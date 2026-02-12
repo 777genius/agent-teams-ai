@@ -47,6 +47,16 @@ export function decodePath(encodedName: string): string {
     return '';
   }
 
+  // Legacy Windows format observed in some Claude installs: "C--Users-name-project"
+  // (no leading dash, drive separator encoded as "--").
+  const legacyWindowsRegex = /^([a-zA-Z])--(.+)$/;
+  const legacyWindowsMatch = legacyWindowsRegex.exec(encodedName);
+  if (legacyWindowsMatch) {
+    const drive = legacyWindowsMatch[1].toUpperCase();
+    const rest = legacyWindowsMatch[2].replace(/-/g, '/');
+    return `${drive}:/${rest}`;
+  }
+
   // Remove leading dash if present (indicates absolute path)
   const withoutLeadingDash = encodedName.startsWith('-') ? encodedName.slice(1) : encodedName;
 
@@ -94,6 +104,12 @@ export function extractProjectName(encodedName: string, cwdHint?: string): strin
 export function isValidEncodedPath(encodedName: string): boolean {
   if (!encodedName) {
     return false;
+  }
+
+  // Support legacy Windows format: "C--Users-name-project"
+  // (no leading dash, drive separator encoded as "--").
+  if (/^[a-zA-Z]--[a-zA-Z0-9_.\s-]+$/.test(encodedName)) {
+    return true;
   }
 
   // Must start with a dash (indicates absolute path)

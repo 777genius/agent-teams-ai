@@ -75,6 +75,10 @@ describe('pathDecoder', () => {
     it('should decode Windows-style encoded path without adding leading slash', () => {
       expect(decodePath('-C:-Users-username-projectname')).toBe('C:/Users/username/projectname');
     });
+
+    it('should decode legacy Windows-style encoded path without leading dash', () => {
+      expect(decodePath('C--Users-username-projectname')).toBe('C:/Users/username/projectname');
+    });
   });
 
   describe('extractProjectName', () => {
@@ -143,6 +147,10 @@ describe('pathDecoder', () => {
 
     it('should return true for valid Windows-style encoded path', () => {
       expect(isValidEncodedPath('-C:-Users-username-projectname')).toBe(true);
+    });
+
+    it('should return true for legacy Windows-style encoded path', () => {
+      expect(isValidEncodedPath('C--Users-username-projectname')).toBe(true);
     });
 
     it('should return false for misplaced colons', () => {

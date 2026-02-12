@@ -21,6 +21,12 @@ describe('ipc guards', () => {
     expect(result.value).toBe('-C:-Users-test-project');
   });
 
+  it('accepts legacy Windows-style encoded project IDs', () => {
+    const result = validateProjectId('C--Users-test-project');
+    expect(result.valid).toBe(true);
+    expect(result.value).toBe('C--Users-test-project');
+  });
+
   it('rejects invalid project IDs', () => {
     const result = validateProjectId('../escape');
     expect(result.valid).toBe(false);
