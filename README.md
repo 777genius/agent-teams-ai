@@ -13,7 +13,7 @@
 <br />
 
 <p align="center">
-  <video src="https://github.com/matt1398/claude-devtools/raw/main/resources/demo.mp4" width="900" autoplay loop muted playsinline>
+  <video src="https://github.com/user-attachments/assets/55e7412e-2737-4729-a863-249f04ebb9ef">
     Your browser does not support the video tag.
   </video>
 </p>
