@@ -124,6 +124,7 @@
       "package.json"
     ],
     "asar": true,
+    "npmRebuild": false,
     "extraMetadata": {
       "main": "dist-electron/main/index.cjs"
     },
