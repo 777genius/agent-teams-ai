@@ -393,7 +393,7 @@ export class ProjectScanner {
     try {
       const baseDir = extractBaseDir(projectId);
       const projectPath = path.join(this.projectsDir, baseDir);
-      const sessionFilter = subprojectRegistry.getSessionFilter(projectId);
+      const sessionFilter = await this.getSessionFilterForProject(projectId);
       const shouldFilterNoise = this.fsProvider.type !== 'ssh';
       const metadataLevel: SessionMetadataLevel = this.fsProvider.type === 'ssh' ? 'light' : 'deep';
 
@@ -477,7 +477,7 @@ export class ProjectScanner {
       const prefilterAll = options?.prefilterAll ?? false;
       const baseDir = extractBaseDir(projectId);
       const projectPath = path.join(this.projectsDir, baseDir);
-      const sessionFilter = subprojectRegistry.getSessionFilter(projectId);
+      const sessionFilter = await this.getSessionFilterForProject(projectId);
       const shouldFilterNoise = this.fsProvider.type !== 'ssh';
       const metadataLevel: SessionMetadataLevel =
         options?.metadataLevel ?? (this.fsProvider.type === 'ssh' ? 'light' : 'deep');
@@ -927,7 +927,7 @@ export class ProjectScanner {
     try {
       const baseDir = extractBaseDir(projectId);
       const projectPath = path.join(this.projectsDir, baseDir);
-      const sessionFilter = subprojectRegistry.getSessionFilter(projectId);
+      const sessionFilter = await this.getSessionFilterForProject(projectId);
 
       if (!(await this.fsProvider.exists(projectPath))) {
         return [];
@@ -946,6 +946,19 @@ export class ProjectScanner {
       logger.error(`Error listing session files for project ${projectId}:`, error);
       return [];
     }
+  }
+
+  /**
+   * Returns the session filter set for a project.
+   * In local mode, composite IDs are refreshed from disk first so newly created
+   * sessions are not hidden by stale registry entries.
+   */
+  private async getSessionFilterForProject(projectId: string): Promise<Set<string> | null> {
+    if (this.fsProvider.type === 'local' && subprojectRegistry.isComposite(projectId)) {
+      const baseDir = extractBaseDir(projectId);
+      await this.scanProject(baseDir);
+    }
+    return subprojectRegistry.getSessionFilter(projectId);
   }
 
   // ===========================================================================

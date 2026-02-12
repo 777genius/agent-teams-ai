@@ -17,6 +17,11 @@ import { resolveFilePath } from '../utils/pathResolution';
 
 const logger = createLogger('Store:sessionDetail');
 
+/**
+ * Tracks latest refresh generation per session to avoid stale overwrites when
+ * many file-change events trigger concurrent in-place refreshes.
+ */
+const sessionRefreshGeneration = new Map<string, number>();
 const sessionRefreshInFlight = new Set<string>();
 const sessionRefreshQueued = new Set<string>();
 let sessionDetailFetchGeneration = 0;
@@ -457,6 +462,8 @@ export const createSessionDetailSlice: StateCreator<AppState, [], [], SessionDet
     }
 
     const refreshKey = `${projectId}/${sessionId}`;
+    const generation = (sessionRefreshGeneration.get(refreshKey) ?? 0) + 1;
+    sessionRefreshGeneration.set(refreshKey, generation);
 
     // Coalesce duplicate in-flight refreshes for the same session.
     if (sessionRefreshInFlight.has(refreshKey)) {
@@ -467,6 +474,11 @@ export const createSessionDetailSlice: StateCreator<AppState, [], [], SessionDet
 
     try {
       const detail = await api.getSessionDetail(projectId, sessionId);
+
+      // Drop stale responses if a newer refresh started while this one was in flight.
+      if (sessionRefreshGeneration.get(refreshKey) !== generation) {
+        return;
+      }
 
       if (!detail) {
         return;
@@ -490,12 +502,8 @@ export const createSessionDetailSlice: StateCreator<AppState, [], [], SessionDet
 
       const latestState = get();
       const latestActiveTab = latestState.getActiveTab();
-      const latestTabsViewingSession = getAllTabs(latestState.paneLayout).filter(
-        (t) => t.type === 'session' && t.sessionId === sessionId
-      );
       const stillViewingSession =
         latestState.selectedSessionId === sessionId ||
-        latestTabsViewingSession.length > 0 ||
         (latestActiveTab?.type === 'session' && latestActiveTab.sessionId === sessionId);
       if (!stillViewingSession) {
         return;
@@ -526,7 +534,7 @@ export const createSessionDetailSlice: StateCreator<AppState, [], [], SessionDet
 
       // Also update the session's isOngoing in the sessions array
       // This keeps the sidebar in sync with the chat view
-      const updatedSessions = latestState.sessions.map((s) =>
+      const updatedSessions = currentState.sessions.map((s) =>
         s.id === sessionId ? { ...s, isOngoing: detail.session?.isOngoing ?? false } : s
       );
 

@@ -73,10 +73,9 @@ export function initializeNotificationListeners(): () => void {
 
   const scheduleSessionRefresh = (projectId: string, sessionId: string): void => {
     const key = `${projectId}/${sessionId}`;
-    // Throttle (not trailing debounce): keep at most one pending refresh per session.
-    // Debounce can starve under continuous writes and delay UI updates indefinitely.
-    if (pendingSessionRefreshTimers.has(key)) {
-      return;
+    const existingTimer = pendingSessionRefreshTimers.get(key);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
     }
     const timer = setTimeout(() => {
       pendingSessionRefreshTimers.delete(key);
@@ -87,9 +86,9 @@ export function initializeNotificationListeners(): () => void {
   };
 
   const scheduleProjectRefresh = (projectId: string): void => {
-    // Throttle (not trailing debounce): keep at most one pending refresh per project.
-    if (pendingProjectRefreshTimers.has(projectId)) {
-      return;
+    const existingTimer = pendingProjectRefreshTimers.get(projectId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
     }
     const timer = setTimeout(() => {
       pendingProjectRefreshTimers.delete(projectId);
@@ -219,10 +218,18 @@ export function initializeNotificationListeners(): () => void {
       const matchesSelectedProject =
         !!selectedProjectId &&
         (eventProjectBaseId == null || selectedProjectBaseId === eventProjectBaseId);
+      const isUnknownSessionInSidebar =
+        event.sessionId != null && !state.sessions.some((session) => session.id === event.sessionId);
+      const shouldRefreshForPotentialNewSession =
+        event.type === 'change' &&
+        !event.isSubagent &&
+        matchesSelectedProject &&
+        state.connectionMode === 'local' &&
+        isUnknownSessionInSidebar;
 
-      // Refresh sidebar session list only when a new top-level session file is added.
-      // Refreshing on every "change" causes excessive list churn while Claude is writing.
-      if (event.type === 'add' && !event.isSubagent) {
+      // Refresh sidebar session list when a new top-level session is detected.
+      // In local mode, some files can be observed as "change" before/without "add".
+      if ((event.type === 'add' && !event.isSubagent) || shouldRefreshForPotentialNewSession) {
         if (matchesSelectedProject && selectedProjectId) {
           scheduleProjectRefresh(selectedProjectId);
         }
