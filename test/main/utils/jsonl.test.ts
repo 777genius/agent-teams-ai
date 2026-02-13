@@ -139,37 +139,48 @@ describe('jsonl', () => {
   describe('analyzeSessionFileMetadata', () => {
     it('should extract first message, count, ongoing state, and git branch in one pass', async () => {
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jsonl-meta-'));
-      const filePath = path.join(tempDir, 'session.jsonl');
-      const lines = [
-        JSON.stringify({
-          type: 'user',
-          uuid: 'u1',
-          timestamp: '2026-01-01T00:00:00.000Z',
-          gitBranch: 'feature/test',
-          message: { role: 'user', content: 'hello world' },
-          isMeta: false,
-        }),
-        JSON.stringify({
-          type: 'assistant',
-          uuid: 'a1',
-          timestamp: '2026-01-01T00:00:01.000Z',
-          message: {
-            role: 'assistant',
-            content: [{ type: 'thinking', thinking: 'thinking...' }],
-          },
-        }),
-      ];
-      fs.writeFileSync(filePath, `${lines.join('\n')}\n`, 'utf8');
+      try {
+        const filePath = path.join(tempDir, 'session.jsonl');
+        const lines = [
+          JSON.stringify({
+            type: 'user',
+            uuid: 'u1',
+            timestamp: '2026-01-01T00:00:00.000Z',
+            gitBranch: 'feature/test',
+            message: { role: 'user', content: 'hello world' },
+            isMeta: false,
+          }),
+          JSON.stringify({
+            type: 'assistant',
+            uuid: 'a1',
+            timestamp: '2026-01-01T00:00:01.000Z',
+            message: {
+              role: 'assistant',
+              content: [{ type: 'thinking', thinking: 'thinking...' }],
+            },
+          }),
+        ];
+        fs.writeFileSync(filePath, `${lines.join('\n')}\n`, 'utf8');
 
-      const result = await analyzeSessionFileMetadata(filePath);
+        const result = await analyzeSessionFileMetadata(filePath);
 
-      expect(result.firstUserMessage?.text).toBe('hello world');
-      expect(result.firstUserMessage?.timestamp).toBe('2026-01-01T00:00:00.000Z');
-      expect(result.messageCount).toBe(1);
-      expect(result.isOngoing).toBe(true);
-      expect(result.gitBranch).toBe('feature/test');
-
-      fs.rmSync(tempDir, { recursive: true, force: true });
+        expect(result.firstUserMessage?.text).toBe('hello world');
+        expect(result.firstUserMessage?.timestamp).toBe('2026-01-01T00:00:00.000Z');
+        expect(result.messageCount).toBe(1);
+        expect(result.isOngoing).toBe(true);
+        expect(result.gitBranch).toBe('feature/test');
+      } finally {
+        try {
+          fs.rmSync(tempDir, {
+            recursive: true,
+            force: true,
+            maxRetries: 5,
+            retryDelay: 200,
+          });
+        } catch {
+          // Best-effort cleanup; ignore ENOTEMPTY on Windows when dir is in use
+        }
+      }
     });
   });
 });
