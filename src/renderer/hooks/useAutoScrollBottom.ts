@@ -23,6 +23,12 @@ interface UseAutoScrollBottomOptions {
   enabled?: boolean;
 
   /**
+   * Scroll behavior used for automatic follow when content updates.
+   * Default: 'smooth'
+   */
+  autoBehavior?: ScrollBehavior;
+
+  /**
    * Whether auto-scroll is temporarily disabled (e.g., during navigation).
    * Unlike enabled, this is for transient disabling during specific operations.
    * Default: false
@@ -115,6 +121,7 @@ export function useAutoScrollBottom(
     threshold = 100,
     smoothDuration = 300,
     enabled = true,
+    autoBehavior = 'smooth',
     disabled = false,
     externalRef,
     resetKey,
@@ -241,11 +248,11 @@ export function useAutoScrollBottom(
 
       // Only auto-scroll if user was at bottom before the update
       if (wasAtBottomBeforeUpdateRef.current) {
-        scrollToBottom('smooth');
+        scrollToBottom(autoBehavior);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Dynamic dependencies array is intentional design
-  }, [...dependencies, enabled, disabled, scrollToBottom]);
+  }, [...dependencies, enabled, disabled, autoBehavior, scrollToBottom]);
 
   /**
    * Getter function for isAtBottom to avoid accessing ref.current during render.

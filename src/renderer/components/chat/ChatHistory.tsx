@@ -339,13 +339,13 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     rootRef: scrollContainerRef,
   });
 
-  // Auto-scroll to bottom when new content is added
-  // Disabled during navigation to prevent conflicts with deep link scrolling
-  // Uses shared scrollContainerRef created above
-  // resetKey ensures auto-scroll state resets when switching tabs/sessions
-  useAutoScrollBottom([conversation?.items.length], {
+  // Auto-follow when conversation updates, but only if the user was already near bottom.
+  // This preserves manual reading position when the user scrolls up.
+  // Disabled during navigation to prevent conflicts with deep-link/search scrolling.
+  useAutoScrollBottom([conversation], {
     threshold: 150,
     smoothDuration: 300,
+    autoBehavior: 'auto',
     disabled: shouldDisableAutoScroll,
     externalRef: scrollContainerRef,
     resetKey: effectiveTabId,

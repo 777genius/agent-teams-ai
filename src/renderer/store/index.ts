@@ -73,9 +73,10 @@ export function initializeNotificationListeners(): () => void {
 
   const scheduleSessionRefresh = (projectId: string, sessionId: string): void => {
     const key = `${projectId}/${sessionId}`;
-    const existingTimer = pendingSessionRefreshTimers.get(key);
-    if (existingTimer) {
-      clearTimeout(existingTimer);
+    // Throttle (not trailing debounce): keep at most one pending refresh per session.
+    // Debounce can delay updates indefinitely while the file is continuously appended.
+    if (pendingSessionRefreshTimers.has(key)) {
+      return;
     }
     const timer = setTimeout(() => {
       pendingSessionRefreshTimers.delete(key);
@@ -218,25 +219,26 @@ export function initializeNotificationListeners(): () => void {
       const matchesSelectedProject =
         !!selectedProjectId &&
         (eventProjectBaseId == null || selectedProjectBaseId === eventProjectBaseId);
+      const isTopLevelSessionEvent = !event.isSubagent;
       const isUnknownSessionInSidebar =
-        event.sessionId != null && !state.sessions.some((session) => session.id === event.sessionId);
+        event.sessionId == null || !state.sessions.some((session) => session.id === event.sessionId);
       const shouldRefreshForPotentialNewSession =
-        event.type === 'change' &&
-        !event.isSubagent &&
+        isTopLevelSessionEvent &&
         matchesSelectedProject &&
-        state.connectionMode === 'local' &&
-        isUnknownSessionInSidebar;
+        isUnknownSessionInSidebar &&
+        (event.type === 'add' || (state.connectionMode === 'local' && event.type === 'change'));
 
-      // Refresh sidebar session list when a new top-level session is detected.
-      // In local mode, some files can be observed as "change" before/without "add".
-      if ((event.type === 'add' && !event.isSubagent) || shouldRefreshForPotentialNewSession) {
+      // Refresh sidebar session list only when a truly new top-level session appears.
+      // Local fs.watch can report "change" before/without "add" for newly created files.
+      if (shouldRefreshForPotentialNewSession) {
         if (matchesSelectedProject && selectedProjectId) {
           scheduleProjectRefresh(selectedProjectId);
         }
       }
 
       // Keep opened session view in sync on content changes.
-      if (event.type === 'change' && selectedProjectId) {
+      // Some local writers emit rename/add for in-place updates, so include "add".
+      if ((event.type === 'change' || event.type === 'add') && selectedProjectId) {
         const activeSessionId = state.selectedSessionId;
         const eventSessionId = event.sessionId;
         const isViewingEventSession =

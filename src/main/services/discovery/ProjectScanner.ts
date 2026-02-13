@@ -416,8 +416,10 @@ export class ProjectScanner {
         sessionFiles.map(async (file) => {
           const sessionId = extractSessionId(file.name);
           const filePath = path.join(projectPath, file.name);
-          const prefetchedMtimeMs = file.mtimeMs;
-          const prefetchedSize = file.size;
+          const fileDetails = await this.resolveFileDetails(file, filePath);
+          const prefetchedMtimeMs = fileDetails.mtimeMs;
+          const prefetchedSize = fileDetails.size;
+          const prefetchedBirthtimeMs = fileDetails.birthtimeMs;
 
           if (shouldFilterNoise) {
             // Check if session has non-noise messages (delegated to SessionContentFilter)
@@ -438,7 +440,8 @@ export class ProjectScanner {
             filePath,
             decodedPath,
             prefetchedMtimeMs,
-            prefetchedSize
+            prefetchedSize,
+            prefetchedBirthtimeMs
           );
         })
       );
@@ -503,6 +506,7 @@ export class ProjectScanner {
         filePath: string;
         mtimeMs: number;
         size: number;
+        birthtimeMs: number;
       }
 
       const fileInfos = await this.collectFulfilledInBatches(
@@ -518,6 +522,7 @@ export class ProjectScanner {
             filePath,
             mtimeMs: fileDetails.mtimeMs,
             size: fileDetails.size,
+            birthtimeMs: fileDetails.birthtimeMs,
           } satisfies SessionFileInfo;
         }
       );
@@ -642,7 +647,8 @@ export class ProjectScanner {
               fileInfo.filePath,
               decodedPath,
               fileInfo.mtimeMs,
-              fileInfo.size
+              fileInfo.size,
+              fileInfo.birthtimeMs
             )
         );
         sessions.push(...builtSessions);
@@ -703,14 +709,17 @@ export class ProjectScanner {
     filePath: string,
     projectPath: string,
     prefetchedMtimeMs?: number,
-    prefetchedSize?: number
+    prefetchedSize?: number,
+    prefetchedBirthtimeMs?: number
   ): Promise<Session> {
-    const usePrefetchedStats =
+    const hasPrefetchedCoreStats =
       typeof prefetchedMtimeMs === 'number' && typeof prefetchedSize === 'number';
-    const stats = usePrefetchedStats ? null : await this.fsProvider.stat(filePath);
+    const needsBirthtimeStat = typeof prefetchedBirthtimeMs !== 'number';
+    const stats =
+      hasPrefetchedCoreStats && !needsBirthtimeStat ? null : await this.fsProvider.stat(filePath);
     const effectiveMtime = prefetchedMtimeMs ?? stats?.mtimeMs ?? Date.now();
     const effectiveSize = prefetchedSize ?? stats?.size ?? -1;
-    const birthtimeMs = stats?.birthtimeMs ?? effectiveMtime;
+    const birthtimeMs = prefetchedBirthtimeMs ?? stats?.birthtimeMs ?? effectiveMtime;
     const cachedMetadata = this.sessionMetadataCache.get(filePath);
     const metadata =
       cachedMetadata?.mtimeMs === effectiveMtime && cachedMetadata.size === effectiveSize
@@ -730,13 +739,18 @@ export class ProjectScanner {
       this.loadTodoData(sessionId),
     ]);
     const metadataLevel: SessionMetadataLevel = 'deep';
+    const firstMessageTimestampMs = this.parseTimestampMs(metadata.firstUserMessage?.timestamp);
+    const createdAt =
+      firstMessageTimestampMs !== null && Number.isFinite(firstMessageTimestampMs)
+        ? firstMessageTimestampMs
+        : birthtimeMs;
 
     return {
       id: sessionId,
       projectId,
       projectPath,
       todoData,
-      createdAt: Math.floor(birthtimeMs),
+      createdAt: Math.floor(createdAt),
       firstMessage: metadata.firstUserMessage?.text,
       messageTimestamp: metadata.firstUserMessage?.timestamp,
       hasSubagents,
@@ -757,14 +771,17 @@ export class ProjectScanner {
     filePath: string,
     projectPath: string,
     prefetchedMtimeMs?: number,
-    prefetchedSize?: number
+    prefetchedSize?: number,
+    prefetchedBirthtimeMs?: number
   ): Promise<Session> {
-    const usePrefetchedStats =
+    const hasPrefetchedCoreStats =
       typeof prefetchedMtimeMs === 'number' && typeof prefetchedSize === 'number';
-    const stats = usePrefetchedStats ? null : await this.fsProvider.stat(filePath);
+    const needsBirthtimeStat = typeof prefetchedBirthtimeMs !== 'number';
+    const stats =
+      hasPrefetchedCoreStats && !needsBirthtimeStat ? null : await this.fsProvider.stat(filePath);
     const effectiveMtime = prefetchedMtimeMs ?? stats?.mtimeMs ?? Date.now();
     const effectiveSize = prefetchedSize ?? stats?.size ?? -1;
-    const birthtimeMs = stats?.birthtimeMs ?? effectiveMtime;
+    const birthtimeMs = prefetchedBirthtimeMs ?? stats?.birthtimeMs ?? effectiveMtime;
     const cachedPreview = this.sessionPreviewCache.get(filePath);
     const preview =
       cachedPreview?.mtimeMs === effectiveMtime && cachedPreview.size === effectiveSize
@@ -778,12 +795,17 @@ export class ProjectScanner {
       });
     }
     const metadataLevel: SessionMetadataLevel = 'light';
+    const previewTimestampMs = this.parseTimestampMs(preview?.timestamp);
+    const createdAt =
+      previewTimestampMs !== null && Number.isFinite(previewTimestampMs)
+        ? previewTimestampMs
+        : birthtimeMs;
 
     return {
       id: sessionId,
       projectId,
       projectPath,
-      createdAt: Math.floor(birthtimeMs),
+      createdAt: Math.floor(createdAt),
       firstMessage: preview?.text,
       messageTimestamp: preview?.timestamp,
       hasSubagents: false,
@@ -803,7 +825,8 @@ export class ProjectScanner {
     filePath: string,
     projectPath: string,
     prefetchedMtimeMs?: number,
-    prefetchedSize?: number
+    prefetchedSize?: number,
+    prefetchedBirthtimeMs?: number
   ): Promise<Session> {
     if (metadataLevel === 'light') {
       return this.buildLightSessionMetadata(
@@ -812,7 +835,8 @@ export class ProjectScanner {
         filePath,
         projectPath,
         prefetchedMtimeMs,
-        prefetchedSize
+        prefetchedSize,
+        prefetchedBirthtimeMs
       );
     }
 
@@ -823,7 +847,8 @@ export class ProjectScanner {
         filePath,
         projectPath,
         prefetchedMtimeMs,
-        prefetchedSize
+        prefetchedSize,
+        prefetchedBirthtimeMs
       );
     } catch (error) {
       // In SSH mode, never drop a visible session row due to transient deep-parse failures.
@@ -838,7 +863,8 @@ export class ProjectScanner {
         filePath,
         projectPath,
         prefetchedMtimeMs,
-        prefetchedSize
+        prefetchedSize,
+        prefetchedBirthtimeMs
       );
     }
   }
@@ -1067,6 +1093,14 @@ export class ProjectScanner {
       birthtimeMs: stats.birthtimeMs,
       size: stats.size,
     };
+  }
+
+  private parseTimestampMs(timestamp: string | undefined): number | null {
+    if (!timestamp) {
+      return null;
+    }
+    const parsed = Date.parse(timestamp);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   /**

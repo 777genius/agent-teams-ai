@@ -462,14 +462,14 @@ export const createSessionDetailSlice: StateCreator<AppState, [], [], SessionDet
     }
 
     const refreshKey = `${projectId}/${sessionId}`;
-    const generation = (sessionRefreshGeneration.get(refreshKey) ?? 0) + 1;
-    sessionRefreshGeneration.set(refreshKey, generation);
 
     // Coalesce duplicate in-flight refreshes for the same session.
     if (sessionRefreshInFlight.has(refreshKey)) {
       sessionRefreshQueued.add(refreshKey);
       return;
     }
+    const generation = (sessionRefreshGeneration.get(refreshKey) ?? 0) + 1;
+    sessionRefreshGeneration.set(refreshKey, generation);
     sessionRefreshInFlight.add(refreshKey);
 
     try {
@@ -501,10 +501,10 @@ export const createSessionDetailSlice: StateCreator<AppState, [], [], SessionDet
       }
 
       const latestState = get();
-      const latestActiveTab = latestState.getActiveTab();
+      const latestAllTabs = getAllTabs(latestState.paneLayout);
       const stillViewingSession =
         latestState.selectedSessionId === sessionId ||
-        (latestActiveTab?.type === 'session' && latestActiveTab.sessionId === sessionId);
+        latestAllTabs.some((tab) => tab.type === 'session' && tab.sessionId === sessionId);
       if (!stillViewingSession) {
         return;
       }
@@ -532,17 +532,14 @@ export const createSessionDetailSlice: StateCreator<AppState, [], [], SessionDet
         }
       }
 
-      // Also update the session's isOngoing in the sessions array
-      // This keeps the sidebar in sync with the chat view
-      const updatedSessions = currentState.sessions.map((s) =>
-        s.id === sessionId ? { ...s, isOngoing: detail.session?.isOngoing ?? false } : s
-      );
-
       // Update only the data, preserve UI states
-      set({
+      set((state) => ({
         sessionDetail: detail,
         conversation: newConversation,
-        sessions: updatedSessions,
+        // Update on latest sessions state to avoid restoring stale sidebar snapshots.
+        sessions: state.sessions.map((s) =>
+          s.id === sessionId ? { ...s, isOngoing: detail.session?.isOngoing ?? false } : s
+        ),
         // Preserve visible group if it still exists, otherwise keep current
         ...(visibleGroupStillExists
           ? {
@@ -551,11 +548,10 @@ export const createSessionDetailSlice: StateCreator<AppState, [], [], SessionDet
           : {}),
         // Note: aiGroupExpansionLevels and expandedStepIds are NOT touched
         // so expansion states are preserved
-      });
+      }));
 
       // Also update per-tab session data for all tabs viewing this session
       const latestTabSessionData = { ...get().tabSessionData };
-      const latestAllTabs = getAllTabs(get().paneLayout);
       for (const tab of latestAllTabs) {
         if (tab.type === 'session' && tab.sessionId === sessionId && latestTabSessionData[tab.id]) {
           const tabData = latestTabSessionData[tab.id];
