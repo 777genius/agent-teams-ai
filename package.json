@@ -158,6 +158,9 @@
     },
     "linux": {
       "target": [
+        "AppImage",
+        "deb",
+        "rpm",
         "pacman"
       ],
       "icon": "resources/icons/png",

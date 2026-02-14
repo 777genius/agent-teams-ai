@@ -57,7 +57,7 @@ jobs:
             runner: macos-14
             dist_command: pnpm dist:mac:arm64
           - arch: x64
-            runner: macos-13
+            runner: macos-15-intel
             dist_command: pnpm dist:mac:x64
     runs-on: ${{ matrix.runner }}
 
@@ -194,7 +194,7 @@ jobs:
       - name: Install Linux packaging dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libarchive-tools
+          sudo apt-get install -y libarchive-tools rpm
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
