@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "description": "Desktop app that visualizes Claude Code session execution — explore conversations, track context usage, and analyze tool calls",
   "license": "MIT",
-  "author": "claude-devtools contributors",
+  "author": {
+    "name": "claude-devtools contributors",
+    "email": "matt1398@users.noreply.github.com"
+  },
   "homepage": "https://github.com/matt1398/claude-devtools",
   "repository": {
     "type": "git",

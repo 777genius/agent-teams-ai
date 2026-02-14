@@ -508,7 +508,8 @@ export class SshConnectionManager extends EventEmitter {
             resolve(stdout);
             return;
           }
-          reject(new Error(stderr.trim() || `Remote command failed with exit code ${code}`));
+          const exitCode = code === null ? 'unknown' : String(code);
+          reject(new Error(stderr.trim() || `Remote command failed with exit code ${exitCode}`));
         });
       });
     });
