@@ -91,6 +91,8 @@ export interface ConfigAPI {
   selectClaudeRootFolder: () => Promise<ClaudeRootFolderSelection | null>;
   /** Get resolved Claude root path info for local mode */
   getClaudeRootInfo: () => Promise<ClaudeRootInfo>;
+  /** Find Windows WSL Claude root candidates (UNC paths) */
+  findWslClaudeRoots: () => Promise<WslClaudeRootCandidate[]>;
   /** Opens the config JSON file in an external editor */
   openInEditor: () => Promise<void>;
   /** Pin a session for a project */
@@ -114,6 +116,15 @@ export interface ClaudeRootFolderSelection {
   /** Whether the selected folder name is exactly ".claude" */
   isClaudeDirName: boolean;
   /** Whether selected folder contains a "projects" directory */
+  hasProjectsDir: boolean;
+}
+
+export interface WslClaudeRootCandidate {
+  /** WSL distribution name (e.g. Ubuntu) */
+  distro: string;
+  /** Candidate Claude root path in UNC format */
+  path: string;
+  /** True if this root contains "projects" directory */
   hasProjectsDir: boolean;
 }
 

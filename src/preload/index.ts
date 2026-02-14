@@ -32,6 +32,7 @@ import {
   CONFIG_ADD_IGNORE_REPOSITORY,
   CONFIG_ADD_TRIGGER,
   CONFIG_CLEAR_SNOOZE,
+  CONFIG_FIND_WSL_CLAUDE_ROOTS,
   CONFIG_GET,
   CONFIG_GET_CLAUDE_ROOT_INFO,
   CONFIG_GET_TRIGGERS,
@@ -64,6 +65,7 @@ import type {
   SshConnectionStatus,
   SshLastConnection,
   TriggerTestResult,
+  WslClaudeRootCandidate,
 } from '@shared/types';
 
 // =============================================================================
@@ -277,6 +279,9 @@ const electronAPI: ElectronAPI = {
     },
     getClaudeRootInfo: async (): Promise<ClaudeRootInfo> => {
       return invokeIpcWithResult<ClaudeRootInfo>(CONFIG_GET_CLAUDE_ROOT_INFO);
+    },
+    findWslClaudeRoots: async (): Promise<WslClaudeRootCandidate[]> => {
+      return invokeIpcWithResult<WslClaudeRootCandidate[]>(CONFIG_FIND_WSL_CLAUDE_ROOTS);
     },
     openInEditor: async (): Promise<void> => {
       return invokeIpcWithResult<void>(CONFIG_OPEN_IN_EDITOR);

@@ -27,6 +27,7 @@ import { execFile } from 'child_process';
 import { BrowserWindow, dialog, type IpcMain, type IpcMainInvokeEvent } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { promisify } from 'util';
 
 import {
   type AppConfig,
@@ -42,9 +43,14 @@ import { validateConfigUpdatePayload } from './configValidation';
 import { validateTriggerId } from './guards';
 
 import type { TriggerColor } from '@shared/constants/triggerColors';
-import type { ClaudeRootFolderSelection, ClaudeRootInfo } from '@shared/types';
+import type {
+  ClaudeRootFolderSelection,
+  ClaudeRootInfo,
+  WslClaudeRootCandidate,
+} from '@shared/types';
 
 const logger = createLogger('IPC:config');
+const execFileAsync = promisify(execFile);
 
 // Get singleton instance
 const configManager = ConfigManager.getInstance();
@@ -109,6 +115,7 @@ export function registerConfigHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('config:selectFolders', handleSelectFolders);
   ipcMain.handle('config:selectClaudeRootFolder', handleSelectClaudeRootFolder);
   ipcMain.handle('config:getClaudeRootInfo', handleGetClaudeRootInfo);
+  ipcMain.handle('config:findWslClaudeRoots', handleFindWslClaudeRoots);
 
   // Editor handlers
   ipcMain.handle('config:openInEditor', handleOpenInEditor);
@@ -724,6 +731,97 @@ async function handleGetClaudeRootInfo(
   }
 }
 
+function normalizeWslHomePath(home: string): string | null {
+  const trimmed = home.trim();
+  if (!trimmed.startsWith('/')) {
+    return null;
+  }
+
+  let normalized = path.posix.normalize(trimmed);
+  if (normalized.length > 1 && normalized.endsWith('/')) {
+    normalized = normalized.slice(0, -1);
+  }
+  return normalized;
+}
+
+function toWslUncPath(distro: string, posixPath: string): string {
+  const uncSuffix = posixPath.replace(/\//g, '\\');
+  return `\\\\wsl.localhost\\${distro}${uncSuffix}`;
+}
+
+async function listWslDistros(): Promise<string[]> {
+  const { stdout } = await execFileAsync('wsl.exe', ['-l', '-q'], { timeout: 4000 });
+  return stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+async function resolveWslHome(distro: string): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync(
+      'wsl.exe',
+      ['-d', distro, '--', 'sh', '-lc', 'printf %s "$HOME"'],
+      { timeout: 4000 }
+    );
+    return normalizeWslHomePath(stdout);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Handler for 'config:findWslClaudeRoots' - Find Windows UNC candidates for WSL Claude roots.
+ */
+async function handleFindWslClaudeRoots(
+  _event: IpcMainInvokeEvent
+): Promise<ConfigResult<WslClaudeRootCandidate[]>> {
+  try {
+    if (process.platform !== 'win32') {
+      return { success: true, data: [] };
+    }
+
+    const distros = await listWslDistros();
+    if (distros.length === 0) {
+      return { success: true, data: [] };
+    }
+
+    const candidates: WslClaudeRootCandidate[] = [];
+    for (const distro of distros) {
+      const homePath = await resolveWslHome(distro);
+      if (!homePath) {
+        continue;
+      }
+
+      const claudePosixPath = path.posix.join(homePath, '.claude');
+      const claudeUncPath = toWslUncPath(distro, claudePosixPath);
+      const projectsPath = path.join(claudeUncPath, 'projects');
+
+      const hasProjectsDir = (() => {
+        try {
+          return fs.existsSync(projectsPath) && fs.statSync(projectsPath).isDirectory();
+        } catch {
+          return false;
+        }
+      })();
+
+      candidates.push({
+        distro,
+        path: claudeUncPath,
+        hasProjectsDir,
+      });
+    }
+
+    return { success: true, data: candidates };
+  } catch (error) {
+    logger.error('Error in config:findWslClaudeRoots:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to detect WSL Claude paths',
+    };
+  }
+}
+
 // =============================================================================
 // Cleanup
 // =============================================================================
@@ -751,6 +849,7 @@ export function removeConfigHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler('config:selectFolders');
   ipcMain.removeHandler('config:selectClaudeRootFolder');
   ipcMain.removeHandler('config:getClaudeRootInfo');
+  ipcMain.removeHandler('config:findWslClaudeRoots');
   ipcMain.removeHandler('config:openInEditor');
   logger.info('Config handlers removed');
 }

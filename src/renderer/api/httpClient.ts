@@ -39,6 +39,7 @@ import type {
   TriggerTestResult,
   UpdaterAPI,
   WaterfallData,
+  WslClaudeRootCandidate,
 } from '@shared/types';
 
 export class HttpAPIClient implements ElectronAPI {
@@ -423,6 +424,10 @@ export class HttpAPIClient implements ElectronAPI {
         resolvedPath: fallbackPath,
         customPath: config.general.claudeRootPath,
       };
+    },
+    findWslClaudeRoots: async (): Promise<WslClaudeRootCandidate[]> => {
+      console.warn('[HttpAPIClient] findWslClaudeRoots is not available in browser mode');
+      return [];
     },
     openInEditor: async (): Promise<void> => {
       console.warn('[HttpAPIClient] openInEditor is not available in browser mode');

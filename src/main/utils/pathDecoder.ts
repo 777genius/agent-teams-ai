@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
@@ -236,75 +235,7 @@ function getHomeDir(): string {
 
 let claudeBasePathOverride: string | null = null;
 
-function isWslEnvironment(): boolean {
-  if (process.platform !== 'linux') {
-    return false;
-  }
-
-  if (process.env.WSL_DISTRO_NAME || process.env.WSL_INTEROP) {
-    return true;
-  }
-
-  // Fallback for environments where WSL vars are not exported.
-  return os.release().toLowerCase().includes('microsoft');
-}
-
-function toWslPathFromWindowsPath(windowsPath: string): string | null {
-  const normalized = windowsPath.trim().replace(/\\/g, '/');
-  if (!normalized) {
-    return null;
-  }
-
-  if (normalized.startsWith('/mnt/')) {
-    return normalized;
-  }
-
-  const match = /^([a-zA-Z]):\/(.+)$/.exec(normalized);
-  if (!match) {
-    return null;
-  }
-
-  const drive = match[1].toLowerCase();
-  const rest = match[2];
-  return `/mnt/${drive}/${rest}`;
-}
-
-function getWslClaudeBaseCandidates(): string[] {
-  const candidates = new Set<string>();
-
-  const addCandidate = (baseHome: string | null | undefined): void => {
-    if (!baseHome) return;
-    const withClaude = path.posix.join(baseHome, '.claude');
-    candidates.add(path.posix.normalize(withClaude));
-  };
-
-  // WSL-native home (e.g. /home/<user>) should be preferred when present.
-  addCandidate(getHomeDir());
-
-  addCandidate(toWslPathFromWindowsPath(process.env.USERPROFILE ?? ''));
-
-  const homeDrivePath =
-    process.env.HOMEDRIVE && process.env.HOMEPATH
-      ? `${process.env.HOMEDRIVE}${process.env.HOMEPATH}`
-      : '';
-  addCandidate(toWslPathFromWindowsPath(homeDrivePath));
-
-  if (process.env.USER) {
-    addCandidate(`/mnt/c/Users/${process.env.USER}`);
-  }
-
-  return Array.from(candidates);
-}
-
 function getDefaultClaudeBasePath(): string {
-  if (isWslEnvironment()) {
-    const candidates = getWslClaudeBaseCandidates();
-    const existing = candidates.find((candidate) => fs.existsSync(candidate));
-    if (existing) {
-      return existing;
-    }
-  }
-
   return path.join(getHomeDir(), '.claude');
 }
 

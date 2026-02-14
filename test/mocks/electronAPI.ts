@@ -70,6 +70,7 @@ export interface MockElectronAPI {
     selectFolders: ReturnType<typeof vi.fn>;
     selectClaudeRootFolder: ReturnType<typeof vi.fn>;
     getClaudeRootInfo: ReturnType<typeof vi.fn>;
+    findWslClaudeRoots: ReturnType<typeof vi.fn>;
     openInEditor: ReturnType<typeof vi.fn>;
     pinSession: ReturnType<typeof vi.fn>;
     unpinSession: ReturnType<typeof vi.fn>;
@@ -171,6 +172,7 @@ export function createMockElectronAPI(): MockElectronAPI {
         resolvedPath: '~/.claude',
         customPath: null,
       }),
+      findWslClaudeRoots: vi.fn().mockResolvedValue([]),
       openInEditor: vi.fn(),
       pinSession: vi.fn(),
       unpinSession: vi.fn(),

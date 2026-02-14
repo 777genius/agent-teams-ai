@@ -56,6 +56,9 @@ export const CONFIG_SELECT_CLAUDE_ROOT_FOLDER = 'config:selectClaudeRootFolder';
 /** Get effective/default Claude root folder info */
 export const CONFIG_GET_CLAUDE_ROOT_INFO = 'config:getClaudeRootInfo';
 
+/** Find WSL Claude root candidates (Windows only) */
+export const CONFIG_FIND_WSL_CLAUDE_ROOTS = 'config:findWslClaudeRoots';
+
 /** Open config file in external editor */
 export const CONFIG_OPEN_IN_EDITOR = 'config:openInEditor';
 
