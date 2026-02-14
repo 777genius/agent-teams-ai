@@ -68,6 +68,11 @@ export interface MockElectronAPI {
     getTriggers: ReturnType<typeof vi.fn>;
     testTrigger: ReturnType<typeof vi.fn>;
     selectFolders: ReturnType<typeof vi.fn>;
+    selectClaudeRootFolder: ReturnType<typeof vi.fn>;
+    getClaudeRootInfo: ReturnType<typeof vi.fn>;
+    openInEditor: ReturnType<typeof vi.fn>;
+    pinSession: ReturnType<typeof vi.fn>;
+    unpinSession: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -106,8 +111,8 @@ export function createMockElectronAPI(): MockElectronAPI {
     openPath: vi.fn().mockResolvedValue({ success: true }),
     openExternal: vi.fn().mockResolvedValue({ success: true }),
     notifications: {
-      onNew: vi.fn().mockReturnValue(() => {}),
-      onUpdated: vi.fn().mockReturnValue(() => {}),
+      onNew: vi.fn().mockReturnValue(() => undefined),
+      onUpdated: vi.fn().mockReturnValue(() => undefined),
       getUnread: vi.fn().mockResolvedValue([]),
       markAsRead: vi.fn().mockResolvedValue(undefined),
       markAllAsRead: vi.fn().mockResolvedValue(undefined),
@@ -118,8 +123,8 @@ export function createMockElectronAPI(): MockElectronAPI {
       delete: vi.fn().mockResolvedValue(true),
       clear: vi.fn().mockResolvedValue(true),
     },
-    onFileChange: vi.fn().mockReturnValue(() => {}),
-    onTodoChange: vi.fn().mockReturnValue(() => {}),
+    onFileChange: vi.fn().mockReturnValue(() => undefined),
+    onTodoChange: vi.fn().mockReturnValue(() => undefined),
     config: {
       get: vi.fn().mockResolvedValue({
         notifications: {
@@ -136,11 +141,15 @@ export function createMockElectronAPI(): MockElectronAPI {
           showDockIcon: true,
           theme: 'dark',
           defaultTab: 'dashboard',
+          claudeRootPath: null,
         },
         display: {
           showTimestamps: true,
           compactMode: false,
           syntaxHighlighting: true,
+        },
+        sessions: {
+          pinnedSessions: {},
         },
       }),
       update: vi.fn(),
@@ -156,6 +165,15 @@ export function createMockElectronAPI(): MockElectronAPI {
       getTriggers: vi.fn().mockResolvedValue([]),
       testTrigger: vi.fn(),
       selectFolders: vi.fn().mockResolvedValue([]),
+      selectClaudeRootFolder: vi.fn().mockResolvedValue(null),
+      getClaudeRootInfo: vi.fn().mockResolvedValue({
+        defaultPath: '~/.claude',
+        resolvedPath: '~/.claude',
+        customPath: null,
+      }),
+      openInEditor: vi.fn(),
+      pinSession: vi.fn(),
+      unpinSession: vi.fn(),
     },
   };
 }

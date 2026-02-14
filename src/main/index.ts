@@ -22,6 +22,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
+import { getProjectsBasePath, getTodosBasePath } from './utils/pathDecoder';
 
 // Window icon path for non-mac platforms.
 const getWindowIconPath = (): string | undefined => {
@@ -174,6 +175,55 @@ function onContextSwitched(context: ServiceContext): void {
 }
 
 /**
+ * Rebuilds the local ServiceContext using the current configured Claude root paths.
+ * Called when general.claudeRootPath changes.
+ */
+function reconfigureLocalContextForClaudeRoot(): void {
+  try {
+    const currentLocal = contextRegistry.get('local');
+    if (!currentLocal) {
+      logger.error('Cannot reconfigure local context: local context not found');
+      return;
+    }
+
+    const wasLocalActive = contextRegistry.getActiveContextId() === 'local';
+    const projectsDir = getProjectsBasePath();
+    const todosDir = getTodosBasePath();
+
+    logger.info(`Reconfiguring local context: projectsDir=${projectsDir}, todosDir=${todosDir}`);
+
+    if (wasLocalActive) {
+      currentLocal.stopFileWatcher();
+    }
+
+    const replacementLocal = new ServiceContext({
+      id: 'local',
+      type: 'local',
+      fsProvider: new LocalFileSystemProvider(),
+      projectsDir,
+      todosDir,
+    });
+
+    if (notificationManager) {
+      replacementLocal.fileWatcher.setNotificationManager(notificationManager);
+    }
+    replacementLocal.start();
+
+    if (!wasLocalActive) {
+      replacementLocal.stopFileWatcher();
+    }
+
+    contextRegistry.replaceContext('local', replacementLocal);
+
+    if (wasLocalActive) {
+      wireFileWatcherEvents(replacementLocal);
+    }
+  } catch (error) {
+    logger.error('Failed to reconfigure local context for Claude root change:', error);
+  }
+}
+
+/**
  * Initializes all services.
  */
 function initializeServices(): void {
@@ -185,11 +235,16 @@ function initializeServices(): void {
   // Create ServiceContextRegistry
   contextRegistry = new ServiceContextRegistry();
 
+  const localProjectsDir = getProjectsBasePath();
+  const localTodosDir = getTodosBasePath();
+
   // Create local context
   const localContext = new ServiceContext({
     id: 'local',
     type: 'local',
     fsProvider: new LocalFileSystemProvider(),
+    projectsDir: localProjectsDir,
+    todosDir: localTodosDir,
   });
 
   // Register and start local context
@@ -215,6 +270,9 @@ function initializeServices(): void {
   initializeIpcHandlers(contextRegistry, updaterService, sshConnectionManager, {
     rewire: rewireContextEvents,
     full: onContextSwitched,
+    onClaudeRootPathUpdated: (_claudeRootPath: string | null) => {
+      reconfigureLocalContextForClaudeRoot();
+    },
   });
 
   // HTTP Server control IPC handlers

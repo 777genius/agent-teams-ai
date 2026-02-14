@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
@@ -226,14 +227,140 @@ export function buildTodoPath(claudeBasePath: string, sessionId: string): string
  * Get the user's home directory.
  */
 function getHomeDir(): string {
-  return process.env.HOME || process.env.USERPROFILE || os.homedir() || '/';
+  const windowsHome =
+    process.env.HOMEDRIVE && process.env.HOMEPATH
+      ? `${process.env.HOMEDRIVE}${process.env.HOMEPATH}`
+      : null;
+  return process.env.HOME || process.env.USERPROFILE || windowsHome || os.homedir() || '/';
+}
+
+let claudeBasePathOverride: string | null = null;
+
+function isWslEnvironment(): boolean {
+  if (process.platform !== 'linux') {
+    return false;
+  }
+
+  if (process.env.WSL_DISTRO_NAME || process.env.WSL_INTEROP) {
+    return true;
+  }
+
+  // Fallback for environments where WSL vars are not exported.
+  return os.release().toLowerCase().includes('microsoft');
+}
+
+function toWslPathFromWindowsPath(windowsPath: string): string | null {
+  const normalized = windowsPath.trim().replace(/\\/g, '/');
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.startsWith('/mnt/')) {
+    return normalized;
+  }
+
+  const match = /^([a-zA-Z]):\/(.+)$/.exec(normalized);
+  if (!match) {
+    return null;
+  }
+
+  const drive = match[1].toLowerCase();
+  const rest = match[2];
+  return `/mnt/${drive}/${rest}`;
+}
+
+function getWslClaudeBaseCandidates(): string[] {
+  const candidates = new Set<string>();
+
+  const addCandidate = (baseHome: string | null | undefined): void => {
+    if (!baseHome) return;
+    const withClaude = path.posix.join(baseHome, '.claude');
+    candidates.add(path.posix.normalize(withClaude));
+  };
+
+  // WSL-native home (e.g. /home/<user>) should be preferred when present.
+  addCandidate(getHomeDir());
+
+  addCandidate(toWslPathFromWindowsPath(process.env.USERPROFILE ?? ''));
+
+  const homeDrivePath =
+    process.env.HOMEDRIVE && process.env.HOMEPATH
+      ? `${process.env.HOMEDRIVE}${process.env.HOMEPATH}`
+      : '';
+  addCandidate(toWslPathFromWindowsPath(homeDrivePath));
+
+  if (process.env.USER) {
+    addCandidate(`/mnt/c/Users/${process.env.USER}`);
+  }
+
+  return Array.from(candidates);
+}
+
+function getDefaultClaudeBasePath(): string {
+  if (isWslEnvironment()) {
+    const candidates = getWslClaudeBaseCandidates();
+    const existing = candidates.find((candidate) => fs.existsSync(candidate));
+    if (existing) {
+      return existing;
+    }
+  }
+
+  return path.join(getHomeDir(), '.claude');
+}
+
+/**
+ * Get the auto-detected Claude config base path (~/.claude) without considering overrides.
+ */
+export function getAutoDetectedClaudeBasePath(): string {
+  return getDefaultClaudeBasePath();
+}
+
+function normalizeOverridePath(claudeBasePath: string): string | null {
+  const trimmed = claudeBasePath.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalized = path.normalize(trimmed);
+  if (!path.isAbsolute(normalized)) {
+    return null;
+  }
+
+  const resolved = path.resolve(normalized);
+  const root = path.parse(resolved).root;
+  if (resolved === root) {
+    return resolved;
+  }
+  let end = resolved.length;
+  while (end > root.length) {
+    const char = resolved[end - 1];
+    if (char !== '/' && char !== '\\') {
+      break;
+    }
+    end--;
+  }
+
+  return resolved.slice(0, end);
+}
+
+/**
+ * Override the Claude config base path (~/.claude).
+ * Pass null to return to auto-detection.
+ */
+export function setClaudeBasePathOverride(claudeBasePath: string | null | undefined): void {
+  if (claudeBasePath == null) {
+    claudeBasePathOverride = null;
+    return;
+  }
+
+  claudeBasePathOverride = normalizeOverridePath(claudeBasePath);
 }
 
 /**
  * Get the Claude config base path (~/.claude).
  */
-function getClaudeBasePath(): string {
-  return path.join(getHomeDir(), '.claude');
+export function getClaudeBasePath(): string {
+  return claudeBasePathOverride ?? getDefaultClaudeBasePath();
 }
 
 /**

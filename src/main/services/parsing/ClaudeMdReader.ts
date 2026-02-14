@@ -8,7 +8,7 @@
  * - Support tilde (~) expansion to home directory
  */
 
-import { encodePath } from '@main/utils/pathDecoder';
+import { encodePath, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { countTokens } from '@main/utils/tokenizer';
 import { createLogger } from '@shared/utils/logger';
 import { app } from 'electron';
@@ -232,8 +232,7 @@ async function readAutoMemoryFile(
 ): Promise<ClaudeMdFileInfo> {
   const expandedRoot = expandTilde(projectRoot);
   const encoded = encodePath(expandedRoot);
-  const homeDir = app.getPath('home');
-  const memoryPath = path.join(homeDir, '.claude', 'projects', encoded, 'memory', 'MEMORY.md');
+  const memoryPath = path.join(getClaudeBasePath(), 'projects', encoded, 'memory', 'MEMORY.md');
 
   try {
     if (!(await fsProvider.exists(memoryPath))) {
@@ -271,8 +270,8 @@ export async function readAllClaudeMdFiles(
   const enterprisePath = getEnterprisePath();
   files.set('enterprise', await readClaudeMdFile(enterprisePath, fsProvider));
 
-  // 2. User memory: ~/.claude/CLAUDE.md
-  const userMemoryPath = '~/.claude/CLAUDE.md';
+  // 2. User memory: <Claude root>/CLAUDE.md
+  const userMemoryPath = path.join(getClaudeBasePath(), 'CLAUDE.md');
   files.set('user', await readClaudeMdFile(userMemoryPath, fsProvider));
 
   // 3. Project memory: ${projectRoot}/CLAUDE.md
@@ -291,9 +290,8 @@ export async function readAllClaudeMdFiles(
   const projectLocalPath = path.join(expandedProjectRoot, 'CLAUDE.local.md');
   files.set('project-local', await readClaudeMdFile(projectLocalPath, fsProvider));
 
-  // 7. User rules: ~/.claude/rules/**/*.md
-  const homeDir = app.getPath('home');
-  const userRulesPath = path.join(homeDir, '.claude', 'rules');
+  // 7. User rules: <Claude root>/rules/**/*.md
+  const userRulesPath = path.join(getClaudeBasePath(), 'rules');
   files.set('user-rules', await readDirectoryMdFiles(userRulesPath, fsProvider));
 
   // 8. Auto memory: ~/.claude/projects/<encoded>/memory/MEMORY.md

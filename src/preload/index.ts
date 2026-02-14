@@ -33,12 +33,14 @@ import {
   CONFIG_ADD_TRIGGER,
   CONFIG_CLEAR_SNOOZE,
   CONFIG_GET,
+  CONFIG_GET_CLAUDE_ROOT_INFO,
   CONFIG_GET_TRIGGERS,
   CONFIG_OPEN_IN_EDITOR,
   CONFIG_PIN_SESSION,
   CONFIG_REMOVE_IGNORE_REGEX,
   CONFIG_REMOVE_IGNORE_REPOSITORY,
   CONFIG_REMOVE_TRIGGER,
+  CONFIG_SELECT_CLAUDE_ROOT_FOLDER,
   CONFIG_SELECT_FOLDERS,
   CONFIG_SNOOZE,
   CONFIG_TEST_TRIGGER,
@@ -49,6 +51,8 @@ import {
 
 import type {
   AppConfig,
+  ClaudeRootFolderSelection,
+  ClaudeRootInfo,
   ContextInfo,
   ElectronAPI,
   HttpServerStatus,
@@ -265,6 +269,14 @@ const electronAPI: ElectronAPI = {
     },
     selectFolders: async (): Promise<string[]> => {
       return invokeIpcWithResult<string[]>(CONFIG_SELECT_FOLDERS);
+    },
+    selectClaudeRootFolder: async (): Promise<ClaudeRootFolderSelection | null> => {
+      return invokeIpcWithResult<ClaudeRootFolderSelection | null>(
+        CONFIG_SELECT_CLAUDE_ROOT_FOLDER
+      );
+    },
+    getClaudeRootInfo: async (): Promise<ClaudeRootInfo> => {
+      return invokeIpcWithResult<ClaudeRootInfo>(CONFIG_GET_CLAUDE_ROOT_INFO);
     },
     openInEditor: async (): Promise<void> => {
       return invokeIpcWithResult<void>(CONFIG_OPEN_IN_EDITOR);

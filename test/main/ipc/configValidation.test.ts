@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as path from 'path';
 
 import { validateConfigUpdatePayload } from '../../../src/main/ipc/configValidation';
 
@@ -16,6 +17,31 @@ describe('configValidation', () => {
         theme: 'system',
         launchAtLogin: true,
       });
+    }
+  });
+
+  it('accepts absolute general.claudeRootPath updates', () => {
+    const result = validateConfigUpdatePayload('general', {
+      claudeRootPath: '/Users/test/.claude',
+    });
+
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.section).toBe('general');
+      expect(result.data).toEqual({
+        claudeRootPath: path.resolve('/Users/test/.claude'),
+      });
+    }
+  });
+
+  it('rejects relative general.claudeRootPath updates', () => {
+    const result = validateConfigUpdatePayload('general', {
+      claudeRootPath: '.claude',
+    });
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toContain('absolute path');
     }
   });
 

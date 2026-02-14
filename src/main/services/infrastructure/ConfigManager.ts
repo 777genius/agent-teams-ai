@@ -9,6 +9,7 @@
  * - Handle JSON parse errors gracefully
  */
 
+import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { validateRegexPattern } from '@main/utils/regexValidation';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -179,6 +180,7 @@ export interface GeneralConfig {
   showDockIcon: boolean;
   theme: 'dark' | 'light' | 'system';
   defaultTab: 'dashboard' | 'last-session';
+  claudeRootPath: string | null;
 }
 
 export interface DisplayConfig {
@@ -244,6 +246,7 @@ const DEFAULT_CONFIG: AppConfig = {
     showDockIcon: true,
     theme: 'dark',
     defaultTab: 'dashboard',
+    claudeRootPath: null,
   },
   display: {
     showTimestamps: true,
@@ -265,6 +268,38 @@ const DEFAULT_CONFIG: AppConfig = {
   },
 };
 
+function normalizeConfiguredClaudeRootPath(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalized = path.normalize(trimmed);
+  if (!path.isAbsolute(normalized)) {
+    return null;
+  }
+
+  const resolved = path.resolve(normalized);
+  const root = path.parse(resolved).root;
+  if (resolved === root) {
+    return resolved;
+  }
+  let end = resolved.length;
+  while (end > root.length) {
+    const char = resolved[end - 1];
+    if (char !== '/' && char !== '\\') {
+      break;
+    }
+    end--;
+  }
+
+  return resolved.slice(0, end);
+}
+
 // ===========================================================================
 // ConfigManager Class
 // ===========================================================================
@@ -278,6 +313,7 @@ export class ConfigManager {
   constructor(configPath?: string) {
     this.configPath = configPath ?? DEFAULT_CONFIG_PATH;
     this.config = this.loadConfig();
+    setClaudeBasePathOverride(this.config.general.claudeRootPath);
     this.triggerManager = new TriggerManager(this.config.notifications.triggers, () =>
       this.saveConfig()
     );
@@ -361,6 +397,11 @@ export class ConfigManager {
   private mergeWithDefaults(loaded: Partial<AppConfig>): AppConfig {
     const loadedNotifications = loaded.notifications ?? ({} as Partial<NotificationConfig>);
     const loadedTriggers = loadedNotifications.triggers ?? [];
+    const mergedGeneral: GeneralConfig = {
+      ...DEFAULT_CONFIG.general,
+      ...(loaded.general ?? {}),
+    };
+    mergedGeneral.claudeRootPath = normalizeConfiguredClaudeRootPath(mergedGeneral.claudeRootPath);
 
     // Merge triggers: preserve existing triggers, add missing builtin ones
     const mergedTriggers = TriggerManager.mergeTriggers(loadedTriggers, DEFAULT_TRIGGERS);
@@ -371,10 +412,7 @@ export class ConfigManager {
         ...loadedNotifications,
         triggers: mergedTriggers,
       },
-      general: {
-        ...DEFAULT_CONFIG.general,
-        ...(loaded.general ?? {}),
-      },
+      general: mergedGeneral,
       display: {
         ...DEFAULT_CONFIG.display,
         ...(loaded.display ?? {}),
@@ -429,12 +467,37 @@ export class ConfigManager {
    * @param data - Partial data to merge into the section
    */
   updateConfig<K extends ConfigSection>(section: K, data: Partial<AppConfig[K]>): AppConfig {
+    const normalizedData = this.normalizeSectionUpdate(section, data);
     this.config[section] = {
       ...this.config[section],
-      ...data,
+      ...normalizedData,
     };
+
+    if (section === 'general') {
+      setClaudeBasePathOverride(this.config.general.claudeRootPath);
+    }
+
     this.saveConfig();
     return this.getConfig();
+  }
+
+  private normalizeSectionUpdate<K extends ConfigSection>(
+    section: K,
+    data: Partial<AppConfig[K]>
+  ): Partial<AppConfig[K]> {
+    if (section !== 'general') {
+      return data;
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(data, 'claudeRootPath')) {
+      return data;
+    }
+
+    const generalUpdate = data as Partial<GeneralConfig>;
+    return {
+      ...generalUpdate,
+      claudeRootPath: normalizeConfiguredClaudeRootPath(generalUpdate.claudeRootPath),
+    } as unknown as Partial<AppConfig[K]>;
   }
 
   // ===========================================================================
@@ -764,6 +827,7 @@ export class ConfigManager {
    */
   resetToDefaults(): AppConfig {
     this.config = this.deepClone(DEFAULT_CONFIG);
+    setClaudeBasePathOverride(this.config.general.claudeRootPath);
     this.triggerManager.setTriggers(this.config.notifications.triggers);
     this.saveConfig();
     logger.info('Config reset to defaults');
@@ -777,6 +841,7 @@ export class ConfigManager {
    */
   reload(): AppConfig {
     this.config = this.loadConfig();
+    setClaudeBasePathOverride(this.config.general.claudeRootPath);
     this.triggerManager.setTriggers(this.config.notifications.triggers);
     logger.info('Config reloaded from disk');
     return this.getConfig();

@@ -17,10 +17,16 @@
  * - config:testTrigger: Test a trigger against historical session data
  */
 
+import {
+  getAutoDetectedClaudeBasePath,
+  getClaudeBasePath,
+} from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { execFile } from 'child_process';
 import { BrowserWindow, dialog, type IpcMain, type IpcMainInvokeEvent } from 'electron';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import {
   type AppConfig,
@@ -36,11 +42,15 @@ import { validateConfigUpdatePayload } from './configValidation';
 import { validateTriggerId } from './guards';
 
 import type { TriggerColor } from '@shared/constants/triggerColors';
+import type { ClaudeRootFolderSelection, ClaudeRootInfo } from '@shared/types';
 
 const logger = createLogger('IPC:config');
 
 // Get singleton instance
 const configManager = ConfigManager.getInstance();
+let onClaudeRootPathUpdated:
+  | ((claudeRootPath: string | null) => Promise<void> | void)
+  | null = null;
 
 /**
  * Response type for config operations
@@ -49,6 +59,17 @@ interface ConfigResult<T = void> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+/**
+ * Initializes config handlers with callbacks that require app-level services.
+ */
+export function initializeConfigHandlers(
+  options: {
+    onClaudeRootPathUpdated?: (claudeRootPath: string | null) => Promise<void> | void;
+  } = {}
+): void {
+  onClaudeRootPathUpdated = options.onClaudeRootPathUpdated ?? null;
 }
 
 /**
@@ -86,6 +107,8 @@ export function registerConfigHandlers(ipcMain: IpcMain): void {
 
   // Dialog handlers
   ipcMain.handle('config:selectFolders', handleSelectFolders);
+  ipcMain.handle('config:selectClaudeRootFolder', handleSelectClaudeRootFolder);
+  ipcMain.handle('config:getClaudeRootInfo', handleGetClaudeRootInfo);
 
   // Editor handlers
   ipcMain.handle('config:openInEditor', handleOpenInEditor);
@@ -127,7 +150,22 @@ async function handleUpdateConfig(
       return { success: false, error: validation.error };
     }
 
+    const isClaudeRootUpdate =
+      validation.section === 'general' &&
+      Object.prototype.hasOwnProperty.call(validation.data, 'claudeRootPath');
+
     configManager.updateConfig(validation.section, validation.data);
+
+    if (isClaudeRootUpdate && onClaudeRootPathUpdated) {
+      const nextClaudeRootPath = (validation.data as { claudeRootPath?: string | null })
+        .claudeRootPath;
+      try {
+        await onClaudeRootPathUpdated(nextClaudeRootPath ?? null);
+      } catch (callbackError) {
+        logger.error('Failed to apply updated Claude root path at runtime:', callbackError);
+      }
+    }
+
     const updatedConfig = configManager.getConfig();
     return { success: true, data: updatedConfig };
   } catch (error) {
@@ -598,6 +636,94 @@ async function handleSelectFolders(_event: IpcMainInvokeEvent): Promise<ConfigRe
   }
 }
 
+/**
+ * Handler for 'config:selectClaudeRootFolder' - Opens native folder picker for Claude root.
+ */
+async function handleSelectClaudeRootFolder(
+  _event: IpcMainInvokeEvent
+): Promise<ConfigResult<ClaudeRootFolderSelection | null>> {
+  try {
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    const currentRootPath = getClaudeBasePath();
+    const dialogOptions: Electron.OpenDialogOptions = {
+      properties: ['openDirectory'],
+      title: 'Select Claude Root Folder',
+      buttonLabel: 'Select Folder',
+      defaultPath: currentRootPath,
+    };
+
+    const result = focusedWindow
+      ? await dialog.showOpenDialog(focusedWindow, dialogOptions)
+      : await dialog.showOpenDialog(dialogOptions);
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: true, data: null };
+    }
+
+    const selectedPath = path.resolve(path.normalize(result.filePaths[0]));
+    const folderName = path.basename(selectedPath);
+    const projectsDir = path.join(selectedPath, 'projects');
+    const hasProjectsDir = (() => {
+      try {
+        return fs.existsSync(projectsDir) && fs.statSync(projectsDir).isDirectory();
+      } catch {
+        return false;
+      }
+    })();
+
+    return {
+      success: true,
+      data: {
+        path: selectedPath,
+        isClaudeDirName: folderName === '.claude',
+        hasProjectsDir,
+      },
+    };
+  } catch (error) {
+    logger.error('Error in config:selectClaudeRootFolder:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to open Claude root folder dialog',
+    };
+  }
+}
+
+/**
+ * Handler for 'config:getClaudeRootInfo' - Returns default/custom/effective local Claude root paths.
+ */
+async function handleGetClaudeRootInfo(
+  _event: IpcMainInvokeEvent
+): Promise<ConfigResult<ClaudeRootInfo>> {
+  try {
+    const customPath = configManager.getConfig().general.claudeRootPath;
+    const defaultPath = getAutoDetectedClaudeBasePath();
+    const resolvedPath = getClaudeBasePath();
+
+    return {
+      success: true,
+      data: {
+        defaultPath,
+        resolvedPath,
+        customPath,
+      },
+    };
+  } catch (error) {
+    logger.error('Error in config:getClaudeRootInfo:', error);
+
+    // Last-resort fallback to a best-effort auto-detected value.
+    const fallbackDefault = getAutoDetectedClaudeBasePath();
+
+    return {
+      success: true,
+      data: {
+        defaultPath: fallbackDefault,
+        resolvedPath: fallbackDefault,
+        customPath: null,
+      },
+    };
+  }
+}
+
 // =============================================================================
 // Cleanup
 // =============================================================================
@@ -623,6 +749,8 @@ export function removeConfigHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler('config:pinSession');
   ipcMain.removeHandler('config:unpinSession');
   ipcMain.removeHandler('config:selectFolders');
+  ipcMain.removeHandler('config:selectClaudeRootFolder');
+  ipcMain.removeHandler('config:getClaudeRootInfo');
   ipcMain.removeHandler('config:openInEditor');
   logger.info('Config handlers removed');
 }

@@ -5,7 +5,9 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { setClaudeBasePathOverride } from '../../../src/main/utils/pathDecoder';
 
 import {
   isPathWithinAllowedDirectories,
@@ -17,6 +19,14 @@ describe('pathValidation', () => {
   const homeDir = os.homedir();
   const claudeDir = path.join(homeDir, '.claude');
   const testProjectPath = path.resolve('/home/user/my-project');
+
+  beforeEach(() => {
+    setClaudeBasePathOverride(claudeDir);
+  });
+
+  afterEach(() => {
+    setClaudeBasePathOverride(null);
+  });
 
   describe('isPathWithinAllowedDirectories', () => {
     it('should allow paths within ~/.claude', () => {

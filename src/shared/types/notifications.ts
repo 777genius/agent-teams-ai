@@ -260,6 +260,8 @@ export interface AppConfig {
     theme: 'dark' | 'light' | 'system';
     /** Default tab to show on app launch */
     defaultTab: 'dashboard' | 'last-session';
+    /** Optional custom Claude root folder (auto-detected when null) */
+    claudeRootPath: string | null;
   };
   /** Display and UI settings */
   display: {

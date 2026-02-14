@@ -50,6 +50,12 @@ export const CONFIG_TEST_TRIGGER = 'config:testTrigger';
 /** Select folders dialog */
 export const CONFIG_SELECT_FOLDERS = 'config:selectFolders';
 
+/** Select local Claude root folder */
+export const CONFIG_SELECT_CLAUDE_ROOT_FOLDER = 'config:selectClaudeRootFolder';
+
+/** Get effective/default Claude root folder info */
+export const CONFIG_GET_CLAUDE_ROOT_INFO = 'config:getClaudeRootInfo';
+
 /** Open config file in external editor */
 export const CONFIG_OPEN_IN_EDITOR = 'config:openInEditor';
 

@@ -87,12 +87,34 @@ export interface ConfigAPI {
   testTrigger: (trigger: NotificationTrigger) => Promise<TriggerTestResult>;
   /** Opens native folder selection dialog and returns selected paths */
   selectFolders: () => Promise<string[]>;
+  /** Open native dialog to select local Claude root folder */
+  selectClaudeRootFolder: () => Promise<ClaudeRootFolderSelection | null>;
+  /** Get resolved Claude root path info for local mode */
+  getClaudeRootInfo: () => Promise<ClaudeRootInfo>;
   /** Opens the config JSON file in an external editor */
   openInEditor: () => Promise<void>;
   /** Pin a session for a project */
   pinSession: (projectId: string, sessionId: string) => Promise<void>;
   /** Unpin a session for a project */
   unpinSession: (projectId: string, sessionId: string) => Promise<void>;
+}
+
+export interface ClaudeRootInfo {
+  /** Auto-detected default Claude root path for this machine */
+  defaultPath: string;
+  /** Effective path currently used by local context */
+  resolvedPath: string;
+  /** Custom override path from settings (null means auto-detect) */
+  customPath: string | null;
+}
+
+export interface ClaudeRootFolderSelection {
+  /** Selected directory absolute path */
+  path: string;
+  /** Whether the selected folder name is exactly ".claude" */
+  isClaudeDirName: boolean;
+  /** Whether selected folder contains a "projects" directory */
+  hasProjectsDir: boolean;
 }
 
 // =============================================================================

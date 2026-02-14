@@ -9,6 +9,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+import { getClaudeBasePath } from './pathDecoder';
+
 /**
  * Sensitive file patterns that should never be accessible.
  * These are checked against the normalized absolute path.
@@ -104,8 +106,7 @@ export function isPathWithinAllowedDirectories(
 ): boolean {
   const isWindows = process.platform === 'win32';
   const normalizedTarget = normalizeForCompare(normalizedPath, isWindows);
-  const homeDir = os.homedir();
-  const claudeDir = path.join(homeDir, '.claude');
+  const claudeDir = getClaudeBasePath();
   const normalizedClaudeDir = normalizeForCompare(claudeDir, isWindows);
 
   // Always allow access to ~/.claude for session data
@@ -169,7 +170,7 @@ export function validateFilePath(
   if (!isPathWithinAllowedDirectories(normalizedPath, projectPath)) {
     return {
       valid: false,
-      error: 'Path is outside allowed directories (project or ~/.claude)',
+      error: 'Path is outside allowed directories (project or Claude root)',
     };
   }
 
@@ -189,7 +190,7 @@ export function validateFilePath(
     if (!isPathWithinAllowedDirectories(normalizedRealTarget, realProjectPath)) {
       return {
         valid: false,
-        error: 'Path is outside allowed directories (project or ~/.claude)',
+        error: 'Path is outside allowed directories (project or Claude root)',
       };
     }
   }

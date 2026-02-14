@@ -16,7 +16,7 @@
 import { createLogger } from '@shared/utils/logger';
 import { ipcMain } from 'electron';
 
-import { registerConfigHandlers, removeConfigHandlers } from './config';
+import { initializeConfigHandlers, registerConfigHandlers, removeConfigHandlers } from './config';
 import {
   initializeContextHandlers,
   registerContextHandlers,
@@ -68,6 +68,7 @@ export function initializeIpcHandlers(
   contextCallbacks: {
     rewire: (context: ServiceContext) => void;
     full: (context: ServiceContext) => void;
+    onClaudeRootPathUpdated: (claudeRootPath: string | null) => Promise<void> | void;
   }
 ): void {
   // Initialize domain handlers with registry
@@ -78,6 +79,9 @@ export function initializeIpcHandlers(
   initializeUpdaterHandlers(updater);
   initializeSshHandlers(sshManager, registry, contextCallbacks.rewire);
   initializeContextHandlers(registry, contextCallbacks.rewire);
+  initializeConfigHandlers({
+    onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,
+  });
 
   // Register all handlers
   registerProjectHandlers(ipcMain);

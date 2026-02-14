@@ -9,6 +9,8 @@
 import type {
   AppConfig,
   ClaudeMdFileInfo,
+  ClaudeRootFolderSelection,
+  ClaudeRootInfo,
   ConfigAPI,
   ContextInfo,
   ConversationGroup,
@@ -408,6 +410,19 @@ export class HttpAPIClient implements ElectronAPI {
     selectFolders: async (): Promise<string[]> => {
       console.warn('[HttpAPIClient] selectFolders is not available in browser mode');
       return [];
+    },
+    selectClaudeRootFolder: async (): Promise<ClaudeRootFolderSelection | null> => {
+      console.warn('[HttpAPIClient] selectClaudeRootFolder is not available in browser mode');
+      return null;
+    },
+    getClaudeRootInfo: async (): Promise<ClaudeRootInfo> => {
+      const config = await this.config.get();
+      const fallbackPath = config.general.claudeRootPath ?? '~/.claude';
+      return {
+        defaultPath: fallbackPath,
+        resolvedPath: fallbackPath,
+        customPath: config.general.claudeRootPath,
+      };
     },
     openInEditor: async (): Promise<void> => {
       console.warn('[HttpAPIClient] openInEditor is not available in browser mode');

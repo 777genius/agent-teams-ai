@@ -3,6 +3,8 @@
  * Prevents invalid/unknown data from mutating persisted config.
  */
 
+import * as path from 'path';
+
 import type {
   AppConfig,
   DisplayConfig,
@@ -200,6 +202,7 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
     'showDockIcon',
     'theme',
     'defaultTab',
+    'claudeRootPath',
   ];
 
   const result: Partial<GeneralConfig> = {};
@@ -236,6 +239,33 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
           };
         }
         result.defaultTab = value;
+        break;
+      case 'claudeRootPath':
+        if (value === null) {
+          result.claudeRootPath = null;
+          break;
+        }
+        if (typeof value !== 'string') {
+          return {
+            valid: false,
+            error: 'general.claudeRootPath must be an absolute path string or null',
+          };
+        }
+        {
+          const trimmed = value.trim();
+          if (!trimmed) {
+            result.claudeRootPath = null;
+            break;
+          }
+          const normalized = path.normalize(trimmed);
+          if (!path.isAbsolute(normalized)) {
+            return {
+              valid: false,
+              error: 'general.claudeRootPath must be an absolute path',
+            };
+          }
+          result.claudeRootPath = path.resolve(normalized);
+        }
         break;
       default:
         return { valid: false, error: `Unsupported general key: ${key}` };

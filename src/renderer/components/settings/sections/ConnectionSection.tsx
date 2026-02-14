@@ -11,14 +11,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
+import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { useStore } from '@renderer/store';
-import { Loader2, Monitor, Server, Wifi, WifiOff } from 'lucide-react';
+import { getFullResetState } from '@renderer/store/utils/stateResetHelpers';
+import { FolderOpen, Loader2, Monitor, RotateCcw, Server, Wifi, WifiOff } from 'lucide-react';
 
 import { SettingRow } from '../components/SettingRow';
 import { SettingsSectionHeader } from '../components/SettingsSectionHeader';
 import { SettingsSelect } from '../components/SettingsSelect';
 
 import type {
+  ClaudeRootInfo,
   SshAuthMethod,
   SshConfigHostEntry,
   SshConnectionConfig,
@@ -33,6 +36,7 @@ const authMethodOptions: readonly { value: SshAuthMethod; label: string }[] = [
 ];
 
 export const ConnectionSection = (): React.JSX.Element => {
+  const connectionMode = useStore((s) => s.connectionMode);
   const connectionState = useStore((s) => s.connectionState);
   const connectedHost = useStore((s) => s.connectedHost);
   const connectionError = useStore((s) => s.connectionError);
@@ -43,6 +47,8 @@ export const ConnectionSection = (): React.JSX.Element => {
   const fetchSshConfigHosts = useStore((s) => s.fetchSshConfigHosts);
   const lastSshConfig = useStore((s) => s.lastSshConfig);
   const loadLastConnection = useStore((s) => s.loadLastConnection);
+  const fetchProjects = useStore((s) => s.fetchProjects);
+  const fetchRepositoryGroups = useStore((s) => s.fetchRepositoryGroups);
 
   // Form state
   const [host, setHost] = useState('');
@@ -62,6 +68,9 @@ export const ConnectionSection = (): React.JSX.Element => {
   // Saved profiles
   const [savedProfiles, setSavedProfiles] = useState<SshConnectionProfile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [claudeRootInfo, setClaudeRootInfo] = useState<ClaudeRootInfo | null>(null);
+  const [updatingClaudeRoot, setUpdatingClaudeRoot] = useState(false);
+  const [claudeRootError, setClaudeRootError] = useState<string | null>(null);
 
   const loadProfiles = useCallback(async () => {
     try {
@@ -73,12 +82,24 @@ export const ConnectionSection = (): React.JSX.Element => {
     }
   }, []);
 
+  const loadClaudeRootInfo = useCallback(async () => {
+    try {
+      const info = await api.config.getClaudeRootInfo();
+      setClaudeRootInfo(info);
+    } catch (error) {
+      setClaudeRootError(
+        error instanceof Error ? error.message : 'Failed to load local Claude root settings'
+      );
+    }
+  }, []);
+
   // Fetch SSH config hosts, saved profiles, and load last connection on mount
   useEffect(() => {
     void fetchSshConfigHosts();
     void loadLastConnection();
     void loadProfiles();
-  }, [fetchSshConfigHosts, loadLastConnection, loadProfiles]);
+    void loadClaudeRootInfo();
+  }, [fetchSshConfigHosts, loadLastConnection, loadProfiles, loadClaudeRootInfo]);
 
   // Pre-fill form from saved connection config when it arrives (one-time on mount).
   // setState in effect is intentional: lastSshConfig loads async from IPC, so we can't
@@ -172,8 +193,99 @@ export const ConnectionSection = (): React.JSX.Element => {
     await disconnectSsh();
   };
 
+  const resetWorkspaceForRootChange = useCallback((): void => {
+    useStore.setState({
+      projects: [],
+      repositoryGroups: [],
+      openTabs: [],
+      activeTabId: null,
+      selectedTabIds: [],
+      paneLayout: {
+        panes: [
+          {
+            id: 'pane-default',
+            tabs: [],
+            activeTabId: null,
+            selectedTabIds: [],
+            widthFraction: 1,
+          },
+        ],
+        focusedPaneId: 'pane-default',
+      },
+      ...getFullResetState(),
+    });
+  }, []);
+
+  const applyClaudeRootPath = useCallback(
+    async (claudeRootPath: string | null): Promise<void> => {
+      try {
+        setUpdatingClaudeRoot(true);
+        setClaudeRootError(null);
+
+        await api.config.update('general', { claudeRootPath });
+        await loadClaudeRootInfo();
+
+        if (connectionMode === 'local') {
+          resetWorkspaceForRootChange();
+          await Promise.all([fetchProjects(), fetchRepositoryGroups()]);
+        }
+      } catch (error) {
+        setClaudeRootError(error instanceof Error ? error.message : 'Failed to update Claude root');
+      } finally {
+        setUpdatingClaudeRoot(false);
+      }
+    },
+    [
+      connectionMode,
+      fetchProjects,
+      fetchRepositoryGroups,
+      loadClaudeRootInfo,
+      resetWorkspaceForRootChange,
+    ]
+  );
+
+  const handleSelectClaudeRootFolder = useCallback(async (): Promise<void> => {
+    setClaudeRootError(null);
+
+    const selection = await api.config.selectClaudeRootFolder();
+    if (!selection) {
+      return;
+    }
+
+    if (!selection.isClaudeDirName) {
+      const proceed = await confirm({
+        title: 'Selected folder is not .claude',
+        message: `This folder is named "${selection.path.split(/[\\/]/).pop() ?? selection.path}", not ".claude". Continue anyway?`,
+        confirmLabel: 'Use Folder',
+      });
+      if (!proceed) {
+        return;
+      }
+    }
+
+    if (!selection.hasProjectsDir) {
+      const proceed = await confirm({
+        title: 'No projects directory found',
+        message: 'This folder does not contain a "projects" directory. Continue anyway?',
+        confirmLabel: 'Use Folder',
+      });
+      if (!proceed) {
+        return;
+      }
+    }
+
+    await applyClaudeRootPath(selection.path);
+  }, [applyClaudeRootPath]);
+
+  const handleResetClaudeRoot = useCallback(async (): Promise<void> => {
+    await applyClaudeRootPath(null);
+  }, [applyClaudeRootPath]);
+
   const isConnecting = connectionState === 'connecting';
   const isConnected = connectionState === 'connected';
+  const isCustomClaudeRoot = Boolean(claudeRootInfo?.customPath);
+  const resolvedClaudeRootPath = claudeRootInfo?.resolvedPath ?? '~/.claude';
+  const defaultClaudeRootPath = claudeRootInfo?.defaultPath ?? '~/.claude';
 
   const inputClass = 'w-full rounded-md border px-3 py-1.5 text-sm focus:outline-none focus:ring-1';
   const inputStyle = {
@@ -184,6 +296,67 @@ export const ConnectionSection = (): React.JSX.Element => {
 
   return (
     <div className="space-y-6">
+      <SettingsSectionHeader title="Local Claude Root" />
+      <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+        Choose which local folder is treated as your Claude data root
+      </p>
+
+      <SettingRow
+        label="Current Local Root"
+        description={isCustomClaudeRoot ? 'Using custom path' : 'Using auto-detected path'}
+      >
+        <div className="max-w-96 text-right">
+          <div className="truncate font-mono text-xs" style={{ color: 'var(--color-text)' }}>
+            {resolvedClaudeRootPath}
+          </div>
+          <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+            Auto-detected: {defaultClaudeRootPath}
+          </div>
+        </div>
+      </SettingRow>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => void handleSelectClaudeRootFolder()}
+          disabled={updatingClaudeRoot}
+          className="rounded-md px-4 py-1.5 text-sm transition-colors disabled:opacity-50"
+          style={{
+            backgroundColor: 'var(--color-surface-raised)',
+            color: 'var(--color-text)',
+          }}
+        >
+          <span className="flex items-center gap-2">
+            {updatingClaudeRoot ? (
+              <Loader2 className="size-3 animate-spin" />
+            ) : (
+              <FolderOpen className="size-3" />
+            )}
+            Select Folder
+          </span>
+        </button>
+
+        <button
+          onClick={() => void handleResetClaudeRoot()}
+          disabled={updatingClaudeRoot || !isCustomClaudeRoot}
+          className="rounded-md px-4 py-1.5 text-sm transition-colors disabled:opacity-50"
+          style={{
+            backgroundColor: 'var(--color-surface-raised)',
+            color: 'var(--color-text-secondary)',
+          }}
+        >
+          <span className="flex items-center gap-2">
+            <RotateCcw className="size-3" />
+            Use Auto-Detect
+          </span>
+        </button>
+      </div>
+
+      {claudeRootError && (
+        <div className="rounded-md border border-red-500/20 bg-red-500/10 px-4 py-3">
+          <p className="text-sm text-red-400">{claudeRootError}</p>
+        </div>
+      )}
+
       <SettingsSectionHeader title="Remote Connection" />
       <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
         Connect to a remote machine to view Claude Code sessions running there
@@ -234,7 +407,7 @@ export const ConnectionSection = (): React.JSX.Element => {
             style={{ color: 'var(--color-text-secondary)' }}
           >
             <Monitor className="size-4" />
-            <span>Local (~/.claude/)</span>
+            <span>Local ({resolvedClaudeRootPath})</span>
           </div>
         </SettingRow>
       )}

@@ -55,6 +55,33 @@ export class ServiceContextRegistry {
   }
 
   /**
+   * Replaces an existing context instance in-place (same context ID).
+   * Used for local-context reconfiguration without changing activeContextId semantics.
+   *
+   * @throws Error if context does not exist or replacement ID mismatches
+   */
+  replaceContext(contextId: string, replacement: ServiceContext): void {
+    const existing = this.contexts.get(contextId);
+    if (!existing) {
+      throw new Error(`Context not found: ${contextId}`);
+    }
+
+    if (replacement.id !== contextId) {
+      throw new Error(
+        `Replacement context ID mismatch: expected "${contextId}", got "${replacement.id}"`
+      );
+    }
+
+    if (existing === replacement) {
+      return;
+    }
+
+    this.contexts.set(contextId, replacement);
+    existing.dispose();
+    logger.info(`Context replaced: ${contextId} (${replacement.type})`);
+  }
+
+  /**
    * Gets the active ServiceContext.
    * @throws Error if active context not found (should never happen)
    */

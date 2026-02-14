@@ -29,6 +29,7 @@ export interface SafeConfig {
     showDockIcon: boolean;
     theme: 'dark' | 'light' | 'system';
     defaultTab: 'dashboard' | 'last-session';
+    claudeRootPath: string | null;
   };
   notifications: {
     enabled: boolean;
@@ -152,6 +153,7 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
         showDockIcon: displayConfig?.general?.showDockIcon ?? true,
         theme: displayConfig?.general?.theme ?? 'dark',
         defaultTab: displayConfig?.general?.defaultTab ?? 'dashboard',
+        claudeRootPath: displayConfig?.general?.claudeRootPath ?? null,
       },
       notifications: {
         enabled: displayConfig?.notifications?.enabled ?? true,

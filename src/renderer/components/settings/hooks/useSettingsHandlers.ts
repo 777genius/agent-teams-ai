@@ -286,6 +286,7 @@ export function useSettingsHandlers({
           showDockIcon: true,
           theme: 'dark',
           defaultTab: 'dashboard',
+          claudeRootPath: null,
         },
         display: {
           showTimestamps: true,
