@@ -6,7 +6,7 @@ import { api } from '@renderer/api';
 import { createLogger } from '@shared/utils/logger';
 
 import type { AppState } from '../types';
-import type { Session } from '@renderer/types/data';
+import type { Session, SessionSortMode } from '@renderer/types/data';
 import type { StateCreator } from 'zustand';
 
 const logger = createLogger('Store:session');
@@ -34,6 +34,8 @@ export interface SessionSlice {
   sessionsLoadingMore: boolean;
   // Pinned sessions
   pinnedSessionIds: string[];
+  // Sort mode
+  sessionSortMode: SessionSortMode;
 
   // Actions
   fetchSessions: (projectId: string) => Promise<void>;
@@ -48,6 +50,8 @@ export interface SessionSlice {
   togglePinSession: (sessionId: string) => Promise<void>;
   /** Load pinned sessions from config for current project */
   loadPinnedSessions: () => Promise<void>;
+  /** Set session sort mode */
+  setSessionSortMode: (mode: SessionSortMode) => void;
 }
 
 // =============================================================================
@@ -67,6 +71,8 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
   sessionsLoadingMore: false,
   // Pinned sessions
   pinnedSessionIds: [],
+  // Sort mode
+  sessionSortMode: 'recent' as SessionSortMode,
 
   // Fetch sessions for a specific project (legacy - not paginated)
   fetchSessions: async (projectId: string) => {
@@ -316,5 +322,10 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
       logger.error('loadPinnedSessions error:', error);
       set({ pinnedSessionIds: [] });
     }
+  },
+
+  // Set session sort mode
+  setSessionSortMode: (mode: SessionSortMode) => {
+    set({ sessionSortMode: mode });
   },
 });

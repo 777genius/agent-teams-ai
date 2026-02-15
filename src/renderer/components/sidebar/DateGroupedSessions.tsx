@@ -12,7 +12,7 @@ import {
   separatePinnedSessions,
 } from '@renderer/utils/dateGrouping';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Calendar, Loader2, MessageSquareOff, Pin } from 'lucide-react';
+import { ArrowDownWideNarrow, Calendar, Loader2, MessageSquareOff, Pin } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { SessionItem } from './SessionItem';
@@ -50,6 +50,8 @@ export const DateGroupedSessions = (): React.JSX.Element => {
     sessionsTotalCount,
     fetchSessionsMore,
     pinnedSessionIds,
+    sessionSortMode,
+    setSessionSortMode,
   } = useStore(
     useShallow((s) => ({
       sessions: s.sessions,
@@ -62,6 +64,8 @@ export const DateGroupedSessions = (): React.JSX.Element => {
       sessionsTotalCount: s.sessionsTotalCount,
       fetchSessionsMore: s.fetchSessionsMore,
       pinnedSessionIds: s.pinnedSessionIds,
+      sessionSortMode: s.sessionSortMode,
+      setSessionSortMode: s.setSessionSortMode,
     }))
   );
 
@@ -82,43 +86,59 @@ export const DateGroupedSessions = (): React.JSX.Element => {
     [groupedSessions]
   );
 
+  // Sessions sorted by context consumption (for most-context sort mode)
+  const contextSortedSessions = useMemo(() => {
+    if (sessionSortMode !== 'most-context') return [];
+    return [...sessions].sort((a, b) => (b.contextConsumption ?? 0) - (a.contextConsumption ?? 0));
+  }, [sessions, sessionSortMode]);
+
   // Flatten sessions with date headers into virtual list items
   const virtualItems = useMemo((): VirtualItem[] => {
     const items: VirtualItem[] = [];
 
-    // Add pinned section first
-    if (pinnedSessions.length > 0) {
-      items.push({
-        type: 'pinned-header',
-        id: 'header-pinned',
-      });
-
-      for (const session of pinnedSessions) {
+    if (sessionSortMode === 'most-context') {
+      // Flat list sorted by consumption - no date headers, no pinned section
+      for (const session of contextSortedSessions) {
         items.push({
           type: 'session',
           session,
-          isPinned: true,
+          isPinned: pinnedSessionIds.includes(session.id),
           id: `session-${session.id}`,
         });
       }
-    }
-
-    for (const category of nonEmptyCategories) {
-      // Add header item
-      items.push({
-        type: 'header',
-        category,
-        id: `header-${category}`,
-      });
-
-      // Add session items
-      for (const session of groupedSessions[category]) {
+    } else {
+      // Default: date-grouped view with pinned section
+      if (pinnedSessions.length > 0) {
         items.push({
-          type: 'session',
-          session,
-          isPinned: false,
-          id: `session-${session.id}`,
+          type: 'pinned-header',
+          id: 'header-pinned',
         });
+
+        for (const session of pinnedSessions) {
+          items.push({
+            type: 'session',
+            session,
+            isPinned: true,
+            id: `session-${session.id}`,
+          });
+        }
+      }
+
+      for (const category of nonEmptyCategories) {
+        items.push({
+          type: 'header',
+          category,
+          id: `header-${category}`,
+        });
+
+        for (const session of groupedSessions[category]) {
+          items.push({
+            type: 'session',
+            session,
+            isPinned: false,
+            id: `session-${session.id}`,
+          });
+        }
       }
     }
 
@@ -131,7 +151,15 @@ export const DateGroupedSessions = (): React.JSX.Element => {
     }
 
     return items;
-  }, [pinnedSessions, nonEmptyCategories, groupedSessions, sessionsHasMore]);
+  }, [
+    sessionSortMode,
+    contextSortedSessions,
+    pinnedSessionIds,
+    pinnedSessions,
+    nonEmptyCategories,
+    groupedSessions,
+    sessionsHasMore,
+  ]);
 
   // Estimate item size based on type
   const estimateSize = useCallback(
@@ -273,12 +301,24 @@ export const DateGroupedSessions = (): React.JSX.Element => {
           className="text-xs uppercase tracking-wider"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          Sessions
+          {sessionSortMode === 'most-context' ? 'By Context' : 'Sessions'}
         </h2>
         <span className="text-xs" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
           ({sessions.length}
           {sessionsTotalCount > sessions.length ? ` of ${sessionsTotalCount}` : ''})
         </span>
+        <button
+          onClick={() =>
+            setSessionSortMode(sessionSortMode === 'recent' ? 'most-context' : 'recent')
+          }
+          className="ml-auto rounded p-1 transition-colors hover:bg-white/5"
+          title={sessionSortMode === 'recent' ? 'Sort by context consumption' : 'Sort by recent'}
+          style={{
+            color: sessionSortMode === 'most-context' ? '#818cf8' : 'var(--color-text-muted)',
+          }}
+        >
+          <ArrowDownWideNarrow className="size-3.5" />
+        </button>
       </div>
 
       <div ref={parentRef} className="flex-1 overflow-y-auto">

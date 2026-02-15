@@ -49,6 +49,9 @@ export type SectionType =
   | typeof SECTION_TASK_COORDINATION
   | typeof SECTION_USER_MESSAGES;
 
+/** View mode for the context panel */
+export type ContextViewMode = 'category' | 'ranked';
+
 // =============================================================================
 // CLAUDE.md Group Types
 // =============================================================================

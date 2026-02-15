@@ -4,10 +4,11 @@
  * Supports right-click context menu for pane management.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useStore } from '@renderer/store';
+import { formatTokensCompact } from '@shared/utils/tokenFormatting';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { MessageSquare, Pin } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -16,7 +17,7 @@ import { OngoingIndicator } from '../common/OngoingIndicator';
 
 import { SessionContextMenu } from './SessionContextMenu';
 
-import type { Session } from '@renderer/types/data';
+import type { PhaseTokenBreakdown, Session } from '@renderer/types/data';
 
 interface SessionItemProps {
   session: Session;
@@ -45,6 +46,63 @@ function formatShortTime(date: Date): string {
     .replace(' years', 'y')
     .replace(' year', 'y');
 }
+
+/**
+ * Consumption badge with hover popover showing phase breakdown.
+ */
+const ConsumptionBadge = ({
+  contextConsumption,
+  phaseBreakdown,
+}: Readonly<{
+  contextConsumption: number;
+  phaseBreakdown?: PhaseTokenBreakdown[];
+}>): React.JSX.Element => {
+  const [showPopover, setShowPopover] = useState(false);
+  const badgeRef = useRef<HTMLSpanElement>(null);
+  const isHigh = contextConsumption > 150_000;
+
+  return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- tooltip trigger via hover, not interactive
+    <span
+      ref={badgeRef}
+      className="relative tabular-nums"
+      style={{ color: isHigh ? 'rgb(251, 191, 36)' : undefined }}
+      onMouseEnter={() => setShowPopover(true)}
+      onMouseLeave={() => setShowPopover(false)}
+    >
+      {formatTokensCompact(contextConsumption)}
+      {showPopover && phaseBreakdown && phaseBreakdown.length > 0 && (
+        <div
+          className="absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg px-3 py-2 text-[10px] shadow-xl"
+          style={{
+            backgroundColor: 'var(--color-surface-overlay)',
+            border: '1px solid var(--color-border-emphasis)',
+            color: 'var(--color-text-secondary)',
+          }}
+        >
+          <div className="mb-1 font-medium" style={{ color: 'var(--color-text)' }}>
+            Total Context: {formatTokensCompact(contextConsumption)} tokens
+          </div>
+          {phaseBreakdown.length === 1 ? (
+            <div>Context: {formatTokensCompact(phaseBreakdown[0].peakTokens)}</div>
+          ) : (
+            phaseBreakdown.map((phase) => (
+              <div key={phase.phaseNumber} className="flex items-center gap-1">
+                <span style={{ color: 'var(--color-text-muted)' }}>Phase {phase.phaseNumber}:</span>
+                <span className="tabular-nums">{formatTokensCompact(phase.contribution)}</span>
+                {phase.postCompaction != null && (
+                  <span style={{ color: 'var(--color-text-muted)' }}>
+                    (compacted → {formatTokensCompact(phase.postCompaction)})
+                  </span>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </span>
+  );
+};
 
 export const SessionItem = ({
   session,
@@ -162,7 +220,7 @@ export const SessionItem = ({
           </span>
         </div>
 
-        {/* Second line: message count + time */}
+        {/* Second line: message count + time + context consumption */}
         <div
           className="mt-0.5 flex items-center gap-2 text-[10px] leading-tight"
           style={{ color: 'var(--color-text-muted)' }}
@@ -173,6 +231,15 @@ export const SessionItem = ({
           </span>
           <span style={{ opacity: 0.5 }}>·</span>
           <span className="tabular-nums">{formatShortTime(new Date(session.createdAt))}</span>
+          {session.contextConsumption != null && session.contextConsumption > 0 && (
+            <>
+              <span style={{ opacity: 0.5 }}>·</span>
+              <ConsumptionBadge
+                contextConsumption={session.contextConsumption}
+                phaseBreakdown={session.phaseBreakdown}
+              />
+            </>
+          )}
         </div>
       </button>
 
