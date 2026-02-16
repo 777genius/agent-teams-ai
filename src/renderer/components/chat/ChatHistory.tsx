@@ -413,23 +413,27 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
       const prevItem = aiItemIndex > 0 ? conversation.items[aiItemIndex - 1] : null;
       if (prevItem?.type !== 'user') return;
 
-      const groupId = prevItem.group.id;
-      const element = chatItemRefs.current.get(groupId);
-      if (!element) return;
+      const run = async (): Promise<void> => {
+        const groupId = prevItem.group.id;
+        await ensureGroupVisible(groupId);
+        const element = chatItemRefs.current.get(groupId);
+        if (!element) return;
 
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setHighlightedGroupId(groupId);
-      setIsNavigationHighlight(true);
-      if (navigationHighlightTimerRef.current) {
-        clearTimeout(navigationHighlightTimerRef.current);
-      }
-      navigationHighlightTimerRef.current = setTimeout(() => {
-        setHighlightedGroupId(null);
-        setIsNavigationHighlight(false);
-        navigationHighlightTimerRef.current = null;
-      }, 2000);
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setHighlightedGroupId(groupId);
+        setIsNavigationHighlight(true);
+        if (navigationHighlightTimerRef.current) {
+          clearTimeout(navigationHighlightTimerRef.current);
+        }
+        navigationHighlightTimerRef.current = setTimeout(() => {
+          setHighlightedGroupId(null);
+          setIsNavigationHighlight(false);
+          navigationHighlightTimerRef.current = null;
+        }, 2000);
+      };
+      void run();
     },
-    [conversation, setHighlightedGroupId]
+    [conversation, ensureGroupVisible, setHighlightedGroupId]
   );
 
   // Handler to navigate to a specific tool within a turn from context panel

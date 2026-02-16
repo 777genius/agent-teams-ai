@@ -562,14 +562,18 @@ export async function analyzeSessionFileMetadata(
       }
 
       // Last phase: final tokens - last post-compaction
+      // Guard: if the last compaction had no subsequent assistant message, post is 0.
+      // In that case, skip the final phase to avoid double-counting.
       const lastPhase = compactionPhases[compactionPhases.length - 1];
-      const lastContribution = lastMainAssistantInputTokens - lastPhase.post;
-      total += lastContribution;
-      phaseBreakdown.push({
-        phaseNumber: compactionPhases.length + 1,
-        contribution: lastContribution,
-        peakTokens: lastMainAssistantInputTokens,
-      });
+      if (lastPhase.post > 0) {
+        const lastContribution = lastMainAssistantInputTokens - lastPhase.post;
+        total += lastContribution;
+        phaseBreakdown.push({
+          phaseNumber: compactionPhases.length + 1,
+          contribution: lastContribution,
+          peakTokens: lastMainAssistantInputTokens,
+        });
+      }
 
       contextConsumption = total;
     }
