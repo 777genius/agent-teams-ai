@@ -3,7 +3,8 @@
  * Uses @tanstack/react-virtual for efficient DOM rendering with infinite scroll.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { useStore } from '@renderer/store';
 import {
@@ -47,7 +48,6 @@ export const DateGroupedSessions = (): React.JSX.Element => {
     sessionsError,
     sessionsHasMore,
     sessionsLoadingMore,
-    sessionsTotalCount,
     fetchSessionsMore,
     pinnedSessionIds,
     sessionSortMode,
@@ -61,7 +61,6 @@ export const DateGroupedSessions = (): React.JSX.Element => {
       sessionsError: s.sessionsError,
       sessionsHasMore: s.sessionsHasMore,
       sessionsLoadingMore: s.sessionsLoadingMore,
-      sessionsTotalCount: s.sessionsTotalCount,
       fetchSessionsMore: s.fetchSessionsMore,
       pinnedSessionIds: s.pinnedSessionIds,
       sessionSortMode: s.sessionSortMode,
@@ -70,6 +69,8 @@ export const DateGroupedSessions = (): React.JSX.Element => {
   );
 
   const parentRef = useRef<HTMLDivElement>(null);
+  const countRef = useRef<HTMLSpanElement>(null);
+  const [showCountTooltip, setShowCountTooltip] = useState(false);
 
   // Separate pinned sessions from unpinned
   const { pinned: pinnedSessions, unpinned: unpinnedSessions } = useMemo(
@@ -303,10 +304,39 @@ export const DateGroupedSessions = (): React.JSX.Element => {
         >
           {sessionSortMode === 'most-context' ? 'By Context' : 'Sessions'}
         </h2>
-        <span className="text-xs" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- tooltip trigger via hover, not interactive */}
+        <span
+          ref={countRef}
+          className="text-xs"
+          style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}
+          onMouseEnter={() => setShowCountTooltip(true)}
+          onMouseLeave={() => setShowCountTooltip(false)}
+        >
           ({sessions.length}
-          {sessionsTotalCount > sessions.length ? ` of ${sessionsTotalCount}` : ''})
+          {sessionsHasMore ? '+' : ''})
         </span>
+        {showCountTooltip &&
+          sessionsHasMore &&
+          countRef.current &&
+          createPortal(
+            <div
+              className="pointer-events-none fixed z-50 w-48 rounded-md px-2.5 py-1.5 text-[11px] leading-snug shadow-lg"
+              style={{
+                top: countRef.current.getBoundingClientRect().bottom + 6,
+                left:
+                  countRef.current.getBoundingClientRect().left +
+                  countRef.current.getBoundingClientRect().width / 2 -
+                  96,
+                backgroundColor: 'var(--color-surface-overlay)',
+                border: '1px solid var(--color-border-emphasis)',
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              {sessions.length} loaded so far — scroll down to load more. Context sorting only ranks
+              loaded sessions.
+            </div>,
+            document.body
+          )}
         <button
           onClick={() =>
             setSessionSortMode(sessionSortMode === 'recent' ? 'most-context' : 'recent')

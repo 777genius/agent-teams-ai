@@ -18,6 +18,10 @@ export interface SessionContextPanelProps {
   projectRoot?: string;
   /** Click Turn N to navigate to that turn */
   onNavigateToTurn?: (turnIndex: number) => void;
+  /** Navigate to a specific tool within a turn by toolUseId */
+  onNavigateToTool?: (turnIndex: number, toolUseId: string) => void;
+  /** Navigate to the user message group preceding the AI group at turnIndex */
+  onNavigateToUserGroup?: (turnIndex: number) => void;
   /** Total session tokens (input + output + cache) for comparison */
   totalSessionTokens?: number;
   /** Phase information for phase selector */

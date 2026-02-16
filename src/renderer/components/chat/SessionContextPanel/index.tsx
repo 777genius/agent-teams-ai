@@ -39,6 +39,8 @@ export const SessionContextPanel = ({
   onClose,
   projectRoot,
   onNavigateToTurn,
+  onNavigateToTool,
+  onNavigateToUserGroup,
   totalSessionTokens,
   phaseInfo,
   selectedPhase,
@@ -250,7 +252,12 @@ export const SessionContextPanel = ({
             />
           </>
         ) : (
-          <RankedInjectionList injections={injections} onNavigateToTurn={onNavigateToTurn} />
+          <RankedInjectionList
+            injections={injections}
+            onNavigateToTurn={onNavigateToTurn}
+            onNavigateToTool={onNavigateToTool}
+            onNavigateToUserGroup={onNavigateToUserGroup}
+          />
         )}
       </div>
     </div>

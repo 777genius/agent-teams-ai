@@ -2,10 +2,13 @@
  * RankedInjectionList - All context injections sorted by token size descending.
  * Injections are shown as grouped rows (e.g., "Tool output in Turn N").
  * Tool-output rows are expandable to reveal individual tool breakdowns sorted desc.
+ * Individual tools support deep-link navigation to the exact tool in chat.
+ * CLAUDE.md and File items show a copy-path button.
  */
 
 import React, { useMemo, useState } from 'react';
 
+import { CopyButton } from '@renderer/components/common/CopyButton';
 import { COLOR_TEXT_MUTED, COLOR_TEXT_SECONDARY } from '@renderer/constants/cssVariables';
 import { ChevronRight } from 'lucide-react';
 
@@ -34,6 +37,8 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; label: string 
 interface RankedInjectionListProps {
   injections: ContextInjection[];
   onNavigateToTurn?: (turnIndex: number) => void;
+  onNavigateToTool?: (turnIndex: number, toolUseId: string) => void;
+  onNavigateToUserGroup?: (turnIndex: number) => void;
 }
 
 // =============================================================================
@@ -71,6 +76,13 @@ function getInjectionTurnIndex(injection: ContextInjection): number {
   }
 }
 
+/** Get copyable path for path-based injections. */
+function getCopyablePath(injection: ContextInjection): string | null {
+  if (injection.category === 'claude-md') return injection.path;
+  if (injection.category === 'mentioned-file') return injection.path;
+  return null;
+}
+
 // =============================================================================
 // Sub-components
 // =============================================================================
@@ -79,9 +91,11 @@ function getInjectionTurnIndex(injection: ContextInjection): number {
 const ToolOutputRankedItem = ({
   injection,
   onNavigateToTurn,
+  onNavigateToTool,
 }: Readonly<{
   injection: ToolOutputInjection;
   onNavigateToTurn?: (turnIndex: number) => void;
+  onNavigateToTool?: (turnIndex: number, toolUseId: string) => void;
 }>): React.ReactElement => {
   const [expanded, setExpanded] = useState(false);
   const hasBreakdown = injection.toolBreakdown.length > 0;
@@ -139,7 +153,9 @@ const ToolOutputRankedItem = ({
             <button
               key={`${tool.toolName}-${idx}`}
               onClick={() => {
-                if (onNavigateToTurn) {
+                if (tool.toolUseId && onNavigateToTool) {
+                  onNavigateToTool(injection.turnIndex, tool.toolUseId);
+                } else if (onNavigateToTurn) {
                   onNavigateToTurn(injection.turnIndex);
                 }
               }}
@@ -185,6 +201,8 @@ const ToolOutputRankedItem = ({
 export const RankedInjectionList = ({
   injections,
   onNavigateToTurn,
+  onNavigateToTool,
+  onNavigateToUserGroup,
 }: Readonly<RankedInjectionListProps>): React.ReactElement => {
   const sortedInjections = useMemo(
     () => [...injections].sort((a, b) => b.estimatedTokens - a.estimatedTokens),
@@ -201,50 +219,64 @@ export const RankedInjectionList = ({
               key={inj.id}
               injection={inj}
               onNavigateToTurn={onNavigateToTurn}
+              onNavigateToTool={onNavigateToTool}
             />
           );
         }
 
-        // All other categories: simple row
         const categoryInfo = CATEGORY_COLORS[inj.category] ?? {
           bg: 'rgba(161, 161, 170, 0.15)',
           text: '#a1a1aa',
           label: inj.category,
         };
+        const copyPath = getCopyablePath(inj);
+
+        const handleClick = (): void => {
+          const turnIndex = getInjectionTurnIndex(inj);
+          if (turnIndex < 0) return;
+          // User messages → navigate to user group; others → navigate to AI group
+          if (inj.category === 'user-message' && onNavigateToUserGroup) {
+            onNavigateToUserGroup(turnIndex);
+          } else if (onNavigateToTurn) {
+            onNavigateToTurn(turnIndex);
+          }
+        };
 
         return (
-          <button
-            key={inj.id}
-            onClick={() => {
-              if (onNavigateToTurn) {
-                const turnIndex = getInjectionTurnIndex(inj);
-                if (turnIndex >= 0) onNavigateToTurn(turnIndex);
-              }
-            }}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-white/5"
-          >
-            {/* Category pill */}
-            <span
-              className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium"
-              style={{ backgroundColor: categoryInfo.bg, color: categoryInfo.text }}
+          <div key={inj.id} className="flex items-center gap-0.5">
+            <button
+              onClick={handleClick}
+              className="flex min-w-0 flex-1 items-center gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-white/5"
             >
-              {categoryInfo.label}
-            </span>
-            {/* Description */}
-            <span
-              className="min-w-0 flex-1 truncate text-xs"
-              style={{ color: COLOR_TEXT_SECONDARY }}
-            >
-              {getInjectionDescription(inj)}
-            </span>
-            {/* Token count */}
-            <span
-              className="shrink-0 text-xs font-medium tabular-nums"
-              style={{ color: COLOR_TEXT_MUTED }}
-            >
-              {formatTokens(inj.estimatedTokens)}
-            </span>
-          </button>
+              {/* Category pill */}
+              <span
+                className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium"
+                style={{ backgroundColor: categoryInfo.bg, color: categoryInfo.text }}
+              >
+                {categoryInfo.label}
+              </span>
+              {/* Description */}
+              <span
+                className="min-w-0 flex-1 truncate text-xs"
+                style={{ color: COLOR_TEXT_SECONDARY }}
+              >
+                {getInjectionDescription(inj)}
+              </span>
+              {/* Token count */}
+              <span
+                className="shrink-0 text-xs font-medium tabular-nums"
+                style={{ color: COLOR_TEXT_MUTED }}
+              >
+                {formatTokens(inj.estimatedTokens)}
+              </span>
+            </button>
+            {/* Copy path button for CLAUDE.md and File items */}
+            {copyPath && (
+              <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                <CopyButton text={copyPath} inline />
+              </span>
+            )}
+          </div>
         );
       })}
     </div>
