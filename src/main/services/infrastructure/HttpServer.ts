@@ -24,12 +24,13 @@ const logger = createLogger('Service:HttpServer');
  */
 function resolveRendererPath(): string | null {
   const candidates = [
-    // Electron production paths
-    join(__dirname, '../../../out/renderer'),
-    join(__dirname, '../../renderer'),
+    // Electron production (asarUnpack): app.asar.unpacked/out/renderer (real filesystem)
+    join(__dirname, '../../out/renderer').replace('app.asar', 'app.asar.unpacked'),
+    // Electron production (asar fallback): app.asar/out/renderer
+    join(__dirname, '../../out/renderer'),
     // Standalone: dist-standalone/index.cjs → ../out/renderer
     join(__dirname, '../out/renderer'),
-    // Fallback: relative to cwd (for standalone bundles)
+    // Fallback: relative to cwd (dev mode, standalone)
     join(process.cwd(), 'out/renderer'),
   ];
 
@@ -89,38 +90,33 @@ export class HttpServer {
       });
     }
 
-    // Register static file serving and SPA fallback (production only)
-    const isDev = process.env.NODE_ENV === 'development';
-    if (!isDev) {
-      const rendererPath = resolveRendererPath();
-      if (rendererPath) {
-        logger.info(`Serving static files from: ${rendererPath}`);
+    // Register static file serving and SPA fallback when renderer output exists.
+    // In dev mode this requires a prior `pnpm build`; in production/standalone it's always present.
+    const rendererPath = resolveRendererPath();
+    if (rendererPath) {
+      logger.info(`Serving static files from: ${rendererPath}`);
 
-        // Cache index.html for SPA fallback
-        const indexHtml = readFileSync(join(rendererPath, 'index.html'), 'utf-8');
+      // Cache index.html for SPA fallback
+      const indexHtml = readFileSync(join(rendererPath, 'index.html'), 'utf-8');
 
-        await this.app.register(fastifyStatic, {
-          root: rendererPath,
-          prefix: '/',
-          wildcard: false,
-        });
+      await this.app.register(fastifyStatic, {
+        root: rendererPath,
+        prefix: '/',
+        wildcard: false,
+      });
 
-        // Register all API routes BEFORE the not-found handler
-        registerHttpRoutes(this.app, services, sshModeSwitchCallback);
+      // Register all API routes BEFORE the not-found handler
+      registerHttpRoutes(this.app, services, sshModeSwitchCallback);
 
-        // SPA fallback: serve index.html for all non-API routes
-        this.app.setNotFoundHandler(async (request, reply) => {
-          if (request.url.startsWith('/api/')) {
-            return reply.status(404).send({ error: 'Not found' });
-          }
-          return reply.type('text/html').send(indexHtml);
-        });
-      } else {
-        logger.warn('Renderer output directory not found, serving API only');
-        registerHttpRoutes(this.app, services, sshModeSwitchCallback);
-      }
+      // SPA fallback: serve index.html for all non-API routes
+      this.app.setNotFoundHandler(async (request, reply) => {
+        if (request.url.startsWith('/api/')) {
+          return reply.status(404).send({ error: 'Not found' });
+        }
+        return reply.type('text/html').send(indexHtml);
+      });
     } else {
-      // Dev mode: no static serving, just API routes
+      logger.warn('Renderer output directory not found (run `pnpm build` first), serving API only');
       registerHttpRoutes(this.app, services, sshModeSwitchCallback);
     }
 
