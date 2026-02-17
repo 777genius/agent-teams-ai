@@ -34,11 +34,14 @@
   </a>&nbsp;&nbsp;
   <a href="https://github.com/matt1398/claude-devtools/releases/latest">
     <img src="https://img.shields.io/badge/Windows-Download-0078D4?logo=windows&logoColor=white&style=flat" alt="Download for Windows" height="30" />
+  </a>&nbsp;&nbsp;
+  <a href="#docker--standalone-deployment">
+    <img src="https://img.shields.io/badge/Docker-Deploy-2496ED?logo=docker&logoColor=white&style=flat" alt="Deploy with Docker" height="30" />
   </a>
 </p>
 
 <p align="center">
-  <sub>No API keys. No configuration. Just download, open, and see everything Claude Code did.</sub>
+  <sub>100% free, open source. No API keys. No configuration. Just download, open, and see everything Claude Code did.</sub>
 </p>
 
 <br />
