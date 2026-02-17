@@ -5,6 +5,12 @@
 <h1 align="center">claude-devtools</h1>
 
 <p align="center">
+  <a href="https://www.producthunt.com/products/claude-devtools?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-claude-devtools" target="_blank" rel="noopener noreferrer">
+    <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1080673&theme=light&t=1771309988290" alt="claude-devtools - See everything Claude Code hides from your terminal | Product Hunt" width="250" height="54" />
+  </a>
+</p>
+
+<p align="center">
   <strong><code>Terminal tells you nothing. This shows you everything.</code></strong>
   <br />
   A desktop app that reconstructs exactly what Claude Code did — every file path, every tool call, every token — from the raw session logs already on your machine.
