@@ -161,8 +161,7 @@
         "pacman"
       ],
       "icon": "resources/icons/png",
-      "category": "Development",
-      "afterInstall": "resources/afterInstall.sh"
+      "category": "Development"
     },
     "deb": {
       "afterInstall": "resources/afterInstall.sh"
