@@ -57,6 +57,7 @@ import type {
   ServiceContextRegistry,
   SshConnectionManager,
   TeamDataService,
+  TeamProvisioningService,
   UpdaterService,
 } from '../services';
 
@@ -68,6 +69,7 @@ export function initializeIpcHandlers(
   updater: UpdaterService,
   sshManager: SshConnectionManager,
   teamDataService: TeamDataService,
+  teamProvisioningService: TeamProvisioningService,
   contextCallbacks: {
     rewire: (context: ServiceContext) => void;
     full: (context: ServiceContext) => void;
@@ -82,7 +84,7 @@ export function initializeIpcHandlers(
   initializeUpdaterHandlers(updater);
   initializeSshHandlers(sshManager, registry, contextCallbacks.rewire);
   initializeContextHandlers(registry, contextCallbacks.rewire);
-  initializeTeamHandlers(teamDataService);
+  initializeTeamHandlers(teamDataService, teamProvisioningService);
   initializeConfigHandlers({
     onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,
   });

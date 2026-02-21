@@ -178,3 +178,51 @@ export const WINDOW_IS_MAXIMIZED = 'window:isMaximized';
 
 /** List all teams */
 export const TEAM_LIST = 'team:list';
+
+/** Get detailed team data */
+export const TEAM_GET_DATA = 'team:getData';
+
+/** Update team kanban state */
+export const TEAM_UPDATE_KANBAN = 'team:updateKanban';
+
+/** Send inbox message to team member */
+export const TEAM_SEND_MESSAGE = 'team:sendMessage';
+
+/** Request review for task */
+export const TEAM_REQUEST_REVIEW = 'team:requestReview';
+
+/** Team change events (main -> renderer) */
+export const TEAM_CHANGE = 'team:change';
+
+/** Create new team by provisioning through CLI */
+export const TEAM_CREATE = 'team:create';
+
+/** Warm up provisioning runtime before create */
+export const TEAM_PREPARE_PROVISIONING = 'team:prepareProvisioning';
+
+/** Get provisioning status by runId */
+export const TEAM_PROVISIONING_STATUS = 'team:provisioningStatus';
+
+/** Cancel running provisioning by runId */
+export const TEAM_CANCEL_PROVISIONING = 'team:cancelProvisioning';
+
+/** Team provisioning progress events (main -> renderer) */
+export const TEAM_PROVISIONING_PROGRESS = 'team:provisioningProgress';
+
+/** Send message to team's live CLI process via stream-json stdin */
+export const TEAM_PROCESS_SEND = 'team:processSend';
+
+/** Check if team has a live CLI process */
+export const TEAM_PROCESS_ALIVE = 'team:processAlive';
+
+/** Create a task in team's task directory */
+export const TEAM_CREATE_TASK = 'team:createTask';
+
+/** Update task status directly (pending/in_progress/completed) */
+export const TEAM_UPDATE_TASK_STATUS = 'team:updateTaskStatus';
+
+/** Delete a team and its associated task directory */
+export const TEAM_DELETE_TEAM = 'team:deleteTeam';
+
+/** Get list of teams with live CLI processes */
+export const TEAM_ALIVE_LIST = 'team:aliveList';

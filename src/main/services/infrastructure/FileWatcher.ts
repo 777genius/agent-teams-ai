@@ -12,7 +12,12 @@
 
 import { type FileChangeEvent, type ParsedMessage } from '@main/types';
 import { parseJsonlFile, parseJsonlLine } from '@main/utils/jsonl';
-import { getProjectsBasePath, getTodosBasePath } from '@main/utils/pathDecoder';
+import {
+  getProjectsBasePath,
+  getTasksBasePath,
+  getTeamsBasePath,
+  getTodosBasePath,
+} from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
@@ -27,6 +32,7 @@ import { LocalFileSystemProvider } from './LocalFileSystemProvider';
 import { type NotificationManager } from './NotificationManager';
 
 import type { FileSystemProvider, FsDirent } from './FileSystemProvider';
+import type { TeamChangeEvent } from '@shared/types';
 
 const logger = createLogger('Service:FileWatcher');
 
@@ -54,9 +60,13 @@ interface ActiveSessionFile {
 export class FileWatcher extends EventEmitter {
   private projectsWatcher: fs.FSWatcher | null = null;
   private todosWatcher: fs.FSWatcher | null = null;
+  private teamsWatcher: fs.FSWatcher | null = null;
+  private tasksWatcher: fs.FSWatcher | null = null;
   private retryTimer: NodeJS.Timeout | null = null;
   private projectsPath: string;
   private todosPath: string;
+  private teamsPath: string;
+  private tasksPath: string;
   private dataCache: DataCache;
   private fsProvider: FileSystemProvider;
   private notificationManager: NotificationManager | null = null;
@@ -96,6 +106,8 @@ export class FileWatcher extends EventEmitter {
     super();
     this.projectsPath = projectsPath ?? getProjectsBasePath();
     this.todosPath = todosPath ?? getTodosBasePath();
+    this.teamsPath = getTeamsBasePath();
+    this.tasksPath = getTasksBasePath();
     this.dataCache = dataCache;
     this.fsProvider = fsProvider ?? new LocalFileSystemProvider();
   }
@@ -161,6 +173,16 @@ export class FileWatcher extends EventEmitter {
     if (this.todosWatcher) {
       this.todosWatcher.close();
       this.todosWatcher = null;
+    }
+
+    if (this.teamsWatcher) {
+      this.teamsWatcher.close();
+      this.teamsWatcher = null;
+    }
+
+    if (this.tasksWatcher) {
+      this.tasksWatcher.close();
+      this.tasksWatcher = null;
     }
 
     // Clear any pending debounce timers
@@ -317,6 +339,62 @@ export class FileWatcher extends EventEmitter {
     }
   }
 
+  /**
+   * Starts the teams directory watcher.
+   */
+  private startTeamsWatcher(): void {
+    if (this.teamsWatcher) {
+      return;
+    }
+
+    try {
+      if (!fs.existsSync(this.teamsPath)) {
+        this.scheduleWatcherRetry();
+        return;
+      }
+
+      this.teamsWatcher = fs.watch(this.teamsPath, { recursive: true }, (eventType, filename) => {
+        if (filename) {
+          this.handleTeamsChange(eventType, filename);
+        }
+      });
+      this.attachWatcherRecovery(this.teamsWatcher, 'teams');
+      logger.info(`FileWatcher: Started watching teams at ${this.teamsPath}`);
+    } catch (error) {
+      logger.error('Error starting teams watcher:', error);
+      this.teamsWatcher = null;
+      this.scheduleWatcherRetry();
+    }
+  }
+
+  /**
+   * Starts the tasks directory watcher.
+   */
+  private startTasksWatcher(): void {
+    if (this.tasksWatcher) {
+      return;
+    }
+
+    try {
+      if (!fs.existsSync(this.tasksPath)) {
+        this.scheduleWatcherRetry();
+        return;
+      }
+
+      this.tasksWatcher = fs.watch(this.tasksPath, { recursive: true }, (eventType, filename) => {
+        if (filename) {
+          this.handleTasksChange(eventType, filename);
+        }
+      });
+      this.attachWatcherRecovery(this.tasksWatcher, 'tasks');
+      logger.info(`FileWatcher: Started watching tasks at ${this.tasksPath}`);
+    } catch (error) {
+      logger.error('Error starting tasks watcher:', error);
+      this.tasksWatcher = null;
+      this.scheduleWatcherRetry();
+    }
+  }
+
   private ensureWatchers(): void {
     if (!this.isWatching || this.fsProvider.type === 'ssh') {
       return;
@@ -324,8 +402,10 @@ export class FileWatcher extends EventEmitter {
 
     this.startProjectsWatcher();
     this.startTodosWatcher();
+    this.startTeamsWatcher();
+    this.startTasksWatcher();
 
-    if (!this.projectsWatcher || !this.todosWatcher) {
+    if (!this.projectsWatcher || !this.todosWatcher || !this.teamsWatcher || !this.tasksWatcher) {
       this.scheduleWatcherRetry();
     }
   }
@@ -341,13 +421,20 @@ export class FileWatcher extends EventEmitter {
     }, WATCHER_RETRY_MS);
   }
 
-  private attachWatcherRecovery(watcher: fs.FSWatcher, watcherType: 'projects' | 'todos'): void {
+  private attachWatcherRecovery(
+    watcher: fs.FSWatcher,
+    watcherType: 'projects' | 'todos' | 'teams' | 'tasks'
+  ): void {
     watcher.on('error', (error) => {
       logger.error(`FileWatcher: ${watcherType} watcher error:`, error);
       if (watcherType === 'projects') {
         this.projectsWatcher = null;
-      } else {
+      } else if (watcherType === 'todos') {
         this.todosWatcher = null;
+      } else if (watcherType === 'teams') {
+        this.teamsWatcher = null;
+      } else {
+        this.tasksWatcher = null;
       }
       this.scheduleWatcherRetry();
     });
@@ -358,8 +445,12 @@ export class FileWatcher extends EventEmitter {
       }
       if (watcherType === 'projects') {
         this.projectsWatcher = null;
-      } else {
+      } else if (watcherType === 'todos') {
         this.todosWatcher = null;
+      } else if (watcherType === 'teams') {
+        this.teamsWatcher = null;
+      } else {
+        this.tasksWatcher = null;
       }
       this.scheduleWatcherRetry();
     });
@@ -808,6 +899,87 @@ export class FileWatcher extends EventEmitter {
     logger.info(`FileWatcher: ${changeType} todo - ${filename}`);
   }
 
+  private handleTeamsChange(eventType: string, filename: string): void {
+    try {
+      this.debounce(`teams/${filename}`, () => this.processTeamsChange(eventType, filename));
+    } catch (error) {
+      logger.error('Error handling teams change:', error);
+    }
+  }
+
+  private processTeamsChange(_eventType: string, filename: string): void {
+    const normalized = filename.split(/[\\/]/).filter(Boolean);
+    const teamName = normalized[0];
+    if (!teamName) {
+      return;
+    }
+
+    // `detail` is relative to the team root (plan examples: `inboxes/alice.json`, `config.json`)
+    const relative = normalized.slice(1).join('/');
+    if (!relative) {
+      return;
+    }
+
+    // Classify only the paths we care about in iteration 02.
+    if (normalized.includes('inboxes')) {
+      const event: TeamChangeEvent = {
+        type: 'inbox',
+        teamName,
+        detail: relative,
+      };
+      this.emit('team-change', event);
+      return;
+    }
+
+    if (relative === 'config.json' || relative === 'kanban-state.json') {
+      const event: TeamChangeEvent = {
+        type: 'config',
+        teamName,
+        detail: relative,
+      };
+      this.emit('team-change', event);
+    }
+  }
+
+  private handleTasksChange(eventType: string, filename: string): void {
+    try {
+      this.debounce(`tasks/${filename}`, () => this.processTasksChange(eventType, filename));
+    } catch (error) {
+      logger.error('Error handling tasks change:', error);
+    }
+  }
+
+  private processTasksChange(_eventType: string, filename: string): void {
+    const normalized = filename.split(/[\\/]/).filter(Boolean);
+    const teamName = normalized[0];
+    if (!teamName) {
+      return;
+    }
+
+    // `detail` is relative to the team tasks dir (plan example: `12.json`)
+    const relative = normalized.slice(1).join('/');
+    if (!relative) {
+      return;
+    }
+
+    // Ignore known non-task files in ~/.claude/tasks
+    if (
+      relative === '.lock' ||
+      relative === '.highwatermark' ||
+      relative.startsWith('.') ||
+      !relative.endsWith('.json')
+    ) {
+      return;
+    }
+
+    const event: TeamChangeEvent = {
+      type: 'task',
+      teamName,
+      detail: relative,
+    };
+    this.emit('team-change', event);
+  }
+
   // ===========================================================================
   // Catch-Up Scan
   // ===========================================================================
@@ -909,10 +1081,12 @@ export class FileWatcher extends EventEmitter {
   /**
    * Returns watched paths.
    */
-  getWatchedPaths(): { projects: string; todos: string } {
+  getWatchedPaths(): { projects: string; todos: string; teams: string; tasks: string } {
     return {
       projects: this.projectsPath,
       todos: this.todosPath,
+      teams: this.teamsPath,
+      tasks: this.tasksPath,
     };
   }
 }

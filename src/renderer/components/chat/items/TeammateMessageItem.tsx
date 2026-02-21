@@ -8,6 +8,7 @@ import {
   CARD_TEXT_LIGHT,
 } from '@renderer/constants/cssVariables';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { detectOperationalNoise } from '@renderer/utils/agentMessageFormatting';
 import { formatTokensCompact } from '@renderer/utils/formatters';
 import { ChevronRight, CornerDownLeft, MessageSquare, RefreshCw } from 'lucide-react';
 
@@ -29,57 +30,6 @@ interface TeammateMessageItemProps {
   highlightClasses?: string;
   /** Inline styles for highlighting (used by custom hex colors) */
   highlightStyle?: React.CSSProperties;
-}
-
-/** Operational noise types that should be rendered minimally */
-const NOISE_TYPES = new Set([
-  'idle_notification',
-  'shutdown_approved',
-  'teammate_terminated',
-  'shutdown_request',
-]);
-
-/** Human-readable labels for noise message types */
-const NOISE_LABELS: Record<string, string> = {
-  idle_notification: 'Idle',
-  shutdown_approved: 'Shutdown confirmed',
-  teammate_terminated: 'Terminated',
-  shutdown_request: 'Shutdown requested',
-};
-
-/**
- * Detect operational noise in teammate message content.
- * Returns label if noise, null if real content.
- */
-function detectNoise(content: string, teammateId: string): string | null {
-  // System messages are always noise
-  if (teammateId === 'system') {
-    const trimmed = content.trim();
-    if (trimmed.startsWith('{')) {
-      try {
-        const parsed = JSON.parse(trimmed) as { type?: string; message?: string };
-        if (parsed.type && NOISE_TYPES.has(parsed.type)) {
-          return parsed.message ?? NOISE_LABELS[parsed.type] ?? parsed.type;
-        }
-      } catch {
-        // Not JSON, fall through
-      }
-    }
-    return trimmed.length < 200 ? trimmed : null;
-  }
-
-  // Non-system: check if content is a JSON operational message
-  const trimmed = content.trim();
-  if (!trimmed.startsWith('{')) return null;
-  try {
-    const parsed = JSON.parse(trimmed) as { type?: string };
-    if (parsed.type && NOISE_TYPES.has(parsed.type)) {
-      return NOISE_LABELS[parsed.type] ?? parsed.type;
-    }
-  } catch {
-    // Not JSON
-  }
-  return null;
 }
 
 // =============================================================================
@@ -128,7 +78,7 @@ export const TeammateMessageItem: React.FC<TeammateMessageItemProps> = ({
 
   // Detect operational noise
   const noiseLabel = useMemo(
-    () => detectNoise(teammateMessage.content, teammateMessage.teammateId),
+    () => detectOperationalNoise(teammateMessage.content, teammateMessage.teammateId),
     [teammateMessage.content, teammateMessage.teammateId]
   );
 

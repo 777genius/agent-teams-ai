@@ -314,3 +314,10 @@ export function getTodosBasePath(): string {
 export function getTeamsBasePath(): string {
   return path.join(getClaudeBasePath(), 'teams');
 }
+
+/**
+ * Get the tasks directory path (~/.claude/tasks).
+ */
+export function getTasksBasePath(): string {
+  return path.join(getClaudeBasePath(), 'tasks');
+}

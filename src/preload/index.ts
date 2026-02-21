@@ -18,7 +18,23 @@ import {
   SSH_SAVE_LAST_CONNECTION,
   SSH_STATUS,
   SSH_TEST,
+  TEAM_ALIVE_LIST,
+  TEAM_CANCEL_PROVISIONING,
+  TEAM_CHANGE,
+  TEAM_CREATE,
+  TEAM_CREATE_TASK,
+  TEAM_DELETE_TEAM,
+  TEAM_GET_DATA,
   TEAM_LIST,
+  TEAM_PREPARE_PROVISIONING,
+  TEAM_PROCESS_ALIVE,
+  TEAM_PROCESS_SEND,
+  TEAM_PROVISIONING_PROGRESS,
+  TEAM_PROVISIONING_STATUS,
+  TEAM_REQUEST_REVIEW,
+  TEAM_SEND_MESSAGE,
+  TEAM_UPDATE_KANBAN,
+  TEAM_UPDATE_TASK_STATUS,
   UPDATER_CHECK,
   UPDATER_DOWNLOAD,
   UPDATER_INSTALL,
@@ -60,18 +76,30 @@ import type {
   ClaudeRootFolderSelection,
   ClaudeRootInfo,
   ContextInfo,
+  CreateTaskRequest,
   ElectronAPI,
   HttpServerStatus,
+  IpcResult,
   NotificationTrigger,
+  SendMessageRequest,
+  SendMessageResult,
   SessionsByIdsOptions,
   SessionsPaginationOptions,
   SshConfigHostEntry,
   SshConnectionConfig,
   SshConnectionStatus,
   SshLastConnection,
+  TeamChangeEvent,
+  TeamCreateRequest,
+  TeamCreateResponse,
+  TeamData,
+  TeamProvisioningPrepareResult,
+  TeamProvisioningProgress,
   TeamSummary,
+  TeamTask,
+  TeamTaskStatus,
   TriggerTestResult,
-  IpcResult,
+  UpdateKanbanPatch,
   WslClaudeRootCandidate,
 } from '@shared/types';
 
@@ -455,6 +483,74 @@ const electronAPI: ElectronAPI = {
   teams: {
     list: async () => {
       return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
+    },
+    getData: async (teamName: string) => {
+      return invokeIpcWithResult<TeamData>(TEAM_GET_DATA, teamName);
+    },
+    deleteTeam: async (teamName: string) => {
+      return invokeIpcWithResult<void>(TEAM_DELETE_TEAM, teamName);
+    },
+    prepareProvisioning: async (cwd?: string) => {
+      return invokeIpcWithResult<TeamProvisioningPrepareResult>(TEAM_PREPARE_PROVISIONING, cwd);
+    },
+    createTeam: async (request: TeamCreateRequest) => {
+      return invokeIpcWithResult<TeamCreateResponse>(TEAM_CREATE, request);
+    },
+    getProvisioningStatus: async (runId: string) => {
+      return invokeIpcWithResult<TeamProvisioningProgress>(TEAM_PROVISIONING_STATUS, runId);
+    },
+    cancelProvisioning: async (runId: string) => {
+      return invokeIpcWithResult<void>(TEAM_CANCEL_PROVISIONING, runId);
+    },
+    sendMessage: async (teamName: string, request: SendMessageRequest) => {
+      return invokeIpcWithResult<SendMessageResult>(TEAM_SEND_MESSAGE, teamName, request);
+    },
+    createTask: async (teamName: string, request: CreateTaskRequest) => {
+      return invokeIpcWithResult<TeamTask>(TEAM_CREATE_TASK, teamName, request);
+    },
+    requestReview: async (teamName: string, taskId: string) => {
+      return invokeIpcWithResult<void>(TEAM_REQUEST_REVIEW, teamName, taskId);
+    },
+    updateKanban: async (teamName: string, taskId: string, patch: UpdateKanbanPatch) => {
+      return invokeIpcWithResult<void>(TEAM_UPDATE_KANBAN, teamName, taskId, patch);
+    },
+    updateTaskStatus: async (teamName: string, taskId: string, status: TeamTaskStatus) => {
+      return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_STATUS, teamName, taskId, status);
+    },
+    processSend: async (teamName: string, message: string) => {
+      return invokeIpcWithResult<void>(TEAM_PROCESS_SEND, teamName, message);
+    },
+    processAlive: async (teamName: string) => {
+      return invokeIpcWithResult<boolean>(TEAM_PROCESS_ALIVE, teamName);
+    },
+    aliveList: async () => {
+      return invokeIpcWithResult<string[]>(TEAM_ALIVE_LIST);
+    },
+    onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {
+      ipcRenderer.on(
+        TEAM_CHANGE,
+        callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+      );
+      return (): void => {
+        ipcRenderer.removeListener(
+          TEAM_CHANGE,
+          callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+        );
+      };
+    },
+    onProvisioningProgress: (
+      callback: (event: unknown, data: TeamProvisioningProgress) => void
+    ): (() => void) => {
+      ipcRenderer.on(
+        TEAM_PROVISIONING_PROGRESS,
+        callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+      );
+      return (): void => {
+        ipcRenderer.removeListener(
+          TEAM_PROVISIONING_PROGRESS,
+          callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+        );
+      };
     },
   },
 };

@@ -49,6 +49,7 @@ const CONTEXT_CHANGED = 'context:changed';
 const HTTP_SERVER_START = 'httpServer:start';
 const HTTP_SERVER_STOP = 'httpServer:stop';
 const HTTP_SERVER_GET_STATUS = 'httpServer:getStatus';
+const TEAM_CHANGE = 'team:change';
 
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled promise rejection in main process:', reason);
@@ -67,6 +68,7 @@ import {
   ServiceContextRegistry,
   SshConnectionManager,
   TeamDataService,
+  TeamProvisioningService,
   UpdaterService,
 } from './services';
 
@@ -82,11 +84,13 @@ let notificationManager: NotificationManager;
 let updaterService: UpdaterService;
 let sshConnectionManager: SshConnectionManager;
 let teamDataService: TeamDataService;
+let teamProvisioningService: TeamProvisioningService;
 let httpServer: HttpServer;
 
 // File watcher event cleanup functions
 let fileChangeCleanup: (() => void) | null = null;
 let todoChangeCleanup: (() => void) | null = null;
+let teamChangeCleanup: (() => void) | null = null;
 
 /**
  * Resolve production renderer index path.
@@ -116,6 +120,10 @@ function wireFileWatcherEvents(context: ServiceContext): void {
     todoChangeCleanup();
     todoChangeCleanup = null;
   }
+  if (teamChangeCleanup) {
+    teamChangeCleanup();
+    teamChangeCleanup = null;
+  }
 
   // Wire file-change events to renderer and HTTP SSE
   const fileChangeHandler = (event: unknown): void => {
@@ -136,6 +144,16 @@ function wireFileWatcherEvents(context: ServiceContext): void {
   };
   context.fileWatcher.on('todo-change', todoChangeHandler);
   todoChangeCleanup = () => context.fileWatcher.off('todo-change', todoChangeHandler);
+
+  // Forward team-change events to renderer and HTTP SSE
+  const teamChangeHandler = (event: unknown): void => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(TEAM_CHANGE, event);
+    }
+    httpServer?.broadcast('team-change', event);
+  };
+  context.fileWatcher.on('team-change', teamChangeHandler);
+  teamChangeCleanup = () => context.fileWatcher.off('team-change', teamChangeHandler);
 
   logger.info(`FileWatcher events wired for context: ${context.id}`);
 }
@@ -267,16 +285,24 @@ function initializeServices(): void {
   // Initialize updater service
   updaterService = new UpdaterService();
   teamDataService = new TeamDataService();
+  teamProvisioningService = new TeamProvisioningService();
   httpServer = new HttpServer();
 
   // Initialize IPC handlers with registry
-  initializeIpcHandlers(contextRegistry, updaterService, sshConnectionManager, teamDataService, {
-    rewire: rewireContextEvents,
-    full: onContextSwitched,
-    onClaudeRootPathUpdated: (_claudeRootPath: string | null) => {
-      reconfigureLocalContextForClaudeRoot();
-    },
-  });
+  initializeIpcHandlers(
+    contextRegistry,
+    updaterService,
+    sshConnectionManager,
+    teamDataService,
+    teamProvisioningService,
+    {
+      rewire: rewireContextEvents,
+      full: onContextSwitched,
+      onClaudeRootPathUpdated: (_claudeRootPath: string | null) => {
+        reconfigureLocalContextForClaudeRoot();
+      },
+    }
+  );
 
   // HTTP Server control IPC handlers
   ipcMain.handle(HTTP_SERVER_START, async () => {

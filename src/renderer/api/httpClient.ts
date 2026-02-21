@@ -14,6 +14,7 @@ import type {
   ConfigAPI,
   ContextInfo,
   ConversationGroup,
+  CreateTaskRequest,
   ElectronAPI,
   FileChangeEvent,
   HttpServerAPI,
@@ -24,6 +25,8 @@ import type {
   Project,
   RepositoryGroup,
   SearchSessionsResult,
+  SendMessageRequest,
+  SendMessageResult,
   Session,
   SessionAPI,
   SessionDetail,
@@ -36,9 +39,18 @@ import type {
   SshConnectionStatus,
   SshLastConnection,
   SubagentDetail,
-  TeamSummary,
+  TeamChangeEvent,
+  TeamCreateRequest,
+  TeamCreateResponse,
+  TeamData,
+  TeamProvisioningPrepareResult,
+  TeamProvisioningProgress,
   TeamsAPI,
+  TeamSummary,
+  TeamTask,
+  TeamTaskStatus,
   TriggerTestResult,
+  UpdateKanbanPatch,
   UpdaterAPI,
   WaterfallData,
   WslClaudeRootCandidate,
@@ -591,6 +603,69 @@ export class HttpAPIClient implements ElectronAPI {
     list: async (): Promise<TeamSummary[]> => {
       console.warn('[HttpAPIClient] teams API is not available in browser mode');
       return [];
+    },
+    getData: async (_teamName: string): Promise<TeamData> => {
+      throw new Error('Teams detail is not available in browser mode');
+    },
+    deleteTeam: async (_teamName: string): Promise<void> => {
+      throw new Error('Team deletion is not available in browser mode');
+    },
+    prepareProvisioning: async (_cwd?: string): Promise<TeamProvisioningPrepareResult> => {
+      throw new Error('Team provisioning is not available in browser mode');
+    },
+    createTeam: async (_request: TeamCreateRequest): Promise<TeamCreateResponse> => {
+      throw new Error('Team provisioning is not available in browser mode');
+    },
+    getProvisioningStatus: async (_runId: string): Promise<TeamProvisioningProgress> => {
+      throw new Error('Team provisioning is not available in browser mode');
+    },
+    cancelProvisioning: async (_runId: string): Promise<void> => {
+      throw new Error('Team provisioning is not available in browser mode');
+    },
+    sendMessage: async (
+      _teamName: string,
+      _request: SendMessageRequest
+    ): Promise<SendMessageResult> => {
+      throw new Error('Team messaging is not available in browser mode');
+    },
+    createTask: async (_teamName: string, _request: CreateTaskRequest): Promise<TeamTask> => {
+      throw new Error('Team task creation is not available in browser mode');
+    },
+    requestReview: async (_teamName: string, _taskId: string): Promise<void> => {
+      throw new Error('Team review is not available in browser mode');
+    },
+    updateKanban: async (
+      _teamName: string,
+      _taskId: string,
+      _patch: UpdateKanbanPatch
+    ): Promise<void> => {
+      throw new Error('Team kanban is not available in browser mode');
+    },
+    updateTaskStatus: async (
+      _teamName: string,
+      _taskId: string,
+      _status: TeamTaskStatus
+    ): Promise<void> => {
+      throw new Error('Team task status update is not available in browser mode');
+    },
+    processSend: async (_teamName: string, _message: string): Promise<void> => {
+      throw new Error('Team process communication is not available in browser mode');
+    },
+    processAlive: async (_teamName: string): Promise<boolean> => {
+      return false;
+    },
+    aliveList: async (): Promise<string[]> => {
+      return [];
+    },
+    onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {
+      return this.addEventListener('team-change', (data: unknown) =>
+        callback(null, data as TeamChangeEvent)
+      );
+    },
+    onProvisioningProgress: (
+      _callback: (event: unknown, data: TeamProvisioningProgress) => void
+    ): (() => void) => {
+      return () => {};
     },
   };
 }

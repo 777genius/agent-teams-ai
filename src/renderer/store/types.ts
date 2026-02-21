@@ -14,9 +14,9 @@ import type { RepositorySlice } from './slices/repositorySlice';
 import type { SessionDetailSlice } from './slices/sessionDetailSlice';
 import type { SessionSlice } from './slices/sessionSlice';
 import type { SubagentSlice } from './slices/subagentSlice';
-import type { TeamSlice } from './slices/teamSlice';
 import type { TabSlice } from './slices/tabSlice';
 import type { TabUISlice } from './slices/tabUISlice';
+import type { TeamSlice } from './slices/teamSlice';
 import type { UISlice } from './slices/uiSlice';
 import type { UpdateSlice } from './slices/updateSlice';
 

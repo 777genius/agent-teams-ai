@@ -76,13 +76,16 @@ export interface Tab {
   id: string;
 
   /** Type of content displayed in this tab */
-  type: 'session' | 'dashboard' | 'notifications' | 'settings' | 'teams';
+  type: 'session' | 'dashboard' | 'notifications' | 'settings' | 'teams' | 'team';
 
   /** Session ID (required when type === 'session') */
   sessionId?: string;
 
   /** Project ID (required when type === 'session') */
   projectId?: string;
+
+  /** Team name (required when type === 'team') */
+  teamName?: string;
 
   /** Display name for the tab (max 50 chars) */
   label: string;

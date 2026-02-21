@@ -36,7 +36,8 @@ export class TeamConfigReader {
 
         const memberCount = Array.isArray(config.members) ? config.members.length : 0;
         summaries.push({
-          name: config.name,
+          teamName: entry.name,
+          displayName: config.name,
           description: typeof config.description === 'string' ? config.description : '',
           memberCount,
           taskCount: 0,
@@ -48,5 +49,19 @@ export class TeamConfigReader {
     }
 
     return summaries;
+  }
+
+  async getConfig(teamName: string): Promise<TeamConfig | null> {
+    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+    try {
+      const raw = await fs.promises.readFile(configPath, 'utf8');
+      const config = JSON.parse(raw) as TeamConfig;
+      if (typeof config.name !== 'string' || config.name.trim() === '') {
+        return null;
+      }
+      return config;
+    } catch {
+      return null;
+    }
   }
 }

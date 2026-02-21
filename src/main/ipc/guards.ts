@@ -12,6 +12,10 @@ const SESSION_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const SUBAGENT_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const NOTIFICATION_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const TRIGGER_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
+const TEAM_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
+const TASK_ID_PATTERN = /^\d{1,10}$/;
+const MEMBER_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
+const FROM_FIELD_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
 const MAX_QUERY_LENGTH = 512;
 const MAX_RESULTS = 200;
@@ -104,6 +108,58 @@ export function validateTriggerId(triggerId: unknown): ValidationResult<string> 
 
   if (!TRIGGER_ID_PATTERN.test(basic.value!)) {
     return { valid: false, error: 'triggerId contains invalid characters' };
+  }
+
+  return { valid: true, value: basic.value };
+}
+
+export function validateTeamName(teamName: unknown): ValidationResult<string> {
+  const basic = validateString(teamName, 'teamName', 128);
+  if (!basic.valid) {
+    return basic;
+  }
+
+  if (!TEAM_NAME_PATTERN.test(basic.value!)) {
+    return { valid: false, error: 'teamName contains invalid characters' };
+  }
+
+  return { valid: true, value: basic.value };
+}
+
+export function validateTaskId(taskId: unknown): ValidationResult<string> {
+  const basic = validateString(taskId, 'taskId', 16);
+  if (!basic.valid) {
+    return basic;
+  }
+
+  if (!TASK_ID_PATTERN.test(basic.value!)) {
+    return { valid: false, error: 'taskId must contain only digits' };
+  }
+
+  return { valid: true, value: basic.value };
+}
+
+export function validateMemberName(memberName: unknown): ValidationResult<string> {
+  const basic = validateString(memberName, 'member', 128);
+  if (!basic.valid) {
+    return basic;
+  }
+
+  if (!MEMBER_NAME_PATTERN.test(basic.value!)) {
+    return { valid: false, error: 'member contains invalid characters' };
+  }
+
+  return { valid: true, value: basic.value };
+}
+
+export function validateFromField(from: unknown): ValidationResult<string> {
+  const basic = validateString(from, 'from', 128);
+  if (!basic.valid) {
+    return basic;
+  }
+
+  if (!FROM_FIELD_PATTERN.test(basic.value!)) {
+    return { valid: false, error: 'from contains invalid characters' };
   }
 
   return { valid: true, value: basic.value };

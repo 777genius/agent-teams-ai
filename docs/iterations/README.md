@@ -5,6 +5,11 @@
 ## Список
 
 - [Итерация 01 — Core Foundation + Team List](./iteration-01-core-team-list.md)
+- [Итерация 02 — Team Detail + Members](./iteration-02-team-detail-members.md)
+- [Итерация 03 — Kanban Board (click-to-move)](./iteration-03-kanban-board.md)
+- [Итерация 04 — Messaging + Review](./iteration-04-messaging-review.md)
+- [Итерация 05 — Testing + Polish](./iteration-05-testing-polish.md)
+- [Итерация 06 — Team Provisioning (Create Team из UI)](./iteration-06-team-provisioning.md)
 
 ## Принципы
 

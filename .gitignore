@@ -47,3 +47,5 @@ temp/
 
 eslint-fix/
 remotion/*
+
+.home/

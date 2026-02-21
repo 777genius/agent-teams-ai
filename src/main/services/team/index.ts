@@ -1,2 +1,11 @@
+export { ClaudeBinaryResolver } from './ClaudeBinaryResolver';
+export { TeamAgentToolsInstaller } from './TeamAgentToolsInstaller';
 export { TeamConfigReader } from './TeamConfigReader';
 export { TeamDataService } from './TeamDataService';
+export { TeamInboxReader } from './TeamInboxReader';
+export { TeamInboxWriter } from './TeamInboxWriter';
+export { TeamKanbanManager } from './TeamKanbanManager';
+export { TeamMemberResolver } from './TeamMemberResolver';
+export { TeamProvisioningService } from './TeamProvisioningService';
+export { TeamTaskReader } from './TeamTaskReader';
+export { TeamTaskWriter } from './TeamTaskWriter';

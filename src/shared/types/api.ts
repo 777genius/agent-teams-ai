@@ -13,7 +13,21 @@ import type {
   NotificationTrigger,
   TriggerTestResult,
 } from './notifications';
-import type { TeamSummary } from './team';
+import type {
+  CreateTaskRequest,
+  SendMessageRequest,
+  SendMessageResult,
+  TeamChangeEvent,
+  TeamCreateRequest,
+  TeamCreateResponse,
+  TeamData,
+  TeamProvisioningPrepareResult,
+  TeamProvisioningProgress,
+  TeamSummary,
+  TeamTask,
+  TeamTaskStatus,
+  UpdateKanbanPatch,
+} from './team';
 import type { WaterfallData } from './visualization';
 import type {
   ConversationGroup,
@@ -312,6 +326,24 @@ export interface HttpServerAPI {
 
 export interface TeamsAPI {
   list: () => Promise<TeamSummary[]>;
+  getData: (teamName: string) => Promise<TeamData>;
+  deleteTeam: (teamName: string) => Promise<void>;
+  prepareProvisioning: (cwd?: string) => Promise<TeamProvisioningPrepareResult>;
+  createTeam: (request: TeamCreateRequest) => Promise<TeamCreateResponse>;
+  getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;
+  cancelProvisioning: (runId: string) => Promise<void>;
+  sendMessage: (teamName: string, request: SendMessageRequest) => Promise<SendMessageResult>;
+  createTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;
+  requestReview: (teamName: string, taskId: string) => Promise<void>;
+  updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;
+  updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
+  processSend: (teamName: string, message: string) => Promise<void>;
+  processAlive: (teamName: string) => Promise<boolean>;
+  aliveList: () => Promise<string[]>;
+  onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void) => () => void;
+  onProvisioningProgress: (
+    callback: (event: unknown, data: TeamProvisioningProgress) => void
+  ) => () => void;
 }
 
 // =============================================================================

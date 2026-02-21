@@ -31,6 +31,7 @@ const TAB_ICONS = {
   settings: Settings,
   session: FileText,
   teams: Users,
+  team: Users,
 } as const;
 
 export const SortableTab = ({

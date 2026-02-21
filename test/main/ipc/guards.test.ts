@@ -3,9 +3,13 @@ import { describe, expect, it } from 'vitest';
 import {
   coercePageLimit,
   coerceSearchMaxResults,
+  validateFromField,
+  validateMemberName,
   validateProjectId,
   validateSearchQuery,
   validateSessionId,
+  validateTaskId,
+  validateTeamName,
 } from '../../../src/main/ipc/guards';
 
 describe('ipc guards', () => {
@@ -50,5 +54,19 @@ describe('ipc guards', () => {
   it('caps pagination limits', () => {
     expect(coercePageLimit(500, 20)).toBe(200);
     expect(coercePageLimit(0, 20)).toBe(20);
+  });
+
+  it('validates team/task/member/from fields', () => {
+    expect(validateTeamName('team-1').valid).toBe(true);
+    expect(validateTaskId('123').valid).toBe(true);
+    expect(validateMemberName('alice_1').valid).toBe(true);
+    expect(validateFromField('team-lead').valid).toBe(true);
+  });
+
+  it('rejects traversal and invalid chars for team-related fields', () => {
+    expect(validateTeamName('../escape').valid).toBe(false);
+    expect(validateTaskId('12/34').valid).toBe(false);
+    expect(validateMemberName('alice bob').valid).toBe(false);
+    expect(validateFromField('../../etc').valid).toBe(false);
   });
 });

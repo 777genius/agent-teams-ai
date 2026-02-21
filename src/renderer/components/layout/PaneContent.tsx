@@ -8,6 +8,7 @@ import { TabUIProvider } from '@renderer/contexts/TabUIContext';
 import { DashboardView } from '../dashboard/DashboardView';
 import { NotificationsView } from '../notifications/NotificationsView';
 import { SettingsView } from '../settings/SettingsView';
+import { TeamDetailView } from '../team/TeamDetailView';
 import { TeamListView } from '../team/TeamListView';
 
 import { SessionTabContent } from './SessionTabContent';
@@ -44,6 +45,7 @@ export const PaneContent = ({ pane }: PaneContentProps): React.JSX.Element => {
             {tab.type === 'notifications' && <NotificationsView />}
             {tab.type === 'settings' && <SettingsView />}
             {tab.type === 'teams' && <TeamListView />}
+            {tab.type === 'team' && <TeamDetailView teamName={tab.teamName ?? ''} />}
             {tab.type === 'session' && (
               <TabUIProvider tabId={tab.id}>
                 <SessionTabContent tab={tab} isActive={isActive} />

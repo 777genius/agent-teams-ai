@@ -19,6 +19,7 @@ export default defineConfig({
       '@shared': resolve(__dirname, 'src/shared'),
       '@main': resolve(__dirname, 'src/main'),
       '@renderer': resolve(__dirname, 'src/renderer'),
+      '@preload': resolve(__dirname, 'src/preload'),
     },
   },
 });

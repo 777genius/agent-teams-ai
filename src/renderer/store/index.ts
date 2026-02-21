@@ -16,15 +16,15 @@ import { createRepositorySlice } from './slices/repositorySlice';
 import { createSessionDetailSlice } from './slices/sessionDetailSlice';
 import { createSessionSlice } from './slices/sessionSlice';
 import { createSubagentSlice } from './slices/subagentSlice';
-import { createTeamSlice } from './slices/teamSlice';
 import { createTabSlice } from './slices/tabSlice';
 import { createTabUISlice } from './slices/tabUISlice';
+import { createTeamSlice } from './slices/teamSlice';
 import { createUISlice } from './slices/uiSlice';
 import { createUpdateSlice } from './slices/updateSlice';
 
 import type { DetectedError } from '../types/data';
 import type { AppState } from './types';
-import type { UpdaterStatus } from '@shared/types';
+import type { TeamChangeEvent, UpdaterStatus } from '@shared/types';
 
 // =============================================================================
 // Store Creation
@@ -63,10 +63,19 @@ export const useStore = create<AppState>()((...args) => ({
  */
 export function initializeNotificationListeners(): () => void {
   const cleanupFns: (() => void)[] = [];
+  useStore.getState().subscribeProvisioningProgress();
+  cleanupFns.push(() => {
+    useStore.getState().unsubscribeProvisioningProgress();
+  });
   const pendingSessionRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const pendingProjectRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  let teamRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+  let teamListRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   const SESSION_REFRESH_DEBOUNCE_MS = 150;
   const PROJECT_REFRESH_DEBOUNCE_MS = 300;
+  const TEAM_REFRESH_THROTTLE_MS = 800;
+  const TEAM_LIST_REFRESH_THROTTLE_MS = 2000;
   const getBaseProjectId = (projectId: string | null | undefined): string | null => {
     if (!projectId) return null;
     const separatorIndex = projectId.indexOf('::');
@@ -169,6 +178,16 @@ export function initializeNotificationListeners(): () => void {
     );
   };
 
+  const isTeamVisibleInAnyPane = (teamName: string): boolean => {
+    const { paneLayout } = useStore.getState();
+    return paneLayout.panes.some((pane) => {
+      if (!pane.activeTabId) return false;
+      return pane.tabs.some(
+        (tab) => tab.id === pane.activeTabId && tab.type === 'team' && tab.teamName === teamName
+      );
+    });
+  };
+
   // Listen for task-list file changes to refresh currently viewed session metadata
   if (api.onTodoChange) {
     const cleanup = api.onTodoChange((event) => {
@@ -267,6 +286,48 @@ export function initializeNotificationListeners(): () => void {
     });
     if (typeof cleanup === 'function') {
       cleanupFns.push(cleanup);
+    }
+  }
+
+  if (api.teams?.onTeamChange) {
+    const cleanup = api.teams.onTeamChange((_event: unknown, event: TeamChangeEvent) => {
+      // Throttled refresh of summary list (keeps TeamListView current without flooding).
+      if (!teamListRefreshTimer) {
+        teamListRefreshTimer = setTimeout(() => {
+          teamListRefreshTimer = null;
+          void useStore.getState().fetchTeams();
+        }, TEAM_LIST_REFRESH_THROTTLE_MS);
+      }
+
+      if (!event?.teamName || !isTeamVisibleInAnyPane(event.teamName)) {
+        return;
+      }
+
+      // Throttle (not debounce): keep at most one pending detail refresh.
+      // Debounce would delay indefinitely while inbox messages keep arriving.
+      if (teamRefreshTimer) {
+        return;
+      }
+
+      teamRefreshTimer = setTimeout(() => {
+        teamRefreshTimer = null;
+        const current = useStore.getState();
+        void current.refreshTeamData(event.teamName);
+      }, TEAM_REFRESH_THROTTLE_MS);
+    });
+
+    if (typeof cleanup === 'function') {
+      cleanupFns.push(() => {
+        cleanup();
+        if (teamRefreshTimer) {
+          clearTimeout(teamRefreshTimer);
+          teamRefreshTimer = null;
+        }
+        if (teamListRefreshTimer) {
+          clearTimeout(teamListRefreshTimer);
+          teamListRefreshTimer = null;
+        }
+      });
     }
   }
 
