@@ -175,6 +175,9 @@
       "icon": "resources/icons/png",
       "category": "Development"
     },
+    "deb": {
+      "afterInstall": "resources/afterInstall.sh"
+    },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
