@@ -1,32 +1,36 @@
 /**
- * WindowsTitleBar - Conventional title bar for Windows when the native frame is hidden.
+ * CustomTitleBar - Conventional title bar for Windows and Linux when the native frame is hidden.
  *
  * Renders a draggable top strip with window controls (minimize, maximize/restore, close)
- * on the right, matching Windows conventions. Only shown in Electron on Windows (win32).
+ * on the right. Only shown in Electron on Windows or Linux (macOS uses native traffic lights).
  */
 
 import { useEffect, useState } from 'react';
 
 import { isElectronMode } from '@renderer/api';
+import faviconUrl from '@renderer/favicon.png';
+import { useStore } from '@renderer/store';
 import { Minus, Square, X } from 'lucide-react';
 
 const TITLE_BAR_HEIGHT = 32;
 
-function isWindowsDesktop(): boolean {
+function needsCustomTitleBar(): boolean {
   if (!isElectronMode()) return false;
-  return window.navigator.userAgent.includes('Windows');
+  const ua = window.navigator.userAgent;
+  return ua.includes('Windows') || ua.includes('Linux');
 }
 
-export const WindowsTitleBar = (): React.JSX.Element | null => {
+export const CustomTitleBar = (): React.JSX.Element | null => {
   const [isMaximized, setIsMaximized] = useState(false);
-  const isWin = isWindowsDesktop();
+  const useNativeTitleBar = useStore((s) => s.appConfig?.general?.useNativeTitleBar ?? false);
+  const showTitleBar = needsCustomTitleBar() && !useNativeTitleBar;
   const api = typeof window !== 'undefined' ? window.electronAPI?.windowControls : null;
 
   useEffect(() => {
     if (api) void api.isMaximized().then(setIsMaximized);
   }, [api]);
 
-  if (!isWin || !api) return null;
+  if (!showTitleBar || !api) return null;
 
   const { minimize, maximize, close, isMaximized: getIsMaximized } = api;
 
@@ -49,14 +53,9 @@ export const WindowsTitleBar = (): React.JSX.Element | null => {
 
   return (
     <div className="flex shrink-0 select-none items-stretch" style={titleBarStyle}>
-      {/* Draggable area — app title optional */}
-      <div className="flex flex-1 items-center pl-4" style={{ minWidth: 0 }}>
-        <span
-          className="truncate text-sm font-semibold"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          claude-devtools
-        </span>
+      {/* Draggable area — app icon */}
+      <div className="flex flex-1 items-center pl-3" style={{ minWidth: 0 }}>
+        <img src={faviconUrl} alt="" className="size-5 shrink-0 rounded-sm" draggable={false} />
       </div>
 
       {/* Window controls — no-drag so they receive clicks */}

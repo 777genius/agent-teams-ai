@@ -424,8 +424,8 @@ function syncTrafficLightPosition(win: BrowserWindow): void {
  */
 function createWindow(): void {
   const isMac = process.platform === 'darwin';
-  const isLinux = process.platform === 'linux';
   const iconPath = isMac ? undefined : getWindowIconPath();
+  const useNativeTitleBar = !isMac && configManager.getConfig().general.useNativeTitleBar;
   mainWindow = new BrowserWindow({
     width: DEFAULT_WINDOW_WIDTH,
     height: DEFAULT_WINDOW_HEIGHT,
@@ -436,7 +436,7 @@ function createWindow(): void {
       contextIsolation: true,
     },
     backgroundColor: '#1a1a1a',
-    ...(isLinux ? {} : { titleBarStyle: 'hidden' as const }),
+    ...(useNativeTitleBar ? {} : { titleBarStyle: 'hidden' as const }),
     ...(isMac && { trafficLightPosition: getTrafficLightPositionForZoom(1) }),
     title: 'claude-devtools',
   });
@@ -485,6 +485,7 @@ function createWindow(): void {
 
     // Prevent Electron's default Ctrl+R / Cmd+R page reload so the renderer
     // keyboard handler can use it as "Refresh Session" (fixes #58).
+    // Also prevent Ctrl+Shift+R / Cmd+Shift+R (hard reload).
     if ((input.control || input.meta) && input.key.toLowerCase() === 'r') {
       event.preventDefault();
       return;

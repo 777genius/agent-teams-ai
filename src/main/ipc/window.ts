@@ -5,7 +5,7 @@
  */
 
 import { createLogger } from '@shared/utils/logger';
-import { BrowserWindow, type IpcMain } from 'electron';
+import { app, BrowserWindow, type IpcMain } from 'electron';
 
 const logger = createLogger('IPC:window');
 
@@ -40,6 +40,11 @@ export function registerWindowHandlers(ipcMain: IpcMain): void {
     return win != null && !win.isDestroyed() && win.isMaximized();
   });
 
+  ipcMain.handle('app:relaunch', () => {
+    app.relaunch();
+    app.exit(0);
+  });
+
   logger.info('Window handlers registered');
 }
 
@@ -48,5 +53,6 @@ export function removeWindowHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler('window:maximize');
   ipcMain.removeHandler('window:close');
   ipcMain.removeHandler('window:isMaximized');
+  ipcMain.removeHandler('app:relaunch');
   logger.info('Window handlers removed');
 }

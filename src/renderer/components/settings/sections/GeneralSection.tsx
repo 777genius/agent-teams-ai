@@ -297,6 +297,31 @@ export const GeneralSection = ({
           disabled={saving}
         />
       </SettingRow>
+      {isElectron && !window.navigator.userAgent.includes('Macintosh') && (
+        <SettingRow
+          label="Use native title bar"
+          description="Use the default system window frame instead of the custom title bar"
+        >
+          <SettingsToggle
+            enabled={safeConfig.general.useNativeTitleBar}
+            onChange={async (v) => {
+              const shouldRelaunch = await confirm({
+                title: 'Restart required',
+                message: 'The app needs to restart to apply the title bar change. Restart now?',
+                confirmLabel: 'Restart',
+              });
+              if (shouldRelaunch) {
+                onGeneralToggle('useNativeTitleBar', v);
+                // Small delay to let config persist before relaunch
+                setTimeout(() => {
+                  void window.electronAPI?.windowControls?.relaunch();
+                }, 200);
+              }
+            }}
+            disabled={saving}
+          />
+        </SettingRow>
+      )}
 
       {isElectron && (
         <>

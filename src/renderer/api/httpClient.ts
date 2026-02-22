@@ -512,6 +512,7 @@ export class HttpAPIClient implements ElectronAPI {
     maximize: async (): Promise<void> => {},
     close: async (): Promise<void> => {},
     isMaximized: async (): Promise<boolean> => false,
+    relaunch: async (): Promise<void> => {},
   };
 
   // ---------------------------------------------------------------------------

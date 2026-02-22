@@ -31,6 +31,7 @@ export interface SafeConfig {
     defaultTab: 'dashboard' | 'last-session';
     claudeRootPath: string | null;
     autoExpandAIGroups: boolean;
+    useNativeTitleBar: boolean;
   };
   notifications: {
     enabled: boolean;
@@ -156,6 +157,7 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
         defaultTab: displayConfig?.general?.defaultTab ?? 'dashboard',
         claudeRootPath: displayConfig?.general?.claudeRootPath ?? null,
         autoExpandAIGroups: displayConfig?.general?.autoExpandAIGroups ?? false,
+        useNativeTitleBar: displayConfig?.general?.useNativeTitleBar ?? false,
       },
       notifications: {
         enabled: displayConfig?.notifications?.enabled ?? true,

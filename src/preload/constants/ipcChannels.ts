@@ -171,3 +171,6 @@ export const WINDOW_CLOSE = 'window:close';
 
 /** Whether the window is currently maximized */
 export const WINDOW_IS_MAXIMIZED = 'window:isMaximized';
+
+/** Relaunch the application */
+export const APP_RELAUNCH = 'app:relaunch';

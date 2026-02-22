@@ -432,6 +432,7 @@ export interface ElectronAPI {
     maximize: () => Promise<void>;
     close: () => Promise<void>;
     isMaximized: () => Promise<boolean>;
+    relaunch: () => Promise<void>;
   };
 
   // Updater API
