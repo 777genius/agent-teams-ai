@@ -4,8 +4,9 @@
  * can provide conventional min / maximize / close buttons.
  */
 
-import { WINDOW_IS_FULLSCREEN } from '@preload/constants/ipcChannels';
 import { createLogger } from '@shared/utils/logger';
+
+const WINDOW_IS_FULLSCREEN = 'window:isFullScreen';
 import { BrowserWindow, type IpcMain } from 'electron';
 
 const logger = createLogger('IPC:window');
