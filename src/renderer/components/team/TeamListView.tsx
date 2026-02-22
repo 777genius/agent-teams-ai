@@ -6,6 +6,7 @@ import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
+import { buildTaskCountsByTeam, normalizePath } from '@renderer/utils/pathNormalize';
 import { Copy, FolderOpen, Search, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -91,7 +92,18 @@ export const TeamListView = (): React.JSX.Element => {
   const [copyData, setCopyData] = useState<TeamCopyData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [aliveTeams, setAliveTeams] = useState<string[]>([]);
-  const { teams, teamsLoading, teamsError, fetchTeams, openTeamTab, deleteTeam } = useStore(
+  const {
+    teams,
+    teamsLoading,
+    teamsError,
+    fetchTeams,
+    openTeamTab,
+    deleteTeam,
+    selectedProjectId,
+    projects,
+    globalTasks,
+    fetchAllTasks,
+  } = useStore(
     useShallow((s) => ({
       teams: s.teams,
       teamsLoading: s.teamsLoading,
@@ -99,6 +111,10 @@ export const TeamListView = (): React.JSX.Element => {
       fetchTeams: s.fetchTeams,
       openTeamTab: s.openTeamTab,
       deleteTeam: s.deleteTeam,
+      selectedProjectId: s.selectedProjectId,
+      projects: s.projects,
+      globalTasks: s.globalTasks,
+      fetchAllTasks: s.fetchAllTasks,
     }))
   );
   const { connectionMode, createTeam, provisioningError, provisioningRuns } = useStore(
@@ -129,16 +145,39 @@ export const TeamListView = (): React.JSX.Element => {
     };
   }, [electronMode, teams]);
 
+  const selectedProjectPath = useMemo(() => {
+    if (!selectedProjectId) return null;
+    const project = projects.find((p) => p.id === selectedProjectId);
+    return project ? normalizePath(project.path) : null;
+  }, [selectedProjectId, projects]);
+
   const filteredTeams = useMemo<TeamSummary[]>(() => {
+    let result = teams;
+
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return teams;
-    return teams.filter(
-      (t) =>
-        t.teamName.toLowerCase().includes(q) ||
-        t.displayName.toLowerCase().includes(q) ||
-        t.description.toLowerCase().includes(q)
-    );
-  }, [teams, searchQuery]);
+    if (q) {
+      result = result.filter(
+        (t) =>
+          t.teamName.toLowerCase().includes(q) ||
+          t.displayName.toLowerCase().includes(q) ||
+          t.description.toLowerCase().includes(q)
+      );
+    }
+
+    if (selectedProjectPath) {
+      const matches = (t: TeamSummary): boolean => {
+        if (t.projectPath && normalizePath(t.projectPath) === selectedProjectPath) return true;
+        return t.projectPathHistory?.some((p) => normalizePath(p) === selectedProjectPath) ?? false;
+      };
+      result = [...result].sort((a, b) => {
+        const aMatch = matches(a) ? 0 : 1;
+        const bMatch = matches(b) ? 0 : 1;
+        return aMatch - bMatch;
+      });
+    }
+
+    return result;
+  }, [teams, searchQuery, selectedProjectPath]);
 
   const handleDeleteTeam = useCallback(
     (teamName: string, e: React.MouseEvent) => {
@@ -184,7 +223,10 @@ export const TeamListView = (): React.JSX.Element => {
       return;
     }
     void fetchTeams();
-  }, [electronMode, fetchTeams]);
+    void fetchAllTasks();
+  }, [electronMode, fetchTeams, fetchAllTasks]);
+
+  const taskCountsByTeam = useMemo(() => buildTaskCountsByTeam(globalTasks), [globalTasks]);
 
   if (!electronMode) {
     return (
@@ -338,11 +380,11 @@ export const TeamListView = (): React.JSX.Element => {
                     ? { borderLeftWidth: '3px', borderLeftColor: teamColorSet.border }
                     : undefined
                 }
-                onClick={() => openTeamTab(team.teamName)}
+                onClick={() => openTeamTab(team.teamName, team.projectPath)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    openTeamTab(team.teamName);
+                    openTeamTab(team.teamName, team.projectPath);
                   }
                 }}
               >
@@ -415,25 +457,51 @@ export const TeamListView = (): React.JSX.Element => {
                         Members: {team.memberCount}
                       </Badge>
                     )}
-                    <Badge variant="secondary" className="text-[10px] font-normal">
-                      Tasks: {team.taskCount}
-                    </Badge>
+                    {(() => {
+                      const tc = taskCountsByTeam.get(team.teamName);
+                      if (!tc || (tc.pending === 0 && tc.inProgress === 0 && tc.completed === 0)) {
+                        return (
+                          <Badge variant="secondary" className="text-[10px] font-normal">
+                            Tasks: 0
+                          </Badge>
+                        );
+                      }
+                      return (
+                        <>
+                          {tc.inProgress > 0 && (
+                            <span className="inline-flex items-center rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-400">
+                              {tc.inProgress} active
+                            </span>
+                          )}
+                          {tc.pending > 0 && (
+                            <span className="inline-flex items-center rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-medium text-yellow-400">
+                              {tc.pending} pending
+                            </span>
+                          )}
+                          {tc.completed > 0 && (
+                            <span className="inline-flex items-center rounded-full bg-green-500/15 px-1.5 py-0.5 text-[10px] font-medium text-green-400">
+                              {tc.completed} done
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                   {(() => {
-                    const projects = getRecentProjects(team);
-                    if (projects.length === 0) return null;
+                    const recentPaths = getRecentProjects(team);
+                    if (recentPaths.length === 0) return null;
                     return (
                       <div className="mt-2 flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
                         <FolderOpen size={10} className="shrink-0" />
                         <span className="truncate">
-                          {projects.map((p, i) => (
+                          {recentPaths.map((p, i) => (
                             <span key={p} title={p}>
                               {i === 0 && status === 'running' ? (
                                 <span className="text-emerald-400">{folderName(p)}</span>
                               ) : (
                                 folderName(p)
                               )}
-                              {i < projects.length - 1 ? ', ' : ''}
+                              {i < recentPaths.length - 1 ? ', ' : ''}
                             </span>
                           ))}
                         </span>

@@ -11,6 +11,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
+import {
+  buildTaskCountsByProject,
+  normalizePath,
+  type TaskStatusCounts,
+} from '@renderer/utils/pathNormalize';
 import { createLogger } from '@shared/utils/logger';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -97,6 +102,7 @@ interface RepositoryCardProps {
   repo: RepositoryGroup;
   onClick: () => void;
   isHighlighted?: boolean;
+  taskCounts?: TaskStatusCounts;
 }
 
 /**
@@ -140,6 +146,7 @@ const RepositoryCard = ({
   repo,
   onClick,
   isHighlighted,
+  taskCounts,
 }: Readonly<RepositoryCardProps>): React.JSX.Element => {
   const lastActivity = repo.mostRecentSession
     ? formatDistanceToNow(new Date(repo.mostRecentSession), { addSuffix: true })
@@ -155,14 +162,14 @@ const RepositoryCard = ({
   return (
     <button
       onClick={onClick}
-      className={`group relative flex min-h-[120px] flex-col overflow-hidden rounded-sm border p-4 text-left transition-all duration-300 ${
+      className={`group relative flex min-h-[120px] flex-col overflow-hidden rounded-lg border p-4 text-left transition-all duration-300 ${
         isHighlighted
           ? 'border-border-emphasis bg-surface-raised'
           : 'bg-surface/50 border-border hover:border-border-emphasis hover:bg-surface-raised'
       } `}
     >
       {/* Icon with subtle border */}
-      <div className="mb-3 flex size-8 items-center justify-center rounded-sm border border-border bg-surface-overlay transition-colors duration-300 group-hover:border-border-emphasis">
+      <div className="mb-3 flex size-8 items-center justify-center rounded-md border border-border bg-surface-overlay transition-colors duration-300 group-hover:border-border-emphasis">
         <FolderGit2 className="size-4 text-text-secondary transition-colors group-hover:text-text" />
       </div>
 
@@ -183,6 +190,27 @@ const RepositoryCard = ({
           </span>
         )}
         <span className="text-[10px] text-text-secondary">{repo.totalSessions} sessions</span>
+        {taskCounts &&
+          (taskCounts.pending > 0 || taskCounts.inProgress > 0 || taskCounts.completed > 0) && (
+            <>
+              <span className="text-text-muted">·</span>
+              {taskCounts.inProgress > 0 && (
+                <span className="inline-flex items-center rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-400">
+                  {taskCounts.inProgress} active
+                </span>
+              )}
+              {taskCounts.pending > 0 && (
+                <span className="inline-flex items-center rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-medium text-yellow-400">
+                  {taskCounts.pending} pending
+                </span>
+              )}
+              {taskCounts.completed > 0 && (
+                <span className="inline-flex items-center rounded-full bg-green-500/15 px-1.5 py-0.5 text-[10px] font-medium text-green-400">
+                  {taskCounts.completed} done
+                </span>
+              )}
+            </>
+          )}
         <span className="text-text-muted">·</span>
         <span className="text-[10px] text-text-muted">{lastActivity}</span>
       </div>
@@ -233,11 +261,11 @@ const NewProjectCard = (): React.JSX.Element => {
 
   return (
     <button
-      className="hover:bg-surface/30 group relative flex min-h-[120px] flex-col items-center justify-center rounded-sm border border-dashed border-border bg-transparent p-4 transition-all duration-300 hover:border-border-emphasis"
+      className="hover:bg-surface/30 group relative flex min-h-[120px] flex-col items-center justify-center rounded-lg border border-dashed border-border bg-transparent p-4 transition-all duration-300 hover:border-border-emphasis"
       onClick={handleClick}
       title="Select a project folder"
     >
-      <div className="mb-2 flex size-8 items-center justify-center rounded-sm border border-dashed border-border transition-colors duration-300 group-hover:border-border-emphasis">
+      <div className="mb-2 flex size-8 items-center justify-center rounded-md border border-dashed border-border transition-colors duration-300 group-hover:border-border-emphasis">
         <FolderOpen className="size-4 text-text-muted transition-colors group-hover:text-text-secondary" />
       </div>
       <span className="text-xs text-text-muted transition-colors group-hover:text-text-secondary">
@@ -260,21 +288,34 @@ const ProjectsGrid = ({
   searchQuery,
   maxProjects = 12,
 }: Readonly<ProjectsGridProps>): React.JSX.Element => {
-  const { repositoryGroups, repositoryGroupsLoading, fetchRepositoryGroups, selectRepository } =
-    useStore(
-      useShallow((s) => ({
-        repositoryGroups: s.repositoryGroups,
-        repositoryGroupsLoading: s.repositoryGroupsLoading,
-        fetchRepositoryGroups: s.fetchRepositoryGroups,
-        selectRepository: s.selectRepository,
-      }))
-    );
+  const {
+    repositoryGroups,
+    repositoryGroupsLoading,
+    fetchRepositoryGroups,
+    selectRepository,
+    globalTasks,
+    fetchAllTasks,
+    openTeamsTab,
+  } = useStore(
+    useShallow((s) => ({
+      repositoryGroups: s.repositoryGroups,
+      repositoryGroupsLoading: s.repositoryGroupsLoading,
+      fetchRepositoryGroups: s.fetchRepositoryGroups,
+      selectRepository: s.selectRepository,
+      globalTasks: s.globalTasks,
+      fetchAllTasks: s.fetchAllTasks,
+      openTeamsTab: s.openTeamsTab,
+    }))
+  );
 
   useEffect(() => {
     if (repositoryGroups.length === 0) {
       void fetchRepositoryGroups();
     }
-  }, [repositoryGroups.length, fetchRepositoryGroups]);
+    void fetchAllTasks();
+  }, [repositoryGroups.length, fetchRepositoryGroups, fetchAllTasks]);
+
+  const taskCountsMap = useMemo(() => buildTaskCountsByProject(globalTasks), [globalTasks]);
 
   // Filter projects based on search query
   const filteredRepos = useMemo(() => {
@@ -375,14 +416,32 @@ const ProjectsGrid = ({
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
-      {filteredRepos.map((repo) => (
-        <RepositoryCard
-          key={repo.id}
-          repo={repo}
-          onClick={() => selectRepository(repo.id)}
-          isHighlighted={!!searchQuery.trim()}
-        />
-      ))}
+      {filteredRepos.map((repo) => {
+        const counts = repo.worktrees.reduce(
+          (acc, wt) => {
+            const c = taskCountsMap.get(normalizePath(wt.path));
+            if (c) {
+              acc.pending += c.pending;
+              acc.inProgress += c.inProgress;
+              acc.completed += c.completed;
+            }
+            return acc;
+          },
+          { pending: 0, inProgress: 0, completed: 0 }
+        );
+        return (
+          <RepositoryCard
+            key={repo.id}
+            repo={repo}
+            onClick={() => {
+              selectRepository(repo.id);
+              openTeamsTab();
+            }}
+            isHighlighted={!!searchQuery.trim()}
+            taskCounts={counts}
+          />
+        );
+      })}
       {!searchQuery.trim() && <NewProjectCard />}
     </div>
   );

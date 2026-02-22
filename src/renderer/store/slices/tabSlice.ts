@@ -12,6 +12,7 @@ import {
   findTabBySessionAndProject,
   truncateLabel,
 } from '@renderer/types/tabs';
+import { normalizePath } from '@renderer/utils/pathNormalize';
 
 import {
   findPane,
@@ -371,10 +372,7 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
         const teamData = state.selectedTeamData;
         const projectPath = teamData?.config.projectPath;
         if (projectPath) {
-          const normalizedTeamPath = projectPath.endsWith('/')
-            ? projectPath.slice(0, -1)
-            : projectPath;
-          const normalizePath = (p: string): string => (p.endsWith('/') ? p.slice(0, -1) : p);
+          const normalizedTeamPath = normalizePath(projectPath);
           const matchingProject = state.projects.find(
             (p) => normalizePath(p.path) === normalizedTeamPath
           );

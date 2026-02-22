@@ -655,6 +655,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         teamName={teamName}
         members={data.members}
         tasks={data.tasks}
+        isTeamAlive={data.isAlive}
         defaultSubject={createTaskDialog.defaultSubject}
         defaultDescription={createTaskDialog.defaultDescription}
         defaultOwner={createTaskDialog.defaultOwner}

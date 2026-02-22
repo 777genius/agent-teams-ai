@@ -20,6 +20,7 @@ import type {
   MemberLogSummary,
   SendMessageRequest,
   SendMessageResult,
+  TaskComment,
   TeamChangeEvent,
   TeamConfig,
   TeamCreateConfigRequest,
@@ -364,6 +365,7 @@ export interface TeamsAPI {
   launchTeam: (request: TeamLaunchRequest) => Promise<TeamLaunchResponse>;
   getAllTasks: () => Promise<GlobalTask[]>;
   updateConfig: (teamName: string, updates: TeamUpdateConfigRequest) => Promise<TeamConfig>;
+  addTaskComment: (teamName: string, taskId: string, text: string) => Promise<TaskComment>;
   onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void) => () => void;
   onProvisioningProgress: (
     callback: (event: unknown, data: TeamProvisioningProgress) => void

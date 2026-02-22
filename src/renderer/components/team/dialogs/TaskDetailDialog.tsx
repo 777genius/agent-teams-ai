@@ -15,6 +15,8 @@ import { TASK_STATUS_LABELS, TASK_STATUS_STYLES } from '@renderer/utils/memberHe
 import { formatDistanceToNow } from 'date-fns';
 import { ArrowLeftFromLine, ArrowRightFromLine, Clock, FileText, User } from 'lucide-react';
 
+import { TaskCommentsSection } from './TaskCommentsSection';
+
 import type { KanbanTaskState, TeamTask } from '@shared/types';
 
 interface TaskDetailDialogProps {
@@ -185,6 +187,13 @@ export const TaskDetailDialog = ({
             ) : null}
           </div>
         ) : null}
+
+        {/* Comments */}
+        <TaskCommentsSection
+          teamName={teamName}
+          taskId={currentTask.id}
+          comments={currentTask.comments ?? []}
+        />
 
         {/* Separator */}
         <div className="border-t border-[var(--color-border)]" />

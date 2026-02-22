@@ -25,6 +25,7 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   TEAM_UPDATE_CONFIG: 'team:updateConfig',
   TEAM_START_TASK: 'team:startTask',
   TEAM_GET_ALL_TASKS: 'team:getAllTasks',
+  TEAM_ADD_TASK_COMMENT: 'team:addTaskComment',
 }));
 
 import {
@@ -50,6 +51,7 @@ import {
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_TASK_STATUS,
+  TEAM_ADD_TASK_COMMENT,
 } from '../../../src/preload/constants/ipcChannels';
 import {
   initializeTeamHandlers,
@@ -78,6 +80,12 @@ describe('ipc teams handlers', () => {
     updateKanban: vi.fn(async () => undefined),
     updateTaskStatus: vi.fn(async () => undefined),
     startTask: vi.fn(async () => undefined),
+    addTaskComment: vi.fn(async () => ({
+      id: 'c1',
+      author: 'user',
+      text: 'test comment',
+      createdAt: new Date().toISOString(),
+    })),
   };
   const provisioningService = {
     prepareForProvisioning: vi.fn(async () => ({
@@ -130,6 +138,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_GET_MEMBER_STATS)).toBe(true);
     expect(handlers.has(TEAM_UPDATE_CONFIG)).toBe(true);
     expect(handlers.has(TEAM_GET_ALL_TASKS)).toBe(true);
+    expect(handlers.has(TEAM_ADD_TASK_COMMENT)).toBe(true);
   });
 
   it('returns success false on invalid sendMessage args', async () => {
@@ -297,5 +306,6 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_GET_MEMBER_STATS)).toBe(false);
     expect(handlers.has(TEAM_UPDATE_CONFIG)).toBe(false);
     expect(handlers.has(TEAM_GET_ALL_TASKS)).toBe(false);
+    expect(handlers.has(TEAM_ADD_TASK_COMMENT)).toBe(false);
   });
 });

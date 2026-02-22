@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useStore } from '@renderer/store';
+import { normalizePath } from '@renderer/utils/pathNormalize';
 import { getNonEmptyTaskCategories, groupTasksByDate } from '@renderer/utils/taskGrouping';
 import { ListTodo, Search, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -21,10 +22,6 @@ const dateCategoryLabels: Record<string, string> = {
   'Previous 7 Days': 'Last 7 Days',
   Older: 'Earlier',
 };
-
-function normalizePath(p: string): string {
-  return p.endsWith('/') ? p.slice(0, -1) : p;
-}
 
 function applyFilter(tasks: GlobalTask[], filter: StatusFilter): GlobalTask[] {
   if (filter === 'all') return tasks;

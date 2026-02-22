@@ -712,6 +712,9 @@ export class HttpAPIClient implements ElectronAPI {
     updateConfig: async () => {
       throw new Error('Team config update is not available in browser mode');
     },
+    addTaskComment: async () => {
+      throw new Error('Task comments are not available in browser mode');
+    },
     onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {
       return this.addEventListener('team-change', (data: unknown) =>
         callback(null, data as TeamChangeEvent)

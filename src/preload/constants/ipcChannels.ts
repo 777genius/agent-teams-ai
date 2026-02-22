@@ -247,3 +247,6 @@ export const TEAM_START_TASK = 'team:startTask';
 
 /** Get all tasks across all teams */
 export const TEAM_GET_ALL_TASKS = 'team:getAllTasks';
+
+/** Add a comment to a task */
+export const TEAM_ADD_TASK_COMMENT = 'team:addTaskComment';

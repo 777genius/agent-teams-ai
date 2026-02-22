@@ -31,6 +31,7 @@ import type {
   KanbanTaskState,
   SendMessageRequest,
   SendMessageResult,
+  TaskComment,
   TeamConfig,
   TeamCreateConfigRequest,
   TeamData,
@@ -312,6 +313,26 @@ export class TeamDataService {
 
   async updateTaskStatus(teamName: string, taskId: string, status: TeamTaskStatus): Promise<void> {
     await this.taskWriter.updateStatus(teamName, taskId, status);
+  }
+
+  async addTaskComment(teamName: string, taskId: string, text: string): Promise<TaskComment> {
+    const comment = await this.taskWriter.addComment(teamName, taskId, text);
+
+    try {
+      const tasks = await this.taskReader.getTasks(teamName);
+      const task = tasks.find((t) => t.id === taskId);
+      if (task?.owner) {
+        await this.sendMessage(teamName, {
+          member: task.owner,
+          text: `Comment on task #${taskId} "${task.subject}":\n\n${text}`,
+          summary: `Comment on #${taskId}`,
+        });
+      }
+    } catch {
+      // Notification is best-effort — don't fail comment save
+    }
+
+    return comment;
   }
 
   async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {

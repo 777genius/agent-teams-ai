@@ -1,4 +1,5 @@
 import { api } from '@renderer/api';
+import { normalizePath } from '@renderer/utils/pathNormalize';
 import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
 
 import type { AppState } from '../types';
@@ -7,6 +8,7 @@ import type {
   GlobalTask,
   SendMessageRequest,
   SendMessageResult,
+  TaskComment,
   TeamCreateRequest,
   TeamData,
   TeamLaunchRequest,
@@ -69,6 +71,9 @@ export interface TeamSlice {
   createTeamTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;
   startTask: (teamName: string, taskId: string) => Promise<void>;
   updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
+  addingComment: boolean;
+  addCommentError: string | null;
+  addTaskComment: (teamName: string, taskId: string, text: string) => Promise<TaskComment>;
   deleteTeam: (teamName: string) => Promise<void>;
   createTeam: (request: TeamCreateRequest) => Promise<string>;
   launchTeam: (request: TeamLaunchRequest) => Promise<string>;
@@ -98,6 +103,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   activeProvisioningRunId: null,
   provisioningError: null,
   kanbanFilterQuery: null,
+  addingComment: false,
+  addCommentError: null,
   provisioningProgressUnsubscribe: null,
 
   fetchTeams: async () => {
@@ -159,12 +166,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     // If projectPath is provided, immediately select the matching project in the sidebar.
     // This avoids a race condition where config.json hasn't been updated with projectPath yet.
     if (projectPath) {
-      const state = get();
-      const normalizePath = (p: string): string => (p.endsWith('/') ? p.slice(0, -1) : p);
+      const stateForProject = get();
       const normalizedPath = normalizePath(projectPath);
-      const matchingProject = state.projects.find((p) => normalizePath(p.path) === normalizedPath);
-      if (matchingProject && state.selectedProjectId !== matchingProject.id) {
-        state.selectProject(matchingProject.id);
+      const matchingProject = stateForProject.projects.find(
+        (p) => normalizePath(p.path) === normalizedPath
+      );
+      if (matchingProject && stateForProject.selectedProjectId !== matchingProject.id) {
+        stateForProject.selectProject(matchingProject.id);
       }
     }
 
@@ -217,11 +225,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       const projectPath = data.config.projectPath;
       if (projectPath) {
         const state = get();
-        const normalizedTeamPath = projectPath.endsWith('/')
-          ? projectPath.slice(0, -1)
-          : projectPath;
-
-        const normalizePath = (p: string): string => (p.endsWith('/') ? p.slice(0, -1) : p);
+        const normalizedTeamPath = normalizePath(projectPath);
 
         // 1. Try flat projects list
         const matchingProject = state.projects.find(
@@ -372,6 +376,22 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       api.teams.updateTaskStatus(teamName, taskId, status)
     );
     await get().refreshTeamData(teamName);
+  },
+
+  addTaskComment: async (teamName, taskId, text) => {
+    set({ addingComment: true, addCommentError: null });
+    try {
+      const comment = await unwrapIpc('team:addTaskComment', () =>
+        api.teams.addTaskComment(teamName, taskId, text)
+      );
+      set({ addingComment: false });
+      await get().refreshTeamData(teamName);
+      return comment;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to add comment';
+      set({ addingComment: false, addCommentError: msg });
+      throw error;
+    }
   },
 
   deleteTeam: async (teamName: string) => {

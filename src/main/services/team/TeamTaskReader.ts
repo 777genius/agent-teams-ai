@@ -3,7 +3,7 @@ import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import type { TeamTask } from '@shared/types';
+import type { TaskComment, TeamTask } from '@shared/types';
 
 const logger = createLogger('Service:TeamTaskReader');
 
@@ -107,6 +107,16 @@ export class TeamTaskReader {
           blockedBy: Array.isArray(parsed.blockedBy) ? (parsed.blockedBy as string[]) : undefined,
           createdAt,
           projectPath: typeof parsed.projectPath === 'string' ? parsed.projectPath : undefined,
+          comments: Array.isArray(parsed.comments)
+            ? (parsed.comments as TaskComment[]).filter(
+                (c) =>
+                  c &&
+                  typeof c === 'object' &&
+                  typeof c.id === 'string' &&
+                  typeof c.text === 'string' &&
+                  typeof c.createdAt === 'string'
+              )
+            : undefined,
         };
         if (task.status === 'deleted') {
           continue;

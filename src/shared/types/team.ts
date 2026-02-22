@@ -47,6 +47,13 @@ export interface TeamSummary {
 
 export type TeamTaskStatus = 'pending' | 'in_progress' | 'completed' | 'deleted';
 
+export interface TaskComment {
+  id: string;
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface TeamTask {
   id: string;
   subject: string;
@@ -58,6 +65,7 @@ export interface TeamTask {
   blockedBy?: string[];
   createdAt?: string;
   projectPath?: string;
+  comments?: TaskComment[];
 }
 
 export interface InboxMessage {

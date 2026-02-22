@@ -18,6 +18,7 @@ import {
   SSH_SAVE_LAST_CONNECTION,
   SSH_STATUS,
   SSH_TEST,
+  TEAM_ADD_TASK_COMMENT,
   TEAM_ALIVE_LIST,
   TEAM_CANCEL_PROVISIONING,
   TEAM_CHANGE,
@@ -99,6 +100,7 @@ import type {
   SshConnectionConfig,
   SshConnectionStatus,
   SshLastConnection,
+  TaskComment,
   TeamChangeEvent,
   TeamConfig,
   TeamCreateConfigRequest,
@@ -566,6 +568,9 @@ const electronAPI: ElectronAPI = {
     },
     updateConfig: async (teamName: string, updates: TeamUpdateConfigRequest) => {
       return invokeIpcWithResult<TeamConfig>(TEAM_UPDATE_CONFIG, teamName, updates);
+    },
+    addTaskComment: async (teamName: string, taskId: string, text: string) => {
+      return invokeIpcWithResult<TaskComment>(TEAM_ADD_TASK_COMMENT, teamName, taskId, text);
     },
     onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {
       ipcRenderer.on(

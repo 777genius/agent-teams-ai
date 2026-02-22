@@ -33,6 +33,7 @@ interface CreateTaskDialogProps {
   teamName: string;
   members: ResolvedTeamMember[];
   tasks: TeamTask[];
+  isTeamAlive?: boolean;
   defaultSubject?: string;
   defaultDescription?: string;
   defaultOwner?: string;
@@ -53,6 +54,7 @@ export const CreateTaskDialog = ({
   teamName,
   members,
   tasks,
+  isTeamAlive = false,
   defaultSubject = '',
   defaultDescription = '',
   defaultOwner = '',
@@ -78,7 +80,7 @@ export const CreateTaskDialog = ({
     }
     setOwner(defaultOwner);
     setBlockedBy([]);
-    setStartImmediately(true);
+    setStartImmediately(isTeamAlive);
     promptDraft.clearDraft();
   }
   if (open !== prevOpen) {
@@ -227,15 +229,26 @@ export const CreateTaskDialog = ({
           </div>
 
           {owner ? (
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="task-start-immediately"
-                checked={startImmediately}
-                onCheckedChange={(v) => setStartImmediately(v === true)}
-              />
-              <Label htmlFor="task-start-immediately" className="text-xs font-normal">
-                Start immediately
-              </Label>
+            <div className="grid gap-1">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="task-start-immediately"
+                  checked={isTeamAlive ? startImmediately : false}
+                  onCheckedChange={(v) => setStartImmediately(v === true)}
+                  disabled={!isTeamAlive}
+                />
+                <Label
+                  htmlFor="task-start-immediately"
+                  className={`text-xs font-normal ${!isTeamAlive ? 'text-[var(--color-text-muted)]' : ''}`}
+                >
+                  Start immediately
+                </Label>
+              </div>
+              {!isTeamAlive ? (
+                <p className="text-[10px] text-[var(--color-text-muted)]">
+                  Team is offline. Launch the team first to start tasks immediately.
+                </p>
+              ) : null}
             </div>
           ) : null}
 

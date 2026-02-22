@@ -1,4 +1,5 @@
 import {
+  TEAM_ADD_TASK_COMMENT,
   TEAM_ALIVE_LIST,
   TEAM_CANCEL_PROVISIONING,
   TEAM_CREATE,
@@ -45,6 +46,7 @@ import type {
   MemberLogSummary,
   SendMessageRequest,
   SendMessageResult,
+  TaskComment,
   TeamConfig,
   TeamCreateConfigRequest,
   TeamCreateRequest,
@@ -103,6 +105,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_UPDATE_CONFIG, handleUpdateConfig);
   ipcMain.handle(TEAM_START_TASK, handleStartTask);
   ipcMain.handle(TEAM_GET_ALL_TASKS, handleGetAllTasks);
+  ipcMain.handle(TEAM_ADD_TASK_COMMENT, handleAddTaskComment);
   logger.info('Team handlers registered');
 }
 
@@ -129,6 +132,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_UPDATE_CONFIG);
   ipcMain.removeHandler(TEAM_START_TASK);
   ipcMain.removeHandler(TEAM_GET_ALL_TASKS);
+  ipcMain.removeHandler(TEAM_ADD_TASK_COMMENT);
 }
 
 function getTeamDataService(): TeamDataService {
@@ -808,4 +812,24 @@ async function handleStartTask(
 
 async function handleGetAllTasks(_event: IpcMainInvokeEvent): Promise<IpcResult<GlobalTask[]>> {
   return wrapTeamHandler('getAllTasks', () => getTeamDataService().getAllTasks());
+}
+
+async function handleAddTaskComment(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown,
+  text: unknown
+): Promise<IpcResult<TaskComment>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  const vTask = validateTaskId(taskId);
+  if (!vTask.valid) return { success: false, error: vTask.error ?? 'Invalid taskId' };
+  if (typeof text !== 'string' || text.trim().length === 0)
+    return { success: false, error: 'Comment text must be non-empty' };
+  if (text.trim().length > 2000)
+    return { success: false, error: 'Comment exceeds 2000 characters' };
+
+  return wrapTeamHandler('addTaskComment', () =>
+    getTeamDataService().addTaskComment(vTeam.value!, vTask.value!, text.trim())
+  );
 }

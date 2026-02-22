@@ -3,9 +3,10 @@
   "type": "module",
   "version": "0.1.0",
   "description": "Desktop app that visualizes Claude Code session execution — explore conversations, track context usage, and analyze tool calls",
-  "license": "MIT",
+  "license": "AGPL-3.0",
   "author": {
-    "name": "Claude Agent Teams UI contributors"
+    "name": "Илия (777genius)",
+    "email": "quantjumppro@gmail.com"
   },
   "homepage": "https://github.com/777genius/claude_agent_teams_ui",
   "repository": {
