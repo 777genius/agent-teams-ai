@@ -5,8 +5,11 @@ const hoisted = vi.hoisted(() => {
   let idCounter = 0;
   let dropWrites = 0;
 
+  // Normalize path separators so tests pass on Windows (backslash → forward slash)
+  const norm = (p: string): string => p.replace(/\\/g, '/');
+
   const readFile = vi.fn(async (filePath: string) => {
-    const data = files.get(filePath);
+    const data = files.get(norm(filePath));
     if (data === undefined) {
       const error = new Error('ENOENT') as NodeJS.ErrnoException;
       error.code = 'ENOENT';
@@ -18,10 +21,10 @@ const hoisted = vi.hoisted(() => {
   const atomicWrite = vi.fn(async (filePath: string, data: string) => {
     if (dropWrites > 0) {
       dropWrites -= 1;
-      files.set(filePath, '[]');
+      files.set(norm(filePath), '[]');
       return;
     }
-    files.set(filePath, data);
+    files.set(norm(filePath), data);
   });
 
   return {

@@ -2,8 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
   const files = new Map<string, string>();
+
+  // Normalize path separators so tests pass on Windows (backslash → forward slash)
+  const norm = (p: string): string => p.replace(/\\/g, '/');
+
   const readFile = vi.fn(async (filePath: string) => {
-    const data = files.get(filePath);
+    const data = files.get(norm(filePath));
     if (data === undefined) {
       const error = new Error('ENOENT') as NodeJS.ErrnoException;
       error.code = 'ENOENT';
@@ -12,7 +16,7 @@ const hoisted = vi.hoisted(() => {
     return data;
   });
   const atomicWrite = vi.fn(async (filePath: string, data: string) => {
-    files.set(filePath, data);
+    files.set(norm(filePath), data);
   });
   return { files, readFile, atomicWrite };
 });

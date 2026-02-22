@@ -5,7 +5,7 @@ import * as path from 'path';
 
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 
-import type { TeamConfig, TeamSummary } from '@shared/types';
+import type { TeamConfig, TeamMember, TeamSummary, TeamSummaryMember } from '@shared/types';
 
 const logger = createLogger('Service:TeamConfigReader');
 
@@ -40,11 +40,23 @@ export class TeamConfigReader {
           continue;
         }
 
-        const memberNames = new Set<string>();
+        const memberMap = new Map<string, TeamSummaryMember>();
+
+        const addMember = (m: TeamMember): void => {
+          const name = m.name?.trim();
+          if (!name) return;
+          const existing = memberMap.get(name);
+          memberMap.set(name, {
+            name,
+            role: m.role?.trim() || existing?.role,
+            color: m.color?.trim() || existing?.color,
+          });
+        };
+
         if (Array.isArray(config.members)) {
           for (const member of config.members) {
-            if (typeof member?.name === 'string' && member.name.trim().length > 0) {
-              memberNames.add(member.name.trim());
+            if (member && typeof member.name === 'string') {
+              addMember(member);
             }
           }
         }
@@ -52,9 +64,7 @@ export class TeamConfigReader {
         try {
           const metaMembers = await this.membersMetaStore.getMembers(entry.name);
           for (const member of metaMembers) {
-            if (member.name.trim().length > 0) {
-              memberNames.add(member.name.trim());
-            }
+            addMember(member);
           }
         } catch {
           logger.debug(`Failed to read members.meta.json for team: ${entry.name}`);
@@ -68,15 +78,16 @@ export class TeamConfigReader {
               continue;
             }
             const inboxName = inbox.slice(0, -'.json'.length).trim();
-            if (inboxName.length > 0) {
-              memberNames.add(inboxName);
+            if (inboxName.length > 0 && !memberMap.has(inboxName)) {
+              memberMap.set(inboxName, { name: inboxName });
             }
           }
         } catch {
           // Inbox folder may not exist yet.
         }
 
-        const memberCount = memberNames.size;
+        const memberCount = memberMap.size;
+        const members = Array.from(memberMap.values());
         summaries.push({
           teamName: entry.name,
           displayName: config.name,
@@ -86,6 +97,7 @@ export class TeamConfigReader {
               ? config.color
               : undefined,
           memberCount,
+          members: members.length > 0 ? members : undefined,
           taskCount: 0,
           lastActivity: null,
           projectPath:

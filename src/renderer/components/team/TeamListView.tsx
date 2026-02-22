@@ -37,6 +37,7 @@ function getRecentProjects(team: TeamSummary): string[] {
 }
 
 function folderName(fullPath: string): string {
+  // eslint-disable-next-line sonarjs/slow-regex -- Anchored regex on short path strings, no backtracking risk
   const parts = fullPath.replace(/\/+$/, '').split('/');
   return parts[parts.length - 1] || fullPath;
 }
@@ -381,10 +382,39 @@ export const TeamListView = (): React.JSX.Element => {
                   <p className="mt-2 line-clamp-2 min-h-10 text-xs text-[var(--color-text-muted)]">
                     {team.description || 'No description'}
                   </p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <Badge variant="secondary" className="text-[10px] font-normal">
-                      Members: {team.memberCount}
-                    </Badge>
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    {team.members && team.members.length > 0 ? (
+                      team.members.map((m) => {
+                        const memberColor = m.color ? getTeamColorSet(m.color) : null;
+                        return (
+                          <span key={m.name} className="inline-flex items-center gap-1">
+                            <span
+                              className="rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide"
+                              style={
+                                memberColor
+                                  ? {
+                                      backgroundColor: memberColor.badge,
+                                      color: memberColor.text,
+                                      border: `1px solid ${memberColor.border}40`,
+                                    }
+                                  : undefined
+                              }
+                            >
+                              {m.name}
+                            </span>
+                            {m.role ? (
+                              <span className="text-[9px] text-[var(--color-text-muted)]">
+                                {m.role}
+                              </span>
+                            ) : null}
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <Badge variant="secondary" className="text-[10px] font-normal">
+                        Members: {team.memberCount}
+                      </Badge>
+                    )}
                     <Badge variant="secondary" className="text-[10px] font-normal">
                       Tasks: {team.taskCount}
                     </Badge>

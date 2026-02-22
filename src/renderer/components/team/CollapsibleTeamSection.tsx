@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { Badge } from '@renderer/components/ui/badge';
 import { ChevronRight } from 'lucide-react';
@@ -22,9 +22,9 @@ export const CollapsibleTeamSection = ({
 }: CollapsibleTeamSectionProps): React.JSX.Element => {
   const [open, setOpen] = useState(defaultOpen);
 
-  useEffect(() => {
-    if (forceOpen) setOpen(true);
-  }, [forceOpen]);
+  if (forceOpen && !open) {
+    setOpen(true);
+  }
 
   return (
     <section className="border-b border-[var(--color-border)] py-3 last:border-b-0">

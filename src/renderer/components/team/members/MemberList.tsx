@@ -6,12 +6,16 @@ interface MemberListProps {
   members: ResolvedTeamMember[];
   isTeamAlive?: boolean;
   onMemberClick?: (member: ResolvedTeamMember) => void;
+  onSendMessage?: (member: ResolvedTeamMember) => void;
+  onAssignTask?: (member: ResolvedTeamMember) => void;
 }
 
 export const MemberList = ({
   members,
   isTeamAlive,
   onMemberClick,
+  onSendMessage,
+  onAssignTask,
 }: MemberListProps): React.JSX.Element => {
   if (members.length === 0) {
     return (
@@ -29,6 +33,8 @@ export const MemberList = ({
           member={member}
           isTeamAlive={isTeamAlive}
           onClick={() => onMemberClick?.(member)}
+          onSendMessage={() => onSendMessage?.(member)}
+          onAssignTask={() => onAssignTask?.(member)}
         />
       ))}
     </div>

@@ -450,6 +450,13 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           members={data.members}
           isTeamAlive={data.isAlive}
           onMemberClick={setSelectedMember}
+          onSendMessage={(member) => {
+            setSendDialogRecipient(member.name);
+            setSendDialogOpen(true);
+          }}
+          onAssignTask={(member) => {
+            openCreateTaskDialog('', '', member.name);
+          }}
         />
       </CollapsibleTeamSection>
 

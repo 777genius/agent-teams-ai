@@ -245,6 +245,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         }
       }
     } catch (error) {
+      // If provisioning is in progress for this team, stay in loading state
+      // instead of showing an error — the file watcher / progress callback will
+      // trigger a refresh once config.json is written.
+      const isProvisioning = Object.values(get().provisioningRuns).some(
+        (run) =>
+          run.teamName === teamName &&
+          !['ready', 'disconnected', 'failed', 'cancelled'].includes(run.state)
+      );
+
+      if (isProvisioning) {
+        set({
+          selectedTeamLoading: true,
+          selectedTeamData: null,
+          selectedTeamError: null,
+        });
+        return;
+      }
+
       set({
         selectedTeamLoading: false,
         selectedTeamData: null,
@@ -433,6 +451,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
     if (progress.state === 'ready' || progress.state === 'disconnected') {
       void get().fetchTeams();
+      // If the user already opened the team tab, reload team data now that
+      // config.json is guaranteed to exist.
+      if (get().selectedTeamName === progress.teamName) {
+        void get().selectTeam(progress.teamName);
+      }
     }
   },
 

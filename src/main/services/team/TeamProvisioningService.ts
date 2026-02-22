@@ -278,7 +278,7 @@ Steps (execute in this exact order):
    - team_name: "${request.teamName}"
    - name: the member's name
    - subagent_type: "general-purpose"
-   - prompt: "You are {name}, a {role} on team \\"${displayName}\\" (${request.teamName}). Send ONE message to the team lead: 'Hello! My name is {name} ({role}). I'm ready.' Then wait for task assignments.
+   - prompt: "You are {name}, a {role} on team \\"${displayName}\\" (${request.teamName}). Introduce yourself briefly (name and role) and confirm you are ready — use the language that matches the project's CLAUDE.md or the user's locale. Then wait for task assignments.
 
 ${taskProtocol}"
 
@@ -320,7 +320,7 @@ Steps (execute in this exact order):
    - team_name: "${request.teamName}"
    - name: the member's name
    - subagent_type: "general-purpose"
-   - prompt: "You are {name}, a {role} on team \\"${request.teamName}\\". The team has been reconnected. Send ONE message to the team lead: 'Hello! My name is {name} ({role}). I'm ready.' Then check TaskList for pending work and resume.
+   - prompt: "You are {name}, a {role} on team \\"${request.teamName}\\". The team has been reconnected. Introduce yourself briefly (name and role) and confirm you are ready — use the language that matches the project's CLAUDE.md or the user's locale. Then check TaskList for pending work and resume.
 
 ${taskProtocol}"
 

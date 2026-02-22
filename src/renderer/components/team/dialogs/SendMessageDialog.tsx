@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
+import { AutoResizeTextarea } from '@renderer/components/ui/auto-resize-textarea';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -18,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import { Textarea } from '@renderer/components/ui/textarea';
+import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 
 import type { ResolvedTeamMember, SendMessageResult } from '@shared/types';
@@ -47,7 +48,7 @@ export const SendMessageDialog = ({
   onClose,
 }: SendMessageDialogProps): React.JSX.Element => {
   const [member, setMember] = useState('');
-  const [text, setText] = useState('');
+  const textDraft = useDraftPersistence({ key: 'sendMessage:text' });
   const [summary, setSummary] = useState('');
   const [prevOpen, setPrevOpen] = useState(false);
   const [prevResult, setPrevResult] = useState<SendMessageResult | null>(null);
@@ -55,7 +56,6 @@ export const SendMessageDialog = ({
   // Reset form when dialog opens
   if (open && !prevOpen) {
     setMember(defaultRecipient ?? '');
-    setText('');
     setSummary('');
     setPrevResult(lastResult);
   }
@@ -64,20 +64,20 @@ export const SendMessageDialog = ({
   }
 
   // Auto-close on successful send (lastResult changed while dialog is open)
-  useEffect(() => {
-    if (open && lastResult && lastResult !== prevResult) {
-      setMember('');
-      setText('');
-      setSummary('');
-      onClose();
-    }
-  }, [open, lastResult, prevResult, onClose]);
+  if (open && lastResult && lastResult !== prevResult) {
+    setMember('');
+    textDraft.clearDraft();
+    setSummary('');
+    setPrevResult(lastResult);
+    onClose();
+  }
 
-  const canSend = member.trim().length > 0 && text.trim().length > 0 && !sending;
+  const canSend = member.trim().length > 0 && textDraft.value.trim().length > 0 && !sending;
 
   const handleSubmit = (): void => {
     if (!canSend) return;
-    onSend(member.trim(), text.trim(), summary.trim() || undefined);
+    onSend(member.trim(), textDraft.value.trim(), summary.trim() || undefined);
+    textDraft.clearDraft();
   };
 
   const handleOpenChange = (nextOpen: boolean): void => {
@@ -131,13 +131,17 @@ export const SendMessageDialog = ({
 
           <div className="grid gap-2">
             <Label htmlFor="smd-message">Message</Label>
-            <Textarea
+            <AutoResizeTextarea
               id="smd-message"
               placeholder="Write your message..."
-              value={text}
-              rows={4}
-              onChange={(e) => setText(e.target.value)}
+              value={textDraft.value}
+              minRows={4}
+              maxRows={12}
+              onChange={(e) => textDraft.setValue(e.target.value)}
             />
+            {textDraft.isSaved ? (
+              <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+            ) : null}
           </div>
 
           {sendError ? <p className="text-xs text-red-400">{sendError}</p> : null}

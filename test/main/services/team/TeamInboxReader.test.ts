@@ -4,8 +4,11 @@ const hoisted = vi.hoisted(() => {
   const files = new Map<string, string>();
   const dirs = new Map<string, string[]>();
 
+  // Normalize path separators so tests pass on Windows (backslash → forward slash)
+  const norm = (p: string): string => p.replace(/\\/g, '/');
+
   const readdir = vi.fn(async (dirPath: string) => {
-    const entries = dirs.get(dirPath);
+    const entries = dirs.get(norm(dirPath));
     if (!entries) {
       const error = new Error('ENOENT') as NodeJS.ErrnoException;
       error.code = 'ENOENT';
@@ -15,7 +18,7 @@ const hoisted = vi.hoisted(() => {
   });
 
   const readFile = vi.fn(async (filePath: string) => {
-    const data = files.get(filePath);
+    const data = files.get(norm(filePath));
     if (data === undefined) {
       const error = new Error('ENOENT') as NodeJS.ErrnoException;
       error.code = 'ENOENT';

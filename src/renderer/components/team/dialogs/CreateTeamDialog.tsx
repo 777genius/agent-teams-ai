@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { api } from '@renderer/api';
+import { AutoResizeTextarea } from '@renderer/components/ui/auto-resize-textarea';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Combobox } from '@renderer/components/ui/combobox';
@@ -21,9 +22,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import { Textarea } from '@renderer/components/ui/textarea';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { cn } from '@renderer/lib/utils';
+import { getMemberColor } from '@shared/constants/memberColors';
 import { Check, CheckCircle2, Loader2 } from 'lucide-react';
 
 const TEAM_COLOR_NAMES = [
@@ -233,8 +235,8 @@ export const CreateTeamDialog = ({
   const isDev = process.env.NODE_ENV !== 'production';
 
   const [teamName, setTeamName] = useState('');
-  const [description, setDescription] = useState('');
-  const [prompt, setPrompt] = useState('');
+  const descriptionDraft = useDraftPersistence({ key: 'createTeam:description' });
+  const promptDraft = useDraftPersistence({ key: 'createTeam:prompt' });
   const [members, setMembers] = useState<MemberDraft[]>([]);
   const [cwdMode, setCwdMode] = useState<'project' | 'custom'>('project');
   const [selectedProjectPath, setSelectedProjectPath] = useState('');
@@ -257,8 +259,8 @@ export const CreateTeamDialog = ({
 
   const resetFormState = (): void => {
     setTeamName('');
-    setDescription('');
-    setPrompt('');
+    descriptionDraft.clearDraft();
+    promptDraft.clearDraft();
     setMembers([]);
     setTeamColor('');
     setCwdMode('project');
@@ -359,7 +361,7 @@ export const CreateTeamDialog = ({
 
     if (initialData) {
       setTeamName(initialData.teamName);
-      setDescription(initialData.description ?? '');
+      descriptionDraft.setValue(initialData.description ?? '');
       setTeamColor(initialData.color ?? '');
       setMembers(
         initialData.members.map((m) => {
@@ -403,10 +405,11 @@ export const CreateTeamDialog = ({
     if (teamName.trim().length === 0) {
       setTeamName(DEV_DEFAULT_TEAM.teamName);
     }
-    if (description.trim().length === 0) {
-      setDescription(DEV_DEFAULT_TEAM.description);
+    if (descriptionDraft.value.trim().length === 0) {
+      descriptionDraft.setValue(DEV_DEFAULT_TEAM.description);
     }
-  }, [open, isDev, teamName, description, initialData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dev default, intentional deps
+  }, [open, isDev, teamName, initialData]);
 
   useEffect(() => {
     if (cwdMode !== 'project') {
@@ -419,6 +422,9 @@ export const CreateTeamDialog = ({
   }, [cwdMode, projects, selectedProjectPath]);
 
   const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
+
+  const description = descriptionDraft.value;
+  const prompt = promptDraft.value;
 
   const request = useMemo<TeamCreateRequest>(
     () => ({
@@ -585,14 +591,18 @@ export const CreateTeamDialog = ({
             <Label htmlFor="team-description" className="text-xs text-[var(--color-text-muted)]">
               description (optional)
             </Label>
-            <Textarea
+            <AutoResizeTextarea
               id="team-description"
-              className="min-h-[40px] resize-none text-xs"
-              rows={2}
+              className="text-xs"
+              minRows={2}
+              maxRows={8}
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
+              onChange={(event) => descriptionDraft.setValue(event.target.value)}
               placeholder="Brief description of the team purpose"
             />
+            {descriptionDraft.isSaved ? (
+              <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+            ) : null}
           </div>
 
           <div className="space-y-1.5 md:col-span-2">
@@ -629,59 +639,77 @@ export const CreateTeamDialog = ({
           <div className="space-y-1.5 md:col-span-2">
             <Label className="text-xs text-[var(--color-text-muted)]">members</Label>
             <div className="space-y-2">
-              {members.map((member, index) => (
-                <div
-                  key={member.id}
-                  className="grid grid-cols-1 gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2 md:grid-cols-[1fr_220px_auto]"
-                >
-                  <Input
-                    className="h-8 text-xs"
-                    value={member.name}
-                    aria-label={`Member ${index + 1} name`}
-                    onChange={(event) => updateMemberName(member.id, event.target.value)}
-                    placeholder="member-name"
-                  />
-                  <div className="space-y-1">
-                    <Select
-                      value={member.roleSelection || NO_ROLE}
-                      onValueChange={(roleSelection) => updateMemberRole(member.id, roleSelection)}
-                    >
-                      <SelectTrigger
-                        className="h-8 text-xs"
-                        aria-label={`Member ${index + 1} role`}
-                      >
-                        <SelectValue placeholder="No role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NO_ROLE}>No role</SelectItem>
-                        {PRESET_ROLES.map((role) => (
-                          <SelectItem key={role} value={role}>
-                            {role}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value={CUSTOM_ROLE}>Custom role...</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {member.roleSelection === CUSTOM_ROLE ? (
-                      <Input
-                        className="h-8 text-xs"
-                        value={member.customRole}
-                        aria-label={`Member ${index + 1} custom role`}
-                        onChange={(event) => updateMemberCustomRole(member.id, event.target.value)}
-                        placeholder="e.g. architect"
-                      />
-                    ) : null}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-red-500/40 text-red-300 hover:bg-red-500/10 hover:text-red-200"
-                    onClick={() => removeMember(member.id)}
+              {members.map((member, index) => {
+                const memberColorSet = getTeamColorSet(getMemberColor(index));
+                return (
+                  <div
+                    key={member.id}
+                    className="grid grid-cols-1 gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2 md:grid-cols-[1fr_220px_auto]"
+                    style={{
+                      borderLeftWidth: '3px',
+                      borderLeftColor: memberColorSet.border,
+                    }}
                   >
-                    Remove
-                  </Button>
-                </div>
-              ))}
+                    <Input
+                      className="h-8 text-xs"
+                      value={member.name}
+                      aria-label={`Member ${index + 1} name`}
+                      onChange={(event) => updateMemberName(member.id, event.target.value)}
+                      placeholder="member-name"
+                      style={
+                        member.name.trim()
+                          ? {
+                              color: memberColorSet.text,
+                            }
+                          : undefined
+                      }
+                    />
+                    <div className="space-y-1">
+                      <Select
+                        value={member.roleSelection || NO_ROLE}
+                        onValueChange={(roleSelection) =>
+                          updateMemberRole(member.id, roleSelection)
+                        }
+                      >
+                        <SelectTrigger
+                          className="h-8 text-xs"
+                          aria-label={`Member ${index + 1} role`}
+                        >
+                          <SelectValue placeholder="No role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_ROLE}>No role</SelectItem>
+                          {PRESET_ROLES.map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {role}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value={CUSTOM_ROLE}>Custom role...</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {member.roleSelection === CUSTOM_ROLE ? (
+                        <Input
+                          className="h-8 text-xs"
+                          value={member.customRole}
+                          aria-label={`Member ${index + 1} custom role`}
+                          onChange={(event) =>
+                            updateMemberCustomRole(member.id, event.target.value)
+                          }
+                          placeholder="e.g. architect"
+                        />
+                      ) : null}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-red-500/40 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                      onClick={() => removeMember(member.id)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                );
+              })}
               <Button
                 variant="outline"
                 size="sm"
@@ -716,14 +744,18 @@ export const CreateTeamDialog = ({
               <Label htmlFor="team-prompt" className="text-xs text-[var(--color-text-muted)]">
                 Prompt for team lead (optional)
               </Label>
-              <Textarea
+              <AutoResizeTextarea
                 id="team-prompt"
-                className="min-h-[40px] resize-none text-xs"
-                rows={3}
+                className="text-xs"
+                minRows={3}
+                maxRows={12}
                 value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
+                onChange={(event) => promptDraft.setValue(event.target.value)}
                 placeholder="Instructions for the team lead during provisioning..."
               />
+              {promptDraft.isSaved ? (
+                <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+              ) : null}
             </div>
           ) : null}
 

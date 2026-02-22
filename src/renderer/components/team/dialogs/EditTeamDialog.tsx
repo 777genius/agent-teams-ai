@@ -128,6 +128,7 @@ export const EditTeamDialog = ({
             />
           </div>
           <div>
+            {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Color picker is a group of buttons, not a single input */}
             <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">
               Color (optional)
             </label>

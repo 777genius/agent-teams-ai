@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { AutoResizeTextarea } from '@renderer/components/ui/auto-resize-textarea';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -19,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import { Textarea } from '@renderer/components/ui/textarea';
+import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 
 import type { ResolvedTeamMember, TeamTask } from '@shared/types';
@@ -54,18 +55,23 @@ export const CreateTaskDialog = ({
   submitting = false,
 }: CreateTaskDialogProps): React.JSX.Element => {
   const [subject, setSubject] = useState(defaultSubject);
-  const [description, setDescription] = useState(defaultDescription);
+  const descriptionDraft = useDraftPersistence({
+    key: 'createTask:description',
+    initialValue: defaultDescription || undefined,
+  });
   const [owner, setOwner] = useState<string>(defaultOwner);
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
-  const [prompt, setPrompt] = useState('');
+  const promptDraft = useDraftPersistence({ key: 'createTask:prompt' });
   const [prevOpen, setPrevOpen] = useState(false);
 
   if (open && !prevOpen) {
     setSubject(defaultSubject);
-    setDescription(defaultDescription);
+    if (defaultDescription) {
+      descriptionDraft.setValue(defaultDescription);
+    }
     setOwner(defaultOwner);
     setBlockedBy([]);
-    setPrompt('');
+    promptDraft.clearDraft();
   }
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -86,11 +92,13 @@ export const CreateTaskDialog = ({
     if (!canSubmit) return;
     onSubmit(
       subject.trim(),
-      description.trim(),
+      descriptionDraft.value.trim(),
       owner || undefined,
       blockedBy.length > 0 ? blockedBy : undefined,
-      prompt.trim() || undefined
+      promptDraft.value.trim() || undefined
     );
+    descriptionDraft.clearDraft();
+    promptDraft.clearDraft();
   };
 
   const handleOpenChange = (nextOpen: boolean): void => {
@@ -127,24 +135,32 @@ export const CreateTaskDialog = ({
 
           <div className="grid gap-2">
             <Label htmlFor="task-description">Description (optional)</Label>
-            <Textarea
+            <AutoResizeTextarea
               id="task-description"
               placeholder="Task details..."
-              value={description}
-              rows={3}
-              onChange={(e) => setDescription(e.target.value)}
+              value={descriptionDraft.value}
+              minRows={3}
+              maxRows={12}
+              onChange={(e) => descriptionDraft.setValue(e.target.value)}
             />
+            {descriptionDraft.isSaved ? (
+              <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+            ) : null}
           </div>
 
           <div className="grid gap-2">
             <Label htmlFor="task-prompt">Prompt for assignee (optional)</Label>
-            <Textarea
+            <AutoResizeTextarea
               id="task-prompt"
               placeholder="Custom instructions for the team member..."
-              value={prompt}
-              rows={3}
-              onChange={(e) => setPrompt(e.target.value)}
+              value={promptDraft.value}
+              minRows={3}
+              maxRows={12}
+              onChange={(e) => promptDraft.setValue(e.target.value)}
             />
+            {promptDraft.isSaved ? (
+              <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+            ) : null}
           </div>
 
           <div className="grid gap-2">

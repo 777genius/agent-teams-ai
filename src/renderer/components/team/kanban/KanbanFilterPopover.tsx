@@ -132,6 +132,7 @@ export const KanbanFilterPopover = ({
                 {member.name}
               </label>
             ))}
+            {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Radix Checkbox renders a button, not a native input */}
             <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs italic text-[var(--color-text-muted)] hover:bg-[var(--color-surface-raised)]">
               <Checkbox
                 checked={filter.selectedOwners.has(UNASSIGNED_OWNER)}

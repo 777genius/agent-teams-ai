@@ -274,6 +274,10 @@ async function validateProvisioningRequest(
     return { valid: false, error: 'cwd must be an absolute path' };
   }
 
+  if (payload.prompt !== undefined && typeof payload.prompt !== 'string') {
+    return { valid: false, error: 'prompt must be a string' };
+  }
+
   try {
     await fs.promises.mkdir(cwd, { recursive: true });
   } catch {
@@ -288,10 +292,6 @@ async function validateProvisioningRequest(
   }
   if (!stat.isDirectory()) {
     return { valid: false, error: 'cwd must be a directory' };
-  }
-
-  if (payload.prompt !== undefined && typeof payload.prompt !== 'string') {
-    return { valid: false, error: 'prompt must be a string' };
   }
 
   return {

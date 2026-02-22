@@ -1,6 +1,7 @@
 import { Badge } from '@renderer/components/ui/badge';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { agentAvatarUrl, getMemberDotClass, getPresenceLabel } from '@renderer/utils/memberHelpers';
+import { ListPlus, MessageSquare } from 'lucide-react';
 
 import type { ResolvedTeamMember } from '@shared/types';
 
@@ -8,12 +9,16 @@ interface MemberCardProps {
   member: ResolvedTeamMember;
   isTeamAlive?: boolean;
   onClick?: () => void;
+  onSendMessage?: () => void;
+  onAssignTask?: () => void;
 }
 
 export const MemberCard = ({
   member,
   isTeamAlive,
   onClick,
+  onSendMessage,
+  onAssignTask,
 }: MemberCardProps): React.JSX.Element => {
   const dotClass = getMemberDotClass(member, isTeamAlive);
   const presenceLabel = getPresenceLabel(member, isTeamAlive);
@@ -68,6 +73,30 @@ export const MemberCard = ({
       >
         {member.taskCount} {member.taskCount === 1 ? 'task' : 'tasks'}
       </Badge>
+      <div className="flex shrink-0 items-center gap-0.5">
+        <button
+          type="button"
+          className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+          title="Send Message"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSendMessage?.();
+          }}
+        >
+          <MessageSquare size={13} />
+        </button>
+        <button
+          type="button"
+          className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+          title="Assign Task"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAssignTask?.();
+          }}
+        >
+          <ListPlus size={13} />
+        </button>
+      </div>
     </div>
   );
 };

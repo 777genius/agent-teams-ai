@@ -59,7 +59,7 @@ export const MemberDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent className="sm:max-w-screen-sm">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <MemberDetailHeader member={member} />
         </DialogHeader>

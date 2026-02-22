@@ -5,13 +5,16 @@ const hoisted = vi.hoisted(() => {
   let overrideVerifyRead: string | null = null;
   let readCount = 0;
 
+  // Normalize path separators so tests pass on Windows (backslash → forward slash)
+  const norm = (p: string): string => p.replace(/\\/g, '/');
+
   const readFile = vi.fn(async (filePath: string) => {
     readCount += 1;
     if (overrideVerifyRead && readCount >= 2) {
       return overrideVerifyRead;
     }
 
-    const data = files.get(filePath);
+    const data = files.get(norm(filePath));
     if (data === undefined) {
       const error = new Error('ENOENT') as NodeJS.ErrnoException;
       error.code = 'ENOENT';
@@ -21,7 +24,7 @@ const hoisted = vi.hoisted(() => {
   });
 
   const atomicWrite = vi.fn(async (filePath: string, data: string) => {
-    files.set(filePath, data);
+    files.set(norm(filePath), data);
   });
 
   return {

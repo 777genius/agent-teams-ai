@@ -5,6 +5,7 @@ import {
   getTasksBasePath,
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
+import { getMemberColor } from '@shared/constants/memberColors';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -74,14 +75,19 @@ export class TeamDataService {
       });
     }
 
-    return rawTasks.map((task) => {
-      const info = teamInfoMap.get(task.teamName);
-      return {
-        ...task,
-        teamDisplayName: info?.displayName ?? task.teamName,
-        projectPath: task.projectPath ?? info?.projectPath,
-      };
-    });
+    // Only include tasks that belong to a known team.
+    // ~/.claude/tasks/ may also contain solo session task dirs (UUID-named)
+    // which have no corresponding team in ~/.claude/teams/.
+    return rawTasks
+      .filter((task) => teamInfoMap.has(task.teamName))
+      .map((task) => {
+        const info = teamInfoMap.get(task.teamName)!;
+        return {
+          ...task,
+          teamDisplayName: info.displayName,
+          projectPath: task.projectPath ?? info.projectPath,
+        };
+      });
   }
 
   async updateConfig(
@@ -304,7 +310,6 @@ export class TeamDataService {
     await fs.promises.mkdir(teamDir, { recursive: true });
     await fs.promises.mkdir(tasksDir, { recursive: true });
 
-    const memberColors = ['blue', 'green', 'yellow', 'cyan', 'magenta', 'red'] as const;
     const joinedAt = Date.now();
     const config = {
       name: request.displayName?.trim() || request.teamName,
@@ -319,7 +324,7 @@ export class TeamDataService {
         name: member.name,
         role: member.role?.trim() || undefined,
         agentType: 'general-purpose',
-        color: memberColors[index % memberColors.length],
+        color: getMemberColor(index),
         joinedAt,
       }))
     );

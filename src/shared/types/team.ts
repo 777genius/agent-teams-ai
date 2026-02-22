@@ -24,12 +24,19 @@ export interface TeamUpdateConfigRequest {
   color?: string;
 }
 
+export interface TeamSummaryMember {
+  name: string;
+  role?: string;
+  color?: string;
+}
+
 export interface TeamSummary {
   teamName: string;
   displayName: string;
   description: string;
   color?: string;
   memberCount: number;
+  members?: TeamSummaryMember[];
   taskCount: number;
   lastActivity: string | null;
   projectPath?: string;

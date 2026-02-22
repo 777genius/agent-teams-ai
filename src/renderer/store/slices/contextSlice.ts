@@ -7,6 +7,7 @@
 
 import { api } from '@renderer/api';
 import { contextStorage } from '@renderer/services/contextStorage';
+import { draftStorage } from '@renderer/services/draftStorage';
 
 import { getFullResetState } from '../utils/stateResetHelpers';
 
@@ -240,6 +241,7 @@ export const createContextSlice: StateCreator<AppState, [], [], ContextSlice> = 
       if (available) {
         // Clean up expired snapshots
         void contextStorage.cleanupExpired();
+        void draftStorage.cleanupExpired();
       }
 
       // Fetch active context from main process
