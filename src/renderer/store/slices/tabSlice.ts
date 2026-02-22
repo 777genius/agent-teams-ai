@@ -387,6 +387,7 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
     const allTabs = getAllTabs(state.paneLayout);
     const sourceTab = allTabs.find((t) => t.id === sourceTabId);
     if (sourceTab?.type !== 'session') return;
+    if (!sourceTab.sessionId || !sourceTab.projectId) return;
 
     const tabData = state.tabSessionData[sourceTabId];
     const firstMsg = tabData?.sessionDetail?.session.firstMessage;

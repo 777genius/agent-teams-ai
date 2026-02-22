@@ -182,17 +182,17 @@ export const CostSection = ({
           <tbody>
             {modelEntries.map(([model, cost]) => {
               const stats = tokensByModel[model];
-              const isExpanded = expandedModel === model;
+              const isExpanded = expandedModel === model && !!stats;
               const pricing = getPricing(model);
               return (
                 <Fragment key={model}>
                   <tr
-                    className="border-border/50 hover:bg-surface-raised/50 cursor-pointer border-b"
-                    onClick={() => setExpandedModel(isExpanded ? null : model)}
+                    className={`border-border/50 border-b ${stats ? 'hover:bg-surface-raised/50 cursor-pointer' : ''}`}
+                    onClick={() => stats && setExpandedModel(isExpanded ? null : model)}
                   >
                     <td className="py-1.5 pr-4 text-text">
                       <span className="mr-1.5 inline-block w-3 text-text-muted">
-                        {isExpanded ? '\u25BC' : '\u25B6'}
+                        {stats ? (isExpanded ? '\u25BC' : '\u25B6') : ''}
                       </span>
                       {model}
                     </td>

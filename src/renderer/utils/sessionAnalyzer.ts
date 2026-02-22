@@ -104,9 +104,10 @@ const DEFAULT_PRICING: ModelPricing = {
 };
 
 export function getPricing(modelName: string): ModelPricing {
-  const name = modelName.toLowerCase();
+  const nameTokens: string[] = modelName.toLowerCase().match(/[a-z0-9]+/g) ?? [];
   for (const [key, pricing] of Object.entries(MODEL_PRICING)) {
-    if (name.includes(key)) return pricing;
+    const keyTokens: string[] = key.match(/[a-z0-9]+/g) ?? [];
+    if (keyTokens.every((t) => nameTokens.includes(t))) return pricing;
   }
   return DEFAULT_PRICING;
 }
@@ -454,7 +455,9 @@ export function analyzeSession(detail: SessionDetail): SessionReport {
     }
 
     // --- Token usage, cache economics, and cost ---
-    if (m.usage && m.model) {
+    // Skip sidechain messages to avoid double-counting (subagent costs are
+    // accounted for separately via processSubagentCost).
+    if (m.usage && m.model && !m.isSidechain) {
       const model = m.model;
       const u = m.usage;
       const inpTok = u.input_tokens ?? 0;
