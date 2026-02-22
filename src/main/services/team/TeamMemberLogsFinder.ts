@@ -427,52 +427,30 @@ export class TeamMemberLogsFinder {
   }
 
   /**
-   * Detects the member name from a parsed JSONL message using multiple signals.
-   * Returns a detection result with the name and a priority level:
-   *   3 = routing sender (highest, handled outside this method)
-   *   2 = "You are {name}" spawn prompt
-   *   1 = text-based fallback (single member match or task assignment context)
+   * Last-resort member detection from message text.
+   * Only called when all structured signals (teammate_id, process.team, routing) failed.
+   * Returns priority 1 (lowest) — only if exactly one known member name appears.
    */
   private detectMemberFromMessage(
     msg: Record<string, unknown>,
     knownMembers: Set<string>
   ): { name: string; priority: number } | null {
+    if (this.extractRole(msg) !== 'user') return null;
+
     const text = this.extractTextContent(msg);
     if (!text) return null;
 
-    // Signal 1 (priority 2): "You are {name}, a {role}" pattern (spawn prompt)
-    const youAreMatch = /\bYou are (\w[\w-]*),\s+a\s+/i.exec(text);
-    if (youAreMatch) {
-      const name = youAreMatch[1].toLowerCase();
-      if (knownMembers.has(name)) {
-        return { name: youAreMatch[1], priority: 2 };
+    // Only attribute if exactly one known member name appears (word-boundary match).
+    // Avoids false positives when multiple members are mentioned.
+    const matches: string[] = [];
+    for (const name of knownMembers) {
+      const regex = new RegExp(`\\b${escapeRegex(name)}\\b`, 'i');
+      if (regex.test(text)) {
+        matches.push(name);
       }
     }
-
-    // Signal 2 (priority 1): Task assignment — look for member name in the task content
-    if (text.includes('New task assigned to you') || text.includes('task assigned')) {
-      for (const name of knownMembers) {
-        const regex = new RegExp(`\\b${escapeRegex(name)}\\b`, 'i');
-        if (regex.test(text)) {
-          return { name: findOriginalCase(text, name), priority: 1 };
-        }
-      }
-    }
-
-    // Signal 3 (priority 1): General fallback — check if exactly one known member
-    // name appears in the first user message content (word-boundary match)
-    if (msg.role === 'user') {
-      const matches: string[] = [];
-      for (const name of knownMembers) {
-        const regex = new RegExp(`\\b${escapeRegex(name)}\\b`, 'i');
-        if (regex.test(text)) {
-          matches.push(name);
-        }
-      }
-      // Only attribute if exactly one member matches (avoid ambiguity)
-      if (matches.length === 1) {
-        return { name: findOriginalCase(text, matches[0]), priority: 1 };
-      }
+    if (matches.length === 1) {
+      return { name: findOriginalCase(text, matches[0]), priority: 1 };
     }
 
     return null;

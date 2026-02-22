@@ -55,7 +55,8 @@ export class ClaudeBinaryResolver {
     const platformBinaryName = process.platform === 'win32' ? 'claude.cmd' : 'claude';
     const fromPath = await resolveFromPathEnv(platformBinaryName);
     if (fromPath) {
-      return fromPath;
+      cachedPath = fromPath;
+      return cachedPath;
     }
 
     const candidates: string[] = [

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -65,14 +65,23 @@ export const SendMessageDialog = ({
     setPrevOpen(open);
   }
 
-  // Auto-close on successful send (lastResult changed while dialog is open)
+  // Track whether auto-close is needed (setState in render phase is fine)
+  const [pendingAutoClose, setPendingAutoClose] = useState(false);
   if (open && lastResult && lastResult !== prevResult) {
-    setMember('');
-    textDraft.clearDraft();
-    setSummary('');
     setPrevResult(lastResult);
-    onClose();
+    setPendingAutoClose(true);
   }
+
+  // Side effects (onClose mutates parent state) must run in useEffect, not render phase
+  useEffect(() => {
+    if (pendingAutoClose) {
+      setMember('');
+      textDraft.clearDraft();
+      setSummary('');
+      setPendingAutoClose(false);
+      onClose();
+    }
+  }, [pendingAutoClose]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mentionSuggestions = useMemo<MentionSuggestion[]>(
     () =>
