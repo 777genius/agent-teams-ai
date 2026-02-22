@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useMentionDetection } from '@renderer/hooks/useMentionDetection';
+import { cn } from '@renderer/lib/utils';
 
 import { AutoResizeTextarea } from './auto-resize-textarea';
 import { MentionSuggestionList } from './MentionSuggestionList';
@@ -114,6 +115,8 @@ interface MentionableTextareaProps extends Omit<
   showHint?: boolean;
   /** Content rendered at the right side of the footer row (e.g. "Draft saved") */
   footerRight?: React.ReactNode;
+  /** Content rendered in the bottom-right corner inside the textarea (e.g. send button) */
+  cornerAction?: React.ReactNode;
 }
 
 export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, MentionableTextareaProps>(
@@ -125,7 +128,9 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       hintText = 'Use @ to mention team members',
       showHint = true,
       footerRight,
+      cornerAction,
       style,
+      className,
       ...textareaProps
     },
     forwardedRef
@@ -201,7 +206,10 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           {hasMentionOverlay ? (
             <div
               ref={backdropRef}
-              className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-md border border-transparent px-3 py-2 text-sm text-[var(--color-text)]"
+              className={cn(
+                'pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-md border border-transparent px-3 py-2 text-sm text-[var(--color-text)]',
+                cornerAction && 'pb-12 pr-[4.25rem]'
+              )}
               style={{
                 whiteSpace: 'pre-wrap',
                 wordWrap: 'break-word',
@@ -231,8 +239,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
                     {seg.value}
                   </span>
                 );
-              })}
-              {/* Trailing space ensures trailing newlines render correctly */}{' '}
+              })}{' '}
             </div>
           ) : null}
 
@@ -243,9 +250,15 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
             onKeyDown={handleKeyDown}
             onSelect={handleSelect}
             {...textareaProps}
+            className={cn(className, cornerAction && 'pb-12 pr-[4.25rem]')}
             onScroll={handleScroll}
             style={textareaStyle}
           />
+          {cornerAction ? (
+            <div className="pointer-events-none absolute bottom-2 right-2 z-20 flex items-end justify-end">
+              <div className="pointer-events-auto">{cornerAction}</div>
+            </div>
+          ) : null}
         </div>
 
         {showFooter ? (

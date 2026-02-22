@@ -2,7 +2,15 @@ import { useEffect, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { formatTokensCompact } from '@shared/utils/tokenFormatting';
-import { AlertCircle, BarChart3, ChevronDown, ChevronRight, FileCode, Loader2 } from 'lucide-react';
+import {
+  AlertCircle,
+  BarChart3,
+  ChevronDown,
+  ChevronRight,
+  FileCode,
+  Info,
+  Loader2,
+} from 'lucide-react';
 
 import type { MemberFullStats } from '@shared/types';
 
@@ -90,14 +98,29 @@ const StatCard = ({
   label,
   value,
   sub,
+  info,
 }: {
   label: string;
   value: string | number;
   sub?: string;
+  info?: string;
 }): React.JSX.Element => (
   <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2">
     <p className="text-lg font-semibold text-[var(--color-text)]">{value}</p>
-    <p className="text-[11px] text-[var(--color-text-muted)]">{label}</p>
+    <div className="flex items-center gap-1">
+      <p className="text-[11px] text-[var(--color-text-muted)]">{label}</p>
+      {info && (
+        <span className="group relative">
+          <Info
+            size={10}
+            className="cursor-help text-[var(--color-text-muted)] opacity-50 hover:opacity-80"
+          />
+          <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 w-52 -translate-x-1/2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-2.5 py-2 text-[10px] leading-relaxed text-[var(--color-text-secondary)] opacity-0 shadow-lg transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+            {info}
+          </span>
+        </span>
+      )}
+    </div>
     {sub && <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)]">{sub}</p>}
   </div>
 );
@@ -116,6 +139,7 @@ const SummaryCards = ({
       label="Lines"
       value={`+${stats.linesAdded}`}
       sub={stats.linesRemoved > 0 ? `-${stats.linesRemoved}` : undefined}
+      info="Approximate. Accurate for Edit and Write tools. Bash file writes are estimated from command patterns (heredoc, echo, sed) and may be underreported."
     />
     <StatCard label="Files" value={stats.filesTouched.length} />
     <StatCard label="Tool Calls" value={totalToolCalls} />

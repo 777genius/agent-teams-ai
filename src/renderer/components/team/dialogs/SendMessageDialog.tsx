@@ -21,15 +21,23 @@ import {
 } from '@renderer/components/ui/select';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
+import { X } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { ResolvedTeamMember, SendMessageResult } from '@shared/types';
+
+interface QuotedMessage {
+  from: string;
+  text: string;
+}
 
 interface SendMessageDialogProps {
   open: boolean;
   members: ResolvedTeamMember[];
   defaultRecipient?: string;
+  quotedMessage?: QuotedMessage;
   sending: boolean;
   sendError: string | null;
   lastResult: SendMessageResult | null;
@@ -43,12 +51,14 @@ export const SendMessageDialog = ({
   open,
   members,
   defaultRecipient,
+  quotedMessage,
   sending,
   sendError,
   lastResult,
   onSend,
   onClose,
 }: SendMessageDialogProps): React.JSX.Element => {
+  const [quote, setQuote] = useState<QuotedMessage | undefined>(undefined);
   const [member, setMember] = useState('');
   const textDraft = useDraftPersistence({ key: 'sendMessage:text' });
   const [summary, setSummary] = useState('');
@@ -59,6 +69,7 @@ export const SendMessageDialog = ({
   if (open && !prevOpen) {
     setMember(defaultRecipient ?? '');
     setSummary('');
+    setQuote(quotedMessage);
     setPrevResult(lastResult);
   }
   if (open !== prevOpen) {
@@ -99,7 +110,9 @@ export const SendMessageDialog = ({
 
   const handleSubmit = (): void => {
     if (!canSend) return;
-    onSend(member.trim(), textDraft.value.trim(), summary.trim() || undefined);
+    const rawText = textDraft.value.trim();
+    const finalText = quote ? buildReplyBlock(quote.from, quote.text, rawText) : rawText;
+    onSend(member.trim(), finalText, summary.trim() || undefined);
     textDraft.clearDraft();
   };
 
@@ -164,6 +177,24 @@ export const SendMessageDialog = ({
               onChange={(e) => setSummary(e.target.value)}
             />
           </div>
+
+          {quote ? (
+            <div className="relative rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5">
+              <button
+                type="button"
+                className="absolute right-1.5 top-1.5 rounded p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                onClick={() => setQuote(undefined)}
+              >
+                <X size={12} />
+              </button>
+              <span className="mb-0.5 block text-[10px] font-medium text-[var(--color-text-muted)]">
+                Replying to @{quote.from}
+              </span>
+              <p className="line-clamp-3 pr-5 text-xs text-[var(--color-text-muted)]">
+                {quote.text}
+              </p>
+            </div>
+          ) : null}
 
           <div className="grid gap-2">
             <Label htmlFor="smd-message">Message</Label>

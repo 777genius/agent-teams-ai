@@ -113,6 +113,7 @@ export class TeamTaskReader {
                   c &&
                   typeof c === 'object' &&
                   typeof c.id === 'string' &&
+                  typeof c.author === 'string' &&
                   typeof c.text === 'string' &&
                   typeof c.createdAt === 'string'
               )

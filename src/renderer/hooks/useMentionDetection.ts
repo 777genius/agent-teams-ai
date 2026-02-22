@@ -127,8 +127,8 @@ export function findMentionTrigger(text: string, cursorPos: number): MentionTrig
   for (let i = beforeCursor.length - 1; i >= 0; i--) {
     const char = beforeCursor[i];
 
-    // If we hit a space before finding @, no valid trigger
-    if (char === ' ' || char === '\t') return null;
+    // If we hit whitespace or newline before finding @, no valid trigger
+    if (char === ' ' || char === '\t' || char === '\n' || char === '\r') return null;
 
     if (char === '@') {
       // @ must be at start or after whitespace/newline

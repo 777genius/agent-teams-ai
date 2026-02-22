@@ -69,11 +69,10 @@ describe('TeamKanbanManager', () => {
   it('writes review state with movedAt on set_column', async () => {
     await manager.updateTask('my-team', '12', { op: 'set_column', column: 'review' });
     const persisted = JSON.parse(hoisted.files.get(statePath) ?? '{}') as {
-      tasks?: Record<string, { column: string; movedAt: string; reviewStatus?: string }>;
+      tasks?: Record<string, { column: string; movedAt: string }>;
     };
 
     expect(persisted.tasks?.['12']?.column).toBe('review');
-    expect(persisted.tasks?.['12']?.reviewStatus).toBe('pending');
     expect(typeof persisted.tasks?.['12']?.movedAt).toBe('string');
     expect(hoisted.atomicWrite).toHaveBeenCalledTimes(1);
   });

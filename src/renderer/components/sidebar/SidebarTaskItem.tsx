@@ -37,11 +37,17 @@ export const SidebarTaskItem = ({ task }: SidebarTaskItemProps): React.JSX.Eleme
   return (
     <button
       type="button"
-      className="flex h-[48px] w-full cursor-pointer flex-col justify-center px-3 text-left transition-colors hover:bg-surface-raised"
+      className="flex h-[48px] w-full cursor-pointer flex-col justify-center border-b px-3 py-2 text-left transition-colors hover:bg-surface-raised"
+      style={{ borderColor: 'var(--color-border)' }}
       onClick={() => openTeamTab(task.teamName, undefined, task.id)}
     >
       <div className="flex w-full items-center gap-1.5 overflow-hidden">
-        <span className="truncate text-[13px] leading-tight text-text">{task.subject}</span>
+        <span
+          className="truncate text-[13px] font-medium leading-tight"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          {task.subject}
+        </span>
         {unreadCount > 0 && (
           <span
             className="size-1.5 shrink-0 rounded-full bg-blue-400"
@@ -50,7 +56,10 @@ export const SidebarTaskItem = ({ task }: SidebarTaskItemProps): React.JSX.Eleme
         )}
         <StatusIcon className={`size-3 shrink-0 ${cfg.color}`} />
       </div>
-      <div className="mt-0.5 flex items-center gap-1.5 text-[11px] leading-tight text-text-muted">
+      <div
+        className="mt-0.5 flex items-center gap-1.5 text-[10px] leading-tight"
+        style={{ color: 'var(--color-text-muted)' }}
+      >
         <span>{task.owner ?? 'unassigned'}</span>
         <span className="opacity-40">·</span>
         <span className="truncate">{task.teamDisplayName}</span>

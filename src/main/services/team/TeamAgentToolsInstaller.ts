@@ -312,7 +312,6 @@ function setKanbanColumn(paths, teamName, taskId, column) {
   if (normalized === 'review') {
     state.tasks[String(taskId)] = {
       column: 'review',
-      reviewStatus: 'pending',
       reviewer: null,
       movedAt: nowIso(),
     };

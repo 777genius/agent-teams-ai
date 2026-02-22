@@ -77,17 +77,36 @@ export class TeamDataService {
       });
     }
 
-    // Only include tasks that belong to a known team.
-    // ~/.claude/tasks/ may also contain solo session task dirs (UUID-named)
-    // which have no corresponding team in ~/.claude/teams/.
+    const teamNames = [
+      ...new Set(rawTasks.map((t) => t.teamName).filter((n) => teamInfoMap.has(n))),
+    ];
+    const kanbanByTeam = new Map<string, KanbanState>();
+    await Promise.all(
+      teamNames.map(async (teamName) => {
+        try {
+          const state = await this.kanbanManager.getState(teamName);
+          kanbanByTeam.set(teamName, state);
+        } catch {
+          // ignore
+        }
+      })
+    );
+
     return rawTasks
       .filter((task) => teamInfoMap.has(task.teamName))
       .map((task) => {
         const info = teamInfoMap.get(task.teamName)!;
+        const kanban = kanbanByTeam.get(task.teamName);
+        const kanbanEntry = kanban?.tasks[task.id];
+        const kanbanColumn =
+          kanbanEntry?.column === 'review' || kanbanEntry?.column === 'approved'
+            ? kanbanEntry.column
+            : undefined;
         return {
           ...task,
           teamDisplayName: info.displayName,
           projectPath: task.projectPath ?? info.projectPath,
+          kanbanColumn,
         };
       });
   }

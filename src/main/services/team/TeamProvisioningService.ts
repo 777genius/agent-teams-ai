@@ -442,6 +442,12 @@ export class TeamProvisioningService {
   }
 
   async prepareForProvisioning(cwd?: string): Promise<TeamProvisioningPrepareResult> {
+    // Always validate cwd even when cache is available
+    const targetCwdForValidation = cwd?.trim() || process.cwd();
+    if (targetCwdForValidation && path.isAbsolute(targetCwdForValidation)) {
+      await ensureCwdExists(targetCwdForValidation);
+    }
+
     if (cachedProbeResult) {
       const { warning, authSource } = cachedProbeResult;
       const warnings: string[] = [];
@@ -796,11 +802,18 @@ export class TeamProvisioningService {
     // Normalize config.json to keep only the team-lead before spawning the CLI, so we get stable names.
     await this.normalizeTeamConfigForLaunch(request.teamName, configRaw);
 
-    await ensureCwdExists(request.cwd);
+    let claudePath: string | null;
+    try {
+      await ensureCwdExists(request.cwd);
 
-    const claudePath = await ClaudeBinaryResolver.resolve();
-    if (!claudePath) {
-      throw new Error('Claude CLI not found; install it or provide a valid path');
+      claudePath = await ClaudeBinaryResolver.resolve();
+      if (!claudePath) {
+        throw new Error('Claude CLI not found; install it or provide a valid path');
+      }
+    } catch (error) {
+      // Restore pre-launch backup so config.json is not left in normalized (lead-only) state
+      await this.restorePrelaunchConfig(request.teamName);
+      throw error;
     }
 
     const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
@@ -894,6 +907,7 @@ export class TeamProvisioningService {
     } catch (error) {
       this.runs.delete(runId);
       this.activeByTeam.delete(request.teamName);
+      await this.restorePrelaunchConfig(request.teamName);
       throw error;
     }
 
@@ -1138,6 +1152,7 @@ export class TeamProvisioningService {
 
     if (run.isLaunch) {
       await this.updateConfigPostLaunch(run.teamName, run.request.cwd);
+      await this.cleanupPrelaunchBackup(run.teamName);
       const readyMessage = 'Team launched — process alive and ready';
       const progress = updateProgress(run, 'ready', readyMessage, {
         cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
@@ -1850,6 +1865,34 @@ export class TeamProvisioningService {
     await this.mergeAndRemoveDuplicateInboxes(teamName, baseNames);
   }
 
+  /**
+   * Restore config.json from prelaunch backup if launch fails after normalization.
+   */
+  private async restorePrelaunchConfig(teamName: string): Promise<void> {
+    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+    const backupPath = `${configPath}.prelaunch.bak`;
+    try {
+      const backupRaw = await fs.promises.readFile(backupPath, 'utf8');
+      await atomicWriteAsync(configPath, backupRaw);
+      logger.info(`[${teamName}] Restored config.json from prelaunch backup after launch failure`);
+    } catch {
+      logger.debug(`[${teamName}] No prelaunch backup to restore (or read failed)`);
+    }
+  }
+
+  /**
+   * Remove the prelaunch backup file after a successful launch.
+   */
+  async cleanupPrelaunchBackup(teamName: string): Promise<void> {
+    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+    const backupPath = `${configPath}.prelaunch.bak`;
+    try {
+      await fs.promises.unlink(backupPath);
+    } catch {
+      // Backup may not exist — that's fine
+    }
+  }
+
   private async mergeAndRemoveDuplicateInboxes(
     teamName: string,
     baseNames: Set<string>
@@ -1938,12 +1981,16 @@ export class TeamProvisioningService {
         const at =
           a && typeof a === 'object'
             ? Date.parse((a as { timestamp?: string }).timestamp ?? '')
-            : 0;
+            : NaN;
         const bt =
           b && typeof b === 'object'
             ? Date.parse((b as { timestamp?: string }).timestamp ?? '')
-            : 0;
-        if (Number.isNaN(at) || Number.isNaN(bt)) return 0;
+            : NaN;
+        const atNaN = Number.isNaN(at);
+        const btNaN = Number.isNaN(bt);
+        if (atNaN && btNaN) return 0;
+        if (atNaN) return 1;
+        if (btNaN) return -1;
         return bt - at;
       });
 

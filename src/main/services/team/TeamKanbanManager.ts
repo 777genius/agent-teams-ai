@@ -56,10 +56,6 @@ export class TeamKanbanManager {
         sanitizedTasks[taskId] = {
           column: candidate.column,
           movedAt: candidate.movedAt,
-          reviewStatus:
-            candidate.reviewStatus === 'pending' || candidate.reviewStatus === 'error'
-              ? candidate.reviewStatus
-              : undefined,
           reviewer:
             typeof candidate.reviewer === 'string' || candidate.reviewer === null
               ? candidate.reviewer
@@ -87,7 +83,6 @@ export class TeamKanbanManager {
     } else if (patch.column === 'review') {
       state.tasks[taskId] = {
         column: 'review',
-        reviewStatus: 'pending',
         reviewer: null,
         movedAt: new Date().toISOString(),
       };

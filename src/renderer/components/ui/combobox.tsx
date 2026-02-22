@@ -6,10 +6,12 @@ import { Check, ChevronsUpDown } from 'lucide-react';
 
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 
-interface ComboboxOption {
+export interface ComboboxOption {
   value: string;
   label: string;
   description?: string;
+  /** Extra data for renderOption (e.g. sessionCount, path). */
+  meta?: Record<string, unknown>;
 }
 
 interface ComboboxProps {

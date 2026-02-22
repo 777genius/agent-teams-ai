@@ -72,6 +72,9 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [sendDialogRecipient, setSendDialogRecipient] = useState<string | undefined>(undefined);
+  const [replyQuote, setReplyQuote] = useState<{ from: string; text: string } | undefined>(
+    undefined
+  );
 
   // Session loading and filtering state
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -460,6 +463,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           onMemberClick={setSelectedMember}
           onSendMessage={(member) => {
             setSendDialogRecipient(member.name);
+            setReplyQuote(undefined);
             setSendDialogOpen(true);
           }}
           onAssignTask={(member) => {
@@ -595,6 +599,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             onClick={(e) => {
               e.stopPropagation();
               setSendDialogRecipient(undefined);
+              setReplyQuote(undefined);
               setSendDialogOpen(true);
             }}
           >
@@ -608,6 +613,11 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           members={data.members}
           onCreateTaskFromMessage={(subject, description) => {
             openCreateTaskDialog(subject, description);
+          }}
+          onReplyToMessage={(message) => {
+            setSendDialogRecipient(message.from);
+            setReplyQuote({ from: message.from, text: message.text });
+            setSendDialogOpen(true);
           }}
         />
       </CollapsibleTeamSection>
@@ -645,6 +655,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           const name = selectedMember?.name ?? '';
           setSelectedMember(null);
           setSendDialogRecipient(name || undefined);
+          setReplyQuote(undefined);
           setSendDialogOpen(true);
         }}
         onAssignTask={() => {
@@ -697,13 +708,17 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         open={sendDialogOpen}
         members={data.members}
         defaultRecipient={sendDialogRecipient}
+        quotedMessage={replyQuote}
         sending={sendingMessage}
         sendError={sendMessageError}
         lastResult={lastSendMessageResult}
         onSend={(member, text, summary) => {
           void sendTeamMessage(teamName, { member, text, summary });
         }}
-        onClose={() => setSendDialogOpen(false)}
+        onClose={() => {
+          setSendDialogOpen(false);
+          setReplyQuote(undefined);
+        }}
       />
 
       <TaskDetailDialog

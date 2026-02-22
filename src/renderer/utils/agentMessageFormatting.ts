@@ -1,4 +1,52 @@
+import { MESSAGE_REPLY_TAG } from '@shared/constants/agentBlocks';
+
 type StructuredAgentMessage = Record<string, unknown>;
+
+// ---------------------------------------------------------------------------
+// Reply block parsing
+// ---------------------------------------------------------------------------
+
+export interface ParsedMessageReply {
+  agentName: string;
+  originalText: string;
+  replyText: string;
+}
+
+const REPLY_BLOCK_RE = new RegExp(
+  '```' +
+    MESSAGE_REPLY_TAG +
+    '\\nReply on @([\\w-]+) original message with text "([\\s\\S]*?)", here is answer: "([\\s\\S]*?)"\\n```'
+);
+
+/**
+ * Parses a message_reply_for_agent block from content.
+ * Returns null if no reply block is found.
+ */
+export function parseMessageReply(content: string): ParsedMessageReply | null {
+  const match = REPLY_BLOCK_RE.exec(content);
+  if (!match) return null;
+  return {
+    agentName: match[1],
+    originalText: match[2],
+    replyText: match[3],
+  };
+}
+
+/**
+ * Builds a reply block string for sending.
+ */
+export function buildReplyBlock(
+  agentName: string,
+  originalText: string,
+  replyText: string
+): string {
+  const tag = MESSAGE_REPLY_TAG;
+  return [
+    '```' + tag,
+    `Reply on @${agentName} original message with text "${originalText}", here is answer: "${replyText}"`,
+    '```',
+  ].join('\n');
+}
 
 const NOISE_TYPES = new Set([
   'idle_notification',

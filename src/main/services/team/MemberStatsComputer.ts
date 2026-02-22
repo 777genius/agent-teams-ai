@@ -167,6 +167,28 @@ export class MemberStatsComputer {
                       linesAdded += writeContent.split('\n').length;
                     }
                   }
+
+                  // Count lines for NotebookEdit
+                  if (toolName === 'NotebookEdit') {
+                    const src = typeof input.new_source === 'string' ? input.new_source : '';
+                    if (src) {
+                      linesAdded += src.split('\n').length;
+                    }
+                    if (typeof input.notebook_path === 'string') {
+                      filesTouchedSet.add(input.notebook_path);
+                    }
+                  }
+
+                  // Count lines for Bash commands that write to files
+                  if (toolName === 'Bash') {
+                    const cmd = typeof input.command === 'string' ? input.command : '';
+                    if (cmd) {
+                      const bashLines = estimateBashLinesChanged(cmd);
+                      linesAdded += bashLines.added;
+                      linesRemoved += bashLines.removed;
+                      for (const f of bashLines.files) filesTouchedSet.add(f);
+                    }
+                  }
                 }
               }
             }
@@ -233,4 +255,107 @@ export class MemberStatsComputer {
         typeof usage.cache_read_input_tokens === 'number' ? usage.cache_read_input_tokens : 0,
     };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Bash line-change heuristics
+// ---------------------------------------------------------------------------
+
+interface BashLinesResult {
+  added: number;
+  removed: number;
+  files: string[];
+}
+
+/**
+ * Best-effort estimation of lines changed by a Bash command.
+ * Handles common patterns: heredoc writes, echo/printf redirects,
+ * sed in-place edits, and tee writes.
+ *
+ * TODO: Improve Bash line counting accuracy:
+ * - Currently only covers ~30-40% of real Bash file-write patterns.
+ * - Misses: variable expansions (`echo "$var" > file`), piped output
+ *   (`grep ... | sort > file`), `python -c`, `git apply`, `patch`,
+ *   `mv`/`cp`, complex heredocs with `<<-` (tab-stripped).
+ * - The fundamental limitation is that Bash command output is not stored
+ *   in the JSONL tool_use input — only the command string is available.
+ *   The actual content written to files lives inside the shell runtime
+ *   and is not captured.
+ * - Potential improvements: parse tool_result blocks for git diff --stat
+ *   patterns (requires two-pass parser), or run a post-hoc `git log --stat`
+ *   against the project repo filtered by session timestamps.
+ */
+export function estimateBashLinesChanged(command: string): BashLinesResult {
+  let added = 0;
+  let removed = 0;
+  const files: string[] = [];
+
+  // 1. Heredoc: cat <<'EOF' > file  OR  cat <<EOF > file
+  //    Count lines between delimiter markers.
+  const heredocPattern = /<<-?\s*'?(\w+)'?/g;
+  let heredocMatch: RegExpExecArray | null;
+  while ((heredocMatch = heredocPattern.exec(command)) !== null) {
+    const delimiter = heredocMatch[1];
+    const afterHeredoc = command.slice(heredocMatch.index + heredocMatch[0].length);
+    const endIdx = afterHeredoc.indexOf(`\n${delimiter}`);
+    if (endIdx > 0) {
+      const startIdx = afterHeredoc.indexOf('\n');
+      if (startIdx >= 0 && startIdx < endIdx) {
+        const content = afterHeredoc.slice(startIdx + 1, endIdx);
+        added += content.split('\n').length;
+      }
+    }
+  }
+
+  // 2. Echo / printf with redirect: echo "..." > /path  OR  printf "..." > /path
+  const echoPattern =
+    /(?:echo|printf)\s+(?:-[a-zA-Z]+\s+)?(?:"([^"]*)"|'([^']*)')\s*>{1,2}\s*(\S+)/g;
+  let echoMatch: RegExpExecArray | null;
+  while ((echoMatch = echoPattern.exec(command)) !== null) {
+    const content = echoMatch[1] ?? echoMatch[2] ?? '';
+    if (content) {
+      added += content.split('\\n').length;
+    }
+    const filePath = echoMatch[3];
+    if (filePath && filePath.startsWith('/')) {
+      files.push(filePath);
+    }
+  }
+
+  // 3. sed -i: each invocation ~ 1 line changed
+  const sedPattern = /sed\s+(?:-[a-zA-Z]*i[a-zA-Z]*|-i)\s/g;
+  let sedMatch: RegExpExecArray | null;
+  while ((sedMatch = sedPattern.exec(command)) !== null) {
+    added += 1;
+    removed += 1;
+    const afterSed = command.slice(sedMatch.index);
+    const sedFileMatch = /\s(\/\S+)\s*(?:[;&|]|$)/.exec(afterSed);
+    if (sedFileMatch) {
+      files.push(sedFileMatch[1]);
+    }
+  }
+
+  // 4. Redirect to file (catch-all for remaining redirects not caught above)
+  if (added === 0 && removed === 0) {
+    const redirectPattern = />{1,2}\s*(\/\S+)/g;
+    let redirectMatch: RegExpExecArray | null;
+    while ((redirectMatch = redirectPattern.exec(command)) !== null) {
+      const filePath = redirectMatch[1];
+      if (filePath) {
+        files.push(filePath);
+      }
+    }
+  }
+
+  // 5. tee: ... | tee /path/to/file
+  const teePattern = /\btee\s+(?:-a\s+)?(\/\S+)/g;
+  let teeMatch: RegExpExecArray | null;
+  while ((teeMatch = teePattern.exec(command)) !== null) {
+    const filePath = teeMatch[1];
+    if (filePath) {
+      files.push(filePath);
+    }
+  }
+
+  return { added, removed, files };
 }

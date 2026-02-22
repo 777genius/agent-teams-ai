@@ -308,11 +308,16 @@ const ProjectsGrid = ({
     }))
   );
 
+  const hasFetchedTasksRef = React.useRef(false);
+
   useEffect(() => {
     if (repositoryGroups.length === 0) {
       void fetchRepositoryGroups();
     }
-    void fetchAllTasks();
+    if (!hasFetchedTasksRef.current) {
+      hasFetchedTasksRef.current = true;
+      void fetchAllTasks();
+    }
   }, [repositoryGroups.length, fetchRepositoryGroups, fetchAllTasks]);
 
   const taskCountsMap = useMemo(() => buildTaskCountsByProject(globalTasks), [globalTasks]);

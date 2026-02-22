@@ -31,3 +31,23 @@ export function createAgentBlockRegex(): RegExp {
  * Kept for backward compatibility with .replace() calls.
  */
 export const AGENT_BLOCK_REGEX = new RegExp(AGENT_BLOCK_PATTERN, 'g');
+
+/**
+ * Fenced code block marker for reply messages between agents.
+ *
+ * Format:
+ * ```message_reply_for_agent
+ * Reply on @agent-name original message with text "<original>", here is answer: "<reply>"
+ * ```
+ */
+export const MESSAGE_REPLY_TAG = 'message_reply_for_agent';
+export const MESSAGE_REPLY_OPEN = '```' + MESSAGE_REPLY_TAG;
+export const MESSAGE_REPLY_CLOSE = '```';
+
+/**
+ * Creates a new RegExp for matching message reply blocks.
+ * Returns a fresh instance each time to avoid stateful 'g' flag issues with .test().
+ */
+export function createMessageReplyBlockRegex(): RegExp {
+  return new RegExp('```message_reply_for_agent\\n[\\s\\S]*?\\n```', 'g');
+}

@@ -3,11 +3,10 @@
  *
  * Structure:
  * - Fixed Header: Project selector (Row 1) + Worktree selector (Row 2, conditional)
- * - Scrollable Body: Date-grouped session list
+ * - Tab bar: Tasks | Sessions
+ * - Scrollable Body: Task list or date-grouped session list
  * - Resizable: Drag right edge to resize
  * - Collapsible: Cmd+B to toggle (Notion-style)
- *
- * Provides clear hierarchy visibility: Project -> Worktree -> Session
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -15,25 +14,35 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
+import { DateGroupedSessions } from '../sidebar/DateGroupedSessions';
 import { GlobalTaskList } from '../sidebar/GlobalTaskList';
+import { defaultTaskFiltersState, TaskFiltersPopover } from '../sidebar/TaskFiltersPopover';
 
 import { SidebarHeader } from './SidebarHeader';
+
+import type { TaskFiltersState } from '../sidebar/TaskFiltersPopover';
+
+type SidebarTab = 'tasks' | 'sessions';
 
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 500;
 const DEFAULT_WIDTH = 280;
 
-export const Sidebar = (): React.JSX.Element | null => {
-  const { projects, projectsLoading, fetchProjects, sidebarCollapsed } = useStore(
+export const Sidebar = (): React.JSX.Element => {
+  const { projects, projectsLoading, fetchProjects, sidebarCollapsed, teams } = useStore(
     useShallow((s) => ({
       projects: s.projects,
       projectsLoading: s.projectsLoading,
       fetchProjects: s.fetchProjects,
       sidebarCollapsed: s.sidebarCollapsed,
+      teams: s.teams,
     }))
   );
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('tasks');
+  const [taskFilters, setTaskFilters] = useState<TaskFiltersState>(defaultTaskFiltersState);
+  const [taskFiltersPopoverOpen, setTaskFiltersPopoverOpen] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Fetch projects on mount if not loaded
@@ -83,38 +92,96 @@ export const Sidebar = (): React.JSX.Element | null => {
     setIsResizing(true);
   };
 
-  // Collapsed state - sidebar is completely hidden (expand button is in TabBar)
-  if (sidebarCollapsed) {
-    return null;
-  }
-
   return (
     <div
       ref={sidebarRef}
-      className="relative flex shrink-0 flex-col border-r"
+      className="relative flex shrink-0 flex-col overflow-hidden border-r"
       style={{
         backgroundColor: 'var(--color-surface-sidebar)',
         borderColor: 'var(--color-border)',
-        width: `${width}px`,
+        width: sidebarCollapsed ? 0 : width,
+        minWidth: sidebarCollapsed ? 0 : undefined,
+        borderRightWidth: sidebarCollapsed ? 0 : undefined,
+        transition: 'width 0.22s ease-out, border-width 0.22s ease-out',
       }}
     >
-      {/* Sidebar header with project dropdown */}
-      <SidebarHeader />
+      <div
+        className="flex min-w-0 flex-1 flex-col overflow-hidden"
+        style={{
+          width: '100%',
+          minWidth: sidebarCollapsed ? 0 : width,
+        }}
+      >
+        <SidebarHeader />
 
-      {/* Global task list */}
-      <div className="flex-1 overflow-hidden">
-        <GlobalTaskList />
+        {/* Tab bar: Tasks | Sessions */}
+        <div
+          className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-1.5"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
+          <div className="flex gap-0.5">
+            <button
+              type="button"
+              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                sidebarTab === 'tasks'
+                  ? 'bg-surface-raised text-text'
+                  : 'text-text-muted hover:text-text-secondary'
+              }`}
+              onClick={() => setSidebarTab('tasks')}
+            >
+              Tasks
+            </button>
+            <button
+              type="button"
+              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                sidebarTab === 'sessions'
+                  ? 'bg-surface-raised text-text'
+                  : 'text-text-muted hover:text-text-secondary'
+              }`}
+              onClick={() => setSidebarTab('sessions')}
+            >
+              Sessions
+            </button>
+          </div>
+          {sidebarTab === 'tasks' && (
+            <TaskFiltersPopover
+              open={taskFiltersPopoverOpen}
+              onOpenChange={setTaskFiltersPopoverOpen}
+              teams={teams.map((t) => ({ teamName: t.teamName, displayName: t.displayName }))}
+              filters={taskFilters}
+              onFiltersChange={setTaskFilters}
+              onApply={() => {}}
+            />
+          )}
+        </div>
+
+        {/* Content: Tasks list or Sessions list */}
+        <div className="min-w-0 flex-1 overflow-hidden">
+          {sidebarTab === 'tasks' ? (
+            <GlobalTaskList
+              hideHeader
+              filters={taskFilters}
+              onFiltersChange={setTaskFilters}
+              filtersPopoverOpen={taskFiltersPopoverOpen}
+              onFiltersPopoverOpenChange={setTaskFiltersPopoverOpen}
+            />
+          ) : (
+            <DateGroupedSessions />
+          )}
+        </div>
       </div>
 
-      {/* Resize handle */}
-      <button
-        type="button"
-        aria-label="Resize sidebar"
-        className={`absolute right-0 top-0 h-full w-1 cursor-col-resize border-0 bg-transparent p-0 transition-colors hover:bg-blue-500/50 ${
-          isResizing ? 'bg-blue-500/50' : ''
-        }`}
-        onMouseDown={handleResizeStart}
-      />
+      {/* Resize handle - only interactive when expanded */}
+      {!sidebarCollapsed && (
+        <button
+          type="button"
+          aria-label="Resize sidebar"
+          className={`absolute right-0 top-0 h-full w-1 cursor-col-resize border-0 bg-transparent p-0 transition-colors hover:bg-blue-500/50 ${
+            isResizing ? 'bg-blue-500/50' : ''
+          }`}
+          onMouseDown={handleResizeStart}
+        />
+      )}
     </div>
   );
 };

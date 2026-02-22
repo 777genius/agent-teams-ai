@@ -1,13 +1,16 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
+import { ReplyQuoteBlock } from '@renderer/components/team/activity/ReplyQuoteBlock';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useMarkCommentsRead } from '@renderer/hooks/useMarkCommentsRead';
 import { useStore } from '@renderer/store';
+import { buildReplyBlock, parseMessageReply } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
+import { getModifierKeyName } from '@renderer/utils/keyboardUtils';
 import { formatDistanceToNow } from 'date-fns';
-import { MessageSquare, Send } from 'lucide-react';
+import { MessageSquare, Reply, Send, X } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { ResolvedTeamMember, TaskComment } from '@shared/types';
@@ -31,6 +34,8 @@ export const TaskCommentsSection = ({
   const addingComment = useStore((s) => s.addingComment);
   const commentsRef = useMarkCommentsRead(teamName, taskId, comments);
 
+  const [replyTo, setReplyTo] = useState<{ author: string; text: string } | null>(null);
+
   const draft = useDraftPersistence({ key: `taskComment:${teamName}:${taskId}` });
 
   const mentionSuggestions = useMemo<MentionSuggestion[]>(
@@ -51,12 +56,14 @@ export const TaskCommentsSection = ({
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
     try {
-      await addTaskComment(teamName, taskId, trimmed);
+      const text = replyTo ? buildReplyBlock(replyTo.author, replyTo.text, trimmed) : trimmed;
+      await addTaskComment(teamName, taskId, text);
       draft.clearDraft();
+      setReplyTo(null);
     } catch {
       // Error is stored in addCommentError via store
     }
-  }, [canSubmit, addTaskComment, teamName, taskId, trimmed, draft]);
+  }, [canSubmit, addTaskComment, teamName, taskId, trimmed, draft, replyTo]);
 
   return (
     <div ref={commentsRef}>
@@ -75,7 +82,7 @@ export const TaskCommentsSection = ({
           {comments.map((comment) => (
             <div
               key={comment.id}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5"
+              className="group rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5"
             >
               <div className="mb-1 flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
                 <span
@@ -90,20 +97,79 @@ export const TaskCommentsSection = ({
                 >
                   {comment.author}
                 </span>
-                <span>{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}</span>
+                <span>
+                  {(() => {
+                    const date = new Date(comment.createdAt);
+                    return isNaN(date.getTime())
+                      ? 'unknown time'
+                      : formatDistanceToNow(date, { addSuffix: true });
+                  })()}
+                </span>
+                <button
+                  type="button"
+                  className="ml-auto flex items-center gap-0.5 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:text-[var(--color-text-secondary)] group-hover:opacity-100"
+                  onClick={() =>
+                    setReplyTo({
+                      author: comment.author,
+                      text: parseMessageReply(comment.text)?.replyText ?? comment.text,
+                    })
+                  }
+                >
+                  <Reply size={11} />
+                  Reply
+                </button>
               </div>
               <div className="text-xs">
-                <MarkdownViewer content={comment.text} maxHeight="max-h-[120px]" />
+                {(() => {
+                  const reply = parseMessageReply(comment.text);
+                  return reply ? (
+                    <ReplyQuoteBlock reply={reply} />
+                  ) : (
+                    <MarkdownViewer content={comment.text} maxHeight="max-h-[120px]" />
+                  );
+                })()}
               </div>
             </div>
           ))}
         </div>
       ) : null}
 
-      <div className="space-y-1.5">
+      {replyTo ? (
+        <div className="mb-2 flex items-start gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2">
+          <div className="min-w-0 flex-1">
+            <div className="mb-0.5 text-[10px] font-medium text-[var(--color-text-muted)]">
+              Replying to{' '}
+              <span
+                className="font-semibold"
+                style={{
+                  color:
+                    replyTo.author === 'user'
+                      ? 'var(--color-text-secondary)'
+                      : (members.find((m) => m.name === replyTo.author)?.color ??
+                        'var(--color-text-secondary)'),
+                }}
+              >
+                @{replyTo.author}
+              </span>
+            </div>
+            <div className="line-clamp-3 text-[11px] text-[var(--color-text-muted)]">
+              {replyTo.text}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-secondary)]"
+            onClick={() => setReplyTo(null)}
+          >
+            <X size={12} />
+          </button>
+        </div>
+      ) : null}
+
+      <div className="relative">
         <MentionableTextarea
           id={`task-comment-${taskId}`}
-          placeholder="Add a comment... (Cmd+Enter to send)"
+          placeholder={`Add a comment... (${getModifierKeyName()}+Enter to send)`}
           value={draft.value}
           onValueChange={draft.setValue}
           suggestions={mentionSuggestions}
@@ -111,6 +177,17 @@ export const TaskCommentsSection = ({
           maxRows={8}
           maxLength={MAX_COMMENT_LENGTH}
           disabled={addingComment}
+          cornerAction={
+            <button
+              type="button"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!canSubmit}
+              onClick={() => void handleSubmit()}
+            >
+              <Send size={12} />
+              Comment
+            </button>
+          }
           footerRight={
             <div className="flex items-center gap-2">
               {remaining < 200 ? (
@@ -126,17 +203,6 @@ export const TaskCommentsSection = ({
             </div>
           }
         />
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!canSubmit}
-            onClick={() => void handleSubmit()}
-          >
-            <Send size={12} />
-            Comment
-          </button>
-        </div>
       </div>
     </div>
   );

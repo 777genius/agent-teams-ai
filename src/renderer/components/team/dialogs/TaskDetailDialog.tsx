@@ -1,5 +1,4 @@
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
-import { ReviewBadge } from '@renderer/components/team/kanban/ReviewBadge';
 import { MemberLogsTab } from '@renderer/components/team/members/MemberLogsTab';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
@@ -93,14 +92,19 @@ export const TaskDetailDialog = ({
               {currentTask.owner ?? '\u2014'}
             </span>
           </div>
-          {currentTask.createdAt ? (
-            <div className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
-              <Clock size={12} />
-              <span className="text-[var(--color-text-secondary)]">
-                {formatDistanceToNow(new Date(currentTask.createdAt), { addSuffix: true })}
-              </span>
-            </div>
-          ) : null}
+          {currentTask.createdAt
+            ? (() => {
+                const date = new Date(currentTask.createdAt);
+                return isNaN(date.getTime()) ? null : (
+                  <div className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
+                    <Clock size={12} />
+                    <span className="text-[var(--color-text-secondary)]">
+                      {formatDistanceToNow(date, { addSuffix: true })}
+                    </span>
+                  </div>
+                );
+              })()
+            : null}
         </div>
 
         {/* Description */}
@@ -178,7 +182,6 @@ export const TaskDetailDialog = ({
         {/* Review info */}
         {kanbanTaskState ? (
           <div className="flex items-center gap-2">
-            <ReviewBadge status={kanbanTaskState.reviewStatus} />
             {kanbanTaskState.reviewer ? (
               <span className="text-xs text-[var(--color-text-secondary)]">
                 Reviewer: {kanbanTaskState.reviewer}

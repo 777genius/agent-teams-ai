@@ -7,6 +7,7 @@ import { Input } from '@renderer/components/ui/input';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
 import { buildTaskCountsByTeam, normalizePath } from '@renderer/utils/pathNormalize';
+import { getBaseName } from '@renderer/utils/pathUtils';
 import { Copy, FolderOpen, Search, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -38,9 +39,7 @@ function getRecentProjects(team: TeamSummary): string[] {
 }
 
 function folderName(fullPath: string): string {
-  // eslint-disable-next-line sonarjs/slow-regex -- Anchored regex on short path strings, no backtracking risk
-  const parts = fullPath.replace(/\/+$/, '').split('/');
-  return parts[parts.length - 1] || fullPath;
+  return getBaseName(fullPath) || fullPath;
 }
 
 function resolveTeamStatus(

@@ -4,8 +4,6 @@ import { Button } from '@renderer/components/ui/button';
 import { useUnreadCommentCount } from '@renderer/hooks/useUnreadCommentCount';
 import { ArrowLeftFromLine, ArrowRightFromLine, CheckCircle2, Play } from 'lucide-react';
 
-import { ReviewBadge } from './ReviewBadge';
-
 import type { KanbanColumnId, KanbanTaskState, TeamTask } from '@shared/types';
 
 interface KanbanTaskCardProps {
@@ -111,7 +109,6 @@ export const KanbanTaskCard = ({
           </div>
           <h5 className="text-sm font-medium text-[var(--color-text)]">{task.subject}</h5>
         </div>
-        {columnId === 'review' ? <ReviewBadge status={kanbanTaskState?.reviewStatus} /> : null}
       </div>
 
       <p className="mb-2 text-xs text-[var(--color-text-muted)]">Owner: {task.owner ?? '\u2014'}</p>

@@ -11,11 +11,14 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import {
   getMessageTypeLabel,
   getStructuredMessageSummary,
+  parseMessageReply,
   parseStructuredAgentMessage,
 } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { createAgentBlockRegex } from '@shared/constants/agentBlocks';
-import { Bot, ChevronRight, ListPlus, MessageSquare } from 'lucide-react';
+import { Bot, ChevronRight, ListPlus, MessageSquare, Reply } from 'lucide-react';
+
+import { ReplyQuoteBlock } from './ReplyQuoteBlock';
 
 import type { TeamColorSet } from '@renderer/constants/teamColors';
 import type { InboxMessage } from '@shared/types';
@@ -27,6 +30,7 @@ interface ActivityItemProps {
   memberRole?: string;
   memberColor?: string;
   onCreateTask?: (subject: string, description: string) => void;
+  onReply?: (message: InboxMessage) => void;
 }
 
 function getStringField(obj: StructuredMessage, key: string): string | null {
@@ -121,6 +125,7 @@ export const ActivityItem = ({
   memberRole,
   memberColor,
   onCreateTask,
+  onReply,
 }: ActivityItemProps): React.JSX.Element => {
   const colors = getTeamColorSet(memberColor ?? message.color ?? '');
   const formattedRole = formatAgentRole(memberRole);
@@ -140,6 +145,12 @@ export const ActivityItem = ({
   const displayText = useMemo(
     () => (structured ? null : stripAgentBlocks(message.text)),
     [structured, message.text]
+  );
+
+  // Check if this is a reply message
+  const parsedReply = useMemo(
+    () => (displayText ? parseMessageReply(displayText) : null),
+    [displayText]
   );
 
   // Noise messages: minimal inline row
@@ -255,8 +266,22 @@ export const ActivityItem = ({
           {summaryText}
         </span>
 
-        {/* Timestamp + create task */}
+        {/* Timestamp + reply + create task */}
         <div className="flex shrink-0 items-center gap-1.5">
+          {onReply && (
+            <button
+              type="button"
+              className="rounded p-0.5 opacity-0 transition-opacity hover:bg-[var(--color-surface-raised)] group-hover:opacity-100"
+              style={{ color: CARD_ICON_MUTED }}
+              title="Reply to message"
+              onClick={(e) => {
+                e.stopPropagation();
+                onReply(message);
+              }}
+            >
+              <Reply size={14} />
+            </button>
+          )}
           {onCreateTask && (
             <button
               type="button"
@@ -294,6 +319,8 @@ export const ActivityItem = ({
                 </pre>
               </details>
             </div>
+          ) : parsedReply ? (
+            <ReplyQuoteBlock reply={parsedReply} />
           ) : (
             <MarkdownViewer content={displayText ?? message.text} maxHeight="max-h-56" copyable />
           )}

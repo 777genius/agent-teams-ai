@@ -6,12 +6,14 @@ interface ActivityTimelineProps {
   messages: InboxMessage[];
   members?: ResolvedTeamMember[];
   onCreateTaskFromMessage?: (subject: string, description: string) => void;
+  onReplyToMessage?: (message: InboxMessage) => void;
 }
 
 export const ActivityTimeline = ({
   messages,
   members,
   onCreateTaskFromMessage,
+  onReplyToMessage,
 }: ActivityTimelineProps): React.JSX.Element => {
   const memberInfo = new Map<string, { role?: string; color?: string }>();
   if (members) {
@@ -43,6 +45,7 @@ export const ActivityTimeline = ({
             memberRole={info?.role}
             memberColor={info?.color}
             onCreateTask={onCreateTaskFromMessage}
+            onReply={onReplyToMessage}
           />
         );
       })}

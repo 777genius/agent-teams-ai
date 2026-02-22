@@ -95,11 +95,9 @@ export interface SendMessageResult {
 export type MemberStatus = 'active' | 'idle' | 'terminated' | 'unknown';
 
 export type KanbanColumnId = 'todo' | 'in_progress' | 'done' | 'review' | 'approved';
-export type KanbanReviewStatus = 'pending' | 'error';
 
 export interface KanbanTaskState {
   column: Extract<KanbanColumnId, 'review' | 'approved'>;
-  reviewStatus?: KanbanReviewStatus;
   reviewer?: string | null;
   errorDescription?: string;
   movedAt: string;
@@ -225,6 +223,8 @@ export interface GlobalTask extends TeamTask {
   teamName: string;
   teamDisplayName: string;
   projectPath?: string;
+  /** Set when task is in team kanban (review or approved column). */
+  kanbanColumn?: 'review' | 'approved';
 }
 
 export interface MemberSubagentSummary {

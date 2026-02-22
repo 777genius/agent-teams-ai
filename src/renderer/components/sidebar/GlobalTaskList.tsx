@@ -7,28 +7,31 @@ import { ListTodo, Search, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { SidebarTaskItem } from './SidebarTaskItem';
+import {
+  defaultTaskFiltersState,
+  getTaskUnreadCount,
+  TaskFiltersPopover,
+  taskMatchesStatus,
+  useReadStateSnapshot,
+} from './TaskFiltersPopover';
 
+import type { TaskFiltersState } from './TaskFiltersPopover';
 import type { GlobalTask } from '@shared/types';
 
-type StatusFilter = 'all' | 'active' | 'done';
-
-const filterButtons: { value: StatusFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'active', label: 'Active' },
-  { value: 'done', label: 'Done' },
-];
+export interface GlobalTaskListProps {
+  /** When true, do not render the header row (Tasks + Filters); parent renders tabs and filters. */
+  hideHeader?: boolean;
+  /** External filters state when used with sidebar tabs. */
+  filters?: TaskFiltersState;
+  onFiltersChange?: (f: TaskFiltersState) => void;
+  filtersPopoverOpen?: boolean;
+  onFiltersPopoverOpenChange?: (open: boolean) => void;
+}
 
 const dateCategoryLabels: Record<string, string> = {
   'Previous 7 Days': 'Last 7 Days',
   Older: 'Earlier',
 };
-
-function applyFilter(tasks: GlobalTask[], filter: StatusFilter): GlobalTask[] {
-  if (filter === 'all') return tasks;
-  if (filter === 'active')
-    return tasks.filter((t) => t.status === 'pending' || t.status === 'in_progress');
-  return tasks.filter((t) => t.status === 'completed');
-}
 
 function applySearch(tasks: GlobalTask[], query: string): GlobalTask[] {
   if (!query.trim()) return tasks;
@@ -47,7 +50,13 @@ function applyProjectFilter(tasks: GlobalTask[], projectPath: string | null): Gl
   return tasks.filter((t) => t.projectPath && normalizePath(t.projectPath) === normalized);
 }
 
-export const GlobalTaskList = (): React.JSX.Element => {
+export const GlobalTaskList = ({
+  hideHeader = false,
+  filters: externalFilters,
+  onFiltersChange: externalOnFiltersChange,
+  filtersPopoverOpen: externalFiltersPopoverOpen,
+  onFiltersPopoverOpenChange: externalOnFiltersPopoverOpenChange,
+}: GlobalTaskListProps = {}): React.JSX.Element => {
   const {
     globalTasks,
     globalTasksLoading,
@@ -58,6 +67,7 @@ export const GlobalTaskList = (): React.JSX.Element => {
     repositoryGroups,
     selectedRepositoryId,
     selectedWorktreeId,
+    teams,
   } = useStore(
     useShallow((s) => ({
       globalTasks: s.globalTasks,
@@ -69,13 +79,20 @@ export const GlobalTaskList = (): React.JSX.Element => {
       repositoryGroups: s.repositoryGroups,
       selectedRepositoryId: s.selectedRepositoryId,
       selectedWorktreeId: s.selectedWorktreeId,
+      teams: s.teams,
     }))
   );
 
-  const [filter, setFilter] = useState<StatusFilter>('all');
+  const [internalFilters, setInternalFilters] = useState(defaultTaskFiltersState);
+  const [internalFiltersPopoverOpen, setInternalFiltersPopoverOpen] = useState(false);
+  const filters = externalFilters ?? internalFilters;
+  const setFilters = externalOnFiltersChange ?? setInternalFilters;
+  const filtersPopoverOpen = externalFiltersPopoverOpen ?? internalFiltersPopoverOpen;
+  const setFiltersPopoverOpen = externalOnFiltersPopoverOpenChange ?? setInternalFiltersPopoverOpen;
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const hasFetchedRef = useRef(false);
+  const readState = useReadStateSnapshot();
 
   useEffect(() => {
     if (!hasFetchedRef.current) {
@@ -104,43 +121,52 @@ export const GlobalTaskList = (): React.JSX.Element => {
   const filtered = useMemo(() => {
     let result = globalTasks;
     result = applyProjectFilter(result, selectedProjectPath);
-    result = applyFilter(result, filter);
+    result = result.filter((t) => taskMatchesStatus(t, filters.statusIds));
+    if (filters.teamName) {
+      result = result.filter((t) => t.teamName === filters.teamName);
+    }
+    if (filters.unreadOnly) {
+      result = result.filter(
+        (t) => getTaskUnreadCount(readState, t.teamName, t.id, t.comments) > 0
+      );
+    }
     result = applySearch(result, searchQuery);
     return result;
-  }, [globalTasks, selectedProjectPath, filter, searchQuery]);
+  }, [
+    globalTasks,
+    selectedProjectPath,
+    filters.statusIds,
+    filters.teamName,
+    filters.unreadOnly,
+    searchQuery,
+    readState,
+  ]);
 
   const grouped = useMemo(() => groupTasksByDate(filtered), [filtered]);
   const categories = useMemo(() => getNonEmptyTaskCategories(grouped), [grouped]);
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Header + Filter bar */}
-      <div
-        className="flex shrink-0 items-center gap-2 border-b px-3 py-1.5"
-        style={{ borderColor: 'var(--color-border)' }}
-      >
-        <span className="text-[12px] font-semibold text-text-secondary">Tasks</span>
-        <div className="flex gap-1">
-          {filterButtons.map((btn) => (
-            <button
-              key={btn.value}
-              type="button"
-              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
-                filter === btn.value
-                  ? 'bg-surface-raised text-text'
-                  : 'text-text-muted hover:text-text-secondary'
-              }`}
-              onClick={() => setFilter(btn.value)}
-            >
-              {btn.label}
-            </button>
-          ))}
+    <div className="flex size-full min-w-0 flex-col">
+      {!hideHeader && (
+        <div
+          className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-1.5"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
+          <span className="text-[12px] font-semibold text-text-secondary">Tasks</span>
+          <TaskFiltersPopover
+            open={filtersPopoverOpen}
+            onOpenChange={setFiltersPopoverOpen}
+            teams={teams.map((t) => ({ teamName: t.teamName, displayName: t.displayName }))}
+            filters={filters}
+            onFiltersChange={setFilters}
+            onApply={() => {}}
+          />
         </div>
-      </div>
+      )}
 
       {/* Search bar */}
       <div
-        className="flex shrink-0 items-center gap-1.5 border-b px-3 py-1"
+        className="flex shrink-0 items-center gap-1.5 border-b px-2 py-1"
         style={{ borderColor: 'var(--color-border)' }}
       >
         <Search className="size-3 shrink-0 text-text-muted" />
