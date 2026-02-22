@@ -214,15 +214,16 @@ function extractNumberBefore(text: string, keyword: string): number | null {
  * Returns [passed, failed] or null if no match.
  */
 function parseTestSummary(text: string): [number, number] | null {
-  // Try "passed"/"failed" keywords
+  // Try "passed"/"failed" keywords — treat missing count as 0
+  // (runners often omit "0 failed" when all tests pass)
   const passed = extractNumberBefore(text, ' passed');
   const failed = extractNumberBefore(text, ' failed');
-  if (passed != null && failed != null) return [passed, failed];
+  if (passed != null || failed != null) return [passed ?? 0, failed ?? 0];
 
   // Try "passing"/"failing" keywords (mocha-style)
   const passing = extractNumberBefore(text, ' passing');
   const failing = extractNumberBefore(text, ' failing');
-  if (passing != null && failing != null) return [passing, failing];
+  if (passing != null || failing != null) return [passing ?? 0, failing ?? 0];
 
   return null;
 }
@@ -457,7 +458,7 @@ export function analyzeSession(detail: SessionDetail): SessionReport {
     // --- Token usage, cache economics, and cost ---
     // Skip sidechain messages to avoid double-counting (subagent costs are
     // accounted for separately via processSubagentCost).
-    if (m.usage && m.model && !m.isSidechain) {
+    if (m.usage && m.model && !m.isSidechain && m.model !== '<synthetic>') {
       const model = m.model;
       const u = m.usage;
       const inpTok = u.input_tokens ?? 0;
@@ -891,19 +892,30 @@ export function analyzeSession(detail: SessionDetail): SessionReport {
   // --- Subagent metrics from detail.processes ---
   const subagentEntries: SubagentEntry[] = detail.processes.map((proc: Process) => {
     const desc = proc.description ?? 'unknown';
-    const model = 'default (inherits parent)';
+    // Extract actual model from subagent messages (first assistant message with a model field)
+    const subagentModel =
+      proc.messages.find((m: ParsedMessage) => m.type === 'assistant' && m.model)?.model ??
+      'default (inherits parent)';
+    // Compute cost from subagent token breakdown (proc.metrics.costUsd is not populated upstream)
+    const computedCost = costUsd(
+      subagentModel,
+      proc.metrics.inputTokens,
+      proc.metrics.outputTokens,
+      proc.metrics.cacheReadTokens,
+      proc.metrics.cacheCreationTokens
+    );
     return {
       description: desc,
       subagentType: proc.subagentType ?? 'unknown',
-      model,
+      model: subagentModel,
       totalTokens: proc.metrics.totalTokens,
       totalDurationMs: proc.durationMs,
       totalToolUseCount: proc.messages.reduce(
         (sum: number, pm: ParsedMessage) => sum + pm.toolCalls.length,
         0
       ),
-      costUsd: proc.metrics.costUsd ?? 0,
-      modelMismatch: detectModelMismatch(desc, model),
+      costUsd: computedCost,
+      modelMismatch: detectModelMismatch(desc, subagentModel),
     };
   });
 
@@ -1113,6 +1125,32 @@ export function analyzeSession(detail: SessionDetail): SessionReport {
   // --- Subagent cost from processes ---
   const processSubagentCost = subagentEntries.reduce((sum, a) => sum + a.costUsd, 0);
   const totalCost = parentCost + processSubagentCost;
+
+  // Add aggregated subagent row to costByModel and byModel for the cost table
+  if (subagentEntries.length > 0 && processSubagentCost > 0) {
+    const subagentTokenStats: ModelTokenStats = {
+      apiCalls: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheCreation: 0,
+      cacheRead: 0,
+      costUsd: 0,
+    };
+    for (const proc of detail.processes) {
+      subagentTokenStats.inputTokens += proc.metrics.inputTokens;
+      subagentTokenStats.outputTokens += proc.metrics.outputTokens;
+      subagentTokenStats.cacheCreation += proc.metrics.cacheCreationTokens;
+      subagentTokenStats.cacheRead += proc.metrics.cacheReadTokens;
+      // Count assistant messages with usage as API calls
+      subagentTokenStats.apiCalls += proc.messages.filter(
+        (m: ParsedMessage) => m.type === 'assistant' && m.usage
+      ).length;
+    }
+    subagentTokenStats.costUsd = Math.round(processSubagentCost * 10000) / 10000;
+    const subagentLabel = 'Subagents (combined)';
+    byModel[subagentLabel] = subagentTokenStats;
+    modelStats.set(subagentLabel, subagentTokenStats);
+  }
 
   // --- Assessment computations ---
   const costPerCommitVal =

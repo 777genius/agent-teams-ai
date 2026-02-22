@@ -4,7 +4,7 @@ import { getPricing } from '@renderer/utils/sessionAnalyzer';
 import { DollarSign } from 'lucide-react';
 
 import { AssessmentBadge } from '../AssessmentBadge';
-import { ReportSection } from '../ReportSection';
+import { ReportSection, sectionId } from '../ReportSection';
 
 import type { ModelTokenStats, ReportCostAnalysis } from '@renderer/types/sessionReport';
 import type { ModelPricing } from '@renderer/types/sessionReport';
@@ -182,18 +182,35 @@ export const CostSection = ({
           <tbody>
             {modelEntries.map(([model, cost]) => {
               const stats = tokensByModel[model];
-              const isExpanded = expandedModel === model && !!stats;
-              const pricing = getPricing(model);
+              // Don't allow expansion for the synthetic aggregated row — getPricing
+              // would return wrong default rates for a non-model label.
+              const isAggregateRow = model === 'Subagents (combined)';
+              const isExpanded = expandedModel === model && !!stats && !isAggregateRow;
+              const pricing = isAggregateRow ? null : getPricing(model);
               return (
                 <Fragment key={model}>
                   <tr
                     className={`border-border/50 border-b ${stats ? 'hover:bg-surface-raised/50 cursor-pointer' : ''}`}
-                    onClick={() => stats && setExpandedModel(isExpanded ? null : model)}
+                    onClick={() => {
+                      if (isAggregateRow) {
+                        const el = document.getElementById(sectionId('Subagents'));
+                        if (el) {
+                          el.scrollIntoView({ behavior: 'smooth' });
+                          el.dispatchEvent(new CustomEvent('report-section-expand'));
+                        }
+                      } else if (stats) {
+                        setExpandedModel(isExpanded ? null : model);
+                      }
+                    }}
                   >
                     <td className="py-1.5 pr-4 text-text">
-                      <span className="mr-1.5 inline-block w-3 text-text-muted">
-                        {stats ? (isExpanded ? '\u25BC' : '\u25B6') : ''}
-                      </span>
+                      {isAggregateRow ? (
+                        <span className="mr-1.5 inline-block w-3 text-text-muted">{'\u2192'}</span>
+                      ) : (
+                        <span className="mr-1.5 inline-block w-3 text-text-muted">
+                          {stats ? (isExpanded ? '\u25BC' : '\u25B6') : ''}
+                        </span>
+                      )}
                       {model}
                     </td>
                     <td className="py-1.5 pr-4 text-right text-text-secondary">
@@ -210,7 +227,7 @@ export const CostSection = ({
                     </td>
                     <td className="py-1.5 pr-4 text-right font-medium text-text">{fmt(cost)}</td>
                   </tr>
-                  {isExpanded && stats && (
+                  {isExpanded && stats && pricing && (
                     <tr>
                       <td colSpan={6} className="px-4 pb-3 pt-1">
                         <CostBreakdownCard stats={stats} pricing={pricing} />
