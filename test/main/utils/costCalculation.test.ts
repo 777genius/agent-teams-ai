@@ -317,7 +317,7 @@ describe('Cost Calculation', () => {
       expect(metrics.costUsd).toBeCloseTo(0.0315, 6);
     });
 
-    it('should use first model found when calculating aggregated cost', () => {
+    it("should calculate cost per-message using each message's model", () => {
       const messages: ParsedMessage[] = [
         {
           type: 'assistant',
@@ -351,10 +351,11 @@ describe('Cost Calculation', () => {
 
       const metrics = calculateMetrics(messages);
 
-      // Uses first model (sonnet) pricing for all tokens
-      // Total tokens: 2000 input, 1000 output
-      // Cost: (2000 * 0.000003) + (1000 * 0.000015) = 0.006 + 0.015 = 0.021
-      expect(metrics.costUsd).toBeCloseTo(0.021, 6);
+      // Each message uses its own model's pricing
+      // Message 1 (sonnet): (1000 * 0.000003) + (500 * 0.000015) = 0.003 + 0.0075 = 0.0105
+      // Message 2 (opus): (1000 * 0.000015) + (500 * 0.000075) = 0.015 + 0.0375 = 0.0525
+      // Total cost: 0.0105 + 0.0525 = 0.063
+      expect(metrics.costUsd).toBeCloseTo(0.063, 6);
     });
   });
 
@@ -491,6 +492,76 @@ describe('Cost Calculation', () => {
 
       const metrics = calculateMetrics(messages);
       expect(metrics.costUsd).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Per-Message Tiering', () => {
+    it('should apply tiered pricing per-message, not to aggregated totals', () => {
+      // Scenario: Many messages each with cache_read tokens < 200k,
+      // but aggregated total > 200k
+      // Each message should use base rates, not tiered rates
+      const messages: ParsedMessage[] = [];
+
+      // Create 10 messages, each with 50k cache_read tokens (500k total)
+      for (let i = 0; i < 10; i++) {
+        messages.push({
+          type: 'assistant',
+          uuid: `msg-${i}`,
+          timestamp: new Date(),
+          content: [],
+          model: 'claude-3-5-sonnet-20241022',
+          usage: {
+            input_tokens: 0,
+            output_tokens: 0,
+            cache_read_input_tokens: 50000,
+          },
+          toolCalls: [],
+          toolResults: [],
+          isSidechain: false,
+        });
+      }
+
+      const metrics = calculateMetrics(messages);
+
+      // Per-message tiering: Each message uses base rate (< 200k threshold)
+      // Each message: 50,000 * 0.0000003 = $0.015
+      // Total: 10 * $0.015 = $0.15
+      const expectedCost = 10 * 50000 * 0.0000003;
+      expect(metrics.costUsd).toBeCloseTo(expectedCost, 6);
+
+      // Verify this is NOT using tiered rate on aggregated total
+      // If incorrectly aggregated: (200k * 0.0000003) + (300k * 0.0000006) = $0.24
+      const incorrectAggregatedCost = 0.24;
+      expect(metrics.costUsd).not.toBeCloseTo(incorrectAggregatedCost, 2);
+    });
+
+    it('should apply tiered rates when individual messages exceed 200k', () => {
+      const messages: ParsedMessage[] = [
+        {
+          type: 'assistant',
+          uuid: 'msg-1',
+          timestamp: new Date(),
+          content: [],
+          model: 'claude-3-5-sonnet-20241022',
+          usage: {
+            input_tokens: 0,
+            output_tokens: 0,
+            cache_read_input_tokens: 300000, // Exceeds 200k threshold
+          },
+          toolCalls: [],
+          toolResults: [],
+          isSidechain: false,
+        },
+      ];
+
+      const metrics = calculateMetrics(messages);
+
+      // Single message with 300k cache_read tokens
+      // First 200k: 200,000 * 0.0000003 = $0.06
+      // Remaining 100k: 100,000 * 0.0000006 = $0.06
+      // Total: $0.12
+      const expectedCost = 200000 * 0.0000003 + 100000 * 0.0000006;
+      expect(metrics.costUsd).toBeCloseTo(expectedCost, 6);
     });
   });
 

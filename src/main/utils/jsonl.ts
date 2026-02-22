@@ -351,44 +351,55 @@ export function calculateMetrics(messages: ParsedMessage[]): SessionMetrics {
     }
   }
 
+  // Calculate cost per-message, then sum (tiered pricing applies per-API-call, not to aggregated totals)
+  let costUsd = 0;
+
   for (const msg of messages) {
     if (msg.usage) {
-      inputTokens += msg.usage.input_tokens ?? 0;
-      outputTokens += msg.usage.output_tokens ?? 0;
-      cacheReadTokens += msg.usage.cache_read_input_tokens ?? 0;
-      cacheCreationTokens += msg.usage.cache_creation_input_tokens ?? 0;
+      const msgInputTokens = msg.usage.input_tokens ?? 0;
+      const msgOutputTokens = msg.usage.output_tokens ?? 0;
+      const msgCacheReadTokens = msg.usage.cache_read_input_tokens ?? 0;
+      const msgCacheCreationTokens = msg.usage.cache_creation_input_tokens ?? 0;
+
+      inputTokens += msgInputTokens;
+      outputTokens += msgOutputTokens;
+      cacheReadTokens += msgCacheReadTokens;
+      cacheCreationTokens += msgCacheCreationTokens;
+
+      // Calculate cost for this message if we have pricing data
+      if (msg.model && !modelName) {
+        modelName = msg.model;
+      }
+
+      if (msg.model) {
+        const pricing = getPricing(msg.model);
+        if (pricing) {
+          const inputCost = calculateTieredCost(
+            msgInputTokens,
+            pricing.input_cost_per_token,
+            pricing.input_cost_per_token_above_200k_tokens
+          );
+          const outputCost = calculateTieredCost(
+            msgOutputTokens,
+            pricing.output_cost_per_token,
+            pricing.output_cost_per_token_above_200k_tokens
+          );
+          const cacheCreationCost = calculateTieredCost(
+            msgCacheCreationTokens,
+            pricing.cache_creation_input_token_cost ?? 0,
+            pricing.cache_creation_input_token_cost_above_200k_tokens
+          );
+          const cacheReadCost = calculateTieredCost(
+            msgCacheReadTokens,
+            pricing.cache_read_input_token_cost ?? 0,
+            pricing.cache_read_input_token_cost_above_200k_tokens
+          );
+          costUsd += inputCost + outputCost + cacheCreationCost + cacheReadCost;
+        }
+      }
     }
     if (!modelName && msg.model) {
       modelName = msg.model;
-    }
-  }
-
-  // Calculate cost
-  let costUsd = 0;
-  if (modelName) {
-    const pricing = getPricing(modelName);
-    if (pricing) {
-      const inputCost = calculateTieredCost(
-        inputTokens,
-        pricing.input_cost_per_token,
-        pricing.input_cost_per_token_above_200k_tokens
-      );
-      const outputCost = calculateTieredCost(
-        outputTokens,
-        pricing.output_cost_per_token,
-        pricing.output_cost_per_token_above_200k_tokens
-      );
-      const cacheCreationCost = calculateTieredCost(
-        cacheCreationTokens,
-        pricing.cache_creation_input_token_cost ?? 0,
-        pricing.cache_creation_input_token_cost_above_200k_tokens
-      );
-      const cacheReadCost = calculateTieredCost(
-        cacheReadTokens,
-        pricing.cache_read_input_token_cost ?? 0,
-        pricing.cache_read_input_token_cost_above_200k_tokens
-      );
-      costUsd = inputCost + outputCost + cacheCreationCost + cacheReadCost;
     }
   }
 

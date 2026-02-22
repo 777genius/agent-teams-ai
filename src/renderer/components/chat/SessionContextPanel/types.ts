@@ -2,12 +2,12 @@
  * Type definitions for SessionContextPanel components.
  */
 
-import type { ClaudeMdSource } from '@renderer/types/claudeMd';
-import type { ContextInjection, ContextPhaseInfo } from '@renderer/types/contextInjection';
-
 // =============================================================================
 // Props Interface
 // =============================================================================
+import type { SessionMetrics } from '@main/types';
+import type { ClaudeMdSource } from '@renderer/types/claudeMd';
+import type { ContextInjection, ContextPhaseInfo } from '@renderer/types/contextInjection';
 
 export interface SessionContextPanelProps {
   /** All accumulated context injections */
@@ -24,6 +24,8 @@ export interface SessionContextPanelProps {
   onNavigateToUserGroup?: (turnIndex: number) => void;
   /** Total session tokens (input + output + cache) for comparison */
   totalSessionTokens?: number;
+  /** Full session metrics (input, output, cache tokens, cost) */
+  sessionMetrics?: SessionMetrics;
   /** Phase information for phase selector */
   phaseInfo?: ContextPhaseInfo;
   /** Currently selected phase (null = current/latest) */
