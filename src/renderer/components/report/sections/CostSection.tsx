@@ -139,7 +139,13 @@ export const CostSection = ({
         <div>
           <div className="text-xs text-text-muted">Per Commit</div>
           <div className="text-[10px] text-text-muted">
-            total cost {'\u00F7'} {commitCount} commit{commitCount !== 1 ? 's' : ''}
+            {commitCount > 0 ? (
+              <>
+                total cost {'\u00F7'} {commitCount} commit{commitCount !== 1 ? 's' : ''}
+              </>
+            ) : (
+              'no commits'
+            )}
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-text">
@@ -156,8 +162,14 @@ export const CostSection = ({
         <div>
           <div className="text-xs text-text-muted">Per Line Changed</div>
           <div className="text-[10px] text-text-muted">
-            total cost {'\u00F7'} {linesChanged.toLocaleString()} line
-            {linesChanged !== 1 ? 's' : ''}
+            {linesChanged > 0 ? (
+              <>
+                total cost {'\u00F7'} {linesChanged.toLocaleString()} line
+                {linesChanged !== 1 ? 's' : ''}
+              </>
+            ) : (
+              'no lines changed'
+            )}
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-text">
