@@ -1,6 +1,6 @@
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
-import { ArrowLeftFromLine, ArrowRightFromLine, CheckCircle2 } from 'lucide-react';
+import { ArrowLeftFromLine, ArrowRightFromLine, CheckCircle2, Play } from 'lucide-react';
 
 import { ReviewBadge } from './ReviewBadge';
 
@@ -16,8 +16,10 @@ interface KanbanTaskCardProps {
   onApprove: (taskId: string) => void;
   onRequestChanges: (taskId: string) => void;
   onMoveBackToDone: (taskId: string) => void;
+  onStartTask: (taskId: string) => void;
   onCompleteTask: (taskId: string) => void;
   onScrollToTask?: (taskId: string) => void;
+  onTaskClick?: (task: TeamTask) => void;
 }
 
 interface DependencyBadgeProps {
@@ -63,8 +65,10 @@ export const KanbanTaskCard = ({
   onApprove,
   onRequestChanges,
   onMoveBackToDone,
+  onStartTask,
   onCompleteTask,
   onScrollToTask,
+  onTaskClick,
 }: KanbanTaskCardProps): React.JSX.Element => {
   const blockedByIds = task.blockedBy?.filter((id) => id.length > 0) ?? [];
   const blocksIds = task.blocks?.filter((id) => id.length > 0) ?? [];
@@ -72,13 +76,22 @@ export const KanbanTaskCard = ({
   const hasBlocks = blocksIds.length > 0;
 
   return (
-    <article
+    <div
       data-task-id={task.id}
-      className={`rounded-md border p-3 ${
+      className={`cursor-pointer rounded-md border p-3 transition-colors hover:border-[var(--color-border-emphasis)] ${
         hasBlockedBy
           ? 'border-yellow-500/30 bg-[var(--color-surface-raised)]'
           : 'border-[var(--color-border)] bg-[var(--color-surface-raised)]'
       }`}
+      role="button"
+      tabIndex={0}
+      onClick={() => onTaskClick?.(task)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onTaskClick?.(task);
+        }
+      }}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <div>
@@ -126,13 +139,47 @@ export const KanbanTaskCard = ({
         </div>
       ) : null}
 
-      {columnId === 'todo' || columnId === 'in_progress' ? (
+      {columnId === 'todo' ? (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+            aria-label={`Start task ${task.id}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onStartTask(task.id);
+            }}
+          >
+            <Play size={12} />
+            Start
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            aria-label={`Complete task ${task.id}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCompleteTask(task.id);
+            }}
+          >
+            <CheckCircle2 size={12} />
+            Complete
+          </Button>
+        </div>
+      ) : null}
+
+      {columnId === 'in_progress' ? (
         <Button
           variant="outline"
           size="sm"
           className="gap-1"
           aria-label={`Complete task ${task.id}`}
-          onClick={() => onCompleteTask(task.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCompleteTask(task.id);
+          }}
         >
           <CheckCircle2 size={12} />
           Complete
@@ -144,7 +191,10 @@ export const KanbanTaskCard = ({
           variant="outline"
           size="sm"
           aria-label={`Request review for task ${task.id}`}
-          onClick={() => onRequestReview(task.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRequestReview(task.id);
+          }}
         >
           Request Review
         </Button>
@@ -160,7 +210,10 @@ export const KanbanTaskCard = ({
               variant="outline"
               size="sm"
               aria-label={`Approve task ${task.id}`}
-              onClick={() => onApprove(task.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onApprove(task.id);
+              }}
             >
               Approve
             </Button>
@@ -168,7 +221,10 @@ export const KanbanTaskCard = ({
               variant="destructive"
               size="sm"
               aria-label={`Request changes for task ${task.id}`}
-              onClick={() => onRequestChanges(task.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRequestChanges(task.id);
+              }}
             >
               Request Changes
             </Button>
@@ -181,11 +237,14 @@ export const KanbanTaskCard = ({
           variant="outline"
           size="sm"
           aria-label={`Move task ${task.id} back to done`}
-          onClick={() => onMoveBackToDone(task.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMoveBackToDone(task.id);
+          }}
         >
           Move back to DONE
         </Button>
       ) : null}
-    </article>
+    </div>
   );
 };

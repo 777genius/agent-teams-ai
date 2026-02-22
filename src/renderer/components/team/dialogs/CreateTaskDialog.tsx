@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { AutoResizeTextarea } from '@renderer/components/ui/auto-resize-textarea';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
+import { Checkbox } from '@renderer/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import {
 } from '@renderer/components/ui/dialog';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
+import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import {
   Select,
   SelectContent,
@@ -20,9 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 
+import type { MentionSuggestion } from '@renderer/types/mention';
 import type { ResolvedTeamMember, TeamTask } from '@shared/types';
 
 interface CreateTaskDialogProps {
@@ -38,7 +41,8 @@ interface CreateTaskDialogProps {
     description: string,
     owner?: string,
     blockedBy?: string[],
-    prompt?: string
+    prompt?: string,
+    startImmediately?: boolean
   ) => void;
   submitting?: boolean;
 }
@@ -61,6 +65,7 @@ export const CreateTaskDialog = ({
   });
   const [owner, setOwner] = useState<string>(defaultOwner);
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
+  const [startImmediately, setStartImmediately] = useState(true);
   const promptDraft = useDraftPersistence({ key: 'createTask:prompt' });
   const [prevOpen, setPrevOpen] = useState(false);
 
@@ -71,11 +76,23 @@ export const CreateTaskDialog = ({
     }
     setOwner(defaultOwner);
     setBlockedBy([]);
+    setStartImmediately(true);
     promptDraft.clearDraft();
   }
   if (open !== prevOpen) {
     setPrevOpen(open);
   }
+
+  const mentionSuggestions = useMemo<MentionSuggestion[]>(
+    () =>
+      members.map((m) => ({
+        id: m.name,
+        name: m.name,
+        subtitle: formatAgentRole(m.role) ?? formatAgentRole(m.agentType) ?? undefined,
+        color: m.color,
+      })),
+    [members]
+  );
 
   const canSubmit = subject.trim().length > 0 && !submitting;
 
@@ -95,7 +112,8 @@ export const CreateTaskDialog = ({
       descriptionDraft.value.trim(),
       owner || undefined,
       blockedBy.length > 0 ? blockedBy : undefined,
-      promptDraft.value.trim() || undefined
+      promptDraft.value.trim() || undefined,
+      startImmediately
     );
     descriptionDraft.clearDraft();
     promptDraft.clearDraft();
@@ -135,32 +153,38 @@ export const CreateTaskDialog = ({
 
           <div className="grid gap-2">
             <Label htmlFor="task-description">Description (optional)</Label>
-            <AutoResizeTextarea
+            <MentionableTextarea
               id="task-description"
               placeholder="Task details..."
               value={descriptionDraft.value}
+              onValueChange={descriptionDraft.setValue}
+              suggestions={mentionSuggestions}
               minRows={3}
               maxRows={12}
-              onChange={(e) => descriptionDraft.setValue(e.target.value)}
+              footerRight={
+                descriptionDraft.isSaved ? (
+                  <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                ) : null
+              }
             />
-            {descriptionDraft.isSaved ? (
-              <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-            ) : null}
           </div>
 
           <div className="grid gap-2">
             <Label htmlFor="task-prompt">Prompt for assignee (optional)</Label>
-            <AutoResizeTextarea
+            <MentionableTextarea
               id="task-prompt"
               placeholder="Custom instructions for the team member..."
               value={promptDraft.value}
+              onValueChange={promptDraft.setValue}
+              suggestions={mentionSuggestions}
               minRows={3}
               maxRows={12}
-              onChange={(e) => promptDraft.setValue(e.target.value)}
+              footerRight={
+                promptDraft.isSaved ? (
+                  <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                ) : null
+              }
             />
-            {promptDraft.isSaved ? (
-              <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-            ) : null}
           </div>
 
           <div className="grid gap-2">
@@ -175,17 +199,43 @@ export const CreateTaskDialog = ({
               <SelectContent>
                 <SelectItem value="__unassigned__">Unassigned</SelectItem>
                 {members.map((m) => {
-                  const role = formatAgentRole(m.agentType);
+                  const role = formatAgentRole(m.role) ?? formatAgentRole(m.agentType);
+                  const memberColor = m.color ? getTeamColorSet(m.color) : null;
                   return (
                     <SelectItem key={m.name} value={m.name}>
-                      {m.name}
-                      {role ? ` (${role})` : ''}
+                      <span className="inline-flex items-center gap-1.5">
+                        {memberColor ? (
+                          <span
+                            className="inline-block size-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: memberColor.border }}
+                          />
+                        ) : null}
+                        <span style={memberColor ? { color: memberColor.text } : undefined}>
+                          {m.name}
+                        </span>
+                        {role ? (
+                          <span className="text-[var(--color-text-muted)]">({role})</span>
+                        ) : null}
+                      </span>
                     </SelectItem>
                   );
                 })}
               </SelectContent>
             </Select>
           </div>
+
+          {owner ? (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="task-start-immediately"
+                checked={startImmediately}
+                onCheckedChange={(v) => setStartImmediately(v === true)}
+              />
+              <Label htmlFor="task-start-immediately" className="text-xs font-normal">
+                Start immediately
+              </Label>
+            </div>
+          ) : null}
 
           {availableTasks.length > 0 ? (
             <div className="grid gap-2">

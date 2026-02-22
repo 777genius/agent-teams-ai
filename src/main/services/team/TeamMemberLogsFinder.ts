@@ -1,5 +1,6 @@
 import { encodePath, extractBaseDir, getProjectsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import { parseAllTeammateMessages } from '@shared/utils/teammateMessageParser';
 import { createReadStream } from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -13,7 +14,18 @@ import type { MemberLogSummary, MemberSubagentLogSummary } from '@shared/types';
 
 const logger = createLogger('Service:TeamMemberLogsFinder');
 
-const MAX_LINES_TO_SCAN = 30;
+/**
+ * Phase 1: How many lines to scan for member attribution.
+ * Detection signals (process.team.memberName, "You are {name}", routing.sender)
+ * appear in the first ~10 lines, so 50 is very conservative.
+ */
+const ATTRIBUTION_SCAN_LINES = 50;
+
+interface StreamedMetadata {
+  firstTimestamp: string | null;
+  lastTimestamp: string | null;
+  messageCount: number;
+}
 
 function trimTrailingSlashes(value: string): string {
   let end = value.length;
@@ -126,16 +138,11 @@ export class TeamMemberLogsFinder {
         if (file.startsWith('agent-acompact')) continue;
 
         const filePath = path.join(subagentsDir, file);
-        // Quick attribution check — reuse parseSubagentSummary to verify membership
-        const summary = await this.parseSubagentSummary(
-          filePath,
-          projectId,
-          sessionId,
-          file,
-          memberName,
-          knownMembers
-        );
-        if (summary) paths.push(filePath);
+        // Quick attribution check — only Phase 1 (no full-file streaming)
+        const attribution = await this.attributeSubagent(filePath, knownMembers);
+        if (attribution?.detectedMember.toLowerCase() === memberName.trim().toLowerCase()) {
+          paths.push(filePath);
+        }
       }
     }
 
@@ -168,21 +175,35 @@ export class TeamMemberLogsFinder {
       config.members?.find((m) => m?.agentType === 'team-lead')?.name?.trim() || 'team-lead';
     const isLeadMember = leadMemberName.toLowerCase() === memberName.trim().toLowerCase();
 
-    let sessionIds: string[];
+    // Collect all known session IDs: current lead + history
+    const knownSessionIds = new Set<string>();
     if (config.leadSessionId) {
-      const leadDir = path.join(projectDir, config.leadSessionId);
-      try {
-        const stat = await fs.stat(leadDir);
-        if (stat.isDirectory()) {
-          sessionIds = [config.leadSessionId];
-        } else {
-          logger.debug(`leadSessionId dir is not a directory: ${leadDir}`);
-          sessionIds = await this.listSessionDirs(projectDir);
+      knownSessionIds.add(config.leadSessionId);
+    }
+    if (Array.isArray(config.sessionHistory)) {
+      for (const sid of config.sessionHistory) {
+        if (typeof sid === 'string' && sid.trim().length > 0) {
+          knownSessionIds.add(sid.trim());
         }
-      } catch {
-        logger.debug(`leadSessionId dir not found: ${leadDir}, falling back to full scan`);
-        sessionIds = await this.listSessionDirs(projectDir);
       }
+    }
+
+    let sessionIds: string[];
+    if (knownSessionIds.size > 0) {
+      // Verify each known session dir exists, fall back to full scan if none exist
+      const verified: string[] = [];
+      for (const sid of knownSessionIds) {
+        const sidDir = path.join(projectDir, sid);
+        try {
+          const stat = await fs.stat(sidDir);
+          if (stat.isDirectory()) {
+            verified.push(sid);
+          }
+        } catch {
+          // dir doesn't exist, skip
+        }
+      }
+      sessionIds = verified.length > 0 ? verified : await this.listSessionDirs(projectDir);
     } else {
       sessionIds = await this.listSessionDirs(projectDir);
     }
@@ -237,112 +258,28 @@ export class TeamMemberLogsFinder {
     knownMembers: Set<string>
   ): Promise<MemberSubagentLogSummary | null> {
     const subagentId = fileName.replace(/^agent-/, '').replace(/\.jsonl$/, '');
-    const lines: string[] = [];
 
-    try {
-      const stream = createReadStream(filePath, { encoding: 'utf8' });
-      const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+    // ── Phase 1: Attribution (first N lines) ──
+    // Detect which member owns this file + extract description.
+    // All detection signals appear in the first few lines of the JSONL.
+    const attribution = await this.attributeSubagent(filePath, knownMembers);
+    if (!attribution) return null;
 
-      let count = 0;
-      for await (const line of rl) {
-        if (count >= MAX_LINES_TO_SCAN) break;
-        const trimmed = line.trim();
-        if (trimmed) {
-          lines.push(trimmed);
-          count++;
-        }
-      }
-      rl.close();
-      stream.destroy();
-    } catch {
-      return null;
-    }
-
-    if (lines.length === 0) return null;
-
-    let firstTimestamp: string | null = null;
-    let lastTimestamp: string | null = null;
-    let messageCount = 0;
-    let description = '';
     const targetLower = targetMember.toLowerCase();
-
-    // Multi-signal member detection with priority levels:
-    //   3 = routing sender (highest — directly identifies the agent)
-    //   2 = "You are {name}" spawn prompt (high — reliable identification)
-    //   1 = text-based fallback (low — may match wrong member from teammate_id etc.)
-    let detectedMember: string | null = null;
-    let detectionPriority = 0;
-
-    for (const line of lines) {
-      try {
-        const msg = JSON.parse(line) as Record<string, unknown>;
-
-        const role = this.extractRole(msg);
-        const textContent = this.extractTextContent(msg);
-
-        // Skip warmup messages
-        if (role === 'user' && textContent?.trim() === 'Warmup') {
-          return null;
-        }
-
-        // Track timestamps
-        if (typeof msg.timestamp === 'string') {
-          if (!firstTimestamp) firstTimestamp = msg.timestamp;
-          lastTimestamp = msg.timestamp;
-        }
-
-        messageCount++;
-
-        // Extract description from first user message
-        if (role === 'user' && !description && textContent) {
-          description = textContent.slice(0, 200);
-        }
-
-        // --- Multi-signal member detection ---
-        // Higher priority signals override lower priority ones
-        const detection = this.detectMemberFromMessage(msg, knownMembers);
-        if (detection && detection.priority > detectionPriority) {
-          detectedMember = detection.name;
-          detectionPriority = detection.priority;
-        }
-
-        // Check toolUseResult routing (highest priority — directly identifies the agent)
-        if (detectionPriority < 3 && msg.toolUseResult && typeof msg.toolUseResult === 'object') {
-          const routing = (msg.toolUseResult as Record<string, unknown>).routing as
-            | Record<string, unknown>
-            | undefined;
-          if (routing && typeof routing.sender === 'string') {
-            const sender = routing.sender.toLowerCase();
-            if (knownMembers.has(sender)) {
-              detectedMember = routing.sender;
-              detectionPriority = 3;
-            }
-          }
-        }
-      } catch {
-        // Skip malformed lines
-      }
-    }
-
-    // Match: the detected member must match the target member
-    if (detectedMember?.toLowerCase() !== targetLower) {
+    if (attribution.detectedMember.toLowerCase() !== targetLower) {
       return null;
     }
 
-    if (!firstTimestamp) {
-      // Fallback: use file mtime
-      try {
-        const stat = await fs.stat(filePath);
-        firstTimestamp = stat.mtime.toISOString();
-        lastTimestamp = firstTimestamp;
-      } catch {
-        firstTimestamp = new Date().toISOString();
-        lastTimestamp = firstTimestamp;
-      }
-    }
+    // ── Phase 2: Metadata (stream entire file) ──
+    // Now that we know the file belongs to this member, collect
+    // accurate timestamps and message count from the full file.
+    const metadata = await this.streamFileMetadata(filePath);
+
+    const firstTimestamp = metadata.firstTimestamp ?? (await this.getFileMtime(filePath));
+    const lastTimestamp = metadata.lastTimestamp ?? firstTimestamp;
 
     const startTime = new Date(firstTimestamp);
-    const endTime = lastTimestamp ? new Date(lastTimestamp) : startTime;
+    const endTime = new Date(lastTimestamp);
     const durationMs = endTime.getTime() - startTime.getTime();
 
     // Check if the file might still be active (modified recently)
@@ -360,13 +297,133 @@ export class TeamMemberLogsFinder {
       subagentId,
       sessionId,
       projectId,
-      description: description || `Subagent ${subagentId}`,
+      description: attribution.description || `Subagent ${subagentId}`,
       memberName: targetMember,
       startTime: firstTimestamp,
       durationMs: Math.max(0, durationMs),
-      messageCount,
+      messageCount: metadata.messageCount,
       isOngoing,
     };
+  }
+
+  /**
+   * Phase 1: Scan first ATTRIBUTION_SCAN_LINES lines for member detection signals
+   * and extract a human-readable description from the first user message.
+   * Returns null if the file is a warmup session or empty.
+   */
+  private async attributeSubagent(
+    filePath: string,
+    knownMembers: Set<string>
+  ): Promise<{ detectedMember: string; description: string } | null> {
+    const lines: string[] = [];
+
+    try {
+      const stream = createReadStream(filePath, { encoding: 'utf8' });
+      const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+
+      let count = 0;
+      for await (const line of rl) {
+        if (count >= ATTRIBUTION_SCAN_LINES) break;
+        const trimmed = line.trim();
+        if (trimmed) {
+          lines.push(trimmed);
+          count++;
+        }
+      }
+      rl.close();
+      stream.destroy();
+    } catch {
+      return null;
+    }
+
+    if (lines.length === 0) return null;
+
+    let description = '';
+    let detectedMember: string | null = null;
+    let detectionPriority = 0;
+
+    for (const line of lines) {
+      // Early exit: both objectives met (member detected at max priority + description found)
+      if (detectionPriority >= 3 && description) break;
+
+      try {
+        const msg = JSON.parse(line) as Record<string, unknown>;
+
+        const role = this.extractRole(msg);
+        const textContent = this.extractTextContent(msg);
+
+        // Skip warmup messages
+        if (role === 'user' && textContent?.trim() === 'Warmup') {
+          return null;
+        }
+
+        // Extract description from first user message + teammate_id attribution
+        if (role === 'user' && textContent) {
+          if (textContent.trimStart().startsWith('<teammate-message')) {
+            const parsed = parseAllTeammateMessages(textContent);
+            if (!description) {
+              description =
+                parsed[0]?.summary || parsed[0]?.content?.slice(0, 200) || 'Teammate spawn';
+            }
+
+            // teammate_id is a structured XML attribute — highest reliability signal
+            if (detectionPriority < 3 && parsed[0]?.teammateId) {
+              const tmId = parsed[0].teammateId.trim().toLowerCase();
+              if (tmId.length > 0 && knownMembers.has(tmId)) {
+                detectedMember = parsed[0].teammateId.trim();
+                detectionPriority = 3;
+              }
+            }
+          } else if (!description) {
+            description = textContent.slice(0, 200);
+          }
+        }
+
+        // --- Multi-signal member detection ---
+        // Higher priority signals override lower priority ones (skip if already at max)
+        if (detectionPriority < 3) {
+          const detection = this.detectMemberFromMessage(msg, knownMembers);
+          if (detection && detection.priority > detectionPriority) {
+            detectedMember = detection.name;
+            detectionPriority = detection.priority;
+          }
+        }
+
+        // Check toolUseResult routing (highest priority — directly identifies the agent)
+        if (detectionPriority < 3 && msg.toolUseResult && typeof msg.toolUseResult === 'object') {
+          const routing = (msg.toolUseResult as Record<string, unknown>).routing as
+            | Record<string, unknown>
+            | undefined;
+          if (routing && typeof routing.sender === 'string') {
+            const sender = routing.sender.toLowerCase();
+            if (knownMembers.has(sender)) {
+              detectedMember = routing.sender;
+              detectionPriority = 3;
+            }
+          }
+        }
+
+        // Check process.team.memberName from system messages (highest priority)
+        if (detectionPriority < 3) {
+          const init = msg.init as Record<string, unknown> | undefined;
+          const process = (msg.process ?? init?.process) as Record<string, unknown> | undefined;
+          const team = process?.team as Record<string, unknown> | undefined;
+          if (team && typeof team.memberName === 'string') {
+            const memberNameLower = team.memberName.trim().toLowerCase();
+            if (memberNameLower.length > 0 && knownMembers.has(memberNameLower)) {
+              detectedMember = team.memberName.trim();
+              detectionPriority = 3;
+            }
+          }
+        }
+      } catch {
+        // Skip malformed lines
+      }
+    }
+
+    if (!detectedMember) return null;
+
+    return { detectedMember, description };
   }
 
   /**
@@ -463,49 +520,13 @@ export class TeamMemberLogsFinder {
       return null;
     }
 
-    let firstTimestamp: string | null = null;
-    let lastTimestamp: string | null = null;
-    let messageCount = 0;
+    const metadata = await this.streamFileMetadata(jsonlPath);
 
-    try {
-      const stream = createReadStream(jsonlPath, { encoding: 'utf8' });
-      const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-      let count = 0;
-      for await (const line of rl) {
-        if (count >= MAX_LINES_TO_SCAN) break;
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        count++;
-        messageCount++;
-        try {
-          const msg = JSON.parse(trimmed) as Record<string, unknown>;
-          if (typeof msg.timestamp === 'string') {
-            if (!firstTimestamp) firstTimestamp = msg.timestamp;
-            lastTimestamp = msg.timestamp;
-          }
-        } catch {
-          // ignore
-        }
-      }
-      rl.close();
-      stream.destroy();
-    } catch {
-      // ignore
-    }
-
-    if (!firstTimestamp) {
-      try {
-        const stat = await fs.stat(jsonlPath);
-        firstTimestamp = stat.mtime.toISOString();
-        lastTimestamp = firstTimestamp;
-      } catch {
-        firstTimestamp = new Date().toISOString();
-        lastTimestamp = firstTimestamp;
-      }
-    }
+    const firstTimestamp = metadata.firstTimestamp ?? (await this.getFileMtime(jsonlPath));
+    const lastTimestamp = metadata.lastTimestamp ?? firstTimestamp;
 
     const startTime = new Date(firstTimestamp);
-    const endTime = lastTimestamp ? new Date(lastTimestamp) : startTime;
+    const endTime = new Date(lastTimestamp);
     const durationMs = endTime.getTime() - startTime.getTime();
 
     let isOngoing = false;
@@ -525,9 +546,54 @@ export class TeamMemberLogsFinder {
       memberName,
       startTime: firstTimestamp,
       durationMs: Math.max(0, durationMs),
-      messageCount,
+      messageCount: metadata.messageCount,
       isOngoing,
     };
+  }
+
+  /**
+   * Stream entire JSONL file collecting only timestamps and message count.
+   * Lightweight — uses regex to extract timestamp without full JSON parse.
+   */
+  private async streamFileMetadata(filePath: string): Promise<StreamedMetadata> {
+    let firstTimestamp: string | null = null;
+    let lastTimestamp: string | null = null;
+    let messageCount = 0;
+
+    try {
+      const stream = createReadStream(filePath, { encoding: 'utf8' });
+      const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+
+      for await (const line of rl) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        messageCount++;
+
+        // Fast timestamp extraction without full JSON parse.
+        // ISO prefix anchor avoids false positives from "timestamp" inside string values.
+        const tsMatch = /"timestamp"\s*:\s*"(\d{4}-\d{2}-\d{2}T[^"]+)"/.exec(trimmed);
+        if (tsMatch) {
+          if (!firstTimestamp) firstTimestamp = tsMatch[1];
+          lastTimestamp = tsMatch[1];
+        }
+      }
+      rl.close();
+      stream.destroy();
+    } catch {
+      // ignore — return whatever we collected so far
+    }
+
+    return { firstTimestamp, lastTimestamp, messageCount };
+  }
+
+  private async getFileMtime(filePath: string): Promise<string> {
+    try {
+      const stat = await fs.stat(filePath);
+      return stat.mtime.toISOString();
+    } catch {
+      return new Date().toISOString();
+    }
   }
 }
 

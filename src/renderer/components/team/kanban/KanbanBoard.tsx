@@ -24,8 +24,10 @@ interface KanbanBoardProps {
   onApprove: (taskId: string) => void;
   onRequestChanges: (taskId: string) => void;
   onMoveBackToDone: (taskId: string) => void;
+  onStartTask: (taskId: string) => void;
   onCompleteTask: (taskId: string) => void;
   onScrollToTask?: (taskId: string) => void;
+  onTaskClick?: (task: TeamTask) => void;
 }
 
 type KanbanViewMode = 'grid' | 'columns';
@@ -68,8 +70,10 @@ export const KanbanBoard = ({
   onApprove,
   onRequestChanges,
   onMoveBackToDone,
+  onStartTask,
   onCompleteTask,
   onScrollToTask,
+  onTaskClick,
 }: KanbanBoardProps): React.JSX.Element => {
   const [viewMode, setViewMode] = useState<KanbanViewMode>('grid');
 
@@ -110,8 +114,10 @@ export const KanbanBoard = ({
             onApprove={onApprove}
             onRequestChanges={onRequestChanges}
             onMoveBackToDone={onMoveBackToDone}
+            onStartTask={onStartTask}
             onCompleteTask={onCompleteTask}
             onScrollToTask={onScrollToTask}
+            onTaskClick={onTaskClick}
           />
         ))}
       </>

@@ -668,6 +668,9 @@ export class HttpAPIClient implements ElectronAPI {
     ): Promise<void> => {
       throw new Error('Team task status update is not available in browser mode');
     },
+    startTask: async (_teamName: string, _taskId: string): Promise<void> => {
+      throw new Error('Team start task is not available in browser mode');
+    },
     processSend: async (_teamName: string, _message: string): Promise<void> => {
       throw new Error('Team process communication is not available in browser mode');
     },

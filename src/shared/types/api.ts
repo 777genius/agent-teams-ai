@@ -354,6 +354,7 @@ export interface TeamsAPI {
   requestReview: (teamName: string, taskId: string) => Promise<void>;
   updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;
   updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
+  startTask: (teamName: string, taskId: string) => Promise<void>;
   processSend: (teamName: string, message: string) => Promise<void>;
   processAlive: (teamName: string) => Promise<boolean>;
   aliveList: () => Promise<string[]>;

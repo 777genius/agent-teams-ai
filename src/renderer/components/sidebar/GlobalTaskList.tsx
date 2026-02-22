@@ -78,12 +78,14 @@ export const GlobalTaskList = (): React.JSX.Element => {
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
-    if (globalTasks.length === 0 && !globalTasksLoading) {
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
       void fetchAllTasks();
     }
-  }, [globalTasks.length, globalTasksLoading, fetchAllTasks]);
+  }, [fetchAllTasks]);
 
   const selectedProjectPath = useMemo(() => {
     if (viewMode === 'grouped') {

@@ -67,6 +67,7 @@ export interface TeamSlice {
   requestReview: (teamName: string, taskId: string) => Promise<void>;
   updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;
   createTeamTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;
+  startTask: (teamName: string, taskId: string) => Promise<void>;
   updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
   deleteTeam: (teamName: string) => Promise<void>;
   createTeam: (request: TeamCreateRequest) => Promise<string>;
@@ -359,6 +360,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const task = await unwrapIpc('team:createTask', () => api.teams.createTask(teamName, request));
     await get().refreshTeamData(teamName);
     return task;
+  },
+
+  startTask: async (teamName: string, taskId: string) => {
+    await unwrapIpc('team:startTask', () => api.teams.startTask(teamName, taskId));
+    await get().refreshTeamData(teamName);
   },
 
   updateTaskStatus: async (teamName: string, taskId: string, status: TeamTaskStatus) => {

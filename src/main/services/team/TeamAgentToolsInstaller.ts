@@ -5,7 +5,7 @@ import * as path from 'path';
 import { atomicWriteAsync } from './atomicWrite';
 
 const TOOL_FILE_NAME = 'teamctl.js';
-const TOOL_VERSION = 3;
+const TOOL_VERSION = 4;
 
 function buildTeamCtlScript(): string {
   const script = String.raw`#!/usr/bin/env node
@@ -395,7 +395,7 @@ function printHelp() {
       '  node teamctl.js task set-status <id> <pending|in_progress|completed|deleted> [--team <team>]',
       '  node teamctl.js task complete <id> [--team <team>]',
       '  node teamctl.js task start <id> [--team <team>]',
-      '  node teamctl.js task create --subject "..." [--description "..."] [--owner "member"] [--notify --from "member"] [--team <team>]',
+      '  node teamctl.js task create --subject "..." [--description "..."] [--prompt "..."] [--owner "member"] [--notify --from "member"] [--team <team>]',
       '  node teamctl.js kanban set-column <id> <review|approved> [--team <team>]',
       '  node teamctl.js kanban clear <id> [--team <team>]',
       '  node teamctl.js review approve <id> [--notify-owner --from "member" --note "..."] [--team <team>]',
@@ -453,25 +453,26 @@ async function main() {
       if (notify && task.owner) {
         const from =
           typeof args.flags.from === 'string' && args.flags.from.trim() ? args.flags.from.trim() : 'user';
-        const text =
-          'New task assigned to you: #' +
-          String(task.id) +
-          ' "' +
-          String(task.subject) +
-          '".\n\n' +
-          'When you start: node "$HOME/.claude/tools/${TOOL_FILE_NAME}" --team ' +
-          String(teamName) +
-          ' task start ' +
-          String(task.id) +
-          '\n' +
-          'When done: node "$HOME/.claude/tools/${TOOL_FILE_NAME}" --team ' +
-          String(teamName) +
-          ' task complete ' +
-          String(task.id) +
-          '\n';
+        const parts = ['New task assigned to you: #' + String(task.id) + ' "' + String(task.subject) + '".'];
+        const rawDesc = typeof args.flags.description === 'string' ? args.flags.description.trim()
+          : typeof args.flags.desc === 'string' ? args.flags.desc.trim() : '';
+        if (rawDesc && rawDesc !== task.subject) {
+          parts.push('\nDescription:\n' + rawDesc);
+        }
+        const prompt = typeof args.flags.prompt === 'string' ? args.flags.prompt.trim() : '';
+        if (prompt) {
+          parts.push('\nInstructions:\n' + prompt);
+        }
+        parts.push(
+          '\n${'```'}info_for_agent',
+          'Update task status using:',
+          'node "$HOME/.claude/tools/${TOOL_FILE_NAME}" --team ' + String(teamName) + ' task start ' + String(task.id),
+          'node "$HOME/.claude/tools/${TOOL_FILE_NAME}" --team ' + String(teamName) + ' task complete ' + String(task.id),
+          '${'```'}'
+        );
         sendInboxMessage(paths, teamName, {
           to: task.owner,
-          text,
+          text: parts.join('\n'),
           summary: 'New task #' + String(task.id) + ' assigned',
           from,
         });

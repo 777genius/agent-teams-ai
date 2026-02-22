@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { AutoResizeTextarea } from '@renderer/components/ui/auto-resize-textarea';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -12,6 +11,7 @@ import {
 } from '@renderer/components/ui/dialog';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
+import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import {
   Select,
   SelectContent,
@@ -19,9 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 
+import type { MentionSuggestion } from '@renderer/types/mention';
 import type { ResolvedTeamMember, SendMessageResult } from '@shared/types';
 
 interface SendMessageDialogProps {
@@ -72,6 +74,17 @@ export const SendMessageDialog = ({
     onClose();
   }
 
+  const mentionSuggestions = useMemo<MentionSuggestion[]>(
+    () =>
+      members.map((m) => ({
+        id: m.name,
+        name: m.name,
+        subtitle: formatAgentRole(m.role) ?? formatAgentRole(m.agentType) ?? undefined,
+        color: m.color,
+      })),
+    [members]
+  );
+
   const canSend = member.trim().length > 0 && textDraft.value.trim().length > 0 && !sending;
 
   const handleSubmit = (): void => {
@@ -107,11 +120,24 @@ export const SendMessageDialog = ({
               <SelectContent>
                 <SelectItem value={NO_MEMBER}>Select member...</SelectItem>
                 {members.map((m) => {
-                  const role = formatAgentRole(m.agentType);
+                  const role = formatAgentRole(m.role) ?? formatAgentRole(m.agentType);
+                  const memberColor = m.color ? getTeamColorSet(m.color) : null;
                   return (
                     <SelectItem key={m.name} value={m.name}>
-                      {m.name}
-                      {role ? ` (${role})` : ''}
+                      <span className="inline-flex items-center gap-1.5">
+                        {memberColor ? (
+                          <span
+                            className="inline-block size-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: memberColor.border }}
+                          />
+                        ) : null}
+                        <span style={memberColor ? { color: memberColor.text } : undefined}>
+                          {m.name}
+                        </span>
+                        {role ? (
+                          <span className="text-[var(--color-text-muted)]">({role})</span>
+                        ) : null}
+                      </span>
                     </SelectItem>
                   );
                 })}
@@ -131,17 +157,20 @@ export const SendMessageDialog = ({
 
           <div className="grid gap-2">
             <Label htmlFor="smd-message">Message</Label>
-            <AutoResizeTextarea
+            <MentionableTextarea
               id="smd-message"
               placeholder="Write your message..."
               value={textDraft.value}
+              onValueChange={textDraft.setValue}
+              suggestions={mentionSuggestions}
               minRows={4}
               maxRows={12}
-              onChange={(e) => textDraft.setValue(e.target.value)}
+              footerRight={
+                textDraft.isSaved ? (
+                  <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                ) : null
+              }
             />
-            {textDraft.isSaved ? (
-              <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-            ) : null}
           </div>
 
           {sendError ? <p className="text-xs text-red-400">{sendError}</p> : null}

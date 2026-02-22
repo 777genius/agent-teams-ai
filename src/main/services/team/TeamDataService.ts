@@ -5,6 +5,7 @@ import {
   getTasksBasePath,
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
+import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
 import { getMemberColor } from '@shared/constants/memberColors';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -216,12 +217,14 @@ export class TeamDataService {
       /* best-effort */
     }
 
+    const shouldStart = request.owner && request.startImmediately !== false;
+
     const task: TeamTask = {
       id: nextId,
       subject: request.subject,
       description,
       owner: request.owner,
-      status: request.owner ? 'in_progress' : 'pending',
+      status: shouldStart ? 'in_progress' : 'pending',
       blocks: [],
       blockedBy,
       projectPath,
@@ -234,18 +237,33 @@ export class TeamDataService {
       await this.taskWriter.addBlocksEntry(teamName, depId, nextId);
     }
 
-    if (request.owner) {
+    if (shouldStart && request.owner) {
       try {
         const toolPath = await this.toolsInstaller.ensureInstalled();
+
+        // Build notification with full context — inbox is the primary delivery
+        // channel to agents (Claude Code monitors inbox via fs.watch)
+        const parts = [`New task assigned to you: #${task.id} "${task.subject}".`];
+
+        if (request.description?.trim()) {
+          parts.push(`\nDescription:\n${request.description.trim()}`);
+        }
+
+        if (request.prompt?.trim()) {
+          parts.push(`\nInstructions:\n${request.prompt.trim()}`);
+        }
+
+        parts.push(
+          `\n${AGENT_BLOCK_OPEN}`,
+          `Update task status using:`,
+          `node "${toolPath}" --team ${teamName} task start ${task.id}`,
+          `node "${toolPath}" --team ${teamName} task complete ${task.id}`,
+          AGENT_BLOCK_CLOSE
+        );
+
         await this.sendMessage(teamName, {
           member: request.owner,
-          text:
-            `New task assigned to you: #${task.id} "${task.subject}".\n\n` +
-            `Update task status using:\n` +
-            `node "${toolPath}" --team ${teamName} task start ${task.id}\n` +
-            `node "${toolPath}" --team ${teamName} task complete ${task.id}\n\n` +
-            `Help:\n` +
-            `node "${toolPath}" --help`,
+          text: parts.join('\n'),
           summary: `New task #${task.id} assigned`,
         });
       } catch {
@@ -254,6 +272,42 @@ export class TeamDataService {
     }
 
     return task;
+  }
+
+  async startTask(teamName: string, taskId: string): Promise<void> {
+    const tasks = await this.taskReader.getTasks(teamName);
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) {
+      throw new Error(`Task #${taskId} not found`);
+    }
+    if (task.status !== 'pending') {
+      throw new Error(`Task #${taskId} is not pending (current: ${task.status})`);
+    }
+
+    await this.taskWriter.updateStatus(teamName, taskId, 'in_progress');
+
+    if (task.owner) {
+      try {
+        const toolPath = await this.toolsInstaller.ensureInstalled();
+        const parts = [`Task #${task.id} "${task.subject}" has been started.`];
+        if (task.description?.trim()) {
+          parts.push(`\nDetails:\n${task.description.trim()}`);
+        }
+        parts.push(
+          `\n${AGENT_BLOCK_OPEN}`,
+          `Update task status using:`,
+          `node "${toolPath}" --team ${teamName} task complete ${task.id}`,
+          AGENT_BLOCK_CLOSE
+        );
+        await this.sendMessage(teamName, {
+          member: task.owner,
+          text: parts.join('\n'),
+          summary: `Task #${task.id} started`,
+        });
+      } catch {
+        // Best-effort notification
+      }
+    }
   }
 
   async updateTaskStatus(teamName: string, taskId: string, status: TeamTaskStatus): Promise<void> {
@@ -279,10 +333,12 @@ export class TeamDataService {
         member: reviewer,
         text:
           `Please review task #${taskId}.\n\n` +
+          `${AGENT_BLOCK_OPEN}\n` +
           `When approved, move it to APPROVED:\n` +
           `node "${toolPath}" --team ${teamName} review approve ${taskId}\n\n` +
           `If changes are needed:\n` +
-          `node "${toolPath}" --team ${teamName} review request-changes ${taskId} --comment "..."`,
+          `node "${toolPath}" --team ${teamName} review request-changes ${taskId} --comment "..."\n` +
+          AGENT_BLOCK_CLOSE,
         summary: `Review request for #${taskId}`,
       });
     } catch (error) {

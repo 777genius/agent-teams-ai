@@ -38,6 +38,7 @@ import {
   TEAM_PROVISIONING_STATUS,
   TEAM_REQUEST_REVIEW,
   TEAM_SEND_MESSAGE,
+  TEAM_START_TASK,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_TASK_STATUS,
@@ -205,8 +206,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('read-mentioned-file', absolutePath, projectRoot, maxTokens),
 
   // Agent config reading
-  readAgentConfigs: (projectRoot: string) =>
-    ipcRenderer.invoke('read-agent-configs', projectRoot),
+  readAgentConfigs: (projectRoot: string) => ipcRenderer.invoke('read-agent-configs', projectRoot),
 
   // Notifications API
   notifications: {
@@ -539,6 +539,9 @@ const electronAPI: ElectronAPI = {
     },
     updateTaskStatus: async (teamName: string, taskId: string, status: TeamTaskStatus) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_STATUS, teamName, taskId, status);
+    },
+    startTask: async (teamName: string, taskId: string) => {
+      return invokeIpcWithResult<void>(TEAM_START_TASK, teamName, taskId);
     },
     processSend: async (teamName: string, message: string) => {
       return invokeIpcWithResult<void>(TEAM_PROCESS_SEND, teamName, message);

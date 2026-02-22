@@ -14,6 +14,7 @@ import { EditTeamDialog } from './dialogs/EditTeamDialog';
 import { LaunchTeamDialog } from './dialogs/LaunchTeamDialog';
 import { ReviewDialog } from './dialogs/ReviewDialog';
 import { SendMessageDialog } from './dialogs/SendMessageDialog';
+import { TaskDetailDialog } from './dialogs/TaskDetailDialog';
 import { KanbanBoard } from './kanban/KanbanBoard';
 import { UNASSIGNED_OWNER } from './kanban/KanbanFilterPopover';
 import { MemberDetailDialog } from './members/MemberDetailDialog';
@@ -58,6 +59,7 @@ function filterKanbanTasks(tasks: TeamTask[], query: string): TeamTask[] {
 
 export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Element => {
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<TeamTask | null>(null);
   const [selectedMember, setSelectedMember] = useState<ResolvedTeamMember | null>(null);
   const [createTaskDialog, setCreateTaskDialog] = useState<CreateTaskDialogState>({
     open: false,
@@ -91,6 +93,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     sendTeamMessage,
     requestReview,
     createTeamTask,
+    startTask,
     deleteTeam,
     openTeamsTab,
     sendingMessage,
@@ -113,6 +116,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       sendTeamMessage: s.sendTeamMessage,
       requestReview: s.requestReview,
       createTeamTask: s.createTeamTask,
+      startTask: s.startTask,
       deleteTeam: s.deleteTeam,
       openTeamsTab: s.openTeamsTab,
       sendingMessage: s.sendingMessage,
@@ -257,6 +261,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     return filterKanbanTasks(filteredTasks, query);
   }, [filteredTasks, kanbanSearch]);
 
+  const taskMap = useMemo(() => new Map((data?.tasks ?? []).map((t) => [t.id, t])), [data?.tasks]);
+
   const openCreateTaskDialog = (subject = '', description = '', owner = ''): void => {
     setCreateTaskDialog({
       open: true,
@@ -297,7 +303,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     description: string,
     owner?: string,
     blockedBy?: string[],
-    prompt?: string
+    prompt?: string,
+    startImmediately?: boolean
   ): void => {
     setCreatingTask(true);
     void (async () => {
@@ -308,9 +315,10 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           owner,
           blockedBy,
           prompt,
+          startImmediately,
         });
 
-        if (prompt && owner && data?.isAlive) {
+        if (prompt && owner && data?.isAlive && startImmediately !== false) {
           const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
           try {
             await api.teams.processSend(teamName, msg);
@@ -534,6 +542,28 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           onMoveBackToDone={(taskId) => {
             void updateKanban(teamName, taskId, { op: 'remove' });
           }}
+          onStartTask={(taskId) => {
+            void (async () => {
+              try {
+                await startTask(teamName, taskId);
+                if (data?.isAlive) {
+                  const task = data.tasks.find((t) => t.id === taskId);
+                  if (task?.owner) {
+                    try {
+                      await api.teams.processSend(
+                        teamName,
+                        `Task #${taskId} "${task.subject}" has started. Please begin working on it.`
+                      );
+                    } catch {
+                      // best-effort
+                    }
+                  }
+                }
+              } catch {
+                // error via store
+              }
+            })();
+          }}
           onCompleteTask={(taskId) => {
             void updateTaskStatus(teamName, taskId, 'completed');
           }}
@@ -545,6 +575,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400/50'), 1500);
             }
           }}
+          onTaskClick={(task) => setSelectedTask(task)}
         />
       </CollapsibleTeamSection>
 
@@ -663,6 +694,24 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           void sendTeamMessage(teamName, { member, text, summary });
         }}
         onClose={() => setSendDialogOpen(false)}
+      />
+
+      <TaskDetailDialog
+        open={selectedTask !== null}
+        task={selectedTask}
+        teamName={teamName}
+        kanbanTaskState={selectedTask ? data?.kanbanState.tasks[selectedTask.id] : undefined}
+        taskMap={taskMap}
+        onClose={() => setSelectedTask(null)}
+        onScrollToTask={(taskId) => {
+          setSelectedTask(null);
+          const el = document.querySelector(`[data-task-id="${taskId}"]`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            el.classList.add('ring-2', 'ring-blue-400/50');
+            setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400/50'), 1500);
+          }
+        }}
       />
     </div>
   );

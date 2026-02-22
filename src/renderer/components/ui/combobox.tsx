@@ -83,6 +83,7 @@ export const Combobox = ({
           <CommandPrimitive.List
             id={listboxId}
             className="max-h-72 overflow-y-auto overscroll-contain p-1"
+            onWheel={(e) => e.stopPropagation()}
           >
             <CommandPrimitive.Empty className="px-2 py-4 text-center text-xs text-[var(--color-text-muted)]">
               {emptyMessage}

@@ -242,5 +242,8 @@ export const TEAM_UPDATE_CONFIG = 'team:updateConfig';
 /** Get aggregated member stats */
 export const TEAM_GET_MEMBER_STATS = 'team:getMemberStats';
 
+/** Start a pending task (transition to in_progress + notify agent) */
+export const TEAM_START_TASK = 'team:startTask';
+
 /** Get all tasks across all teams */
 export const TEAM_GET_ALL_TASKS = 'team:getAllTasks';

@@ -22,6 +22,7 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   TEAM_GET_MEMBER_LOGS: 'team:getMemberLogs',
   TEAM_GET_MEMBER_STATS: 'team:getMemberStats',
   TEAM_UPDATE_CONFIG: 'team:updateConfig',
+  TEAM_START_TASK: 'team:startTask',
   TEAM_GET_ALL_TASKS: 'team:getAllTasks',
 }));
 
@@ -42,6 +43,7 @@ import {
   TEAM_REQUEST_REVIEW,
   TEAM_SEND_MESSAGE,
   TEAM_GET_MEMBER_LOGS,
+  TEAM_START_TASK,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_TASK_STATUS,
@@ -72,6 +74,7 @@ describe('ipc teams handlers', () => {
     requestReview: vi.fn(async () => undefined),
     updateKanban: vi.fn(async () => undefined),
     updateTaskStatus: vi.fn(async () => undefined),
+    startTask: vi.fn(async () => undefined),
   };
   const provisioningService = {
     prepareForProvisioning: vi.fn(async () => ({
@@ -115,6 +118,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_REQUEST_REVIEW)).toBe(true);
     expect(handlers.has(TEAM_UPDATE_KANBAN)).toBe(true);
     expect(handlers.has(TEAM_UPDATE_TASK_STATUS)).toBe(true);
+    expect(handlers.has(TEAM_START_TASK)).toBe(true);
     expect(handlers.has(TEAM_PROCESS_SEND)).toBe(true);
     expect(handlers.has(TEAM_PROCESS_ALIVE)).toBe(true);
     expect(handlers.has(TEAM_ALIVE_LIST)).toBe(true);
@@ -196,6 +200,7 @@ describe('ipc teams handlers', () => {
         owner: undefined,
         blockedBy: undefined,
         prompt: 'Custom instructions here',
+        startImmediately: undefined,
       });
     });
 
@@ -231,6 +236,7 @@ describe('ipc teams handlers', () => {
         owner: undefined,
         blockedBy: undefined,
         prompt: undefined,
+        startImmediately: undefined,
       });
     });
   });
@@ -277,6 +283,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_REQUEST_REVIEW)).toBe(false);
     expect(handlers.has(TEAM_UPDATE_KANBAN)).toBe(false);
     expect(handlers.has(TEAM_UPDATE_TASK_STATUS)).toBe(false);
+    expect(handlers.has(TEAM_START_TASK)).toBe(false);
     expect(handlers.has(TEAM_PROCESS_SEND)).toBe(false);
     expect(handlers.has(TEAM_PROCESS_ALIVE)).toBe(false);
     expect(handlers.has(TEAM_ALIVE_LIST)).toBe(false);

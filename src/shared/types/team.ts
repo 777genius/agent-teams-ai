@@ -147,6 +147,7 @@ export interface CreateTaskRequest {
   owner?: string;
   blockedBy?: string[];
   prompt?: string;
+  startImmediately?: boolean;
 }
 
 export interface TeamChangeEvent {

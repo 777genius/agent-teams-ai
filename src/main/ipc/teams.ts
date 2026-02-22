@@ -18,6 +18,7 @@ import {
   TEAM_PROVISIONING_STATUS,
   TEAM_REQUEST_REVIEW,
   TEAM_SEND_MESSAGE,
+  TEAM_START_TASK,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_TASK_STATUS,
@@ -100,6 +101,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_MEMBER_LOGS, handleGetMemberLogs);
   ipcMain.handle(TEAM_GET_MEMBER_STATS, handleGetMemberStats);
   ipcMain.handle(TEAM_UPDATE_CONFIG, handleUpdateConfig);
+  ipcMain.handle(TEAM_START_TASK, handleStartTask);
   ipcMain.handle(TEAM_GET_ALL_TASKS, handleGetAllTasks);
   logger.info('Team handlers registered');
 }
@@ -125,6 +127,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_GET_MEMBER_LOGS);
   ipcMain.removeHandler(TEAM_GET_MEMBER_STATS);
   ipcMain.removeHandler(TEAM_UPDATE_CONFIG);
+  ipcMain.removeHandler(TEAM_START_TASK);
   ipcMain.removeHandler(TEAM_GET_ALL_TASKS);
 }
 
@@ -531,6 +534,9 @@ async function handleCreateTask(
       return { success: false, error: 'prompt exceeds max length (5000)' };
     }
   }
+  if (payload.startImmediately !== undefined && typeof payload.startImmediately !== 'boolean') {
+    return { success: false, error: 'startImmediately must be a boolean' };
+  }
 
   return wrapTeamHandler('createTask', () =>
     getTeamDataService().createTask(validatedTeamName.value!, {
@@ -539,6 +545,7 @@ async function handleCreateTask(
       owner: payload.owner?.trim() || undefined,
       blockedBy: payload.blockedBy,
       prompt: payload.prompt?.trim() || undefined,
+      startImmediately: payload.startImmediately,
     })
   );
 }
@@ -760,6 +767,24 @@ async function handleGetMemberStats(
 
 async function handleAliveList(_event: IpcMainInvokeEvent): Promise<IpcResult<string[]>> {
   return wrapTeamHandler('aliveList', async () => getTeamProvisioningService().getAliveTeams());
+}
+
+async function handleStartTask(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown
+): Promise<IpcResult<void>> {
+  const validatedTeamName = validateTeamName(teamName);
+  if (!validatedTeamName.valid) {
+    return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
+  }
+  const validatedTaskId = validateTaskId(taskId);
+  if (!validatedTaskId.valid) {
+    return { success: false, error: validatedTaskId.error ?? 'Invalid taskId' };
+  }
+  return wrapTeamHandler('startTask', () =>
+    getTeamDataService().startTask(validatedTeamName.value!, validatedTaskId.value!)
+  );
 }
 
 async function handleGetAllTasks(_event: IpcMainInvokeEvent): Promise<IpcResult<GlobalTask[]>> {

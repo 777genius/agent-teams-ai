@@ -15,6 +15,7 @@ import {
 } from '@renderer/components/ui/dialog';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
+import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import {
   Select,
   SelectContent,
@@ -39,6 +40,7 @@ const TEAM_COLOR_NAMES = [
   'pink',
 ] as const;
 
+import type { MentionSuggestion } from '@renderer/types/mention';
 import type {
   Project,
   TeamCreateRequest,
@@ -426,6 +428,24 @@ export const CreateTeamDialog = ({
   const description = descriptionDraft.value;
   const prompt = promptDraft.value;
 
+  const mentionSuggestions = useMemo<MentionSuggestion[]>(
+    () =>
+      members
+        .filter((m) => m.name.trim())
+        .map((m, index) => ({
+          id: m.id,
+          name: m.name.trim(),
+          subtitle:
+            m.roleSelection === CUSTOM_ROLE
+              ? m.customRole.trim() || undefined
+              : m.roleSelection && m.roleSelection !== NO_ROLE
+                ? m.roleSelection
+                : undefined,
+          color: getMemberColor(index),
+        })),
+    [members]
+  );
+
   const request = useMemo<TeamCreateRequest>(
     () => ({
       teamName: teamName.trim(),
@@ -744,18 +764,21 @@ export const CreateTeamDialog = ({
               <Label htmlFor="team-prompt" className="text-xs text-[var(--color-text-muted)]">
                 Prompt for team lead (optional)
               </Label>
-              <AutoResizeTextarea
+              <MentionableTextarea
                 id="team-prompt"
                 className="text-xs"
                 minRows={3}
                 maxRows={12}
                 value={prompt}
-                onChange={(event) => promptDraft.setValue(event.target.value)}
+                onValueChange={promptDraft.setValue}
+                suggestions={mentionSuggestions}
                 placeholder="Instructions for the team lead during provisioning..."
+                footerRight={
+                  promptDraft.isSaved ? (
+                    <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                  ) : null
+                }
               />
-              {promptDraft.isSaved ? (
-                <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-              ) : null}
             </div>
           ) : null}
 
