@@ -202,6 +202,15 @@ async function handleUpdateConfig(
     return { success: false, error: 'Invalid updates object' };
   }
   const { name, description, color } = updates as TeamUpdateConfigRequest;
+  if (name !== undefined && typeof name !== 'string') {
+    return { success: false, error: 'name must be a string' };
+  }
+  if (description !== undefined && typeof description !== 'string') {
+    return { success: false, error: 'description must be a string' };
+  }
+  if (color !== undefined && typeof color !== 'string') {
+    return { success: false, error: 'color must be a string' };
+  }
   return wrapTeamHandler('updateConfig', async () => {
     const result = await getTeamDataService().updateConfig(validated.value!, {
       name,

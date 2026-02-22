@@ -1091,8 +1091,7 @@ export class TeamProvisioningService {
     this.stopFilesystemMonitor(run);
 
     if (run.isLaunch) {
-      await this.ensureProjectPathInConfig(run.teamName, run.request.cwd);
-      await this.appendSessionToHistory(run.teamName);
+      await this.updateConfigPostLaunch(run.teamName, run.request.cwd);
       const readyMessage = 'Team launched — process alive and ready';
       const progress = updateProgress(run, 'ready', readyMessage, {
         cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
@@ -1129,8 +1128,7 @@ export class TeamProvisioningService {
 
     // Persist teammates metadata separately from config.json.
     await this.persistMembersMeta(run.teamName, run.request);
-    await this.ensureProjectPathInConfig(run.teamName, run.request.cwd);
-    await this.appendSessionToHistory(run.teamName);
+    await this.updateConfigPostLaunch(run.teamName, run.request.cwd);
 
     const progress = updateProgress(run, 'ready', 'Team provisioned — process alive and ready', {
       cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
@@ -1669,60 +1667,44 @@ export class TeamProvisioningService {
   }
 
   /**
-   * Append current leadSessionId to sessionHistory array in config.json.
-   * Called after launch/create to track which sessions belong to this team.
+   * Single atomic read-mutate-write for post-launch config updates.
+   * Combines session history append and projectPath update to avoid
+   * race conditions with the CLI writing to the same file.
    */
-  private async appendSessionToHistory(teamName: string): Promise<void> {
+  private async updateConfigPostLaunch(teamName: string, projectPath: string): Promise<void> {
     const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
     try {
       const raw = await fs.promises.readFile(configPath, 'utf8');
       const config = JSON.parse(raw) as Record<string, unknown>;
+
+      // Append session to history
       const leadSessionId = config.leadSessionId;
-      if (typeof leadSessionId !== 'string' || leadSessionId.trim().length === 0) {
-        return;
+      if (typeof leadSessionId === 'string' && leadSessionId.trim().length > 0) {
+        const sessionHistory = Array.isArray(config.sessionHistory)
+          ? (config.sessionHistory as string[])
+          : [];
+        if (!sessionHistory.includes(leadSessionId)) {
+          sessionHistory.push(leadSessionId);
+          config.sessionHistory = sessionHistory;
+        }
       }
-      const history = Array.isArray(config.sessionHistory)
-        ? (config.sessionHistory as string[])
-        : [];
-      if (history.includes(leadSessionId)) {
-        return;
+
+      // Ensure projectPath
+      if (projectPath.trim()) {
+        config.projectPath = projectPath;
+        const pathHistory = Array.isArray(config.projectPathHistory)
+          ? (config.projectPathHistory as string[]).filter(
+              (p) => typeof p === 'string' && p !== projectPath
+            )
+          : [];
+        pathHistory.push(projectPath);
+        config.projectPathHistory = pathHistory;
       }
-      history.push(leadSessionId);
-      config.sessionHistory = history;
-      await fs.promises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf8');
-      logger.info(`[${teamName}] Appended session ${leadSessionId} to sessionHistory`);
+
+      await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
     } catch (error) {
       logger.warn(
-        `[${teamName}] Failed to append session to history: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
-  private async ensureProjectPathInConfig(teamName: string, projectPath: string): Promise<void> {
-    if (!projectPath.trim()) {
-      return;
-    }
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    try {
-      const raw = await fs.promises.readFile(configPath, 'utf8');
-      const config = JSON.parse(raw) as Record<string, unknown>;
-
-      // Always update projectPath to current cwd
-      config.projectPath = projectPath;
-
-      // Maintain ordered history (no duplicates, most recent last)
-      const history = Array.isArray(config.projectPathHistory)
-        ? (config.projectPathHistory as string[]).filter(
-            (p) => typeof p === 'string' && p !== projectPath
-          )
-        : [];
-      history.push(projectPath);
-      config.projectPathHistory = history;
-
-      await fs.promises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf8');
-    } catch (error) {
-      logger.warn(
-        `[${teamName}] Failed to ensure projectPath in config.json: ${
+        `[${teamName}] Failed to update config post-launch: ${
           error instanceof Error ? error.message : String(error)
         }`
       );

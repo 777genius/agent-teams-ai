@@ -1,3 +1,4 @@
+import * as os from 'os';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@preload/constants/ipcChannels', () => ({
@@ -148,7 +149,7 @@ describe('ipc teams handlers', () => {
     const createResult = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
       teamName: 'my-team',
       members: [{ name: 'alice' }],
-      cwd: '/',
+      cwd: os.tmpdir(),
     })) as { success: boolean };
     expect(createResult.success).toBe(true);
     expect(provisioningService.createTeam).toHaveBeenCalledTimes(1);
@@ -247,7 +248,7 @@ describe('ipc teams handlers', () => {
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'test-team',
         members: [{ name: 'alice' }],
-        cwd: '/',
+        cwd: os.tmpdir(),
         prompt: 'Build a web app',
       })) as { success: boolean };
       expect(result.success).toBe(true);
@@ -260,7 +261,7 @@ describe('ipc teams handlers', () => {
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'test-team',
         members: [{ name: 'alice' }],
-        cwd: '/',
+        cwd: os.tmpdir(),
         prompt: 123,
       })) as { success: boolean; error: string };
       expect(result.success).toBe(false);
