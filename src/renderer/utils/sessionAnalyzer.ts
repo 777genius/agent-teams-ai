@@ -569,7 +569,7 @@ export function analyzeSession(detail: SessionDetail): SessionReport {
     for (const tc of m.toolCalls) {
       const toolName = tc.name;
       toolCounts.set(toolName, (toolCounts.get(toolName) ?? 0) + 1);
-      toolCallIndex.set(tc.id ?? '', [i, tc]);
+      if (tc.id) toolCallIndex.set(tc.id, [i, tc]);
       const inp = tc.input ?? {};
 
       // Bash commands
@@ -749,7 +749,8 @@ export function analyzeSession(detail: SessionDetail): SessionReport {
 
     // --- Tool results ---
     for (const tr of m.toolResults) {
-      const toolUseId = tr.toolUseId ?? '';
+      const toolUseId = tr.toolUseId;
+      if (!toolUseId) continue;
       const contentStr = typeof tr.content === 'string' ? tr.content : JSON.stringify(tr.content);
 
       // Tool errors
