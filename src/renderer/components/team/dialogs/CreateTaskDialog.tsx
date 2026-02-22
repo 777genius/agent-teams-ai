@@ -30,6 +30,7 @@ import type { ResolvedTeamMember, TeamTask } from '@shared/types';
 
 interface CreateTaskDialogProps {
   open: boolean;
+  teamName: string;
   members: ResolvedTeamMember[];
   tasks: TeamTask[];
   defaultSubject?: string;
@@ -49,6 +50,7 @@ interface CreateTaskDialogProps {
 
 export const CreateTaskDialog = ({
   open,
+  teamName,
   members,
   tasks,
   defaultSubject = '',
@@ -60,13 +62,13 @@ export const CreateTaskDialog = ({
 }: CreateTaskDialogProps): React.JSX.Element => {
   const [subject, setSubject] = useState(defaultSubject);
   const descriptionDraft = useDraftPersistence({
-    key: 'createTask:description',
+    key: `createTask:${teamName}:description`,
     initialValue: defaultDescription || undefined,
   });
   const [owner, setOwner] = useState<string>(defaultOwner);
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
   const [startImmediately, setStartImmediately] = useState(true);
-  const promptDraft = useDraftPersistence({ key: 'createTask:prompt' });
+  const promptDraft = useDraftPersistence({ key: `createTask:${teamName}:prompt` });
   const [prevOpen, setPrevOpen] = useState(false);
 
   if (open && !prevOpen) {

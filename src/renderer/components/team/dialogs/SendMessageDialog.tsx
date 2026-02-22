@@ -69,19 +69,20 @@ export const SendMessageDialog = ({
   const [pendingAutoClose, setPendingAutoClose] = useState(false);
   if (open && lastResult && lastResult !== prevResult) {
     setPrevResult(lastResult);
+    setMember('');
+    setSummary('');
     setPendingAutoClose(true);
   }
 
   // Side effects (onClose mutates parent state) must run in useEffect, not render phase
   useEffect(() => {
     if (pendingAutoClose) {
-      setMember('');
       textDraft.clearDraft();
-      setSummary('');
       setPendingAutoClose(false);
       onClose();
     }
-  }, [pendingAutoClose]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only trigger on pendingAutoClose flag
+  }, [pendingAutoClose]);
 
   const mentionSuggestions = useMemo<MentionSuggestion[]>(
     () =>

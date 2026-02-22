@@ -690,6 +690,16 @@ async function handleCreateConfig(
     return { success: false, error: 'members must contain at least one member' };
   }
 
+  if (payload.displayName !== undefined && typeof payload.displayName !== 'string') {
+    return { success: false, error: 'displayName must be a string' };
+  }
+  if (payload.description !== undefined && typeof payload.description !== 'string') {
+    return { success: false, error: 'description must be a string' };
+  }
+  if (payload.color !== undefined && typeof payload.color !== 'string') {
+    return { success: false, error: 'color must be a string' };
+  }
+
   const seenNames = new Set<string>();
   const members: TeamCreateConfigRequest['members'] = [];
   for (const member of payload.members) {

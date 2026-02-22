@@ -110,7 +110,7 @@ export class TeamMemberLogsFinder {
     const discovery = await this.discoverMemberFiles(teamName, memberName);
     if (!discovery) return [];
 
-    const { projectDir, projectId, config, sessionIds, knownMembers, isLeadMember } = discovery;
+    const { projectDir, config, sessionIds, knownMembers, isLeadMember } = discovery;
     const paths: string[] = [];
 
     if (isLeadMember && config.leadSessionId) {

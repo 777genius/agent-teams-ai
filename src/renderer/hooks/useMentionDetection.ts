@@ -82,7 +82,7 @@ export function getCaretCoordinates(
   mirror.style.position = 'absolute';
   mirror.style.visibility = 'hidden';
   mirror.style.whiteSpace = 'pre-wrap';
-  mirror.style.wordWrap = 'break-word';
+  mirror.style.overflowWrap = 'break-word';
   mirror.style.overflow = 'hidden';
 
   for (const prop of MIRROR_PROPS) {
