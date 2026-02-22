@@ -119,7 +119,7 @@ export const MemberLogsTab = ({ teamName, memberName }: MemberLogsTabProps): Rea
   }
 
   return (
-    <div className="max-h-[400px] space-y-1.5 overflow-y-auto pr-1">
+    <div className="max-h-[400px] min-w-0 space-y-1.5 overflow-y-auto overflow-x-hidden pr-1">
       {logs.map((log) => (
         <LogCard
           key={
@@ -171,9 +171,9 @@ const LogCard = ({
   const timeAgo = formatRelativeTime(log.startTime);
 
   return (
-    <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">
+    <div className="min-w-0 overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">
       <button
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-[var(--color-surface-raised)]"
+        className="flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-xs hover:bg-[var(--color-surface-raised)]"
         onClick={onToggle}
       >
         {expanded ? (
@@ -181,8 +181,10 @@ const LogCard = ({
         ) : (
           <ChevronRight size={12} className="shrink-0 text-[var(--color-text-muted)]" />
         )}
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[var(--color-text)]">{log.description}</div>
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <div className="truncate text-[var(--color-text)]" title={log.description}>
+            {log.description}
+          </div>
           <div className="mt-0.5 flex items-center gap-3 text-[10px] text-[var(--color-text-muted)]">
             <span className="flex items-center gap-1">
               <Clock size={10} />
@@ -214,7 +216,7 @@ const LogCard = ({
             </div>
           )}
           {!detailLoading && detailChunks && (
-            <div className="max-h-[360px] overflow-y-auto pr-1">
+            <div className="max-h-[360px] min-w-0 overflow-y-auto overflow-x-hidden pr-1">
               <MemberExecutionLog
                 chunks={detailChunks}
                 memberName={log.kind === 'lead_session' ? (log.memberName ?? undefined) : undefined}

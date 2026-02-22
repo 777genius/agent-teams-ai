@@ -1,3 +1,4 @@
+import { useUnreadCommentCount } from '@renderer/hooks/useUnreadCommentCount';
 import { useStore } from '@renderer/store';
 import { format, isThisYear, isToday, isYesterday } from 'date-fns';
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
@@ -28,6 +29,7 @@ interface SidebarTaskItemProps {
 
 export const SidebarTaskItem = ({ task }: SidebarTaskItemProps): React.JSX.Element => {
   const openTeamTab = useStore((s) => s.openTeamTab);
+  const unreadCount = useUnreadCommentCount(task.teamName, task.id, task.comments);
   const cfg = statusConfig[task.status] ?? statusConfig.pending;
   const StatusIcon = cfg.icon;
   const dateLabel = formatTaskDate(task.createdAt);
@@ -40,6 +42,12 @@ export const SidebarTaskItem = ({ task }: SidebarTaskItemProps): React.JSX.Eleme
     >
       <div className="flex w-full items-center gap-1.5 overflow-hidden">
         <span className="truncate text-[13px] leading-tight text-text">{task.subject}</span>
+        {unreadCount > 0 && (
+          <span
+            className="size-1.5 shrink-0 rounded-full bg-blue-400"
+            title={`${unreadCount} unread`}
+          />
+        )}
         <StatusIcon className={`size-3 shrink-0 ${cfg.color}`} />
       </div>
       <div className="mt-0.5 flex items-center gap-1.5 text-[11px] leading-tight text-text-muted">

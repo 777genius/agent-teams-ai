@@ -319,12 +319,22 @@ export class TeamDataService {
     const comment = await this.taskWriter.addComment(teamName, taskId, text);
 
     try {
-      const tasks = await this.taskReader.getTasks(teamName);
+      const [tasks, toolPath] = await Promise.all([
+        this.taskReader.getTasks(teamName),
+        this.toolsInstaller.ensureInstalled(),
+      ]);
       const task = tasks.find((t) => t.id === taskId);
       if (task?.owner) {
+        const parts = [
+          `Comment on task #${taskId} "${task.subject}":\n\n${text}`,
+          `\n${AGENT_BLOCK_OPEN}`,
+          `Reply to this comment using:`,
+          `node "${toolPath}" --team ${teamName} task comment ${taskId} --text "<your reply>" --from "<your-name>"`,
+          AGENT_BLOCK_CLOSE,
+        ];
         await this.sendMessage(teamName, {
           member: task.owner,
-          text: `Comment on task #${taskId} "${task.subject}":\n\n${text}`,
+          text: parts.join('\n'),
           summary: `Comment on #${taskId}`,
         });
       }

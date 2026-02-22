@@ -1,7 +1,10 @@
 /* eslint-disable no-param-reassign -- ProvisioningRun object is intentionally mutated as a state tracker throughout the provisioning lifecycle */
 import {
+  encodePath,
+  extractBaseDir,
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
+  getProjectsBasePath,
   getTasksBasePath,
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
@@ -246,6 +249,8 @@ function buildTaskStatusProtocol(teamName: string): string {
 4. If review fails and changes are needed:
    node \\"$HOME/.claude/tools/teamctl.js\\" --team \\"${teamName}\\" review request-changes <taskId> --comment \\"<what to fix>\\"
 5. NEVER skip status updates. A task is NOT done until completed status is written.
+6. To reply to a comment on a task:
+   node \\"$HOME/.claude/tools/teamctl.js\\" --team \\"${teamName}\\" task comment <taskId> --text \\"<your reply>\\" --from \\"<your-name>\\"
 Failure to follow this protocol means the task board will show incorrect status.`;
 }
 
@@ -754,6 +759,39 @@ export class TeamProvisioningService {
     } = await this.resolveLaunchExpectedMembers(request.teamName, configRaw);
     const expectedMembers = expectedMemberSpecs.map((m) => m.name);
 
+    // Extract leadSessionId for session resume on reconnect.
+    // If a valid JSONL file exists for the previous session, we can resume it
+    // so the lead retains full context of prior work.
+    let previousSessionId: string | undefined;
+    try {
+      const configParsed = JSON.parse(configRaw) as Record<string, unknown>;
+      if (
+        typeof configParsed.leadSessionId === 'string' &&
+        configParsed.leadSessionId.trim().length > 0
+      ) {
+        const candidateId = configParsed.leadSessionId.trim();
+        const projectPath =
+          typeof configParsed.projectPath === 'string' && configParsed.projectPath.trim().length > 0
+            ? configParsed.projectPath.trim()
+            : request.cwd;
+        const projectId = encodePath(projectPath);
+        const baseDir = extractBaseDir(projectId);
+        const jsonlPath = path.join(getProjectsBasePath(), baseDir, `${candidateId}.jsonl`);
+        if (await this.pathExists(jsonlPath)) {
+          previousSessionId = candidateId;
+          logger.info(
+            `[${request.teamName}] Found previous session JSONL for resume: ${candidateId}`
+          );
+        } else {
+          logger.info(
+            `[${request.teamName}] Previous session JSONL not found at ${jsonlPath}, starting fresh`
+          );
+        }
+      }
+    } catch {
+      logger.debug(`[${request.teamName}] Failed to extract leadSessionId from config for resume`);
+    }
+
     // IMPORTANT: The CLI auto-suffixes teammate names when they already exist in config.json.
     // Normalize config.json to keep only the team-lead before spawning the CLI, so we get stable names.
     await this.normalizeTeamConfigForLaunch(request.teamName, configRaw);
@@ -827,35 +865,40 @@ export class TeamProvisioningService {
           'Attempting spawn anyway — CLI may authenticate via apiKeyHelper, SSO, or other mechanism.'
       );
     }
-    try {
-      child = spawn(
-        claudePath,
-        [
-          '--input-format',
-          'stream-json',
-          '--output-format',
-          'stream-json',
-          '--verbose',
-          '--setting-sources',
-          'user,project,local',
-          '--disallowedTools',
-          'TeamDelete,TodoWrite',
-        ],
-        {
-          cwd: request.cwd,
-          env: {
-            ...shellEnv,
-          },
-          stdio: ['pipe', 'pipe', 'pipe'],
-        }
+    const launchArgs = [
+      '--input-format',
+      'stream-json',
+      '--output-format',
+      'stream-json',
+      '--verbose',
+      '--setting-sources',
+      'user,project,local',
+      '--disallowedTools',
+      'TeamDelete,TodoWrite',
+    ];
+    if (previousSessionId) {
+      launchArgs.push('--resume', previousSessionId);
+      logger.info(
+        `[${request.teamName}] Launching with --resume ${previousSessionId} for session continuity`
       );
+    }
+
+    try {
+      child = spawn(claudePath, launchArgs, {
+        cwd: request.cwd,
+        env: {
+          ...shellEnv,
+        },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
     } catch (error) {
       this.runs.delete(runId);
       this.activeByTeam.delete(request.teamName);
       throw error;
     }
 
-    updateProgress(run, 'spawning', 'Starting Claude CLI process for team launch', {
+    const resumeHint = previousSessionId ? ' (resuming previous session)' : '';
+    updateProgress(run, 'spawning', `Starting Claude CLI process for team launch${resumeHint}`, {
       pid: child.pid ?? undefined,
     });
     run.onProgress(run.progress);
@@ -918,8 +961,11 @@ export class TeamProvisioningService {
       });
     }
 
-    // Filesystem monitor — config already exists, start from 'waiting_members'
-    this.startFilesystemMonitor(run, syntheticRequest);
+    // For launch, skip the filesystem monitor — files (config, inboxes, tasks)
+    // already exist from the previous run and would trigger immediate false
+    // completion on the first poll. Rely on stream-json result.success instead.
+    updateProgress(run, 'monitoring', 'CLI running — reconnecting with teammates');
+    run.onProgress(run.progress);
 
     run.timeoutHandle = setTimeout(() => {
       if (!run.processKilled && !run.provisioningComplete) {

@@ -1,5 +1,7 @@
+import { UnreadCommentsBadge } from '@renderer/components/team/UnreadCommentsBadge';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
+import { useUnreadCommentCount } from '@renderer/hooks/useUnreadCommentCount';
 import { ArrowLeftFromLine, ArrowRightFromLine, CheckCircle2, Play } from 'lucide-react';
 
 import { ReviewBadge } from './ReviewBadge';
@@ -8,6 +10,7 @@ import type { KanbanColumnId, KanbanTaskState, TeamTask } from '@shared/types';
 
 interface KanbanTaskCardProps {
   task: TeamTask;
+  teamName: string;
   columnId: KanbanColumnId;
   kanbanTaskState?: KanbanTaskState;
   hasReviewers: boolean;
@@ -57,6 +60,7 @@ const DependencyBadge = ({
 
 export const KanbanTaskCard = ({
   task,
+  teamName,
   columnId,
   kanbanTaskState,
   hasReviewers,
@@ -70,6 +74,7 @@ export const KanbanTaskCard = ({
   onScrollToTask,
   onTaskClick,
 }: KanbanTaskCardProps): React.JSX.Element => {
+  const unreadCount = useUnreadCommentCount(teamName, task.id, task.comments);
   const blockedByIds = task.blockedBy?.filter((id) => id.length > 0) ?? [];
   const blocksIds = task.blocks?.filter((id) => id.length > 0) ?? [];
   const hasBlockedBy = blockedByIds.length > 0;
@@ -95,9 +100,15 @@ export const KanbanTaskCard = ({
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <div>
-          <Badge variant="secondary" className="mb-1 px-1.5 py-0 text-[10px] font-normal">
-            #{task.id}
-          </Badge>
+          <div className="mb-1 flex items-center gap-1">
+            <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+              #{task.id}
+            </Badge>
+            <UnreadCommentsBadge
+              unreadCount={unreadCount}
+              totalCount={task.comments?.length ?? 0}
+            />
+          </div>
           <h5 className="text-sm font-medium text-[var(--color-text)]">{task.subject}</h5>
         </div>
         {columnId === 'review' ? <ReviewBadge status={kanbanTaskState?.reviewStatus} /> : null}

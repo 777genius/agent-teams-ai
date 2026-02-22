@@ -404,7 +404,16 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   createTeam: async (request: TeamCreateRequest) => {
-    set({ provisioningError: null });
+    // Clear stale provisioning runs for this team so the banner starts fresh
+    set((state) => {
+      const cleaned = { ...state.provisioningRuns };
+      for (const [runId, run] of Object.entries(cleaned)) {
+        if (run.teamName === request.teamName) {
+          delete cleaned[runId];
+        }
+      }
+      return { provisioningError: null, provisioningRuns: cleaned };
+    });
     try {
       if (typeof api.teams.createTeam !== 'function') {
         throw new Error(
@@ -432,7 +441,16 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   launchTeam: async (request: TeamLaunchRequest) => {
-    set({ provisioningError: null });
+    // Clear stale provisioning runs for this team so the banner starts fresh
+    set((state) => {
+      const cleaned = { ...state.provisioningRuns };
+      for (const [runId, run] of Object.entries(cleaned)) {
+        if (run.teamName === request.teamName) {
+          delete cleaned[runId];
+        }
+      }
+      return { provisioningError: null, provisioningRuns: cleaned };
+    });
     try {
       const response = await unwrapIpc('team:launch', () => api.teams.launchTeam(request));
       set({

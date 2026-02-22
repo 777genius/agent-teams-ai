@@ -7,6 +7,7 @@ import type { TeamTask } from '@shared/types';
 
 interface MemberTasksTabProps {
   tasks: TeamTask[];
+  onTaskClick?: (task: TeamTask) => void;
 }
 
 const STATUS_ORDER: Record<string, number> = {
@@ -15,7 +16,7 @@ const STATUS_ORDER: Record<string, number> = {
   completed: 2,
 };
 
-export const MemberTasksTab = ({ tasks }: MemberTasksTabProps): React.JSX.Element => {
+export const MemberTasksTab = ({ tasks, onTaskClick }: MemberTasksTabProps): React.JSX.Element => {
   const visibleTasks = useMemo(
     () =>
       tasks
@@ -38,9 +39,11 @@ export const MemberTasksTab = ({ tasks }: MemberTasksTabProps): React.JSX.Elemen
         {visibleTasks.map((task) => {
           const style = TASK_STATUS_STYLES[task.status];
           return (
-            <div
+            <button
+              type="button"
               key={task.id}
-              className="flex items-center gap-2 rounded-md px-2.5 py-2 hover:bg-[var(--color-surface-raised)]"
+              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left hover:bg-[var(--color-surface-raised)]"
+              onClick={() => onTaskClick?.(task)}
             >
               <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px] font-normal">
                 #{task.id}
@@ -53,7 +56,7 @@ export const MemberTasksTab = ({ tasks }: MemberTasksTabProps): React.JSX.Elemen
               >
                 {TASK_STATUS_LABELS[task.status]}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>

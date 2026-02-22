@@ -3,6 +3,7 @@
  */
 
 import { api } from '@renderer/api';
+import { cleanupStale as cleanupCommentReadState } from '@renderer/services/commentReadStorage';
 import { create } from 'zustand';
 
 import { createConfigSlice } from './slices/configSlice';
@@ -62,6 +63,7 @@ export const useStore = create<AppState>()((...args) => ({
  * Call this once when the app starts (e.g., in App.tsx useEffect).
  */
 export function initializeNotificationListeners(): () => void {
+  void cleanupCommentReadState();
   const cleanupFns: (() => void)[] = [];
   useStore.getState().subscribeProvisioningProgress();
   cleanupFns.push(() => {

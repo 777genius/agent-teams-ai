@@ -524,6 +524,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         </div>
         <KanbanBoard
           tasks={kanbanDisplayTasks}
+          teamName={teamName}
           kanbanState={data.kanbanState}
           filter={kanbanFilter}
           sessions={teamSessions}
@@ -540,7 +541,10 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             setRequestChangesTaskId(taskId);
           }}
           onMoveBackToDone={(taskId) => {
-            void updateKanban(teamName, taskId, { op: 'remove' });
+            void (async () => {
+              await updateKanban(teamName, taskId, { op: 'remove' });
+              await updateTaskStatus(teamName, taskId, 'completed');
+            })();
           }}
           onStartTask={(taskId) => {
             void (async () => {
@@ -585,9 +589,9 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         defaultOpen
         action={
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="h-6 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            className="h-7 gap-1.5 px-2.5 text-xs font-medium text-[var(--color-text)]"
             onClick={(e) => {
               e.stopPropagation();
               setSendDialogRecipient(undefined);
@@ -648,6 +652,10 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           setSelectedMember(null);
           openCreateTaskDialog('', '', name);
         }}
+        onTaskClick={(task) => {
+          setSelectedMember(null);
+          setSelectedTask(task);
+        }}
       />
 
       <CreateTaskDialog
@@ -704,6 +712,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         teamName={teamName}
         kanbanTaskState={selectedTask ? data?.kanbanState.tasks[selectedTask.id] : undefined}
         taskMap={taskMap}
+        members={data?.members ?? []}
         onClose={() => setSelectedTask(null)}
         onScrollToTask={(taskId) => {
           setSelectedTask(null);

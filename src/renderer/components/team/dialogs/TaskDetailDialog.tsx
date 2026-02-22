@@ -17,7 +17,7 @@ import { ArrowLeftFromLine, ArrowRightFromLine, Clock, FileText, User } from 'lu
 
 import { TaskCommentsSection } from './TaskCommentsSection';
 
-import type { KanbanTaskState, TeamTask } from '@shared/types';
+import type { KanbanTaskState, ResolvedTeamMember, TeamTask } from '@shared/types';
 
 interface TaskDetailDialogProps {
   open: boolean;
@@ -25,6 +25,7 @@ interface TaskDetailDialogProps {
   teamName: string;
   kanbanTaskState?: KanbanTaskState;
   taskMap: Map<string, TeamTask>;
+  members: ResolvedTeamMember[];
   onClose: () => void;
   onScrollToTask?: (taskId: string) => void;
 }
@@ -35,6 +36,7 @@ export const TaskDetailDialog = ({
   teamName,
   kanbanTaskState,
   taskMap,
+  members,
   onClose,
   onScrollToTask,
 }: TaskDetailDialogProps): React.JSX.Element => {
@@ -65,7 +67,7 @@ export const TaskDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-4xl">
+      <DialogContent className="max-h-[85vh] min-w-0 overflow-y-auto overflow-x-hidden sm:max-w-4xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
@@ -193,13 +195,14 @@ export const TaskDetailDialog = ({
           teamName={teamName}
           taskId={currentTask.id}
           comments={currentTask.comments ?? []}
+          members={members}
         />
 
         {/* Separator */}
         <div className="border-t border-[var(--color-border)]" />
 
         {/* Session Logs */}
-        <div>
+        <div className="min-w-0 overflow-hidden">
           <h4 className="mb-2 text-xs font-medium text-[var(--color-text-muted)]">
             Execution Logs
           </h4>

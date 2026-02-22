@@ -14,6 +14,7 @@ import type { KanbanColumnId, KanbanState, ResolvedTeamMember, TeamTask } from '
 
 interface KanbanBoardProps {
   tasks: TeamTask[];
+  teamName: string;
   kanbanState: KanbanState;
   filter: KanbanFilterState;
   sessions: Session[];
@@ -60,6 +61,7 @@ function getTaskColumn(task: TeamTask, kanbanState: KanbanState): KanbanColumnId
 
 export const KanbanBoard = ({
   tasks,
+  teamName,
   kanbanState,
   filter,
   sessions,
@@ -106,6 +108,7 @@ export const KanbanBoard = ({
           <KanbanTaskCard
             key={task.id}
             task={task}
+            teamName={teamName}
             columnId={columnId}
             kanbanTaskState={kanbanState.tasks[task.id]}
             hasReviewers={kanbanState.reviewers.length > 0}

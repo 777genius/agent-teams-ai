@@ -23,6 +23,7 @@ interface MemberDetailDialogProps {
   onClose: () => void;
   onSendMessage: () => void;
   onAssignTask: () => void;
+  onTaskClick: (task: TeamTask) => void;
 }
 
 export const MemberDetailDialog = ({
@@ -34,6 +35,7 @@ export const MemberDetailDialog = ({
   onClose,
   onSendMessage,
   onAssignTask,
+  onTaskClick,
 }: MemberDetailDialogProps): React.JSX.Element | null => {
   const memberTasks = useMemo(
     () => (member ? tasks.filter((t) => t.owner === member.name) : []),
@@ -100,7 +102,7 @@ export const MemberDetailDialog = ({
             </TabsTrigger>
           </TabsList>
           <TabsContent value="tasks">
-            <MemberTasksTab tasks={memberTasks} />
+            <MemberTasksTab tasks={memberTasks} onTaskClick={onTaskClick} />
           </TabsContent>
           <TabsContent value="messages">
             <MemberMessagesTab messages={memberMessages} />

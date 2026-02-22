@@ -5,7 +5,7 @@ import * as path from 'path';
 import { atomicWriteAsync } from './atomicWrite';
 
 const TOOL_FILE_NAME = 'teamctl.js';
-const TOOL_VERSION = 4;
+const TOOL_VERSION = 5;
 
 function buildTeamCtlScript(): string {
   const script = String.raw`#!/usr/bin/env node
@@ -188,6 +188,31 @@ function setTaskStatus(paths, taskId, status) {
   const { taskPath, task } = readTask(paths, taskId);
   task.status = normalized;
   writeTask(taskPath, task);
+}
+
+function addTaskComment(paths, taskId, flags) {
+  var text = typeof flags.text === 'string' ? flags.text.trim() : '';
+  if (!text) die('Missing --text');
+  var from = typeof flags.from === 'string' && flags.from.trim() ? flags.from.trim() : 'agent';
+
+  var ref = readTask(paths, taskId);
+  var task = ref.task;
+  var taskPath = ref.taskPath;
+
+  var existing = Array.isArray(task.comments) ? task.comments : [];
+  var commentId = crypto.randomUUID
+    ? crypto.randomUUID()
+    : String(Date.now()) + '-' + String(Math.random());
+  var comment = {
+    id: commentId,
+    author: from,
+    text: text,
+    createdAt: nowIso(),
+  };
+  task.comments = existing.concat([comment]);
+  writeTask(taskPath, task);
+
+  return { commentId: commentId, taskId: String(taskId), subject: task.subject, owner: task.owner };
 }
 
 function listTaskIds(tasksDir) {
@@ -396,6 +421,7 @@ function printHelp() {
       '  node teamctl.js task complete <id> [--team <team>]',
       '  node teamctl.js task start <id> [--team <team>]',
       '  node teamctl.js task create --subject "..." [--description "..."] [--prompt "..."] [--owner "member"] [--notify --from "member"] [--team <team>]',
+      '  node teamctl.js task comment <id> --text "..." [--from "member"] [--team <team>]',
       '  node teamctl.js kanban set-column <id> <review|approved> [--team <team>]',
       '  node teamctl.js kanban clear <id> [--team <team>]',
       '  node teamctl.js review approve <id> [--notify-owner --from "member" --note "..."] [--team <team>]',
@@ -496,6 +522,25 @@ async function main() {
         } catch {}
       }
       process.stdout.write(JSON.stringify(tasks.filter(Boolean), null, 2) + '\n');
+      return;
+    }
+    if (action === 'comment') {
+      const id = rest[0] || args.flags.id;
+      if (!id) die('Usage: task comment <id> --text "..."');
+      const result = addTaskComment(paths, String(id), args.flags);
+      const from = typeof args.flags.from === 'string' && args.flags.from.trim() ? args.flags.from.trim() : 'agent';
+      // Notify task owner via inbox — but SKIP self-notification to prevent loop
+      if (result.owner && result.owner !== from) {
+        try {
+          sendInboxMessage(paths, teamName, {
+            to: result.owner,
+            text: 'Comment on task #' + String(result.taskId) + ' "' + String(result.subject) + '":\n\n' + (typeof args.flags.text === 'string' ? args.flags.text.trim() : ''),
+            summary: 'Comment on #' + String(result.taskId),
+            from: from,
+          });
+        } catch (e) { /* best-effort */ }
+      }
+      process.stdout.write('OK comment added to task #' + String(id) + '\n');
       return;
     }
     die('Unknown task action: ' + String(action));
