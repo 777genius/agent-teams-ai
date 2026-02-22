@@ -6,8 +6,11 @@ import { DollarSign } from 'lucide-react';
 import { AssessmentBadge } from '../AssessmentBadge';
 import { ReportSection, sectionId } from '../ReportSection';
 
-import type { ModelTokenStats, ReportCostAnalysis } from '@renderer/types/sessionReport';
-import type { ModelPricing } from '@renderer/types/sessionReport';
+import type {
+  ModelPricing,
+  ModelTokenStats,
+  ReportCostAnalysis,
+} from '@renderer/types/sessionReport';
 
 const fmt = (v: number) => `$${v.toFixed(4)}`;
 const fmtK = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v));

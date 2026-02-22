@@ -882,7 +882,7 @@ export function analyzeSession(detail: SessionDetail): SessionReport {
     totalCacheReadTokens += stats.cacheRead;
   }
 
-  const grandTotal =
+  let grandTotal =
     totalInputTokens + totalOutputTokens + totalCacheCreationTokens + totalCacheReadTokens;
 
   // --- Cost analysis ---
@@ -1150,6 +1150,14 @@ export function analyzeSession(detail: SessionDetail): SessionReport {
     const subagentLabel = 'Subagents (combined)';
     byModel[subagentLabel] = subagentTokenStats;
     modelStats.set(subagentLabel, subagentTokenStats);
+
+    // Update totals to include subagent tokens so the footer row stays consistent
+    totalInputTokens += subagentTokenStats.inputTokens;
+    totalOutputTokens += subagentTokenStats.outputTokens;
+    totalCacheCreationTokens += subagentTokenStats.cacheCreation;
+    totalCacheReadTokens += subagentTokenStats.cacheRead;
+    grandTotal =
+      totalInputTokens + totalOutputTokens + totalCacheCreationTokens + totalCacheReadTokens;
   }
 
   // --- Assessment computations ---
