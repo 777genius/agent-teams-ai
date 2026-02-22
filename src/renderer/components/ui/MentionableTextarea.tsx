@@ -69,7 +69,7 @@ function parseMentionSegments(text: string, suggestions: MentionSuggestion[]): S
       // Character after name must be boundary
       if (end < text.length) {
         const after = text[end];
-        // eslint-disable-next-line no-useless-escape
+        // eslint-disable-next-line no-useless-escape -- escaped chars needed for regex character class
         if (!/[\s,.:;!?\)\]\}\-]/.test(after)) continue;
       }
 

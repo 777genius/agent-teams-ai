@@ -43,7 +43,9 @@ import {
   TEAM_PROVISIONING_STATUS,
   TEAM_REQUEST_REVIEW,
   TEAM_SEND_MESSAGE,
+  TEAM_GET_ALL_TASKS,
   TEAM_GET_MEMBER_LOGS,
+  TEAM_GET_MEMBER_STATS,
   TEAM_START_TASK,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
@@ -125,7 +127,9 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_ALIVE_LIST)).toBe(true);
     expect(handlers.has(TEAM_CREATE_CONFIG)).toBe(true);
     expect(handlers.has(TEAM_GET_MEMBER_LOGS)).toBe(true);
+    expect(handlers.has(TEAM_GET_MEMBER_STATS)).toBe(true);
     expect(handlers.has(TEAM_UPDATE_CONFIG)).toBe(true);
+    expect(handlers.has(TEAM_GET_ALL_TASKS)).toBe(true);
   });
 
   it('returns success false on invalid sendMessage args', async () => {
@@ -289,5 +293,9 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_PROCESS_ALIVE)).toBe(false);
     expect(handlers.has(TEAM_ALIVE_LIST)).toBe(false);
     expect(handlers.has(TEAM_CREATE_CONFIG)).toBe(false);
+    expect(handlers.has(TEAM_GET_MEMBER_LOGS)).toBe(false);
+    expect(handlers.has(TEAM_GET_MEMBER_STATS)).toBe(false);
+    expect(handlers.has(TEAM_UPDATE_CONFIG)).toBe(false);
+    expect(handlers.has(TEAM_GET_ALL_TASKS)).toBe(false);
   });
 });

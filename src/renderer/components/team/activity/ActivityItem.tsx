@@ -14,7 +14,7 @@ import {
   parseStructuredAgentMessage,
 } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
-import { AGENT_BLOCK_REGEX } from '@shared/constants/agentBlocks';
+import { createAgentBlockRegex } from '@shared/constants/agentBlocks';
 import { Bot, ChevronRight, ListPlus, MessageSquare } from 'lucide-react';
 
 import type { TeamColorSet } from '@renderer/constants/teamColors';
@@ -109,7 +109,7 @@ function getSystemMessageLabel(text: string): string | null {
 
 /** Strip ```info_for_agent ... ``` blocks from text for UI display. */
 function stripAgentBlocks(text: string): string {
-  return text.replace(AGENT_BLOCK_REGEX, '').trim();
+  return text.replace(createAgentBlockRegex(), '').trim();
 }
 
 // ---------------------------------------------------------------------------
