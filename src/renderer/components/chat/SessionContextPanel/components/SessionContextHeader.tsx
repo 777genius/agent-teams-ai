@@ -134,22 +134,22 @@ export const SessionContextHeader = ({
               <span className="font-medium tabular-nums" style={{ color: COLOR_TEXT_SECONDARY }}>
                 {formatCostUsd(sessionMetrics.costUsd)}
               </span>
-              <span style={{ color: COLOR_TEXT_MUTED }}> (parent only</span>
-              {onViewReport ? (
-                <span>
-                  <span style={{ color: COLOR_TEXT_MUTED }}> · </span>
-                  <button
-                    onClick={onViewReport}
-                    className="underline"
-                    style={{ color: COLOR_TEXT_SECONDARY }}
-                  >
-                    view full cost
-                  </button>
-                  <span style={{ color: COLOR_TEXT_MUTED }}>)</span>
-                </span>
-              ) : (
-                <span style={{ color: COLOR_TEXT_MUTED }}>)</span>
-              )}
+              <span style={{ color: COLOR_TEXT_MUTED }}>
+                {' (parent only'}
+                {onViewReport && (
+                  <>
+                    {' · '}
+                    <button
+                      onClick={onViewReport}
+                      className="underline"
+                      style={{ color: COLOR_TEXT_SECONDARY }}
+                    >
+                      view full cost
+                    </button>
+                  </>
+                )}
+                {')'}
+              </span>
             </div>
           )}
         </div>

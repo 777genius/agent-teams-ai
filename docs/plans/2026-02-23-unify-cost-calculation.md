@@ -10,6 +10,8 @@
 
 ---
 
+## Tasks
+
 ### Task 1: Create the shared pricing module with tests
 
 **Files:**

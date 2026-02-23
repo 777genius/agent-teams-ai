@@ -62,7 +62,7 @@ Create a single shared pricing module that both processes import.
 
 - Report costs become more accurate (tiered pricing, 206 models instead of 6)
 - Cost numbers between chat view and Session Report now agree exactly
-- No UI changes — same components, same layout
+- Small UI change: Visible Context header adds a "parent only · view full cost" action when available
 
 ## Out of Scope
 

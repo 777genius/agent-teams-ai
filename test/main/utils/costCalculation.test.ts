@@ -84,7 +84,7 @@ describe('Cost Calculation', () => {
     });
 
     it('should return 0 cost when model pricing not found', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const messages: ParsedMessage[] = [
         {
           type: 'assistant',

@@ -22,19 +22,28 @@ export interface DisplayPricing {
 
 const TIER_THRESHOLD = 200_000;
 
-const pricingMap = pricingData as Record<string, unknown>;
+const PRICING_MAP = pricingData as Record<string, unknown>;
 
-function tryGetPricing(key: string): LiteLLMPricing | null {
-  const entry = pricingMap[key];
-  if (
-    entry &&
+// Pre-compute lowercase key map for O(1) case-insensitive lookups
+const LOWERCASE_KEY_MAP = new Map<string, string>();
+for (const key of Object.keys(PRICING_MAP)) {
+  if (!LOWERCASE_KEY_MAP.has(key.toLowerCase())) {
+    LOWERCASE_KEY_MAP.set(key.toLowerCase(), key);
+  }
+}
+
+function isLiteLLMPricing(entry: unknown): entry is LiteLLMPricing {
+  return (
+    !!entry &&
     typeof entry === 'object' &&
     'input_cost_per_token' in entry &&
     'output_cost_per_token' in entry
-  ) {
-    return entry as LiteLLMPricing;
-  }
-  return null;
+  );
+}
+
+function tryGetPricing(key: string): LiteLLMPricing | null {
+  const entry = PRICING_MAP[key];
+  return isLiteLLMPricing(entry) ? entry : null;
 }
 
 export function getPricing(modelName: string): LiteLLMPricing | null {
@@ -42,14 +51,9 @@ export function getPricing(modelName: string): LiteLLMPricing | null {
   if (exact) return exact;
 
   const lowerName = modelName.toLowerCase();
-  const lower = tryGetPricing(lowerName);
-  if (lower) return lower;
-
-  for (const key of Object.keys(pricingMap)) {
-    if (key.toLowerCase() === lowerName) {
-      const match = tryGetPricing(key);
-      if (match) return match;
-    }
+  const originalKey = LOWERCASE_KEY_MAP.get(lowerName);
+  if (originalKey) {
+    return tryGetPricing(originalKey);
   }
 
   return null;

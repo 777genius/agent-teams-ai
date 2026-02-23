@@ -55,7 +55,7 @@ describe('Shared Pricing Module', () => {
     });
 
     it('should return 0 for unknown models', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const cost = calculateMessageCost('unknown-model', 1000, 500, 0, 0);
       expect(cost).toBe(0);
       expect(warnSpy).toHaveBeenCalledWith(
