@@ -481,7 +481,16 @@ function createWindow(): void {
   const ZOOM_OUT_KEYS = new Set(['-', '_']);
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
-    if (!input.meta || input.type !== 'keyDown') return;
+    if (input.type !== 'keyDown') return;
+
+    // Prevent Electron's default Ctrl+R / Cmd+R page reload so the renderer
+    // keyboard handler can use it as "Refresh Session" (fixes #58).
+    if ((input.control || input.meta) && input.key.toLowerCase() === 'r') {
+      event.preventDefault();
+      return;
+    }
+
+    if (!input.meta) return;
 
     const currentLevel = mainWindow.webContents.getZoomLevel();
 

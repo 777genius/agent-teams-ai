@@ -14,6 +14,7 @@ import { horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortabl
 import { isElectronMode } from '@renderer/api';
 import { HEADER_ROW1_HEIGHT } from '@renderer/constants/layout';
 import { useStore } from '@renderer/store';
+import { formatShortcut } from '@renderer/utils/stringUtils';
 import { Bell, PanelLeft, Plus, RefreshCw, Search, Settings } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -339,7 +340,7 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
             onMouseEnter={() => setRefreshHover(true)}
             onMouseLeave={() => setRefreshHover(false)}
             onClick={handleRefresh}
-            title="Refresh Session (Cmd+R)"
+            title={`Refresh Session (${formatShortcut('R')})`}
           >
             <RefreshCw className="size-4" />
           </button>
@@ -376,7 +377,7 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
             color: searchHover ? 'var(--color-text)' : 'var(--color-text-muted)',
             backgroundColor: searchHover ? 'var(--color-surface-raised)' : 'transparent',
           }}
-          title="Search (Cmd+K)"
+          title={`Search (${formatShortcut('K')})`}
         >
           <Search className="size-4" />
         </button>
