@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 
+import { TooltipProvider } from '@renderer/components/ui/tooltip';
+
 import { ConfirmDialog } from './components/common/ConfirmDialog';
 import { ContextSwitchOverlay } from './components/common/ContextSwitchOverlay';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { TabbedLayout } from './components/layout/TabbedLayout';
-import { TooltipProvider } from './components/ui/tooltip';
 import { useTheme } from './hooks/useTheme';
 import { api } from './api';
 import { initializeNotificationListeners, useStore } from './store';

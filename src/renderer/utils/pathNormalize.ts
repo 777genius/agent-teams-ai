@@ -39,3 +39,18 @@ export function buildTaskCountsByTeam(tasks: GlobalTask[]): Map<string, TaskStat
   }
   return map;
 }
+
+/** Build a map of owner name (lowercase) -> task status counts (ignores deleted). */
+export function buildTaskCountsByOwner(
+  tasks: { owner?: string | null; status: string }[]
+): Map<string, TaskStatusCounts> {
+  const map = new Map<string, TaskStatusCounts>();
+  for (const task of tasks) {
+    const owner = task.owner?.trim();
+    if (!owner || task.status === 'deleted') continue;
+    const key = owner.toLowerCase();
+    const counts = map.get(key) ?? { pending: 0, inProgress: 0, completed: 0 };
+    map.set(key, incrementStatus(counts, task.status));
+  }
+  return map;
+}

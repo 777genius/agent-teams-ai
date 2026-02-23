@@ -110,11 +110,11 @@ export const MessagesFilterPopover = ({
       <PopoverContent align="end" className="w-72 p-0">
         <div className="border-b border-[var(--color-border)] p-3">
           <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-            Кто писал
+            From
           </p>
           <div className="max-h-40 space-y-1 overflow-y-auto">
             {fromOptions.length === 0 ? (
-              <p className="text-xs italic text-[var(--color-text-muted)]">Нет данных</p>
+              <p className="text-xs italic text-[var(--color-text-muted)]">No data</p>
             ) : (
               fromOptions.map((name) => (
                 <label
@@ -133,11 +133,11 @@ export const MessagesFilterPopover = ({
         </div>
         <div className="border-b border-[var(--color-border)] p-3">
           <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-            Кому писали
+            To
           </p>
           <div className="max-h-40 space-y-1 overflow-y-auto">
             {toOptions.length === 0 ? (
-              <p className="text-xs italic text-[var(--color-text-muted)]">Нет данных</p>
+              <p className="text-xs italic text-[var(--color-text-muted)]">No data</p>
             ) : (
               toOptions.map((name) => (
                 <label
@@ -159,10 +159,10 @@ export const MessagesFilterPopover = ({
             disabled={draftCount === 0}
             onClick={handleReset}
           >
-            Сбросить
+            Reset
           </Button>
           <Button size="sm" className="h-7 px-3 text-[11px]" onClick={handleSave}>
-            Сохранить
+            Save
           </Button>
         </div>
       </PopoverContent>
