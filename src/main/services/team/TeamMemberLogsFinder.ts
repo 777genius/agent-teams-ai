@@ -298,7 +298,7 @@ export class TeamMemberLogsFinder {
   } | null> {
     const discovery = await this.discoverProjectSessions(teamName);
     if (!discovery) return null;
-    const { config, knownMembers } = discovery;
+    const { config } = discovery;
     const leadMemberName =
       config.members?.find((m) => m?.agentType === 'team-lead')?.name?.trim() || 'team-lead';
     const isLeadMember = leadMemberName.toLowerCase() === memberName.trim().toLowerCase();
