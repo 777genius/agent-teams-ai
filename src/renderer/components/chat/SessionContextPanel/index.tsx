@@ -49,6 +49,7 @@ export const SessionContextPanel = ({
   onNavigateToUserGroup,
   totalSessionTokens,
   sessionMetrics,
+  onViewReport,
   phaseInfo,
   selectedPhase,
   onPhaseChange,
@@ -193,6 +194,7 @@ export const SessionContextPanel = ({
         totalSessionTokens={totalSessionTokens}
         sessionMetrics={sessionMetrics}
         onClose={onClose}
+        onViewReport={onViewReport}
         phaseInfo={phaseInfo}
         selectedPhase={selectedPhase}
         onPhaseChange={onPhaseChange}

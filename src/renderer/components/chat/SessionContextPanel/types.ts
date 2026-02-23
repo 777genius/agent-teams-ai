@@ -27,6 +27,8 @@ export interface SessionContextPanelProps {
   totalSessionTokens?: number;
   /** Full session metrics (input, output, cache tokens, cost) */
   sessionMetrics?: SessionMetrics;
+  /** Open the Session Report to see full cost breakdown */
+  onViewReport?: () => void;
   /** Phase information for phase selector */
   phaseInfo?: ContextPhaseInfo;
   /** Currently selected phase (null = current/latest) */

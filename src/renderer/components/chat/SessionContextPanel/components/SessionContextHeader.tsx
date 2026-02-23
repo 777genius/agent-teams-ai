@@ -29,6 +29,7 @@ interface SessionContextHeaderProps {
   totalSessionTokens?: number;
   sessionMetrics?: SessionMetrics;
   onClose?: () => void;
+  onViewReport?: () => void;
   phaseInfo?: ContextPhaseInfo;
   selectedPhase: number | null;
   onPhaseChange: (phase: number | null) => void;
@@ -42,6 +43,7 @@ export const SessionContextHeader = ({
   totalSessionTokens,
   sessionMetrics,
   onClose,
+  onViewReport,
   phaseInfo,
   selectedPhase,
   onPhaseChange,
@@ -132,6 +134,22 @@ export const SessionContextHeader = ({
               <span className="font-medium tabular-nums" style={{ color: COLOR_TEXT_SECONDARY }}>
                 {formatCostUsd(sessionMetrics.costUsd)}
               </span>
+              <span style={{ color: COLOR_TEXT_MUTED }}> (parent only</span>
+              {onViewReport ? (
+                <span>
+                  <span style={{ color: COLOR_TEXT_MUTED }}> · </span>
+                  <button
+                    onClick={onViewReport}
+                    className="underline"
+                    style={{ color: COLOR_TEXT_SECONDARY }}
+                  >
+                    view full cost
+                  </button>
+                  <span style={{ color: COLOR_TEXT_MUTED }}>)</span>
+                </span>
+              ) : (
+                <span style={{ color: COLOR_TEXT_MUTED }}>)</span>
+              )}
             </div>
           )}
         </div>

@@ -64,6 +64,7 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     syncSearchMatchesWithRendered,
     selectSearchMatch,
     setTabVisibleAIGroup,
+    openSessionReport,
   } = useStore(
     useShallow((s) => ({
       searchQuery: s.searchQuery,
@@ -76,6 +77,7 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
       syncSearchMatchesWithRendered: s.syncSearchMatchesWithRendered,
       selectSearchMatch: s.selectSearchMatch,
       setTabVisibleAIGroup: s.setTabVisibleAIGroup,
+      openSessionReport: s.openSessionReport,
     }))
   );
 
@@ -872,6 +874,7 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
               onNavigateToUserGroup={handleNavigateToUserGroup}
               totalSessionTokens={lastAiGroupTotalTokens}
               sessionMetrics={sessionDetail?.metrics}
+              onViewReport={effectiveTabId ? () => openSessionReport(effectiveTabId) : undefined}
               phaseInfo={sessionPhaseInfo ?? undefined}
               selectedPhase={selectedContextPhase}
               onPhaseChange={setSelectedContextPhase}
