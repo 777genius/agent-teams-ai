@@ -28,6 +28,7 @@ interface SessionContextHeaderProps {
   totalTokens: number;
   totalSessionTokens?: number;
   sessionMetrics?: SessionMetrics;
+  subagentCostUsd?: number;
   onClose?: () => void;
   onViewReport?: () => void;
   phaseInfo?: ContextPhaseInfo;
@@ -42,6 +43,7 @@ export const SessionContextHeader = ({
   totalTokens,
   totalSessionTokens,
   sessionMetrics,
+  subagentCostUsd,
   onClose,
   onViewReport,
   phaseInfo,
@@ -132,24 +134,30 @@ export const SessionContextHeader = ({
             <div className="col-span-2">
               <span style={{ color: COLOR_TEXT_MUTED }}>Session Cost: </span>
               <span className="font-medium tabular-nums" style={{ color: COLOR_TEXT_SECONDARY }}>
-                {formatCostUsd(sessionMetrics.costUsd)}
+                {formatCostUsd(sessionMetrics.costUsd + (subagentCostUsd ?? 0))}
               </span>
-              <span style={{ color: COLOR_TEXT_MUTED }}>
-                {' (parent only'}
-                {onViewReport && (
-                  <>
-                    {' · '}
-                    <button
-                      onClick={onViewReport}
-                      className="underline"
-                      style={{ color: COLOR_TEXT_SECONDARY }}
-                    >
-                      view full cost
-                    </button>
-                  </>
-                )}
-                {')'}
-              </span>
+              {subagentCostUsd !== undefined && subagentCostUsd > 0 && (
+                <span style={{ color: COLOR_TEXT_MUTED }}>
+                  {' ('}
+                  {formatCostUsd(sessionMetrics.costUsd)}
+                  {' parent + '}
+                  {formatCostUsd(subagentCostUsd)}
+                  {' subagents'}
+                  {onViewReport && (
+                    <>
+                      {' · '}
+                      <button
+                        onClick={onViewReport}
+                        className="underline"
+                        style={{ color: COLOR_TEXT_SECONDARY }}
+                      >
+                        details
+                      </button>
+                    </>
+                  )}
+                  {')'}
+                </span>
+              )}
             </div>
           )}
         </div>

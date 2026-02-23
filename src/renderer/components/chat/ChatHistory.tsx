@@ -102,6 +102,14 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     sessionDetail,
   } = tabData;
 
+  // Compute combined subagent cost from process metrics
+  const subagentCostUsd = useMemo(() => {
+    const processes = sessionDetail?.processes;
+    if (!processes || processes.length === 0) return undefined;
+    const total = processes.reduce((sum, p) => sum + (p.metrics.costUsd ?? 0), 0);
+    return total > 0 ? total : undefined;
+  }, [sessionDetail?.processes]);
+
   // State for Context button hover (local state OK - doesn't need per-tab isolation)
   const [isContextButtonHovered, setIsContextButtonHovered] = useState(false);
 
@@ -874,6 +882,7 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
               onNavigateToUserGroup={handleNavigateToUserGroup}
               totalSessionTokens={lastAiGroupTotalTokens}
               sessionMetrics={sessionDetail?.metrics}
+              subagentCostUsd={subagentCostUsd}
               onViewReport={effectiveTabId ? () => openSessionReport(effectiveTabId) : undefined}
               phaseInfo={sessionPhaseInfo ?? undefined}
               selectedPhase={selectedContextPhase}
