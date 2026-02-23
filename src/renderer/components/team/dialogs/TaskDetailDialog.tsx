@@ -13,8 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
+import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { markAsRead } from '@renderer/services/commentReadStorage';
 import {
+  agentAvatarUrl,
   KANBAN_COLUMN_DISPLAY,
   TASK_STATUS_LABELS,
   TASK_STATUS_STYLES,
@@ -98,6 +100,7 @@ export const TaskDetailDialog = ({
         t.id !== currentTask.id && Array.isArray(t.related) && t.related.includes(currentTask.id)
     )
     .map((t) => t.id);
+  const ownerMember = currentTask.owner ? members.find((m) => m.name === currentTask.owner) : null;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -121,11 +124,33 @@ export const TaskDetailDialog = ({
 
         {/* Metadata */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
-          <div className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
-            <User size={12} />
-            <span className="text-[var(--color-text-secondary)]">
-              {currentTask.owner ?? '\u2014'}
-            </span>
+          <div className="flex min-w-0 items-center gap-2">
+            {ownerMember ? (
+              <div
+                className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1"
+                style={{
+                  borderLeft: `3px solid ${getTeamColorSet(ownerMember.color ?? '').border}`,
+                  backgroundColor: getTeamColorSet(ownerMember.color ?? '').badge,
+                }}
+              >
+                <img
+                  src={agentAvatarUrl(ownerMember.name, 32)}
+                  alt={ownerMember.name}
+                  className="size-6 shrink-0 rounded-full bg-[var(--color-surface-raised)]"
+                  loading="lazy"
+                />
+                <span className="min-w-0 truncate font-medium text-[var(--color-text)]">
+                  {ownerMember.name}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
+                <User size={12} />
+                <span className="text-[var(--color-text-secondary)]">
+                  {currentTask.owner ?? '\u2014'}
+                </span>
+              </div>
+            )}
           </div>
           {currentTask.createdBy ? (
             <div className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
@@ -159,126 +184,128 @@ export const TaskDetailDialog = ({
           )}
         </CollapsibleTeamSection>
 
-        {/* Dependencies */}
-        {blockedByIds.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="inline-flex items-center gap-0.5 text-xs text-yellow-300">
-              <ArrowLeftFromLine size={12} />
-              Blocked by
-            </span>
-            {blockedByIds.map((id) => {
-              const depTask = taskMap.get(id);
-              const isCompleted = depTask?.status === 'completed';
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-                    isCompleted
-                      ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-                      : 'bg-yellow-500/15 text-yellow-300 hover:bg-yellow-500/25'
-                  } cursor-pointer`}
-                  title={depTask ? `#${id}: ${depTask.subject}` : `#${id}`}
-                  onClick={() => handleDependencyClick(id)}
-                >
-                  #{id}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-
-        {blocksIds.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="inline-flex items-center gap-0.5 text-xs text-blue-400">
-              <ArrowRightFromLine size={12} />
-              Blocks
-            </span>
-            {blocksIds.map((id) => {
-              const depTask = taskMap.get(id);
-              const isCompleted = depTask?.status === 'completed';
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-                    isCompleted
-                      ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-                      : 'bg-blue-500/15 text-blue-400 hover:bg-blue-500/25'
-                  } cursor-pointer`}
-                  title={depTask ? `#${id}: ${depTask.subject}` : `#${id}`}
-                  onClick={() => handleDependencyClick(id)}
-                >
-                  #{id}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-
-        {/* Related tasks (explicit) */}
-        {relatedIds.length > 0 || relatedByIds.length > 0 ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)]">
-              <Link2 size={12} />
-              Related tasks
-            </div>
-
-            {relatedIds.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-[var(--color-text-muted)]">Links</span>
-                {relatedIds.map((id) => {
-                  const depTask = taskMap.get(id);
-                  return (
-                    <button
-                      key={`related:${currentTask.id}:${id}`}
-                      type="button"
-                      className="inline-flex items-center rounded bg-purple-500/15 px-1.5 py-0.5 text-[10px] font-medium text-purple-300 transition-colors hover:bg-purple-500/25"
-                      title={depTask ? `#${id}: ${depTask.subject}` : `#${id}`}
-                      onClick={() => handleDependencyClick(id)}
-                    >
-                      #{id}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-
-            {relatedByIds.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-[var(--color-text-muted)]">Linked from</span>
-                {relatedByIds.map((id) => {
-                  const depTask = taskMap.get(id);
-                  return (
-                    <button
-                      key={`related-by:${currentTask.id}:${id}`}
-                      type="button"
-                      className="inline-flex items-center rounded bg-fuchsia-500/15 px-1.5 py-0.5 text-[10px] font-medium text-fuchsia-300 transition-colors hover:bg-fuchsia-500/25"
-                      title={depTask ? `#${id}: ${depTask.subject}` : `#${id}`}
-                      onClick={() => handleDependencyClick(id)}
-                    >
-                      #{id}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {/* Review info */}
-        {kanbanTaskState ? (
-          <div className="flex items-center gap-2">
-            {kanbanTaskState.reviewer ? (
-              <span className="text-xs text-[var(--color-text-secondary)]">
-                Reviewer: {kanbanTaskState.reviewer}
+        <div className="mb-3 space-y-2">
+          {/* Dependencies */}
+          {blockedByIds.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-0.5 text-xs text-yellow-300">
+                <ArrowLeftFromLine size={12} />
+                Blocked by
               </span>
-            ) : null}
-            {kanbanTaskState.errorDescription ? (
-              <span className="text-xs text-red-400">{kanbanTaskState.errorDescription}</span>
-            ) : null}
-          </div>
-        ) : null}
+              {blockedByIds.map((id) => {
+                const depTask = taskMap.get(id);
+                const isCompleted = depTask?.status === 'completed';
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                      isCompleted
+                        ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                        : 'bg-yellow-500/15 text-yellow-300 hover:bg-yellow-500/25'
+                    } cursor-pointer`}
+                    title={depTask ? `#${id}: ${depTask.subject}` : `#${id}`}
+                    onClick={() => handleDependencyClick(id)}
+                  >
+                    #{id}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {blocksIds.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-0.5 text-xs text-blue-400">
+                <ArrowRightFromLine size={12} />
+                Blocks
+              </span>
+              {blocksIds.map((id) => {
+                const depTask = taskMap.get(id);
+                const isCompleted = depTask?.status === 'completed';
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                      isCompleted
+                        ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                        : 'bg-blue-500/15 text-blue-400 hover:bg-blue-500/25'
+                    } cursor-pointer`}
+                    title={depTask ? `#${id}: ${depTask.subject}` : `#${id}`}
+                    onClick={() => handleDependencyClick(id)}
+                  >
+                    #{id}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {/* Related tasks (explicit) */}
+          {relatedIds.length > 0 || relatedByIds.length > 0 ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)]">
+                <Link2 size={12} />
+                Related tasks
+              </div>
+
+              {relatedIds.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-[var(--color-text-muted)]">Links</span>
+                  {relatedIds.map((id) => {
+                    const depTask = taskMap.get(id);
+                    return (
+                      <button
+                        key={`related:${currentTask.id}:${id}`}
+                        type="button"
+                        className="inline-flex items-center rounded bg-purple-500/15 px-1.5 py-0.5 text-[10px] font-medium text-purple-300 transition-colors hover:bg-purple-500/25"
+                        title={depTask ? `#${id}: ${depTask.subject}` : `#${id}`}
+                        onClick={() => handleDependencyClick(id)}
+                      >
+                        #{id}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+
+              {relatedByIds.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-[var(--color-text-muted)]">Linked from</span>
+                  {relatedByIds.map((id) => {
+                    const depTask = taskMap.get(id);
+                    return (
+                      <button
+                        key={`related-by:${currentTask.id}:${id}`}
+                        type="button"
+                        className="inline-flex items-center rounded bg-fuchsia-500/15 px-1.5 py-0.5 text-[10px] font-medium text-fuchsia-300 transition-colors hover:bg-fuchsia-500/25"
+                        title={depTask ? `#${id}: ${depTask.subject}` : `#${id}`}
+                        onClick={() => handleDependencyClick(id)}
+                      >
+                        #{id}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* Review info */}
+          {kanbanTaskState ? (
+            <div className="flex items-center gap-2">
+              {kanbanTaskState.reviewer ? (
+                <span className="text-xs text-[var(--color-text-secondary)]">
+                  Reviewer: {kanbanTaskState.reviewer}
+                </span>
+              ) : null}
+              {kanbanTaskState.errorDescription ? (
+                <span className="text-xs text-red-400">{kanbanTaskState.errorDescription}</span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
 
         {/* Comments */}
         <CollapsibleTeamSection

@@ -236,10 +236,7 @@ export const GlobalTaskList = ({
       </div>
 
       {/* Grouping mode */}
-      <div
-        className="flex shrink-0 items-center gap-2 border-b px-2 py-1"
-        style={{ borderColor: 'var(--color-border)' }}
-      >
+      <div className="flex shrink-0 items-center gap-2 px-2 py-1">
         <span className="shrink-0 text-[11px] text-text-muted">Group by:</span>
         <Select value={groupingMode} onValueChange={(v) => setGroupingMode(v as TaskGroupingMode)}>
           <SelectTrigger className="h-7 min-w-0 flex-1 border-[var(--color-border)] px-2 text-[11px]">

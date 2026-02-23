@@ -111,6 +111,18 @@ export const ActivityTimeline = ({
         memberInfo.set(m.agentType, info);
       }
     }
+    const leadMember = members.find(
+      (m) => m.agentType === 'team-lead' || m.role?.toLowerCase().includes('lead')
+    );
+    if (leadMember) {
+      const leadInfo = memberInfo.get(leadMember.name);
+      if (leadInfo) {
+        const teamLeadColor = leadInfo.color ?? getMemberColorByName('team-lead');
+        const resolvedLeadInfo = { role: leadInfo.role, color: teamLeadColor };
+        memberInfo.set('team-lead', resolvedLeadInfo);
+        memberInfo.set(leadMember.name, resolvedLeadInfo);
+      }
+    }
   }
 
   const handleMemberNameClick = (name: string): void => {
