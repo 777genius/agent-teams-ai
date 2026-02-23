@@ -9,10 +9,11 @@ import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 interface ActivityTimelineProps {
   messages: InboxMessage[];
   members?: ResolvedTeamMember[];
-  /** Set of message keys that have been read; messages not in this set show an unread dot. */
-  readSet?: Set<string>;
-  /** Function to get a stable key for a message (used with readSet). */
-  getMessageKey?: (message: InboxMessage) => string;
+  /**
+   * When provided, unread is derived from this set and getMessageKey.
+   * When omitted, unread is derived from message.read.
+   */
+  readState?: { readSet: Set<string>; getMessageKey: (message: InboxMessage) => string };
   onCreateTaskFromMessage?: (subject: string, description: string) => void;
   onReplyToMessage?: (message: InboxMessage) => void;
   onMemberClick?: (member: ResolvedTeamMember) => void;
@@ -92,8 +93,7 @@ const MessageRowWithObserver = ({
 export const ActivityTimeline = ({
   messages,
   members,
-  readSet,
-  getMessageKey,
+  readState,
   onCreateTaskFromMessage,
   onReplyToMessage,
   onMemberClick,
@@ -121,6 +121,13 @@ export const ActivityTimeline = ({
         const resolvedLeadInfo = { role: leadInfo.role, color: teamLeadColor };
         memberInfo.set('team-lead', resolvedLeadInfo);
         memberInfo.set(leadMember.name, resolvedLeadInfo);
+        if (
+          leadMember.agentType &&
+          leadMember.agentType !== 'team-lead' &&
+          leadMember.agentType !== leadMember.name
+        ) {
+          memberInfo.set(leadMember.agentType, resolvedLeadInfo);
+        }
       }
     }
   }
@@ -147,8 +154,9 @@ export const ActivityTimeline = ({
         const recipientColor =
           recipientInfo?.color ?? (message.to ? getMemberColorByName(message.to) : undefined);
         const messageKey = `${message.messageId ?? index}-${message.timestamp}-${message.from}`;
-        const isUnread =
-          readSet !== undefined && getMessageKey ? !readSet.has(getMessageKey(message)) : false;
+        const isUnread = readState
+          ? !readState.readSet.has(readState.getMessageKey(message))
+          : !message.read;
         return (
           <MessageRowWithObserver
             key={messageKey}

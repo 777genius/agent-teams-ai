@@ -723,8 +723,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         <ActivityTimeline
           messages={filteredMessages}
           members={data.members}
-          readSet={readSet}
-          getMessageKey={toMessageKey}
+          readState={{ readSet, getMessageKey: toMessageKey }}
           onMemberClick={setSelectedMember}
           onCreateTaskFromMessage={(subject, description) => {
             openCreateTaskDialog(subject, description);
