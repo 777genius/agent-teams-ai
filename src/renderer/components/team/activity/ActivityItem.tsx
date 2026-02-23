@@ -30,6 +30,8 @@ interface ActivityItemProps {
   memberRole?: string;
   memberColor?: string;
   recipientColor?: string;
+  /** When true, show a blue unread dot. */
+  isUnread?: boolean;
   onMemberNameClick?: (memberName: string) => void;
   onCreateTask?: (subject: string, description: string) => void;
   onReply?: (message: InboxMessage) => void;
@@ -127,6 +129,7 @@ export const ActivityItem = ({
   memberRole,
   memberColor,
   recipientColor,
+  isUnread,
   onMemberNameClick,
   onCreateTask,
   onReply,
@@ -175,7 +178,7 @@ export const ActivityItem = ({
   };
 
   const summaryText = message.summary || autoSummary || '';
-  const HeaderTag = systemLabel ? 'button' : 'div';
+  const isHeaderClickable = Boolean(systemLabel);
 
   return (
     <article
@@ -186,16 +189,18 @@ export const ActivityItem = ({
         borderLeft: `3px solid ${colors.border}`,
       }}
     >
-      {/* Header — clickable when system message to toggle expand */}
-      <HeaderTag
-        type={systemLabel ? 'button' : undefined}
+      {/* Header — div with role=button (cannot use <button> due to nested buttons inside) */}
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- role=button, tabIndex, onKeyDown below; nested buttons prevent using native button */}
+      <div
+        role={isHeaderClickable ? 'button' : undefined}
+        tabIndex={isHeaderClickable ? 0 : undefined}
         className={[
           'flex items-center gap-2 px-3 py-2',
-          systemLabel ? 'w-full cursor-pointer select-none border-0 bg-transparent text-left' : '',
+          isHeaderClickable ? 'cursor-pointer select-none' : '',
         ].join(' ')}
-        onClick={systemLabel ? () => setIsExpanded((v) => !v) : undefined}
+        onClick={isHeaderClickable ? () => setIsExpanded((v) => !v) : undefined}
         onKeyDown={
-          systemLabel
+          isHeaderClickable
             ? (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
@@ -205,6 +210,9 @@ export const ActivityItem = ({
             : undefined
         }
       >
+        {isUnread ? (
+          <span className="size-2 shrink-0 rounded-full bg-blue-500" title="Unread" aria-hidden />
+        ) : null}
         {/* Chevron for collapsible system messages */}
         {systemLabel ? (
           <ChevronRight
@@ -374,7 +382,7 @@ export const ActivityItem = ({
             {timestamp}
           </span>
         </div>
-      </HeaderTag>
+      </div>
 
       {/* Content — collapsed for system messages, expanded for others */}
       {isExpanded ? (

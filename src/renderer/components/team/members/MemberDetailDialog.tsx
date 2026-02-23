@@ -12,18 +12,20 @@ import { MemberMessagesTab } from './MemberMessagesTab';
 import { MemberStatsTab } from './MemberStatsTab';
 import { MemberTasksTab } from './MemberTasksTab';
 
-import type { InboxMessage, ResolvedTeamMember, TeamTask } from '@shared/types';
+import type { InboxMessage, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
 interface MemberDetailDialogProps {
   open: boolean;
   member: ResolvedTeamMember | null;
   teamName: string;
-  tasks: TeamTask[];
+  tasks: TeamTaskWithKanban[];
   messages: InboxMessage[];
+  isTeamAlive?: boolean;
+  isTeamProvisioning?: boolean;
   onClose: () => void;
   onSendMessage: () => void;
   onAssignTask: () => void;
-  onTaskClick: (task: TeamTask) => void;
+  onTaskClick: (task: TeamTaskWithKanban) => void;
 }
 
 export const MemberDetailDialog = ({
@@ -32,6 +34,8 @@ export const MemberDetailDialog = ({
   teamName,
   tasks,
   messages,
+  isTeamAlive,
+  isTeamProvisioning,
   onClose,
   onSendMessage,
   onAssignTask,
@@ -61,9 +65,13 @@ export const MemberDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className="min-w-0 overflow-hidden sm:max-w-4xl">
         <DialogHeader>
-          <MemberDetailHeader member={member} />
+          <MemberDetailHeader
+            member={member}
+            isTeamAlive={isTeamAlive}
+            isTeamProvisioning={isTeamProvisioning}
+          />
         </DialogHeader>
 
         <MemberDetailStats
@@ -110,7 +118,7 @@ export const MemberDetailDialog = ({
           <TabsContent value="stats">
             <MemberStatsTab teamName={teamName} memberName={member.name} />
           </TabsContent>
-          <TabsContent value="logs">
+          <TabsContent value="logs" className="min-w-0 overflow-hidden">
             <MemberLogsTab teamName={teamName} memberName={member.name} />
           </TabsContent>
         </Tabs>

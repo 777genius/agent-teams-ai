@@ -51,6 +51,7 @@ export class TeamTaskWriter {
         description: task.description ?? '',
         blocks: task.blocks ?? [],
         blockedBy: task.blockedBy ?? [],
+        related: task.related ?? [],
         createdAt: task.createdAt ?? new Date().toISOString(),
       };
 

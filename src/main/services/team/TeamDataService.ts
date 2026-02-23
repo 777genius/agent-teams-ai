@@ -38,6 +38,7 @@ import type {
   TeamSummary,
   TeamTask,
   TeamTaskStatus,
+  TeamTaskWithKanban,
   UpdateKanbanPatch,
 } from '@shared/types';
 
@@ -196,11 +197,17 @@ export class TeamDataService {
       }
     }
 
+    const tasksWithKanban: TeamTaskWithKanban[] = tasks.map((task) => {
+      const col = kanbanState.tasks[task.id]?.column;
+      const kanbanColumn = col === 'review' || col === 'approved' ? col : undefined;
+      return { ...task, kanbanColumn };
+    });
+
     const members = this.memberResolver.resolveMembers(
       config,
       metaMembers,
       inboxNames,
-      tasks,
+      tasksWithKanban,
       messages
     );
 
@@ -217,10 +224,16 @@ export class TeamDataService {
       }
     }
 
+    const tasksToReturn: TeamTaskWithKanban[] = tasks.map((task) => {
+      const col = kanbanState.tasks[task.id]?.column;
+      const kanbanColumn = col === 'review' || col === 'approved' ? col : undefined;
+      return { ...task, kanbanColumn };
+    });
+
     return {
       teamName,
       config,
-      tasks,
+      tasks: tasksToReturn,
       members,
       messages,
       kanbanState,
@@ -232,6 +245,7 @@ export class TeamDataService {
     const nextId = await this.taskReader.getNextTaskId(teamName);
 
     const blockedBy = request.blockedBy?.filter((id) => id.length > 0) ?? [];
+    const related = request.related?.filter((id) => id.length > 0 && id !== nextId) ?? [];
 
     let description = request.description
       ? `${request.subject}\n\n${request.description}`
@@ -262,6 +276,7 @@ export class TeamDataService {
       status: shouldStart ? 'in_progress' : 'pending',
       blocks: [],
       blockedBy,
+      related: related.length > 0 ? related : undefined,
       projectPath,
     };
 

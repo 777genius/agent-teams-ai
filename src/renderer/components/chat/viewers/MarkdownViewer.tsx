@@ -23,6 +23,7 @@ import {
   PROSE_TABLE_HEADER_BG,
 } from '@renderer/constants/cssVariables';
 import { useStore } from '@renderer/store';
+import { rehypePlugins } from '@renderer/utils/markdownPlugins';
 import { FileText } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 import { useShallow } from 'zustand/react/shallow';
@@ -137,7 +138,7 @@ function createViewerMarkdownComponents(searchCtx: SearchContext | null): Compon
       </del>
     ),
 
-    // Code: inline vs block detection
+    // Code: inline vs block detection (block code is highlighted by rehype-highlight; preserve hljs class)
     code: (props) => {
       const {
         className: codeClassName,
@@ -155,7 +156,10 @@ function createViewerMarkdownComponents(searchCtx: SearchContext | null): Compon
 
       if (isBlock) {
         return (
-          <code className="font-mono text-xs" style={{ color: COLOR_TEXT }}>
+          <code
+            className={`break-all font-mono text-xs ${codeClassName ?? ''}`.trim()}
+            style={{ color: COLOR_TEXT }}
+          >
             {hl(children)}
           </code>
         );
@@ -163,7 +167,7 @@ function createViewerMarkdownComponents(searchCtx: SearchContext | null): Compon
       // Inline code — no hl(); parent block element's hl() descends here
       return (
         <code
-          className="rounded px-1.5 py-0.5 font-mono text-xs"
+          className="break-all rounded px-1.5 py-0.5 font-mono text-xs"
           style={{
             backgroundColor: PROSE_CODE_BG,
             color: PROSE_CODE_TEXT,
@@ -177,7 +181,7 @@ function createViewerMarkdownComponents(searchCtx: SearchContext | null): Compon
     // Code blocks
     pre: ({ children }) => (
       <pre
-        className="my-3 overflow-x-auto rounded-lg p-3 text-xs leading-relaxed"
+        className="my-3 max-w-full overflow-x-auto rounded-lg p-3 text-xs leading-relaxed"
         style={{
           backgroundColor: PROSE_PRE_BG,
           border: `1px solid ${PROSE_PRE_BORDER}`,
@@ -296,7 +300,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
 
   return (
     <div
-      className={`overflow-hidden rounded-lg shadow-sm ${copyable && !label ? 'group relative' : ''} ${className}`}
+      className={`min-w-0 overflow-hidden rounded-lg shadow-sm ${copyable && !label ? 'group relative' : ''} ${className}`}
       style={{
         backgroundColor: CODE_BG,
         border: `1px solid ${CODE_BORDER}`,
@@ -328,9 +332,13 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
       )}
 
       {/* Markdown content with scroll */}
-      <div className={`overflow-auto ${maxHeight}`}>
-        <div className="p-4">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <div className={`min-w-0 overflow-auto ${maxHeight}`}>
+        <div className="min-w-0 break-words p-4">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={rehypePlugins}
+            components={components}
+          >
             {content}
           </ReactMarkdown>
         </div>

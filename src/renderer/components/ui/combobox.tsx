@@ -74,20 +74,21 @@ export const Combobox = ({
           className="flex size-full flex-col overflow-hidden rounded-md bg-[var(--color-surface)]"
           shouldFilter={false}
         >
-          <div className="flex items-center border-b border-[var(--color-border)] px-2">
+          <div className="flex items-center border-b border-[var(--color-border)]">
             <CommandPrimitive.Input
               value={search}
               onValueChange={setSearch}
               placeholder={searchPlaceholder}
-              className="flex h-8 w-full border-0 bg-transparent py-1 text-xs text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)]"
+              className="flex h-8 w-full border-0 bg-transparent px-2 py-1 text-xs text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)]"
             />
           </div>
           <CommandPrimitive.List
             id={listboxId}
-            className="max-h-72 overflow-y-auto overscroll-contain px-2 py-1"
+            className="max-h-72 overflow-y-auto overscroll-contain py-1 pl-0 pr-2"
+            style={{ paddingLeft: 0 }}
             onWheel={(e) => e.stopPropagation()}
           >
-            <CommandPrimitive.Empty className="px-2 py-4 text-center text-xs text-[var(--color-text-muted)]">
+            <CommandPrimitive.Empty className="py-4 pr-2 text-center text-xs text-[var(--color-text-muted)]">
               {emptyMessage}
             </CommandPrimitive.Empty>
             {options
@@ -112,6 +113,7 @@ export const Combobox = ({
                       setSearch('');
                     }}
                     className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-0 pr-2 text-xs outline-none data-[selected=true]:bg-[var(--color-surface-raised)] data-[selected=true]:text-[var(--color-text)]"
+                    style={{ paddingLeft: 0 }}
                   >
                     {renderOption ? (
                       renderOption(option, isSelected, search)

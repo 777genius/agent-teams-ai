@@ -3,18 +3,19 @@ import { getMemberColor } from '@shared/constants/memberColors';
 import { MemberCard } from './MemberCard';
 
 import type { TaskStatusCounts } from '@renderer/utils/pathNormalize';
-import type { ResolvedTeamMember, TeamTask } from '@shared/types';
+import type { ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
 interface MemberListProps {
   members: ResolvedTeamMember[];
   memberTaskCounts?: Map<string, TaskStatusCounts>;
-  taskMap?: Map<string, TeamTask>;
+  taskMap?: Map<string, TeamTaskWithKanban>;
   pendingRepliesByMember?: Record<string, number>;
   isTeamAlive?: boolean;
+  isTeamProvisioning?: boolean;
   onMemberClick?: (member: ResolvedTeamMember) => void;
   onSendMessage?: (member: ResolvedTeamMember) => void;
   onAssignTask?: (member: ResolvedTeamMember) => void;
-  onOpenTask?: (task: TeamTask) => void;
+  onOpenTask?: (task: TeamTaskWithKanban) => void;
 }
 
 export const MemberList = ({
@@ -23,6 +24,7 @@ export const MemberList = ({
   taskMap,
   pendingRepliesByMember,
   isTeamAlive,
+  isTeamProvisioning,
   onMemberClick,
   onSendMessage,
   onAssignTask,
@@ -49,6 +51,7 @@ export const MemberList = ({
             memberColor={member.color ?? getMemberColor(index)}
             taskCounts={memberTaskCounts?.get(member.name.toLowerCase())}
             isTeamAlive={isTeamAlive}
+            isTeamProvisioning={isTeamProvisioning}
             currentTask={currentTask}
             isAwaitingReply={awaitingReply}
             onOpenTask={currentTask ? () => onOpenTask?.(currentTask) : undefined}

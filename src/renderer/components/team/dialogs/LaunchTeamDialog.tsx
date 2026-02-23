@@ -16,14 +16,21 @@ import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { cn } from '@renderer/lib/utils';
+import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { Check, CheckCircle2, Loader2 } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { Project, TeamLaunchRequest, TeamProvisioningPrepareResult } from '@shared/types';
+import type {
+  Project,
+  ResolvedTeamMember,
+  TeamLaunchRequest,
+  TeamProvisioningPrepareResult,
+} from '@shared/types';
 
 interface LaunchTeamDialogProps {
   open: boolean;
   teamName: string;
+  members: ResolvedTeamMember[];
   defaultProjectPath?: string;
   provisioningError: string | null;
   onClose: () => void;
@@ -66,6 +73,7 @@ function renderHighlightedText(text: string, query: string): React.JSX.Element {
 export const LaunchTeamDialog = ({
   open,
   teamName,
+  members,
   defaultProjectPath,
   provisioningError,
   onClose,
@@ -198,12 +206,13 @@ export const LaunchTeamDialog = ({
 
   const mentionSuggestions = useMemo<MentionSuggestion[]>(
     () =>
-      projects.map((p) => ({
-        id: p.path,
-        name: p.name,
-        subtitle: p.path,
+      members.map((m) => ({
+        id: m.name,
+        name: m.name,
+        subtitle: formatAgentRole(m.role) ?? formatAgentRole(m.agentType) ?? undefined,
+        color: m.color,
       })),
-    [projects]
+    [members]
   );
 
   const activeError = localError ?? provisioningError;
@@ -381,7 +390,7 @@ export const LaunchTeamDialog = ({
               value={promptDraft.value}
               onValueChange={promptDraft.setValue}
               suggestions={mentionSuggestions}
-              placeholder="Instructions for team lead... Use @ to mention projects."
+              placeholder="Instructions for team lead... Use @ to mention team members."
               footerRight={
                 promptDraft.isSaved ? (
                   <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>

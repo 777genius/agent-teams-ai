@@ -17,12 +17,34 @@ import {
   WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL,
 } from '@shared/constants';
 import { createLogger } from '@shared/utils/logger';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
+const CONTEXT_CHANGED = 'context:changed';
+const SSH_STATUS = 'ssh:status';
+const TEAM_CHANGE = 'team:change';
+const WINDOW_FULLSCREEN_CHANGED = 'window:fullscreen-changed';
+
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
+import { HttpServer } from './services/infrastructure/HttpServer';
 import { getProjectsBasePath, getTodosBasePath } from './utils/pathDecoder';
+import {
+  configManager,
+  LocalFileSystemProvider,
+  MemberStatsComputer,
+  NotificationManager,
+  ServiceContext,
+  ServiceContextRegistry,
+  SshConnectionManager,
+  TeamAgentToolsInstaller,
+  TeamDataService,
+  TeamMemberLogsFinder,
+  TeamProvisioningService,
+  UpdaterService,
+} from './services';
+
+const logger = createLogger('App');
 
 // Window icon path for non-mac platforms.
 const getWindowIconPath = (): string | undefined => {
@@ -42,16 +64,6 @@ const getWindowIconPath = (): string | undefined => {
   return undefined;
 };
 
-const logger = createLogger('App');
-// IPC channel constants (duplicated from @preload to avoid boundary violation)
-const SSH_STATUS = 'ssh:status';
-const CONTEXT_CHANGED = 'context:changed';
-const WINDOW_FULLSCREEN_CHANGED = 'window:fullscreen-changed';
-const HTTP_SERVER_START = 'httpServer:start';
-const HTTP_SERVER_STOP = 'httpServer:stop';
-const HTTP_SERVER_GET_STATUS = 'httpServer:getStatus';
-const TEAM_CHANGE = 'team:change';
-
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled promise rejection in main process:', reason);
 });
@@ -59,22 +71,6 @@ process.on('unhandledRejection', (reason) => {
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught exception in main process:', error);
 });
-
-import { HttpServer } from './services/infrastructure/HttpServer';
-import {
-  configManager,
-  LocalFileSystemProvider,
-  MemberStatsComputer,
-  NotificationManager,
-  ServiceContext,
-  ServiceContextRegistry,
-  SshConnectionManager,
-  TeamAgentToolsInstaller,
-  TeamDataService,
-  TeamMemberLogsFinder,
-  TeamProvisioningService,
-  UpdaterService,
-} from './services';
 
 // =============================================================================
 // Application State
@@ -334,46 +330,12 @@ function initializeServices(): void {
       onClaudeRootPathUpdated: (_claudeRootPath: string | null) => {
         reconfigureLocalContextForClaudeRoot();
       },
+    },
+    {
+      httpServer,
+      startHttpServer: () => startHttpServer(handleModeSwitch),
     }
   );
-
-  // HTTP Server control IPC handlers
-  ipcMain.handle(HTTP_SERVER_START, async () => {
-    try {
-      if (httpServer.isRunning()) {
-        return { success: true, data: { running: true, port: httpServer.getPort() } };
-      }
-      await startHttpServer(handleModeSwitch);
-      // Persist the enabled state
-      configManager.updateConfig('httpServer', { enabled: true, port: httpServer.getPort() });
-      return { success: true, data: { running: true, port: httpServer.getPort() } };
-    } catch (error) {
-      logger.error('Failed to start HTTP server via IPC:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to start server',
-      };
-    }
-  });
-
-  ipcMain.handle(HTTP_SERVER_STOP, async () => {
-    try {
-      await httpServer.stop();
-      // Persist the disabled state
-      configManager.updateConfig('httpServer', { enabled: false });
-      return { success: true, data: { running: false, port: httpServer.getPort() } };
-    } catch (error) {
-      logger.error('Failed to stop HTTP server via IPC:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to stop server',
-      };
-    }
-  });
-
-  ipcMain.handle(HTTP_SERVER_GET_STATUS, () => {
-    return { success: true, data: { running: httpServer.isRunning(), port: httpServer.getPort() } };
-  });
 
   // Forward SSH state changes to renderer and HTTP SSE clients
   sshConnectionManager.on('state-change', (status: unknown) => {
@@ -450,6 +412,10 @@ function shutdownServices(): void {
   if (todoChangeCleanup) {
     todoChangeCleanup();
     todoChangeCleanup = null;
+  }
+  if (teamChangeCleanup) {
+    teamChangeCleanup();
+    teamChangeCleanup = null;
   }
 
   // Dispose all contexts (including local)

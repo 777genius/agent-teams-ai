@@ -105,6 +105,9 @@ export class TeamTaskReader {
             : 'pending',
           blocks: Array.isArray(parsed.blocks) ? (parsed.blocks as string[]) : undefined,
           blockedBy: Array.isArray(parsed.blockedBy) ? (parsed.blockedBy as string[]) : undefined,
+          related: Array.isArray(parsed.related)
+            ? (parsed.related as unknown[]).filter((id): id is string => typeof id === 'string')
+            : undefined,
           createdAt,
           projectPath: typeof parsed.projectPath === 'string' ? parsed.projectPath : undefined,
           comments: Array.isArray(parsed.comments)

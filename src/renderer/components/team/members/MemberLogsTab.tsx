@@ -154,7 +154,7 @@ export const MemberLogsTab = ({
   }
 
   return (
-    <div className="max-h-[400px] min-w-0 space-y-1.5 overflow-y-auto overflow-x-hidden pr-1">
+    <div className="max-h-[400px] w-full min-w-0 space-y-1.5 overflow-y-auto overflow-x-hidden pr-1">
       {logs.map((log) => (
         <LogCard
           key={
@@ -251,7 +251,7 @@ const LogCard = ({
             </div>
           )}
           {!detailLoading && detailChunks && (
-            <div className="max-h-[360px] min-w-0 overflow-y-auto overflow-x-hidden pr-1">
+            <div className="max-h-[360px] w-full min-w-0 overflow-y-auto overflow-x-hidden pr-1">
               <MemberExecutionLog
                 chunks={detailChunks}
                 memberName={log.kind === 'lead_session' ? (log.memberName ?? undefined) : undefined}

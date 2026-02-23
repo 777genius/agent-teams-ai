@@ -1,7 +1,7 @@
 import { useUnreadCommentCount } from '@renderer/hooks/useUnreadCommentCount';
 import { useStore } from '@renderer/store';
 import { format, isThisYear, isToday, isYesterday } from 'date-fns';
-import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
+import { CheckCircle2, Circle, Eye, Loader2, ShieldCheck } from 'lucide-react';
 
 import type { GlobalTask, TeamTaskStatus } from '@shared/types';
 import type { LucideIcon } from 'lucide-react';
@@ -30,7 +30,12 @@ interface SidebarTaskItemProps {
 export const SidebarTaskItem = ({ task }: SidebarTaskItemProps): React.JSX.Element => {
   const openTeamTab = useStore((s) => s.openTeamTab);
   const unreadCount = useUnreadCommentCount(task.teamName, task.id, task.comments);
-  const cfg = statusConfig[task.status] ?? statusConfig.pending;
+  const cfg =
+    task.kanbanColumn === 'approved'
+      ? ({ icon: ShieldCheck, color: 'text-emerald-400', label: 'approved' } as const)
+      : task.kanbanColumn === 'review'
+        ? ({ icon: Eye, color: 'text-amber-400', label: 'in review' } as const)
+        : (statusConfig[task.status] ?? statusConfig.pending);
   const StatusIcon = cfg.icon;
   const dateLabel = formatTaskDate(task.createdAt);
 

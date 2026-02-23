@@ -2,6 +2,7 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 
 import { useStore } from '@renderer/store';
+import { rehypePlugins } from '@renderer/utils/markdownPlugins';
 import { AlertTriangle, CheckCircle, FileCheck, XCircle } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 import { useShallow } from 'zustand/react/shallow';
@@ -88,7 +89,11 @@ export const LastOutputDisplay = ({
 
         {/* Content - scrollable */}
         <div className="max-h-96 overflow-y-auto px-4 py-3" data-search-content>
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={rehypePlugins}
+            components={mdComponents}
+          >
             {textContent}
           </ReactMarkdown>
         </div>
@@ -231,7 +236,11 @@ export const LastOutputDisplay = ({
 
           {/* Plan content - scrollable */}
           <div className="max-h-96 overflow-y-auto px-4 py-3">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={rehypePlugins}
+              components={mdComponents}
+            >
               {planContent}
             </ReactMarkdown>
           </div>

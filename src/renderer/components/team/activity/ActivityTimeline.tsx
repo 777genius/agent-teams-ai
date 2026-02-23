@@ -9,6 +9,10 @@ import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 interface ActivityTimelineProps {
   messages: InboxMessage[];
   members?: ResolvedTeamMember[];
+  /** Set of message keys that have been read; messages not in this set show an unread dot. */
+  readSet?: Set<string>;
+  /** Function to get a stable key for a message (used with readSet). */
+  getMessageKey?: (message: InboxMessage) => string;
   onCreateTaskFromMessage?: (subject: string, description: string) => void;
   onReplyToMessage?: (message: InboxMessage) => void;
   onMemberClick?: (member: ResolvedTeamMember) => void;
@@ -23,6 +27,7 @@ const MessageRowWithObserver = ({
   memberRole,
   memberColor,
   recipientColor,
+  isUnread,
   onMemberNameClick,
   onCreateTask,
   onReply,
@@ -32,6 +37,7 @@ const MessageRowWithObserver = ({
   memberRole?: string;
   memberColor?: string;
   recipientColor?: string;
+  isUnread?: boolean;
   onMemberNameClick?: (name: string) => void;
   onCreateTask?: (subject: string, description: string) => void;
   onReply?: (message: InboxMessage) => void;
@@ -74,6 +80,7 @@ const MessageRowWithObserver = ({
         memberRole={memberRole}
         memberColor={memberColor}
         recipientColor={recipientColor}
+        isUnread={isUnread}
         onMemberNameClick={onMemberNameClick}
         onCreateTask={onCreateTask}
         onReply={onReply}
@@ -85,6 +92,8 @@ const MessageRowWithObserver = ({
 export const ActivityTimeline = ({
   messages,
   members,
+  readSet,
+  getMessageKey,
   onCreateTaskFromMessage,
   onReplyToMessage,
   onMemberClick,
@@ -126,6 +135,8 @@ export const ActivityTimeline = ({
         const recipientColor =
           recipientInfo?.color ?? (message.to ? getMemberColorByName(message.to) : undefined);
         const messageKey = `${message.messageId ?? index}-${message.timestamp}-${message.from}`;
+        const isUnread =
+          readSet !== undefined && getMessageKey ? !readSet.has(getMessageKey(message)) : false;
         return (
           <MessageRowWithObserver
             key={messageKey}
@@ -133,6 +144,7 @@ export const ActivityTimeline = ({
             memberRole={info?.role}
             memberColor={info?.color}
             recipientColor={recipientColor}
+            isUnread={isUnread}
             onMemberNameClick={onMemberClick ? handleMemberNameClick : undefined}
             onCreateTask={onCreateTaskFromMessage}
             onReply={onReplyToMessage}

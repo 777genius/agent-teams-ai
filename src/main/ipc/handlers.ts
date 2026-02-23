@@ -11,6 +11,7 @@
  * - notifications.ts: Notification management
  * - config.ts: App configuration
  * - ssh.ts: SSH connection management
+ * - httpServer.ts: HTTP sidecar server control
  */
 
 import { createLogger } from '@shared/utils/logger';
@@ -22,6 +23,11 @@ import {
   registerContextHandlers,
   removeContextHandlers,
 } from './context';
+import {
+  initializeHttpServerHandlers,
+  registerHttpServerHandlers,
+  removeHttpServerHandlers,
+} from './httpServer';
 
 const logger = createLogger('IPC:handlers');
 import { registerNotificationHandlers, removeNotificationHandlers } from './notifications';
@@ -62,6 +68,7 @@ import type {
   TeamProvisioningService,
   UpdaterService,
 } from '../services';
+import type { HttpServer } from '../services/infrastructure/HttpServer';
 
 /**
  * Initializes IPC handlers with service registry.
@@ -78,6 +85,10 @@ export function initializeIpcHandlers(
     rewire: (context: ServiceContext) => void;
     full: (context: ServiceContext) => void;
     onClaudeRootPathUpdated: (claudeRootPath: string | null) => Promise<void> | void;
+  },
+  httpServerDeps?: {
+    httpServer: HttpServer;
+    startHttpServer: () => Promise<void>;
   }
 ): void {
   // Initialize domain handlers with registry
@@ -97,6 +108,9 @@ export function initializeIpcHandlers(
   initializeConfigHandlers({
     onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,
   });
+  if (httpServerDeps) {
+    initializeHttpServerHandlers(httpServerDeps.httpServer, httpServerDeps.startHttpServer);
+  }
 
   // Register all handlers
   registerProjectHandlers(ipcMain);
@@ -112,6 +126,9 @@ export function initializeIpcHandlers(
   registerContextHandlers(ipcMain);
   registerTeamHandlers(ipcMain);
   registerWindowHandlers(ipcMain);
+  if (httpServerDeps) {
+    registerHttpServerHandlers(ipcMain);
+  }
 
   logger.info('All handlers registered');
 }
@@ -134,6 +151,7 @@ export function removeIpcHandlers(): void {
   removeContextHandlers(ipcMain);
   removeTeamHandlers(ipcMain);
   removeWindowHandlers(ipcMain);
+  removeHttpServerHandlers(ipcMain);
 
   logger.info('All handlers removed');
 }

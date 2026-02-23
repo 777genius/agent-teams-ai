@@ -7,12 +7,18 @@ import type { ResolvedTeamMember } from '@shared/types';
 
 interface MemberDetailHeaderProps {
   member: ResolvedTeamMember;
+  isTeamAlive?: boolean;
+  isTeamProvisioning?: boolean;
 }
 
-export const MemberDetailHeader = ({ member }: MemberDetailHeaderProps): React.JSX.Element => {
+export const MemberDetailHeader = ({
+  member,
+  isTeamAlive,
+  isTeamProvisioning,
+}: MemberDetailHeaderProps): React.JSX.Element => {
   const role = member.role || formatAgentRole(member.agentType);
-  const presenceLabel = getPresenceLabel(member);
-  const dotClass = getMemberDotClass(member);
+  const presenceLabel = getPresenceLabel(member, isTeamAlive, isTeamProvisioning);
+  const dotClass = getMemberDotClass(member, isTeamAlive, isTeamProvisioning);
 
   return (
     <div className="flex items-center gap-3">
@@ -25,7 +31,7 @@ export const MemberDetailHeader = ({ member }: MemberDetailHeaderProps): React.J
         />
         <span
           className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-[var(--color-surface)] ${dotClass}`}
-          aria-label={member.status}
+          aria-label={presenceLabel}
         />
       </div>
       <div className="min-w-0 flex-1">

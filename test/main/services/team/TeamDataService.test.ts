@@ -163,4 +163,45 @@ describe('TeamDataService', () => {
       expect.objectContaining({ status: 'pending', owner: 'alice', createdBy: 'user' })
     );
   });
+
+  it('persists explicit related task links when creating a task', async () => {
+    const createTaskMock = vi.fn(async () => undefined);
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [] })),
+      } as never,
+      {
+        getNextTaskId: vi.fn(async () => '3'),
+        getTasks: vi.fn(async () => []),
+      } as never,
+      {
+        listInboxNames: vi.fn(async () => []),
+        getMessages: vi.fn(async () => []),
+      } as never,
+      {} as never,
+      {
+        createTask: createTaskMock,
+        addBlocksEntry: vi.fn(async () => undefined),
+      } as never,
+      {
+        resolveMembers: vi.fn(() => []),
+      } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
+        garbageCollect: vi.fn(async () => undefined),
+      } as never
+    );
+
+    const result = await service.createTask('my-team', {
+      subject: 'Review work task',
+      related: ['1', '2'],
+    });
+
+    expect(result.related).toEqual(['1', '2']);
+    expect(createTaskMock).toHaveBeenCalledWith(
+      'my-team',
+      expect.objectContaining({ related: ['1', '2'] })
+    );
+  });
 });

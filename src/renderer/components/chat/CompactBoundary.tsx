@@ -10,6 +10,7 @@ import {
   TOOL_CALL_BORDER,
   TOOL_CALL_TEXT,
 } from '@renderer/constants/cssVariables';
+import { rehypePlugins } from '@renderer/utils/markdownPlugins';
 import { formatTokensCompact as formatTokens } from '@shared/utils/tokenFormatting';
 import { format } from 'date-fns';
 import { ChevronRight, Layers } from 'lucide-react';
@@ -146,7 +147,11 @@ export const CompactBoundary = ({
             style={{ borderColor: 'var(--chat-ai-border)' }}
           >
             {compactContent ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={rehypePlugins}
+                components={markdownComponents}
+              >
                 {compactContent}
               </ReactMarkdown>
             ) : (

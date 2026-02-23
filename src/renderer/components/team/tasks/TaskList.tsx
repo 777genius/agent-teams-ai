@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react';
 
 import { TaskRow } from './TaskRow';
 
-import type { TeamTask } from '@shared/types';
+import type { TeamTaskWithKanban } from '@shared/types';
 
 interface TaskListProps {
-  tasks: TeamTask[];
+  tasks: TeamTaskWithKanban[];
 }
 
 export const TaskList = ({ tasks }: TaskListProps): React.JSX.Element => {

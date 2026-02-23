@@ -23,6 +23,8 @@ interface TaskCommentsSectionProps {
   taskId: string;
   comments: TaskComment[];
   members: ResolvedTeamMember[];
+  /** When true, the "Comments" header is not rendered (e.g. inside a collapsible section). */
+  hideHeader?: boolean;
 }
 
 export const TaskCommentsSection = ({
@@ -30,6 +32,7 @@ export const TaskCommentsSection = ({
   taskId,
   comments,
   members,
+  hideHeader = false,
 }: TaskCommentsSectionProps): React.JSX.Element => {
   const addTaskComment = useStore((s) => s.addTaskComment);
   const addingComment = useStore((s) => s.addingComment);
@@ -78,23 +81,22 @@ export const TaskCommentsSection = ({
 
   return (
     <div ref={commentsRef}>
-      <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)]">
-        <MessageSquare size={12} />
-        Comments
-        {comments.length > 0 ? (
-          <span className="rounded-full bg-[var(--color-surface-raised)] px-1.5 py-0 text-[10px]">
-            {comments.length}
-          </span>
-        ) : null}
-      </div>
+      {!hideHeader ? (
+        <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)]">
+          <MessageSquare size={12} />
+          Comments
+          {comments.length > 0 ? (
+            <span className="rounded-full bg-[var(--color-surface-raised)] px-1.5 py-0 text-[10px]">
+              {comments.length}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       {comments.length > 0 ? (
         <div className="mb-3 space-y-2">
           {comments.map((comment) => (
-            <div
-              key={comment.id}
-              className="group rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5"
-            >
+            <div key={comment.id} className="group p-2.5">
               <div className="mb-1 flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
                 <span
                   className="font-medium"

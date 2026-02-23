@@ -64,9 +64,20 @@ export interface TeamTask {
   status: TeamTaskStatus;
   blocks?: string[];
   blockedBy?: string[];
+  /**
+   * Explicit task links (non-blocking). Used for navigation between related tasks,
+   * e.g. "review task" ↔ "work task".
+   */
+  related?: string[];
   createdAt?: string;
   projectPath?: string;
   comments?: TaskComment[];
+}
+
+/** Task enriched for UI/DTO use (overlay from kanban-state.json). */
+export interface TeamTaskWithKanban extends TeamTask {
+  /** Set when task is in team kanban (review or approved column). */
+  kanbanColumn?: 'review' | 'approved';
 }
 
 export interface InboxMessage {
@@ -130,7 +141,7 @@ export interface ResolvedTeamMember {
 export interface TeamData {
   teamName: string;
   config: TeamConfig;
-  tasks: TeamTask[];
+  tasks: TeamTaskWithKanban[];
   members: ResolvedTeamMember[];
   messages: InboxMessage[];
   kanbanState: KanbanState;
@@ -153,6 +164,7 @@ export interface CreateTaskRequest {
   description?: string;
   owner?: string;
   blockedBy?: string[];
+  related?: string[];
   prompt?: string;
   startImmediately?: boolean;
 }
@@ -220,12 +232,10 @@ export interface TeamProvisioningProgress {
   cliLogsTail?: string;
 }
 
-export interface GlobalTask extends TeamTask {
+export interface GlobalTask extends TeamTaskWithKanban {
   teamName: string;
   teamDisplayName: string;
   projectPath?: string;
-  /** Set when task is in team kanban (review or approved column). */
-  kanbanColumn?: 'review' | 'approved';
 }
 
 export interface MemberSubagentSummary {

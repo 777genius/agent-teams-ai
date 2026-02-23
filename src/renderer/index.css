@@ -383,6 +383,64 @@
   --skeleton-base-dim: rgba(205, 208, 215, 0.6);
 }
 
+/* rehype-highlight (highlight.js) — map hljs classes to app theme variables */
+.hljs {
+  color: var(--color-text);
+  background: transparent;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-addition {
+  color: var(--syntax-keyword);
+}
+.hljs-string,
+.hljs-doctag {
+  color: var(--syntax-string);
+}
+.hljs-comment,
+.hljs-quote {
+  color: var(--syntax-comment);
+  font-style: italic;
+}
+.hljs-number,
+.hljs-literal {
+  color: var(--syntax-number);
+}
+.hljs-built_in,
+.hljs-type,
+.hljs-class .hljs-title {
+  color: var(--syntax-type);
+}
+.hljs-title.function_,
+.hljs-function .hljs-title {
+  color: var(--syntax-function);
+}
+.hljs-params,
+.hljs-attr,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-attribute {
+  color: var(--color-text);
+}
+.hljs-symbol,
+.hljs-bullet,
+.hljs-subst,
+.hljs-meta,
+.hljs-meta .hljs-keyword,
+.hljs-selector-attr,
+.hljs-selector-pseudo,
+.hljs-link,
+.hljs-regexp {
+  color: var(--syntax-operator);
+}
+.hljs-deletion {
+  color: var(--diff-removed-text);
+}
+.hljs-section {
+  font-weight: 600;
+  color: var(--syntax-keyword);
+}
+
 * {
   margin: 0;
   padding: 0;

@@ -1,6 +1,9 @@
 import { api } from '@renderer/api';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
+import { createLogger } from '@shared/utils/logger';
+
+const logger = createLogger('teamSlice');
 
 import type { AppState } from '../types';
 import type {
@@ -250,9 +253,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         }
       }
     } catch (error) {
-      // If provisioning is in progress for this team, stay in loading state
-      // instead of showing an error — the file watcher / progress callback will
-      // trigger a refresh once config.json is written.
+      // If provisioning is in progress for this team, stay in loading state;
+      // file watcher / progress callback will refresh once config is written.
       const isProvisioning = Object.values(get().provisioningRuns).some(
         (run) =>
           run.teamName === teamName &&
@@ -268,15 +270,17 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         return;
       }
 
+      const message =
+        error instanceof IpcError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : 'Failed to fetch team data';
+      logger.error(`[team:getData] ${message}`);
       set({
         selectedTeamLoading: false,
         selectedTeamData: null,
-        selectedTeamError:
-          error instanceof IpcError
-            ? error.message
-            : error instanceof Error
-              ? error.message
-              : 'Failed to fetch team data',
+        selectedTeamError: message,
       });
     }
   },

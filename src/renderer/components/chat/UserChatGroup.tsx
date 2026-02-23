@@ -4,6 +4,7 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import { api } from '@renderer/api';
 import { useTabUI } from '@renderer/hooks/useTabUI';
 import { useStore } from '@renderer/store';
+import { rehypePlugins } from '@renderer/utils/markdownPlugins';
 import { createLogger } from '@shared/utils/logger';
 import { format } from 'date-fns';
 import { User } from 'lucide-react';
@@ -204,7 +205,10 @@ function createUserMarkdownComponents(
 
       if (isBlock) {
         return (
-          <code className="block font-mono text-xs" style={{ color: userTextColor }}>
+          <code
+            className={`block font-mono text-xs ${className ?? ''}`.trim()}
+            style={{ color: userTextColor }}
+          >
             {hl(children)}
           </code>
         );
@@ -442,7 +446,11 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
             <CopyButton text={textContent} bgColor="var(--chat-user-bg)" />
 
             <div className="text-sm" style={{ color: 'var(--chat-user-text)' }} data-search-content>
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={userMarkdownComponents}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={rehypePlugins}
+                components={userMarkdownComponents}
+              >
                 {displayText}
               </ReactMarkdown>
             </div>

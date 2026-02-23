@@ -1,22 +1,55 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
 import { normalizePath } from '@renderer/utils/pathNormalize';
-import { getNonEmptyTaskCategories, groupTasksByDate } from '@renderer/utils/taskGrouping';
+import {
+  getNonEmptyTaskCategories,
+  groupTasksByDate,
+  groupTasksByProject,
+} from '@renderer/utils/taskGrouping';
 import { ListTodo, Search, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { SidebarTaskItem } from './SidebarTaskItem';
+import { TaskFiltersPopover } from './TaskFiltersPopover';
 import {
   defaultTaskFiltersState,
   getTaskUnreadCount,
-  TaskFiltersPopover,
   taskMatchesStatus,
   useReadStateSnapshot,
-} from './TaskFiltersPopover';
+} from './taskFiltersState';
 
-import type { TaskFiltersState } from './TaskFiltersPopover';
+import type { TaskFiltersState } from './taskFiltersState';
 import type { GlobalTask } from '@shared/types';
+
+const TASK_GROUPING_STORAGE_KEY = 'sidebarTasksGrouping';
+
+export type TaskGroupingMode = 'project' | 'time';
+
+function loadGroupingMode(): TaskGroupingMode {
+  try {
+    const v = localStorage.getItem(TASK_GROUPING_STORAGE_KEY);
+    if (v === 'project' || v === 'time') return v;
+  } catch {
+    /* ignore */
+  }
+  return 'project';
+}
+
+function saveGroupingMode(mode: TaskGroupingMode): void {
+  try {
+    localStorage.setItem(TASK_GROUPING_STORAGE_KEY, mode);
+  } catch {
+    /* ignore */
+  }
+}
 
 export interface GlobalTaskListProps {
   /** When true, do not render the header row (Tasks + Filters); parent renders tabs and filters. */
@@ -90,9 +123,15 @@ export const GlobalTaskList = ({
   const filtersPopoverOpen = externalFiltersPopoverOpen ?? internalFiltersPopoverOpen;
   const setFiltersPopoverOpen = externalOnFiltersPopoverOpenChange ?? setInternalFiltersPopoverOpen;
   const [searchQuery, setSearchQuery] = useState('');
+  const [groupingMode, setGroupingModeState] = useState<TaskGroupingMode>(loadGroupingMode);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const hasFetchedRef = useRef(false);
   const readState = useReadStateSnapshot();
+
+  const setGroupingMode = (mode: TaskGroupingMode): void => {
+    setGroupingModeState(mode);
+    saveGroupingMode(mode);
+  };
 
   useEffect(() => {
     if (!hasFetchedRef.current) {
@@ -144,6 +183,10 @@ export const GlobalTaskList = ({
 
   const grouped = useMemo(() => groupTasksByDate(filtered), [filtered]);
   const categories = useMemo(() => getNonEmptyTaskCategories(grouped), [grouped]);
+  const projectGroups = useMemo(() => groupTasksByProject(filtered), [filtered]);
+
+  const hasContent =
+    groupingMode === 'time' ? categories.length > 0 : projectGroups.some((g) => g.tasks.length > 0);
 
   return (
     <div className="flex size-full min-w-0 flex-col">
@@ -192,6 +235,23 @@ export const GlobalTaskList = ({
         )}
       </div>
 
+      {/* Grouping mode */}
+      <div
+        className="flex shrink-0 items-center gap-2 border-b px-2 py-1"
+        style={{ borderColor: 'var(--color-border)' }}
+      >
+        <span className="shrink-0 text-[11px] text-text-muted">Group by:</span>
+        <Select value={groupingMode} onValueChange={(v) => setGroupingMode(v as TaskGroupingMode)}>
+          <SelectTrigger className="h-7 min-w-0 flex-1 border-[var(--color-border)] px-2 text-[11px]">
+            <SelectValue placeholder="Group by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="project">Project</SelectItem>
+            <SelectItem value="time">Time</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         {globalTasksLoading && globalTasks.length === 0 && (
@@ -202,7 +262,7 @@ export const GlobalTaskList = ({
           </div>
         )}
 
-        {!globalTasksLoading && categories.length === 0 && (
+        {!globalTasksLoading && !hasContent && (
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-text-muted">
             <ListTodo className="size-8 opacity-40" />
             <span className="text-[12px]">
@@ -211,38 +271,68 @@ export const GlobalTaskList = ({
           </div>
         )}
 
-        {categories.map((category) => {
-          const tasks = grouped[category];
-          let lastTeam: string | null = null;
-
-          return (
-            <div key={category}>
-              {/* Date header */}
-              <div
-                className="sticky top-0 z-10 px-3 py-1.5 text-[11px] font-semibold text-text-secondary"
-                style={{ backgroundColor: 'var(--color-surface-sidebar)' }}
-              >
-                {dateCategoryLabels[category] ?? category}
+        {groupingMode === 'project' &&
+          projectGroups.map((group) => {
+            if (group.tasks.length === 0) return null;
+            let lastTeam: string | null = null;
+            return (
+              <div key={group.projectKey}>
+                <div
+                  className="sticky top-0 z-10 px-3 py-1.5 text-[11px] font-semibold text-text-secondary"
+                  style={{ backgroundColor: 'var(--color-surface-sidebar)' }}
+                >
+                  {group.projectLabel}
+                </div>
+                {group.tasks.map((task) => {
+                  const showTeamHeader = task.teamName !== lastTeam;
+                  lastTeam = task.teamName;
+                  return (
+                    <div key={`${task.teamName}-${task.id}`}>
+                      {showTeamHeader && (
+                        <div className="px-3 pb-0.5 pt-1.5 text-[10px] font-medium text-text-muted">
+                          Team: {task.teamDisplayName}
+                        </div>
+                      )}
+                      <SidebarTaskItem task={task} />
+                    </div>
+                  );
+                })}
               </div>
+            );
+          })}
 
-              {tasks.map((task) => {
-                const showTeamHeader = task.teamName !== lastTeam;
-                lastTeam = task.teamName;
+        {groupingMode === 'time' &&
+          categories.map((category) => {
+            const tasks = grouped[category];
+            let lastTeam: string | null = null;
 
-                return (
-                  <div key={`${task.teamName}-${task.id}`}>
-                    {showTeamHeader && (
-                      <div className="px-3 pb-0.5 pt-1.5 text-[10px] font-medium text-text-muted">
-                        Team: {task.teamDisplayName}
-                      </div>
-                    )}
-                    <SidebarTaskItem task={task} />
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
+            return (
+              <div key={category}>
+                <div
+                  className="sticky top-0 z-10 px-3 py-1.5 text-[11px] font-semibold text-text-secondary"
+                  style={{ backgroundColor: 'var(--color-surface-sidebar)' }}
+                >
+                  {dateCategoryLabels[category] ?? category}
+                </div>
+
+                {tasks.map((task) => {
+                  const showTeamHeader = task.teamName !== lastTeam;
+                  lastTeam = task.teamName;
+
+                  return (
+                    <div key={`${task.teamName}-${task.id}`}>
+                      {showTeamHeader && (
+                        <div className="px-3 pb-0.5 pt-1.5 text-[10px] font-medium text-text-muted">
+                          Team: {task.teamDisplayName}
+                        </div>
+                      )}
+                      <SidebarTaskItem task={task} />
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
       </div>
     </div>
   );

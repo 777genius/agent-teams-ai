@@ -3,13 +3,13 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { Loader2 } from 'lucide-react';
 
-import type { ResolvedTeamMember, TeamTask } from '@shared/types';
+import type { ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
 interface ActiveTasksBlockProps {
   members: ResolvedTeamMember[];
-  tasks: TeamTask[];
+  tasks: TeamTaskWithKanban[];
   onMemberClick?: (member: ResolvedTeamMember) => void;
-  onTaskClick?: (task: TeamTask) => void;
+  onTaskClick?: (task: TeamTaskWithKanban) => void;
 }
 
 export const ActiveTasksBlock = ({

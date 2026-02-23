@@ -1,7 +1,7 @@
-import type { TeamTask } from '@shared/types';
+import type { TeamTaskWithKanban } from '@shared/types';
 
 interface TaskRowProps {
-  task: TeamTask;
+  task: TeamTaskWithKanban;
 }
 
 export const TaskRow = ({ task }: TaskRowProps): React.JSX.Element => {
@@ -13,7 +13,9 @@ export const TaskRow = ({ task }: TaskRowProps): React.JSX.Element => {
       <td className="px-3 py-2 text-xs text-[var(--color-text-muted)]">{task.id}</td>
       <td className="px-3 py-2 text-sm text-[var(--color-text)]">{task.subject}</td>
       <td className="px-3 py-2 text-xs text-[var(--color-text-muted)]">{task.owner ?? '\u2014'}</td>
-      <td className="px-3 py-2 text-xs text-[var(--color-text-muted)]">{task.status}</td>
+      <td className="px-3 py-2 text-xs text-[var(--color-text-muted)]">
+        {task.kanbanColumn ?? task.status}
+      </td>
       <td className="px-3 py-2 text-xs">
         {blockedByIds.length > 0 ? (
           <span className="text-yellow-300">{blockedByIds.map((id) => `#${id}`).join(', ')}</span>

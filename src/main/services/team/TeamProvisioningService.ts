@@ -113,8 +113,11 @@ interface ProvisioningRun {
     leadName: string;
     startedAt: string;
     textParts: string[];
-    resolve: (text: string) => void;
-    reject: (error: string) => void;
+    settled: boolean;
+    idleHandle: NodeJS.Timeout | null;
+    idleMs: number;
+    resolveOnce: (text: string) => void;
+    rejectOnce: (error: string) => void;
     timeoutHandle: NodeJS.Timeout;
   } | null;
 }
@@ -266,6 +269,13 @@ function buildTaskStatusProtocol(teamName: string): string {
    node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task comment <taskId> --text "<summary of your finding or decision>" --from "<your-name>"
    Do NOT comment on trivial coordination messages. Only comment when the information is valuable context for the task.
 8. When sending a message about a specific task, include #<taskId> in your SendMessage summary field for traceability.
+9. Review workflow clarity (IMPORTANT):
+   - The work task (e.g. #1) is the thing that must end up APPROVED after review.
+   - If you are reviewing work for task #X, run review approve/request-changes on #X (the work task).
+   - Do NOT approve a separate "review task" (e.g. #2 created just to ask for a review) — that will put the wrong task into APPROVED.
+   - Typical flow:
+     a) Owner finishes work on #X → task complete #X
+     b) Reviewer accepts → review approve #X
 Failure to follow this protocol means the task board will show incorrect status.`;
 }
 
@@ -974,6 +984,8 @@ export class TeamProvisioningService {
         `[${request.teamName}] Launching with --resume ${previousSessionId} for session continuity`
       );
     }
+    // New sessions: CLI creates its own ID. No --resume with synthetic name — docs say
+    // --resume is for existing sessions and may show an interactive picker if not found.
 
     try {
       child = spawn(claudePath, launchArgs, {
@@ -1225,18 +1237,43 @@ export class TeamProvisioningService {
         }),
       ].join('\n');
 
-      const captureTimeoutMs = 60_000;
+      const captureTimeoutMs = 15_000;
+      const captureIdleMs = 800;
       const capturePromise = new Promise<string>((resolve, reject) => {
         const timeoutHandle = setTimeout(() => {
           reject(new Error('Timed out waiting for lead reply'));
         }, captureTimeoutMs);
-        run.leadRelayCapture = {
+        const capture = {
           leadName,
           startedAt: nowIso(),
-          textParts: [],
-          resolve,
-          reject,
+          textParts: [] as string[],
+          settled: false,
+          idleHandle: null as NodeJS.Timeout | null,
+          idleMs: captureIdleMs,
           timeoutHandle,
+          resolveOnce: (text: string) => {
+            if (capture.settled) return;
+            capture.settled = true;
+            if (capture.idleHandle) {
+              clearTimeout(capture.idleHandle);
+              capture.idleHandle = null;
+            }
+            clearTimeout(capture.timeoutHandle);
+            resolve(text);
+          },
+          rejectOnce: (error: string) => {
+            if (capture.settled) return;
+            capture.settled = true;
+            if (capture.idleHandle) {
+              clearTimeout(capture.idleHandle);
+              capture.idleHandle = null;
+            }
+            clearTimeout(capture.timeoutHandle);
+            reject(new Error(error));
+          },
+        };
+        run.leadRelayCapture = {
+          ...capture,
         };
       });
 
@@ -1270,9 +1307,15 @@ export class TeamProvisioningService {
       try {
         replyText = (await capturePromise).trim() || null;
       } catch {
-        // ignore
+        // Best-effort: if we captured some text but never got result.success, keep it.
+        const partial = run.leadRelayCapture?.textParts?.join('')?.trim();
+        replyText = partial && partial.length > 0 ? partial : null;
       } finally {
         if (run.leadRelayCapture) {
+          if (run.leadRelayCapture.idleHandle) {
+            clearTimeout(run.leadRelayCapture.idleHandle);
+            run.leadRelayCapture.idleHandle = null;
+          }
           clearTimeout(run.leadRelayCapture.timeoutHandle);
           run.leadRelayCapture = null;
         }
@@ -1307,6 +1350,13 @@ export class TeamProvisioningService {
         this.leadInboxRelayInFlight.delete(teamName);
       }
     }
+  }
+
+  /**
+   * Check if a team has an active provisioning run (started but not yet finished).
+   */
+  hasProvisioningRun(teamName: string): boolean {
+    return this.activeByTeam.has(teamName);
   }
 
   /**
@@ -1436,27 +1486,54 @@ export class TeamProvisioningService {
     // stream-json output has various message types:
     // {"type":"assistant","content":[{"type":"text","text":"..."},...]}
     // {"type":"result","subtype":"success",...}
-    if (msg.type === 'assistant' && Array.isArray(msg.content)) {
-      const textParts = (msg.content as Record<string, unknown>[])
+    if (msg.type === 'assistant') {
+      const content = Array.isArray(msg.content)
+        ? (msg.content as Record<string, unknown>[])
+        : (() => {
+            const message = msg.message;
+            if (!message || typeof message !== 'object') return null;
+            const inner = (message as Record<string, unknown>).content;
+            return Array.isArray(inner) ? (inner as Record<string, unknown>[]) : null;
+          })();
+
+      const textParts = (content ?? [])
         .filter((part) => part.type === 'text' && typeof part.text === 'string')
         .map((part) => part.text as string);
       if (textParts.length > 0) {
         const text = textParts.join('');
         logger.debug(`[${run.teamName}] assistant: ${text.slice(0, 200)}`);
         if (run.leadRelayCapture) {
-          run.leadRelayCapture.textParts.push(text);
+          const capture = run.leadRelayCapture;
+          if (!capture.settled) {
+            capture.textParts.push(text);
+            if (capture.idleHandle) {
+              clearTimeout(capture.idleHandle);
+            }
+            capture.idleHandle = setTimeout(() => {
+              const combined = capture.textParts.join('').trim();
+              capture.resolveOnce(combined);
+            }, capture.idleMs);
+          }
         }
       }
     }
 
     if (msg.type === 'result') {
-      const subtype = msg.subtype as string | undefined;
+      const subtype =
+        typeof msg.subtype === 'string'
+          ? msg.subtype
+          : (() => {
+              const result = msg.result;
+              if (!result || typeof result !== 'object') return undefined;
+              const inner = (result as Record<string, unknown>).subtype;
+              return typeof inner === 'string' ? inner : undefined;
+            })();
       if (subtype === 'success') {
         logger.info(`[${run.teamName}] stream-json result: success — turn complete, process alive`);
         if (run.leadRelayCapture) {
           const capture = run.leadRelayCapture;
           const combined = capture.textParts.join('').trim();
-          capture.resolve(combined);
+          capture.resolveOnce(combined);
         }
         if (!run.provisioningComplete) {
           void this.handleProvisioningTurnComplete(run);
@@ -1466,7 +1543,7 @@ export class TeamProvisioningService {
           typeof msg.error === 'string' ? msg.error : JSON.stringify(msg.error ?? 'unknown');
         logger.warn(`[${run.teamName}] stream-json result: error — ${errorMsg}`);
         if (run.leadRelayCapture) {
-          run.leadRelayCapture.reject(errorMsg);
+          run.leadRelayCapture.rejectOnce(errorMsg);
         }
         if (!run.provisioningComplete) {
           const progress = updateProgress(

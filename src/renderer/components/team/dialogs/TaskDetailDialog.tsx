@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
+import { CollapsibleTeamSection } from '@renderer/components/team/CollapsibleTeamSection';
 import { MemberLogsTab } from '@renderer/components/team/members/MemberLogsTab';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
@@ -13,27 +14,24 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { markAsRead } from '@renderer/services/commentReadStorage';
-import { TASK_STATUS_LABELS, TASK_STATUS_STYLES } from '@renderer/utils/memberHelpers';
-import { formatDistanceToNow } from 'date-fns';
 import {
-  ArrowLeftFromLine,
-  ArrowRightFromLine,
-  Clock,
-  FileText,
-  PenLine,
-  User,
-} from 'lucide-react';
+  KANBAN_COLUMN_DISPLAY,
+  TASK_STATUS_LABELS,
+  TASK_STATUS_STYLES,
+} from '@renderer/utils/memberHelpers';
+import { formatDistanceToNow } from 'date-fns';
+import { ArrowLeftFromLine, ArrowRightFromLine, Clock, Link2, PenLine, User } from 'lucide-react';
 
 import { TaskCommentsSection } from './TaskCommentsSection';
 
-import type { KanbanTaskState, ResolvedTeamMember, TeamTask } from '@shared/types';
+import type { KanbanTaskState, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
 interface TaskDetailDialogProps {
   open: boolean;
-  task: TeamTask | null;
+  task: TeamTaskWithKanban | null;
   teamName: string;
   kanbanTaskState?: KanbanTaskState;
-  taskMap: Map<string, TeamTask>;
+  taskMap: Map<string, TeamTaskWithKanban>;
   members: ResolvedTeamMember[];
   onClose: () => void;
   onScrollToTask?: (taskId: string) => void;
@@ -76,11 +74,30 @@ export const TaskDetailDialog = ({
     );
   }
 
+  const kanbanColumn = kanbanTaskState?.column ?? currentTask.kanbanColumn;
   const status = currentTask.status;
-  const statusStyle = TASK_STATUS_STYLES[status];
-  const statusLabel = TASK_STATUS_LABELS[status];
+  const statusStyle =
+    kanbanColumn && KANBAN_COLUMN_DISPLAY[kanbanColumn]
+      ? {
+          bg: KANBAN_COLUMN_DISPLAY[kanbanColumn].bg,
+          text: KANBAN_COLUMN_DISPLAY[kanbanColumn].text,
+        }
+      : TASK_STATUS_STYLES[status];
+  const statusLabel =
+    kanbanColumn && KANBAN_COLUMN_DISPLAY[kanbanColumn]
+      ? KANBAN_COLUMN_DISPLAY[kanbanColumn].label
+      : TASK_STATUS_LABELS[status];
   const blockedByIds = currentTask.blockedBy?.filter((id) => id.length > 0) ?? [];
   const blocksIds = currentTask.blocks?.filter((id) => id.length > 0) ?? [];
+  const relatedIds = (currentTask.related ?? []).filter(
+    (id) => id.length > 0 && id !== currentTask.id
+  );
+  const relatedByIds = Array.from(taskMap.values())
+    .filter(
+      (t) =>
+        t.id !== currentTask.id && Array.isArray(t.related) && t.related.includes(currentTask.id)
+    )
+    .map((t) => t.id);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -132,19 +149,15 @@ export const TaskDetailDialog = ({
         </div>
 
         {/* Description */}
-        <div>
-          <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)]">
-            <FileText size={12} />
-            Description
-          </div>
+        <CollapsibleTeamSection title="Description" defaultOpen>
           {currentTask.description ? (
-            <div className="max-h-[200px] overflow-y-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+            <div className="max-h-[200px] overflow-y-auto">
               <MarkdownViewer content={currentTask.description} maxHeight="max-h-[180px]" />
             </div>
           ) : (
             <p className="text-xs text-[var(--color-text-muted)]">No description</p>
           )}
-        </div>
+        </CollapsibleTeamSection>
 
         {/* Dependencies */}
         {blockedByIds.length > 0 ? (
@@ -203,6 +216,56 @@ export const TaskDetailDialog = ({
           </div>
         ) : null}
 
+        {/* Related tasks (explicit) */}
+        {relatedIds.length > 0 || relatedByIds.length > 0 ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)]">
+              <Link2 size={12} />
+              Related tasks
+            </div>
+
+            {relatedIds.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-[var(--color-text-muted)]">Links</span>
+                {relatedIds.map((id) => {
+                  const depTask = taskMap.get(id);
+                  return (
+                    <button
+                      key={`related:${currentTask.id}:${id}`}
+                      type="button"
+                      className="inline-flex items-center rounded bg-purple-500/15 px-1.5 py-0.5 text-[10px] font-medium text-purple-300 transition-colors hover:bg-purple-500/25"
+                      title={depTask ? `#${id}: ${depTask.subject}` : `#${id}`}
+                      onClick={() => handleDependencyClick(id)}
+                    >
+                      #{id}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {relatedByIds.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-[var(--color-text-muted)]">Linked from</span>
+                {relatedByIds.map((id) => {
+                  const depTask = taskMap.get(id);
+                  return (
+                    <button
+                      key={`related-by:${currentTask.id}:${id}`}
+                      type="button"
+                      className="inline-flex items-center rounded bg-fuchsia-500/15 px-1.5 py-0.5 text-[10px] font-medium text-fuchsia-300 transition-colors hover:bg-fuchsia-500/25"
+                      title={depTask ? `#${id}: ${depTask.subject}` : `#${id}`}
+                      onClick={() => handleDependencyClick(id)}
+                    >
+                      #{id}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* Review info */}
         {kanbanTaskState ? (
           <div className="flex items-center gap-2">
@@ -218,28 +281,35 @@ export const TaskDetailDialog = ({
         ) : null}
 
         {/* Comments */}
-        <TaskCommentsSection
-          teamName={teamName}
-          taskId={currentTask.id}
-          comments={currentTask.comments ?? []}
-          members={members}
-        />
-
-        {/* Separator */}
-        <div className="border-t border-[var(--color-border)]" />
-
-        {/* Session Logs — sessions that reference this task */}
-        <div className="min-w-0 overflow-hidden">
-          <h4 className="mb-2 text-xs font-medium text-[var(--color-text-muted)]">
-            Execution Logs
-          </h4>
-          <MemberLogsTab
+        <CollapsibleTeamSection
+          title="Comments"
+          badge={
+            (currentTask.comments?.length ?? 0) > 0
+              ? (currentTask.comments?.length ?? 0)
+              : undefined
+          }
+          defaultOpen
+        >
+          <TaskCommentsSection
             teamName={teamName}
             taskId={currentTask.id}
-            taskOwner={currentTask.owner}
-            taskStatus={currentTask.status}
+            comments={currentTask.comments ?? []}
+            members={members}
+            hideHeader
           />
-        </div>
+        </CollapsibleTeamSection>
+
+        {/* Execution Logs — sessions that reference this task */}
+        <CollapsibleTeamSection title="Execution Logs" defaultOpen>
+          <div className="min-w-0 overflow-hidden">
+            <MemberLogsTab
+              teamName={teamName}
+              taskId={currentTask.id}
+              taskOwner={currentTask.owner}
+              taskStatus={currentTask.status}
+            />
+          </div>
+        </CollapsibleTeamSection>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

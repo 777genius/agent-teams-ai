@@ -1,13 +1,17 @@
 import { useMemo } from 'react';
 
 import { Badge } from '@renderer/components/ui/badge';
-import { TASK_STATUS_LABELS, TASK_STATUS_STYLES } from '@renderer/utils/memberHelpers';
+import {
+  KANBAN_COLUMN_DISPLAY,
+  TASK_STATUS_LABELS,
+  TASK_STATUS_STYLES,
+} from '@renderer/utils/memberHelpers';
 
-import type { TeamTask } from '@shared/types';
+import type { TeamTaskWithKanban } from '@shared/types';
 
 interface MemberTasksTabProps {
-  tasks: TeamTask[];
-  onTaskClick?: (task: TeamTask) => void;
+  tasks: TeamTaskWithKanban[];
+  onTaskClick?: (task: TeamTaskWithKanban) => void;
 }
 
 const STATUS_ORDER: Record<string, number> = {
@@ -37,7 +41,15 @@ export const MemberTasksTab = ({ tasks, onTaskClick }: MemberTasksTabProps): Rea
     <div className="max-h-[320px] overflow-y-auto">
       <div className="flex flex-col gap-1">
         {visibleTasks.map((task) => {
-          const style = TASK_STATUS_STYLES[task.status];
+          const col = task.kanbanColumn;
+          const style =
+            col && KANBAN_COLUMN_DISPLAY[col]
+              ? { bg: KANBAN_COLUMN_DISPLAY[col].bg, text: KANBAN_COLUMN_DISPLAY[col].text }
+              : TASK_STATUS_STYLES[task.status];
+          const label =
+            col && KANBAN_COLUMN_DISPLAY[col]
+              ? KANBAN_COLUMN_DISPLAY[col].label
+              : TASK_STATUS_LABELS[task.status];
           return (
             <button
               type="button"
@@ -54,7 +66,7 @@ export const MemberTasksTab = ({ tasks, onTaskClick }: MemberTasksTabProps): Rea
               <span
                 className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${style.bg} ${style.text}`}
               >
-                {TASK_STATUS_LABELS[task.status]}
+                {label}
               </span>
             </button>
           );

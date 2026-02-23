@@ -10,6 +10,7 @@ import ReactMarkdown from 'react-markdown';
 
 import { markdownComponents } from '@renderer/components/chat/markdownComponents';
 import { useStore } from '@renderer/store';
+import { rehypePlugins } from '@renderer/utils/markdownPlugins';
 import { X } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 
@@ -150,7 +151,11 @@ export const UpdateDialog = (): React.JSX.Element | null => {
               color: 'var(--color-text-muted)',
             }}
           >
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={rehypePlugins}
+              components={markdownComponents}
+            >
               {normalizeReleaseNotes(releaseNotes)}
             </ReactMarkdown>
           </div>

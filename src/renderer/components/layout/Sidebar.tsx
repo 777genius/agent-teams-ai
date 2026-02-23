@@ -16,11 +16,12 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { DateGroupedSessions } from '../sidebar/DateGroupedSessions';
 import { GlobalTaskList } from '../sidebar/GlobalTaskList';
-import { defaultTaskFiltersState, TaskFiltersPopover } from '../sidebar/TaskFiltersPopover';
+import { TaskFiltersPopover } from '../sidebar/TaskFiltersPopover';
+import { defaultTaskFiltersState } from '../sidebar/taskFiltersState';
 
 import { SidebarHeader } from './SidebarHeader';
 
-import type { TaskFiltersState } from '../sidebar/TaskFiltersPopover';
+import type { TaskFiltersState } from '../sidebar/taskFiltersState';
 
 type SidebarTab = 'tasks' | 'sessions';
 
@@ -106,7 +107,7 @@ export const Sidebar = (): React.JSX.Element => {
       }}
     >
       <div
-        className="flex min-w-0 flex-1 flex-col overflow-hidden"
+        className="flex min-w-0 flex-1 flex-col overflow-hidden pr-2"
         style={{
           width: '100%',
           minWidth: sidebarCollapsed ? 0 : width,

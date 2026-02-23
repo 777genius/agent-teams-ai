@@ -181,7 +181,7 @@ export const BaseItem: React.FC<BaseItemProps> = ({
       {/* Expanded Content */}
       {isExpanded && children && (
         <div
-          className="ml-2 mt-2 space-y-3 pl-6"
+          className="ml-2 mt-2 min-w-0 space-y-3 pl-6"
           style={{ borderLeft: '2px solid var(--color-border)' }}
         >
           {children}

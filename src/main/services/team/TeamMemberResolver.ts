@@ -3,7 +3,7 @@ import type {
   MemberStatus,
   ResolvedTeamMember,
   TeamConfig,
-  TeamTask,
+  TeamTaskWithKanban,
 } from '@shared/types';
 
 export class TeamMemberResolver {
@@ -11,7 +11,7 @@ export class TeamMemberResolver {
     config: TeamConfig,
     metaMembers: TeamConfig['members'],
     inboxNames: string[],
-    tasks: TeamTask[],
+    tasks: TeamTaskWithKanban[],
     messages: InboxMessage[]
   ): ResolvedTeamMember[] {
     const names = new Set<string>();
@@ -70,7 +70,10 @@ export class TeamMemberResolver {
     const members: ResolvedTeamMember[] = [];
     for (const name of names) {
       const ownedTasks = tasks.filter((task) => task.owner === name);
-      const currentTask = ownedTasks.find((task) => task.status === 'in_progress') ?? null;
+      const currentTask =
+        ownedTasks.find(
+          (task) => task.status === 'in_progress' && task.kanbanColumn !== 'approved'
+        ) ?? null;
       const memberMessages = messages.filter((message) => message.from === name);
       const latestMessage = memberMessages[0] ?? null;
       const status = this.resolveStatus(latestMessage);

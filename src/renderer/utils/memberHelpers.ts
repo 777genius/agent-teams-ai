@@ -11,15 +11,28 @@ export const STATUS_DOT_COLORS: Record<MemberStatus, string> = {
   unknown: 'bg-zinc-600',
 };
 
-export function getMemberDotClass(member: ResolvedTeamMember, isTeamAlive?: boolean): string {
-  if (isTeamAlive === false) return STATUS_DOT_COLORS.terminated;
+export function getMemberDotClass(
+  member: ResolvedTeamMember,
+  isTeamAlive?: boolean,
+  isTeamProvisioning?: boolean
+): string {
   if (member.status === 'terminated') return STATUS_DOT_COLORS.terminated;
-  return member.currentTaskId ? STATUS_DOT_COLORS.active : STATUS_DOT_COLORS.idle;
+  if (isTeamProvisioning) return STATUS_DOT_COLORS.unknown;
+  if (isTeamAlive === false) return STATUS_DOT_COLORS.terminated;
+  if (member.status === 'unknown') return STATUS_DOT_COLORS.unknown;
+  if (member.currentTaskId) return STATUS_DOT_COLORS.active;
+  return member.status === 'active' ? STATUS_DOT_COLORS.active : STATUS_DOT_COLORS.idle;
 }
 
-export function getPresenceLabel(member: ResolvedTeamMember, isTeamAlive?: boolean): string {
-  if (isTeamAlive === false) return 'offline';
+export function getPresenceLabel(
+  member: ResolvedTeamMember,
+  isTeamAlive?: boolean,
+  isTeamProvisioning?: boolean
+): string {
   if (member.status === 'terminated') return 'terminated';
+  if (isTeamProvisioning) return 'connecting';
+  if (isTeamAlive === false) return 'offline';
+  if (member.status === 'unknown') return 'unknown';
   return member.currentTaskId ? 'working' : 'idle';
 }
 
@@ -35,4 +48,12 @@ export const TASK_STATUS_LABELS: Record<TeamTaskStatus, string> = {
   in_progress: 'In Progress',
   completed: 'Completed',
   deleted: 'Deleted',
+};
+
+export const KANBAN_COLUMN_DISPLAY: Record<
+  'review' | 'approved',
+  { label: string; bg: string; text: string }
+> = {
+  review: { label: 'In Review', bg: 'bg-amber-500/15', text: 'text-amber-400' },
+  approved: { label: 'Approved', bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
 };

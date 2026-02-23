@@ -181,60 +181,70 @@ async function handleGetData(
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
-  return wrapTeamHandler('getData', async () => {
-    const tn = validated.value!;
-    const data = await getTeamDataService().getTeamData(tn);
-    const provisioning = getTeamProvisioningService();
-    const isAlive = provisioning.isTeamAlive(tn);
-
-    if (isAlive) {
-      // Fire-and-forget: relay can take time (waits for lead reply).
-      void provisioning.relayLeadInboxMessages(tn).catch(() => undefined);
+  const tn = validated.value!;
+  let data: TeamData;
+  try {
+    data = await getTeamDataService().getTeamData(tn);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (
+      message === `Team not found: ${tn}` &&
+      getTeamProvisioningService().hasProvisioningRun(tn)
+    ) {
+      return { success: false, error: 'TEAM_PROVISIONING' };
     }
+    logger.error(`[teams:getData] ${message}`);
+    return { success: false, error: message };
+  }
+  const provisioning = getTeamProvisioningService();
+  const isAlive = provisioning.isTeamAlive(tn);
 
-    const live = provisioning.getLiveLeadProcessMessages(tn);
-    if (live.length === 0) {
-      return { ...data, isAlive };
+  if (isAlive) {
+    void provisioning.relayLeadInboxMessages(tn).catch(() => undefined);
+  }
+
+  const live = provisioning.getLiveLeadProcessMessages(tn);
+  if (live.length === 0) {
+    return { success: true, data: { ...data, isAlive } };
+  }
+
+  const normalizeText = (text: string): string => text.trim().replace(/\r\n/g, '\n');
+  const leadSessionTextFingerprints = new Set<string>();
+  for (const msg of data.messages) {
+    if ((msg as { source?: unknown }).source !== 'lead_session') continue;
+    if (typeof msg.from !== 'string' || typeof msg.text !== 'string') continue;
+    leadSessionTextFingerprints.add(`${msg.from}\0${normalizeText(msg.text)}`);
+  }
+
+  const keyFor = (m: {
+    messageId?: string;
+    timestamp: string;
+    from: string;
+    text: string;
+  }): string => {
+    if (typeof m.messageId === 'string' && m.messageId.trim().length > 0) {
+      return m.messageId;
     }
+    return `${m.timestamp}\0${m.from}\0${(m.text ?? '').slice(0, 80)}`;
+  };
 
-    const normalizeText = (text: string): string => text.trim().replace(/\r\n/g, '\n');
-    const leadSessionTextFingerprints = new Set<string>();
-    for (const msg of data.messages) {
-      if ((msg as { source?: unknown }).source !== 'lead_session') continue;
-      if (typeof msg.from !== 'string' || typeof msg.text !== 'string') continue;
-      leadSessionTextFingerprints.add(`${msg.from}\0${normalizeText(msg.text)}`);
-    }
-
-    const keyFor = (m: {
-      messageId?: string;
-      timestamp: string;
-      from: string;
-      text: string;
-    }): string => {
-      if (typeof m.messageId === 'string' && m.messageId.trim().length > 0) {
-        return m.messageId;
+  const merged: typeof data.messages = [];
+  const seen = new Set<string>();
+  for (const msg of [...data.messages, ...live]) {
+    if ((msg as { source?: unknown }).source === 'lead_process') {
+      const fp = `${msg.from}\0${normalizeText(msg.text ?? '')}`;
+      if (leadSessionTextFingerprints.has(fp)) {
+        continue;
       }
-      return `${m.timestamp}\0${m.from}\0${(m.text ?? '').slice(0, 80)}`;
-    };
-
-    const merged: typeof data.messages = [];
-    const seen = new Set<string>();
-    for (const msg of [...data.messages, ...live]) {
-      if ((msg as { source?: unknown }).source === 'lead_process') {
-        const fp = `${msg.from}\0${normalizeText(msg.text ?? '')}`;
-        if (leadSessionTextFingerprints.has(fp)) {
-          continue;
-        }
-      }
-      const key = keyFor(msg);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      merged.push(msg);
     }
-    merged.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+    const key = keyFor(msg);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(msg);
+  }
+  merged.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 
-    return { ...data, isAlive, messages: merged };
-  });
+  return { success: true, data: { ...data, isAlive, messages: merged } };
 }
 
 async function handleDeleteTeam(
@@ -548,14 +558,28 @@ async function handleSendMessage(
     }
   }
 
-  return wrapTeamHandler('sendMessage', () =>
-    getTeamDataService().sendMessage(validatedTeamName.value!, {
+  return wrapTeamHandler('sendMessage', async () => {
+    const tn = validatedTeamName.value!;
+    const result = await getTeamDataService().sendMessage(tn, {
       member: validatedMember.value!,
       text: payload.text!,
       summary: payload.summary,
       from: payload.from,
-    })
-  );
+    });
+
+    // Best-effort: if messaging the lead while process is alive, relay immediately (no UI dependency).
+    try {
+      const provisioning = getTeamProvisioningService();
+      if (provisioning.isTeamAlive(tn)) {
+        // Avoid reading unrelated inboxes; relayLeadInboxMessages will no-op when nothing new exists.
+        void provisioning.relayLeadInboxMessages(tn).catch(() => undefined);
+      }
+    } catch {
+      // ignore
+    }
+
+    return result;
+  });
 }
 
 async function handleCreateTask(
@@ -596,6 +620,17 @@ async function handleCreateTask(
       return { success: false, error: 'blockedBy must be an array of task ID strings' };
     }
   }
+  if (payload.related !== undefined) {
+    if (!Array.isArray(payload.related) || payload.related.some((id) => typeof id !== 'string')) {
+      return { success: false, error: 'related must be an array of task ID strings' };
+    }
+    for (const id of payload.related) {
+      const validated = validateTaskId(id);
+      if (!validated.valid) {
+        return { success: false, error: validated.error ?? 'Invalid related task id' };
+      }
+    }
+  }
   if (payload.prompt !== undefined) {
     if (typeof payload.prompt !== 'string') {
       return { success: false, error: 'prompt must be a string' };
@@ -614,6 +649,7 @@ async function handleCreateTask(
       description: payload.description?.trim(),
       owner: payload.owner?.trim() || undefined,
       blockedBy: payload.blockedBy,
+      related: payload.related,
       prompt: payload.prompt?.trim() || undefined,
       startImmediately: payload.startImmediately,
     })

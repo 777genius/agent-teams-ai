@@ -96,7 +96,7 @@ export const DisplayItemList = ({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="min-w-0 space-y-2">
       {items.map((item, index) => {
         let itemKey = '';
         let element: React.ReactNode = null;

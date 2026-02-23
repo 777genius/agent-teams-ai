@@ -62,6 +62,8 @@ const MIRROR_PROPS = [
   'wordSpacing',
 ] as const;
 
+const MENTION_DROPDOWN_OFFSET_PX = 10;
+
 /**
  * Calculates caret coordinates relative to the textarea element
  * using a mirror div technique.
@@ -180,7 +182,7 @@ export function useMentionDetection({
       if (!textarea) return;
       const coords = getCaretCoordinates(textarea, triggerIdx, text);
       setDropdownPosition({
-        top: coords.top + coords.height,
+        top: coords.top + coords.height + MENTION_DROPDOWN_OFFSET_PX,
         left: 0,
       });
     },

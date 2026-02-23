@@ -43,6 +43,7 @@ interface CreateTaskDialogProps {
     description: string,
     owner?: string,
     blockedBy?: string[],
+    related?: string[],
     prompt?: string,
     startImmediately?: boolean
   ) => void;
@@ -69,6 +70,7 @@ export const CreateTaskDialog = ({
   });
   const [owner, setOwner] = useState<string>(defaultOwner);
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
+  const [related, setRelated] = useState<string[]>([]);
   const [startImmediately, setStartImmediately] = useState(true);
   const promptDraft = useDraftPersistence({ key: `createTask:${teamName}:prompt` });
   const [prevOpen, setPrevOpen] = useState(false);
@@ -80,6 +82,7 @@ export const CreateTaskDialog = ({
     }
     setOwner(defaultOwner);
     setBlockedBy([]);
+    setRelated([]);
     setStartImmediately(isTeamAlive);
     promptDraft.clearDraft();
   }
@@ -109,6 +112,12 @@ export const CreateTaskDialog = ({
     );
   };
 
+  const toggleRelated = (taskId: string): void => {
+    setRelated((prev) =>
+      prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
+    );
+  };
+
   const handleSubmit = (): void => {
     if (!canSubmit) return;
     onSubmit(
@@ -116,6 +125,7 @@ export const CreateTaskDialog = ({
       descriptionDraft.value.trim(),
       owner || undefined,
       blockedBy.length > 0 ? blockedBy : undefined,
+      related.length > 0 ? related : undefined,
       promptDraft.value.trim() || undefined,
       startImmediately
     );
@@ -292,6 +302,51 @@ export const CreateTaskDialog = ({
               {blockedBy.length > 0 ? (
                 <p className="text-[11px] text-yellow-300">
                   Task will be blocked by: {blockedBy.map((id) => `#${id}`).join(', ')}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {availableTasks.length > 0 ? (
+            <div className="grid gap-2">
+              <Label>Related tasks (optional)</Label>
+              <div className="max-h-32 overflow-y-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
+                {availableTasks.map((t) => {
+                  const isSelected = related.includes(t.id);
+                  return (
+                    <button
+                      key={`related:${t.id}`}
+                      type="button"
+                      className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors ${
+                        isSelected
+                          ? 'bg-purple-500/15 text-purple-300'
+                          : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]'
+                      }`}
+                      onClick={() => toggleRelated(t.id)}
+                    >
+                      <span
+                        className={`flex size-3.5 shrink-0 items-center justify-center rounded-sm border text-[9px] ${
+                          isSelected
+                            ? 'border-purple-400 bg-purple-500/30 text-purple-300'
+                            : 'border-[var(--color-border-emphasis)]'
+                        }`}
+                      >
+                        {isSelected ? '\u2713' : ''}
+                      </span>
+                      <Badge
+                        variant="secondary"
+                        className="shrink-0 px-1 py-0 text-[10px] font-normal"
+                      >
+                        #{t.id}
+                      </Badge>
+                      <span className="truncate">{t.subject}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {related.length > 0 ? (
+                <p className="text-[11px] text-purple-300">
+                  Related: {related.map((id) => `#${id}`).join(', ')}
                 </p>
               ) : null}
             </div>

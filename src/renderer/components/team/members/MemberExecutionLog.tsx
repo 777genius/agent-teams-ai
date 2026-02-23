@@ -41,7 +41,7 @@ export const MemberExecutionLog = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6 overflow-hidden">
       {conversation.items.map((item) => {
         if (item.type === 'system') {
           return <SystemChatGroup key={item.group.id} systemGroup={item.group} />;
@@ -92,8 +92,8 @@ const UserLogItem = ({ group }: { group: UserGroup }): React.JSX.Element => {
   const text = group.content.rawText ?? group.content.text ?? '';
   if (!text.trim()) {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl rounded-br-sm border border-[var(--color-border)] bg-[var(--chat-user-bg)] px-4 py-3">
+      <div className="flex min-w-0 justify-end">
+        <div className="min-w-0 max-w-[85%] rounded-2xl rounded-br-sm border border-[var(--color-border)] bg-[var(--chat-user-bg)] px-4 py-3">
           <div className="text-[10px] text-[var(--color-text-muted)]">
             {format(group.timestamp, 'h:mm:ss a')}
           </div>
@@ -104,12 +104,12 @@ const UserLogItem = ({ group }: { group: UserGroup }): React.JSX.Element => {
   }
 
   return (
-    <div className="flex justify-end">
-      <div className="max-w-[85%] rounded-2xl rounded-br-sm border border-[var(--chat-user-border)] bg-[var(--chat-user-bg)] px-4 py-3">
+    <div className="flex min-w-0 justify-end">
+      <div className="min-w-0 max-w-full rounded-2xl rounded-br-sm border border-[var(--chat-user-border)] bg-[var(--chat-user-bg)] px-4 py-3">
         <div className="text-right text-[10px] text-[var(--color-text-muted)]">
           {format(group.timestamp, 'h:mm:ss a')}
         </div>
-        <div className="mt-2 text-sm text-[var(--chat-user-text)]">
+        <div className="mt-2 min-w-0 break-words text-sm text-[var(--chat-user-text)]">
           <MarkdownViewer content={text} copyable />
         </div>
       </div>

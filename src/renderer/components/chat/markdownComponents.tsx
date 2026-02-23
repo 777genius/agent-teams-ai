@@ -110,7 +110,7 @@ export function createMarkdownComponents(searchCtx: SearchContext | null): Compo
       </del>
     ),
 
-    // Inline code vs block code
+    // Inline code vs block code (block is highlighted by rehype-highlight; preserve hljs class)
     code: ({ className, children }) => {
       const hasLanguageClass = className?.includes('language-');
       const content = typeof children === 'string' ? children : '';
@@ -119,7 +119,10 @@ export function createMarkdownComponents(searchCtx: SearchContext | null): Compo
 
       if (isBlock) {
         return (
-          <code className="block font-mono text-xs" style={{ color: 'var(--color-text)' }}>
+          <code
+            className={`block font-mono text-xs ${className ?? ''}`.trim()}
+            style={{ color: 'var(--color-text)' }}
+          >
             {hl(children)}
           </code>
         );

@@ -32,11 +32,13 @@ import { TeamSessionsSection } from './TeamSessionsSection';
 import type { KanbanFilterState } from './kanban/KanbanFilterPopover';
 import type { MessagesFilterState } from './messages/MessagesFilterPopover';
 import type { Session } from '@renderer/types/data';
-import type { InboxMessage, ResolvedTeamMember, TeamTask } from '@shared/types';
+import type { InboxMessage, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
 interface TeamDetailViewProps {
   teamName: string;
 }
+
+const ACTIVE_PROVISIONING_STATES = new Set(['validating', 'spawning', 'monitoring', 'verifying']);
 
 interface CreateTaskDialogState {
   open: boolean;
@@ -50,7 +52,7 @@ interface TimeWindow {
   end: number;
 }
 
-function filterKanbanTasks(tasks: TeamTask[], query: string): TeamTask[] {
+function filterKanbanTasks(tasks: TeamTaskWithKanban[], query: string): TeamTaskWithKanban[] {
   if (query.startsWith('#')) {
     const id = query.slice(1);
     return tasks.filter((t) => t.id === id);
@@ -66,7 +68,7 @@ function filterKanbanTasks(tasks: TeamTask[], query: string): TeamTask[] {
 
 export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Element => {
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
-  const [selectedTask, setSelectedTask] = useState<TeamTask | null>(null);
+  const [selectedTask, setSelectedTask] = useState<TeamTaskWithKanban | null>(null);
   const [selectedMember, setSelectedMember] = useState<ResolvedTeamMember | null>(null);
   const [pendingRepliesByMember, setPendingRepliesByMember] = useState<Record<string, number>>({});
   const [createTaskDialog, setCreateTaskDialog] = useState<CreateTaskDialogState>({
@@ -113,6 +115,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     reviewActionError,
     launchTeam,
     provisioningError,
+    isTeamProvisioning,
     kanbanFilterQuery,
     clearKanbanFilter,
   } = useStore(
@@ -136,6 +139,9 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       reviewActionError: s.reviewActionError,
       launchTeam: s.launchTeam,
       provisioningError: s.provisioningError,
+      isTeamProvisioning: Object.values(s.provisioningRuns).some(
+        (run) => run.teamName === teamName && ACTIVE_PROVISIONING_STATES.has(run.state)
+      ),
       kanbanFilterQuery: s.kanbanFilterQuery,
       clearKanbanFilter: s.clearKanbanFilter,
     }))
@@ -369,6 +375,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     description: string,
     owner?: string,
     blockedBy?: string[],
+    related?: string[],
     prompt?: string,
     startImmediately?: boolean
   ): void => {
@@ -380,11 +387,12 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           description: description || undefined,
           owner,
           blockedBy,
+          related,
           prompt,
           startImmediately,
         });
 
-        if (prompt && owner && data?.isAlive && startImmediately !== false) {
+        if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {
           const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
           try {
             await api.teams.processSend(teamName, msg);
@@ -527,6 +535,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           taskMap={taskMap}
           pendingRepliesByMember={pendingRepliesByMember}
           isTeamAlive={data.isAlive}
+          isTeamProvisioning={isTeamProvisioning}
           onMemberClick={setSelectedMember}
           onSendMessage={(member) => {
             setSendDialogRecipient(member.name);
@@ -714,6 +723,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         <ActivityTimeline
           messages={filteredMessages}
           members={data.members}
+          readSet={readSet}
+          getMessageKey={toMessageKey}
           onMemberClick={setSelectedMember}
           onCreateTaskFromMessage={(subject, description) => {
             openCreateTaskDialog(subject, description);
@@ -757,6 +768,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         teamName={teamName}
         tasks={data.tasks}
         messages={data.messages}
+        isTeamAlive={data.isAlive}
+        isTeamProvisioning={isTeamProvisioning}
         onClose={() => setSelectedMember(null)}
         onSendMessage={() => {
           const name = selectedMember?.name ?? '';
@@ -781,7 +794,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         teamName={teamName}
         members={data.members}
         tasks={data.tasks}
-        isTeamAlive={data.isAlive}
+        isTeamAlive={data.isAlive && !isTeamProvisioning}
         defaultSubject={createTaskDialog.defaultSubject}
         defaultDescription={createTaskDialog.defaultDescription}
         defaultOwner={createTaskDialog.defaultOwner}
@@ -803,6 +816,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       <LaunchTeamDialog
         open={launchDialogOpen}
         teamName={teamName}
+        members={data?.members ?? []}
         defaultProjectPath={data.config.projectPath}
         provisioningError={provisioningError}
         onClose={() => setLaunchDialogOpen(false)}

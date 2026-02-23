@@ -3,7 +3,15 @@ import { useMemo, useState } from 'react';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
-import { Columns3, LayoutGrid } from 'lucide-react';
+import {
+  CheckCircle2,
+  ClipboardList,
+  Columns3,
+  Eye,
+  LayoutGrid,
+  PlayCircle,
+  ShieldCheck,
+} from 'lucide-react';
 
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanFilterPopover } from './KanbanFilterPopover';
@@ -12,6 +20,37 @@ import { KanbanTaskCard } from './KanbanTaskCard';
 import type { KanbanFilterState } from './KanbanFilterPopover';
 import type { Session } from '@renderer/types/data';
 import type { KanbanColumnId, KanbanState, ResolvedTeamMember, TeamTask } from '@shared/types';
+
+const COLUMN_ACCENTS: Record<
+  KanbanColumnId,
+  { headerBg: string; bodyBg: string; icon: React.ReactNode }
+> = {
+  todo: {
+    headerBg: 'rgba(59, 130, 246, 0.12)',
+    bodyBg: 'rgba(59, 130, 246, 0.05)',
+    icon: <ClipboardList size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
+  },
+  in_progress: {
+    headerBg: 'rgba(234, 179, 8, 0.14)',
+    bodyBg: 'rgba(234, 179, 8, 0.06)',
+    icon: <PlayCircle size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
+  },
+  done: {
+    headerBg: 'rgba(34, 197, 94, 0.12)',
+    bodyBg: 'rgba(34, 197, 94, 0.05)',
+    icon: <CheckCircle2 size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
+  },
+  review: {
+    headerBg: 'rgba(139, 92, 246, 0.12)',
+    bodyBg: 'rgba(139, 92, 246, 0.05)',
+    icon: <Eye size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
+  },
+  approved: {
+    headerBg: 'rgba(34, 197, 94, 0.24)',
+    bodyBg: 'rgba(34, 197, 94, 0.11)',
+    icon: <ShieldCheck size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
+  },
+};
 
 interface KanbanBoardProps {
   tasks: TeamTask[];
@@ -184,8 +223,16 @@ export const KanbanBoard = ({
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
           {COLUMNS.map((column) => {
             const columnTasks = grouped.get(column.id) ?? [];
+            const accent = COLUMN_ACCENTS[column.id];
             return (
-              <KanbanColumn key={column.id} title={column.title} count={columnTasks.length}>
+              <KanbanColumn
+                key={column.id}
+                title={column.title}
+                count={columnTasks.length}
+                icon={accent.icon}
+                headerBg={accent.headerBg}
+                bodyBg={accent.bodyBg}
+              >
                 {renderCards(column.id, columnTasks)}
               </KanbanColumn>
             );
@@ -195,9 +242,16 @@ export const KanbanBoard = ({
         <div className="flex gap-3 overflow-x-auto pb-2">
           {COLUMNS.map((column) => {
             const columnTasks = grouped.get(column.id) ?? [];
+            const accent = COLUMN_ACCENTS[column.id];
             return (
               <div key={column.id} className="w-64 shrink-0">
-                <KanbanColumn title={column.title} count={columnTasks.length}>
+                <KanbanColumn
+                  title={column.title}
+                  count={columnTasks.length}
+                  icon={accent.icon}
+                  headerBg={accent.headerBg}
+                  bodyBg={accent.bodyBg}
+                >
                   {renderCards(column.id, columnTasks)}
                 </KanbanColumn>
               </div>
