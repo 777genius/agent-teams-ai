@@ -21,6 +21,7 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   TEAM_PROCESS_ALIVE: 'team:processAlive',
   TEAM_ALIVE_LIST: 'team:aliveList',
   TEAM_GET_MEMBER_LOGS: 'team:getMemberLogs',
+  TEAM_GET_LOGS_FOR_TASK: 'team:getLogsForTask',
   TEAM_GET_MEMBER_STATS: 'team:getMemberStats',
   TEAM_UPDATE_CONFIG: 'team:updateConfig',
   TEAM_START_TASK: 'team:startTask',
@@ -45,6 +46,7 @@ import {
   TEAM_REQUEST_REVIEW,
   TEAM_SEND_MESSAGE,
   TEAM_GET_ALL_TASKS,
+  TEAM_GET_LOGS_FOR_TASK,
   TEAM_GET_MEMBER_LOGS,
   TEAM_GET_MEMBER_STATS,
   TEAM_START_TASK,
@@ -135,6 +137,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_ALIVE_LIST)).toBe(true);
     expect(handlers.has(TEAM_CREATE_CONFIG)).toBe(true);
     expect(handlers.has(TEAM_GET_MEMBER_LOGS)).toBe(true);
+    expect(handlers.has(TEAM_GET_LOGS_FOR_TASK)).toBe(true);
     expect(handlers.has(TEAM_GET_MEMBER_STATS)).toBe(true);
     expect(handlers.has(TEAM_UPDATE_CONFIG)).toBe(true);
     expect(handlers.has(TEAM_GET_ALL_TASKS)).toBe(true);
@@ -303,6 +306,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_ALIVE_LIST)).toBe(false);
     expect(handlers.has(TEAM_CREATE_CONFIG)).toBe(false);
     expect(handlers.has(TEAM_GET_MEMBER_LOGS)).toBe(false);
+    expect(handlers.has(TEAM_GET_LOGS_FOR_TASK)).toBe(false);
     expect(handlers.has(TEAM_GET_MEMBER_STATS)).toBe(false);
     expect(handlers.has(TEAM_UPDATE_CONFIG)).toBe(false);
     expect(handlers.has(TEAM_GET_ALL_TASKS)).toBe(false);
