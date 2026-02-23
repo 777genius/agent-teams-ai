@@ -32,9 +32,9 @@ export const SidebarTaskItem = ({ task }: SidebarTaskItemProps): React.JSX.Eleme
   const unreadCount = useUnreadCommentCount(task.teamName, task.id, task.comments);
   const cfg =
     task.kanbanColumn === 'approved'
-      ? ({ icon: ShieldCheck, color: 'text-emerald-400', label: 'approved' } as const)
+      ? ({ icon: ShieldCheck, color: 'text-teal-400', label: 'approved' } as const)
       : task.kanbanColumn === 'review'
-        ? ({ icon: Eye, color: 'text-amber-400', label: 'in review' } as const)
+        ? ({ icon: Eye, color: 'text-orange-400', label: 'in review' } as const)
         : (statusConfig[task.status] ?? statusConfig.pending);
   const StatusIcon = cfg.icon;
   const dateLabel = formatTaskDate(task.createdAt);

@@ -77,7 +77,7 @@ export function groupTasksByProject(tasks: GlobalTask[]): ProjectTaskGroup[] {
 
   for (const task of tasks) {
     const path = task.projectPath?.trim() ?? '';
-    const key = path ? normalizePath(path) : NO_PROJECT_KEY;
+    const key = path ? normalizePath(trimTrailingPathSep(path)) : NO_PROJECT_KEY;
     let entry = byKey.get(key);
     if (!entry) {
       entry = { path: path || '', tasks: [] };

@@ -23,7 +23,7 @@ import {
   PROSE_TABLE_HEADER_BG,
 } from '@renderer/constants/cssVariables';
 import { useStore } from '@renderer/store';
-import { rehypePlugins } from '@renderer/utils/markdownPlugins';
+import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
 import { FileText } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 import { useShallow } from 'zustand/react/shallow';
@@ -157,7 +157,7 @@ function createViewerMarkdownComponents(searchCtx: SearchContext | null): Compon
       if (isBlock) {
         return (
           <code
-            className={`break-all font-mono text-xs ${codeClassName ?? ''}`.trim()}
+            className={`font-mono text-xs ${codeClassName ?? ''}`.trim()}
             style={{ color: COLOR_TEXT }}
           >
             {hl(children)}
@@ -336,7 +336,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
         <div className="min-w-0 break-words p-4">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
-            rehypePlugins={rehypePlugins}
+            rehypePlugins={REHYPE_PLUGINS}
             components={components}
           >
             {content}

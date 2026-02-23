@@ -29,7 +29,7 @@ export function taskMatchesStatus(
   statusIds: Set<TaskStatusFilterId>
 ): boolean {
   if (statusIds.size === 0) return false;
-  if (statusIds.size === STATUS_OPTIONS.length) return true;
+  if (statusIds.size === STATUS_OPTIONS.length) return task.status !== 'deleted';
 
   const inTodo = task.status === 'pending' && !task.kanbanColumn;
   const inProgress = task.status === 'in_progress' && !task.kanbanColumn;

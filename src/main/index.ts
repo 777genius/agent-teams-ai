@@ -10,6 +10,13 @@
  */
 
 import {
+  CONTEXT_CHANGED,
+  SSH_STATUS,
+  TEAM_CHANGE,
+  WINDOW_FULLSCREEN_CHANGED,
+  // eslint-disable-next-line boundaries/element-types -- IPC channel constants shared between main and preload
+} from '@preload/constants/ipcChannels';
+import {
   DEFAULT_WINDOW_HEIGHT,
   DEFAULT_WINDOW_WIDTH,
   DEV_SERVER_PORT,
@@ -20,11 +27,6 @@ import { createLogger } from '@shared/utils/logger';
 import { app, BrowserWindow } from 'electron';
 import { existsSync } from 'fs';
 import { join } from 'path';
-
-const CONTEXT_CHANGED = 'context:changed';
-const SSH_STATUS = 'ssh:status';
-const TEAM_CHANGE = 'team:change';
-const WINDOW_FULLSCREEN_CHANGED = 'window:fullscreen-changed';
 
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { HttpServer } from './services/infrastructure/HttpServer';

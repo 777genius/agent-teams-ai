@@ -5,4 +5,4 @@
 
 import rehypeHighlight from 'rehype-highlight';
 
-export const rehypePlugins = [rehypeHighlight];
+export const REHYPE_PLUGINS = [rehypeHighlight];

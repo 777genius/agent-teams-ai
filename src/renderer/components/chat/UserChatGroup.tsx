@@ -4,7 +4,7 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import { api } from '@renderer/api';
 import { useTabUI } from '@renderer/hooks/useTabUI';
 import { useStore } from '@renderer/store';
-import { rehypePlugins } from '@renderer/utils/markdownPlugins';
+import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
 import { createLogger } from '@shared/utils/logger';
 import { format } from 'date-fns';
 import { User } from 'lucide-react';
@@ -448,7 +448,7 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
             <div className="text-sm" style={{ color: 'var(--chat-user-text)' }} data-search-content>
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                rehypePlugins={rehypePlugins}
+                rehypePlugins={REHYPE_PLUGINS}
                 components={userMarkdownComponents}
               >
                 {displayText}

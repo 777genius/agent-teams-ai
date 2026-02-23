@@ -100,8 +100,9 @@ export const MemberCard = ({
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
-                      e.stopPropagation();
                       e.preventDefault();
+                      e.stopPropagation();
+                      onOpenTask?.();
                     }
                   }}
                 >

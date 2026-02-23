@@ -389,9 +389,11 @@
   background: transparent;
 }
 .hljs-keyword,
-.hljs-selector-tag,
-.hljs-addition {
+.hljs-selector-tag {
   color: var(--syntax-keyword);
+}
+.hljs-addition {
+  color: var(--diff-added-text);
 }
 .hljs-string,
 .hljs-doctag {

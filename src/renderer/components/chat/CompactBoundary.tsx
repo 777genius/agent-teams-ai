@@ -10,7 +10,7 @@ import {
   TOOL_CALL_BORDER,
   TOOL_CALL_TEXT,
 } from '@renderer/constants/cssVariables';
-import { rehypePlugins } from '@renderer/utils/markdownPlugins';
+import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
 import { formatTokensCompact as formatTokens } from '@shared/utils/tokenFormatting';
 import { format } from 'date-fns';
 import { ChevronRight, Layers } from 'lucide-react';
@@ -149,7 +149,7 @@ export const CompactBoundary = ({
             {compactContent ? (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                rehypePlugins={rehypePlugins}
+                rehypePlugins={REHYPE_PLUGINS}
                 components={markdownComponents}
               >
                 {compactContent}

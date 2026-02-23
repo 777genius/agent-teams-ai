@@ -1,3 +1,5 @@
+import { KANBAN_COLUMN_DISPLAY, TASK_STATUS_LABELS } from '@renderer/utils/memberHelpers';
+
 import type { TeamTaskWithKanban } from '@shared/types';
 
 interface TaskRowProps {
@@ -14,7 +16,9 @@ export const TaskRow = ({ task }: TaskRowProps): React.JSX.Element => {
       <td className="px-3 py-2 text-sm text-[var(--color-text)]">{task.subject}</td>
       <td className="px-3 py-2 text-xs text-[var(--color-text-muted)]">{task.owner ?? '\u2014'}</td>
       <td className="px-3 py-2 text-xs text-[var(--color-text-muted)]">
-        {task.kanbanColumn ?? task.status}
+        {task.kanbanColumn && task.kanbanColumn in KANBAN_COLUMN_DISPLAY
+          ? KANBAN_COLUMN_DISPLAY[task.kanbanColumn].label
+          : (TASK_STATUS_LABELS[task.status] ?? task.status)}
       </td>
       <td className="px-3 py-2 text-xs">
         {blockedByIds.length > 0 ? (

@@ -1272,9 +1272,7 @@ export class TeamProvisioningService {
             reject(new Error(error));
           },
         };
-        run.leadRelayCapture = {
-          ...capture,
-        };
+        run.leadRelayCapture = capture;
       });
 
       try {

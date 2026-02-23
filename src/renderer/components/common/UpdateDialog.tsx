@@ -10,7 +10,7 @@ import ReactMarkdown from 'react-markdown';
 
 import { markdownComponents } from '@renderer/components/chat/markdownComponents';
 import { useStore } from '@renderer/store';
-import { rehypePlugins } from '@renderer/utils/markdownPlugins';
+import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
 import { X } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 
@@ -153,7 +153,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
           >
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              rehypePlugins={rehypePlugins}
+              rehypePlugins={REHYPE_PLUGINS}
               components={markdownComponents}
             >
               {normalizeReleaseNotes(releaseNotes)}
