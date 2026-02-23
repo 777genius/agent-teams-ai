@@ -41,8 +41,14 @@ const MessageRowWithObserver = ({
   const reportedRef = useRef(false);
   const messageRef = useRef(message);
   const onVisibleRef = useRef(onVisible);
-  messageRef.current = message;
-  onVisibleRef.current = onVisible;
+
+  useEffect(() => {
+    messageRef.current = message;
+  }, [message]);
+
+  useEffect(() => {
+    onVisibleRef.current = onVisible;
+  }, [onVisible]);
 
   useEffect(() => {
     if (!onVisible) return;

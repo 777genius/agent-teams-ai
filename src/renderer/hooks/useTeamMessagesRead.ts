@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import {
   getReadSet as getReadSetStorage,
@@ -9,28 +9,23 @@ export function useTeamMessagesRead(teamName: string): {
   readSet: Set<string>;
   markRead: (messageKey: string) => void;
 } {
-  const [readSet, setReadSet] = useState<Set<string>>(() =>
-    teamName ? getReadSetStorage(teamName) : new Set()
+  const [version, setVersion] = useState(0);
+  const readSet = useMemo(
+    () => {
+      if (version < 0) return new Set<string>();
+      return teamName ? getReadSetStorage(teamName) : new Set();
+    },
+    [teamName, version]
   );
-
-  useEffect(() => {
-    if (!teamName) {
-      setReadSet(new Set());
-      return;
-    }
-    setReadSet(getReadSetStorage(teamName));
-  }, [teamName]);
 
   const markRead = useCallback(
     (messageKey: string) => {
       if (!teamName) return;
-      setReadSet((prev) => {
-        if (prev.has(messageKey)) return prev;
-        const next = new Set(prev);
-        next.add(messageKey);
-        markReadStorage(teamName, messageKey, next);
-        return next;
-      });
+      const existing = getReadSetStorage(teamName);
+      if (existing.has(messageKey)) return;
+      existing.add(messageKey);
+      markReadStorage(teamName, messageKey, existing);
+      setVersion((v) => v + 1);
     },
     [teamName]
   );
