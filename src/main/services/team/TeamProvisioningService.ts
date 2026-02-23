@@ -644,6 +644,7 @@ export class TeamProvisioningService {
           'user,project,local',
           '--disallowedTools',
           'TeamDelete,TodoWrite',
+          '--dangerously-skip-permissions',
         ],
         {
           cwd: request.cwd,
@@ -913,6 +914,7 @@ export class TeamProvisioningService {
       'user,project,local',
       '--disallowedTools',
       'TeamDelete,TodoWrite',
+      '--dangerously-skip-permissions',
     ];
     if (previousSessionId) {
       launchArgs.push('--resume', previousSessionId);
