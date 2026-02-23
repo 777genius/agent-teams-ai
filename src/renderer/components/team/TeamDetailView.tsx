@@ -5,6 +5,7 @@ import { Button } from '@renderer/components/ui/button';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import { buildTaskCountsByOwner } from '@renderer/utils/pathNormalize';
 import { MessageSquare, Pencil, Play, Plus, Search, Trash2, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -293,6 +294,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
 
   const taskMap = useMemo(() => new Map((data?.tasks ?? []).map((t) => [t.id, t])), [data?.tasks]);
 
+  const memberTaskCounts = useMemo(() => buildTaskCountsByOwner(data?.tasks ?? []), [data?.tasks]);
+
   const openCreateTaskDialog = (subject = '', description = '', owner = ''): void => {
     setCreateTaskDialog({
       open: true,
@@ -487,6 +490,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       <CollapsibleTeamSection title="Members" badge={data.members.length} defaultOpen>
         <MemberList
           members={data.members}
+          memberTaskCounts={memberTaskCounts}
           isTeamAlive={data.isAlive}
           onMemberClick={setSelectedMember}
           onSendMessage={(member) => {
@@ -625,7 +629,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               <Search size={12} className="shrink-0 text-[var(--color-text-muted)]" />
               <input
                 type="search"
-                placeholder="Поиск..."
+                placeholder="Search..."
                 value={messagesSearchQuery}
                 onChange={(e) => setMessagesSearchQuery(e.target.value)}
                 onPointerDown={(e) => e.stopPropagation()}
