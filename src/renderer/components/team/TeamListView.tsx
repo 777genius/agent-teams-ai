@@ -14,14 +14,14 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
 import { buildTaskCountsByTeam, normalizePath } from '@renderer/utils/pathNormalize';
 import { getBaseName } from '@renderer/utils/pathUtils';
-import { CheckCircle, Clock, Copy, FolderOpen, Play, Search, Trash2 } from 'lucide-react';
+import { CheckCircle, Clock, Copy, FolderOpen, Play, Search, Square, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { CreateTeamDialog } from './dialogs/CreateTeamDialog';
 import { TeamEmptyState } from './TeamEmptyState';
 
 import type { TeamCopyData } from './dialogs/CreateTeamDialog';
-import type { TeamProvisioningProgress, TeamSummary } from '@shared/types';
+import type { TeamCreateRequest, TeamProvisioningProgress, TeamSummary } from '@shared/types';
 
 function generateUniqueName(sourceName: string, existingNames: string[]): string {
   const base = sourceName.replace(/-\d+$/, '');
@@ -243,6 +243,20 @@ export const TeamListView = (): React.JSX.Element => {
     [teams]
   );
 
+  const [stoppingTeamName, setStoppingTeamName] = useState<string | null>(null);
+  const handleStopTeam = useCallback(async (teamName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setStoppingTeamName(teamName);
+    try {
+      await api.teams.stop(teamName);
+      setAliveTeams((prev) => prev.filter((n) => n !== teamName));
+    } catch (err) {
+      console.error('Failed to stop team:', err);
+    } finally {
+      setStoppingTeamName(null);
+    }
+  }, []);
+
   useEffect(() => {
     if (!electronMode) {
       return;
@@ -252,6 +266,18 @@ export const TeamListView = (): React.JSX.Element => {
   }, [electronMode, fetchTeams, fetchAllTasks]);
 
   const taskCountsByTeam = useMemo(() => buildTaskCountsByTeam(globalTasks), [globalTasks]);
+
+  const handleCreateDialogClose = useCallback(() => {
+    setShowCreateDialog(false);
+    setCopyData(null);
+  }, []);
+
+  const handleCreateSubmit = useCallback(
+    async (request: TeamCreateRequest) => {
+      await createTeam(request);
+    },
+    [createTeam]
+  );
 
   if (!electronMode) {
     return (
@@ -276,13 +302,8 @@ export const TeamListView = (): React.JSX.Element => {
       existingTeamNames={teams.map((t) => t.teamName)}
       initialData={copyData ?? undefined}
       defaultProjectPath={currentProjectPath}
-      onClose={() => {
-        setShowCreateDialog(false);
-        setCopyData(null);
-      }}
-      onCreate={async (request) => {
-        await createTeam(request);
-      }}
+      onClose={handleCreateDialogClose}
+      onCreate={handleCreateSubmit}
       onOpenTeam={openTeamTab}
     />
   );
@@ -396,12 +417,26 @@ export const TeamListView = (): React.JSX.Element => {
             {filteredTeams.map((team) => {
               const status = resolveTeamStatus(team.teamName, aliveTeams, provisioningRuns);
               const teamColorSet = team.color ? getTeamColorSet(team.color) : null;
+              const matchesCurrentProject =
+                !!currentProjectPath &&
+                (() => {
+                  if (team.projectPath && normalizePath(team.projectPath) === currentProjectPath)
+                    return true;
+                  return (
+                    team.projectPathHistory?.some((p) => normalizePath(p) === currentProjectPath) ??
+                    false
+                  );
+                })();
               return (
                 <div
                   key={team.teamName}
                   role="button"
                   tabIndex={0}
-                  className="group relative cursor-pointer overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:bg-[var(--color-surface-raised)]"
+                  className={`group relative cursor-pointer overflow-hidden rounded-lg border bg-[var(--color-surface)] p-4 hover:bg-[var(--color-surface-raised)] ${
+                    matchesCurrentProject
+                      ? 'border-emerald-500/70 ring-1 ring-emerald-500/30'
+                      : 'border-[var(--color-border)]'
+                  }`}
                   style={
                     teamColorSet
                       ? { borderLeftWidth: '3px', borderLeftColor: teamColorSet.border }
@@ -430,6 +465,24 @@ export const TeamListView = (): React.JSX.Element => {
                         <StatusBadge status={status} />
                       </div>
                       <div className="flex shrink-0 gap-1">
+                        {status === 'running' && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-amber-500/10 hover:text-amber-300 disabled:opacity-50 group-hover:opacity-100"
+                                onClick={(e) => handleStopTeam(team.teamName, e)}
+                                disabled={stoppingTeamName === team.teamName}
+                                aria-label="Stop team"
+                              >
+                                <Square size={14} fill="currentColor" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              {stoppingTeamName === team.teamName ? 'Stopping…' : 'Stop team'}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button

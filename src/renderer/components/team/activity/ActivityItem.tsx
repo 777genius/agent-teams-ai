@@ -175,6 +175,7 @@ export const ActivityItem = ({
   };
 
   const summaryText = message.summary || autoSummary || '';
+  const HeaderTag = systemLabel ? 'button' : 'div';
 
   return (
     <article
@@ -186,13 +187,12 @@ export const ActivityItem = ({
       }}
     >
       {/* Header — clickable when system message to toggle expand */}
-      <div
+      <HeaderTag
+        type={systemLabel ? 'button' : undefined}
         className={[
           'flex items-center gap-2 px-3 py-2',
-          systemLabel ? 'cursor-pointer select-none' : '',
+          systemLabel ? 'w-full cursor-pointer select-none border-0 bg-transparent text-left' : '',
         ].join(' ')}
-        role={systemLabel ? 'button' : undefined}
-        tabIndex={systemLabel ? 0 : undefined}
         onClick={systemLabel ? () => setIsExpanded((v) => !v) : undefined}
         onKeyDown={
           systemLabel
@@ -216,7 +216,7 @@ export const ActivityItem = ({
           />
         ) : null}
 
-        {message.source === 'lead_session' ? (
+        {message.source === 'lead_session' || message.source === 'lead_process' ? (
           <Bot className="size-3.5 shrink-0" style={{ color: colors.border }} />
         ) : (
           <MessageSquare className="size-3.5 shrink-0" style={{ color: colors.border }} />
@@ -274,6 +274,10 @@ export const ActivityItem = ({
         {message.source === 'lead_session' ? (
           <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
             session
+          </span>
+        ) : message.source === 'lead_process' ? (
+          <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+            live
           </span>
         ) : null}
 
@@ -370,7 +374,7 @@ export const ActivityItem = ({
             {timestamp}
           </span>
         </div>
-      </div>
+      </HeaderTag>
 
       {/* Content — collapsed for system messages, expanded for others */}
       {isExpanded ? (

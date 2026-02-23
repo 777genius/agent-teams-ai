@@ -41,6 +41,7 @@ import {
   TEAM_REQUEST_REVIEW,
   TEAM_SEND_MESSAGE,
   TEAM_START_TASK,
+  TEAM_STOP,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_TASK_STATUS,
@@ -387,8 +388,8 @@ const electronAPI: ElectronAPI = {
   },
 
   // Shell operations
-  openPath: (targetPath: string, projectRoot?: string) =>
-    ipcRenderer.invoke('shell:openPath', targetPath, projectRoot),
+  openPath: (targetPath: string, projectRoot?: string, userSelectedFromDialog?: boolean) =>
+    ipcRenderer.invoke('shell:openPath', targetPath, projectRoot, userSelectedFromDialog),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
 
   // Window controls (when title bar is hidden, e.g. Windows / Linux)
@@ -566,6 +567,9 @@ const electronAPI: ElectronAPI = {
     },
     aliveList: async () => {
       return invokeIpcWithResult<string[]>(TEAM_ALIVE_LIST);
+    },
+    stop: async (teamName: string) => {
+      return invokeIpcWithResult<void>(TEAM_STOP, teamName);
     },
     createConfig: async (request: TeamCreateConfigRequest) => {
       return invokeIpcWithResult<void>(TEAM_CREATE_CONFIG, request);

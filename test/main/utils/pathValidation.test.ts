@@ -13,6 +13,7 @@ import {
   isPathWithinAllowedDirectories,
   validateFilePath,
   validateOpenPath,
+  validateOpenPathUserSelected,
 } from '../../../src/main/utils/pathValidation';
 
 describe('pathValidation', () => {
@@ -297,6 +298,27 @@ describe('pathValidation', () => {
       expect(result.valid).toBe(false);
 
       fs.rmSync(tempRoot, { recursive: true, force: true });
+    });
+  });
+
+  describe('validateOpenPathUserSelected', () => {
+    it('should allow path outside project when chosen by user', () => {
+      const outsidePath = path.join(homeDir, 'some-other-project');
+      const result = validateOpenPathUserSelected(outsidePath);
+      expect(result.valid).toBe(true);
+      expect(result.normalizedPath).toBe(path.resolve(outsidePath));
+    });
+
+    it('should reject sensitive paths', () => {
+      const result = validateOpenPathUserSelected(path.join(homeDir, '.ssh', 'id_rsa'));
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Cannot open sensitive files');
+    });
+
+    it('should reject empty path', () => {
+      const result = validateOpenPathUserSelected('');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid path');
     });
   });
 });

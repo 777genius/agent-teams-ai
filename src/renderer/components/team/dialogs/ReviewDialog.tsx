@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -8,13 +10,18 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { Label } from '@renderer/components/ui/label';
-import { Textarea } from '@renderer/components/ui/textarea';
+import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { formatAgentRole } from '@renderer/utils/formatAgentRole';
+
+import type { MentionSuggestion } from '@renderer/types/mention';
+import type { ResolvedTeamMember } from '@shared/types';
 
 interface ReviewDialogProps {
   open: boolean;
   teamName: string;
   taskId: string | null;
+  members: ResolvedTeamMember[];
   onCancel: () => void;
   onSubmit: (comment?: string) => void;
 }
@@ -23,6 +30,7 @@ export const ReviewDialog = ({
   open,
   teamName,
   taskId,
+  members,
   onCancel,
   onSubmit,
 }: ReviewDialogProps): React.JSX.Element => {
@@ -30,6 +38,17 @@ export const ReviewDialog = ({
     key: `requestChanges:${teamName}:${taskId ?? ''}`,
     enabled: Boolean(teamName && taskId),
   });
+
+  const mentionSuggestions = useMemo<MentionSuggestion[]>(
+    () =>
+      members.map((m) => ({
+        id: m.name,
+        name: m.name,
+        subtitle: formatAgentRole(m.role) ?? formatAgentRole(m.agentType) ?? undefined,
+        color: m.color,
+      })),
+    [members]
+  );
 
   const handleCancel = (): void => {
     onCancel();
@@ -58,16 +77,20 @@ export const ReviewDialog = ({
 
         <div className="grid gap-2 py-2">
           <Label htmlFor="review-comment">Comment (optional)</Label>
-          <Textarea
+          <MentionableTextarea
             id="review-comment"
             className="min-h-[110px] text-xs"
             value={draft.value}
+            onValueChange={draft.setValue}
             placeholder="Describe what needs to change..."
-            onChange={(event) => draft.setValue(event.target.value)}
+            suggestions={mentionSuggestions}
+            hintText="Use @ to mention team members"
+            footerRight={
+              draft.isSaved ? (
+                <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+              ) : undefined
+            }
           />
-          {draft.isSaved ? (
-            <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-          ) : null}
         </div>
 
         <DialogFooter>

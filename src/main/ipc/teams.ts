@@ -21,6 +21,7 @@ import {
   TEAM_REQUEST_REVIEW,
   TEAM_SEND_MESSAGE,
   TEAM_START_TASK,
+  TEAM_STOP,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_TASK_STATUS,
@@ -100,6 +101,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_PROCESS_SEND, handleProcessSend);
   ipcMain.handle(TEAM_PROCESS_ALIVE, handleProcessAlive);
   ipcMain.handle(TEAM_ALIVE_LIST, handleAliveList);
+  ipcMain.handle(TEAM_STOP, handleStopTeam);
   ipcMain.handle(TEAM_CREATE_CONFIG, handleCreateConfig);
   ipcMain.handle(TEAM_GET_MEMBER_LOGS, handleGetMemberLogs);
   ipcMain.handle(TEAM_GET_LOGS_FOR_TASK, handleGetLogsForTask);
@@ -128,6 +130,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_PROCESS_SEND);
   ipcMain.removeHandler(TEAM_PROCESS_ALIVE);
   ipcMain.removeHandler(TEAM_ALIVE_LIST);
+  ipcMain.removeHandler(TEAM_STOP);
   ipcMain.removeHandler(TEAM_CREATE_CONFIG);
   ipcMain.removeHandler(TEAM_GET_MEMBER_LOGS);
   ipcMain.removeHandler(TEAM_GET_LOGS_FOR_TASK);
@@ -179,9 +182,58 @@ async function handleGetData(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('getData', async () => {
-    const data = await getTeamDataService().getTeamData(validated.value!);
-    const isAlive = getTeamProvisioningService().isTeamAlive(validated.value!);
-    return { ...data, isAlive };
+    const tn = validated.value!;
+    const data = await getTeamDataService().getTeamData(tn);
+    const provisioning = getTeamProvisioningService();
+    const isAlive = provisioning.isTeamAlive(tn);
+
+    if (isAlive) {
+      // Fire-and-forget: relay can take time (waits for lead reply).
+      void provisioning.relayLeadInboxMessages(tn).catch(() => undefined);
+    }
+
+    const live = provisioning.getLiveLeadProcessMessages(tn);
+    if (live.length === 0) {
+      return { ...data, isAlive };
+    }
+
+    const normalizeText = (text: string): string => text.trim().replace(/\r\n/g, '\n');
+    const leadSessionTextFingerprints = new Set<string>();
+    for (const msg of data.messages) {
+      if ((msg as { source?: unknown }).source !== 'lead_session') continue;
+      if (typeof msg.from !== 'string' || typeof msg.text !== 'string') continue;
+      leadSessionTextFingerprints.add(`${msg.from}\0${normalizeText(msg.text)}`);
+    }
+
+    const keyFor = (m: {
+      messageId?: string;
+      timestamp: string;
+      from: string;
+      text: string;
+    }): string => {
+      if (typeof m.messageId === 'string' && m.messageId.trim().length > 0) {
+        return m.messageId;
+      }
+      return `${m.timestamp}\0${m.from}\0${(m.text ?? '').slice(0, 80)}`;
+    };
+
+    const merged: typeof data.messages = [];
+    const seen = new Set<string>();
+    for (const msg of [...data.messages, ...live]) {
+      if ((msg as { source?: unknown }).source === 'lead_process') {
+        const fp = `${msg.from}\0${normalizeText(msg.text ?? '')}`;
+        if (leadSessionTextFingerprints.has(fp)) {
+          continue;
+        }
+      }
+      const key = keyFor(msg);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(msg);
+    }
+    merged.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+
+    return { ...data, isAlive, messages: merged };
   });
 }
 
@@ -232,7 +284,9 @@ async function handleUpdateConfig(
 }
 
 function isProvisioningTeamName(teamName: string): boolean {
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(teamName) && teamName.length <= 64;
+  if (teamName.length > 64) return false;
+  const parts = teamName.split('-');
+  return parts.every((p) => /^[a-z0-9]+$/.test(p));
 }
 
 async function validateProvisioningRequest(
@@ -819,6 +873,19 @@ async function handleGetMemberStats(
 
 async function handleAliveList(_event: IpcMainInvokeEvent): Promise<IpcResult<string[]>> {
   return wrapTeamHandler('aliveList', async () => getTeamProvisioningService().getAliveTeams());
+}
+
+async function handleStopTeam(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown
+): Promise<IpcResult<void>> {
+  const validated = validateTeamName(teamName);
+  if (!validated.valid) {
+    return { success: false, error: validated.error ?? 'Invalid teamName' };
+  }
+  return wrapTeamHandler('stop', async () => {
+    getTeamProvisioningService().stopTeam(validated.value!);
+  });
 }
 
 async function handleStartTask(

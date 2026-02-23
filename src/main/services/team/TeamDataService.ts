@@ -469,7 +469,7 @@ export class TeamDataService {
 
     for (const msg of messages) {
       if (!msg.messageId || !msg.summary || msg.from === 'user') continue;
-      if (msg.source === 'lead_session') continue;
+      if (msg.source === 'lead_session' || msg.source === 'lead_process') continue;
 
       const textKey = `${msg.from}\0${msg.text}`;
       if (processedTexts.has(textKey)) continue;

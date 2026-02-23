@@ -214,6 +214,40 @@ const RepositoryCard = ({
         <span className="text-text-muted">·</span>
         <span className="text-[10px] text-text-muted">{lastActivity}</span>
       </div>
+
+      {/* Tasks progress bar */}
+      {taskCounts &&
+        (() => {
+          const pending = taskCounts.pending ?? 0;
+          const inProgress = taskCounts.inProgress ?? 0;
+          const completed = taskCounts.completed ?? 0;
+          const totalTasks = pending + inProgress + completed;
+          if (totalTasks === 0) return null;
+          const completedRatio = completed / totalTasks;
+          const progressPercent = Math.round(completedRatio * 100);
+          return (
+            <div className="mt-2 w-full space-y-1">
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--color-surface-raised)]"
+                  role="progressbar"
+                  aria-valuenow={completed}
+                  aria-valuemin={0}
+                  aria-valuemax={totalTasks}
+                  aria-label={`Tasks ${completed}/${totalTasks} completed`}
+                >
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-200"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <span className="shrink-0 text-[10px] font-medium tracking-tight text-[var(--color-text-muted)]">
+                  {completed}/{totalTasks}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
     </button>
   );
 };
@@ -250,7 +284,7 @@ const NewProjectCard = (): React.JSX.Element => {
       }
 
       // No match found - open the folder in file manager as fallback
-      const result = await api.openPath(selectedPath);
+      const result = await api.openPath(selectedPath, undefined, true);
       if (!result.success) {
         logger.error('Failed to open folder:', result.error);
       }

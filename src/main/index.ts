@@ -155,6 +155,19 @@ function wireFileWatcherEvents(context: ServiceContext): void {
       mainWindow.webContents.send(TEAM_CHANGE, event);
     }
     httpServer?.broadcast('team-change', event);
+
+    // Auto-relay direct messages to live team lead process (no UI dependency).
+    try {
+      if (!event || typeof event !== 'object') return;
+      const row = event as { type?: unknown; teamName?: unknown };
+      if (row.type !== 'inbox') return;
+      if (typeof row.teamName !== 'string' || row.teamName.trim().length === 0) return;
+      const teamName = row.teamName.trim();
+      if (!teamProvisioningService.isTeamAlive(teamName)) return;
+      void teamProvisioningService.relayLeadInboxMessages(teamName).catch(() => undefined);
+    } catch {
+      // ignore
+    }
   };
   context.fileWatcher.on('team-change', teamChangeHandler);
   teamChangeCleanup = () => context.fileWatcher.off('team-change', teamChangeHandler);
@@ -297,6 +310,14 @@ function initializeServices(): void {
   void teamProvisioningService.warmup();
   void new TeamAgentToolsInstaller().ensureInstalled();
   httpServer = new HttpServer();
+
+  // Allow TeamProvisioningService to trigger team refresh events (e.g. live lead replies).
+  teamProvisioningService.setTeamChangeEmitter((event) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(TEAM_CHANGE, event);
+    }
+    httpServer?.broadcast('team-change', event);
+  });
 
   // Initialize IPC handlers with registry
   initializeIpcHandlers(

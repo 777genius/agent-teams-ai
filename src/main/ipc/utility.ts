@@ -12,12 +12,21 @@ import { createLogger } from '@shared/utils/logger';
 import { app, type IpcMain, type IpcMainInvokeEvent, shell } from 'electron';
 import * as fs from 'fs';
 
-import { type ClaudeMdFileInfo, readAgentConfigs, readAllClaudeMdFiles, readDirectoryClaudeMd } from '../services';
+import {
+  type ClaudeMdFileInfo,
+  readAgentConfigs,
+  readAllClaudeMdFiles,
+  readDirectoryClaudeMd,
+} from '../services';
 
 import type { AgentConfig } from '@shared/types/api';
 
 const logger = createLogger('IPC:utility');
-import { validateFilePath, validateOpenPath } from '../utils/pathValidation';
+import {
+  validateFilePath,
+  validateOpenPath,
+  validateOpenPathUserSelected,
+} from '../utils/pathValidation';
 import { countTokens } from '../utils/tokenizer';
 
 /**
@@ -96,15 +105,19 @@ async function handleShellOpenExternal(
  * Handler for 'shell:openPath' IPC call.
  * Opens a folder or file in the system's default application (Finder on macOS).
  * Validates path security before opening.
+ * When userSelectedFromDialog is true, path was chosen via system folder picker —
+ * only sensitive-pattern checks apply, not project/claude directory restriction.
  */
 async function handleShellOpenPath(
   _event: IpcMainInvokeEvent,
   targetPath: string,
-  projectRoot?: string
+  projectRoot?: string,
+  userSelectedFromDialog?: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Validate path security
-    const validation = validateOpenPath(targetPath, projectRoot ?? null);
+    const validation = userSelectedFromDialog
+      ? validateOpenPathUserSelected(targetPath)
+      : validateOpenPath(targetPath, projectRoot ?? null);
     if (!validation.valid) {
       logger.error(`shell:openPath - validation failed: ${validation.error ?? 'Unknown error'}`);
       return { success: false, error: validation.error };

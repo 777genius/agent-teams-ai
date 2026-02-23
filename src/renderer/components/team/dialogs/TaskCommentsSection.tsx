@@ -132,27 +132,35 @@ export const TaskCommentsSection = ({
               </div>
               {(() => {
                 const reply = parseMessageReply(comment.text);
+                const displayText = reply ? reply.replyText : comment.text;
+                const needsExpandCollapse = displayText.includes('\n');
                 const expanded = expandedCommentIds.has(comment.id);
                 const collapsedHeight = 'max-h-[120px]';
+                const showCollapsed = needsExpandCollapse && !expanded;
+                const showExpandedButton = needsExpandCollapse && expanded;
                 return (
                   <div className="relative text-xs">
                     <div
                       className={
-                        expanded ? undefined : `relative ${collapsedHeight} overflow-hidden`
+                        showCollapsed ? `relative ${collapsedHeight} overflow-hidden` : undefined
                       }
                     >
                       {reply ? (
                         <ReplyQuoteBlock
                           reply={reply}
-                          bodyMaxHeight={expanded ? undefined : 'max-h-56'}
+                          bodyMaxHeight={
+                            needsExpandCollapse && !expanded ? 'max-h-56' : 'max-h-none'
+                          }
                         />
                       ) : (
                         <MarkdownViewer
                           content={comment.text}
-                          maxHeight={expanded ? undefined : collapsedHeight}
+                          maxHeight={
+                            needsExpandCollapse && !expanded ? collapsedHeight : 'max-h-none'
+                          }
                         />
                       )}
-                      {!expanded && (
+                      {showCollapsed && (
                         <>
                           <div
                             className="pointer-events-none absolute inset-x-0 bottom-0 h-14"
@@ -167,25 +175,25 @@ export const TaskCommentsSection = ({
                               type="button"
                               className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] shadow-sm transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
                               onClick={() => toggleCommentExpanded(comment.id)}
-                              title="Развернуть"
+                              title="Expand"
                             >
                               <ChevronDown size={12} />
-                              Развернуть
+                              Expand
                             </button>
                           </div>
                         </>
                       )}
                     </div>
-                    {expanded && (
+                    {showExpandedButton && (
                       <div className="flex justify-center pt-2">
                         <button
                           type="button"
                           className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-2.5 py-1 text-[11px] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-secondary)]"
                           onClick={() => toggleCommentExpanded(comment.id)}
-                          title="Свернуть"
+                          title="Collapse"
                         >
                           <ChevronUp size={12} />
-                          Свернуть
+                          Collapse
                         </button>
                       </div>
                     )}

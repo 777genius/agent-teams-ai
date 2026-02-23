@@ -269,7 +269,7 @@ export const LaunchTeamDialog = ({
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-xs text-[var(--color-text-muted)]">cwd</Label>
+            <Label className="text-xs text-[var(--color-text-muted)]">Project</Label>
             <div className="space-y-2">
               <div className="flex items-center gap-1">
                 <Button

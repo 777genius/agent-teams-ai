@@ -20,6 +20,7 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   TEAM_PROCESS_SEND: 'team:processSend',
   TEAM_PROCESS_ALIVE: 'team:processAlive',
   TEAM_ALIVE_LIST: 'team:aliveList',
+  TEAM_STOP: 'team:stop',
   TEAM_GET_MEMBER_LOGS: 'team:getMemberLogs',
   TEAM_GET_LOGS_FOR_TASK: 'team:getLogsForTask',
   TEAM_GET_MEMBER_STATS: 'team:getMemberStats',
@@ -31,6 +32,7 @@ vi.mock('@preload/constants/ipcChannels', () => ({
 
 import {
   TEAM_ALIVE_LIST,
+  TEAM_STOP,
   TEAM_CANCEL_PROVISIONING,
   TEAM_CREATE,
   TEAM_CREATE_CONFIG,
@@ -107,7 +109,10 @@ describe('ipc teams handlers', () => {
     launchTeam: vi.fn(async () => ({ runId: 'run-2' })),
     sendMessageToTeam: vi.fn(async () => undefined),
     isTeamAlive: vi.fn(() => true),
+    relayLeadInboxMessages: vi.fn(async () => 0),
+    getLiveLeadProcessMessages: vi.fn(() => []),
     getAliveTeams: vi.fn(() => ['my-team']),
+    stopTeam: vi.fn(() => undefined),
   };
 
   beforeEach(() => {
@@ -135,6 +140,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_PROCESS_SEND)).toBe(true);
     expect(handlers.has(TEAM_PROCESS_ALIVE)).toBe(true);
     expect(handlers.has(TEAM_ALIVE_LIST)).toBe(true);
+    expect(handlers.has(TEAM_STOP)).toBe(true);
     expect(handlers.has(TEAM_CREATE_CONFIG)).toBe(true);
     expect(handlers.has(TEAM_GET_MEMBER_LOGS)).toBe(true);
     expect(handlers.has(TEAM_GET_LOGS_FOR_TASK)).toBe(true);
@@ -201,6 +207,43 @@ describe('ipc teams handlers', () => {
       op: 'set_column',
       column: 'approved',
     });
+  });
+
+  it('dedups live lead replies when lead_session already has same text', async () => {
+    service.getTeamData.mockResolvedValueOnce({
+      teamName: 'my-team',
+      messages: [
+        {
+          from: 'team-lead',
+          to: 'user',
+          text: 'Hello there',
+          timestamp: '2026-02-23T10:00:00.000Z',
+          read: true,
+          source: 'lead_session',
+        },
+      ],
+    });
+    provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([
+      {
+        from: 'team-lead',
+        to: 'user',
+        text: 'Hello there',
+        timestamp: '2026-02-23T10:00:01.000Z',
+        read: true,
+        source: 'lead_process',
+        messageId: 'live-1',
+      },
+    ]);
+
+    const getDataHandler = handlers.get(TEAM_GET_DATA)!;
+    const result = (await getDataHandler({} as never, 'my-team')) as {
+      success: boolean;
+      data: { messages: { source?: string }[] };
+    };
+    expect(result.success).toBe(true);
+    const sources = result.data.messages.map((m) => m.source);
+    expect(sources.filter((s) => s === 'lead_process')).toHaveLength(0);
+    expect(sources.filter((s) => s === 'lead_session')).toHaveLength(1);
   });
 
   describe('createTask prompt validation', () => {
@@ -304,6 +347,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_PROCESS_SEND)).toBe(false);
     expect(handlers.has(TEAM_PROCESS_ALIVE)).toBe(false);
     expect(handlers.has(TEAM_ALIVE_LIST)).toBe(false);
+    expect(handlers.has(TEAM_STOP)).toBe(false);
     expect(handlers.has(TEAM_CREATE_CONFIG)).toBe(false);
     expect(handlers.has(TEAM_GET_MEMBER_LOGS)).toBe(false);
     expect(handlers.has(TEAM_GET_LOGS_FOR_TASK)).toBe(false);

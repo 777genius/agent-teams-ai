@@ -359,6 +359,7 @@ export interface TeamsAPI {
   processSend: (teamName: string, message: string) => Promise<void>;
   processAlive: (teamName: string) => Promise<boolean>;
   aliveList: () => Promise<string[]>;
+  stop: (teamName: string) => Promise<void>;
   createConfig: (request: TeamCreateConfigRequest) => Promise<void>;
   getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;
   getLogsForTask: (
@@ -461,7 +462,8 @@ export interface ElectronAPI {
   // Shell operations
   openPath: (
     targetPath: string,
-    projectRoot?: string
+    projectRoot?: string,
+    userSelectedFromDialog?: boolean
   ) => Promise<{ success: boolean; error?: string }>;
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
 

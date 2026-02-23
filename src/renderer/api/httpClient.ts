@@ -685,6 +685,9 @@ export class HttpAPIClient implements ElectronAPI {
     aliveList: async (): Promise<string[]> => {
       return [];
     },
+    stop: async (): Promise<void> => {
+      throw new Error('Team stop is not available in browser mode');
+    },
     createConfig: async (): Promise<void> => {
       throw new Error('Team config creation is not available in browser mode');
     },

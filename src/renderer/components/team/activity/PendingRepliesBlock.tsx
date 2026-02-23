@@ -1,43 +1,48 @@
 import { CARD_BG, CARD_BORDER_STYLE, CARD_ICON_MUTED } from '@renderer/constants/cssVariables';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
+import { formatDistanceToNowStrict } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 
-import type { ResolvedTeamMember, TeamTask } from '@shared/types';
+import type { ResolvedTeamMember } from '@shared/types';
 
-interface ActiveTasksBlockProps {
+interface PendingRepliesBlockProps {
   members: ResolvedTeamMember[];
-  tasks: TeamTask[];
+  pendingRepliesByMember: Record<string, number>;
   onMemberClick?: (member: ResolvedTeamMember) => void;
-  onTaskClick?: (task: TeamTask) => void;
 }
 
-export const ActiveTasksBlock = ({
+export const PendingRepliesBlock = ({
   members,
-  tasks,
+  pendingRepliesByMember,
   onMemberClick,
-  onTaskClick,
-}: ActiveTasksBlockProps): React.JSX.Element | null => {
-  const taskMap = new Map(tasks.map((t) => [t.id, t]));
-  const working = members.filter((m) => m.currentTaskId != null);
-  if (working.length === 0) return null;
+}: PendingRepliesBlockProps): React.JSX.Element | null => {
+  const pending = Object.entries(pendingRepliesByMember)
+    .map(([name, sentAtMs]) => ({
+      member: members.find((m) => m.name === name) ?? null,
+      name,
+      sentAtMs,
+    }))
+    .filter((p): p is { member: ResolvedTeamMember; name: string; sentAtMs: number } => !!p.member)
+    .sort((a, b) => b.sentAtMs - a.sentAtMs);
+
+  if (pending.length === 0) return null;
 
   return (
     <div className="mb-3 space-y-1.5">
       <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
-        In progress
+        Awaiting replies
       </p>
-      {working.map((member) => {
-        const taskId = member.currentTaskId!;
-        const task = taskMap.get(taskId);
+      {pending.map(({ member, sentAtMs }) => {
         const colors = getTeamColorSet(member.color ?? '');
         const roleLabel = formatAgentRole(
           member.role ?? (member.agentType !== 'general-purpose' ? member.agentType : undefined)
         );
+        const since = formatDistanceToNowStrict(sentAtMs, { addSuffix: true });
 
         return (
           <article
-            key={`${member.name}-${taskId}`}
+            key={`pending-reply:${member.name}:${sentAtMs}`}
             className="overflow-hidden rounded-md"
             style={{
               backgroundColor: CARD_BG,
@@ -46,10 +51,6 @@ export const ActiveTasksBlock = ({
             }}
           >
             <div className="flex items-center gap-2 px-3 py-2">
-              <span className="relative flex size-2 shrink-0">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-                <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-              </span>
               <Loader2
                 className="size-3.5 shrink-0 animate-spin"
                 style={{ color: colors.border }}
@@ -64,6 +65,7 @@ export const ActiveTasksBlock = ({
                     border: `1px solid ${colors.border}40`,
                   }}
                   onClick={() => onMemberClick(member)}
+                  title="Open member"
                 >
                   {member.name}
                 </button>
@@ -87,31 +89,13 @@ export const ActiveTasksBlock = ({
               <span
                 className="min-w-0 flex-1 truncate text-[10px]"
                 style={{ color: CARD_ICON_MUTED }}
+                title="Message sent, awaiting reply"
               >
-                working on
+                awaiting reply
               </span>
-              {task &&
-                (onTaskClick ? (
-                  <button
-                    type="button"
-                    className="truncate rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-text)] transition-opacity hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-[var(--color-border)]"
-                    style={{ border: `1px solid ${colors.border}40` }}
-                    onClick={() => onTaskClick(task)}
-                    title={task.subject}
-                  >
-                    #{task.id} {task.subject.slice(0, 40)}
-                    {task.subject.length > 40 ? '…' : ''}
-                  </button>
-                ) : (
-                  <span
-                    className="truncate px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-text)]"
-                    style={{ border: `1px solid ${colors.border}40` }}
-                    title={task.subject}
-                  >
-                    #{task.id} {task.subject.slice(0, 40)}
-                    {task.subject.length > 40 ? '…' : ''}
-                  </span>
-                ))}
+              <span className="shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
+                {since}
+              </span>
             </div>
           </article>
         );

@@ -199,6 +199,45 @@ export function validateFilePath(
 }
 
 /**
+ * Validates a path for opening when it was explicitly chosen by the user
+ * via the system folder picker. Only checks sensitive patterns, not
+ * allowed-directories (project / ~/.claude).
+ *
+ * @param targetPath - The path to open
+ * @returns Validation result
+ */
+export function validateOpenPathUserSelected(targetPath: string): PathValidationResult {
+  if (!targetPath || typeof targetPath !== 'string') {
+    return { valid: false, error: 'Invalid path' };
+  }
+
+  const expandedPath = targetPath.startsWith('~')
+    ? path.join(os.homedir(), targetPath.slice(1))
+    : targetPath;
+
+  const normalizedPath = path.resolve(path.normalize(expandedPath));
+
+  if (!path.isAbsolute(normalizedPath)) {
+    return { valid: false, error: 'Path must be absolute' };
+  }
+
+  if (matchesSensitivePattern(normalizedPath)) {
+    return { valid: false, error: 'Cannot open sensitive files' };
+  }
+
+  const realTargetPath = resolveRealPathIfExists(normalizedPath);
+  if (realTargetPath) {
+    const isWindows = process.platform === 'win32';
+    const normalizedRealTarget = normalizeForCompare(realTargetPath, isWindows);
+    if (matchesSensitivePattern(normalizedRealTarget)) {
+      return { valid: false, error: 'Cannot open sensitive files' };
+    }
+  }
+
+  return { valid: true, normalizedPath };
+}
+
+/**
  * Validates a path for shell:openPath operation.
  * More permissive than file reading - allows opening project directories
  * and Claude data directories.
