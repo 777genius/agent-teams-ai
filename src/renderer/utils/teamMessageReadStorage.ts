@@ -16,12 +16,22 @@ export function getReadSet(teamName: string): Set<string> {
   }
 }
 
-export function markRead(teamName: string, messageKey: string): void {
-  const set = getReadSet(teamName);
-  if (set.has(messageKey)) return;
-  set.add(messageKey);
+/**
+ * Mark a message as read and persist. If `fullSet` is provided, that set is written
+ * (avoids losing keys when a previous write failed). Otherwise reads from localStorage and adds one key.
+ */
+export function markRead(teamName: string, messageKey: string, fullSet?: Set<string>): void {
+  const toWrite =
+    fullSet ??
+    (() => {
+      const set = getReadSet(teamName);
+      if (set.has(messageKey)) return null;
+      set.add(messageKey);
+      return set;
+    })();
+  if (!toWrite) return;
   try {
-    localStorage.setItem(storageKey(teamName), JSON.stringify([...set]));
+    localStorage.setItem(storageKey(teamName), JSON.stringify([...toWrite]));
   } catch {
     // quota or disabled
   }

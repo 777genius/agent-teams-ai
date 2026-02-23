@@ -28,7 +28,7 @@ export function useTeamMessagesRead(teamName: string): {
         if (prev.has(messageKey)) return prev;
         const next = new Set(prev);
         next.add(messageKey);
-        markReadStorage(teamName, messageKey);
+        markReadStorage(teamName, messageKey, next);
         return next;
       });
     },

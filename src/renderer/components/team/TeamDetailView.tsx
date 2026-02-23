@@ -31,7 +31,7 @@ import { TeamSessionsSection } from './TeamSessionsSection';
 import type { KanbanFilterState } from './kanban/KanbanFilterPopover';
 import type { MessagesFilterState } from './messages/MessagesFilterPopover';
 import type { Session } from '@renderer/types/data';
-import type { ResolvedTeamMember, TeamTask } from '@shared/types';
+import type { InboxMessage, ResolvedTeamMember, TeamTask } from '@shared/types';
 
 interface TeamDetailViewProps {
   teamName: string;
@@ -293,6 +293,10 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   const messagesUnreadCount = useMemo(
     () => filteredMessages.filter((m) => !readSet.has(toMessageKey(m))).length,
     [filteredMessages, readSet]
+  );
+  const handleMessageVisible = useCallback(
+    (message: InboxMessage) => markRead(toMessageKey(message)),
+    [markRead]
   );
 
   const kanbanDisplayTasks = useMemo(() => {
@@ -691,7 +695,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             setReplyQuote({ from: message.from, text: message.text });
             setSendDialogOpen(true);
           }}
-          onMessageVisible={(message) => markRead(toMessageKey(message))}
+          onMessageVisible={handleMessageVisible}
         />
       </CollapsibleTeamSection>
 

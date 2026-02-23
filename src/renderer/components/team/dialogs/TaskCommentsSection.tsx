@@ -118,18 +118,6 @@ export const TaskCommentsSection = ({
                 </span>
                 <button
                   type="button"
-                  className="flex items-center gap-0.5 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:text-[var(--color-text-secondary)] group-hover:opacity-100"
-                  onClick={() => toggleCommentExpanded(comment.id)}
-                  title={expandedCommentIds.has(comment.id) ? 'Свернуть' : 'Развернуть'}
-                >
-                  {expandedCommentIds.has(comment.id) ? (
-                    <ChevronUp size={12} />
-                  ) : (
-                    <ChevronDown size={12} />
-                  )}
-                </button>
-                <button
-                  type="button"
                   className="ml-auto flex items-center gap-0.5 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:text-[var(--color-text-secondary)] group-hover:opacity-100"
                   onClick={() =>
                     setReplyTo({
@@ -142,23 +130,68 @@ export const TaskCommentsSection = ({
                   Reply
                 </button>
               </div>
-              <div className="text-xs">
-                {(() => {
-                  const reply = parseMessageReply(comment.text);
-                  const expanded = expandedCommentIds.has(comment.id);
-                  return reply ? (
-                    <ReplyQuoteBlock
-                      reply={reply}
-                      bodyMaxHeight={expanded ? undefined : 'max-h-56'}
-                    />
-                  ) : (
-                    <MarkdownViewer
-                      content={comment.text}
-                      maxHeight={expanded ? undefined : 'max-h-[120px]'}
-                    />
-                  );
-                })()}
-              </div>
+              {(() => {
+                const reply = parseMessageReply(comment.text);
+                const expanded = expandedCommentIds.has(comment.id);
+                const collapsedHeight = 'max-h-[120px]';
+                return (
+                  <div className="relative text-xs">
+                    <div
+                      className={
+                        expanded ? undefined : `relative ${collapsedHeight} overflow-hidden`
+                      }
+                    >
+                      {reply ? (
+                        <ReplyQuoteBlock
+                          reply={reply}
+                          bodyMaxHeight={expanded ? undefined : 'max-h-56'}
+                        />
+                      ) : (
+                        <MarkdownViewer
+                          content={comment.text}
+                          maxHeight={expanded ? undefined : collapsedHeight}
+                        />
+                      )}
+                      {!expanded && (
+                        <>
+                          <div
+                            className="pointer-events-none absolute inset-x-0 bottom-0 h-14"
+                            style={{
+                              background:
+                                'linear-gradient(to top, var(--color-surface) 0%, transparent 100%)',
+                            }}
+                            aria-hidden
+                          />
+                          <div className="absolute inset-x-0 bottom-0 flex justify-center pt-1">
+                            <button
+                              type="button"
+                              className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] shadow-sm transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+                              onClick={() => toggleCommentExpanded(comment.id)}
+                              title="Развернуть"
+                            >
+                              <ChevronDown size={12} />
+                              Развернуть
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    {expanded && (
+                      <div className="flex justify-center pt-2">
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-2.5 py-1 text-[11px] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-secondary)]"
+                          onClick={() => toggleCommentExpanded(comment.id)}
+                          title="Свернуть"
+                        >
+                          <ChevronUp size={12} />
+                          Свернуть
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>

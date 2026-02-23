@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { getMemberColorByName } from '@shared/constants/memberColors';
 
@@ -39,16 +39,10 @@ const MessageRowWithObserver = ({
 }): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
   const reportedRef = useRef(false);
-
-  const handleIntersect = useCallback(
-    (entry: IntersectionObserverEntry) => {
-      if (!entry.isIntersecting || !onVisible) return;
-      if (reportedRef.current) return;
-      reportedRef.current = true;
-      onVisible(message);
-    },
-    [message, onVisible]
-  );
+  const messageRef = useRef(message);
+  const onVisibleRef = useRef(onVisible);
+  messageRef.current = message;
+  onVisibleRef.current = onVisible;
 
   useEffect(() => {
     if (!onVisible) return;
@@ -56,13 +50,19 @@ const MessageRowWithObserver = ({
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry) handleIntersect(entry);
+        if (!entry?.isIntersecting) return;
+        if (reportedRef.current) return;
+        const cb = onVisibleRef.current;
+        const msg = messageRef.current;
+        if (!cb) return;
+        reportedRef.current = true;
+        cb(msg);
       },
       { threshold: VIEWPORT_THRESHOLD, rootMargin: '0px' }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [onVisible, handleIntersect]);
+  }, [onVisible]);
 
   return (
     <div ref={ref} className="min-h-px">
