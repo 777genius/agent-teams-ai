@@ -15,10 +15,10 @@ export function useTeamMessagesRead(teamName: string): {
 
   useEffect(() => {
     if (!teamName) {
-      setReadSet(new Set());
+      queueMicrotask(() => setReadSet(new Set()));
       return;
     }
-    setReadSet(getReadSetStorage(teamName));
+    queueMicrotask(() => setReadSet(getReadSetStorage(teamName)));
   }, [teamName]);
 
   const markRead = useCallback(

@@ -57,7 +57,7 @@ export const TaskDetailDialog = ({
     if (comments.length === 0) return;
     const latest = Math.max(...comments.map((c) => new Date(c.createdAt).getTime()));
     if (latest > 0) markAsRead(teamName, currentTask.id, latest);
-  }, [open, teamName, currentTask?.id, currentTask?.comments]);
+  }, [open, teamName, currentTask]);
 
   const handleDependencyClick = (taskId: string): void => {
     onClose();

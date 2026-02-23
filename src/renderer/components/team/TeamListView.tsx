@@ -21,7 +21,7 @@ import { CreateTeamDialog } from './dialogs/CreateTeamDialog';
 import { TeamEmptyState } from './TeamEmptyState';
 
 import type { TeamCopyData } from './dialogs/CreateTeamDialog';
-import type { TeamProvisioningProgress, TeamSummary } from '@shared/types';
+import type { TeamCreateRequest, TeamProvisioningProgress, TeamSummary } from '@shared/types';
 
 function generateUniqueName(sourceName: string, existingNames: string[]): string {
   const base = sourceName.replace(/-\d+$/, '');
@@ -244,17 +244,15 @@ export const TeamListView = (): React.JSX.Element => {
   );
 
   const [stoppingTeamName, setStoppingTeamName] = useState<string | null>(null);
-  const handleStopTeam = useCallback((teamName: string, e: React.MouseEvent) => {
+  const handleStopTeam = useCallback(async (teamName: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setStoppingTeamName(teamName);
-    void api.teams
-      .stop(teamName)
-      .then(() => {
-        setAliveTeams((prev) => prev.filter((n) => n !== teamName));
-      })
-      .finally(() => {
-        setStoppingTeamName(null);
-      });
+    try {
+      await api.teams.stop(teamName);
+      setAliveTeams((prev) => prev.filter((n) => n !== teamName));
+    } finally {
+      setStoppingTeamName(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -266,6 +264,18 @@ export const TeamListView = (): React.JSX.Element => {
   }, [electronMode, fetchTeams, fetchAllTasks]);
 
   const taskCountsByTeam = useMemo(() => buildTaskCountsByTeam(globalTasks), [globalTasks]);
+
+  const handleCreateDialogClose = useCallback(() => {
+    setShowCreateDialog(false);
+    setCopyData(null);
+  }, []);
+
+  const handleCreateSubmit = useCallback(
+    async (request: TeamCreateRequest) => {
+      await createTeam(request);
+    },
+    [createTeam]
+  );
 
   if (!electronMode) {
     return (
@@ -290,13 +300,8 @@ export const TeamListView = (): React.JSX.Element => {
       existingTeamNames={teams.map((t) => t.teamName)}
       initialData={copyData ?? undefined}
       defaultProjectPath={currentProjectPath}
-      onClose={() => {
-        setShowCreateDialog(false);
-        setCopyData(null);
-      }}
-      onCreate={async (request) => {
-        await createTeam(request);
-      }}
+      onClose={handleCreateDialogClose}
+      onCreate={handleCreateSubmit}
       onOpenTeam={openTeamTab}
     />
   );

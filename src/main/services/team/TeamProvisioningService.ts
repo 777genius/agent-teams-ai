@@ -18,6 +18,7 @@ import { promisify } from 'util';
 
 import { atomicWriteAsync } from './atomicWrite';
 import { ClaudeBinaryResolver } from './ClaudeBinaryResolver';
+import { withInboxLock } from './inboxLock';
 import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
@@ -1235,54 +1236,56 @@ export class TeamProvisioningService {
   ): Promise<void> {
     const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${member}.json`);
 
-    let raw: string;
-    try {
-      raw = await fs.promises.readFile(inboxPath, 'utf8');
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    await withInboxLock(inboxPath, async () => {
+      let raw: string;
+      try {
+        raw = await fs.promises.readFile(inboxPath, 'utf8');
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          return;
+        }
+        throw error;
+      }
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw) as unknown;
+      } catch {
         return;
       }
-      throw error;
-    }
+      if (!Array.isArray(parsed)) return;
 
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw) as unknown;
-    } catch {
-      return;
-    }
-    if (!Array.isArray(parsed)) return;
+      const ids = new Set(messages.map((m) => m.messageId).filter((id): id is string => !!id));
+      const fallbackKeys = new Set(
+        messages.filter((m) => !m.messageId).map((m) => `${m.timestamp}\0${m.from}\0${m.text}`)
+      );
 
-    const ids = new Set(messages.map((m) => m.messageId).filter((id): id is string => !!id));
-    const fallbackKeys = new Set(
-      messages.filter((m) => !m.messageId).map((m) => `${m.timestamp}\0${m.from}\0${m.text}`)
-    );
+      let changed = false;
+      for (const item of parsed) {
+        if (!item || typeof item !== 'object') continue;
+        const row = item as Record<string, unknown>;
+        const msgId = typeof row.messageId === 'string' ? row.messageId : null;
+        const timestamp = typeof row.timestamp === 'string' ? row.timestamp : null;
+        const from = typeof row.from === 'string' ? row.from : null;
+        const text = typeof row.text === 'string' ? row.text : null;
 
-    let changed = false;
-    for (const item of parsed) {
-      if (!item || typeof item !== 'object') continue;
-      const row = item as Record<string, unknown>;
-      const msgId = typeof row.messageId === 'string' ? row.messageId : null;
-      const timestamp = typeof row.timestamp === 'string' ? row.timestamp : null;
-      const from = typeof row.from === 'string' ? row.from : null;
-      const text = typeof row.text === 'string' ? row.text : null;
+        const matchesId = msgId ? ids.has(msgId) : false;
+        const matchesFallback =
+          !msgId && timestamp && from && text
+            ? fallbackKeys.has(`${timestamp}\0${from}\0${text}`)
+            : false;
 
-      const matchesId = msgId ? ids.has(msgId) : false;
-      const matchesFallback =
-        !msgId && timestamp && from && text
-          ? fallbackKeys.has(`${timestamp}\0${from}\0${text}`)
-          : false;
+        if (!matchesId && !matchesFallback) continue;
 
-      if (!matchesId && !matchesFallback) continue;
-
-      if (row.read !== true) {
-        row.read = true;
-        changed = true;
+        if (row.read !== true) {
+          row.read = true;
+          changed = true;
+        }
       }
-    }
 
-    if (!changed) return;
-    await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
+      if (!changed) return;
+      await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
+    });
   }
 
   private trimRelayedSet(set: Set<string>): Set<string> {
