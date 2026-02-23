@@ -90,9 +90,25 @@ function attachAliveRun(
     processKilled: false,
     cancelRequested: false,
     provisioningComplete: true,
+    leadRelayCapture: null,
   });
 
   return { writeSpy };
+}
+
+async function waitForCapture(service: TeamProvisioningService): Promise<any> {
+  const runs = (service as unknown as { runs: Map<string, unknown> }).runs;
+  const run = runs.get('run-1') as any;
+  for (let i = 0; i < 50; i++) {
+    if (run?.leadRelayCapture) return run;
+    // Progress async awaits in relayLeadInboxMessages
+    await Promise.resolve();
+  }
+  for (let i = 0; i < 50; i++) {
+    if (run?.leadRelayCapture) return run;
+    await new Promise((r) => setTimeout(r, 0));
+  }
+  return run;
 }
 
 describe('TeamProvisioningService relayLeadInboxMessages', () => {
@@ -119,13 +135,24 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     ]);
 
     const { writeSpy } = attachAliveRun(service, teamName);
-    const relayed = await service.relayLeadInboxMessages(teamName);
+
+    const relayPromise = service.relayLeadInboxMessages(teamName);
+    const run = await waitForCapture(service);
+    expect(run?.leadRelayCapture).toBeTruthy();
+    (service as any).handleStreamJsonMessage(run, {
+      type: 'assistant',
+      content: [{ type: 'text', text: 'OK, will do.' }],
+    });
+    (service as any).handleStreamJsonMessage(run, { type: 'result', subtype: 'success' });
+
+    const relayed = await relayPromise;
 
     expect(relayed).toBe(1);
     expect(writeSpy).toHaveBeenCalledTimes(1);
     const payload = String(writeSpy.mock.calls[0]?.[0] ?? '');
     expect(payload).toContain('"type":"user"');
     expect(payload).toContain('Please assign this to Alice.');
+    expect(service.getLiveLeadProcessMessages(teamName)).toHaveLength(1);
   });
 
   it('dedups by messageId even if markRead fails', async () => {
@@ -146,7 +173,15 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     hoisted.setAtomicWriteShouldFail(true);
     const { writeSpy } = attachAliveRun(service, teamName);
 
-    const first = await service.relayLeadInboxMessages(teamName);
+    const firstPromise = service.relayLeadInboxMessages(teamName);
+    const run = await waitForCapture(service);
+    expect(run?.leadRelayCapture).toBeTruthy();
+    (service as any).handleStreamJsonMessage(run, {
+      type: 'assistant',
+      content: [{ type: 'text', text: 'Acknowledged.' }],
+    });
+    (service as any).handleStreamJsonMessage(run, { type: 'result', subtype: 'success' });
+    const first = await firstPromise;
     const second = await service.relayLeadInboxMessages(teamName);
 
     expect(first).toBe(1);
@@ -180,9 +215,18 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
       processKilled: false,
       cancelRequested: false,
       provisioningComplete: true,
+      leadRelayCapture: null,
     });
 
-    const second = await service.relayLeadInboxMessages(teamName);
+    const secondPromise = service.relayLeadInboxMessages(teamName);
+    const run = await waitForCapture(service);
+    expect(run?.leadRelayCapture).toBeTruthy();
+    (service as any).handleStreamJsonMessage(run, {
+      type: 'assistant',
+      content: [{ type: 'text', text: 'Hi.' }],
+    });
+    (service as any).handleStreamJsonMessage(run, { type: 'result', subtype: 'success' });
+    const second = await secondPromise;
     expect(second).toBe(1);
     expect(writeSpy).toHaveBeenCalledTimes(1);
   });

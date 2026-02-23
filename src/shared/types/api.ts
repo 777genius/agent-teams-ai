@@ -462,7 +462,8 @@ export interface ElectronAPI {
   // Shell operations
   openPath: (
     targetPath: string,
-    projectRoot?: string
+    projectRoot?: string,
+    userSelectedFromDialog?: boolean
   ) => Promise<{ success: boolean; error?: string }>;
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
 

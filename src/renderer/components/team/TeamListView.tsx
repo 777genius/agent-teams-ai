@@ -250,6 +250,8 @@ export const TeamListView = (): React.JSX.Element => {
     try {
       await api.teams.stop(teamName);
       setAliveTeams((prev) => prev.filter((n) => n !== teamName));
+    } catch (err) {
+      console.error('Failed to stop team:', err);
     } finally {
       setStoppingTeamName(null);
     }
@@ -415,12 +417,26 @@ export const TeamListView = (): React.JSX.Element => {
             {filteredTeams.map((team) => {
               const status = resolveTeamStatus(team.teamName, aliveTeams, provisioningRuns);
               const teamColorSet = team.color ? getTeamColorSet(team.color) : null;
+              const matchesCurrentProject =
+                !!currentProjectPath &&
+                (() => {
+                  if (team.projectPath && normalizePath(team.projectPath) === currentProjectPath)
+                    return true;
+                  return (
+                    team.projectPathHistory?.some((p) => normalizePath(p) === currentProjectPath) ??
+                    false
+                  );
+                })();
               return (
                 <div
                   key={team.teamName}
                   role="button"
                   tabIndex={0}
-                  className="group relative cursor-pointer overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:bg-[var(--color-surface-raised)]"
+                  className={`group relative cursor-pointer overflow-hidden rounded-lg border bg-[var(--color-surface)] p-4 hover:bg-[var(--color-surface-raised)] ${
+                    matchesCurrentProject
+                      ? 'border-emerald-500/70 ring-1 ring-emerald-500/30'
+                      : 'border-[var(--color-border)]'
+                  }`}
                   style={
                     teamColorSet
                       ? { borderLeftWidth: '3px', borderLeftColor: teamColorSet.border }

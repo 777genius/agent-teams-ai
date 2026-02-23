@@ -139,6 +139,12 @@ export const MemberCard = ({
                 e.stopPropagation();
                 onOpenTask?.();
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }
+              }}
             >
               #{currentTask.id} {currentTask.subject.slice(0, 36)}
               {currentTask.subject.length > 36 ? '…' : ''}

@@ -19,7 +19,7 @@
   "main": "dist-electron/main/index.cjs",
   "scripts": {
     "dev": "electron-vite dev",
-    "dev:kill": "pkill -f 'electron-vite|electron \\.' 2>/dev/null; echo 'Done'",
+    "dev:kill": "node bin/kill-dev.js",
     "build": "electron-vite build",
     "dist": "electron-builder --mac --win --linux",
     "dist:mac": "electron-builder --mac --publish always",

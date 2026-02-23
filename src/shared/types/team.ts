@@ -78,7 +78,7 @@ export interface InboxMessage {
   summary?: string;
   color?: string;
   messageId?: string;
-  source?: 'inbox' | 'lead_session';
+  source?: 'inbox' | 'lead_session' | 'lead_process';
 }
 
 export interface SendMessageRequest {

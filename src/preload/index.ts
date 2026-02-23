@@ -388,8 +388,8 @@ const electronAPI: ElectronAPI = {
   },
 
   // Shell operations
-  openPath: (targetPath: string, projectRoot?: string) =>
-    ipcRenderer.invoke('shell:openPath', targetPath, projectRoot),
+  openPath: (targetPath: string, projectRoot?: string, userSelectedFromDialog?: boolean) =>
+    ipcRenderer.invoke('shell:openPath', targetPath, projectRoot, userSelectedFromDialog),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
 
   // Window controls (when title bar is hidden, e.g. Windows / Linux)

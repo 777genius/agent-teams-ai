@@ -109,6 +109,8 @@ describe('ipc teams handlers', () => {
     launchTeam: vi.fn(async () => ({ runId: 'run-2' })),
     sendMessageToTeam: vi.fn(async () => undefined),
     isTeamAlive: vi.fn(() => true),
+    relayLeadInboxMessages: vi.fn(async () => 0),
+    getLiveLeadProcessMessages: vi.fn(() => []),
     getAliveTeams: vi.fn(() => ['my-team']),
     stopTeam: vi.fn(() => undefined),
   };
@@ -205,6 +207,43 @@ describe('ipc teams handlers', () => {
       op: 'set_column',
       column: 'approved',
     });
+  });
+
+  it('dedups live lead replies when lead_session already has same text', async () => {
+    service.getTeamData.mockResolvedValueOnce({
+      teamName: 'my-team',
+      messages: [
+        {
+          from: 'team-lead',
+          to: 'user',
+          text: 'Hello there',
+          timestamp: '2026-02-23T10:00:00.000Z',
+          read: true,
+          source: 'lead_session',
+        },
+      ],
+    });
+    provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([
+      {
+        from: 'team-lead',
+        to: 'user',
+        text: 'Hello there',
+        timestamp: '2026-02-23T10:00:01.000Z',
+        read: true,
+        source: 'lead_process',
+        messageId: 'live-1',
+      },
+    ]);
+
+    const getDataHandler = handlers.get(TEAM_GET_DATA)!;
+    const result = (await getDataHandler({} as never, 'my-team')) as {
+      success: boolean;
+      data: { messages: { source?: string }[] };
+    };
+    expect(result.success).toBe(true);
+    const sources = result.data.messages.map((m) => m.source);
+    expect(sources.filter((s) => s === 'lead_process')).toHaveLength(0);
+    expect(sources.filter((s) => s === 'lead_session')).toHaveLength(1);
   });
 
   describe('createTask prompt validation', () => {

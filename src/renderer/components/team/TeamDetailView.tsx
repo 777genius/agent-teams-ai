@@ -827,6 +827,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               await sendTeamMessage(teamName, { member, text, summary });
             } catch {
               setPendingRepliesByMember((prev) => {
+                if (prev[member] !== sentAtMs) return prev;
                 const next = { ...prev };
                 delete next[member];
                 return next;

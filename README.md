@@ -5,9 +5,7 @@
 <h1 align="center">Claude Agent Teams UI</h1>
 
 <p align="center">
-  <strong><code>Terminal tells you nothing. This shows you everything.</code></strong>
-  <br />
-  You're the CTO, agents are your team. They handle tasks themselves, message each other, review each other's code. You just look at the kanban board and drink coffee.
+  <strong><code>You're the CTO, agents are your team. They handle tasks themselves, message each other, review each other's code. You just look at the kanban board and drink coffee.</code></strong>
 </p>
 
 <p align="center">

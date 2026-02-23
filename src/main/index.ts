@@ -311,6 +311,14 @@ function initializeServices(): void {
   void new TeamAgentToolsInstaller().ensureInstalled();
   httpServer = new HttpServer();
 
+  // Allow TeamProvisioningService to trigger team refresh events (e.g. live lead replies).
+  teamProvisioningService.setTeamChangeEmitter((event) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(TEAM_CHANGE, event);
+    }
+    httpServer?.broadcast('team-change', event);
+  });
+
   // Initialize IPC handlers with registry
   initializeIpcHandlers(
     contextRegistry,

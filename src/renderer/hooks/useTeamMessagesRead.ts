@@ -14,11 +14,10 @@ export function useTeamMessagesRead(teamName: string): {
   );
 
   useEffect(() => {
-    if (!teamName) {
-      queueMicrotask(() => setReadSet(new Set()));
-      return;
-    }
-    queueMicrotask(() => setReadSet(getReadSetStorage(teamName)));
+    if (!teamName) return;
+    const next = getReadSetStorage(teamName);
+    const t = setTimeout(() => setReadSet(next), 0);
+    return () => clearTimeout(t);
   }, [teamName]);
 
   const markRead = useCallback(
@@ -35,5 +34,6 @@ export function useTeamMessagesRead(teamName: string): {
     [teamName]
   );
 
-  return { readSet, markRead };
+  const effectiveReadSet = !teamName ? new Set<string>() : readSet;
+  return { readSet: effectiveReadSet, markRead };
 }

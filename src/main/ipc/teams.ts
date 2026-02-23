@@ -182,16 +182,58 @@ async function handleGetData(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('getData', async () => {
-    const data = await getTeamDataService().getTeamData(validated.value!);
-    const isAlive = getTeamProvisioningService().isTeamAlive(validated.value!);
+    const tn = validated.value!;
+    const data = await getTeamDataService().getTeamData(tn);
+    const provisioning = getTeamProvisioningService();
+    const isAlive = provisioning.isTeamAlive(tn);
+
     if (isAlive) {
-      try {
-        await getTeamProvisioningService().relayLeadInboxMessages(validated.value!);
-      } catch {
-        // Best-effort: never fail getData due to relay issues
-      }
+      // Fire-and-forget: relay can take time (waits for lead reply).
+      void provisioning.relayLeadInboxMessages(tn).catch(() => undefined);
     }
-    return { ...data, isAlive };
+
+    const live = provisioning.getLiveLeadProcessMessages(tn);
+    if (live.length === 0) {
+      return { ...data, isAlive };
+    }
+
+    const normalizeText = (text: string): string => text.trim().replace(/\r\n/g, '\n');
+    const leadSessionTextFingerprints = new Set<string>();
+    for (const msg of data.messages) {
+      if ((msg as { source?: unknown }).source !== 'lead_session') continue;
+      if (typeof msg.from !== 'string' || typeof msg.text !== 'string') continue;
+      leadSessionTextFingerprints.add(`${msg.from}\0${normalizeText(msg.text)}`);
+    }
+
+    const keyFor = (m: {
+      messageId?: string;
+      timestamp: string;
+      from: string;
+      text: string;
+    }): string => {
+      if (typeof m.messageId === 'string' && m.messageId.trim().length > 0) {
+        return m.messageId;
+      }
+      return `${m.timestamp}\0${m.from}\0${(m.text ?? '').slice(0, 80)}`;
+    };
+
+    const merged: typeof data.messages = [];
+    const seen = new Set<string>();
+    for (const msg of [...data.messages, ...live]) {
+      if ((msg as { source?: unknown }).source === 'lead_process') {
+        const fp = `${msg.from}\0${normalizeText(msg.text ?? '')}`;
+        if (leadSessionTextFingerprints.has(fp)) {
+          continue;
+        }
+      }
+      const key = keyFor(msg);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(msg);
+    }
+    merged.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+
+    return { ...data, isAlive, messages: merged };
   });
 }
 
@@ -242,7 +284,9 @@ async function handleUpdateConfig(
 }
 
 function isProvisioningTeamName(teamName: string): boolean {
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(teamName) && teamName.length <= 64;
+  if (teamName.length > 64) return false;
+  const parts = teamName.split('-');
+  return parts.every((p) => /^[a-z0-9]+$/.test(p));
 }
 
 async function validateProvisioningRequest(

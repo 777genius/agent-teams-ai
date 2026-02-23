@@ -148,12 +148,16 @@ export const TaskCommentsSection = ({
                       {reply ? (
                         <ReplyQuoteBlock
                           reply={reply}
-                          bodyMaxHeight={needsExpandCollapse && !expanded ? 'max-h-56' : undefined}
+                          bodyMaxHeight={
+                            needsExpandCollapse && !expanded ? 'max-h-56' : 'max-h-none'
+                          }
                         />
                       ) : (
                         <MarkdownViewer
                           content={comment.text}
-                          maxHeight={needsExpandCollapse && !expanded ? collapsedHeight : undefined}
+                          maxHeight={
+                            needsExpandCollapse && !expanded ? collapsedHeight : 'max-h-none'
+                          }
                         />
                       )}
                       {showCollapsed && (

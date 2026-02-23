@@ -24,6 +24,8 @@ import { TeamInboxReader } from './TeamInboxReader';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 
 import type {
+  InboxMessage,
+  TeamChangeEvent,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamLaunchRequest,
@@ -107,6 +109,14 @@ interface ProvisioningRun {
   waitingTasksSince: number | null;
   provisioningComplete: boolean;
   isLaunch: boolean;
+  leadRelayCapture: {
+    leadName: string;
+    startedAt: string;
+    textParts: string[];
+    resolve: (text: string) => void;
+    reject: (error: string) => void;
+    timeoutHandle: NodeJS.Timeout;
+  } | null;
 }
 
 type ProvisioningAuthSource =
@@ -242,18 +252,18 @@ function buildMembersPrompt(members: TeamCreateRequest['members']): string {
 function buildTaskStatusProtocol(teamName: string): string {
   return `MANDATORY TASK STATUS PROTOCOL — you MUST follow this for EVERY task:
 1. Use this command to mark task started:
-   node \\"$HOME/.claude/tools/teamctl.js\\" --team \\"${teamName}\\" task start <taskId>
+   node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task start <taskId>
 2. Use this command to mark task completed BEFORE sending your final reply:
-   node \\"$HOME/.claude/tools/teamctl.js\\" --team \\"${teamName}\\" task complete <taskId>
+   node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task complete <taskId>
 3. If you are asked to review and task is accepted, move it to APPROVED (not DONE):
-   node \\"$HOME/.claude/tools/teamctl.js\\" --team \\"${teamName}\\" review approve <taskId>
+   node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" review approve <taskId>
 4. If review fails and changes are needed:
-   node \\"$HOME/.claude/tools/teamctl.js\\" --team \\"${teamName}\\" review request-changes <taskId> --comment \\"<what to fix>\\"
+   node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" review request-changes <taskId> --comment "<what to fix>"
 5. NEVER skip status updates. A task is NOT done until completed status is written.
 6. To reply to a comment on a task:
-   node \\"$HOME/.claude/tools/teamctl.js\\" --team \\"${teamName}\\" task comment <taskId> --text \\"<your reply>\\" --from \\"<your-name>\\"
+   node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task comment <taskId> --text "<your reply>" --from "<your-name>"
 7. When discussing a task with a teammate and you have important findings, decisions, blockers, or progress updates — record them as a task comment:
-   node \\"$HOME/.claude/tools/teamctl.js\\" --team \\"${teamName}\\" task comment <taskId> --text \\"<summary of your finding or decision>\\" --from \\"<your-name>\\"
+   node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task comment <taskId> --text "<summary of your finding or decision>" --from "<your-name>"
    Do NOT comment on trivial coordination messages. Only comment when the information is valuable context for the task.
 8. When sending a message about a specific task, include #<taskId> in your SendMessage summary field for traceability.
 Failure to follow this protocol means the task board will show incorrect status.`;
@@ -278,11 +288,19 @@ Goal: Provision a Claude Code agent team with live teammates.
 ${userPromptBlock}
 Constraints:
 - Do NOT call TeamDelete under any circumstances.
-- Do NOT use TodoWrite — use TaskCreate for tasks.
+- Do NOT use TodoWrite.
 - Do NOT send shutdown_request messages (SendMessage type: "shutdown_request" is FORBIDDEN).
 - Do NOT shut down, terminate, or clean up the team or its members.
 - Keep assistant text minimal.
 - NEVER send duplicate messages to the same member. One SendMessage per member per topic is enough.
+- Keep the task board high-signal: avoid creating tasks for trivial micro-items.
+- Use teamctl.js (via Bash) for tasks that must appear on the team board (assigned work, substantial work, or when the user explicitly asks to create a task).
+- TaskCreate is optional for private planning only; do NOT use it for team-board tasks.
+
+Communication protocol (CRITICAL — you are running headless, no one sees your text output):
+- When you receive a <teammate-message> from a teammate, ALWAYS reply using the SendMessage tool with the sender's name as recipient.
+- Your plain text output is invisible to teammates — they are separate processes and can only read their inbox.
+- Example: if you receive <teammate-message teammate_id="alice">...</teammate-message>, respond with SendMessage(type: "message", recipient: "alice", content: "your reply").
 
 Task board operations — use teamctl.js via Bash:
 - Create task: node "$HOME/.claude/tools/teamctl.js" --team "${request.teamName}" task create --subject "..." --description "..." --owner "<actual-member-name>" --notify --from "${leadName}"
@@ -297,11 +315,16 @@ Steps (execute in this exact order):
    - team_name: "${request.teamName}"
    - name: the member's name
    - subagent_type: "general-purpose"
-   - prompt: "You are {name}, a {role} on team \\"${displayName}\\" (${request.teamName}). Introduce yourself briefly (name and role) and confirm you are ready — use the language that matches the project's CLAUDE.md or the user's locale. Then wait for task assignments.
+   - prompt:
+     You are {name}, a {role} on team "${displayName}" (${request.teamName}).
+     Introduce yourself briefly (name and role) and confirm you are ready — use the language that matches the project's CLAUDE.md or the user's locale.
+     Then wait for task assignments.
 
-${taskProtocol}"
+     ${taskProtocol}
 
-3) If user instructions above mention tasks or work for members — create each task via teamctl.js (see "Task board operations"). The --notify flag sends the assignment to the member automatically, so do NOT send a separate SendMessage for the same task.
+3) If user instructions explicitly ask to create tasks OR describe substantial/assigned work that should be tracked — create tasks via teamctl.js (see "Task board operations").
+   - Prefer fewer, broader tasks over many micro-tasks.
+   - The --notify flag sends the assignment to the member automatically, so do NOT send a separate SendMessage for the same task.
 
 4) After all steps, output a short summary.
 
@@ -329,11 +352,19 @@ Goal: Reconnect with existing team "${request.teamName}".
 ${userPromptBlock}
 Constraints:
 - Do NOT call TeamDelete under any circumstances.
-- Do NOT use TodoWrite — use TaskCreate for tasks.
+- Do NOT use TodoWrite.
 - Do NOT send shutdown_request messages (SendMessage type: "shutdown_request" is FORBIDDEN).
 - Do NOT shut down, terminate, or clean up the team or its members.
 - Keep assistant text minimal.
 - NEVER send duplicate messages to the same member. One SendMessage per member per topic is enough.
+- Keep the task board high-signal: avoid creating tasks for trivial micro-items.
+- Use teamctl.js (via Bash) for tasks that must appear on the team board (assigned work, substantial work, or when the user explicitly asks to create a task).
+- TaskCreate is optional for private planning only; do NOT use it for team-board tasks.
+
+Communication protocol (CRITICAL — you are running headless, no one sees your text output):
+- When you receive a <teammate-message> from a teammate, ALWAYS reply using the SendMessage tool with the sender's name as recipient.
+- Your plain text output is invisible to teammates — they are separate processes and can only read their inbox.
+- Example: if you receive <teammate-message teammate_id="alice">...</teammate-message>, respond with SendMessage(type: "message", recipient: "alice", content: "your reply").
 
 Task board operations — use teamctl.js via Bash:
 - Create task: node "$HOME/.claude/tools/teamctl.js" --team "${request.teamName}" task create --subject "..." --description "..." --owner "<actual-member-name>" --notify --from "${leadName}"
@@ -343,17 +374,22 @@ Steps (execute in this exact order):
 
 1) Read team config at ~/.claude/teams/${request.teamName}/config.json — understand current team state.
 
-2) Read the task list via TaskList — understand pending work.
+2) Read tasks from ~/.claude/tasks/${request.teamName}/ (JSON files) and kanban state from ~/.claude/teams/${request.teamName}/kanban-state.json — understand pending work.
 
 3) Spawn each existing member as a live teammate using the Task tool:
    - team_name: "${request.teamName}"
    - name: the member's name
    - subagent_type: "general-purpose"
-   - prompt: "You are {name}, a {role} on team \\"${request.teamName}\\". The team has been reconnected. Introduce yourself briefly (name and role) and confirm you are ready — use the language that matches the project's CLAUDE.md or the user's locale. Then check TaskList for pending work and resume.
+   - prompt:
+     You are {name}, a {role} on team "${request.teamName}".
+     The team has been reconnected. Introduce yourself briefly (name and role) and confirm you are ready — use the language that matches the project's CLAUDE.md or the user's locale.
+     Then resume any pending work you own (if any) and wait for new assignments.
 
-${taskProtocol}"
+     ${taskProtocol}
 
-4) If user instructions above mention tasks or work for members — create each task via teamctl.js (see "Task board operations"). The --notify flag sends the assignment to the member automatically, so do NOT send a separate SendMessage for the same task.
+4) If user instructions explicitly ask to create tasks OR describe substantial/assigned work that should be tracked — create tasks via teamctl.js (see "Task board operations").
+   - Prefer fewer, broader tasks over many micro-tasks.
+   - The --notify flag sends the assignment to the member automatically, so do NOT send a separate SendMessage for the same task.
 
 5) After all steps, output a short summary.
 
@@ -449,12 +485,22 @@ export class TeamProvisioningService {
   private readonly leadInboxRelayInFlight = new Map<string, Promise<number>>();
   private readonly relayedLeadInboxMessageIds = new Map<string, Set<string>>();
   private readonly relayedLeadInboxFallbackKeys = new Map<string, Set<string>>();
+  private readonly liveLeadProcessMessages = new Map<string, InboxMessage[]>();
+  private teamChangeEmitter: ((event: TeamChangeEvent) => void) | null = null;
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
     private readonly inboxReader: TeamInboxReader = new TeamInboxReader(),
     private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore()
   ) {}
+
+  setTeamChangeEmitter(emitter: ((event: TeamChangeEvent) => void) | null): void {
+    this.teamChangeEmitter = emitter;
+  }
+
+  getLiveLeadProcessMessages(teamName: string): InboxMessage[] {
+    return [...(this.liveLeadProcessMessages.get(teamName) ?? [])];
+  }
 
   async warmup(): Promise<void> {
     try {
@@ -611,6 +657,7 @@ export class TeamProvisioningService {
       provisioningComplete: false,
       isLaunch: false,
       fsPhase: 'waiting_config',
+      leadRelayCapture: null,
       progress: {
         runId,
         teamName: request.teamName,
@@ -878,6 +925,7 @@ export class TeamProvisioningService {
       provisioningComplete: false,
       isLaunch: true,
       fsPhase: 'waiting_members',
+      leadRelayCapture: null,
       progress: {
         runId,
         teamName: request.teamName,
@@ -1177,9 +1225,28 @@ export class TeamProvisioningService {
         }),
       ].join('\n');
 
+      const captureTimeoutMs = 60_000;
+      const capturePromise = new Promise<string>((resolve, reject) => {
+        const timeoutHandle = setTimeout(() => {
+          reject(new Error('Timed out waiting for lead reply'));
+        }, captureTimeoutMs);
+        run.leadRelayCapture = {
+          leadName,
+          startedAt: nowIso(),
+          textParts: [],
+          resolve,
+          reject,
+          timeoutHandle,
+        };
+      });
+
       try {
         await this.sendMessageToTeam(teamName, message);
       } catch {
+        if (run.leadRelayCapture) {
+          clearTimeout(run.leadRelayCapture.timeoutHandle);
+          run.leadRelayCapture = null;
+        }
         return 0;
       }
 
@@ -1197,6 +1264,36 @@ export class TeamProvisioningService {
         await this.markInboxMessagesRead(teamName, leadName, batch);
       } catch {
         // Best-effort: relay succeeded; marking read failed.
+      }
+
+      let replyText: string | null = null;
+      try {
+        replyText = (await capturePromise).trim() || null;
+      } catch {
+        // ignore
+      } finally {
+        if (run.leadRelayCapture) {
+          clearTimeout(run.leadRelayCapture.timeoutHandle);
+          run.leadRelayCapture = null;
+        }
+      }
+
+      if (replyText) {
+        this.pushLiveLeadProcessMessage(teamName, {
+          from: leadName,
+          to: 'user',
+          text: replyText,
+          timestamp: nowIso(),
+          read: true,
+          summary: 'Lead reply',
+          messageId: `lead-process-${runId}-${Date.now()}`,
+          source: 'lead_process',
+        });
+        this.teamChangeEmitter?.({
+          type: 'inbox',
+          teamName,
+          detail: 'lead-process-reply',
+        });
       }
 
       return batch.length;
@@ -1297,13 +1394,23 @@ export class TeamProvisioningService {
     return next;
   }
 
+  private pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void {
+    const MAX = 100;
+    const list = this.liveLeadProcessMessages.get(teamName) ?? [];
+    list.push(message);
+    if (list.length > MAX) {
+      list.splice(0, list.length - MAX);
+    }
+    this.liveLeadProcessMessages.set(teamName, list);
+  }
+
   /**
    * Stop the running process for a team. No-op if team is not running.
    */
   stopTeam(teamName: string): void {
     const runId = this.activeByTeam.get(teamName);
     if (!runId) {
-      throw new Error(`No active process for team "${teamName}"`);
+      return;
     }
     const run = this.runs.get(runId);
     if (!run) {
@@ -1336,6 +1443,9 @@ export class TeamProvisioningService {
       if (textParts.length > 0) {
         const text = textParts.join('');
         logger.debug(`[${run.teamName}] assistant: ${text.slice(0, 200)}`);
+        if (run.leadRelayCapture) {
+          run.leadRelayCapture.textParts.push(text);
+        }
       }
     }
 
@@ -1343,6 +1453,11 @@ export class TeamProvisioningService {
       const subtype = msg.subtype as string | undefined;
       if (subtype === 'success') {
         logger.info(`[${run.teamName}] stream-json result: success — turn complete, process alive`);
+        if (run.leadRelayCapture) {
+          const capture = run.leadRelayCapture;
+          const combined = capture.textParts.join('').trim();
+          capture.resolve(combined);
+        }
         if (!run.provisioningComplete) {
           void this.handleProvisioningTurnComplete(run);
         }
@@ -1350,6 +1465,9 @@ export class TeamProvisioningService {
         const errorMsg =
           typeof msg.error === 'string' ? msg.error : JSON.stringify(msg.error ?? 'unknown');
         logger.warn(`[${run.teamName}] stream-json result: error — ${errorMsg}`);
+        if (run.leadRelayCapture) {
+          run.leadRelayCapture.reject(errorMsg);
+        }
         if (!run.provisioningComplete) {
           const progress = updateProgress(
             run,
@@ -1454,6 +1572,7 @@ export class TeamProvisioningService {
     this.leadInboxRelayInFlight.delete(run.teamName);
     this.relayedLeadInboxMessageIds.delete(run.teamName);
     this.relayedLeadInboxFallbackKeys.delete(run.teamName);
+    this.liveLeadProcessMessages.delete(run.teamName);
   }
 
   /**
