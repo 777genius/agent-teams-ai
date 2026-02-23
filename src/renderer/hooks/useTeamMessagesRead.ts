@@ -27,5 +27,6 @@ export function useTeamMessagesRead(teamName: string): {
     [teamName]
   );
 
-  return { readSet, markRead };
+  const effectiveReadSet = !teamName ? new Set<string>() : readSet;
+  return { readSet: effectiveReadSet, markRead };
 }
