@@ -21,6 +21,7 @@ import {
   TEAM_REQUEST_REVIEW,
   TEAM_SEND_MESSAGE,
   TEAM_START_TASK,
+  TEAM_STOP,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_TASK_STATUS,
@@ -100,6 +101,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_PROCESS_SEND, handleProcessSend);
   ipcMain.handle(TEAM_PROCESS_ALIVE, handleProcessAlive);
   ipcMain.handle(TEAM_ALIVE_LIST, handleAliveList);
+  ipcMain.handle(TEAM_STOP, handleStopTeam);
   ipcMain.handle(TEAM_CREATE_CONFIG, handleCreateConfig);
   ipcMain.handle(TEAM_GET_MEMBER_LOGS, handleGetMemberLogs);
   ipcMain.handle(TEAM_GET_LOGS_FOR_TASK, handleGetLogsForTask);
@@ -128,6 +130,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_PROCESS_SEND);
   ipcMain.removeHandler(TEAM_PROCESS_ALIVE);
   ipcMain.removeHandler(TEAM_ALIVE_LIST);
+  ipcMain.removeHandler(TEAM_STOP);
   ipcMain.removeHandler(TEAM_CREATE_CONFIG);
   ipcMain.removeHandler(TEAM_GET_MEMBER_LOGS);
   ipcMain.removeHandler(TEAM_GET_LOGS_FOR_TASK);
@@ -181,6 +184,13 @@ async function handleGetData(
   return wrapTeamHandler('getData', async () => {
     const data = await getTeamDataService().getTeamData(validated.value!);
     const isAlive = getTeamProvisioningService().isTeamAlive(validated.value!);
+    if (isAlive) {
+      try {
+        await getTeamProvisioningService().relayLeadInboxMessages(validated.value!);
+      } catch {
+        // Best-effort: never fail getData due to relay issues
+      }
+    }
     return { ...data, isAlive };
   });
 }
@@ -819,6 +829,19 @@ async function handleGetMemberStats(
 
 async function handleAliveList(_event: IpcMainInvokeEvent): Promise<IpcResult<string[]>> {
   return wrapTeamHandler('aliveList', async () => getTeamProvisioningService().getAliveTeams());
+}
+
+async function handleStopTeam(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown
+): Promise<IpcResult<void>> {
+  const validated = validateTeamName(teamName);
+  if (!validated.valid) {
+    return { success: false, error: validated.error ?? 'Invalid teamName' };
+  }
+  return wrapTeamHandler('stop', async () => {
+    getTeamProvisioningService().stopTeam(validated.value!);
+  });
 }
 
 async function handleStartTask(

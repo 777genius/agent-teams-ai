@@ -235,6 +235,7 @@ export const TEAM_DELETE_TEAM = 'team:deleteTeam';
 
 /** Get list of teams with live CLI processes */
 export const TEAM_ALIVE_LIST = 'team:aliveList';
+export const TEAM_STOP = 'team:stop';
 
 /** Create team config without provisioning CLI */
 export const TEAM_CREATE_CONFIG = 'team:createConfig';

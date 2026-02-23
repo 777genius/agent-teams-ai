@@ -41,6 +41,7 @@ import {
   TEAM_REQUEST_REVIEW,
   TEAM_SEND_MESSAGE,
   TEAM_START_TASK,
+  TEAM_STOP,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_TASK_STATUS,
@@ -566,6 +567,9 @@ const electronAPI: ElectronAPI = {
     },
     aliveList: async () => {
       return invokeIpcWithResult<string[]>(TEAM_ALIVE_LIST);
+    },
+    stop: async (teamName: string) => {
+      return invokeIpcWithResult<void>(TEAM_STOP, teamName);
     },
     createConfig: async (request: TeamCreateConfigRequest) => {
       return invokeIpcWithResult<void>(TEAM_CREATE_CONFIG, request);

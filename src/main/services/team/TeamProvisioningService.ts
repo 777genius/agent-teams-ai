@@ -445,6 +445,9 @@ let cachedProbeResult: CachedProbeResult | null = null;
 export class TeamProvisioningService {
   private readonly runs = new Map<string, ProvisioningRun>();
   private readonly activeByTeam = new Map<string, string>();
+  private readonly leadInboxRelayInFlight = new Map<string, Promise<number>>();
+  private readonly relayedLeadInboxMessageIds = new Map<string, Set<string>>();
+  private readonly relayedLeadInboxFallbackKeys = new Map<string, Set<string>>();
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -1096,6 +1099,119 @@ export class TeamProvisioningService {
   }
 
   /**
+   * Relay unread inbox messages addressed to the team lead into the live lead process.
+   *
+   * Why: teammates (and the UI) write to `inboxes/<lead>.json`, but the live lead CLI
+   * process consumes new turns via stream-json stdin. Without relaying, the lead
+   * appears unresponsive to direct messages.
+   *
+   * Returns the number of messages relayed.
+   */
+  async relayLeadInboxMessages(teamName: string): Promise<number> {
+    const existing = this.leadInboxRelayInFlight.get(teamName);
+    if (existing) {
+      return existing;
+    }
+
+    const work = (async (): Promise<number> => {
+      const runId = this.activeByTeam.get(teamName);
+      if (!runId) return 0;
+      const run = this.runs.get(runId);
+      if (!run?.child || run.processKilled || run.cancelRequested) return 0;
+      if (!run.provisioningComplete) return 0;
+
+      const relayedIds = this.relayedLeadInboxMessageIds.get(teamName) ?? new Set<string>();
+      const relayedFallback = this.relayedLeadInboxFallbackKeys.get(teamName) ?? new Set<string>();
+
+      let config: Awaited<ReturnType<TeamConfigReader['getConfig']>> | null = null;
+      try {
+        config = await this.configReader.getConfig(teamName);
+      } catch {
+        return 0;
+      }
+      if (!config) return 0;
+
+      const leadName =
+        config.members?.find((m) => m?.agentType === 'team-lead')?.name?.trim() || 'team-lead';
+
+      let leadInboxMessages: Awaited<ReturnType<TeamInboxReader['getMessagesFor']>> = [];
+      try {
+        leadInboxMessages = await this.inboxReader.getMessagesFor(teamName, leadName);
+      } catch {
+        return 0;
+      }
+
+      const unread = leadInboxMessages
+        .filter((m) => {
+          if (m.read) return false;
+          if (typeof m.text !== 'string' || m.text.trim().length === 0) return false;
+          if (typeof m.messageId === 'string' && m.messageId.trim().length > 0) {
+            return !relayedIds.has(m.messageId);
+          }
+          return !relayedFallback.has(`${m.timestamp}\0${m.from}\0${m.text}`);
+        })
+        .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+
+      if (unread.length === 0) return 0;
+
+      const MAX_RELAY = 10;
+      const batch = unread.slice(0, MAX_RELAY);
+
+      const message = [
+        `You have new inbox messages addressed to you (team lead "${leadName}").`,
+        `Process them in order (oldest first).`,
+        `If action is required, delegate via task creation (teamctl.js --notify) or SendMessage, and keep responses minimal.`,
+        ``,
+        `Messages:`,
+        ...batch.flatMap((m, idx) => {
+          const summaryLine = m.summary?.trim() ? `Summary: ${m.summary.trim()}` : null;
+          return [
+            `${idx + 1}) From: ${m.from || 'unknown'}`,
+            `   Timestamp: ${m.timestamp}`,
+            ...(summaryLine ? [`   ${summaryLine}`] : []),
+            `   Text:`,
+            ...m.text.split('\n').map((line) => `   ${line}`),
+            ``,
+          ];
+        }),
+      ].join('\n');
+
+      try {
+        await this.sendMessageToTeam(teamName, message);
+      } catch {
+        return 0;
+      }
+
+      for (const m of batch) {
+        if (typeof m.messageId === 'string' && m.messageId.trim().length > 0) {
+          relayedIds.add(m.messageId);
+        } else {
+          relayedFallback.add(`${m.timestamp}\0${m.from}\0${m.text}`);
+        }
+      }
+      this.relayedLeadInboxMessageIds.set(teamName, this.trimRelayedSet(relayedIds));
+      this.relayedLeadInboxFallbackKeys.set(teamName, this.trimRelayedSet(relayedFallback));
+
+      try {
+        await this.markInboxMessagesRead(teamName, leadName, batch);
+      } catch {
+        // Best-effort: relay succeeded; marking read failed.
+      }
+
+      return batch.length;
+    })();
+
+    this.leadInboxRelayInFlight.set(teamName, work);
+    try {
+      return await work;
+    } finally {
+      if (this.leadInboxRelayInFlight.get(teamName) === work) {
+        this.leadInboxRelayInFlight.delete(teamName);
+      }
+    }
+  }
+
+  /**
    * Check if a team has a live process.
    */
   isTeamAlive(teamName: string): boolean {
@@ -1110,6 +1226,96 @@ export class TeamProvisioningService {
    */
   getAliveTeams(): string[] {
     return Array.from(this.activeByTeam.keys()).filter((name) => this.isTeamAlive(name));
+  }
+
+  private async markInboxMessagesRead(
+    teamName: string,
+    member: string,
+    messages: { messageId?: string; timestamp: string; from: string; text: string }[]
+  ): Promise<void> {
+    const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${member}.json`);
+
+    let raw: string;
+    try {
+      raw = await fs.promises.readFile(inboxPath, 'utf8');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return;
+      }
+      throw error;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw) as unknown;
+    } catch {
+      return;
+    }
+    if (!Array.isArray(parsed)) return;
+
+    const ids = new Set(messages.map((m) => m.messageId).filter((id): id is string => !!id));
+    const fallbackKeys = new Set(
+      messages.filter((m) => !m.messageId).map((m) => `${m.timestamp}\0${m.from}\0${m.text}`)
+    );
+
+    let changed = false;
+    for (const item of parsed) {
+      if (!item || typeof item !== 'object') continue;
+      const row = item as Record<string, unknown>;
+      const msgId = typeof row.messageId === 'string' ? row.messageId : null;
+      const timestamp = typeof row.timestamp === 'string' ? row.timestamp : null;
+      const from = typeof row.from === 'string' ? row.from : null;
+      const text = typeof row.text === 'string' ? row.text : null;
+
+      const matchesId = msgId ? ids.has(msgId) : false;
+      const matchesFallback =
+        !msgId && timestamp && from && text
+          ? fallbackKeys.has(`${timestamp}\0${from}\0${text}`)
+          : false;
+
+      if (!matchesId && !matchesFallback) continue;
+
+      if (row.read !== true) {
+        row.read = true;
+        changed = true;
+      }
+    }
+
+    if (!changed) return;
+    await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
+  }
+
+  private trimRelayedSet(set: Set<string>): Set<string> {
+    const MAX_IDS = 2000;
+    if (set.size <= MAX_IDS) return set;
+    const next = new Set<string>();
+    const tail = Array.from(set).slice(-MAX_IDS);
+    for (const id of tail) next.add(id);
+    return next;
+  }
+
+  /**
+   * Stop the running process for a team. No-op if team is not running.
+   */
+  stopTeam(teamName: string): void {
+    const runId = this.activeByTeam.get(teamName);
+    if (!runId) {
+      throw new Error(`No active process for team "${teamName}"`);
+    }
+    const run = this.runs.get(runId);
+    if (!run) {
+      this.activeByTeam.delete(teamName);
+      return;
+    }
+    if (run.processKilled || run.cancelRequested) {
+      return;
+    }
+    run.processKilled = true;
+    run.cancelRequested = true;
+    run.child?.stdin?.end();
+    run.child?.kill();
+    this.cleanupRun(run);
+    logger.info(`[${teamName}] Process stopped by user`);
   }
 
   /**
@@ -1186,6 +1392,9 @@ export class TeamProvisioningService {
       });
       run.onProgress(progress);
       logger.info(`[${run.teamName}] Launch complete. Process alive for subsequent tasks.`);
+
+      // Pick up any direct messages that arrived before/while reconnecting.
+      void this.relayLeadInboxMessages(run.teamName).catch(() => undefined);
       return;
     }
 
@@ -1224,6 +1433,9 @@ export class TeamProvisioningService {
     run.onProgress(progress);
     // NOTE: do NOT remove from activeByTeam — process stays alive
     logger.info(`[${run.teamName}] Provisioning complete. Process alive for subsequent tasks.`);
+
+    // Pick up any direct messages that arrived during provisioning.
+    void this.relayLeadInboxMessages(run.teamName).catch(() => undefined);
   }
 
   /**
@@ -1236,6 +1448,9 @@ export class TeamProvisioningService {
     }
     this.stopFilesystemMonitor(run);
     this.activeByTeam.delete(run.teamName);
+    this.leadInboxRelayInFlight.delete(run.teamName);
+    this.relayedLeadInboxMessageIds.delete(run.teamName);
+    this.relayedLeadInboxFallbackKeys.delete(run.teamName);
   }
 
   /**

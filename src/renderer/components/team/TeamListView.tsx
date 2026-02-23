@@ -14,7 +14,7 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
 import { buildTaskCountsByTeam, normalizePath } from '@renderer/utils/pathNormalize';
 import { getBaseName } from '@renderer/utils/pathUtils';
-import { CheckCircle, Clock, Copy, FolderOpen, Play, Search, Trash2 } from 'lucide-react';
+import { CheckCircle, Clock, Copy, FolderOpen, Play, Search, Square, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { CreateTeamDialog } from './dialogs/CreateTeamDialog';
@@ -243,6 +243,20 @@ export const TeamListView = (): React.JSX.Element => {
     [teams]
   );
 
+  const [stoppingTeamName, setStoppingTeamName] = useState<string | null>(null);
+  const handleStopTeam = useCallback((teamName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setStoppingTeamName(teamName);
+    void api.teams
+      .stop(teamName)
+      .then(() => {
+        setAliveTeams((prev) => prev.filter((n) => n !== teamName));
+      })
+      .finally(() => {
+        setStoppingTeamName(null);
+      });
+  }, []);
+
   useEffect(() => {
     if (!electronMode) {
       return;
@@ -430,6 +444,24 @@ export const TeamListView = (): React.JSX.Element => {
                         <StatusBadge status={status} />
                       </div>
                       <div className="flex shrink-0 gap-1">
+                        {status === 'running' && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-amber-500/10 hover:text-amber-300 disabled:opacity-50 group-hover:opacity-100"
+                                onClick={(e) => handleStopTeam(team.teamName, e)}
+                                disabled={stoppingTeamName === team.teamName}
+                                aria-label="Stop team"
+                              >
+                                <Square size={14} fill="currentColor" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              {stoppingTeamName === team.teamName ? 'Stopping…' : 'Stop team'}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button

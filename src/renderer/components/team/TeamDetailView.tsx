@@ -13,6 +13,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { ActiveTasksBlock } from './activity/ActiveTasksBlock';
 import { ActivityTimeline } from './activity/ActivityTimeline';
+import { PendingRepliesBlock } from './activity/PendingRepliesBlock';
 import { CreateTaskDialog } from './dialogs/CreateTaskDialog';
 import { EditTeamDialog } from './dialogs/EditTeamDialog';
 import { LaunchTeamDialog } from './dialogs/LaunchTeamDialog';
@@ -67,6 +68,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<TeamTask | null>(null);
   const [selectedMember, setSelectedMember] = useState<ResolvedTeamMember | null>(null);
+  const [pendingRepliesByMember, setPendingRepliesByMember] = useState<Record<string, number>>({});
   const [createTaskDialog, setCreateTaskDialog] = useState<CreateTaskDialogState>({
     open: false,
     defaultSubject: '',
@@ -309,6 +311,24 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
 
   const memberTaskCounts = useMemo(() => buildTaskCountsByOwner(data?.tasks ?? []), [data?.tasks]);
 
+  useEffect(() => {
+    if (!data || Object.keys(pendingRepliesByMember).length === 0) return;
+    const next = { ...pendingRepliesByMember };
+    let changed = false;
+    for (const [memberName, sentAtMs] of Object.entries(pendingRepliesByMember)) {
+      const hasReply = data.messages.some((m) => {
+        if (m.from !== memberName) return false;
+        const ts = Date.parse(m.timestamp);
+        return Number.isFinite(ts) && ts > sentAtMs;
+      });
+      if (hasReply) {
+        delete next[memberName];
+        changed = true;
+      }
+    }
+    if (changed) setPendingRepliesByMember(next);
+  }, [data, pendingRepliesByMember]);
+
   const openCreateTaskDialog = (subject = '', description = '', owner = ''): void => {
     setCreateTaskDialog({
       open: true,
@@ -504,6 +524,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         <MemberList
           members={data.members}
           memberTaskCounts={memberTaskCounts}
+          taskMap={taskMap}
+          pendingRepliesByMember={pendingRepliesByMember}
           isTeamAlive={data.isAlive}
           onMemberClick={setSelectedMember}
           onSendMessage={(member) => {
@@ -514,6 +536,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           onAssignTask={(member) => {
             openCreateTaskDialog('', '', member.name);
           }}
+          onOpenTask={(task) => setSelectedTask(task)}
         />
       </CollapsibleTeamSection>
 
@@ -677,6 +700,11 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           </div>
         }
       >
+        <PendingRepliesBlock
+          members={data.members}
+          pendingRepliesByMember={pendingRepliesByMember}
+          onMemberClick={setSelectedMember}
+        />
         <ActiveTasksBlock
           members={data.members}
           tasks={data.tasks}
@@ -703,6 +731,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         open={requestChangesTaskId !== null}
         teamName={teamName}
         taskId={requestChangesTaskId}
+        members={data?.members ?? []}
         onCancel={() => setRequestChangesTaskId(null)}
         onSubmit={(comment) => {
           if (!requestChangesTaskId) {
@@ -791,7 +820,19 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         sendError={sendMessageError}
         lastResult={lastSendMessageResult}
         onSend={(member, text, summary) => {
-          void sendTeamMessage(teamName, { member, text, summary });
+          void (async () => {
+            const sentAtMs = Date.now();
+            setPendingRepliesByMember((prev) => ({ ...prev, [member]: sentAtMs }));
+            try {
+              await sendTeamMessage(teamName, { member, text, summary });
+            } catch {
+              setPendingRepliesByMember((prev) => {
+                const next = { ...prev };
+                delete next[member];
+                return next;
+              });
+            }
+          })();
         }}
         onClose={() => {
           setSendDialogOpen(false);

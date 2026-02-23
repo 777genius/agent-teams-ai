@@ -20,6 +20,7 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   TEAM_PROCESS_SEND: 'team:processSend',
   TEAM_PROCESS_ALIVE: 'team:processAlive',
   TEAM_ALIVE_LIST: 'team:aliveList',
+  TEAM_STOP: 'team:stop',
   TEAM_GET_MEMBER_LOGS: 'team:getMemberLogs',
   TEAM_GET_LOGS_FOR_TASK: 'team:getLogsForTask',
   TEAM_GET_MEMBER_STATS: 'team:getMemberStats',
@@ -31,6 +32,7 @@ vi.mock('@preload/constants/ipcChannels', () => ({
 
 import {
   TEAM_ALIVE_LIST,
+  TEAM_STOP,
   TEAM_CANCEL_PROVISIONING,
   TEAM_CREATE,
   TEAM_CREATE_CONFIG,
@@ -108,6 +110,7 @@ describe('ipc teams handlers', () => {
     sendMessageToTeam: vi.fn(async () => undefined),
     isTeamAlive: vi.fn(() => true),
     getAliveTeams: vi.fn(() => ['my-team']),
+    stopTeam: vi.fn(() => undefined),
   };
 
   beforeEach(() => {
@@ -135,6 +138,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_PROCESS_SEND)).toBe(true);
     expect(handlers.has(TEAM_PROCESS_ALIVE)).toBe(true);
     expect(handlers.has(TEAM_ALIVE_LIST)).toBe(true);
+    expect(handlers.has(TEAM_STOP)).toBe(true);
     expect(handlers.has(TEAM_CREATE_CONFIG)).toBe(true);
     expect(handlers.has(TEAM_GET_MEMBER_LOGS)).toBe(true);
     expect(handlers.has(TEAM_GET_LOGS_FOR_TASK)).toBe(true);
@@ -304,6 +308,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_PROCESS_SEND)).toBe(false);
     expect(handlers.has(TEAM_PROCESS_ALIVE)).toBe(false);
     expect(handlers.has(TEAM_ALIVE_LIST)).toBe(false);
+    expect(handlers.has(TEAM_STOP)).toBe(false);
     expect(handlers.has(TEAM_CREATE_CONFIG)).toBe(false);
     expect(handlers.has(TEAM_GET_MEMBER_LOGS)).toBe(false);
     expect(handlers.has(TEAM_GET_LOGS_FOR_TASK)).toBe(false);
