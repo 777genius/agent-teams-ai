@@ -262,6 +262,15 @@ export const CreateTeamDialog = ({
   const [launchTeam, setLaunchTeam] = useState(true);
   const [teamColor, setTeamColor] = useState('');
 
+  const resetUIState = (): void => {
+    setLocalError(null);
+    setFieldErrors({});
+    setIsSubmitting(false);
+    setPrepareState('idle');
+    setPrepareMessage(null);
+    setPrepareWarnings([]);
+  };
+
   const resetFormState = (): void => {
     setTeamName('');
     descriptionDraft.clearDraft();
@@ -271,13 +280,8 @@ export const CreateTeamDialog = ({
     setCwdMode('project');
     setSelectedProjectPath('');
     setCustomCwd('');
-    setLocalError(null);
-    setFieldErrors({});
-    setIsSubmitting(false);
-    setPrepareState('idle');
-    setPrepareMessage(null);
-    setPrepareWarnings([]);
     setLaunchTeam(true);
+    resetUIState();
   };
 
   useEffect(() => {
@@ -562,7 +566,7 @@ export const CreateTeamDialog = ({
       open={open}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) {
-          resetFormState();
+          resetUIState();
           onClose();
         }
       }}
