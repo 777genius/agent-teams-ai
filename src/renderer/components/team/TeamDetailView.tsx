@@ -9,6 +9,7 @@ import { buildTaskCountsByOwner } from '@renderer/utils/pathNormalize';
 import { MessageSquare, Pencil, Play, Plus, Search, Trash2, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { ActiveTasksBlock } from './activity/ActiveTasksBlock';
 import { ActivityTimeline } from './activity/ActivityTimeline';
 import { CreateTaskDialog } from './dialogs/CreateTaskDialog';
 import { EditTeamDialog } from './dialogs/EditTeamDialog';
@@ -661,6 +662,12 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           </div>
         }
       >
+        <ActiveTasksBlock
+          members={data.members}
+          tasks={data.tasks}
+          onMemberClick={setSelectedMember}
+          onTaskClick={setSelectedTask}
+        />
         <ActivityTimeline
           messages={filteredMessages}
           members={data.members}
@@ -678,6 +685,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
 
       <ReviewDialog
         open={requestChangesTaskId !== null}
+        teamName={teamName}
         taskId={requestChangesTaskId}
         onCancel={() => setRequestChangesTaskId(null)}
         onSubmit={(comment) => {

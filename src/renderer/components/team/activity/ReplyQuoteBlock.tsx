@@ -4,9 +4,14 @@ import type { ParsedMessageReply } from '@renderer/utils/agentMessageFormatting'
 
 interface ReplyQuoteBlockProps {
   reply: ParsedMessageReply;
+  /** When set, limits height of the reply body (e.g. "max-h-56"). Omit to show full content. */
+  bodyMaxHeight?: string;
 }
 
-export const ReplyQuoteBlock = ({ reply }: ReplyQuoteBlockProps): React.JSX.Element => (
+export const ReplyQuoteBlock = ({
+  reply,
+  bodyMaxHeight = 'max-h-56',
+}: ReplyQuoteBlockProps): React.JSX.Element => (
   <div className="space-y-2">
     <div
       className="rounded-md border-l-2 border-[var(--color-border-emphasis)] bg-[var(--color-surface)] px-3 py-2"
@@ -17,6 +22,6 @@ export const ReplyQuoteBlock = ({ reply }: ReplyQuoteBlockProps): React.JSX.Elem
       </span>
       <p className="line-clamp-3 text-xs text-[var(--color-text-muted)]">{reply.originalText}</p>
     </div>
-    <MarkdownViewer content={reply.replyText} maxHeight="max-h-56" copyable />
+    <MarkdownViewer content={reply.replyText} maxHeight={bodyMaxHeight} copyable />
   </div>
 );

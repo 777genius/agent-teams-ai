@@ -11,7 +11,7 @@ import { buildReplyBlock, parseMessageReply } from '@renderer/utils/agentMessage
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { getModifierKeyName } from '@renderer/utils/keyboardUtils';
 import { formatDistanceToNow } from 'date-fns';
-import { MessageSquare, Reply, Send, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, MessageSquare, Reply, Send, X } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { ResolvedTeamMember, TaskComment } from '@shared/types';
@@ -36,6 +36,16 @@ export const TaskCommentsSection = ({
   const commentsRef = useMarkCommentsRead(teamName, taskId, comments);
 
   const [replyTo, setReplyTo] = useState<{ author: string; text: string } | null>(null);
+  const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(new Set());
+
+  const toggleCommentExpanded = useCallback((commentId: string) => {
+    setExpandedCommentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(commentId)) next.delete(commentId);
+      else next.add(commentId);
+      return next;
+    });
+  }, []);
 
   const draft = useDraftPersistence({ key: `taskComment:${teamName}:${taskId}` });
 
@@ -108,6 +118,18 @@ export const TaskCommentsSection = ({
                 </span>
                 <button
                   type="button"
+                  className="flex items-center gap-0.5 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:text-[var(--color-text-secondary)] group-hover:opacity-100"
+                  onClick={() => toggleCommentExpanded(comment.id)}
+                  title={expandedCommentIds.has(comment.id) ? 'Свернуть' : 'Развернуть'}
+                >
+                  {expandedCommentIds.has(comment.id) ? (
+                    <ChevronUp size={12} />
+                  ) : (
+                    <ChevronDown size={12} />
+                  )}
+                </button>
+                <button
+                  type="button"
                   className="ml-auto flex items-center gap-0.5 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:text-[var(--color-text-secondary)] group-hover:opacity-100"
                   onClick={() =>
                     setReplyTo({
@@ -123,10 +145,17 @@ export const TaskCommentsSection = ({
               <div className="text-xs">
                 {(() => {
                   const reply = parseMessageReply(comment.text);
+                  const expanded = expandedCommentIds.has(comment.id);
                   return reply ? (
-                    <ReplyQuoteBlock reply={reply} />
+                    <ReplyQuoteBlock
+                      reply={reply}
+                      bodyMaxHeight={expanded ? undefined : 'max-h-56'}
+                    />
                   ) : (
-                    <MarkdownViewer content={comment.text} maxHeight="max-h-[120px]" />
+                    <MarkdownViewer
+                      content={comment.text}
+                      maxHeight={expanded ? undefined : 'max-h-[120px]'}
+                    />
                   );
                 })()}
               </div>

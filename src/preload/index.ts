@@ -573,8 +573,17 @@ const electronAPI: ElectronAPI = {
     getMemberLogs: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<MemberLogSummary[]>(TEAM_GET_MEMBER_LOGS, teamName, memberName);
     },
-    getLogsForTask: async (teamName: string, taskId: string) => {
-      return invokeIpcWithResult<MemberLogSummary[]>(TEAM_GET_LOGS_FOR_TASK, teamName, taskId);
+    getLogsForTask: async (
+      teamName: string,
+      taskId: string,
+      options?: { owner?: string; status?: string }
+    ) => {
+      return invokeIpcWithResult<MemberLogSummary[]>(
+        TEAM_GET_LOGS_FOR_TASK,
+        teamName,
+        taskId,
+        options
+      );
     },
     getMemberStats: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<MemberFullStats>(TEAM_GET_MEMBER_STATS, teamName, memberName);

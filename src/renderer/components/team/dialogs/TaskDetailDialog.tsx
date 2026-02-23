@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { MemberLogsTab } from '@renderer/components/team/members/MemberLogsTab';
 import { Badge } from '@renderer/components/ui/badge';
@@ -10,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
+import { markAsRead } from '@renderer/services/commentReadStorage';
 import { TASK_STATUS_LABELS, TASK_STATUS_STYLES } from '@renderer/utils/memberHelpers';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -48,6 +51,19 @@ export const TaskDetailDialog = ({
 }: TaskDetailDialogProps): React.JSX.Element => {
   const currentTask = task ? (taskMap.get(task.id) ?? task) : null;
 
+  useEffect(() => {
+    if (!open || !currentTask) return;
+    const comments = currentTask.comments ?? [];
+    if (comments.length === 0) return;
+    const latest = Math.max(...comments.map((c) => new Date(c.createdAt).getTime()));
+    if (latest > 0) markAsRead(teamName, currentTask.id, latest);
+  }, [open, teamName, currentTask?.id, currentTask?.comments]);
+
+  const handleDependencyClick = (taskId: string): void => {
+    onClose();
+    onScrollToTask?.(taskId);
+  };
+
   if (!currentTask) {
     return (
       <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -65,11 +81,6 @@ export const TaskDetailDialog = ({
   const statusLabel = TASK_STATUS_LABELS[status];
   const blockedByIds = currentTask.blockedBy?.filter((id) => id.length > 0) ?? [];
   const blocksIds = currentTask.blocks?.filter((id) => id.length > 0) ?? [];
-
-  const handleDependencyClick = (taskId: string): void => {
-    onClose();
-    onScrollToTask?.(taskId);
-  };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -222,7 +233,12 @@ export const TaskDetailDialog = ({
           <h4 className="mb-2 text-xs font-medium text-[var(--color-text-muted)]">
             Execution Logs
           </h4>
-          <MemberLogsTab teamName={teamName} taskId={currentTask.id} />
+          <MemberLogsTab
+            teamName={teamName}
+            taskId={currentTask.id}
+            taskOwner={currentTask.owner}
+            taskStatus={currentTask.status}
+          />
         </div>
 
         <DialogFooter>

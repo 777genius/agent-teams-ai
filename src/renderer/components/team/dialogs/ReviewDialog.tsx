@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -11,9 +9,11 @@ import {
 } from '@renderer/components/ui/dialog';
 import { Label } from '@renderer/components/ui/label';
 import { Textarea } from '@renderer/components/ui/textarea';
+import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 
 interface ReviewDialogProps {
   open: boolean;
+  teamName: string;
   taskId: string | null;
   onCancel: () => void;
   onSubmit: (comment?: string) => void;
@@ -21,20 +21,23 @@ interface ReviewDialogProps {
 
 export const ReviewDialog = ({
   open,
+  teamName,
   taskId,
   onCancel,
   onSubmit,
 }: ReviewDialogProps): React.JSX.Element => {
-  const [comment, setComment] = useState('');
+  const draft = useDraftPersistence({
+    key: `requestChanges:${teamName}:${taskId ?? ''}`,
+    enabled: Boolean(teamName && taskId),
+  });
 
   const handleCancel = (): void => {
-    setComment('');
     onCancel();
   };
 
   const handleSubmit = (): void => {
-    const trimmed = comment.trim() || undefined;
-    setComment('');
+    const trimmed = draft.value.trim() || undefined;
+    draft.clearDraft();
     onSubmit(trimmed);
   };
 
@@ -58,10 +61,13 @@ export const ReviewDialog = ({
           <Textarea
             id="review-comment"
             className="min-h-[110px] text-xs"
-            value={comment}
+            value={draft.value}
             placeholder="Describe what needs to change..."
-            onChange={(event) => setComment(event.target.value)}
+            onChange={(event) => draft.setValue(event.target.value)}
           />
+          {draft.isSaved ? (
+            <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+          ) : null}
         </div>
 
         <DialogFooter>

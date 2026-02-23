@@ -104,8 +104,14 @@ export class TeamMemberLogsFinder {
 
   /**
    * Returns session logs that reference the given task (TaskCreate, TaskUpdate, comments, etc.).
+   * When the task is in_progress and has an owner, also includes that owner's session logs so
+   * the executor's current activity is visible even before the JSONL mentions the task id.
    */
-  async findLogsForTask(teamName: string, taskId: string): Promise<MemberLogSummary[]> {
+  async findLogsForTask(
+    teamName: string,
+    taskId: string,
+    options?: { owner?: string; status?: string }
+  ): Promise<MemberLogSummary[]> {
     const discovery = await this.discoverProjectSessions(teamName);
     if (!discovery) return [];
 
@@ -156,6 +162,32 @@ export class TeamMemberLogsFinder {
           knownMembers
         );
         if (summary) results.push(summary);
+      }
+    }
+
+    const includeOwnerSessions =
+      options?.status === 'in_progress' &&
+      typeof options?.owner === 'string' &&
+      options.owner.trim().length > 0;
+    if (includeOwnerSessions) {
+      const ownerLogs = await this.findMemberLogs(teamName, options.owner!.trim());
+      const seen = new Set<string>();
+      for (const log of results) {
+        const key =
+          log.kind === 'subagent'
+            ? `subagent:${log.sessionId}:${log.subagentId}`
+            : `lead:${log.sessionId}`;
+        seen.add(key);
+      }
+      for (const log of ownerLogs) {
+        const key =
+          log.kind === 'subagent'
+            ? `subagent:${log.sessionId}:${log.subagentId}`
+            : `lead:${log.sessionId}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push(log);
+        }
       }
     }
 
@@ -307,11 +339,18 @@ export class TeamMemberLogsFinder {
 
   private async fileMentionsTaskId(filePath: string, taskId: string): Promise<boolean> {
     const escaped = taskId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const patterns = [
+    const numericTaskId = /^\d+$/.test(taskId) ? taskId : null;
+    const patterns: RegExp[] = [
       new RegExp(`"task_id"\\s*:\\s*"${escaped}"`, 'i'),
       new RegExp(`"taskId"\\s*:\\s*"${escaped}"`, 'i'),
       new RegExp(`#${escaped}\\b`),
     ];
+    if (numericTaskId) {
+      patterns.push(
+        new RegExp(`"task_id"\\s*:\\s*${numericTaskId}\\b`),
+        new RegExp(`"taskId"\\s*:\\s*${numericTaskId}\\b`)
+      );
+    }
     try {
       const stream = createReadStream(filePath, { encoding: 'utf8' });
       const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });

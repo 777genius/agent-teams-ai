@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
@@ -13,10 +13,12 @@ import {
 } from '@renderer/components/ui/dialog';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
-import { Textarea } from '@renderer/components/ui/textarea';
+import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
+import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { cn } from '@renderer/lib/utils';
 import { Check, CheckCircle2, Loader2 } from 'lucide-react';
 
+import type { MentionSuggestion } from '@renderer/types/mention';
 import type { Project, TeamLaunchRequest, TeamProvisioningPrepareResult } from '@shared/types';
 
 interface LaunchTeamDialogProps {
@@ -72,7 +74,7 @@ export const LaunchTeamDialog = ({
   const [cwdMode, setCwdMode] = useState<'project' | 'custom'>('project');
   const [selectedProjectPath, setSelectedProjectPath] = useState('');
   const [customCwd, setCustomCwd] = useState('');
-  const [prompt, setPrompt] = useState('');
+  const promptDraft = useDraftPersistence({ key: `launchTeam:${teamName}:prompt` });
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -88,7 +90,6 @@ export const LaunchTeamDialog = ({
     setPrepareState('idle');
     setPrepareMessage(null);
     setPrepareWarnings([]);
-    setPrompt('');
     setCwdMode('project');
     setSelectedProjectPath('');
     setCustomCwd('');
@@ -195,6 +196,16 @@ export const LaunchTeamDialog = ({
 
   const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
 
+  const mentionSuggestions = useMemo<MentionSuggestion[]>(
+    () =>
+      projects.map((p) => ({
+        id: p.path,
+        name: p.name,
+        subtitle: p.path,
+      })),
+    [projects]
+  );
+
   const activeError = localError ?? provisioningError;
 
   const handleSubmit = (): void => {
@@ -210,7 +221,7 @@ export const LaunchTeamDialog = ({
         await onLaunch({
           teamName,
           cwd: effectiveCwd,
-          prompt: prompt.trim() || undefined,
+          prompt: promptDraft.value.trim() || undefined,
         });
         resetFormState();
         onClose();
@@ -362,12 +373,20 @@ export const LaunchTeamDialog = ({
             <Label htmlFor="launch-prompt" className="text-xs text-[var(--color-text-muted)]">
               Prompt (optional)
             </Label>
-            <Textarea
+            <MentionableTextarea
               id="launch-prompt"
-              className="min-h-[100px] resize-y text-xs"
-              value={prompt}
-              onChange={(event) => setPrompt(event.target.value)}
-              placeholder="Instructions for team lead..."
+              className="min-h-[100px] text-xs"
+              minRows={4}
+              maxRows={12}
+              value={promptDraft.value}
+              onValueChange={promptDraft.setValue}
+              suggestions={mentionSuggestions}
+              placeholder="Instructions for team lead... Use @ to mention projects."
+              footerRight={
+                promptDraft.isSaved ? (
+                  <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                ) : null
+              }
             />
           </div>
         </div>

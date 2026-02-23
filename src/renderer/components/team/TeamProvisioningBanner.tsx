@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
-import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { CheckCircle2, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { STEP_LABELS, STEP_ORDER } from './provisioningSteps';
+import { ProvisioningProgressBlock } from './ProvisioningProgressBlock';
+import { STEP_ORDER } from './provisioningSteps';
 
 import type { ProvisioningStep } from './provisioningSteps';
 import type { TeamProvisioningProgress } from '@shared/types';
@@ -137,51 +136,20 @@ export const TeamProvisioningBanner = ({
 
   if (isActive) {
     return (
-      <div className="mb-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-[var(--color-text-muted)]">{progress.message}</p>
-          {canCancel ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 shrink-0 px-2 text-xs"
-              onClick={() => {
-                void cancelProvisioning(progress.runId);
-              }}
-            >
-              Cancel
-            </Button>
-          ) : null}
-        </div>
-        <div className="mt-2 flex items-center gap-1 overflow-x-auto pb-0.5">
-          {STEP_ORDER.map((step, index) => {
-            const isDone = progressStepIndex >= 0 && index < progressStepIndex;
-            const isCurrent = progressStepIndex >= 0 && index === progressStepIndex;
-
-            return (
-              <div key={step} className="flex items-center gap-1">
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    'whitespace-nowrap px-2 py-0.5 text-[11px] font-normal',
-                    isDone && 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200',
-
-                    isCurrent &&
-                      'border-[var(--color-accent)]/70 bg-[var(--color-accent)]/15 text-[var(--color-text)]'
-                  )}
-                >
-                  <span className="mr-1 inline-flex size-4 items-center justify-center rounded-full border border-current text-[10px]">
-                    {index + 1}
-                  </span>
-                  {STEP_LABELS[step]}
-                </Badge>
-                {index < STEP_ORDER.length - 1 ? (
-                  <span className="text-[var(--color-text-muted)]">&rarr;</span>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
+      <div className="mb-3">
+        <ProvisioningProgressBlock
+          title="Launching team"
+          message={progress.message}
+          currentStepIndex={progressStepIndex >= 0 ? progressStepIndex : -1}
+          loading
+          onCancel={
+            canCancel
+              ? () => {
+                  void cancelProvisioning(progress.runId);
+                }
+              : null
+          }
+        />
       </div>
     );
   }

@@ -20,12 +20,17 @@ interface MemberLogsTabProps {
   teamName: string;
   memberName?: string;
   taskId?: string;
+  /** When viewing task logs: include owner's sessions when task is in_progress */
+  taskOwner?: string;
+  taskStatus?: string;
 }
 
 export const MemberLogsTab = ({
   teamName,
   memberName,
   taskId,
+  taskOwner,
+  taskStatus,
 }: MemberLogsTabProps): React.JSX.Element => {
   const [logs, setLogs] = useState<MemberLogSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +52,10 @@ export const MemberLogsTab = ({
         }
         const result =
           taskId != null
-            ? await api.teams.getLogsForTask(teamName, taskId)
+            ? await api.teams.getLogsForTask(teamName, taskId, {
+                owner: taskOwner,
+                status: taskStatus,
+              })
             : await api.teams.getMemberLogs(teamName, memberName!);
         if (!cancelled) {
           setLogs(result);
@@ -66,7 +74,7 @@ export const MemberLogsTab = ({
     return () => {
       cancelled = true;
     };
-  }, [teamName, memberName, taskId]);
+  }, [teamName, memberName, taskId, taskOwner, taskStatus]);
 
   const handleExpand = useCallback(
     async (log: MemberLogSummary) => {

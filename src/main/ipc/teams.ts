@@ -769,7 +769,8 @@ async function handleGetMemberLogs(
 async function handleGetLogsForTask(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
-  taskId: unknown
+  taskId: unknown,
+  options?: { owner?: string; status?: string }
 ): Promise<IpcResult<MemberLogSummary[]>> {
   const vTeam = validateTeamName(teamName);
   if (!vTeam.valid) {
@@ -779,8 +780,15 @@ async function handleGetLogsForTask(
   if (!vTask.valid) {
     return { success: false, error: vTask.error ?? 'Invalid taskId' };
   }
+  const opts =
+    options && typeof options === 'object'
+      ? {
+          owner: typeof options.owner === 'string' ? options.owner : undefined,
+          status: typeof options.status === 'string' ? options.status : undefined,
+        }
+      : undefined;
   return wrapTeamHandler('getLogsForTask', () =>
-    getTeamMemberLogsFinder().findLogsForTask(vTeam.value!, vTask.value!)
+    getTeamMemberLogsFinder().findLogsForTask(vTeam.value!, vTask.value!, opts)
   );
 }
 
