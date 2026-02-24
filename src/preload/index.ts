@@ -49,6 +49,7 @@ import {
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
+  TEAM_UPDATE_MEMBER_ROLE,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
   UPDATER_CHECK,
@@ -630,6 +631,9 @@ const electronAPI: ElectronAPI = {
     },
     removeMember: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<void>(TEAM_REMOVE_MEMBER, teamName, memberName);
+    },
+    updateMemberRole: async (teamName: string, memberName: string, role: string | undefined) => {
+      return invokeIpcWithResult<void>(TEAM_UPDATE_MEMBER_ROLE, teamName, memberName, role);
     },
     getProjectBranch: async (projectPath: string) => {
       return invokeIpcWithResult<string | null>(TEAM_GET_PROJECT_BRANCH, projectPath);

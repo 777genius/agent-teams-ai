@@ -1,7 +1,12 @@
+import { useState } from 'react';
+
 import { Badge } from '@renderer/components/ui/badge';
 import { DialogDescription, DialogTitle } from '@renderer/components/ui/dialog';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { agentAvatarUrl, getMemberDotClass, getPresenceLabel } from '@renderer/utils/memberHelpers';
+import { Pencil } from 'lucide-react';
+
+import { MemberRoleEditor } from './MemberRoleEditor';
 
 import type { ResolvedTeamMember } from '@shared/types';
 
@@ -9,16 +14,25 @@ interface MemberDetailHeaderProps {
   member: ResolvedTeamMember;
   isTeamAlive?: boolean;
   isTeamProvisioning?: boolean;
+  onUpdateRole?: (newRole: string | undefined) => Promise<void> | void;
+  updatingRole?: boolean;
 }
 
 export const MemberDetailHeader = ({
   member,
   isTeamAlive,
   isTeamProvisioning,
+  onUpdateRole,
+  updatingRole,
 }: MemberDetailHeaderProps): React.JSX.Element => {
+  const [editing, setEditing] = useState(false);
+
   const role = member.role || formatAgentRole(member.agentType);
   const presenceLabel = getPresenceLabel(member, isTeamAlive, isTeamProvisioning);
   const dotClass = getMemberDotClass(member, isTeamAlive, isTeamProvisioning);
+
+  const canEditRole =
+    member.agentType !== 'team-lead' && !member.removedAt && !isTeamProvisioning && !!onUpdateRole;
 
   return (
     <div className="flex items-center gap-3">
@@ -37,13 +51,43 @@ export const MemberDetailHeader = ({
       <div className="min-w-0 flex-1">
         <DialogTitle className="truncate">{member.name}</DialogTitle>
         <DialogDescription className="mt-1 flex items-center gap-2">
-          {role && <span>{role}</span>}
-          <Badge
-            variant="secondary"
-            className="px-1.5 py-0.5 text-[10px] font-normal leading-none text-[var(--color-text-muted)]"
-          >
-            {presenceLabel}
-          </Badge>
+          {editing ? (
+            <MemberRoleEditor
+              currentRole={member.role}
+              saving={updatingRole}
+              onSave={async (newRole) => {
+                try {
+                  await onUpdateRole?.(newRole);
+                  setEditing(false);
+                } catch {
+                  // stay in editing mode so user can retry
+                }
+              }}
+              onCancel={() => setEditing(false)}
+            />
+          ) : (
+            <>
+              <span>{role || 'No role'}</span>
+              {canEditRole && (
+                <button
+                  type="button"
+                  className="inline-flex items-center text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
+                  onClick={() => setEditing(true)}
+                  aria-label="Edit role"
+                >
+                  <Pencil size={12} />
+                </button>
+              )}
+            </>
+          )}
+          {!editing && (
+            <Badge
+              variant="secondary"
+              className="px-1.5 py-0.5 text-[10px] font-normal leading-none text-[var(--color-text-muted)]"
+            >
+              {presenceLabel}
+            </Badge>
+          )}
         </DialogDescription>
       </div>
     </div>

@@ -335,3 +335,8 @@ export interface AddMemberRequest {
 export interface RemoveMemberRequest {
   name: string;
 }
+
+export interface UpdateMemberRoleRequest {
+  name: string;
+  role: string | undefined;
+}

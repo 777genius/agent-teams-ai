@@ -30,7 +30,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { CreateTeamDialog } from './dialogs/CreateTeamDialog';
 import { TeamEmptyState } from './TeamEmptyState';
 
-import type { TeamCopyData } from './dialogs/CreateTeamDialog';
+import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
 import type { TeamCreateRequest, TeamProvisioningProgress, TeamSummary } from '@shared/types';
 
 function generateUniqueName(sourceName: string, existingNames: string[]): string {
@@ -326,6 +326,17 @@ export const TeamListView = (): React.JSX.Element => {
 
   const taskCountsByTeam = useMemo(() => buildTaskCountsByTeam(globalTasks), [globalTasks]);
 
+  const activeTeams = useMemo<ActiveTeamRef[]>(() => {
+    const aliveSet = new Set(aliveTeams);
+    return teams
+      .filter((t) => aliveSet.has(t.teamName) && t.projectPath)
+      .map((t) => ({
+        teamName: t.teamName,
+        displayName: t.displayName,
+        projectPath: t.projectPath!,
+      }));
+  }, [teams, aliveTeams]);
+
   const handleCreateDialogClose = useCallback(() => {
     setShowCreateDialog(false);
     setCopyData(null);
@@ -359,6 +370,7 @@ export const TeamListView = (): React.JSX.Element => {
       canCreate={canCreate}
       provisioningError={provisioningError}
       existingTeamNames={teams.map((t) => t.teamName)}
+      activeTeams={activeTeams}
       initialData={copyData ?? undefined}
       defaultProjectPath={currentProjectPath}
       onClose={handleCreateDialogClose}

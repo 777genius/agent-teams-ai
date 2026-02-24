@@ -323,6 +323,26 @@ export class TeamDataService {
     await this.membersMetaStore.writeMembers(teamName, members);
   }
 
+  async updateMemberRole(
+    teamName: string,
+    memberName: string,
+    newRole: string | undefined
+  ): Promise<{ oldRole: string | undefined; changed: boolean }> {
+    const members = await this.membersMetaStore.getMembers(teamName);
+    const member = members.find((m) => m.name === memberName);
+    if (!member) throw new Error(`Member "${memberName}" not found`);
+    if (member.removedAt) throw new Error(`Member "${memberName}" is removed`);
+    if (member.agentType === 'team-lead') throw new Error('Cannot change team lead role');
+
+    const oldRole = member.role;
+    const normalized = typeof newRole === 'string' && newRole.trim() ? newRole.trim() : undefined;
+    if (oldRole === normalized) return { oldRole, changed: false };
+
+    member.role = normalized;
+    await this.membersMetaStore.writeMembers(teamName, members);
+    return { oldRole, changed: true };
+  }
+
   async removeMember(teamName: string, memberName: string): Promise<void> {
     const members = await this.membersMetaStore.getMembers(teamName);
     const member = members.find((m) => m.name === memberName);

@@ -108,6 +108,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const [addingMemberLoading, setAddingMemberLoading] = useState(false);
   const [removeMemberConfirm, setRemoveMemberConfirm] = useState<string | null>(null);
+  const [updatingRoleLoading, setUpdatingRoleLoading] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
@@ -117,6 +118,11 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   const [replyQuote, setReplyQuote] = useState<{ from: string; text: string } | undefined>(
     undefined
   );
+
+  // Active teams for conflict warning in LaunchTeamDialog
+  const [activeTeamsForLaunch, setActiveTeamsForLaunch] = useState<
+    { teamName: string; displayName: string; projectPath: string }[]
+  >([]);
 
   // Session loading and filtering state
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -132,6 +138,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     loading,
     error,
     projects,
+    teams,
     selectTeam,
     updateKanban,
     updateKanbanColumnOrder,
@@ -149,9 +156,11 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     reviewActionError,
     addMember,
     removeMember,
+    updateMemberRole,
     launchTeam,
     provisioningError,
     isTeamProvisioning,
+    refreshTeamData,
     kanbanFilterQuery,
     clearKanbanFilter,
   } = useStore(
@@ -160,6 +169,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       loading: s.selectedTeamLoading,
       error: s.selectedTeamError,
       projects: s.projects,
+      teams: s.teams,
       selectTeam: s.selectTeam,
       updateKanban: s.updateKanban,
       updateKanbanColumnOrder: s.updateKanbanColumnOrder,
@@ -177,11 +187,13 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       reviewActionError: s.reviewActionError,
       addMember: s.addMember,
       removeMember: s.removeMember,
+      updateMemberRole: s.updateMemberRole,
       launchTeam: s.launchTeam,
       provisioningError: s.provisioningError,
       isTeamProvisioning: Object.values(s.provisioningRuns).some(
         (run) => run.teamName === teamName && ACTIVE_PROVISIONING_STATES.has(run.state)
       ),
+      refreshTeamData: s.refreshTeamData,
       kanbanFilterQuery: s.kanbanFilterQuery,
       clearKanbanFilter: s.clearKanbanFilter,
     }))
@@ -201,6 +213,32 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     }
     void selectTeam(teamName);
   }, [teamName, selectTeam]);
+
+  // Fetch active teams when launch dialog opens (for conflict warning)
+  useEffect(() => {
+    if (!launchDialogOpen) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const aliveList = await api.teams.aliveList();
+        if (cancelled) return;
+        const aliveSet = new Set(aliveList);
+        const refs = teams
+          .filter((t) => aliveSet.has(t.teamName) && t.projectPath)
+          .map((t) => ({
+            teamName: t.teamName,
+            displayName: t.displayName,
+            projectPath: t.projectPath!,
+          }));
+        setActiveTeamsForLaunch(refs);
+      } catch {
+        // best-effort
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [launchDialogOpen, teams]);
 
   useEffect(() => {
     if (kanbanFilterQuery) {
@@ -437,12 +475,15 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     setStoppingTeam(true);
     try {
       await api.teams.stop(teamName);
+      // Backend sends 'disconnected' progress which triggers store refresh,
+      // but refresh here too as a safety net (e.g. if progress event is missed).
+      await refreshTeamData(teamName);
     } catch (err) {
       console.error('Failed to stop team:', err);
     } finally {
       setStoppingTeam(false);
     }
-  }, [teamName]);
+  }, [teamName, refreshTeamData]);
 
   const handleDeleteTeam = useCallback((): void => {
     setDeleteConfirmOpen(true);
@@ -1088,6 +1129,15 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           setSelectedMember(null);
           setSelectedTask(task);
         }}
+        onUpdateRole={async (memberName, role) => {
+          setUpdatingRoleLoading(true);
+          try {
+            await updateMemberRole(teamName, memberName, role);
+          } finally {
+            setUpdatingRoleLoading(false);
+          }
+        }}
+        updatingRole={updatingRoleLoading}
         onRemoveMember={() => {
           const name = selectedMember?.name;
           if (!name) return;
@@ -1201,6 +1251,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         members={data?.members ?? []}
         defaultProjectPath={data.config.projectPath}
         provisioningError={provisioningError}
+        activeTeams={activeTeamsForLaunch}
         onClose={() => setLaunchDialogOpen(false)}
         onLaunch={async (request) => {
           await launchTeam(request);

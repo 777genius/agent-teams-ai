@@ -748,6 +748,9 @@ export class HttpAPIClient implements ElectronAPI {
     removeMember: async (): Promise<void> => {
       throw new Error('Team member management is not available in browser mode');
     },
+    updateMemberRole: async (): Promise<void> => {
+      throw new Error('Team member management is not available in browser mode');
+    },
     getProjectBranch: async (_projectPath: string): Promise<string | null> => {
       return null;
     },

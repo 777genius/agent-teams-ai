@@ -382,6 +382,11 @@ export interface TeamsAPI {
   updateConfig: (teamName: string, updates: TeamUpdateConfigRequest) => Promise<TeamConfig>;
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
   removeMember: (teamName: string, memberName: string) => Promise<void>;
+  updateMemberRole: (
+    teamName: string,
+    memberName: string,
+    role: string | undefined
+  ) => Promise<void>;
   addTaskComment: (teamName: string, taskId: string, text: string) => Promise<TaskComment>;
   getProjectBranch: (projectPath: string) => Promise<string | null>;
   getAttachments: (teamName: string, messageId: string) => Promise<AttachmentFileData[]>;

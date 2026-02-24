@@ -1595,6 +1595,8 @@ export class TeamProvisioningService {
     run.cancelRequested = true;
     run.child?.stdin?.end();
     run.child?.kill();
+    const progress = updateProgress(run, 'disconnected', 'Team stopped by user');
+    run.onProgress(progress);
     this.cleanupRun(run);
     logger.info(`[${teamName}] Process stopped by user`);
   }

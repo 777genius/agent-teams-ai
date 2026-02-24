@@ -31,6 +31,7 @@ import {
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
+  TEAM_UPDATE_MEMBER_ROLE,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
@@ -188,6 +189,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_ADD_TASK_COMMENT, handleAddTaskComment);
   ipcMain.handle(TEAM_ADD_MEMBER, handleAddMember);
   ipcMain.handle(TEAM_REMOVE_MEMBER, handleRemoveMember);
+  ipcMain.handle(TEAM_UPDATE_MEMBER_ROLE, handleUpdateMemberRole);
   ipcMain.handle(TEAM_GET_PROJECT_BRANCH, handleGetProjectBranch);
   ipcMain.handle(TEAM_GET_ATTACHMENTS, handleGetAttachments);
   logger.info('Team handlers registered');
@@ -223,6 +225,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_ADD_TASK_COMMENT);
   ipcMain.removeHandler(TEAM_ADD_MEMBER);
   ipcMain.removeHandler(TEAM_REMOVE_MEMBER);
+  ipcMain.removeHandler(TEAM_UPDATE_MEMBER_ROLE);
   ipcMain.removeHandler(TEAM_GET_PROJECT_BRANCH);
   ipcMain.removeHandler(TEAM_GET_ATTACHMENTS);
 }
@@ -1352,6 +1355,49 @@ async function handleRemoveMember(
   return wrapTeamHandler('removeMember', () =>
     getTeamDataService().removeMember(vTeam.value!, vMember.value!)
   );
+}
+
+async function handleUpdateMemberRole(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  memberName: unknown,
+  role: unknown
+): Promise<IpcResult<void>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  const vMember = validateMemberName(memberName);
+  if (!vMember.valid) return { success: false, error: vMember.error ?? 'Invalid memberName' };
+
+  const normalizedRole =
+    role === undefined || role === null
+      ? undefined
+      : typeof role === 'string'
+        ? role.trim() || undefined
+        : undefined;
+
+  return wrapTeamHandler('updateMemberRole', async () => {
+    const tn = vTeam.value!;
+    const name = vMember.value!;
+    const { oldRole, changed } = await getTeamDataService().updateMemberRole(
+      tn,
+      name,
+      normalizedRole
+    );
+
+    if (changed) {
+      const provisioning = getTeamProvisioningService();
+      if (provisioning.isTeamAlive(tn)) {
+        const oldDesc = oldRole ? `"${oldRole}"` : 'none';
+        const newDesc = normalizedRole ? `"${normalizedRole}"` : 'none';
+        const message = `Teammate "${name}" role changed from ${oldDesc} to ${newDesc}. This will take effect on next launch.`;
+        try {
+          await provisioning.sendMessageToTeam(tn, message);
+        } catch {
+          logger.warn(`Failed to notify lead about role change for "${name}" in ${tn}`);
+        }
+      }
+    }
+  });
 }
 
 async function handleAddTaskComment(

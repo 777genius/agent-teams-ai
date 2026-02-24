@@ -27,6 +27,8 @@ interface MemberDetailDialogProps {
   onAssignTask: () => void;
   onTaskClick: (task: TeamTaskWithKanban) => void;
   onRemoveMember?: () => void;
+  onUpdateRole?: (memberName: string, role: string | undefined) => Promise<void> | void;
+  updatingRole?: boolean;
 }
 
 export const MemberDetailDialog = ({
@@ -42,6 +44,8 @@ export const MemberDetailDialog = ({
   onAssignTask,
   onTaskClick,
   onRemoveMember,
+  onUpdateRole,
+  updatingRole,
 }: MemberDetailDialogProps): React.JSX.Element | null => {
   const memberTasks = useMemo(
     () => (member ? tasks.filter((t) => t.owner === member.name) : []),
@@ -76,6 +80,10 @@ export const MemberDetailDialog = ({
               member={member}
               isTeamAlive={isTeamAlive}
               isTeamProvisioning={isTeamProvisioning}
+              onUpdateRole={
+                onUpdateRole ? (newRole) => onUpdateRole(member.name, newRole) : undefined
+              }
+              updatingRole={updatingRole}
             />
           </DialogHeader>
 

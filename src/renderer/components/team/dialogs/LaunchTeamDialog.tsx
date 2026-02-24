@@ -25,8 +25,10 @@ import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
+import { normalizePath } from '@renderer/utils/pathNormalize';
 import { AlertTriangle, Check, CheckCircle2, Loader2 } from 'lucide-react';
 
+import type { ActiveTeamRef } from './CreateTeamDialog';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type {
   Project,
@@ -41,6 +43,7 @@ interface LaunchTeamDialogProps {
   members: ResolvedTeamMember[];
   defaultProjectPath?: string;
   provisioningError: string | null;
+  activeTeams?: ActiveTeamRef[];
   onClose: () => void;
   onLaunch: (request: TeamLaunchRequest) => Promise<void>;
 }
@@ -84,6 +87,7 @@ export const LaunchTeamDialog = ({
   members,
   defaultProjectPath,
   provisioningError,
+  activeTeams,
   onClose,
   onLaunch,
 }: LaunchTeamDialogProps): React.JSX.Element => {
@@ -235,6 +239,15 @@ export const LaunchTeamDialog = ({
 
   const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
 
+  const conflictingTeam = useMemo(() => {
+    if (!activeTeams?.length || !effectiveCwd) return null;
+    const norm = normalizePath(effectiveCwd);
+    return (
+      activeTeams.find((t) => t.teamName !== teamName && normalizePath(t.projectPath) === norm) ??
+      null
+    );
+  }, [activeTeams, effectiveCwd, teamName]);
+
   const mentionSuggestions = useMemo<MentionSuggestion[]>(
     () =>
       members.map((m) => ({
@@ -292,6 +305,24 @@ export const LaunchTeamDialog = ({
             CLI.
           </DialogDescription>
         </DialogHeader>
+
+        {conflictingTeam ? (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+              <div className="min-w-0 space-y-1">
+                <p className="font-medium text-amber-300">
+                  Team &ldquo;{conflictingTeam.displayName}&rdquo; is already running in this
+                  project
+                </p>
+                <p className="text-amber-300/80">
+                  Running two teams in the same directory is risky — they may conflict editing the
+                  same files. Consider using a different directory or a git worktree for isolation.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {prepareState === 'failed' ? (
           <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs">

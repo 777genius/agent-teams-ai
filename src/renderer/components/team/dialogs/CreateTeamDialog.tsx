@@ -56,11 +56,18 @@ export interface TeamCopyData {
   members: TeamProvisioningMemberInput[];
 }
 
+export interface ActiveTeamRef {
+  teamName: string;
+  displayName: string;
+  projectPath: string;
+}
+
 interface CreateTeamDialogProps {
   open: boolean;
   canCreate: boolean;
   provisioningError: string | null;
   existingTeamNames: string[];
+  activeTeams?: ActiveTeamRef[];
   initialData?: TeamCopyData;
   defaultProjectPath?: string | null;
   onClose: () => void;
@@ -232,6 +239,7 @@ export const CreateTeamDialog = ({
   canCreate,
   provisioningError,
   existingTeamNames,
+  activeTeams,
   initialData,
   defaultProjectPath,
   onClose,
@@ -483,6 +491,12 @@ export const CreateTeamDialog = ({
   const canOpenExistingTeam =
     activeError?.includes('Team already exists') === true && request.teamName.length > 0;
 
+  const conflictingTeam = useMemo(() => {
+    if (!activeTeams?.length || !effectiveCwd) return null;
+    const norm = normalizePath(effectiveCwd);
+    return activeTeams.find((t) => normalizePath(t.projectPath) === norm) ?? null;
+  }, [activeTeams, effectiveCwd]);
+
   const updateMemberName = (memberId: string, name: string): void => {
     setMembers((prev) =>
       prev.map((candidate) => (candidate.id === memberId ? { ...candidate, name } : candidate))
@@ -587,6 +601,24 @@ export const CreateTeamDialog = ({
               : 'Team provisioning via local Claude CLI.'}
           </DialogDescription>
         </DialogHeader>
+
+        {conflictingTeam ? (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+              <div className="min-w-0 space-y-1">
+                <p className="font-medium text-amber-300">
+                  Team &ldquo;{conflictingTeam.displayName}&rdquo; is already running in this
+                  project
+                </p>
+                <p className="text-amber-300/80">
+                  Running two teams in the same directory is risky — they may conflict editing the
+                  same files. Consider using a different directory or a git worktree for isolation.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {canCreate && launchTeam && prepareState === 'failed' ? (
           <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs">

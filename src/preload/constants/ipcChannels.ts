@@ -276,5 +276,8 @@ export const TEAM_ADD_MEMBER = 'team:addMember';
 /** Soft-delete a team member */
 export const TEAM_REMOVE_MEMBER = 'team:removeMember';
 
+/** Update a team member's role */
+export const TEAM_UPDATE_MEMBER_ROLE = 'team:updateMemberRole';
+
 /** Get attachment data for a message */
 export const TEAM_GET_ATTACHMENTS = 'team:getAttachments';

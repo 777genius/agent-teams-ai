@@ -89,6 +89,11 @@ export interface TeamSlice {
   addTaskComment: (teamName: string, taskId: string, text: string) => Promise<TaskComment>;
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
   removeMember: (teamName: string, memberName: string) => Promise<void>;
+  updateMemberRole: (
+    teamName: string,
+    memberName: string,
+    role: string | undefined
+  ) => Promise<void>;
   deleteTeam: (teamName: string) => Promise<void>;
   createTeam: (request: TeamCreateRequest) => Promise<string>;
   launchTeam: (request: TeamLaunchRequest) => Promise<string>;
@@ -455,6 +460,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   removeMember: async (teamName: string, memberName: string) => {
     await unwrapIpc('team:removeMember', () => api.teams.removeMember(teamName, memberName));
+    await get().refreshTeamData(teamName);
+  },
+
+  updateMemberRole: async (teamName: string, memberName: string, role: string | undefined) => {
+    await unwrapIpc('team:updateMemberRole', () =>
+      api.teams.updateMemberRole(teamName, memberName, role)
+    );
     await get().refreshTeamData(teamName);
   },
 
