@@ -3,11 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { cn } from '@renderer/lib/utils';
-import hljs from 'highlight.js/lib/core';
-import json from 'highlight.js/lib/languages/json';
+import hljs from 'highlight.js';
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
-
-hljs.registerLanguage('json', json);
 
 import { STEP_LABELS, STEP_ORDER } from './provisioningSteps';
 
