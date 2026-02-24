@@ -74,6 +74,8 @@ export interface TeamTask {
    */
   related?: string[];
   createdAt?: string;
+  /** File modification time (mtime). Used for sorting by last activity. */
+  updatedAt?: string;
   projectPath?: string;
   comments?: TaskComment[];
 }

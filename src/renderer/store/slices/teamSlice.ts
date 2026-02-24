@@ -237,6 +237,23 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       reviewActionError: null,
     });
 
+    // If this team is being provisioned right now, config.json doesn't exist yet.
+    // Stay in loading state — the provisioning progress callback will re-call
+    // selectTeam once config is written.
+    const isProvisioningNow = Object.values(get().provisioningRuns).some(
+      (run) =>
+        run.teamName === teamName &&
+        !['ready', 'disconnected', 'failed', 'cancelled'].includes(run.state)
+    );
+    if (isProvisioningNow) {
+      set({
+        selectedTeamLoading: true,
+        selectedTeamData: null,
+        selectedTeamError: null,
+      });
+      return;
+    }
+
     try {
       const data = await unwrapIpc('team:getData', () => api.teams.getData(teamName));
       // Stale check: user may have switched to another team during the async call

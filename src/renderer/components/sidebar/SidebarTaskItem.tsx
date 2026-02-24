@@ -37,7 +37,7 @@ export const SidebarTaskItem = ({ task }: SidebarTaskItemProps): React.JSX.Eleme
         ? ({ icon: Eye, color: 'text-orange-400', label: 'in review' } as const)
         : (statusConfig[task.status] ?? statusConfig.pending);
   const StatusIcon = cfg.icon;
-  const dateLabel = formatTaskDate(task.createdAt);
+  const dateLabel = formatTaskDate(task.updatedAt ?? task.createdAt);
 
   return (
     <button

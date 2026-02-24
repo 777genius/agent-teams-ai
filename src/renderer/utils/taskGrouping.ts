@@ -14,6 +14,11 @@ export interface ProjectTaskGroup {
   tasks: GlobalTask[];
 }
 
+/** Returns updatedAt if available, otherwise createdAt. */
+function getEffectiveDate(task: GlobalTask): string | undefined {
+  return task.updatedAt ?? task.createdAt;
+}
+
 function getDateCategory(dateStr: string | undefined): DateCategory {
   if (!dateStr) return 'Older';
   const d = new Date(dateStr);
@@ -33,7 +38,7 @@ export function groupTasksByDate(tasks: GlobalTask[]): DateGroupedTasks {
   };
 
   for (const task of tasks) {
-    const cat = getDateCategory(task.createdAt);
+    const cat = getDateCategory(getEffectiveDate(task));
     groups[cat].push(task);
   }
 
@@ -41,9 +46,11 @@ export function groupTasksByDate(tasks: GlobalTask[]): DateGroupedTasks {
     groups[cat].sort((a, b) => {
       const cmp = a.teamName.localeCompare(b.teamName);
       if (cmp !== 0) return cmp;
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
+      const dateA = getEffectiveDate(a);
+      const dateB = getEffectiveDate(b);
+      const tsA = dateA ? new Date(dateA).getTime() : 0;
+      const tsB = dateB ? new Date(dateB).getTime() : 0;
+      return tsB - tsA;
     });
   }
 
@@ -90,9 +97,11 @@ export function groupTasksByProject(tasks: GlobalTask[]): ProjectTaskGroup[] {
     entry.tasks.sort((a, b) => {
       const cmp = a.teamName.localeCompare(b.teamName);
       if (cmp !== 0) return cmp;
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
+      const dateA = getEffectiveDate(a);
+      const dateB = getEffectiveDate(b);
+      const tsA = dateA ? new Date(dateA).getTime() : 0;
+      const tsB = dateB ? new Date(dateB).getTime() : 0;
+      return tsB - tsA;
     });
   }
 
@@ -104,10 +113,16 @@ export function groupTasksByProject(tasks: GlobalTask[]): ProjectTaskGroup[] {
 
   groups.sort((a, b) => {
     const tsA = Math.max(
-      ...a.tasks.map((t) => (t.createdAt ? new Date(t.createdAt).getTime() : 0))
+      ...a.tasks.map((t) => {
+        const d = getEffectiveDate(t);
+        return d ? new Date(d).getTime() : 0;
+      })
     );
     const tsB = Math.max(
-      ...b.tasks.map((t) => (t.createdAt ? new Date(t.createdAt).getTime() : 0))
+      ...b.tasks.map((t) => {
+        const d = getEffectiveDate(t);
+        return d ? new Date(d).getTime() : 0;
+      })
     );
     return tsB - tsA;
   });

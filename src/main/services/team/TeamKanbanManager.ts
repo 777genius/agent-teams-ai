@@ -1,4 +1,5 @@
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -8,8 +9,6 @@ import { atomicWriteAsync } from './atomicWrite';
 import type { KanbanColumnId, KanbanState, UpdateKanbanPatch } from '@shared/types';
 
 const logger = createLogger('Service:TeamKanbanManager');
-
-const KANBAN_COLUMN_IDS: KanbanColumnId[] = ['todo', 'in_progress', 'done', 'review', 'approved'];
 
 function createDefaultState(teamName: string): KanbanState {
   return {
