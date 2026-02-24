@@ -296,6 +296,8 @@ export function useSettingsHandlers({
           defaultTab: 'dashboard',
           claudeRootPath: null,
           agentLanguage: 'system',
+          autoExpandAIGroups: false,
+          useNativeTitleBar: false,
         },
         display: {
           showTimestamps: true,

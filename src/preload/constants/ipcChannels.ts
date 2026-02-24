@@ -178,6 +178,9 @@ export const WINDOW_IS_FULLSCREEN = 'window:isFullScreen';
 /** Event: (isFullScreen: boolean) when window enters or leaves fullscreen */
 export const WINDOW_FULLSCREEN_CHANGED = 'window:fullscreen-changed';
 
+/** Relaunch the application */
+export const APP_RELAUNCH = 'app:relaunch';
+
 // =============================================================================
 // Team API Channels
 // =============================================================================

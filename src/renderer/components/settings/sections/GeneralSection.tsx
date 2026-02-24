@@ -17,6 +17,7 @@ import { SettingRow, SettingsSectionHeader, SettingsSelect, SettingsToggle } fro
 import type { SafeConfig } from '../hooks/useSettingsConfig';
 import type { ClaudeRootInfo, WslClaudeRootCandidate } from '@shared/types';
 import type { HttpServerStatus } from '@shared/types/api';
+import type { AppConfig } from '@shared/types/notifications';
 
 // Theme options
 const THEME_OPTIONS = [
@@ -28,7 +29,7 @@ const THEME_OPTIONS = [
 interface GeneralSectionProps {
   readonly safeConfig: SafeConfig;
   readonly saving: boolean;
-  readonly onGeneralToggle: (key: 'launchAtLogin' | 'showDockIcon', value: boolean) => void;
+  readonly onGeneralToggle: (key: keyof AppConfig['general'], value: boolean) => void;
   readonly onThemeChange: (value: 'dark' | 'light' | 'system') => void;
   readonly onLanguageChange: (value: string) => void;
 }
@@ -341,6 +342,41 @@ export const GeneralSection = ({
           disabled={saving}
         />
       </SettingRow>
+      <SettingRow
+        label="Expand AI responses by default"
+        description="Automatically expand each response turn when opening a transcript or receiving a new message"
+      >
+        <SettingsToggle
+          enabled={safeConfig.general.autoExpandAIGroups ?? false}
+          onChange={(v) => onGeneralToggle('autoExpandAIGroups', v)}
+          disabled={saving}
+        />
+      </SettingRow>
+      {isElectron && !window.navigator.userAgent.includes('Macintosh') && (
+        <SettingRow
+          label="Use native title bar"
+          description="Use the default system window frame instead of the custom title bar"
+        >
+          <SettingsToggle
+            enabled={safeConfig.general.useNativeTitleBar}
+            onChange={async (v) => {
+              const shouldRelaunch = await confirm({
+                title: 'Restart required',
+                message: 'The app needs to restart to apply the title bar change. Restart now?',
+                confirmLabel: 'Restart',
+              });
+              if (shouldRelaunch) {
+                onGeneralToggle('useNativeTitleBar', v);
+                // Small delay to let config persist before relaunch
+                setTimeout(() => {
+                  void window.electronAPI?.windowControls?.relaunch();
+                }, 200);
+              }
+            }}
+            disabled={saving}
+          />
+        </SettingRow>
+      )}
 
       {isElectron && (
         <>

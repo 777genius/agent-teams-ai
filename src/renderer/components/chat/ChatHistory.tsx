@@ -1,15 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useAutoScrollBottom } from '@renderer/hooks/useAutoScrollBottom';
+import { isNearBottom, useAutoScrollBottom } from '@renderer/hooks/useAutoScrollBottom';
 import { useTabNavigationController } from '@renderer/hooks/useTabNavigationController';
 import { useTabUI } from '@renderer/hooks/useTabUI';
 import { useVisibleAIGroup } from '@renderer/hooks/useVisibleAIGroup';
 import { useStore } from '@renderer/store';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ChevronRight, Users } from 'lucide-react';
+import { ChevronRight, ChevronsDown, Users } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { SessionContextPanel } from './SessionContextPanel/index';
+
+/** Pixels from bottom considered "near bottom" for scroll-button visibility and auto-scroll. */
+const SCROLL_THRESHOLD = 300;
+/** Must match the `w-80` (320px) context panel width used in the layout below. */
+const CONTEXT_PANEL_WIDTH_PX = 320;
+
 import { ChatHistoryEmptyState } from './ChatHistoryEmptyState';
 import { ChatHistoryItem } from './ChatHistoryItem';
 import { ChatHistoryLoadingState } from './ChatHistoryLoadingState';
@@ -60,6 +66,7 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     setTabVisibleAIGroup,
     teams,
     openTeamTab,
+    openSessionReport,
   } = useStore(
     useShallow((s) => ({
       searchQuery: s.searchQuery,
@@ -74,6 +81,7 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
       setTabVisibleAIGroup: s.setTabVisibleAIGroup,
       teams: s.teams,
       openTeamTab: s.openTeamTab,
+      openSessionReport: s.openSessionReport,
     }))
   );
 
@@ -97,6 +105,14 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     sessionPhaseInfo,
     sessionDetail,
   } = tabData;
+
+  // Compute combined subagent cost from process metrics
+  const subagentCostUsd = useMemo(() => {
+    const processes = sessionDetail?.processes;
+    if (!processes || processes.length === 0) return undefined;
+    const total = processes.reduce((sum, p) => sum + (p.metrics.costUsd ?? 0), 0);
+    return total > 0 ? total : undefined;
+  }, [sessionDetail?.processes]);
 
   // State for Context button hover (local state OK - doesn't need per-tab isolation)
   const [isContextButtonHovered, setIsContextButtonHovered] = useState(false);
@@ -355,17 +371,32 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     rootRef: scrollContainerRef,
   });
 
+  // Scroll-to-bottom button visibility
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  const checkScrollButton = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    setShowScrollButton(!isNearBottom(scrollTop, scrollHeight, clientHeight, SCROLL_THRESHOLD));
+  }, []);
+
   // Auto-follow when conversation updates, but only if the user was already near bottom.
   // This preserves manual reading position when the user scrolls up.
   // Disabled during navigation to prevent conflicts with deep-link/search scrolling.
-  useAutoScrollBottom([conversation], {
-    threshold: 150,
+  const { scrollToBottom } = useAutoScrollBottom([conversation], {
+    threshold: SCROLL_THRESHOLD,
     smoothDuration: 300,
     autoBehavior: 'auto',
     disabled: shouldDisableAutoScroll,
     externalRef: scrollContainerRef,
     resetKey: effectiveTabId,
   });
+
+  // Re-check button visibility whenever conversation updates
+  useEffect(() => {
+    checkScrollButton();
+  }, [conversation, checkScrollButton]);
 
   // Callback to register AI group refs (combines with visibility hook)
   const registerAIGroupRefCombined = useCallback(
@@ -730,12 +761,13 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
       className="flex flex-1 flex-col overflow-hidden"
       style={{ backgroundColor: 'var(--color-surface)' }}
     >
-      <div className="flex flex-1 overflow-hidden">
+      <div className="relative flex flex-1 overflow-hidden">
         {/* Chat content */}
         <div
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto"
           style={{ backgroundColor: 'var(--color-surface)' }}
+          onScroll={checkScrollButton}
         >
           {/* Sticky Context button */}
           {allContextInjections.length > 0 && (
@@ -845,6 +877,30 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
           </div>
         </div>
 
+        {/* Scroll to bottom button */}
+        {showScrollButton && (
+          <button
+            onClick={() => {
+              scrollToBottom('smooth');
+              setShowScrollButton(false);
+            }}
+            className="absolute bottom-5 z-20 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs shadow-lg backdrop-blur-md transition-all"
+            style={{
+              right:
+                isContextPanelVisible && allContextInjections.length > 0
+                  ? `calc(${CONTEXT_PANEL_WIDTH_PX}px + 1rem)`
+                  : '1rem',
+              backgroundColor: 'var(--context-btn-bg)',
+              color: 'var(--color-text-secondary)',
+              border: '1px solid var(--color-border-emphasis)',
+            }}
+            title="Scroll to bottom"
+          >
+            <ChevronsDown className="size-3.5" />
+            <span>Bottom</span>
+          </button>
+        )}
+
         {/* Context panel sidebar */}
         {isContextPanelVisible && allContextInjections.length > 0 && (
           <div className="w-80 shrink-0">
@@ -856,6 +912,9 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
               onNavigateToTool={handleNavigateToTool}
               onNavigateToUserGroup={handleNavigateToUserGroup}
               totalSessionTokens={lastAiGroupTotalTokens}
+              sessionMetrics={sessionDetail?.metrics}
+              subagentCostUsd={subagentCostUsd}
+              onViewReport={effectiveTabId ? () => openSessionReport(effectiveTabId) : undefined}
               phaseInfo={sessionPhaseInfo ?? undefined}
               selectedPhase={selectedContextPhase}
               onPhaseChange={setSelectedContextPhase}

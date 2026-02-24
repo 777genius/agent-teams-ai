@@ -8,7 +8,17 @@ import { useCallback, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useStore } from '@renderer/store';
-import { Bell, FileText, LayoutDashboard, Pin, Search, Settings, Users, X } from 'lucide-react';
+import {
+  Activity,
+  Bell,
+  FileText,
+  LayoutDashboard,
+  Pin,
+  Search,
+  Settings,
+  Users,
+  X,
+} from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import type { Tab } from '@renderer/types/tabs';
@@ -32,6 +42,7 @@ const TAB_ICONS = {
   session: FileText,
   teams: Users,
   team: Users,
+  report: Activity,
 } as const;
 
 export const SortableTab = ({
@@ -62,7 +73,8 @@ export const SortableTab = ({
     },
   });
 
-  const style: React.CSSProperties = {
+  const style = {
+    WebkitAppRegion: 'no-drag',
     transform: CSS.Transform.toString(transform),
     transition: isDragging ? 'none' : transition,
     opacity: isDragging ? 0.3 : 1,
