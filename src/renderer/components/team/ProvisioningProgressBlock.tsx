@@ -69,7 +69,9 @@ function highlightLogsHtml(text: string): string {
       const trimmed = line.trimStart();
       if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
         try {
-          return hljs.highlight(line, { language: 'json' }).value;
+          const parsed: unknown = JSON.parse(trimmed);
+          const pretty = JSON.stringify(parsed, null, 2);
+          return hljs.highlight(pretty, { language: 'json' }).value;
         } catch {
           return escapeHtml(line);
         }

@@ -810,7 +810,7 @@ async function handleSendMessage(
         });
 
         return result;
-      } catch (stdinError) {
+      } catch (stdinError: unknown) {
         // Stdin failed (process died between check and write)
         // If attachments were requested, fail rather than silently dropping them
         if (validatedAttachments?.length) {
@@ -818,7 +818,8 @@ async function handleSendMessage(
             'Failed to deliver message with attachments: team process became unavailable'
           );
         }
-        logger.warn('stdin fallback for ' + tn + ': ' + String(stdinError));
+        const errMsg = stdinError instanceof Error ? stdinError.message : 'unknown error';
+        logger.warn(`stdin fallback for ${tn}: ${errMsg}`);
         // Fallback to inbox path for text-only messages
       }
     }
