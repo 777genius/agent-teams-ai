@@ -1,6 +1,11 @@
 import * as os from 'os';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('electron', () => ({
+  app: { getLocale: vi.fn(() => 'en'), getPath: vi.fn(() => '/tmp') },
+  Notification: vi.fn(),
+}));
+
 vi.mock('@preload/constants/ipcChannels', () => ({
   TEAM_LIST: 'team:list',
   TEAM_GET_DATA: 'team:getData',
