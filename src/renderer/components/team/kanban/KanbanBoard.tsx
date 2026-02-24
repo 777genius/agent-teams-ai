@@ -78,6 +78,8 @@ interface KanbanBoardProps {
   onColumnOrderChange?: (columnId: KanbanColumnId, orderedTaskIds: string[]) => void;
   /** Слот слева в одной строке с фильтром и переключателем вида (например, поле поиска). */
   toolbarLeft?: React.ReactNode;
+  /** Opens the create-task dialog with pre-set startImmediately value. */
+  onAddTask?: (startImmediately: boolean) => void;
 }
 
 type KanbanViewMode = 'grid' | 'columns';
@@ -218,6 +220,7 @@ export const KanbanBoard = ({
   onTaskClick,
   onColumnOrderChange,
   toolbarLeft,
+  onAddTask,
 }: KanbanBoardProps): React.JSX.Element => {
   const [viewMode, setViewMode] = useState<KanbanViewMode>('grid');
 
@@ -395,6 +398,12 @@ export const KanbanBoard = ({
           {COLUMNS.map((column) => {
             const columnTasks = groupedOrdered.get(column.id) ?? [];
             const accent = COLUMN_ACCENTS[column.id];
+            const addHandler =
+              onAddTask && column.id === 'todo'
+                ? () => onAddTask(false)
+                : onAddTask && column.id === 'in_progress'
+                  ? () => onAddTask(true)
+                  : undefined;
             return (
               <KanbanColumn
                 key={column.id}
@@ -403,6 +412,7 @@ export const KanbanBoard = ({
                 icon={accent.icon}
                 headerBg={accent.headerBg}
                 bodyBg={accent.bodyBg}
+                onAddTask={addHandler}
               >
                 {renderCards(column.id, columnTasks)}
               </KanbanColumn>
@@ -414,6 +424,12 @@ export const KanbanBoard = ({
           {COLUMNS.map((column) => {
             const columnTasks = groupedOrdered.get(column.id) ?? [];
             const accent = COLUMN_ACCENTS[column.id];
+            const addHandler =
+              onAddTask && column.id === 'todo'
+                ? () => onAddTask(false)
+                : onAddTask && column.id === 'in_progress'
+                  ? () => onAddTask(true)
+                  : undefined;
             return (
               <div key={column.id} className="w-64 shrink-0">
                 <KanbanColumn
@@ -422,6 +438,7 @@ export const KanbanBoard = ({
                   icon={accent.icon}
                   headerBg={accent.headerBg}
                   bodyBg={accent.bodyBg}
+                  onAddTask={addHandler}
                 >
                   {renderCards(column.id, columnTasks)}
                 </KanbanColumn>

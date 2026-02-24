@@ -49,17 +49,13 @@ export const CollapsibleTeamSection = ({
               {badge}
             </Badge>
           )}
-          {secondaryBadge != null && secondaryBadge >= 0 && (
+          {secondaryBadge != null && secondaryBadge > 0 && (
             <Badge
               variant="secondary"
-              className={
-                secondaryBadge > 0
-                  ? 'bg-blue-500/20 px-1.5 py-0.5 text-[10px] font-normal leading-none text-blue-400'
-                  : 'px-1.5 py-0.5 text-[10px] font-normal leading-none text-[var(--color-text-muted)]'
-              }
-              title={secondaryBadge > 0 ? `${secondaryBadge} unread` : undefined}
+              className="bg-blue-500/20 px-1.5 py-0.5 text-[10px] font-normal leading-none text-blue-400"
+              title={`${secondaryBadge} unread`}
             >
-              {secondaryBadge}
+              {secondaryBadge} new
             </Badge>
           )}
         </div>

@@ -160,7 +160,7 @@ export const ActivityTimeline = ({
           recipientInfo?.color ?? (message.to ? getMemberColorByName(message.to) : undefined);
         const messageKey = `${message.messageId ?? index}-${message.timestamp}-${message.from}`;
         const isUnread = readState
-          ? !readState.readSet.has(readState.getMessageKey(message))
+          ? !message.read && !readState.readSet.has(readState.getMessageKey(message))
           : !message.read;
         return (
           <MessageRowWithObserver

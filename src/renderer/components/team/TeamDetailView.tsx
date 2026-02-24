@@ -17,7 +17,17 @@ import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { buildTaskCountsByOwner } from '@renderer/utils/pathNormalize';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
-import { GitBranch, Pencil, Play, Plus, Search, Trash2, UserPlus, X } from 'lucide-react';
+import {
+  CheckCheck,
+  GitBranch,
+  Pencil,
+  Play,
+  Plus,
+  Search,
+  Trash2,
+  UserPlus,
+  X,
+} from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { ActiveTasksBlock } from './activity/ActiveTasksBlock';
@@ -56,6 +66,7 @@ interface CreateTaskDialogState {
   defaultSubject: string;
   defaultDescription: string;
   defaultOwner: string;
+  defaultStartImmediately?: boolean;
 }
 
 interface TimeWindow {
@@ -342,15 +353,21 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     return list;
   }, [data, timeWindow, messagesFilter, messagesSearchQuery]);
 
-  const { readSet, markRead } = useTeamMessagesRead(teamName ?? '');
+  const { readSet, markRead, markAllRead } = useTeamMessagesRead(teamName ?? '');
   const messagesUnreadCount = useMemo(
-    () => filteredMessages.filter((m) => !readSet.has(toMessageKey(m))).length,
+    () => filteredMessages.filter((m) => !m.read && !readSet.has(toMessageKey(m))).length,
     [filteredMessages, readSet]
   );
   const handleMessageVisible = useCallback(
     (message: InboxMessage) => markRead(toMessageKey(message)),
     [markRead]
   );
+  const handleMarkAllRead = useCallback(() => {
+    const keys = filteredMessages
+      .filter((m) => !m.read && !readSet.has(toMessageKey(m)))
+      .map((m) => toMessageKey(m));
+    markAllRead(keys);
+  }, [filteredMessages, readSet, markAllRead]);
 
   const kanbanDisplayTasks = useMemo(() => {
     const query = kanbanSearch.trim();
@@ -385,12 +402,18 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     if (changed) setPendingRepliesByMember(next);
   }, [data, pendingRepliesByMember]);
 
-  const openCreateTaskDialog = (subject = '', description = '', owner = ''): void => {
+  const openCreateTaskDialog = (
+    subject = '',
+    description = '',
+    owner = '',
+    startImmediately?: boolean
+  ): void => {
     setCreateTaskDialog({
       open: true,
       defaultSubject: subject,
       defaultDescription: description,
       defaultOwner: owner,
+      defaultStartImmediately: startImmediately,
     });
   };
 
@@ -400,6 +423,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       defaultSubject: '',
       defaultDescription: '',
       defaultOwner: '',
+      defaultStartImmediately: undefined,
     });
   };
 
@@ -768,6 +792,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             }
           }}
           onTaskClick={(task) => setSelectedTask(task)}
+          onAddTask={(startImmediately) => openCreateTaskDialog('', '', '', startImmediately)}
         />
       </CollapsibleTeamSection>
 
@@ -780,6 +805,23 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         defaultOpen
         action={
           <div className="flex items-center gap-2 pl-2">
+            {messagesUnreadCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="pointer-events-auto flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-blue-400 transition-colors hover:bg-blue-500/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMarkAllRead();
+                    }}
+                  >
+                    <CheckCheck size={12} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Mark all as read</TooltipContent>
+              </Tooltip>
+            )}
             <div className="flex w-36 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1">
               <Search size={12} className="shrink-0 text-[var(--color-text-muted)]" />
               <input
@@ -915,6 +957,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         defaultSubject={createTaskDialog.defaultSubject}
         defaultDescription={createTaskDialog.defaultDescription}
         defaultOwner={createTaskDialog.defaultOwner}
+        defaultStartImmediately={createTaskDialog.defaultStartImmediately}
         onClose={closeCreateTaskDialog}
         onSubmit={handleCreateTask}
         submitting={creatingTask}

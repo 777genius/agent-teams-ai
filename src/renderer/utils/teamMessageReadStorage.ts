@@ -36,3 +36,14 @@ export function markRead(teamName: string, messageKey: string, fullSet?: Set<str
     // quota or disabled
   }
 }
+
+/**
+ * Persist a full set of read keys at once (bulk mark-all-as-read).
+ */
+export function markBulkRead(teamName: string, fullSet: Set<string>): void {
+  try {
+    localStorage.setItem(storageKey(teamName), JSON.stringify([...fullSet]));
+  } catch {
+    // quota or disabled
+  }
+}

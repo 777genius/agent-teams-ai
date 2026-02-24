@@ -38,6 +38,7 @@ interface CreateTaskDialogProps {
   defaultSubject?: string;
   defaultDescription?: string;
   defaultOwner?: string;
+  defaultStartImmediately?: boolean;
   onClose: () => void;
   onSubmit: (
     subject: string,
@@ -60,6 +61,7 @@ export const CreateTaskDialog = ({
   defaultSubject = '',
   defaultDescription = '',
   defaultOwner = '',
+  defaultStartImmediately,
   onClose,
   onSubmit,
   submitting = false,
@@ -86,7 +88,7 @@ export const CreateTaskDialog = ({
     setOwner(defaultOwner);
     setBlockedBy([]);
     setRelated([]);
-    setStartImmediately(isTeamAlive);
+    setStartImmediately(defaultStartImmediately ?? isTeamAlive);
     promptDraft.clearDraft();
     setBlockedBySearch('');
     setRelatedSearch('');
