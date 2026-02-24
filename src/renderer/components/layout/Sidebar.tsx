@@ -183,22 +183,28 @@ export const Sidebar = (): React.JSX.Element => {
 
         {/* Content: Tasks list or Sessions list */}
         <div
-          id={sidebarTab === 'tasks' ? 'sidebar-tasks-panel' : 'sidebar-sessions-panel'}
+          id="sidebar-tasks-panel"
           role="tabpanel"
-          aria-labelledby={`sidebar-tab-${sidebarTab}`}
+          aria-labelledby="sidebar-tab-tasks"
+          hidden={sidebarTab !== 'tasks'}
           className="min-w-0 flex-1 overflow-hidden"
         >
-          {sidebarTab === 'tasks' ? (
-            <GlobalTaskList
-              hideHeader
-              filters={taskFilters}
-              onFiltersChange={setTaskFilters}
-              filtersPopoverOpen={taskFiltersPopoverOpen}
-              onFiltersPopoverOpenChange={setTaskFiltersPopoverOpen}
-            />
-          ) : (
-            <DateGroupedSessions />
-          )}
+          <GlobalTaskList
+            hideHeader
+            filters={taskFilters}
+            onFiltersChange={setTaskFilters}
+            filtersPopoverOpen={taskFiltersPopoverOpen}
+            onFiltersPopoverOpenChange={setTaskFiltersPopoverOpen}
+          />
+        </div>
+        <div
+          id="sidebar-sessions-panel"
+          role="tabpanel"
+          aria-labelledby="sidebar-tab-sessions"
+          hidden={sidebarTab !== 'sessions'}
+          className="min-w-0 flex-1 overflow-hidden"
+        >
+          <DateGroupedSessions />
         </div>
       </div>
 

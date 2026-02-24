@@ -1,4 +1,5 @@
 import { getToolsBasePath } from '@main/utils/pathDecoder';
+import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -492,11 +493,11 @@ async function main() {
           parts.push('\nInstructions:\n' + prompt);
         }
         parts.push(
-          '\n${'```'}info_for_agent',
+          '\n' + ${JSON.stringify(AGENT_BLOCK_OPEN)},
           'Update task status using:',
           'node "$HOME/.claude/tools/${TOOL_FILE_NAME}" --team ' + String(teamName) + ' task start ' + String(task.id),
           'node "$HOME/.claude/tools/${TOOL_FILE_NAME}" --team ' + String(teamName) + ' task complete ' + String(task.id),
-          '${'```'}'
+          ${JSON.stringify(AGENT_BLOCK_CLOSE)}
         );
         sendInboxMessage(paths, teamName, {
           to: task.owner,

@@ -79,16 +79,19 @@ export class TeamTaskReader {
               : '';
         // Resolve createdAt: prefer JSON field, fallback to fs.stat
         let createdAt: string | undefined;
+        let updatedAt: string | undefined;
         if (typeof parsed.createdAt === 'string') {
           createdAt = parsed.createdAt;
-        } else {
-          try {
-            const stat = await fs.promises.stat(taskPath);
+        }
+        try {
+          const stat = await fs.promises.stat(taskPath);
+          if (!createdAt) {
             const bt = stat.birthtime.getTime();
             createdAt = (bt > 0 ? stat.birthtime : stat.mtime).toISOString();
-          } catch {
-            /* leave undefined */
           }
+          updatedAt = stat.mtime.toISOString();
+        } catch {
+          /* leave undefined */
         }
 
         const task: TeamTask = {
@@ -110,6 +113,7 @@ export class TeamTaskReader {
             ? (parsed.related as unknown[]).filter((id): id is string => typeof id === 'string')
             : undefined,
           createdAt,
+          updatedAt,
           projectPath: typeof parsed.projectPath === 'string' ? parsed.projectPath : undefined,
           comments: Array.isArray(parsed.comments)
             ? (parsed.comments as TaskComment[]).filter(

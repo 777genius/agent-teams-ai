@@ -422,14 +422,12 @@ export const CreateTeamDialog = ({
     if (!open || !isDev || initialData) {
       return;
     }
-    if (teamName.trim().length === 0) {
-      setTeamName(DEV_DEFAULT_TEAM.teamName);
-    }
+    setTeamName((prev) => (prev.trim().length === 0 ? DEV_DEFAULT_TEAM.teamName : prev));
     if (descriptionDraft.value.trim().length === 0) {
       descriptionDraft.setValue(DEV_DEFAULT_TEAM.description);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- dev default, intentional deps
-  }, [open, isDev, teamName, initialData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dev defaults applied once on open
+  }, [open]);
 
   useEffect(() => {
     if (cwdMode !== 'project') {

@@ -259,17 +259,32 @@ export const KanbanTaskCard = ({
           ) : null}
 
           {columnId === 'done' ? (
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label={`Request review for task ${task.id}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRequestReview(task.id);
-              }}
-            >
-              Request Review
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+                aria-label={`Approve task ${task.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onApprove(task.id);
+                }}
+              >
+                <CheckCircle2 size={12} />
+                Approve
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label={`Request review for task ${task.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRequestReview(task.id);
+                }}
+              >
+                Request Review
+              </Button>
+            </>
           ) : null}
 
           {columnId === 'review' ? (

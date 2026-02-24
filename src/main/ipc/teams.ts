@@ -36,6 +36,7 @@ import {
   TEAM_UPDATE_TASK_STATUS,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
+import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { createLogger } from '@shared/utils/logger';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
 import { type IpcMain, type IpcMainInvokeEvent } from 'electron';
@@ -713,7 +714,7 @@ function validateAttachments(
     if (estimatedBinarySize > MAX_ATTACHMENT_SIZE * 1.1) {
       return { valid: false, error: `Attachment "${a.filename}" data exceeds size limit` };
     }
-    totalSize += a.size;
+    totalSize += Math.max(a.size, estimatedBinarySize);
     result.push({
       id: a.id,
       filename: a.filename,
@@ -994,8 +995,6 @@ async function handleUpdateKanban(
     );
   });
 }
-
-const KANBAN_COLUMN_IDS: KanbanColumnId[] = ['todo', 'in_progress', 'done', 'review', 'approved'];
 
 function validateKanbanColumnId(
   value: unknown

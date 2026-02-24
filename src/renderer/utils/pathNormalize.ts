@@ -2,7 +2,10 @@ import type { GlobalTask } from '@shared/types';
 
 export function normalizePath(p: string): string {
   let s = p.replace(/\\/g, '/');
-  while (s.endsWith('/')) s = s.slice(0, -1);
+  // Preserve root paths like "/" or "C:/"
+  if (s !== '/' && !/^[A-Za-z]:\/$/.test(s)) {
+    while (s.endsWith('/')) s = s.slice(0, -1);
+  }
   return s.toLowerCase();
 }
 
