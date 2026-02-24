@@ -37,6 +37,7 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   TEAM_ADD_TASK_COMMENT: 'team:addTaskComment',
   TEAM_ADD_MEMBER: 'team:addMember',
   TEAM_REMOVE_MEMBER: 'team:removeMember',
+  TEAM_UPDATE_MEMBER_ROLE: 'team:updateMemberRole',
   TEAM_GET_PROJECT_BRANCH: 'team:getProjectBranch',
   TEAM_GET_ATTACHMENTS: 'team:getAttachments',
 }));
@@ -72,6 +73,7 @@ import {
   TEAM_GET_ATTACHMENTS,
   TEAM_GET_PROJECT_BRANCH,
   TEAM_REMOVE_MEMBER,
+  TEAM_UPDATE_MEMBER_ROLE,
 } from '../../../src/preload/constants/ipcChannels';
 import {
   initializeTeamHandlers,
@@ -109,6 +111,7 @@ describe('ipc teams handlers', () => {
     })),
     addMember: vi.fn(async () => undefined),
     removeMember: vi.fn(async () => undefined),
+    updateMemberRole: vi.fn(async () => ({ oldRole: undefined, changed: true })),
   };
   const provisioningService = {
     prepareForProvisioning: vi.fn(async () => ({
@@ -170,6 +173,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_ADD_TASK_COMMENT)).toBe(true);
     expect(handlers.has(TEAM_ADD_MEMBER)).toBe(true);
     expect(handlers.has(TEAM_REMOVE_MEMBER)).toBe(true);
+    expect(handlers.has(TEAM_UPDATE_MEMBER_ROLE)).toBe(true);
   });
 
   it('returns success false on invalid sendMessage args', async () => {
@@ -382,6 +386,42 @@ describe('ipc teams handlers', () => {
     });
   });
 
+  describe('updateMemberRole', () => {
+    it('calls service on valid input', async () => {
+      const handler = handlers.get(TEAM_UPDATE_MEMBER_ROLE)!;
+      const result = (await handler({} as never, 'my-team', 'alice', 'developer')) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(true);
+      expect(service.updateMemberRole).toHaveBeenCalledWith('my-team', 'alice', 'developer');
+    });
+
+    it('normalizes null role to undefined', async () => {
+      const handler = handlers.get(TEAM_UPDATE_MEMBER_ROLE)!;
+      const result = (await handler({} as never, 'my-team', 'alice', null)) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(true);
+      expect(service.updateMemberRole).toHaveBeenCalledWith('my-team', 'alice', undefined);
+    });
+
+    it('rejects invalid team name', async () => {
+      const handler = handlers.get(TEAM_UPDATE_MEMBER_ROLE)!;
+      const result = (await handler({} as never, '../bad', 'alice', 'dev')) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid member name', async () => {
+      const handler = handlers.get(TEAM_UPDATE_MEMBER_ROLE)!;
+      const result = (await handler({} as never, 'my-team', '../bad', 'dev')) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(false);
+    });
+  });
+
   describe('createTeam prompt validation', () => {
     it('accepts valid prompt in team create request', async () => {
       const handler = handlers.get(TEAM_CREATE)!;
@@ -439,6 +479,7 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_ADD_TASK_COMMENT)).toBe(false);
     expect(handlers.has(TEAM_ADD_MEMBER)).toBe(false);
     expect(handlers.has(TEAM_REMOVE_MEMBER)).toBe(false);
+    expect(handlers.has(TEAM_UPDATE_MEMBER_ROLE)).toBe(false);
     expect(handlers.has(TEAM_GET_PROJECT_BRANCH)).toBe(false);
     expect(handlers.has(TEAM_GET_ATTACHMENTS)).toBe(false);
   });

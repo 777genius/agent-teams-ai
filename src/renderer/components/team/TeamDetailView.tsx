@@ -1133,6 +1133,12 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           setUpdatingRoleLoading(true);
           try {
             await updateMemberRole(teamName, memberName, role);
+            // Optimistically update local selectedMember to reflect new role
+            setSelectedMember((prev) => {
+              if (prev?.name !== memberName) return prev;
+              const normalized = typeof role === 'string' && role.trim() ? role.trim() : undefined;
+              return { ...prev, role: normalized };
+            });
           } finally {
             setUpdatingRoleLoading(false);
           }
