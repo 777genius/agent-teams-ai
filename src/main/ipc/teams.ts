@@ -389,7 +389,8 @@ async function handleUpdateConfig(
     return { success: false, error: 'color must be a string' };
   }
   return wrapTeamHandler('updateConfig', async () => {
-    const result = await getTeamDataService().updateConfig(validated.value!, {
+    const tn = validated.value!;
+    const result = await getTeamDataService().updateConfig(tn, {
       name,
       description,
       color,
@@ -397,6 +398,20 @@ async function handleUpdateConfig(
     if (!result) {
       throw new Error('Team config not found');
     }
+
+    // Notify running lead about the rename so it stays aware of current team name
+    if (typeof name === 'string' && name.trim()) {
+      const provisioning = getTeamProvisioningService();
+      if (provisioning.isTeamAlive(tn)) {
+        const msg = `The team has been renamed to "${name.trim()}". Please use this name when referring to the team going forward.`;
+        try {
+          await provisioning.sendMessageToTeam(tn, msg);
+        } catch {
+          logger.warn(`Failed to notify lead about team rename for ${tn}`);
+        }
+      }
+    }
+
     return result;
   });
 }
