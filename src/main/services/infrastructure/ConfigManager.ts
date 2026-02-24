@@ -182,6 +182,8 @@ export interface GeneralConfig {
   defaultTab: 'dashboard' | 'last-session';
   claudeRootPath: string | null;
   agentLanguage: string;
+  autoExpandAIGroups: boolean;
+  useNativeTitleBar: boolean;
 }
 
 export interface DisplayConfig {
@@ -250,6 +252,8 @@ const DEFAULT_CONFIG: AppConfig = {
     defaultTab: 'dashboard',
     claudeRootPath: null,
     agentLanguage: 'system',
+    autoExpandAIGroups: false,
+    useNativeTitleBar: false,
   },
   display: {
     showTimestamps: true,

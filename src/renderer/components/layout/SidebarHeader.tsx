@@ -17,7 +17,7 @@ import { isElectronMode } from '@renderer/api';
 import { HEADER_ROW1_HEIGHT, HEADER_ROW2_HEIGHT } from '@renderer/constants/layout';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
-import { truncateMiddle } from '@renderer/utils/stringUtils';
+import { formatShortcut, truncateMiddle } from '@renderer/utils/stringUtils';
 import { Check, ChevronDown, GitBranch, PanelLeft } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -329,7 +329,7 @@ export const SidebarHeader = (): React.JSX.Element => {
               backgroundColor: isCollapseHovered ? 'var(--color-surface-raised)' : 'transparent',
             } as React.CSSProperties
           }
-          title="Collapse sidebar (⌘B)"
+          title={`Collapse sidebar (${formatShortcut('B')})`}
         >
           <PanelLeft className="size-4" />
         </button>

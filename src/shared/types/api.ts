@@ -57,6 +57,30 @@ import type {
 } from '@main/types';
 
 // =============================================================================
+// Cost Calculation Types
+// =============================================================================
+
+/**
+ * Detailed cost breakdown by token type for a session or chunk
+ */
+export interface CostBreakdown {
+  /** Cost for input tokens */
+  inputCost: number;
+  /** Cost for output tokens */
+  outputCost: number;
+  /** Cost for cache creation tokens */
+  cacheCreationCost: number;
+  /** Cost for cache read tokens */
+  cacheReadCost: number;
+  /** Total cost (sum of all components) */
+  totalCost: number;
+  /** Model name used for calculation */
+  model: string;
+  /** Source of the cost data */
+  source: 'calculated' | 'precalculated' | 'unavailable';
+}
+
+// =============================================================================
 // Agent Config
 // =============================================================================
 
@@ -492,6 +516,7 @@ export interface ElectronAPI {
     close: () => Promise<void>;
     isMaximized: () => Promise<boolean>;
     isFullScreen: () => Promise<boolean>;
+    relaunch: () => Promise<void>;
   };
 
   /** Subscribe to fullscreen changes (e.g. to remove macOS traffic light padding in fullscreen) */

@@ -532,6 +532,7 @@ export class HttpAPIClient implements ElectronAPI {
     close: async (): Promise<void> => {},
     isMaximized: async (): Promise<boolean> => false,
     isFullScreen: async (): Promise<boolean> => false,
+    relaunch: async (): Promise<void> => {},
   };
 
   onFullScreenChange =

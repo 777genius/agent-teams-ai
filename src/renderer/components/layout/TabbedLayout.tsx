@@ -17,9 +17,9 @@ import { UpdateDialog } from '../common/UpdateDialog';
 import { WorkspaceIndicator } from '../common/WorkspaceIndicator';
 import { CommandPalette } from '../search/CommandPalette';
 
+import { CustomTitleBar } from './CustomTitleBar';
 import { PaneContainer } from './PaneContainer';
 import { Sidebar } from './Sidebar';
-import { WindowsTitleBar } from './WindowsTitleBar';
 
 export const TabbedLayout = (): React.JSX.Element => {
   useKeyboardShortcuts();
@@ -38,7 +38,7 @@ export const TabbedLayout = (): React.JSX.Element => {
         { '--macos-traffic-light-padding-left': `${trafficLightPadding}px` } as React.CSSProperties
       }
     >
-      <WindowsTitleBar />
+      <CustomTitleBar />
       <UpdateBanner />
       <div className="flex flex-1 overflow-hidden">
         {/* Command Palette (Cmd+K) */}

@@ -2,6 +2,7 @@ import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
 import { contextBridge, ipcRenderer } from 'electron';
 
 import {
+  APP_RELAUNCH,
   CONTEXT_CHANGED,
   CONTEXT_GET_ACTIVE,
   CONTEXT_LIST,
@@ -409,6 +410,7 @@ const electronAPI: ElectronAPI = {
     close: () => ipcRenderer.invoke(WINDOW_CLOSE),
     isMaximized: () => ipcRenderer.invoke(WINDOW_IS_MAXIMIZED) as Promise<boolean>,
     isFullScreen: () => ipcRenderer.invoke(WINDOW_IS_FULLSCREEN) as Promise<boolean>,
+    relaunch: () => ipcRenderer.invoke(APP_RELAUNCH),
   },
 
   onFullScreenChange: (callback: (isFullScreen: boolean) => void): (() => void) => {

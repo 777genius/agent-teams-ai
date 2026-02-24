@@ -9,6 +9,7 @@
 
 import { isCommandOutputContent, sanitizeDisplayContent } from '@shared/utils/contentSanitizer';
 import { createLogger } from '@shared/utils/logger';
+import { calculateMessageCost } from '@shared/utils/pricing';
 import * as readline from 'readline';
 
 import { LocalFileSystemProvider } from '../services/infrastructure/LocalFileSystemProvider';
@@ -228,7 +229,6 @@ export function calculateMetrics(messages: ParsedMessage[]): SessionMetrics {
   let outputTokens = 0;
   let cacheReadTokens = 0;
   let cacheCreationTokens = 0;
-  const costUsd = 0;
 
   // Get timestamps for duration (loop instead of Math.min/max spread to avoid stack overflow on large sessions)
   const timestamps = messages.map((m) => m.timestamp.getTime()).filter((t) => !isNaN(t));
@@ -244,12 +244,30 @@ export function calculateMetrics(messages: ParsedMessage[]): SessionMetrics {
     }
   }
 
+  // Calculate cost per-message, then sum (tiered pricing applies per-API-call, not to aggregated totals)
+  let costUsd = 0;
+
   for (const msg of messages) {
     if (msg.usage) {
-      inputTokens += msg.usage.input_tokens ?? 0;
-      outputTokens += msg.usage.output_tokens ?? 0;
-      cacheReadTokens += msg.usage.cache_read_input_tokens ?? 0;
-      cacheCreationTokens += msg.usage.cache_creation_input_tokens ?? 0;
+      const msgInputTokens = msg.usage.input_tokens ?? 0;
+      const msgOutputTokens = msg.usage.output_tokens ?? 0;
+      const msgCacheReadTokens = msg.usage.cache_read_input_tokens ?? 0;
+      const msgCacheCreationTokens = msg.usage.cache_creation_input_tokens ?? 0;
+
+      inputTokens += msgInputTokens;
+      outputTokens += msgOutputTokens;
+      cacheReadTokens += msgCacheReadTokens;
+      cacheCreationTokens += msgCacheCreationTokens;
+
+      if (msg.model) {
+        costUsd += calculateMessageCost(
+          msg.model,
+          msgInputTokens,
+          msgOutputTokens,
+          msgCacheReadTokens,
+          msgCacheCreationTokens
+        );
+      }
     }
   }
 
@@ -261,7 +279,7 @@ export function calculateMetrics(messages: ParsedMessage[]): SessionMetrics {
     cacheReadTokens,
     cacheCreationTokens,
     messageCount: messages.length,
-    costUsd: costUsd > 0 ? costUsd : undefined,
+    costUsd,
   };
 }
 

@@ -204,6 +204,8 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
     'defaultTab',
     'claudeRootPath',
     'agentLanguage',
+    'autoExpandAIGroups',
+    'useNativeTitleBar',
   ];
 
   const result: Partial<GeneralConfig> = {};
@@ -273,6 +275,18 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
           return { valid: false, error: 'general.agentLanguage must be a non-empty string' };
         }
         result.agentLanguage = value.trim();
+        break;
+      case 'autoExpandAIGroups':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `general.${key} must be a boolean` };
+        }
+        result.autoExpandAIGroups = value;
+        break;
+      case 'useNativeTitleBar':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `general.${key} must be a boolean` };
+        }
+        result.useNativeTitleBar = value;
         break;
       default:
         return { valid: false, error: `Unsupported general key: ${key}` };
