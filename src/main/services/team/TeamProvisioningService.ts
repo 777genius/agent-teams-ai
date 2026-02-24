@@ -13,7 +13,6 @@ import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { createLogger } from '@shared/utils/logger';
 import { execFile, spawn } from 'child_process';
 import { randomUUID } from 'crypto';
-import { app } from 'electron';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -288,10 +287,18 @@ function buildTaskStatusProtocol(teamName: string): string {
 Failure to follow this protocol means the task board will show incorrect status.`;
 }
 
+function getSystemLocale(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().locale;
+  } catch {
+    return process.env.LANG?.split('.')[0]?.replace('_', '-') ?? 'en';
+  }
+}
+
 function getAgentLanguageInstruction(): string {
   const config = ConfigManager.getInstance().getConfig();
   const langCode = config.general.agentLanguage || 'system';
-  const systemLocale = app.getLocale();
+  const systemLocale = getSystemLocale();
   const languageName = resolveLanguageName(langCode, systemLocale);
   return `IMPORTANT: Communicate in ${languageName}. All messages, summaries, and task descriptions MUST be in ${languageName}.`;
 }
