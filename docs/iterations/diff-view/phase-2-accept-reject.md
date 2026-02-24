@@ -113,12 +113,140 @@ export class FileContentResolver {
   async resolveFileContent(
     teamName: string,
     memberName: string,
-    filePath: string
+    filePath: string,
+    snippets: SnippetDiff[]
   ): Promise<{
     original: string | null;
     modified: string | null;
     source: 'file-history' | 'snippet-reconstruction' | 'disk-current' | 'git-fallback' | 'unavailable';
-  }>;
+  }> {
+    // Level 1: file-history-snapshot backup
+    const fromBackup = await this.tryFileHistoryBackup(teamName, memberName, filePath);
+    if (fromBackup) return { ...fromBackup, source: 'file-history' };
+
+    // Level 2: Snippet chain reconstruction
+    const fromSnippets = await this.trySnippetReconstruction(filePath, snippets);
+    if (fromSnippets) return { ...fromSnippets, source: 'snippet-reconstruction' };
+
+    // Level 3: Текущий файл на диске (worst case — может быть уже изменён)
+    try {
+      const currentContent = await readFile(filePath, 'utf8');
+      return { original: currentContent, modified: currentContent, source: 'disk-current' };
+    } catch {
+      return { original: null, modified: null, source: 'unavailable' };
+    }
+  }
+
+  /**
+   * Level 2: Реконструкция original содержимого через обратное применение snippet chain.
+   *
+   * Алгоритм:
+   * 1. Читаем ТЕКУЩИЙ файл с диска (modified state)
+   * 2. Берём все SnippetDiff[] для этого файла (из ChangeExtractorService)
+   * 3. Применяем snippets в ОБРАТНОМ порядке (от последнего к первому)
+   * 4. Для каждого snippet: заменяем newString → oldString в текущем содержимом
+   * 5. Результат = "original" содержимое до всех изменений
+   *
+   * Ограничения:
+   * - Работает ТОЛЬКО если все snippets корректны и покрывают все изменения
+   * - Если какой-то snippet не найден в текущем файле → return null (fallback на Level 3)
+   * - Write-new тип: original = '' (пустой файл), modified = текущий файл
+   * - Write-update тип: невозможно восстановить original → return null
+   * - replaceAll: true — заменяем ВСЕ вхождения newString → oldString
+   */
+  private async trySnippetReconstruction(
+    filePath: string,
+    snippets: SnippetDiff[]
+  ): Promise<{ original: string; modified: string } | null> {
+    // Нет snippets — нечего реконструировать
+    if (!snippets || snippets.length === 0) return null;
+
+    // Читаем текущий файл с диска — это "modified" state (после всех изменений агента)
+    let currentContent: string;
+    try {
+      currentContent = await readFile(filePath, 'utf8');
+    } catch {
+      // Файл не существует на диске — невозможно реконструировать
+      return null;
+    }
+
+    const modified = currentContent;
+
+    // Сортируем snippets по timestamp УБЫВАНИЯ — от последнего к первому.
+    // Обратный порядок нужен, потому что мы "откатываем" изменения:
+    // последний snippet применился последним → откатываем его первым.
+    const sorted = [...snippets].sort((a, b) => {
+      // timestamp — ISO string или epoch, сравниваем как строки (ISO) или числа
+      const timeA = typeof a.timestamp === 'number' ? a.timestamp : new Date(a.timestamp).getTime();
+      const timeB = typeof b.timestamp === 'number' ? b.timestamp : new Date(b.timestamp).getTime();
+      return timeB - timeA; // УБЫВАНИЕ — от нового к старому
+    });
+
+    // Применяем обратные замены
+    let content = currentContent;
+
+    for (const snippet of sorted) {
+      // Write-new: агент СОЗДАЛ файл с нуля.
+      // Original = '' (пустой), Modified = текущее содержимое.
+      // Не нужно reverse-apply — просто знаем, что до этого файла не было.
+      if (snippet.type === 'write-new') {
+        return { original: '', modified };
+      }
+
+      // Write-update: агент ПЕРЕЗАПИСАЛ файл целиком (Write без old_string).
+      // Невозможно восстановить предыдущее содержимое — нет old_string.
+      // Fallback на Level 3 (текущий диск).
+      if (snippet.type === 'write-update') {
+        return null;
+      }
+
+      // Edit / Multi-edit: у нас есть oldString и newString
+      // Reverse: заменяем newString → oldString
+      if (snippet.type === 'edit' || snippet.type === 'multi-edit') {
+        // Guard: пустой newString означает удаление (oldString → '').
+        // Reverse = вставить oldString обратно, но без позиционного контекста
+        // не знаем КУДА вставлять → невозможно reverse → return null.
+        if (!snippet.newString && snippet.oldString) {
+          return null;
+        }
+
+        // Guard: пустой oldString означает вставку ('' → newString).
+        // Reverse = удалить newString из файла.
+        // Но если newString не уникален — опасно. Проверяем ниже.
+
+        if (snippet.replaceAll) {
+          // replaceAll: true — агент заменил ВСЕ вхождения oldString → newString.
+          // Reverse: заменяем ВСЕ вхождения newString → oldString.
+          if (snippet.newString && !content.includes(snippet.newString)) {
+            // newString не найден — chain сломана
+            return null;
+          }
+          content = content.replaceAll(snippet.newString, snippet.oldString);
+          continue;
+        }
+
+        // Обычная замена (первое вхождение)
+        if (snippet.newString && !content.includes(snippet.newString)) {
+          // newString не найден в текущем содержимом —
+          // значит chain неполный или файл был изменён после агента.
+          // Fallback на Level 3.
+          return null;
+        }
+
+        // Заменяем ПЕРВОЕ вхождение newString → oldString
+        if (snippet.newString) {
+          const idx = content.indexOf(snippet.newString);
+          content =
+            content.slice(0, idx) +
+            snippet.oldString +
+            content.slice(idx + snippet.newString.length);
+        }
+      }
+    }
+
+    // content теперь содержит "original" — состояние файла ДО всех изменений агента
+    return { original: content, modified };
+  }
 
   /**
    * Batch resolve для всех файлов в changeSet.
@@ -154,13 +282,27 @@ export class FileContentResolver {
 4. **Нужная версия**: Последний snapshot ПЕРЕД первым tool_use для данного файла
 5. **Если snapshot отсутствует**: Fallback на snippet reconstruction
 
-**Snippet chain reconstruction:**
+**Snippet chain reconstruction (Level 2 — `trySnippetReconstruction`):**
 
-1. Собрать все Edit tool_use для файла в хронологическом порядке
-2. Начать с `original = ''` (или текущий файл, если есть)
-3. Для каждого Edit: `content = content.replace(old_string, new_string)`
-4. `modified` = финальный результат, `original` = начальное состояние
-5. **Проблема**: Нет гарантии что chain полный (Write без old нарушает цепочку)
+Подход: **обратное применение** (reverse-apply) — начинаем с текущего файла на диске и откатываем snippets от последнего к первому.
+
+1. Читаем ТЕКУЩИЙ файл с диска (= modified state после всех изменений агента)
+2. Сортируем snippets по timestamp УБЫВАНИЯ (от последнего к первому)
+3. Для каждого snippet в обратном порядке:
+   - `write-new` → original = `''`, modified = текущий файл (агент создал файл с нуля)
+   - `write-update` → return null (невозможно восстановить — нет oldString)
+   - `edit` / `multi-edit` + `replaceAll: true` → `content.replaceAll(newString, oldString)`
+   - `edit` / `multi-edit` → `content.replace(newString, oldString)` (первое вхождение)
+   - Если `newString` не найден в content → return null (chain сломана, fallback на Level 3)
+4. После всех reverse-замен: `content` = original, текущий файл = modified
+
+**Ограничения:**
+- Работает ТОЛЬКО если все snippets корректны и покрывают ВСЕ изменения
+- `write-update` (Write без old_string) ломает цепочку → fallback на Level 3
+- Пустой `newString` (delete-операция) требует позиционный контекст → return null
+- Неуникальный короткий `newString` может привести к неверной замене (но для Level 2 это приемлемо — Level 1 обычно покрывает ~85% кейсов)
+
+Полная реализация метода — см. `trySnippetReconstruction()` в классе выше.
 
 ### 3. Сервис: `src/main/services/team/ReviewApplierService.ts` (NEW)
 
@@ -550,14 +692,15 @@ async function handleGetFileContent(
 ): Promise<IpcResult<FileChangeWithContent>> {
   return wrapReviewHandler('review:getFileContent', async () => {
     const resolver = getContentResolver();
-    const resolved = await resolver.resolveFileContent(teamName, memberName, filePath);
 
-    // ВАЖНО: resolver возвращает { original, modified, source },
-    // но ReviewAPI.getFileContent обещает FileChangeWithContent.
-    // Нужно маппить в полный тип:
+    // ВАЖНО: сначала получаем snippets из extractor — они нужны для Level 2 reconstruction
     const extractor = getChangeExtractor();
     const changeSet = await extractor.getAgentChanges(teamName, memberName);
     const fileSummary = changeSet.files.find(f => f.filePath === filePath);
+    const snippets = fileSummary?.snippets ?? [];
+
+    // Передаём snippets в resolver для Level 2 (snippet chain reconstruction)
+    const resolved = await resolver.resolveFileContent(teamName, memberName, filePath, snippets);
 
     return {
       filePath,
@@ -1213,27 +1356,127 @@ interface ConflictDialogProps {
   2. "Use Agent's Original" — восстановить до-агентное состояние
   3. "Edit Manually" — открыть CodeMirror для ручного редактирования
 
+#### `src/renderer/components/team/review/DiffErrorBoundary.tsx` (NEW)
+
+**Задача**: React ErrorBoundary вокруг CodeMirror. CodeMirror может бросать исключения при malformed content, DOM manipulation issues, race conditions при destroy/create. ErrorBoundary перехватывает ошибки, логирует, показывает fallback с raw diff текстом.
+
+```typescript
+// src/renderer/components/team/review/DiffErrorBoundary.tsx (NEW)
+import React from 'react';
+import { AlertTriangle } from 'lucide-react';
+
+interface DiffErrorBoundaryProps {
+  children: React.ReactNode;
+  filePath: string;
+  /** Fallback: показать raw text diff */
+  oldString?: string;
+  newString?: string;
+  onRetry?: () => void;
+}
+
+interface DiffErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class DiffErrorBoundary extends React.Component<DiffErrorBoundaryProps, DiffErrorBoundaryState> {
+  state: DiffErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error): DiffErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    // Логируем ошибку CodeMirror для диагностики
+    console.error('[DiffErrorBoundary] CodeMirror crash:', error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-4 h-4 text-red-400" />
+            <span className="text-sm font-medium text-red-300">
+              Ошибка отображения diff для {this.props.filePath}
+            </span>
+          </div>
+          <p className="text-xs text-text-muted mb-3">
+            {this.state.error?.message ?? 'Unknown error'}
+          </p>
+          {this.props.onRetry && (
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                this.props.onRetry?.();
+              }}
+              className="text-xs px-3 py-1 rounded bg-surface-raised hover:bg-surface-overlay text-text-secondary"
+            >
+              Попробовать снова
+            </button>
+          )}
+          {/* Raw text fallback — пользователь всё равно видит изменения */}
+          {(this.props.oldString || this.props.newString) && (
+            <details className="mt-3">
+              <summary className="text-xs text-text-muted cursor-pointer">
+                Показать raw diff
+              </summary>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-mono">
+                <div>
+                  <div className="text-red-400 mb-1">— Original</div>
+                  <pre className="p-2 bg-surface rounded overflow-auto max-h-64 whitespace-pre-wrap">
+                    {this.props.oldString || '(empty)'}
+                  </pre>
+                </div>
+                <div>
+                  <div className="text-green-400 mb-1">+ Modified</div>
+                  <pre className="p-2 bg-surface rounded overflow-auto max-h-64 whitespace-pre-wrap">
+                    {this.props.newString || '(empty)'}
+                  </pre>
+                </div>
+              </div>
+            </details>
+          )}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+```
+
+**~80 LOC**. Class component (обязательно для ErrorBoundary — React не поддерживает getDerivedStateFromError в функциональных компонентах).
+
 ### 9. Модификация существующих компонентов
 
 #### `ChangeReviewDialog.tsx` (MODIFY — замена Phase 1 ReviewDiffContent)
 
-Phase 1 использовал простой HTML-рендер. Phase 2 заменяет на `CodeMirrorDiffView`:
+Phase 1 использовал простой HTML-рендер. Phase 2 заменяет на `CodeMirrorDiffView`, обёрнутый в `DiffErrorBoundary`:
 
 ```typescript
 // Phase 1 (удалить)
 <ReviewDiffContent snippets={selectedFile.snippets} />
 
-// Phase 2 (заменить на)
-<CodeMirrorDiffView
-  original={fileContent?.originalFullContent ?? ''}
-  modified={fileContent?.modifiedFullContent ?? ''}
-  fileName={selectedFile.relativePath}
-  showMergeControls={true}
-  collapseUnchanged={collapseUnchanged}
-  onHunkAccepted={(idx) => setHunkDecision(selectedFile.filePath, idx, 'accepted')}
-  onHunkRejected={(idx) => setHunkDecision(selectedFile.filePath, idx, 'rejected')}
-/>
+// Phase 2 (заменить на — CodeMirror обёрнут в ErrorBoundary)
+<DiffErrorBoundary
+  filePath={selectedFile.filePath}
+  oldString={fileContent?.originalFullContent}
+  newString={fileContent?.modifiedFullContent}
+  onRetry={() => refetchFileContent(selectedFile.filePath)}
+>
+  <CodeMirrorDiffView
+    original={fileContent?.originalFullContent ?? ''}
+    modified={fileContent?.modifiedFullContent ?? ''}
+    fileName={selectedFile.relativePath}
+    showMergeControls={true}
+    collapseUnchanged={collapseUnchanged}
+    onHunkAccepted={(idx) => setHunkDecision(selectedFile.filePath, idx, 'accepted')}
+    onHunkRejected={(idx) => setHunkDecision(selectedFile.filePath, idx, 'rejected')}
+  />
+</DiffErrorBoundary>
 ```
+
+**Важно**: `DiffErrorBoundary` оборачивает ТОЛЬКО `CodeMirrorDiffView`, а не весь dialog. Если CodeMirror упадёт — остальной UI (file tree, toolbar, timeline) продолжает работать. При ошибке пользователь видит raw diff text и может нажать "Попробовать снова" для пересоздания CodeMirror instance.
 
 **Lazy loading file content:**
 ```typescript
@@ -1289,11 +1532,12 @@ function getFileStatusIcon(filePath: string, hunkDecisions: Record<string, HunkD
 | `src/preload/index.ts` | MODIFY | +30 |
 | `src/renderer/store/slices/changeReviewSlice.ts` | MODIFY | +200 |
 | `src/renderer/components/team/review/CodeMirrorDiffView.tsx` | NEW | 350 |
+| `src/renderer/components/team/review/DiffErrorBoundary.tsx` | NEW | 80 |
 | `src/renderer/components/team/review/ReviewToolbar.tsx` | NEW | 150 |
 | `src/renderer/components/team/review/ConflictDialog.tsx` | NEW | 180 |
 | `src/renderer/components/team/review/ChangeReviewDialog.tsx` | MODIFY | +60 |
 | `src/renderer/components/team/review/ReviewFileTree.tsx` | MODIFY | +40 |
-| **Итого** | 4 NEW + 10 MODIFY | ~1,970 |
+| **Итого** | 5 NEW + 10 MODIFY | ~2,050 |
 
 ---
 

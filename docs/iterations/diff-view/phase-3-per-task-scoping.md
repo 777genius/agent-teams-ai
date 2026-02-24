@@ -521,9 +521,125 @@ private async extractFilteredChanges(
 
     try {
       for await (const line of rl) {
-        // ... parse entry, extract content, find tool_use blocks ...
-        // if (shouldFilter && !allowedToolUseIds.has(block.id)) continue;
-        // → add to fileMap
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        let entry: Record<string, unknown>;
+        try {
+          entry = JSON.parse(trimmed) as Record<string, unknown>;
+        } catch {
+          continue; // Пропускаем повреждённые строки
+        }
+
+        const timestamp = typeof entry.timestamp === 'string' ? entry.timestamp : '';
+
+        // Извлекаем content (тот же паттерн что в parseBoundaries — extractContent)
+        const message = entry.message as Record<string, unknown> | undefined;
+        let content: unknown[] | null = null;
+        if (message && Array.isArray(message.content)) {
+          content = message.content;
+        } else if (Array.isArray(entry.content)) {
+          content = entry.content;
+        }
+        if (!content) continue;
+
+        // Ищем tool_use блоки с file-modifying tools
+        for (const block of content) {
+          if (!block || typeof block !== 'object') continue;
+          const b = block as Record<string, unknown>;
+          if (b.type !== 'tool_use') continue;
+
+          const rawName = typeof b.name === 'string' ? b.name : '';
+          const toolName = rawName.replace(/^proxy_/, '');
+
+          // Только file-modifying tools
+          if (!['Edit', 'Write', 'MultiEdit'].includes(toolName)) continue;
+
+          const toolUseId = typeof b.id === 'string' ? b.id : '';
+
+          // Фильтрация по allowedToolUseIds (если scope задан)
+          if (shouldFilter && !allowedToolUseIds.has(toolUseId)) continue;
+
+          const input = b.input as Record<string, unknown> | undefined;
+          if (!input) continue;
+
+          const filePath = typeof input.file_path === 'string' ? input.file_path : '';
+          if (!filePath) continue;
+
+          // Инициализируем FileChangeSummary если ещё нет
+          if (!fileMap.has(filePath)) {
+            fileMap.set(filePath, {
+              filePath,
+              relativePath: filePath.split('/').slice(-3).join('/'), // Последние 3 сегмента
+              snippets: [],
+              linesAdded: 0,
+              linesRemoved: 0,
+            });
+          }
+          const summary = fileMap.get(filePath)!;
+
+          if (toolName === 'Edit') {
+            const oldString = typeof input.old_string === 'string' ? input.old_string : '';
+            const newString = typeof input.new_string === 'string' ? input.new_string : '';
+            const replaceAll = input.replace_all === true;
+
+            summary.snippets.push({
+              toolUseId,
+              toolName: 'Edit',
+              oldString,
+              newString,
+              type: 'edit',
+              timestamp,
+              replaceAll,
+            });
+
+            // Подсчёт строк
+            const addedLines = newString.split('\n').length;
+            const removedLines = oldString.split('\n').length;
+            summary.linesAdded += Math.max(0, addedLines - removedLines);
+            summary.linesRemoved += Math.max(0, removedLines - addedLines);
+          } else if (toolName === 'Write') {
+            const content = typeof input.content === 'string' ? input.content : '';
+            // Write: если файл уже встречался в fileMap — это update, иначе new
+            const isNew = summary.snippets.length === 0;
+
+            summary.snippets.push({
+              toolUseId,
+              toolName: 'Write',
+              oldString: '',
+              newString: content,
+              type: isNew ? 'write-new' : 'write-update',
+              timestamp,
+              replaceAll: false,
+            });
+
+            summary.linesAdded += content.split('\n').length;
+          } else if (toolName === 'MultiEdit') {
+            const edits = Array.isArray(input.edits) ? input.edits : [];
+
+            for (const edit of edits) {
+              if (!edit || typeof edit !== 'object') continue;
+              const e = edit as Record<string, unknown>;
+              const oldString = typeof e.old_string === 'string' ? e.old_string : '';
+              const newString = typeof e.new_string === 'string' ? e.new_string : '';
+
+              summary.snippets.push({
+                toolUseId,
+                toolName: 'MultiEdit',
+                oldString,
+                newString,
+                type: 'multi-edit',
+                timestamp,
+                replaceAll: false,
+              });
+
+              const addedLines = newString.split('\n').length;
+              const removedLines = oldString.split('\n').length;
+              summary.linesAdded += Math.max(0, addedLines - removedLines);
+              summary.linesRemoved += Math.max(0, removedLines - addedLines);
+            }
+          }
+        }
       }
     } finally {
       rl.close();

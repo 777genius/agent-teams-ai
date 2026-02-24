@@ -234,8 +234,23 @@ function parseEntry(raw: string | null): ViewedStorageEntry | null {
   }
 }
 
+// ВАЖНО: Все localStorage операции обёрнуты в try-catch.
+// QuotaExceededError возможен при переполнении (~5MB limit).
+// При ошибке: логируем warning, операция no-op (viewed state теряется, не критично).
+
 function saveEntry(teamName: string, scopeKey: string, entry: ViewedStorageEntry): void {
-  localStorage.setItem(getStorageKey(teamName, scopeKey), JSON.stringify(entry));
+  try {
+    localStorage.setItem(getStorageKey(teamName, scopeKey), JSON.stringify(entry));
+  } catch (error) {
+    console.warn('[diffViewedStorage] localStorage write failed:', error);
+    // QuotaExceededError — попробуем очистить старые entries и retry
+    try {
+      cleanupOldViewedEntries();
+      localStorage.setItem(getStorageKey(teamName, scopeKey), JSON.stringify(entry));
+    } catch {
+      // Полный отказ — молча проглатываем, viewed state не критичен
+    }
+  }
 }
 
 /** M2 fix: Cleanup старых entries при переполнении */
@@ -552,6 +567,9 @@ import { promisify } from 'util';
 const execFileAsync = promisify(execFile);
 
 export class GitDiffFallback {
+  // Все git операции имеют timeout 10s — на больших repo git может зависнуть.
+  // При timeout execFile выбрасывает error с signal='SIGTERM', catch → return null/false/[].
+
   // M3 fix: кеш isGitRepo результатов — один exec per projectPath за сессию
   private gitRepoCache = new Map<string, boolean>();
 
@@ -571,6 +589,7 @@ export class GitDiffFallback {
       ], {
         cwd: projectPath,
         maxBuffer: 10 * 1024 * 1024, // 10MB
+        timeout: 10_000,
       });
       return stdout;
     } catch {
@@ -592,7 +611,7 @@ export class GitDiffFallback {
       const { stdout } = await execFileAsync('git', [
         'log', '--format=%H', '--before', timestamp,
         '-1', '--', relativePath
-      ], { cwd: projectPath });
+      ], { cwd: projectPath, timeout: 10_000 });
       return stdout.trim() || null;
     } catch {
       return null;
@@ -613,7 +632,7 @@ export class GitDiffFallback {
       const relativePath = filePath.replace(projectPath + '/', '');
       const { stdout } = await execFileAsync('git', [
         'diff', fromCommit, toCommit, '--', relativePath
-      ], { cwd: projectPath });
+      ], { cwd: projectPath, timeout: 10_000 });
       return stdout || null;
     } catch {
       return null;
@@ -634,7 +653,7 @@ export class GitDiffFallback {
         'log', `--max-count=${maxCount}`,
         '--format=%H|%aI|%s',
         '--', relativePath
-      ], { cwd: projectPath });
+      ], { cwd: projectPath, timeout: 10_000 });
 
       return stdout.trim().split('\n')
         .filter(line => line.includes('|'))
@@ -658,6 +677,7 @@ export class GitDiffFallback {
     try {
       await execFileAsync('git', ['rev-parse', '--is-inside-work-tree'], {
         cwd: projectPath,
+        timeout: 10_000,
       });
       this.gitRepoCache.set(projectPath, true);
       return true;
@@ -676,6 +696,13 @@ export class GitDiffFallback {
 // GitDiffFallback добавляет file-level операции.
 // Оба используют execFile('git', ...) — одинаковый паттерн.
 ```
+
+**Loading states для git operations:**
+
+Git fallback может быть медленным (особенно на больших repo). В UI:
+- `FileContentResolver.resolveFileContent()` уже возвращает Promise -- компонент показывает loading spinner
+- Добавить `source` field в ответ, чтобы UI мог показать badge "Git fallback" / "JSONL" / "Disk"
+- При timeout (10s) показать toast: "Git operation timed out. Showing current file version."
 
 #### Модификация: `FileContentResolver.ts` (MODIFY — Phase 2 + Phase 4)
 
