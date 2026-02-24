@@ -71,6 +71,9 @@ importers:
       fastify:
         specifier: ^5.7.4
         version: 5.7.4
+      highlight.js:
+        specifier: ^11.11.1
+        version: 11.11.1
       idb-keyval:
         specifier: ^6.2.2
         version: 6.2.2
