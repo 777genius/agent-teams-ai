@@ -11,7 +11,7 @@ import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { cn } from '@renderer/lib/utils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { getModifierKeyName } from '@renderer/utils/keyboardUtils';
-import { AlertCircle, Check, ChevronDown, Paperclip, Send } from 'lucide-react';
+import { AlertCircle, Check, ChevronDown, ImagePlus, Send } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { AttachmentPayload, ResolvedTeamMember } from '@shared/types';
@@ -256,7 +256,7 @@ export const MessageComposer = ({
                   disabled={!canAttach}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Paperclip size={14} />
+                  <ImagePlus size={14} />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top">
