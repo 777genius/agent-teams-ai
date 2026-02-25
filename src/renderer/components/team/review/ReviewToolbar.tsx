@@ -1,5 +1,17 @@
 import { cn } from '@renderer/lib/utils';
-import { Check, Columns2, Eye, EyeOff, GitMerge, Loader2, Rows2, X } from 'lucide-react';
+import {
+  Check,
+  Columns2,
+  Eye,
+  EyeOff,
+  GitMerge,
+  Loader2,
+  Pencil,
+  Rows2,
+  Save,
+  Undo2,
+  X,
+} from 'lucide-react';
 
 import type { ChangeStats } from '@shared/types';
 
@@ -16,6 +28,12 @@ interface ReviewToolbarProps {
   onApply: () => void;
   onDiffViewModeChange: (mode: 'unified' | 'split') => void;
   onCollapseUnchangedChange: (collapse: boolean) => void;
+  // Editable diff props
+  editedCount?: number;
+  hasCurrentFileEdits?: boolean;
+  saving?: boolean;
+  onSaveCurrentFile?: () => void;
+  onDiscardCurrentFile?: () => void;
 }
 
 export const ReviewToolbar = ({
@@ -31,6 +49,11 @@ export const ReviewToolbar = ({
   onApply,
   onDiffViewModeChange,
   onCollapseUnchangedChange,
+  editedCount = 0,
+  hasCurrentFileEdits = false,
+  saving = false,
+  onSaveCurrentFile,
+  onDiscardCurrentFile,
 }: ReviewToolbarProps) => {
   const hasRejected = stats.rejected > 0;
   const canApply = hasRejected && !applying;
@@ -119,6 +142,35 @@ export const ReviewToolbar = ({
       </button>
 
       <div className="h-4 w-px bg-border" />
+
+      {/* Edited files indicator + actions */}
+      {hasCurrentFileEdits && (
+        <>
+          <button
+            onClick={onSaveCurrentFile}
+            disabled={saving}
+            className="flex items-center gap-1 rounded bg-green-500/15 px-2 py-1 text-xs text-green-400 transition-colors hover:bg-green-500/25 disabled:opacity-50"
+            title="Save file to disk (Cmd+Enter)"
+          >
+            {saving ? <Loader2 className="size-3 animate-spin" /> : <Save className="size-3" />}
+            Save File
+          </button>
+          <button
+            onClick={onDiscardCurrentFile}
+            className="flex items-center gap-1 rounded bg-orange-500/15 px-2 py-1 text-xs text-orange-400 transition-colors hover:bg-orange-500/25"
+            title="Discard edits for this file"
+          >
+            <Undo2 className="size-3" /> Discard
+          </button>
+        </>
+      )}
+      {editedCount > 0 && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-400">
+          <Pencil className="size-3" /> {editedCount} edited
+        </span>
+      )}
+
+      {(hasCurrentFileEdits || editedCount > 0) && <div className="h-4 w-px bg-border" />}
 
       {/* Actions */}
       <button

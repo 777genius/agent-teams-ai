@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { goToNextChunk, rejectChunk } from '@codemirror/merge';
 import { useDiffNavigation } from '@renderer/hooks/useDiffNavigation';
 import { useViewedFiles } from '@renderer/hooks/useViewedFiles';
 import { cn } from '@renderer/lib/utils';
@@ -74,11 +75,18 @@ export const ChangeReviewDialog = ({
     acceptAll,
     rejectAll,
     applyReview,
+    // Editable diff
+    editedContents,
+    updateEditedContent,
+    discardFileEdits,
+    saveEditedFile,
   } = useStore();
 
   const editorViewRef = useRef<EditorView | null>(null);
   const [autoViewed, setAutoViewed] = useState(true);
   const [timelineOpen, setTimelineOpen] = useState(false);
+  // Counter to force editor rebuild on discard
+  const [discardCounter, setDiscardCounter] = useState(0);
 
   // Build scope key for viewed storage
   const scopeKey = mode === 'task' ? `task:${taskId ?? ''}` : `agent:${memberName ?? ''}`;
@@ -99,6 +107,23 @@ export const ChangeReviewDialog = ({
     progress: viewedProgress,
   } = useViewedFiles(teamName, scopeKey, allFilePaths);
 
+  // Editable diff computed values
+  const editedCount = Object.keys(editedContents).length;
+  const hasCurrentFileEdits = !!(
+    selectedReviewFilePath && selectedReviewFilePath in editedContents
+  );
+
+  const handleSaveCurrentFile = useCallback(() => {
+    if (selectedReviewFilePath) void saveEditedFile(selectedReviewFilePath);
+  }, [selectedReviewFilePath, saveEditedFile]);
+
+  const handleDiscardCurrentFile = useCallback(() => {
+    if (selectedReviewFilePath) {
+      discardFileEdits(selectedReviewFilePath);
+      setDiscardCounter((c) => c + 1);
+    }
+  }, [selectedReviewFilePath, discardFileEdits]);
+
   const diffNav = useDiffNavigation(
     activeChangeSet?.files ?? [],
     selectedReviewFilePath,
@@ -107,7 +132,8 @@ export const ChangeReviewDialog = ({
     open,
     (filePath, hunkIndex) => setHunkDecision(filePath, hunkIndex, 'accepted'),
     (filePath, hunkIndex) => setHunkDecision(filePath, hunkIndex, 'rejected'),
-    () => onOpenChange(false)
+    () => onOpenChange(false),
+    handleSaveCurrentFile
   );
 
   // Auto-viewed callback
@@ -146,6 +172,19 @@ export const ChangeReviewDialog = ({
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [open, onOpenChange]);
+
+  // Cmd+N IPC listener (forwarded from main process)
+  useEffect(() => {
+    if (!open) return;
+    const cleanup = window.electronAPI?.review.onCmdN?.(() => {
+      const view = editorViewRef.current;
+      if (view) {
+        rejectChunk(view);
+        requestAnimationFrame(() => goToNextChunk(view));
+      }
+    });
+    return cleanup ?? undefined;
+  }, [open]);
 
   // Lazy-load file content when file selected
   useEffect(() => {
@@ -268,6 +307,11 @@ export const ChangeReviewDialog = ({
             onApply={handleApply}
             onDiffViewModeChange={setDiffViewMode}
             onCollapseUnchangedChange={setCollapseUnchanged}
+            editedCount={editedCount}
+            hasCurrentFileEdits={hasCurrentFileEdits}
+            saving={applying}
+            onSaveCurrentFile={handleSaveCurrentFile}
+            onDiscardCurrentFile={handleDiscardCurrentFile}
           />
         )}
 
@@ -399,9 +443,11 @@ export const ChangeReviewDialog = ({
                           newString={fileContent.modifiedFullContent}
                         >
                           <CodeMirrorDiffView
+                            key={`${selectedFile.filePath}:${discardCounter}`}
                             original={fileContent.originalFullContent ?? ''}
                             modified={fileContent.modifiedFullContent}
                             fileName={selectedFile.relativePath}
+                            readOnly={false}
                             showMergeControls={true}
                             collapseUnchanged={collapseUnchanged}
                             onHunkAccepted={(idx) =>
@@ -412,6 +458,9 @@ export const ChangeReviewDialog = ({
                             }
                             onFullyViewed={handleFullyViewed}
                             editorViewRef={editorViewRef}
+                            onContentChanged={(content) => {
+                              updateEditedContent(selectedFile.filePath, content);
+                            }}
                           />
                         </DiffErrorBoundary>
                       </div>

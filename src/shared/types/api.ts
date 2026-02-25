@@ -463,6 +463,9 @@ export interface ReviewAPI {
     hunkIndices: number[],
     snippets: SnippetDiff[]
   ) => Promise<{ preview: string; hasConflicts: boolean }>;
+  // Editable diff
+  saveEditedFile: (filePath: string, content: string) => Promise<{ success: boolean }>;
+  onCmdN?: (callback: () => void) => (() => void) | undefined;
   // Phase 4
   getGitFileLog: (
     projectPath: string,

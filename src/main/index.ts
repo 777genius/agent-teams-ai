@@ -551,6 +551,13 @@ function createWindow(): void {
       return;
     }
 
+    // Prevent Cmd+N from opening new window; forward to renderer for review shortcuts
+    if (input.meta && input.key.toLowerCase() === 'n') {
+      event.preventDefault();
+      mainWindow.webContents.send('review:cmdN');
+      return;
+    }
+
     if (!input.meta) return;
 
     const currentLevel = mainWindow.webContents.getZoomLevel();

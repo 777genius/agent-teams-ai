@@ -807,6 +807,10 @@ export class HttpAPIClient implements ElectronAPI {
     previewReject: async () => {
       throw new Error('Review is not available in browser mode');
     },
+    // Editable diff stubs
+    saveEditedFile: async () => {
+      throw new Error('Review is not available in browser mode');
+    },
     // Phase 4 stubs
     getGitFileLog: async () => {
       throw new Error('Review is not available in browser mode');

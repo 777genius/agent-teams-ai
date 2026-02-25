@@ -310,6 +310,14 @@ export class ReviewApplierService {
     return { applied, skipped, conflicts, errors };
   }
 
+  /**
+   * Save edited file content directly to disk.
+   */
+  async saveEditedFile(filePath: string, content: string): Promise<{ success: boolean }> {
+    await writeFile(filePath, content, 'utf8');
+    return { success: true };
+  }
+
   // ── Private: Rejection strategies ──
 
   /**

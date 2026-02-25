@@ -42,6 +42,9 @@ export interface ChangeReviewSlice {
   applyError: string | null;
   applying: boolean;
 
+  // Editable diff state
+  editedContents: Record<string, string>;
+
   // Phase 1 actions
   fetchAgentChanges: (teamName: string, memberName: string) => Promise<void>;
   fetchTaskChanges: (teamName: string, taskId: string) => Promise<void>;
@@ -65,6 +68,12 @@ export interface ChangeReviewSlice {
   ) => Promise<void>;
   applyReview: (teamName: string, taskId?: string, memberName?: string) => Promise<void>;
   invalidateChangeStats: (teamName: string) => void;
+
+  // Editable diff actions
+  updateEditedContent: (filePath: string, content: string) => void;
+  discardFileEdits: (filePath: string) => void;
+  discardAllEdits: () => void;
+  saveEditedFile: (filePath: string) => Promise<void>;
 }
 
 export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeReviewSlice> = (
@@ -87,6 +96,9 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
   collapseUnchanged: true,
   applyError: null,
   applying: false,
+
+  // Editable diff initial state
+  editedContents: {},
 
   fetchAgentChanges: async (teamName: string, memberName: string) => {
     set({ changeSetLoading: true, changeSetError: null });
@@ -136,6 +148,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       fileContentsLoading: {},
       applyError: null,
       applying: false,
+      editedContents: {},
     });
   },
 
@@ -347,6 +360,40 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         applying: false,
         applyError: mapReviewError(error),
       });
+    }
+  },
+
+  // ── Editable diff actions ──
+
+  updateEditedContent: (filePath: string, content: string) => {
+    set((s) => ({
+      editedContents: { ...s.editedContents, [filePath]: content },
+    }));
+  },
+
+  discardFileEdits: (filePath: string) => {
+    set((s) => {
+      const next = { ...s.editedContents };
+      delete next[filePath];
+      return { editedContents: next };
+    });
+  },
+
+  discardAllEdits: () => set({ editedContents: {} }),
+
+  saveEditedFile: async (filePath: string) => {
+    const content = get().editedContents[filePath];
+    if (!(filePath in get().editedContents)) return;
+    set({ applying: true, applyError: null });
+    try {
+      await api.review.saveEditedFile(filePath, content);
+      set((s) => {
+        const next = { ...s.editedContents };
+        delete next[filePath];
+        return { editedContents: next, applying: false };
+      });
+    } catch (error) {
+      set({ applying: false, applyError: mapReviewError(error) });
     }
   },
 

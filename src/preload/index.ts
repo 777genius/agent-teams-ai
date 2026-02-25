@@ -20,6 +20,7 @@ import {
   REVIEW_PREVIEW_REJECT,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
+  REVIEW_SAVE_EDITED_FILE,
   SSH_CONNECT,
   SSH_DISCONNECT,
   SSH_GET_CONFIG_HOSTS,
@@ -754,6 +755,17 @@ const electronAPI: ElectronAPI = {
         hunkIndices,
         snippets
       );
+    },
+    // Editable diff
+    saveEditedFile: async (filePath: string, content: string) => {
+      return invokeIpcWithResult<{ success: boolean }>(REVIEW_SAVE_EDITED_FILE, filePath, content);
+    },
+    onCmdN: (callback: () => void): (() => void) => {
+      const handler = () => callback();
+      ipcRenderer.on('review:cmdN', handler);
+      return () => {
+        ipcRenderer.removeListener('review:cmdN', handler);
+      };
     },
     // Phase 4
     getGitFileLog: async (projectPath: string, filePath: string) => {

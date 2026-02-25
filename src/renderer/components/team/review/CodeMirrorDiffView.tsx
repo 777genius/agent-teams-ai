@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { css } from '@codemirror/lang-css';
 import { html } from '@codemirror/lang-html';
 import { javascript } from '@codemirror/lang-javascript';
@@ -32,6 +33,8 @@ interface CodeMirrorDiffViewProps {
   onFullyViewed?: () => void;
   /** Ref to expose the EditorView for external navigation */
   editorViewRef?: React.RefObject<EditorView | null>;
+  /** Called when editor content changes (debounced, only when readOnly=false) */
+  onContentChanged?: (content: string) => void;
 }
 
 /** Detect language extension from file name */
@@ -183,7 +186,7 @@ export const CodeMirrorDiffView = ({
   modified,
   fileName,
   maxHeight = '100%',
-  readOnly = true,
+  readOnly = false,
   showMergeControls = false,
   collapseUnchanged: collapseUnchangedProp = true,
   collapseMargin = 3,
@@ -191,6 +194,7 @@ export const CodeMirrorDiffView = ({
   onHunkRejected,
   onFullyViewed,
   editorViewRef: externalViewRef,
+  onContentChanged,
 }: CodeMirrorDiffViewProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -201,11 +205,21 @@ export const CodeMirrorDiffView = ({
   // Stabilize callbacks via useEffect (cannot update refs during render)
   const onAcceptRef = useRef(onHunkAccepted);
   const onRejectRef = useRef(onHunkRejected);
+  const onContentChangedRef = useRef(onContentChanged);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
     onAcceptRef.current = onHunkAccepted;
     onRejectRef.current = onHunkRejected;
+    onContentChangedRef.current = onContentChanged;
     externalViewRefHolder.current = externalViewRef;
-  }, [onHunkAccepted, onHunkRejected, externalViewRef]);
+  }, [onHunkAccepted, onHunkRejected, onContentChanged, externalViewRef]);
+
+  // Auto-scroll to next chunk after accept/reject (deferred to let CM recalculate)
+  const scrollToNextChunk = useCallback(() => {
+    requestAnimationFrame(() => {
+      if (viewRef.current) goToNextChunk(viewRef.current);
+    });
+  }, []);
 
   const langExtension = useMemo(() => getLanguageExtension(fileName), [fileName]);
 
@@ -216,13 +230,42 @@ export const CodeMirrorDiffView = ({
       EditorState.readOnly.of(readOnly),
     ];
 
+    // Undo/redo support and standard editing keybindings
+    if (!readOnly) {
+      extensions.push(history());
+      extensions.push(keymap.of([...defaultKeymap, ...historyKeymap]));
+    }
+
     if (langExtension) {
       extensions.push(langExtension);
     }
 
-    // Keyboard shortcuts for chunk navigation
+    // Keyboard shortcuts for chunk navigation and accept/reject
     extensions.push(
       keymap.of([
+        {
+          key: 'Mod-y',
+          run: (view) => {
+            acceptChunk(view);
+            requestAnimationFrame(() => goToNextChunk(view));
+            return true;
+          },
+        },
+        {
+          key: 'Mod-n',
+          run: (view) => {
+            rejectChunk(view);
+            requestAnimationFrame(() => goToNextChunk(view));
+            return true;
+          },
+        },
+        {
+          key: 'Alt-j',
+          run: (view) => {
+            goToNextChunk(view);
+            return true;
+          },
+        },
         {
           key: 'Ctrl-Alt-ArrowDown',
           run: goToNextChunk,
@@ -233,6 +276,20 @@ export const CodeMirrorDiffView = ({
         },
       ])
     );
+
+    // Debounced content change listener (only when editable)
+    if (!readOnly) {
+      extensions.push(
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged) {
+            clearTimeout(debounceTimer.current);
+            debounceTimer.current = setTimeout(() => {
+              onContentChangedRef.current?.(update.state.doc.toString());
+            }, 300);
+          }
+        })
+      );
+    }
 
     // Unified merge view
     const mergeConfig: Parameters<typeof unifiedMergeView>[0] = {
@@ -265,6 +322,7 @@ export const CodeMirrorDiffView = ({
               const hunkIndex = computeHunkIndexAtPos(view.state, pos);
               action(e);
               onAcceptRef.current?.(hunkIndex);
+              scrollToNextChunk();
             }
           };
         } else {
@@ -279,6 +337,7 @@ export const CodeMirrorDiffView = ({
               const hunkIndex = computeHunkIndexAtPos(view.state, pos);
               action(e);
               onRejectRef.current?.(hunkIndex);
+              scrollToNextChunk();
             }
           };
         }
@@ -290,7 +349,15 @@ export const CodeMirrorDiffView = ({
     extensions.push(unifiedMergeView(mergeConfig));
 
     return extensions;
-  }, [original, readOnly, langExtension, showMergeControls, collapseUnchangedProp, collapseMargin]);
+  }, [
+    original,
+    readOnly,
+    langExtension,
+    showMergeControls,
+    collapseUnchangedProp,
+    collapseMargin,
+    scrollToNextChunk,
+  ]);
 
   useEffect(() => {
     if (!containerRef.current) return;

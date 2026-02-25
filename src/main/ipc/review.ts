@@ -15,6 +15,7 @@ import {
   REVIEW_PREVIEW_REJECT,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
+  REVIEW_SAVE_EDITED_FILE,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
 import { createLogger } from '@shared/utils/logger';
@@ -89,6 +90,8 @@ export function registerReviewHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(REVIEW_PREVIEW_REJECT, handlePreviewReject);
   ipcMain.handle(REVIEW_APPLY_DECISIONS, handleApplyDecisions);
   ipcMain.handle(REVIEW_GET_FILE_CONTENT, handleGetFileContent);
+  // Editable diff
+  ipcMain.handle(REVIEW_SAVE_EDITED_FILE, handleSaveEditedFile);
   // Phase 4
   ipcMain.handle(REVIEW_GET_GIT_FILE_LOG, handleGetGitFileLog);
 }
@@ -105,6 +108,8 @@ export function removeReviewHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(REVIEW_PREVIEW_REJECT);
   ipcMain.removeHandler(REVIEW_APPLY_DECISIONS);
   ipcMain.removeHandler(REVIEW_GET_FILE_CONTENT);
+  // Editable diff
+  ipcMain.removeHandler(REVIEW_SAVE_EDITED_FILE);
   // Phase 4
   ipcMain.removeHandler(REVIEW_GET_GIT_FILE_LOG);
 }
@@ -227,6 +232,19 @@ async function handleGetFileContent(
   return wrapReviewHandler('getFileContent', () =>
     getContentResolver().getFileContent(teamName, memberName, filePath)
   );
+}
+
+// --- Editable diff Handlers ---
+
+async function handleSaveEditedFile(
+  _event: IpcMainInvokeEvent,
+  filePath: string,
+  content: string
+): Promise<IpcResult<{ success: boolean }>> {
+  if (!filePath || typeof content !== 'string') {
+    return { success: false, error: 'Invalid parameters' };
+  }
+  return wrapReviewHandler('saveEditedFile', () => getApplier().saveEditedFile(filePath, content));
 }
 
 // --- Phase 4 Handlers ---

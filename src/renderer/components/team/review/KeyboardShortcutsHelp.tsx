@@ -6,13 +6,10 @@ interface KeyboardShortcutsHelpProps {
 }
 
 const shortcuts = [
-  { keys: ['j', '\u2193'], action: 'Next hunk' },
-  { keys: ['k', '\u2191'], action: 'Previous hunk' },
-  { keys: ['n'], action: 'Next file' },
-  { keys: ['p', 'Shift+N'], action: 'Previous file' },
-  { keys: ['a'], action: 'Accept current hunk' },
-  { keys: ['x'], action: 'Reject current hunk' },
-  { keys: ['?'], action: 'Toggle shortcuts help' },
+  { keys: ['\u2325+J'], action: 'Next change' },
+  { keys: ['\u2318+Y'], action: 'Accept change' },
+  { keys: ['\u2318+N'], action: 'Reject change' },
+  { keys: ['\u2318+\u21A9'], action: 'Save file' },
   { keys: ['Esc'], action: 'Close dialog' },
 ];
 

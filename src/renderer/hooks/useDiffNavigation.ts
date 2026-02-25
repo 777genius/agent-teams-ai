@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { goToNextChunk, goToPreviousChunk } from '@codemirror/merge';
+import { acceptChunk, goToNextChunk, goToPreviousChunk } from '@codemirror/merge';
 
 import type { EditorView } from '@codemirror/view';
 import type { FileChangeSummary } from '@shared/types/review';
@@ -27,7 +27,8 @@ export function useDiffNavigation(
   isDialogOpen: boolean,
   onHunkAccepted?: (filePath: string, hunkIndex: number) => void,
   onHunkRejected?: (filePath: string, hunkIndex: number) => void,
-  onClose?: () => void
+  onClose?: () => void,
+  onSaveFile?: () => void
 ): DiffNavigationState {
   // Track hunk index keyed by file path to auto-reset on file change
   const [hunkState, setHunkState] = useState<{ filePath: string | null; index: number }>({
@@ -105,95 +106,67 @@ export function useDiffNavigation(
   }, [selectedFilePath, currentHunkIndex, onHunkRejected]);
 
   // Store refs for stable closure
-  const goToNextHunkRef = useRef(goToNextHunk);
-  const goToPrevHunkRef = useRef(goToPrevHunk);
-  const goToNextFileRef = useRef(goToNextFile);
-  const goToPrevFileRef = useRef(goToPrevFile);
-  const acceptCurrentHunkRef = useRef(acceptCurrentHunk);
-  const rejectCurrentHunkRef = useRef(rejectCurrentHunk);
   const onCloseRef = useRef(onClose);
+  const onSaveFileRef = useRef(onSaveFile);
 
   useEffect(() => {
-    goToNextHunkRef.current = goToNextHunk;
-    goToPrevHunkRef.current = goToPrevHunk;
-    goToNextFileRef.current = goToNextFile;
-    goToPrevFileRef.current = goToPrevFile;
-    acceptCurrentHunkRef.current = acceptCurrentHunk;
-    rejectCurrentHunkRef.current = rejectCurrentHunk;
     onCloseRef.current = onClose;
-  }, [
-    goToNextHunk,
-    goToPrevHunk,
-    goToNextFile,
-    goToPrevFile,
-    acceptCurrentHunk,
-    rejectCurrentHunk,
-    onClose,
-  ]);
+    onSaveFileRef.current = onSaveFile;
+  }, [onClose, onSaveFile]);
 
-  // Keyboard handler
+  // Keyboard handler — new shortcuts for editable diff
   useEffect(() => {
     if (!isDialogOpen) return;
 
     const handler = (event: KeyboardEvent) => {
-      // Don't intercept when focus is in input/textarea
+      // Skip if CM keymap already handled this event
+      if (event.defaultPrevented) return;
+      // Skip inputs/textareas
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;
       }
 
-      switch (event.key) {
-        case 'j':
-        case 'ArrowDown':
-          if (!event.metaKey && !event.ctrlKey && !event.altKey) {
-            event.preventDefault();
-            goToNextHunkRef.current();
-          }
-          break;
-        case 'k':
-        case 'ArrowUp':
-          if (!event.metaKey && !event.ctrlKey && !event.altKey) {
-            event.preventDefault();
-            goToPrevHunkRef.current();
-          }
-          break;
-        case 'n':
-          if (!event.shiftKey) {
-            event.preventDefault();
-            goToNextFileRef.current();
-          } else {
-            event.preventDefault();
-            goToPrevFileRef.current();
-          }
-          break;
-        case 'p':
+      const isMeta = event.metaKey || event.ctrlKey;
+
+      // Alt+J -> next change
+      if (event.altKey && event.key.toLowerCase() === 'j') {
+        event.preventDefault();
+        const view = editorViewRef.current;
+        if (view) goToNextChunk(view);
+        return;
+      }
+
+      // Cmd+Enter -> save file
+      if (isMeta && event.key === 'Enter') {
+        event.preventDefault();
+        onSaveFileRef.current?.();
+        return;
+      }
+
+      // Cmd+Y -> accept + scroll (fallback when editor not focused)
+      if (isMeta && event.key.toLowerCase() === 'y') {
+        event.preventDefault();
+        const view = editorViewRef.current;
+        if (view) {
+          acceptChunk(view);
+          requestAnimationFrame(() => goToNextChunk(view));
+        }
+        return;
+      }
+
+      // Escape handling
+      if (event.key === 'Escape') {
+        if (showShortcutsHelp) {
           event.preventDefault();
-          goToPrevFileRef.current();
-          break;
-        case 'a':
-          event.preventDefault();
-          acceptCurrentHunkRef.current();
-          break;
-        case 'x':
-          event.preventDefault();
-          rejectCurrentHunkRef.current();
-          break;
-        case '?':
-          event.preventDefault();
-          setShowShortcutsHelp((prev) => !prev);
-          break;
-        case 'Escape':
-          if (showShortcutsHelp) {
-            event.preventDefault();
-            setShowShortcutsHelp(false);
-          }
-          // Note: main Escape handling for closing dialog is in ChangeReviewDialog itself
-          break;
+          setShowShortcutsHelp(false);
+        }
+        // Note: main Escape handling for closing dialog is in ChangeReviewDialog itself
       }
     };
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [isDialogOpen, showShortcutsHelp]);
+  }, [isDialogOpen, showShortcutsHelp, editorViewRef]);
 
   return {
     currentHunkIndex,
