@@ -1013,9 +1013,10 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         headerExtra={
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="pointer-events-auto rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
+              <Button
+                variant="ghost"
+                size="sm"
+                className="pointer-events-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
                 onClick={(e) => {
                   e.stopPropagation();
                   void window.electronAPI.openExternal(
@@ -1024,7 +1025,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                 }}
               >
                 <Bell size={12} />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="top">Desktop notifications plugin</TooltipContent>
           </Tooltip>
