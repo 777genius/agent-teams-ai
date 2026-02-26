@@ -191,6 +191,8 @@ export class CliInstallerService {
       binaryPath: null,
       latestVersion: null,
       updateAvailable: false,
+      authLoggedIn: false,
+      authMethod: null,
     };
 
     const binaryPath = await ClaudeBinaryResolver.resolve();
@@ -208,6 +210,22 @@ export class CliInstallerService {
         );
       } catch (err) {
         logger.warn('Failed to get CLI version:', getErrorMessage(err));
+      }
+
+      // Check auth status
+      try {
+        const { stdout: authStdout } = await execFileAsync(binaryPath, ['auth', 'status'], {
+          timeout: VERSION_TIMEOUT_MS,
+        });
+        const auth = JSON.parse(authStdout.trim()) as { loggedIn?: boolean; authMethod?: string };
+        result.authLoggedIn = auth.loggedIn === true;
+        result.authMethod = auth.authMethod ?? null;
+        logger.info(
+          `Auth status: loggedIn=${result.authLoggedIn}, method=${result.authMethod ?? 'null'}`
+        );
+      } catch (err) {
+        logger.warn('Failed to check auth status:', getErrorMessage(err));
+        result.authLoggedIn = false;
       }
     }
 

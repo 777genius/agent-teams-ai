@@ -56,6 +56,11 @@ import {
 } from './subagents';
 import { initializeTeamHandlers, registerTeamHandlers, removeTeamHandlers } from './teams';
 import {
+  initializeTerminalHandlers,
+  registerTerminalHandlers,
+  removeTerminalHandlers,
+} from './terminal';
+import {
   initializeUpdaterHandlers,
   registerUpdaterHandlers,
   removeUpdaterHandlers,
@@ -70,6 +75,7 @@ import type {
   FileContentResolver,
   GitDiffFallback,
   MemberStatsComputer,
+  PtyTerminalService,
   ReviewApplierService,
   ServiceContext,
   ServiceContextRegistry,
@@ -105,7 +111,8 @@ export function initializeIpcHandlers(
   fileContentResolver?: FileContentResolver,
   reviewApplier?: ReviewApplierService,
   gitDiffFallback?: GitDiffFallback,
-  cliInstaller?: CliInstallerService
+  cliInstaller?: CliInstallerService,
+  ptyTerminal?: PtyTerminalService
 ): void {
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -132,6 +139,9 @@ export function initializeIpcHandlers(
   }
   if (cliInstaller) {
     initializeCliInstallerHandlers(cliInstaller);
+  }
+  if (ptyTerminal) {
+    initializeTerminalHandlers(ptyTerminal);
   }
   if (changeExtractor) {
     initializeReviewHandlers({
@@ -160,6 +170,9 @@ export function initializeIpcHandlers(
   if (cliInstaller) {
     registerCliInstallerHandlers(ipcMain);
   }
+  if (ptyTerminal) {
+    registerTerminalHandlers(ipcMain);
+  }
   if (httpServerDeps) {
     registerHttpServerHandlers(ipcMain);
   }
@@ -187,6 +200,7 @@ export function removeIpcHandlers(): void {
   removeReviewHandlers(ipcMain);
   removeWindowHandlers(ipcMain);
   removeCliInstallerHandlers(ipcMain);
+  removeTerminalHandlers(ipcMain);
   removeHttpServerHandlers(ipcMain);
 
   logger.info('All handlers removed');

@@ -3,6 +3,7 @@ import { createReadStream } from 'fs';
 import * as readline from 'readline';
 
 import { type TeamMemberLogsFinder } from './TeamMemberLogsFinder';
+import { countLineChanges } from './UnifiedLineCounter';
 
 import type { FileLineStats, MemberFullStats } from '@shared/types';
 
@@ -117,6 +118,9 @@ export class MemberStatsComputer {
     let firstTimestamp: string | null = null;
     let lastTimestamp: string | null = null;
 
+    // Track last known content per file for accurate Write/NotebookEdit diffs
+    const fileLastContent = new Map<string, string>();
+
     const trackFile = (fp: string): void => {
       if (typeof fp === 'string' && isValidFilePath(fp)) filesTouchedSet.add(fp);
     };
@@ -186,41 +190,73 @@ export class MemberStatsComputer {
                     trackFile(input.path);
                   }
 
-                  // Count lines for Edit
+                  // Count lines for Edit (using semantic diff for accuracy)
                   if (toolName === 'Edit') {
+                    const editPath = typeof input.file_path === 'string' ? input.file_path : '';
                     const oldStr = typeof input.old_string === 'string' ? input.old_string : '';
                     const newStr = typeof input.new_string === 'string' ? input.new_string : '';
-                    const oldLines = oldStr ? oldStr.split('\n').length : 0;
-                    const newLines = newStr ? newStr.split('\n').length : 0;
-                    const fileAdded = newLines > oldLines ? newLines - oldLines : 0;
-                    const fileRemoved = oldLines > newLines ? oldLines - newLines : 0;
+                    const replaceAll = input.replace_all === true;
+                    const { added: fileAdded, removed: fileRemoved } = countLineChanges(
+                      oldStr,
+                      newStr
+                    );
                     linesAdded += fileAdded;
                     linesRemoved += fileRemoved;
-                    if (typeof input.file_path === 'string') {
-                      addFileLines(input.file_path, fileAdded, fileRemoved);
-                    }
-                  }
-
-                  // Count lines for Write
-                  if (toolName === 'Write') {
-                    const writeContent = typeof input.content === 'string' ? input.content : '';
-                    if (writeContent) {
-                      const fileAdded = writeContent.split('\n').length;
-                      linesAdded += fileAdded;
-                      if (typeof input.file_path === 'string') {
-                        addFileLines(input.file_path, fileAdded, 0);
+                    if (editPath) {
+                      addFileLines(editPath, fileAdded, fileRemoved);
+                      // Update fileLastContent so subsequent Writes diff against correct state
+                      const prev = fileLastContent.get(editPath);
+                      if (prev !== undefined && oldStr) {
+                        if (replaceAll) {
+                          fileLastContent.set(editPath, prev.split(oldStr).join(newStr));
+                        } else {
+                          const idx = prev.indexOf(oldStr);
+                          if (idx !== -1) {
+                            fileLastContent.set(
+                              editPath,
+                              prev.substring(0, idx) + newStr + prev.substring(idx + oldStr.length)
+                            );
+                          }
+                        }
                       }
                     }
                   }
 
-                  // Count lines for NotebookEdit
+                  // Count lines for Write (track previous content for accurate diff)
+                  if (toolName === 'Write') {
+                    const writeContent = typeof input.content === 'string' ? input.content : '';
+                    const writePath = typeof input.file_path === 'string' ? input.file_path : '';
+                    if (writeContent) {
+                      const prevContent = fileLastContent.get(writePath) ?? '';
+                      const { added: fileAdded, removed: fileRemoved } = countLineChanges(
+                        prevContent,
+                        writeContent
+                      );
+                      if (writePath) fileLastContent.set(writePath, writeContent);
+                      linesAdded += fileAdded;
+                      linesRemoved += fileRemoved;
+                      if (writePath) {
+                        addFileLines(writePath, fileAdded, fileRemoved);
+                      }
+                    }
+                  }
+
+                  // Count lines for NotebookEdit (semantic diff)
                   if (toolName === 'NotebookEdit') {
                     const src = typeof input.new_source === 'string' ? input.new_source : '';
                     if (src) {
-                      const fileAdded = src.split('\n').length;
+                      const nbPath =
+                        typeof input.notebook_path === 'string' ? input.notebook_path : '';
+                      const prevContent = fileLastContent.get(nbPath) ?? '';
+                      const { added: fileAdded, removed: fileRemoved } = countLineChanges(
+                        prevContent,
+                        src
+                      );
+                      if (nbPath) fileLastContent.set(nbPath, src);
                       linesAdded += fileAdded;
-                      if (typeof input.notebook_path === 'string') {
-                        addFileLines(input.notebook_path, fileAdded, 0);
+                      linesRemoved += fileRemoved;
+                      if (nbPath) {
+                        addFileLines(nbPath, fileAdded, fileRemoved);
                       }
                     }
                     if (typeof input.notebook_path === 'string') {

@@ -94,6 +94,9 @@ export class TeamTaskReader {
           /* leave undefined */
         }
 
+        // `satisfies Record<keyof TeamTask, unknown>` ensures compile-time
+        // safety: if a field is added to TeamTask but not mapped here,
+        // TypeScript will error. This prevents silently dropping new fields.
         const task: TeamTask = {
           id:
             typeof parsed.id === 'string' || typeof parsed.id === 'number' ? String(parsed.id) : '',
@@ -126,7 +129,13 @@ export class TeamTaskReader {
                   typeof c.createdAt === 'string'
               )
             : undefined,
-        };
+          needsClarification: (['lead', 'user'] as const).includes(
+            parsed.needsClarification as 'lead' | 'user'
+          )
+            ? (parsed.needsClarification as 'lead' | 'user')
+            : undefined,
+          deletedAt: undefined, // deleted tasks are filtered out below
+        } satisfies Record<keyof TeamTask, unknown>;
         if (task.status === 'deleted') {
           continue;
         }

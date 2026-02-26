@@ -3,6 +3,8 @@ import { applyPatch, structuredPatch } from 'diff';
 import { readFile, writeFile } from 'fs/promises';
 import { diff3Merge } from 'node-diff3';
 
+import { HunkSnippetMatcher } from './HunkSnippetMatcher';
+
 import type {
   ApplyReviewRequest,
   ApplyReviewResult,
@@ -26,6 +28,8 @@ const logger = createLogger('Service:ReviewApplierService');
  * - Batch review application
  */
 export class ReviewApplierService {
+  private readonly matcher = new HunkSnippetMatcher();
+
   /**
    * Check if the file on disk has been modified since the review was computed.
    * Compares current disk content against the expected modified content.
@@ -68,7 +72,7 @@ export class ReviewApplierService {
     snippets: SnippetDiff[]
   ): Promise<RejectResult> {
     // Try snippet-level reverse first (most accurate)
-    const snippetResult = this.trySnippetLevelReject(modified, hunkIndices, snippets);
+    const snippetResult = this.trySnippetLevelReject(original, modified, hunkIndices, snippets);
     if (snippetResult) {
       try {
         await writeFile(filePath, snippetResult.newContent, 'utf8');
@@ -199,7 +203,7 @@ export class ReviewApplierService {
     snippets: SnippetDiff[]
   ): Promise<{ preview: string; hasConflicts: boolean }> {
     // Try snippet-level reverse
-    const snippetResult = this.trySnippetLevelReject(modified, hunkIndices, snippets);
+    const snippetResult = this.trySnippetLevelReject(original, modified, hunkIndices, snippets);
     if (snippetResult) {
       return { preview: snippetResult.newContent, hasConflicts: false };
     }
@@ -323,10 +327,11 @@ export class ReviewApplierService {
   /**
    * Snippet-level rejection: reverse specific snippets by position (most accurate).
    *
-   * Maps hunk indices to snippet indices, then reverses each snippet's edit
-   * in reverse positional order to avoid index shift.
+   * Uses HunkSnippetMatcher with content overlap analysis to map
+   * hunk indices → snippet indices, then reverses matched snippets.
    */
   private trySnippetLevelReject(
+    original: string,
     modified: string,
     hunkIndices: number[],
     snippets: SnippetDiff[]
@@ -334,11 +339,21 @@ export class ReviewApplierService {
     const validSnippets = snippets.filter((s) => !s.isError);
     if (validSnippets.length === 0) return null;
 
-    // Map hunk indices to snippet indices.
-    // The structured patch hunks roughly correspond to groups of consecutive edit snippets,
-    // but a simple approach: use hunkIndices as snippet indices (Phase 2 assumption).
-    const snippetsToReject = hunkIndices
-      .filter((idx) => idx >= 0 && idx < validSnippets.length)
+    // Pass pre-filtered snippets — matcher returns indices relative to this array
+    const hunkToSnippets = this.matcher.matchHunksToSnippets(
+      original,
+      modified,
+      hunkIndices,
+      validSnippets
+    );
+
+    // Collect all unique snippet indices to reject
+    const snippetIndices = new Set<number>();
+    for (const indices of hunkToSnippets.values()) {
+      indices.forEach((idx) => snippetIndices.add(idx));
+    }
+
+    const snippetsToReject = Array.from(snippetIndices)
       .map((idx) => validSnippets[idx])
       .filter(Boolean);
 
@@ -346,18 +361,17 @@ export class ReviewApplierService {
 
     let content = modified;
 
-    // Sort by position in file descending to avoid index shift when replacing
-    // We find each snippet's newString position and sort by that
+    // Find positions using disambiguation and sort descending for safe replacement
     const positioned = snippetsToReject
       .map((snippet) => {
-        const pos = content.indexOf(snippet.newString);
+        const pos = this.matcher.findSnippetPosition(snippet, content);
         return { snippet, pos };
       })
       .filter((item) => item.pos !== -1)
       .sort((a, b) => b.pos - a.pos);
 
     if (positioned.length !== snippetsToReject.length) {
-      // Some snippets' newStrings not found in current content — can't do snippet-level
+      // Some snippets' newStrings not found — can't do snippet-level
       return null;
     }
 

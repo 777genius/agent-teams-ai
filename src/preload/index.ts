@@ -79,6 +79,12 @@ import {
   TEAM_UPDATE_MEMBER_ROLE,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
+  TERMINAL_DATA,
+  TERMINAL_EXIT,
+  TERMINAL_KILL,
+  TERMINAL_RESIZE,
+  TERMINAL_SPAWN,
+  TERMINAL_WRITE,
   UPDATER_CHECK,
   UPDATER_DOWNLOAD,
   UPDATER_INSTALL,
@@ -173,6 +179,7 @@ import type {
   UpdateKanbanPatch,
   WslClaudeRootCandidate,
 } from '@shared/types';
+import type { PtySpawnOptions } from '@shared/types/terminal';
 
 // =============================================================================
 // IPC Result Types and Helpers
@@ -876,6 +883,39 @@ const electronAPI: ElectronAPI = {
         ipcRenderer.removeListener(
           CLI_INSTALLER_PROGRESS,
           callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+        );
+      };
+    },
+  },
+
+  // ===== Terminal API =====
+  terminal: {
+    spawn: (options?: PtySpawnOptions) => invokeIpcWithResult<string>(TERMINAL_SPAWN, options),
+    write: (ptyId: string, data: string) => ipcRenderer.send(TERMINAL_WRITE, ptyId, data),
+    resize: (ptyId: string, cols: number, rows: number) =>
+      ipcRenderer.send(TERMINAL_RESIZE, ptyId, cols, rows),
+    kill: (ptyId: string) => ipcRenderer.send(TERMINAL_KILL, ptyId),
+    onData: (cb: (event: unknown, ptyId: string, data: string) => void): (() => void) => {
+      ipcRenderer.on(
+        TERMINAL_DATA,
+        cb as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+      );
+      return (): void => {
+        ipcRenderer.removeListener(
+          TERMINAL_DATA,
+          cb as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+        );
+      };
+    },
+    onExit: (cb: (event: unknown, ptyId: string, exitCode: number) => void): (() => void) => {
+      ipcRenderer.on(
+        TERMINAL_EXIT,
+        cb as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+      );
+      return (): void => {
+        ipcRenderer.removeListener(
+          TERMINAL_EXIT,
+          cb as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
         );
       };
     },

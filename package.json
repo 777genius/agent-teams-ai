@@ -48,7 +48,8 @@
     "standalone": "tsx src/main/standalone.ts",
     "standalone:build": "electron-vite build && vite build --config vite.standalone.config.ts",
     "standalone:start": "node dist-standalone/index.cjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "electron-rebuild -f -o node-pty"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js,jsx}": [
@@ -99,6 +100,8 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-virtual": "^3.10.8",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
@@ -111,6 +114,7 @@
     "lucide-react": "^0.562.0",
     "mdast-util-to-hast": "^13.2.1",
     "node-diff3": "^3.2.0",
+    "node-pty": "^1.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
@@ -125,6 +129,7 @@
     "zustand": "^4.5.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.3",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.6.0",
     "@eslint/js": "^9.39.2",
     "@tailwindcss/typography": "^0.5.19",
@@ -181,7 +186,8 @@
     ],
     "asar": true,
     "asarUnpack": [
-      "out/renderer/**"
+      "out/renderer/**",
+      "**/node_modules/node-pty/build/Release/**"
     ],
     "extraResources": [
       {
@@ -240,5 +246,10 @@
       }
     ]
   },
-  "packageManager": "pnpm@10.25.0+sha512.5e82639027af37cf832061bcc6d639c219634488e0f2baebe785028a793de7b525ffcd3f7ff574f5e9860654e098fe852ba8ac5dd5cefe1767d23a020a92f501"
+  "packageManager": "pnpm@10.25.0+sha512.5e82639027af37cf832061bcc6d639c219634488e0f2baebe785028a793de7b525ffcd3f7ff574f5e9860654e098fe852ba8ac5dd5cefe1767d23a020a92f501",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "node-pty"
+    ]
+  }
 }

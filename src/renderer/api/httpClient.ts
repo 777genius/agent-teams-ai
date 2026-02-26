@@ -63,6 +63,7 @@ import type {
   WslClaudeRootCandidate,
 } from '@shared/types';
 import type { AgentConfig } from '@shared/types/api';
+import type { TerminalAPI } from '@shared/types/terminal';
 
 export class HttpAPIClient implements ElectronAPI {
   private baseUrl: string;
@@ -877,6 +878,8 @@ export class HttpAPIClient implements ElectronAPI {
       binaryPath: null,
       latestVersion: null,
       updateAvailable: false,
+      authLoggedIn: false,
+      authMethod: null,
     }),
     install: async (): Promise<void> => {
       console.warn('[HttpAPIClient] CLI installer not available in browser mode');
@@ -884,5 +887,20 @@ export class HttpAPIClient implements ElectronAPI {
     onProgress: (): (() => void) => {
       return () => {};
     },
+  };
+
+  // ---------------------------------------------------------------------------
+  // Terminal (not available in browser mode)
+  // ---------------------------------------------------------------------------
+
+  terminal: TerminalAPI = {
+    spawn: async (): Promise<string> => {
+      throw new Error('Terminal not available in browser mode');
+    },
+    write: () => {},
+    resize: () => {},
+    kill: () => {},
+    onData: (): (() => void) => () => {},
+    onExit: (): (() => void) => () => {},
   };
 }

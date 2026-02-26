@@ -24,6 +24,7 @@ export * from './FileWatcher';
 export * from './HttpServer';
 export * from './LocalFileSystemProvider';
 export * from './NotificationManager';
+export * from './PtyTerminalService';
 export * from './ServiceContext';
 export * from './ServiceContextRegistry';
 export * from './SshConfigParser';

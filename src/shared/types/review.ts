@@ -9,6 +9,8 @@ export interface SnippetDiff {
   replaceAll: boolean;
   timestamp: string;
   isError: boolean;
+  /** Hash of ±3 surrounding context lines for reliable hunk↔snippet matching */
+  contextHash?: string;
 }
 
 /** Агрегированные изменения по файлу */

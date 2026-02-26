@@ -7,24 +7,34 @@
  * Only rendered in Electron mode.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
+import { TerminalModal } from '@renderer/components/terminal/TerminalModal';
 import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
 import { formatBytes } from '@renderer/utils/formatters';
-import { AlertTriangle, CheckCircle, Download, Loader2, RefreshCw, Terminal } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle,
+  Download,
+  Loader2,
+  LogIn,
+  RefreshCw,
+  Terminal,
+} from 'lucide-react';
 
 // =============================================================================
 // Border color by state
 // =============================================================================
 
-type BannerVariant = 'loading' | 'error' | 'success' | 'info';
+type BannerVariant = 'loading' | 'error' | 'success' | 'info' | 'warning';
 
 const VARIANT_STYLES: Record<BannerVariant, { border: string; bg: string }> = {
   loading: { border: 'var(--color-border)', bg: 'transparent' },
   error: { border: '#ef4444', bg: 'rgba(239, 68, 68, 0.06)' },
   success: { border: '#22c55e', bg: 'rgba(34, 197, 94, 0.04)' },
   info: { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.04)' },
+  warning: { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.06)' },
 };
 
 // =============================================================================
@@ -148,6 +158,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
     isBusy,
   } = useCliInstaller();
 
+  const [showLoginTerminal, setShowLoginTerminal] = useState(false);
+
   useEffect(() => {
     if (isElectron) {
       void fetchCliStatus();
@@ -171,6 +183,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
     if (installerState !== 'idle') return 'info';
     if (!cliStatus) return 'loading';
     if (!cliStatus.installed) return 'error';
+    if (cliStatus.installed && !cliStatus.authLoggedIn) return 'warning';
     if (cliStatus.updateAvailable) return 'info';
     return 'success';
   };
@@ -365,6 +378,58 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           </button>
         </div>
       </div>
+    );
+  }
+
+  // Installed but not logged in — yellow warning banner
+  if (cliStatus.installed && !cliStatus.authLoggedIn) {
+    return (
+      <>
+        <div
+          className="mb-6 rounded-lg border-l-4 p-4"
+          style={{
+            borderColor: VARIANT_STYLES.warning.border,
+            backgroundColor: VARIANT_STYLES.warning.bg,
+          }}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 size-5 shrink-0" style={{ color: '#f59e0b' }} />
+              <div>
+                <p className="text-sm font-medium" style={{ color: '#fbbf24' }}>
+                  Not logged in
+                </p>
+                <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  Claude CLI is installed but you are not authenticated. Login is required for team
+                  provisioning and AI features.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowLoginTerminal(true)}
+              className="flex shrink-0 items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium text-white transition-colors"
+              style={{ backgroundColor: '#f59e0b' }}
+            >
+              <LogIn className="size-4" />
+              Login
+            </button>
+          </div>
+        </div>
+        {showLoginTerminal && cliStatus.binaryPath && (
+          <TerminalModal
+            title="Claude Auth Login"
+            command={cliStatus.binaryPath}
+            args={['auth', 'login']}
+            onClose={() => {
+              setShowLoginTerminal(false);
+              void fetchCliStatus();
+            }}
+            onExit={() => {
+              void fetchCliStatus();
+            }}
+          />
+        )}
+      </>
     );
   }
 

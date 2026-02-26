@@ -62,6 +62,8 @@ export interface TaskComment {
   createdAt: string;
 }
 
+// Fields are validated in TeamTaskReader.getTasks() using `satisfies Record<keyof TeamTask, unknown>`.
+// Adding a field here without mapping it there will cause a compile error.
 export interface TeamTask {
   id: string;
   subject: string;

@@ -43,6 +43,7 @@ import {
   LocalFileSystemProvider,
   MemberStatsComputer,
   NotificationManager,
+  PtyTerminalService,
   ServiceContext,
   ServiceContextRegistry,
   SshConnectionManager,
@@ -170,6 +171,7 @@ let sshConnectionManager: SshConnectionManager;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
 let cliInstallerService: CliInstallerService;
+let ptyTerminalService: PtyTerminalService;
 let httpServer: HttpServer;
 
 // File watcher event cleanup functions
@@ -422,6 +424,7 @@ function initializeServices(): void {
   // Initialize updater and CLI installer services
   updaterService = new UpdaterService();
   cliInstallerService = new CliInstallerService();
+  ptyTerminalService = new PtyTerminalService();
   teamDataService = new TeamDataService();
   teamProvisioningService = new TeamProvisioningService();
   const teamMemberLogsFinder = new TeamMemberLogsFinder();
@@ -474,7 +477,8 @@ function initializeServices(): void {
     fileContentResolver,
     reviewApplier,
     gitDiffFallback,
-    cliInstallerService
+    cliInstallerService,
+    ptyTerminalService
   );
 
   // Forward SSH state changes to renderer and HTTP SSE clients
@@ -566,6 +570,11 @@ function shutdownServices(): void {
   // Dispose SSH connection manager
   if (sshConnectionManager) {
     sshConnectionManager.dispose();
+  }
+
+  // Kill all PTY processes
+  if (ptyTerminalService) {
+    ptyTerminalService.killAll();
   }
 
   // Remove IPC handlers
@@ -719,6 +728,9 @@ function createWindow(): void {
     if (cliInstallerService) {
       cliInstallerService.setMainWindow(null);
     }
+    if (ptyTerminalService) {
+      ptyTerminalService.setMainWindow(null);
+    }
   });
 
   // Handle renderer process crashes (render-process-gone replaces deprecated 'crashed' event)
@@ -736,6 +748,9 @@ function createWindow(): void {
   }
   if (cliInstallerService) {
     cliInstallerService.setMainWindow(mainWindow);
+  }
+  if (ptyTerminalService) {
+    ptyTerminalService.setMainWindow(mainWindow);
   }
 
   logger.info('Main window created');

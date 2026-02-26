@@ -1,10 +1,10 @@
 import { createLogger } from '@shared/utils/logger';
-import { diffLines } from 'diff';
 import { createReadStream } from 'fs';
 import { stat } from 'fs/promises';
 import * as readline from 'readline';
 
 import { TeamConfigReader } from './TeamConfigReader';
+import { countLineChanges } from './UnifiedLineCounter';
 
 import type { TaskBoundaryParser } from './TaskBoundaryParser';
 import type { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
@@ -37,7 +37,7 @@ interface LogFileRef {
 
 export class ChangeExtractorService {
   private cache = new Map<string, CacheEntry>();
-  private readonly CACHE_TTL = 30 * 1000; // 30 сек — shorter TTL to reduce stale data risk
+  private readonly cacheTtl = 30 * 1000; // 30 сек — shorter TTL to reduce stale data risk
 
   constructor(
     private readonly logsFinder: TeamMemberLogsFinder,
@@ -96,7 +96,7 @@ export class ChangeExtractorService {
     this.cache.set(cacheKey, {
       data: result,
       mtime: latestMtime,
-      expiresAt: Date.now() + this.CACHE_TTL,
+      expiresAt: Date.now() + this.cacheTtl,
     });
 
     return result;
@@ -173,6 +173,26 @@ export class ChangeExtractorService {
     }
   }
 
+  /**
+   * Compute a context hash from old/newString for reliable hunk↔snippet matching.
+   * Uses first+last 3 lines of both strings as a fingerprint.
+   */
+  private computeContextHash(oldString: string, newString: string): string {
+    const take3 = (s: string): string => {
+      const lines = s.split('\n');
+      const head = lines.slice(0, 3).join('\n');
+      const tail = lines.length > 3 ? lines.slice(-3).join('\n') : '';
+      return `${head}|${tail}`;
+    };
+    const raw = `${take3(oldString)}::${take3(newString)}`;
+    // Simple hash: DJB2 variant (fast, no crypto needed)
+    let hash = 5381;
+    for (let i = 0; i < raw.length; i++) {
+      hash = ((hash << 5) + hash + raw.charCodeAt(i)) | 0;
+    }
+    return (hash >>> 0).toString(36);
+  }
+
   /** Парсить один JSONL файл и извлечь все snippets (двухпроходный подход) */
   private async parseJSONLFile(filePath: string): Promise<SnippetDiff[]> {
     // Сначала считываем все записи в память для двух проходов
@@ -237,16 +257,16 @@ export class ChangeExtractorService {
         const isError = erroredIds.has(toolUseId);
 
         if (toolName === 'Edit') {
-          const filePath_ = typeof input.file_path === 'string' ? input.file_path : '';
+          const path = typeof input.file_path === 'string' ? input.file_path : '';
           const oldString = typeof input.old_string === 'string' ? input.old_string : '';
           const newString = typeof input.new_string === 'string' ? input.new_string : '';
           const replaceAll = input.replace_all === true;
 
-          if (filePath_) {
-            seenFiles.add(filePath_);
+          if (path) {
+            seenFiles.add(path);
             snippets.push({
               toolUseId,
-              filePath: filePath_,
+              filePath: path,
               toolName: 'Edit',
               type: 'edit',
               oldString,
@@ -254,18 +274,19 @@ export class ChangeExtractorService {
               replaceAll,
               timestamp,
               isError,
+              contextHash: this.computeContextHash(oldString, newString),
             });
           }
         } else if (toolName === 'Write') {
-          const filePath_ = typeof input.file_path === 'string' ? input.file_path : '';
+          const path = typeof input.file_path === 'string' ? input.file_path : '';
           const writeContent = typeof input.content === 'string' ? input.content : '';
 
-          if (filePath_) {
-            const isNew = !seenFiles.has(filePath_);
-            seenFiles.add(filePath_);
+          if (path) {
+            const isNew = !seenFiles.has(path);
+            seenFiles.add(path);
             snippets.push({
               toolUseId,
-              filePath: filePath_,
+              filePath: path,
               toolName: 'Write',
               type: isNew ? 'write-new' : 'write-update',
               oldString: '',
@@ -273,14 +294,15 @@ export class ChangeExtractorService {
               replaceAll: false,
               timestamp,
               isError,
+              contextHash: this.computeContextHash('', writeContent),
             });
           }
         } else if (toolName === 'MultiEdit') {
-          const filePath_ = typeof input.file_path === 'string' ? input.file_path : '';
+          const path = typeof input.file_path === 'string' ? input.file_path : '';
           const edits = Array.isArray(input.edits) ? input.edits : [];
 
-          if (filePath_) {
-            seenFiles.add(filePath_);
+          if (path) {
+            seenFiles.add(path);
             for (const edit of edits) {
               if (!edit || typeof edit !== 'object') continue;
               const editObj = edit as Record<string, unknown>;
@@ -288,7 +310,7 @@ export class ChangeExtractorService {
               const newString = typeof editObj.new_string === 'string' ? editObj.new_string : '';
               snippets.push({
                 toolUseId,
-                filePath: filePath_,
+                filePath: path,
                 toolName: 'MultiEdit',
                 type: 'multi-edit',
                 oldString,
@@ -296,6 +318,7 @@ export class ChangeExtractorService {
                 replaceAll: false,
                 timestamp,
                 isError,
+                contextHash: this.computeContextHash(oldString, newString),
               });
             }
           }
@@ -388,7 +411,7 @@ export class ChangeExtractorService {
       let totalRemoved = 0;
       for (const s of data.snippets) {
         if (s.isError) continue;
-        const { added, removed } = this.countLines(s.oldString, s.newString);
+        const { added, removed } = countLineChanges(s.oldString, s.newString);
         totalAdded += added;
         totalRemoved += removed;
       }
@@ -418,15 +441,18 @@ export class ChangeExtractorService {
   private buildTimeline(filePath: string, snippets: SnippetDiff[]): FileEditTimeline {
     const events: FileEditEvent[] = snippets
       .filter((s) => !s.isError)
-      .map((s, idx) => ({
-        toolUseId: s.toolUseId,
-        toolName: s.toolName as FileEditEvent['toolName'],
-        timestamp: s.timestamp,
-        summary: this.generateEditSummary(s),
-        linesAdded: Math.max(0, s.newString.split('\n').length - s.oldString.split('\n').length),
-        linesRemoved: Math.max(0, s.oldString.split('\n').length - s.newString.split('\n').length),
-        snippetIndex: idx,
-      }));
+      .map((s, idx) => {
+        const { added, removed } = countLineChanges(s.oldString, s.newString);
+        return {
+          toolUseId: s.toolUseId,
+          toolName: s.toolName as FileEditEvent['toolName'],
+          timestamp: s.timestamp,
+          summary: this.generateEditSummary(s),
+          linesAdded: added,
+          linesRemoved: removed,
+          snippetIndex: idx,
+        };
+      });
 
     const timestamps = events.map((e) => new Date(e.timestamp).getTime()).filter((t) => !isNaN(t));
     const durationMs =
@@ -442,34 +468,19 @@ export class ChangeExtractorService {
       case 'write-update':
         return 'Wrote full file content';
       case 'multi-edit': {
-        const lines = snippet.oldString.split('\n').length;
-        return `Multi-edit (${lines} line${lines !== 1 ? 's' : ''})`;
+        const { added, removed } = countLineChanges(snippet.oldString, snippet.newString);
+        const total = added + removed;
+        return `Multi-edit (${total} line${total !== 1 ? 's' : ''})`;
       }
       case 'edit': {
-        const added = snippet.newString.split('\n').length;
-        const removed = snippet.oldString.split('\n').length;
-        if (removed === 0 || snippet.oldString === '')
-          return `Added ${added} line${added !== 1 ? 's' : ''}`;
-        if (added === 0 || snippet.newString === '')
-          return `Removed ${removed} line${removed !== 1 ? 's' : ''}`;
+        const { added, removed } = countLineChanges(snippet.oldString, snippet.newString);
+        if (snippet.oldString === '') return `Added ${added} line${added !== 1 ? 's' : ''}`;
+        if (snippet.newString === '') return `Removed ${removed} line${removed !== 1 ? 's' : ''}`;
         return `Changed ${removed} → ${added} lines`;
       }
       default:
         return 'File modified';
     }
-  }
-
-  /** Подсчёт добавленных/удалённых строк через diff */
-  private countLines(oldStr: string, newStr: string): { added: number; removed: number } {
-    if (!oldStr && !newStr) return { added: 0, removed: 0 };
-    const changes = diffLines(oldStr, newStr);
-    let added = 0;
-    let removed = 0;
-    for (const c of changes) {
-      if (c.added) added += c.count ?? 0;
-      if (c.removed) removed += c.count ?? 0;
-    }
-    return { added, removed };
   }
 
   /** Проверить, содержит ли путь к файлу один из sessionId */

@@ -326,6 +326,28 @@ export const CLI_INSTALLER_INSTALL = 'cliInstaller:install';
 export const CLI_INSTALLER_PROGRESS = 'cliInstaller:progress';
 
 // =============================================================================
+// Terminal API Channels
+// =============================================================================
+
+/** Spawn a new PTY terminal process */
+export const TERMINAL_SPAWN = 'terminal:spawn';
+
+/** Write data to PTY stdin (fire-and-forget) */
+export const TERMINAL_WRITE = 'terminal:write';
+
+/** Resize PTY terminal (fire-and-forget) */
+export const TERMINAL_RESIZE = 'terminal:resize';
+
+/** Kill PTY process (fire-and-forget) */
+export const TERMINAL_KILL = 'terminal:kill';
+
+/** PTY data output (main -> renderer) */
+export const TERMINAL_DATA = 'terminal:data';
+
+/** PTY process exit (main -> renderer) */
+export const TERMINAL_EXIT = 'terminal:exit';
+
+// =============================================================================
 // Review API Channels
 // =============================================================================
 

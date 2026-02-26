@@ -55,6 +55,7 @@ import type {
   TeamUpdateConfigRequest,
   UpdateKanbanPatch,
 } from './team';
+import type { TerminalAPI } from './terminal';
 import type { WaterfallData } from './visualization';
 import type {
   ConversationGroup,
@@ -634,6 +635,9 @@ export interface ElectronAPI {
 
   // CLI Installer API
   cliInstaller: CliInstallerAPI;
+
+  // Embedded Terminal API (xterm.js + node-pty)
+  terminal: TerminalAPI;
 }
 
 // =============================================================================

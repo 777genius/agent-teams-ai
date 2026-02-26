@@ -105,128 +105,130 @@ export const TaskCommentsSection = ({
 
       {comments.length > 0 ? (
         <div className="mb-3 space-y-2">
-          {[...comments].reverse().map((comment) => (
-            <div key={comment.id} className="group p-2.5">
-              <div className="mb-1 flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
-                <span
-                  className="font-medium"
-                  style={{
-                    color: (() => {
-                      const rc = colorMap.get(comment.author);
-                      return rc ? getTeamColorSet(rc).text : 'var(--color-text-secondary)';
-                    })(),
-                  }}
-                >
-                  {comment.author}
-                </span>
-                <span>
-                  {(() => {
-                    const date = new Date(comment.createdAt);
-                    return isNaN(date.getTime())
-                      ? 'unknown time'
-                      : formatDistanceToNow(date, { addSuffix: true });
-                  })()}
-                </span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="ml-auto flex items-center gap-0.5 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:text-[var(--color-text-secondary)] group-hover:opacity-100"
-                      onClick={() => {
-                        const replyText = stripAgentBlocks(
-                          parseMessageReply(comment.text)?.replyText ?? comment.text
-                        );
-                        if (onReply) {
-                          onReply(comment.author, replyText);
-                        } else {
-                          setReplyTo({ author: comment.author, text: replyText });
+          {[...comments]
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .map((comment) => (
+              <div key={comment.id} className="group p-2.5">
+                <div className="mb-1 flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
+                  <span
+                    className="font-medium"
+                    style={{
+                      color: (() => {
+                        const rc = colorMap.get(comment.author);
+                        return rc ? getTeamColorSet(rc).text : 'var(--color-text-secondary)';
+                      })(),
+                    }}
+                  >
+                    {comment.author}
+                  </span>
+                  <span>
+                    {(() => {
+                      const date = new Date(comment.createdAt);
+                      return isNaN(date.getTime())
+                        ? 'unknown time'
+                        : formatDistanceToNow(date, { addSuffix: true });
+                    })()}
+                  </span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="ml-auto flex items-center gap-0.5 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:text-[var(--color-text-secondary)] group-hover:opacity-100"
+                        onClick={() => {
+                          const replyText = stripAgentBlocks(
+                            parseMessageReply(comment.text)?.replyText ?? comment.text
+                          );
+                          if (onReply) {
+                            onReply(comment.author, replyText);
+                          } else {
+                            setReplyTo({ author: comment.author, text: replyText });
+                          }
+                        }}
+                      >
+                        <Reply size={11} />
+                        Reply
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">Reply to comment</TooltipContent>
+                  </Tooltip>
+                </div>
+                {(() => {
+                  const reply = parseMessageReply(comment.text);
+                  const rawForDisplay = reply ? reply.replyText : comment.text;
+                  const displayText = stripAgentBlocks(rawForDisplay);
+                  const needsExpandCollapse = displayText.includes('\n');
+                  const expanded = expandedCommentIds.has(comment.id);
+                  const collapsedHeight = 'max-h-[120px]';
+                  const showCollapsed = needsExpandCollapse && !expanded;
+                  const showExpandedButton = needsExpandCollapse && expanded;
+                  return (
+                    <div className="relative text-xs">
+                      <div
+                        className={
+                          showCollapsed ? `relative ${collapsedHeight} overflow-hidden` : undefined
                         }
-                      }}
-                    >
-                      <Reply size={11} />
-                      Reply
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="left">Reply to comment</TooltipContent>
-                </Tooltip>
-              </div>
-              {(() => {
-                const reply = parseMessageReply(comment.text);
-                const rawForDisplay = reply ? reply.replyText : comment.text;
-                const displayText = stripAgentBlocks(rawForDisplay);
-                const needsExpandCollapse = displayText.includes('\n');
-                const expanded = expandedCommentIds.has(comment.id);
-                const collapsedHeight = 'max-h-[120px]';
-                const showCollapsed = needsExpandCollapse && !expanded;
-                const showExpandedButton = needsExpandCollapse && expanded;
-                return (
-                  <div className="relative text-xs">
-                    <div
-                      className={
-                        showCollapsed ? `relative ${collapsedHeight} overflow-hidden` : undefined
-                      }
-                    >
-                      {reply ? (
-                        <ReplyQuoteBlock
-                          reply={{
-                            ...reply,
-                            originalText: stripAgentBlocks(reply.originalText),
-                            replyText: stripAgentBlocks(reply.replyText),
-                          }}
-                          bodyMaxHeight={
-                            needsExpandCollapse && !expanded ? 'max-h-56' : 'max-h-none'
-                          }
-                        />
-                      ) : (
-                        <MarkdownViewer
-                          content={displayText}
-                          maxHeight={
-                            needsExpandCollapse && !expanded ? collapsedHeight : 'max-h-none'
-                          }
-                        />
-                      )}
-                      {showCollapsed && (
-                        <>
-                          <div
-                            className="pointer-events-none absolute inset-x-0 bottom-0 h-14"
-                            style={{
-                              background:
-                                'linear-gradient(to top, var(--color-surface) 0%, transparent 100%)',
+                      >
+                        {reply ? (
+                          <ReplyQuoteBlock
+                            reply={{
+                              ...reply,
+                              originalText: stripAgentBlocks(reply.originalText),
+                              replyText: stripAgentBlocks(reply.replyText),
                             }}
-                            aria-hidden
+                            bodyMaxHeight={
+                              needsExpandCollapse && !expanded ? 'max-h-56' : 'max-h-none'
+                            }
                           />
-                          <div className="absolute inset-x-0 bottom-0 flex justify-center pt-1">
-                            <button
-                              type="button"
-                              className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] shadow-sm transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
-                              onClick={() => toggleCommentExpanded(comment.id)}
-                              title="Expand"
-                            >
-                              <ChevronDown size={12} />
-                              Expand
-                            </button>
-                          </div>
-                        </>
+                        ) : (
+                          <MarkdownViewer
+                            content={displayText}
+                            maxHeight={
+                              needsExpandCollapse && !expanded ? collapsedHeight : 'max-h-none'
+                            }
+                          />
+                        )}
+                        {showCollapsed && (
+                          <>
+                            <div
+                              className="pointer-events-none absolute inset-x-0 bottom-0 h-14"
+                              style={{
+                                background:
+                                  'linear-gradient(to top, var(--color-surface) 0%, transparent 100%)',
+                              }}
+                              aria-hidden
+                            />
+                            <div className="absolute inset-x-0 bottom-0 flex justify-center pt-1">
+                              <button
+                                type="button"
+                                className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] shadow-sm transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+                                onClick={() => toggleCommentExpanded(comment.id)}
+                                title="Expand"
+                              >
+                                <ChevronDown size={12} />
+                                Expand
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      {showExpandedButton && (
+                        <div className="flex justify-center pt-2">
+                          <button
+                            type="button"
+                            className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-2.5 py-1 text-[11px] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-secondary)]"
+                            onClick={() => toggleCommentExpanded(comment.id)}
+                            title="Collapse"
+                          >
+                            <ChevronUp size={12} />
+                            Collapse
+                          </button>
+                        </div>
                       )}
                     </div>
-                    {showExpandedButton && (
-                      <div className="flex justify-center pt-2">
-                        <button
-                          type="button"
-                          className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-2.5 py-1 text-[11px] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-secondary)]"
-                          onClick={() => toggleCommentExpanded(comment.id)}
-                          title="Collapse"
-                        >
-                          <ChevronUp size={12} />
-                          Collapse
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-          ))}
+                  );
+                })()}
+              </div>
+            ))}
         </div>
       ) : null}
 

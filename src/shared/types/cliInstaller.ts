@@ -39,6 +39,10 @@ export interface CliInstallationStatus {
   latestVersion: string | null;
   /** True when installed version < latest version */
   updateAvailable: boolean;
+  /** Whether user is logged in (claude auth status) */
+  authLoggedIn: boolean;
+  /** Auth method if logged in (e.g. "oauth_token", "api_key"), null otherwise */
+  authMethod: string | null;
 }
 
 // =============================================================================

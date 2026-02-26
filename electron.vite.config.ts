@@ -10,6 +10,10 @@ import type { Plugin } from 'vite'
 const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8'))
 const prodDeps = Object.keys(pkg.dependencies || {})
 
+// node-pty is a native addon that cannot be bundled by Rollup.
+// It must remain external and be loaded at runtime via require().
+const bundledDeps = prodDeps.filter(d => d !== 'node-pty')
+
 // Rollup plugin: stub out native .node addon imports with empty modules.
 // ssh2 and cpu-features use optional native bindings that can't be bundled,
 // but they have pure JS fallbacks when the native module isn't available.
@@ -32,7 +36,7 @@ export default defineConfig({
   main: {
     plugins: [
       externalizeDepsPlugin({
-        exclude: prodDeps
+        exclude: bundledDeps
       }),
       nativeModuleStub()
     ],
