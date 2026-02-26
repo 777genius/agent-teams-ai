@@ -48,6 +48,8 @@ interface CodeMirrorDiffViewProps {
   onFullyViewed?: () => void;
   /** Ref to expose the EditorView for external navigation */
   editorViewRef?: React.RefObject<EditorView | null>;
+  /** Called whenever the internal EditorView is created or destroyed */
+  onViewChange?: (view: EditorView | null) => void;
   /** Called when editor content changes (debounced, only when readOnly=false) */
   onContentChanged?: (content: string) => void;
   /** Cached EditorState to restore (preserves undo history between file switches) */
@@ -293,6 +295,7 @@ export const CodeMirrorDiffView = ({
   onHunkRejected,
   onFullyViewed,
   editorViewRef: externalViewRef,
+  onViewChange,
   onContentChanged,
   initialState,
   usePortionCollapse = false,
@@ -308,13 +311,15 @@ export const CodeMirrorDiffView = ({
   const onAcceptRef = useRef(onHunkAccepted);
   const onRejectRef = useRef(onHunkRejected);
   const onContentChangedRef = useRef(onContentChanged);
+  const onViewChangeRef = useRef(onViewChange);
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
     onAcceptRef.current = onHunkAccepted;
     onRejectRef.current = onHunkRejected;
     onContentChangedRef.current = onContentChanged;
+    onViewChangeRef.current = onViewChange;
     externalViewRefHolder.current = externalViewRef;
-  }, [onHunkAccepted, onHunkRejected, onContentChanged, externalViewRef]);
+  }, [onHunkAccepted, onHunkRejected, onContentChanged, onViewChange, externalViewRef]);
 
   // Auto-scroll to next chunk after accept/reject (deferred to let CM recalculate)
   const scrollToNextChunk = useCallback(() => {
@@ -705,6 +710,8 @@ export const CodeMirrorDiffView = ({
     if (extRef) {
       (extRef as React.MutableRefObject<EditorView | null>).current = view;
     }
+    // Notify parent that a new EditorView was created
+    onViewChangeRef.current?.(view);
 
     return () => {
       clearTimeout(debounceTimer.current);
@@ -713,6 +720,8 @@ export const CodeMirrorDiffView = ({
       if (extRef) {
         (extRef as React.MutableRefObject<EditorView | null>).current = null;
       }
+      // Notify parent that the EditorView was destroyed
+      onViewChangeRef.current?.(null);
     };
     // We intentionally rebuild the entire editor when key props change
   }, [original, modified, buildExtensions, initialState]);
@@ -747,7 +756,7 @@ export const CodeMirrorDiffView = ({
     return () => {
       cancelled = true;
     };
-  }, [fileName, buildExtensions, initialState]);
+  }, [fileName, buildExtensions, initialState, original, modified]);
 
   // Dynamic collapse toggle — reconfigure compartments in-place, preserving undo history
   useEffect(() => {

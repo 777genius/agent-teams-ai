@@ -44,11 +44,28 @@ export function registerTerminalHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TERMINAL_SPAWN, handleSpawn);
 
   // write, resize, kill are fire-and-forget (hot path, latency-sensitive)
-  ipcMain.on(TERMINAL_WRITE, (_event, ptyId: string, data: string) => service.write(ptyId, data));
-  ipcMain.on(TERMINAL_RESIZE, (_event, ptyId: string, cols: number, rows: number) =>
-    service.resize(ptyId, cols, rows)
-  );
-  ipcMain.on(TERMINAL_KILL, (_event, ptyId: string) => service.kill(ptyId));
+  // Wrapped in try/catch: node-pty can throw if the PTY dies between Map.get() and .write()
+  ipcMain.on(TERMINAL_WRITE, (_event, ptyId: string, data: string) => {
+    try {
+      service.write(ptyId, data);
+    } catch (err) {
+      logger.warn('terminal:write error:', getErrorMessage(err));
+    }
+  });
+  ipcMain.on(TERMINAL_RESIZE, (_event, ptyId: string, cols: number, rows: number) => {
+    try {
+      service.resize(ptyId, cols, rows);
+    } catch (err) {
+      logger.warn('terminal:resize error:', getErrorMessage(err));
+    }
+  });
+  ipcMain.on(TERMINAL_KILL, (_event, ptyId: string) => {
+    try {
+      service.kill(ptyId);
+    } catch (err) {
+      logger.warn('terminal:kill error:', getErrorMessage(err));
+    }
+  });
 
   logger.info('Terminal handlers registered');
 }

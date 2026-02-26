@@ -86,9 +86,7 @@ interface ValidationResult {
   };
 }
 
-const PRESET_ROLES = ['lead', 'reviewer', 'developer', 'qa', 'researcher'] as const;
-const CUSTOM_ROLE = '__custom__';
-const NO_ROLE = '__none__';
+import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 const DEV_DEFAULT_TEAM = {
   teamName: 'team-alpha',
   description: 'Dev test team for provisioning flow',

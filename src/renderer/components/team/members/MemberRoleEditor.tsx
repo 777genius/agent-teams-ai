@@ -9,12 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import { CUSTOM_ROLE, FORBIDDEN_ROLES, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 import { Check, Loader2, X } from 'lucide-react';
-
-const ROLE_PRESETS = ['reviewer', 'developer', 'qa', 'researcher'] as const;
-const FORBIDDEN_ROLES = new Set(['lead', 'team-lead']);
-const NO_ROLE = '__none__';
-const CUSTOM_ROLE = '__custom__';
 
 interface MemberRoleEditorProps {
   currentRole: string | undefined;
@@ -29,7 +25,7 @@ export const MemberRoleEditor = ({
   onCancel,
   saving,
 }: MemberRoleEditorProps): React.JSX.Element => {
-  const isPreset = currentRole && (ROLE_PRESETS as readonly string[]).includes(currentRole);
+  const isPreset = currentRole && (PRESET_ROLES as readonly string[]).includes(currentRole);
   const [selectValue, setSelectValue] = useState<string>(
     !currentRole ? NO_ROLE : isPreset ? currentRole : CUSTOM_ROLE
   );
@@ -75,7 +71,7 @@ export const MemberRoleEditor = ({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={NO_ROLE}>No role</SelectItem>
-          {ROLE_PRESETS.map((r) => (
+          {PRESET_ROLES.map((r) => (
             <SelectItem key={r} value={r}>
               {r}
             </SelectItem>

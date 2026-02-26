@@ -212,22 +212,47 @@ export const ActivityTimeline = ({
         );
       })}
       {hiddenCount > 0 && (
-        <div className="flex items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5">
-          <span className="text-[11px] text-[var(--color-text-muted)]">+{hiddenCount} older</span>
-          <button
-            onClick={handleShowMore}
-            className="rounded px-2 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+        <div className="relative flex justify-center pb-3 pt-1">
+          {/* Bottom-up shadow gradient: darkest at bottom edge, fades upward */}
+          <div
+            className="pointer-events-none absolute inset-x-0 -top-24"
+            style={{
+              bottom: '-1.6rem',
+              background:
+                'linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.25) 25%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.03) 75%, transparent 100%)',
+            }}
+          />
+          <div
+            className="relative z-[1] flex items-center gap-3 rounded-full px-4 py-1.5"
+            style={{
+              backgroundColor: 'var(--color-surface-raised)',
+              boxShadow:
+                '0 0 12px 4px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
+              border: '1px solid var(--color-border-emphasis)',
+            }}
           >
-            Show {Math.min(MESSAGES_PAGE_SIZE, hiddenCount)} more
-          </button>
-          {hiddenCount > MESSAGES_PAGE_SIZE && (
+            <span className="text-[11px] tabular-nums text-[var(--color-text-muted)]">
+              +{hiddenCount} older
+            </span>
+            <span className="h-3 w-px bg-[var(--color-border-emphasis)]" />
             <button
-              onClick={handleShowAll}
-              className="rounded px-2 py-0.5 text-[11px] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text-secondary)]"
+              onClick={handleShowMore}
+              className="rounded-full px-2.5 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)] transition-all hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--color-text)]"
             >
-              Show all
+              Show {Math.min(MESSAGES_PAGE_SIZE, hiddenCount)} more
             </button>
-          )}
+            {hiddenCount > MESSAGES_PAGE_SIZE && (
+              <>
+                <span className="h-3 w-px bg-[var(--color-border-emphasis)]" />
+                <button
+                  onClick={handleShowAll}
+                  className="rounded-full px-2.5 py-0.5 text-[11px] text-[var(--color-text-muted)] transition-all hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--color-text-secondary)]"
+                >
+                  Show all
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -6,7 +6,7 @@ import * as path from 'path';
 import { atomicWriteAsync } from './atomicWrite';
 
 const TOOL_FILE_NAME = 'teamctl.js';
-const TOOL_VERSION = 9;
+const TOOL_VERSION = 10;
 
 function buildTeamCtlScript(): string {
   const script = String.raw`#!/usr/bin/env node
@@ -217,29 +217,43 @@ function addTaskComment(paths, taskId, flags) {
   if (!text) die('Missing --text');
   var from = typeof flags.from === 'string' && flags.from.trim() ? flags.from.trim() : 'agent';
 
-  var ref = readTask(paths, taskId);
-  var task = ref.task;
-  var taskPath = ref.taskPath;
+  var ref;
+  var task;
+  var taskPath;
+  var commentId;
+  var comment;
+  var existing;
+  var lastErr;
+  for (var attempt = 0; attempt < 8; attempt++) {
+    try {
+      ref = readTask(paths, taskId);
+      task = ref.task;
+      taskPath = ref.taskPath;
 
-  // Auto-clear needsClarification: "lead" when someone other than the task owner comments
-  if (task.needsClarification === 'lead' && from !== task.owner) {
-    delete task.needsClarification;
+      if (task.needsClarification === 'lead' && from !== task.owner) {
+        delete task.needsClarification;
+      }
+
+      existing = Array.isArray(task.comments) ? task.comments : [];
+      commentId = crypto.randomUUID
+        ? crypto.randomUUID()
+        : String(Date.now()) + '-' + String(Math.random());
+      comment = {
+        id: commentId,
+        author: from,
+        text: text,
+        createdAt: nowIso(),
+      };
+      task.comments = existing.concat([comment]);
+      writeTask(taskPath, task);
+
+      return { commentId: commentId, taskId: String(taskId), subject: task.subject, owner: task.owner };
+    } catch (e) {
+      lastErr = e;
+      if (attempt === 7) throw e;
+    }
   }
-
-  var existing = Array.isArray(task.comments) ? task.comments : [];
-  var commentId = crypto.randomUUID
-    ? crypto.randomUUID()
-    : String(Date.now()) + '-' + String(Math.random());
-  var comment = {
-    id: commentId,
-    author: from,
-    text: text,
-    createdAt: nowIso(),
-  };
-  task.comments = existing.concat([comment]);
-  writeTask(taskPath, task);
-
-  return { commentId: commentId, taskId: String(taskId), subject: task.subject, owner: task.owner };
+  throw lastErr;
 }
 
 function setNeedsClarification(paths, taskId, value) {
@@ -309,25 +323,36 @@ function createTask(paths, flags) {
         : undefined;
 
   ensureDir(paths.tasksDir);
-  const nextId = getNextTaskId(paths);
-  const taskPath = path.join(paths.tasksDir, String(nextId) + '.json');
-  if (fs.existsSync(taskPath)) die('Task already exists: ' + String(nextId));
-
   const from = typeof flags.from === 'string' && flags.from.trim() ? flags.from.trim() : undefined;
-
-  const task = {
-    id: nextId,
-    subject,
-    description: String(description || subject),
-    activeForm: activeForm ? String(activeForm) : undefined,
-    owner,
-    createdBy: from,
-    status,
-    blocks: [],
-    blockedBy: [],
-  };
-
-  writeTask(taskPath, task);
+  let nextId;
+  let task;
+  let taskPath;
+  while (true) {
+    nextId = getNextTaskId(paths);
+    taskPath = path.join(paths.tasksDir, String(nextId) + '.json');
+    task = {
+      id: nextId,
+      subject,
+      description: String(description || subject),
+      activeForm: activeForm ? String(activeForm) : undefined,
+      owner,
+      createdBy: from,
+      status,
+      blocks: [],
+      blockedBy: [],
+    };
+    try {
+      const fd = fs.openSync(taskPath, 'wx');
+      fs.closeSync(fd);
+      atomicWrite(taskPath, JSON.stringify(task, null, 2));
+      const verify = readJson(taskPath, null);
+      if (!verify) die('Task write verification failed');
+      break;
+    } catch (e) {
+      if (e && e.code === 'EEXIST') continue;
+      throw e;
+    }
+  }
   updateHighwatermark(paths, nextId);
   return task;
 }

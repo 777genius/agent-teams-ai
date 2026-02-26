@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 
 import { CodeMirrorDiffView } from './CodeMirrorDiffView';
 import { DiffErrorBoundary } from './DiffErrorBoundary';
@@ -41,19 +41,16 @@ export const FileSectionDiff = ({
   const localEditorViewRef = useRef<EditorView | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // Register/unregister EditorView with parent Map
-  useEffect(() => {
-    return () => {
-      onEditorViewReady(file.filePath, null);
-    };
-  }, [file.filePath, onEditorViewReady]);
-
-  // Sync EditorView ref to parent after CM creates the view
-  useEffect(() => {
-    if (localEditorViewRef.current) {
-      onEditorViewReady(file.filePath, localEditorViewRef.current);
-    }
-  }, [file.filePath, onEditorViewReady, discardCounter]);
+  // Notify parent whenever CodeMirrorDiffView creates or destroys its EditorView.
+  // This fires on every editor lifecycle event: initial mount, key-change remount,
+  // and internal recreation (e.g. when `modified` prop changes after Save).
+  const handleViewChange = useCallback(
+    (view: EditorView | null) => {
+      localEditorViewRef.current = view;
+      onEditorViewReady(file.filePath, view);
+    },
+    [file.filePath, onEditorViewReady]
+  );
 
   // Auto-viewed sentinel observer
   useEffect(() => {
@@ -124,6 +121,7 @@ export const FileSectionDiff = ({
           onHunkRejected={(idx) => onHunkRejected(file.filePath, idx)}
           onContentChanged={(content) => onContentChanged(file.filePath, content)}
           editorViewRef={localEditorViewRef}
+          onViewChange={handleViewChange}
         />
       </DiffErrorBoundary>
       <div ref={sentinelRef} className="h-1 shrink-0" />
