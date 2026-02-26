@@ -35,6 +35,7 @@ export const EmbeddedTerminal = ({
     if (!container) return;
 
     let ptyId: string | null = null;
+    let disposed = false;
 
     const term = new Terminal({
       cursorBlink: true,
@@ -53,7 +54,7 @@ export const EmbeddedTerminal = ({
     term.open(container);
 
     // Fit after opening so dimensions are correct
-    requestAnimationFrame(() => fitAddon.fit());
+    const rafId = requestAnimationFrame(() => fitAddon.fit());
 
     // User input → PTY (returns IDisposable — must dispose in cleanup)
     const inputDisposable = term.onData((data) => {
@@ -62,7 +63,7 @@ export const EmbeddedTerminal = ({
 
     // PTY output → xterm
     const unsubData = api.terminal.onData((_, id, data) => {
-      if (id === ptyId) term.write(data);
+      if (id === ptyId && !disposed) term.write(data);
     });
 
     // PTY exit
@@ -85,12 +86,14 @@ export const EmbeddedTerminal = ({
     api.terminal
       .spawn(spawnOptions)
       .then((id) => {
+        if (disposed) return;
         ptyId = id;
         // Send actual terminal size after spawn (fitAddon.fit() may have
         // changed cols/rows via RAF after spawnOptions was constructed)
         api.terminal.resize(id, term.cols, term.rows);
       })
       .catch((err: unknown) => {
+        if (disposed) return;
         term.write(
           `\r\n\x1b[31mFailed to start terminal: ${err instanceof Error ? err.message : String(err)}\x1b[0m\r\n`
         );
@@ -106,6 +109,8 @@ export const EmbeddedTerminal = ({
     observer.observe(container);
 
     return () => {
+      disposed = true;
+      cancelAnimationFrame(rafId);
       inputDisposable.dispose();
       unsubData();
       unsubExit();

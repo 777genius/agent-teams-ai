@@ -187,7 +187,7 @@
     "asar": true,
     "asarUnpack": [
       "out/renderer/**",
-      "**/node_modules/node-pty/build/Release/**"
+      "**/node_modules/node-pty/**"
     ],
     "extraResources": [
       {
