@@ -540,7 +540,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       }
 
       // Build FileReviewDecision[] from hunkDecisions/fileDecisions
-      const { hunkDecisions, fileDecisions, activeChangeSet } = get();
+      const { hunkDecisions, fileDecisions, fileChunkCounts, activeChangeSet } = get();
       if (!activeChangeSet) {
         set({ applying: false });
         return;
@@ -552,7 +552,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         const fileDecision = fileDecisions[file.filePath] ?? 'pending';
         const hunkDecs: Record<number, HunkDecision> = {};
 
-        for (let i = 0; i < file.snippets.length; i++) {
+        const count = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
+        for (let i = 0; i < count; i++) {
           const key = `${file.filePath}:${i}`;
           hunkDecs[i] = hunkDecisions[key] ?? 'pending';
         }
@@ -599,7 +600,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     taskId?: string,
     memberName?: string
   ) => {
-    const { hunkDecisions, fileDecisions, activeChangeSet } = get();
+    const { hunkDecisions, fileDecisions, fileChunkCounts, activeChangeSet } = get();
     if (!activeChangeSet) return;
 
     const file = activeChangeSet.files.find((f) => f.filePath === filePath);
@@ -607,7 +608,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
 
     const fileDecision = fileDecisions[filePath] ?? 'pending';
     const hunkDecs: Record<number, HunkDecision> = {};
-    for (let i = 0; i < file.snippets.length; i++) {
+    const count = getFileHunkCount(filePath, file.snippets.length, fileChunkCounts);
+    for (let i = 0; i < count; i++) {
       hunkDecs[i] = hunkDecisions[`${filePath}:${i}`] ?? 'pending';
     }
 

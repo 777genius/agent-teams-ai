@@ -161,9 +161,18 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
   const [showLoginTerminal, setShowLoginTerminal] = useState(false);
 
   useEffect(() => {
-    if (isElectron) {
-      void fetchCliStatus();
-    }
+    if (!isElectron) return;
+
+    void fetchCliStatus();
+
+    const interval = setInterval(
+      () => {
+        void fetchCliStatus();
+      },
+      10 * 60 * 1000
+    );
+
+    return () => clearInterval(interval);
   }, [isElectron, fetchCliStatus]);
 
   const handleInstall = useCallback(() => {
@@ -447,6 +456,11 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
               <span className="text-sm" style={{ color: 'var(--color-text)' }}>
                 Claude CLI v{cliStatus.installedVersion ?? 'unknown'}
               </span>
+              {cliStatus.authLoggedIn && (
+                <span className="text-xs" style={{ color: '#4ade80' }}>
+                  Authenticated
+                </span>
+              )}
               {cliStatus.updateAvailable && cliStatus.latestVersion && (
                 <span className="text-xs" style={{ color: '#60a5fa' }}>
                   &rarr; v{cliStatus.latestVersion}

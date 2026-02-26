@@ -37,17 +37,22 @@ export class HunkSnippetMatcher {
       const hunk = patch.hunks[hunkIdx];
       const snippetSet = new Set<number>();
 
-      // Extract added/removed content from hunk
-      const addedLines = hunk.lines.filter((l) => l.startsWith('+')).map((l) => l.slice(1));
-      const removedLines = hunk.lines.filter((l) => l.startsWith('-')).map((l) => l.slice(1));
-      const addedContent = addedLines.join('\n');
-      const removedContent = removedLines.join('\n');
+      // Reconstruct old/new side of hunk INCLUDING context lines.
+      // Context lines (` ` prefix) are critical — without them, snippets whose
+      // oldString spans unchanged lines between changed lines can't be matched.
+      const oldSideContent = hunk.lines
+        .filter((l) => !l.startsWith('+'))
+        .map((l) => l.slice(1))
+        .join('\n');
+      const newSideContent = hunk.lines
+        .filter((l) => !l.startsWith('-'))
+        .map((l) => l.slice(1))
+        .join('\n');
 
       for (let sIdx = 0; sIdx < snippets.length; sIdx++) {
         const snippet = snippets[sIdx];
 
-        // Content overlap: check if snippet's strings appear in hunk's diff content
-        if (this.hasContentOverlap(snippet, addedContent, removedContent)) {
+        if (this.hasContentOverlap(snippet, oldSideContent, newSideContent)) {
           snippetSet.add(sIdx);
         }
       }
@@ -116,40 +121,30 @@ export class HunkSnippetMatcher {
   // ── Private helpers ──
 
   /**
-   * Check if a snippet's content overlaps with hunk's added/removed content.
+   * Check if a snippet's content overlaps with a hunk's reconstructed file ranges.
+   *
+   * @param hunkOldSide — reconstructed original file text within hunk range (context + removed lines)
+   * @param hunkNewSide — reconstructed modified file text within hunk range (context + added lines)
    */
   private hasContentOverlap(
     snippet: SnippetDiff,
-    hunkAddedContent: string,
-    hunkRemovedContent: string
+    hunkOldSide: string,
+    hunkNewSide: string
   ): boolean {
-    // Skip empty snippets
     if (!snippet.newString && !snippet.oldString) return false;
 
     if (snippet.type === 'write-new' || snippet.type === 'write-update') {
-      // For Write: check if hunk's added content is a substring of snippet's newString
-      if (snippet.newString && hunkAddedContent) {
-        return snippet.newString.includes(hunkAddedContent);
+      // For Write: snippet.newString is the full file content — check if hunk's new side is within it
+      if (snippet.newString && hunkNewSide) {
+        return snippet.newString.includes(hunkNewSide);
       }
       return false;
     }
 
-    // For Edit/MultiEdit: check bidirectional overlap
-    const matchesNew = snippet.newString
-      ? hunkAddedContent.includes(snippet.newString) || snippet.newString.includes(hunkAddedContent)
-      : false;
+    // For Edit/MultiEdit: check if snippet falls within hunk's file range
+    const matchesOld = snippet.oldString ? hunkOldSide.includes(snippet.oldString) : false;
+    const matchesNew = snippet.newString ? hunkNewSide.includes(snippet.newString) : false;
 
-    const matchesOld = snippet.oldString
-      ? hunkRemovedContent.includes(snippet.oldString) ||
-        snippet.oldString.includes(hunkRemovedContent)
-      : false;
-
-    // Both directions match = high confidence
-    if (matchesNew && matchesOld) return true;
-
-    // Single direction match = acceptable for Edit
-    if (matchesNew || matchesOld) return true;
-
-    return false;
+    return matchesOld || matchesNew;
   }
 }

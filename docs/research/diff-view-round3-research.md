@@ -22,36 +22,58 @@ Source: 3 parallel research agents (~260k tokens total)
 
 ### A1. FALSE NEGATIVES (критичнее)
 
-**Root cause**: Различие whitespace между snippet и hunk.
+**Root cause (уточнён Round 3.1)**: НЕ whitespace (предыдущий анализ был неверен — Edit tool хранит точный текст с indentation). Реальная причина: **context lines** в hunk отбрасываются при matching.
 
-- `ChangeExtractorService` хранит `oldString`/`newString` как есть из Edit tool_use — **без leading whitespace**
-- `structuredPatch()` генерирует hunk lines с indentation из файла: `" const x = 1;"`
-- `.slice(1)` убирает только `+`/`-` prefix, оставляя indentation
-- `.includes()` сравнивает `"const x"` vs `"  const x"` → **не находит**
+**Механизм**:
+- `HunkSnippetMatcher` берёт только `+` и `-` строки из хунка, отбрасывая context (` ` prefix)
+- `removedContent` = join только `-` строк → контекстные строки МЕЖДУ изменёнными строками теряются
+- Snippet `oldString` содержит ВСЕ строки (включая context), т.к. это точная подстрока файла
+- `includes()` в обе стороны фейлится: ни `removedContent ⊂ oldString`, ни наоборот
 
-**Конкретный пример**:
+**Concrete proof** (из ресёрча):
 ```typescript
-// Файл с 3 Edit-ами в строках, разделённых < 3 строками:
-const [state, setState] = useState(0);     // ← Edit 1
-const [data, setData] = useState(null);    // ← Edit 2
-const [loading, setLoading] = useState(false);  // ← Edit 3
+// Claude's Edit:
+// old_string = "interface UserConfig {\n  name: string;\n  age: number;\n  email: string;\n  active: boolean;\n  premium: boolean;\n}"
+// new_string = "interface UserSettings {\n  name: string;\n  age: number;\n  email: string;\n  active: boolean;\n  isPremium: boolean;\n}"
+
+// structuredPatch() hunk:
+// -interface UserConfig {      ← removed
+//   name: string;              ← CONTEXT (discarded!)
+//   age: number;               ← CONTEXT (discarded!)
+//   email: string;             ← CONTEXT (discarded!)
+//   active: boolean;           ← CONTEXT (discarded!)
+// -  premium: boolean;         ← removed
+// +interface UserSettings {    ← added
+// +  isPremium: boolean;       ← added
+
+// removedContent = "interface UserConfig {\n  premium: boolean;"
+// oldString = "interface UserConfig {\n  name: string;\n  age: number;\n  email: string;\n  active: boolean;\n  premium: boolean;\n}"
+// removedContent.includes(oldString) → NO
+// oldString.includes(removedContent) → NO (context lines break contiguity)
+// ❌ FALSE NEGATIVE — snippet не матчится к своему хунку
 ```
 
-`structuredPatch()` сливает их в ОДИН хунк (context window = 3 строки).
+**`structuredPatch()` merge threshold**: `context * 2` = 8 строк (default context=4). Хунки мержатся если gap ≤ 8 строк.
 
-- Snippet: `oldString = "const [state, setState] = useState(0);"`
-- Hunk removed: `"  const [state, setState] = useState(0);"` (с отступом)
-- `includes()` → false
+**Частота**: ВЫСОКАЯ. Любой Edit где Claude захватывает блок с неизменёнными строками внутри:
+- Переименование interface/class + изменение полей
+- Смена параметров функции + изменение body
+- Конфигурационные объекты (часть полей меняется, часть нет)
 
-**Решение**: Нормализация whitespace при matching:
+**Решение**: Реконструировать "old side" и "new side" хунка включая context lines:
 ```typescript
-const normalize = (s: string) =>
-  s.split('\n').map(l => l.trim()).filter(l => l).join('\n');
+// Вместо только +/- строк:
+const oldSideContent = hunk.lines
+  .filter(l => l.startsWith(' ') || l.startsWith('-'))
+  .map(l => l.slice(1)).join('\n');
+const newSideContent = hunk.lines
+  .filter(l => l.startsWith(' ') || l.startsWith('+'))
+  .map(l => l.slice(1)).join('\n');
+// oldSideContent.includes(snippet.oldString) → TRUE ✓
+// newSideContent.includes(snippet.newString) → TRUE ✓
 ```
 
-**Риск**: минимальный — whitespace-only diff в Edit почти невозможен (Claude всегда меняет контент).
-
-**Оценка**: фиксит ~90% false negatives от merged hunks.
+**Уверенность**: 9.5/10 что реальный баг. 9/10 что fix через old/new side reconstruction работает.
 
 ### A2. FALSE POSITIVES
 
