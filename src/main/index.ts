@@ -33,7 +33,9 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
+import { showTeamNativeNotification } from './ipc/teams';
 import { HttpServer } from './services/infrastructure/HttpServer';
+import { TeamInboxReader } from './services/team/TeamInboxReader';
 import { getProjectsBasePath, getTodosBasePath } from './utils/pathDecoder';
 import {
   CliInstallerService,
@@ -55,6 +57,74 @@ import {
 import type { TeamChangeEvent } from '@shared/types';
 
 const logger = createLogger('App');
+
+// --- Team message notification tracking ---
+const teamInboxReader = new TeamInboxReader();
+/** Track last-seen message count per inbox file to detect new messages. */
+const inboxMessageCounts = new Map<string, number>();
+/** Debounce per-inbox to avoid flooding during batch writes. */
+const inboxNotifyTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const INBOX_NOTIFY_DEBOUNCE_MS = 500;
+/** Messages sent from our UI (user_sent) — suppress notifications for these. */
+const suppressedSources = new Set(['user_sent']);
+
+async function notifyNewInboxMessages(teamName: string, detail: string): Promise<void> {
+  // detail is like "inboxes/carol.json" — extract member name
+  const match = /^inboxes\/(.+)\.json$/.exec(detail);
+  if (!match) return;
+  const memberName = match[1];
+  const key = `${teamName}:${memberName}`;
+
+  try {
+    const messages = await teamInboxReader.getMessagesFor(teamName, memberName);
+    const prevCount = inboxMessageCounts.get(key) ?? 0;
+
+    if (prevCount === 0) {
+      // First load — seed count, don't notify
+      inboxMessageCounts.set(key, messages.length);
+      return;
+    }
+
+    if (messages.length <= prevCount) {
+      inboxMessageCounts.set(key, messages.length);
+      return;
+    }
+
+    // Messages are sorted newest-first, so new ones are at the beginning
+    const newMessages = messages.slice(0, messages.length - prevCount);
+    inboxMessageCounts.set(key, messages.length);
+
+    // Resolve team display name
+    let teamDisplayName = teamName;
+    try {
+      const service = teamDataService;
+      if (service) {
+        const summary = await service.listTeams();
+        const team = summary.find((t) => t.teamName === teamName);
+        if (team?.displayName) teamDisplayName = team.displayName;
+      }
+    } catch {
+      // use teamName as fallback
+    }
+
+    for (const msg of newMessages) {
+      // Skip messages sent from our own UI
+      if (msg.source && suppressedSources.has(msg.source)) continue;
+
+      const fromLabel = msg.from || 'Unknown';
+      const toLabel = msg.to || memberName;
+      const summary = msg.summary || msg.text.slice(0, 60);
+
+      showTeamNativeNotification({
+        title: `${teamDisplayName}`,
+        subtitle: `${fromLabel} → ${toLabel}: ${summary}`,
+        body: msg.text,
+      });
+    }
+  } catch (error) {
+    logger.warn(`Failed to check inbox messages for ${key}:`, error);
+  }
+}
 
 // Window icon path for non-mac platforms.
 const getWindowIconPath = (): string | undefined => {
@@ -163,15 +233,33 @@ function wireFileWatcherEvents(context: ServiceContext): void {
     }
     httpServer?.broadcast('team-change', event);
 
-    // Auto-relay direct messages to live team lead process (no UI dependency).
+    // Process inbox change events — relay to lead + native OS notifications.
     try {
       if (!event || typeof event !== 'object') return;
-      const row = event as { type?: unknown; teamName?: unknown };
+      const row = event as { type?: unknown; teamName?: unknown; detail?: unknown };
       if (row.type !== 'inbox') return;
       if (typeof row.teamName !== 'string' || row.teamName.trim().length === 0) return;
       const teamName = row.teamName.trim();
-      if (!teamProvisioningService.isTeamAlive(teamName)) return;
-      void teamProvisioningService.relayLeadInboxMessages(teamName).catch(() => undefined);
+      const detail = typeof row.detail === 'string' ? row.detail : '';
+
+      // Auto-relay direct messages to live team lead process (no UI dependency).
+      if (teamProvisioningService.isTeamAlive(teamName)) {
+        void teamProvisioningService.relayLeadInboxMessages(teamName).catch(() => undefined);
+      }
+
+      // Show native OS notification for new inbox messages (debounced per inbox).
+      if (detail.startsWith('inboxes/')) {
+        const timerKey = `${teamName}:${detail}`;
+        const existing = inboxNotifyTimers.get(timerKey);
+        if (existing) clearTimeout(existing);
+        inboxNotifyTimers.set(
+          timerKey,
+          setTimeout(() => {
+            inboxNotifyTimers.delete(timerKey);
+            void notifyNewInboxMessages(teamName, detail).catch(() => undefined);
+          }, INBOX_NOTIFY_DEBOUNCE_MS)
+        );
+      }
     } catch {
       // ignore
     }

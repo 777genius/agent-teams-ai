@@ -37,7 +37,7 @@ interface LogFileRef {
 
 export class ChangeExtractorService {
   private cache = new Map<string, CacheEntry>();
-  private readonly CACHE_TTL = 3 * 60 * 1000; // 3 мин
+  private readonly CACHE_TTL = 30 * 1000; // 30 сек — shorter TTL to reduce stale data risk
 
   constructor(
     private readonly logsFinder: TeamMemberLogsFinder,

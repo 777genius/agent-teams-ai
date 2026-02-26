@@ -69,6 +69,7 @@ import {
   TEAM_RESTORE_TASK,
   TEAM_SEND_MESSAGE,
   TEAM_SET_TASK_CLARIFICATION,
+  TEAM_SHOW_MESSAGE_NOTIFICATION,
   TEAM_SOFT_DELETE_TASK,
   TEAM_START_TASK,
   TEAM_STOP,
@@ -161,6 +162,7 @@ import type {
   TeamData,
   TeamLaunchRequest,
   TeamLaunchResponse,
+  TeamMessageNotificationData,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamSummary,
@@ -709,6 +711,9 @@ const electronAPI: ElectronAPI = {
       value: 'lead' | 'user' | null
     ) => {
       return invokeIpcWithResult<void>(TEAM_SET_TASK_CLARIFICATION, teamName, taskId, value);
+    },
+    showMessageNotification: async (data: TeamMessageNotificationData) => {
+      return invokeIpcWithResult<void>(TEAM_SHOW_MESSAGE_NOTIFICATION, data);
     },
     onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {
       ipcRenderer.on(

@@ -29,6 +29,9 @@ import type {
 import type { StateCreator } from 'zustand';
 
 // --- Clarification notification tracking ---
+// Native OS notifications for new inbox messages are handled in main process
+// (main/index.ts → notifyNewInboxMessages). This renderer-side tracking only
+// handles clarification-specific logic (e.g., marking tasks as needing user input).
 const notifiedClarificationTaskKeys = new Set<string>();
 
 let isFirstFetchAllTasks = true;
@@ -49,11 +52,19 @@ function detectClarificationNotifications(oldTasks: GlobalTask[], newTasks: Glob
 }
 
 function fireClarificationNotification(task: GlobalTask): void {
-  if (typeof Notification === 'undefined') return;
-  if (Notification.permission !== 'granted') return;
-  new Notification('Clarification needed', {
-    body: `[${task.teamDisplayName}] Task #${task.id}: ${task.subject}`,
-  });
+  // Delegate to main process for native OS notification (cross-platform, no permission needed)
+  const latestComment = task.comments?.length ? task.comments[task.comments.length - 1] : undefined;
+  const body = latestComment?.text || task.description || `Task #${task.id}: ${task.subject}`;
+
+  void api.teams
+    ?.showMessageNotification({
+      teamDisplayName: task.teamDisplayName,
+      from: latestComment?.author || 'team-lead',
+      to: 'user',
+      summary: `Clarification needed — Task #${task.id}`,
+      body,
+    })
+    .catch(() => undefined);
 }
 
 function mapSendMessageError(error: unknown): string {

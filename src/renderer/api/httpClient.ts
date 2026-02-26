@@ -796,6 +796,9 @@ export class HttpAPIClient implements ElectronAPI {
     ): Promise<void> => {
       // Not available via HTTP client — no-op
     },
+    showMessageNotification: async (): Promise<void> => {
+      // Not available via HTTP client — native notifications require Electron
+    },
     onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {
       return this.addEventListener('team-change', (data: unknown) =>
         callback(null, data as TeamChangeEvent)

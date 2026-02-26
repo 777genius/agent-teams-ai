@@ -306,16 +306,16 @@ function buildTaskStatusProtocol(teamName: string): string {
    - Typical flow:
      a) Owner finishes work on #X → task complete #X
      b) Reviewer accepts → review approve #X
-10. CLARIFICATION PROTOCOL (IMPORTANT):
-    When you are blocked and need information to continue a task:
-    a) Do BOTH of these steps:
-       1) Send a message to your team lead via SendMessage explaining what you need.
-       2) Set the clarification flag on the task:
-          node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-clarification <taskId> lead --from "<your-name>"
-    b) The flag is auto-cleared when the lead adds a task comment on your task.
+10. CLARIFICATION PROTOCOL (CRITICAL — MANDATORY):
+    When you are blocked and need information to continue a task, you MUST do BOTH steps below — skipping the Bash command breaks the task board:
+    a) STEP 1 — FIRST, set the clarification flag via Bash (this updates the task board):
+       node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-clarification <taskId> lead --from "<your-name>"
+    b) STEP 2 — THEN, send a message to your team lead via SendMessage explaining what you need.
+    IMPORTANT: Always run the Bash command BEFORE sending the message. The flag is what makes the task board show "needs clarification" — without it, your request is invisible on the board.
+    c) The flag is auto-cleared when the lead adds a task comment on your task.
        If the lead replies via SendMessage instead, clear the flag yourself once you have the answer:
        node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-clarification <taskId> clear --from "<your-name>"
-    c) Do NOT set clarification to "user" yourself — only the team lead escalates to the user.
+    d) Do NOT set clarification to "user" yourself — only the team lead escalates to the user.
 Failure to follow this protocol means the task board will show incorrect status.`);
 }
 
@@ -347,12 +347,16 @@ function buildTeamCtlOpsInstructions(teamName: string, leadName: string): string
       `Notification policy:`,
       `- The --notify flag sends the assignment to the member automatically, so do NOT send a separate SendMessage for the same task.`,
       ``,
-      `Clarification handling:`,
+      `Clarification handling (CRITICAL — MANDATORY for correct task board state):`,
       `- When a teammate needs clarification (needsClarification: "lead"), reply via task comment (preferred — auto-clears the flag) or SendMessage.`,
       `- If you reply via SendMessage instead of task comment, also clear the flag manually:`,
       `  node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-clarification <taskId> clear --from "${leadName}"`,
-      `- If you cannot answer and the user needs to decide, escalate to "user":`,
-      `  node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-clarification <taskId> user --from "${leadName}"`,
+      `- If you cannot answer and the user needs to decide — ESCALATION PROTOCOL:`,
+      `  1) FIRST, set the flag to "user" via Bash (this updates the task board):`,
+      `     node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-clarification <taskId> user --from "${leadName}"`,
+      `  2) THEN, send a message to "user" explaining the question.`,
+      `  3) THEN, reply to the teammate telling them to wait.`,
+      `  IMPORTANT: Always run the Bash command BEFORE sending messages. Without the flag, the task board won't show that the task is blocked waiting for user input.`,
     ].join('\n')
   );
 }

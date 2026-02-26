@@ -309,6 +309,9 @@ export const TEAM_GET_DELETED_TASKS = 'team:getDeletedTasks';
 /** Set needsClarification flag on a task */
 export const TEAM_SET_TASK_CLARIFICATION = 'team:setTaskClarification';
 
+/** Show native OS notification for a team message */
+export const TEAM_SHOW_MESSAGE_NOTIFICATION = 'team:showMessageNotification';
+
 // =============================================================================
 // CLI Installer API Channels
 // =============================================================================

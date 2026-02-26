@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({
   app: { getLocale: vi.fn(() => 'en'), getPath: vi.fn(() => '/tmp') },
-  Notification: vi.fn(),
+  Notification: Object.assign(vi.fn(), { isSupported: vi.fn(() => false) }),
+  BrowserWindow: { getAllWindows: vi.fn(() => []) },
 }));
 
 vi.mock('@preload/constants/ipcChannels', () => ({
@@ -45,6 +46,7 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   TEAM_SOFT_DELETE_TASK: 'team:softDeleteTask',
   TEAM_GET_DELETED_TASKS: 'team:getDeletedTasks',
   TEAM_SET_TASK_CLARIFICATION: 'team:setTaskClarification',
+  TEAM_SHOW_MESSAGE_NOTIFICATION: 'team:showMessageNotification',
   TEAM_RESTORE: 'team:restoreTeam',
   TEAM_PERMANENTLY_DELETE: 'team:permanentlyDeleteTeam',
   TEAM_RESTORE_TASK: 'team:restoreTask',

@@ -374,3 +374,18 @@ export interface UpdateMemberRoleRequest {
   name: string;
   role: string | undefined;
 }
+
+/** Data sent from renderer to main for native OS team message notification. */
+export interface TeamMessageNotificationData {
+  teamDisplayName: string;
+  /** Who sent the message. */
+  from: string;
+  /** Who received the message (member name or "user"). */
+  to?: string;
+  /** Short summary shown in subtitle. */
+  summary?: string;
+  /** Full message body — displayed as notification body (truncated to 300 chars). */
+  body: string;
+  /** Optional sender color for visual context. */
+  color?: string;
+}

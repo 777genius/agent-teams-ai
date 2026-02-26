@@ -20,6 +20,7 @@ import {
 } from '@renderer/constants/cssVariables';
 import { getBaseName } from '@renderer/utils/pathUtils';
 import { formatTokens } from '@shared/utils/tokenFormatting';
+import { diffLines as semanticDiffLines } from 'diff';
 import { Pencil } from 'lucide-react';
 
 // =============================================================================
@@ -41,8 +42,40 @@ interface DiffLine {
 }
 
 // =============================================================================
-// Diff Algorithm (LCS-based)
+// Diff Algorithm (LCS-based, with semantic fallback for large files)
 // =============================================================================
+
+/** Max LCS matrix cells before falling back to semantic diff.
+ *  1M cells ≈ 8MB RAM — safe for all platforms. */
+const MAX_LCS_CELLS = 1_000_000;
+
+/**
+ * Fallback diff using semantic line-diffing from npm `diff` package.
+ * Used when LCS matrix would exceed memory threshold.
+ */
+function generateDiffFallback(oldLines: string[], newLines: string[]): DiffLine[] {
+  const oldText = oldLines.join('\n');
+  const newText = newLines.join('\n');
+  const changes = semanticDiffLines(oldText, newText);
+
+  const result: DiffLine[] = [];
+  let lineNumber = 1;
+
+  for (const change of changes) {
+    const changeLines = change.value.replace(/\r?\n$/, '').split(/\r?\n/);
+    for (const content of changeLines) {
+      if (change.added) {
+        result.push({ type: 'added', content, lineNumber: lineNumber++ });
+      } else if (change.removed) {
+        result.push({ type: 'removed', content, lineNumber: lineNumber++ });
+      } else {
+        result.push({ type: 'context', content, lineNumber: lineNumber++ });
+      }
+    }
+  }
+
+  return result;
+}
 
 /**
  * Computes the Longest Common Subsequence matrix for two arrays of strings.
@@ -69,8 +102,13 @@ function computeLCSMatrix(oldLines: string[], newLines: string[]): number[][] {
 
 /**
  * Backtrack through LCS matrix to generate diff lines.
+ * Falls back to semantic diffing for large files to prevent OOM.
  */
 function generateDiff(oldLines: string[], newLines: string[]): DiffLine[] {
+  if (oldLines.length * newLines.length > MAX_LCS_CELLS) {
+    return generateDiffFallback(oldLines, newLines);
+  }
+
   const matrix = computeLCSMatrix(oldLines, newLines);
   const result: DiffLine[] = [];
 
@@ -276,7 +314,7 @@ const DiffLineRow: React.FC<DiffLineRowProps> = ({ line }): React.JSX.Element =>
       </span>
       {/* Content */}
       <span className="flex-1 whitespace-pre" style={{ color: style.text }}>
-        {line.content || ' '}
+        {line.content ?? ' '}
       </span>
     </div>
   );
@@ -294,8 +332,8 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
   tokenCount,
 }): React.JSX.Element => {
   // Compute diff
-  const oldLines = oldString.split('\n');
-  const newLines = newString.split('\n');
+  const oldLines = oldString.split(/\r?\n/);
+  const newLines = newString.split(/\r?\n/);
   const diffLines = generateDiff(oldLines, newLines);
   const stats = computeStats(diffLines);
 

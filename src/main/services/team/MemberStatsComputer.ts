@@ -371,7 +371,7 @@ export function estimateBashLinesChanged(command: string): BashLinesResult {
       added += content.split('\\n').length;
     }
     const filePath = echoMatch[3];
-    if (filePath?.startsWith('/')) {
+    if (filePath?.trim()) {
       files.push(filePath);
     }
   }

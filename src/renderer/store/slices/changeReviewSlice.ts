@@ -655,9 +655,18 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       set((s) => {
         const nextEdited = { ...s.editedContents };
         delete nextEdited[filePath];
-        // Remove cached file content so next fetchFileContent re-reads from disk
+        // Update cached content in-place to avoid skeleton flash.
+        // Replace modifiedFullContent with saved version so CodeMirror
+        // reflects the new baseline without a full re-fetch cycle.
         const nextContents = { ...s.fileContents };
-        delete nextContents[filePath];
+        const existing = nextContents[filePath];
+        if (existing) {
+          nextContents[filePath] = {
+            ...existing,
+            modifiedFullContent: content,
+            contentSource: 'disk-current',
+          };
+        }
         return { editedContents: nextEdited, fileContents: nextContents, applying: false };
       });
     } catch (error) {

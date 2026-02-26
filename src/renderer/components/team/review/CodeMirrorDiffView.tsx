@@ -125,21 +125,31 @@ function getAsyncLanguageDesc(fileName: string): LanguageDescription | null {
   return LanguageDescription.matchFilename(languages, fileName);
 }
 
-/** Compute hunk index for the chunk at a given position (B-side / modified doc) */
+/** Compute hunk index for the chunk at a given position (B-side / modified doc).
+ *  If the position falls inside a chunk, returns that chunk's index.
+ *  Otherwise returns the nearest chunk by distance (avoids defaulting to 0). */
 function computeHunkIndexAtPos(state: EditorState, pos: number): number {
   const chunks = getChunks(state);
-  if (!chunks) return 0;
+  if (!chunks || chunks.chunks.length === 0) return 0;
+
+  let nearestIndex = 0;
+  let nearestDist = Infinity;
 
   let index = 0;
   for (const chunk of chunks.chunks) {
-    // Only check B-side (modified doc) — editor positions correspond to B-side in unified view.
-    // A-side (fromA/toA) positions refer to the original document and are not editor positions.
+    // Exact match — position is inside this chunk
     if (pos >= chunk.fromB && pos <= chunk.toB) {
       return index;
     }
+    // Track nearest chunk for fallback
+    const dist = Math.min(Math.abs(pos - chunk.fromB), Math.abs(pos - chunk.toB));
+    if (dist < nearestDist) {
+      nearestDist = dist;
+      nearestIndex = index;
+    }
     index++;
   }
-  return 0;
+  return nearestIndex;
 }
 
 /** Custom dark theme for diff view using CSS variables */
@@ -773,7 +783,7 @@ export const CodeMirrorDiffView = ({
           }
         }
       },
-      { threshold: 1.0 }
+      { threshold: 0.85 }
     );
 
     observer.observe(endSentinelRef.current);

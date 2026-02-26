@@ -29,7 +29,7 @@ interface ContentCacheEntry {
  */
 export class FileContentResolver {
   private cache = new Map<string, ContentCacheEntry>();
-  private readonly cacheTtl = 3 * 60 * 1000; // 3 мин (same as ChangeExtractorService)
+  private readonly cacheTtl = 30 * 1000; // 30 сек — shorter TTL to reduce stale data risk
 
   constructor(
     private readonly logsFinder: TeamMemberLogsFinder,

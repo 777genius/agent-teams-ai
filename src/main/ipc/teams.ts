@@ -33,6 +33,7 @@ import {
   TEAM_RESTORE_TASK,
   TEAM_SEND_MESSAGE,
   TEAM_SET_TASK_CLARIFICATION,
+  TEAM_SHOW_MESSAGE_NOTIFICATION,
   TEAM_SOFT_DELETE_TASK,
   TEAM_START_TASK,
   TEAM_STOP,
@@ -47,10 +48,11 @@ import {
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { createLogger } from '@shared/utils/logger';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
-import { type IpcMain, type IpcMainInvokeEvent } from 'electron';
+import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { ConfigManager } from '../services/infrastructure/ConfigManager';
 import { NotificationManager } from '../services/infrastructure/NotificationManager';
 import { gitIdentityResolver } from '../services/parsing/GitIdentityResolver';
 
@@ -88,6 +90,7 @@ import type {
   TeamData,
   TeamLaunchRequest,
   TeamLaunchResponse,
+  TeamMessageNotificationData,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamSummary,
@@ -209,6 +212,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_RESTORE_TASK, handleRestoreTask);
   ipcMain.handle(TEAM_GET_DELETED_TASKS, handleGetDeletedTasks);
   ipcMain.handle(TEAM_SET_TASK_CLARIFICATION, handleSetTaskClarification);
+  ipcMain.handle(TEAM_SHOW_MESSAGE_NOTIFICATION, handleShowMessageNotification);
   logger.info('Team handlers registered');
 }
 
@@ -253,6 +257,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_RESTORE_TASK);
   ipcMain.removeHandler(TEAM_GET_DELETED_TASKS);
   ipcMain.removeHandler(TEAM_SET_TASK_CLARIFICATION);
+  ipcMain.removeHandler(TEAM_SHOW_MESSAGE_NOTIFICATION);
 }
 
 function getTeamDataService(): TeamDataService {
@@ -1592,6 +1597,67 @@ async function handleKillProcess(
       }
     }
   });
+}
+
+async function handleShowMessageNotification(
+  _event: IpcMainInvokeEvent,
+  data: unknown
+): Promise<IpcResult<void>> {
+  if (!data || typeof data !== 'object') {
+    return { success: false, error: 'Invalid notification data' };
+  }
+  const d = data as TeamMessageNotificationData;
+  if (!d.teamDisplayName || !d.from || !d.body) {
+    return { success: false, error: 'Missing required fields (teamDisplayName, from, body)' };
+  }
+
+  showTeamNativeNotification({
+    title: d.teamDisplayName,
+    subtitle: d.summary ?? `${d.from} → ${d.to ?? 'team'}`,
+    body: d.body,
+  });
+  return { success: true, data: undefined };
+}
+
+/**
+ * Show a native OS notification for a team event.
+ * Respects user's notification settings (enabled, snoozed).
+ * Cross-platform: macOS, Linux, Windows via Electron Notification API.
+ */
+export function showTeamNativeNotification(opts: {
+  title: string;
+  subtitle?: string;
+  body: string;
+}): void {
+  const config = ConfigManager.getInstance().getConfig();
+  if (!config.notifications.enabled) return;
+  if (config.notifications.snoozedUntil && Date.now() < config.notifications.snoozedUntil) return;
+
+  if (
+    typeof Notification === 'undefined' ||
+    typeof Notification.isSupported !== 'function' ||
+    !Notification.isSupported()
+  ) {
+    return;
+  }
+
+  const notification = new Notification({
+    title: opts.title,
+    subtitle: opts.subtitle,
+    body: opts.body.slice(0, 300),
+    sound: config.notifications.soundEnabled ? 'default' : undefined,
+  });
+
+  notification.on('click', () => {
+    const windows = BrowserWindow.getAllWindows();
+    const mainWin = windows[0];
+    if (mainWin && !mainWin.isDestroyed()) {
+      mainWin.show();
+      mainWin.focus();
+    }
+  });
+
+  notification.show();
 }
 
 async function handleAddTaskComment(
