@@ -16,6 +16,7 @@
  * - HttpServer: Fastify-based HTTP server for API and static file serving
  */
 
+export * from './CliInstallerService';
 export * from './ConfigManager';
 export * from './DataCache';
 export type * from './FileSystemProvider';

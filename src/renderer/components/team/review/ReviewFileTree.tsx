@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import { getFileHunkCount } from '@renderer/store/slices/changeReviewSlice';
 import {
   Check,
   ChevronRight,
@@ -83,12 +84,20 @@ function buildTree(files: FileChangeSummary[]): TreeNode[] {
 
 function getFileStatus(
   file: FileChangeSummary,
-  hunkDecisions: Record<string, HunkDecision>
+  hunkDecisions: Record<string, HunkDecision>,
+  fileDecisions: Record<string, HunkDecision>,
+  fileChunkCounts: Record<string, number>
 ): FileStatus {
-  if (file.snippets.length === 0) return 'pending';
+  // File-level decision takes priority (set by Accept All / Reject All)
+  const fileDec = fileDecisions[file.filePath];
+  if (fileDec === 'accepted') return 'accepted';
+  if (fileDec === 'rejected') return 'rejected';
+
+  const count = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
+  if (count === 0) return 'pending';
 
   const decisions: HunkDecision[] = [];
-  for (let i = 0; i < file.snippets.length; i++) {
+  for (let i = 0; i < count; i++) {
     const key = `${file.filePath}:${i}`;
     decisions.push(hunkDecisions[key] ?? 'pending');
   }
@@ -142,6 +151,8 @@ const TreeItem = ({
   onSelectFile,
   depth,
   hunkDecisions,
+  fileDecisions,
+  fileChunkCounts,
   viewedSet,
   collapsedFolders,
   onToggleFolder,
@@ -152,6 +163,8 @@ const TreeItem = ({
   onSelectFile: (filePath: string) => void;
   depth: number;
   hunkDecisions: Record<string, HunkDecision>;
+  fileDecisions: Record<string, HunkDecision>;
+  fileChunkCounts: Record<string, number>;
   viewedSet?: Set<string>;
   collapsedFolders: Set<string>;
   onToggleFolder: (fullPath: string) => void;
@@ -159,7 +172,7 @@ const TreeItem = ({
   if (node.isFile && node.file) {
     const isSelected = node.file.filePath === selectedFilePath;
     const isActive = node.file.filePath === activeFilePath && !isSelected;
-    const status = getFileStatus(node.file, hunkDecisions);
+    const status = getFileStatus(node.file, hunkDecisions, fileDecisions, fileChunkCounts);
     return (
       <button
         data-tree-file={node.file.filePath}
@@ -240,6 +253,8 @@ const TreeItem = ({
               onSelectFile={onSelectFile}
               depth={depth + 1}
               hunkDecisions={hunkDecisions}
+              fileDecisions={fileDecisions}
+              fileChunkCounts={fileChunkCounts}
               viewedSet={viewedSet}
               collapsedFolders={collapsedFolders}
               onToggleFolder={onToggleFolder}
@@ -287,6 +302,8 @@ export const ReviewFileTree = ({
   activeFilePath,
 }: ReviewFileTreeProps): JSX.Element => {
   const hunkDecisions = useStore((state) => state.hunkDecisions);
+  const fileDecisions = useStore((state) => state.fileDecisions);
+  const fileChunkCounts = useStore((state) => state.fileChunkCounts);
   const tree = useMemo(() => buildTree(files), [files]);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => new Set());
 
@@ -347,6 +364,8 @@ export const ReviewFileTree = ({
             onSelectFile={onSelectFile}
             depth={0}
             hunkDecisions={hunkDecisions}
+            fileDecisions={fileDecisions}
+            fileChunkCounts={fileChunkCounts}
             viewedSet={viewedSet}
             collapsedFolders={collapsedFolders}
             onToggleFolder={toggleFolder}

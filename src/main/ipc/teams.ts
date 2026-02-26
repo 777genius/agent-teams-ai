@@ -32,6 +32,7 @@ import {
   TEAM_RESTORE,
   TEAM_RESTORE_TASK,
   TEAM_SEND_MESSAGE,
+  TEAM_SET_TASK_CLARIFICATION,
   TEAM_SOFT_DELETE_TASK,
   TEAM_START_TASK,
   TEAM_STOP,
@@ -207,6 +208,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_SOFT_DELETE_TASK, handleSoftDeleteTask);
   ipcMain.handle(TEAM_RESTORE_TASK, handleRestoreTask);
   ipcMain.handle(TEAM_GET_DELETED_TASKS, handleGetDeletedTasks);
+  ipcMain.handle(TEAM_SET_TASK_CLARIFICATION, handleSetTaskClarification);
   logger.info('Team handlers registered');
 }
 
@@ -250,6 +252,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_SOFT_DELETE_TASK);
   ipcMain.removeHandler(TEAM_RESTORE_TASK);
   ipcMain.removeHandler(TEAM_GET_DELETED_TASKS);
+  ipcMain.removeHandler(TEAM_SET_TASK_CLARIFICATION);
 }
 
 function getTeamDataService(): TeamDataService {
@@ -1159,6 +1162,43 @@ async function handleGetDeletedTasks(
 
   return wrapTeamHandler('getDeletedTasks', () =>
     getTeamDataService().getDeletedTasks(validatedTeamName.value!)
+  );
+}
+
+const VALID_CLARIFICATION_VALUES = ['lead', 'user'] as const;
+
+async function handleSetTaskClarification(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown,
+  value: unknown
+): Promise<IpcResult<void>> {
+  const validatedTeamName = validateTeamName(teamName);
+  if (!validatedTeamName.valid) {
+    return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
+  }
+
+  const validatedTaskId = validateTaskId(taskId);
+  if (!validatedTaskId.valid) {
+    return { success: false, error: validatedTaskId.error ?? 'Invalid taskId' };
+  }
+
+  if (
+    value !== null &&
+    (typeof value !== 'string' || !VALID_CLARIFICATION_VALUES.includes(value as 'lead' | 'user'))
+  ) {
+    return {
+      success: false,
+      error: `value must be "lead", "user", or null`,
+    };
+  }
+
+  return wrapTeamHandler('setTaskClarification', () =>
+    getTeamDataService().setTaskNeedsClarification(
+      validatedTeamName.value!,
+      validatedTaskId.value!,
+      value as 'lead' | 'user' | null
+    )
   );
 }
 

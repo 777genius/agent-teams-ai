@@ -17,6 +17,11 @@
 import { createLogger } from '@shared/utils/logger';
 import { ipcMain } from 'electron';
 
+import {
+  initializeCliInstallerHandlers,
+  registerCliInstallerHandlers,
+  removeCliInstallerHandlers,
+} from './cliInstaller';
 import { initializeConfigHandlers, registerConfigHandlers, removeConfigHandlers } from './config';
 import {
   initializeContextHandlers,
@@ -61,6 +66,7 @@ import { registerWindowHandlers, removeWindowHandlers } from './window';
 
 import type {
   ChangeExtractorService,
+  CliInstallerService,
   FileContentResolver,
   GitDiffFallback,
   MemberStatsComputer,
@@ -98,7 +104,8 @@ export function initializeIpcHandlers(
   changeExtractor?: ChangeExtractorService,
   fileContentResolver?: FileContentResolver,
   reviewApplier?: ReviewApplierService,
-  gitDiffFallback?: GitDiffFallback
+  gitDiffFallback?: GitDiffFallback,
+  cliInstaller?: CliInstallerService
 ): void {
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -122,6 +129,9 @@ export function initializeIpcHandlers(
   });
   if (httpServerDeps) {
     initializeHttpServerHandlers(httpServerDeps.httpServer, httpServerDeps.startHttpServer);
+  }
+  if (cliInstaller) {
+    initializeCliInstallerHandlers(cliInstaller);
   }
   if (changeExtractor) {
     initializeReviewHandlers({
@@ -147,6 +157,9 @@ export function initializeIpcHandlers(
   registerTeamHandlers(ipcMain);
   registerReviewHandlers(ipcMain);
   registerWindowHandlers(ipcMain);
+  if (cliInstaller) {
+    registerCliInstallerHandlers(ipcMain);
+  }
   if (httpServerDeps) {
     registerHttpServerHandlers(ipcMain);
   }
@@ -173,6 +186,7 @@ export function removeIpcHandlers(): void {
   removeTeamHandlers(ipcMain);
   removeReviewHandlers(ipcMain);
   removeWindowHandlers(ipcMain);
+  removeCliInstallerHandlers(ipcMain);
   removeHttpServerHandlers(ipcMain);
 
   logger.info('All handlers removed');

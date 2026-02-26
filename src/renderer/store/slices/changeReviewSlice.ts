@@ -26,6 +26,14 @@ import type { StateCreator } from 'zustand';
 
 const logger = createLogger('changeReviewSlice');
 
+/** Snapshot of review decisions for undo support */
+interface DecisionSnapshot {
+  hunkDecisions: Record<string, HunkDecision>;
+  fileDecisions: Record<string, HunkDecision>;
+}
+
+const MAX_REVIEW_UNDO_DEPTH = 10;
+
 /**
  * When true, rejected hunks are immediately applied to disk (no need for "Apply All Changes").
  * When false, decisions are batched and applied manually via "Apply All Changes" button.
@@ -51,6 +59,10 @@ export interface ChangeReviewSlice {
   // Phase 2 state
   hunkDecisions: Record<string, HunkDecision>;
   fileDecisions: Record<string, HunkDecision>;
+  /** Actual CodeMirror chunk count per file (may differ from snippets.length) */
+  fileChunkCounts: Record<string, number>;
+  /** Undo stack for bulk review operations (Accept All / Reject All) */
+  reviewUndoStack: DecisionSnapshot[];
   fileContents: Record<string, FileChangeWithContent>;
   fileContentsLoading: Record<string, boolean>;
   collapseUnchanged: boolean;
@@ -80,6 +92,9 @@ export interface ChangeReviewSlice {
   // Phase 2 actions
   setHunkDecision: (filePath: string, hunkIndex: number, decision: HunkDecision) => void;
   setFileDecision: (filePath: string, decision: HunkDecision) => void;
+  setFileChunkCount: (filePath: string, count: number) => void;
+  pushReviewUndoSnapshot: () => void;
+  undoBulkReview: () => boolean;
   acceptAllFile: (filePath: string) => void;
   rejectAllFile: (filePath: string) => void;
   acceptAll: () => void;
@@ -109,6 +124,46 @@ export interface ChangeReviewSlice {
   checkTaskHasChanges: (teamName: string, taskId: string) => Promise<void>;
 }
 
+/**
+ * Map a current CM chunk index to its original index, accounting for chunks
+ * that have been accepted/rejected (removed from CM view, causing index shifts).
+ *
+ * When chunk 0 is accepted, CM removes it — old chunk 1 becomes new chunk 0.
+ * This function reverses that shift so decisions are stored with stable indices.
+ */
+function mapCurrentToOriginalIndex(
+  filePath: string,
+  currentIdx: number,
+  hunkDecisions: Record<string, HunkDecision>,
+  totalChunks: number
+): number {
+  const decided = new Set<number>();
+  for (let i = 0; i < totalChunks; i++) {
+    if (`${filePath}:${i}` in hunkDecisions) {
+      decided.add(i);
+    }
+  }
+
+  // Walk original indices, skip already-decided, count undecided until currentIdx
+  let undecidedSeen = 0;
+  for (let orig = 0; orig < totalChunks; orig++) {
+    if (decided.has(orig)) continue;
+    if (undecidedSeen === currentIdx) return orig;
+    undecidedSeen++;
+  }
+
+  return currentIdx;
+}
+
+/** Get the hunk count for a file: prefer actual CM chunk count, fallback to snippet count */
+export function getFileHunkCount(
+  filePath: string,
+  snippetsLength: number,
+  fileChunkCounts: Record<string, number>
+): number {
+  return fileChunkCounts[filePath] ?? snippetsLength;
+}
+
 export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeReviewSlice> = (
   set,
   get
@@ -123,6 +178,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
   // Phase 2 initial state
   hunkDecisions: {},
   fileDecisions: {},
+  fileChunkCounts: {},
+  reviewUndoStack: [],
   fileContents: {},
   fileContentsLoading: {},
   collapseUnchanged: true,
@@ -180,6 +237,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       selectedReviewFilePath: null,
       hunkDecisions: {},
       fileDecisions: {},
+      fileChunkCounts: {},
+      reviewUndoStack: [],
       fileContents: {},
       fileContentsLoading: {},
       applyError: null,
@@ -194,6 +253,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       changeSetLoading: false,
       changeSetError: null,
       selectedReviewFilePath: null,
+      fileChunkCounts: {},
+      reviewUndoStack: [],
       fileContents: {},
       fileContentsLoading: {},
       applyError: null,
@@ -210,6 +271,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       selectedReviewFilePath: null,
       hunkDecisions: {},
       fileDecisions: {},
+      fileChunkCounts: {},
+      reviewUndoStack: [],
       fileContents: {},
       fileContentsLoading: {},
       applyError: null,
@@ -267,9 +330,17 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
   // ── Phase 2 actions ──
 
   setHunkDecision: (filePath: string, hunkIndex: number, decision: HunkDecision) => {
-    const key = `${filePath}:${hunkIndex}`;
-    set((state) => ({
-      hunkDecisions: { ...state.hunkDecisions, [key]: decision },
+    const state = get();
+    const totalChunks = state.fileChunkCounts[filePath] ?? 0;
+    // Map current chunk index to original: after accept/reject, chunks shift in CM.
+    // We need the original index to keep decisions stable across shifts.
+    const originalIndex =
+      totalChunks > 0
+        ? mapCurrentToOriginalIndex(filePath, hunkIndex, state.hunkDecisions, totalChunks)
+        : hunkIndex;
+    const key = `${filePath}:${originalIndex}`;
+    set((s) => ({
+      hunkDecisions: { ...s.hunkDecisions, [key]: decision },
     }));
   },
 
@@ -279,13 +350,46 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     }));
   },
 
+  setFileChunkCount: (filePath: string, count: number) => {
+    set((s) => ({
+      fileChunkCounts: { ...s.fileChunkCounts, [filePath]: count },
+    }));
+  },
+
+  pushReviewUndoSnapshot: () => {
+    const state = get();
+    const snapshot: DecisionSnapshot = {
+      hunkDecisions: { ...state.hunkDecisions },
+      fileDecisions: { ...state.fileDecisions },
+    };
+    const stack = [...state.reviewUndoStack, snapshot];
+    if (stack.length > MAX_REVIEW_UNDO_DEPTH) {
+      stack.shift();
+    }
+    set({ reviewUndoStack: stack });
+  },
+
+  undoBulkReview: () => {
+    const state = get();
+    if (state.reviewUndoStack.length === 0) return false;
+    const stack = [...state.reviewUndoStack];
+    const snapshot = stack.pop()!;
+    set({
+      hunkDecisions: snapshot.hunkDecisions,
+      fileDecisions: snapshot.fileDecisions,
+      reviewUndoStack: stack,
+    });
+    return true;
+  },
+
   acceptAllFile: (filePath: string) => {
     const state = get();
     const file = state.activeChangeSet?.files.find((f) => f.filePath === filePath);
     if (!file) return;
 
+    const count = getFileHunkCount(filePath, file.snippets.length, state.fileChunkCounts);
     const newHunkDecisions = { ...state.hunkDecisions };
-    for (let i = 0; i < file.snippets.length; i++) {
+    for (let i = 0; i < count; i++) {
       newHunkDecisions[`${filePath}:${i}`] = 'accepted';
     }
     set({
@@ -299,8 +403,9 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     const file = state.activeChangeSet?.files.find((f) => f.filePath === filePath);
     if (!file) return;
 
+    const count = getFileHunkCount(filePath, file.snippets.length, state.fileChunkCounts);
     const newHunkDecisions = { ...state.hunkDecisions };
-    for (let i = 0; i < file.snippets.length; i++) {
+    for (let i = 0; i < count; i++) {
       newHunkDecisions[`${filePath}:${i}`] = 'rejected';
     }
     set({
@@ -318,7 +423,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
 
     for (const file of state.activeChangeSet.files) {
       newFileDecisions[file.filePath] = 'accepted';
-      for (let i = 0; i < file.snippets.length; i++) {
+      const count = getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts);
+      for (let i = 0; i < count; i++) {
         newHunkDecisions[`${file.filePath}:${i}`] = 'accepted';
       }
     }
@@ -334,7 +440,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
 
     for (const file of state.activeChangeSet.files) {
       newFileDecisions[file.filePath] = 'rejected';
-      for (let i = 0; i < file.snippets.length; i++) {
+      const count = getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts);
+      for (let i = 0; i < count; i++) {
         newHunkDecisions[`${file.filePath}:${i}`] = 'rejected';
       }
     }
@@ -546,9 +653,12 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     try {
       await api.review.saveEditedFile(filePath, content);
       set((s) => {
-        const next = { ...s.editedContents };
-        delete next[filePath];
-        return { editedContents: next, applying: false };
+        const nextEdited = { ...s.editedContents };
+        delete nextEdited[filePath];
+        // Remove cached file content so next fetchFileContent re-reads from disk
+        const nextContents = { ...s.fileContents };
+        delete nextContents[filePath];
+        return { editedContents: nextEdited, fileContents: nextContents, applying: false };
       });
     } catch (error) {
       set({ applying: false, applyError: mapReviewError(error) });

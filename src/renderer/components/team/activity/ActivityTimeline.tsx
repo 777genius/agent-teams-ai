@@ -150,12 +150,15 @@ export const ActivityTimeline = ({
 
   const hiddenCount = Math.max(0, messages.length - visibleCount);
 
-  useEffect(() => {
-    if (wasShowingAllRef.current && hiddenCount > 0) {
-      queueMicrotask(() => setVisibleCount(messages.length));
-    }
-    wasShowingAllRef.current = hiddenCount === 0;
-  }, [hiddenCount, messages.length]);
+  // Auto-expand when user was seeing all and new messages arrive — derived state sync.
+  // Reading/updating ref during render is intentional (React docs: derived state sync).
+  /* eslint-disable react-hooks/refs -- ref stores previous frame's "showing all" for derived state sync */
+  const wasShowingAll = wasShowingAllRef.current;
+  if (wasShowingAll && hiddenCount > 0) {
+    setVisibleCount(messages.length);
+  }
+  wasShowingAllRef.current = hiddenCount === 0;
+  /* eslint-enable react-hooks/refs -- end of intentional ref access during render */
 
   const visibleMessages = useMemo(
     () => (hiddenCount > 0 ? messages.slice(0, visibleCount) : messages),

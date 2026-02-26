@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '@renderer/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader } from '@renderer/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
+import { useMemberStats } from '@renderer/hooks/useMemberStats';
 import { BarChart3, FileText, ListPlus, MessageSquare, UserMinus } from 'lucide-react';
 
 import { MemberDetailHeader } from './MemberDetailHeader';
@@ -78,6 +79,14 @@ export const MemberDetailDialog = ({
 
   const [activeTab, setActiveTab] = useState<MemberDetailTab>('tasks');
 
+  const {
+    stats: memberStats,
+    loading: statsLoading,
+    error: statsError,
+  } = useMemberStats(teamName, member?.name ?? null);
+
+  const totalTokens = memberStats ? memberStats.inputTokens + memberStats.outputTokens : null;
+
   if (!member) return null;
 
   return (
@@ -102,7 +111,9 @@ export const MemberDetailDialog = ({
             inProgressTasks={inProgressTasks}
             completedTasks={completedTasks}
             messageCount={memberMessages.length}
-            lastActiveAt={member.lastActiveAt}
+            totalTokens={totalTokens}
+            statsLoading={statsLoading}
+            statsComputedAt={memberStats?.computedAt}
             onTabChange={setActiveTab}
           />
         </div>
@@ -148,6 +159,9 @@ export const MemberDetailDialog = ({
             <MemberStatsTab
               teamName={teamName}
               memberName={member.name}
+              prefetchedStats={memberStats}
+              prefetchedLoading={statsLoading}
+              prefetchedError={statsError}
               onFileClick={(filePath) => onViewMemberChanges?.(member.name, filePath)}
               onShowAllFiles={() => onViewMemberChanges?.(member.name)}
             />

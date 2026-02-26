@@ -3,6 +3,9 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 import {
   APP_RELAUNCH,
+  CLI_INSTALLER_GET_STATUS,
+  CLI_INSTALLER_INSTALL,
+  CLI_INSTALLER_PROGRESS,
   CONTEXT_CHANGED,
   CONTEXT_GET_ACTIVE,
   CONTEXT_LIST,
@@ -65,6 +68,7 @@ import {
   TEAM_RESTORE,
   TEAM_RESTORE_TASK,
   TEAM_SEND_MESSAGE,
+  TEAM_SET_TASK_CLARIFICATION,
   TEAM_SOFT_DELETE_TASK,
   TEAM_START_TASK,
   TEAM_STOP,
@@ -122,6 +126,8 @@ import type {
   ChangeStats,
   ClaudeRootFolderSelection,
   ClaudeRootInfo,
+  CliInstallationStatus,
+  CliInstallerProgress,
   ConflictCheckResult,
   ContextInfo,
   CreateTaskRequest,
@@ -432,6 +438,7 @@ const electronAPI: ElectronAPI = {
   // Shell operations
   openPath: (targetPath: string, projectRoot?: string, userSelectedFromDialog?: boolean) =>
     ipcRenderer.invoke('shell:openPath', targetPath, projectRoot, userSelectedFromDialog),
+  showInFolder: (filePath: string) => ipcRenderer.invoke('shell:showInFolder', filePath),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
 
   // Window controls (when title bar is hidden, e.g. Windows / Linux)
@@ -696,6 +703,13 @@ const electronAPI: ElectronAPI = {
     getDeletedTasks: async (teamName: string) => {
       return invokeIpcWithResult<TeamTask[]>(TEAM_GET_DELETED_TASKS, teamName);
     },
+    setTaskClarification: async (
+      teamName: string,
+      taskId: string,
+      value: 'lead' | 'user' | null
+    ) => {
+      return invokeIpcWithResult<void>(TEAM_SET_TASK_CLARIFICATION, teamName, taskId, value);
+    },
     onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {
       ipcRenderer.on(
         TEAM_CHANGE,
@@ -837,6 +851,28 @@ const electronAPI: ElectronAPI = {
         projectPath,
         filePath
       );
+    },
+  },
+
+  // ===== CLI Installer API =====
+  cliInstaller: {
+    getStatus: async (): Promise<CliInstallationStatus> => {
+      return invokeIpcWithResult<CliInstallationStatus>(CLI_INSTALLER_GET_STATUS);
+    },
+    install: async (): Promise<void> => {
+      return invokeIpcWithResult<void>(CLI_INSTALLER_INSTALL);
+    },
+    onProgress: (callback: (event: unknown, data: CliInstallerProgress) => void): (() => void) => {
+      ipcRenderer.on(
+        CLI_INSTALLER_PROGRESS,
+        callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+      );
+      return (): void => {
+        ipcRenderer.removeListener(
+          CLI_INSTALLER_PROGRESS,
+          callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+        );
+      };
     },
   },
 };

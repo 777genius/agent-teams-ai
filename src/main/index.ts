@@ -36,6 +36,7 @@ import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { HttpServer } from './services/infrastructure/HttpServer';
 import { getProjectsBasePath, getTodosBasePath } from './utils/pathDecoder';
 import {
+  CliInstallerService,
   configManager,
   LocalFileSystemProvider,
   MemberStatsComputer,
@@ -94,6 +95,7 @@ let updaterService: UpdaterService;
 let sshConnectionManager: SshConnectionManager;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
+let cliInstallerService: CliInstallerService;
 let httpServer: HttpServer;
 
 // File watcher event cleanup functions
@@ -304,8 +306,9 @@ function initializeServices(): void {
   // Wire file watcher events for local context
   wireFileWatcherEvents(localContext);
 
-  // Initialize updater service
+  // Initialize updater and CLI installer services
   updaterService = new UpdaterService();
+  cliInstallerService = new CliInstallerService();
   teamDataService = new TeamDataService();
   teamProvisioningService = new TeamProvisioningService();
   const teamMemberLogsFinder = new TeamMemberLogsFinder();
@@ -357,7 +360,8 @@ function initializeServices(): void {
     changeExtractor,
     fileContentResolver,
     reviewApplier,
-    gitDiffFallback
+    gitDiffFallback,
+    cliInstallerService
   );
 
   // Forward SSH state changes to renderer and HTTP SSE clients
@@ -599,6 +603,9 @@ function createWindow(): void {
     if (updaterService) {
       updaterService.setMainWindow(null);
     }
+    if (cliInstallerService) {
+      cliInstallerService.setMainWindow(null);
+    }
   });
 
   // Handle renderer process crashes (render-process-gone replaces deprecated 'crashed' event)
@@ -613,6 +620,9 @@ function createWindow(): void {
   }
   if (updaterService) {
     updaterService.setMainWindow(mainWindow);
+  }
+  if (cliInstallerService) {
+    cliInstallerService.setMainWindow(mainWindow);
   }
 
   logger.info('Main window created');

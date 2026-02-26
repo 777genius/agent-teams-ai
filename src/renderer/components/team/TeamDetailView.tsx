@@ -519,6 +519,23 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   }, [teamName, refreshTeamData]);
 
   const selectReviewFile = useStore((s) => s.selectReviewFile);
+  const pendingReviewRequest = useStore((s) => s.pendingReviewRequest);
+  const setPendingReviewRequest = useStore((s) => s.setPendingReviewRequest);
+
+  // Pick up pending review request from GlobalTaskDetailDialog
+  useEffect(() => {
+    if (!pendingReviewRequest) return;
+    setReviewDialogState({
+      open: true,
+      mode: 'task',
+      taskId: pendingReviewRequest.taskId,
+      initialFilePath: pendingReviewRequest.filePath,
+    });
+    if (pendingReviewRequest.filePath) {
+      selectReviewFile(pendingReviewRequest.filePath);
+    }
+    setPendingReviewRequest(null);
+  }, [pendingReviewRequest, selectReviewFile, setPendingReviewRequest]);
 
   const handleDeleteTask = useCallback(
     (taskId: string) => {

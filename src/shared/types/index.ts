@@ -29,3 +29,6 @@ export type * from './team';
 
 // Re-export Review types (Phase 1)
 export type * from './review';
+
+// Re-export CLI Installer types
+export type * from './cliInstaller';

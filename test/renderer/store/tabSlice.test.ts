@@ -102,12 +102,15 @@ describe('tabSlice', () => {
         expect(sessionTabs).toHaveLength(2);
       });
 
-      it('should not deduplicate dashboard tabs', () => {
+      it('should reuse existing dashboard tab instead of creating duplicate', () => {
         store.getState().openDashboard();
+        const firstTabId = store.getState().activeTabId;
+
         store.getState().openDashboard();
 
-        expect(store.getState().openTabs).toHaveLength(2);
-        expect(store.getState().openTabs.filter((t) => t.type === 'dashboard')).toHaveLength(2);
+        expect(store.getState().openTabs).toHaveLength(1);
+        expect(store.getState().openTabs.filter((t) => t.type === 'dashboard')).toHaveLength(1);
+        expect(store.getState().activeTabId).toBe(firstTabId);
       });
     });
 

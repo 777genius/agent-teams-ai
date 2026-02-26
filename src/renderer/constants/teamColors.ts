@@ -23,6 +23,7 @@ const TEAMMATE_COLORS: Record<string, TeamColorSet> = {
   cyan: { border: '#06b6d4', badge: 'rgba(6, 182, 212, 0.15)', text: '#22d3ee' },
   orange: { border: '#f97316', badge: 'rgba(249, 115, 22, 0.15)', text: '#fb923c' },
   pink: { border: '#ec4899', badge: 'rgba(236, 72, 153, 0.15)', text: '#f472b6' },
+  magenta: { border: '#d946ef', badge: 'rgba(217, 70, 239, 0.15)', text: '#e879f9' },
   /** Reserved for the human user — never assigned to team members. */
   user: { border: '#f5f5f4', badge: 'rgba(245, 245, 244, 0.12)', text: '#d6d3d1' },
 };

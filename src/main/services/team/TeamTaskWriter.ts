@@ -190,6 +190,34 @@ export class TeamTaskWriter {
     });
   }
 
+  async setNeedsClarification(
+    teamName: string,
+    taskId: string,
+    value: 'lead' | 'user' | null
+  ): Promise<void> {
+    const taskPath = path.join(getTasksBasePath(), teamName, `${taskId}.json`);
+
+    await withTaskLock(taskPath, async () => {
+      let raw: string;
+      try {
+        raw = await fs.promises.readFile(taskPath, 'utf8');
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          throw new Error(`Task not found: ${taskId}`);
+        }
+        throw error;
+      }
+
+      const task = JSON.parse(raw) as Record<string, unknown>;
+      if (value) {
+        task.needsClarification = value;
+      } else {
+        delete task.needsClarification;
+      }
+      await atomicWriteAsync(taskPath, JSON.stringify(task, null, 2));
+    });
+  }
+
   async addComment(
     teamName: string,
     taskId: string,

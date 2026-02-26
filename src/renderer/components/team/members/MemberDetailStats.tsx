@@ -1,4 +1,4 @@
-import { formatDistanceToNow } from 'date-fns';
+import { formatRelativeTime, formatTokensCompact } from '@renderer/utils/formatters';
 
 export type MemberDetailTab = 'tasks' | 'messages' | 'stats' | 'logs';
 
@@ -7,7 +7,9 @@ interface MemberDetailStatsProps {
   inProgressTasks: number;
   completedTasks: number;
   messageCount: number;
-  lastActiveAt: string | null;
+  totalTokens: number | null;
+  statsLoading?: boolean;
+  statsComputedAt?: string;
   onTabChange?: (tab: MemberDetailTab) => void;
 }
 
@@ -50,12 +52,18 @@ export const MemberDetailStats = ({
   inProgressTasks,
   completedTasks,
   messageCount,
-  lastActiveAt,
+  totalTokens,
+  statsLoading,
+  statsComputedAt,
   onTabChange,
 }: MemberDetailStatsProps): React.JSX.Element => {
-  const lastActive = lastActiveAt
-    ? formatDistanceToNow(new Date(lastActiveAt), { addSuffix: true })
-    : '—';
+  const tokensValue = statsLoading
+    ? '...'
+    : totalTokens != null
+      ? formatTokensCompact(totalTokens)
+      : '—';
+  const tokensSub =
+    !statsLoading && statsComputedAt ? `updated ${formatRelativeTime(statsComputedAt)}` : undefined;
 
   return (
     <div className="grid min-w-0 flex-1 grid-cols-4 gap-1.5">
@@ -76,9 +84,10 @@ export const MemberDetailStats = ({
         onClick={onTabChange ? () => onTabChange('messages') : undefined}
       />
       <StatBlock
-        label="Activity"
-        value={lastActive}
-        onClick={onTabChange ? () => onTabChange('logs') : undefined}
+        label="Tokens"
+        value={tokensValue}
+        sub={tokensSub}
+        onClick={onTabChange ? () => onTabChange('stats') : undefined}
       />
     </div>
   );

@@ -35,6 +35,7 @@ import { countTokens } from '../utils/tokenizer';
 export function registerUtilityHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('get-app-version', handleGetAppVersion);
   ipcMain.handle('shell:openPath', handleShellOpenPath);
+  ipcMain.handle('shell:showInFolder', handleShellShowInFolder);
   ipcMain.handle('shell:openExternal', handleShellOpenExternal);
   ipcMain.handle('read-claude-md-files', handleReadClaudeMdFiles);
   ipcMain.handle('read-directory-claude-md', handleReadDirectoryClaudeMd);
@@ -50,6 +51,7 @@ export function registerUtilityHandlers(ipcMain: IpcMain): void {
 export function removeUtilityHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler('get-app-version');
   ipcMain.removeHandler('shell:openPath');
+  ipcMain.removeHandler('shell:showInFolder');
   ipcMain.removeHandler('shell:openExternal');
   ipcMain.removeHandler('read-claude-md-files');
   ipcMain.removeHandler('read-directory-claude-md');
@@ -69,6 +71,16 @@ export function removeUtilityHandlers(ipcMain: IpcMain): void {
  */
 function handleGetAppVersion(): string {
   return app.getVersion();
+}
+
+/**
+ * Handler for 'shell:showInFolder' IPC call.
+ * Reveals a file in the system file manager (Finder/Explorer).
+ */
+function handleShellShowInFolder(_event: IpcMainInvokeEvent, filePath: string): void {
+  if (typeof filePath === 'string' && filePath.length > 0 && fs.existsSync(filePath)) {
+    shell.showItemInFolder(filePath);
+  }
 }
 
 /**

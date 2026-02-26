@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { cn } from '@renderer/lib/utils';
+import { formatRelativeTime } from '@renderer/utils/formatters';
 import { formatTokensCompact } from '@shared/utils/tokenFormatting';
 import {
   AlertCircle,
@@ -18,6 +19,9 @@ import type { FileLineStats, MemberFullStats } from '@shared/types';
 interface MemberStatsTabProps {
   teamName: string;
   memberName: string;
+  prefetchedStats?: MemberFullStats | null;
+  prefetchedLoading?: boolean;
+  prefetchedError?: string | null;
   onFileClick?: (filePath: string) => void;
   onShowAllFiles?: () => void;
 }
@@ -25,39 +29,44 @@ interface MemberStatsTabProps {
 export const MemberStatsTab = ({
   teamName,
   memberName,
+  prefetchedStats,
+  prefetchedLoading,
+  prefetchedError,
   onFileClick,
   onShowAllFiles,
 }: MemberStatsTabProps): React.JSX.Element => {
-  const [stats, setStats] = useState<MemberFullStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const usePrefetched = prefetchedStats !== undefined;
+
+  const [localStats, setLocalStats] = useState<MemberFullStats | null>(null);
+  const [localLoading, setLocalLoading] = useState(!usePrefetched);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (usePrefetched) return;
+
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    setLocalLoading(true);
+    setLocalError(null);
 
     void (async () => {
       try {
         const result = await api.teams.getMemberStats(teamName, memberName);
-        if (!cancelled) {
-          setStats(result);
-        }
+        if (!cancelled) setLocalStats(result);
       } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Unknown error');
-        }
+        if (!cancelled) setLocalError(e instanceof Error ? e.message : 'Unknown error');
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLocalLoading(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [teamName, memberName]);
+  }, [teamName, memberName, usePrefetched]);
+
+  const stats = usePrefetched ? (prefetchedStats ?? null) : localStats;
+  const loading = usePrefetched ? (prefetchedLoading ?? false) : localLoading;
+  const error = usePrefetched ? (prefetchedError ?? null) : localError;
 
   if (loading) {
     return (
@@ -192,7 +201,17 @@ const ToolUsageBars = ({
   );
 };
 
-const INVALID_PATHS = new Set(['null', 'undefined', 'None', '']);
+const TRAILING_PUNCT = ';.,';
+
+function isInvalidPath(path: string): boolean {
+  let trimmed = path.trim();
+  let end = trimmed.length;
+  while (end > 0 && TRAILING_PUNCT.includes(trimmed[end - 1])) {
+    end--;
+  }
+  trimmed = trimmed.slice(0, end);
+  return !trimmed || trimmed === 'null' || trimmed === 'undefined' || trimmed === 'None';
+}
 
 const FilesTouchedSection = ({
   files,
@@ -207,7 +226,7 @@ const FilesTouchedSection = ({
 }): React.JSX.Element | null => {
   const [expanded, setExpanded] = useState(false);
 
-  const validFiles = files.filter((f) => !INVALID_PATHS.has(f));
+  const validFiles = files.filter((f) => !isInvalidPath(f));
   if (validFiles.length === 0) return null;
 
   const visibleFiles = expanded ? validFiles : validFiles.slice(0, 5);
@@ -246,7 +265,7 @@ const FilesTouchedSection = ({
               <FileCode size={10} className="shrink-0 opacity-50" />
               <span className="min-w-0 truncate">{basename}</span>
               {fStats && (fStats.added > 0 || fStats.removed > 0) && (
-                <span className="ml-auto flex shrink-0 items-center gap-1 font-mono text-[10px]">
+                <span className="flex shrink-0 items-center gap-1 font-mono text-[10px]">
                   {fStats.added > 0 && <span className="text-emerald-400">+{fStats.added}</span>}
                   {fStats.removed > 0 && <span className="text-red-400">-{fStats.removed}</span>}
                 </span>
@@ -277,16 +296,3 @@ const StatsFooter = ({ stats }: { stats: MemberFullStats }): React.JSX.Element =
     </div>
   );
 };
-
-function formatRelativeTime(isoString: string): string {
-  const date = new Date(isoString);
-  const now = Date.now();
-  const diffMs = now - date.getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  const diffHours = Math.floor(diffMin / 60);
-
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return date.toLocaleDateString();
-}

@@ -7,7 +7,7 @@ import { isLastChunkInFile, useDiffNavigation } from '@renderer/hooks/useDiffNav
 import { useViewedFiles } from '@renderer/hooks/useViewedFiles';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
-import { REVIEW_INSTANT_APPLY } from '@renderer/store/slices/changeReviewSlice';
+import { getFileHunkCount, REVIEW_INSTANT_APPLY } from '@renderer/store/slices/changeReviewSlice';
 import { ChevronDown, Clock, X } from 'lucide-react';
 
 import { acceptAllChunks, rejectAllChunks } from './CodeMirrorDiffUtils';
@@ -74,6 +74,10 @@ export const ChangeReviewDialog = ({
     persistDecisions,
     clearDecisionsFromDisk,
     resetAllReviewState,
+    fileChunkCounts,
+    pushReviewUndoSnapshot,
+    undoBulkReview,
+    reviewUndoStack,
   } = useStore();
 
   // Active file from scroll-spy (replaces selectedReviewFilePath for continuous scroll)
@@ -147,6 +151,7 @@ export const ChangeReviewDialog = ({
   // Accept/Reject all across all files
   const handleAcceptAll = useCallback(() => {
     if (!activeChangeSet) return;
+    pushReviewUndoSnapshot();
     for (const file of activeChangeSet.files) {
       acceptAllFile(file.filePath);
     }
@@ -155,10 +160,11 @@ export const ChangeReviewDialog = ({
         acceptAllChunks(view);
       }
     });
-  }, [activeChangeSet, acceptAllFile]);
+  }, [activeChangeSet, acceptAllFile, pushReviewUndoSnapshot]);
 
   const handleRejectAll = useCallback(() => {
     if (!activeChangeSet) return;
+    pushReviewUndoSnapshot();
     for (const file of activeChangeSet.files) {
       rejectAllFile(file.filePath);
     }
@@ -167,7 +173,7 @@ export const ChangeReviewDialog = ({
         rejectAllChunks(view);
       }
     });
-  }, [activeChangeSet, rejectAllFile]);
+  }, [activeChangeSet, rejectAllFile, pushReviewUndoSnapshot]);
 
   // Per-file callbacks for ContinuousScrollView
   const handleHunkAccepted = useCallback(
@@ -217,6 +223,21 @@ export const ChangeReviewDialog = ({
     },
     [discardFileEdits]
   );
+
+  // Undo last bulk review operation (Accept All / Reject All)
+  const handleUndoBulk = useCallback(() => {
+    const restored = undoBulkReview();
+    if (restored && activeChangeSet) {
+      // Nuclear reset: increment discard counters for all files to force CM remount
+      setDiscardCounters((prev) => {
+        const next = { ...prev };
+        for (const file of activeChangeSet.files) {
+          next[file.filePath] = (next[file.filePath] ?? 0) + 1;
+        }
+        return next;
+      });
+    }
+  }, [undoBulkReview, activeChangeSet]);
 
   // Save active file (for Cmd+Enter keyboard shortcut)
   const handleSaveActiveFile = useCallback(() => {
@@ -276,12 +297,21 @@ export const ChangeReviewDialog = ({
     loadDecisionsFromDisk,
   ]);
 
-  // Persist decisions to disk on change (debounced via store action)
+  // Persist decisions to disk on change (debounced via store action).
+  // When decisions go from non-empty to empty (e.g. undo to clean state),
+  // clear the persisted file so stale decisions don't reload on reopen.
   const hasDecisions =
     Object.keys(hunkDecisions).length > 0 || Object.keys(fileDecisions).length > 0;
+  const hadDecisionsRef = useRef(false);
   useEffect(() => {
-    if (!open || !hasDecisions) return;
-    persistDecisions(teamName, decisionScopeKey);
+    if (!open) return;
+    if (hasDecisions) {
+      hadDecisionsRef.current = true;
+      persistDecisions(teamName, decisionScopeKey);
+    } else if (hadDecisionsRef.current) {
+      hadDecisionsRef.current = false;
+      void clearDecisionsFromDisk(teamName, decisionScopeKey);
+    }
   }, [
     open,
     hasDecisions,
@@ -290,6 +320,7 @@ export const ChangeReviewDialog = ({
     teamName,
     decisionScopeKey,
     persistDecisions,
+    clearDecisionsFromDisk,
   ]);
 
   // Reset initial scroll flag when initialFilePath changes
@@ -318,6 +349,25 @@ export const ChangeReviewDialog = ({
     return () => document.removeEventListener('keydown', handler);
   }, [open, onOpenChange]);
 
+  // Cmd+Z for undo bulk review (when not inside a CM editor)
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        // Don't intercept if focus is inside a CM editor — let CM handle its own undo
+        if (document.activeElement?.closest('.cm-editor')) return;
+
+        if (useStore.getState().reviewUndoStack.length > 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          handleUndoBulk();
+        }
+      }
+    };
+    document.addEventListener('keydown', handler, true);
+    return () => document.removeEventListener('keydown', handler, true);
+  }, [open, handleUndoBulk]);
+
   // Cmd+N IPC listener (forwarded from main process)
   useEffect(() => {
     if (!open) return;
@@ -338,7 +388,7 @@ export const ChangeReviewDialog = ({
     return cleanup ?? undefined;
   }, [open, diffNav]);
 
-  // Compute toolbar stats
+  // Compute toolbar stats using actual CM chunk count (not snippet count)
   const reviewStats = useMemo(() => {
     if (!activeChangeSet) return { pending: 0, accepted: 0, rejected: 0 };
 
@@ -347,7 +397,20 @@ export const ChangeReviewDialog = ({
     let rejected = 0;
 
     for (const file of activeChangeSet.files) {
-      for (let i = 0; i < file.snippets.length; i++) {
+      // File-level decision takes priority (set by Accept All / Reject All)
+      const fileDec = fileDecisions[file.filePath];
+      const count = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
+
+      if (fileDec === 'accepted') {
+        accepted += count;
+        continue;
+      }
+      if (fileDec === 'rejected') {
+        rejected += count;
+        continue;
+      }
+
+      for (let i = 0; i < count; i++) {
         const key = `${file.filePath}:${i}`;
         const decision: HunkDecision = hunkDecisions[key] ?? 'pending';
         if (decision === 'pending') pending++;
@@ -357,7 +420,7 @@ export const ChangeReviewDialog = ({
     }
 
     return { pending, accepted, rejected };
-  }, [activeChangeSet, hunkDecisions]);
+  }, [activeChangeSet, hunkDecisions, fileDecisions, fileChunkCounts]);
 
   const changeStats = useMemo(() => {
     if (!activeChangeSet) return { linesAdded: 0, linesRemoved: 0, filesChanged: 0 };
@@ -459,6 +522,8 @@ export const ChangeReviewDialog = ({
             onCollapseUnchangedChange={setCollapseUnchanged}
             instantApply={REVIEW_INSTANT_APPLY}
             editedCount={editedCount}
+            canUndo={reviewUndoStack.length > 0}
+            onUndo={handleUndoBulk}
           />
         )}
 

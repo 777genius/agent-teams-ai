@@ -27,6 +27,8 @@ const logger = createLogger('Component:DashboardView');
 import { formatDistanceToNow } from 'date-fns';
 import { Command, FolderGit2, FolderOpen, GitBranch, Search, Users } from 'lucide-react';
 
+import { CliStatusBanner } from './CliStatusBanner';
+
 import type { RepositoryGroup } from '@renderer/types/data';
 
 // =============================================================================
@@ -599,6 +601,9 @@ export const DashboardView = (): React.JSX.Element => {
 
       {/* Content */}
       <div className="relative mx-auto max-w-5xl px-8 py-12">
+        {/* CLI Status Banner */}
+        <CliStatusBanner />
+
         {/* Team select + Search */}
         <div className="mb-12 flex items-center justify-center gap-3">
           <button

@@ -306,6 +306,22 @@ export const TEAM_SOFT_DELETE_TASK = 'team:softDeleteTask';
 /** Get all soft-deleted tasks for a team */
 export const TEAM_GET_DELETED_TASKS = 'team:getDeletedTasks';
 
+/** Set needsClarification flag on a task */
+export const TEAM_SET_TASK_CLARIFICATION = 'team:setTaskClarification';
+
+// =============================================================================
+// CLI Installer API Channels
+// =============================================================================
+
+/** Get CLI installation status */
+export const CLI_INSTALLER_GET_STATUS = 'cliInstaller:getStatus';
+
+/** Start CLI install/update */
+export const CLI_INSTALLER_INSTALL = 'cliInstaller:install';
+
+/** CLI installer progress events (main -> renderer) */
+export const CLI_INSTALLER_PROGRESS = 'cliInstaller:progress';
+
 // =============================================================================
 // Review API Channels
 // =============================================================================

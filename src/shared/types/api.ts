@@ -7,6 +7,7 @@
  * Shared between preload and renderer processes.
  */
 
+import type { CliInstallerAPI } from './cliInstaller';
 import type {
   AppConfig,
   DetectedError,
@@ -427,6 +428,11 @@ export interface TeamsAPI {
     role: string | undefined
   ) => Promise<void>;
   addTaskComment: (teamName: string, taskId: string, text: string) => Promise<TaskComment>;
+  setTaskClarification: (
+    teamName: string,
+    taskId: string,
+    value: 'lead' | 'user' | null
+  ) => Promise<void>;
   getProjectBranch: (projectPath: string) => Promise<string | null>;
   getAttachments: (teamName: string, messageId: string) => Promise<AttachmentFileData[]>;
   killProcess: (teamName: string, pid: number) => Promise<void>;
@@ -585,6 +591,7 @@ export interface ElectronAPI {
     projectRoot?: string,
     userSelectedFromDialog?: boolean
   ) => Promise<{ success: boolean; error?: string }>;
+  showInFolder: (filePath: string) => Promise<void>;
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
 
   // Window controls (when title bar is hidden, e.g. Windows / Linux)
@@ -622,6 +629,9 @@ export interface ElectronAPI {
 
   // Review API
   review: ReviewAPI;
+
+  // CLI Installer API
+  cliInstaller: CliInstallerAPI;
 }
 
 // =============================================================================

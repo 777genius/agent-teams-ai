@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { useStore } from '@renderer/store';
 import { ExternalLink } from 'lucide-react';
@@ -20,6 +20,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
     selectedTeamData,
     selectedTeamLoading,
     openTeamTab,
+    setPendingReviewRequest,
   } = useStore(
     useShallow((s) => ({
       globalTaskDetail: s.globalTaskDetail,
@@ -27,6 +28,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
       selectedTeamData: s.selectedTeamData,
       selectedTeamLoading: s.selectedTeamLoading,
       openTeamTab: s.openTeamTab,
+      setPendingReviewRequest: s.setPendingReviewRequest,
     }))
   );
 
@@ -42,16 +44,27 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
     [selectedTeamData]
   );
 
-  if (!globalTaskDetail) return null;
+  const teamName = globalTaskDetail?.teamName ?? '';
+  const taskId = globalTaskDetail?.taskId ?? '';
 
-  const { teamName, taskId } = globalTaskDetail;
-  const task = taskMap.get(taskId) ?? null;
-  const kanbanTaskState = selectedTeamData?.kanbanState.tasks[taskId];
-
-  const handleOpenTeam = (): void => {
+  const handleOpenTeam = useCallback((): void => {
     closeGlobalTaskDetail();
     openTeamTab(teamName, undefined, taskId);
-  };
+  }, [closeGlobalTaskDetail, openTeamTab, teamName, taskId]);
+
+  const handleViewChanges = useCallback(
+    (viewTaskId: string, filePath?: string) => {
+      setPendingReviewRequest({ taskId: viewTaskId, filePath });
+      closeGlobalTaskDetail();
+      openTeamTab(teamName);
+    },
+    [closeGlobalTaskDetail, openTeamTab, setPendingReviewRequest, teamName]
+  );
+
+  if (!globalTaskDetail) return null;
+
+  const task = taskMap.get(taskId) ?? null;
+  const kanbanTaskState = selectedTeamData?.kanbanState.tasks[taskId];
 
   return (
     <TaskDetailDialog
@@ -63,6 +76,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
       members={activeMembers}
       onClose={closeGlobalTaskDetail}
       onOwnerChange={undefined}
+      onViewChanges={handleViewChanges}
       headerExtra={
         <button
           type="button"

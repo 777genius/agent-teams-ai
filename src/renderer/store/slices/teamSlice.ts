@@ -28,6 +28,34 @@ import type {
 } from '@shared/types';
 import type { StateCreator } from 'zustand';
 
+// --- Clarification notification tracking ---
+const notifiedClarificationTaskKeys = new Set<string>();
+
+let isFirstFetchAllTasks = true;
+
+function detectClarificationNotifications(oldTasks: GlobalTask[], newTasks: GlobalTask[]): void {
+  for (const task of newTasks) {
+    const key = `${task.teamName}:${task.id}`;
+    if (task.needsClarification === 'user') {
+      const oldTask = oldTasks.find((t) => t.teamName === task.teamName && t.id === task.id);
+      if (oldTask?.needsClarification !== 'user' && !notifiedClarificationTaskKeys.has(key)) {
+        notifiedClarificationTaskKeys.add(key);
+        fireClarificationNotification(task);
+      }
+    } else {
+      notifiedClarificationTaskKeys.delete(key);
+    }
+  }
+}
+
+function fireClarificationNotification(task: GlobalTask): void {
+  if (typeof Notification === 'undefined') return;
+  if (Notification.permission !== 'granted') return;
+  new Notification('Clarification needed', {
+    body: `[${task.teamDisplayName}] Task #${task.id}: ${task.subject}`,
+  });
+}
+
 function mapSendMessageError(error: unknown): string {
   const message =
     error instanceof IpcError ? error.message : error instanceof Error ? error.message : '';
@@ -61,6 +89,9 @@ export interface TeamSlice {
   globalTaskDetail: GlobalTaskDetailState | null;
   openGlobalTaskDetail: (teamName: string, taskId: string) => void;
   closeGlobalTaskDetail: () => void;
+  /** Set by GlobalTaskDetailDialog to signal TeamDetailView to open ChangeReviewDialog */
+  pendingReviewRequest: { taskId: string; filePath?: string } | null;
+  setPendingReviewRequest: (req: { taskId: string; filePath?: string } | null) => void;
   selectedTeamName: string | null;
   selectedTeamData: TeamData | null;
   selectedTeamLoading: boolean;
@@ -104,6 +135,11 @@ export interface TeamSlice {
     memberName: string,
     role: string | undefined
   ) => Promise<void>;
+  setTaskNeedsClarification: (
+    teamName: string,
+    taskId: string,
+    value: 'lead' | 'user' | null
+  ) => Promise<void>;
   deletedTasks: TeamTask[];
   deletedTasksLoading: boolean;
   softDeleteTask: (teamName: string, taskId: string) => Promise<void>;
@@ -142,6 +178,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   provisioningError: null,
   kanbanFilterQuery: null,
   globalTaskDetail: null,
+  pendingReviewRequest: null,
+  setPendingReviewRequest: (req) => set({ pendingReviewRequest: req }),
   openGlobalTaskDetail: (teamName: string, taskId: string) => {
     set({ globalTaskDetail: { teamName, taskId } });
     // Ensure team data is loaded for the dialog
@@ -158,37 +196,62 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   deletedTasksLoading: false,
 
   fetchTeams: async () => {
-    set({ teamsLoading: true, teamsError: null });
+    // Only show loading spinner on initial load — avoids flickering when refreshing
+    const isInitialLoad = get().teams.length === 0;
+    if (isInitialLoad) {
+      set({ teamsLoading: true, teamsError: null });
+    }
     try {
       const teams = await unwrapIpc('team:list', () => api.teams.list());
       set({ teams, teamsLoading: false, teamsError: null });
     } catch (error) {
+      // On refresh failure, keep existing teams visible
       set({
         teamsLoading: false,
-        teamsError:
-          error instanceof IpcError
+        teamsError: isInitialLoad
+          ? error instanceof IpcError
             ? error.message
             : error instanceof Error
               ? error.message
-              : 'Failed to fetch teams',
+              : 'Failed to fetch teams'
+          : null,
       });
     }
   },
 
   fetchAllTasks: async () => {
-    set({ globalTasksLoading: true, globalTasksError: null });
+    const isInitialLoad = get().globalTasks.length === 0;
+    if (isInitialLoad) {
+      set({ globalTasksLoading: true, globalTasksError: null });
+    }
+    const oldTasks = get().globalTasks;
+    const wasFirst = isFirstFetchAllTasks;
+    isFirstFetchAllTasks = false;
     try {
       const tasks = await unwrapIpc('team:getAllTasks', () => api.teams.getAllTasks());
+
+      if (!wasFirst) {
+        detectClarificationNotifications(oldTasks, tasks);
+      } else {
+        // Initial load — seed the Set to prevent false notifications on next update
+        for (const task of tasks) {
+          if (task.needsClarification === 'user') {
+            notifiedClarificationTaskKeys.add(`${task.teamName}:${task.id}`);
+          }
+        }
+      }
+
       set({ globalTasks: tasks, globalTasksLoading: false, globalTasksError: null });
     } catch (error) {
       set({
         globalTasksLoading: false,
-        globalTasksError:
-          error instanceof IpcError
+        globalTasksError: isInitialLoad
+          ? error instanceof IpcError
             ? error.message
             : error instanceof Error
               ? error.message
-              : 'Failed to fetch tasks',
+              : 'Failed to fetch tasks'
+          : null,
       });
     }
   },
@@ -478,6 +541,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       api.teams.updateTaskOwner(teamName, taskId, owner)
     );
     await get().refreshTeamData(teamName);
+  },
+
+  setTaskNeedsClarification: async (teamName, taskId, value) => {
+    await unwrapIpc('team:setTaskClarification', () =>
+      api.teams.setTaskClarification(teamName, taskId, value)
+    );
+    await get().refreshTeamData(teamName);
+    await get().fetchAllTasks();
   },
 
   addTaskComment: async (teamName, taskId, text) => {

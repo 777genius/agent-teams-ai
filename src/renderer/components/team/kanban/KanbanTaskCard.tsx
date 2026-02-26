@@ -13,6 +13,7 @@ import {
   ArrowRightFromLine,
   CheckCircle2,
   FileCode,
+  HelpCircle,
   Play,
   Trash2,
   XCircle,
@@ -190,6 +191,18 @@ export const KanbanTaskCard = ({
           #{task.id}
         </Badge>
         {task.owner ? <MemberBadge name={task.owner} color={colorMap.get(task.owner)} /> : null}
+        {task.needsClarification ? (
+          <span
+            className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+              task.needsClarification === 'user'
+                ? 'bg-red-500/15 text-red-400'
+                : 'bg-blue-500/15 text-blue-400'
+            }`}
+          >
+            <HelpCircle size={10} />
+            {task.needsClarification === 'user' ? 'Awaiting user' : 'Awaiting lead'}
+          </span>
+        ) : null}
         <h5 className="min-w-0 truncate text-sm font-medium text-[var(--color-text)]">
           {task.subject}
         </h5>

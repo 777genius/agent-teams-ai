@@ -82,6 +82,8 @@ export interface TeamTask {
   updatedAt?: string;
   projectPath?: string;
   comments?: TaskComment[];
+  /** Signals that the agent is blocked and needs clarification. "lead" = ask team lead, "user" = escalated to human. */
+  needsClarification?: 'lead' | 'user';
   /** ISO timestamp — when the task was soft-deleted. Only set for status === 'deleted'. */
   deletedAt?: string;
 }

@@ -11,6 +11,8 @@ import { CheckCircle, Code2, Download, Loader2, RefreshCw, Upload } from 'lucide
 
 import { SettingsSectionHeader } from '../components';
 
+import { CliStatusSection } from './CliStatusSection';
+
 interface AdvancedSectionProps {
   readonly saving: boolean;
   readonly onResetToDefaults: () => void;
@@ -143,6 +145,8 @@ export const AdvancedSection = ({
           </button>
         )}
       </div>
+
+      <CliStatusSection />
 
       <SettingsSectionHeader title="About" />
       <div className="flex items-start gap-4 py-3">

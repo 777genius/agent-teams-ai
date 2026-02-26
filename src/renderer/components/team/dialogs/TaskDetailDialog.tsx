@@ -39,6 +39,7 @@ import {
   Clock,
   FileCode,
   FileDiff,
+  HelpCircle,
   Link2,
   Loader2,
   MessageSquare,
@@ -117,9 +118,14 @@ export const TaskDetailDialog = ({
 
   // Lazy-load task changes when dialog is open and task is completed
   const isTaskCompleted = currentTask?.status === 'completed';
+  const setTaskNeedsClarification = useStore((s) => s.setTaskNeedsClarification);
   const activeChangeSet = useStore((s) => s.activeChangeSet);
   const changeSetLoading = useStore((s) => s.changeSetLoading);
   const fetchTaskChanges = useStore((s) => s.fetchTaskChanges);
+
+  // Use the lightweight cache to know if changes exist before full data loads
+  const changesCacheKey = currentTask ? `${teamName}:${currentTask.id}` : '';
+  const taskKnownHasChanges = useStore((s) => s.taskHasChanges[changesCacheKey]) === true;
 
   const taskChangesFiles = useMemo(() => {
     if (!activeChangeSet || !currentTask) return null;
@@ -280,6 +286,35 @@ export const TaskDetailDialog = ({
             : null}
         </div>
 
+        {/* Clarification banner */}
+        {currentTask.needsClarification ? (
+          <div
+            className={`flex items-center justify-between rounded-md px-3 py-2 text-xs ${
+              currentTask.needsClarification === 'user'
+                ? 'border border-red-500/20 bg-red-500/10 text-red-400'
+                : 'border border-blue-500/20 bg-blue-500/10 text-blue-400'
+            }`}
+          >
+            <span className="flex items-center gap-1.5">
+              <HelpCircle size={14} />
+              {currentTask.needsClarification === 'user'
+                ? 'Awaiting clarification from you'
+                : 'Awaiting clarification from team lead'}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                void setTaskNeedsClarification(teamName, currentTask.id, null);
+              }}
+            >
+              Mark resolved
+            </Button>
+          </div>
+        ) : null}
+
         {/* Description */}
         <CollapsibleTeamSection title="Description" icon={<AlignLeft size={14} />} defaultOpen>
           {currentTask.description ? (
@@ -291,27 +326,15 @@ export const TaskDetailDialog = ({
           )}
         </CollapsibleTeamSection>
 
-        {/* Execution Logs — sessions that reference this task */}
-        <CollapsibleTeamSection title="Execution Logs" icon={<ScrollText size={14} />} defaultOpen>
-          <div className="min-w-0 overflow-hidden">
-            <MemberLogsTab
-              teamName={teamName}
-              taskId={currentTask.id}
-              taskOwner={currentTask.owner}
-              taskStatus={currentTask.status}
-            />
-          </div>
-        </CollapsibleTeamSection>
-
         {/* Changes */}
         {isTaskCompleted && onViewChanges ? (
           <CollapsibleTeamSection
             title="Changes"
             icon={<FileDiff size={14} />}
             badge={taskChangesFiles ? taskChangesFiles.length : undefined}
-            defaultOpen={!!taskChangesFiles && taskChangesFiles.length > 0}
+            defaultOpen={taskKnownHasChanges}
           >
-            {changeSetLoading && !taskChangesFiles ? (
+            {changeSetLoading || (!taskChangesFiles && taskKnownHasChanges) ? (
               <div className="flex items-center gap-2 py-2 text-xs text-[var(--color-text-muted)]">
                 <Loader2 size={14} className="animate-spin" />
                 Loading changes...
@@ -329,7 +352,7 @@ export const TaskDetailDialog = ({
                     }}
                   >
                     <FileCode size={14} className="shrink-0 text-[var(--color-text-muted)]" />
-                    <span className="min-w-0 flex-1 truncate font-mono text-[var(--color-text-secondary)]">
+                    <span className="truncate font-mono text-[var(--color-text-secondary)]">
                       {file.relativePath}
                     </span>
                     <span className="flex shrink-0 items-center gap-1.5">
@@ -348,6 +371,18 @@ export const TaskDetailDialog = ({
             )}
           </CollapsibleTeamSection>
         ) : null}
+
+        {/* Execution Logs — sessions that reference this task */}
+        <CollapsibleTeamSection title="Execution Logs" icon={<ScrollText size={14} />} defaultOpen>
+          <div className="min-w-0 overflow-hidden">
+            <MemberLogsTab
+              teamName={teamName}
+              taskId={currentTask.id}
+              taskOwner={currentTask.owner}
+              taskStatus={currentTask.status}
+            />
+          </div>
+        </CollapsibleTeamSection>
 
         <div className="mb-3 space-y-2">
           {/* Dependencies */}
@@ -483,6 +518,13 @@ export const TaskDetailDialog = ({
           }
           defaultOpen
         >
+          <TaskCommentInput
+            teamName={teamName}
+            taskId={currentTask.id}
+            members={members}
+            replyTo={effectiveReplyTo}
+            onClearReply={clearReply}
+          />
           <TaskCommentsSection
             teamName={teamName}
             taskId={currentTask.id}
@@ -493,15 +535,6 @@ export const TaskDetailDialog = ({
             onReply={handleReply}
           />
         </CollapsibleTeamSection>
-
-        {/* Comment input — always visible outside the collapsible section */}
-        <TaskCommentInput
-          teamName={teamName}
-          taskId={currentTask.id}
-          members={members}
-          replyTo={effectiveReplyTo}
-          onClearReply={clearReply}
-        />
 
         <DialogFooter className="flex items-center justify-between sm:justify-between">
           {onDeleteTask && currentTask ? (

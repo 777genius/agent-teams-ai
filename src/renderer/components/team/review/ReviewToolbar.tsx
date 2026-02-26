@@ -2,7 +2,7 @@ import React from 'react';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
-import { Check, Eye, EyeOff, GitMerge, Loader2, Pencil, X } from 'lucide-react';
+import { Check, Eye, EyeOff, GitMerge, Loader2, Pencil, Undo2, X } from 'lucide-react';
 
 import type { ChangeStats } from '@shared/types';
 
@@ -19,6 +19,8 @@ interface ReviewToolbarProps {
   onApply: () => void;
   onCollapseUnchangedChange: (collapse: boolean) => void;
   editedCount?: number;
+  canUndo?: boolean;
+  onUndo?: () => void;
 }
 
 export const ReviewToolbar = ({
@@ -34,6 +36,8 @@ export const ReviewToolbar = ({
   onCollapseUnchangedChange: _onCollapseUnchangedChange,
   instantApply = false,
   editedCount = 0,
+  canUndo = false,
+  onUndo,
 }: ReviewToolbarProps): React.ReactElement => {
   const hasRejected = stats.rejected > 0;
   const canApply = hasRejected && !applying;
@@ -138,32 +142,54 @@ export const ReviewToolbar = ({
 
       {editedCount > 0 && <div className="h-4 w-px bg-border" />}
 
-      {/* Actions */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={onAcceptAll}
-            className="flex items-center gap-1 rounded bg-green-500/15 px-2.5 py-1 text-xs text-green-400 transition-colors hover:bg-green-500/25"
-          >
-            <Check className="size-3" />
-            Accept All
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Accept all changes across all files</TooltipContent>
-      </Tooltip>
+      {canUndo && onUndo && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onUndo}
+              className="flex items-center gap-1 rounded bg-zinc-500/15 px-2.5 py-1 text-xs text-zinc-300 transition-colors hover:bg-zinc-500/25"
+            >
+              <Undo2 className="size-3" />
+              Undo
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            Undo last bulk operation (
+            {/Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘Z' : 'Ctrl+Z'})
+          </TooltipContent>
+        </Tooltip>
+      )}
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={onRejectAll}
-            className="flex items-center gap-1 rounded bg-red-500/15 px-2.5 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/25"
-          >
-            <X className="size-3" />
-            Reject All
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Reject all changes across all files</TooltipContent>
-      </Tooltip>
+      {/* Actions — hidden when all hunks are already decided */}
+      {stats.pending > 0 && (
+        <>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onAcceptAll}
+                className="flex items-center gap-1 rounded bg-green-500/15 px-2.5 py-1 text-xs text-green-400 transition-colors hover:bg-green-500/25"
+              >
+                <Check className="size-3" />
+                Accept All
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Accept all changes across all files</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onRejectAll}
+                className="flex items-center gap-1 rounded bg-red-500/15 px-2.5 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/25"
+              >
+                <X className="size-3" />
+                Reject All
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Reject all changes across all files</TooltipContent>
+          </Tooltip>
+        </>
+      )}
 
       {!instantApply && (
         <Tooltip>

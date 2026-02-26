@@ -135,6 +135,14 @@ async function resolveFromExplicitPath(inputPath: string): Promise<string | null
 let cachedPath: string | null | undefined;
 
 export class ClaudeBinaryResolver {
+  /**
+   * Clear the cached binary path.
+   * Call after CLI install/update so the next resolve() picks up the new location.
+   */
+  static clearCache(): void {
+    cachedPath = undefined;
+  }
+
   static async resolve(): Promise<string | null> {
     if (cachedPath !== undefined) return cachedPath;
 
@@ -163,6 +171,8 @@ export class ClaudeBinaryResolver {
       process.platform === 'win32' ? expandWindowsBinaryNames(baseBinaryName) : [baseBinaryName];
 
     const candidateDirs: string[] = [
+      // Native binary installation path (claude install)
+      path.join(os.homedir(), '.local', 'bin'),
       path.join(os.homedir(), '.npm-global', 'bin'),
       path.join(os.homedir(), '.npm', 'bin'),
       process.platform === 'win32'

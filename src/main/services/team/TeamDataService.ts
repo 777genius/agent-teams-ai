@@ -707,6 +707,14 @@ export class TeamDataService {
     await this.taskWriter.updateOwner(teamName, taskId, owner);
   }
 
+  async setTaskNeedsClarification(
+    teamName: string,
+    taskId: string,
+    value: 'lead' | 'user' | null
+  ): Promise<void> {
+    await this.taskWriter.setNeedsClarification(teamName, taskId, value);
+  }
+
   async addTaskComment(teamName: string, taskId: string, text: string): Promise<TaskComment> {
     const comment = await this.taskWriter.addComment(teamName, taskId, text);
 
@@ -716,6 +724,13 @@ export class TeamDataService {
         this.toolsInstaller.ensureInstalled(),
       ]);
       const task = tasks.find((t) => t.id === taskId);
+
+      // Auto-clear needsClarification: "user" on UI comment
+      // UI comments always have author "user" (TeamTaskWriter default)
+      if (task?.needsClarification === 'user') {
+        await this.taskWriter.setNeedsClarification(teamName, taskId, null);
+      }
+
       if (task?.owner) {
         const parts = [
           `Comment on task #${taskId} "${task.subject}":\n\n${text}`,

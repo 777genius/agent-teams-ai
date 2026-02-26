@@ -259,7 +259,12 @@ async function handleSaveEditedFile(
   if (!filePath || typeof content !== 'string') {
     return { success: false, error: 'Invalid parameters' };
   }
-  return wrapReviewHandler('saveEditedFile', () => getApplier().saveEditedFile(filePath, content));
+  return wrapReviewHandler('saveEditedFile', async () => {
+    const result = await getApplier().saveEditedFile(filePath, content);
+    // Invalidate cached content so next fetch reads the saved version from disk
+    getContentResolver().invalidateFile(filePath);
+    return result;
+  });
 }
 
 // --- Phase 4 Handlers ---

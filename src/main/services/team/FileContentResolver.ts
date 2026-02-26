@@ -36,6 +36,15 @@ export class FileContentResolver {
     private readonly gitFallback?: GitDiffFallback
   ) {}
 
+  /** Invalidate cached content for a file (e.g. after user saves edits) */
+  invalidateFile(filePath: string): void {
+    for (const key of this.cache.keys()) {
+      if (key.endsWith(`:${filePath}`)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
   /**
    * Resolve full file contents for a single file.
    * Returns original (before changes) and modified (after changes) content.

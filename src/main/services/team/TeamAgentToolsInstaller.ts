@@ -6,7 +6,7 @@ import * as path from 'path';
 import { atomicWriteAsync } from './atomicWrite';
 
 const TOOL_FILE_NAME = 'teamctl.js';
-const TOOL_VERSION = 7;
+const TOOL_VERSION = 8;
 
 function buildTeamCtlScript(): string {
   const script = String.raw`#!/usr/bin/env node
@@ -210,6 +210,11 @@ function addTaskComment(paths, taskId, flags) {
   var task = ref.task;
   var taskPath = ref.taskPath;
 
+  // Auto-clear needsClarification: "lead" when someone other than the task owner comments
+  if (task.needsClarification === 'lead' && from !== task.owner) {
+    delete task.needsClarification;
+  }
+
   var existing = Array.isArray(task.comments) ? task.comments : [];
   var commentId = crypto.randomUUID
     ? crypto.randomUUID()
@@ -224,6 +229,18 @@ function addTaskComment(paths, taskId, flags) {
   writeTask(taskPath, task);
 
   return { commentId: commentId, taskId: String(taskId), subject: task.subject, owner: task.owner };
+}
+
+function setNeedsClarification(paths, taskId, value) {
+  var allowed = { lead: true, user: true, clear: true };
+  if (!allowed[value]) die('Invalid value: ' + value + '. Use: lead, user, clear');
+  var ref = readTask(paths, taskId);
+  if (value === 'clear') {
+    delete ref.task.needsClarification;
+  } else {
+    ref.task.needsClarification = value;
+  }
+  writeTask(ref.taskPath, ref.task);
 }
 
 function listTaskIds(tasksDir) {
@@ -578,6 +595,9 @@ function taskBriefing(paths, teamName, flags) {
     if (t.related && t.related.length > 0) {
       parts.push('  Related: ' + t.related.map(function(id) { return '#' + id; }).join(', '));
     }
+    if (t.needsClarification) {
+      parts.push('  *** NEEDS CLARIFICATION: from ' + t.needsClarification.toUpperCase() + ' ***');
+    }
     if (Array.isArray(t.comments) && t.comments.length > 0) {
       parts.push('  Comments (' + t.comments.length + '):');
       for (var c = 0; c < t.comments.length; c++) {
@@ -636,6 +656,7 @@ function printHelp() {
       '  node teamctl.js task start <id> [--team <team>]',
       '  node teamctl.js task create --subject "..." [--description "..."] [--prompt "..."] [--owner "member"] [--status pending|in_progress|completed|deleted] [--notify --from "member"] [--team <team>]',
       '  node teamctl.js task comment <id> --text "..." [--from "member"] [--team <team>]',
+      '  node teamctl.js task set-clarification <id> <lead|user|clear> [--from "member"] [--team <team>]',
       '  node teamctl.js task briefing --for <member-name> [--team <team>]',
       '  node teamctl.js kanban set-column <id> <review|approved> [--team <team>]',
       '  node teamctl.js kanban clear <id> [--team <team>]',
@@ -760,6 +781,14 @@ async function main() {
         } catch (e) { /* best-effort */ }
       }
       process.stdout.write('OK comment added to task #' + String(id) + '\n');
+      return;
+    }
+    if (action === 'set-clarification') {
+      const id = rest[0] || args.flags.id;
+      const val = rest[1] || args.flags.value;
+      if (!id || !val) die('Usage: task set-clarification <id> <lead|user|clear>');
+      setNeedsClarification(paths, String(id), String(val));
+      process.stdout.write('OK task #' + String(id) + ' needsClarification=' + (val === 'clear' ? 'cleared' : String(val)) + '\n');
       return;
     }
     if (action === 'briefing') {

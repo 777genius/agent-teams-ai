@@ -2,8 +2,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useLazyFileContent } from '@renderer/hooks/useLazyFileContent';
 import { useVisibleFileSection } from '@renderer/hooks/useVisibleFileSection';
+import { useStore } from '@renderer/store';
 
-import { acceptAllChunks, rejectAllChunks, replayHunkDecisions } from './CodeMirrorDiffUtils';
+import {
+  acceptAllChunks,
+  getChunks,
+  rejectAllChunks,
+  replayHunkDecisions,
+} from './CodeMirrorDiffUtils';
 import { FileSectionDiff } from './FileSectionDiff';
 import { FileSectionHeader } from './FileSectionHeader';
 import { FileSectionPlaceholder } from './FileSectionPlaceholder';
@@ -69,6 +75,7 @@ export const ContinuousScrollView = ({
   memberName,
   fetchFileContent,
 }: ContinuousScrollViewProps): React.ReactElement => {
+  const setFileChunkCount = useStore((s) => s.setFileChunkCount);
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set());
 
   const handleToggleCollapse = useCallback((filePath: string) => {
@@ -124,10 +131,27 @@ export const ContinuousScrollView = ({
     hunkDecisionsRef.current = hunkDecisions;
   });
 
+  // Track which views have already had decisions replayed to prevent
+  // cascading re-replays on every render (useEffect in FileSectionDiff has no deps).
+  // When a view is destroyed/recreated (discard, lazy remount), the identity changes
+  // and replay runs once for the new instance.
+  const replayedViewsRef = useRef(new Set<EditorView>());
+
   const handleEditorViewReady = useCallback(
     (filePath: string, view: EditorView | null) => {
       if (view) {
+        // Skip if this exact view instance was already processed
+        if (editorViewMapRef.current.get(filePath) === view && replayedViewsRef.current.has(view)) {
+          return;
+        }
         editorViewMapRef.current.set(filePath, view);
+        replayedViewsRef.current.add(view);
+
+        // Store the actual CM chunk count (may differ from snippet count)
+        const chunks = getChunks(view.state);
+        if (chunks) {
+          setFileChunkCount(filePath, chunks.chunks.length);
+        }
 
         const fileDecision = fileDecisionsRef.current[filePath];
         if (fileDecision === 'accepted' || fileDecision === 'rejected') {
@@ -147,9 +171,11 @@ export const ContinuousScrollView = ({
         }
       } else {
         editorViewMapRef.current.delete(filePath);
+        // Don't clean replayedViewsRef — stale entries are harmless (WeakSet-like behavior
+        // is not needed since view instances are unique and old ones get GC'd)
       }
     },
-    [editorViewMapRef]
+    [editorViewMapRef, setFileChunkCount]
   );
 
   if (files.length === 0) {

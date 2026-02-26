@@ -14,6 +14,7 @@ import {
   AGENT_BLOCK_OPEN,
   stripAgentBlocks,
 } from '@shared/constants/agentBlocks';
+import { getMemberColor } from '@shared/constants/memberColors';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { createLogger } from '@shared/utils/logger';
 import { execFile, spawn } from 'child_process';
@@ -305,6 +306,16 @@ function buildTaskStatusProtocol(teamName: string): string {
    - Typical flow:
      a) Owner finishes work on #X → task complete #X
      b) Reviewer accepts → review approve #X
+10. CLARIFICATION PROTOCOL (IMPORTANT):
+    When you are blocked and need information to continue a task:
+    a) Do BOTH of these steps:
+       1) Send a message to your team lead via SendMessage explaining what you need.
+       2) Set the clarification flag on the task:
+          node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-clarification <taskId> lead --from "<your-name>"
+    b) The flag is auto-cleared when the lead adds a task comment on your task.
+       If the lead replies via SendMessage instead, clear the flag yourself once you have the answer:
+       node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-clarification <taskId> clear --from "<your-name>"
+    c) Do NOT set clarification to "user" yourself — only the team lead escalates to the user.
 Failure to follow this protocol means the task board will show incorrect status.`);
 }
 
@@ -333,6 +344,13 @@ function buildTeamCtlOpsInstructions(teamName: string, leadName: string): string
       ``,
       `Notification policy:`,
       `- The --notify flag sends the assignment to the member automatically, so do NOT send a separate SendMessage for the same task.`,
+      ``,
+      `Clarification handling:`,
+      `- When a teammate needs clarification (needsClarification: "lead"), reply via task comment (preferred — auto-clears the flag) or SendMessage.`,
+      `- If you reply via SendMessage instead of task comment, also clear the flag manually:`,
+      `  node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-clarification <taskId> clear --from "${leadName}"`,
+      `- If you cannot answer and the user needs to decide, escalate to "user":`,
+      `  node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-clarification <taskId> user --from "${leadName}"`,
     ].join('\n')
   );
 }
@@ -2900,7 +2918,6 @@ export class TeamProvisioningService {
       return;
     }
 
-    const memberColors = ['blue', 'green', 'yellow', 'cyan', 'magenta', 'red'] as const;
     const joinedAt = Date.now();
 
     try {
@@ -2910,7 +2927,7 @@ export class TeamProvisioningService {
           name: member.name,
           role: member.role?.trim() || undefined,
           agentType: 'general-purpose',
-          color: memberColors[index % memberColors.length],
+          color: getMemberColor(index),
           joinedAt,
         }))
       );

@@ -12,6 +12,7 @@ import type {
   ClaudeMdFileInfo,
   ClaudeRootFolderSelection,
   ClaudeRootInfo,
+  CliInstallerAPI,
   ConfigAPI,
   ContextInfo,
   ConversationGroup,
@@ -522,6 +523,10 @@ export class HttpAPIClient implements ElectronAPI {
     return { success: false, error: 'Not available in browser mode' };
   };
 
+  showInFolder = async (_filePath: string): Promise<void> => {
+    console.warn('[HttpAPIClient] showInFolder is not available in browser mode');
+  };
+
   openExternal = async (url: string): Promise<{ success: boolean; error?: string }> => {
     window.open(url, '_blank');
     return { success: true };
@@ -784,6 +789,13 @@ export class HttpAPIClient implements ElectronAPI {
     getDeletedTasks: async (_teamName: string): Promise<TeamTask[]> => {
       return [];
     },
+    setTaskClarification: async (
+      _teamName: string,
+      _taskId: string,
+      _value: 'lead' | 'user' | null
+    ): Promise<void> => {
+      // Not available via HTTP client — no-op
+    },
     onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {
       return this.addEventListener('team-change', (data: unknown) =>
         callback(null, data as TeamChangeEvent)
@@ -848,6 +860,26 @@ export class HttpAPIClient implements ElectronAPI {
     // Phase 4 stubs
     getGitFileLog: async (): Promise<never> => {
       throw new Error('Review is not available in browser mode');
+    },
+  };
+
+  // ---------------------------------------------------------------------------
+  // CLI Installer (not available in browser mode)
+  // ---------------------------------------------------------------------------
+
+  cliInstaller: CliInstallerAPI = {
+    getStatus: async () => ({
+      installed: false,
+      installedVersion: null,
+      binaryPath: null,
+      latestVersion: null,
+      updateAvailable: false,
+    }),
+    install: async (): Promise<void> => {
+      console.warn('[HttpAPIClient] CLI installer not available in browser mode');
+    },
+    onProgress: (): (() => void) => {
+      return () => {};
     },
   };
 }
