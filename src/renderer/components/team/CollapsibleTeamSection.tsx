@@ -5,6 +5,8 @@ import { ChevronRight } from 'lucide-react';
 
 interface CollapsibleTeamSectionProps {
   title: string;
+  /** Icon rendered before the title text. */
+  icon?: React.ReactNode;
   badge?: string | number;
   /** Secondary badge (e.g. unread count). Shown next to main badge when defined. */
   secondaryBadge?: number;
@@ -18,6 +20,7 @@ interface CollapsibleTeamSectionProps {
 
 export const CollapsibleTeamSection = ({
   title,
+  icon,
   badge,
   secondaryBadge,
   headerExtra,
@@ -43,6 +46,7 @@ export const CollapsibleTeamSection = ({
             size={14}
             className={`shrink-0 text-[var(--color-text-muted)] transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`}
           />
+          {icon ? <span className="shrink-0 text-[var(--color-text-muted)]">{icon}</span> : null}
           <span className="text-sm font-medium text-[var(--color-text)]">{title}</span>
           {badge != null && (
             <Badge

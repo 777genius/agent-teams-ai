@@ -28,6 +28,10 @@ interface TaskCommentsSectionProps {
   members: ResolvedTeamMember[];
   /** When true, the "Comments" header is not rendered (e.g. inside a collapsible section). */
   hideHeader?: boolean;
+  /** When true, the comment input area is not rendered (useful when input is rendered externally). */
+  hideInput?: boolean;
+  /** Called when the user clicks Reply on a comment (used when input is rendered externally). */
+  onReply?: (author: string, text: string) => void;
 }
 
 export const TaskCommentsSection = ({
@@ -36,6 +40,8 @@ export const TaskCommentsSection = ({
   comments,
   members,
   hideHeader = false,
+  hideInput = false,
+  onReply,
 }: TaskCommentsSectionProps): React.JSX.Element => {
   const addTaskComment = useStore((s) => s.addTaskComment);
   const addingComment = useStore((s) => s.addingComment);
@@ -126,14 +132,16 @@ export const TaskCommentsSection = ({
                     <button
                       type="button"
                       className="ml-auto flex items-center gap-0.5 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:text-[var(--color-text-secondary)] group-hover:opacity-100"
-                      onClick={() =>
-                        setReplyTo({
-                          author: comment.author,
-                          text: stripAgentBlocks(
-                            parseMessageReply(comment.text)?.replyText ?? comment.text
-                          ),
-                        })
-                      }
+                      onClick={() => {
+                        const replyText = stripAgentBlocks(
+                          parseMessageReply(comment.text)?.replyText ?? comment.text
+                        );
+                        if (onReply) {
+                          onReply(comment.author, replyText);
+                        } else {
+                          setReplyTo({ author: comment.author, text: replyText });
+                        }
+                      }}
                     >
                       <Reply size={11} />
                       Reply
@@ -222,80 +230,84 @@ export const TaskCommentsSection = ({
         </div>
       ) : null}
 
-      {replyTo ? (
-        <div className="mb-2 flex items-start gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2">
-          <div className="min-w-0 flex-1">
-            <div className="mb-0.5 text-[10px] font-medium text-[var(--color-text-muted)]">
-              Replying to{' '}
-              <span
-                className="font-semibold"
-                style={{
-                  color: (() => {
-                    const rc = colorMap.get(replyTo.author);
-                    return rc ? getTeamColorSet(rc).text : 'var(--color-text-secondary)';
-                  })(),
-                }}
-              >
-                @{replyTo.author}
-              </span>
+      {!hideInput && (
+        <>
+          {replyTo ? (
+            <div className="mb-2 flex items-start gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-2">
+              <div className="min-w-0 flex-1">
+                <div className="mb-0.5 text-[10px] font-medium text-[var(--color-text-muted)]">
+                  Replying to{' '}
+                  <span
+                    className="font-semibold"
+                    style={{
+                      color: (() => {
+                        const rc = colorMap.get(replyTo.author);
+                        return rc ? getTeamColorSet(rc).text : 'var(--color-text-secondary)';
+                      })(),
+                    }}
+                  >
+                    @{replyTo.author}
+                  </span>
+                </div>
+                <div className="line-clamp-3 text-[11px] text-[var(--color-text-muted)]">
+                  {replyTo.text}
+                </div>
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-secondary)]"
+                    onClick={() => setReplyTo(null)}
+                  >
+                    <X size={12} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left">Cancel reply</TooltipContent>
+              </Tooltip>
             </div>
-            <div className="line-clamp-3 text-[11px] text-[var(--color-text-muted)]">
-              {replyTo.text}
-            </div>
-          </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-secondary)]"
-                onClick={() => setReplyTo(null)}
-              >
-                <X size={12} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="left">Cancel reply</TooltipContent>
-          </Tooltip>
-        </div>
-      ) : null}
+          ) : null}
 
-      <div className="relative">
-        <MentionableTextarea
-          id={`task-comment-${taskId}`}
-          placeholder={`Add a comment... (${getModifierKeyName()}+Enter to send)`}
-          value={draft.value}
-          onValueChange={draft.setValue}
-          suggestions={mentionSuggestions}
-          minRows={2}
-          maxRows={8}
-          maxLength={MAX_COMMENT_LENGTH}
-          disabled={addingComment}
-          cornerAction={
-            <button
-              type="button"
-              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={!canSubmit}
-              onClick={() => void handleSubmit()}
-            >
-              <Send size={12} />
-              Comment
-            </button>
-          }
-          footerRight={
-            <div className="flex items-center gap-2">
-              {remaining < 200 ? (
-                <span
-                  className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
+          <div className="relative">
+            <MentionableTextarea
+              id={`task-comment-${taskId}`}
+              placeholder={`Add a comment... (${getModifierKeyName()}+Enter to send)`}
+              value={draft.value}
+              onValueChange={draft.setValue}
+              suggestions={mentionSuggestions}
+              minRows={2}
+              maxRows={8}
+              maxLength={MAX_COMMENT_LENGTH}
+              disabled={addingComment}
+              cornerAction={
+                <button
+                  type="button"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!canSubmit}
+                  onClick={() => void handleSubmit()}
                 >
-                  {remaining} chars left
-                </span>
-              ) : null}
-              {draft.isSaved ? (
-                <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-              ) : null}
-            </div>
-          }
-        />
-      </div>
+                  <Send size={12} />
+                  Comment
+                </button>
+              }
+              footerRight={
+                <div className="flex items-center gap-2">
+                  {remaining < 200 ? (
+                    <span
+                      className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
+                    >
+                      {remaining} chars left
+                    </span>
+                  ) : null}
+                  {draft.isSaved ? (
+                    <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                  ) : null}
+                </div>
+              }
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 };

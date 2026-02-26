@@ -91,4 +91,43 @@ export const mirrorEditsAfterResolve = EditorState.transactionExtender.of((tr) =
   return { effects: originalDocChangeEffect(tr.startState, tr.changes) };
 });
 
+/**
+ * Replay persisted per-hunk decisions on a freshly mounted editor.
+ * Processes chunks in reverse order to preserve earlier chunk positions.
+ */
+export function replayHunkDecisions(
+  view: EditorView,
+  filePath: string,
+  hunkDecisions: Record<string, string>
+): void {
+  const result = getChunks(view.state);
+  if (!result || result.chunks.length === 0) return;
+
+  // Collect decisions that need replaying
+  const toReplay: { index: number; decision: 'accepted' | 'rejected' }[] = [];
+  for (let i = 0; i < result.chunks.length; i++) {
+    const key = `${filePath}:${i}`;
+    const d = hunkDecisions[key];
+    if (d === 'accepted' || d === 'rejected') {
+      toReplay.push({ index: i, decision: d });
+    }
+  }
+
+  if (toReplay.length === 0) return;
+
+  // Process in reverse order — removing a later chunk doesn't shift earlier positions
+  for (let i = toReplay.length - 1; i >= 0; i--) {
+    const { index, decision } = toReplay[i];
+    const currentChunks = getChunks(view.state);
+    if (!currentChunks || index >= currentChunks.chunks.length) continue;
+
+    const chunk = currentChunks.chunks[index];
+    if (decision === 'accepted') {
+      acceptChunk(view, chunk.fromB);
+    } else {
+      rejectChunk(view, chunk.fromB);
+    }
+  }
+}
+
 export { acceptChunk, getChunks, rejectChunk };

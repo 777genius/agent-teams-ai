@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { CollapsibleTeamSection } from '@renderer/components/team/CollapsibleTeamSection';
@@ -33,16 +33,21 @@ import {
 } from '@renderer/utils/memberHelpers';
 import { formatDistanceToNow } from 'date-fns';
 import {
+  AlignLeft,
   ArrowLeftFromLine,
   ArrowRightFromLine,
   Clock,
   FileCode,
+  FileDiff,
   Link2,
   Loader2,
+  MessageSquare,
   PenLine,
+  ScrollText,
   Trash2,
 } from 'lucide-react';
 
+import { TaskCommentInput } from './TaskCommentInput';
 import { TaskCommentsSection } from './TaskCommentsSection';
 
 import type { KanbanTaskState, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
@@ -79,6 +84,28 @@ export const TaskDetailDialog = ({
 }: TaskDetailDialogProps): React.JSX.Element => {
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
   const currentTask = task ? (taskMap.get(task.id) ?? task) : null;
+  const [replyTo, setReplyTo] = useState<{
+    taskId: string;
+    author: string;
+    text: string;
+  } | null>(null);
+  const handleReply = useCallback(
+    (author: string, text: string) => {
+      if (currentTask) setReplyTo({ taskId: currentTask.id, author, text });
+    },
+    [currentTask]
+  );
+  const clearReply = useCallback(() => setReplyTo(null), []);
+
+  const handleClose = useCallback(() => {
+    setReplyTo(null);
+    onClose();
+  }, [onClose]);
+
+  const effectiveReplyTo =
+    replyTo && replyTo.taskId === currentTask?.id
+      ? { author: replyTo.author, text: replyTo.text }
+      : null;
 
   useEffect(() => {
     if (!open || !currentTask) return;
@@ -118,13 +145,13 @@ export const TaskDetailDialog = ({
   ]);
 
   const handleDependencyClick = (taskId: string): void => {
-    onClose();
+    handleClose();
     onScrollToTask?.(taskId);
   };
 
   if (!currentTask) {
     return (
-      <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
         <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>Task not found</DialogTitle>
@@ -254,7 +281,7 @@ export const TaskDetailDialog = ({
         </div>
 
         {/* Description */}
-        <CollapsibleTeamSection title="Description" defaultOpen>
+        <CollapsibleTeamSection title="Description" icon={<AlignLeft size={14} />} defaultOpen>
           {currentTask.description ? (
             <div className="max-h-[200px] overflow-y-auto">
               <MarkdownViewer content={currentTask.description} maxHeight="max-h-[180px]" />
@@ -265,7 +292,7 @@ export const TaskDetailDialog = ({
         </CollapsibleTeamSection>
 
         {/* Execution Logs — sessions that reference this task */}
-        <CollapsibleTeamSection title="Execution Logs" defaultOpen>
+        <CollapsibleTeamSection title="Execution Logs" icon={<ScrollText size={14} />} defaultOpen>
           <div className="min-w-0 overflow-hidden">
             <MemberLogsTab
               teamName={teamName}
@@ -280,6 +307,7 @@ export const TaskDetailDialog = ({
         {isTaskCompleted && onViewChanges ? (
           <CollapsibleTeamSection
             title="Changes"
+            icon={<FileDiff size={14} />}
             badge={taskChangesFiles ? taskChangesFiles.length : undefined}
             defaultOpen={!!taskChangesFiles && taskChangesFiles.length > 0}
           >
@@ -296,7 +324,7 @@ export const TaskDetailDialog = ({
                     type="button"
                     className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]"
                     onClick={() => {
-                      onClose();
+                      handleClose();
                       onViewChanges(currentTask.id, file.filePath);
                     }}
                   >
@@ -447,6 +475,7 @@ export const TaskDetailDialog = ({
         {/* Comments */}
         <CollapsibleTeamSection
           title="Comments"
+          icon={<MessageSquare size={14} />}
           badge={
             (currentTask.comments?.length ?? 0) > 0
               ? (currentTask.comments?.length ?? 0)
@@ -460,8 +489,19 @@ export const TaskDetailDialog = ({
             comments={currentTask.comments ?? []}
             members={members}
             hideHeader
+            hideInput
+            onReply={handleReply}
           />
         </CollapsibleTeamSection>
+
+        {/* Comment input — always visible outside the collapsible section */}
+        <TaskCommentInput
+          teamName={teamName}
+          taskId={currentTask.id}
+          members={members}
+          replyTo={effectiveReplyTo}
+          onClearReply={clearReply}
+        />
 
         <DialogFooter className="flex items-center justify-between sm:justify-between">
           {onDeleteTask && currentTask ? (
@@ -470,7 +510,7 @@ export const TaskDetailDialog = ({
               size="sm"
               onClick={() => {
                 onDeleteTask(currentTask.id);
-                onClose();
+                handleClose();
               }}
             >
               <Trash2 size={14} className="mr-1" />
@@ -479,7 +519,7 @@ export const TaskDetailDialog = ({
           ) : (
             <div />
           )}
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={handleClose}>
             Close
           </Button>
         </DialogFooter>

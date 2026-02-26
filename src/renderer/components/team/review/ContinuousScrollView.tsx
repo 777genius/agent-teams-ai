@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLazyFileContent } from '@renderer/hooks/useLazyFileContent';
 import { useVisibleFileSection } from '@renderer/hooks/useVisibleFileSection';
 
-import { acceptAllChunks, rejectAllChunks } from './CodeMirrorDiffUtils';
+import { acceptAllChunks, rejectAllChunks, replayHunkDecisions } from './CodeMirrorDiffUtils';
 import { FileSectionDiff } from './FileSectionDiff';
 import { FileSectionHeader } from './FileSectionHeader';
 import { FileSectionPlaceholder } from './FileSectionPlaceholder';
@@ -18,6 +18,7 @@ interface ContinuousScrollViewProps {
   fileContentsLoading: Record<string, boolean>;
   viewedSet: Set<string>;
   editedContents: Record<string, string>;
+  hunkDecisions: Record<string, HunkDecision>;
   fileDecisions: Record<string, HunkDecision>;
   collapseUnchanged: boolean;
   applying: boolean;
@@ -48,6 +49,7 @@ export const ContinuousScrollView = ({
   fileContentsLoading,
   viewedSet,
   editedContents,
+  hunkDecisions,
   fileDecisions,
   collapseUnchanged,
   applying,
@@ -114,10 +116,12 @@ export const ContinuousScrollView = ({
     [registerFileSectionRef, registerLazyRef]
   );
 
-  // Ref to avoid stale closure — fileDecisions changes frequently
+  // Refs to avoid stale closures — decisions change frequently
   const fileDecisionsRef = useRef(fileDecisions);
+  const hunkDecisionsRef = useRef(hunkDecisions);
   useEffect(() => {
     fileDecisionsRef.current = fileDecisions;
+    hunkDecisionsRef.current = hunkDecisions;
   });
 
   const handleEditorViewReady = useCallback(
@@ -125,17 +129,20 @@ export const ContinuousScrollView = ({
       if (view) {
         editorViewMapRef.current.set(filePath, view);
 
-        // Sync pre-existing "Accept All" / "Reject All" decisions to newly mounted editors.
-        // When Accept All runs, store is updated for ALL files, but CM only updates mounted ones.
-        // Lazily-loaded files mount later and need their CM state synced with the store.
-        const decision = fileDecisionsRef.current[filePath];
-        if (decision === 'accepted' || decision === 'rejected') {
+        const fileDecision = fileDecisionsRef.current[filePath];
+        if (fileDecision === 'accepted' || fileDecision === 'rejected') {
+          // Sync file-level "Accept All" / "Reject All" decisions
           requestAnimationFrame(() => {
-            if (decision === 'accepted') {
+            if (fileDecision === 'accepted') {
               acceptAllChunks(view);
             } else {
               rejectAllChunks(view);
             }
+          });
+        } else {
+          // Replay individual per-hunk decisions persisted from previous session
+          requestAnimationFrame(() => {
+            replayHunkDecisions(view, filePath, hunkDecisionsRef.current);
           });
         }
       } else {

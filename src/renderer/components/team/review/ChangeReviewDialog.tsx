@@ -539,6 +539,7 @@ export const ChangeReviewDialog = ({
               fileContentsLoading={fileContentsLoading}
               viewedSet={viewedSet}
               editedContents={editedContents}
+              hunkDecisions={hunkDecisions}
               fileDecisions={fileDecisions}
               collapseUnchanged={collapseUnchanged}
               applying={applying}

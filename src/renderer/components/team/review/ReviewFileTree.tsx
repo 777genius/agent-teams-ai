@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import {
@@ -7,6 +8,7 @@ import {
   ChevronRight,
   Circle,
   CircleDot,
+  Eye,
   File,
   Folder,
   FolderOpen,
@@ -101,18 +103,36 @@ function getFileStatus(
   return 'mixed';
 }
 
+const statusLabels: Record<FileStatus, string> = {
+  accepted: 'All changes accepted',
+  rejected: 'All changes rejected',
+  mixed: 'Partially reviewed',
+  pending: 'Pending review',
+};
+
 const FileStatusIcon = ({ status }: { status: FileStatus }): JSX.Element => {
-  switch (status) {
-    case 'accepted':
-      return <Check className="size-3 shrink-0 text-green-400" />;
-    case 'rejected':
-      return <XIcon className="size-3 shrink-0 text-red-400" />;
-    case 'mixed':
-      return <CircleDot className="size-3 shrink-0 text-yellow-400" />;
-    case 'pending':
-    default:
-      return <Circle className="size-3 shrink-0 text-zinc-500" />;
-  }
+  const icon = (() => {
+    switch (status) {
+      case 'accepted':
+        return <Check className="size-3 shrink-0 text-green-400" />;
+      case 'rejected':
+        return <XIcon className="size-3 shrink-0 text-red-400" />;
+      case 'mixed':
+        return <CircleDot className="size-3 shrink-0 text-yellow-400" />;
+      case 'pending':
+      default:
+        return <Circle className="size-3 shrink-0 text-zinc-500" />;
+    }
+  })();
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex shrink-0">{icon}</span>
+      </TooltipTrigger>
+      <TooltipContent side="top">{statusLabels[status]}</TooltipContent>
+    </Tooltip>
+  );
 };
 
 const TreeItem = ({
@@ -123,8 +143,6 @@ const TreeItem = ({
   depth,
   hunkDecisions,
   viewedSet,
-  onMarkViewed,
-  onUnmarkViewed,
   collapsedFolders,
   onToggleFolder,
 }: {
@@ -135,8 +153,6 @@ const TreeItem = ({
   depth: number;
   hunkDecisions: Record<string, HunkDecision>;
   viewedSet?: Set<string>;
-  onMarkViewed?: (filePath: string) => void;
-  onUnmarkViewed?: (filePath: string) => void;
   collapsedFolders: Set<string>;
   onToggleFolder: (fullPath: string) => void;
 }): JSX.Element => {
@@ -160,22 +176,15 @@ const TreeItem = ({
       >
         <FileStatusIcon status={status} />
         <File className="size-3.5 shrink-0" />
-        {viewedSet && (
-          <input
-            type="checkbox"
-            checked={viewedSet.has(node.file.filePath)}
-            onChange={(e) => {
-              e.stopPropagation();
-              if (e.target.checked) {
-                onMarkViewed?.(node.file!.filePath);
-              } else {
-                onUnmarkViewed?.(node.file!.filePath);
-              }
-            }}
-            onClick={(e) => e.stopPropagation()}
-            className="size-3 shrink-0 rounded border-zinc-600 accent-green-500"
-            aria-label={`Mark ${node.name} as viewed`}
-          />
+        {viewedSet && viewedSet.has(node.file.filePath) && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex shrink-0">
+                <Eye className="size-3 shrink-0 text-blue-400" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top">Viewed</TooltipContent>
+          </Tooltip>
         )}
         <span
           className={cn(
@@ -232,8 +241,6 @@ const TreeItem = ({
               depth={depth + 1}
               hunkDecisions={hunkDecisions}
               viewedSet={viewedSet}
-              onMarkViewed={onMarkViewed}
-              onUnmarkViewed={onUnmarkViewed}
               collapsedFolders={collapsedFolders}
               onToggleFolder={onToggleFolder}
             />
@@ -277,8 +284,6 @@ export const ReviewFileTree = ({
   selectedFilePath,
   onSelectFile,
   viewedSet,
-  onMarkViewed,
-  onUnmarkViewed,
   activeFilePath,
 }: ReviewFileTreeProps): JSX.Element => {
   const hunkDecisions = useStore((state) => state.hunkDecisions);
@@ -343,8 +348,6 @@ export const ReviewFileTree = ({
             depth={0}
             hunkDecisions={hunkDecisions}
             viewedSet={viewedSet}
-            onMarkViewed={onMarkViewed}
-            onUnmarkViewed={onUnmarkViewed}
             collapsedFolders={collapsedFolders}
             onToggleFolder={toggleFolder}
           />
