@@ -68,6 +68,20 @@ const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) — suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
 
+/** Resolve human-friendly team display name, falling back to raw teamName. */
+async function resolveTeamDisplayName(teamName: string): Promise<string> {
+  try {
+    if (teamDataService) {
+      const summary = await teamDataService.listTeams();
+      const team = summary.find((t) => t.teamName === teamName);
+      if (team?.displayName) return team.displayName;
+    }
+  } catch {
+    // fallback
+  }
+  return teamName;
+}
+
 async function notifyNewInboxMessages(teamName: string, detail: string): Promise<void> {
   // detail is like "inboxes/carol.json" — extract member name
   const match = /^inboxes\/(.+)\.json$/.exec(detail);
@@ -94,30 +108,20 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
     const newMessages = messages.slice(0, messages.length - prevCount);
     inboxMessageCounts.set(key, messages.length);
 
-    // Resolve team display name
-    let teamDisplayName = teamName;
-    try {
-      const service = teamDataService;
-      if (service) {
-        const summary = await service.listTeams();
-        const team = summary.find((t) => t.teamName === teamName);
-        if (team?.displayName) teamDisplayName = team.displayName;
-      }
-    } catch {
-      // use teamName as fallback
-    }
+    const teamDisplayName = await resolveTeamDisplayName(teamName);
 
     for (const msg of newMessages) {
+      // Only notify for messages addressed to the human user
+      if (msg.to !== 'user') continue;
       // Skip messages sent from our own UI
       if (msg.source && suppressedSources.has(msg.source)) continue;
 
       const fromLabel = msg.from || 'Unknown';
-      const toLabel = msg.to || memberName;
       const summary = msg.summary || msg.text.slice(0, 60);
 
       showTeamNativeNotification({
-        title: `${teamDisplayName}`,
-        subtitle: `${fromLabel} → ${toLabel}: ${summary}`,
+        title: teamDisplayName,
+        subtitle: `${fromLabel}: ${summary}`,
         body: msg.text,
       });
     }
@@ -259,6 +263,27 @@ function wireFileWatcherEvents(context: ServiceContext): void {
             void notifyNewInboxMessages(teamName, detail).catch(() => undefined);
           }, INBOX_NOTIFY_DEBOUNCE_MS)
         );
+      }
+
+      // Show native OS notification for live lead process replies.
+      // These don't go through inbox files — they're held in-memory by TeamProvisioningService.
+      if (detail === 'lead-process-reply' || detail === 'lead-direct-reply') {
+        const messages = teamProvisioningService.getLiveLeadProcessMessages(teamName);
+        const latest = messages.length > 0 ? messages[messages.length - 1] : undefined;
+        // Only notify for messages addressed to the human user
+        if (latest?.to === 'user') {
+          const fromLabel = latest.from || 'team-lead';
+          const summary = latest.summary || latest.text.slice(0, 60);
+          void resolveTeamDisplayName(teamName)
+            .then((displayName) => {
+              showTeamNativeNotification({
+                title: displayName,
+                subtitle: `${fromLabel}: ${summary}`,
+                body: latest.text,
+              });
+            })
+            .catch(() => undefined);
+        }
       }
     } catch {
       // ignore
