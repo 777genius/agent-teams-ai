@@ -46,7 +46,7 @@
     "test:coverage": "vitest run --coverage",
     "test:coverage:critical": "vitest run --coverage --config vitest.critical.config.ts",
     "standalone": "tsx src/main/standalone.ts",
-    "standalone:build": "electron-vite build && vite build --config vite.standalone.config.ts",
+    "standalone:build": "electron-vite build && vite build --config docker/vite.standalone.config.ts",
     "standalone:start": "node dist-standalone/index.cjs",
     "prepare": "husky",
     "postinstall": "electron-rebuild -f -o node-pty || echo 'node-pty rebuild failed (terminal will be disabled)'"

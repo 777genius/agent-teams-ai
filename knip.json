@@ -6,7 +6,7 @@
     "src/preload/index.ts",
     "src/renderer/main.tsx",
     "electron.vite.config.ts",
-    "vite.standalone.config.ts"
+    "docker/vite.standalone.config.ts"
   ],
   "project": ["src/**/*.{ts,tsx}!"],
   "ignore": ["tsconfig*.json"],
