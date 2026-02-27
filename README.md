@@ -37,11 +37,11 @@ No prerequisites — Claude Code can be installed and configured directly from t
 <tr>
 <td align="center">
   <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI-arm64.dmg">
-    <img src="https://img.shields.io/badge/macOS_(Apple_Silicon)-Download_.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
   </a>
   <br />
   <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI-x64.dmg">
-    <img src="https://img.shields.io/badge/macOS_(Intel)-Download_.dmg-434343?style=flat-square&logo=apple&logoColor=white" alt="macOS Intel" />
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
   </a>
 </td>
 <td align="center">
