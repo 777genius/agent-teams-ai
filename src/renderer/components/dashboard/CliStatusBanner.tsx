@@ -405,6 +405,9 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
             onExit={() => {
               void fetchCliStatus();
             }}
+            autoCloseOnSuccessMs={4000}
+            successMessage="Login complete"
+            failureMessage="Login failed"
           />
         )}
       </>

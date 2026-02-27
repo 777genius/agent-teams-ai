@@ -572,6 +572,13 @@ function shutdownServices(): void {
     sshConnectionManager.dispose();
   }
 
+  // Stop all running team provisioning processes
+  if (teamProvisioningService) {
+    for (const teamName of teamProvisioningService.getAliveTeams()) {
+      teamProvisioningService.stopTeam(teamName);
+    }
+  }
+
   // Kill all PTY processes
   if (ptyTerminalService) {
     ptyTerminalService.killAll();

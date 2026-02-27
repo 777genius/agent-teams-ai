@@ -58,12 +58,18 @@ export class PtyTerminalService {
         ? (process.env.COMSPEC ?? 'powershell.exe')
         : (process.env.SHELL ?? '/bin/bash'));
 
+    const home = getHomeDir();
     const pty = nodePty.spawn(shell, options?.args ?? [], {
       name: 'xterm-256color',
       cols: options?.cols ?? 80,
       rows: options?.rows ?? 24,
-      cwd: options?.cwd ?? getHomeDir(),
-      env: { ...process.env, ...options?.env } as Record<string, string>,
+      cwd: options?.cwd ?? home,
+      env: {
+        ...process.env,
+        HOME: home,
+        USERPROFILE: home,
+        ...options?.env,
+      } as Record<string, string>,
     });
 
     pty.onData((data) => this.send(TERMINAL_DATA, id, data));

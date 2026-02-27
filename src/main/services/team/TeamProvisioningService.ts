@@ -196,10 +196,22 @@ async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.P
       stdio: ['ignore', 'pipe', 'ignore'],
     });
     const chunks: Buffer[] = [];
+    let settled = false;
     let timeoutHandle: NodeJS.Timeout | null = setTimeout(() => {
       timeoutHandle = null;
       child.kill();
-      reject(new Error('shell env resolve timeout'));
+      // SIGKILL fallback if SIGTERM is ignored (e.g., shell stuck on .zshrc)
+      setTimeout(() => {
+        try {
+          child.kill('SIGKILL');
+        } catch {
+          /* already dead */
+        }
+      }, 3000);
+      if (!settled) {
+        settled = true;
+        reject(new Error('shell env resolve timeout'));
+      }
     }, SHELL_ENV_TIMEOUT_MS);
 
     child.stdout?.on('data', (chunk: Buffer) => {
@@ -210,13 +222,19 @@ async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.P
         clearTimeout(timeoutHandle);
         timeoutHandle = null;
       }
-      reject(error);
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
     });
     child.once('close', () => {
       if (timeoutHandle) {
         clearTimeout(timeoutHandle);
       }
-      resolve(Buffer.concat(chunks).toString('utf8'));
+      if (!settled) {
+        settled = true;
+        resolve(Buffer.concat(chunks).toString('utf8'));
+      }
     });
   });
   return parseNullSeparatedEnv(envDump);
@@ -965,7 +983,7 @@ export class TeamProvisioningService {
     run.child = child;
 
     // Send provisioning prompt as first stream-json message (SDKUserMessage format)
-    if (child.stdin) {
+    if (child.stdin?.writable) {
       const message = JSON.stringify({
         type: 'user',
         message: {
@@ -1275,7 +1293,7 @@ export class TeamProvisioningService {
     run.child = child;
 
     // Send launch prompt
-    if (child.stdin) {
+    if (child.stdin?.writable) {
       const message = JSON.stringify({
         type: 'user',
         message: {
@@ -1982,7 +2000,9 @@ export class TeamProvisioningService {
    * Process stays alive for subsequent tasks.
    */
   private async handleProvisioningTurnComplete(run: ProvisioningRun): Promise<void> {
-    if (run.cancelRequested) return;
+    // Guard: must be set synchronously BEFORE any await to prevent
+    // double-invocation from filesystem monitor + stream-json racing.
+    if (run.provisioningComplete || run.cancelRequested) return;
     run.provisioningComplete = true;
     this.setLeadActivity(run, 'idle');
 
@@ -2058,6 +2078,11 @@ export class TeamProvisioningService {
       run.timeoutHandle = null;
     }
     this.stopFilesystemMonitor(run);
+    // Remove stream listeners to prevent data handlers firing on a cleaned-up run
+    if (run.child) {
+      run.child.stdout?.removeAllListeners('data');
+      run.child.stderr?.removeAllListeners('data');
+    }
     this.activeByTeam.delete(run.teamName);
     this.leadInboxRelayInFlight.delete(run.teamName);
     this.relayedLeadInboxMessageIds.delete(run.teamName);
@@ -2441,7 +2466,10 @@ export class TeamProvisioningService {
 
   private async buildProvisioningEnv(): Promise<ProvisioningEnvResolution> {
     const shellEnv = await resolveInteractiveShellEnv();
-    const home = shellEnv.HOME?.trim() || process.env.HOME?.trim() || getHomeDir();
+    // getHomeDir() uses Electron's app.getPath('home') which handles Unicode
+    // correctly on Windows. Prefer it over process.env which may be garbled.
+    const electronHome = getHomeDir();
+    const home = shellEnv.HOME?.trim() || electronHome;
     const user = shellEnv.USER?.trim() || process.env.USER?.trim() || os.userInfo().username;
     const shell = shellEnv.SHELL?.trim() || process.env.SHELL?.trim() || '/bin/zsh';
     const xdgConfigHome =
@@ -2455,6 +2483,7 @@ export class TeamProvisioningService {
       ...process.env,
       ...shellEnv,
       HOME: home,
+      USERPROFILE: home,
       USER: user,
       LOGNAME: shellEnv.LOGNAME?.trim() || process.env.LOGNAME?.trim() || user,
       SHELL: shell,

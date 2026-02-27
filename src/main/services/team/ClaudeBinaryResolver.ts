@@ -176,9 +176,7 @@ export class ClaudeBinaryResolver {
       path.join(getHomeDir(), '.npm-global', 'bin'),
       path.join(getHomeDir(), '.npm', 'bin'),
       process.platform === 'win32'
-        ? process.env.APPDATA
-          ? path.join(process.env.APPDATA, 'npm')
-          : ''
+        ? path.join(getHomeDir(), 'AppData', 'Roaming', 'npm')
         : '/usr/local/bin',
       process.platform === 'win32' ? '' : '/opt/homebrew/bin',
     ].filter((candidate) => candidate.length > 0);
