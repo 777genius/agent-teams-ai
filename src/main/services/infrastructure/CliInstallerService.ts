@@ -331,7 +331,11 @@ export class CliInstallerService {
         await fsp.chmod(tmpFilePath, 0o755);
       }
 
-      this.sendProgress({ type: 'installing', detail: 'Starting shell integration...' });
+      this.sendProgress({
+        type: 'installing',
+        detail: 'Starting shell integration...',
+        rawChunk: 'Starting shell integration...\r\n',
+      });
       logger.info('Running claude install...');
 
       try {
@@ -446,14 +450,19 @@ export class CliInstallerService {
       const outputLines: string[] = [];
 
       const handleOutput = (chunk: Buffer): void => {
-        const text = chunk.toString('utf-8').trim();
-        if (!text) return;
-        for (const line of text.split('\n')) {
-          const trimmed = line.trim();
-          if (trimmed) {
-            outputLines.push(trimmed);
-            logger.info(`[claude install] ${trimmed}`);
-            this.sendProgress({ type: 'installing', detail: trimmed });
+        const raw = chunk.toString('utf-8');
+        if (!raw.trim()) return;
+
+        // Send raw chunk for xterm.js rendering in UI
+        this.sendProgress({ type: 'installing', rawChunk: raw });
+
+        // Extract clean text for logger and error context
+        for (const line of raw.split('\n')) {
+          // eslint-disable-next-line no-control-regex, sonarjs/no-control-regex -- ANSI escape sequences stripped for clean logs
+          const clean = line.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').trim();
+          if (clean) {
+            outputLines.push(clean);
+            logger.info(`[claude install] ${clean}`);
           }
         }
       };

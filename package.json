@@ -49,7 +49,7 @@
     "standalone:build": "electron-vite build && vite build --config vite.standalone.config.ts",
     "standalone:start": "node dist-standalone/index.cjs",
     "prepare": "husky",
-    "postinstall": "electron-rebuild -f -o node-pty"
+    "postinstall": "electron-rebuild -f -o node-pty || echo 'node-pty rebuild failed (terminal will be disabled)'"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js,jsx}": [

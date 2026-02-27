@@ -7,9 +7,10 @@
  * Only rendered in Electron mode.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api, isElectronMode } from '@renderer/api';
+import { TerminalLogPanel } from '@renderer/components/terminal/TerminalLogPanel';
 import { TerminalModal } from '@renderer/components/terminal/TerminalModal';
 import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
 import { formatBytes } from '@renderer/utils/formatters';
@@ -48,38 +49,6 @@ const DetailLine = ({ text }: { text: string | null }): React.JSX.Element | null
     <p className="mt-1 truncate font-mono text-xs" style={{ color: 'var(--color-text-muted)' }}>
       {text}
     </p>
-  );
-};
-
-/** Mini log panel shown during the installing phase */
-const LogPanel = ({ logs }: { logs: string[] }): React.JSX.Element | null => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [logs]);
-
-  if (logs.length === 0) return null;
-
-  return (
-    <div
-      ref={scrollRef}
-      className="mt-2 max-h-24 overflow-y-auto rounded border font-mono text-xs leading-relaxed"
-      style={{
-        borderColor: 'var(--color-border)',
-        backgroundColor: 'var(--color-surface)',
-        padding: '6px 8px',
-        color: 'var(--color-text-muted)',
-      }}
-    >
-      {logs.map((line, i) => (
-        <div key={i} className="whitespace-pre-wrap break-all">
-          <span style={{ color: 'var(--color-text-muted)', opacity: 0.5 }}>&rsaquo;</span> {line}
-        </div>
-      ))}
-    </div>
   );
 };
 
@@ -151,7 +120,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
     downloadTotal,
     installerError,
     installerDetail,
-    installerLogs,
+    installerRawChunks,
     completedVersion,
     fetchCliStatus,
     installCli,
@@ -321,7 +290,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
             Installing Claude CLI...
           </span>
         </div>
-        <LogPanel logs={installerLogs} />
+        <TerminalLogPanel chunks={installerRawChunks} />
       </div>
     );
   }

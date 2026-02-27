@@ -639,6 +639,7 @@ async function handleLaunchTeam(
         cwd,
         prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
         model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
+        clearContext: payload.clearContext === true ? true : undefined,
       },
       (progress) => {
         try {

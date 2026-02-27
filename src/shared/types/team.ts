@@ -212,6 +212,8 @@ export interface TeamLaunchRequest {
   cwd: string;
   prompt?: string;
   model?: string;
+  /** When true, skip --resume and start a fresh session (clears context memory). */
+  clearContext?: boolean;
 }
 
 export interface TeamLaunchResponse {

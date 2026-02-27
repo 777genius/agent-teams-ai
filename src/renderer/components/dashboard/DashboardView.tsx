@@ -146,7 +146,7 @@ const RepositoryCard = ({
     (e: React.MouseEvent) => {
       e.stopPropagation();
       if (projectPath) {
-        void api.openPath(projectPath);
+        void api.openPath(projectPath, projectPath);
       }
     },
     [projectPath]

@@ -67,6 +67,8 @@ export interface CliInstallerProgress {
   error?: string;
   /** Status detail text (e.g. stdout lines from `claude install`) */
   detail?: string;
+  /** Raw terminal output chunk (with ANSI codes), only for 'installing' */
+  rawChunk?: string;
 }
 
 // =============================================================================

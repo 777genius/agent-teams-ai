@@ -1092,34 +1092,44 @@ export class TeamProvisioningService {
     // Extract leadSessionId for session resume on reconnect.
     // If a valid JSONL file exists for the previous session, we can resume it
     // so the lead retains full context of prior work.
+    // When clearContext is true, skip resume entirely to start a fresh session.
     let previousSessionId: string | undefined;
-    try {
-      const configParsed = JSON.parse(configRaw) as Record<string, unknown>;
-      if (
-        typeof configParsed.leadSessionId === 'string' &&
-        configParsed.leadSessionId.trim().length > 0
-      ) {
-        const candidateId = configParsed.leadSessionId.trim();
-        const projectPath =
-          typeof configParsed.projectPath === 'string' && configParsed.projectPath.trim().length > 0
-            ? configParsed.projectPath.trim()
-            : request.cwd;
-        const projectId = encodePath(projectPath);
-        const baseDir = extractBaseDir(projectId);
-        const jsonlPath = path.join(getProjectsBasePath(), baseDir, `${candidateId}.jsonl`);
-        if (await this.pathExists(jsonlPath)) {
-          previousSessionId = candidateId;
-          logger.info(
-            `[${request.teamName}] Found previous session JSONL for resume: ${candidateId}`
-          );
-        } else {
-          logger.info(
-            `[${request.teamName}] Previous session JSONL not found at ${jsonlPath}, starting fresh`
-          );
+    if (request.clearContext) {
+      logger.info(
+        `[${request.teamName}] clearContext requested — skipping session resume, starting fresh`
+      );
+    } else {
+      try {
+        const configParsed = JSON.parse(configRaw) as Record<string, unknown>;
+        if (
+          typeof configParsed.leadSessionId === 'string' &&
+          configParsed.leadSessionId.trim().length > 0
+        ) {
+          const candidateId = configParsed.leadSessionId.trim();
+          const projectPath =
+            typeof configParsed.projectPath === 'string' &&
+            configParsed.projectPath.trim().length > 0
+              ? configParsed.projectPath.trim()
+              : request.cwd;
+          const projectId = encodePath(projectPath);
+          const baseDir = extractBaseDir(projectId);
+          const jsonlPath = path.join(getProjectsBasePath(), baseDir, `${candidateId}.jsonl`);
+          if (await this.pathExists(jsonlPath)) {
+            previousSessionId = candidateId;
+            logger.info(
+              `[${request.teamName}] Found previous session JSONL for resume: ${candidateId}`
+            );
+          } else {
+            logger.info(
+              `[${request.teamName}] Previous session JSONL not found at ${jsonlPath}, starting fresh`
+            );
+          }
         }
+      } catch {
+        logger.debug(
+          `[${request.teamName}] Failed to extract leadSessionId from config for resume`
+        );
       }
-    } catch {
-      logger.debug(`[${request.teamName}] Failed to extract leadSessionId from config for resume`);
     }
 
     // IMPORTANT: The CLI auto-suffixes teammate names when they already exist in config.json.

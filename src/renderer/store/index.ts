@@ -399,13 +399,16 @@ export function initializeNotificationListeners(): () => void {
           useStore.setState({ cliInstallerState: 'verifying', cliInstallerDetail: detail });
           break;
         case 'installing': {
-          // Accumulate log lines for the mini-terminal
+          // Accumulate log lines and raw chunks for xterm.js rendering
           const prevLogs = useStore.getState().cliInstallerLogs;
+          const prevRaw = useStore.getState().cliInstallerRawChunks;
           const newLogs = detail ? [...prevLogs, detail].slice(-50) : prevLogs;
+          const newRaw = progress.rawChunk ? [...prevRaw, progress.rawChunk].slice(-200) : prevRaw;
           useStore.setState({
             cliInstallerState: 'installing',
             cliInstallerDetail: detail,
             cliInstallerLogs: newLogs,
+            cliInstallerRawChunks: newRaw,
           });
           break;
         }

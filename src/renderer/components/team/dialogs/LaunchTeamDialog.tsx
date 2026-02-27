@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
+import { Checkbox } from '@renderer/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +25,7 @@ import { useStore } from '@renderer/store';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { normalizePath } from '@renderer/utils/pathNormalize';
-import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, RotateCcw } from 'lucide-react';
 
 import { ProjectPathSelector } from './ProjectPathSelector';
 
@@ -71,6 +72,7 @@ export const LaunchTeamDialog = ({
   const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedModel, setSelectedModel] = useState('');
+  const [clearContext, setClearContext] = useState(false);
 
   const resetFormState = (): void => {
     setLocalError(null);
@@ -82,6 +84,7 @@ export const LaunchTeamDialog = ({
     setSelectedProjectPath('');
     setCustomCwd('');
     setSelectedModel('');
+    setClearContext(false);
   };
 
   // Warm up CLI on open
@@ -244,6 +247,7 @@ export const LaunchTeamDialog = ({
           cwd: effectiveCwd,
           prompt: promptDraft.value.trim() || undefined,
           model: selectedModel && selectedModel !== '__default__' ? selectedModel : undefined,
+          clearContext: clearContext || undefined,
         });
         resetFormState();
         onClose();
@@ -368,6 +372,34 @@ export const LaunchTeamDialog = ({
                 <SelectItem value="haiku">Haiku 4.5</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="clear-context"
+                checked={clearContext}
+                onCheckedChange={(checked) => setClearContext(checked === true)}
+              />
+              <Label
+                htmlFor="clear-context"
+                className="flex cursor-pointer items-center gap-1.5 text-xs font-normal text-text-secondary"
+              >
+                <RotateCcw className="size-3 shrink-0" />
+                Clear context (fresh session)
+              </Label>
+            </div>
+            {clearContext && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
+                  <p className="text-amber-300/90">
+                    The team lead will start a new session without resuming previous context. All
+                    accumulated session memory and conversation history will not be available.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
