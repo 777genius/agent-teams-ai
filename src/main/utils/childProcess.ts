@@ -68,14 +68,21 @@ function needsShell(binaryPath: string): boolean {
 }
 
 /**
- * Minimal quoting for command‑line arguments when building a shell
- * invocation.  We only escape spaces and double quotes since our
- * callers only ever use simple strings (paths, flags, literals) and
- * the shell itself will handle most quoting rules.
+ * Quote an argument for cmd.exe shell invocation on Windows.
+ *
+ * cmd.exe rules:
+ * - Double-quote args containing spaces or special characters
+ * - Inside double quotes, escape literal `"` as `""`
+ * - `%` is expanded as env var even inside double quotes — escape as `%%`
+ * - `^`, `&`, `|`, `<`, `>` are safe inside double quotes
+ *
+ * Our callers only pass controlled strings (binary paths, CLI flags),
+ * NOT arbitrary user input.
  */
 function quoteArg(arg: string): string {
   if (/[^A-Za-z0-9_\-/.]/.test(arg)) {
-    return `"${arg.replace(/"/g, '\\"')}"`;
+    const escaped = arg.replace(/%/g, '%%').replace(/"/g, '""');
+    return `"${escaped}"`;
   }
   return arg;
 }
@@ -133,7 +140,7 @@ export function spawnCli(
   if (process.platform === 'win32' && needsShell(binaryPath)) {
     const cmd = [binaryPath, ...args].map(quoteArg).join(' ');
     // eslint-disable-next-line sonarjs/os-command -- cmd from known binaryPath+args, not user input (Windows EINVAL fallback)
-    return spawn(cmd, { shell: true, ...options });
+    return spawn(cmd, { ...options, shell: true });
   }
 
   try {
@@ -144,7 +151,7 @@ export function spawnCli(
     if (process.platform === 'win32' && code === 'EINVAL') {
       const cmd = [binaryPath, ...args].map(quoteArg).join(' ');
       // eslint-disable-next-line sonarjs/os-command -- cmd from known binaryPath+args, not user input (Windows EINVAL fallback)
-      return spawn(cmd, { shell: true, ...options });
+      return spawn(cmd, { ...options, shell: true });
     }
     throw err;
   }

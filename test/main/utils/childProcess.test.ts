@@ -134,6 +134,34 @@ describe('cli child process helpers', () => {
       expect(result.stdout).toBe('1.2.3');
     });
 
+    it('escapes percent signs and quotes for cmd.exe in shell fallback', async () => {
+      setPlatform('win32');
+      const execMock = child.exec as unknown as vi.Mock;
+      execMock.mockImplementation((_cmd: string, _opts: unknown, cb: Function) => {
+        cb(null, 'ok', '');
+        return {} as any;
+      });
+
+      await execCli('C:\\Users\\Алексей\\bin\\claude.cmd', ['--model', 'test%PATH%"arg']);
+      const shellCmd = execMock.mock.calls[0][0] as string;
+      // %PATH% must become %%PATH%% to prevent cmd.exe env var expansion
+      expect(shellCmd).toContain('%%PATH%%');
+      // double quote inside arg must become "" (cmd.exe escaping)
+      expect(shellCmd).toContain('""arg');
+      // should NOT contain \" (Unix-style escaping)
+      expect(shellCmd).not.toContain('\\"');
+    });
+
+    it('shell: true cannot be overridden by caller options', () => {
+      setPlatform('win32');
+      const spawnMock = child.spawn as unknown as vi.Mock;
+      spawnMock.mockReturnValue({} as any);
+
+      spawnCli('C:\\Users\\Алексей\\bin\\claude.cmd', ['--version'], { shell: false } as any);
+      // shell: true must win over caller's shell: false
+      expect(spawnMock.mock.calls[0][1]).toMatchObject({ shell: true });
+    });
+
     it('falls back to shell when execFile throws EINVAL on windows', async () => {
       setPlatform('win32');
       const execFileMock = child.execFile as unknown as vi.Mock;
