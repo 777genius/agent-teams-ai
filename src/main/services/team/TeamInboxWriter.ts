@@ -15,6 +15,7 @@ export class TeamInboxWriter {
 
     const payload: InboxMessage = {
       from: request.from ?? 'user',
+      to: request.member,
       text: request.text,
       timestamp: new Date().toISOString(),
       read: false,

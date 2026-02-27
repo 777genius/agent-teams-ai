@@ -26,11 +26,11 @@ In standalone mode (Docker or `node dist-standalone/index.cjs`), the auto-update
 For maximum trust, run the Docker container with `--network none`:
 
 ```bash
-docker build -t claude-agent-teams-ui .
+docker build -t claude-agent-teams-ui -f docker/Dockerfile .
 docker run --network none -p 3456:3456 -v ~/.claude:/data/.claude:ro claude-agent-teams-ui
 ```
 
-Or with Docker Compose, uncomment `network_mode: "none"` in `docker-compose.yml`.
+Or with Docker Compose, uncomment `network_mode: "none"` in `docker/docker-compose.yml`.
 
 ## IPC & Input Validation
 

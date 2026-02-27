@@ -413,6 +413,7 @@ function sendInboxMessage(paths, teamName, flags) {
     : String(Date.now()) + '-' + String(Math.random());
   const payload = {
     from,
+    to,
     text,
     timestamp: nowIso(),
     read: false,
