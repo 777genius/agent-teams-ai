@@ -2,7 +2,9 @@ import '@xterm/xterm/css/xterm.css';
 
 import { useEffect, useRef } from 'react';
 
+import { api } from '@renderer/api';
 import { FitAddon } from '@xterm/addon-fit';
+import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Terminal } from '@xterm/xterm';
 
 interface TerminalLogPanelProps {
@@ -40,6 +42,12 @@ export const TerminalLogPanel = ({
 
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
+
+    const webLinksAddon = new WebLinksAddon((_event, uri) => {
+      void api.openExternal(uri);
+    });
+    term.loadAddon(webLinksAddon);
+
     term.open(container);
 
     const rafId = requestAnimationFrame(() => fitAddon.fit());
