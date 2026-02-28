@@ -243,7 +243,6 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     if (!teamName) {
       return;
     }
-    console.warn(`[TeamDetailView] selectTeam start team=${teamName}`);
     void selectTeam(teamName);
     void fetchDeletedTasks(teamName);
   }, [teamName, selectTeam, fetchDeletedTasks]);

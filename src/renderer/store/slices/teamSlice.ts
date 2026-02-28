@@ -384,18 +384,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       reviewActionError: null,
     });
 
-    const startedAt = Date.now();
-    const traceId = `${teamName}:${startedAt}`;
-    // NOTE: logger.info is not shown by default (level=WARN in dev). Use warn/console.
-    console.warn(
-      `[selectTeam] start trace=${traceId} skipProjectAutoSelect=${opts?.skipProjectAutoSelect === true}`
-    );
-
     try {
       const data = await withTimeout(
         unwrapIpc('team:getData', () => api.teams.getData(teamName)),
         TEAM_GET_DATA_TIMEOUT_MS,
-        `team:getData(${teamName}) trace=${traceId}`
+        `team:getData(${teamName})`
       );
       // Stale check: user may have switched to another team during the async call
       if (get().selectedTeamName !== teamName) {
@@ -407,10 +400,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         selectedTeamLoading: false,
         selectedTeamError: null,
       });
-
-      console.warn(
-        `[selectTeam] done trace=${traceId} ms=${Date.now() - startedAt} tasks=${data.tasks.length} members=${data.members.length} messages=${data.messages.length}`
-      );
 
       // Sync tab label with the team's display name from config
       const displayName = data.config.name || teamName;
@@ -471,7 +460,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           selectedTeamData: null,
           selectedTeamError: null,
         });
-        console.warn(`[selectTeam] provisioning team=${teamName} trace=${traceId}`);
         return;
       }
 
@@ -481,7 +469,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           : error instanceof Error
             ? error.message
             : 'Failed to fetch team data';
-      console.warn(`[selectTeam] fail team=${teamName} ms=${Date.now() - startedAt} ${message}`);
       set({
         selectedTeamLoading: false,
         selectedTeamData: null,

@@ -231,14 +231,6 @@ export const TaskDetailDialog = ({
     onScrollToTask?.(taskId);
   };
 
-  useEffect(() => {
-    if (!open) return;
-    if (!loading) return;
-    console.warn(
-      `[TaskDetailDialog] loading=true variant=${variant} team=${teamName} taskId=${task?.id ?? ''}`
-    );
-  }, [loading, open, task?.id, teamName, variant]);
-
   if (loading) {
     return (
       <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
