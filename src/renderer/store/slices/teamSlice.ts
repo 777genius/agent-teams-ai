@@ -204,11 +204,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   setPendingReviewRequest: (req) => set({ pendingReviewRequest: req }),
   openGlobalTaskDetail: (teamName: string, taskId: string) => {
     set({ globalTaskDetail: { teamName, taskId } });
-    // Ensure team data is loaded for the dialog
-    const state = get();
-    if (state.selectedTeamName !== teamName || !state.selectedTeamData) {
-      void state.selectTeam(teamName, { skipProjectAutoSelect: true });
-    }
   },
   closeGlobalTaskDetail: () => set({ globalTaskDetail: null }),
   addingComment: false,

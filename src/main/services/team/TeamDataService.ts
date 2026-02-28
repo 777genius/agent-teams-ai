@@ -12,7 +12,6 @@ import { createLogger } from '@shared/utils/logger';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as readline from 'readline';
 
 import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 
@@ -969,58 +968,76 @@ export class TeamDataService {
 
     const leadName = config.members?.find((m) => m.agentType === 'team-lead')?.name ?? 'team-lead';
 
-    const texts: InboxMessage[] = [];
+    // Optimization: read from the end of the JSONL file (we only need the last N texts).
+    // The full file can be huge; scanning from the start causes long stalls on Windows.
+    const MAX_SCAN_BYTES = 8 * 1024 * 1024; // 8MB tail cap
+    const INITIAL_SCAN_BYTES = 256 * 1024; // 256KB
 
-    const stream = fs.createReadStream(jsonlPath, { encoding: 'utf8' });
-    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
+    const textsReversed: InboxMessage[] = [];
+    const handle = await fs.promises.open(jsonlPath, 'r');
     try {
-      for await (const line of rl) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
+      const stat = await handle.stat();
+      const fileSize = stat.size;
 
-        let msg: Record<string, unknown>;
-        try {
-          msg = JSON.parse(trimmed) as Record<string, unknown>;
-        } catch {
-          continue;
+      let scanBytes = Math.min(INITIAL_SCAN_BYTES, fileSize);
+      while (textsReversed.length < MAX_LEAD_TEXTS && scanBytes <= MAX_SCAN_BYTES) {
+        const start = Math.max(0, fileSize - scanBytes);
+        const buffer = Buffer.alloc(scanBytes);
+        await handle.read(buffer, 0, scanBytes, start);
+        const chunk = buffer.toString('utf8');
+
+        const lines = chunk.split(/\r?\n/);
+        // If we started mid-file, the first line may be partial — drop it.
+        const fromIndex = start > 0 ? 1 : 0;
+
+        for (let i = lines.length - 1; i >= fromIndex; i--) {
+          const trimmed = lines[i]?.trim();
+          if (!trimmed) continue;
+
+          let msg: Record<string, unknown>;
+          try {
+            msg = JSON.parse(trimmed) as Record<string, unknown>;
+          } catch {
+            continue;
+          }
+
+          if (msg.type !== 'assistant') continue;
+
+          const message = (msg.message ?? msg) as Record<string, unknown>;
+          const content = message.content;
+          if (!Array.isArray(content)) continue;
+
+          const timestamp =
+            typeof msg.timestamp === 'string' ? msg.timestamp : new Date().toISOString();
+
+          for (const block of content as Record<string, unknown>[]) {
+            if (block.type !== 'text' || typeof block.text !== 'string') continue;
+            const text = block.text.trim();
+            if (text.length < MIN_TEXT_LENGTH) continue;
+            textsReversed.push({
+              from: leadName,
+              text,
+              timestamp,
+              read: true,
+              source: 'lead_session',
+            });
+            if (textsReversed.length >= MAX_LEAD_TEXTS) break;
+          }
+          if (textsReversed.length >= MAX_LEAD_TEXTS) break;
         }
 
-        if (msg.type !== 'assistant') continue;
-
-        const message = (msg.message ?? msg) as Record<string, unknown>;
-        const content = message.content;
-        if (!Array.isArray(content)) continue;
-
-        const timestamp =
-          typeof msg.timestamp === 'string' ? msg.timestamp : new Date().toISOString();
-
-        for (const block of content as Record<string, unknown>[]) {
-          if (block.type !== 'text' || typeof block.text !== 'string') continue;
-
-          const text = block.text.trim();
-          if (text.length < MIN_TEXT_LENGTH) continue;
-
-          texts.push({
-            from: leadName,
-            text,
-            timestamp,
-            read: true,
-            source: 'lead_session',
-          });
-        }
+        if (textsReversed.length >= MAX_LEAD_TEXTS) break;
+        if (scanBytes === fileSize) break;
+        scanBytes = Math.min(fileSize, scanBytes * 2);
       }
     } finally {
-      rl.close();
-      stream.destroy();
+      await handle.close();
     }
 
-    // Keep only the last N texts
-    if (texts.length > MAX_LEAD_TEXTS) {
-      return texts.slice(-MAX_LEAD_TEXTS);
-    }
-
-    return texts;
+    // Convert back to chronological order (old behavior) and keep the last N texts.
+    textsReversed.reverse();
+    const texts = textsReversed;
+    return texts.length > MAX_LEAD_TEXTS ? texts.slice(-MAX_LEAD_TEXTS) : texts;
   }
 
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {

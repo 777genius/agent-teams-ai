@@ -62,6 +62,7 @@ import type { KanbanTaskState, ResolvedTeamMember, TeamTaskWithKanban } from '@s
 interface TaskDetailDialogProps {
   open: boolean;
   loading?: boolean;
+  variant?: 'team' | 'global';
   task: TeamTaskWithKanban | null;
   teamName: string;
   kanbanTaskState?: KanbanTaskState;
@@ -79,6 +80,7 @@ interface TaskDetailDialogProps {
 export const TaskDetailDialog = ({
   open,
   loading = false,
+  variant = 'team',
   task,
   teamName,
   kanbanTaskState,
@@ -208,6 +210,7 @@ export const TaskDetailDialog = ({
   }, [activeChangeSet, currentTask]);
 
   useEffect(() => {
+    if (variant !== 'team') return;
     if (!open || !currentTask || !isTaskCompleted || !onViewChanges) return;
     // Only fetch if we don't already have data for this task
     if (taskChangesFiles !== null) return;
@@ -220,6 +223,7 @@ export const TaskDetailDialog = ({
     fetchTaskChanges,
     taskChangesFiles,
     onViewChanges,
+    variant,
   ]);
 
   const handleDependencyClick = (taskId: string): void => {
@@ -536,7 +540,7 @@ export const TaskDetailDialog = ({
         </CollapsibleTeamSection>
 
         {/* Changes */}
-        {isTaskCompleted && onViewChanges ? (
+        {variant === 'team' && isTaskCompleted && onViewChanges ? (
           <CollapsibleTeamSection
             title="Changes"
             icon={<FileDiff size={14} />}
@@ -582,16 +586,22 @@ export const TaskDetailDialog = ({
         ) : null}
 
         {/* Execution Logs — sessions that reference this task */}
-        <CollapsibleTeamSection title="Execution Logs" icon={<ScrollText size={14} />} defaultOpen>
-          <div className="min-w-0 overflow-hidden">
-            <MemberLogsTab
-              teamName={teamName}
-              taskId={currentTask.id}
-              taskOwner={currentTask.owner}
-              taskStatus={currentTask.status}
-            />
-          </div>
-        </CollapsibleTeamSection>
+        {variant === 'team' ? (
+          <CollapsibleTeamSection
+            title="Execution Logs"
+            icon={<ScrollText size={14} />}
+            defaultOpen
+          >
+            <div className="min-w-0 overflow-hidden">
+              <MemberLogsTab
+                teamName={teamName}
+                taskId={currentTask.id}
+                taskOwner={currentTask.owner}
+                taskStatus={currentTask.status}
+              />
+            </div>
+          </CollapsibleTeamSection>
+        ) : null}
 
         <div className="mb-3 space-y-2">
           {/* Dependencies */}

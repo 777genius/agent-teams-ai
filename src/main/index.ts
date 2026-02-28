@@ -62,6 +62,7 @@ import {
   UpdaterService,
 } from './services';
 
+import type { FileChangeEvent } from '@main/types';
 import type { TeamChangeEvent } from '@shared/types';
 
 const logger = createLogger('App');
@@ -76,18 +77,51 @@ const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) — suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
 
+// --- Team display name cache (avoid listTeams() on every notification) ---
+const TEAM_DISPLAY_NAME_TTL_MS = 30_000;
+const teamDisplayNameCache = new Map<string, { value: string; expiresAt: number }>();
+let teamListInFlight: Promise<Map<string, string>> | null = null;
+
+async function refreshTeamDisplayNameCache(): Promise<Map<string, string>> {
+  if (teamListInFlight) {
+    return teamListInFlight;
+  }
+
+  teamListInFlight = (async () => {
+    const out = new Map<string, string>();
+    try {
+      if (!teamDataService) return out;
+      const summary = await teamDataService.listTeams();
+      for (const team of summary) {
+        if (team?.teamName) {
+          out.set(team.teamName, team.displayName || team.teamName);
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      teamListInFlight = null;
+    }
+    return out;
+  })();
+
+  return teamListInFlight;
+}
+
 /** Resolve human-friendly team display name, falling back to raw teamName. */
 async function resolveTeamDisplayName(teamName: string): Promise<string> {
-  try {
-    if (teamDataService) {
-      const summary = await teamDataService.listTeams();
-      const team = summary.find((t) => t.teamName === teamName);
-      if (team?.displayName) return team.displayName;
-    }
-  } catch {
-    // fallback
+  const cached = teamDisplayNameCache.get(teamName);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
   }
-  return teamName;
+
+  const map = await refreshTeamDisplayNameCache();
+  const resolved = map.get(teamName) ?? teamName;
+  teamDisplayNameCache.set(teamName, {
+    value: resolved,
+    expiresAt: Date.now() + TEAM_DISPLAY_NAME_TTL_MS,
+  });
+  return resolved;
 }
 
 async function notifyNewInboxMessages(teamName: string, detail: string): Promise<void> {
@@ -220,9 +254,37 @@ function wireFileWatcherEvents(context: ServiceContext): void {
   }
 
   // Wire file-change events to renderer and HTTP SSE
+  const SCAN_CACHE_INVALIDATE_DEBOUNCE_MS = 250;
+  let scanCacheInvalidateTimer: ReturnType<typeof setTimeout> | null = null;
+  const scheduleScanCacheInvalidation = (): void => {
+    if (scanCacheInvalidateTimer) {
+      clearTimeout(scanCacheInvalidateTimer);
+    }
+    scanCacheInvalidateTimer = setTimeout(() => {
+      scanCacheInvalidateTimer = null;
+      context.projectScanner.clearScanCache();
+    }, SCAN_CACHE_INVALIDATE_DEBOUNCE_MS);
+  };
+
   const fileChangeHandler = (event: unknown): void => {
-    // Invalidate the scan cache so the next IPC request sees fresh data
-    context.projectScanner.clearScanCache();
+    // Avoid triggering a full project rescan on every session append.
+    // The ProjectScanner already has a short TTL cache; we only invalidate for
+    // structural changes (add/unlink), and we debounce bursts of events.
+    try {
+      if (event && typeof event === 'object') {
+        const row = event as Partial<FileChangeEvent>;
+        const isSubagent = row.isSubagent === true;
+        const changeType = row.type;
+        if (!isSubagent && (changeType === 'add' || changeType === 'unlink')) {
+          scheduleScanCacheInvalidation();
+        }
+      } else {
+        // Fallback: if we can't classify the event, invalidate (debounced).
+        scheduleScanCacheInvalidation();
+      }
+    } catch {
+      // ignore
+    }
 
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('file-change', event);
@@ -230,7 +292,13 @@ function wireFileWatcherEvents(context: ServiceContext): void {
     httpServer?.broadcast('file-change', event);
   };
   context.fileWatcher.on('file-change', fileChangeHandler);
-  fileChangeCleanup = () => context.fileWatcher.off('file-change', fileChangeHandler);
+  fileChangeCleanup = () => {
+    context.fileWatcher.off('file-change', fileChangeHandler);
+    if (scanCacheInvalidateTimer) {
+      clearTimeout(scanCacheInvalidateTimer);
+      scanCacheInvalidateTimer = null;
+    }
+  };
 
   // Forward checklist-change events to renderer and HTTP SSE (mirrors file-change pattern above)
   const todoChangeHandler = (event: unknown): void => {
