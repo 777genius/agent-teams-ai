@@ -39,6 +39,8 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
 
   // Fetch all projects from main process
   fetchProjects: async () => {
+    // Guard: prevent concurrent fetches (component mount + centralized init chain)
+    if (get().projectsLoading) return;
     set({ projectsLoading: true, projectsError: null });
     try {
       const projects = await api.getProjects();

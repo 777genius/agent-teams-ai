@@ -46,7 +46,7 @@ function hashString(str: string): number {
 
 export function getSubagentTypeColorSet(
   subagentType: string,
-  agentConfigs?: Record<string, { color?: string }>
+  agentConfigs?: Record<string, { name?: string; color?: string }>
 ): TeamColorSet {
   // Use color from agent config if available
   const configColor = agentConfigs?.[subagentType]?.color;

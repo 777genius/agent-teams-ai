@@ -45,7 +45,7 @@ export const MemberBadge = ({
       className={`rounded px-1.5 py-0.5 ${textClass} font-medium tracking-wide`}
       style={badgeStyle}
     >
-      {name}
+      {name === 'team-lead' ? 'lead' : name}
     </span>
   );
 

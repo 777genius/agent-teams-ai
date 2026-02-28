@@ -10,6 +10,9 @@
  * Git worktree detection:
  * - Main repo: .git is a directory
  * - Worktree: .git is a file containing "gitdir: /path/to/main/.git/worktrees/<name>"
+ *
+ * All filesystem operations use fs.promises to avoid blocking the main process event loop.
+ * Results are cached with a short TTL to avoid redundant reads during batch operations.
  */
 
 import {
@@ -27,12 +30,31 @@ import {
 import { type RepositoryIdentity, type WorktreeSource } from '@main/types';
 import { createLogger } from '@shared/utils/logger';
 import * as crypto from 'crypto';
-import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 const logger = createLogger('Service:GitIdentityResolver');
 
+interface CacheEntry<T> {
+  value: T;
+  expiry: number;
+}
+
+/** Check if a path exists on the filesystem (async). */
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fsp.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 class GitIdentityResolver {
+  private identityCache = new Map<string, CacheEntry<RepositoryIdentity | null>>();
+  private branchCache = new Map<string, CacheEntry<string | null>>();
+  private static readonly CACHE_TTL_MS = 60_000;
+
   /**
    * Resolve repository identity from a project path.
    *
@@ -48,66 +70,80 @@ class GitIdentityResolver {
    * @returns RepositoryIdentity or null if not a git repo
    */
   async resolveIdentity(projectPath: string): Promise<RepositoryIdentity | null> {
+    const cached = this.identityCache.get(projectPath);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.value;
+    }
+
+    const result = await this.resolveIdentityUncached(projectPath);
+    this.identityCache.set(projectPath, {
+      value: result,
+      expiry: Date.now() + GitIdentityResolver.CACHE_TTL_MS,
+    });
+    return result;
+  }
+
+  private async resolveIdentityUncached(projectPath: string): Promise<RepositoryIdentity | null> {
     try {
       const gitPath = path.join(projectPath, '.git');
 
-      // First, try filesystem-based resolution
-      if (fs.existsSync(gitPath)) {
-        const stats = fs.statSync(gitPath);
+      let stats: Awaited<ReturnType<typeof fsp.stat>>;
+      try {
+        stats = await fsp.stat(gitPath);
+      } catch {
+        // .git doesn't exist — fallback to path heuristics
+        return this.resolveIdentityFromPath(projectPath);
+      }
 
-        let mainGitDir: string;
+      let mainGitDir: string;
 
-        if (stats.isFile()) {
-          // This is a worktree - parse the .git file to find main repo
-          const gitFileContent = fs.readFileSync(gitPath, 'utf-8').trim();
-          const gitDirMatch = /^gitdir:\s*(\S[^\r\n]*)$/m.exec(gitFileContent);
+      if (stats.isFile()) {
+        // This is a worktree - parse the .git file to find main repo
+        const gitFileContent = (await fsp.readFile(gitPath, 'utf-8')).trim();
+        const gitDirMatch = /^gitdir:\s*(\S[^\r\n]*)$/m.exec(gitFileContent);
 
-          if (!gitDirMatch) {
-            logger.warn(`Invalid .git file format at ${gitPath}`);
-            return this.resolveIdentityFromPath(projectPath);
-          }
-
-          let worktreeGitDir = gitDirMatch[1].trim();
-
-          // Handle relative paths in gitdir (resolve relative to the .git file location)
-          if (!path.isAbsolute(worktreeGitDir)) {
-            worktreeGitDir = path.resolve(projectPath, worktreeGitDir);
-          }
-
-          mainGitDir = this.extractMainGitDir(worktreeGitDir);
-        } else if (stats.isDirectory()) {
-          mainGitDir = gitPath;
-        } else {
+        if (!gitDirMatch) {
+          logger.warn(`Invalid .git file format at ${gitPath}`);
           return this.resolveIdentityFromPath(projectPath);
         }
 
-        // Normalize the path to handle symlinks (e.g., /tmp -> /private/var/folders)
-        // This ensures all worktrees of the same repo get the same ID
-        try {
-          mainGitDir = fs.realpathSync(mainGitDir);
-        } catch {
-          // If realpath fails (e.g., path doesn't exist), use as-is
+        let worktreeGitDir = gitDirMatch[1].trim();
+
+        // Handle relative paths in gitdir (resolve relative to the .git file location)
+        if (!path.isAbsolute(worktreeGitDir)) {
+          worktreeGitDir = path.resolve(projectPath, worktreeGitDir);
         }
 
-        // Extract remote URL from config
-        const remoteUrl = this.getRemoteUrl(mainGitDir);
-
-        // Generate consistent repository ID based on the CANONICAL main git directory
-        const repoId = this.generateRepoId(remoteUrl, mainGitDir);
-
-        // Extract repository name from path or remote URL
-        const repoName = this.extractRepoName(remoteUrl, mainGitDir);
-
-        return {
-          id: repoId,
-          remoteUrl: remoteUrl ?? undefined,
-          mainGitDir,
-          name: repoName,
-        };
+        mainGitDir = this.extractMainGitDir(worktreeGitDir);
+      } else if (stats.isDirectory()) {
+        mainGitDir = gitPath;
+      } else {
+        return this.resolveIdentityFromPath(projectPath);
       }
 
-      // Fallback: path doesn't exist, use heuristic resolution
-      return this.resolveIdentityFromPath(projectPath);
+      // Normalize the path to handle symlinks (e.g., /tmp -> /private/var/folders)
+      // This ensures all worktrees of the same repo get the same ID
+      try {
+        mainGitDir = await fsp.realpath(mainGitDir);
+      } catch {
+        // If realpath fails (e.g., path doesn't exist), use as-is
+      }
+
+      // Extract remote URL from config
+      const remoteUrl = await this.getRemoteUrl(mainGitDir);
+
+      // Generate consistent repository ID based on the CANONICAL main git directory
+      const repoId = this.generateRepoId(remoteUrl, mainGitDir);
+
+      // Extract repository name from path or remote URL
+      const repoName = this.extractRepoName(remoteUrl, mainGitDir);
+
+      return {
+        id: repoId,
+        remoteUrl: remoteUrl ?? undefined,
+        mainGitDir,
+        name: repoName,
+      };
     } catch (error) {
       logger.error(`Error resolving git identity for ${projectPath}:`, error);
       // Try fallback even on error
@@ -223,7 +259,7 @@ class GitIdentityResolver {
    * Worktrees have a .git file, main repos have a .git directory.
    * Uses path heuristics if filesystem is not available (for deleted worktrees).
    */
-  isWorktree(projectPath: string): boolean {
+  async isWorktree(projectPath: string): Promise<boolean> {
     // First, try path-based heuristics (works for deleted worktrees)
     const parts = projectPath.split(path.sep).filter(Boolean);
 
@@ -257,10 +293,8 @@ class GitIdentityResolver {
     // Fallback: check filesystem if available
     try {
       const gitPath = path.join(projectPath, '.git');
-      if (fs.existsSync(gitPath)) {
-        const stats = fs.statSync(gitPath);
-        return stats.isFile();
-      }
+      const stats = await fsp.stat(gitPath);
+      return stats.isFile();
     } catch {
       // Ignore errors - filesystem might not be available
     }
@@ -301,14 +335,16 @@ class GitIdentityResolver {
    * @param gitDir - Path to the .git directory
    * @returns Remote URL or null if not found
    */
-  private getRemoteUrl(gitDir: string): string | null {
+  private async getRemoteUrl(gitDir: string): Promise<string | null> {
     try {
       const configPath = path.join(gitDir, 'config');
-      if (!fs.existsSync(configPath)) {
+
+      let configContent: string;
+      try {
+        configContent = await fsp.readFile(configPath, 'utf-8');
+      } catch {
         return null;
       }
-
-      const configContent = fs.readFileSync(configPath, 'utf-8');
 
       // Parse git config to find [remote "origin"] section
       const lines = configContent.split(/\r?\n/);
@@ -413,19 +449,35 @@ class GitIdentityResolver {
    * @returns Branch name or null
    */
   async getBranch(projectPath: string): Promise<string | null> {
+    const cached = this.branchCache.get(projectPath);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.value;
+    }
+
+    const result = await this.getBranchUncached(projectPath);
+    this.branchCache.set(projectPath, {
+      value: result,
+      expiry: Date.now() + GitIdentityResolver.CACHE_TTL_MS,
+    });
+    return result;
+  }
+
+  private async getBranchUncached(projectPath: string): Promise<string | null> {
     try {
       const gitPath = path.join(projectPath, '.git');
 
-      if (!fs.existsSync(gitPath)) {
+      let stats: Awaited<ReturnType<typeof fsp.stat>>;
+      try {
+        stats = await fsp.stat(gitPath);
+      } catch {
         return null;
       }
 
-      const stats = fs.statSync(gitPath);
       let headPath: string;
 
       if (stats.isFile()) {
         // Worktree - read .git file to find the HEAD location
-        const gitFileContent = fs.readFileSync(gitPath, 'utf-8').trim();
+        const gitFileContent = (await fsp.readFile(gitPath, 'utf-8')).trim();
         const gitDirMatch = /^gitdir:\s*(\S[^\r\n]*)$/.exec(gitFileContent);
 
         if (!gitDirMatch) {
@@ -438,11 +490,12 @@ class GitIdentityResolver {
         headPath = path.join(gitPath, 'HEAD');
       }
 
-      if (!fs.existsSync(headPath)) {
+      let headContent: string;
+      try {
+        headContent = (await fsp.readFile(headPath, 'utf-8')).trim();
+      } catch {
         return null;
       }
-
-      const headContent = fs.readFileSync(headPath, 'utf-8').trim();
 
       // Check if HEAD is a symbolic ref (branch)
       const refMatch = /^ref:\s*refs\/heads\/(.+)$/.exec(headContent);
@@ -476,7 +529,7 @@ class GitIdentityResolver {
    * @param projectPath - The filesystem path to check
    * @returns WorktreeSource identifier
    */
-  detectWorktreeSource(projectPath: string): WorktreeSource {
+  async detectWorktreeSource(projectPath: string): Promise<WorktreeSource> {
     const parts = projectPath.split(path.sep).filter(Boolean);
 
     // Pattern: vibe-kanban
@@ -518,13 +571,8 @@ class GitIdentityResolver {
 
     // Check if it's a standard git repo (only if filesystem exists)
     // For deleted repos, we'll return 'git' as fallback since we can't verify
-    try {
-      const gitPath = path.join(projectPath, '.git');
-      if (fs.existsSync(gitPath)) {
-        return 'git';
-      }
-    } catch {
-      // Ignore errors - filesystem might not be available
+    if (await fileExists(path.join(projectPath, '.git'))) {
+      return 'git';
     }
 
     // Default to 'git' for paths that don't match known patterns
@@ -542,12 +590,12 @@ class GitIdentityResolver {
    * @param isMainWorktree - Whether this is the main worktree
    * @returns Display name for the worktree
    */
-  getWorktreeDisplayName(
+  async getWorktreeDisplayName(
     projectPath: string,
     source: WorktreeSource,
     branch: string | null,
     isMainWorktree: boolean
-  ): string {
+  ): Promise<string> {
     const parts = projectPath.split(path.sep).filter(Boolean);
 
     switch (source) {
@@ -626,7 +674,7 @@ class GitIdentityResolver {
           return branch ?? 'main';
         }
         // For non-main git worktrees, try to get the worktree name from .git file
-        return this.getGitWorktreeName(projectPath) ?? branch ?? parts[parts.length - 1];
+        return (await this.getGitWorktreeName(projectPath)) ?? branch ?? parts[parts.length - 1];
 
       case 'unknown':
       default:
@@ -645,15 +693,20 @@ class GitIdentityResolver {
    * @param projectPath - The filesystem path
    * @returns Worktree name or null
    */
-  private getGitWorktreeName(projectPath: string): string | null {
+  private async getGitWorktreeName(projectPath: string): Promise<string | null> {
     try {
       const gitPath = path.join(projectPath, '.git');
-      if (!fs.existsSync(gitPath)) return null;
 
-      const stats = fs.statSync(gitPath);
+      let stats: Awaited<ReturnType<typeof fsp.stat>>;
+      try {
+        stats = await fsp.stat(gitPath);
+      } catch {
+        return null;
+      }
+
       if (!stats.isFile()) return null;
 
-      const content = fs.readFileSync(gitPath, 'utf-8');
+      const content = await fsp.readFile(gitPath, 'utf-8');
       const match = /gitdir:\s*(\S[^\r\n]*)/.exec(content);
       if (!match) return null;
 

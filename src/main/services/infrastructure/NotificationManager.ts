@@ -12,11 +12,11 @@
  * - Emit IPC events to renderer: notification:new, notification:updated
  */
 
+import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { type BrowserWindow, Notification } from 'electron';
 import { EventEmitter } from 'events';
-import * as fs from 'fs';
-import * as os from 'os';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 import { type DetectedError } from '../error/ErrorMessageBuilder';
@@ -77,7 +77,7 @@ const MAX_NOTIFICATIONS = 100;
 const THROTTLE_MS = 5000;
 
 /** Path to notifications storage file */
-const NOTIFICATIONS_PATH = path.join(os.homedir(), '.claude', 'claude-devtools-notifications.json');
+const NOTIFICATIONS_PATH = path.join(getHomeDir(), '.claude', 'claude-devtools-notifications.json');
 
 // =============================================================================
 // NotificationManager Class
@@ -90,6 +90,10 @@ export class NotificationManager extends EventEmitter {
   private mainWindow: BrowserWindow | null = null;
   private throttleMap = new Map<string, number>();
   private isInitialized: boolean = false;
+  /** Promise that resolves when async initialization is complete.
+   *  Used by addError() to wait for notifications to be loaded from disk
+   *  before writing, preventing a race where save overwrites unloaded data. */
+  private initPromise: Promise<void> | null = null;
 
   constructor(configManager?: ConfigManager) {
     super();
@@ -106,7 +110,9 @@ export class NotificationManager extends EventEmitter {
   static getInstance(): NotificationManager {
     if (!NotificationManager.instance) {
       NotificationManager.instance = new NotificationManager();
-      NotificationManager.instance.initialize();
+      // Async init: loads notifications without blocking startup.
+      // addError() awaits initPromise to prevent save-before-load races.
+      NotificationManager.instance.initPromise = NotificationManager.instance.initialize();
     }
     return NotificationManager.instance;
   }
@@ -133,12 +139,12 @@ export class NotificationManager extends EventEmitter {
    * Initializes the notification manager.
    * Loads existing notifications and prunes if needed.
    */
-  initialize(): void {
+  async initialize(): Promise<void> {
     if (this.isInitialized) {
       return;
     }
 
-    this.loadNotifications();
+    await this.loadNotifications();
     this.pruneNotifications();
     this.isInitialized = true;
 
@@ -157,42 +163,45 @@ export class NotificationManager extends EventEmitter {
   // ===========================================================================
 
   /**
-   * Loads notifications from disk.
+   * Loads notifications from disk (async to avoid blocking startup).
+   * Uses a single readFile instead of access() + readFile() to eliminate
+   * a redundant syscall and TOCTOU race condition.
    */
-  private loadNotifications(): void {
+  private async loadNotifications(): Promise<void> {
     try {
-      if (fs.existsSync(NOTIFICATIONS_PATH)) {
-        const data = fs.readFileSync(NOTIFICATIONS_PATH, 'utf8');
-        const parsed = JSON.parse(data) as unknown;
+      const data = await fsp.readFile(NOTIFICATIONS_PATH, 'utf8');
+      const parsed = JSON.parse(data) as unknown;
 
-        if (Array.isArray(parsed)) {
-          this.notifications = parsed as StoredNotification[];
-        } else {
-          logger.warn('Invalid notifications file format, starting fresh');
-          this.notifications = [];
-        }
+      if (Array.isArray(parsed)) {
+        this.notifications = parsed as StoredNotification[];
+      } else {
+        logger.warn('Invalid notifications file format, starting fresh');
+        this.notifications = [];
       }
     } catch (error) {
-      logger.error('Error loading notifications:', error);
+      // ENOENT is expected on first run — no file to load
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        logger.error('Error loading notifications:', error);
+      }
       this.notifications = [];
     }
   }
 
   /**
-   * Saves notifications to disk.
+   * Saves notifications to disk asynchronously.
+   * Uses async I/O to avoid blocking the main process event loop,
+   * which is critical on Windows where sync writes can freeze the UI.
    */
   private saveNotifications(): void {
-    try {
-      // Ensure directory exists
-      const dir = path.dirname(NOTIFICATIONS_PATH);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
+    const data = JSON.stringify(this.notifications, null, 2);
+    const dir = path.dirname(NOTIFICATIONS_PATH);
 
-      fs.writeFileSync(NOTIFICATIONS_PATH, JSON.stringify(this.notifications, null, 2), 'utf8');
-    } catch (error) {
-      logger.error('Error saving notifications:', error);
-    }
+    fsp
+      .mkdir(dir, { recursive: true })
+      .then(() => fsp.writeFile(NOTIFICATIONS_PATH, data, 'utf8'))
+      .catch((error) => {
+        logger.error('Error saving notifications:', error);
+      });
   }
 
   /**
@@ -451,6 +460,12 @@ export class NotificationManager extends EventEmitter {
    * @returns The stored notification, or null if filtered/throttled
    */
   async addError(error: DetectedError): Promise<StoredNotification | null> {
+    // Wait for async initialization to complete before modifying notifications.
+    // Prevents a race where saveNotifications() overwrites not-yet-loaded data.
+    if (this.initPromise) {
+      await this.initPromise;
+    }
+
     // Deduplicate by toolUseId: the same tool call can appear in both the
     // subagent JSONL file and the parent session JSONL (as a progress event).
     // Keep the subagent-annotated version (with subagentId) when possible.

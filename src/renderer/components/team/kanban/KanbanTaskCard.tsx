@@ -170,6 +170,40 @@ export const KanbanTaskCard = ({
     }
   }, [showChangesColumn, task.status, task.id, teamName, taskHasChanges, checkTaskHasChanges]);
 
+  const isReviewManual = columnId === 'review' && !hasReviewers;
+
+  const metaActions = (
+    <>
+      {showChangesColumn && taskHasChanges === true ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewChanges(task.id);
+          }}
+          className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)] transition-colors hover:text-blue-400"
+        >
+          <FileCode className="size-3" />
+          Changes
+        </button>
+      ) : null}
+      <UnreadCommentsBadge unreadCount={unreadCount} totalCount={task.comments?.length ?? 0} />
+      {onDeleteTask ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeleteTask(task.id);
+          }}
+          className="text-[var(--color-text-muted)] transition-colors hover:text-red-400"
+          title="Delete task"
+        >
+          <Trash2 size={12} />
+        </button>
+      ) : null}
+    </>
+  );
+
   return (
     <div
       data-task-id={task.id}
@@ -194,24 +228,24 @@ export const KanbanTaskCard = ({
             #{task.id}
           </Badge>
           {task.owner ? <MemberBadge name={task.owner} color={colorMap.get(task.owner)} /> : null}
-          {task.needsClarification ? (
-            <span
-              className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                task.needsClarification === 'user'
-                  ? 'bg-red-500/15 text-red-400'
-                  : 'bg-blue-500/15 text-blue-400'
-              }`}
-            >
-              <HelpCircle size={10} />
-              {task.needsClarification === 'user' ? 'Awaiting user' : 'Awaiting lead'}
-            </span>
-          ) : null}
           {!compact && (
             <h5 className="min-w-0 truncate text-sm font-medium text-[var(--color-text)]">
               {task.subject}
             </h5>
           )}
         </div>
+        {task.needsClarification ? (
+          <span
+            className={`mt-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+              task.needsClarification === 'user'
+                ? 'bg-red-500/15 text-red-400'
+                : 'bg-blue-500/15 text-blue-400'
+            }`}
+          >
+            <HelpCircle size={10} />
+            {task.needsClarification === 'user' ? 'Awaiting user' : 'Awaiting lead'}
+          </span>
+        ) : null}
         {compact && (
           <h5 className="mt-1 truncate text-sm font-medium text-[var(--color-text)]">
             {task.subject}
@@ -335,9 +369,12 @@ export const KanbanTaskCard = ({
           ) : null}
 
           {columnId === 'review' ? (
-            <div className="space-y-2">
-              {!hasReviewers ? (
-                <p className="text-[11px] text-[var(--color-text-muted)]">Manual review</p>
+            <div className="w-full space-y-2">
+              {isReviewManual ? (
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] text-[var(--color-text-muted)]">Manual review</p>
+                  <div className="flex items-center gap-1.5">{metaActions}</div>
+                </div>
               ) : null}
               <div className="flex gap-2">
                 <Button
@@ -383,35 +420,7 @@ export const KanbanTaskCard = ({
           ) : null}
         </div>
 
-        <div className="flex items-center gap-1.5">
-          {showChangesColumn && taskHasChanges === true ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onViewChanges(task.id);
-              }}
-              className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)] transition-colors hover:text-blue-400"
-            >
-              <FileCode className="size-3" />
-              Changes
-            </button>
-          ) : null}
-          <UnreadCommentsBadge unreadCount={unreadCount} totalCount={task.comments?.length ?? 0} />
-          {onDeleteTask ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteTask(task.id);
-              }}
-              className="text-[var(--color-text-muted)] transition-colors hover:text-red-400"
-              title="Delete task"
-            >
-              <Trash2 size={12} />
-            </button>
-          ) : null}
-        </div>
+        {!isReviewManual ? <div className="flex items-center gap-1.5">{metaActions}</div> : null}
       </div>
     </div>
   );

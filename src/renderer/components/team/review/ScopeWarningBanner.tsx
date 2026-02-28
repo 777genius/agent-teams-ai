@@ -29,9 +29,9 @@ const TIER_CONFIGS: Record<number, TierConfig> = {
     border: 'border-emerald-500/15',
     bg: 'bg-emerald-500/5',
     accentColor: 'text-emerald-400',
-    title: 'Scope determined precisely',
+    title: 'Task scope determined precisely',
     detail:
-      'Both start (TaskUpdate → in_progress) and completion (TaskUpdate → completed) markers found in the session log. The diff includes only file modifications (Edit, Write) between these two boundaries.',
+      'Both start and completion markers found in the session log. The diff includes only changes made during this specific task — other tasks that modified the same files are excluded.',
   },
   2: {
     Icon: Info,
@@ -40,7 +40,7 @@ const TIER_CONFIGS: Record<number, TierConfig> = {
     accentColor: 'text-blue-400',
     title: 'End boundary estimated',
     detail:
-      'Only the start marker (TaskUpdate → in_progress) was found — the task has no completion marker yet. Changes shown from start marker to end of session log.',
+      'Only the start marker was found — the task has no completion marker yet. Changes shown from task start to end of session. If other tasks ran after this one in the same session, their changes may also be included.',
   },
   3: {
     Icon: AlertTriangle,
@@ -49,7 +49,7 @@ const TIER_CONFIGS: Record<number, TierConfig> = {
     accentColor: 'text-orange-400',
     title: 'Start boundary estimated',
     detail:
-      'Only the completion marker (TaskUpdate → completed) was found. The start of work was not captured — this can happen if the task was already in progress when the session began. Changes shown from session start to completion marker.',
+      'Only the completion marker was found — the start of work was not captured. If other tasks ran before this one in the same session, their changes to the same files may also be included.',
   },
   4: {
     Icon: AlertTriangle,
@@ -58,7 +58,7 @@ const TIER_CONFIGS: Record<number, TierConfig> = {
     accentColor: 'text-red-400',
     title: 'Showing all session changes',
     detail:
-      'No TaskUpdate markers found in the session log. Cannot determine task-specific boundaries — this can happen with older CLI versions or non-standard workflows. All file modifications from the session are included.',
+      'No task markers found in the session log. Cannot isolate this task — all file changes from the entire session are shown, including changes from other tasks. This can happen with older CLI versions or non-standard workflows.',
   },
 };
 

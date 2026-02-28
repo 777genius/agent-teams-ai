@@ -41,6 +41,7 @@ import {
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
   TEAM_UPDATE_MEMBER_ROLE,
+  TEAM_UPDATE_TASK_FIELDS,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
@@ -186,6 +187,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_UPDATE_KANBAN_COLUMN_ORDER, handleUpdateKanbanColumnOrder);
   ipcMain.handle(TEAM_UPDATE_TASK_STATUS, handleUpdateTaskStatus);
   ipcMain.handle(TEAM_UPDATE_TASK_OWNER, handleUpdateTaskOwner);
+  ipcMain.handle(TEAM_UPDATE_TASK_FIELDS, handleUpdateTaskFields);
   ipcMain.handle(TEAM_DELETE_TEAM, handleDeleteTeam);
   ipcMain.handle(TEAM_RESTORE, handleRestoreTeam);
   ipcMain.handle(TEAM_PERMANENTLY_DELETE, handlePermanentlyDeleteTeam);
@@ -231,6 +233,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_UPDATE_KANBAN_COLUMN_ORDER);
   ipcMain.removeHandler(TEAM_UPDATE_TASK_STATUS);
   ipcMain.removeHandler(TEAM_UPDATE_TASK_OWNER);
+  ipcMain.removeHandler(TEAM_UPDATE_TASK_FIELDS);
   ipcMain.removeHandler(TEAM_DELETE_TEAM);
   ipcMain.removeHandler(TEAM_RESTORE);
   ipcMain.removeHandler(TEAM_PERMANENTLY_DELETE);
@@ -318,6 +321,8 @@ async function handleGetData(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   const tn = validated.value!;
+  const startedAt = Date.now();
+  logger.info(`[teams:getData] start team=${tn}`);
   let data: TeamData;
   try {
     data = await getTeamDataService().getTeamData(tn);
@@ -331,6 +336,14 @@ async function handleGetData(
     }
     logger.error(`[teams:getData] ${message}`);
     return { success: false, error: message };
+  }
+  const getDataMs = Date.now() - startedAt;
+  if (getDataMs >= 1000) {
+    logger.warn(
+      `[teams:getData] slow team=${tn} ms=${getDataMs} tasks=${data.tasks.length} members=${data.members.length} messages=${data.messages.length}`
+    );
+  } else {
+    logger.info(`[teams:getData] done team=${tn} ms=${getDataMs}`);
   }
   const provisioning = getTeamProvisioningService();
   const isAlive = provisioning.isTeamAlive(tn);
@@ -639,6 +652,7 @@ async function handleLaunchTeam(
         cwd,
         prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
         model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
+        clearContext: payload.clearContext === true ? true : undefined,
       },
       (progress) => {
         try {
@@ -1508,9 +1522,79 @@ async function handleRemoveMember(
   const vMember = validateMemberName(memberName);
   if (!vMember.valid) return { success: false, error: vMember.error ?? 'Invalid memberName' };
 
-  return wrapTeamHandler('removeMember', () =>
-    getTeamDataService().removeMember(vTeam.value!, vMember.value!)
-  );
+  return wrapTeamHandler('removeMember', async () => {
+    const tn = vTeam.value!;
+    const name = vMember.value!;
+    await getTeamDataService().removeMember(tn, name);
+
+    // Notify the lead about removed member
+    const provisioning = getTeamProvisioningService();
+    if (provisioning.isTeamAlive(tn)) {
+      const message =
+        `Teammate "${name}" has been removed from the team. ` +
+        `They will no longer participate in team activities. Please reassign their tasks if needed.`;
+      try {
+        await provisioning.sendMessageToTeam(tn, message);
+      } catch {
+        logger.warn(`Failed to notify lead about removal of "${name}" in ${tn}`);
+      }
+    }
+  });
+}
+
+async function handleUpdateTaskFields(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown,
+  fields: unknown
+): Promise<IpcResult<void>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  if (typeof taskId !== 'string' || !taskId.trim()) {
+    return { success: false, error: 'taskId must be a non-empty string' };
+  }
+  if (!fields || typeof fields !== 'object') {
+    return { success: false, error: 'fields must be an object' };
+  }
+  const { subject, description } = fields as { subject?: unknown; description?: unknown };
+  if (subject !== undefined) {
+    if (typeof subject !== 'string') return { success: false, error: 'subject must be a string' };
+    if (subject.trim().length === 0) return { success: false, error: 'subject cannot be empty' };
+    if (subject.length > 500)
+      return { success: false, error: 'subject must be 500 characters or less' };
+  }
+  if (description !== undefined && typeof description !== 'string') {
+    return { success: false, error: 'description must be a string' };
+  }
+
+  const validFields: { subject?: string; description?: string } = {};
+  if (typeof subject === 'string') validFields.subject = subject;
+  if (typeof description === 'string') validFields.description = description;
+
+  if (Object.keys(validFields).length === 0) {
+    return { success: false, error: 'At least one field must be provided' };
+  }
+
+  return wrapTeamHandler('updateTaskFields', async () => {
+    const tn = vTeam.value!;
+    await getTeamDataService().updateTaskFields(tn, taskId, validFields);
+
+    // Notify the lead about updated task fields
+    const provisioning = getTeamProvisioningService();
+    if (provisioning.isTeamAlive(tn)) {
+      const changedParts: string[] = [];
+      if (validFields.subject) changedParts.push('title');
+      if (validFields.description !== undefined) changedParts.push('description');
+      const message =
+        `Task #${taskId} has been updated by the user (changed: ${changedParts.join(', ')}). ` +
+        `New title: "${validFields.subject ?? '(unchanged)'}".`;
+      try {
+        await provisioning.sendMessageToTeam(tn, message);
+      } catch {
+        logger.warn(`Failed to notify lead about task fields update for #${taskId} in ${tn}`);
+      }
+    }
+  });
 }
 
 async function handleUpdateMemberRole(

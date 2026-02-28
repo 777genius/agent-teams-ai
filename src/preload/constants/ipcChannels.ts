@@ -239,6 +239,9 @@ export const TEAM_UPDATE_TASK_STATUS = 'team:updateTaskStatus';
 /** Update task owner (reassign) */
 export const TEAM_UPDATE_TASK_OWNER = 'team:updateTaskOwner';
 
+/** Update task fields (subject, description) */
+export const TEAM_UPDATE_TASK_FIELDS = 'team:updateTaskFields';
+
 /** Soft-delete a team (sets deletedAt in config) */
 export const TEAM_DELETE_TEAM = 'team:deleteTeam';
 

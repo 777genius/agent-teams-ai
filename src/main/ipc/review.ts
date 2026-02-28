@@ -6,6 +6,7 @@
 
 import { createIpcWrapper } from '@main/ipc/ipcWrapper';
 import { ReviewDecisionStore } from '@main/services/team/ReviewDecisionStore';
+import { validateFilePath } from '@main/utils/pathValidation';
 import {
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
@@ -23,6 +24,7 @@ import {
   REVIEW_SAVE_EDITED_FILE,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
+import { createLogger } from '@shared/utils/logger';
 
 import type { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import type { FileContentResolver } from '@main/services/team/FileContentResolver';
@@ -44,6 +46,7 @@ import type {
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 const wrapReviewHandler = createIpcWrapper('IPC:review');
+const logger = createLogger('IPC:review');
 
 // --- Module-level state ---
 
@@ -243,10 +246,15 @@ async function handleSaveEditedFile(
   if (!filePath || typeof content !== 'string') {
     return { success: false, error: 'Invalid parameters' };
   }
+  const pathCheck = validateFilePath(filePath, null);
+  if (!pathCheck.valid) {
+    logger.error(`saveEditedFile blocked: ${String(pathCheck.error)} (path: ${String(filePath)})`);
+    return { success: false, error: `Path validation failed: ${String(pathCheck.error)}` };
+  }
   return wrapReviewHandler('saveEditedFile', async () => {
-    const result = await getApplier().saveEditedFile(filePath, content);
+    const result = await getApplier().saveEditedFile(pathCheck.normalizedPath!, content);
     // Invalidate cached content so next fetch reads the saved version from disk
-    getContentResolver().invalidateFile(filePath);
+    getContentResolver().invalidateFile(pathCheck.normalizedPath!);
     return result;
   });
 }

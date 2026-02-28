@@ -75,7 +75,41 @@ export function initializeNotificationListeners(): () => void {
   cleanupFns.push(() => {
     useStore.getState().unsubscribeProvisioningProgress();
   });
-  void useStore.getState().fetchTeams();
+  // Initial data fetches. Config loads first (needed for theme), then the rest
+  // run in parallel (no data dependencies between them). UV_THREADPOOL_SIZE=16
+  // prevents thread pool saturation even with concurrent I/O on Windows.
+  // Components also fire these from useEffect — loading guards in each action
+  // prevent duplicate IPC calls (whichever caller starts first wins).
+  void (async () => {
+    // Config: fast (in-memory read) — needed for theme before first paint.
+    await useStore.getState().fetchConfig();
+    // Remaining fetches have no data dependency on each other — run in parallel
+    // to avoid blocking teams/notifications behind a slow repository scan.
+    await Promise.all([
+      // Repository groups: heavy — full project directory scan for sidebar.
+      useStore.getState().fetchRepositoryGroups(),
+      // Global tasks: moderate — reads team task files for sidebar.
+      useStore.getState().fetchAllTasks(),
+      // Team summaries: moderate — reads team config files.
+      useStore.getState().fetchTeams(),
+      // Notification count: light — reads from in-memory store in main process.
+      useStore.getState().fetchNotifications(),
+    ]);
+  })();
+
+  // CLI status check is non-critical for initial render (spawns child processes
+  // + iterates PATH directories with stat() calls — heavy on Windows).
+  // Defer until the app is fully interactive.
+  let cliStatusTimer: ReturnType<typeof setTimeout> | null = null;
+  if (api.cliInstaller) {
+    cliStatusTimer = setTimeout(() => {
+      void useStore.getState().fetchCliStatus();
+      cliStatusTimer = null;
+    }, 5000);
+  }
+  cleanupFns.push(() => {
+    if (cliStatusTimer) clearTimeout(cliStatusTimer);
+  });
   const pendingSessionRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const pendingProjectRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let teamRefreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -170,8 +204,7 @@ export function initializeNotificationListeners(): () => void {
     }
   }
 
-  // Fetch after listeners are attached so startup events do not get overwritten by a stale response.
-  void useStore.getState().fetchNotifications();
+  // fetchNotifications() is called in the parallel init chain above.
 
   /**
    * Check if a session is visible in any pane (not just the focused pane's active tab).
@@ -378,10 +411,7 @@ export function initializeNotificationListeners(): () => void {
     }
   }
 
-  // Auto-check CLI status on startup
-  if (api.cliInstaller) {
-    void useStore.getState().fetchCliStatus();
-  }
+  // fetchCliStatus() is deferred 5s after app start (heavy on Windows).
 
   // Listen for CLI installer progress events from main process
   let cliCompletedRevertTimer: ReturnType<typeof setTimeout> | null = null;
@@ -414,13 +444,16 @@ export function initializeNotificationListeners(): () => void {
           useStore.setState({ cliInstallerState: 'verifying', cliInstallerDetail: detail });
           break;
         case 'installing': {
-          // Accumulate log lines for the mini-terminal
+          // Accumulate log lines and raw chunks for xterm.js rendering
           const prevLogs = useStore.getState().cliInstallerLogs;
+          const prevRaw = useStore.getState().cliInstallerRawChunks;
           const newLogs = detail ? [...prevLogs, detail].slice(-50) : prevLogs;
+          const newRaw = progress.rawChunk ? [...prevRaw, progress.rawChunk].slice(-200) : prevRaw;
           useStore.setState({
             cliInstallerState: 'installing',
             cliInstallerDetail: detail,
             cliInstallerLogs: newLogs,
+            cliInstallerRawChunks: newRaw,
           });
           break;
         }

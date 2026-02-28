@@ -338,7 +338,7 @@ export default defineConfig([
       },
       parserOptions: {
         projectService: false,
-        project: './tsconfig.test.json',
+        project: './tsconfig.json',
       },
     },
     rules: {

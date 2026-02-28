@@ -241,13 +241,13 @@ describe('sessionSlice', () => {
         .mockImplementationOnce(
           () =>
             new Promise((resolve) => {
-              resolveFirst = resolve;
+              resolveFirst = resolve as (value: unknown) => void;
             })
         )
         .mockImplementationOnce(
           () =>
             new Promise((resolve) => {
-              resolveSecond = resolve;
+              resolveSecond = resolve as (value: unknown) => void;
             })
         );
 
@@ -285,13 +285,13 @@ describe('sessionSlice', () => {
         .mockImplementationOnce(
           () =>
             new Promise((resolve) => {
-              resolveFirst = resolve;
+              resolveFirst = resolve as (value: unknown) => void;
             })
         )
         .mockImplementationOnce(
           () =>
             new Promise((resolve) => {
-              resolveSecond = resolve;
+              resolveSecond = resolve as (value: unknown) => void;
             })
         );
 

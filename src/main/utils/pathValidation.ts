@@ -6,10 +6,9 @@
  */
 
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 
-import { getClaudeBasePath } from './pathDecoder';
+import { getClaudeBasePath, getHomeDir } from './pathDecoder';
 
 /**
  * Sensitive file patterns that should never be accessible.
@@ -149,7 +148,7 @@ export function validateFilePath(
 
   // Expand ~ to home directory
   const expandedPath = filePath.startsWith('~')
-    ? path.join(os.homedir(), filePath.slice(1))
+    ? path.join(getHomeDir(), filePath.slice(1))
     : filePath;
 
   // Must be absolute path
@@ -212,7 +211,7 @@ export function validateOpenPathUserSelected(targetPath: string): PathValidation
   }
 
   const expandedPath = targetPath.startsWith('~')
-    ? path.join(os.homedir(), targetPath.slice(1))
+    ? path.join(getHomeDir(), targetPath.slice(1))
     : targetPath;
 
   const normalizedPath = path.resolve(path.normalize(expandedPath));
@@ -256,7 +255,7 @@ export function validateOpenPath(
 
   // Expand ~ to home directory
   const expandedPath = targetPath.startsWith('~')
-    ? path.join(os.homedir(), targetPath.slice(1))
+    ? path.join(getHomeDir(), targetPath.slice(1))
     : targetPath;
 
   const normalizedPath = path.resolve(path.normalize(expandedPath));

@@ -407,6 +407,11 @@ export interface TeamsAPI {
   ) => Promise<void>;
   updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
   updateTaskOwner: (teamName: string, taskId: string, owner: string | null) => Promise<void>;
+  updateTaskFields: (
+    teamName: string,
+    taskId: string,
+    fields: { subject?: string; description?: string }
+  ) => Promise<void>;
   startTask: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   processSend: (teamName: string, message: string) => Promise<void>;
   processAlive: (teamName: string) => Promise<boolean>;

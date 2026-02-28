@@ -9,7 +9,7 @@
 
 import { createLogger } from '@shared/utils/logger';
 import { type IpcMain, type IpcMainInvokeEvent } from 'electron';
-import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 const logger = createLogger('IPC:validation');
@@ -75,11 +75,8 @@ async function handleValidatePath(
       return { exists: false };
     }
 
-    if (!fs.existsSync(fullPath)) {
-      return { exists: false };
-    }
-
-    const stats = fs.statSync(fullPath);
+    // Single async stat — no TOCTOU, doesn't block the main thread
+    const stats = await fsp.stat(fullPath);
     return {
       exists: true,
       isDirectory: stats.isDirectory(),
@@ -99,21 +96,27 @@ async function handleValidateMentions(
   mentions: { type: 'path'; value: string }[],
   projectPath: string
 ): Promise<Record<string, boolean>> {
-  const results = new Map<string, boolean>();
+  // Validate all mentions in parallel with async I/O
+  // (was sequential sync existsSync — blocked main thread per mention)
+  const entries = await Promise.all(
+    mentions.map(async (mention) => {
+      const fullPath = path.join(projectPath, mention.value);
 
-  for (const mention of mentions) {
-    const fullPath = path.join(projectPath, mention.value);
+      // Security: Skip paths that escape project directory
+      if (!isPathContained(fullPath, projectPath)) {
+        return [`@${mention.value}`, false] as const;
+      }
 
-    // Security: Skip paths that escape project directory
-    if (!isPathContained(fullPath, projectPath)) {
-      results.set(`@${mention.value}`, false);
-      continue;
-    }
+      try {
+        await fsp.access(fullPath);
+        return [`@${mention.value}`, true] as const;
+      } catch {
+        return [`@${mention.value}`, false] as const;
+      }
+    })
+  );
 
-    results.set(`@${mention.value}`, fs.existsSync(fullPath));
-  }
-
-  return Object.fromEntries(results);
+  return Object.fromEntries(entries);
 }
 
 /**

@@ -142,13 +142,34 @@ function buildMembers(members: MemberDraft[]): TeamCreateRequest['members'] {
     .filter((member): member is NonNullable<typeof member> => member !== null);
 }
 
+// eslint-disable-next-line security/detect-unsafe-regex -- kebab-case pattern is linear, no ReDoS
+const TEAM_NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const MEMBER_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
+
+function validateTeamNameInline(name: string): string | null {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  if (!TEAM_NAME_RE.test(trimmed) || trimmed.length > 64) {
+    return 'Use kebab-case [a-z0-9-], max 64 chars';
+  }
+  return null;
+}
+
+function validateMemberNameInline(name: string): string | null {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  if (!MEMBER_NAME_RE.test(trimmed)) {
+    return 'Start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars';
+  }
+  return null;
+}
+
 function validateRequest(
   request: TeamCreateRequest,
   options?: { requireCwd?: boolean }
 ): ValidationResult {
   const requireCwd = options?.requireCwd ?? true;
-  // eslint-disable-next-line security/detect-unsafe-regex -- kebab-case pattern is linear, no ReDoS
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(request.teamName) || request.teamName.length > 64) {
+  if (!TEAM_NAME_RE.test(request.teamName) || request.teamName.length > 64) {
     return {
       valid: false,
       errors: {
@@ -180,8 +201,7 @@ function validateRequest(
       },
     };
   }
-  const memberNamePattern = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
-  if (request.members.some((member) => !memberNamePattern.test(member.name.trim()))) {
+  if (request.members.some((member) => !MEMBER_NAME_RE.test(member.name.trim()))) {
     return {
       valid: false,
       errors: {
@@ -692,6 +712,8 @@ export const CreateTeamDialog = ({
             />
             {existingTeamNames.includes(teamName.trim()) ? (
               <p className="text-[11px] text-red-300">Team name already exists</p>
+            ) : validateTeamNameInline(teamName) ? (
+              <p className="text-[11px] text-red-300">{validateTeamNameInline(teamName)}</p>
             ) : fieldErrors.teamName ? (
               <p className="text-[11px] text-red-300">{fieldErrors.teamName}</p>
             ) : null}
@@ -727,20 +749,27 @@ export const CreateTeamDialog = ({
                       borderLeftColor: memberColorSet.border,
                     }}
                   >
-                    <Input
-                      className="h-8 text-xs"
-                      value={member.name}
-                      aria-label={`Member ${index + 1} name`}
-                      onChange={(event) => updateMemberName(member.id, event.target.value)}
-                      placeholder="member-name"
-                      style={
-                        member.name.trim()
-                          ? {
-                              color: memberColorSet.text,
-                            }
-                          : undefined
-                      }
-                    />
+                    <div className="space-y-0.5">
+                      <Input
+                        className="h-8 text-xs"
+                        value={member.name}
+                        aria-label={`Member ${index + 1} name`}
+                        onChange={(event) => updateMemberName(member.id, event.target.value)}
+                        placeholder="member-name"
+                        style={
+                          member.name.trim()
+                            ? {
+                                color: memberColorSet.text,
+                              }
+                            : undefined
+                        }
+                      />
+                      {validateMemberNameInline(member.name) ? (
+                        <p className="text-[10px] text-red-300">
+                          {validateMemberNameInline(member.name)}
+                        </p>
+                      ) : null}
+                    </div>
                     <div className="space-y-1">
                       <Select
                         value={member.roleSelection || NO_ROLE}
@@ -791,9 +820,15 @@ export const CreateTeamDialog = ({
                 <MembersJsonEditor value={jsonText} onChange={handleJsonChange} error={jsonError} />
               ) : null}
             </div>
-            {fieldErrors.members ? (
-              <p className="text-[11px] text-red-300">{fieldErrors.members}</p>
-            ) : null}
+            {(() => {
+              const names = members.map((m) => m.name.trim().toLowerCase()).filter(Boolean);
+              const hasDuplicates = new Set(names).size !== names.length;
+              if (hasDuplicates)
+                return <p className="text-[11px] text-red-300">Member names must be unique</p>;
+              if (fieldErrors.members)
+                return <p className="text-[11px] text-red-300">{fieldErrors.members}</p>;
+              return null;
+            })()}
           </div>
 
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 md:col-span-2">

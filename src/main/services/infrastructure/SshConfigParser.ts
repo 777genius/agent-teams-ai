@@ -8,9 +8,9 @@
  * - Gracefully handle missing/unreadable files
  */
 
+import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 import SSHConfig from 'ssh-config';
 
@@ -22,7 +22,7 @@ export class SshConfigParser {
   private configPath: string;
 
   constructor(configPath?: string) {
-    this.configPath = configPath ?? path.join(os.homedir(), '.ssh', 'config');
+    this.configPath = configPath ?? path.join(getHomeDir(), '.ssh', 'config');
   }
 
   /**
@@ -151,7 +151,7 @@ export class SshConfigParser {
       }
 
       const pattern = match[1].trim();
-      const expandedPattern = pattern.replace(/^~/, os.homedir());
+      const expandedPattern = pattern.replace(/^~/, getHomeDir());
 
       try {
         // Handle glob-like patterns by checking if the path contains wildcards

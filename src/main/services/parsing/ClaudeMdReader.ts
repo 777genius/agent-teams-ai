@@ -8,10 +8,9 @@
  * - Support tilde (~) expansion to home directory
  */
 
-import { encodePath, getClaudeBasePath } from '@main/utils/pathDecoder';
+import { encodePath, getClaudeBasePath, getHomeDir } from '@main/utils/pathDecoder';
 import { countTokens } from '@main/utils/tokenizer';
 import { createLogger } from '@shared/utils/logger';
-import { app } from 'electron';
 import * as path from 'path';
 
 import { LocalFileSystemProvider } from '../infrastructure/LocalFileSystemProvider';
@@ -48,7 +47,7 @@ export interface ClaudeMdReadResult {
  */
 function expandTilde(filePath: string): string {
   if (filePath.startsWith('~')) {
-    const homeDir = app.getPath('home');
+    const homeDir = getHomeDir();
     return path.join(homeDir, filePath.slice(1));
   }
   return filePath;

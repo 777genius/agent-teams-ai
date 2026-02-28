@@ -9,6 +9,7 @@
  * - Handle reconnection on errors
  */
 
+import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { execFile } from 'child_process';
 import { EventEmitter } from 'events';
@@ -267,7 +268,7 @@ export class SshConnectionManager extends EventEmitter {
         break;
 
       case 'privateKey': {
-        const keyPath = config.privateKeyPath ?? path.join(os.homedir(), '.ssh', 'id_rsa');
+        const keyPath = config.privateKeyPath ?? path.join(getHomeDir(), '.ssh', 'id_rsa');
         try {
           const keyData = await fs.promises.readFile(keyPath, 'utf8');
           connectConfig.privateKey = keyData;
@@ -308,7 +309,7 @@ export class SshConnectionManager extends EventEmitter {
    * Handles macOS GUI apps not inheriting SSH_AUTH_SOCK from shell.
    */
   private async discoverAgentSocket(): Promise<string | null> {
-    // 1. Check SSH_AUTH_SOCK env var
+    // 1. Check SSH_AUTH_SOCK env var (all platforms)
     if (process.env.SSH_AUTH_SOCK) {
       try {
         await fs.promises.access(process.env.SSH_AUTH_SOCK);
@@ -318,7 +319,19 @@ export class SshConnectionManager extends EventEmitter {
       }
     }
 
-    // 2. macOS: ask launchctl for the socket (GUI apps don't inherit shell env)
+    // 2. Windows: use OpenSSH named pipe (no Unix sockets on Windows)
+    if (process.platform === 'win32') {
+      const pipe = '\\\\.\\pipe\\openssh-ssh-agent';
+      try {
+        await fs.promises.access(pipe);
+        return pipe;
+      } catch {
+        // OpenSSH agent not running
+      }
+      return null;
+    }
+
+    // 3. macOS: ask launchctl for the socket (GUI apps don't inherit shell env)
     if (process.platform === 'darwin') {
       try {
         const sock = await new Promise<string | null>((resolve) => {
@@ -343,19 +356,19 @@ export class SshConnectionManager extends EventEmitter {
       }
     }
 
-    // 3. Try known socket paths
+    // 4. Try known socket paths (macOS/Linux only)
     const knownPaths = [
       // 1Password SSH agent
       path.join(
-        os.homedir(),
+        getHomeDir(),
         'Library',
         'Group Containers',
         '2BUA8C4S2C.com.1password',
         'agent.sock'
       ),
-      path.join(os.homedir(), '.1password', 'agent.sock'),
+      path.join(getHomeDir(), '.1password', 'agent.sock'),
       // Common user agent socket
-      path.join(os.homedir(), '.ssh', 'agent.sock'),
+      path.join(getHomeDir(), '.ssh', 'agent.sock'),
     ];
 
     // Linux: add system paths
@@ -395,8 +408,8 @@ export class SshConnectionManager extends EventEmitter {
         // The config parser already told us there's an identity file.
         // Try common identity file locations from config
         const configKeyPaths = [
-          path.join(os.homedir(), '.ssh', 'id_ed25519'),
-          path.join(os.homedir(), '.ssh', 'id_rsa'),
+          path.join(getHomeDir(), '.ssh', 'id_ed25519'),
+          path.join(getHomeDir(), '.ssh', 'id_rsa'),
         ];
         for (const keyPath of configKeyPaths) {
           try {
@@ -417,9 +430,9 @@ export class SshConnectionManager extends EventEmitter {
 
     // Try default key files
     const defaultKeys = [
-      path.join(os.homedir(), '.ssh', 'id_ed25519'),
-      path.join(os.homedir(), '.ssh', 'id_rsa'),
-      path.join(os.homedir(), '.ssh', 'id_ecdsa'),
+      path.join(getHomeDir(), '.ssh', 'id_ed25519'),
+      path.join(getHomeDir(), '.ssh', 'id_rsa'),
+      path.join(getHomeDir(), '.ssh', 'id_ecdsa'),
     ];
 
     for (const keyPath of defaultKeys) {

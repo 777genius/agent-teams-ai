@@ -218,3 +218,41 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm dist:linux
+
+  upload-stable-links:
+    needs: [release-mac, release-win, release-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Upload stable-named assets for /latest/download links
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          REPO="${GITHUB_REPOSITORY}"
+          DOWNLOAD_BASE="https://github.com/${REPO}/releases/download/v${VERSION}"
+
+          declare -A FILES=(
+            ["Claude-Agent-Teams-UI-arm64.dmg"]="Claude-Agent-Teams-UI-${VERSION}-arm64.dmg"
+            ["Claude-Agent-Teams-UI-x64.dmg"]="Claude-Agent-Teams-UI-${VERSION}.dmg"
+            ["Claude-Agent-Teams-UI-Setup.exe"]="Claude-Agent-Teams-UI-Setup-${VERSION}.exe"
+            ["Claude-Agent-Teams-UI.AppImage"]="Claude-Agent-Teams-UI-${VERSION}.AppImage"
+            ["Claude-Agent-Teams-UI-amd64.deb"]="claude-agent-teams-ui_${VERSION}_amd64.deb"
+            ["Claude-Agent-Teams-UI-x86_64.rpm"]="claude-agent-teams-ui-${VERSION}.x86_64.rpm"
+            ["Claude-Agent-Teams-UI.pacman"]="claude-agent-teams-ui-${VERSION}.pacman"
+          )
+
+          # Remove old stable assets (ignore errors if they don't exist)
+          for STABLE_NAME in "${!FILES[@]}"; do
+            gh release delete-asset "v${VERSION}" "$STABLE_NAME" --repo "$REPO" --yes 2>/dev/null || true
+          done
+
+          # Download versioned files and re-upload with stable names
+          for STABLE_NAME in "${!FILES[@]}"; do
+            VERSIONED_NAME="${FILES[$STABLE_NAME]}"
+            echo "Downloading ${VERSIONED_NAME} -> ${STABLE_NAME}"
+            curl -fSL -o "$STABLE_NAME" "${DOWNLOAD_BASE}/${VERSIONED_NAME}" && \
+              gh release upload "v${VERSION}" "$STABLE_NAME" --repo "$REPO" --clobber
+            rm -f "$STABLE_NAME"
+          done

@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 
 import { api } from '@renderer/api';
 import { FitAddon } from '@xterm/addon-fit';
+import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Terminal } from '@xterm/xterm';
 
 import type { PtySpawnOptions } from '@shared/types/terminal';
@@ -51,10 +52,29 @@ export const EmbeddedTerminal = ({
 
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
+
+    // Clickable URLs — opens in external browser
+    const webLinksAddon = new WebLinksAddon((_event, uri) => {
+      void api.openExternal(uri);
+    });
+    term.loadAddon(webLinksAddon);
+
     term.open(container);
 
     // Fit after opening so dimensions are correct
     const rafId = requestAnimationFrame(() => fitAddon.fit());
+
+    // Ctrl+C with selection → copy to clipboard (instead of sending SIGINT)
+    term.attachCustomKeyEventHandler((event) => {
+      if (event.type === 'keydown' && event.key === 'c' && (event.ctrlKey || event.metaKey)) {
+        const selection = term.getSelection();
+        if (selection) {
+          void navigator.clipboard.writeText(selection);
+          return false; // Prevent sending to PTY
+        }
+      }
+      return true;
+    });
 
     // User input → PTY (returns IDisposable — must dispose in cleanup)
     const inputDisposable = term.onData((data) => {

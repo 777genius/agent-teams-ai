@@ -1819,7 +1819,7 @@ describe('teamctl.js', () => {
       const { exitCode } = run(claudeDir, ['task', 'comment', '1', '--from', '--text', 'Hello']);
       // from=true → not a string → defaults to 'agent'
       expect(exitCode).toBe(0);
-      const comments = readTask(claudeDir, '1').comments as { author: string }[];
+      const comments = readTask(claudeDir, '1').comments as { author: string; text: string }[];
       expect(comments[0].author).toBe('agent'); // not "--text"
       expect(comments[0].text).toBe('Hello');
     });

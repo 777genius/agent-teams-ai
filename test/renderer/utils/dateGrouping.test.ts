@@ -10,15 +10,11 @@ import type { Session } from '../../../src/renderer/types/data';
 function createSession(id: string, createdAt: Date): Session {
   return {
     id,
-    createdAt: createdAt.toISOString(),
-    updatedAt: createdAt.toISOString(),
-    displayName: `Session ${id}`,
-    triggerCount: 1,
-    ongoing: false,
-    lastTriggerPreview: 'Test',
-    cwd: '/test',
-    todos: [],
-    totalTokens: 0,
+    projectId: 'test-project',
+    projectPath: '/test',
+    createdAt: createdAt.getTime(),
+    hasSubagents: false,
+    messageCount: 1,
   };
 }
 

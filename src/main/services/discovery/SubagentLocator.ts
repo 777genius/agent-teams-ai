@@ -43,37 +43,21 @@ export class SubagentLocator {
   async hasSubagents(projectId: string, sessionId: string): Promise<boolean> {
     // Check NEW structure: {projectId}/{sessionId}/subagents/
     const newSubagentsPath = this.getSubagentsPath(projectId, sessionId);
-    if (await this.fsProvider.exists(newSubagentsPath)) {
-      try {
-        const entries = await this.fsProvider.readdir(newSubagentsPath);
-        const subagentFiles = entries.filter(
-          (entry) => entry.name.startsWith('agent-') && entry.name.endsWith('.jsonl')
-        );
-
-        // Check if at least one subagent file has content (not empty)
-        for (const entry of subagentFiles) {
-          const filePath = path.join(newSubagentsPath, entry.name);
-          try {
-            const stats = await this.fsProvider.stat(filePath);
-            // File must have size > 0 and contain at least one line
-            if (stats.size > 0) {
-              const content = await this.fsProvider.readFile(filePath);
-              if (content.trim().length > 0) {
-                return true;
-              }
-            }
-          } catch (error) {
-            // Skip this file if we can't read it - log for debugging
-            logger.debug(`SubagentLocator: Could not read file ${filePath}:`, error);
-            continue;
-          }
-        }
-      } catch {
-        // Ignore errors
-      }
+    try {
+      const entries = await this.fsProvider.readdir(newSubagentsPath);
+      // A non-empty agent-*.jsonl file is sufficient proof of subagents.
+      // readdir() populates size from stat, so no extra I/O needed.
+      return entries.some(
+        (entry) =>
+          entry.name.startsWith('agent-') &&
+          entry.name.endsWith('.jsonl') &&
+          typeof entry.size === 'number' &&
+          entry.size > 0
+      );
+    } catch {
+      // Directory doesn't exist or is unreadable — no subagents
+      return false;
     }
-
-    return false;
   }
 
   /**
@@ -88,37 +72,22 @@ export class SubagentLocator {
   hasSubagentsSync(projectId: string, sessionId: string): boolean {
     // Check NEW structure: {projectId}/{sessionId}/subagents/
     const newSubagentsPath = this.getSubagentsPath(projectId, sessionId);
-    if (fs.existsSync(newSubagentsPath)) {
-      try {
-        const entries = fs.readdirSync(newSubagentsPath);
-        const subagentFiles = entries.filter(
-          (name) => name.startsWith('agent-') && name.endsWith('.jsonl')
-        );
-
-        // Check if at least one subagent file has content (not empty)
-        for (const fileName of subagentFiles) {
-          const filePath = path.join(newSubagentsPath, fileName);
-          try {
-            const stats = fs.statSync(filePath);
-            // File must have size > 0 and contain at least one line
-            if (stats.size > 0) {
-              const content = fs.readFileSync(filePath, 'utf8');
-              if (content.trim().length > 0) {
-                return true;
-              }
-            }
-          } catch (error) {
-            // Skip this file if we can't read it - log for debugging
-            logger.debug(`SubagentLocator: Could not read file ${filePath}:`, error);
-            continue;
-          }
+    try {
+      const entries = fs.readdirSync(newSubagentsPath);
+      // A non-empty agent-*.jsonl file is sufficient proof of subagents.
+      return entries.some((name) => {
+        if (!name.startsWith('agent-') || !name.endsWith('.jsonl')) return false;
+        try {
+          const stats = fs.statSync(path.join(newSubagentsPath, name));
+          return stats.size > 0;
+        } catch {
+          return false;
         }
-      } catch {
-        // Ignore errors
-      }
+      });
+    } catch {
+      // Directory doesn't exist or is unreadable — no subagents
+      return false;
     }
-
-    return false;
   }
 
   /**

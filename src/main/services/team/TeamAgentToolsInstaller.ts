@@ -3,22 +3,25 @@ import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBloc
 import * as fs from 'fs';
 import * as path from 'path';
 
+// eslint-disable-next-line no-restricted-imports -- package.json is at project root, no alias available
+import { version as APP_VERSION } from '../../../../package.json';
+
 import { atomicWriteAsync } from './atomicWrite';
 
 const TOOL_FILE_NAME = 'teamctl.js';
 const TOOL_VERSION = 11;
 
-function buildTeamCtlScript(): string {
+function buildTeamCtlScript(version: string): string {
   const script = String.raw`#!/usr/bin/env node
 'use strict';
 
-// Team tools (v${TOOL_VERSION})
+// Team tools (v${version})
 
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const TOOL_VERSION = ${TOOL_VERSION};
+const TOOL_VERSION = '${version}';
 
 function nowIso() {
   return new Date().toISOString();
@@ -413,6 +416,7 @@ function sendInboxMessage(paths, teamName, flags) {
     : String(Date.now()) + '-' + String(Math.random());
   const payload = {
     from,
+    to,
     text,
     timestamp: nowIso(),
     read: false,
@@ -978,7 +982,7 @@ export class TeamAgentToolsInstaller {
     const toolPath = path.join(toolsDir, TOOL_FILE_NAME);
     await fs.promises.mkdir(toolsDir, { recursive: true });
 
-    const desired = buildTeamCtlScript();
+    const desired = buildTeamCtlScript(APP_VERSION);
     let current: string | null = null;
     try {
       current = await fs.promises.readFile(toolPath, 'utf8');
@@ -988,7 +992,7 @@ export class TeamAgentToolsInstaller {
       }
     }
 
-    if (current?.includes(`TOOL_VERSION = ${TOOL_VERSION}`)) {
+    if (current?.includes(`TOOL_VERSION = '${APP_VERSION}'`)) {
       return toolPath;
     }
 

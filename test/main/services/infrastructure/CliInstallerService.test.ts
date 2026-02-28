@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock dependencies before importing service
-vi.mock('child_process', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('child_process')>();
+vi.mock('@main/utils/childProcess', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@main/utils/childProcess')>();
   return {
     ...actual,
-    execFile: vi.fn(),
+    execCli: vi.fn().mockRejectedValue(new Error('execCli not configured')),
   };
 });
 
@@ -63,6 +63,7 @@ import {
   normalizeVersion,
 } from '@main/services/infrastructure/CliInstallerService';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
+import { execCli } from '@main/utils/childProcess';
 
 /**
  * Helper: allow expected console.error/warn calls in tests where service logs errors.
@@ -105,6 +106,27 @@ describe('CliInstallerService', () => {
       // Version will be null because execFile is mocked to no-op
       // and latestVersion will be null because fetch is mocked
     });
+
+    it('handles spawn EINVAL when binary path contains non-ASCII by falling back', async () => {
+      allowConsoleLogs();
+      const fakePath = 'C:\\Users\\Алексей\\AppData\\Roaming\\npm\\claude.cmd';
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue(fakePath);
+
+      // execCli handles the EINVAL → shell fallback internally;
+      // here we just verify the service delegates to execCli correctly.
+      vi.mocked(execCli)
+        .mockResolvedValueOnce({ stdout: '2.3.4', stderr: '' }) // --version
+        .mockResolvedValueOnce({ stdout: '{}', stderr: '' }); // auth status
+
+      const status = await service.getStatus();
+      expect(status.installed).toBe(true);
+      expect(status.installedVersion).toBe('2.3.4');
+      expect(execCli).toHaveBeenCalledWith(
+        fakePath,
+        ['--version'],
+        expect.objectContaining({ timeout: expect.any(Number) })
+      );
+    });
   });
 
   describe('install mutex', () => {
@@ -127,10 +149,10 @@ describe('CliInstallerService', () => {
       // Second call should send "already in progress" error
       const progressCalls = mockWindow.webContents.send.mock.calls;
       const errorCalls = progressCalls.filter(
-        ([channel, data]: [string, { type: string; error?: string }]) =>
-          channel === 'cliInstaller:progress' &&
-          data.type === 'error' &&
-          data.error?.includes('already in progress')
+        (call: unknown[]) =>
+          (call[0] as string) === 'cliInstaller:progress' &&
+          (call[1] as { type: string; error?: string }).type === 'error' &&
+          (call[1] as { type: string; error?: string }).error?.includes('already in progress')
       );
       expect(errorCalls.length).toBeGreaterThanOrEqual(1);
     });
@@ -152,8 +174,9 @@ describe('CliInstallerService', () => {
       await service.install();
 
       const checkingCalls = mockWindow.webContents.send.mock.calls.filter(
-        ([channel, data]: [string, { type: string }]) =>
-          channel === 'cliInstaller:progress' && data.type === 'checking'
+        (call: unknown[]) =>
+          (call[0] as string) === 'cliInstaller:progress' &&
+          (call[1] as { type: string }).type === 'checking'
       );
       expect(checkingCalls.length).toBeGreaterThanOrEqual(1);
     });
@@ -226,6 +249,49 @@ describe('CliInstallerService', () => {
       expect(isVersionOlder('2.1', '2.1.1')).toBe(true);
       expect(isVersionOlder('2.1.1', '2.1')).toBe(false);
       expect(isVersionOlder('2.1', '2.1.0')).toBe(false); // 2.1 == 2.1.0
+    });
+  });
+
+  describe('getStatus timeout', () => {
+    it('returns partial result when gatherStatus hangs', async () => {
+      allowConsoleLogs();
+      vi.useFakeTimers();
+
+      // ClaudeBinaryResolver.resolve() never settles — simulates thread pool exhaustion
+      vi.mocked(ClaudeBinaryResolver.resolve).mockReturnValue(new Promise(() => {}));
+
+      const statusPromise = service.getStatus();
+
+      // Advance past GET_STATUS_TIMEOUT_MS (25s)
+      await vi.advanceTimersByTimeAsync(26_000);
+
+      const status = await statusPromise;
+
+      // Should return the default (partial) result — not hang forever
+      expect(status.installed).toBe(false);
+      expect(status.installedVersion).toBeNull();
+      expect(status.binaryPath).toBeNull();
+
+      vi.useRealTimers();
+    });
+
+    it('returns full result when gatherStatus completes before timeout', async () => {
+      allowConsoleLogs();
+
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
+      vi.mocked(execCli)
+        .mockResolvedValueOnce({ stdout: '2.5.0 (Claude Code)', stderr: '' })
+        .mockResolvedValueOnce({
+          stdout: '{"loggedIn":true,"authMethod":"api_key"}',
+          stderr: '',
+        });
+
+      const status = await service.getStatus();
+
+      expect(status.installed).toBe(true);
+      expect(status.installedVersion).toBe('2.5.0');
+      expect(status.authLoggedIn).toBe(true);
+      expect(status.authMethod).toBe('api_key');
     });
   });
 

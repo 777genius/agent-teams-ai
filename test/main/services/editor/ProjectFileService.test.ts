@@ -70,7 +70,7 @@ const mockRm = vi.mocked(fs.rm);
 
 function createStats(
   overrides: Partial<Record<string, unknown>> = {}
-): ReturnType<typeof fs.lstat> {
+): Awaited<ReturnType<typeof fs.lstat>> {
   return {
     isFile: () => overrides.isFile ?? true,
     isDirectory: () => overrides.isDirectory ?? false,

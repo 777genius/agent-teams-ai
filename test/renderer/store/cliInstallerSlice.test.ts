@@ -88,6 +88,8 @@ describe('cliInstallerSlice', () => {
         binaryPath: '/usr/local/bin/claude',
         latestVersion: '2.1.59',
         updateAvailable: false,
+        authLoggedIn: false,
+        authMethod: null,
       };
       vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(mockStatus);
 
@@ -112,6 +114,8 @@ describe('cliInstallerSlice', () => {
         binaryPath: '/usr/local/bin/claude',
         latestVersion: '2.1.59',
         updateAvailable: true,
+        authLoggedIn: true,
+        authMethod: 'oauth_token',
       };
       vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(mockStatus);
 

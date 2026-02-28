@@ -64,7 +64,7 @@ export const SidebarTaskItem = ({
   showTeamName,
 }: SidebarTaskItemProps): React.JSX.Element => {
   const openGlobalTaskDetail = useStore((s) => s.openGlobalTaskDetail);
-  const teamMembers = useStore((s) => s.teams.find((t) => t.teamName === task.teamName)?.members);
+  const teamMembers = useStore((s) => s.teamByName[task.teamName]?.members);
   const unreadCount = useUnreadCommentCount(task.teamName, task.id, task.comments);
   const cfg =
     task.kanbanColumn === 'approved'

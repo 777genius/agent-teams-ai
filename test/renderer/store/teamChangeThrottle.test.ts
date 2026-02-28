@@ -9,6 +9,13 @@ const hoisted = vi.hoisted(() => ({
 
 vi.mock('@renderer/api', () => ({
   api: {
+    config: {
+      get: vi.fn(async () => ({
+        general: { theme: 'dark' },
+        notifications: { enabled: true, triggers: [] },
+      })),
+    },
+    getRepositoryGroups: vi.fn(async () => []),
     notifications: {
       onNew: vi.fn(() => () => undefined),
       onUpdated: vi.fn(() => () => undefined),
@@ -39,6 +46,7 @@ vi.mock('@renderer/api', () => ({
         }
       ),
       getAllTasks: vi.fn(async () => []),
+      list: vi.fn(async () => []),
     },
   },
 }));
@@ -48,7 +56,7 @@ import { initializeNotificationListeners, useStore } from '../../../src/renderer
 describe('team change throttling', () => {
   let cleanup: (() => void) | null = null;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers();
     const fetchTeams = vi.fn(async () => undefined);
     const refreshTeamData = vi.fn(async () => undefined);
@@ -70,6 +78,10 @@ describe('team change throttling', () => {
     } as never);
 
     cleanup = initializeNotificationListeners();
+
+    // Flush microtask queue so the sequential init chain completes
+    // before test assertions start (prevents init calls from leaking into spies).
+    await vi.advanceTimersByTimeAsync(0);
   });
 
   afterEach(() => {

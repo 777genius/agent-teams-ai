@@ -52,44 +52,46 @@ export const MemberDetailHeader = ({
       </div>
       <div className="min-w-0 flex-1">
         <DialogTitle className="truncate">{member.name}</DialogTitle>
-        <DialogDescription className="mt-1 flex items-center gap-2">
-          {editing ? (
-            <MemberRoleEditor
-              currentRole={member.role}
-              saving={updatingRole}
-              onSave={async (newRole) => {
-                try {
-                  await onUpdateRole?.(newRole);
-                  setEditing(false);
-                } catch {
-                  // stay in editing mode so user can retry
-                }
-              }}
-              onCancel={() => setEditing(false)}
-            />
-          ) : (
-            <>
-              <span>{role || 'No role'}</span>
-              {canEditRole && (
-                <button
-                  type="button"
-                  className="inline-flex items-center text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
-                  onClick={() => setEditing(true)}
-                  aria-label="Edit role"
-                >
-                  <Pencil size={12} />
-                </button>
-              )}
-            </>
-          )}
-          {!editing && (
-            <Badge
-              variant="secondary"
-              className="px-1.5 py-0.5 text-[10px] font-normal leading-none text-[var(--color-text-muted)]"
-            >
-              {presenceLabel}
-            </Badge>
-          )}
+        <DialogDescription asChild className="mt-1 flex items-center gap-2">
+          <div>
+            {editing ? (
+              <MemberRoleEditor
+                currentRole={member.role}
+                saving={updatingRole}
+                onSave={async (newRole) => {
+                  try {
+                    await onUpdateRole?.(newRole);
+                    setEditing(false);
+                  } catch {
+                    // stay in editing mode so user can retry
+                  }
+                }}
+                onCancel={() => setEditing(false)}
+              />
+            ) : (
+              <>
+                <span>{role || 'No role'}</span>
+                {canEditRole && (
+                  <button
+                    type="button"
+                    className="inline-flex items-center text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
+                    onClick={() => setEditing(true)}
+                    aria-label="Edit role"
+                  >
+                    <Pencil size={12} />
+                  </button>
+                )}
+              </>
+            )}
+            {!editing && (
+              <Badge
+                variant="secondary"
+                className="px-1.5 py-0.5 text-[10px] font-normal leading-none text-[var(--color-text-muted)]"
+              >
+                {presenceLabel}
+              </Badge>
+            )}
+          </div>
         </DialogDescription>
       </div>
     </div>

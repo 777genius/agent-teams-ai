@@ -90,6 +90,7 @@ import {
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
   TEAM_UPDATE_MEMBER_ROLE,
+  TEAM_UPDATE_TASK_FIELDS,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
   TERMINAL_DATA,
@@ -661,6 +662,13 @@ const electronAPI: ElectronAPI = {
     },
     updateTaskOwner: async (teamName: string, taskId: string, owner: string | null) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_OWNER, teamName, taskId, owner);
+    },
+    updateTaskFields: async (
+      teamName: string,
+      taskId: string,
+      fields: { subject?: string; description?: string }
+    ) => {
+      return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_FIELDS, teamName, taskId, fields);
     },
     startTask: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<{ notifiedOwner: boolean }>(TEAM_START_TASK, teamName, taskId);

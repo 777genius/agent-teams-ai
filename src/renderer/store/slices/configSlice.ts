@@ -42,6 +42,8 @@ export const createConfigSlice: StateCreator<AppState, [], [], ConfigSlice> = (s
 
   // Fetch app configuration from main process
   fetchConfig: async () => {
+    // Guard: prevent concurrent fetches (useTheme + centralized init chain)
+    if (get().configLoading) return;
     set({ configLoading: true, configError: null });
     try {
       const config = await api.config.get();

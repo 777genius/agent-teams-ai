@@ -128,12 +128,14 @@ export const GlobalTaskList = ({
     saveGroupingMode(mode);
   };
 
+  // Fetch tasks on mount — loading guard in the store action prevents
+  // duplicate IPC calls when the centralized init chain is already fetching.
   useEffect(() => {
-    if (!hasFetchedRef.current) {
+    if (!hasFetchedRef.current && !globalTasksLoading) {
       hasFetchedRef.current = true;
       void fetchAllTasks();
     }
-  }, [fetchAllTasks]);
+  }, [fetchAllTasks, globalTasksLoading]);
 
   // Build project combobox options from available projects/repos
   const projectFilterOptions = useMemo((): ComboboxOption[] => {

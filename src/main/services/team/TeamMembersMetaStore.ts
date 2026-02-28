@@ -11,6 +11,8 @@ interface TeamMembersMetaFile {
   members: TeamMember[];
 }
 
+const MAX_META_FILE_BYTES = 256 * 1024;
+
 function normalizeMember(member: TeamMember): TeamMember | null {
   const trimmedName = member.name?.trim();
   if (!trimmedName) {
@@ -35,6 +37,14 @@ export class TeamMembersMetaStore {
 
   async getMembers(teamName: string): Promise<TeamMember[]> {
     const metaPath = this.getMetaPath(teamName);
+    try {
+      const stat = await fs.promises.stat(metaPath);
+      if (stat.isFile() && stat.size > MAX_META_FILE_BYTES) {
+        return [];
+      }
+    } catch {
+      // ignore - readFile below will handle ENOENT and throw on other errors
+    }
     let raw: string;
     try {
       raw = await fs.promises.readFile(metaPath, 'utf8');

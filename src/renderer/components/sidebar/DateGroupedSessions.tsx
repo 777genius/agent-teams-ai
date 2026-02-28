@@ -236,14 +236,26 @@ export const DateGroupedSessions = (): React.JSX.Element => {
   const [isWorktreeDropdownOpen, setIsWorktreeDropdownOpen] = useState(false);
   const worktreeDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch project data on mount
+  // Fetch project data on mount or when viewMode changes.
+  // Loading guards in the store actions prevent duplicate IPC calls
+  // when the centralized init chain has already started a fetch.
+  const repositoryGroupsLoading = useStore((s) => s.repositoryGroupsLoading);
+  const projectsLoading = useStore((s) => s.projectsLoading);
   useEffect(() => {
-    if (viewMode === 'grouped' && repositoryGroups.length === 0) {
+    if (viewMode === 'grouped' && repositoryGroups.length === 0 && !repositoryGroupsLoading) {
       void fetchRepositoryGroups();
-    } else if (viewMode === 'flat' && projects.length === 0) {
+    } else if (viewMode === 'flat' && projects.length === 0 && !projectsLoading) {
       void fetchProjects();
     }
-  }, [viewMode, repositoryGroups.length, projects.length, fetchRepositoryGroups, fetchProjects]);
+  }, [
+    viewMode,
+    repositoryGroups.length,
+    projects.length,
+    repositoryGroupsLoading,
+    projectsLoading,
+    fetchRepositoryGroups,
+    fetchProjects,
+  ]);
 
   // Project combobox options
   const projectComboboxOptions = useMemo((): ComboboxOption[] => {

@@ -43,20 +43,27 @@ export class LocalFileSystemProvider implements FileSystemProvider {
 
   async readdir(dirPath: string): Promise<FsDirent[]> {
     const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-    // Stat all entries concurrently to populate mtimeMs, used by SessionSearcher's
-    // mtime-based cache invalidation. Failures are silently ignored (mtimeMs stays undefined).
+    // Stat all entries concurrently to populate mtimeMs/birthtimeMs/size.
+    // Populating all three avoids a second stat() call in resolveFileDetails().
+    // Failures are silently ignored (fields stay undefined).
     return Promise.all(
       entries.map(async (entry) => {
         let mtimeMs: number | undefined;
+        let birthtimeMs: number | undefined;
+        let size: number | undefined;
         try {
           const stat = await fs.promises.stat(`${dirPath}/${entry.name}`);
           mtimeMs = stat.mtimeMs;
+          birthtimeMs = stat.birthtimeMs;
+          size = stat.size;
         } catch {
           // ignore
         }
         return {
           name: entry.name,
           mtimeMs,
+          birthtimeMs,
+          size,
           isFile: () => entry.isFile(),
           isDirectory: () => entry.isDirectory(),
         };
