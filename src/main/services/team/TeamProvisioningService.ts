@@ -2620,6 +2620,8 @@ export class TeamProvisioningService {
     projectPath: string,
     detectedSessionId: string | null
   ): Promise<void> {
+    const MAX_SESSION_HISTORY = 5000;
+    const MAX_PROJECT_PATH_HISTORY = 500;
     const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
     try {
       const raw = await fs.promises.readFile(configPath, 'utf8');
@@ -2657,7 +2659,11 @@ export class TeamProvisioningService {
         logger.info(`[${teamName}] Updated leadSessionId: ${newSessionId}`);
       }
 
-      config.sessionHistory = sessionHistory;
+      if (sessionHistory.length > MAX_SESSION_HISTORY) {
+        config.sessionHistory = sessionHistory.slice(-MAX_SESSION_HISTORY);
+      } else {
+        config.sessionHistory = sessionHistory;
+      }
 
       // Save current language setting
       const langCode = ConfigManager.getInstance().getConfig().general.agentLanguage || 'system';
@@ -2672,7 +2678,10 @@ export class TeamProvisioningService {
             )
           : [];
         pathHistory.push(projectPath);
-        config.projectPathHistory = pathHistory;
+        config.projectPathHistory =
+          pathHistory.length > MAX_PROJECT_PATH_HISTORY
+            ? pathHistory.slice(-MAX_PROJECT_PATH_HISTORY)
+            : pathHistory;
       }
 
       await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));

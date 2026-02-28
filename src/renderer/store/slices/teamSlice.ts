@@ -92,6 +92,10 @@ export interface GlobalTaskDetailState {
 
 export interface TeamSlice {
   teams: TeamSummary[];
+  /** O(1) lookup to avoid array scans in render-hot paths */
+  teamByName: Record<string, TeamSummary>;
+  /** O(1) lookup: sessionId -> owning team (lead + history) */
+  teamBySessionId: Record<string, TeamSummary>;
   teamsLoading: boolean;
   teamsError: string | null;
   globalTasks: GlobalTask[];
@@ -175,6 +179,8 @@ export interface TeamSlice {
 
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
   teams: [],
+  teamByName: {},
+  teamBySessionId: {},
   teamsLoading: false,
   teamsError: null,
   globalTasks: [],
@@ -223,7 +229,22 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
     try {
       const teams = await unwrapIpc('team:list', () => api.teams.list());
-      set({ teams, teamsLoading: false, teamsError: null });
+      const teamByName: Record<string, TeamSummary> = {};
+      const teamBySessionId: Record<string, TeamSummary> = {};
+      for (const team of teams) {
+        teamByName[team.teamName] = team;
+        if (team.leadSessionId) {
+          teamBySessionId[team.leadSessionId] = team;
+        }
+        if (Array.isArray(team.sessionHistory)) {
+          for (const sid of team.sessionHistory) {
+            if (typeof sid === 'string' && sid) {
+              teamBySessionId[sid] = team;
+            }
+          }
+        }
+      }
+      set({ teams, teamByName, teamBySessionId, teamsLoading: false, teamsError: null });
     } catch (error) {
       // On refresh failure, keep existing teams visible
       set({
@@ -313,7 +334,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
     const state = get();
     // Use display name from teams list or selected team data if available
-    const teamSummary = state.teams.find((t) => t.teamName === teamName);
+    const teamSummary = state.teamByName[teamName];
     const displayName = teamSummary?.displayName || state.selectedTeamData?.config.name || teamName;
 
     const allTabs = state.getAllPaneTabs();

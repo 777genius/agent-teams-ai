@@ -64,7 +64,6 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     syncSearchMatchesWithRendered,
     selectSearchMatch,
     setTabVisibleAIGroup,
-    teams,
     openTeamTab,
     openSessionReport,
   } = useStore(
@@ -79,7 +78,6 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
       syncSearchMatchesWithRendered: s.syncSearchMatchesWithRendered,
       selectSearchMatch: s.selectSearchMatch,
       setTabVisibleAIGroup: s.setTabVisibleAIGroup,
-      teams: s.teams,
       openTeamTab: s.openTeamTab,
       openSessionReport: s.openSessionReport,
     }))
@@ -126,12 +124,14 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
   const thisTab = effectiveTabId ? openTabs.find((t) => t.id === effectiveTabId) : null;
   const pendingNavigation = thisTab?.pendingNavigation;
 
+  const teamBySessionId = useStore((s) => s.teamBySessionId);
+
   // Look up whether this session belongs to a team
   const sessionTeam = useMemo(() => {
-    if (!sessionDetail?.session?.id) return null;
-    const sid = sessionDetail.session.id;
-    return teams.find((t) => t.leadSessionId === sid || t.sessionHistory?.includes(sid)) ?? null;
-  }, [teams, sessionDetail?.session?.id]);
+    const sid = sessionDetail?.session?.id;
+    if (!sid) return null;
+    return teamBySessionId[sid] ?? null;
+  }, [teamBySessionId, sessionDetail?.session?.id]);
 
   // Compute all accumulated context injections (phase-aware)
   const { allContextInjections, lastAiGroupTotalTokens } = useMemo(() => {

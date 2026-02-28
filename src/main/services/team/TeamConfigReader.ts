@@ -12,6 +12,8 @@ const logger = createLogger('Service:TeamConfigReader');
 const TEAM_LIST_CONCURRENCY = process.platform === 'win32' ? 4 : 12;
 const LARGE_CONFIG_BYTES = 512 * 1024;
 const CONFIG_HEAD_BYTES = 64 * 1024;
+const MAX_SESSION_HISTORY_IN_SUMMARY = 2000;
+const MAX_PROJECT_PATH_HISTORY_IN_SUMMARY = 200;
 
 async function mapLimit<T, R>(
   items: readonly T[],
@@ -131,10 +133,10 @@ export class TeamConfigReader {
                 ? config.leadSessionId
                 : undefined;
             projectPathHistory = Array.isArray(config.projectPathHistory)
-              ? config.projectPathHistory
+              ? config.projectPathHistory.slice(-MAX_PROJECT_PATH_HISTORY_IN_SUMMARY)
               : undefined;
             sessionHistory = Array.isArray(config.sessionHistory)
-              ? config.sessionHistory
+              ? config.sessionHistory.slice(-MAX_SESSION_HISTORY_IN_SUMMARY)
               : undefined;
             deletedAt = typeof config.deletedAt === 'string' ? config.deletedAt : undefined;
           }
@@ -163,24 +165,6 @@ export class TeamConfigReader {
                 addMember(member);
               }
             }
-          }
-
-          const removedNames = new Set<string>();
-          try {
-            const metaMembers = await this.membersMetaStore.getMembers(teamName);
-            for (const member of metaMembers) {
-              if (member.removedAt) {
-                removedNames.add(member.name.trim());
-              } else {
-                addMember(member);
-              }
-            }
-          } catch {
-            logger.debug(`Failed to read members.meta.json for team: ${teamName}`);
-          }
-
-          for (const name of removedNames) {
-            memberMap.delete(name);
           }
 
           const members = Array.from(memberMap.values());
