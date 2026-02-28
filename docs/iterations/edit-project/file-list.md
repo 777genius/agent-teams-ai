@@ -100,7 +100,7 @@ Benchmark 5: Keystroke re-renders
 | 2 | `src/main/services/editor/ProjectFileService.ts` | 1 | Stateless файловый сервис |
 | 3 | `src/main/services/editor/index.ts` | 1 | Barrel export: `{ ProjectFileService }` (расширяется в итерациях 4-5) |
 | 4 | `src/main/services/editor/FileSearchService.ts` | 4 | Search in files |
-| 5 | `src/main/services/editor/GitStatusService.ts` | 5 | git status --porcelain |
+| 5 | `src/main/services/editor/GitStatusService.ts` | 5 | git status через simple-git (~80-100 LOC) |
 | 6 | `src/main/services/editor/EditorFileWatcher.ts` | 5 | FileWatcher (~250-300 LOC, burst coalescing + ENOSPC fallback) |
 | 7 | `src/main/services/editor/conflictDetection.ts` | 5 | Утилита mtime check: сравнение mtime до/после save, conflict resolution (~40 LOC) |
 | 8 | `src/main/ipc/editor.ts` | 1 | IPC handlers |

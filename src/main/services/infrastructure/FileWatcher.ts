@@ -428,13 +428,24 @@ export class FileWatcher extends EventEmitter {
       return;
     }
 
-    // Start all watchers in parallel to minimize total startup latency
-    await Promise.all([
-      this.startProjectsWatcher(),
-      this.startTodosWatcher(),
-      this.startTeamsWatcher(),
-      this.startTasksWatcher(),
-    ]);
+    if (process.platform === 'win32') {
+      // On Windows, start watchers sequentially to avoid saturating the UV
+      // thread pool (4 threads by default). Recursive fs.watch() on NTFS is
+      // significantly slower than on macOS/Linux and can block all threads
+      // simultaneously when started in parallel, freezing the app.
+      await this.startProjectsWatcher();
+      await this.startTodosWatcher();
+      await this.startTeamsWatcher();
+      await this.startTasksWatcher();
+    } else {
+      // On macOS/Linux, start all watchers in parallel to minimize total startup latency
+      await Promise.all([
+        this.startProjectsWatcher(),
+        this.startTodosWatcher(),
+        this.startTeamsWatcher(),
+        this.startTasksWatcher(),
+      ]);
+    }
 
     if (!this.projectsWatcher || !this.todosWatcher || !this.teamsWatcher || !this.tasksWatcher) {
       this.scheduleWatcherRetry();

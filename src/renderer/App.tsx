@@ -23,9 +23,21 @@ export const App = (): React.JSX.Element => {
     }
   }, []);
 
-  // Initialize context system (before notification listeners)
+  // Initialize context system first, then notification listeners.
+  // Staggered to avoid flooding the main process with 6+ simultaneous IPC
+  // calls at startup, which saturates the UV thread pool on Windows.
   useEffect(() => {
-    void useStore.getState().initializeContextSystem();
+    let notificationCleanup: (() => void) | undefined;
+
+    void useStore
+      .getState()
+      .initializeContextSystem()
+      .finally(() => {
+        // Start notification listeners after context system is ready
+        notificationCleanup = initializeNotificationListeners();
+      });
+
+    return () => notificationCleanup?.();
   }, []);
 
   // Refresh available contexts when SSH connection state changes
@@ -34,12 +46,6 @@ export const App = (): React.JSX.Element => {
     const cleanup = api.ssh.onStatus(() => {
       void useStore.getState().fetchAvailableContexts();
     });
-    return cleanup;
-  }, []);
-
-  // Initialize IPC event listeners (notifications, file changes)
-  useEffect(() => {
-    const cleanup = initializeNotificationListeners();
     return cleanup;
   }, []);
 

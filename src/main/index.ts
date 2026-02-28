@@ -663,7 +663,14 @@ function createWindow(): void {
       // Deferred from initializeServices() to avoid blocking window creation
       // with fs.watch() setup (especially slow on Windows with recursive watchers).
       const activeContext = contextRegistry.getActive();
-      activeContext.startFileWatcher();
+      if (process.platform === 'win32') {
+        // On Windows, delay FileWatcher startup to let the renderer complete
+        // its initial IPC calls without UV thread pool contention. Recursive
+        // fs.watch() on NTFS saturates all 4 default UV threads.
+        setTimeout(() => activeContext.startFileWatcher(), 1500);
+      } else {
+        activeContext.startFileWatcher();
+      }
 
       setTimeout(() => updaterService.checkForUpdates(), 3000);
 

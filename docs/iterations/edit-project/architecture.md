@@ -431,7 +431,7 @@ const treeLoading = useStore(s => s.editorFileTreeLoading);    // FileTreePanel
 | `editor:createDir` | 3 | renderer -> main | `(parentDir: string, name: string)` -> `IpcResult<void>` | Создание директории |
 | `editor:deleteFile` | 3 | renderer -> main | `(filePath: string)` -> `IpcResult<void>` | Удаление через shell.trashItem() |
 | `editor:searchInFiles` | 4 | renderer -> main | `(query: string, options?: { caseSensitive?: boolean })` -> `IpcResult<SearchResult[]>` | Literal search, default case-insensitive (как SessionSearcher), max 100 results. Кнопка "Aa" в UI для toggle |
-| `editor:gitStatus` | 5 | renderer -> main | `()` -> `IpcResult<GitFileStatus[]>` | git status --porcelain, кеш 5 сек |
+| `editor:gitStatus` | 5 | renderer -> main | `()` -> `IpcResult<GitFileStatus[]>` | git status через `simple-git`, кеш 5 сек |
 | `editor:watchDir` | 5 | renderer -> main | `()` -> `IpcResult<void>` | Запуск file watcher |
 | `editor:change` | 5 | main -> renderer | event: `EditorFileChangeEvent` | Файл изменился на диске |
 
@@ -463,8 +463,15 @@ interface ReadFileResult {
 
 interface GitFileStatus {
   path: string;
-  status: 'modified' | 'untracked' | 'staged' | 'deleted' | 'conflict';
-  // 'conflict' = merge conflicts (git porcelain codes UU, AA, DD)
+  status: 'modified' | 'untracked' | 'staged' | 'deleted' | 'renamed' | 'conflict';
+  // Маппинг из simple-git StatusResult:
+  //   status.modified → 'modified'
+  //   status.not_added → 'untracked'
+  //   status.staged → 'staged'
+  //   status.deleted → 'deleted'
+  //   status.renamed → 'renamed' (with from/to)
+  //   status.conflicted → 'conflict'
+  renamedFrom?: string;  // Только для 'renamed'
 }
 
 interface SearchResult {
