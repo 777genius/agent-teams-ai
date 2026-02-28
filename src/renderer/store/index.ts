@@ -73,7 +73,18 @@ export function initializeNotificationListeners(): () => void {
   cleanupFns.push(() => {
     useStore.getState().unsubscribeProvisioningProgress();
   });
-  void useStore.getState().fetchTeams();
+  // Stagger IPC data fetches to avoid saturating the UV thread pool on Windows.
+  // Each fetch triggers file I/O in the main process; firing them all at once
+  // blocks all 4 default UV threads simultaneously, freezing the app.
+  void useStore
+    .getState()
+    .fetchTeams()
+    .finally(() => {
+      void useStore.getState().fetchNotifications();
+      if (api.cliInstaller) {
+        void useStore.getState().fetchCliStatus();
+      }
+    });
   const pendingSessionRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const pendingProjectRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let teamRefreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -168,8 +179,7 @@ export function initializeNotificationListeners(): () => void {
     }
   }
 
-  // Fetch after listeners are attached so startup events do not get overwritten by a stale response.
-  void useStore.getState().fetchNotifications();
+  // fetchNotifications() is called in the staggered init chain above (after fetchTeams).
 
   /**
    * Check if a session is visible in any pane (not just the focused pane's active tab).
@@ -363,10 +373,7 @@ export function initializeNotificationListeners(): () => void {
     }
   }
 
-  // Auto-check CLI status on startup
-  if (api.cliInstaller) {
-    void useStore.getState().fetchCliStatus();
-  }
+  // fetchCliStatus() is called in the staggered init chain above (after fetchTeams).
 
   // Listen for CLI installer progress events from main process
   let cliCompletedRevertTimer: ReturnType<typeof setTimeout> | null = null;

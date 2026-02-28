@@ -23,27 +23,28 @@ export const App = (): React.JSX.Element => {
     }
   }, []);
 
-  // Initialize context system first, then notification listeners.
-  // Staggered to avoid flooding the main process with 6+ simultaneous IPC
-  // calls at startup, which saturates the UV thread pool on Windows.
+  // Defer IPC-heavy initialization to after the first paint.
+  // On Windows, firing 6+ IPC calls simultaneously at startup saturates the
+  // UV thread pool (4 threads by default), causing the app to freeze.
+  // Context system init is skipped here — local context is ready by default,
+  // and SSH context is initialized lazily when SSH connects (see below).
   useEffect(() => {
-    let notificationCleanup: (() => void) | undefined;
-
-    void useStore
-      .getState()
-      .initializeContextSystem()
-      .finally(() => {
-        // Start notification listeners after context system is ready
-        notificationCleanup = initializeNotificationListeners();
-      });
-
-    return () => notificationCleanup?.();
+    let cleanup: (() => void) | undefined;
+    const timer = setTimeout(() => {
+      cleanup = initializeNotificationListeners();
+    }, 100);
+    return () => {
+      clearTimeout(timer);
+      cleanup?.();
+    };
   }, []);
 
-  // Refresh available contexts when SSH connection state changes
+  // Initialize context system lazily when SSH connection state changes.
+  // Local-only users never pay the cost of IndexedDB init + context IPC calls.
   useEffect(() => {
     if (!api.ssh?.onStatus) return;
     const cleanup = api.ssh.onStatus(() => {
+      void useStore.getState().initializeContextSystem();
       void useStore.getState().fetchAvailableContexts();
     });
     return cleanup;
