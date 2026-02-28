@@ -48,7 +48,28 @@
 - Dirty flag через debounced `EditorView.updateListener` (300ms)
 - Гранулярные Zustand-селекторы: FileTreePanel не подписывается на tabs/content
 - EditorState pooling: один EditorView, Map<tabId, EditorState> в useRef
-- LRU eviction при > 30 states
+- LRU eviction при > 30 states. При eviction: удалить dirty flag из `editorModifiedFiles` (предотвращает stale dirty indicator), очистить draft из localStorage
+
+## Autosave (draft recovery)
+
+Минимальный autosave для защиты от потери данных при crash/kill:
+
+```typescript
+// В CodeMirrorEditor.tsx — debounced 30 секунд после последнего изменения
+const AUTOSAVE_DELAY = 30_000;
+
+// Сохранять draft в localStorage:
+// key: `editor-draft:${filePath}`
+// value: JSON.stringify({ content: doc.toString(), timestamp: Date.now() })
+// Очищать при успешном saveFile() или при closeTab()
+
+// При openFile() — проверить наличие draft:
+// if (draft exists && draft.timestamp > file.mtimeMs) → banner "Recovered unsaved changes. [Apply] [Discard]"
+// Edge case: если draft.timestamp < file.mtimeMs — файл был изменён извне ПОСЛЕ draft → draft устарел, удалить молча
+// Edge case: если file.mtimeMs === 0 или undefined (новый файл) — применять draft безусловно
+```
+
+Лимиты: max 10 drafts, max 500KB per draft. При превышении — вытеснять oldest. Не сохранять draft для read-only/preview файлов.
 
 ## UX-требования
 
@@ -56,6 +77,8 @@
 - Unsaved changes при закрытии overlay: три кнопки ("Save All & Close" / "Discard & Close" / "Cancel")
 - Dirty indicator (точка) на вкладке ПЕРЕД текстом
 - `hasUnsavedChanges()` в slice
+- `closeTab()` с dirty state: показать confirm dialog ("Save / Discard / Cancel") перед закрытием. При "Save" — сохранить через IPC, при "Discard" — закрыть + удалить draft, при "Cancel" — отмена. Закрытие overlay с dirty tabs — аналогично через "Save All & Close" / "Discard & Close" / "Cancel"
+- Draft recovery banner при обнаружении несохранённого draft
 
 ## Тестирование
 
@@ -65,7 +88,8 @@
 | 2 | `editorSlice` -- open/close файлы, dirty state, save | `test/renderer/store/editorSlice.test.ts` (расширение) |
 | 3 | `atomicWrite` -- unit тесты | `test/main/utils/atomicWrite.test.ts` |
 | 4 | EditorState pooling -- save/restore state при switch tab | — |
-| 5 | Manual: открыть файл -> отредактировать -> Cmd+S -> dirty indicator сбрасывается | — |
+| 5 | Draft autosave — сохранение в localStorage, recovery при reopen, cleanup при save/close | — (manual + unit для localStorage logic) |
+| 6 | Manual: открыть файл -> отредактировать -> Cmd+S -> dirty indicator сбрасывается | — |
 
 ## Критерии готовности
 
@@ -74,6 +98,7 @@
 - [ ] Dirty indicator на вкладке
 - [ ] Status bar показывает позицию курсора и язык
 - [ ] При закрытии overlay с unsaved changes -- confirmation dialog
+- [ ] Draft autosave: после 30 сек без сохранения — draft в localStorage, recovery при reopen
 - [ ] Benchmark: 0 re-render FileTreePanel/TabBar при наборе текста
 
 ## Оценка

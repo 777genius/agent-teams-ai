@@ -138,6 +138,21 @@ export class ServiceContext {
   }
 
   /**
+   * Starts only cache cleanup, deferring FileWatcher to later.
+   * Use this at app startup so the window appears without waiting for fs.watch().
+   * Call startFileWatcher() separately after the window is visible.
+   */
+  startCacheOnly(): void {
+    if (this.disposed) {
+      logger.error(`Cannot start disposed context: ${this.id}`);
+      return;
+    }
+
+    logger.info(`Starting ServiceContext (cache only): ${this.id}`);
+    this.cleanupInterval = this.dataCache.startAutoCleanup(CACHE_CLEANUP_INTERVAL_MINUTES);
+  }
+
+  /**
    * Stops the file watcher (for pausing on context switch).
    * Does not dispose resources - can be resumed with startFileWatcher().
    */

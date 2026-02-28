@@ -61,10 +61,11 @@
 
 ## Security-требования
 
-1. `ProjectFileService.readDir()`: для каждого entry проверять containment через `isPathWithinAllowedDirectories()` (экспортирована из pathValidation.ts). Для symlinks -- `fs.realpath()` + повторная проверка containment. Молча пропускать entries за пределами projectRoot (SEC-2). **НЕ вызывать `validateFilePath()` целиком** — она блокирует sensitive файлы, а readDir должен их ПОКАЗЫВАТЬ с пометкой `isSensitive: true`. Для пометки использовать новую экспортируемую функцию `matchesSensitivePattern()` из pathValidation.ts (сейчас приватная — нужно экспортировать) (SEC-6)
-2. `ProjectFileService.readFile()`: `fs.lstat()` -> `isFile()` ДО чтения. `stats.size <= 2MB`. Block device paths. Post-read realpath verify (SEC-3, SEC-4)
-3. `activeProjectRoot` в module-level state, НЕ от renderer (SEC-5)
-4. Sensitive файлы: показывать с замком в дереве, "Sensitive file, cannot open" при клике (SEC-6)
+1. **SEC-15**: `editor:open` handler валидирует `projectPath` ДО установки `activeProjectRoot`: `path.isAbsolute()`, `fs.stat().isDirectory()`, `!== '/'`/`'C:\\'`, `!isPathWithinRoot(path, claudeDir)`. Без этого злонамеренный renderer может передать `"/"`, делая ВСЕ пути валидными
+2. `ProjectFileService.readDir()`: для каждого entry проверять containment через `isPathWithinAllowedDirectories()` (экспортирована из pathValidation.ts). Для symlinks -- `fs.realpath()` + повторная проверка containment. Молча пропускать entries за пределами projectRoot (SEC-2). **НЕ вызывать `validateFilePath()` целиком** — она блокирует sensitive файлы, а readDir должен их ПОКАЗЫВАТЬ с пометкой `isSensitive: true`. Для пометки использовать новую экспортируемую функцию `matchesSensitivePattern()` из pathValidation.ts (сейчас приватная — нужно экспортировать) (SEC-6)
+3. `ProjectFileService.readFile()`: `fs.lstat()` -> `isFile()` ДО чтения. `stats.size <= 2MB`. Block device paths. Post-read realpath verify (SEC-3, SEC-4)
+4. `activeProjectRoot` в module-level state, НЕ от renderer (SEC-5)
+5. Sensitive файлы: показывать с замком в дереве, "Sensitive file, cannot open" при клике (SEC-6)
 
 ## Performance-требования
 

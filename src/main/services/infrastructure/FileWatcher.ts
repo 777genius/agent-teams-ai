@@ -21,6 +21,7 @@ import {
 import { createLogger } from '@shared/utils/logger';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 import { projectPathResolver } from '../discovery/ProjectPathResolver';
@@ -149,7 +150,9 @@ export class FileWatcher extends EventEmitter {
     if (this.fsProvider.type === 'ssh') {
       this.startPollingMode();
     } else {
-      this.ensureWatchers();
+      // Fire-and-forget: ensureWatchers is now async to avoid blocking the event loop
+      // with synchronous fs.existsSync() calls during startup.
+      void this.ensureWatchers();
     }
     this.startCatchUpTimer();
   }
@@ -278,17 +281,20 @@ export class FileWatcher extends EventEmitter {
   /**
    * Starts the projects directory watcher.
    */
-  private startProjectsWatcher(): void {
+  private async startProjectsWatcher(): Promise<void> {
     if (this.projectsWatcher) {
       return;
     }
 
     try {
-      if (!fs.existsSync(this.projectsPath)) {
+      if (!(await this.pathExists(this.projectsPath))) {
         logger.warn(`FileWatcher: Projects directory does not exist: ${this.projectsPath}`);
         this.scheduleWatcherRetry();
         return;
       }
+
+      // Guard: stop() may have been called while awaiting pathExists
+      if (!this.isWatching) return;
 
       this.projectsWatcher = fs.watch(
         this.projectsPath,
@@ -312,17 +318,20 @@ export class FileWatcher extends EventEmitter {
   /**
    * Starts the todos directory watcher.
    */
-  private startTodosWatcher(): void {
+  private async startTodosWatcher(): Promise<void> {
     if (this.todosWatcher) {
       return;
     }
 
     try {
-      if (!fs.existsSync(this.todosPath)) {
+      if (!(await this.pathExists(this.todosPath))) {
         // Todos directory may not exist yet - that's OK
         this.scheduleWatcherRetry();
         return;
       }
+
+      // Guard: stop() may have been called while awaiting pathExists
+      if (!this.isWatching) return;
 
       this.todosWatcher = fs.watch(this.todosPath, (eventType, filename) => {
         if (filename) {
@@ -342,16 +351,19 @@ export class FileWatcher extends EventEmitter {
   /**
    * Starts the teams directory watcher.
    */
-  private startTeamsWatcher(): void {
+  private async startTeamsWatcher(): Promise<void> {
     if (this.teamsWatcher) {
       return;
     }
 
     try {
-      if (!fs.existsSync(this.teamsPath)) {
+      if (!(await this.pathExists(this.teamsPath))) {
         this.scheduleWatcherRetry();
         return;
       }
+
+      // Guard: stop() may have been called while awaiting pathExists
+      if (!this.isWatching) return;
 
       this.teamsWatcher = fs.watch(this.teamsPath, { recursive: true }, (eventType, filename) => {
         if (filename) {
@@ -370,16 +382,19 @@ export class FileWatcher extends EventEmitter {
   /**
    * Starts the tasks directory watcher.
    */
-  private startTasksWatcher(): void {
+  private async startTasksWatcher(): Promise<void> {
     if (this.tasksWatcher) {
       return;
     }
 
     try {
-      if (!fs.existsSync(this.tasksPath)) {
+      if (!(await this.pathExists(this.tasksPath))) {
         this.scheduleWatcherRetry();
         return;
       }
+
+      // Guard: stop() may have been called while awaiting pathExists
+      if (!this.isWatching) return;
 
       this.tasksWatcher = fs.watch(this.tasksPath, { recursive: true }, (eventType, filename) => {
         if (filename) {
@@ -395,15 +410,31 @@ export class FileWatcher extends EventEmitter {
     }
   }
 
-  private ensureWatchers(): void {
+  /**
+   * Async check for path existence. Replaces sync fs.existsSync()
+   * to avoid blocking the event loop during watcher initialization.
+   */
+  private async pathExists(p: string): Promise<boolean> {
+    try {
+      await fsp.access(p, fs.constants.F_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async ensureWatchers(): Promise<void> {
     if (!this.isWatching || this.fsProvider.type === 'ssh') {
       return;
     }
 
-    this.startProjectsWatcher();
-    this.startTodosWatcher();
-    this.startTeamsWatcher();
-    this.startTasksWatcher();
+    // Start all watchers in parallel to minimize total startup latency
+    await Promise.all([
+      this.startProjectsWatcher(),
+      this.startTodosWatcher(),
+      this.startTeamsWatcher(),
+      this.startTasksWatcher(),
+    ]);
 
     if (!this.projectsWatcher || !this.todosWatcher || !this.teamsWatcher || !this.tasksWatcher) {
       this.scheduleWatcherRetry();
@@ -417,7 +448,7 @@ export class FileWatcher extends EventEmitter {
 
     this.retryTimer = setTimeout(() => {
       this.retryTimer = null;
-      this.ensureWatchers();
+      void this.ensureWatchers();
     }, WATCHER_RETRY_MS);
   }
 

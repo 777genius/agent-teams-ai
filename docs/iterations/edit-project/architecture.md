@@ -51,12 +51,12 @@
 
 ```
 src/renderer/components/team/editor/
-├── ProjectEditorOverlay.tsx     # Полноэкранный overlay (max 150 LOC)
-├── EditorFileTree.tsx           # Обёртка над generic FileTree (max 200 LOC)
-├── EditorTabBar.tsx             # Панель вкладок (max 100 LOC)
-├── CodeMirrorEditor.tsx         # CM6 wrapper: lifecycle + EditorState pooling (max 150 LOC)
-├── EditorToolbar.tsx            # Save, Undo, Redo, язык (max 100 LOC)
-├── EditorStatusBar.tsx          # Ln:Col, язык, отступы, кодировка (max 80 LOC)
+├── ProjectEditorOverlay.tsx     # Полноэкранный overlay (~150-200 LOC)
+├── EditorFileTree.tsx           # Обёртка над generic FileTree (~150-200 LOC)
+├── EditorTabBar.tsx             # Панель вкладок (~100-130 LOC)
+├── CodeMirrorEditor.tsx         # CM6 wrapper: lifecycle + EditorState pooling + editorBridge (~250-350 LOC)
+├── EditorToolbar.tsx            # Save, Undo, Redo, язык (~80-100 LOC)
+├── EditorStatusBar.tsx          # Ln:Col, язык, отступы, кодировка (~60-80 LOC)
 ├── EditorContextMenu.tsx        # Context menu для дерева файлов (итерация 3)
 ├── NewFileDialog.tsx            # Inline-input для имени нового файла (итерация 3)
 ├── QuickOpenDialog.tsx          # Cmd+P fuzzy search (итерация 4)
@@ -217,7 +217,7 @@ export interface EditorSlice {
   editorFileTreeLoading: boolean;
   editorFileTreeError: string | null;
 
-  editorExpandedDirs: Set<string>;       // Сохраняется при re-open (H7)
+  editorExpandedDirs: Record<string, boolean>;  // Сохраняется при re-open. Record — согласовано с editorModifiedFiles (Zustand не отслеживает мутации Set)
 
   openEditor: (projectPath: string) => Promise<void>;
   closeEditor: () => void;
@@ -230,7 +230,7 @@ export interface EditorSlice {
   //     2. stateCache.current.clear() — освободить все EditorState из Map
   //     3. scrollTopCache.current.clear() — освободить scroll positions
   //     4. viewRef.current?.destroy() — уничтожить активный EditorView
-  //     5. Сброс slice state: tabs=[], tree=null, modified=Set(), loading={}, errors={}
+  //     5. Сброс slice state: tabs=[], tree=null, modified={}, expandedDirs={}, loading={}, errors={}
   //   }
   loadFileTree: (dirPath: string) => Promise<void>;
   expandDirectory: (dirPath: string) => Promise<void>;
@@ -306,14 +306,17 @@ export const editorBridge = {
   },
   /** Вызывается CodeMirrorEditor при unmount */
   unregister() { stateCache = null; scrollTopCache = null; activeView = null; },
+  /** Проверка: зарегистрирован ли bridge (HMR guard) */
+  get isRegistered(): boolean { return stateCache !== null; },
   /** Для saveFile() — контент из кешированного state */
   getContent(filePath: string): string | null {
     return stateCache?.get(filePath)?.doc.toString() ?? null;
   },
   /** Для saveAllFiles() — контент всех modified файлов */
-  getAllModifiedContent(modifiedFiles: Set<string>): Map<string, string> {
+  getAllModifiedContent(modifiedFiles: Record<string, boolean>): Map<string, string> {
     const result = new Map<string, string>();
-    for (const fp of modifiedFiles) {
+    for (const fp of Object.keys(modifiedFiles)) {
+      if (!modifiedFiles[fp]) continue;
       const content = stateCache?.get(fp)?.doc.toString();
       if (content !== undefined) result.set(fp, content);
     }
@@ -332,6 +335,15 @@ export const editorBridge = {
 ```
 
 Паттерн аналогичен `ConfirmDialog.tsx` (module-level `globalSetState`) и `changeReviewSlice.ts` (module-level state).
+
+**HMR guard**: При HMR модуль перезагружается → refs обнуляются. Компонент CodeMirrorEditor в `useEffect` проверяет `editorBridge.isRegistered` и перерегистрируется при необходимости:
+```typescript
+useEffect(() => {
+  editorBridge.register(stateCache.current, scrollTopCache.current, viewRef.current!);
+  return () => editorBridge.unregister();
+}, []); // single registration at mount
+```
+Store actions проверяют `editorBridge.isRegistered` перед обращением — при false логируют warning и graceful fallback (не крашат).
 
 ### EditorState pooling (Map в useRef)
 
@@ -368,8 +380,12 @@ function switchTab(oldTabId: string, newTabId: string) {
 
 // LRU eviction при > 30 states:
 if (stateCache.current.size > 30) {
-  // Вытеснить oldest, сохранив { content: doc.toString(), cursorPos }
-  // При возврате -- восстановить через EditorState.create()
+  // LRU eviction: вытеснить наименее недавно использованный state (least recently used).
+  // Трекинг порядка: обновлять `accessOrder: string[]` при каждом switchTab (push tabId в конец,
+  // удалить предыдущее вхождение). Вытеснять accessOrder[0].
+  // При eviction:
+  // 1. Удалить dirty flag из editorModifiedFiles (если был) + очистить draft из localStorage
+  // 2. Сохранить { content: doc.toString(), cursorPos } для восстановления через EditorState.create()
 }
 ```
 
@@ -566,7 +582,7 @@ removeEditorHandlers(ipcMain);
 
 ## Компоненты
 
-### ProjectEditorOverlay.tsx (max 150 LOC)
+### ProjectEditorOverlay.tsx (~150-200 LOC)
 
 **Ответственность**: Layout shell -- `fixed inset-0 z-50`, header с кнопкой закрытия, split layout (sidebar + main).
 
@@ -578,7 +594,7 @@ removeEditorHandlers(ipcMain);
 - Escape/X с unsaved changes: ConfirmDialog с тремя кнопками -- "Save All & Close" / "Discard & Close" / "Cancel"
 - Кнопка `?` в header: открывает `EditorShortcutsHelp`
 
-### EditorFileTree.tsx (max 200 LOC)
+### EditorFileTree.tsx (~150-200 LOC)
 
 **Ответственность**: Тонкая обёртка над generic `FileTree<FileTreeEntry>`.
 
@@ -592,7 +608,7 @@ removeEditorHandlers(ipcMain);
 - Длинные имена: `truncate` + `title` tooltip
 - ARIA: `role="tree"`, `role="treeitem"`, `aria-expanded`, `role="group"`, keyboard navigation (arrow keys)
 
-### Generic FileTree.tsx (common/, max 250 LOC)
+### Generic FileTree.tsx (common/, ~200-250 LOC)
 
 **Ответственность**: Переиспользуемый generic tree с render-props.
 
@@ -604,7 +620,7 @@ interface FileTreeProps<T extends { name: string; path: string; type: 'file' | '
   renderLeafNode?: (node: TreeNode<T>, isSelected: boolean, depth: number) => React.ReactNode;
   renderFolderLabel?: (node: TreeNode<T>, isOpen: boolean, depth: number) => React.ReactNode;
   renderNodeIcon?: (node: TreeNode<T>) => React.ReactNode;
-  collapsedFolders: Set<string>;
+  collapsedFolders: Record<string, boolean>;
   onToggleFolder: (fullPath: string) => void;
 }
 
@@ -623,7 +639,7 @@ interface TreeNode<T> {
 - `renderLeafNode` заменяет весь leaf-элемент (не просто "extra"), что покрывает сложные сценарии ReviewFileTree (11 пропсов из store)
 - Виртуализация через `@tanstack/react-virtual` с итерации 4: `flattenTree(tree, expandedDirs) -> FlatNode[]` + `useVirtualizer({ count, estimateSize: () => 28 })`
 
-### EditorTabBar.tsx (max 100 LOC)
+### EditorTabBar.tsx (~100-130 LOC)
 
 **Ответственность**: Панель вкладок с переключением, закрытием, dirty indicator.
 
@@ -634,32 +650,34 @@ interface TreeNode<T> {
 - Middle-click close, X button close
 - ARIA: `role="tablist"`, `role="tab"`, `aria-selected`
 
-### CodeMirrorEditor.tsx (max 150 LOC)
+### CodeMirrorEditor.tsx (~250-350 LOC)
 
-**Ответственность**: CM6 lifecycle -- EditorState pooling, extensions, keybindings.
+**Ответственность**: CM6 lifecycle — EditorState pooling, extensions, keybindings, bridge registration, autosave.
 
 - Один EditorView на весь редактор (активный файл)
 - `Map<tabId, EditorState>` в useRef
-- Extensions через `buildEditorExtensions(options)` -- фабрика, компонент не знает о конкретных CM plugins
+- Extensions через `buildEditorExtensions(options)` — фабрика, компонент не знает о конкретных CM plugins
 - Dirty flag через debounced `EditorView.updateListener` (300ms)
 - LRU eviction при > 30 states
+- `editorBridge.register()` при mount, `editorBridge.unregister()` при unmount (R3)
+- Draft autosave в localStorage (30 сек debounce) + recovery при reopen
 - Паттерн lifecycle из `MembersJsonEditor.tsx` (строки 27-73)
 
-### EditorStatusBar.tsx (max 80 LOC)
+### EditorStatusBar.tsx (~60-80 LOC)
 
 **Ответственность**: Нижняя полоска: `[Ln 42, Col 15] | [TypeScript] | [UTF-8] | [Spaces: 2] | [LF]`
 
 - Данные из CM6 state (cursor position, language)
 - CSS: `bg-surface-sidebar border-t border-border text-text-muted text-xs h-6`
 
-### EditorBinaryState.tsx (max 60 LOC)
+### EditorBinaryState.tsx (~50-60 LOC)
 
 **Ответственность**: Заглушка вместо CM6 для бинарных файлов.
 
 - Иконка файла, тип, размер
 - Кнопки "Open in System Viewer" (`shell:openPath`) и "Close Tab"
 
-### EditorErrorState.tsx (max 60 LOC)
+### EditorErrorState.tsx (~50-60 LOC)
 
 **Ответственность**: Заглушка при ошибке чтения.
 

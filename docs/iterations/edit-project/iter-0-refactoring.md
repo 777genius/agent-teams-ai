@@ -79,9 +79,26 @@ const wrapHandler = createIpcWrapper('IPC:editor');
 - `review.ts` импортирует `createIpcWrapper` из `ipcWrapper.ts`
 - `teams.ts` — миграция `wrapTeamHandler` → `createIpcWrapper` в отдельном follow-up PR (40+ замен, высокий blast radius)
 
+## Уровень риска по рефакторингам
+
+| R# | Что трогает | Уровень риска | Почему |
+|----|-------------|--------------|--------|
+| R1 | ReviewFileTree (дерево файлов) | Низкий | Извлечение чистой функции buildTree(). Diff-viewer, hunks, approve/reject — не затрагиваются |
+| R2 | CodeMirrorDiffView (языки) | Около нуля | Чистые stateless функции, просто выносим в отдельный файл |
+| R3 | CodeMirrorDiffView (тема) | Низкий | Разрезка CSS-объекта на base + diff-specific. Визуально проверить |
+| R4 | review.ts (IPC wrapper) | Около нуля | 15 LOC try-catch factory, тривиальная замена |
+
+**Что НЕ затрагивается**: ChangeReviewDialog logic, diff rendering, hunks, approve/reject, комментарии, changeReviewSlice state.
+
 ## Критерии готовности
 
-- `pnpm typecheck` проходит
-- Тесты `ReviewFileTree` и `CodeMirrorDiffView` проходят (zero behavior change)
-- ChangeReviewDialog работает корректно (manual check)
-- Новые unit-тесты для `fileTreeBuilder.ts` и `ipcWrapper.ts`
+- [ ] `pnpm typecheck` проходит
+- [ ] `pnpm test` проходит (zero behavior change)
+- [ ] Новые unit-тесты для `fileTreeBuilder.ts` и `ipcWrapper.ts`
+- [ ] Новые unit-тесты для `codemirrorLanguages.ts` — проверка маппинга расширений на языки
+- [ ] Manual smoke-тест: открыть ChangeReviewDialog → файловое дерево рендерится корректно, diff подсвечивается
+
+## Оценка
+
+- **Надёжность решения: 9/10** — все 4 рефакторинга механические (извлечение функций без изменения поведения). R2/R4 — около нуля риска, R1/R3 — низкий.
+- **Уверенность: 9/10** — код review workflow не затрагивается, трогается только утилитарная часть (дерево файлов, языки, тема, wrapper).

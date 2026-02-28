@@ -39,13 +39,13 @@
 
 ## Security-требования
 
-1. `searchInFiles`: ТОЛЬКО literal string search, НЕ regex. Default case-insensitive (`line.toLowerCase().includes(query.toLowerCase())` — ReDoS-безопасно). Опция `caseSensitive?: boolean` в параметрах. Max 1000 файлов, max 1MB/файл. Каждый файл валидируется через `validateFilePath()`. AbortController timeout 5s (SEC-8)
+1. `searchInFiles`: ТОЛЬКО literal string search, НЕ regex. Default case-insensitive (`line.toLowerCase().includes(query.toLowerCase())` — ReDoS-безопасно). Опция `caseSensitive?: boolean` в параметрах. Max 1000 файлов, max 1MB/файл. Каждый файл валидируется через `validateFilePath()`. AbortController timeout 5s (SEC-8). **Cancellation**: предыдущий поиск отменяется AbortController при новом запросе (debounce 300ms на renderer перед IPC вызовом)
 
 ## Performance-требования
 
 - File tree виртуализация: `@tanstack/react-virtual` -- `flattenTree()` + `useVirtualizer({ estimateSize: () => 28 })`
 - Quick Open: кешировать flat file list при открытии editor. Invalidate по file watcher event или F5
-- Search in files: запускать с AbortController timeout
+- Search in files: запускать с AbortController timeout. На renderer: debounce 300ms + отмена предыдущего IPC запроса при новом вводе (хранить `abortControllerRef` в SearchInFilesPanel)
 
 ## Keyboard Scope Isolation (R1)
 
@@ -60,6 +60,8 @@ const editorOpen = useStore(s => s.editorProjectPath !== null);
 Конкретные конфликты: `Cmd+W` (:155), `Cmd+B` (:271), `Cmd+F` (:241), `Cmd+Shift+[/]` (:177), `Ctrl+Tab` (:81).
 
 Плюс в `useEditorKeyboardShortcuts.ts` — все CM6 keybindings с `stopPropagation: true` как safety net.
+
+**Keyboard scope для диалогов внутри editor**: Escape в QuickOpenDialog/SearchInFilesPanel закрывает ДИАЛОГ, не overlay. Реализация: диалоги вызывают `e.stopPropagation()` на Escape, overlay слушает Escape только когда нет открытых диалогов (state-guard `quickOpenVisible || searchPanelVisible`).
 
 ## Изменения в существующих файлах (доп.)
 

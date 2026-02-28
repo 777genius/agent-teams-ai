@@ -78,6 +78,15 @@ export class ProjectScanner {
     { mtimeMs: number; size: number; preview: { text: string; timestamp: string } | null }
   >();
 
+  // Short-lived scan cache to prevent duplicate scans within the same request cycle.
+  // Both getProjects() and getRepositoryGroups() call scan() — the cache deduplicates.
+  private scanCache: { projects: Project[]; timestamp: number } | null = null;
+  private static readonly SCAN_CACHE_TTL_MS = 2000;
+
+  // Platform-aware batch sizes to avoid UV thread pool saturation on Windows
+  private static readonly LOCAL_SESSION_BATCH = process.platform === 'win32' ? 32 : 128;
+  private static readonly LOCAL_PROJECT_BATCH = process.platform === 'win32' ? 8 : 24;
+
   // Delegated services
   private readonly fsProvider: FileSystemProvider;
   private readonly sessionContentFilter: typeof SessionContentFilter;
@@ -108,6 +117,15 @@ export class ProjectScanner {
    * @returns Promise resolving to projects sorted by most recent activity
    */
   async scan(): Promise<Project[]> {
+    // Short-lived cache: prevents duplicate scans when getProjects() and
+    // getRepositoryGroups() fire in Promise.all() on startup/context switch.
+    if (
+      this.scanCache &&
+      Date.now() - this.scanCache.timestamp < ProjectScanner.SCAN_CACHE_TTL_MS
+    ) {
+      return this.scanCache.projects;
+    }
+
     const startedAt = Date.now();
     try {
       if (!(await this.fsProvider.exists(this.projectsDir))) {
@@ -128,7 +146,7 @@ export class ProjectScanner {
       // Process each project directory (may return multiple projects per dir)
       const projectArrays = await this.collectFulfilledInBatches(
         projectDirs,
-        this.fsProvider.type === 'ssh' ? 8 : 24,
+        this.fsProvider.type === 'ssh' ? 8 : ProjectScanner.LOCAL_PROJECT_BATCH,
         async (dir) => this.scanProject(dir.name)
       );
 
@@ -142,11 +160,20 @@ export class ProjectScanner {
         );
       }
 
+      this.scanCache = { projects: validProjects, timestamp: Date.now() };
       return validProjects;
     } catch (error) {
       logger.error('Error scanning projects directory:', error);
       return [];
     }
+  }
+
+  /**
+   * Clears the scan cache so the next scan() call reads fresh data.
+   * Call this when a file change is detected by FileWatcher.
+   */
+  clearScanCache(): void {
+    this.scanCache = null;
   }
 
   // ===========================================================================
@@ -173,8 +200,33 @@ export class ProjectScanner {
         return [];
       }
 
-      // 2. Delegate to WorktreeGrouper
-      return this.worktreeGrouper.groupByRepository(projects);
+      // 2. Convert each project to a simple RepositoryGroup (git resolution disabled)
+      // Git identity resolution is bypassed to avoid blocking I/O on startup.
+      // Each project becomes a single-worktree group.
+      const groups: RepositoryGroup[] = projects.map((project) => ({
+        id: project.id,
+        identity: null,
+        worktrees: [
+          {
+            id: project.id,
+            path: project.path,
+            name: project.name,
+            isMainWorktree: true,
+            source: 'unknown' as const,
+            sessions: project.sessions,
+            createdAt: project.createdAt,
+            mostRecentSession: project.mostRecentSession,
+          },
+        ],
+        name: project.name,
+        mostRecentSession: project.mostRecentSession,
+        totalSessions: project.sessions.length,
+      }));
+
+      // Sort by most recent activity (same order as the full git-aware version)
+      groups.sort((a, b) => (b.mostRecentSession ?? 0) - (a.mostRecentSession ?? 0));
+
+      return groups;
     } catch (error) {
       logger.error('Error scanning with worktree grouping:', error);
       return [];
@@ -226,7 +278,7 @@ export class ProjectScanner {
       const shouldSplitByCwd = this.fsProvider.type !== 'ssh';
       const sessionInfos = await this.collectFulfilledInBatches(
         sessionFiles,
-        this.fsProvider.type === 'ssh' ? 32 : 128,
+        this.fsProvider.type === 'ssh' ? 32 : ProjectScanner.LOCAL_SESSION_BATCH,
         async (file) => {
           const filePath = path.join(projectPath, file.name);
           const { mtimeMs, birthtimeMs } = await this.resolveFileDetails(file, filePath);
@@ -736,11 +788,8 @@ export class ProjectScanner {
       });
     }
 
-    // Check for subagents and load task list data in parallel
-    const [hasSubagents, todoData] = await Promise.all([
-      this.subagentLocator.hasSubagents(projectId, sessionId),
-      this.loadTodoData(sessionId),
-    ]);
+    // Check for subagents (todoData skipped here — loaded on-demand in detail view)
+    const hasSubagents = await this.subagentLocator.hasSubagents(projectId, sessionId);
     const metadataLevel: SessionMetadataLevel = 'deep';
     const firstMessageTimestampMs = this.parseTimestampMs(metadata.firstUserMessage?.timestamp);
     const createdAt =
@@ -752,7 +801,6 @@ export class ProjectScanner {
       id: sessionId,
       projectId,
       projectPath,
-      todoData,
       createdAt: Math.floor(createdAt),
       firstMessage: metadata.firstUserMessage?.text,
       messageTimestamp: metadata.firstUserMessage?.timestamp,
@@ -920,15 +968,16 @@ export class ProjectScanner {
   async loadTodoData(sessionId: string): Promise<unknown> {
     try {
       const todoPath = buildTodoPath(path.dirname(this.projectsDir), sessionId);
-
-      if (!(await this.fsProvider.exists(todoPath))) {
-        return undefined;
-      }
-
       const content = await this.fsProvider.readFile(todoPath);
       return JSON.parse(content) as unknown;
-    } catch (error) {
-      // Log but continue - task list data is non-critical
+    } catch (error: unknown) {
+      // ENOENT/EACCES = file missing or inaccessible — normal when no todos exist
+      if (error instanceof Error && 'code' in error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code === 'ENOENT' || code === 'EACCES') {
+          return undefined;
+        }
+      }
       logger.debug(`Failed to load task list data for session ${sessionId}:`, error);
       return undefined;
     }

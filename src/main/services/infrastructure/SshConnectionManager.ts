@@ -309,7 +309,7 @@ export class SshConnectionManager extends EventEmitter {
    * Handles macOS GUI apps not inheriting SSH_AUTH_SOCK from shell.
    */
   private async discoverAgentSocket(): Promise<string | null> {
-    // 1. Check SSH_AUTH_SOCK env var
+    // 1. Check SSH_AUTH_SOCK env var (all platforms)
     if (process.env.SSH_AUTH_SOCK) {
       try {
         await fs.promises.access(process.env.SSH_AUTH_SOCK);
@@ -319,7 +319,19 @@ export class SshConnectionManager extends EventEmitter {
       }
     }
 
-    // 2. macOS: ask launchctl for the socket (GUI apps don't inherit shell env)
+    // 2. Windows: use OpenSSH named pipe (no Unix sockets on Windows)
+    if (process.platform === 'win32') {
+      const pipe = '\\\\.\\pipe\\openssh-ssh-agent';
+      try {
+        await fs.promises.access(pipe);
+        return pipe;
+      } catch {
+        // OpenSSH agent not running
+      }
+      return null;
+    }
+
+    // 3. macOS: ask launchctl for the socket (GUI apps don't inherit shell env)
     if (process.platform === 'darwin') {
       try {
         const sock = await new Promise<string | null>((resolve) => {
@@ -344,7 +356,7 @@ export class SshConnectionManager extends EventEmitter {
       }
     }
 
-    // 3. Try known socket paths
+    // 4. Try known socket paths (macOS/Linux only)
     const knownPaths = [
       // 1Password SSH agent
       path.join(

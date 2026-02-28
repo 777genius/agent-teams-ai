@@ -12,7 +12,7 @@
 - **State**: Zustand slice (`editorSlice.ts`)
 - **Виртуализация**: `@tanstack/react-virtual` (уже в проекте)
 - **Fuzzy search**: `cmdk` v1.0.4 (уже в зависимостях)
-- **Новые npm-зависимости**: `@codemirror/search` (~15KB gzipped) — для встроенного Cmd+F поиска в файле. Остальное уже установлено
+- **Новые npm-зависимости**: `@codemirror/search` (~15KB gzipped), `@radix-ui/react-context-menu` (итерация 3, контекстное меню) — для встроенного Cmd+F поиска в файле и CRUD-меню. Остальное уже установлено
 
 ## Ключевые архитектурные решения
 

@@ -214,6 +214,9 @@ function wireFileWatcherEvents(context: ServiceContext): void {
 
   // Wire file-change events to renderer and HTTP SSE
   const fileChangeHandler = (event: unknown): void => {
+    // Invalidate the scan cache so the next IPC request sees fresh data
+    context.projectScanner.clearScanCache();
+
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('file-change', event);
     }
@@ -406,9 +409,11 @@ function initializeServices(): void {
     todosDir: localTodosDir,
   });
 
-  // Register and start local context
+  // Register context and start cache cleanup only.
+  // FileWatcher is deferred to did-finish-load to avoid blocking window creation
+  // with fs.watch() setup (especially slow on Windows NTFS with recursive watchers).
   contextRegistry.registerContext(localContext);
-  localContext.start();
+  localContext.startCacheOnly();
 
   logger.info(`Projects directory: ${localContext.projectScanner.getProjectsDir()}`);
 
@@ -654,6 +659,12 @@ function createWindow(): void {
           mainWindow.webContents.send(WINDOW_FULLSCREEN_CHANGED, mainWindow.isFullScreen());
         }
       }, 0);
+      // Start file watchers now that the window is visible and responsive.
+      // Deferred from initializeServices() to avoid blocking window creation
+      // with fs.watch() setup (especially slow on Windows with recursive watchers).
+      const activeContext = contextRegistry.getActive();
+      activeContext.startFileWatcher();
+
       setTimeout(() => updaterService.checkForUpdates(), 3000);
 
       // Defer non-critical startup work to avoid thread pool contention.

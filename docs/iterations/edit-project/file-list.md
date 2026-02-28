@@ -10,7 +10,7 @@
 | 4 | CM6 тормозит на файлах >2MB | Низкая | Средний | 1 | Hard limit 2MB + тиерная стратегия + external editor fallback |
 | 5 | TOCTOU race condition при save | Высокая | Высокий | 2 | Atomic write (tmp + rename) + post-read verify |
 | 6 | Race condition: агент и пользователь редактируют один файл | Высокая | Высокий | 5 | mtime check + conflict dialog (overwrite / cancel / diff) |
-| 7 | Unsaved data loss при crash | Средняя | Средний | 2 | Возможен autosave в localStorage/IndexedDB (P2 фича) |
+| 7 | Unsaved data loss при crash | Средняя | Средний | 2 | Draft autosave в localStorage (30 сек debounce, max 10 drafts x 500KB). Recovery banner при reopen |
 | 8 | Device file DoS (/dev/zero) | Средняя | Высокий | 1 | `fs.lstat()` + `isFile()` + block /dev/ /proc/ /sys/ |
 | 9 | Credential leakage (.env, .key) | Высокая | Высокий | 1 | `validateFilePath()` + визуальная пометка + блокировка чтения |
 | 10 | ReDoS в searchInFiles | Средняя | Средний | 4 | Только literal search + timeout через AbortController |
@@ -22,7 +22,28 @@
 
 ---
 
-## Benchmarks
+## Тест-стратегия
+
+### Unit-тесты (Vitest)
+~15 файлов, покрывают: сервисы (ProjectFileService, FileSearchService, GitStatusService), store slices, утилиты (fileTreeBuilder, tabLabelDisambiguation, codemirrorLanguages, atomicWrite), IPC wrapper. Запуск: `pnpm test`.
+
+### Integration-тесты (Vitest + happy-dom)
+Для компонентов использующих CM6 — happy-dom НЕ поддерживает `contenteditable` полностью. Стратегия:
+- **CodeMirrorEditor**: тестировать через mock EditorView. Проверять lifecycle (mount → register bridge, unmount → unregister), tab switch (stateCache save/restore), dirty flag propagation
+- **editorSlice + editorBridge**: интеграционный тест — store action вызывает bridge, bridge возвращает mock content
+- **IPC handlers (editor.ts)**: тестировать с mock fs + mock ProjectFileService. Проверять security guards (path traversal, .git/ write block, device paths)
+
+### Manual smoke-тесты (каждая итерация)
+Обязательный чеклист перед мёрджем каждого PR:
+- [ ] Открыть editor, навигировать по дереву, открыть файл — подсветка работает
+- [ ] Редактировать файл, Cmd+S — сохранение без ошибок
+- [ ] Unsaved changes при закрытии — confirmation dialog
+- [ ] ChangeReviewDialog по-прежнему работает корректно (regression)
+- [ ] Горячие клавиши НЕ конфликтуют с глобальными при закрытом editor
+
+### Benchmarks (manual, один раз после iter-4)
+
+Запускать вручную через DevTools Performance tab + React DevTools Profiler. Результаты фиксировать в PR description.
 
 ```
 Benchmark 1: EditorView memory
@@ -52,6 +73,23 @@ Benchmark 5: Keystroke re-renders
 
 ---
 
+## Стратегия отката
+
+Каждая итерация — отдельный PR. При проблемах — revert PR целиком.
+
+| Итерация | Fallback при провале | Минимально жизнеспособный результат |
+|----------|---------------------|-------------------------------------|
+| PR 0 | Revert PR. Рефакторинги механические (извлечение функций), не трогают review logic. При проблеме — revert + дублировать код в editor | — |
+| Iter 1 | Read-only browser без CM6 — просто дерево + `<pre>` с raw text | Кнопка "Open in Editor" → файловый браузер |
+| Iter 2 | Оставить read-only из iter-1, открывать файлы в external editor (`shell:openPath`) | Read-only + external editor fallback |
+| Iter 3 | Один таб (последний открытый файл). CRUD через terminal/external | Single-tab editor |
+| Iter 4 | Без Quick Open, без search — ручная навигация по дереву. Без виртуализации (работает до ~2000 файлов) | Editor без search/shortcuts |
+| Iter 5 | Без git badges, без file watcher — ручной F5 refresh. Без conflict detection — last-write-wins | Полный editor без live features |
+
+**Критическая точка невозврата**: нет. Каждый PR изолирован. Даже если iter-5 провалится, iter-1-4 дают полноценный editor без git/watcher.
+
+---
+
 ## Полный список файлов
 
 ### Новые файлы (~30)
@@ -77,7 +115,7 @@ Benchmark 5: Keystroke re-renders
 | 17 | `src/renderer/components/common/FileTree.tsx` | 1 | Generic FileTree с render-props |
 | 18 | `src/renderer/components/team/editor/ProjectEditorOverlay.tsx` | 1 | Full-screen overlay |
 | 19 | `src/renderer/components/team/editor/EditorFileTree.tsx` | 1 | Обёртка над FileTree |
-| 20 | `src/renderer/components/team/editor/CodeMirrorEditor.tsx` | 1 | CM6 wrapper |
+| 20 | `src/renderer/components/team/editor/CodeMirrorEditor.tsx` | 1 | CM6 wrapper (~250-350 LOC: pooling + LRU + bridge + dirty + autosave) |
 | 21 | `src/renderer/components/team/editor/EditorTabBar.tsx` | 2 | Панель вкладок |
 | 22 | `src/renderer/components/team/editor/EditorToolbar.tsx` | 2 | Toolbar |
 | 23 | `src/renderer/components/team/editor/EditorStatusBar.tsx` | 2 | Status bar |
