@@ -514,9 +514,25 @@ export class TeamDataService {
     const leadCwd = leadEntry?.cwd ?? config.projectPath;
     if (!leadCwd) return;
 
+    const withTimeout = async <T>(p: Promise<T>, ms: number): Promise<T> => {
+      let timer: NodeJS.Timeout | null = null;
+      try {
+        return await Promise.race([
+          p,
+          new Promise<T>((_resolve, reject) => {
+            timer = setTimeout(() => reject(new Error('timeout')), ms);
+          }),
+        ]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    };
+
     let leadBranch: string | null = null;
     try {
-      leadBranch = await gitIdentityResolver.getBranch(leadCwd);
+      // Git can hang on some Windows setups (network drives, locked repos, credential prompts).
+      // Branch is best-effort; never block team:getData on it.
+      leadBranch = await withTimeout(gitIdentityResolver.getBranch(leadCwd), 2000);
     } catch {
       // Lead cwd may not be a git repo — skip enrichment entirely
       return;
@@ -532,7 +548,7 @@ export class TeamDataService {
         batch.map(async (member) => {
           if (!member.cwd) return;
           try {
-            const branch = await gitIdentityResolver.getBranch(member.cwd);
+            const branch = await withTimeout(gitIdentityResolver.getBranch(member.cwd), 2000);
             if (branch && branch !== leadBranch) {
               // eslint-disable-next-line no-param-reassign -- intentional in-place enrichment
               member.gitBranch = branch;

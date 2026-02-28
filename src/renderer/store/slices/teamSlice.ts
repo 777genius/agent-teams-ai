@@ -384,26 +384,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       reviewActionError: null,
     });
 
-    // If this team is being provisioned right now, config.json doesn't exist yet.
-    // Stay in loading state — the provisioning progress callback will re-call
-    // selectTeam once config is written.
-    const isProvisioningNow = Object.values(get().provisioningRuns).some(
-      (run) =>
-        run.teamName === teamName &&
-        !['ready', 'disconnected', 'failed', 'cancelled'].includes(run.state)
-    );
-    if (isProvisioningNow) {
-      set({
-        selectedTeamLoading: true,
-        selectedTeamData: null,
-        selectedTeamError: null,
-      });
-      return;
-    }
-
     const startedAt = Date.now();
     const traceId = `${teamName}:${startedAt}`;
-    logger.info(
+    // NOTE: logger.info is not shown by default (level=WARN in dev). Use warn/console.
+    console.warn(
       `[selectTeam] start trace=${traceId} skipProjectAutoSelect=${opts?.skipProjectAutoSelect === true}`
     );
 
@@ -424,7 +408,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         selectedTeamError: null,
       });
 
-      logger.info(
+      console.warn(
         `[selectTeam] done trace=${traceId} ms=${Date.now() - startedAt} tasks=${data.tasks.length} members=${data.members.length} messages=${data.messages.length}`
       );
 
@@ -479,12 +463,15 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           !['ready', 'disconnected', 'failed', 'cancelled'].includes(run.state)
       );
 
-      if (isProvisioning) {
+      const msg = error instanceof Error ? error.message : String(error);
+      // IPC can report provisioning state explicitly.
+      if (msg === 'TEAM_PROVISIONING' || (msg.includes('TEAM_PROVISIONING') && isProvisioning)) {
         set({
           selectedTeamLoading: true,
           selectedTeamData: null,
           selectedTeamError: null,
         });
+        console.warn(`[selectTeam] provisioning team=${teamName} trace=${traceId}`);
         return;
       }
 
@@ -494,7 +481,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           : error instanceof Error
             ? error.message
             : 'Failed to fetch team data';
-      logger.error(`[selectTeam] fail team=${teamName} ms=${Date.now() - startedAt} ${message}`);
+      console.warn(`[selectTeam] fail team=${teamName} ms=${Date.now() - startedAt} ${message}`);
       set({
         selectedTeamLoading: false,
         selectedTeamData: null,
