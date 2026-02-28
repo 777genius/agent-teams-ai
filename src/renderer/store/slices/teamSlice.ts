@@ -354,6 +354,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   selectTeam: async (teamName: string, opts) => {
+    // Guard: prevent duplicate in-flight fetches for the same team.
+    // GlobalTaskDetailDialog + tab navigation can call selectTeam() in quick succession.
+    if (get().selectedTeamLoading && get().selectedTeamName === teamName) {
+      return;
+    }
+
     // Clear stale data immediately to prevent flash of previous team's content
     const prev = get().selectedTeamName;
     set({

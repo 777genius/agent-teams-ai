@@ -44,9 +44,25 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
   // Load full team data in the background to enable "as before" details (logs/changes/members).
   useEffect(() => {
     if (!globalTaskDetail) return;
-    if (selectedTeamName === teamName && selectedTeamData) return;
+    if (!teamName) return;
+
+    // Avoid re-triggering selectTeam in a loop while the fetch is in flight.
+    // selectedTeamName is set immediately by selectTeam(), but selectedTeamData
+    // remains null until IPC resolves.
+    if (selectedTeamName === teamName) {
+      if (selectedTeamData || selectedTeamLoading) return;
+      // Retry once if we are on the right team but have no data and not loading (e.g. prior error).
+    }
+
     void selectTeam(teamName, { skipProjectAutoSelect: true });
-  }, [globalTaskDetail, selectTeam, selectedTeamData, selectedTeamName, teamName]);
+  }, [
+    globalTaskDetail,
+    selectTeam,
+    selectedTeamData,
+    selectedTeamLoading,
+    selectedTeamName,
+    teamName,
+  ]);
 
   const isFullTeamLoaded = selectedTeamName === teamName && !!selectedTeamData;
 
