@@ -54,6 +54,12 @@ const INSTALL_TIMEOUT_MS = 120_000;
 /** Max redirects to follow when fetching from GCS */
 const MAX_REDIRECTS = 5;
 
+/** Socket timeout for HTTP requests — covers DNS + TCP + TLS + first byte (ms) */
+const HTTP_CONNECT_TIMEOUT_MS = 15_000;
+
+/** Overall timeout for getStatus() to prevent UI hanging indefinitely (ms) */
+const GET_STATUS_TIMEOUT_MS = 25_000;
+
 /** Max retries for EBUSY (antivirus scanning the new binary) */
 const EBUSY_MAX_RETRIES = 3;
 
@@ -80,40 +86,64 @@ function buildChildEnv(): NodeJS.ProcessEnv {
 
 /**
  * Follow redirects manually for https.get (Node https does NOT auto-follow).
+ * Includes a socket-level timeout covering DNS + TCP connect + TLS + first byte.
  */
 function httpsGetFollowRedirects(
   url: string,
-  redirectsLeft = MAX_REDIRECTS
+  redirectsLeft = MAX_REDIRECTS,
+  timeoutMs = HTTP_CONNECT_TIMEOUT_MS
 ): Promise<IncomingMessage> {
   return new Promise((resolve, reject) => {
     const parsedUrl = new URL(url);
     const transport = parsedUrl.protocol === 'http:' ? http : https;
+    let settled = false;
 
-    transport
-      .get(url, (res) => {
-        const status = res.statusCode ?? 0;
+    const settleResolve = (value: IncomingMessage): void => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
 
-        if (status >= 300 && status < 400 && res.headers.location) {
-          if (redirectsLeft <= 0) {
-            res.destroy();
-            reject(new Error('Too many redirects'));
-            return;
-          }
-          const redirectUrl = new URL(res.headers.location, url).toString();
+    const settleReject = (err: Error): void => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+
+    const req = transport.get(url, (res) => {
+      const status = res.statusCode ?? 0;
+
+      if (status >= 300 && status < 400 && res.headers.location) {
+        if (redirectsLeft <= 0) {
           res.destroy();
-          httpsGetFollowRedirects(redirectUrl, redirectsLeft - 1).then(resolve, reject);
+          settleReject(new Error('Too many redirects'));
           return;
         }
+        const redirectUrl = new URL(res.headers.location, url).toString();
+        res.destroy();
+        httpsGetFollowRedirects(redirectUrl, redirectsLeft - 1, timeoutMs).then(
+          settleResolve,
+          settleReject
+        );
+        return;
+      }
 
-        if (status !== 200) {
-          res.destroy();
-          reject(new Error(`HTTP ${status} fetching ${url}`));
-          return;
-        }
+      if (status !== 200) {
+        res.destroy();
+        settleReject(new Error(`HTTP ${status} fetching ${url}`));
+        return;
+      }
 
-        resolve(res);
-      })
-      .on('error', reject);
+      settleResolve(res);
+    });
+
+    // Socket-level timeout: fires if the socket is idle for timeoutMs at any point
+    // during DNS resolution, TCP connect, TLS handshake, or waiting for response headers.
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error(`Connection timed out after ${timeoutMs}ms fetching ${url}`));
+    });
+
+    req.on('error', (err) => settleReject(err instanceof Error ? err : new Error(String(err))));
   });
 }
 
@@ -211,19 +241,44 @@ export class CliInstallerService {
       authMethod: null,
     };
 
+    // Run the actual status gathering with an overall timeout.
+    // On timeout, return whatever partial result was collected so far.
+    const ref = { current: result };
+    await Promise.race([
+      this.gatherStatus(ref),
+      new Promise<void>((resolve) =>
+        setTimeout(() => {
+          logger.warn(
+            `getStatus() timed out after ${GET_STATUS_TIMEOUT_MS}ms, returning partial result`
+          );
+          resolve();
+        }, GET_STATUS_TIMEOUT_MS)
+      ),
+    ]);
+
+    return result;
+  }
+
+  /**
+   * Gathers CLI status information, mutating the provided result object.
+   * Split from getStatus() to enable overall timeout via Promise.race —
+   * on timeout, getStatus() returns whatever fields were populated so far.
+   */
+  private async gatherStatus(ref: { current: CliInstallationStatus }): Promise<void> {
+    const r = ref.current;
     const binaryPath = await ClaudeBinaryResolver.resolve();
     if (binaryPath) {
-      result.installed = true;
-      result.binaryPath = binaryPath;
+      r.installed = true;
+      r.binaryPath = binaryPath;
 
       try {
         const { stdout } = await execCli(binaryPath, ['--version'], {
           timeout: VERSION_TIMEOUT_MS,
           env: buildChildEnv(),
         });
-        result.installedVersion = normalizeVersion(stdout);
+        r.installedVersion = normalizeVersion(stdout);
         logger.info(
-          `Installed CLI version: "${stdout.trim()}" → normalized: "${result.installedVersion}"`
+          `Installed CLI version: "${stdout.trim()}" → normalized: "${r.installedVersion}"`
         );
       } catch (err) {
         logger.warn('Failed to get CLI version:', getErrorMessage(err));
@@ -236,35 +291,29 @@ export class CliInstallerService {
           env: buildChildEnv(),
         });
         const auth = JSON.parse(authStdout.trim()) as { loggedIn?: boolean; authMethod?: string };
-        result.authLoggedIn = auth.loggedIn === true;
-        result.authMethod = auth.authMethod ?? null;
-        logger.info(
-          `Auth status: loggedIn=${result.authLoggedIn}, method=${result.authMethod ?? 'null'}`
-        );
+        r.authLoggedIn = auth.loggedIn === true;
+        r.authMethod = auth.authMethod ?? null;
+        logger.info(`Auth status: loggedIn=${r.authLoggedIn}, method=${r.authMethod ?? 'null'}`);
       } catch (err) {
         logger.warn('Failed to check auth status:', getErrorMessage(err));
-        result.authLoggedIn = false;
+        r.authLoggedIn = false;
       }
     }
 
     try {
       const latestRaw = await fetchText(`${GCS_BASE}/latest`);
-      result.latestVersion = normalizeVersion(latestRaw);
-      logger.info(
-        `Latest CLI version: "${latestRaw.trim()}" → normalized: "${result.latestVersion}"`
-      );
+      r.latestVersion = normalizeVersion(latestRaw);
+      logger.info(`Latest CLI version: "${latestRaw.trim()}" → normalized: "${r.latestVersion}"`);
 
-      if (result.installedVersion && result.latestVersion) {
-        result.updateAvailable = isVersionOlder(result.installedVersion, result.latestVersion);
+      if (r.installedVersion && r.latestVersion) {
+        r.updateAvailable = isVersionOlder(r.installedVersion, r.latestVersion);
         logger.info(
-          `Update available: ${result.updateAvailable} (${result.installedVersion} → ${result.latestVersion})`
+          `Update available: ${r.updateAvailable} (${r.installedVersion} → ${r.latestVersion})`
         );
       }
     } catch (err) {
       logger.warn('Failed to fetch latest CLI version:', getErrorMessage(err));
     }
-
-    return result;
   }
 
   // ---------------------------------------------------------------------------

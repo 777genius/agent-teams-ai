@@ -252,6 +252,49 @@ describe('CliInstallerService', () => {
     });
   });
 
+  describe('getStatus timeout', () => {
+    it('returns partial result when gatherStatus hangs', async () => {
+      allowConsoleLogs();
+      vi.useFakeTimers();
+
+      // ClaudeBinaryResolver.resolve() never settles — simulates thread pool exhaustion
+      vi.mocked(ClaudeBinaryResolver.resolve).mockReturnValue(new Promise(() => {}));
+
+      const statusPromise = service.getStatus();
+
+      // Advance past GET_STATUS_TIMEOUT_MS (25s)
+      await vi.advanceTimersByTimeAsync(26_000);
+
+      const status = await statusPromise;
+
+      // Should return the default (partial) result — not hang forever
+      expect(status.installed).toBe(false);
+      expect(status.installedVersion).toBeNull();
+      expect(status.binaryPath).toBeNull();
+
+      vi.useRealTimers();
+    });
+
+    it('returns full result when gatherStatus completes before timeout', async () => {
+      allowConsoleLogs();
+
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
+      vi.mocked(execCli)
+        .mockResolvedValueOnce({ stdout: '2.5.0 (Claude Code)', stderr: '' })
+        .mockResolvedValueOnce({
+          stdout: '{"loggedIn":true,"authMethod":"api_key"}',
+          stderr: '',
+        });
+
+      const status = await service.getStatus();
+
+      expect(status.installed).toBe(true);
+      expect(status.installedVersion).toBe('2.5.0');
+      expect(status.authLoggedIn).toBe(true);
+      expect(status.authMethod).toBe('api_key');
+    });
+  });
+
   describe('sendProgress with destroyed window', () => {
     it('does not throw when window is destroyed', async () => {
       allowConsoleLogs();

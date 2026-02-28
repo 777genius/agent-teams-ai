@@ -41,7 +41,7 @@
                          └──────────────┬──────────────────────────┘
                                         │
                          ┌──────────────▼──────────────────────────┐
-                         │     Main Process: FileEditorService      │
+                         │     Main Process: ProjectFileService      │
                          │  (sandboxed path validation)             │
                          │  ┌─────────────────────────────────┐    │
                          │  │ fs.readdir / fs.readFile /       │    │
@@ -514,7 +514,7 @@ editorSaveError: Record<string, string>   // per-file
 2. editorSlice.openEditor(data.config.projectPath)
 3. set({ editorProjectPath, editorFileTreeLoading: true })
 4. IPC: editor:readDir(projectPath, depth=1)
-5. Main: FileEditorService.readDir() → валидация пути → fs.readdir
+5. Main: ProjectFileService.readDir() → валидация пути → fs.readdir
 6. Результат: FileTreeEntry[]
 7. set({ editorFileTree, editorFileTreeLoading: false })
 8. CodeEditorOverlay рендерится (fixed inset-0 z-50)
@@ -528,10 +528,10 @@ editorSaveError: Record<string, string>   // per-file
 3. Проверка: есть ли уже tab с этим filePath?
    ДА → setActiveTab(tabId)
    НЕТ → создать tab, IPC: editor:readFile(filePath)
-4. Main: FileEditorService.readFile() → валидация → fs.readFile
+4. Main: ProjectFileService.readFile() → валидация → fs.readFile
 5. Результат: ReadFileResult { content, size, truncated }
 6. set({ editorFileContents[filePath]: content })
-7. CM EditorView создаётся с content
+7. CM EditorState создаётся, единственный EditorView пересоздаётся
 ```
 
 ### 10.3 Сохранение файла
@@ -539,11 +539,11 @@ editorSaveError: Record<string, string>   // per-file
 ```
 1. Юзер нажимает Cmd+S (или кнопку Save)
 2. editorSlice.saveFile(filePath)
-3. content = editorModifiedContents[filePath] ?? editorFileContents[filePath]
+3. content = EditorState (из useRef Map) ?? editorFileContents[filePath]
 4. set({ editorSaving[filePath]: true })
 5. IPC: editor:writeFile(filePath, content)
-6. Main: FileEditorService.writeFile() → валидация → fs.writeFile (atomic via tmp+rename)
-7. set({ editorSaving: false, editorModifiedContents: remove filePath })
+6. Main: ProjectFileService.writeFile() → валидация → fs.writeFile (atomic via tmp+rename)
+7. set({ editorSaving: false, editorModifiedFiles: remove filePath })
 8. Tab isModified indicator исчезает
 ```
 

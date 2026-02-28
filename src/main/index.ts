@@ -435,9 +435,8 @@ function initializeServices(): void {
   const fileContentResolver = new FileContentResolver(teamMemberLogsFinder, gitDiffFallback);
   const reviewApplier = new ReviewApplierService();
 
-  // Fire-and-forget: warm up CLI and install teamctl.js at startup
-  void teamProvisioningService.warmup();
-  void new TeamAgentToolsInstaller().ensureInstalled();
+  // warmup() and ensureInstalled() are deferred to after window creation
+  // (did-finish-load handler) to avoid thread pool contention at startup.
   httpServer = new HttpServer();
 
   // Allow TeamProvisioningService to trigger team refresh events (e.g. live lead replies).
@@ -449,9 +448,8 @@ function initializeServices(): void {
   };
   teamProvisioningService.setTeamChangeEmitter(teamChangeEmitter);
 
-  // Start periodic health checks for registered CLI processes (every 2s).
-  // Dead processes get stoppedAt written to processes.json → FileWatcher picks it up.
-  teamDataService.startProcessHealthPolling();
+  // startProcessHealthPolling() is deferred to after window creation
+  // (did-finish-load handler) to avoid thread pool contention at startup.
 
   // Initialize IPC handlers with registry
   initializeIpcHandlers(
@@ -657,6 +655,14 @@ function createWindow(): void {
         }
       }, 0);
       setTimeout(() => updaterService.checkForUpdates(), 3000);
+
+      // Defer non-critical startup work to avoid thread pool contention.
+      // The window is now visible and responsive; these run in the background.
+      setTimeout(() => {
+        void teamProvisioningService.warmup();
+        void new TeamAgentToolsInstaller().ensureInstalled();
+        teamDataService.startProcessHealthPolling();
+      }, 5000);
     }
   });
 
