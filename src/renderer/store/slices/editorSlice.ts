@@ -860,7 +860,26 @@ async function refreshDirectory(
   try {
     const result = await api.editor.readDir(dirPath);
     const currentTree = get().editorFileTree;
-    if (currentTree) {
+    if (!currentTree) return;
+
+    const projectPath = get().editorProjectPath;
+    if (dirPath === projectPath) {
+      // Root refresh — tree IS the root's children, so preserve expanded subtrees
+      // by merging new entries with existing children data
+      const existingByPath = new Map<string, FileTreeEntry>();
+      for (const entry of currentTree) {
+        existingByPath.set(entry.path, entry);
+      }
+      const merged = result.entries.map((entry) => {
+        const existing = existingByPath.get(entry.path);
+        // Preserve expanded subtree children for directories that still exist
+        if (existing?.children && entry.type === 'directory') {
+          return { ...entry, children: existing.children };
+        }
+        return entry;
+      });
+      set({ editorFileTree: merged });
+    } else {
       const updatedTree = mergeChildrenIntoTree(currentTree, dirPath, result.entries);
       set({ editorFileTree: updatedTree });
     }
