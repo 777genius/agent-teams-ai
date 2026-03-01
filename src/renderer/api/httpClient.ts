@@ -988,6 +988,9 @@ export class HttpAPIClient implements ElectronAPI {
     watchDir: async () => {
       throw new Error('Editor not available in browser mode');
     },
+    setWatchedFiles: async () => {
+      throw new Error('Editor not available in browser mode');
+    },
     onEditorChange: () => {
       return () => {};
     },

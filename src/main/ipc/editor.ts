@@ -22,6 +22,7 @@ import {
   EDITOR_READ_FILE,
   EDITOR_RENAME_FILE,
   EDITOR_SEARCH_IN_FILES,
+  EDITOR_SET_WATCHED_FILES,
   EDITOR_WATCH_DIR,
   EDITOR_WRITE_FILE,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
@@ -352,6 +353,19 @@ async function handleEditorWatchDir(
   });
 }
 
+/**
+ * Update watched file list (open tabs).
+ */
+async function handleEditorSetWatchedFiles(
+  _event: IpcMainInvokeEvent,
+  filePaths: string[]
+): Promise<IpcResult<void>> {
+  return wrapHandler('setWatchedFiles', async () => {
+    if (!activeProjectRoot) throw new Error('Editor not initialized');
+    editorFileWatcher.setWatchedFiles(Array.isArray(filePaths) ? filePaths : []);
+  });
+}
+
 // =============================================================================
 // Registration
 // =============================================================================
@@ -384,6 +398,7 @@ export function registerEditorHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(EDITOR_READ_BINARY_PREVIEW, handleEditorReadBinaryPreview);
   ipcMain.handle(EDITOR_GIT_STATUS, handleEditorGitStatus);
   ipcMain.handle(EDITOR_WATCH_DIR, handleEditorWatchDir);
+  ipcMain.handle(EDITOR_SET_WATCHED_FILES, handleEditorSetWatchedFiles);
 }
 
 export function removeEditorHandlers(ipcMain: IpcMain): void {
@@ -402,6 +417,7 @@ export function removeEditorHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(EDITOR_READ_BINARY_PREVIEW);
   ipcMain.removeHandler(EDITOR_GIT_STATUS);
   ipcMain.removeHandler(EDITOR_WATCH_DIR);
+  ipcMain.removeHandler(EDITOR_SET_WATCHED_FILES);
 }
 
 /**

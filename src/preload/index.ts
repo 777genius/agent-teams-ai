@@ -24,6 +24,7 @@ import {
   EDITOR_READ_FILE,
   EDITOR_RENAME_FILE,
   EDITOR_SEARCH_IN_FILES,
+  EDITOR_SET_WATCHED_FILES,
   EDITOR_WATCH_DIR,
   EDITOR_WRITE_FILE,
   HTTP_SERVER_GET_STATUS,
@@ -1032,6 +1033,8 @@ const electronAPI: ElectronAPI = {
       invokeIpcWithResult<BinaryPreviewResult>(EDITOR_READ_BINARY_PREVIEW, filePath),
     gitStatus: () => invokeIpcWithResult<GitStatusResult>(EDITOR_GIT_STATUS),
     watchDir: (enable: boolean) => invokeIpcWithResult<void>(EDITOR_WATCH_DIR, enable),
+    setWatchedFiles: (filePaths: string[]) =>
+      invokeIpcWithResult<void>(EDITOR_SET_WATCHED_FILES, filePaths),
     onEditorChange: (callback: (event: EditorFileChangeEvent) => void): (() => void) => {
       const listener = (_event: Electron.IpcRendererEvent, data: EditorFileChangeEvent): void =>
         callback(data);

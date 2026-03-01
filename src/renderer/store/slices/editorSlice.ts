@@ -65,6 +65,28 @@ let watcherEventCounts: Record<EditorFileChangeEvent['type'], number> = {
   delete: 0,
 };
 
+let watchedFilesSyncTimer: ReturnType<typeof setTimeout> | null = null;
+let lastWatchedFilesKey = '';
+
+function scheduleSyncWatchedFiles(get: () => AppState): void {
+  if (!api.editor) return;
+  const state = get();
+  if (!state.editorWatcherEnabled) return;
+  if (!state.editorProjectPath) return;
+
+  const filePaths = state.editorOpenTabs.map((t) => t.filePath).filter(Boolean);
+  filePaths.sort();
+  const key = filePaths.join('\n');
+  if (key === lastWatchedFilesKey) return;
+  lastWatchedFilesKey = key;
+
+  if (watchedFilesSyncTimer) clearTimeout(watchedFilesSyncTimer);
+  watchedFilesSyncTimer = setTimeout(() => {
+    watchedFilesSyncTimer = null;
+    void api.editor.setWatchedFiles(filePaths);
+  }, 150);
+}
+
 /**
  * Open request sequence for editor initialization.
  * Cancels stale async work (notably React 18 StrictMode dev effect mount/unmount).
@@ -308,7 +330,8 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
 
       scheduleIdleWork(() => {
         if (editorOpenSeq !== openSeq || get().editorProjectPath !== projectPath) return;
-        if (watcherDesired) void get().toggleWatcher(true);
+        // TODO: temporarily disabled file watcher — re-enable when stabilized
+        if (watcherDesired) void get().toggleWatcher(false);
         // Defer initial git status a bit more — it can be expensive on large repos.
         setTimeout(() => {
           if (editorOpenSeq !== openSeq || get().editorProjectPath !== projectPath) return;
@@ -465,6 +488,8 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
       editorOpenTabs: newTabs,
       editorActiveTabId: tab.id,
     });
+
+    scheduleSyncWatchedFiles(get);
   },
 
   closeEditorTab: (tabId: string) => {
@@ -505,6 +530,8 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
       editorModifiedFiles: restModified,
       editorSaveError: restErrors,
     });
+
+    scheduleSyncWatchedFiles(get);
   },
 
   closeOtherEditorTabs: (keepTabId: string) => {
@@ -809,6 +836,9 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
         };
       });
 
+      // Keep open-files-only watcher in sync with remapped tab paths
+      scheduleSyncWatchedFiles(get);
+
       // Remap bridge state for each affected tab
       const { editorOpenTabs } = get();
       for (const tab of editorOpenTabs) {
@@ -907,6 +937,9 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
         };
       });
 
+      // Keep open-files-only watcher in sync with remapped tab paths
+      scheduleSyncWatchedFiles(get);
+
       // Remap bridge state
       const { editorOpenTabs } = get();
       for (const tab of editorOpenTabs) {
@@ -991,6 +1024,12 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
         localStorage.setItem('editor-watcher-enabled', String(enable));
       } catch {
         // localStorage may not be available
+      }
+      if (enable) {
+        scheduleSyncWatchedFiles(get);
+      } else {
+        // Ensure main process stops watching files promptly.
+        lastWatchedFilesKey = '';
       }
     } catch (error) {
       log.error('Failed to toggle watcher:', error);

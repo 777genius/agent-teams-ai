@@ -458,6 +458,9 @@ export const EDITOR_GIT_STATUS = 'editor:gitStatus';
 /** Enable/disable file watcher for current project */
 export const EDITOR_WATCH_DIR = 'editor:watchDir';
 
+/** Update list of watched file paths (open tabs) */
+export const EDITOR_SET_WATCHED_FILES = 'editor:setWatchedFiles';
+
 /** Read binary file as base64 for inline preview */
 export const EDITOR_READ_BINARY_PREVIEW = 'editor:readBinaryPreview';
 

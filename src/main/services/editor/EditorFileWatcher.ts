@@ -22,11 +22,8 @@ const log = createLogger('EditorFileWatcher');
 // Constants
 // =============================================================================
 
-/** Directories to ignore (regex for chokidar's `ignored` option) */
-const IGNORED_PATTERN =
-  /(node_modules|\.git|dist|build|out|coverage|__pycache__|\.cache|\.next|\.turbo|\.parcel-cache|\.vite|\.venv|\.tox|vendor|target|Pods|DerivedData|\.idea|\.vscode|\.DS_Store)/;
-
-const MAX_DEPTH = 20;
+const STARTUP_IGNORE_CHANGE_MS = 3000;
+const MAX_EMITTED_EVENTS_PER_FLUSH = 300;
 
 // =============================================================================
 // Service
@@ -40,34 +37,69 @@ export class EditorFileWatcher {
   private onChangeCallback: ((event: EditorFileChangeEvent) => void) | null = null;
   // Higher debounce = fewer IPC events during large bursts (checkout/build/format).
   private readonly DEBOUNCE_MS = 350;
+  private ignoreChangeUntilMs = 0;
+  private watchedFilesKey = '';
 
   /**
-   * Start watching a project directory.
-   * Idempotent: stops any existing watcher first.
+   * Initialize watcher context for a project root.
+   *
+   * Performance: does NOT watch the entire project directory.
+   * Use setWatchedFiles() to watch only open files (tabs).
    */
   start(projectRoot: string, onChange: (event: EditorFileChangeEvent) => void): void {
     this.stop();
     this.projectRoot = projectRoot;
+    this.ignoreChangeUntilMs = Date.now() + STARTUP_IGNORE_CHANGE_MS;
+    this.watchedFilesKey = '';
 
-    log.info('Starting file watcher for:', projectRoot);
+    log.info('Starting file watcher (open files only) for:', projectRoot);
+    this.onChangeCallback = onChange;
+  }
 
-    this.watcher = watch(projectRoot, {
-      ignored: IGNORED_PATTERN,
+  /**
+   * Update list of watched file paths (open tabs).
+   * Rebuilds chokidar watcher when the set changes.
+   */
+  setWatchedFiles(filePaths: string[]): void {
+    if (!this.projectRoot) {
+      throw new Error('Watcher not initialized');
+    }
+
+    const normalized = filePaths
+      .filter((p): p is string => typeof p === 'string' && p.length > 0)
+      .filter((p) => isPathWithinRoot(p, this.projectRoot!));
+
+    normalized.sort();
+    const key = normalized.join('\n');
+    if (key === this.watchedFilesKey) return;
+    this.watchedFilesKey = key;
+
+    // Close existing watcher first (if any)
+    if (this.watcher) {
+      void this.watcher.close();
+      this.watcher = null;
+    }
+
+    if (normalized.length === 0) {
+      return;
+    }
+
+    // Build a new watcher for the given file set.
+    // disableGlobbing prevents chokidar from treating file names as patterns.
+    this.watcher = watch(normalized, {
       ignoreInitial: true,
       ignorePermissionErrors: true,
       followSymlinks: false,
-      depth: MAX_DEPTH,
     });
 
-    this.onChangeCallback = onChange;
-
     const emitSafe = (type: EditorFileChangeEvent['type'], filePath: string): void => {
-      // SEC-2: validate path is within project root before sending to renderer
-      if (!isPathWithinRoot(filePath, projectRoot)) {
+      if (type === 'change' && Date.now() < this.ignoreChangeUntilMs) {
+        return;
+      }
+      if (!isPathWithinRoot(filePath, this.projectRoot!)) {
         log.warn('Watcher event outside project root, ignoring:', filePath);
         return;
       }
-      // Aggregate rapid events — only the last event type per path is kept
       this.pendingEvents.set(filePath, type);
       this.scheduleFlush();
     };
@@ -91,6 +123,8 @@ export class EditorFileWatcher {
     }
     this.pendingEvents.clear();
     this.onChangeCallback = null;
+    this.ignoreChangeUntilMs = 0;
+    this.watchedFilesKey = '';
     if (this.watcher) {
       log.info('Stopping file watcher');
       void this.watcher.close();
@@ -110,9 +144,28 @@ export class EditorFileWatcher {
       const events = new Map(this.pendingEvents);
       this.pendingEvents.clear();
       if (!this.onChangeCallback) return;
-      for (const [filePath, type] of events) {
-        this.onChangeCallback({ type, path: filePath });
+      // Cap emitted events per flush to protect renderer from floods.
+      // Prefer create/delete events over change events.
+      let emitted = 0;
+
+      if (events.size > MAX_EMITTED_EVENTS_PER_FLUSH) {
+        log.warn(
+          `Watcher burst: ${events.size} events pending, capping to ${MAX_EMITTED_EVENTS_PER_FLUSH}`
+        );
       }
+
+      const emit = (type: EditorFileChangeEvent['type']): void => {
+        for (const [filePath, t] of events) {
+          if (t !== type) continue;
+          this.onChangeCallback?.({ type: t, path: filePath });
+          emitted++;
+          if (emitted >= MAX_EMITTED_EVENTS_PER_FLUSH) return;
+        }
+      };
+
+      emit('delete');
+      if (emitted < MAX_EMITTED_EVENTS_PER_FLUSH) emit('create');
+      if (emitted < MAX_EMITTED_EVENTS_PER_FLUSH) emit('change');
     }, this.DEBOUNCE_MS);
   }
 

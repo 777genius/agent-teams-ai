@@ -196,6 +196,11 @@ export interface EditorAPI {
   readBinaryPreview: (filePath: string) => Promise<BinaryPreviewResult>;
   gitStatus: () => Promise<GitStatusResult>;
   watchDir: (enable: boolean) => Promise<void>;
+  /**
+   * Provide the list of currently-open file paths (tabs) to watch.
+   * Intended as a performance optimization: avoids watching the whole project tree.
+   */
+  setWatchedFiles: (filePaths: string[]) => Promise<void>;
   /** Subscribe to file change events (main → renderer). Returns cleanup function. */
   onEditorChange: (callback: (event: EditorFileChangeEvent) => void) => () => void;
 }

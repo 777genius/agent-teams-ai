@@ -41,8 +41,10 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   EDITOR_RENAME_FILE: 'editor:renameFile',
   EDITOR_SEARCH_IN_FILES: 'editor:searchInFiles',
   EDITOR_LIST_FILES: 'editor:listFiles',
+  EDITOR_READ_BINARY_PREVIEW: 'editor:readBinaryPreview',
   EDITOR_GIT_STATUS: 'editor:gitStatus',
   EDITOR_WATCH_DIR: 'editor:watchDir',
+  EDITOR_SET_WATCHED_FILES: 'editor:setWatchedFiles',
   EDITOR_CHANGE: 'editor:change',
 }));
 
@@ -146,8 +148,8 @@ describe('Editor IPC handlers', () => {
   });
 
   describe('registration', () => {
-    it('registers all 14 editor channels', () => {
-      expect(mockIpc.handle).toHaveBeenCalledTimes(14);
+    it('registers all 16 editor channels', () => {
+      expect(mockIpc.handle).toHaveBeenCalledTimes(16);
       expect(mockIpc._handlers.has('editor:open')).toBe(true);
       expect(mockIpc._handlers.has('editor:close')).toBe(true);
       expect(mockIpc._handlers.has('editor:readDir')).toBe(true);
@@ -160,13 +162,15 @@ describe('Editor IPC handlers', () => {
       expect(mockIpc._handlers.has('editor:renameFile')).toBe(true);
       expect(mockIpc._handlers.has('editor:searchInFiles')).toBe(true);
       expect(mockIpc._handlers.has('editor:listFiles')).toBe(true);
+      expect(mockIpc._handlers.has('editor:readBinaryPreview')).toBe(true);
       expect(mockIpc._handlers.has('editor:gitStatus')).toBe(true);
       expect(mockIpc._handlers.has('editor:watchDir')).toBe(true);
+      expect(mockIpc._handlers.has('editor:setWatchedFiles')).toBe(true);
     });
 
     it('removeEditorHandlers clears all channels', () => {
       removeEditorHandlers(mockIpc as unknown as IpcMain);
-      expect(mockIpc.removeHandler).toHaveBeenCalledTimes(14);
+      expect(mockIpc.removeHandler).toHaveBeenCalledTimes(16);
     });
   });
 
