@@ -1,28 +1,16 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { cpp } from '@codemirror/lang-cpp';
-import { css } from '@codemirror/lang-css';
-import { go } from '@codemirror/lang-go';
-import { html } from '@codemirror/lang-html';
-import { java } from '@codemirror/lang-java';
-import { javascript } from '@codemirror/lang-javascript';
-import { json } from '@codemirror/lang-json';
-import { less } from '@codemirror/lang-less';
-import { markdown } from '@codemirror/lang-markdown';
-import { php } from '@codemirror/lang-php';
-import { python } from '@codemirror/lang-python';
-import { rust } from '@codemirror/lang-rust';
-import { sass } from '@codemirror/lang-sass';
-import { sql } from '@codemirror/lang-sql';
-import { xml } from '@codemirror/lang-xml';
-import { yaml } from '@codemirror/lang-yaml';
-import { indentUnit, LanguageDescription, syntaxHighlighting } from '@codemirror/language';
-import { languages } from '@codemirror/language-data';
+import { indentUnit, syntaxHighlighting } from '@codemirror/language';
 import { goToNextChunk, goToPreviousChunk, unifiedMergeView } from '@codemirror/merge';
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
+import {
+  getAsyncLanguageDesc,
+  getSyncLanguageExtension,
+} from '@renderer/utils/codemirrorLanguages';
+import { baseEditorTheme } from '@renderer/utils/codemirrorTheme';
 
 import {
   acceptChunk,
@@ -60,73 +48,6 @@ interface CodeMirrorDiffViewProps {
   portionSize?: number;
 }
 
-/** Synchronous language extension for common file types (bundled by Vite) */
-function getSyncLanguageExtension(fileName: string): Extension | null {
-  const ext = fileName.split('.').pop()?.toLowerCase();
-  switch (ext) {
-    case 'ts':
-    case 'tsx':
-    case 'js':
-    case 'jsx':
-    case 'mjs':
-    case 'cjs':
-      return javascript({
-        jsx: ext === 'tsx' || ext === 'jsx',
-        typescript: ext === 'ts' || ext === 'tsx',
-      });
-    case 'py':
-      return python();
-    case 'json':
-    case 'jsonl':
-      return json();
-    case 'css':
-      return css();
-    case 'scss':
-      return sass({ indented: false });
-    case 'sass':
-      return sass({ indented: true });
-    case 'less':
-      return less();
-    case 'html':
-    case 'htm':
-      return html();
-    case 'xml':
-    case 'svg':
-      return xml();
-    case 'md':
-    case 'mdx':
-    case 'markdown':
-      return markdown();
-    case 'yaml':
-    case 'yml':
-      return yaml();
-    case 'rs':
-      return rust();
-    case 'go':
-      return go();
-    case 'java':
-      return java();
-    case 'c':
-    case 'h':
-    case 'cpp':
-    case 'cxx':
-    case 'cc':
-    case 'hpp':
-      return cpp();
-    case 'php':
-      return php();
-    case 'sql':
-      return sql();
-    default:
-      return null;
-  }
-}
-
-/** Async fallback: match by filename via @codemirror/language-data for rare languages */
-function getAsyncLanguageDesc(fileName: string): LanguageDescription | null {
-  return LanguageDescription.matchFilename(languages, fileName);
-}
-
 /** Compute hunk index for the chunk at a given position (B-side / modified doc).
  *  If the position falls inside a chunk, returns that chunk's index.
  *  Otherwise returns the nearest chunk by distance (avoids defaulting to 0). */
@@ -154,49 +75,8 @@ function computeHunkIndexAtPos(state: EditorState, pos: number): number {
   return nearestIndex;
 }
 
-/** Custom dark theme for diff view using CSS variables */
-const diffTheme = EditorView.theme({
-  '&': {
-    backgroundColor: 'var(--color-surface)',
-    color: 'var(--color-text)',
-    fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-    fontSize: '13px',
-  },
-  '&.cm-focused': {
-    outline: 'none',
-  },
-  '.cm-gutters': {
-    backgroundColor: 'var(--color-surface)',
-    borderRight: '1px solid var(--color-border)',
-    color: 'var(--color-text-muted)',
-    fontSize: '11px',
-    minWidth: 'auto',
-  },
-  '.cm-lineNumbers .cm-gutterElement': {
-    padding: '0 4px 0 8px',
-    minWidth: '2ch',
-    textAlign: 'right',
-    opacity: '0.5',
-  },
-  '.cm-activeLineGutter': {
-    backgroundColor: 'transparent',
-  },
-  '.cm-activeLine': {
-    backgroundColor: 'transparent',
-  },
-  '.cm-scroller': {
-    overflow: 'auto',
-  },
-  '.cm-content': {
-    caretColor: 'var(--color-text)',
-  },
-  '.cm-cursor': {
-    borderLeftColor: 'var(--color-text)',
-  },
-  '.cm-selectionBackground': {
-    backgroundColor: 'rgba(59, 130, 246, 0.3) !important',
-  },
-  // Diff-specific line/block backgrounds
+/** Diff-specific theme — merge toolbar, changed/deleted line backgrounds, collapse markers */
+const diffSpecificTheme = EditorView.theme({
   '.cm-changedLine': { backgroundColor: '#1a3a1a !important' },
   '.cm-deletedChunk': { backgroundColor: '#241517', position: 'relative', overflow: 'visible' },
   '.cm-insertedLine': { backgroundColor: '#1a3a1a !important' },
@@ -476,7 +356,8 @@ export const CodeMirrorDiffView = ({
 
   const buildExtensions = useCallback(() => {
     const extensions: Extension[] = [
-      diffTheme,
+      baseEditorTheme,
+      diffSpecificTheme,
       lineNumbers(),
       syntaxHighlighting(oneDarkHighlightStyle),
       EditorView.editable.of(!readOnly),

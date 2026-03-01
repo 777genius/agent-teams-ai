@@ -7,7 +7,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { setClaudeBasePathOverride } from '../../../src/main/utils/pathDecoder';
+import { getHomeDir, setClaudeBasePathOverride } from '../../../src/main/utils/pathDecoder';
 
 import {
   isPathWithinAllowedDirectories,
@@ -17,7 +17,7 @@ import {
 } from '../../../src/main/utils/pathValidation';
 
 describe('pathValidation', () => {
-  const homeDir = os.homedir();
+  const homeDir = getHomeDir();
   const claudeDir = path.join(homeDir, '.claude');
   const testProjectPath = path.resolve('/home/user/my-project');
 

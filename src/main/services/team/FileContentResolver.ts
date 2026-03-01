@@ -1,3 +1,4 @@
+import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { diffLines } from 'diff';
 import { createReadStream } from 'fs';
@@ -257,8 +258,13 @@ export class FileContentResolver {
       if (!backupFileName) continue;
 
       // Construct the file-history path
-      const homeDir = process.env.HOME || process.env.USERPROFILE || '';
-      const historyPath = path.join(homeDir, '.claude', 'file-history', sessionId, backupFileName);
+      const historyPath = path.join(
+        getHomeDir(),
+        '.claude',
+        'file-history',
+        sessionId,
+        backupFileName
+      );
 
       try {
         await access(historyPath);

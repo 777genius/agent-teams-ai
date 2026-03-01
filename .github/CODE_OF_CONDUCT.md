@@ -17,4 +17,4 @@ This project follows the Contributor Covenant Code of Conduct.
 Maintainers are here to help keep our community welcoming. They’ll clarify expectations when needed and, if necessary, take steps to address behavior that goes against these standards.
 
 ## Reporting
-Please report incidents privately to the maintainers through the security/contact channel listed in `SECURITY.md`.
+Please report incidents privately to the maintainers through the security/contact channel listed in `SECURITY.md` (`.github/SECURITY.md`).

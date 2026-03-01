@@ -26,7 +26,7 @@ export function useCliInstaller(): {
   downloadTotal: number;
   installerError: string | null;
   installerDetail: string | null;
-  installerLogs: string[];
+  installerRawChunks: string[];
   completedVersion: string | null;
   fetchCliStatus: () => Promise<void>;
   installCli: () => void;
@@ -41,7 +41,7 @@ export function useCliInstaller(): {
   const downloadTotal = useStore((s) => s.cliDownloadTotal);
   const installerError = useStore((s) => s.cliInstallerError);
   const installerDetail = useStore((s) => s.cliInstallerDetail);
-  const installerLogs = useStore((s) => s.cliInstallerLogs);
+  const installerRawChunks = useStore((s) => s.cliInstallerRawChunks);
   const completedVersion = useStore((s) => s.cliCompletedVersion);
   const fetchCliStatus = useStore((s) => s.fetchCliStatus);
   const installCli = useStore((s) => s.installCli);
@@ -58,7 +58,7 @@ export function useCliInstaller(): {
     downloadTotal,
     installerError,
     installerDetail,
-    installerLogs,
+    installerRawChunks,
     completedVersion,
     fetchCliStatus,
     installCli,

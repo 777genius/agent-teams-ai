@@ -9,6 +9,13 @@
  * - Manage application lifecycle
  */
 
+// Increase UV thread pool size BEFORE any async I/O.
+// Default is 4 threads which is far too few for startup:
+// binary resolution stat() calls, CLI subprocess spawning, fs.watch(),
+// and readFile/readdir from IPC handlers all compete for the pool.
+// On Windows this saturates all threads, blocking the event loop.
+process.env.UV_THREADPOOL_SIZE ??= '16';
+
 import { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import { FileContentResolver } from '@main/services/team/FileContentResolver';
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
@@ -32,6 +39,7 @@ import { app, BrowserWindow } from 'electron';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
+import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { showTeamNativeNotification } from './ipc/teams';
 import { HttpServer } from './services/infrastructure/HttpServer';
@@ -55,6 +63,7 @@ import {
   UpdaterService,
 } from './services';
 
+import type { FileChangeEvent } from '@main/types';
 import type { TeamChangeEvent } from '@shared/types';
 
 const logger = createLogger('App');
@@ -69,18 +78,51 @@ const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) — suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
 
+// --- Team display name cache (avoid listTeams() on every notification) ---
+const TEAM_DISPLAY_NAME_TTL_MS = 30_000;
+const teamDisplayNameCache = new Map<string, { value: string; expiresAt: number }>();
+let teamListInFlight: Promise<Map<string, string>> | null = null;
+
+async function refreshTeamDisplayNameCache(): Promise<Map<string, string>> {
+  if (teamListInFlight) {
+    return teamListInFlight;
+  }
+
+  teamListInFlight = (async () => {
+    const out = new Map<string, string>();
+    try {
+      if (!teamDataService) return out;
+      const summary = await teamDataService.listTeams();
+      for (const team of summary) {
+        if (team?.teamName) {
+          out.set(team.teamName, team.displayName || team.teamName);
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      teamListInFlight = null;
+    }
+    return out;
+  })();
+
+  return teamListInFlight;
+}
+
 /** Resolve human-friendly team display name, falling back to raw teamName. */
 async function resolveTeamDisplayName(teamName: string): Promise<string> {
-  try {
-    if (teamDataService) {
-      const summary = await teamDataService.listTeams();
-      const team = summary.find((t) => t.teamName === teamName);
-      if (team?.displayName) return team.displayName;
-    }
-  } catch {
-    // fallback
+  const cached = teamDisplayNameCache.get(teamName);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
   }
-  return teamName;
+
+  const map = await refreshTeamDisplayNameCache();
+  const resolved = map.get(teamName) ?? teamName;
+  teamDisplayNameCache.set(teamName, {
+    value: resolved,
+    expiresAt: Date.now() + TEAM_DISPLAY_NAME_TTL_MS,
+  });
+  return resolved;
 }
 
 async function notifyNewInboxMessages(teamName: string, detail: string): Promise<void> {
@@ -213,14 +255,51 @@ function wireFileWatcherEvents(context: ServiceContext): void {
   }
 
   // Wire file-change events to renderer and HTTP SSE
+  const SCAN_CACHE_INVALIDATE_DEBOUNCE_MS = 250;
+  let scanCacheInvalidateTimer: ReturnType<typeof setTimeout> | null = null;
+  const scheduleScanCacheInvalidation = (): void => {
+    if (scanCacheInvalidateTimer) {
+      clearTimeout(scanCacheInvalidateTimer);
+    }
+    scanCacheInvalidateTimer = setTimeout(() => {
+      scanCacheInvalidateTimer = null;
+      context.projectScanner.clearScanCache();
+    }, SCAN_CACHE_INVALIDATE_DEBOUNCE_MS);
+  };
+
   const fileChangeHandler = (event: unknown): void => {
+    // Avoid triggering a full project rescan on every session append.
+    // The ProjectScanner already has a short TTL cache; we only invalidate for
+    // structural changes (add/unlink), and we debounce bursts of events.
+    try {
+      if (event && typeof event === 'object') {
+        const row = event as Partial<FileChangeEvent>;
+        const isSubagent = row.isSubagent === true;
+        const changeType = row.type;
+        if (!isSubagent && (changeType === 'add' || changeType === 'unlink')) {
+          scheduleScanCacheInvalidation();
+        }
+      } else {
+        // Fallback: if we can't classify the event, invalidate (debounced).
+        scheduleScanCacheInvalidation();
+      }
+    } catch {
+      // ignore
+    }
+
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('file-change', event);
     }
     httpServer?.broadcast('file-change', event);
   };
   context.fileWatcher.on('file-change', fileChangeHandler);
-  fileChangeCleanup = () => context.fileWatcher.off('file-change', fileChangeHandler);
+  fileChangeCleanup = () => {
+    context.fileWatcher.off('file-change', fileChangeHandler);
+    if (scanCacheInvalidateTimer) {
+      clearTimeout(scanCacheInvalidateTimer);
+      scanCacheInvalidateTimer = null;
+    }
+  };
 
   // Forward checklist-change events to renderer and HTTP SSE (mirrors file-change pattern above)
   const todoChangeHandler = (event: unknown): void => {
@@ -406,9 +485,11 @@ function initializeServices(): void {
     todosDir: localTodosDir,
   });
 
-  // Register and start local context
+  // Register context and start cache cleanup only.
+  // FileWatcher is deferred to did-finish-load to avoid blocking window creation
+  // with fs.watch() setup (especially slow on Windows NTFS with recursive watchers).
   contextRegistry.registerContext(localContext);
-  localContext.start();
+  localContext.startCacheOnly();
 
   logger.info(`Projects directory: ${localContext.projectScanner.getProjectsDir()}`);
 
@@ -435,9 +516,8 @@ function initializeServices(): void {
   const fileContentResolver = new FileContentResolver(teamMemberLogsFinder, gitDiffFallback);
   const reviewApplier = new ReviewApplierService();
 
-  // Fire-and-forget: warm up CLI and install teamctl.js at startup
-  void teamProvisioningService.warmup();
-  void new TeamAgentToolsInstaller().ensureInstalled();
+  // warmup() and ensureInstalled() are deferred to after window creation
+  // (did-finish-load handler) to avoid thread pool contention at startup.
   httpServer = new HttpServer();
 
   // Allow TeamProvisioningService to trigger team refresh events (e.g. live lead replies).
@@ -449,9 +529,8 @@ function initializeServices(): void {
   };
   teamProvisioningService.setTeamChangeEmitter(teamChangeEmitter);
 
-  // Start periodic health checks for registered CLI processes (every 2s).
-  // Dead processes get stoppedAt written to processes.json → FileWatcher picks it up.
-  teamDataService.startProcessHealthPolling();
+  // startProcessHealthPolling() is deferred to after window creation
+  // (did-finish-load handler) to avoid thread pool contention at startup.
 
   // Initialize IPC handlers with registry
   initializeIpcHandlers(
@@ -562,6 +641,9 @@ function shutdownServices(): void {
     teamChangeCleanup = null;
   }
 
+  // Clean up editor state (watcher, git service)
+  cleanupEditorState();
+
   // Dispose all contexts (including local)
   if (contextRegistry) {
     contextRegistry.dispose();
@@ -570,6 +652,13 @@ function shutdownServices(): void {
   // Dispose SSH connection manager
   if (sshConnectionManager) {
     sshConnectionManager.dispose();
+  }
+
+  // Stop all running team provisioning processes
+  if (teamProvisioningService) {
+    for (const teamName of teamProvisioningService.getAliveTeams()) {
+      teamProvisioningService.stopTeam(teamName);
+    }
   }
 
   // Kill all PTY processes
@@ -649,7 +738,28 @@ function createWindow(): void {
           mainWindow.webContents.send(WINDOW_FULLSCREEN_CHANGED, mainWindow.isFullScreen());
         }
       }, 0);
+      // Start file watchers now that the window is visible and responsive.
+      // Deferred from initializeServices() to avoid blocking window creation
+      // with fs.watch() setup (especially slow on Windows with recursive watchers).
+      const activeContext = contextRegistry.getActive();
+      if (process.platform === 'win32') {
+        // On Windows, delay FileWatcher startup to let the renderer complete
+        // its initial IPC calls without UV thread pool contention. Recursive
+        // fs.watch() on NTFS saturates all 4 default UV threads.
+        setTimeout(() => activeContext.startFileWatcher(), 1500);
+      } else {
+        activeContext.startFileWatcher();
+      }
+
       setTimeout(() => updaterService.checkForUpdates(), 3000);
+
+      // Defer non-critical startup work to avoid thread pool contention.
+      // The window is now visible and responsive; these run in the background.
+      setTimeout(() => {
+        void teamProvisioningService.warmup();
+        void new TeamAgentToolsInstaller().ensureInstalled();
+        teamDataService.startProcessHealthPolling();
+      }, 5000);
     }
   });
 
@@ -731,6 +841,8 @@ function createWindow(): void {
     if (ptyTerminalService) {
       ptyTerminalService.setMainWindow(null);
     }
+    setEditorMainWindow(null);
+    cleanupEditorState();
   });
 
   // Handle renderer process crashes (render-process-gone replaces deprecated 'crashed' event)
@@ -752,6 +864,7 @@ function createWindow(): void {
   if (ptyTerminalService) {
     ptyTerminalService.setMainWindow(mainWindow);
   }
+  setEditorMainWindow(mainWindow);
 
   logger.info('Main window created');
 }

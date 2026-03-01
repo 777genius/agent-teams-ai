@@ -226,11 +226,12 @@ function captureSnapshot(state: AppState, contextId: string): ContextSnapshot {
 // =============================================================================
 
 export const createContextSlice: StateCreator<AppState, [], [], ContextSlice> = (set, get) => ({
-  // Initial state
+  // Initial state — local context is always ready, no initialization needed.
+  // initializeContextSystem() is called lazily when SSH connects.
   activeContextId: 'local',
   isContextSwitching: false,
   targetContextId: null,
-  contextSnapshotsReady: false,
+  contextSnapshotsReady: true,
   availableContexts: [{ id: 'local', type: 'local' as const }],
 
   // Initialize context system (called once on app mount)

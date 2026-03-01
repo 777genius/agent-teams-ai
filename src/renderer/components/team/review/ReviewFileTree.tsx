@@ -4,6 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { getFileHunkCount } from '@renderer/store/slices/changeReviewSlice';
+import { buildTree, sortTreeNodes } from '@renderer/utils/fileTreeBuilder';
 import {
   Check,
   ChevronRight,
@@ -16,6 +17,7 @@ import {
   X as XIcon,
 } from 'lucide-react';
 
+import type { TreeNode } from '@renderer/utils/fileTreeBuilder';
 import type { HunkDecision } from '@shared/types';
 import type { FileChangeSummary } from '@shared/types/review';
 
@@ -29,58 +31,7 @@ interface ReviewFileTreeProps {
   activeFilePath?: string;
 }
 
-interface TreeNode {
-  name: string;
-  fullPath: string;
-  isFile: boolean;
-  file?: FileChangeSummary;
-  children: TreeNode[];
-}
-
 type FileStatus = 'pending' | 'accepted' | 'rejected' | 'mixed';
-
-function buildTree(files: FileChangeSummary[]): TreeNode[] {
-  const root: TreeNode = { name: '', fullPath: '', isFile: false, children: [] };
-
-  for (const file of files) {
-    const parts = file.relativePath.split('/');
-    let current = root;
-
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      const isLast = i === parts.length - 1;
-      const fullPath = parts.slice(0, i + 1).join('/');
-
-      let child = current.children.find((c) => c.name === part);
-      if (!child) {
-        child = {
-          name: part,
-          fullPath,
-          isFile: isLast,
-          file: isLast ? file : undefined,
-          children: [],
-        };
-        current.children.push(child);
-      }
-      current = child;
-    }
-  }
-
-  function collapse(node: TreeNode): TreeNode {
-    const collapsed: TreeNode = { ...node, children: node.children.map(collapse) };
-    if (!collapsed.isFile && collapsed.children.length === 1 && !collapsed.children[0].isFile) {
-      const child = collapsed.children[0];
-      return {
-        ...child,
-        name: `${collapsed.name}/${child.name}`,
-        children: child.children,
-      };
-    }
-    return collapsed;
-  }
-
-  return collapse(root).children;
-}
 
 function getFileStatus(
   file: FileChangeSummary,
@@ -157,7 +108,7 @@ const TreeItem = ({
   collapsedFolders,
   onToggleFolder,
 }: {
-  node: TreeNode;
+  node: TreeNode<FileChangeSummary>;
   selectedFilePath: string | null;
   activeFilePath?: string;
   onSelectFile: (filePath: string) => void;
@@ -169,14 +120,14 @@ const TreeItem = ({
   collapsedFolders: Set<string>;
   onToggleFolder: (fullPath: string) => void;
 }): JSX.Element => {
-  if (node.isFile && node.file) {
-    const isSelected = node.file.filePath === selectedFilePath;
-    const isActive = node.file.filePath === activeFilePath && !isSelected;
-    const status = getFileStatus(node.file, hunkDecisions, fileDecisions, fileChunkCounts);
+  if (node.isFile && node.data) {
+    const isSelected = node.data.filePath === selectedFilePath;
+    const isActive = node.data.filePath === activeFilePath && !isSelected;
+    const status = getFileStatus(node.data, hunkDecisions, fileDecisions, fileChunkCounts);
     return (
       <button
-        data-tree-file={node.file.filePath}
-        onClick={() => onSelectFile(node.file!.filePath)}
+        data-tree-file={node.data.filePath}
+        onClick={() => onSelectFile(node.data!.filePath)}
         className={cn(
           'flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs transition-colors',
           isSelected
@@ -189,7 +140,7 @@ const TreeItem = ({
       >
         <FileStatusIcon status={status} />
         <File className="size-3.5 shrink-0" />
-        {viewedSet && viewedSet.has(node.file.filePath) && (
+        {viewedSet && viewedSet.has(node.data.filePath) && (
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="inline-flex shrink-0">
@@ -208,11 +159,11 @@ const TreeItem = ({
           {node.name}
         </span>
         <span className="ml-1 flex shrink-0 items-center gap-1">
-          {node.file.linesAdded > 0 && (
-            <span className="text-green-400">+{node.file.linesAdded}</span>
+          {node.data.linesAdded > 0 && (
+            <span className="text-green-400">+{node.data.linesAdded}</span>
           )}
-          {node.file.linesRemoved > 0 && (
-            <span className="text-red-400">-{node.file.linesRemoved}</span>
+          {node.data.linesRemoved > 0 && (
+            <span className="text-red-400">-{node.data.linesRemoved}</span>
           )}
         </span>
       </button>
@@ -239,27 +190,22 @@ const TreeItem = ({
         <span className="truncate">{node.name}</span>
       </button>
       {isOpen &&
-        [...node.children]
-          .sort((a, b) => {
-            if (a.isFile !== b.isFile) return a.isFile ? 1 : -1;
-            return a.name.localeCompare(b.name);
-          })
-          .map((child) => (
-            <TreeItem
-              key={child.fullPath}
-              node={child}
-              selectedFilePath={selectedFilePath}
-              activeFilePath={activeFilePath}
-              onSelectFile={onSelectFile}
-              depth={depth + 1}
-              hunkDecisions={hunkDecisions}
-              fileDecisions={fileDecisions}
-              fileChunkCounts={fileChunkCounts}
-              viewedSet={viewedSet}
-              collapsedFolders={collapsedFolders}
-              onToggleFolder={onToggleFolder}
-            />
-          ))}
+        sortTreeNodes(node.children).map((child) => (
+          <TreeItem
+            key={child.fullPath}
+            node={child}
+            selectedFilePath={selectedFilePath}
+            activeFilePath={activeFilePath}
+            onSelectFile={onSelectFile}
+            depth={depth + 1}
+            hunkDecisions={hunkDecisions}
+            fileDecisions={fileDecisions}
+            fileChunkCounts={fileChunkCounts}
+            viewedSet={viewedSet}
+            collapsedFolders={collapsedFolders}
+            onToggleFolder={onToggleFolder}
+          />
+        ))}
     </div>
   );
 };
@@ -274,12 +220,12 @@ function applyExpandAncestors(prev: Set<string>, ancestors: string[]): Set<strin
   return next;
 }
 
-function getAncestorFolderPaths(tree: TreeNode[], filePath: string): string[] {
+function getAncestorFolderPaths(tree: TreeNode<FileChangeSummary>[], filePath: string): string[] {
   const paths: string[] = [];
 
-  function walk(nodes: TreeNode[], ancestors: string[]): boolean {
+  function walk(nodes: TreeNode<FileChangeSummary>[], ancestors: string[]): boolean {
     for (const node of nodes) {
-      if (node.isFile && node.file?.filePath === filePath) {
+      if (node.isFile && node.data?.filePath === filePath) {
         paths.push(...ancestors);
         return true;
       }
@@ -304,7 +250,7 @@ export const ReviewFileTree = ({
   const hunkDecisions = useStore((state) => state.hunkDecisions);
   const fileDecisions = useStore((state) => state.fileDecisions);
   const fileChunkCounts = useStore((state) => state.fileChunkCounts);
-  const tree = useMemo(() => buildTree(files), [files]);
+  const tree = useMemo(() => buildTree(files, (f) => f.relativePath), [files]);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => new Set());
 
   const toggleFolder = useCallback((fullPath: string) => {
@@ -350,27 +296,22 @@ export const ReviewFileTree = ({
 
   return (
     <div className="py-1">
-      {[...tree]
-        .sort((a, b) => {
-          if (a.isFile !== b.isFile) return a.isFile ? 1 : -1;
-          return a.name.localeCompare(b.name);
-        })
-        .map((node) => (
-          <TreeItem
-            key={node.fullPath}
-            node={node}
-            selectedFilePath={selectedFilePath}
-            activeFilePath={activeFilePath}
-            onSelectFile={onSelectFile}
-            depth={0}
-            hunkDecisions={hunkDecisions}
-            fileDecisions={fileDecisions}
-            fileChunkCounts={fileChunkCounts}
-            viewedSet={viewedSet}
-            collapsedFolders={collapsedFolders}
-            onToggleFolder={toggleFolder}
-          />
-        ))}
+      {sortTreeNodes(tree).map((node) => (
+        <TreeItem
+          key={node.fullPath}
+          node={node}
+          selectedFilePath={selectedFilePath}
+          activeFilePath={activeFilePath}
+          onSelectFile={onSelectFile}
+          depth={0}
+          hunkDecisions={hunkDecisions}
+          fileDecisions={fileDecisions}
+          fileChunkCounts={fileChunkCounts}
+          viewedSet={viewedSet}
+          collapsedFolders={collapsedFolders}
+          onToggleFolder={toggleFolder}
+        />
+      ))}
     </div>
   );
 };

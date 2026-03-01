@@ -4,7 +4,9 @@
  * Паттерн: module-level state + guard + wrapReviewHandler (как teams.ts)
  */
 
+import { createIpcWrapper } from '@main/ipc/ipcWrapper';
 import { ReviewDecisionStore } from '@main/services/team/ReviewDecisionStore';
+import { validateFilePath } from '@main/utils/pathValidation';
 import {
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
@@ -43,6 +45,7 @@ import type {
 } from '@shared/types/review';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
+const wrapReviewHandler = createIpcWrapper('IPC:review');
 const logger = createLogger('IPC:review');
 
 // --- Module-level state ---
@@ -126,22 +129,6 @@ export function removeReviewHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(REVIEW_LOAD_DECISIONS);
   ipcMain.removeHandler(REVIEW_SAVE_DECISIONS);
   ipcMain.removeHandler(REVIEW_CLEAR_DECISIONS);
-}
-
-// --- Локальный wrapReviewHandler ---
-
-async function wrapReviewHandler<T>(
-  operation: string,
-  handler: () => Promise<T>
-): Promise<IpcResult<T>> {
-  try {
-    const data = await handler();
-    return { success: true, data };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    logger.error(`Review handler error [${operation}]:`, message);
-    return { success: false, error: message };
-  }
 }
 
 // --- Phase 1 Handlers ---
@@ -259,10 +246,15 @@ async function handleSaveEditedFile(
   if (!filePath || typeof content !== 'string') {
     return { success: false, error: 'Invalid parameters' };
   }
+  const pathCheck = validateFilePath(filePath, null);
+  if (!pathCheck.valid) {
+    logger.error(`saveEditedFile blocked: ${String(pathCheck.error)} (path: ${String(filePath)})`);
+    return { success: false, error: `Path validation failed: ${String(pathCheck.error)}` };
+  }
   return wrapReviewHandler('saveEditedFile', async () => {
-    const result = await getApplier().saveEditedFile(filePath, content);
+    const result = await getApplier().saveEditedFile(pathCheck.normalizedPath!, content);
     // Invalidate cached content so next fetch reads the saved version from disk
-    getContentResolver().invalidateFile(filePath);
+    getContentResolver().invalidateFile(pathCheck.normalizedPath!);
     return result;
   });
 }

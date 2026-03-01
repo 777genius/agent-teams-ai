@@ -39,6 +39,8 @@ interface SendMessageDialogProps {
   open: boolean;
   members: ResolvedTeamMember[];
   defaultRecipient?: string;
+  /** Pre-filled message text (e.g. from editor selection action) */
+  defaultText?: string;
   quotedMessage?: QuotedMessage;
   sending: boolean;
   sendError: string | null;
@@ -53,6 +55,7 @@ export const SendMessageDialog = ({
   open,
   members,
   defaultRecipient,
+  defaultText,
   quotedMessage,
   sending,
   sendError,
@@ -74,6 +77,9 @@ export const SendMessageDialog = ({
     setSummary('');
     setQuote(quotedMessage);
     setPrevResult(lastResult);
+    if (defaultText) {
+      textDraft.setValue(defaultText);
+    }
   }
   if (open !== prevOpen) {
     setPrevOpen(open);

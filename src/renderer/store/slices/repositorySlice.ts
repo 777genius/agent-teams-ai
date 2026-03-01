@@ -51,6 +51,8 @@ export const createRepositorySlice: StateCreator<AppState, [], [], RepositorySli
 
   // Fetch all repository groups (projects grouped by git repo)
   fetchRepositoryGroups: async () => {
+    // Guard: prevent concurrent fetches (component mount + centralized init chain)
+    if (get().repositoryGroupsLoading) return;
     set({ repositoryGroupsLoading: true, repositoryGroupsError: null });
     try {
       const groups = await api.getRepositoryGroups();

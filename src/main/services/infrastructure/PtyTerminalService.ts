@@ -6,8 +6,8 @@
  */
 
 import crypto from 'node:crypto';
-import os from 'node:os';
 
+import { getHomeDir } from '@main/utils/pathDecoder';
 // eslint-disable-next-line boundaries/element-types -- IPC channel constants shared between main and preload
 import { TERMINAL_DATA, TERMINAL_EXIT } from '@preload/constants/ipcChannels';
 import { createLogger } from '@shared/utils/logger';
@@ -58,12 +58,18 @@ export class PtyTerminalService {
         ? (process.env.COMSPEC ?? 'powershell.exe')
         : (process.env.SHELL ?? '/bin/bash'));
 
+    const home = getHomeDir();
     const pty = nodePty.spawn(shell, options?.args ?? [], {
       name: 'xterm-256color',
       cols: options?.cols ?? 80,
       rows: options?.rows ?? 24,
-      cwd: options?.cwd ?? os.homedir(),
-      env: { ...process.env, ...options?.env } as Record<string, string>,
+      cwd: options?.cwd ?? home,
+      env: {
+        ...process.env,
+        HOME: home,
+        USERPROFILE: home,
+        ...options?.env,
+      } as Record<string, string>,
     });
 
     pty.onData((data) => this.send(TERMINAL_DATA, id, data));

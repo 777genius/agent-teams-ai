@@ -47,8 +47,8 @@ vi.mock('../../../src/renderer/utils/unwrapIpc', async (importOriginal) => {
 });
 
 function createSliceStore() {
-  return create<any>()((set, get) => ({
-    ...createTeamSlice(set as never, get as never),
+  return create<any>()((set, get, store) => ({
+    ...createTeamSlice(set as never, get as never, store as never),
     paneLayout: {
       focusedPaneId: 'pane-default',
       panes: [

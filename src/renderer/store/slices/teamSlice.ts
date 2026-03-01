@@ -7,6 +7,20 @@ import { getWorktreeNavigationState } from '../utils/stateResetHelpers';
 
 const logger = createLogger('teamSlice');
 
+const TEAM_GET_DATA_TIMEOUT_MS = 30_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`Timeout after ${ms}ms: ${label}`));
+    }, ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 import type { AppState } from '../types';
 import type {
   AddMemberRequest,
@@ -92,6 +106,10 @@ export interface GlobalTaskDetailState {
 
 export interface TeamSlice {
   teams: TeamSummary[];
+  /** O(1) lookup to avoid array scans in render-hot paths */
+  teamByName: Record<string, TeamSummary>;
+  /** O(1) lookup: sessionId -> owning team (lead + history) */
+  teamBySessionId: Record<string, TeamSummary>;
   teamsLoading: boolean;
   teamsError: string | null;
   globalTasks: GlobalTask[];
@@ -122,7 +140,7 @@ export interface TeamSlice {
   openTeamsTab: () => void;
   openTeamTab: (teamName: string, projectPath?: string, taskId?: string) => void;
   clearKanbanFilter: () => void;
-  selectTeam: (teamName: string) => Promise<void>;
+  selectTeam: (teamName: string, opts?: { skipProjectAutoSelect?: boolean }) => Promise<void>;
   refreshTeamData: (teamName: string) => Promise<void>;
   sendTeamMessage: (teamName: string, request: SendMessageRequest) => Promise<void>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
@@ -136,6 +154,11 @@ export interface TeamSlice {
   startTask: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
   updateTaskOwner: (teamName: string, taskId: string, owner: string | null) => Promise<void>;
+  updateTaskFields: (
+    teamName: string,
+    taskId: string,
+    fields: { subject?: string; description?: string }
+  ) => Promise<void>;
   addingComment: boolean;
   addCommentError: string | null;
   addTaskComment: (teamName: string, taskId: string, text: string) => Promise<TaskComment>;
@@ -170,6 +193,8 @@ export interface TeamSlice {
 
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
   teams: [],
+  teamByName: {},
+  teamBySessionId: {},
   teamsLoading: false,
   teamsError: null,
   globalTasks: [],
@@ -193,11 +218,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   setPendingReviewRequest: (req) => set({ pendingReviewRequest: req }),
   openGlobalTaskDetail: (teamName: string, taskId: string) => {
     set({ globalTaskDetail: { teamName, taskId } });
-    // Ensure team data is loaded for the dialog
-    const state = get();
-    if (state.selectedTeamName !== teamName || !state.selectedTeamData) {
-      void state.selectTeam(teamName);
-    }
   },
   closeGlobalTaskDetail: () => set({ globalTaskDetail: null }),
   addingComment: false,
@@ -207,6 +227,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   deletedTasksLoading: false,
 
   fetchTeams: async () => {
+    // Guard: prevent concurrent fetches (component mount + centralized init chain).
+    // Only effective during initial load (when teamsLoading is set to true below).
+    // Refreshes are already serialized by the throttle timer in onTeamChange.
+    if (get().teamsLoading) return;
     // Only show loading spinner on initial load — avoids flickering when refreshing
     const isInitialLoad = get().teams.length === 0;
     if (isInitialLoad) {
@@ -214,7 +238,22 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
     try {
       const teams = await unwrapIpc('team:list', () => api.teams.list());
-      set({ teams, teamsLoading: false, teamsError: null });
+      const teamByName: Record<string, TeamSummary> = {};
+      const teamBySessionId: Record<string, TeamSummary> = {};
+      for (const team of teams) {
+        teamByName[team.teamName] = team;
+        if (team.leadSessionId) {
+          teamBySessionId[team.leadSessionId] = team;
+        }
+        if (Array.isArray(team.sessionHistory)) {
+          for (const sid of team.sessionHistory) {
+            if (typeof sid === 'string' && sid) {
+              teamBySessionId[sid] = team;
+            }
+          }
+        }
+      }
+      set({ teams, teamByName, teamBySessionId, teamsLoading: false, teamsError: null });
     } catch (error) {
       // On refresh failure, keep existing teams visible
       set({
@@ -231,6 +270,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   fetchAllTasks: async () => {
+    // Guard: prevent concurrent fetches (component mount + centralized init chain)
+    if (get().globalTasksLoading) return;
     const isInitialLoad = get().globalTasks.length === 0;
     if (isInitialLoad) {
       set({ globalTasksLoading: true, globalTasksError: null });
@@ -302,7 +343,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
     const state = get();
     // Use display name from teams list or selected team data if available
-    const teamSummary = state.teams.find((t) => t.teamName === teamName);
+    const teamSummary = state.teamByName[teamName];
     const displayName = teamSummary?.displayName || state.selectedTeamData?.config.name || teamName;
 
     const allTabs = state.getAllPaneTabs();
@@ -326,7 +367,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     set({ kanbanFilterQuery: null });
   },
 
-  selectTeam: async (teamName: string) => {
+  selectTeam: async (teamName: string, opts) => {
+    // Guard: prevent duplicate in-flight fetches for the same team.
+    // GlobalTaskDetailDialog + tab navigation can call selectTeam() in quick succession.
+    if (get().selectedTeamLoading && get().selectedTeamName === teamName) {
+      return;
+    }
+
     // Clear stale data immediately to prevent flash of previous team's content
     const prev = get().selectedTeamName;
     set({
@@ -337,25 +384,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       reviewActionError: null,
     });
 
-    // If this team is being provisioned right now, config.json doesn't exist yet.
-    // Stay in loading state — the provisioning progress callback will re-call
-    // selectTeam once config is written.
-    const isProvisioningNow = Object.values(get().provisioningRuns).some(
-      (run) =>
-        run.teamName === teamName &&
-        !['ready', 'disconnected', 'failed', 'cancelled'].includes(run.state)
-    );
-    if (isProvisioningNow) {
-      set({
-        selectedTeamLoading: true,
-        selectedTeamData: null,
-        selectedTeamError: null,
-      });
-      return;
-    }
-
     try {
-      const data = await unwrapIpc('team:getData', () => api.teams.getData(teamName));
+      const data = await withTimeout(
+        unwrapIpc('team:getData', () => api.teams.getData(teamName)),
+        TEAM_GET_DATA_TIMEOUT_MS,
+        `team:getData(${teamName})`
+      );
       // Stale check: user may have switched to another team during the async call
       if (get().selectedTeamName !== teamName) {
         return;
@@ -373,6 +407,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       const teamTab = allTabs.find((tab) => tab.type === 'team' && tab.teamName === teamName);
       if (teamTab && teamTab.label !== displayName) {
         get().updateTabLabel(teamTab.id, displayName);
+      }
+
+      if (opts?.skipProjectAutoSelect) {
+        return;
       }
 
       // Auto-select the project associated with this team's cwd/projectPath.
@@ -414,7 +452,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           !['ready', 'disconnected', 'failed', 'cancelled'].includes(run.state)
       );
 
-      if (isProvisioning) {
+      const msg = error instanceof Error ? error.message : String(error);
+      // IPC can report provisioning state explicitly.
+      if (msg === 'TEAM_PROVISIONING' || (msg.includes('TEAM_PROVISIONING') && isProvisioning)) {
         set({
           selectedTeamLoading: true,
           selectedTeamData: null,
@@ -429,7 +469,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           : error instanceof Error
             ? error.message
             : 'Failed to fetch team data';
-      logger.error(`[team:getData] ${message}`);
       set({
         selectedTeamLoading: false,
         selectedTeamData: null,
@@ -550,6 +589,17 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   updateTaskOwner: async (teamName: string, taskId: string, owner: string | null) => {
     await unwrapIpc('team:updateTaskOwner', () =>
       api.teams.updateTaskOwner(teamName, taskId, owner)
+    );
+    await get().refreshTeamData(teamName);
+  },
+
+  updateTaskFields: async (
+    teamName: string,
+    taskId: string,
+    fields: { subject?: string; description?: string }
+  ) => {
+    await unwrapIpc('team:updateTaskFields', () =>
+      api.teams.updateTaskFields(teamName, taskId, fields)
     );
     await get().refreshTeamData(teamName);
   },

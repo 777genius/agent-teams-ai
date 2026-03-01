@@ -79,12 +79,15 @@ describe('notificationSlice', () => {
       id,
       sessionId: 's1',
       projectId: 'p1',
+      filePath: '/path/to/session.jsonl',
+      source: 'tool',
       lineNumber: 1,
       timestamp: Date.now(),
+      createdAt: Date.now(),
       triggerName,
-      severity: 'error',
       message: `msg-${id}`,
       isRead,
+      context: { projectName: 'test-project' },
     });
 
     it('marks only matching trigger notifications as read', async () => {
@@ -180,12 +183,15 @@ describe('notificationSlice', () => {
       id,
       sessionId: 's1',
       projectId: 'p1',
+      filePath: '/path/to/session.jsonl',
+      source: 'tool',
       lineNumber: 1,
       timestamp: Date.now(),
+      createdAt: Date.now(),
       triggerName,
-      severity: 'error',
       message: `msg-${id}`,
       isRead,
+      context: { projectName: 'test-project' },
     });
 
     it('deletes only matching trigger notifications', async () => {
@@ -290,13 +296,16 @@ describe('notificationSlice', () => {
       id: 'error-1',
       sessionId: 'session-target',
       projectId: 'project-1',
+      filePath: '/path/to/session.jsonl',
+      source: 'tool',
       lineNumber: 42,
       timestamp: Date.now(),
+      createdAt: Date.now(),
       toolUseId: 'tool-1',
       triggerName: 'test-trigger',
-      severity: 'error',
       message: 'Test error message',
       isRead: false,
+      context: { projectName: 'test-project' },
       ...overrides,
     });
 

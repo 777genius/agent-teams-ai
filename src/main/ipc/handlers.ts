@@ -28,6 +28,7 @@ import {
   registerContextHandlers,
   removeContextHandlers,
 } from './context';
+import { initializeEditorHandlers, registerEditorHandlers, removeEditorHandlers } from './editor';
 import {
   initializeHttpServerHandlers,
   registerHttpServerHandlers,
@@ -143,6 +144,8 @@ export function initializeIpcHandlers(
   if (ptyTerminal) {
     initializeTerminalHandlers(ptyTerminal);
   }
+  initializeEditorHandlers();
+
   if (changeExtractor) {
     initializeReviewHandlers({
       extractor: changeExtractor,
@@ -166,6 +169,7 @@ export function initializeIpcHandlers(
   registerContextHandlers(ipcMain);
   registerTeamHandlers(ipcMain);
   registerReviewHandlers(ipcMain);
+  registerEditorHandlers(ipcMain);
   registerWindowHandlers(ipcMain);
   if (cliInstaller) {
     registerCliInstallerHandlers(ipcMain);
@@ -198,6 +202,7 @@ export function removeIpcHandlers(): void {
   removeContextHandlers(ipcMain);
   removeTeamHandlers(ipcMain);
   removeReviewHandlers(ipcMain);
+  removeEditorHandlers(ipcMain);
   removeWindowHandlers(ipcMain);
   removeCliInstallerHandlers(ipcMain);
   removeTerminalHandlers(ipcMain);

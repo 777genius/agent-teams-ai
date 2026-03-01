@@ -57,7 +57,12 @@ export default defineConfig({
           // CJS format so bundled deps can use __dirname/require.
           // Use .cjs extension since package.json has "type": "module".
           format: 'cjs',
-          entryFileNames: '[name].cjs'
+          entryFileNames: '[name].cjs',
+          // Set UV_THREADPOOL_SIZE before any module code runs.
+          // Must be in the banner because ESM→CJS hoists imports above top-level code.
+          // On Windows, fs.watch({recursive:true}) occupies a UV pool thread per watcher;
+          // with 3+ watchers + concurrent fs/DNS/spawn, the default 4 threads deadlock.
+          banner: `if(!process.env.UV_THREADPOOL_SIZE){process.env.UV_THREADPOOL_SIZE='24'}`
         }
       }
     }

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { ReplyQuoteBlock } from '@renderer/components/team/activity/ReplyQuoteBlock';
@@ -20,6 +20,9 @@ import type { MentionSuggestion } from '@renderer/types/mention';
 import type { ResolvedTeamMember, TaskComment } from '@shared/types';
 
 const MAX_COMMENT_LENGTH = 2000;
+const INITIAL_VISIBLE_COMMENTS = 30;
+const VISIBLE_COMMENTS_STEP = 50;
+const MAX_COMMENTS_TO_RENDER = 2000;
 
 interface TaskCommentsSectionProps {
   teamName: string;
@@ -49,6 +52,13 @@ export const TaskCommentsSection = ({
 
   const [replyTo, setReplyTo] = useState<{ author: string; text: string } | null>(null);
   const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(new Set());
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COMMENTS);
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE_COMMENTS);
+    setExpandedCommentIds(new Set());
+    setReplyTo(null);
+  }, [teamIdKey(teamName, taskId)]);
 
   const toggleCommentExpanded = useCallback((commentId: string) => {
     setExpandedCommentIds((prev) => {
@@ -61,6 +71,24 @@ export const TaskCommentsSection = ({
 
   const draft = useDraftPersistence({ key: `taskComment:${teamName}:${taskId}` });
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
+
+  const cappedComments = useMemo(() => {
+    if (comments.length <= MAX_COMMENTS_TO_RENDER) return comments;
+    // In extreme cases, rendering thousands of markdown blocks can freeze the renderer.
+    // Keep the UI responsive by showing only the most recent subset.
+    return comments.slice(-MAX_COMMENTS_TO_RENDER);
+  }, [comments]);
+
+  const sortedComments = useMemo(() => {
+    const list = [...cappedComments];
+    list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return list;
+  }, [cappedComments]);
+
+  const visibleComments = useMemo(
+    () => sortedComments.slice(0, Math.min(visibleCount, sortedComments.length)),
+    [sortedComments, visibleCount]
+  );
 
   const mentionSuggestions = useMemo<MentionSuggestion[]>(
     () =>
@@ -105,130 +133,150 @@ export const TaskCommentsSection = ({
 
       {comments.length > 0 ? (
         <div className="mb-3 space-y-2">
-          {[...comments]
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .map((comment) => (
-              <div key={comment.id} className="group p-2.5">
-                <div className="mb-1 flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
-                  <span
-                    className="font-medium"
-                    style={{
-                      color: (() => {
-                        const rc = colorMap.get(comment.author);
-                        return rc ? getTeamColorSet(rc).text : 'var(--color-text-secondary)';
-                      })(),
-                    }}
-                  >
-                    {comment.author}
-                  </span>
-                  <span>
-                    {(() => {
-                      const date = new Date(comment.createdAt);
-                      return isNaN(date.getTime())
-                        ? 'unknown time'
-                        : formatDistanceToNow(date, { addSuffix: true });
-                    })()}
-                  </span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="ml-auto flex items-center gap-0.5 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:text-[var(--color-text-secondary)] group-hover:opacity-100"
-                        onClick={() => {
-                          const replyText = stripAgentBlocks(
-                            parseMessageReply(comment.text)?.replyText ?? comment.text
-                          );
-                          if (onReply) {
-                            onReply(comment.author, replyText);
-                          } else {
-                            setReplyTo({ author: comment.author, text: replyText });
-                          }
-                        }}
-                      >
-                        <Reply size={11} />
-                        Reply
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left">Reply to comment</TooltipContent>
-                  </Tooltip>
-                </div>
-                {(() => {
-                  const reply = parseMessageReply(comment.text);
-                  const rawForDisplay = reply ? reply.replyText : comment.text;
-                  const displayText = stripAgentBlocks(rawForDisplay);
-                  const needsExpandCollapse = displayText.includes('\n');
-                  const expanded = expandedCommentIds.has(comment.id);
-                  const collapsedHeight = 'max-h-[120px]';
-                  const showCollapsed = needsExpandCollapse && !expanded;
-                  const showExpandedButton = needsExpandCollapse && expanded;
-                  return (
-                    <div className="relative text-xs">
-                      <div
-                        className={
-                          showCollapsed ? `relative ${collapsedHeight} overflow-hidden` : undefined
+          {comments.length > MAX_COMMENTS_TO_RENDER ? (
+            <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-[11px] text-[var(--color-text-muted)]">
+              Showing the most recent {MAX_COMMENTS_TO_RENDER.toLocaleString()} comments to keep the
+              UI responsive.
+            </div>
+          ) : null}
+
+          {visibleComments.map((comment) => (
+            <div key={comment.id} className="group p-2.5">
+              <div className="mb-1 flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
+                <span
+                  className="font-medium"
+                  style={{
+                    color: (() => {
+                      const rc = colorMap.get(comment.author);
+                      return rc ? getTeamColorSet(rc).text : 'var(--color-text-secondary)';
+                    })(),
+                  }}
+                >
+                  {comment.author}
+                </span>
+                <span>
+                  {(() => {
+                    const date = new Date(comment.createdAt);
+                    return isNaN(date.getTime())
+                      ? 'unknown time'
+                      : formatDistanceToNow(date, { addSuffix: true });
+                  })()}
+                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="ml-auto flex items-center gap-0.5 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:text-[var(--color-text-secondary)] group-hover:opacity-100"
+                      onClick={() => {
+                        const replyText = stripAgentBlocks(
+                          parseMessageReply(comment.text)?.replyText ?? comment.text
+                        );
+                        if (onReply) {
+                          onReply(comment.author, replyText);
+                        } else {
+                          setReplyTo({ author: comment.author, text: replyText });
                         }
-                      >
-                        {reply ? (
-                          <ReplyQuoteBlock
-                            reply={{
-                              ...reply,
-                              originalText: stripAgentBlocks(reply.originalText),
-                              replyText: stripAgentBlocks(reply.replyText),
+                      }}
+                    >
+                      <Reply size={11} />
+                      Reply
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">Reply to comment</TooltipContent>
+                </Tooltip>
+              </div>
+              {(() => {
+                const reply = parseMessageReply(comment.text);
+                const rawForDisplay = reply ? reply.replyText : comment.text;
+                const displayText = stripAgentBlocks(rawForDisplay);
+                const needsExpandCollapse = displayText.includes('\n');
+                const expanded = expandedCommentIds.has(comment.id);
+                const collapsedHeight = 'max-h-[120px]';
+                const showCollapsed = needsExpandCollapse && !expanded;
+                const showExpandedButton = needsExpandCollapse && expanded;
+                return (
+                  <div className="relative text-xs">
+                    <div
+                      className={
+                        showCollapsed ? `relative ${collapsedHeight} overflow-hidden` : undefined
+                      }
+                    >
+                      {reply ? (
+                        <ReplyQuoteBlock
+                          reply={{
+                            ...reply,
+                            originalText: stripAgentBlocks(reply.originalText),
+                            replyText: stripAgentBlocks(reply.replyText),
+                          }}
+                          bodyMaxHeight={
+                            needsExpandCollapse && !expanded ? 'max-h-56' : 'max-h-none'
+                          }
+                        />
+                      ) : (
+                        <MarkdownViewer
+                          content={displayText}
+                          maxHeight={
+                            needsExpandCollapse && !expanded ? collapsedHeight : 'max-h-none'
+                          }
+                          bare
+                        />
+                      )}
+                      {showCollapsed && (
+                        <>
+                          <div
+                            className="pointer-events-none absolute inset-x-0 bottom-0 h-14"
+                            style={{
+                              background:
+                                'linear-gradient(to top, var(--color-surface) 0%, transparent 100%)',
                             }}
-                            bodyMaxHeight={
-                              needsExpandCollapse && !expanded ? 'max-h-56' : 'max-h-none'
-                            }
+                            aria-hidden
                           />
-                        ) : (
-                          <MarkdownViewer
-                            content={displayText}
-                            maxHeight={
-                              needsExpandCollapse && !expanded ? collapsedHeight : 'max-h-none'
-                            }
-                          />
-                        )}
-                        {showCollapsed && (
-                          <>
-                            <div
-                              className="pointer-events-none absolute inset-x-0 bottom-0 h-14"
-                              style={{
-                                background:
-                                  'linear-gradient(to top, var(--color-surface) 0%, transparent 100%)',
-                              }}
-                              aria-hidden
-                            />
-                            <div className="absolute inset-x-0 bottom-0 flex justify-center pt-1">
-                              <button
-                                type="button"
-                                className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] shadow-sm transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
-                                onClick={() => toggleCommentExpanded(comment.id)}
-                                title="Expand"
-                              >
-                                <ChevronDown size={12} />
-                                Expand
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      {showExpandedButton && (
-                        <div className="flex justify-center pt-2">
-                          <button
-                            type="button"
-                            className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-2.5 py-1 text-[11px] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-secondary)]"
-                            onClick={() => toggleCommentExpanded(comment.id)}
-                            title="Collapse"
-                          >
-                            <ChevronUp size={12} />
-                            Collapse
-                          </button>
-                        </div>
+                          <div className="absolute inset-x-0 bottom-0 flex justify-center pt-1">
+                            <button
+                              type="button"
+                              className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] shadow-sm transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+                              onClick={() => toggleCommentExpanded(comment.id)}
+                              title="Expand"
+                            >
+                              <ChevronDown size={12} />
+                              Expand
+                            </button>
+                          </div>
+                        </>
                       )}
                     </div>
-                  );
-                })()}
-              </div>
-            ))}
+                    {showExpandedButton && (
+                      <div className="flex justify-center pt-2">
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-2.5 py-1 text-[11px] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-secondary)]"
+                          onClick={() => toggleCommentExpanded(comment.id)}
+                          title="Collapse"
+                        >
+                          <ChevronUp size={12} />
+                          Collapse
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          ))}
+
+          {sortedComments.length > visibleComments.length ? (
+            <div className="flex items-center justify-center pt-2">
+              <button
+                type="button"
+                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-[11px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+                onClick={() =>
+                  setVisibleCount((v) => Math.min(sortedComments.length, v + VISIBLE_COMMENTS_STEP))
+                }
+              >
+                Show more comments ({visibleComments.length}/{sortedComments.length})
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -313,3 +361,7 @@ export const TaskCommentsSection = ({
     </div>
   );
 };
+
+function teamIdKey(teamName: string, taskId: string): string {
+  return `${teamName}::${taskId}`;
+}

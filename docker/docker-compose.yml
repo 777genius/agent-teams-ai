@@ -2,7 +2,7 @@
 # Claude Agent Teams UI — Docker Compose
 #
 # Quick start:
-#   docker compose up
+#   docker compose -f docker/docker-compose.yml up
 #
 # Then open http://localhost:3456 in your browser.
 #
@@ -14,7 +14,9 @@
 
 services:
   claude-agent-teams-ui:
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     ports:
       - "3456:3456"
     volumes:

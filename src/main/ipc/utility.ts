@@ -10,7 +10,7 @@
 
 import { createLogger } from '@shared/utils/logger';
 import { app, type IpcMain, type IpcMainInvokeEvent, shell } from 'electron';
-import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 
 import {
   type ClaudeMdFileInfo,
@@ -77,9 +77,16 @@ function handleGetAppVersion(): string {
  * Handler for 'shell:showInFolder' IPC call.
  * Reveals a file in the system file manager (Finder/Explorer).
  */
-function handleShellShowInFolder(_event: IpcMainInvokeEvent, filePath: string): void {
-  if (typeof filePath === 'string' && filePath.length > 0 && fs.existsSync(filePath)) {
+async function handleShellShowInFolder(
+  _event: IpcMainInvokeEvent,
+  filePath: string
+): Promise<void> {
+  if (typeof filePath !== 'string' || filePath.length === 0) return;
+  try {
+    await fsp.access(filePath);
     shell.showItemInFolder(filePath);
+  } catch {
+    // File doesn't exist — silently ignore
   }
 }
 
@@ -137,8 +144,10 @@ async function handleShellOpenPath(
 
     const safePath = validation.normalizedPath!;
 
-    // Check if path exists
-    if (!fs.existsSync(safePath)) {
+    // Check if path exists (async to avoid blocking main thread)
+    try {
+      await fsp.access(safePath);
+    } catch {
       logger.error(`shell:openPath - path does not exist: ${safePath}`);
       return { success: false, error: 'Path does not exist' };
     }
@@ -224,19 +233,13 @@ async function handleReadMentionedFile(
 
     const safePath = validation.normalizedPath!;
 
-    // Check if file exists
-    if (!fs.existsSync(safePath)) {
-      return null;
-    }
-
-    // Check if it's a file (not directory)
-    const stats = fs.statSync(safePath);
+    // Single async stat + read — no TOCTOU, doesn't block main thread
+    const stats = await fsp.stat(safePath);
     if (!stats.isFile()) {
       return null;
     }
 
-    // Read file content
-    const content = fs.readFileSync(safePath, 'utf8');
+    const content = await fsp.readFile(safePath, 'utf8');
 
     // Calculate tokens
     const estimatedTokens = countTokens(content);

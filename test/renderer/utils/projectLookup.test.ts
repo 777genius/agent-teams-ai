@@ -28,7 +28,7 @@ function makeRepoGroup(worktrees: { id: string; path: string }[]): RepoGroupLike
       name: w.id,
       gitBranch: 'main',
       isMainWorktree: true,
-      source: 'standalone' as const,
+      source: 'unknown' as const,
       sessions: [],
       createdAt: 0,
     })),

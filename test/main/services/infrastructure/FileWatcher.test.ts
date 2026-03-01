@@ -24,6 +24,16 @@ vi.mock('fs', async () => {
   };
 });
 
+vi.mock('fs/promises', async () => {
+  const actual = await vi.importActual<typeof import('fs/promises')>('fs/promises');
+  return {
+    ...actual,
+    access: vi.fn(),
+    // Stash the real access for tests with real files
+    __realAccess: actual.access,
+  };
+});
+
 vi.mock('../../../../src/main/services/error/ErrorDetector', () => ({
   errorDetector: {
     detectErrors: vi.fn().mockResolvedValue([]),
@@ -47,6 +57,7 @@ vi.mock('../../../../src/main/services/discovery/ProjectPathResolver', () => ({
 }));
 
 import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 
 import { errorDetector } from '../../../../src/main/services/error/ErrorDetector';
 import { DataCache } from '../../../../src/main/services/infrastructure/DataCache';
@@ -97,16 +108,16 @@ describe('FileWatcher', () => {
     vi.restoreAllMocks();
   });
 
-  it('retries and starts watchers when directories appear later', () => {
+  it('retries and starts watchers when directories appear later', async () => {
     const dataCache = new DataCache(50, 10, false);
     let dirsAvailable = false;
 
-    const existsSyncMock = vi.mocked(fs.existsSync);
-    existsSyncMock.mockImplementation((targetPath) => {
-      if (targetPath === '/tmp/projects' || targetPath === '/tmp/todos') {
-        return dirsAvailable;
+    const accessMock = vi.mocked(fsp.access);
+    accessMock.mockImplementation(async (targetPath) => {
+      if ((targetPath === '/tmp/projects' || targetPath === '/tmp/todos') && dirsAvailable) {
+        return;
       }
-      return false;
+      throw new Error('ENOENT');
     });
 
     const watchMock = vi.mocked(fs.watch);
@@ -114,25 +125,29 @@ describe('FileWatcher', () => {
 
     const watcher = new FileWatcher(dataCache, '/tmp/projects', '/tmp/todos');
     watcher.start();
+    await vi.advanceTimersByTimeAsync(0);
 
     expect(watchMock).toHaveBeenCalledTimes(0);
 
     dirsAvailable = true;
-    vi.advanceTimersByTime(2000);
+    await vi.advanceTimersByTimeAsync(2000);
 
     expect(watchMock).toHaveBeenCalledTimes(2);
     watcher.stop();
   });
 
-  it('recovers from watcher errors by re-registering affected watcher', () => {
+  it('recovers from watcher errors by re-registering affected watcher', async () => {
     const dataCache = new DataCache(50, 10, false);
     const projectWatcher = createFakeWatcher();
     const todoWatcher = createFakeWatcher();
     const replacementProjectWatcher = createFakeWatcher();
 
-    const existsSyncMock = vi.mocked(fs.existsSync);
-    existsSyncMock.mockImplementation((targetPath) => {
-      return targetPath === '/tmp/projects' || targetPath === '/tmp/todos';
+    const accessMock = vi.mocked(fsp.access);
+    accessMock.mockImplementation(async (targetPath) => {
+      if (targetPath === '/tmp/projects' || targetPath === '/tmp/todos') {
+        return;
+      }
+      throw new Error('ENOENT');
     });
 
     const watchMock = vi.mocked(fs.watch);
@@ -143,10 +158,11 @@ describe('FileWatcher', () => {
 
     const watcher = new FileWatcher(dataCache, '/tmp/projects', '/tmp/todos');
     watcher.start();
+    await vi.advanceTimersByTimeAsync(0);
     expect(watchMock).toHaveBeenCalledTimes(2);
 
     (projectWatcher as unknown as EventEmitter).emit('error', new Error('watch failed'));
-    vi.advanceTimersByTime(2000);
+    await vi.advanceTimersByTimeAsync(2000);
 
     expect(watchMock).toHaveBeenCalledTimes(3);
     watcher.stop();
@@ -519,7 +535,7 @@ describe('FileWatcher', () => {
     it('starts catch-up timer on start() and clears on stop()', () => {
       const dataCache = new DataCache(50, 10, false);
 
-      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fsp.access).mockResolvedValue();
       vi.mocked(fs.watch).mockImplementation(() => createFakeWatcher());
 
       const watcher = new FileWatcher(dataCache, '/tmp/projects', '/tmp/todos');
@@ -540,7 +556,7 @@ describe('FileWatcher', () => {
     it('clears all tracking state on stop()', () => {
       const dataCache = new DataCache(50, 10, false);
 
-      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fsp.access).mockResolvedValue();
       vi.mocked(fs.watch).mockImplementation(() => createFakeWatcher());
 
       const watcher = new FileWatcher(dataCache, '/tmp/projects', '/tmp/todos');

@@ -268,6 +268,14 @@ function createViewerMarkdownComponents(searchCtx: SearchContext | null): Compon
 /** Default components without search highlighting */
 const defaultComponents = createViewerMarkdownComponents(null);
 
+// Markdown + syntax highlighting can freeze the renderer on some inputs
+// (very large text, huge code blocks, pathological markdown). Keep the UI responsive:
+// - for medium/large content: disable syntax highlighting
+// - for very large content: show a raw preview instead of parsing markdown
+const DISABLE_HIGHLIGHT_CHARS = 12_000;
+const MAX_MARKDOWN_CHARS = 60_000;
+const LARGE_PREVIEW_CHARS = 30_000;
+
 // =============================================================================
 // Component
 // =============================================================================
@@ -281,6 +289,12 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   copyable = false,
   bare = false,
 }) => {
+  const [showRaw, setShowRaw] = React.useState(false);
+  const [rawLimit, setRawLimit] = React.useState(LARGE_PREVIEW_CHARS);
+
+  const isTooLarge = content.length > MAX_MARKDOWN_CHARS;
+  const disableHighlight = content.length > DISABLE_HIGHLIGHT_CHARS;
+
   // Only subscribe to search store when itemId is provided
   const { searchQuery, searchMatches, currentSearchIndex } = useStore(
     useShallow((s) => ({
@@ -289,6 +303,128 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
       currentSearchIndex: itemId ? s.currentSearchIndex : -1,
     }))
   );
+
+  // Guard: very large markdown can freeze the renderer (remark/rehype + highlighting).
+  // For large content, default to a lightweight raw preview with manual expansion.
+  if (isTooLarge || showRaw) {
+    const shown = content.slice(0, Math.min(rawLimit, content.length));
+    const isTruncated = shown.length < content.length;
+    return (
+      <div
+        className={`min-w-0 overflow-hidden ${bare ? '' : 'rounded-lg shadow-sm'} ${copyable && !label ? 'group relative' : ''} ${className}`}
+        style={
+          bare
+            ? undefined
+            : {
+                backgroundColor: CODE_BG,
+                border: `1px solid ${CODE_BORDER}`,
+              }
+        }
+      >
+        {copyable && !label && (
+          <CopyButton text={content} bgColor={bare ? 'transparent' : undefined} />
+        )}
+
+        {label && (
+          <div
+            className="flex items-center gap-2 px-3 py-2"
+            style={{
+              backgroundColor: CODE_HEADER_BG,
+              borderBottom: `1px solid ${CODE_BORDER}`,
+            }}
+          >
+            <FileText className="size-4 shrink-0" style={{ color: COLOR_TEXT_MUTED }} />
+            <span className="text-sm font-medium" style={{ color: COLOR_TEXT_SECONDARY }}>
+              {label}
+            </span>
+            <span className="ml-2 text-[11px]" style={{ color: COLOR_TEXT_MUTED }}>
+              Raw
+            </span>
+            <span className="flex-1" />
+            <button
+              type="button"
+              className="text-xs underline"
+              style={{ color: PROSE_LINK }}
+              onClick={() => setShowRaw(false)}
+              disabled={isTooLarge}
+              title={
+                isTooLarge
+                  ? 'Large content is shown as raw to prevent UI freeze'
+                  : 'Render markdown'
+              }
+            >
+              Render markdown
+            </button>
+            {copyable && <CopyButton text={content} inline />}
+          </div>
+        )}
+
+        {!label && (
+          <div
+            className="flex items-center justify-between px-3 py-2 text-xs"
+            style={{ color: COLOR_TEXT_MUTED }}
+          >
+            <span>Raw preview</span>
+            <button
+              type="button"
+              className="underline"
+              style={{ color: PROSE_LINK }}
+              onClick={() => setShowRaw(false)}
+              disabled={isTooLarge}
+              title={
+                isTooLarge
+                  ? 'Large content is shown as raw to prevent UI freeze'
+                  : 'Render markdown'
+              }
+            >
+              Render markdown
+            </button>
+          </div>
+        )}
+
+        {isTooLarge && (
+          <div className="px-3 pb-2 text-[11px]" style={{ color: COLOR_TEXT_MUTED }}>
+            Content is very large ({content.length.toLocaleString()} chars). Showing raw preview to
+            keep the UI responsive.
+          </div>
+        )}
+
+        <div className={`min-w-0 overflow-auto ${maxHeight}`}>
+          <pre
+            className="min-w-0 whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed"
+            style={{ color: PROSE_BODY }}
+          >
+            {shown}
+          </pre>
+          {isTruncated && (
+            <div className="flex items-center justify-between gap-2 px-4 pb-4 text-xs">
+              <span style={{ color: COLOR_TEXT_MUTED }}>
+                Showing {shown.length.toLocaleString()} / {content.length.toLocaleString()} chars
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded border px-2 py-1"
+                  style={{ borderColor: CODE_BORDER, color: PROSE_LINK }}
+                  onClick={() => setRawLimit((v) => Math.min(content.length, v * 2))}
+                >
+                  Show more
+                </button>
+                <button
+                  type="button"
+                  className="rounded border px-2 py-1"
+                  style={{ borderColor: CODE_BORDER, color: PROSE_LINK }}
+                  onClick={() => setRawLimit(content.length)}
+                >
+                  Show all
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // Create search context (fresh each render so counter starts at 0)
   const searchCtx =
@@ -345,7 +481,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
         <div className="min-w-0 break-words p-4">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
-            rehypePlugins={REHYPE_PLUGINS}
+            rehypePlugins={disableHighlight ? [] : REHYPE_PLUGINS}
             urlTransform={(url) => url}
             components={components}
           >

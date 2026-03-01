@@ -42,6 +42,7 @@ export function useKeyboardShortcuts(): void {
     activeContextId,
     switchContext,
     isContextSwitching,
+    editorOpen,
   } = useStore(
     useShallow((s) => ({
       openTabs: s.openTabs,
@@ -69,6 +70,7 @@ export function useKeyboardShortcuts(): void {
       activeContextId: s.activeContextId,
       switchContext: s.switchContext,
       isContextSwitching: s.isContextSwitching,
+      editorOpen: s.editorProjectPath !== null,
     }))
   );
 
@@ -76,6 +78,24 @@ export function useKeyboardShortcuts(): void {
     function handleKeyDown(event: KeyboardEvent): void {
       // Check if Cmd (macOS) or Ctrl (Windows/Linux) is pressed
       const isMod = event.metaKey || event.ctrlKey;
+
+      // Editor scope guard: when the editor overlay is open, these shortcuts are
+      // handled by useEditorKeyboardShortcuts — yield control to avoid conflicts.
+      if (editorOpen) {
+        const isConflicting =
+          // Ctrl+Tab — editor tab cycling
+          (event.ctrlKey && event.key === 'Tab') ||
+          // Cmd+W — editor close tab
+          (isMod && event.key === 'w' && !event.altKey && !event.shiftKey) ||
+          // Cmd+B — editor sidebar toggle
+          (isMod && event.key === 'b') ||
+          // Cmd+F — editor find in file (CM6)
+          (isMod && event.key === 'f') ||
+          // Cmd+Shift+[ / ] — editor tab switching
+          (isMod && event.shiftKey && (event.key === '[' || event.key === ']'));
+
+        if (isConflicting) return;
+      }
 
       // Ctrl+Tab / Ctrl+Shift+Tab: Switch tabs within focused pane (universal shortcut)
       if (event.ctrlKey && event.key === 'Tab') {
@@ -303,5 +323,6 @@ export function useKeyboardShortcuts(): void {
     activeContextId,
     switchContext,
     isContextSwitching,
+    editorOpen,
   ]);
 }

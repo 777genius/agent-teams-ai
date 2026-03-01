@@ -2,7 +2,7 @@
  * UpdateDialog - Modal dialog shown when a new version is available.
  *
  * Prompts the user to download the update or dismiss it.
- * Release notes may be HTML from the updater; we normalize to text and render as markdown.
+ * Release notes (markdown from GitHub) are rendered with ReactMarkdown.
  */
 
 import { useEffect, useRef } from 'react';
@@ -13,31 +13,6 @@ import { useStore } from '@renderer/store';
 import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
 import { X } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
-
-/**
- * Normalize release notes: strip HTML tags and convert block elements to newlines.
- * Uses DOMParser for proper HTML entity decoding (handles all entities like &mdash;, &#39;, etc.)
- */
-function normalizeReleaseNotes(html: string): string {
-  if (!html?.trim()) return '';
-
-  // Convert block elements to newlines for better formatting
-  const processed = html
-    .replace(/<\/p>\s*/gi, '\n\n')
-    .replace(/<br\s*\/?>\s*/gi, '\n')
-    .replace(/<\/div>\s*/gi, '\n')
-    .replace(/<\/li>\s*/gi, '\n')
-    .replace(/<\/h[1-6]>\s*/gi, '\n\n');
-
-  // Use DOMParser to decode HTML entities and strip remaining tags
-  // This properly handles all HTML entities (&nbsp;, &mdash;, &#39;, etc.)
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(processed, 'text/html');
-  const text = doc.body.textContent || '';
-
-  // Normalize multiple newlines
-  return text.replace(/\n{3,}/g, '\n\n').trim();
-}
 
 export const UpdateDialog = (): React.JSX.Element | null => {
   const showUpdateDialog = useStore((s) => s.showUpdateDialog);
@@ -141,14 +116,14 @@ export const UpdateDialog = (): React.JSX.Element | null => {
           )}
         </div>
 
-        {/* Release notes — normalize HTML then render as markdown */}
+        {/* Release notes */}
         {releaseNotes && (
           <div
-            className="prose prose-sm mb-4 max-h-48 overflow-y-auto rounded border p-2 text-xs"
+            className="prose prose-sm prose-invert mb-4 max-h-60 overflow-y-auto rounded border p-3 text-xs"
             style={{
               backgroundColor: 'var(--color-surface)',
               borderColor: 'var(--color-border)',
-              color: 'var(--color-text-muted)',
+              color: 'var(--color-text-secondary)',
             }}
           >
             <ReactMarkdown
@@ -156,7 +131,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
               rehypePlugins={REHYPE_PLUGINS}
               components={markdownComponents}
             >
-              {normalizeReleaseNotes(releaseNotes)}
+              {releaseNotes}
             </ReactMarkdown>
           </div>
         )}

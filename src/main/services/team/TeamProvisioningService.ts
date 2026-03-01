@@ -1,10 +1,12 @@
 /* eslint-disable no-param-reassign -- ProvisioningRun object is intentionally mutated as a state tracker throughout the provisioning lifecycle */
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
+import { killProcessTree, spawnCli } from '@main/utils/childProcess';
 import {
   encodePath,
   extractBaseDir,
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
+  getHomeDir,
   getProjectsBasePath,
   getTasksBasePath,
   getTeamsBasePath,
@@ -194,10 +196,22 @@ async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.P
       stdio: ['ignore', 'pipe', 'ignore'],
     });
     const chunks: Buffer[] = [];
+    let settled = false;
     let timeoutHandle: NodeJS.Timeout | null = setTimeout(() => {
       timeoutHandle = null;
       child.kill();
-      reject(new Error('shell env resolve timeout'));
+      // SIGKILL fallback if SIGTERM is ignored (e.g., shell stuck on .zshrc)
+      setTimeout(() => {
+        try {
+          child.kill('SIGKILL');
+        } catch {
+          /* already dead */
+        }
+      }, 3000);
+      if (!settled) {
+        settled = true;
+        reject(new Error('shell env resolve timeout'));
+      }
     }, SHELL_ENV_TIMEOUT_MS);
 
     child.stdout?.on('data', (chunk: Buffer) => {
@@ -208,13 +222,19 @@ async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.P
         clearTimeout(timeoutHandle);
         timeoutHandle = null;
       }
-      reject(error);
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
     });
     child.once('close', () => {
       if (timeoutHandle) {
         clearTimeout(timeoutHandle);
       }
-      resolve(Buffer.concat(chunks).toString('utf8'));
+      if (!settled) {
+        settled = true;
+        resolve(Buffer.concat(chunks).toString('utf8'));
+      }
     });
   });
   return parseNullSeparatedEnv(envDump);
@@ -929,7 +949,7 @@ export class TeamProvisioningService {
       );
     }
     try {
-      child = spawn(
+      child = spawnCli(
         claudePath,
         [
           '--input-format',
@@ -963,7 +983,7 @@ export class TeamProvisioningService {
     run.child = child;
 
     // Send provisioning prompt as first stream-json message (SDKUserMessage format)
-    if (child.stdin) {
+    if (child.stdin?.writable) {
       const message = JSON.stringify({
         type: 'user',
         message: {
@@ -1033,7 +1053,7 @@ export class TeamProvisioningService {
         void (async () => {
           const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
           run.child?.stdin?.end();
-          run.child?.kill();
+          killProcessTree(run.child);
           if (readyOnTimeout) {
             return; // cleanupRun already called inside tryCompleteAfterTimeout
           }
@@ -1092,34 +1112,44 @@ export class TeamProvisioningService {
     // Extract leadSessionId for session resume on reconnect.
     // If a valid JSONL file exists for the previous session, we can resume it
     // so the lead retains full context of prior work.
+    // When clearContext is true, skip resume entirely to start a fresh session.
     let previousSessionId: string | undefined;
-    try {
-      const configParsed = JSON.parse(configRaw) as Record<string, unknown>;
-      if (
-        typeof configParsed.leadSessionId === 'string' &&
-        configParsed.leadSessionId.trim().length > 0
-      ) {
-        const candidateId = configParsed.leadSessionId.trim();
-        const projectPath =
-          typeof configParsed.projectPath === 'string' && configParsed.projectPath.trim().length > 0
-            ? configParsed.projectPath.trim()
-            : request.cwd;
-        const projectId = encodePath(projectPath);
-        const baseDir = extractBaseDir(projectId);
-        const jsonlPath = path.join(getProjectsBasePath(), baseDir, `${candidateId}.jsonl`);
-        if (await this.pathExists(jsonlPath)) {
-          previousSessionId = candidateId;
-          logger.info(
-            `[${request.teamName}] Found previous session JSONL for resume: ${candidateId}`
-          );
-        } else {
-          logger.info(
-            `[${request.teamName}] Previous session JSONL not found at ${jsonlPath}, starting fresh`
-          );
+    if (request.clearContext) {
+      logger.info(
+        `[${request.teamName}] clearContext requested — skipping session resume, starting fresh`
+      );
+    } else {
+      try {
+        const configParsed = JSON.parse(configRaw) as Record<string, unknown>;
+        if (
+          typeof configParsed.leadSessionId === 'string' &&
+          configParsed.leadSessionId.trim().length > 0
+        ) {
+          const candidateId = configParsed.leadSessionId.trim();
+          const projectPath =
+            typeof configParsed.projectPath === 'string' &&
+            configParsed.projectPath.trim().length > 0
+              ? configParsed.projectPath.trim()
+              : request.cwd;
+          const projectId = encodePath(projectPath);
+          const baseDir = extractBaseDir(projectId);
+          const jsonlPath = path.join(getProjectsBasePath(), baseDir, `${candidateId}.jsonl`);
+          if (await this.pathExists(jsonlPath)) {
+            previousSessionId = candidateId;
+            logger.info(
+              `[${request.teamName}] Found previous session JSONL for resume: ${candidateId}`
+            );
+          } else {
+            logger.info(
+              `[${request.teamName}] Previous session JSONL not found at ${jsonlPath}, starting fresh`
+            );
+          }
         }
+      } catch {
+        logger.debug(
+          `[${request.teamName}] Failed to extract leadSessionId from config for resume`
+        );
       }
-    } catch {
-      logger.debug(`[${request.teamName}] Failed to extract leadSessionId from config for resume`);
     }
 
     // IMPORTANT: The CLI auto-suffixes teammate names when they already exist in config.json.
@@ -1241,7 +1271,7 @@ export class TeamProvisioningService {
     // --resume is for existing sessions and may show an interactive picker if not found.
 
     try {
-      child = spawn(claudePath, launchArgs, {
+      child = spawnCli(claudePath, launchArgs, {
         cwd: request.cwd,
         env: {
           ...shellEnv,
@@ -1263,7 +1293,7 @@ export class TeamProvisioningService {
     run.child = child;
 
     // Send launch prompt
-    if (child.stdin) {
+    if (child.stdin?.writable) {
       const message = JSON.stringify({
         type: 'user',
         message: {
@@ -1332,7 +1362,7 @@ export class TeamProvisioningService {
         void (async () => {
           const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
           run.child?.stdin?.end();
-          run.child?.kill();
+          killProcessTree(run.child);
           if (readyOnTimeout) {
             return;
           }
@@ -1383,7 +1413,7 @@ export class TeamProvisioningService {
     run.cancelRequested = true;
     run.processKilled = true;
     run.child?.stdin?.end();
-    run.child?.kill();
+    killProcessTree(run.child);
     const progress = updateProgress(run, 'cancelled', 'Provisioning cancelled by user');
     run.onProgress(progress);
     this.cleanupRun(run);
@@ -1812,7 +1842,7 @@ export class TeamProvisioningService {
     run.processKilled = true;
     run.cancelRequested = true;
     run.child?.stdin?.end();
-    run.child?.kill();
+    killProcessTree(run.child);
     const progress = updateProgress(run, 'disconnected', 'Team stopped by user');
     run.onProgress(progress);
     this.cleanupRun(run);
@@ -1954,7 +1984,7 @@ export class TeamProvisioningService {
           // Kill the process on provisioning error
           run.processKilled = true;
           run.child?.stdin?.end();
-          run.child?.kill();
+          killProcessTree(run.child);
           this.cleanupRun(run);
         } else if (run.provisioningComplete) {
           // Post-provisioning error: process alive, waiting for input
@@ -1970,7 +2000,9 @@ export class TeamProvisioningService {
    * Process stays alive for subsequent tasks.
    */
   private async handleProvisioningTurnComplete(run: ProvisioningRun): Promise<void> {
-    if (run.cancelRequested) return;
+    // Guard: must be set synchronously BEFORE any await to prevent
+    // double-invocation from filesystem monitor + stream-json racing.
+    if (run.provisioningComplete || run.cancelRequested) return;
     run.provisioningComplete = true;
     this.setLeadActivity(run, 'idle');
 
@@ -2016,7 +2048,7 @@ export class TeamProvisioningService {
       run.onProgress(progress);
       run.processKilled = true;
       run.child?.stdin?.end();
-      run.child?.kill();
+      killProcessTree(run.child);
       this.cleanupRun(run);
       return;
     }
@@ -2046,6 +2078,11 @@ export class TeamProvisioningService {
       run.timeoutHandle = null;
     }
     this.stopFilesystemMonitor(run);
+    // Remove stream listeners to prevent data handlers firing on a cleaned-up run
+    if (run.child) {
+      run.child.stdout?.removeAllListeners('data');
+      run.child.stderr?.removeAllListeners('data');
+    }
     this.activeByTeam.delete(run.teamName);
     this.leadInboxRelayInFlight.delete(run.teamName);
     this.relayedLeadInboxMessageIds.delete(run.teamName);
@@ -2429,7 +2466,10 @@ export class TeamProvisioningService {
 
   private async buildProvisioningEnv(): Promise<ProvisioningEnvResolution> {
     const shellEnv = await resolveInteractiveShellEnv();
-    const home = shellEnv.HOME?.trim() || process.env.HOME?.trim() || os.homedir();
+    // getHomeDir() uses Electron's app.getPath('home') which handles Unicode
+    // correctly on Windows. Prefer it over process.env which may be garbled.
+    const electronHome = getHomeDir();
+    const home = shellEnv.HOME?.trim() || electronHome;
     const user = shellEnv.USER?.trim() || process.env.USER?.trim() || os.userInfo().username;
     const shell = shellEnv.SHELL?.trim() || process.env.SHELL?.trim() || '/bin/zsh';
     const xdgConfigHome =
@@ -2443,6 +2483,7 @@ export class TeamProvisioningService {
       ...process.env,
       ...shellEnv,
       HOME: home,
+      USERPROFILE: home,
       USER: user,
       LOGNAME: shellEnv.LOGNAME?.trim() || process.env.LOGNAME?.trim() || user,
       SHELL: shell,
@@ -2579,6 +2620,8 @@ export class TeamProvisioningService {
     projectPath: string,
     detectedSessionId: string | null
   ): Promise<void> {
+    const MAX_SESSION_HISTORY = 5000;
+    const MAX_PROJECT_PATH_HISTORY = 500;
     const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
     try {
       const raw = await fs.promises.readFile(configPath, 'utf8');
@@ -2616,7 +2659,11 @@ export class TeamProvisioningService {
         logger.info(`[${teamName}] Updated leadSessionId: ${newSessionId}`);
       }
 
-      config.sessionHistory = sessionHistory;
+      if (sessionHistory.length > MAX_SESSION_HISTORY) {
+        config.sessionHistory = sessionHistory.slice(-MAX_SESSION_HISTORY);
+      } else {
+        config.sessionHistory = sessionHistory;
+      }
 
       // Save current language setting
       const langCode = ConfigManager.getInstance().getConfig().general.agentLanguage || 'system';
@@ -2631,7 +2678,10 @@ export class TeamProvisioningService {
             )
           : [];
         pathHistory.push(projectPath);
-        config.projectPathHistory = pathHistory;
+        config.projectPathHistory =
+          pathHistory.length > MAX_PROJECT_PATH_HISTORY
+            ? pathHistory.slice(-MAX_PROJECT_PATH_HISTORY)
+            : pathHistory;
       }
 
       await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
@@ -3116,7 +3166,7 @@ export class TeamProvisioningService {
     timeoutMs: number
   ): Promise<{ exitCode: number | null; stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
-      const child = spawn(claudePath, args, {
+      const child = spawnCli(claudePath, args, {
         cwd,
         env,
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -3125,7 +3175,7 @@ export class TeamProvisioningService {
       const stderrChunks: Buffer[] = [];
 
       const timeoutHandle = setTimeout(() => {
-        child.kill();
+        killProcessTree(child);
         reject(new Error(`Timeout running: claude ${args.join(' ')}`));
       }, timeoutMs);
 

@@ -13,6 +13,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -37,6 +39,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -67,6 +71,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           usage: {
@@ -89,6 +95,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'unknown-model',
@@ -114,6 +122,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -140,6 +150,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -167,6 +179,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -194,6 +208,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -225,6 +241,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-opus-20240229',
@@ -252,6 +270,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-4-sonnet-20250514',
@@ -282,6 +302,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -296,6 +318,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-2',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -322,6 +346,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -336,6 +362,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-2',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-opus-20240229', // Different model
@@ -365,6 +393,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -387,6 +417,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -413,6 +445,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -435,6 +469,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'CLAUDE-3-5-SONNET-20241022',
@@ -465,6 +501,8 @@ describe('Cost Calculation', () => {
         messages.push({
           type: 'assistant',
           uuid: `msg-${i}`,
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -498,6 +536,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',
@@ -527,6 +567,8 @@ describe('Cost Calculation', () => {
         {
           type: 'assistant',
           uuid: 'msg-1',
+          parentUuid: null,
+          isMeta: false,
           timestamp: new Date(),
           content: [],
           model: 'claude-3-5-sonnet-20241022',

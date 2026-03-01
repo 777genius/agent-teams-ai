@@ -39,12 +39,15 @@ export function useTheme(): {
     return 'dark';
   });
 
-  // Fetch config on mount if not loaded
+  // Fetch config on mount if not loaded.
+  // The centralized init chain also calls fetchConfig — configLoading guard
+  // in the store action prevents duplicate IPC calls.
+  const configLoading = useStore((s) => s.configLoading);
   useEffect(() => {
-    if (!appConfig) {
+    if (!appConfig && !configLoading) {
       void fetchConfig();
     }
-  }, [appConfig, fetchConfig]);
+  }, [appConfig, configLoading, fetchConfig]);
 
   // Get configured theme
   const configuredTheme: Theme = appConfig?.general?.theme ?? 'dark';

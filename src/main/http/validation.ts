@@ -8,7 +8,7 @@
  */
 
 import { createLogger } from '@shared/utils/logger';
-import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 import type { FastifyInstance } from 'fastify';
@@ -39,11 +39,8 @@ export function registerValidationRoutes(app: FastifyInstance): void {
           return { exists: false };
         }
 
-        if (!fs.existsSync(fullPath)) {
-          return { exists: false };
-        }
-
-        const stats = fs.statSync(fullPath);
+        // Single async stat — no TOCTOU, doesn't block the main thread
+        const stats = await fsp.stat(fullPath);
         return { exists: true, isDirectory: stats.isDirectory() };
       } catch {
         return { exists: false };
@@ -56,18 +53,24 @@ export function registerValidationRoutes(app: FastifyInstance): void {
     '/api/validate/mentions',
     async (request) => {
       const { mentions, projectPath } = request.body;
-      const results = new Map<string, boolean>();
 
-      for (const mention of mentions) {
-        const fullPath = path.join(projectPath, mention.value);
-        if (!isPathContained(fullPath, projectPath)) {
-          results.set(`@${mention.value}`, false);
-          continue;
-        }
-        results.set(`@${mention.value}`, fs.existsSync(fullPath));
-      }
+      // Validate all mentions in parallel with async I/O
+      const entries = await Promise.all(
+        mentions.map(async (mention) => {
+          const fullPath = path.join(projectPath, mention.value);
+          if (!isPathContained(fullPath, projectPath)) {
+            return [`@${mention.value}`, false] as const;
+          }
+          try {
+            await fsp.access(fullPath);
+            return [`@${mention.value}`, true] as const;
+          } catch {
+            return [`@${mention.value}`, false] as const;
+          }
+        })
+      );
 
-      return Object.fromEntries(results);
+      return Object.fromEntries(entries);
     }
   );
 

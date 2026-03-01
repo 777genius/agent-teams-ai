@@ -13,7 +13,8 @@ import { type HttpServices, registerHttpRoutes } from '@main/http';
 import { broadcastEvent } from '@main/http/events';
 import { createLogger } from '@shared/utils/logger';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
 import { join } from 'path';
 
 const logger = createLogger('Service:HttpServer');
@@ -97,8 +98,8 @@ export class HttpServer {
     if (rendererPath) {
       logger.info(`Serving static files from: ${rendererPath}`);
 
-      // Cache index.html for SPA fallback
-      const indexHtml = readFileSync(join(rendererPath, 'index.html'), 'utf-8');
+      // Cache index.html for SPA fallback (async to avoid blocking main thread)
+      const indexHtml = await readFile(join(rendererPath, 'index.html'), 'utf-8');
 
       await this.app.register(fastifyStatic, {
         root: rendererPath,

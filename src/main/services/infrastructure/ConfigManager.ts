@@ -9,11 +9,11 @@
  * - Handle JSON parse errors gracefully
  */
 
-import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { getHomeDir, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { validateRegexPattern } from '@main/utils/regexValidation';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
-import * as os from 'os';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 import { DEFAULT_TRIGGERS, TriggerManager } from './TriggerManager';
@@ -23,7 +23,7 @@ import type { SshConnectionProfile } from '@shared/types/api';
 
 const logger = createLogger('Service:ConfigManager');
 
-const CONFIG_DIR = path.join(os.homedir(), '.claude');
+const CONFIG_DIR = path.join(getHomeDir(), '.claude');
 const CONFIG_FILENAME = 'claude-devtools-config.json';
 const DEFAULT_CONFIG_PATH = path.join(CONFIG_DIR, CONFIG_FILENAME);
 
@@ -353,21 +353,21 @@ export class ConfigManager {
   /**
    * Loads configuration from disk.
    * Returns default config if file doesn't exist or is invalid.
+   * Uses a single readFileSync (no TOCTOU from existsSync + readFileSync).
    */
   private loadConfig(): AppConfig {
     try {
-      if (!fs.existsSync(this.configPath)) {
-        logger.info('No config file found, using defaults');
-        return this.deepClone(DEFAULT_CONFIG);
-      }
-
       const content = fs.readFileSync(this.configPath, 'utf8');
       const parsed = JSON.parse(content) as Partial<AppConfig>;
 
       // Merge with defaults to ensure all fields exist
       return this.mergeWithDefaults(parsed);
     } catch (error) {
-      logger.error('Error loading config, using defaults:', error);
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        logger.info('No config file found, using defaults');
+      } else {
+        logger.error('Error loading config, using defaults:', error);
+      }
       return this.deepClone(DEFAULT_CONFIG);
     }
   }
@@ -385,16 +385,18 @@ export class ConfigManager {
   }
 
   /**
-   * Persists configuration to the canonical path.
+   * Persists configuration to the canonical path asynchronously.
+   * Uses async I/O to avoid blocking the main process event loop.
+   * mkdir({ recursive: true }) is idempotent — no need for an existsSync guard.
    */
   private persistConfig(config: AppConfig): void {
-    const configDir = path.dirname(this.configPath);
-    if (!fs.existsSync(configDir)) {
-      fs.mkdirSync(configDir, { recursive: true });
-    }
-
     const content = JSON.stringify(config, null, 2);
-    fs.writeFileSync(this.configPath, content, 'utf8');
+    fsp
+      .mkdir(path.dirname(this.configPath), { recursive: true })
+      .then(() => fsp.writeFile(this.configPath, content, 'utf8'))
+      .catch((error) => {
+        logger.error('Error persisting config:', error);
+      });
   }
 
   /**

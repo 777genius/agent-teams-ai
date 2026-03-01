@@ -573,7 +573,7 @@ describe('exportAsJson', () => {
 // =============================================================================
 
 describe('triggerDownload', () => {
-  let createElementSpy: ReturnType<typeof vi.spyOn>;
+  let createElementSpy: any;
   let mockAnchor: { href: string; download: string; click: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {

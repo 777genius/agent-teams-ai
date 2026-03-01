@@ -8,7 +8,7 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { TabbedLayout } from './components/layout/TabbedLayout';
 import { useTheme } from './hooks/useTheme';
 import { api } from './api';
-import { initializeNotificationListeners, useStore } from './store';
+import { useStore } from './store';
 
 export const App = (): React.JSX.Element => {
   // Initialize theme on app load
@@ -23,23 +23,14 @@ export const App = (): React.JSX.Element => {
     }
   }, []);
 
-  // Initialize context system (before notification listeners)
-  useEffect(() => {
-    void useStore.getState().initializeContextSystem();
-  }, []);
-
-  // Refresh available contexts when SSH connection state changes
+  // Initialize context system lazily when SSH connection state changes.
+  // Local-only users never pay the cost of IndexedDB init + context IPC calls.
   useEffect(() => {
     if (!api.ssh?.onStatus) return;
     const cleanup = api.ssh.onStatus(() => {
+      void useStore.getState().initializeContextSystem();
       void useStore.getState().fetchAvailableContexts();
     });
-    return cleanup;
-  }, []);
-
-  // Initialize IPC event listeners (notifications, file changes)
-  useEffect(() => {
-    const cleanup = initializeNotificationListeners();
     return cleanup;
   }, []);
 

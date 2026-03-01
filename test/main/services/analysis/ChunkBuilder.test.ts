@@ -49,6 +49,7 @@ function createSubagent(overrides: Partial<Process>): Process {
     endTime: new Date(),
     durationMs: 1000,
     isOngoing: false,
+    isParallel: false,
     messages: [],
     metrics: {
       inputTokens: 100,
@@ -406,6 +407,9 @@ describe('ChunkBuilder', () => {
         timestamp: new Date(),
         lastModified: new Date(),
         isOngoing: false,
+        hasSubagents: false,
+        messageCount: 0,
+        createdAt: Date.now(),
       };
 
       const messages = [

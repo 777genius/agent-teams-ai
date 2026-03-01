@@ -11,7 +11,7 @@
  */
 
 import { createLogger } from '@shared/utils/logger';
-import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 import {
@@ -27,14 +27,19 @@ import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:utility');
 
+/** Cached app version — read once from package.json, not every request. */
+let cachedVersion: string | null = null;
+
 export function registerUtilityRoutes(app: FastifyInstance): void {
-  // App version
+  // App version (cached — no file I/O after first call)
   app.get('/api/version', async () => {
+    if (cachedVersion) return cachedVersion;
     try {
-      // Read version from package.json (works in both Electron and Node)
       const pkgPath = path.resolve(__dirname, '../../../package.json');
-      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as { version: string };
-      return pkg.version;
+      const content = await fsp.readFile(pkgPath, 'utf8');
+      const pkg = JSON.parse(content) as { version: string };
+      cachedVersion = pkg.version;
+      return cachedVersion;
     } catch {
       return '0.0.0';
     }
@@ -73,7 +78,7 @@ export function registerUtilityRoutes(app: FastifyInstance): void {
     }
   });
 
-  // Read mentioned file
+  // Read mentioned file — async I/O, no TOCTOU
   app.post<{ Body: { absolutePath: string; projectRoot: string; maxTokens?: number } }>(
     '/api/read-mentioned-file',
     async (request) => {
@@ -87,16 +92,12 @@ export function registerUtilityRoutes(app: FastifyInstance): void {
 
         const safePath = validation.normalizedPath!;
 
-        if (!fs.existsSync(safePath)) {
-          return null;
-        }
-
-        const stats = fs.statSync(safePath);
+        const stats = await fsp.stat(safePath);
         if (!stats.isFile()) {
           return null;
         }
 
-        const content = fs.readFileSync(safePath, 'utf8');
+        const content = await fsp.readFile(safePath, 'utf8');
         const estimatedTokens = countTokens(content);
 
         if (estimatedTokens > maxTokens) {

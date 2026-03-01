@@ -4,7 +4,12 @@
 
 import { create } from 'zustand';
 
+import { createChangeReviewSlice } from '../../../src/renderer/store/slices/changeReviewSlice';
+import { createCliInstallerSlice } from '../../../src/renderer/store/slices/cliInstallerSlice';
 import { createConfigSlice } from '../../../src/renderer/store/slices/configSlice';
+import { createConnectionSlice } from '../../../src/renderer/store/slices/connectionSlice';
+import { createContextSlice } from '../../../src/renderer/store/slices/contextSlice';
+import { createEditorSlice } from '../../../src/renderer/store/slices/editorSlice';
 import { createConversationSlice } from '../../../src/renderer/store/slices/conversationSlice';
 import { createNotificationSlice } from '../../../src/renderer/store/slices/notificationSlice';
 import { createPaneSlice } from '../../../src/renderer/store/slices/paneSlice';
@@ -15,7 +20,9 @@ import { createSessionSlice } from '../../../src/renderer/store/slices/sessionSl
 import { createSubagentSlice } from '../../../src/renderer/store/slices/subagentSlice';
 import { createTabSlice } from '../../../src/renderer/store/slices/tabSlice';
 import { createTabUISlice } from '../../../src/renderer/store/slices/tabUISlice';
+import { createTeamSlice } from '../../../src/renderer/store/slices/teamSlice';
 import { createUISlice } from '../../../src/renderer/store/slices/uiSlice';
+import { createUpdateSlice } from '../../../src/renderer/store/slices/updateSlice';
 
 import type { AppState } from '../../../src/renderer/store/types';
 
@@ -30,6 +37,7 @@ export function createTestStore() {
     ...createSessionSlice(...args),
     ...createSessionDetailSlice(...args),
     ...createSubagentSlice(...args),
+    ...createTeamSlice(...args),
     ...createConversationSlice(...args),
     ...createTabSlice(...args),
     ...createTabUISlice(...args),
@@ -37,6 +45,12 @@ export function createTestStore() {
     ...createUISlice(...args),
     ...createNotificationSlice(...args),
     ...createConfigSlice(...args),
+    ...createConnectionSlice(...args),
+    ...createContextSlice(...args),
+    ...createUpdateSlice(...args),
+    ...createChangeReviewSlice(...args),
+    ...createCliInstallerSlice(...args),
+    ...createEditorSlice(...args),
   }));
 }
 

@@ -10,6 +10,20 @@ import {
   CONTEXT_GET_ACTIVE,
   CONTEXT_LIST,
   CONTEXT_SWITCH,
+  EDITOR_CHANGE,
+  EDITOR_CLOSE,
+  EDITOR_CREATE_DIR,
+  EDITOR_CREATE_FILE,
+  EDITOR_DELETE_FILE,
+  EDITOR_GIT_STATUS,
+  EDITOR_LIST_FILES,
+  EDITOR_MOVE_FILE,
+  EDITOR_OPEN,
+  EDITOR_READ_DIR,
+  EDITOR_READ_FILE,
+  EDITOR_SEARCH_IN_FILES,
+  EDITOR_WATCH_DIR,
+  EDITOR_WRITE_FILE,
   HTTP_SERVER_GET_STATUS,
   HTTP_SERVER_START,
   HTTP_SERVER_STOP,
@@ -77,6 +91,7 @@ import {
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
   TEAM_UPDATE_MEMBER_ROLE,
+  TEAM_UPDATE_TASK_FIELDS,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
   TERMINAL_DATA,
@@ -179,6 +194,20 @@ import type {
   UpdateKanbanPatch,
   WslClaudeRootCandidate,
 } from '@shared/types';
+import type {
+  CreateDirResponse,
+  CreateFileResponse,
+  DeleteFileResponse,
+  EditorFileChangeEvent,
+  GitStatusResult,
+  MoveFileResponse,
+  QuickOpenFile,
+  ReadDirResult,
+  ReadFileResult,
+  SearchInFilesOptions,
+  SearchInFilesResult,
+  WriteFileResponse,
+} from '@shared/types/editor';
 import type { PtySpawnOptions } from '@shared/types/terminal';
 
 // =============================================================================
@@ -636,6 +665,13 @@ const electronAPI: ElectronAPI = {
     updateTaskOwner: async (teamName: string, taskId: string, owner: string | null) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_OWNER, teamName, taskId, owner);
     },
+    updateTaskFields: async (
+      teamName: string,
+      taskId: string,
+      fields: { subject?: string; description?: string }
+    ) => {
+      return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_FIELDS, teamName, taskId, fields);
+    },
     startTask: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<{ notifiedOwner: boolean }>(TEAM_START_TASK, teamName, taskId);
     },
@@ -917,6 +953,38 @@ const electronAPI: ElectronAPI = {
           TERMINAL_EXIT,
           cb as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
         );
+      };
+    },
+  },
+
+  // ===== Editor API =====
+  editor: {
+    open: (projectPath: string) => invokeIpcWithResult<void>(EDITOR_OPEN, projectPath),
+    close: () => invokeIpcWithResult<void>(EDITOR_CLOSE),
+    readDir: (dirPath: string, maxEntries?: number) =>
+      invokeIpcWithResult<ReadDirResult>(EDITOR_READ_DIR, dirPath, maxEntries),
+    readFile: (filePath: string) => invokeIpcWithResult<ReadFileResult>(EDITOR_READ_FILE, filePath),
+    writeFile: (filePath: string, content: string, baselineMtimeMs?: number) =>
+      invokeIpcWithResult<WriteFileResponse>(EDITOR_WRITE_FILE, filePath, content, baselineMtimeMs),
+    createFile: (parentDir: string, fileName: string) =>
+      invokeIpcWithResult<CreateFileResponse>(EDITOR_CREATE_FILE, parentDir, fileName),
+    createDir: (parentDir: string, dirName: string) =>
+      invokeIpcWithResult<CreateDirResponse>(EDITOR_CREATE_DIR, parentDir, dirName),
+    deleteFile: (filePath: string) =>
+      invokeIpcWithResult<DeleteFileResponse>(EDITOR_DELETE_FILE, filePath),
+    moveFile: (sourcePath: string, destDir: string) =>
+      invokeIpcWithResult<MoveFileResponse>(EDITOR_MOVE_FILE, sourcePath, destDir),
+    searchInFiles: (options: SearchInFilesOptions) =>
+      invokeIpcWithResult<SearchInFilesResult>(EDITOR_SEARCH_IN_FILES, options),
+    listFiles: () => invokeIpcWithResult<QuickOpenFile[]>(EDITOR_LIST_FILES),
+    gitStatus: () => invokeIpcWithResult<GitStatusResult>(EDITOR_GIT_STATUS),
+    watchDir: (enable: boolean) => invokeIpcWithResult<void>(EDITOR_WATCH_DIR, enable),
+    onEditorChange: (callback: (event: EditorFileChangeEvent) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: EditorFileChangeEvent): void =>
+        callback(data);
+      ipcRenderer.on(EDITOR_CHANGE, listener);
+      return (): void => {
+        ipcRenderer.removeListener(EDITOR_CHANGE, listener);
       };
     },
   },

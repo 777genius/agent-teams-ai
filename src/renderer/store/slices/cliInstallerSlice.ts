@@ -37,6 +37,7 @@ export interface CliInstallerSlice {
   cliInstallerError: string | null;
   cliInstallerDetail: string | null;
   cliInstallerLogs: string[];
+  cliInstallerRawChunks: string[];
   cliCompletedVersion: string | null;
 
   // Actions
@@ -62,6 +63,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   cliInstallerError: null,
   cliInstallerDetail: null,
   cliInstallerLogs: [],
+  cliInstallerRawChunks: [],
   cliCompletedVersion: null,
 
   fetchCliStatus: async () => {
@@ -84,6 +86,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       cliInstallerError: null,
       cliInstallerDetail: null,
       cliInstallerLogs: [],
+      cliInstallerRawChunks: [],
       cliDownloadProgress: 0,
       cliDownloadTransferred: 0,
       cliDownloadTotal: 0,

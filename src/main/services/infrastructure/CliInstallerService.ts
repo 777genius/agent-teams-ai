@@ -17,16 +17,16 @@
  * - Human-readable error messages per phase
  */
 
+import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
+import { getHomeDir } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
-import { execFile, spawn } from 'child_process';
 import { createHash } from 'crypto';
 import { createWriteStream, existsSync, promises as fsp } from 'fs';
 import http from 'http';
 import https from 'https';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { promisify } from 'util';
 
 import { ClaudeBinaryResolver } from '../team/ClaudeBinaryResolver';
 
@@ -35,10 +35,6 @@ import type { BrowserWindow } from 'electron';
 import type { IncomingMessage } from 'http';
 
 const logger = createLogger('CliInstallerService');
-
-// Note: execFile (not exec) is used intentionally — no shell injection risk.
-// Arguments are passed as arrays, never interpolated into shell strings.
-const execFileAsync = promisify(execFile);
 
 // =============================================================================
 // Constants
@@ -58,46 +54,96 @@ const INSTALL_TIMEOUT_MS = 120_000;
 /** Max redirects to follow when fetching from GCS */
 const MAX_REDIRECTS = 5;
 
+/** Socket timeout for HTTP requests — covers DNS + TCP + TLS + first byte (ms) */
+const HTTP_CONNECT_TIMEOUT_MS = 15_000;
+
+/** Overall timeout for getStatus() to prevent UI hanging indefinitely (ms) */
+const GET_STATUS_TIMEOUT_MS = 25_000;
+
+/** Max retries for EBUSY (antivirus scanning the new binary) */
+const EBUSY_MAX_RETRIES = 3;
+
+/** Delay between EBUSY retries (multiplied by attempt number) */
+const EBUSY_RETRY_DELAY_MS = 2000;
+
+/**
+ * Build env for child processes with correct HOME.
+ * On Windows with non-ASCII usernames, process.env may have a broken HOME/USERPROFILE.
+ * getHomeDir() uses Electron's app.getPath('home') which handles Unicode correctly.
+ */
+function buildChildEnv(): NodeJS.ProcessEnv {
+  const home = getHomeDir();
+  return {
+    ...process.env,
+    HOME: home,
+    USERPROFILE: home,
+  };
+}
+
 // =============================================================================
 // Helpers
 // =============================================================================
 
 /**
  * Follow redirects manually for https.get (Node https does NOT auto-follow).
+ * Includes a socket-level timeout covering DNS + TCP connect + TLS + first byte.
  */
 function httpsGetFollowRedirects(
   url: string,
-  redirectsLeft = MAX_REDIRECTS
+  redirectsLeft = MAX_REDIRECTS,
+  timeoutMs = HTTP_CONNECT_TIMEOUT_MS
 ): Promise<IncomingMessage> {
   return new Promise((resolve, reject) => {
     const parsedUrl = new URL(url);
     const transport = parsedUrl.protocol === 'http:' ? http : https;
+    let settled = false;
 
-    transport
-      .get(url, (res) => {
-        const status = res.statusCode ?? 0;
+    const settleResolve = (value: IncomingMessage): void => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
 
-        if (status >= 300 && status < 400 && res.headers.location) {
-          if (redirectsLeft <= 0) {
-            res.destroy();
-            reject(new Error('Too many redirects'));
-            return;
-          }
-          const redirectUrl = new URL(res.headers.location, url).toString();
+    const settleReject = (err: Error): void => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+
+    const req = transport.get(url, (res) => {
+      const status = res.statusCode ?? 0;
+
+      if (status >= 300 && status < 400 && res.headers.location) {
+        if (redirectsLeft <= 0) {
           res.destroy();
-          httpsGetFollowRedirects(redirectUrl, redirectsLeft - 1).then(resolve, reject);
+          settleReject(new Error('Too many redirects'));
           return;
         }
+        const redirectUrl = new URL(res.headers.location, url).toString();
+        res.destroy();
+        httpsGetFollowRedirects(redirectUrl, redirectsLeft - 1, timeoutMs).then(
+          settleResolve,
+          settleReject
+        );
+        return;
+      }
 
-        if (status !== 200) {
-          res.destroy();
-          reject(new Error(`HTTP ${status} fetching ${url}`));
-          return;
-        }
+      if (status !== 200) {
+        res.destroy();
+        settleReject(new Error(`HTTP ${status} fetching ${url}`));
+        return;
+      }
 
-        resolve(res);
-      })
-      .on('error', reject);
+      settleResolve(res);
+    });
+
+    // Socket-level timeout: fires if the socket is idle for timeoutMs at any point
+    // during DNS resolution, TCP connect, TLS handshake, or waiting for response headers.
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error(`Connection timed out after ${timeoutMs}ms fetching ${url}`));
+    });
+
+    req.on('error', (err) => settleReject(err instanceof Error ? err : new Error(String(err))));
   });
 }
 
@@ -195,18 +241,44 @@ export class CliInstallerService {
       authMethod: null,
     };
 
+    // Run the actual status gathering with an overall timeout.
+    // On timeout, return whatever partial result was collected so far.
+    const ref = { current: result };
+    await Promise.race([
+      this.gatherStatus(ref),
+      new Promise<void>((resolve) =>
+        setTimeout(() => {
+          logger.warn(
+            `getStatus() timed out after ${GET_STATUS_TIMEOUT_MS}ms, returning partial result`
+          );
+          resolve();
+        }, GET_STATUS_TIMEOUT_MS)
+      ),
+    ]);
+
+    return result;
+  }
+
+  /**
+   * Gathers CLI status information, mutating the provided result object.
+   * Split from getStatus() to enable overall timeout via Promise.race —
+   * on timeout, getStatus() returns whatever fields were populated so far.
+   */
+  private async gatherStatus(ref: { current: CliInstallationStatus }): Promise<void> {
+    const r = ref.current;
     const binaryPath = await ClaudeBinaryResolver.resolve();
     if (binaryPath) {
-      result.installed = true;
-      result.binaryPath = binaryPath;
+      r.installed = true;
+      r.binaryPath = binaryPath;
 
       try {
-        const { stdout } = await execFileAsync(binaryPath, ['--version'], {
+        const { stdout } = await execCli(binaryPath, ['--version'], {
           timeout: VERSION_TIMEOUT_MS,
+          env: buildChildEnv(),
         });
-        result.installedVersion = normalizeVersion(stdout);
+        r.installedVersion = normalizeVersion(stdout);
         logger.info(
-          `Installed CLI version: "${stdout.trim()}" → normalized: "${result.installedVersion}"`
+          `Installed CLI version: "${stdout.trim()}" → normalized: "${r.installedVersion}"`
         );
       } catch (err) {
         logger.warn('Failed to get CLI version:', getErrorMessage(err));
@@ -214,39 +286,34 @@ export class CliInstallerService {
 
       // Check auth status
       try {
-        const { stdout: authStdout } = await execFileAsync(binaryPath, ['auth', 'status'], {
+        const { stdout: authStdout } = await execCli(binaryPath, ['auth', 'status'], {
           timeout: VERSION_TIMEOUT_MS,
+          env: buildChildEnv(),
         });
         const auth = JSON.parse(authStdout.trim()) as { loggedIn?: boolean; authMethod?: string };
-        result.authLoggedIn = auth.loggedIn === true;
-        result.authMethod = auth.authMethod ?? null;
-        logger.info(
-          `Auth status: loggedIn=${result.authLoggedIn}, method=${result.authMethod ?? 'null'}`
-        );
+        r.authLoggedIn = auth.loggedIn === true;
+        r.authMethod = auth.authMethod ?? null;
+        logger.info(`Auth status: loggedIn=${r.authLoggedIn}, method=${r.authMethod ?? 'null'}`);
       } catch (err) {
         logger.warn('Failed to check auth status:', getErrorMessage(err));
-        result.authLoggedIn = false;
+        r.authLoggedIn = false;
       }
     }
 
     try {
       const latestRaw = await fetchText(`${GCS_BASE}/latest`);
-      result.latestVersion = normalizeVersion(latestRaw);
-      logger.info(
-        `Latest CLI version: "${latestRaw.trim()}" → normalized: "${result.latestVersion}"`
-      );
+      r.latestVersion = normalizeVersion(latestRaw);
+      logger.info(`Latest CLI version: "${latestRaw.trim()}" → normalized: "${r.latestVersion}"`);
 
-      if (result.installedVersion && result.latestVersion) {
-        result.updateAvailable = isVersionOlder(result.installedVersion, result.latestVersion);
+      if (r.installedVersion && r.latestVersion) {
+        r.updateAvailable = isVersionOlder(r.installedVersion, r.latestVersion);
         logger.info(
-          `Update available: ${result.updateAvailable} (${result.installedVersion} → ${result.latestVersion})`
+          `Update available: ${r.updateAvailable} (${r.installedVersion} → ${r.latestVersion})`
         );
       }
     } catch (err) {
       logger.warn('Failed to fetch latest CLI version:', getErrorMessage(err));
     }
-
-    return result;
   }
 
   // ---------------------------------------------------------------------------
@@ -331,7 +398,17 @@ export class CliInstallerService {
         await fsp.chmod(tmpFilePath, 0o755);
       }
 
-      this.sendProgress({ type: 'installing', detail: 'Starting shell integration...' });
+      // On Windows, antivirus (Defender) scans new executables on first access.
+      // A brief pause lets the scan complete before we spawn, preventing EBUSY.
+      if (process.platform === 'win32') {
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+
+      this.sendProgress({
+        type: 'installing',
+        detail: 'Starting shell integration...',
+        rawChunk: 'Starting shell integration...\r\n',
+      });
       logger.info('Running claude install...');
 
       try {
@@ -407,7 +484,11 @@ export class CliInstallerService {
       });
 
       res.on('end', () => {
-        fileStream.end(() => resolve(hash.digest('hex')));
+        const digest = hash.digest('hex');
+        fileStream.end();
+        // Wait for 'close' (not just 'finish') — ensures file descriptor is fully released.
+        // On Windows, spawning the file before 'close' can cause EBUSY.
+        fileStream.on('close', () => resolve(digest));
       });
 
       res.on('error', (err) => {
@@ -425,16 +506,17 @@ export class CliInstallerService {
   /**
    * Run `claude install` via spawn with streaming output.
    * Collects all output for error context. Non-zero exit tolerated if binary resolves.
+   * Retries on EBUSY (antivirus scanning the new binary).
    */
-  private async runInstallWithStreaming(binaryPath: string): Promise<void> {
+  private async runInstallWithStreaming(binaryPath: string, attempt = 1): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      const child = spawn(binaryPath, ['install'], {
-        env: { ...process.env, CLAUDE_SKIP_ANALYTICS: '1' },
+      const child = spawnCli(binaryPath, ['install'], {
+        env: { ...buildChildEnv(), CLAUDE_SKIP_ANALYTICS: '1' },
         stdio: ['ignore', 'pipe', 'pipe'],
       });
 
       const timeout = setTimeout(() => {
-        child.kill();
+        killProcessTree(child);
         reject(
           new Error(
             `Timed out after ${INSTALL_TIMEOUT_MS / 1000}s. ` +
@@ -446,14 +528,19 @@ export class CliInstallerService {
       const outputLines: string[] = [];
 
       const handleOutput = (chunk: Buffer): void => {
-        const text = chunk.toString('utf-8').trim();
-        if (!text) return;
-        for (const line of text.split('\n')) {
-          const trimmed = line.trim();
-          if (trimmed) {
-            outputLines.push(trimmed);
-            logger.info(`[claude install] ${trimmed}`);
-            this.sendProgress({ type: 'installing', detail: trimmed });
+        const raw = chunk.toString('utf-8');
+        if (!raw.trim()) return;
+
+        // Send raw chunk for xterm.js rendering in UI
+        this.sendProgress({ type: 'installing', rawChunk: raw });
+
+        // Extract clean text for logger and error context
+        for (const line of raw.split('\n')) {
+          // eslint-disable-next-line no-control-regex, sonarjs/no-control-regex -- ANSI escape sequences stripped for clean logs
+          const clean = line.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').trim();
+          if (clean) {
+            outputLines.push(clean);
+            logger.info(`[claude install] ${clean}`);
           }
         }
       };
@@ -482,6 +569,24 @@ export class CliInstallerService {
 
       child.on('error', (err) => {
         clearTimeout(timeout);
+
+        // EBUSY: antivirus (Windows Defender / macOS Gatekeeper) may be scanning the binary — retry
+        const isEbusy = (err as NodeJS.ErrnoException).code === 'EBUSY';
+        if (isEbusy && attempt < EBUSY_MAX_RETRIES) {
+          const delayMs = attempt * EBUSY_RETRY_DELAY_MS;
+          logger.warn(
+            `spawn EBUSY (attempt ${attempt}/${EBUSY_MAX_RETRIES}), retrying in ${delayMs}ms...`
+          );
+          this.sendProgress({
+            type: 'installing',
+            rawChunk: `\r\n⏳ File busy (OS scan), retrying in ${delayMs / 1000}s...\r\n`,
+          });
+          setTimeout(() => {
+            this.runInstallWithStreaming(binaryPath, attempt + 1).then(resolve, reject);
+          }, delayMs);
+          return;
+        }
+
         reject(err);
       });
     });

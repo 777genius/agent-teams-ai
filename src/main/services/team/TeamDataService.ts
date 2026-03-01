@@ -12,7 +12,6 @@ import { createLogger } from '@shared/utils/logger';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as readline from 'readline';
 
 import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 
@@ -170,10 +169,21 @@ export class TeamDataService {
   }
 
   async getTeamData(teamName: string): Promise<TeamData> {
+    const startedAt = Date.now();
+    const marks: Record<string, number> = {};
+    const mark = (label: string): void => {
+      marks[label] = Date.now();
+    };
+    const msSince = (label: string): number => {
+      const t = marks[label];
+      return typeof t === 'number' ? t - startedAt : -1;
+    };
+
     const config = await this.configReader.getConfig(teamName);
     if (!config) {
       throw new Error(`Team not found: ${teamName}`);
     }
+    mark('config');
 
     const warnings: string[] = [];
 
@@ -185,6 +195,7 @@ export class TeamDataService {
       warnings.push('Tasks failed to load');
       tasksLoaded = false;
     }
+    mark('tasks');
 
     let inboxNames: string[] = [];
     try {
@@ -192,6 +203,7 @@ export class TeamDataService {
     } catch {
       warnings.push('Inboxes failed to load');
     }
+    mark('inboxNames');
 
     let messages: InboxMessage[] = [];
     try {
@@ -199,6 +211,7 @@ export class TeamDataService {
     } catch {
       warnings.push('Messages failed to load');
     }
+    mark('messages');
 
     try {
       const leadTexts = await this.extractLeadSessionTexts(config);
@@ -208,6 +221,7 @@ export class TeamDataService {
     } catch {
       warnings.push('Lead session texts failed to load');
     }
+    mark('leadTexts');
 
     try {
       const sentMessages = await this.sentMessagesStore.readMessages(teamName);
@@ -217,6 +231,7 @@ export class TeamDataService {
     } catch {
       warnings.push('Sent messages failed to load');
     }
+    mark('sentMessages');
 
     messages.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 
@@ -226,6 +241,7 @@ export class TeamDataService {
     } catch {
       warnings.push('Member metadata failed to load');
     }
+    mark('metaMembers');
 
     let kanbanState: KanbanState = {
       teamName,
@@ -239,6 +255,7 @@ export class TeamDataService {
       warnings.push('Kanban state failed to load');
       canRunKanbanGc = false;
     }
+    mark('kanbanState');
 
     if (canRunKanbanGc && tasksLoaded) {
       try {
@@ -248,6 +265,7 @@ export class TeamDataService {
         warnings.push('Kanban state cleanup failed');
       }
     }
+    mark('kanbanGc');
 
     const tasksWithKanban: TeamTaskWithKanban[] = tasks.map((task) => {
       const col = kanbanState.tasks[task.id]?.column;
@@ -262,9 +280,11 @@ export class TeamDataService {
       tasksWithKanban,
       messages
     );
+    mark('resolveMembers');
 
     // Enrich members with git branch when it differs from lead's branch
     await this.enrichMemberBranches(members, config);
+    mark('enrichBranches');
 
     // Auto-sync: create comments from task-related inbox messages
     if (tasksLoaded && messages.length > 0) {
@@ -278,6 +298,7 @@ export class TeamDataService {
         warnings.push('Comment sync from messages failed');
       }
     }
+    mark('syncComments');
 
     const tasksToReturn: TeamTaskWithKanban[] = tasks.map((task) => {
       const col = kanbanState.tasks[task.id]?.column;
@@ -290,6 +311,22 @@ export class TeamDataService {
       processes = await this.readProcesses(teamName);
     } catch {
       warnings.push('Processes failed to load');
+    }
+    mark('processes');
+
+    const totalMs = Date.now() - startedAt;
+    if (totalMs >= 1500) {
+      logger.warn(
+        `[getTeamData] slow team=${teamName} total=${totalMs}ms config=${msSince('config')} tasks=${msSince('tasks')} inboxNames=${msSince(
+          'inboxNames'
+        )} messages=${msSince('messages')} leadTexts=${msSince('leadTexts')} sent=${msSince(
+          'sentMessages'
+        )} membersMeta=${msSince('metaMembers')} kanban=${msSince('kanbanState')} kanbanGc=${msSince(
+          'kanbanGc'
+        )} resolveMembers=${msSince('resolveMembers')} enrichBranches=${msSince(
+          'enrichBranches'
+        )} syncComments=${msSince('syncComments')} processes=${msSince('processes')}`
+      );
     }
 
     // Auto-track teams with alive processes for periodic health checks
@@ -477,28 +514,51 @@ export class TeamDataService {
     const leadCwd = leadEntry?.cwd ?? config.projectPath;
     if (!leadCwd) return;
 
+    const withTimeout = async <T>(p: Promise<T>, ms: number): Promise<T> => {
+      let timer: NodeJS.Timeout | null = null;
+      try {
+        return await Promise.race([
+          p,
+          new Promise<T>((_resolve, reject) => {
+            timer = setTimeout(() => reject(new Error('timeout')), ms);
+          }),
+        ]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    };
+
     let leadBranch: string | null = null;
     try {
-      leadBranch = await gitIdentityResolver.getBranch(leadCwd);
+      // Git can hang on some Windows setups (network drives, locked repos, credential prompts).
+      // Branch is best-effort; never block team:getData on it.
+      leadBranch = await withTimeout(gitIdentityResolver.getBranch(leadCwd), 2000);
     } catch {
       // Lead cwd may not be a git repo — skip enrichment entirely
       return;
     }
 
-    await Promise.all(
-      members.map(async (member) => {
-        if (!member.cwd || member.cwd === leadCwd) return;
-        try {
-          const branch = await gitIdentityResolver.getBranch(member.cwd);
-          if (branch && branch !== leadBranch) {
-            // eslint-disable-next-line no-param-reassign -- intentional in-place enrichment
-            member.gitBranch = branch;
+    const candidates = members.filter((m) => m.cwd && m.cwd !== leadCwd);
+    if (candidates.length === 0) return;
+
+    const concurrency = process.platform === 'win32' ? 4 : 8;
+    for (let i = 0; i < candidates.length; i += concurrency) {
+      const batch = candidates.slice(i, i + concurrency);
+      await Promise.all(
+        batch.map(async (member) => {
+          if (!member.cwd) return;
+          try {
+            const branch = await withTimeout(gitIdentityResolver.getBranch(member.cwd), 2000);
+            if (branch && branch !== leadBranch) {
+              // eslint-disable-next-line no-param-reassign -- intentional in-place enrichment
+              member.gitBranch = branch;
+            }
+          } catch {
+            // Member cwd may not be a git repo — skip silently
           }
-        } catch {
-          // Member cwd may not be a git repo — skip silently
-        }
-      })
-    );
+        })
+      );
+    }
   }
 
   async addMember(teamName: string, request: AddMemberRequest): Promise<void> {
@@ -707,6 +767,14 @@ export class TeamDataService {
     await this.taskWriter.updateOwner(teamName, taskId, owner);
   }
 
+  async updateTaskFields(
+    teamName: string,
+    taskId: string,
+    fields: { subject?: string; description?: string }
+  ): Promise<void> {
+    await this.taskWriter.updateFields(teamName, taskId, fields);
+  }
+
   async setTaskNeedsClarification(
     teamName: string,
     taskId: string,
@@ -902,6 +970,11 @@ export class TeamDataService {
     const TASK_ID_PATTERN = /#(\d+)/g;
     let synced = false;
 
+    const tasksById = new Map<string, TeamTask>();
+    for (const t of tasks) {
+      tasksById.set(t.id, t);
+    }
+
     // Dedup broadcasts: same sender + same text → process only once
     const processedTexts = new Set<string>();
 
@@ -920,7 +993,7 @@ export class TeamDataService {
       }
 
       for (const taskId of taskIds) {
-        const task = tasks.find((t) => t.id === taskId);
+        const task = tasksById.get(taskId);
         if (!task) continue;
 
         const commentId = `msg-${msg.messageId}`;
@@ -961,58 +1034,76 @@ export class TeamDataService {
 
     const leadName = config.members?.find((m) => m.agentType === 'team-lead')?.name ?? 'team-lead';
 
-    const texts: InboxMessage[] = [];
+    // Optimization: read from the end of the JSONL file (we only need the last N texts).
+    // The full file can be huge; scanning from the start causes long stalls on Windows.
+    const MAX_SCAN_BYTES = 8 * 1024 * 1024; // 8MB tail cap
+    const INITIAL_SCAN_BYTES = 256 * 1024; // 256KB
 
-    const stream = fs.createReadStream(jsonlPath, { encoding: 'utf8' });
-    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
+    const textsReversed: InboxMessage[] = [];
+    const handle = await fs.promises.open(jsonlPath, 'r');
     try {
-      for await (const line of rl) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
+      const stat = await handle.stat();
+      const fileSize = stat.size;
 
-        let msg: Record<string, unknown>;
-        try {
-          msg = JSON.parse(trimmed) as Record<string, unknown>;
-        } catch {
-          continue;
+      let scanBytes = Math.min(INITIAL_SCAN_BYTES, fileSize);
+      while (textsReversed.length < MAX_LEAD_TEXTS && scanBytes <= MAX_SCAN_BYTES) {
+        const start = Math.max(0, fileSize - scanBytes);
+        const buffer = Buffer.alloc(scanBytes);
+        await handle.read(buffer, 0, scanBytes, start);
+        const chunk = buffer.toString('utf8');
+
+        const lines = chunk.split(/\r?\n/);
+        // If we started mid-file, the first line may be partial — drop it.
+        const fromIndex = start > 0 ? 1 : 0;
+
+        for (let i = lines.length - 1; i >= fromIndex; i--) {
+          const trimmed = lines[i]?.trim();
+          if (!trimmed) continue;
+
+          let msg: Record<string, unknown>;
+          try {
+            msg = JSON.parse(trimmed) as Record<string, unknown>;
+          } catch {
+            continue;
+          }
+
+          if (msg.type !== 'assistant') continue;
+
+          const message = (msg.message ?? msg) as Record<string, unknown>;
+          const content = message.content;
+          if (!Array.isArray(content)) continue;
+
+          const timestamp =
+            typeof msg.timestamp === 'string' ? msg.timestamp : new Date().toISOString();
+
+          for (const block of content as Record<string, unknown>[]) {
+            if (block.type !== 'text' || typeof block.text !== 'string') continue;
+            const text = block.text.trim();
+            if (text.length < MIN_TEXT_LENGTH) continue;
+            textsReversed.push({
+              from: leadName,
+              text,
+              timestamp,
+              read: true,
+              source: 'lead_session',
+            });
+            if (textsReversed.length >= MAX_LEAD_TEXTS) break;
+          }
+          if (textsReversed.length >= MAX_LEAD_TEXTS) break;
         }
 
-        if (msg.type !== 'assistant') continue;
-
-        const message = (msg.message ?? msg) as Record<string, unknown>;
-        const content = message.content;
-        if (!Array.isArray(content)) continue;
-
-        const timestamp =
-          typeof msg.timestamp === 'string' ? msg.timestamp : new Date().toISOString();
-
-        for (const block of content as Record<string, unknown>[]) {
-          if (block.type !== 'text' || typeof block.text !== 'string') continue;
-
-          const text = block.text.trim();
-          if (text.length < MIN_TEXT_LENGTH) continue;
-
-          texts.push({
-            from: leadName,
-            text,
-            timestamp,
-            read: true,
-            source: 'lead_session',
-          });
-        }
+        if (textsReversed.length >= MAX_LEAD_TEXTS) break;
+        if (scanBytes === fileSize) break;
+        scanBytes = Math.min(fileSize, scanBytes * 2);
       }
     } finally {
-      rl.close();
-      stream.destroy();
+      await handle.close();
     }
 
-    // Keep only the last N texts
-    if (texts.length > MAX_LEAD_TEXTS) {
-      return texts.slice(-MAX_LEAD_TEXTS);
-    }
-
-    return texts;
+    // Convert back to chronological order (old behavior) and keep the last N texts.
+    textsReversed.reverse();
+    const texts = textsReversed;
+    return texts.length > MAX_LEAD_TEXTS ? texts.slice(-MAX_LEAD_TEXTS) : texts;
   }
 
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {

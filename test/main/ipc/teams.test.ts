@@ -1,5 +1,6 @@
 import * as os from 'os';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { InboxMessage, TeamCreateRequest, TeamProvisioningProgress } from '@shared/types/team';
 
 vi.mock('electron', () => ({
   app: { getLocale: vi.fn(() => 'en'), getPath: vi.fn(() => '/tmp') },
@@ -24,6 +25,7 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   TEAM_UPDATE_KANBAN: 'team:updateKanban',
   TEAM_UPDATE_KANBAN_COLUMN_ORDER: 'team:updateKanbanColumnOrder',
   TEAM_UPDATE_TASK_STATUS: 'team:updateTaskStatus',
+  TEAM_UPDATE_TASK_FIELDS: 'team:updateTaskFields',
   TEAM_UPDATE_TASK_OWNER: 'team:updateTaskOwner',
   TEAM_PROCESS_SEND: 'team:processSend',
   TEAM_PROCESS_ALIVE: 'team:processAlive',
@@ -111,7 +113,15 @@ describe('ipc teams handlers', () => {
 
   const service = {
     listTeams: vi.fn(async () => [{ teamName: 'my-team', displayName: 'My Team' }]),
-    getTeamData: vi.fn(async () => ({ teamName: 'my-team' })),
+    getTeamData: vi.fn(async () => ({
+      teamName: 'my-team',
+      config: { name: 'My Team' },
+      tasks: [],
+      members: [],
+      messages: [] as InboxMessage[],
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
+    })),
     deleteTeam: vi.fn(async () => undefined),
     sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'm1' })),
     createTask: vi.fn(async () => ({ id: '1', subject: 'Test', status: 'pending' })),
@@ -138,7 +148,11 @@ describe('ipc teams handlers', () => {
       ready: true,
       message: 'CLI прогрет и готов к запуску',
     })),
-    createTeam: vi.fn(async () => ({ runId: 'run-1' })),
+    createTeam: vi.fn(
+      async (_req: TeamCreateRequest, _onProgress: (p: TeamProvisioningProgress) => void) => ({
+        runId: 'run-1',
+      })
+    ),
     getProvisioningStatus: vi.fn(async () => ({
       runId: 'run-1',
       teamName: 'my-team',
@@ -152,7 +166,7 @@ describe('ipc teams handlers', () => {
     sendMessageToTeam: vi.fn(async () => undefined),
     isTeamAlive: vi.fn(() => true),
     relayLeadInboxMessages: vi.fn(async () => 0),
-    getLiveLeadProcessMessages: vi.fn(() => []),
+    getLiveLeadProcessMessages: vi.fn(() => [] as InboxMessage[]),
     getAliveTeams: vi.fn(() => ['my-team']),
     getLeadActivityState: vi.fn(() => 'idle'),
     stopTeam: vi.fn(() => undefined),
@@ -267,6 +281,8 @@ describe('ipc teams handlers', () => {
     service.getTeamData.mockResolvedValueOnce({
       teamName: 'my-team',
       config: { name: 'My Team' },
+      tasks: [],
+      members: [],
       messages: [
         {
           from: 'team-lead',
@@ -274,9 +290,11 @@ describe('ipc teams handlers', () => {
           text: 'Hello there',
           timestamp: '2026-02-23T10:00:00.000Z',
           read: true,
-          source: 'lead_session',
+          source: 'lead_session' as const,
         },
       ],
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
     });
     provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([
       {
@@ -285,7 +303,7 @@ describe('ipc teams handlers', () => {
         text: 'Hello there',
         timestamp: '2026-02-23T10:00:01.000Z',
         read: true,
-        source: 'lead_process',
+        source: 'lead_process' as const,
         messageId: 'live-1',
       },
     ]);

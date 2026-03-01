@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
+import { Input } from '@renderer/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -21,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import { Textarea } from '@renderer/components/ui/textarea';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { markAsRead } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
@@ -36,16 +38,20 @@ import {
   AlignLeft,
   ArrowLeftFromLine,
   ArrowRightFromLine,
+  Check,
   Clock,
+  Eye,
   FileCode,
   FileDiff,
   HelpCircle,
   Link2,
   Loader2,
   MessageSquare,
+  Pencil,
   PenLine,
   ScrollText,
   Trash2,
+  X,
 } from 'lucide-react';
 
 import { TaskCommentInput } from './TaskCommentInput';
@@ -55,6 +61,8 @@ import type { KanbanTaskState, ResolvedTeamMember, TeamTaskWithKanban } from '@s
 
 interface TaskDetailDialogProps {
   open: boolean;
+  loading?: boolean;
+  variant?: 'team' | 'global';
   task: TeamTaskWithKanban | null;
   teamName: string;
   kanbanTaskState?: KanbanTaskState;
@@ -71,6 +79,8 @@ interface TaskDetailDialogProps {
 
 export const TaskDetailDialog = ({
   open,
+  loading = false,
+  variant = 'team',
   task,
   teamName,
   kanbanTaskState,
@@ -85,6 +95,70 @@ export const TaskDetailDialog = ({
 }: TaskDetailDialogProps): React.JSX.Element => {
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
   const currentTask = task ? (taskMap.get(task.id) ?? task) : null;
+  const updateTaskFields = useStore((s) => s.updateTaskFields);
+
+  // Inline editing: subject
+  const [editingSubject, setEditingSubject] = useState(false);
+  const [subjectDraft, setSubjectDraft] = useState('');
+  const [savingSubject, setSavingSubject] = useState(false);
+
+  // Inline editing: description
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [descriptionPreview, setDescriptionPreview] = useState(false);
+  const [savingDescription, setSavingDescription] = useState(false);
+
+  const startEditSubject = useCallback(() => {
+    if (!currentTask) return;
+    setSubjectDraft(currentTask.subject);
+    setEditingSubject(true);
+  }, [currentTask]);
+
+  const saveSubject = useCallback(async () => {
+    if (!currentTask || savingSubject) return;
+    const trimmed = subjectDraft.trim();
+    if (!trimmed || trimmed === currentTask.subject) {
+      setEditingSubject(false);
+      return;
+    }
+    setSavingSubject(true);
+    try {
+      await updateTaskFields(teamName, currentTask.id, { subject: trimmed });
+      setEditingSubject(false);
+    } finally {
+      setSavingSubject(false);
+    }
+  }, [currentTask, subjectDraft, savingSubject, teamName, updateTaskFields]);
+
+  const startEditDescription = useCallback(() => {
+    if (!currentTask) return;
+    setDescriptionDraft(currentTask.description ?? '');
+    setDescriptionPreview(false);
+    setEditingDescription(true);
+  }, [currentTask]);
+
+  const saveDescription = useCallback(async () => {
+    if (!currentTask || savingDescription) return;
+    const newDesc = descriptionDraft.trim();
+    if (newDesc === (currentTask.description ?? '')) {
+      setEditingDescription(false);
+      return;
+    }
+    setSavingDescription(true);
+    try {
+      await updateTaskFields(teamName, currentTask.id, { description: newDesc });
+      setEditingDescription(false);
+    } finally {
+      setSavingDescription(false);
+    }
+  }, [currentTask, descriptionDraft, savingDescription, teamName, updateTaskFields]);
+
+  // Reset editing state on dialog close or task change
+  useEffect(() => {
+    setEditingSubject(false);
+    setEditingDescription(false);
+  }, [open, currentTask?.id]);
+
   const [replyTo, setReplyTo] = useState<{
     taskId: string;
     author: string;
@@ -136,6 +210,7 @@ export const TaskDetailDialog = ({
   }, [activeChangeSet, currentTask]);
 
   useEffect(() => {
+    if (variant !== 'team') return;
     if (!open || !currentTask || !isTaskCompleted || !onViewChanges) return;
     // Only fetch if we don't already have data for this task
     if (taskChangesFiles !== null) return;
@@ -148,12 +223,29 @@ export const TaskDetailDialog = ({
     fetchTaskChanges,
     taskChangesFiles,
     onViewChanges,
+    variant,
   ]);
 
   const handleDependencyClick = (taskId: string): void => {
     handleClose();
     onScrollToTask?.(taskId);
   };
+
+  if (loading) {
+    return (
+      <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+        <DialogContent className="sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Loading task…</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+            <Loader2 className="size-4 animate-spin" />
+            <span>Fetching team data</span>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   if (!currentTask) {
     return (
@@ -209,7 +301,34 @@ export const TaskDetailDialog = ({
             </span>
             {headerExtra ? <div className="ml-auto mr-4">{headerExtra}</div> : null}
           </div>
-          <DialogTitle className="text-base">{currentTask.subject}</DialogTitle>
+          {editingSubject ? (
+            <div className="flex items-center gap-2">
+              <Input
+                autoFocus
+                value={subjectDraft}
+                onChange={(e) => setSubjectDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void saveSubject();
+                  if (e.key === 'Escape') setEditingSubject(false);
+                }}
+                onBlur={() => void saveSubject()}
+                disabled={savingSubject}
+                className="h-8 text-base"
+              />
+              {savingSubject ? <Loader2 size={14} className="animate-spin" /> : null}
+            </div>
+          ) : (
+            <DialogTitle
+              className="group flex cursor-pointer items-center gap-1.5 text-base hover:text-[var(--color-text)]"
+              onClick={startEditSubject}
+            >
+              {currentTask.subject}
+              <Pencil
+                size={12}
+                className="shrink-0 text-[var(--color-text-muted)] opacity-0 transition-opacity group-hover:opacity-100"
+              />
+            </DialogTitle>
+          )}
           {currentTask.activeForm ? (
             <DialogDescription>{currentTask.activeForm}</DialogDescription>
           ) : null}
@@ -317,17 +436,111 @@ export const TaskDetailDialog = ({
 
         {/* Description */}
         <CollapsibleTeamSection title="Description" icon={<AlignLeft size={14} />} defaultOpen>
-          {currentTask.description ? (
-            <div className="max-h-[200px] overflow-y-auto">
+          {editingDescription ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${
+                    !descriptionPreview
+                      ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+                      : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
+                  }`}
+                  onClick={() => setDescriptionPreview(false)}
+                >
+                  <Pencil size={12} />
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${
+                    descriptionPreview
+                      ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+                      : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
+                  }`}
+                  onClick={() => setDescriptionPreview(true)}
+                >
+                  <Eye size={12} />
+                  Preview
+                </button>
+              </div>
+              {descriptionPreview ? (
+                <div className="max-h-[200px] overflow-y-auto rounded border border-[var(--color-border)] p-2">
+                  {descriptionDraft.trim() ? (
+                    <MarkdownViewer content={descriptionDraft} maxHeight="max-h-[180px]" />
+                  ) : (
+                    <p className="text-xs text-[var(--color-text-muted)]">Nothing to preview</p>
+                  )}
+                </div>
+              ) : (
+                <Textarea
+                  autoFocus
+                  value={descriptionDraft}
+                  onChange={(e) => setDescriptionDraft(e.target.value)}
+                  disabled={savingDescription}
+                  rows={6}
+                  className="text-xs"
+                  placeholder="Task description (supports markdown)"
+                />
+              )}
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={savingDescription}
+                  onClick={() => void saveDescription()}
+                >
+                  {savingDescription ? (
+                    <Loader2 size={12} className="mr-1 animate-spin" />
+                  ) : (
+                    <Check size={12} className="mr-1" />
+                  )}
+                  Save
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={savingDescription}
+                  onClick={() => setEditingDescription(false)}
+                >
+                  <X size={12} className="mr-1" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : currentTask.description ? (
+            <div
+              role="button"
+              tabIndex={0}
+              className="group max-h-[200px] cursor-pointer overflow-y-auto"
+              onClick={startEditDescription}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  startEditDescription();
+                }
+              }}
+            >
               <MarkdownViewer content={currentTask.description} maxHeight="max-h-[180px]" />
+              <Pencil
+                size={12}
+                className="mt-1 text-[var(--color-text-muted)] opacity-0 transition-opacity group-hover:opacity-100"
+              />
             </div>
           ) : (
-            <p className="text-xs text-[var(--color-text-muted)]">No description</p>
+            <button
+              type="button"
+              className="text-xs text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
+              onClick={startEditDescription}
+            >
+              Click to add description...
+            </button>
           )}
         </CollapsibleTeamSection>
 
         {/* Changes */}
-        {isTaskCompleted && onViewChanges ? (
+        {variant === 'team' && isTaskCompleted && onViewChanges ? (
           <CollapsibleTeamSection
             title="Changes"
             icon={<FileDiff size={14} />}
@@ -373,16 +586,22 @@ export const TaskDetailDialog = ({
         ) : null}
 
         {/* Execution Logs — sessions that reference this task */}
-        <CollapsibleTeamSection title="Execution Logs" icon={<ScrollText size={14} />} defaultOpen>
-          <div className="min-w-0 overflow-hidden">
-            <MemberLogsTab
-              teamName={teamName}
-              taskId={currentTask.id}
-              taskOwner={currentTask.owner}
-              taskStatus={currentTask.status}
-            />
-          </div>
-        </CollapsibleTeamSection>
+        {variant === 'team' ? (
+          <CollapsibleTeamSection
+            title="Execution Logs"
+            icon={<ScrollText size={14} />}
+            defaultOpen
+          >
+            <div className="min-w-0 overflow-hidden">
+              <MemberLogsTab
+                teamName={teamName}
+                taskId={currentTask.id}
+                taskOwner={currentTask.owner}
+                taskStatus={currentTask.status}
+              />
+            </div>
+          </CollapsibleTeamSection>
+        ) : null}
 
         <div className="mb-3 space-y-2">
           {/* Dependencies */}
