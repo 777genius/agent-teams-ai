@@ -5,7 +5,7 @@
  * Loads ALL project files via backend API on mount (not limited to expanded dirs).
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useStore } from '@renderer/store';
 import { Command } from 'cmdk';

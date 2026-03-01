@@ -94,7 +94,13 @@ export interface ChangeReviewSlice {
   clearDecisionsFromDisk: (teamName: string, scopeKey: string) => Promise<void>;
 
   // Phase 2 actions
-  setHunkDecision: (filePath: string, hunkIndex: number, decision: HunkDecision) => void;
+  /**
+   * Set decision for a hunk at the current (visible) CM index.
+   * Returns the stable/original hunk index used as the decision key.
+   */
+  setHunkDecision: (filePath: string, hunkIndex: number, decision: HunkDecision) => number;
+  /** Clear a persisted decision using the stable/original hunk index */
+  clearHunkDecisionByOriginalIndex: (filePath: string, originalIndex: number) => void;
   setFileDecision: (filePath: string, decision: HunkDecision) => void;
   setFileChunkCount: (filePath: string, count: number) => void;
   pushReviewUndoSnapshot: () => void;
@@ -429,6 +435,17 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     set((s) => ({
       hunkDecisions: { ...s.hunkDecisions, [key]: decision },
     }));
+    return originalIndex;
+  },
+
+  clearHunkDecisionByOriginalIndex: (filePath: string, originalIndex: number) => {
+    const key = `${filePath}:${originalIndex}`;
+    set((s) => {
+      if (!(key in s.hunkDecisions)) return s;
+      const next = { ...s.hunkDecisions };
+      delete next[key];
+      return { hunkDecisions: next };
+    });
   },
 
   setFileDecision: (filePath: string, decision: HunkDecision) => {
@@ -727,14 +744,14 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
 
     try {
       const content = fileContents[filePath];
-      const baseCount = getFileHunkCount(filePath, file.snippets.length, fileChunkCounts);
-      const maxIdx = getMaxDecisionIndexForFile(filePath, hunkDecisions);
+      const innerBaseCount = getFileHunkCount(filePath, file.snippets.length, fileChunkCounts);
+      const innerMaxIdx = getMaxDecisionIndexForFile(filePath, hunkDecisions);
       const hunkContextHashes =
-        maxIdx < baseCount
+        innerMaxIdx < innerBaseCount
           ? buildHunkContextHashesForFile(
               content?.originalFullContent,
               content?.modifiedFullContent,
-              baseCount
+              innerBaseCount
             )
           : undefined;
       await api.review.applyDecisions({

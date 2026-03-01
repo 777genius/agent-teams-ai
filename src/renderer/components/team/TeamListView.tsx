@@ -541,7 +541,7 @@ export const TeamListView = (): React.JSX.Element => {
   const renderHeader = (): React.JSX.Element => (
     <div className="mb-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-[var(--color-text)]">Teams</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text)]">Select Team</h2>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"

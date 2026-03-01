@@ -371,10 +371,11 @@ function findMatchingWorktree(
 }
 
 const NewProjectCard = (): React.JSX.Element => {
-  const { repositoryGroups, fetchRepositoryGroups } = useStore(
+  const { repositoryGroups, fetchRepositoryGroups, openTeamsTab } = useStore(
     useShallow((s) => ({
       repositoryGroups: s.repositoryGroups,
       fetchRepositoryGroups: s.fetchRepositoryGroups,
+      openTeamsTab: s.openTeamsTab,
     }))
   );
 
@@ -396,6 +397,7 @@ const NewProjectCard = (): React.JSX.Element => {
       const match = findMatchingWorktree(repositoryGroups, selectedPath);
       if (match) {
         navigateToMatch(match);
+        openTeamsTab();
         return;
       }
 
@@ -405,6 +407,7 @@ const NewProjectCard = (): React.JSX.Element => {
       const matchAfterRefresh = findMatchingWorktree(refreshedGroups, selectedPath);
       if (matchAfterRefresh) {
         navigateToMatch(matchAfterRefresh);
+        openTeamsTab();
         return;
       }
 
@@ -437,6 +440,7 @@ const NewProjectCard = (): React.JSX.Element => {
         repositoryGroups: [syntheticGroup, ...state.repositoryGroups],
       }));
       navigateToMatch({ repoId: encodedId, worktreeId: encodedId });
+      openTeamsTab();
     } catch (error) {
       logger.error('Error selecting folder:', error);
     }

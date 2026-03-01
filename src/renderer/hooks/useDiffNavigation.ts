@@ -264,14 +264,18 @@ export function useDiffNavigation(
     }
   }, [selectedFilePath, currentHunkIndex, onHunkRejected]);
 
-  // Store refs for stable closure
+  // Store refs for stable closure (avoids re-registering keydown on every render)
   const onCloseRef = useRef(onClose);
   const onSaveFileRef = useRef(onSaveFile);
+  const onHunkAcceptedRef = useRef(onHunkAccepted);
+  const selectedFilePathRef = useRef(selectedFilePath);
 
   useEffect(() => {
     onCloseRef.current = onClose;
     onSaveFileRef.current = onSaveFile;
-  }, [onClose, onSaveFile]);
+    onHunkAcceptedRef.current = onHunkAccepted;
+    selectedFilePathRef.current = selectedFilePath;
+  }, [onClose, onSaveFile, onHunkAccepted, selectedFilePath]);
 
   // Keyboard handler
   useEffect(() => {
@@ -327,11 +331,14 @@ export function useDiffNavigation(
         event.preventDefault();
         const view = getActiveEditorView(editorViewRef, continuousOptionsRef.current);
         if (view) {
-          const filePath = getActiveFilePath(selectedFilePath, continuousOptionsRef.current);
-          if (filePath && onHunkAccepted) {
+          const filePath = getActiveFilePath(
+            selectedFilePathRef.current,
+            continuousOptionsRef.current
+          );
+          if (filePath && onHunkAcceptedRef.current) {
             const cursorPos = view.state.selection.main.head;
             const idx = computeChunkIndexAtPos(view.state, cursorPos);
-            onHunkAccepted(filePath, idx);
+            onHunkAcceptedRef.current(filePath, idx);
           }
           acceptChunk(view);
           requestAnimationFrame(() => goToNextHunk());

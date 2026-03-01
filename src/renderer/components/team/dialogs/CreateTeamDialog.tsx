@@ -142,15 +142,27 @@ function buildMembers(members: MemberDraft[]): TeamCreateRequest['members'] {
     .filter((member): member is NonNullable<typeof member> => member !== null);
 }
 
-// eslint-disable-next-line security/detect-unsafe-regex -- kebab-case pattern is linear, no ReDoS
-const TEAM_NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+/** Mirrors Claude CLI's `zuA()` sanitization: non-alphanumeric → `-`, then lowercase. */
+function sanitizeTeamName(name: string): string {
+  return name
+    .replace(/[^a-zA-Z0-9]/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+/g, '')
+    .replace(/-+$/g, '')
+    .toLowerCase();
+}
+
 const MEMBER_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
 function validateTeamNameInline(name: string): string | null {
   const trimmed = name.trim();
   if (!trimmed) return null;
-  if (!TEAM_NAME_RE.test(trimmed) || trimmed.length > 64) {
-    return 'Use kebab-case [a-z0-9-], max 64 chars';
+  const sanitized = sanitizeTeamName(trimmed);
+  if (!sanitized) {
+    return 'Name must contain at least one letter or digit';
+  }
+  if (sanitized.length > 128) {
+    return 'Name is too long (max 128 chars)';
   }
   return null;
 }
@@ -169,11 +181,20 @@ function validateRequest(
   options?: { requireCwd?: boolean }
 ): ValidationResult {
   const requireCwd = options?.requireCwd ?? true;
-  if (!TEAM_NAME_RE.test(request.teamName) || request.teamName.length > 64) {
+  const sanitized = sanitizeTeamName(request.teamName);
+  if (!sanitized) {
     return {
       valid: false,
       errors: {
-        teamName: 'Use kebab-case [a-z0-9-], max 64 chars',
+        teamName: 'Name must contain at least one letter or digit',
+      },
+    };
+  }
+  if (sanitized.length > 128) {
+    return {
+      valid: false,
+      errors: {
+        teamName: 'Name is too long (max 128 chars)',
       },
     };
   }
@@ -519,9 +540,11 @@ export const CreateTeamDialog = ({
   const effectiveModel =
     selectedModel && selectedModel !== '__default__' ? selectedModel : undefined;
 
+  const sanitizedTeamName = sanitizeTeamName(teamName.trim());
+
   const request = useMemo<TeamCreateRequest>(
     () => ({
-      teamName: teamName.trim(),
+      teamName: sanitizedTeamName,
       description: description.trim() || undefined,
       color: teamColor || undefined,
       members: buildMembers(members),
@@ -529,7 +552,7 @@ export const CreateTeamDialog = ({
       prompt: prompt.trim() || undefined,
       model: effectiveModel,
     }),
-    [teamName, description, teamColor, members, effectiveCwd, prompt, effectiveModel]
+    [sanitizedTeamName, description, teamColor, members, effectiveCwd, prompt, effectiveModel]
   );
 
   const activeError = localError ?? provisioningError;
@@ -576,7 +599,7 @@ export const CreateTeamDialog = ({
   };
 
   const handleSubmit = (): void => {
-    if (existingTeamNames.includes(request.teamName)) {
+    if (existingTeamNames.includes(sanitizedTeamName)) {
       setFieldErrors({ teamName: 'Team name already exists' });
       setLocalError('Check form fields');
       return;
@@ -710,12 +733,17 @@ export const CreateTeamDialog = ({
               onChange={(event) => setTeamName(event.target.value)}
               placeholder="team-alpha"
             />
-            {existingTeamNames.includes(teamName.trim()) ? (
+            {existingTeamNames.includes(sanitizedTeamName) ? (
               <p className="text-[11px] text-red-300">Team name already exists</p>
             ) : validateTeamNameInline(teamName) ? (
               <p className="text-[11px] text-red-300">{validateTeamNameInline(teamName)}</p>
             ) : fieldErrors.teamName ? (
               <p className="text-[11px] text-red-300">{fieldErrors.teamName}</p>
+            ) : null}
+            {sanitizedTeamName && sanitizedTeamName !== teamName.trim() ? (
+              <p className="text-[11px] text-[var(--color-text-muted)]">
+                On disk: <span className="font-mono">{sanitizedTeamName}</span>
+              </p>
             ) : null}
           </div>
 
