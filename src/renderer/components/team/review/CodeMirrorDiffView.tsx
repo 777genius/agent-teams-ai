@@ -381,10 +381,11 @@ export const CodeMirrorDiffView = ({
   );
 
   const buildExtensions = useCallback(() => {
+    const isEffectivelyEmptyOriginal = original.trim().length === 0;
     const extensions: Extension[] = [
       baseEditorTheme,
       diffSpecificTheme,
-      ...(original.length === 0 ? [emptyOriginalOverrideTheme] : []),
+      ...(isEffectivelyEmptyOriginal ? [emptyOriginalOverrideTheme] : []),
       lineNumbers(),
       syntaxHighlighting(oneDarkHighlightStyle),
       EditorView.editable.of(!readOnly),

@@ -42,15 +42,13 @@ export function acceptAllChunks(view: EditorView): boolean {
   if (!result || result.chunks.length === 0) return false;
 
   const orig = getOriginalDoc(view.state);
-  const specs: ChangeSpec[] = [];
-  for (const chunk of result.chunks) {
-    specs.push({
-      from: chunk.fromA,
-      to: chunk.toA,
-      insert: view.state.doc.sliceString(chunk.fromB, chunk.toB),
-    });
-  }
-  const changes = ChangeSet.of(specs, orig.length);
+  // More robust than per-chunk: merge chunk ranges can be inconsistent for "empty" originals
+  // (e.g. whitespace-only or reconstruction edge cases), which can throw RangeError.
+  // Accept-all semantics are simply: make original equal to current modified doc.
+  const changes = ChangeSet.of(
+    [{ from: 0, to: orig.length, insert: view.state.doc.toString() }],
+    orig.length
+  );
   view.dispatch({
     effects: updateOriginalDoc.of({ doc: changes.apply(orig), changes }),
   });
@@ -63,15 +61,11 @@ export function rejectAllChunks(view: EditorView): boolean {
   if (!result || result.chunks.length === 0) return false;
 
   const orig = getOriginalDoc(view.state);
-  const specs: ChangeSpec[] = [];
-  for (const chunk of result.chunks) {
-    specs.push({
-      from: chunk.fromB,
-      to: chunk.toB,
-      insert: orig.sliceString(chunk.fromA, chunk.toA),
-    });
-  }
-  view.dispatch({ changes: specs });
+  // Same robustness principle as acceptAllChunks: reject-all semantics are simply
+  // "restore the current doc to the original baseline" in one edit.
+  view.dispatch({
+    changes: [{ from: 0, to: view.state.doc.length, insert: orig.toString() }],
+  });
   return true;
 }
 
