@@ -344,7 +344,11 @@ export const EditorFileTree = ({
         onDragCancel={handleDragCancel}
         autoScroll={{ threshold: { x: 0, y: 0.15 } }}
       >
-        <RootDropZone ref={scrollRef} projectPath={projectPath}>
+        <RootDropZone
+          ref={scrollRef}
+          projectPath={projectPath}
+          isDropTarget={dropTargetPath === projectPath}
+        >
           <div
             style={{
               height: `${virtualizer.getTotalSize()}px`,
@@ -365,16 +369,19 @@ export const EditorFileTree = ({
                   onClick={handleNodeClick}
                   style={{
                     position: 'absolute',
-                    top: 0,
+                    top: `${virtualItem.start}px`,
                     left: 0,
                     width: '100%',
                     height: `${virtualItem.size}px`,
-                    transform: `translateY(${virtualItem.start}px)`,
                   }}
                 />
               );
             })}
           </div>
+          {/* Spacer at bottom — drop here to move to project root */}
+          {draggedItem && (
+            <div className="h-16 w-full shrink-0" aria-label="Drop here for project root" />
+          )}
         </RootDropZone>
         <DragOverlay dropAnimation={null}>
           {draggedItem && <DragOverlayFileItem item={draggedItem} />}
@@ -398,8 +405,8 @@ export const EditorFileTree = ({
 
 const RootDropZone = React.forwardRef<
   HTMLDivElement,
-  { projectPath: string | null; children: React.ReactNode }
->(({ projectPath, children }, ref) => {
+  { projectPath: string | null; isDropTarget: boolean; children: React.ReactNode }
+>(({ projectPath, isDropTarget, children }, ref) => {
   const { setNodeRef } = useDroppable({
     id: 'root-drop-zone',
     data: { isRoot: true, path: projectPath },
@@ -417,7 +424,13 @@ const RootDropZone = React.forwardRef<
   );
 
   return (
-    <div ref={combinedRef} className="h-full overflow-y-auto" role="tree">
+    <div
+      ref={combinedRef}
+      className={`h-full overflow-y-auto transition-colors ${
+        isDropTarget ? 'bg-blue-400/5 ring-1 ring-inset ring-blue-400/30' : ''
+      }`}
+      role="tree"
+    >
       {children}
     </div>
   );
