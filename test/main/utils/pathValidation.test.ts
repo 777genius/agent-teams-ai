@@ -223,14 +223,18 @@ describe('pathValidation', () => {
       it('should expand ~ to home directory for paths within ~/.claude', () => {
         const result = validateFilePath('~/.claude/projects/test.jsonl', null);
         expect(result.valid).toBe(true);
-        expect(result.normalizedPath).toBe(path.join(homeDir, '.claude', 'projects', 'test.jsonl'));
+        expect(result.normalizedPath).toBe(
+          path.resolve(path.join(homeDir, '.claude', 'projects', 'test.jsonl'))
+        );
       });
 
       it('should expand ~ to home directory for project paths', () => {
         const projectInHome = path.join(homeDir, 'my-project');
         const result = validateFilePath('~/my-project/src/index.ts', projectInHome);
         expect(result.valid).toBe(true);
-        expect(result.normalizedPath).toBe(path.join(projectInHome, 'src', 'index.ts'));
+        expect(result.normalizedPath).toBe(
+          path.resolve(path.join(projectInHome, 'src', 'index.ts'))
+        );
       });
 
       it('should reject tilde paths to sensitive files', () => {
@@ -250,7 +254,7 @@ describe('pathValidation', () => {
     it('should expand tilde in paths', () => {
       const result = validateOpenPath('~/.claude', null);
       expect(result.valid).toBe(true);
-      expect(result.normalizedPath).toBe(path.normalize(claudeDir));
+      expect(result.normalizedPath).toBe(path.resolve(claudeDir));
     });
 
     it('should reject sensitive files', () => {
