@@ -31,6 +31,7 @@ import {
   RotateCcw,
   X,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { CodeMirrorEditor } from './CodeMirrorEditor';
 import { EditorBinaryState } from './EditorBinaryState';
@@ -73,23 +74,29 @@ export const ProjectEditorOverlay = ({
   onClose,
   onEditorAction,
 }: ProjectEditorOverlayProps): React.ReactElement => {
+  // Data selectors — grouped with useShallow to prevent unnecessary re-renders
+  const { activeTabId, openTabs, modifiedFiles, saveErrors, externalChanges, conflictFile } =
+    useStore(
+      useShallow((s) => ({
+        activeTabId: s.editorActiveTabId,
+        openTabs: s.editorOpenTabs,
+        modifiedFiles: s.editorModifiedFiles,
+        saveErrors: s.editorSaveError,
+        externalChanges: s.editorExternalChanges,
+        conflictFile: s.editorConflictFile,
+      }))
+    );
+
+  // Actions — stable references in Zustand, no grouping needed
   const openEditor = useStore((s) => s.openEditor);
   const closeEditor = useStore((s) => s.closeEditor);
   const openFile = useStore((s) => s.openFile);
   const closeEditorTab = useStore((s) => s.closeEditorTab);
   const saveFile = useStore((s) => s.saveFile);
-  const activeTabId = useStore((s) => s.editorActiveTabId);
-  const openTabs = useStore((s) => s.editorOpenTabs);
-  const modifiedFiles = useStore((s) => s.editorModifiedFiles);
-  const saveErrors = useStore((s) => s.editorSaveError);
   const hasUnsavedChanges = useStore((s) => s.hasUnsavedChanges);
   const saveAllFiles = useStore((s) => s.saveAllFiles);
   const discardChanges = useStore((s) => s.discardChanges);
-
-  // Iter-5: git, watcher, conflict
-  const externalChanges = useStore((s) => s.editorExternalChanges);
   const clearExternalChange = useStore((s) => s.clearExternalChange);
-  const conflictFile = useStore((s) => s.editorConflictFile);
   const forceOverwrite = useStore((s) => s.forceOverwrite);
   const resolveConflict = useStore((s) => s.resolveConflict);
   const setFileMtime = useStore((s) => s.setFileMtime);

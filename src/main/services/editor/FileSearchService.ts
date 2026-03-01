@@ -203,8 +203,11 @@ export class FileSearchService {
       return a.name.localeCompare(b.name);
     });
 
+    const candidates: string[] = [];
+    const subdirs: string[] = [];
+
     for (const entry of sorted) {
-      if (signal?.aborted || files.length >= MAX_FILES) break;
+      if (signal?.aborted) break;
 
       const fullPath = path.join(dirPath, entry.name);
 
@@ -216,27 +219,39 @@ export class FileSearchService {
 
       if (entry.isDirectory()) {
         if (IGNORED_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
-        await this.collectFiles(projectRoot, fullPath, files, signal);
+        subdirs.push(fullPath);
       } else if (entry.isFile()) {
         if (IGNORED_FILES.has(entry.name)) continue;
-
-        // Skip files > 1MB
-        try {
-          const stat = await fs.stat(fullPath);
-          if (stat.size > MAX_FILE_SIZE) continue;
-        } catch {
-          continue;
-        }
-
-        // Skip binary files (quick check via first 512 bytes)
-        try {
-          if (await isBinaryFile(fullPath)) continue;
-        } catch {
-          continue;
-        }
-
-        files.push(fullPath);
+        candidates.push(fullPath);
       }
+    }
+
+    // Parallel stat + binary check (batched by 20 for I/O concurrency)
+    const CHECK_CONCURRENCY = 20;
+    for (let i = 0; i < candidates.length; i += CHECK_CONCURRENCY) {
+      if (signal?.aborted || files.length >= MAX_FILES) break;
+      const batch = candidates.slice(i, i + CHECK_CONCURRENCY);
+      const results = await Promise.all(
+        batch.map(async (fp) => {
+          try {
+            const stat = await fs.stat(fp);
+            if (stat.size > MAX_FILE_SIZE) return null;
+            if (await isBinaryFile(fp)) return null;
+            return fp;
+          } catch {
+            return null;
+          }
+        })
+      );
+      for (const fp of results) {
+        if (fp && files.length < MAX_FILES) files.push(fp);
+      }
+    }
+
+    // Recurse into subdirectories
+    for (const subdir of subdirs) {
+      if (signal?.aborted || files.length >= MAX_FILES) break;
+      await this.collectFiles(projectRoot, subdir, files, signal);
     }
   }
 

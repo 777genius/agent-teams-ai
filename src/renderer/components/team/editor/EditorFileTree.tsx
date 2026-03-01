@@ -29,6 +29,7 @@ import { useStore } from '@renderer/store';
 import { sortTreeNodes } from '@renderer/utils/fileTreeBuilder';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronDown, ChevronRight, Folder, FolderOpen, Lock } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { EditorContextMenu } from './EditorContextMenu';
 import { FileIcon } from './FileIcon';
@@ -77,20 +78,27 @@ export const EditorFileTree = ({
   selectedFilePath,
   onFileSelect,
 }: EditorFileTreeProps): React.ReactElement => {
-  const fileTree = useStore((s) => s.editorFileTree);
-  const expandedDirs = useStore((s) => s.editorExpandedDirs);
+  // Data selectors — grouped with useShallow to prevent unnecessary re-renders
+  const { fileTree, expandedDirs, loading, error, gitFiles, projectPath } = useStore(
+    useShallow((s) => ({
+      fileTree: s.editorFileTree,
+      expandedDirs: s.editorExpandedDirs,
+      loading: s.editorFileTreeLoading,
+      error: s.editorFileTreeError,
+      gitFiles: s.editorGitFiles,
+      projectPath: s.editorProjectPath,
+    }))
+  );
+
+  // Actions — stable references in Zustand, no grouping needed
   const expandDirectory = useStore((s) => s.expandDirectory);
   const collapseDirectory = useStore((s) => s.collapseDirectory);
-  const loading = useStore((s) => s.editorFileTreeLoading);
-  const error = useStore((s) => s.editorFileTreeError);
   const createFileInTree = useStore((s) => s.createFileInTree);
   const createDirInTree = useStore((s) => s.createDirInTree);
   const deleteFileFromTree = useStore((s) => s.deleteFileFromTree);
   const moveFileInTree = useStore((s) => s.moveFileInTree);
   const renameFileInTree = useStore((s) => s.renameFileInTree);
   const openFile = useStore((s) => s.openFile);
-  const gitFiles = useStore((s) => s.editorGitFiles);
-  const projectPath = useStore((s) => s.editorProjectPath);
 
   const [newItemState, setNewItemState] = useState<NewItemState | null>(null);
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
@@ -473,7 +481,7 @@ export const EditorFileTree = ({
                   <DraggableTreeItem
                     item={item}
                     activeNodePath={activeNodePath}
-                    gitStatusMap={gitStatusMap}
+                    gitStatus={gitStatusMap.get(item.node.fullPath)}
                     dropTargetPath={dropTargetPath}
                     isDragActive={!!draggedItem}
                     onClick={handleNodeClick}
@@ -564,7 +572,7 @@ RootDropZone.displayName = 'RootDropZone';
 interface DraggableTreeItemProps {
   item: FlatTreeItem;
   activeNodePath: string | null;
-  gitStatusMap: Map<string, GitFileStatusType>;
+  gitStatus?: GitFileStatusType;
   dropTargetPath: string | null;
   isDragActive: boolean;
   onClick: (node: TreeNode<FileTreeEntry>) => void;
@@ -578,7 +586,7 @@ const DraggableTreeItem = React.memo(
   ({
     item,
     activeNodePath,
-    gitStatusMap,
+    gitStatus,
     dropTargetPath,
     isDragActive,
     onClick,
@@ -689,9 +697,7 @@ const DraggableTreeItem = React.memo(
         ) : (
           <span className="truncate">{node.name}</span>
         )}
-        {!isRenaming && node.data && gitStatusMap.has(node.data.path) && (
-          <GitStatusBadge status={gitStatusMap.get(node.data.path)!} />
-        )}
+        {!isRenaming && gitStatus && <GitStatusBadge status={gitStatus} />}
       </div>
     );
   }

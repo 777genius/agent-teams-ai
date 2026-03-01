@@ -35,6 +35,10 @@ const MAX_DEPTH = 20;
 export class EditorFileWatcher {
   private watcher: FSWatcher | null = null;
   private projectRoot: string | null = null;
+  private pendingEvents = new Map<string, EditorFileChangeEvent['type']>();
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private onChangeCallback: ((event: EditorFileChangeEvent) => void) | null = null;
+  private readonly DEBOUNCE_MS = 150;
 
   /**
    * Start watching a project directory.
@@ -53,13 +57,17 @@ export class EditorFileWatcher {
       depth: MAX_DEPTH,
     });
 
+    this.onChangeCallback = onChange;
+
     const emitSafe = (type: EditorFileChangeEvent['type'], filePath: string): void => {
       // SEC-2: validate path is within project root before sending to renderer
       if (!isPathWithinRoot(filePath, projectRoot)) {
         log.warn('Watcher event outside project root, ignoring:', filePath);
         return;
       }
-      onChange({ type, path: filePath });
+      // Aggregate rapid events — only the last event type per path is kept
+      this.pendingEvents.set(filePath, type);
+      this.scheduleFlush();
     };
 
     this.watcher.on('change', (p) => emitSafe('change', p));
@@ -75,12 +83,35 @@ export class EditorFileWatcher {
    * Stop watching. Safe to call multiple times.
    */
   stop(): void {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
+    this.pendingEvents.clear();
+    this.onChangeCallback = null;
     if (this.watcher) {
       log.info('Stopping file watcher');
       void this.watcher.close();
       this.watcher = null;
     }
     this.projectRoot = null;
+  }
+
+  /**
+   * Flush pending events — debounced to aggregate rapid FS changes
+   * (e.g. git checkout, bulk format). Fires once after 150ms of quiet.
+   */
+  private scheduleFlush(): void {
+    if (this.flushTimer) return;
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = null;
+      const events = new Map(this.pendingEvents);
+      this.pendingEvents.clear();
+      if (!this.onChangeCallback) return;
+      for (const [filePath, type] of events) {
+        this.onChangeCallback({ type, path: filePath });
+      }
+    }, this.DEBOUNCE_MS);
   }
 
   /**

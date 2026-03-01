@@ -79,14 +79,6 @@ export class GitStatusService {
     }
 
     try {
-      // Check if it's a git repo first
-      const isRepo = await this.isGitRepo();
-      if (!isRepo) {
-        const result: GitStatusResult = { files: [], isGitRepo: false, branch: null };
-        this.setCacheResult(result);
-        return result;
-      }
-
       const statusResult = await this.git.status();
       const files = mapStatusResult(statusResult);
       const branch = statusResult.current ?? null;
@@ -96,18 +88,10 @@ export class GitStatusService {
       return result;
     } catch (error) {
       log.error('Failed to get git status:', error);
-      // Graceful degradation: return empty non-repo result
-      return { files: [], isGitRepo: false, branch: null };
-    }
-  }
-
-  private async isGitRepo(): Promise<boolean> {
-    if (!this.git) return false;
-    try {
-      await this.git.revparse(['--is-inside-work-tree']);
-      return true;
-    } catch {
-      return false;
+      // Graceful degradation: cache negative result to avoid repeated git calls
+      const result: GitStatusResult = { files: [], isGitRepo: false, branch: null };
+      this.setCacheResult(result);
+      return result;
     }
   }
 
