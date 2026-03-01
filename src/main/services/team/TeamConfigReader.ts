@@ -167,6 +167,19 @@ export class TeamConfigReader {
             }
           }
 
+          // Also read members.meta.json — UI-created teams store members there,
+          // and CLI-created teams may have additional members added via the UI.
+          try {
+            const metaMembers = await this.membersMetaStore.getMembers(teamName);
+            for (const member of metaMembers) {
+              if (!member.removedAt) {
+                addMember(member);
+              }
+            }
+          } catch {
+            // best-effort — don't fail listing if meta file is broken
+          }
+
           const members = Array.from(memberMap.values());
           const summary: TeamSummary = {
             teamName,
