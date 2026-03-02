@@ -1,3 +1,5 @@
+import { EventEmitter } from 'events';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
@@ -17,6 +19,17 @@ function allowConsoleLogs() {
   vi.spyOn(console, 'warn').mockImplementation(() => {});
 }
 
+function createFakeChild(exitCode: number): NodeJS.Process {
+  const child = new EventEmitter() as NodeJS.Process & {
+    stdout: EventEmitter;
+    stderr: EventEmitter;
+  };
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  setImmediate(() => child.emit('close', exitCode));
+  return child;
+}
+
 describe('TeamProvisioningService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -26,8 +39,13 @@ describe('TeamProvisioningService', () => {
     it('does not throw when spawnCli rejects', async () => {
       allowConsoleLogs();
       vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('C:\\path\\claude');
+      let callCount = 0;
       vi.mocked(spawnCli).mockImplementation(() => {
-        throw new Error('spawn EINVAL');
+        callCount++;
+        if (callCount === 1) {
+          throw new Error('spawn EINVAL');
+        }
+        return createFakeChild(0) as ReturnType<typeof spawnCli>;
       });
 
       const svc = new TeamProvisioningService();
