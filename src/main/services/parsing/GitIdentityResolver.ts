@@ -18,6 +18,7 @@
 import {
   AUTO_CLAUDE_DIR,
   CCSWITCH_DIR,
+  CLAUDE_CODE_DIR,
   CLAUDE_WORKTREES_DIR,
   CONDUCTOR_DIR,
   CURSOR_DIR,
@@ -242,6 +243,15 @@ class GitIdentityResolver {
       return parts[claudeWorktreesIdx + 1];
     }
 
+    // Pattern 6b: /.claude/worktrees/{name} (Claude Code CLI)
+    const claudeCodeDirIdx = parts.indexOf(CLAUDE_CODE_DIR);
+    if (claudeCodeDirIdx >= 0 && parts[claudeCodeDirIdx + 1] === WORKTREES_DIR) {
+      // Repo is the directory containing .claude
+      if (claudeCodeDirIdx > 0) {
+        return parts[claudeCodeDirIdx - 1];
+      }
+    }
+
     // Pattern 7: /.ccswitch/worktrees/{repo}/{name}
     const ccswitchIdx = parts.indexOf(CCSWITCH_DIR);
     if (ccswitchIdx >= 0 && parts[ccswitchIdx + 1] === WORKTREES_DIR) {
@@ -280,6 +290,11 @@ class GitIdentityResolver {
       return true;
     }
     if (parts.includes(CCSWITCH_DIR) && parts.includes(WORKTREES_DIR)) {
+      return true;
+    }
+    // Pattern: .claude/worktrees/{name} (Claude Code CLI worktrees)
+    const claudeCodeIdx = parts.indexOf(CLAUDE_CODE_DIR);
+    if (claudeCodeIdx >= 0 && parts[claudeCodeIdx + 1] === WORKTREES_DIR) {
       return true;
     }
     if (parts.includes(CONDUCTOR_DIR) && parts.includes(WORKSPACES_DIR)) {
@@ -569,6 +584,15 @@ class GitIdentityResolver {
       return 'ccswitch';
     }
 
+    // Pattern: claude-code (Claude Code CLI)
+    // /Users/.../.claude/worktrees/{name}
+    {
+      const claudeCodeIdx = parts.indexOf(CLAUDE_CODE_DIR);
+      if (claudeCodeIdx >= 0 && parts[claudeCodeIdx + 1] === WORKTREES_DIR) {
+        return 'claude-code';
+      }
+    }
+
     // Check if it's a standard git repo (only if filesystem exists)
     // For deleted repos, we'll return 'git' as fallback since we can't verify
     if (await fileExists(path.join(projectPath, '.git'))) {
@@ -663,6 +687,19 @@ class GitIdentityResolver {
           const worktreesIdx = parts.indexOf(WORKTREES_DIR, ccswitchWorktreesIdx);
           if (worktreesIdx >= 0 && parts[worktreesIdx + 2]) {
             return parts[worktreesIdx + 2];
+          }
+        }
+        break;
+      }
+
+      case 'claude-code': {
+        // Pattern: .claude/worktrees/{name}
+        // Display: {name} (e.g., "editor-feature")
+        const claudeCodeDirIdx = parts.indexOf(CLAUDE_CODE_DIR);
+        if (claudeCodeDirIdx >= 0) {
+          const worktreesIdx = parts.indexOf(WORKTREES_DIR, claudeCodeDirIdx);
+          if (worktreesIdx >= 0 && parts[worktreesIdx + 1]) {
+            return parts[worktreesIdx + 1];
           }
         }
         break;

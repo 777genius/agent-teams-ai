@@ -1,6 +1,7 @@
+import { computeDiffContextHash } from '@shared/utils/diffContextHash';
 import { createLogger } from '@shared/utils/logger';
 import { applyPatch, structuredPatch } from 'diff';
-import { readFile, writeFile } from 'fs/promises';
+import { readFile, unlink, writeFile } from 'fs/promises';
 import { diff3Merge } from 'node-diff3';
 
 import { HunkSnippetMatcher } from './HunkSnippetMatcher';
@@ -247,6 +248,68 @@ export class ReviewApplierService {
       const original = fileContent.originalFullContent;
       const modified = fileContent.modifiedFullContent;
 
+      const rejectedHunkIndices = Object.entries(decision.hunkDecisions)
+        .filter(([, d]) => d === 'rejected')
+        .map(([idx]) => parseInt(idx, 10));
+
+      const allHunksRejected =
+        Object.keys(decision.hunkDecisions).length > 0 &&
+        Object.values(decision.hunkDecisions).every((d) => d === 'rejected');
+      const hasWriteNewSnippet = fileContent.snippets.some((s) => s.type === 'write-new');
+
+      // Special case: rejecting an entirely new file should remove it from disk.
+      // IMPORTANT: Do NOT delete on partial reject — users may want to keep parts of the new file.
+      const shouldDeleteNewFile =
+        fileContent.isNewFile &&
+        hasWriteNewSnippet &&
+        original === '' &&
+        (decision.fileDecision === 'rejected' || allHunksRejected);
+
+      if (shouldDeleteNewFile) {
+        // If we have an expected modified baseline, guard against deleting a user-modified file.
+        if (modified !== null) {
+          const conflict = await this.checkConflict(decision.filePath, modified);
+          if (conflict.hasConflict) {
+            conflicts++;
+            errors.push({
+              filePath: decision.filePath,
+              error:
+                'File was modified since review was computed; refusing to delete new file automatically.',
+            });
+            continue;
+          }
+        } else {
+          // No baseline — safest behavior is to only treat "already missing" as success.
+          try {
+            await readFile(decision.filePath, 'utf8');
+          } catch {
+            applied++;
+            continue;
+          }
+          errors.push({
+            filePath: decision.filePath,
+            error: 'Cannot delete new file: expected modified content is unavailable.',
+          });
+          continue;
+        }
+
+        try {
+          await unlink(decision.filePath);
+          applied++;
+        } catch (err) {
+          const msg = String(err);
+          if (msg.includes('ENOENT')) {
+            applied++;
+          } else {
+            errors.push({
+              filePath: decision.filePath,
+              error: `Failed to delete new file: ${msg}`,
+            });
+          }
+        }
+        continue;
+      }
+
       if (original === null || modified === null) {
         errors.push({
           filePath: decision.filePath,
@@ -275,21 +338,27 @@ export class ReviewApplierService {
           }
         } else {
           // Partial reject — only specific hunks
-          const rejectedHunkIndices = Object.entries(decision.hunkDecisions)
-            .filter(([, d]) => d === 'rejected')
-            .map(([idx]) => parseInt(idx, 10));
-
           if (rejectedHunkIndices.length === 0) {
             skipped++;
             continue;
           }
+
+          const mappedRejected =
+            decision.hunkContextHashes && Object.keys(decision.hunkContextHashes).length > 0
+              ? mapRejectedHunkIndicesByHash(
+                  original,
+                  modified,
+                  rejectedHunkIndices,
+                  decision.hunkContextHashes
+                )
+              : rejectedHunkIndices;
 
           const result = await this.rejectHunks(
             request.teamName,
             decision.filePath,
             original,
             modified,
-            rejectedHunkIndices,
+            mappedRejected,
             fileContent.snippets
           );
 
@@ -336,7 +405,12 @@ export class ReviewApplierService {
     hunkIndices: number[],
     snippets: SnippetDiff[]
   ): RejectResult | null {
-    const validSnippets = snippets.filter((s) => !s.isError);
+    // Safety: never use full-file Write snippets for snippet-level rejection.
+    // They are not localized, and matching a single hunk to a full-file write
+    // can incorrectly delete/overwrite large parts of the file.
+    const validSnippets = snippets.filter(
+      (s) => !s.isError && s.type !== 'write-new' && s.type !== 'write-update'
+    );
     if (validSnippets.length === 0) return null;
 
     // Pass pre-filtered snippets — matcher returns indices relative to this array
@@ -346,6 +420,15 @@ export class ReviewApplierService {
       hunkIndices,
       validSnippets
     );
+
+    // Safety: if any requested hunk maps ambiguously, do NOT attempt snippet-level replacement.
+    // Fall back to hunk-level inverse patch which is positional and safer.
+    for (const hunkIdx of hunkIndices) {
+      const set = hunkToSnippets.get(hunkIdx);
+      if (set?.size !== 1) {
+        return null;
+      }
+    }
 
     // Collect all unique snippet indices to reject
     const snippetIndices = new Set<number>();
@@ -448,6 +531,55 @@ export class ReviewApplierService {
       hadConflicts: false,
     };
   }
+}
+
+function buildHunkHashIndexMap(original: string, modified: string): Map<string, number[]> {
+  const patch = structuredPatch('file', 'file', original, modified);
+  const hunks = patch.hunks ?? [];
+  const map = new Map<string, number[]>();
+  for (let i = 0; i < hunks.length; i++) {
+    const hunk = hunks[i];
+    const oldSideContent = hunk.lines
+      .filter((l) => !l.startsWith('+'))
+      .map((l) => l.slice(1))
+      .join('\n');
+    const newSideContent = hunk.lines
+      .filter((l) => !l.startsWith('-'))
+      .map((l) => l.slice(1))
+      .join('\n');
+    const hash = computeDiffContextHash(oldSideContent, newSideContent);
+    const arr = map.get(hash);
+    if (arr) arr.push(i);
+    else map.set(hash, [i]);
+  }
+  return map;
+}
+
+function mapRejectedHunkIndicesByHash(
+  original: string,
+  modified: string,
+  rejectedIndices: number[],
+  hunkContextHashes: Record<number, string>
+): number[] {
+  const hashMap = buildHunkHashIndexMap(original, modified);
+  const out = new Set<number>();
+
+  for (const idx of rejectedIndices) {
+    const hash = hunkContextHashes[idx];
+    if (!hash) {
+      out.add(idx);
+      continue;
+    }
+    const candidates = hashMap.get(hash);
+    if (candidates?.length === 1) {
+      out.add(candidates[0]);
+    } else {
+      // Ambiguous or missing — fall back to index to preserve prior behavior.
+      out.add(idx);
+    }
+  }
+
+  return [...out].sort((a, b) => a - b);
 }
 
 // ── Module-level helpers ──

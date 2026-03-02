@@ -4,20 +4,25 @@
  * Each segment is clickable — expands and scrolls the folder in the file tree.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { useStore } from '@renderer/store';
 import { ChevronRight } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
-import { getFileIcon } from './fileIcons';
+import { FileIcon } from './FileIcon';
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export const EditorBreadcrumb = (): React.ReactElement | null => {
-  const activeTabId = useStore((s) => s.editorActiveTabId);
-  const projectPath = useStore((s) => s.editorProjectPath);
+  const { activeTabId, projectPath } = useStore(
+    useShallow((s) => ({
+      activeTabId: s.editorActiveTabId,
+      projectPath: s.editorProjectPath,
+    }))
+  );
   const expandDirectory = useStore((s) => s.expandDirectory);
 
   const segments = useMemo(() => {
@@ -30,19 +35,19 @@ export const EditorBreadcrumb = (): React.ReactElement | null => {
     return relativePath.split('/');
   }, [activeTabId, projectPath]);
 
+  const handleSegmentClick = useCallback(
+    (segmentIndex: number): void => {
+      if (!projectPath) return;
+      const dirSegments = segments.slice(0, segmentIndex + 1);
+      const dirPath = `${projectPath}/${dirSegments.join('/')}`;
+      void expandDirectory(dirPath);
+    },
+    [segments, projectPath, expandDirectory]
+  );
+
   if (segments.length === 0) return null;
 
   const fileName = segments[segments.length - 1];
-  const iconInfo = getFileIcon(fileName);
-  const Icon = iconInfo.icon;
-
-  const handleSegmentClick = (segmentIndex: number): void => {
-    if (!projectPath) return;
-    // Build absolute path up to this segment (it's a directory)
-    const dirSegments = segments.slice(0, segmentIndex + 1);
-    const dirPath = `${projectPath}/${dirSegments.join('/')}`;
-    void expandDirectory(dirPath);
-  };
 
   return (
     <div className="flex items-center gap-0.5 overflow-x-auto px-3 py-1 text-xs text-text-muted">
@@ -53,7 +58,7 @@ export const EditorBreadcrumb = (): React.ReactElement | null => {
             {idx > 0 && <ChevronRight className="text-text-muted/50 size-3" />}
             {isLast ? (
               <span className="flex items-center gap-1 text-text-secondary">
-                <Icon className="size-3" style={{ color: iconInfo.color }} />
+                <FileIcon fileName={fileName} className="size-3" />
                 {segment}
               </span>
             ) : (

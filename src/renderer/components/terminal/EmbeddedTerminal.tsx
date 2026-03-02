@@ -66,7 +66,7 @@ export const EmbeddedTerminal = ({
 
     // Ctrl+C with selection → copy to clipboard (instead of sending SIGINT)
     term.attachCustomKeyEventHandler((event) => {
-      if (event.type === 'keydown' && event.key === 'c' && (event.ctrlKey || event.metaKey)) {
+      if (event.type === 'keydown' && event.code === 'KeyC' && (event.ctrlKey || event.metaKey)) {
         const selection = term.getSelection();
         if (selection) {
           void navigator.clipboard.writeText(selection);

@@ -50,14 +50,20 @@ const notifiedClarificationTaskKeys = new Set<string>();
 
 let isFirstFetchAllTasks = true;
 
-function detectClarificationNotifications(oldTasks: GlobalTask[], newTasks: GlobalTask[]): void {
+function detectClarificationNotifications(
+  oldTasks: GlobalTask[],
+  newTasks: GlobalTask[],
+  notifyEnabled: boolean
+): void {
   for (const task of newTasks) {
     const key = `${task.teamName}:${task.id}`;
     if (task.needsClarification === 'user') {
       const oldTask = oldTasks.find((t) => t.teamName === task.teamName && t.id === task.id);
       if (oldTask?.needsClarification !== 'user' && !notifiedClarificationTaskKeys.has(key)) {
         notifiedClarificationTaskKeys.add(key);
-        fireClarificationNotification(task);
+        if (notifyEnabled) {
+          fireClarificationNotification(task);
+        }
       }
     } else {
       notifiedClarificationTaskKeys.delete(key);
@@ -168,6 +174,18 @@ export interface TeamSlice {
     teamName: string,
     memberName: string,
     role: string | undefined
+  ) => Promise<void>;
+  addTaskRelationship: (
+    teamName: string,
+    taskId: string,
+    targetId: string,
+    type: 'blockedBy' | 'blocks' | 'related'
+  ) => Promise<void>;
+  removeTaskRelationship: (
+    teamName: string,
+    taskId: string,
+    targetId: string,
+    type: 'blockedBy' | 'blocks' | 'related'
   ) => Promise<void>;
   setTaskNeedsClarification: (
     teamName: string,
@@ -283,7 +301,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       const tasks = await unwrapIpc('team:getAllTasks', () => api.teams.getAllTasks());
 
       if (!wasFirst) {
-        detectClarificationNotifications(oldTasks, tasks);
+        const notifyOnClarifications =
+          get().appConfig?.notifications?.notifyOnClarifications ?? true;
+        detectClarificationNotifications(oldTasks, tasks, notifyOnClarifications);
       } else {
         // Initial load — seed the Set to prevent false notifications on next update
         for (const task of tasks) {
@@ -600,6 +620,20 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   ) => {
     await unwrapIpc('team:updateTaskFields', () =>
       api.teams.updateTaskFields(teamName, taskId, fields)
+    );
+    await get().refreshTeamData(teamName);
+  },
+
+  addTaskRelationship: async (teamName, taskId, targetId, type) => {
+    await unwrapIpc('team:addTaskRelationship', () =>
+      api.teams.addTaskRelationship(teamName, taskId, targetId, type)
+    );
+    await get().refreshTeamData(teamName);
+  },
+
+  removeTaskRelationship: async (teamName, taskId, targetId, type) => {
+    await unwrapIpc('team:removeTaskRelationship', () =>
+      api.teams.removeTaskRelationship(teamName, taskId, targetId, type)
     );
     await get().refreshTeamData(teamName);
   },

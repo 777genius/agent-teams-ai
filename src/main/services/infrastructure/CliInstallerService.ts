@@ -58,13 +58,22 @@ const MAX_REDIRECTS = 5;
 const HTTP_CONNECT_TIMEOUT_MS = 15_000;
 
 /** Overall timeout for getStatus() to prevent UI hanging indefinitely (ms) */
-const GET_STATUS_TIMEOUT_MS = 25_000;
+const GET_STATUS_TIMEOUT_MS = 30_000;
+
+/** Overall timeout for the auth status check (covers both attempts + retry delay) (ms) */
+const AUTH_TOTAL_TIMEOUT_MS = 15_000;
 
 /** Max retries for EBUSY (antivirus scanning the new binary) */
 const EBUSY_MAX_RETRIES = 3;
 
 /** Delay between EBUSY retries (multiplied by attempt number) */
 const EBUSY_RETRY_DELAY_MS = 2000;
+
+/** Max retries for auth status check (covers stale locks after Ctrl+C) */
+const AUTH_STATUS_MAX_RETRIES = 2;
+
+/** Delay before retrying auth status check (ms) — gives previous process time to clean up */
+const AUTH_STATUS_RETRY_DELAY_MS = 1500;
 
 /**
  * Build env for child processes with correct HOME.
@@ -263,6 +272,8 @@ export class CliInstallerService {
    * Gathers CLI status information, mutating the provided result object.
    * Split from getStatus() to enable overall timeout via Promise.race —
    * on timeout, getStatus() returns whatever fields were populated so far.
+   *
+   * Flow: binary resolve → --version (sequential) → Promise.all([auth, GCS]) (parallel)
    */
   private async gatherStatus(ref: { current: CliInstallationStatus }): Promise<void> {
     const r = ref.current;
@@ -284,31 +295,84 @@ export class CliInstallerService {
         logger.warn('Failed to get CLI version:', getErrorMessage(err));
       }
 
-      // Check auth status
-      try {
-        const { stdout: authStdout } = await execCli(binaryPath, ['auth', 'status'], {
-          timeout: VERSION_TIMEOUT_MS,
-          env: buildChildEnv(),
-        });
-        const auth = JSON.parse(authStdout.trim()) as { loggedIn?: boolean; authMethod?: string };
-        r.authLoggedIn = auth.loggedIn === true;
-        r.authMethod = auth.authMethod ?? null;
-        logger.info(`Auth status: loggedIn=${r.authLoggedIn}, method=${r.authMethod ?? 'null'}`);
-      } catch (err) {
-        logger.warn('Failed to check auth status:', getErrorMessage(err));
-        r.authLoggedIn = false;
-      }
+      // Auth and GCS version check are independent — run in parallel.
+      // Both mutate `r` directly so partial results survive the outer timeout.
+      await Promise.all([this.checkAuthStatus(binaryPath, r), this.fetchLatestVersion(r)]);
+    } else {
+      // No binary — still check latest version for "install" prompt
+      await this.fetchLatestVersion(r);
     }
+  }
 
+  /**
+   * Check auth status with retry — covers stale lock files after Ctrl+C interruption.
+   * Wrapped in its own timeout to prevent slow auth from blocking the overall status.
+   * Mutates `r` directly so results survive even if the outer Promise.all hasn't resolved.
+   */
+
+  private async checkAuthStatus(binaryPath: string, result: CliInstallationStatus): Promise<void> {
+    const doCheck = async (): Promise<void> => {
+      for (let authAttempt = 1; authAttempt <= AUTH_STATUS_MAX_RETRIES; authAttempt++) {
+        try {
+          const { stdout: authStdout } = await execCli(binaryPath, ['auth', 'status'], {
+            timeout: VERSION_TIMEOUT_MS,
+            env: buildChildEnv(),
+          });
+          const auth = JSON.parse(authStdout.trim()) as {
+            loggedIn?: boolean;
+            authMethod?: string;
+          };
+          result.authLoggedIn = auth.loggedIn === true; // eslint-disable-line no-param-reassign -- intentional mutation of shared result object
+          result.authMethod = auth.authMethod ?? null; // eslint-disable-line no-param-reassign -- intentional mutation of shared result object
+          logger.info(
+            `Auth status: loggedIn=${result.authLoggedIn}, method=${result.authMethod ?? 'null'}` +
+              (authAttempt > 1 ? ` (attempt ${authAttempt})` : '')
+          );
+          return;
+        } catch (err) {
+          if (authAttempt < AUTH_STATUS_MAX_RETRIES) {
+            logger.warn(
+              `Auth status check failed (attempt ${authAttempt}/${AUTH_STATUS_MAX_RETRIES}), ` +
+                `retrying in ${AUTH_STATUS_RETRY_DELAY_MS}ms: ${getErrorMessage(err)}`
+            );
+            await new Promise((resolve) => setTimeout(resolve, AUTH_STATUS_RETRY_DELAY_MS));
+          } else {
+            logger.warn(
+              `Auth status check failed after ${AUTH_STATUS_MAX_RETRIES} attempts: ${getErrorMessage(err)}`
+            );
+            result.authLoggedIn = false; // eslint-disable-line no-param-reassign -- intentional mutation of shared result object
+          }
+        }
+      }
+    };
+
+    // Own timeout so slow auth doesn't eat the overall getStatus budget
+    await Promise.race([
+      doCheck(),
+      new Promise<void>((resolve) =>
+        setTimeout(() => {
+          logger.warn(`Auth status check timed out after ${AUTH_TOTAL_TIMEOUT_MS}ms`);
+          resolve();
+        }, AUTH_TOTAL_TIMEOUT_MS)
+      ),
+    ]);
+  }
+
+  /**
+   * Fetch latest CLI version from GCS and update the result object.
+   */
+  private async fetchLatestVersion(result: CliInstallationStatus): Promise<void> {
     try {
       const latestRaw = await fetchText(`${GCS_BASE}/latest`);
-      r.latestVersion = normalizeVersion(latestRaw);
-      logger.info(`Latest CLI version: "${latestRaw.trim()}" → normalized: "${r.latestVersion}"`);
+      result.latestVersion = normalizeVersion(latestRaw); // eslint-disable-line no-param-reassign -- intentional mutation of shared result object
+      logger.info(
+        `Latest CLI version: "${latestRaw.trim()}" → normalized: "${result.latestVersion}"`
+      );
 
-      if (r.installedVersion && r.latestVersion) {
-        r.updateAvailable = isVersionOlder(r.installedVersion, r.latestVersion);
+      if (result.installedVersion && result.latestVersion) {
+        result.updateAvailable = isVersionOlder(result.installedVersion, result.latestVersion); // eslint-disable-line no-param-reassign -- intentional mutation of shared result object
         logger.info(
-          `Update available: ${r.updateAvailable} (${r.installedVersion} → ${r.latestVersion})`
+          `Update available: ${result.updateAvailable} (${result.installedVersion} → ${result.latestVersion})`
         );
       }
     } catch (err) {

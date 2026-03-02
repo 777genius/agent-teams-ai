@@ -63,7 +63,7 @@ import type {
   WslClaudeRootCandidate,
 } from '@shared/types';
 import type { AgentConfig } from '@shared/types/api';
-import type { EditorAPI } from '@shared/types/editor';
+import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
 import type { TerminalAPI } from '@shared/types/terminal';
 
 export class HttpAPIClient implements ElectronAPI {
@@ -481,6 +481,10 @@ export class HttpAPIClient implements ElectronAPI {
       this.post('/api/config/hide-sessions', { projectId, sessionIds }),
     unhideSessions: (projectId: string, sessionIds: string[]): Promise<void> =>
       this.post('/api/config/unhide-sessions', { projectId, sessionIds }),
+    addCustomProjectPath: (projectPath: string): Promise<void> =>
+      this.post('/api/config/add-custom-project-path', { projectPath }),
+    removeCustomProjectPath: (projectPath: string): Promise<void> =>
+      this.post('/api/config/remove-custom-project-path', { projectPath }),
   };
 
   // ---------------------------------------------------------------------------
@@ -808,6 +812,22 @@ export class HttpAPIClient implements ElectronAPI {
     showMessageNotification: async (): Promise<void> => {
       // Not available via HTTP client — native notifications require Electron
     },
+    addTaskRelationship: async (
+      _teamName: string,
+      _taskId: string,
+      _targetId: string,
+      _type: 'blockedBy' | 'blocks' | 'related'
+    ): Promise<void> => {
+      throw new Error('Task relationships are not available in browser mode');
+    },
+    removeTaskRelationship: async (
+      _teamName: string,
+      _taskId: string,
+      _targetId: string,
+      _type: 'blockedBy' | 'blocks' | 'related'
+    ): Promise<void> => {
+      throw new Error('Task relationships are not available in browser mode');
+    },
     onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {
       return this.addEventListener('team-change', (data: unknown) =>
         callback(null, data as TeamChangeEvent)
@@ -863,7 +883,13 @@ export class HttpAPIClient implements ElectronAPI {
     loadDecisions: async (): Promise<never> => {
       throw new Error('Review is not available in browser mode');
     },
-    saveDecisions: async (): Promise<never> => {
+    saveDecisions: async (
+      _teamName: string,
+      _scopeKey: string,
+      _hunkDecisions: Record<string, unknown>,
+      _fileDecisions: Record<string, unknown>,
+      _hunkContextHashesByFile?: Record<string, Record<number, string>>
+    ): Promise<never> => {
       throw new Error('Review is not available in browser mode');
     },
     clearDecisions: async (): Promise<never> => {
@@ -913,6 +939,16 @@ export class HttpAPIClient implements ElectronAPI {
   };
 
   // ---------------------------------------------------------------------------
+  // Project (not available in browser mode)
+  // ---------------------------------------------------------------------------
+
+  project: ProjectAPI = {
+    listFiles: async () => {
+      throw new Error('Project API not available in browser mode');
+    },
+  };
+
+  // ---------------------------------------------------------------------------
   // Editor (not available in browser mode)
   // ---------------------------------------------------------------------------
 
@@ -944,16 +980,28 @@ export class HttpAPIClient implements ElectronAPI {
     moveFile: async () => {
       throw new Error('Editor not available in browser mode');
     },
+    renameFile: async () => {
+      throw new Error('Editor not available in browser mode');
+    },
     searchInFiles: async () => {
       throw new Error('Editor not available in browser mode');
     },
     listFiles: async () => {
       throw new Error('Editor not available in browser mode');
     },
+    readBinaryPreview: async () => {
+      throw new Error('Editor not available in browser mode');
+    },
     gitStatus: async () => {
       throw new Error('Editor not available in browser mode');
     },
     watchDir: async () => {
+      throw new Error('Editor not available in browser mode');
+    },
+    setWatchedFiles: async () => {
+      throw new Error('Editor not available in browser mode');
+    },
+    setWatchedDirs: async () => {
       throw new Error('Editor not available in browser mode');
     },
     onEditorChange: () => {

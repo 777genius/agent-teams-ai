@@ -7,8 +7,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useAttachments } from '@renderer/hooks/useAttachments';
+import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { cn } from '@renderer/lib/utils';
+import { useStore } from '@renderer/store';
+import { serializeChipsWithText } from '@renderer/types/inlineChip';
+import { removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { getModifierKeyName } from '@renderer/utils/keyboardUtils';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
@@ -50,7 +54,9 @@ export const MessageComposer = ({
   const dragCounterRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
   const draft = useDraftPersistence({ key: `compose:${teamName}` });
+  const chipDraft = useChipDraftPersistence(`compose:${teamName}:chips`);
   const {
     attachments,
     error: attachmentError,
@@ -88,11 +94,23 @@ export const MessageComposer = ({
   // Track whether we initiated a send — clear draft only on confirmed success
   const pendingSendRef = useRef(false);
 
+  const handleChipRemove = useCallback(
+    (chipId: string) => {
+      const chip = chipDraft.chips.find((c) => c.id === chipId);
+      if (chip) {
+        draft.setValue(removeChipTokenFromText(draft.value, chip));
+      }
+      chipDraft.setChips(chipDraft.chips.filter((c) => c.id !== chipId));
+    },
+    [chipDraft, draft]
+  );
+
   const handleSend = useCallback(() => {
     if (!canSend) return;
     pendingSendRef.current = true;
-    onSend(recipient, trimmed, trimmed, attachments.length > 0 ? attachments : undefined);
-  }, [canSend, recipient, trimmed, onSend, attachments]);
+    const serialized = serializeChipsWithText(trimmed, chipDraft.chips);
+    onSend(recipient, serialized, serialized, attachments.length > 0 ? attachments : undefined);
+  }, [canSend, recipient, trimmed, onSend, attachments, chipDraft.chips]);
 
   // Clear draft only after send completes successfully (sending: true → false, no error)
   useEffect(() => {
@@ -100,10 +118,12 @@ export const MessageComposer = ({
       pendingSendRef.current = false;
       if (!sendError) {
         draft.clearDraft();
+        chipDraft.clearChipDraft();
         clearAttachments();
       }
     }
-  }, [sending, sendError, draft, clearAttachments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- clearChipDraft is stable (useCallback with [])
+  }, [sending, sendError, draft, clearAttachments, chipDraft.clearChipDraft]);
 
   const handleKeyDownCapture = useCallback(
     (e: React.KeyboardEvent) => {
@@ -304,6 +324,10 @@ export const MessageComposer = ({
         value={draft.value}
         onValueChange={draft.setValue}
         suggestions={mentionSuggestions}
+        chips={chipDraft.chips}
+        onChipRemove={handleChipRemove}
+        projectPath={projectPath}
+        onFileChipInsert={(chip) => chipDraft.setChips([...chipDraft.chips, chip])}
         minRows={2}
         maxRows={6}
         maxLength={MAX_MESSAGE_LENGTH}

@@ -262,8 +262,8 @@ describe('CliInstallerService', () => {
 
       const statusPromise = service.getStatus();
 
-      // Advance past GET_STATUS_TIMEOUT_MS (25s)
-      await vi.advanceTimersByTimeAsync(26_000);
+      // Advance past GET_STATUS_TIMEOUT_MS (30s)
+      await vi.advanceTimersByTimeAsync(31_000);
 
       const status = await statusPromise;
 
@@ -292,6 +292,115 @@ describe('CliInstallerService', () => {
       expect(status.installedVersion).toBe('2.5.0');
       expect(status.authLoggedIn).toBe(true);
       expect(status.authMethod).toBe('api_key');
+    });
+  });
+
+  describe('auth parallelism', () => {
+    let httpsGet: ReturnType<typeof vi.fn>;
+
+    beforeEach(async () => {
+      // Reset execCli mock queue (clearAllMocks doesn't clear mockResolvedValueOnce queue)
+      vi.mocked(execCli).mockReset();
+      vi.mocked(execCli).mockRejectedValue(new Error('execCli not configured'));
+
+      // Get reference to the mocked https.get for per-test control
+      const httpsModule = await import('https');
+      httpsGet = vi.mocked(httpsModule.default.get);
+    });
+
+    afterEach(() => {
+      // Reset https.get so it doesn't leak into subsequent test groups
+      httpsGet.mockReset();
+      vi.useRealTimers();
+    });
+
+    it('auth is not blocked by slow GCS fetch', async () => {
+      allowConsoleLogs();
+      vi.useFakeTimers();
+
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
+
+      // --version resolves immediately, auth resolves immediately
+      vi.mocked(execCli)
+        .mockResolvedValueOnce({ stdout: '2.5.0 (Claude Code)', stderr: '' })
+        .mockResolvedValueOnce({
+          stdout: '{"loggedIn":true,"authMethod":"api_key"}',
+          stderr: '',
+        });
+
+      // GCS never responds — simulates slow/hanging network.
+      // Returns proper req-like object so httpsGetFollowRedirects doesn't crash,
+      // but never fires the response callback.
+      httpsGet.mockImplementation(() => ({
+        setTimeout: vi.fn(),
+        on: vi.fn(),
+        destroy: vi.fn(),
+      }));
+
+      const statusPromise = service.getStatus();
+
+      // Advance past GET_STATUS_TIMEOUT_MS (30s) — GCS still hanging,
+      // but auth already wrote its result to `r` directly
+      await vi.advanceTimersByTimeAsync(31_000);
+
+      const status = await statusPromise;
+
+      // Auth succeeded even though GCS is hanging
+      expect(status.authLoggedIn).toBe(true);
+      expect(status.authMethod).toBe('api_key');
+      expect(status.installed).toBe(true);
+      expect(status.installedVersion).toBe('2.5.0');
+    });
+
+    it('auth retry works when first attempt fails', async () => {
+      allowConsoleLogs();
+      vi.useFakeTimers();
+
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
+
+      // --version ok, auth attempt 1 fails, auth attempt 2 succeeds
+      vi.mocked(execCli)
+        .mockResolvedValueOnce({ stdout: '2.5.0', stderr: '' })
+        .mockRejectedValueOnce(new Error('ENOENT stale lock'))
+        .mockResolvedValueOnce({
+          stdout: '{"loggedIn":true,"authMethod":"oauth"}',
+          stderr: '',
+        });
+
+      const statusPromise = service.getStatus();
+
+      // Advance past retry delay (1.5s) + auth timeout + outer timeout
+      await vi.advanceTimersByTimeAsync(31_000);
+
+      const status = await statusPromise;
+
+      expect(status.authLoggedIn).toBe(true);
+      expect(status.authMethod).toBe('oauth');
+    });
+
+    it('auth times out independently when both attempts hang', async () => {
+      allowConsoleLogs();
+      vi.useFakeTimers();
+
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
+
+      // --version ok, auth hangs forever (never resolves)
+      vi.mocked(execCli)
+        .mockResolvedValueOnce({ stdout: '2.5.0', stderr: '' })
+        .mockReturnValue(new Promise(() => {}));
+
+      const statusPromise = service.getStatus();
+
+      // Advance past AUTH_TOTAL_TIMEOUT_MS (15s) and GET_STATUS_TIMEOUT_MS (30s)
+      await vi.advanceTimersByTimeAsync(31_000);
+
+      const status = await statusPromise;
+
+      // Auth timed out independently → stays false
+      expect(status.authLoggedIn).toBe(false);
+      expect(status.authMethod).toBeNull();
+      // Version was populated before auth started
+      expect(status.installedVersion).toBe('2.5.0');
     });
   });
 

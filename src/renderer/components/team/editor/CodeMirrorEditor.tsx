@@ -9,8 +9,14 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { defaultKeymap, history, historyKeymap, redo, undo } from '@codemirror/commands';
-import { bracketMatching, indentOnInput, syntaxHighlighting } from '@codemirror/language';
-import { search, searchKeymap } from '@codemirror/search';
+import {
+  bracketMatching,
+  foldGutter,
+  foldKeymap,
+  indentOnInput,
+  syntaxHighlighting,
+} from '@codemirror/language';
+import { gotoLine, search, searchKeymap } from '@codemirror/search';
 import { Compartment, EditorState } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import {
@@ -20,11 +26,16 @@ import {
   keymap,
   lineNumbers,
 } from '@codemirror/view';
+import {
+  createSearchPanel,
+  editorSearchPanelTheme,
+} from '@renderer/components/team/editor/EditorSearchPanel';
 import { useStore } from '@renderer/store';
 import {
   getAsyncLanguageDesc,
   getSyncLanguageExtension,
 } from '@renderer/utils/codemirrorLanguages';
+import { buildSelectionInfo, SELECTION_DEBOUNCE_MS } from '@renderer/utils/codemirrorSelectionInfo';
 import { baseEditorTheme } from '@renderer/utils/codemirrorTheme';
 import { editorBridge } from '@renderer/utils/editorBridge';
 
@@ -40,9 +51,6 @@ const DIRTY_DEBOUNCE_MS = 300;
 const AUTOSAVE_DELAY_MS = 30_000;
 const MAX_DRAFT_SIZE = 500 * 1024; // 500KB
 const MAX_DRAFTS = 10;
-const SELECTION_DEBOUNCE_MS = 150;
-const MAX_SELECTION_TEXT = 5000;
-
 /** Compartment for dynamic line wrap toggling */
 const lineWrapCompartment = new Compartment();
 
@@ -65,35 +73,8 @@ interface CodeMirrorEditorProps {
   onDraftRecovered?: (filePath: string) => void;
   /** Called when text selection changes (for floating action menu) */
   onSelectionChange?: (info: EditorSelectionInfo | null) => void;
-}
-
-// =============================================================================
-// Selection info helper
-// =============================================================================
-
-function buildSelectionInfo(
-  view: EditorView,
-  sel: { from: number; to: number }
-): EditorSelectionInfo | null {
-  const coords = view.coordsAtPos(sel.to);
-  if (!coords) return null; // selection end is off-screen
-
-  let text = view.state.sliceDoc(sel.from, sel.to);
-  if (text.length > MAX_SELECTION_TEXT) {
-    text = text.slice(0, MAX_SELECTION_TEXT) + '…';
-  }
-
-  return {
-    text,
-    filePath: '', // filled by parent (CodeMirrorEditor has no file context in buildEditableExtensions)
-    fromLine: view.state.doc.lineAt(sel.from).number,
-    toLine: view.state.doc.lineAt(sel.to).number,
-    screenRect: {
-      top: coords.top,
-      right: coords.right ?? coords.left,
-      bottom: coords.bottom,
-    },
-  };
+  /** Called with the current document text on changes (debounced, for live preview) */
+  onDocChange?: (content: string) => void;
 }
 
 // =============================================================================
@@ -122,12 +103,14 @@ function buildEditableExtensions(
     highlightActiveLineGutter(),
     bracketMatching(),
     indentOnInput(),
+    foldGutter(),
 
     // History
     history(),
 
-    // Search (Cmd+F)
-    search(),
+    // Search (Cmd+F) — custom panel with UI Kit
+    search({ createPanel: createSearchPanel }),
+    editorSearchPanelTheme,
 
     // Save keymap (Cmd+S / Ctrl+S)
     keymap.of([
@@ -150,7 +133,13 @@ function buildEditableExtensions(
     ]),
 
     // Keymaps
-    keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
+    // Filter out built-in gotoLine (Alt-g) — replaced by custom GoToLineDialog
+    keymap.of([
+      ...defaultKeymap,
+      ...historyKeymap,
+      ...searchKeymap.filter((k) => k.run !== gotoLine),
+      ...foldKeymap,
+    ]),
 
     // Update listener for dirty flag + cursor position + selection
     EditorView.updateListener.of((update) => {
@@ -241,6 +230,8 @@ function enforceDraftLimit(): void {
 // Component
 // =============================================================================
 
+const DOC_CHANGE_DEBOUNCE_MS = 150;
+
 export const CodeMirrorEditor = ({
   filePath,
   content,
@@ -249,6 +240,7 @@ export const CodeMirrorEditor = ({
   onCursorChange,
   onDraftRecovered,
   onSelectionChange,
+  onDocChange,
 }: CodeMirrorEditorProps): React.ReactElement => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -262,6 +254,8 @@ export const CodeMirrorEditor = ({
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Selection debounce
   const selectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Doc change debounce (live preview)
+  const docChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const markFileModified = useStore((s) => s.markFileModified);
   const discardChanges = useStore((s) => s.discardChanges);
@@ -280,6 +274,9 @@ export const CodeMirrorEditor = ({
 
   const onSelectionChangeRef = useRef(onSelectionChange);
   onSelectionChangeRef.current = onSelectionChange;
+
+  const onDocChangeRef = useRef(onDocChange);
+  onDocChangeRef.current = onDocChange;
 
   const lineWrapRef = useRef(lineWrap);
   lineWrapRef.current = lineWrap;
@@ -303,6 +300,13 @@ export const CodeMirrorEditor = ({
         saveDraft(filePathRef.current, view.state.doc.toString());
       }
     }, AUTOSAVE_DELAY_MS);
+
+    // Live content callback for markdown preview
+    if (docChangeTimerRef.current) clearTimeout(docChangeTimerRef.current);
+    docChangeTimerRef.current = setTimeout(() => {
+      const view = viewRef.current;
+      if (view) onDocChangeRef.current?.(view.state.doc.toString());
+    }, DOC_CHANGE_DEBOUNCE_MS);
   }, [markFileModified]);
 
   const handleCursorMove = useCallback((line: number, col: number) => {
@@ -442,6 +446,7 @@ export const CodeMirrorEditor = ({
     const dirtyTimer = dirtyTimerRef;
     const autosaveTimer = autosaveTimerRef;
     const selectionTimer = selectionTimerRef;
+    const docChangeTimer = docChangeTimerRef;
 
     return () => {
       // Save scroll position before destroying
@@ -454,6 +459,7 @@ export const CodeMirrorEditor = ({
       if (dirtyTimer.current) clearTimeout(dirtyTimer.current);
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
       if (selectionTimer.current) clearTimeout(selectionTimer.current);
+      if (docChangeTimer.current) clearTimeout(docChangeTimer.current);
 
       view.destroy();
       viewRef.current = null;
@@ -496,5 +502,5 @@ export const CodeMirrorEditor = ({
     };
   }, []);
 
-  return <div ref={containerRef} className="size-full overflow-auto" />;
+  return <div ref={containerRef} className="size-full overflow-hidden" />;
 };

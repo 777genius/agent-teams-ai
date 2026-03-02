@@ -16,6 +16,7 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import { createChipFromSelection } from '@renderer/utils/chipUtils';
 import { formatProjectPath } from '@renderer/utils/pathDisplay';
 import { buildTaskCountsByOwner } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
@@ -26,6 +27,7 @@ import {
   AlertTriangle,
   Bell,
   CheckCheck,
+  Code,
   Columns3,
   FolderOpen,
   GitBranch,
@@ -74,6 +76,7 @@ import { TeamSessionsSection } from './TeamSessionsSection';
 import type { KanbanFilterState } from './kanban/KanbanFilterPopover';
 import type { MessagesFilterState } from './messages/MessagesFilterPopover';
 import type { Session } from '@renderer/types/data';
+import type { InlineChip } from '@renderer/types/inlineChip';
 import type { InboxMessage, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 import type { EditorSelectionAction } from '@shared/types/editor';
 
@@ -89,6 +92,7 @@ interface CreateTaskDialogState {
   defaultDescription: string;
   defaultOwner: string;
   defaultStartImmediately?: boolean;
+  defaultChip?: InlineChip;
 }
 
 interface TimeWindow {
@@ -148,6 +152,9 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   const [trashOpen, setTrashOpen] = useState(false);
   const [sendDialogRecipient, setSendDialogRecipient] = useState<string | undefined>(undefined);
   const [sendDialogDefaultText, setSendDialogDefaultText] = useState<string | undefined>(undefined);
+  const [sendDialogDefaultChip, setSendDialogDefaultChip] = useState<InlineChip | undefined>(
+    undefined
+  );
   const [replyQuote, setReplyQuote] = useState<{ from: string; text: string } | undefined>(
     undefined
   );
@@ -258,6 +265,14 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     to: new Set(),
   });
   const [messagesFilterOpen, setMessagesFilterOpen] = useState(false);
+
+  // Open editor overlay when a file reveal is requested (e.g. from chip click)
+  const pendingRevealFile = useStore((s) => s.editorPendingRevealFile);
+  useEffect(() => {
+    if (pendingRevealFile && data?.config.projectPath) {
+      setEditorOpen(true);
+    }
+  }, [pendingRevealFile, data?.config.projectPath]);
 
   useEffect(() => {
     if (!teamName) {
@@ -526,13 +541,26 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
 
   const handleEditorAction = useCallback(
     (action: EditorSelectionAction) => {
+      const chip = createChipFromSelection(action, []) ?? undefined;
       if (action.type === 'sendMessage') {
-        setSendDialogDefaultText(action.formattedContext);
+        setSendDialogDefaultText(chip ? undefined : action.formattedContext);
+        setSendDialogDefaultChip(chip);
         setSendDialogRecipient(undefined);
         setReplyQuote(undefined);
         setSendDialogOpen(true);
       } else if (action.type === 'createTask') {
-        openCreateTaskDialog('', action.formattedContext);
+        if (chip) {
+          setCreateTaskDialog({
+            open: true,
+            defaultSubject: '',
+            defaultDescription: '',
+            defaultOwner: '',
+            defaultStartImmediately: undefined,
+            defaultChip: chip,
+          });
+        } else {
+          openCreateTaskDialog('', action.formattedContext);
+        }
       }
     },
 
@@ -805,13 +833,17 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                   <span className="max-w-60 truncate font-mono">
                     {formatProjectPath(data.config.projectPath)}
                   </span>
-                  <button
-                    onClick={() => setEditorOpen(true)}
-                    className="ml-1 rounded px-1 py-0.5 text-[10px] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text-secondary)]"
-                    title="Open in Editor"
-                  >
-                    <Pencil size={10} />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setEditorOpen(true)}
+                        className="ml-1 flex items-center gap-0.5 rounded border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-border-emphasis)] hover:text-[var(--color-text)]"
+                      >
+                        <Code size={10} className="shrink-0" /> Edit code
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Open project in built-in editor</TooltipContent>
+                  </Tooltip>
                 </span>
               )}
               {leadBranch && (
@@ -921,6 +953,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             onSendMessage={(member) => {
               setSendDialogRecipient(member.name);
               setSendDialogDefaultText(undefined);
+              setSendDialogDefaultChip(undefined);
               setReplyQuote(undefined);
               setSendDialogOpen(true);
             }}
@@ -1238,6 +1271,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             onReplyToMessage={(message) => {
               setSendDialogRecipient(message.from);
               setSendDialogDefaultText(undefined);
+              setSendDialogDefaultChip(undefined);
               setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
               setSendDialogOpen(true);
             }}
@@ -1288,6 +1322,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             setSelectedMember(null);
             setSendDialogRecipient(name || undefined);
             setSendDialogDefaultText(undefined);
+            setSendDialogDefaultChip(undefined);
             setReplyQuote(undefined);
             setSendDialogOpen(true);
           }}
@@ -1342,6 +1377,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           defaultDescription={createTaskDialog.defaultDescription}
           defaultOwner={createTaskDialog.defaultOwner}
           defaultStartImmediately={createTaskDialog.defaultStartImmediately}
+          defaultChip={createTaskDialog.defaultChip}
           onClose={closeCreateTaskDialog}
           onSubmit={handleCreateTask}
           submitting={creatingTask}
@@ -1450,6 +1486,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           members={activeMembers}
           defaultRecipient={sendDialogRecipient}
           defaultText={sendDialogDefaultText}
+          defaultChip={sendDialogDefaultChip}
           quotedMessage={replyQuote}
           sending={sendingMessage}
           sendError={sendMessageError}
@@ -1474,6 +1511,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             setSendDialogOpen(false);
             setReplyQuote(undefined);
             setSendDialogDefaultText(undefined);
+            setSendDialogDefaultChip(undefined);
           }}
         />
 
@@ -1524,6 +1562,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           memberName={reviewDialogState.memberName}
           taskId={reviewDialogState.taskId}
           initialFilePath={reviewDialogState.initialFilePath}
+          projectPath={data.config.projectPath}
+          onEditorAction={handleEditorAction}
         />
       </div>
 

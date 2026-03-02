@@ -190,12 +190,43 @@ export interface EditorAPI {
   createDir: (parentDir: string, dirName: string) => Promise<CreateDirResponse>;
   deleteFile: (filePath: string) => Promise<DeleteFileResponse>;
   moveFile: (sourcePath: string, destDir: string) => Promise<MoveFileResponse>;
+  renameFile: (sourcePath: string, newName: string) => Promise<MoveFileResponse>;
   searchInFiles: (options: SearchInFilesOptions) => Promise<SearchInFilesResult>;
   listFiles: () => Promise<QuickOpenFile[]>;
+  readBinaryPreview: (filePath: string) => Promise<BinaryPreviewResult>;
   gitStatus: () => Promise<GitStatusResult>;
   watchDir: (enable: boolean) => Promise<void>;
+  /**
+   * Provide the list of currently-open file paths (tabs) to watch.
+   * Intended as a performance optimization: avoids watching the whole project tree.
+   */
+  setWatchedFiles: (filePaths: string[]) => Promise<void>;
+  /**
+   * Provide the list of directories to watch shallowly (depth=0).
+   * Intended to keep the explorer tree in sync with external changes without
+   * recursively watching the whole project.
+   */
+  setWatchedDirs: (dirPaths: string[]) => Promise<void>;
   /** Subscribe to file change events (main → renderer). Returns cleanup function. */
   onEditorChange: (callback: (event: EditorFileChangeEvent) => void) => () => void;
+}
+
+/** Editor-independent project file operations (e.g. @file mentions). */
+export interface ProjectAPI {
+  listFiles: (projectPath: string) => Promise<QuickOpenFile[]>;
+}
+
+// =============================================================================
+// Binary Preview
+// =============================================================================
+
+export interface BinaryPreviewResult {
+  /** Base64-encoded file content */
+  base64: string;
+  /** MIME type (e.g. 'image/png') */
+  mimeType: string;
+  /** File size in bytes */
+  size: number;
 }
 
 // =============================================================================
@@ -214,9 +245,13 @@ export interface EditorSelectionInfo {
 export interface EditorSelectionAction {
   type: 'sendMessage' | 'createTask';
   filePath: string;
-  fromLine: number;
-  toLine: number;
+  /** 1-based start line, or null for file-level mentions (no code selection) */
+  fromLine: number | null;
+  /** 1-based end line, or null for file-level mentions (no code selection) */
+  toLine: number | null;
   selectedText: string;
-  /** Pre-formatted context block (markdown code fence) */
+  /** Pre-formatted context block (markdown code fence or file reference) */
   formattedContext: string;
+  /** Relative display path for file-level mentions */
+  displayPath?: string;
 }

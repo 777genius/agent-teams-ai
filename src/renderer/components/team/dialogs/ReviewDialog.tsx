@@ -12,6 +12,7 @@ import {
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { useStore } from '@renderer/store';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 
@@ -35,6 +36,7 @@ export const ReviewDialog = ({
   onCancel,
   onSubmit,
 }: ReviewDialogProps): React.JSX.Element => {
+  const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
   const draft = useDraftPersistence({
     key: `requestChanges:${teamName}:${taskId ?? ''}`,
     enabled: Boolean(teamName && taskId),
@@ -88,7 +90,7 @@ export const ReviewDialog = ({
             onValueChange={draft.setValue}
             placeholder="Describe what needs to change..."
             suggestions={mentionSuggestions}
-            hintText="Use @ to mention team members"
+            projectPath={projectPath}
             footerRight={
               draft.isSaved ? (
                 <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { UnreadCommentsBadge } from '@renderer/components/team/UnreadCommentsBadge';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useUnreadCommentCount } from '@renderer/hooks/useUnreadCommentCount';
 import { useStore } from '@renderer/store';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
@@ -73,6 +74,41 @@ const DependencyBadge = ({
     >
       #{taskId}
     </button>
+  );
+};
+
+const TruncatedTitle = ({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string;
+}): React.JSX.Element => {
+  const ref = useRef<HTMLHeadingElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  const checkTruncation = useCallback(() => {
+    const el = ref.current;
+    if (el) {
+      setIsTruncated(el.scrollWidth > el.clientWidth);
+    }
+  }, []);
+
+  return (
+    <Tooltip open={isTruncated ? undefined : false}>
+      <TooltipTrigger asChild>
+        <h5
+          ref={ref}
+          className={`truncate text-sm font-medium text-[var(--color-text)] ${className ?? ''}`}
+          onMouseEnter={checkTruncation}
+        >
+          {text}
+        </h5>
+      </TooltipTrigger>
+      <TooltipContent side="top" align="start">
+        {text}
+      </TooltipContent>
+    </Tooltip>
   );
 };
 
@@ -228,11 +264,7 @@ export const KanbanTaskCard = ({
             #{task.id}
           </Badge>
           {task.owner ? <MemberBadge name={task.owner} color={colorMap.get(task.owner)} /> : null}
-          {!compact && (
-            <h5 className="min-w-0 truncate text-sm font-medium text-[var(--color-text)]">
-              {task.subject}
-            </h5>
-          )}
+          {!compact && <TruncatedTitle text={task.subject} className="min-w-0" />}
         </div>
         {task.needsClarification ? (
           <span
@@ -246,11 +278,7 @@ export const KanbanTaskCard = ({
             {task.needsClarification === 'user' ? 'Awaiting user' : 'Awaiting lead'}
           </span>
         ) : null}
-        {compact && (
-          <h5 className="mt-1 truncate text-sm font-medium text-[var(--color-text)]">
-            {task.subject}
-          </h5>
-        )}
+        {compact && <TruncatedTitle text={task.subject} className="mt-1" />}
       </div>
 
       {hasBlockedBy ? (

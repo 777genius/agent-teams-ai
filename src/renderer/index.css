@@ -199,6 +199,11 @@
   --skeleton-base-dim: rgba(26, 28, 40, 0.6);
 }
 
+/* File icon glow — halo so dark icons stay visible on dark backgrounds */
+.file-icon-glow {
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.45));
+}
+
 /* Light theme overrides - Warm neutral palette for eye comfort */
 :root.light {
   --color-surface: #f9f9f7; /* Warm off-white (not pure white) */
@@ -537,6 +542,15 @@ body {
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
+/* Thin scrollbar for narrow panels (sidebar, search) */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+}
+
 /* Dashboard skeleton shimmer animation */
 @keyframes shimmer {
   0% {
@@ -556,6 +570,36 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes message-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-enter-animate {
+  animation: message-enter 300ms ease-out both;
+}
+
+@keyframes chat-message-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-message-enter-animate {
+  animation: chat-message-enter 350ms ease-out both;
 }
 
 .skeleton-card {
@@ -578,6 +622,10 @@ body {
     transparent 100%
   );
   animation: shimmer 1.2s ease-in-out infinite;
+}
+
+:root.light .file-icon-glow {
+  filter: none;
 }
 
 :root.light .skeleton-card::after {
@@ -628,4 +676,29 @@ body {
 /* Optional field label — muted text for non-required form fields */
 .label-optional {
   color: var(--color-text-muted);
+}
+
+/* Checkerboard background for transparent image previews */
+.checkerboard-bg {
+  background-image:
+    linear-gradient(45deg, #1a1a2e 25%, transparent 25%),
+    linear-gradient(-45deg, #1a1a2e 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1a1a2e 75%),
+    linear-gradient(-45deg, transparent 75%, #1a1a2e 75%);
+  background-size: 16px 16px;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+  background-color: #12131a;
+}
+
+:root.light .checkerboard-bg {
+  background-image:
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
+    linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+  background-color: #ffffff;
 }

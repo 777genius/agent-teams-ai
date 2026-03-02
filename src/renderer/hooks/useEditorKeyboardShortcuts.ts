@@ -5,11 +5,13 @@
  * CM6-internal shortcuts (Cmd+Z, Cmd+Shift+Z, Cmd+A, Cmd+D) are handled by CodeMirror directly.
  */
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
-import { gotoLine, openSearchPanel } from '@codemirror/search';
+import { openSearchPanel } from '@codemirror/search';
 import { useStore } from '@renderer/store';
 import { editorBridge } from '@renderer/utils/editorBridge';
+import { physicalKey } from '@renderer/utils/keyboardUtils';
+import { useShallow } from 'zustand/react/shallow';
 
 import type { EditorFileTab } from '@shared/types/editor';
 
@@ -20,8 +22,11 @@ import type { EditorFileTab } from '@shared/types/editor';
 interface UseEditorKeyboardShortcutsOptions {
   onToggleQuickOpen: () => void;
   onToggleSearchPanel: () => void;
+  onToggleGoToLine: () => void;
   onToggleSidebar: () => void;
   onClose: () => void;
+  onToggleMdSplit?: () => void;
+  onToggleMdPreview?: () => void;
 }
 
 /** Dependencies injected into the key handler for testability. */
@@ -34,8 +39,11 @@ export interface EditorKeyHandlerDeps {
   hasUnsavedChanges: () => boolean;
   onToggleQuickOpen: () => void;
   onToggleSearchPanel: () => void;
+  onToggleGoToLine: () => void;
   onToggleSidebar: () => void;
   onToggleLineWrap: () => void;
+  onToggleMdSplit?: () => void;
+  onToggleMdPreview?: () => void;
   getEditorView: () => { dispatch: unknown } | null;
 }
 
@@ -52,8 +60,11 @@ export function createEditorKeyHandler(deps: EditorKeyHandlerDeps): (e: Keyboard
     const isMod = e.metaKey || e.ctrlKey;
     if (!isMod) return;
 
+    // Layout-independent key (uses event.code for letters/symbols)
+    const key = physicalKey(e);
+
     // Cmd+P: Quick Open
-    if (e.key === 'p' && !e.shiftKey) {
+    if (key === 'p' && !e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
       deps.onToggleQuickOpen();
@@ -61,7 +72,7 @@ export function createEditorKeyHandler(deps: EditorKeyHandlerDeps): (e: Keyboard
     }
 
     // Cmd+Shift+F: Search in files
-    if (e.key === 'f' && e.shiftKey) {
+    if (key === 'f' && e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
       deps.onToggleSearchPanel();
@@ -69,7 +80,7 @@ export function createEditorKeyHandler(deps: EditorKeyHandlerDeps): (e: Keyboard
     }
 
     // Cmd+F: Find in current file (CM6)
-    if (e.key === 'f' && !e.shiftKey) {
+    if (key === 'f' && !e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
       const view = deps.getEditorView();
@@ -78,16 +89,15 @@ export function createEditorKeyHandler(deps: EditorKeyHandlerDeps): (e: Keyboard
     }
 
     // Cmd+G: Go to line
-    if (e.key === 'g' && !e.shiftKey) {
+    if (key === 'g' && !e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
-      const view = deps.getEditorView();
-      if (view) gotoLine(view as Parameters<typeof gotoLine>[0]);
+      deps.onToggleGoToLine();
       return;
     }
 
     // Cmd+S: Save current file
-    if (e.key === 's' && !e.shiftKey) {
+    if (key === 's' && !e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
       if (deps.activeTabId) void deps.saveFile(deps.activeTabId);
@@ -95,15 +105,31 @@ export function createEditorKeyHandler(deps: EditorKeyHandlerDeps): (e: Keyboard
     }
 
     // Cmd+Shift+S: Save all files
-    if (e.key === 's' && e.shiftKey) {
+    if (key === 's' && e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
       if (deps.hasUnsavedChanges()) void deps.saveAllFiles();
       return;
     }
 
+    // Cmd+Shift+M: Toggle markdown split preview
+    if (key === 'm' && e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      deps.onToggleMdSplit?.();
+      return;
+    }
+
+    // Cmd+Shift+V: Toggle markdown full preview
+    if (key === 'v' && e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      deps.onToggleMdPreview?.();
+      return;
+    }
+
     // Cmd+Shift+W: Toggle line wrap
-    if (e.key === 'w' && e.shiftKey && !e.altKey) {
+    if (key === 'w' && e.shiftKey && !e.altKey) {
       e.preventDefault();
       e.stopPropagation();
       deps.onToggleLineWrap();
@@ -111,7 +137,7 @@ export function createEditorKeyHandler(deps: EditorKeyHandlerDeps): (e: Keyboard
     }
 
     // Cmd+W: Close current editor tab
-    if (e.key === 'w' && !e.shiftKey && !e.altKey) {
+    if (key === 'w' && !e.shiftKey && !e.altKey) {
       e.preventDefault();
       e.stopPropagation();
       if (deps.activeTabId) {
@@ -123,7 +149,7 @@ export function createEditorKeyHandler(deps: EditorKeyHandlerDeps): (e: Keyboard
     }
 
     // Cmd+B: Toggle sidebar
-    if (e.key === 'b') {
+    if (key === 'b') {
       e.preventDefault();
       e.stopPropagation();
       deps.onToggleSidebar();
@@ -131,7 +157,7 @@ export function createEditorKeyHandler(deps: EditorKeyHandlerDeps): (e: Keyboard
     }
 
     // Cmd+Shift+]: Next tab
-    if (e.key === ']' && e.shiftKey) {
+    if (key === ']' && e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
       const idx = deps.openTabs.findIndex((t) => t.id === deps.activeTabId);
@@ -144,7 +170,7 @@ export function createEditorKeyHandler(deps: EditorKeyHandlerDeps): (e: Keyboard
     }
 
     // Cmd+Shift+[: Previous tab
-    if (e.key === '[' && e.shiftKey) {
+    if (key === '[' && e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
       const idx = deps.openTabs.findIndex((t) => t.id === deps.activeTabId);
@@ -157,7 +183,7 @@ export function createEditorKeyHandler(deps: EditorKeyHandlerDeps): (e: Keyboard
     }
 
     // Ctrl+Tab / Ctrl+Shift+Tab: Tab cycling
-    if (e.ctrlKey && e.key === 'Tab') {
+    if (e.ctrlKey && key === 'Tab') {
       e.preventDefault();
       e.stopPropagation();
       const idx = deps.openTabs.findIndex((t) => t.id === deps.activeTabId);
@@ -181,47 +207,48 @@ export function createEditorKeyHandler(deps: EditorKeyHandlerDeps): (e: Keyboard
 export function useEditorKeyboardShortcuts({
   onToggleQuickOpen,
   onToggleSearchPanel,
+  onToggleGoToLine,
   onToggleSidebar,
   onClose: _onClose,
+  onToggleMdSplit,
+  onToggleMdPreview,
 }: UseEditorKeyboardShortcutsOptions): void {
-  const openTabs = useStore((s) => s.editorOpenTabs);
-  const activeTabId = useStore((s) => s.editorActiveTabId);
+  const { openTabs, activeTabId } = useStore(
+    useShallow((s) => ({
+      openTabs: s.editorOpenTabs,
+      activeTabId: s.editorActiveTabId,
+    }))
+  );
   const setActiveEditorTab = useStore((s) => s.setActiveEditorTab);
   const saveFile = useStore((s) => s.saveFile);
   const saveAllFiles = useStore((s) => s.saveAllFiles);
   const hasUnsavedChanges = useStore((s) => s.hasUnsavedChanges);
   const toggleLineWrap = useStore((s) => s.toggleLineWrap);
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      const handler = createEditorKeyHandler({
-        activeTabId,
-        openTabs,
-        setActiveEditorTab,
-        saveFile,
-        saveAllFiles,
-        hasUnsavedChanges,
-        onToggleQuickOpen,
-        onToggleSearchPanel,
-        onToggleSidebar,
-        onToggleLineWrap: toggleLineWrap,
-        getEditorView: () => editorBridge.getView(),
-      });
-      handler(e);
-    },
-    [
-      activeTabId,
-      openTabs,
-      setActiveEditorTab,
-      saveFile,
-      saveAllFiles,
-      hasUnsavedChanges,
-      onToggleQuickOpen,
-      onToggleSearchPanel,
-      onToggleSidebar,
-      toggleLineWrap,
-    ]
-  );
+  // Store all deps in a ref so the keydown handler has a stable identity
+  const depsRef = useRef<EditorKeyHandlerDeps>(null!);
+  // eslint-disable-next-line react-hooks/refs -- sync ref with deps for stable keydown handler
+  depsRef.current = {
+    activeTabId,
+    openTabs,
+    setActiveEditorTab,
+    saveFile,
+    saveAllFiles,
+    hasUnsavedChanges,
+    onToggleQuickOpen,
+    onToggleSearchPanel,
+    onToggleGoToLine,
+    onToggleSidebar,
+    onToggleLineWrap: toggleLineWrap,
+    onToggleMdSplit,
+    onToggleMdPreview,
+    getEditorView: () => editorBridge.getView(),
+  };
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    const handler = createEditorKeyHandler(depsRef.current);
+    handler(e);
+  }, []);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown, true); // capture phase

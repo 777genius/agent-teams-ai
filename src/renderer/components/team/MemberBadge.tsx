@@ -6,6 +6,8 @@ interface MemberBadgeProps {
   color?: string;
   /** Avatar + badge size variant */
   size?: 'sm' | 'md';
+  /** Hide the avatar icon, show only the name badge */
+  hideAvatar?: boolean;
   onClick?: (name: string) => void;
 }
 
@@ -18,6 +20,7 @@ export const MemberBadge = ({
   name,
   color,
   size = 'sm',
+  hideAvatar,
   onClick,
 }: MemberBadgeProps): React.JSX.Element => {
   const colors = getTeamColorSet(color ?? '');
@@ -59,7 +62,7 @@ export const MemberBadge = ({
           onClick(name);
         }}
       >
-        {avatar}
+        {!hideAvatar && avatar}
         {badge}
       </button>
     );
@@ -67,7 +70,7 @@ export const MemberBadge = ({
 
   return (
     <span className="inline-flex items-center gap-1">
-      {avatar}
+      {!hideAvatar && avatar}
       {badge}
     </span>
   );

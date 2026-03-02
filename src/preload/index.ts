@@ -19,14 +19,19 @@ import {
   EDITOR_LIST_FILES,
   EDITOR_MOVE_FILE,
   EDITOR_OPEN,
+  EDITOR_READ_BINARY_PREVIEW,
   EDITOR_READ_DIR,
   EDITOR_READ_FILE,
+  EDITOR_RENAME_FILE,
   EDITOR_SEARCH_IN_FILES,
+  EDITOR_SET_WATCHED_DIRS,
+  EDITOR_SET_WATCHED_FILES,
   EDITOR_WATCH_DIR,
   EDITOR_WRITE_FILE,
   HTTP_SERVER_GET_STATUS,
   HTTP_SERVER_START,
   HTTP_SERVER_STOP,
+  PROJECT_LIST_FILES,
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
   REVIEW_CLEAR_DECISIONS,
@@ -52,6 +57,7 @@ import {
   SSH_TEST,
   TEAM_ADD_MEMBER,
   TEAM_ADD_TASK_COMMENT,
+  TEAM_ADD_TASK_RELATIONSHIP,
   TEAM_ALIVE_LIST,
   TEAM_CANCEL_PROVISIONING,
   TEAM_CHANGE,
@@ -78,6 +84,7 @@ import {
   TEAM_PROVISIONING_PROGRESS,
   TEAM_PROVISIONING_STATUS,
   TEAM_REMOVE_MEMBER,
+  TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTORE,
   TEAM_RESTORE_TASK,
@@ -112,6 +119,7 @@ import {
   WINDOW_MINIMIZE,
 } from './constants/ipcChannels';
 import {
+  CONFIG_ADD_CUSTOM_PROJECT_PATH,
   CONFIG_ADD_IGNORE_REGEX,
   CONFIG_ADD_IGNORE_REPOSITORY,
   CONFIG_ADD_TRIGGER,
@@ -124,6 +132,7 @@ import {
   CONFIG_HIDE_SESSIONS,
   CONFIG_OPEN_IN_EDITOR,
   CONFIG_PIN_SESSION,
+  CONFIG_REMOVE_CUSTOM_PROJECT_PATH,
   CONFIG_REMOVE_IGNORE_REGEX,
   CONFIG_REMOVE_IGNORE_REPOSITORY,
   CONFIG_REMOVE_TRIGGER,
@@ -195,6 +204,7 @@ import type {
   WslClaudeRootCandidate,
 } from '@shared/types';
 import type {
+  BinaryPreviewResult,
   CreateDirResponse,
   CreateFileResponse,
   DeleteFileResponse,
@@ -440,6 +450,12 @@ const electronAPI: ElectronAPI = {
     },
     unhideSessions: async (projectId: string, sessionIds: string[]): Promise<void> => {
       return invokeIpcWithResult<void>(CONFIG_UNHIDE_SESSIONS, projectId, sessionIds);
+    },
+    addCustomProjectPath: async (projectPath: string): Promise<void> => {
+      return invokeIpcWithResult<void>(CONFIG_ADD_CUSTOM_PROJECT_PATH, projectPath);
+    },
+    removeCustomProjectPath: async (projectPath: string): Promise<void> => {
+      return invokeIpcWithResult<void>(CONFIG_REMOVE_CUSTOM_PROJECT_PATH, projectPath);
     },
   },
 
@@ -696,7 +712,12 @@ const electronAPI: ElectronAPI = {
     getLogsForTask: async (
       teamName: string,
       taskId: string,
-      options?: { owner?: string; status?: string }
+      options?: {
+        owner?: string;
+        status?: string;
+        intervals?: { startedAt: string; completedAt?: string }[];
+        since?: string;
+      }
     ) => {
       return invokeIpcWithResult<MemberLogSummary[]>(
         TEAM_GET_LOGS_FOR_TASK,
@@ -757,6 +778,34 @@ const electronAPI: ElectronAPI = {
     },
     showMessageNotification: async (data: TeamMessageNotificationData) => {
       return invokeIpcWithResult<void>(TEAM_SHOW_MESSAGE_NOTIFICATION, data);
+    },
+    addTaskRelationship: async (
+      teamName: string,
+      taskId: string,
+      targetId: string,
+      type: 'blockedBy' | 'blocks' | 'related'
+    ) => {
+      return invokeIpcWithResult<void>(
+        TEAM_ADD_TASK_RELATIONSHIP,
+        teamName,
+        taskId,
+        targetId,
+        type
+      );
+    },
+    removeTaskRelationship: async (
+      teamName: string,
+      taskId: string,
+      targetId: string,
+      type: 'blockedBy' | 'blocks' | 'related'
+    ) => {
+      return invokeIpcWithResult<void>(
+        TEAM_REMOVE_TASK_RELATIONSHIP,
+        teamName,
+        taskId,
+        targetId,
+        type
+      );
     },
     onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {
       ipcRenderer.on(
@@ -858,28 +907,36 @@ const electronAPI: ElectronAPI = {
       );
     },
     // Editable diff
-    saveEditedFile: async (filePath: string, content: string) => {
-      return invokeIpcWithResult<{ success: boolean }>(REVIEW_SAVE_EDITED_FILE, filePath, content);
+    saveEditedFile: async (filePath: string, content: string, projectPath?: string) => {
+      return invokeIpcWithResult<{ success: boolean }>(
+        REVIEW_SAVE_EDITED_FILE,
+        filePath,
+        content,
+        projectPath
+      );
     },
     // Decision persistence
     loadDecisions: async (teamName: string, scopeKey: string) => {
       return invokeIpcWithResult<{
         hunkDecisions: Record<string, HunkDecision>;
         fileDecisions: Record<string, HunkDecision>;
+        hunkContextHashesByFile?: Record<string, Record<number, string>>;
       } | null>(REVIEW_LOAD_DECISIONS, teamName, scopeKey);
     },
     saveDecisions: async (
       teamName: string,
       scopeKey: string,
       hunkDecisions: Record<string, HunkDecision>,
-      fileDecisions: Record<string, HunkDecision>
+      fileDecisions: Record<string, HunkDecision>,
+      hunkContextHashesByFile?: Record<string, Record<number, string>>
     ) => {
       return invokeIpcWithResult<void>(
         REVIEW_SAVE_DECISIONS,
         teamName,
         scopeKey,
         hunkDecisions,
-        fileDecisions
+        fileDecisions,
+        hunkContextHashesByFile ?? null
       );
     },
     clearDecisions: async (teamName: string, scopeKey: string) => {
@@ -957,6 +1014,12 @@ const electronAPI: ElectronAPI = {
     },
   },
 
+  // ===== Project API (editor-independent) =====
+  project: {
+    listFiles: (projectPath: string) =>
+      invokeIpcWithResult<QuickOpenFile[]>(PROJECT_LIST_FILES, projectPath),
+  },
+
   // ===== Editor API =====
   editor: {
     open: (projectPath: string) => invokeIpcWithResult<void>(EDITOR_OPEN, projectPath),
@@ -974,11 +1037,19 @@ const electronAPI: ElectronAPI = {
       invokeIpcWithResult<DeleteFileResponse>(EDITOR_DELETE_FILE, filePath),
     moveFile: (sourcePath: string, destDir: string) =>
       invokeIpcWithResult<MoveFileResponse>(EDITOR_MOVE_FILE, sourcePath, destDir),
+    renameFile: (sourcePath: string, newName: string) =>
+      invokeIpcWithResult<MoveFileResponse>(EDITOR_RENAME_FILE, sourcePath, newName),
     searchInFiles: (options: SearchInFilesOptions) =>
       invokeIpcWithResult<SearchInFilesResult>(EDITOR_SEARCH_IN_FILES, options),
     listFiles: () => invokeIpcWithResult<QuickOpenFile[]>(EDITOR_LIST_FILES),
+    readBinaryPreview: (filePath: string) =>
+      invokeIpcWithResult<BinaryPreviewResult>(EDITOR_READ_BINARY_PREVIEW, filePath),
     gitStatus: () => invokeIpcWithResult<GitStatusResult>(EDITOR_GIT_STATUS),
     watchDir: (enable: boolean) => invokeIpcWithResult<void>(EDITOR_WATCH_DIR, enable),
+    setWatchedFiles: (filePaths: string[]) =>
+      invokeIpcWithResult<void>(EDITOR_SET_WATCHED_FILES, filePaths),
+    setWatchedDirs: (dirPaths: string[]) =>
+      invokeIpcWithResult<void>(EDITOR_SET_WATCHED_DIRS, dirPaths),
     onEditorChange: (callback: (event: EditorFileChangeEvent) => void): (() => void) => {
       const listener = (_event: Electron.IpcRendererEvent, data: EditorFileChangeEvent): void =>
         callback(data);

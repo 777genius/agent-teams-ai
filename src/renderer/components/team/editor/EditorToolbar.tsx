@@ -2,23 +2,49 @@
  * Toolbar with Save, Undo, Redo buttons.
  */
 
+import React from 'react';
+
 import { redo, undo } from '@codemirror/commands';
+import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { editorBridge } from '@renderer/utils/editorBridge';
 import { shortcutLabel } from '@renderer/utils/platformKeys';
-import { Redo2, Save, Undo2, WrapText } from 'lucide-react';
+import { Columns2, Eye, Redo2, Save, Undo2, WrapText } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
+
+// =============================================================================
+// Types
+// =============================================================================
+
+export type MdPreviewMode = 'off' | 'split' | 'preview';
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export const EditorToolbar = (): React.ReactElement | null => {
-  const activeTabId = useStore((s) => s.editorActiveTabId);
-  const modifiedFiles = useStore((s) => s.editorModifiedFiles);
-  const saving = useStore((s) => s.editorSaving);
+interface EditorToolbarProps {
+  isMarkdown?: boolean;
+  mdPreviewMode?: MdPreviewMode;
+  onToggleSplit?: () => void;
+  onToggleFullPreview?: () => void;
+}
+
+export const EditorToolbar = ({
+  isMarkdown = false,
+  mdPreviewMode = 'off',
+  onToggleSplit,
+  onToggleFullPreview,
+}: EditorToolbarProps): React.ReactElement | null => {
+  const { activeTabId, modifiedFiles, saving, lineWrap } = useStore(
+    useShallow((s) => ({
+      activeTabId: s.editorActiveTabId,
+      modifiedFiles: s.editorModifiedFiles,
+      saving: s.editorSaving,
+      lineWrap: s.editorLineWrap,
+    }))
+  );
   const saveFile = useStore((s) => s.saveFile);
-  const lineWrap = useStore((s) => s.editorLineWrap);
   const toggleLineWrap = useStore((s) => s.toggleLineWrap);
 
   if (!activeTabId) return null;
@@ -69,6 +95,25 @@ export const EditorToolbar = (): React.ReactElement | null => {
         onClick={toggleLineWrap}
         active={lineWrap}
       />
+      {isMarkdown && (
+        <>
+          <div className="mx-1 h-4 w-px bg-border" />
+          <ToolbarButton
+            icon={<Columns2 className="size-3.5" />}
+            label={mdPreviewMode === 'split' ? 'Close split preview' : 'Split preview'}
+            shortcut={shortcutLabel('⌘ ⇧ M', 'Ctrl+Shift+M')}
+            onClick={onToggleSplit ?? (() => {})}
+            active={mdPreviewMode === 'split'}
+          />
+          <ToolbarButton
+            icon={<Eye className="size-3.5" />}
+            label={mdPreviewMode === 'preview' ? 'Close preview' : 'Full preview'}
+            shortcut={shortcutLabel('⌘ ⇧ V', 'Ctrl+Shift+V')}
+            onClick={onToggleFullPreview ?? (() => {})}
+            active={mdPreviewMode === 'preview'}
+          />
+        </>
+      )}
     </div>
   );
 };
@@ -86,30 +131,33 @@ interface ToolbarButtonProps {
   active?: boolean;
 }
 
-const ToolbarButton = ({
+const ToolbarButton = React.memo(function ToolbarButton({
   icon,
   label,
   shortcut,
   onClick,
   disabled = false,
   active = false,
-}: ToolbarButtonProps): React.ReactElement => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <button
-        onClick={onClick}
-        disabled={disabled}
-        className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors hover:bg-surface-raised hover:text-text disabled:opacity-40 disabled:hover:bg-transparent ${
-          active ? 'bg-surface-raised text-text' : 'text-text-muted'
-        }`}
-        aria-label={`${label} (${shortcut})`}
-        aria-pressed={active}
-      >
-        {icon}
-      </button>
-    </TooltipTrigger>
-    <TooltipContent side="bottom">
-      {label} ({shortcut})
-    </TooltipContent>
-  </Tooltip>
-);
+}: ToolbarButtonProps): React.ReactElement {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          onClick={onClick}
+          disabled={disabled}
+          className={`h-auto gap-1 px-1.5 py-0.5 text-xs ${
+            active ? 'bg-surface-raised text-text' : 'text-text-muted'
+          }`}
+          aria-label={`${label} (${shortcut})`}
+          aria-pressed={active}
+        >
+          {icon}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        {label} ({shortcut})
+      </TooltipContent>
+    </Tooltip>
+  );
+});

@@ -40,6 +40,12 @@ export interface NotificationConfig {
   snoozeMinutes: number; // Default snooze duration
   /** Whether to include errors from subagent sessions */
   includeSubagentErrors: boolean;
+  /** Whether to show native OS notifications when teammates send messages to the team lead */
+  notifyOnLeadInbox: boolean;
+  /** Whether to show native OS notifications when teammates send messages to you (the user) */
+  notifyOnUserInbox: boolean;
+  /** Whether to show native OS notifications when a task needs user clarification */
+  notifyOnClarifications: boolean;
   /** Notification triggers - define when to generate notifications */
   triggers: NotificationTrigger[];
 }
@@ -184,6 +190,8 @@ export interface GeneralConfig {
   agentLanguage: string;
   autoExpandAIGroups: boolean;
   useNativeTitleBar: boolean;
+  /** Paths manually added via "Select Folder" that persist across app restarts */
+  customProjectPaths: string[];
 }
 
 export interface DisplayConfig {
@@ -243,6 +251,9 @@ const DEFAULT_CONFIG: AppConfig = {
     snoozedUntil: null,
     snoozeMinutes: 30,
     includeSubagentErrors: true,
+    notifyOnLeadInbox: false,
+    notifyOnUserInbox: true,
+    notifyOnClarifications: true,
     triggers: DEFAULT_TRIGGERS,
   },
   general: {
@@ -254,6 +265,7 @@ const DEFAULT_CONFIG: AppConfig = {
     agentLanguage: 'system',
     autoExpandAIGroups: false,
     useNativeTitleBar: false,
+    customProjectPaths: [],
   },
   display: {
     showTimestamps: true,
@@ -407,6 +419,7 @@ export class ConfigManager {
   private mergeWithDefaults(loaded: Partial<AppConfig>): AppConfig {
     const loadedNotifications = loaded.notifications ?? ({} as Partial<NotificationConfig>);
     const loadedTriggers = loadedNotifications.triggers ?? [];
+
     const mergedGeneral: GeneralConfig = {
       ...DEFAULT_CONFIG.general,
       ...(loaded.general ?? {}),
@@ -837,6 +850,58 @@ export class ConfigManager {
     }
 
     this.saveConfig();
+  }
+
+  // ===========================================================================
+  // Custom Project Path Management
+  // ===========================================================================
+
+  /**
+   * Adds a custom project path (from "Select Folder" dialog).
+   * Persisted across app restarts.
+   * @param projectPath - Absolute filesystem path to the project
+   */
+  addCustomProjectPath(projectPath: string): void {
+    if (!projectPath || projectPath.trim().length === 0) {
+      return;
+    }
+
+    const normalized = path.normalize(projectPath.trim());
+    if (!path.isAbsolute(normalized)) {
+      return;
+    }
+
+    if (this.config.general.customProjectPaths.includes(normalized)) {
+      return;
+    }
+
+    this.config.general.customProjectPaths.push(normalized);
+    this.saveConfig();
+    logger.info(`Custom project path added: ${normalized}`);
+  }
+
+  /**
+   * Removes a custom project path.
+   * @param projectPath - The path to remove
+   */
+  removeCustomProjectPath(projectPath: string): void {
+    const normalized = path.normalize(projectPath.trim());
+    const index = this.config.general.customProjectPaths.indexOf(normalized);
+    if (index === -1) {
+      return;
+    }
+
+    this.config.general.customProjectPaths.splice(index, 1);
+    this.saveConfig();
+    logger.info(`Custom project path removed: ${normalized}`);
+  }
+
+  /**
+   * Gets all custom project paths.
+   * @returns Array of absolute filesystem paths
+   */
+  getCustomProjectPaths(): string[] {
+    return [...this.config.general.customProjectPaths];
   }
 
   // ===========================================================================

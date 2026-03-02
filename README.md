@@ -19,6 +19,37 @@
 
 <br />
 
+## What is this
+
+A new approach to task management with AI agents.
+
+- **Assemble your team** — create agent teams with different roles that work autonomously in parallel
+- **Agents talk to each other** — they communicate, create and manage their own tasks, and leave comments
+- **Sit back and watch** — tasks change status on the kanban board while agents handle everything on their own
+- **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment
+- **Full tool visibility** — inspect exactly which tools an agent used to complete each task
+- **Live process dashboard** — see which agents are running processes in dedicated sections (frontend, backend, etc.) and open URLs directly in the browser
+- **Stay in control** — send a direct message to any agent or drop a comment on a task whenever you want to clarify something or add new work
+
+<details>
+<summary><strong>More features</strong></summary>
+
+<br />
+
+- **Recent tasks across projects** — browse the latest completed tasks from all your projects in one place
+- **Deep session analysis** — detailed breakdown of what happened in each Claude session: bash commands, reasoning, subprocesses
+- **Smart task-to-log matching** — automatically links Claude session logs to specific tasks based on status change timestamps, even when a task moves back and forth between states
+- **Zero-setup onboarding** — built-in Claude Code installation and authentication, ready to go out of the box
+- **Built-in code editor** — edit project files with Git support and other essential features without leaving the app
+- **Branch strategy control** — choose via prompt whether all agents work on a single branch or each gets its own git worktree
+- **Team member stats** — global performance statistics for every member of the team
+- **Attach code context** — reference files or code snippets in your messages, just like in Cursor
+- **Notification system** — configurable alerts when tasks complete, agents need attention, or errors occur
+
+</details>
+
+---
+
 <!--
 <p align="center">
   <video src="https://github.com/user-attachments/assets/2b420b2c-c4af-4d10-a679-c83269f8ee99">

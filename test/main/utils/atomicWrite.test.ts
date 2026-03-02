@@ -30,7 +30,7 @@ const mockRename = vi.mocked(fs.promises.rename);
 const mockCopyFile = vi.mocked(fs.promises.copyFile);
 const mockUnlink = vi.mocked(fs.promises.unlink);
 
-const TARGET_PATH = '/Users/test/project/src/index.ts';
+const TARGET_PATH = path.resolve('/Users/test/project/src/index.ts');
 const TARGET_DIR = path.dirname(TARGET_PATH);
 const CONTENT = 'export const hello = "world";';
 
@@ -65,7 +65,8 @@ describe('atomicWriteAsync', () => {
     // writeFile should be called with a tmp path in the same directory
     expect(mockWriteFile).toHaveBeenCalledTimes(1);
     const tmpPath = getTmpPath();
-    expect(tmpPath).toMatch(new RegExp(`^${TARGET_DIR}/\\.tmp\\.[a-f0-9-]+$`));
+    const escapedDir = TARGET_DIR.replace(/[\\]/g, '\\\\');
+    expect(tmpPath).toMatch(new RegExp(`^${escapedDir}[/\\\\]\\.tmp\\.[a-f0-9-]+$`));
 
     // rename from tmp to target
     expect(mockRename).toHaveBeenCalledWith(tmpPath, TARGET_PATH);

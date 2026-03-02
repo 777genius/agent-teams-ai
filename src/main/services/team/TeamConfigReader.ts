@@ -146,14 +146,16 @@ export class TeamConfigReader {
             return null;
           }
 
+          // Case-insensitive dedup: key is lowercase name, value keeps the original casing
           const memberMap = new Map<string, TeamSummaryMember>();
 
-          const addMember = (m: TeamMember): void => {
+          const mergeMember = (m: TeamMember): void => {
             const name = m.name?.trim();
             if (!name) return;
-            const existing = memberMap.get(name);
-            memberMap.set(name, {
-              name,
+            const key = name.toLowerCase();
+            const existing = memberMap.get(key);
+            memberMap.set(key, {
+              name: existing?.name ?? name,
               role: m.role?.trim() || existing?.role,
               color: m.color?.trim() || existing?.color,
             });
@@ -162,9 +164,22 @@ export class TeamConfigReader {
           if (config && Array.isArray(config.members)) {
             for (const member of config.members) {
               if (member && typeof member.name === 'string') {
-                addMember(member);
+                mergeMember(member);
               }
             }
+          }
+
+          // Also read members.meta.json — UI-created teams store members there,
+          // and CLI-created teams may have additional members added via the UI.
+          try {
+            const metaMembers = await this.membersMetaStore.getMembers(teamName);
+            for (const member of metaMembers) {
+              if (!member.removedAt) {
+                mergeMember(member);
+              }
+            }
+          } catch {
+            // best-effort — don't fail listing if meta file is broken
           }
 
           const members = Array.from(memberMap.values());

@@ -5,6 +5,7 @@ import {
   getModifierKeyName,
   getModifierKeySymbol,
   isMacOS,
+  physicalKey,
 } from '../../../src/renderer/utils/keyboardUtils';
 
 describe('keyboardUtils', () => {
@@ -155,6 +156,113 @@ describe('keyboardUtils', () => {
       it('should always include + separator', () => {
         expect(formatModifierShortcut('K')).toContain('+');
         expect(formatModifierShortcut('K', false)).toContain('+');
+      });
+    });
+  });
+
+  describe('physicalKey', () => {
+    function makeEvent(
+      key: string,
+      code: string,
+      mods: Partial<KeyboardEventInit> = {}
+    ): KeyboardEvent {
+      return new KeyboardEvent('keydown', { key, code, ...mods, bubbles: true, cancelable: true });
+    }
+
+    describe('letter keys — English layout', () => {
+      it('resolves KeyF to f', () => {
+        expect(physicalKey(makeEvent('f', 'KeyF'))).toBe('f');
+      });
+
+      it('resolves KeyW to w', () => {
+        expect(physicalKey(makeEvent('w', 'KeyW'))).toBe('w');
+      });
+
+      it('always returns lowercase even with Shift', () => {
+        expect(physicalKey(makeEvent('F', 'KeyF', { shiftKey: true }))).toBe('f');
+      });
+    });
+
+    describe('letter keys — Russian layout', () => {
+      it('resolves Cyrillic а (physical F) to f', () => {
+        expect(physicalKey(makeEvent('а', 'KeyF'))).toBe('f');
+      });
+
+      it('resolves Cyrillic ц (physical W) to w', () => {
+        expect(physicalKey(makeEvent('ц', 'KeyW'))).toBe('w');
+      });
+
+      it('resolves Cyrillic з (physical P) to p', () => {
+        expect(physicalKey(makeEvent('з', 'KeyP'))).toBe('p');
+      });
+
+      it('resolves Cyrillic и (physical B) to b', () => {
+        expect(physicalKey(makeEvent('и', 'KeyB'))).toBe('b');
+      });
+
+      it('resolves Cyrillic л (physical K) to k', () => {
+        expect(physicalKey(makeEvent('л', 'KeyK'))).toBe('k');
+      });
+
+      it('resolves Cyrillic ы (physical S) to s', () => {
+        expect(physicalKey(makeEvent('ы', 'KeyS'))).toBe('s');
+      });
+    });
+
+    describe('digit keys', () => {
+      it('resolves Digit1 to 1', () => {
+        expect(physicalKey(makeEvent('1', 'Digit1'))).toBe('1');
+      });
+
+      it('resolves Digit9 to 9', () => {
+        expect(physicalKey(makeEvent('9', 'Digit9'))).toBe('9');
+      });
+
+      it('resolves shifted digit (e.g. !) back to digit', () => {
+        expect(physicalKey(makeEvent('!', 'Digit1', { shiftKey: true }))).toBe('1');
+      });
+    });
+
+    describe('punctuation keys', () => {
+      it('resolves BracketLeft to [', () => {
+        expect(physicalKey(makeEvent('[', 'BracketLeft'))).toBe('[');
+      });
+
+      it('resolves Russian х (physical [) to [', () => {
+        expect(physicalKey(makeEvent('х', 'BracketLeft'))).toBe('[');
+      });
+
+      it('resolves BracketRight to ]', () => {
+        expect(physicalKey(makeEvent(']', 'BracketRight'))).toBe(']');
+      });
+
+      it('resolves Backslash to \\', () => {
+        expect(physicalKey(makeEvent('\\', 'Backslash'))).toBe('\\');
+      });
+
+      it('resolves Comma to ,', () => {
+        expect(physicalKey(makeEvent(',', 'Comma'))).toBe(',');
+        // Russian: physical , produces б
+        expect(physicalKey(makeEvent('б', 'Comma'))).toBe(',');
+      });
+    });
+
+    describe('special keys (pass-through)', () => {
+      it('returns event.key for Tab', () => {
+        expect(physicalKey(makeEvent('Tab', 'Tab'))).toBe('Tab');
+      });
+
+      it('returns event.key for Enter', () => {
+        expect(physicalKey(makeEvent('Enter', 'Enter'))).toBe('Enter');
+      });
+
+      it('returns event.key for Escape', () => {
+        expect(physicalKey(makeEvent('Escape', 'Escape'))).toBe('Escape');
+      });
+
+      it('returns event.key for Arrow keys', () => {
+        expect(physicalKey(makeEvent('ArrowUp', 'ArrowUp'))).toBe('ArrowUp');
+        expect(physicalKey(makeEvent('ArrowDown', 'ArrowDown'))).toBe('ArrowDown');
       });
     });
   });

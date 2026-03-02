@@ -22,11 +22,16 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { useStore } from '@renderer/store';
+import { chipToken, serializeChipsWithText } from '@renderer/types/inlineChip';
+import { removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { AlertTriangle, Search } from 'lucide-react';
 
+import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
@@ -40,6 +45,7 @@ interface CreateTaskDialogProps {
   defaultDescription?: string;
   defaultOwner?: string;
   defaultStartImmediately?: boolean;
+  defaultChip?: InlineChip;
   onClose: () => void;
   onSubmit: (
     subject: string,
@@ -63,16 +69,19 @@ export const CreateTaskDialog = ({
   defaultDescription = '',
   defaultOwner = '',
   defaultStartImmediately,
+  defaultChip,
   onClose,
   onSubmit,
   submitting = false,
 }: CreateTaskDialogProps): React.JSX.Element => {
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
+  const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
   const [subject, setSubject] = useState(defaultSubject);
   const descriptionDraft = useDraftPersistence({
     key: `createTask:${teamName}:description`,
     initialValue: defaultDescription || undefined,
   });
+  const descChipDraft = useChipDraftPersistence(`createTask:${teamName}:descChips`);
   const [owner, setOwner] = useState<string>(defaultOwner);
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
   const [related, setRelated] = useState<string[]>([]);
@@ -84,7 +93,11 @@ export const CreateTaskDialog = ({
 
   if (open && !prevOpen) {
     setSubject(defaultSubject);
-    if (defaultDescription) {
+    if (defaultChip) {
+      const token = chipToken(defaultChip);
+      descriptionDraft.setValue(token + '\n');
+      descChipDraft.setChips([defaultChip]);
+    } else if (defaultDescription) {
       descriptionDraft.setValue(defaultDescription);
     }
     setOwner(defaultOwner);
@@ -130,11 +143,23 @@ export const CreateTaskDialog = ({
     );
   };
 
+  const handleDescChipRemove = (chipId: string): void => {
+    const chip = descChipDraft.chips.find((c) => c.id === chipId);
+    if (chip) {
+      descriptionDraft.setValue(removeChipTokenFromText(descriptionDraft.value, chip));
+    }
+    descChipDraft.setChips(descChipDraft.chips.filter((c) => c.id !== chipId));
+  };
+
   const handleSubmit = (): void => {
     if (!canSubmit) return;
+    const serializedDesc = serializeChipsWithText(
+      descriptionDraft.value.trim(),
+      descChipDraft.chips
+    );
     onSubmit(
       subject.trim(),
-      descriptionDraft.value.trim(),
+      serializedDesc,
       owner || undefined,
       blockedBy.length > 0 ? blockedBy : undefined,
       related.length > 0 ? related : undefined,
@@ -142,6 +167,7 @@ export const CreateTaskDialog = ({
       startImmediately
     );
     descriptionDraft.clearDraft();
+    descChipDraft.clearChipDraft();
     promptDraft.clearDraft();
   };
 
@@ -239,6 +265,10 @@ export const CreateTaskDialog = ({
               value={descriptionDraft.value}
               onValueChange={descriptionDraft.setValue}
               suggestions={mentionSuggestions}
+              chips={descChipDraft.chips}
+              onChipRemove={handleDescChipRemove}
+              projectPath={projectPath}
+              onFileChipInsert={(chip) => descChipDraft.setChips([...descChipDraft.chips, chip])}
               minRows={3}
               maxRows={12}
               footerRight={
@@ -259,6 +289,7 @@ export const CreateTaskDialog = ({
               value={promptDraft.value}
               onValueChange={promptDraft.setValue}
               suggestions={mentionSuggestions}
+              projectPath={projectPath}
               minRows={3}
               maxRows={12}
               footerRight={

@@ -57,6 +57,31 @@ export function getCodeFenceLanguage(fileName: string): string {
   return CODE_FENCE_LANG[ext] ?? '';
 }
 
+/**
+ * Builds a file-mention action (no code selection, just the file reference).
+ * Used when triggering "Create Task" / "Write Teammate" from the file tree context menu.
+ */
+export function buildFileAction(
+  type: EditorSelectionAction['type'],
+  filePath: string,
+  projectPath?: string | null
+): EditorSelectionAction {
+  const fileName = filePath.split('/').pop() ?? 'file';
+  const displayPath =
+    projectPath && filePath.startsWith(projectPath + '/')
+      ? filePath.slice(projectPath.length + 1)
+      : filePath;
+  return {
+    type,
+    filePath,
+    fromLine: null,
+    toLine: null,
+    selectedText: '',
+    formattedContext: `**${fileName}** (\`${displayPath}\`)`,
+    displayPath,
+  };
+}
+
 /** Builds a selection action with a formatted markdown code fence context. */
 export function buildSelectionAction(
   type: EditorSelectionAction['type'],

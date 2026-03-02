@@ -281,29 +281,53 @@ const portionCollapseTheme = EditorView.theme({
 // CM recognizes it's the same field → keeps accumulated state (expanded regions) → no create() call.
 // Config is read from portionCollapseConfigFacet (controlled by compartment).
 
-const portionCollapseField = StateField.define<DecorationSet>({
-  create(state: EditorState): DecorationSet {
+interface PortionCollapseState {
+  decorations: DecorationSet;
+  /**
+   * Once the user expands everything (i.e. removes the last collapse widget),
+   * we should NOT re-initialize collapse on harmless transactions like cursor moves.
+   */
+  userExpandedAll: boolean;
+}
+
+const portionCollapseField = StateField.define<PortionCollapseState>({
+  create(state: EditorState): PortionCollapseState {
     const cfg = state.facet(portionCollapseConfigFacet);
-    return buildPortionRanges(state, cfg.margin, cfg.minSize, cfg.portionSize);
+    return {
+      decorations: buildPortionRanges(state, cfg.margin, cfg.minSize, cfg.portionSize),
+      userExpandedAll: false,
+    };
   },
 
-  update(deco: DecorationSet, tr: Transaction): DecorationSet {
+  update(value: PortionCollapseState, tr: Transaction): PortionCollapseState {
     const cfg = tr.state.facet(portionCollapseConfigFacet);
 
     // 1. Expand effects
-    let result = deco;
+    let nextDeco = value.decorations;
+    let userExpandedAll = value.userExpandedAll;
     let hasExpandEffect = false;
     for (const effect of tr.effects) {
       if (effect.is(expandPortion)) {
         hasExpandEffect = true;
-        result = handleExpandPortion(result, effect.value, tr.state, cfg.minSize, cfg.portionSize);
+        nextDeco = handleExpandPortion(
+          nextDeco,
+          effect.value,
+          tr.state,
+          cfg.minSize,
+          cfg.portionSize
+        );
       }
       if (effect.is(expandAllAtPos)) {
         hasExpandEffect = true;
-        result = handleExpandAll(result, effect.value);
+        nextDeco = handleExpandAll(nextDeco, effect.value);
       }
     }
-    if (hasExpandEffect) return result;
+    if (hasExpandEffect) {
+      if (nextDeco === Decoration.none) {
+        userExpandedAll = true;
+      }
+      return { decorations: nextDeco, userExpandedAll };
+    }
 
     // 2. Accept chunk (updateOriginalDoc) — editor doc unchanged, keep decorations.
     // Full rebuild here would destroy user's expanded state (Expand All / Expand N).
@@ -311,27 +335,47 @@ const portionCollapseField = StateField.define<DecorationSet>({
     // When mirrorEditsAfterResolve adds updateOriginalDoc to a docChanged transaction,
     // we must NOT short-circuit — fall through to docChanged handler for proper rebuild.
     if (tr.effects.some((e) => e.is(updateOriginalDoc)) && !tr.docChanged) {
-      return deco;
+      return value;
     }
 
-    // 3. Document changed (reject, user edit) → full rebuild
+    // 3. Document changed (reject, user edit)
+    //
+    // Rebuilding from scratch here causes a bad UX: after the user expands (or when a hunk is
+    // applied) the editor can suddenly re-collapse unchanged regions, hiding the code the user
+    // was actively looking at. Instead, keep the user's current collapsed/expanded state stable
+    // by mapping existing decorations through the document changes.
     if (tr.docChanged) {
-      return buildPortionRanges(tr.state, cfg.margin, cfg.minSize, cfg.portionSize);
+      const mapped = value.decorations.map(tr.changes);
+      // If we previously had no collapse decoration but chunks are now available, initialize once.
+      // BUT: if the user explicitly expanded everything, never re-collapse automatically.
+      if (!value.userExpandedAll && value.decorations === Decoration.none) {
+        const chunks = getChunks(tr.state);
+        if (chunks) {
+          return {
+            decorations: buildPortionRanges(tr.state, cfg.margin, cfg.minSize, cfg.portionSize),
+            userExpandedAll: false,
+          };
+        }
+      }
+      return { decorations: mapped, userExpandedAll: value.userExpandedAll };
     }
 
     // 4. Lazy init
-    if (deco === Decoration.none) {
+    if (!value.userExpandedAll && value.decorations === Decoration.none) {
       const chunks = getChunks(tr.state);
       if (chunks) {
-        return buildPortionRanges(tr.state, cfg.margin, cfg.minSize, cfg.portionSize);
+        return {
+          decorations: buildPortionRanges(tr.state, cfg.margin, cfg.minSize, cfg.portionSize),
+          userExpandedAll: false,
+        };
       }
     }
 
-    return deco;
+    return value;
   },
 
   provide(f) {
-    return EditorView.decorations.from(f);
+    return EditorView.decorations.from(f, (v) => v.decorations);
   },
 });
 

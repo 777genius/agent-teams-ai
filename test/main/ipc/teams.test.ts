@@ -49,6 +49,8 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   TEAM_GET_DELETED_TASKS: 'team:getDeletedTasks',
   TEAM_SET_TASK_CLARIFICATION: 'team:setTaskClarification',
   TEAM_SHOW_MESSAGE_NOTIFICATION: 'team:showMessageNotification',
+  TEAM_ADD_TASK_RELATIONSHIP: 'team:addTaskRelationship',
+  TEAM_REMOVE_TASK_RELATIONSHIP: 'team:removeTaskRelationship',
   TEAM_RESTORE: 'team:restoreTeam',
   TEAM_PERMANENTLY_DELETE: 'team:permanentlyDeleteTeam',
   TEAM_RESTORE_TASK: 'team:restoreTask',
@@ -93,6 +95,8 @@ import {
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SOFT_DELETE_TASK,
   TEAM_UPDATE_MEMBER_ROLE,
+  TEAM_ADD_TASK_RELATIONSHIP,
+  TEAM_REMOVE_TASK_RELATIONSHIP,
 } from '../../../src/preload/constants/ipcChannels';
 import {
   initializeTeamHandlers,
@@ -142,6 +146,8 @@ describe('ipc teams handlers', () => {
     softDeleteTask: vi.fn(async () => undefined),
     getDeletedTasks: vi.fn(async () => []),
     setTaskNeedsClarification: vi.fn(async () => undefined),
+    addTaskRelationship: vi.fn(async () => undefined),
+    removeTaskRelationship: vi.fn(async () => undefined),
   };
   const provisioningService = {
     prepareForProvisioning: vi.fn(async () => ({
@@ -216,6 +222,8 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_SET_TASK_CLARIFICATION)).toBe(true);
     expect(handlers.has(TEAM_RESTORE)).toBe(true);
     expect(handlers.has(TEAM_PERMANENTLY_DELETE)).toBe(true);
+    expect(handlers.has(TEAM_ADD_TASK_RELATIONSHIP)).toBe(true);
+    expect(handlers.has(TEAM_REMOVE_TASK_RELATIONSHIP)).toBe(true);
   });
 
   it('returns success false on invalid sendMessage args', async () => {
@@ -535,5 +543,77 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_SET_TASK_CLARIFICATION)).toBe(false);
     expect(handlers.has(TEAM_RESTORE)).toBe(false);
     expect(handlers.has(TEAM_PERMANENTLY_DELETE)).toBe(false);
+    expect(handlers.has(TEAM_ADD_TASK_RELATIONSHIP)).toBe(false);
+    expect(handlers.has(TEAM_REMOVE_TASK_RELATIONSHIP)).toBe(false);
+  });
+
+  describe('addTaskRelationship', () => {
+    it('calls service on valid input', async () => {
+      const handler = handlers.get(TEAM_ADD_TASK_RELATIONSHIP)!;
+      const result = (await handler({} as never, 'my-team', '1', '2', 'blockedBy')) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(true);
+      expect(service.addTaskRelationship).toHaveBeenCalledWith('my-team', '1', '2', 'blockedBy');
+    });
+
+    it('rejects invalid team name', async () => {
+      const handler = handlers.get(TEAM_ADD_TASK_RELATIONSHIP)!;
+      const result = (await handler({} as never, '../bad', '1', '2', 'blockedBy')) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid task id', async () => {
+      const handler = handlers.get(TEAM_ADD_TASK_RELATIONSHIP)!;
+      const result = (await handler({} as never, 'my-team', 'abc', '2', 'blockedBy')) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid target id', async () => {
+      const handler = handlers.get(TEAM_ADD_TASK_RELATIONSHIP)!;
+      const result = (await handler({} as never, 'my-team', '1', '', 'blockedBy')) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid relationship type', async () => {
+      const handler = handlers.get(TEAM_ADD_TASK_RELATIONSHIP)!;
+      const result = (await handler({} as never, 'my-team', '1', '2', 'invalid')) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('removeTaskRelationship', () => {
+    it('calls service on valid input', async () => {
+      const handler = handlers.get(TEAM_REMOVE_TASK_RELATIONSHIP)!;
+      const result = (await handler({} as never, 'my-team', '1', '2', 'related')) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(true);
+      expect(service.removeTaskRelationship).toHaveBeenCalledWith('my-team', '1', '2', 'related');
+    });
+
+    it('rejects invalid team name', async () => {
+      const handler = handlers.get(TEAM_REMOVE_TASK_RELATIONSHIP)!;
+      const result = (await handler({} as never, '../bad', '1', '2', 'related')) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid relationship type', async () => {
+      const handler = handlers.get(TEAM_REMOVE_TASK_RELATIONSHIP)!;
+      const result = (await handler({} as never, 'my-team', '1', '2', 'unknown')) as {
+        success: boolean;
+      };
+      expect(result.success).toBe(false);
+    });
   });
 });

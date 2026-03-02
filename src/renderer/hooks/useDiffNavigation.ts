@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { acceptChunk, goToNextChunk, goToPreviousChunk } from '@codemirror/merge';
-import { getChunks } from '@renderer/components/team/review/CodeMirrorDiffUtils';
+import {
+  computeChunkIndexAtPos,
+  getChunks,
+} from '@renderer/components/team/review/CodeMirrorDiffUtils';
+import { physicalKey } from '@renderer/utils/keyboardUtils';
 
 import type { EditorView } from '@codemirror/view';
 import type { FileChangeSummary } from '@shared/types/review';
@@ -98,7 +102,8 @@ export function useDiffNavigation(
   onHunkRejected?: (filePath: string, hunkIndex: number) => void,
   onClose?: () => void,
   onSaveFile?: () => void,
-  continuousOptions?: ContinuousNavigationOptions
+  continuousOptions?: ContinuousNavigationOptions,
+  getHunkCountForFile?: (filePath: string, fallbackSnippetsLength: number) => number
 ): DiffNavigationState {
   const [hunkState, setHunkState] = useState<{ filePath: string | null; index: number }>({
     filePath: selectedFilePath,
@@ -108,7 +113,10 @@ export function useDiffNavigation(
 
   const activePath = getActiveFilePath(selectedFilePath, continuousOptions);
   const selectedFile = files.find((f) => f.filePath === activePath);
-  const totalHunks = selectedFile?.snippets.length ?? 0;
+  const totalHunks =
+    selectedFile && getHunkCountForFile
+      ? getHunkCountForFile(selectedFile.filePath, selectedFile.snippets.length)
+      : (selectedFile?.snippets.length ?? 0);
 
   const currentHunkIndex = hunkState.filePath === activePath ? hunkState.index : 0;
 
@@ -256,14 +264,18 @@ export function useDiffNavigation(
     }
   }, [selectedFilePath, currentHunkIndex, onHunkRejected]);
 
-  // Store refs for stable closure
+  // Store refs for stable closure (avoids re-registering keydown on every render)
   const onCloseRef = useRef(onClose);
   const onSaveFileRef = useRef(onSaveFile);
+  const onHunkAcceptedRef = useRef(onHunkAccepted);
+  const selectedFilePathRef = useRef(selectedFilePath);
 
   useEffect(() => {
     onCloseRef.current = onClose;
     onSaveFileRef.current = onSaveFile;
-  }, [onClose, onSaveFile]);
+    onHunkAcceptedRef.current = onHunkAccepted;
+    selectedFilePathRef.current = selectedFilePath;
+  }, [onClose, onSaveFile, onHunkAccepted, selectedFilePath]);
 
   // Keyboard handler
   useEffect(() => {
@@ -276,55 +288,60 @@ export function useDiffNavigation(
       }
 
       const isMeta = event.metaKey || event.ctrlKey;
+      // Layout-independent key (uses event.code for letters/symbols)
+      const key = physicalKey(event);
 
       // Alt+J -> next hunk (cross-file in continuous mode)
-      if (event.altKey && event.key.toLowerCase() === 'j') {
+      if (event.altKey && key === 'j') {
         event.preventDefault();
         goToNextHunk();
         return;
       }
 
       // Alt+K -> prev hunk (cross-file in continuous mode)
-      if (event.altKey && event.key.toLowerCase() === 'k') {
+      if (event.altKey && key === 'k') {
         event.preventDefault();
         goToPrevHunk();
         return;
       }
 
       // Alt+ArrowDown -> next file
-      if (event.altKey && event.key === 'ArrowDown') {
+      if (event.altKey && key === 'ArrowDown') {
         event.preventDefault();
         goToNextFile();
         return;
       }
 
       // Alt+ArrowUp -> prev file
-      if (event.altKey && event.key === 'ArrowUp') {
+      if (event.altKey && key === 'ArrowUp') {
         event.preventDefault();
         goToPrevFile();
         return;
       }
 
-      // Cmd+Enter -> save file
-      if (isMeta && event.key === 'Enter') {
+      // Cmd+S -> save file
+      if (isMeta && key === 's' && !event.shiftKey) {
         event.preventDefault();
         onSaveFileRef.current?.();
         return;
       }
 
       // Cmd+Y -> accept chunk + next (cross-file aware)
-      if (isMeta && event.key.toLowerCase() === 'y') {
+      if (isMeta && key === 'y') {
         event.preventDefault();
         const view = getActiveEditorView(editorViewRef, continuousOptionsRef.current);
         if (view) {
+          const filePath = getActiveFilePath(
+            selectedFilePathRef.current,
+            continuousOptionsRef.current
+          );
+          if (filePath && onHunkAcceptedRef.current) {
+            const cursorPos = view.state.selection.main.head;
+            const idx = computeChunkIndexAtPos(view.state, cursorPos);
+            onHunkAcceptedRef.current(filePath, idx);
+          }
           acceptChunk(view);
-          requestAnimationFrame(() => {
-            if (continuousOptionsRef.current?.enabled && isLastChunkInFile(view)) {
-              goToNextFile();
-            } else {
-              goToNextChunk(view);
-            }
-          });
+          requestAnimationFrame(() => goToNextHunk());
         }
         return;
       }

@@ -8,7 +8,7 @@
  */
 
 import type { CliInstallerAPI } from './cliInstaller';
-import type { EditorAPI } from './editor';
+import type { EditorAPI, ProjectAPI } from './editor';
 import type {
   AppConfig,
   DetectedError,
@@ -184,6 +184,10 @@ export interface ConfigAPI {
   hideSessions: (projectId: string, sessionIds: string[]) => Promise<void>;
   /** Bulk unhide sessions for a project */
   unhideSessions: (projectId: string, sessionIds: string[]) => Promise<void>;
+  /** Add a custom project path (persisted across restarts) */
+  addCustomProjectPath: (projectPath: string) => Promise<void>;
+  /** Remove a custom project path */
+  removeCustomProjectPath: (projectPath: string) => Promise<void>;
 }
 
 export interface ClaudeRootInfo {
@@ -422,7 +426,14 @@ export interface TeamsAPI {
   getLogsForTask: (
     teamName: string,
     taskId: string,
-    options?: { owner?: string; status?: string }
+    options?: {
+      owner?: string;
+      status?: string;
+      /** Persisted work intervals (preferred for reliable owner-log attribution). */
+      intervals?: { startedAt: string; completedAt?: string }[];
+      /** Back-compat: single since timestamp (deprecated). */
+      since?: string;
+    }
   ) => Promise<MemberLogSummary[]>;
   getMemberStats: (teamName: string, memberName: string) => Promise<MemberFullStats>;
   launchTeam: (request: TeamLaunchRequest) => Promise<TeamLaunchResponse>;
@@ -449,6 +460,18 @@ export interface TeamsAPI {
   restoreTask: (teamName: string, taskId: string) => Promise<void>;
   getDeletedTasks: (teamName: string) => Promise<TeamTask[]>;
   showMessageNotification: (data: TeamMessageNotificationData) => Promise<void>;
+  addTaskRelationship: (
+    teamName: string,
+    taskId: string,
+    targetId: string,
+    type: 'blockedBy' | 'blocks' | 'related'
+  ) => Promise<void>;
+  removeTaskRelationship: (
+    teamName: string,
+    taskId: string,
+    targetId: string,
+    type: 'blockedBy' | 'blocks' | 'related'
+  ) => Promise<void>;
   onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void) => () => void;
   onProvisioningProgress: (
     callback: (event: unknown, data: TeamProvisioningProgress) => void
@@ -489,7 +512,11 @@ export interface ReviewAPI {
     snippets: SnippetDiff[]
   ) => Promise<{ preview: string; hasConflicts: boolean }>;
   // Editable diff
-  saveEditedFile: (filePath: string, content: string) => Promise<{ success: boolean }>;
+  saveEditedFile: (
+    filePath: string,
+    content: string,
+    projectPath?: string
+  ) => Promise<{ success: boolean }>;
   // Decision persistence
   loadDecisions: (
     teamName: string,
@@ -497,12 +524,18 @@ export interface ReviewAPI {
   ) => Promise<{
     hunkDecisions: Record<string, HunkDecision>;
     fileDecisions: Record<string, HunkDecision>;
+    /**
+     * Optional stable hunk fingerprints persisted from the renderer.
+     * filePath -> (hunkIndex -> contextHash)
+     */
+    hunkContextHashesByFile?: Record<string, Record<number, string>>;
   } | null>;
   saveDecisions: (
     teamName: string,
     scopeKey: string,
     hunkDecisions: Record<string, HunkDecision>,
-    fileDecisions: Record<string, HunkDecision>
+    fileDecisions: Record<string, HunkDecision>,
+    hunkContextHashesByFile?: Record<string, Record<number, string>>
   ) => Promise<void>;
   clearDecisions: (teamName: string, scopeKey: string) => Promise<void>;
   onCmdN?: (callback: () => void) => (() => void) | undefined;
@@ -644,6 +677,9 @@ export interface ElectronAPI {
 
   // Embedded Terminal API (xterm.js + node-pty)
   terminal: TerminalAPI;
+
+  // Project file operations (editor-independent)
+  project: ProjectAPI;
 
   // Project Editor API (file browser + CodeMirror)
   editor: EditorAPI;

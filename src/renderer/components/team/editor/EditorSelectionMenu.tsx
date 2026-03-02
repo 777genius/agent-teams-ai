@@ -5,6 +5,7 @@
  * Uses onMouseDown preventDefault to avoid deselecting text in CM6.
  */
 
+import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { ListTodo, MessageSquare } from 'lucide-react';
 
@@ -92,16 +93,17 @@ interface MenuButtonProps {
 const MenuButton = ({ icon, label, onClick }: MenuButtonProps): React.ReactElement => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="icon"
         tabIndex={-1}
         aria-label={label}
         onClick={onClick}
         onMouseDown={(e) => e.preventDefault()} // prevent CM6 selection loss
-        className="rounded p-1.5 text-text-secondary transition-colors hover:bg-surface-raised hover:text-text"
+        className="size-7 p-1.5 text-text-secondary"
       >
         {icon}
-      </button>
+      </Button>
     </TooltipTrigger>
     <TooltipContent side="top" sideOffset={6}>
       {label}

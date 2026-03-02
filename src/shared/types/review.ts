@@ -81,6 +81,16 @@ export interface FileReviewDecision {
   filePath: string;
   fileDecision: HunkDecision;
   hunkDecisions: Record<number, HunkDecision>;
+  /** Optional stable hunk fingerprints (index → contextHash). Used to map decisions when indices drift. */
+  hunkContextHashes?: Record<number, string>;
+  /**
+   * Optional context to apply decisions without re-resolving content in main process.
+   * When present, main can use these values directly (safer in task mode where memberName may be unknown).
+   */
+  snippets?: SnippetDiff[];
+  originalFullContent?: string | null;
+  modifiedFullContent?: string | null;
+  isNewFile?: boolean;
 }
 
 /** Запрос на применение review */

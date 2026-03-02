@@ -1,8 +1,12 @@
 /**
- * Placeholder for binary files — shows file info and "Open in System Viewer" button.
+ * Router for binary file display — picks the right preview component
+ * based on file type from the preview registry.
  */
 
-import { FileQuestion } from 'lucide-react';
+import { getPreviewType, isPreviewable } from '@renderer/utils/previewRegistry';
+
+import { EditorBinaryPlaceholder } from './EditorBinaryPlaceholder';
+import { EditorImagePreview } from './EditorImagePreview';
 
 interface EditorBinaryStateProps {
   filePath: string;
@@ -14,28 +18,11 @@ export const EditorBinaryState = ({
   size,
 }: EditorBinaryStateProps): React.ReactElement => {
   const fileName = filePath.split('/').pop() ?? filePath;
-  const sizeFormatted =
-    size < 1024
-      ? `${size} B`
-      : size < 1024 * 1024
-        ? `${(size / 1024).toFixed(1)} KB`
-        : `${(size / 1024 / 1024).toFixed(1)} MB`;
+  const previewType = getPreviewType(fileName);
 
-  const handleOpenExternal = (): void => {
-    window.electronAPI.openPath(filePath).catch(console.error);
-  };
+  if (previewType === 'image' && isPreviewable(fileName, size)) {
+    return <EditorImagePreview filePath={filePath} fileName={fileName} size={size} />;
+  }
 
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 text-text-muted">
-      <FileQuestion className="size-12 opacity-30" />
-      <p className="text-sm font-medium text-text-secondary">{fileName}</p>
-      <p className="text-xs">Binary file ({sizeFormatted})</p>
-      <button
-        onClick={handleOpenExternal}
-        className="mt-2 rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-raised"
-      >
-        Open in System Viewer
-      </button>
-    </div>
-  );
+  return <EditorBinaryPlaceholder filePath={filePath} fileName={fileName} size={size} />;
 };

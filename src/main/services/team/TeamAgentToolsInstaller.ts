@@ -9,7 +9,6 @@ import { version as APP_VERSION } from '../../../../package.json';
 import { atomicWriteAsync } from './atomicWrite';
 
 const TOOL_FILE_NAME = 'teamctl.js';
-const TOOL_VERSION = 11;
 
 function buildTeamCtlScript(version: string): string {
   const script = String.raw`#!/usr/bin/env node
@@ -196,10 +195,37 @@ function writeTask(taskPath, task) {
   return verify;
 }
 
+function applyWorkIntervalsForStatusTransition(task, prevStatus, nextStatus, now) {
+  var wasInProgress = prevStatus === 'in_progress';
+  var isInProgress = nextStatus === 'in_progress';
+  var intervals = Array.isArray(task.workIntervals) ? task.workIntervals.slice() : [];
+  var last = intervals.length ? intervals[intervals.length - 1] : null;
+
+  if (!wasInProgress && isInProgress) {
+    if (!last || typeof last.completedAt === 'string') {
+      intervals.push({ startedAt: now });
+    }
+  } else if (wasInProgress && !isInProgress) {
+    // Close the most recent open interval (if any).
+    for (var i = intervals.length - 1; i >= 0; i--) {
+      if (intervals[i] && typeof intervals[i].startedAt === 'string' && !intervals[i].completedAt) {
+        intervals[i].completedAt = now;
+        break;
+      }
+    }
+  }
+
+  if (intervals.length > 0) task.workIntervals = intervals;
+  else delete task.workIntervals;
+}
+
 function setTaskStatus(paths, taskId, status) {
   const normalized = normalizeStatus(status);
   if (!normalized) die('Invalid status: ' + String(status));
   const { taskPath, task } = readTask(paths, taskId);
+  var prev = task.status;
+  var now = nowIso();
+  applyWorkIntervalsForStatusTransition(task, prev, normalized, now);
   task.status = normalized;
   writeTask(taskPath, task);
 }
@@ -245,6 +271,7 @@ function addTaskComment(paths, taskId, flags) {
         id: commentId,
         author: from,
         text: text,
+        type: 'regular',
         createdAt: nowIso(),
       };
       task.comments = existing.concat([comment]);
@@ -306,6 +333,103 @@ function updateHighwatermark(paths, taskId) {
   atomicWrite(hwmPath, String(taskId));
 }
 
+function parseIdList(value) {
+  if (!value || value === true) return [];
+  var ids = String(value).split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  for (var k = 0; k < ids.length; k++) {
+    if (!/^\d+$/.test(ids[k])) die('Invalid task ID in list: ' + ids[k]);
+  }
+  return ids;
+}
+
+function taskExists(paths, taskId) {
+  try {
+    fs.accessSync(path.join(paths.tasksDir, String(taskId) + '.json'), fs.constants.F_OK);
+    return true;
+  } catch (e) { return false; }
+}
+
+function readTaskObject(paths, taskId) {
+  var taskPath = path.join(paths.tasksDir, String(taskId) + '.json');
+  var t = readJson(taskPath, null);
+  if (!t) die('Task not found: #' + taskId);
+  return { task: t, taskPath: taskPath };
+}
+
+function wouldCreateBlockCycle(paths, sourceId, targetId) {
+  var visited = {};
+  var stack = [String(targetId)];
+  while (stack.length > 0) {
+    var current = stack.pop();
+    if (current === String(sourceId)) return true;
+    if (visited[current]) continue;
+    visited[current] = true;
+    try {
+      var t = readJson(path.join(paths.tasksDir, current + '.json'), null);
+      if (t && Array.isArray(t.blockedBy)) {
+        for (var i = 0; i < t.blockedBy.length; i++) stack.push(String(t.blockedBy[i]));
+      }
+    } catch (e) { /* skip */ }
+  }
+  return false;
+}
+
+function linkTasks(paths, taskId, targetId, type) {
+  var id = String(taskId), target = String(targetId);
+  if (id === target) die('Cannot link a task to itself');
+  if (!taskExists(paths, id)) die('Task not found: #' + id);
+  if (!taskExists(paths, target)) die('Task not found: #' + target);
+
+  if (type === 'blocked-by') {
+    if (wouldCreateBlockCycle(paths, id, target))
+      die('Circular dependency: #' + target + ' already depends on #' + id);
+    var refA = readTaskObject(paths, id);
+    var bb = Array.isArray(refA.task.blockedBy) ? refA.task.blockedBy : [];
+    if (!bb.includes(target)) { refA.task.blockedBy = bb.concat([target]); atomicWrite(refA.taskPath, JSON.stringify(refA.task, null, 2)); }
+    var refB = readTaskObject(paths, target);
+    var bl = Array.isArray(refB.task.blocks) ? refB.task.blocks : [];
+    if (!bl.includes(id)) { refB.task.blocks = bl.concat([id]); atomicWrite(refB.taskPath, JSON.stringify(refB.task, null, 2)); }
+  } else if (type === 'blocks') {
+    linkTasks(paths, target, id, 'blocked-by');
+    return;
+  } else if (type === 'related') {
+    var rA = readTaskObject(paths, id);
+    var relA = Array.isArray(rA.task.related) ? rA.task.related : [];
+    if (!relA.includes(target)) { rA.task.related = relA.concat([target]); atomicWrite(rA.taskPath, JSON.stringify(rA.task, null, 2)); }
+    var rB = readTaskObject(paths, target);
+    var relB = Array.isArray(rB.task.related) ? rB.task.related : [];
+    if (!relB.includes(id)) { rB.task.related = relB.concat([id]); atomicWrite(rB.taskPath, JSON.stringify(rB.task, null, 2)); }
+  }
+}
+
+function unlinkTasks(paths, taskId, targetId, type) {
+  var id = String(taskId), target = String(targetId);
+  if (!taskExists(paths, id)) die('Task not found: #' + id);
+
+  if (type === 'blocked-by') {
+    var refA = readTaskObject(paths, id);
+    refA.task.blockedBy = (Array.isArray(refA.task.blockedBy) ? refA.task.blockedBy : []).filter(function(x) { return x !== target; });
+    atomicWrite(refA.taskPath, JSON.stringify(refA.task, null, 2));
+    if (taskExists(paths, target)) {
+      var refB = readTaskObject(paths, target);
+      refB.task.blocks = (Array.isArray(refB.task.blocks) ? refB.task.blocks : []).filter(function(x) { return x !== id; });
+      atomicWrite(refB.taskPath, JSON.stringify(refB.task, null, 2));
+    }
+  } else if (type === 'blocks') {
+    unlinkTasks(paths, target, id, 'blocked-by');
+    return;
+  } else if (type === 'related') {
+    var rA = readTaskObject(paths, id);
+    rA.task.related = (Array.isArray(rA.task.related) ? rA.task.related : []).filter(function(x) { return x !== target; });
+    atomicWrite(rA.taskPath, JSON.stringify(rA.task, null, 2));
+    if (taskExists(paths, target)) {
+      var rB = readTaskObject(paths, target);
+      rB.task.related = (Array.isArray(rB.task.related) ? rB.task.related : []).filter(function(x) { return x !== id; });
+      atomicWrite(rB.taskPath, JSON.stringify(rB.task, null, 2));
+    }
+  }
+}
+
 function createTask(paths, flags) {
   const subject = typeof flags.subject === 'string' ? flags.subject.trim() : '';
   if (!subject) die('Missing --subject');
@@ -317,13 +441,24 @@ function createTask(paths, flags) {
         : '';
   const owner = typeof flags.owner === 'string' && flags.owner.trim() ? flags.owner.trim() : undefined;
   const explicitStatus = typeof flags.status === 'string' ? flags.status : '';
-  const status = normalizeStatus(explicitStatus) || (owner ? 'in_progress' : 'pending');
   const activeForm =
     typeof flags.activeForm === 'string'
       ? flags.activeForm
       : typeof flags['active-form'] === 'string'
         ? flags['active-form']
         : undefined;
+
+  var blockedByIds = parseIdList(flags['blocked-by']);
+  var relatedIds = parseIdList(flags.related);
+  // Default status rule:
+  // - explicit --status always wins
+  // - tasks with dependencies should start as pending, even if assigned (owner)
+  // - otherwise, assigned tasks default to in_progress, unassigned to pending
+  const status =
+    normalizeStatus(explicitStatus) ||
+    (blockedByIds.length > 0 ? 'pending' : owner ? 'in_progress' : 'pending');
+  for (var v = 0; v < blockedByIds.length; v++) { if (!taskExists(paths, blockedByIds[v])) die('Blocked-by task not found: #' + blockedByIds[v]); }
+  for (var w = 0; w < relatedIds.length; w++) { if (!taskExists(paths, relatedIds[w])) die('Related task not found: #' + relatedIds[w]); }
 
   ensureDir(paths.tasksDir);
   const from = typeof flags.from === 'string' && flags.from.trim() ? flags.from.trim() : undefined;
@@ -333,6 +468,7 @@ function createTask(paths, flags) {
   while (true) {
     nextId = getNextTaskId(paths);
     taskPath = path.join(paths.tasksDir, String(nextId) + '.json');
+    var createdAt = nowIso();
     task = {
       id: nextId,
       subject,
@@ -341,8 +477,11 @@ function createTask(paths, flags) {
       owner,
       createdBy: from,
       status,
+      createdAt: createdAt,
+      workIntervals: status === 'in_progress' ? [{ startedAt: createdAt }] : undefined,
       blocks: [],
-      blockedBy: [],
+      blockedBy: blockedByIds,
+      related: relatedIds.length > 0 ? relatedIds : undefined,
     };
     try {
       const fd = fs.openSync(taskPath, 'wx');
@@ -357,6 +496,20 @@ function createTask(paths, flags) {
     }
   }
   updateHighwatermark(paths, nextId);
+
+  // Set reverse links for blockedBy (target.blocks += nextId)
+  for (var bi = 0; bi < blockedByIds.length; bi++) {
+    var dep = readTaskObject(paths, blockedByIds[bi]);
+    var depBl = Array.isArray(dep.task.blocks) ? dep.task.blocks : [];
+    if (!depBl.includes(nextId)) { dep.task.blocks = depBl.concat([nextId]); atomicWrite(dep.taskPath, JSON.stringify(dep.task, null, 2)); }
+  }
+  // Set reverse links for related (bidirectional)
+  for (var ri = 0; ri < relatedIds.length; ri++) {
+    var rel = readTaskObject(paths, relatedIds[ri]);
+    var relL = Array.isArray(rel.task.related) ? rel.task.related : [];
+    if (!relL.includes(nextId)) { rel.task.related = relL.concat([nextId]); atomicWrite(rel.taskPath, JSON.stringify(rel.task, null, 2)); }
+  }
+
   return task;
 }
 
@@ -447,18 +600,32 @@ function sendInboxMessage(paths, teamName, flags) {
 
 function reviewApprove(paths, teamName, taskId, flags) {
   setKanbanColumn(paths, teamName, taskId, 'approved');
-  const notify = flags.notify === true || flags['notify-owner'] === true;
-  if (!notify) return;
-  const { task } = readTask(paths, taskId);
-  if (!task.owner) return;
+  const { taskPath, task } = readTask(paths, taskId);
   const from = typeof flags.from === 'string' && flags.from.trim() ? flags.from.trim() : inferLeadName(paths);
   const note = typeof flags.note === 'string' ? flags.note.trim() : '';
-  const text = note
+
+  // Record review comment in task.comments
+  var existing = Array.isArray(task.comments) ? task.comments : [];
+  var reviewCommentId = crypto.randomUUID
+    ? crypto.randomUUID()
+    : String(Date.now()) + '-' + String(Math.random());
+  task.comments = existing.concat([{
+    id: reviewCommentId,
+    author: from,
+    text: note || 'Approved',
+    type: 'review_approved',
+    createdAt: nowIso(),
+  }]);
+  writeTask(taskPath, task);
+
+  const notify = flags.notify === true || flags['notify-owner'] === true;
+  if (!notify || !task.owner) return;
+  const inboxText = note
     ? 'Task #' + String(taskId) + ' approved.\n\n' + note
     : 'Task #' + String(taskId) + ' approved.';
   sendInboxMessage(paths, teamName, {
     to: task.owner,
-    text,
+    text: inboxText,
     summary: 'Approved #' + String(taskId),
     from,
   });
@@ -469,12 +636,29 @@ function reviewRequestChanges(paths, teamName, taskId, flags) {
   const { taskPath, task } = readTask(paths, taskId);
   if (!task.owner) die('No owner found for task ' + String(taskId));
 
+  const from = typeof flags.from === 'string' && flags.from.trim() ? flags.from.trim() : inferLeadName(paths);
+
   clearKanban(paths, teamName, taskId);
+  var now = nowIso();
+  applyWorkIntervalsForStatusTransition(task, task.status, 'in_progress', now);
   task.status = 'in_progress';
+
+  // Record review comment in task.comments
+  var existing = Array.isArray(task.comments) ? task.comments : [];
+  var reviewCommentId = crypto.randomUUID
+    ? crypto.randomUUID()
+    : String(Date.now()) + '-' + String(Math.random());
+  task.comments = existing.concat([{
+    id: reviewCommentId,
+    author: from,
+    text: comment || 'Reviewer requested changes.',
+    type: 'review_request',
+    createdAt: now,
+  }]);
+
   writeTask(taskPath, task);
 
-  const from = typeof flags.from === 'string' && flags.from.trim() ? flags.from.trim() : inferLeadName(paths);
-  const text =
+  const inboxText =
     'Task #' +
     String(taskId) +
     ' needs fixes.\n\n' +
@@ -483,7 +667,7 @@ function reviewRequestChanges(paths, teamName, taskId, flags) {
     'Please fix and mark it as completed when ready.';
   sendInboxMessage(paths, teamName, {
     to: task.owner,
-    text,
+    text: inboxText,
     summary: 'Fix request for #' + String(taskId),
     from,
   });
@@ -639,6 +823,9 @@ function taskBriefing(paths, teamName, flags) {
     if (t.description && t.description !== t.subject) {
       parts.push('  Description: ' + t.description.slice(0, 500));
     }
+    if (t.blocks && t.blocks.length > 0) {
+      parts.push('  Blocks: ' + t.blocks.map(function(id) { return '#' + id; }).join(', '));
+    }
     if (t.blockedBy && t.blockedBy.length > 0) {
       parts.push('  Blocked by: ' + t.blockedBy.map(function(id) { return '#' + id; }).join(', '));
     }
@@ -704,7 +891,13 @@ function printHelp() {
       '  node teamctl.js task set-status <id> <pending|in_progress|completed|deleted> [--team <team>]',
       '  node teamctl.js task complete <id> [--team <team>]',
       '  node teamctl.js task start <id> [--team <team>]',
-      '  node teamctl.js task create --subject "..." [--description "..."] [--prompt "..."] [--owner "member"] [--status pending|in_progress|completed|deleted] [--notify --from "member"] [--team <team>]',
+      '  node teamctl.js task create --subject "..." [--description "..."] [--prompt "..."] [--owner "member"] [--blocked-by 2,3] [--related 5] [--status ...] [--notify --from "member"] [--team <team>]',
+      '  node teamctl.js task link <id> --blocked-by <targetId> [--team <team>]',
+      '  node teamctl.js task link <id> --blocks <targetId> [--team <team>]',
+      '  node teamctl.js task link <id> --related <targetId> [--team <team>]',
+      '  node teamctl.js task unlink <id> --blocked-by <targetId> [--team <team>]',
+      '  node teamctl.js task unlink <id> --blocks <targetId> [--team <team>]',
+      '  node teamctl.js task unlink <id> --related <targetId> [--team <team>]',
       '  node teamctl.js task set-owner <id> <member|clear> [--notify --from "member"] [--team <team>]',
       '  node teamctl.js task comment <id> --text "..." [--from "member"] [--team <team>]',
       '  node teamctl.js task set-clarification <id> <lead|user|clear> [--from "member"] [--team <team>]',
@@ -875,6 +1068,30 @@ async function main() {
     }
     if (action === 'briefing') {
       taskBriefing(paths, teamName, args.flags);
+      return;
+    }
+    if (action === 'link') {
+      var linkId = rest[0] || args.flags.id;
+      if (!linkId) die('Usage: task link <id> --blocked-by|--blocks|--related <targetId>');
+      var linkBbF = args.flags['blocked-by'], linkBlF = args.flags.blocks, linkRelF = args.flags.related;
+      var linkCnt = (linkBbF ? 1 : 0) + (linkBlF ? 1 : 0) + (linkRelF ? 1 : 0);
+      if (linkCnt !== 1) die('Specify exactly one: --blocked-by, --blocks, or --related');
+      var linkTp = linkBbF ? 'blocked-by' : linkBlF ? 'blocks' : 'related';
+      var linkTv = linkBbF || linkBlF || linkRelF;
+      linkTasks(paths, String(linkId), String(linkTv), linkTp);
+      process.stdout.write('OK task #' + linkId + ' ' + linkTp + ' #' + linkTv + '\n');
+      return;
+    }
+    if (action === 'unlink') {
+      var unlinkId = rest[0] || args.flags.id;
+      if (!unlinkId) die('Usage: task unlink <id> --blocked-by|--blocks|--related <targetId>');
+      var unlinkBbF = args.flags['blocked-by'], unlinkBlF = args.flags.blocks, unlinkRelF = args.flags.related;
+      var unlinkCnt = (unlinkBbF ? 1 : 0) + (unlinkBlF ? 1 : 0) + (unlinkRelF ? 1 : 0);
+      if (unlinkCnt !== 1) die('Specify exactly one: --blocked-by, --blocks, or --related');
+      var unlinkTp = unlinkBbF ? 'blocked-by' : unlinkBlF ? 'blocks' : 'related';
+      var unlinkTv = unlinkBbF || unlinkBlF || unlinkRelF;
+      unlinkTasks(paths, String(unlinkId), String(unlinkTv), unlinkTp);
+      process.stdout.write('OK task #' + unlinkId + ' unlinked ' + unlinkTp + ' #' + unlinkTv + '\n');
       return;
     }
     die('Unknown task action: ' + String(action));

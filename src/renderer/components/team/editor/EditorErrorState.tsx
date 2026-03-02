@@ -2,6 +2,7 @@
  * Error state for file read failures (EACCES, ENOENT, etc.).
  */
 
+import { Button } from '@renderer/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
 
 interface EditorErrorStateProps {
@@ -25,22 +26,14 @@ export const EditorErrorState = ({
       <p className="max-w-md text-center text-sm text-text-secondary">{error}</p>
       <div className="flex gap-2">
         {onRetry && (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-raised"
-          >
+          <Button variant="outline" size="sm" onClick={onRetry}>
             Retry
-          </button>
+          </Button>
         )}
         {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-raised"
-          >
+          <Button variant="outline" size="sm" onClick={onClose}>
             Close Tab
-          </button>
+          </Button>
         )}
       </div>
     </div>

@@ -147,6 +147,7 @@ export type WorktreeSource =
   | 'auto-claude' // /Users/.../.auto-claude/worktrees/tasks/{task-id}
   | '21st' // /Users/.../.21st/worktrees/{id}/{name [bracket-id]}
   | 'claude-desktop' // /Users/.../.claude-worktrees/{repo}/{name}
+  | 'claude-code' // /Users/.../.claude/worktrees/{name}
   | 'ccswitch' // /Users/.../.ccswitch/worktrees/{repo}/{name}
   | 'git' // Standard git worktree (main repo or detached)
   | 'unknown'; // Non-git project or undetectable

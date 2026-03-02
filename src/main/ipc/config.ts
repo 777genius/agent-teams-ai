@@ -114,6 +114,10 @@ export function registerConfigHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('config:getClaudeRootInfo', handleGetClaudeRootInfo);
   ipcMain.handle('config:findWslClaudeRoots', handleFindWslClaudeRoots);
 
+  // Custom project path handlers
+  ipcMain.handle('config:addCustomProjectPath', handleAddCustomProjectPath);
+  ipcMain.handle('config:removeCustomProjectPath', handleRemoveCustomProjectPath);
+
   // Editor handlers
   ipcMain.handle('config:openInEditor', handleOpenInEditor);
 
@@ -625,6 +629,46 @@ async function handleOpenInEditor(_event: IpcMainInvokeEvent): Promise<IpcResult
 }
 
 /**
+ * Handler for 'config:addCustomProjectPath' - Persists a custom project path.
+ */
+async function handleAddCustomProjectPath(
+  _event: IpcMainInvokeEvent,
+  projectPath: string
+): Promise<IpcResult> {
+  try {
+    if (!projectPath || typeof projectPath !== 'string') {
+      return { success: false, error: 'Project path is required and must be a string' };
+    }
+
+    configManager.addCustomProjectPath(projectPath);
+    return { success: true };
+  } catch (error) {
+    logger.error('Error in config:addCustomProjectPath:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+/**
+ * Handler for 'config:removeCustomProjectPath' - Removes a custom project path.
+ */
+async function handleRemoveCustomProjectPath(
+  _event: IpcMainInvokeEvent,
+  projectPath: string
+): Promise<IpcResult> {
+  try {
+    if (!projectPath || typeof projectPath !== 'string') {
+      return { success: false, error: 'Project path is required and must be a string' };
+    }
+
+    configManager.removeCustomProjectPath(projectPath);
+    return { success: true };
+  } catch (error) {
+    logger.error('Error in config:removeCustomProjectPath:', error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+/**
  * Handler for 'config:selectFolders' - Opens native folder selection dialog.
  * Allows users to select one or more folders for trigger project scope.
  */
@@ -1091,6 +1135,8 @@ export function removeConfigHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler('config:unhideSession');
   ipcMain.removeHandler('config:hideSessions');
   ipcMain.removeHandler('config:unhideSessions');
+  ipcMain.removeHandler('config:addCustomProjectPath');
+  ipcMain.removeHandler('config:removeCustomProjectPath');
   ipcMain.removeHandler('config:selectFolders');
   ipcMain.removeHandler('config:selectClaudeRootFolder');
   ipcMain.removeHandler('config:getClaudeRootInfo');

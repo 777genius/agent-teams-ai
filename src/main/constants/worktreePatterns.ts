@@ -42,3 +42,6 @@ export const CLAUDE_WORKTREES_DIR = '.claude-worktrees';
 
 /** ccswitch worktrees directory */
 export const CCSWITCH_DIR = '.ccswitch';
+
+/** Claude Code CLI worktrees directory (.claude/worktrees/) */
+export const CLAUDE_CODE_DIR = '.claude';

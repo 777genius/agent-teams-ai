@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { IS_MAC } from '@renderer/utils/platformKeys';
 import { X } from 'lucide-react';
 
 interface KeyboardShortcutsHelpProps {
@@ -7,16 +8,20 @@ interface KeyboardShortcutsHelpProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const mod = IS_MAC ? '\u2318' : 'Ctrl';
+const alt = IS_MAC ? '\u2325' : 'Alt';
+const shift = IS_MAC ? '\u21E7' : 'Shift';
+
 const shortcuts = [
-  { keys: ['\u2325+J'], action: 'Next change' },
-  { keys: ['\u2325+K'], action: 'Previous change' },
-  { keys: ['\u2325+\u2193'], action: 'Next file' },
-  { keys: ['\u2325+\u2191'], action: 'Previous file' },
-  { keys: ['\u2318+Y'], action: 'Accept change' },
-  { keys: ['\u2318+N'], action: 'Reject change' },
-  { keys: ['\u2318+\u21A9'], action: 'Save file' },
-  { keys: ['\u2318+Z'], action: 'Undo' },
-  { keys: ['\u2318+\u21E7+Z'], action: 'Redo' },
+  { keys: [`${alt}+J`], action: 'Next change' },
+  { keys: [`${alt}+K`], action: 'Previous change' },
+  { keys: [`${alt}+\u2193`], action: 'Next file' },
+  { keys: [`${alt}+\u2191`], action: 'Previous file' },
+  { keys: [`${mod}+Y`], action: 'Accept change' },
+  { keys: [`${mod}+N`], action: 'Reject change' },
+  { keys: [`${mod}+S`], action: 'Save file' },
+  { keys: [`${mod}+Z`], action: 'Undo' },
+  { keys: [`${mod}+${shift}+Z`], action: 'Redo' },
   { keys: ['?'], action: 'Toggle shortcuts' },
   { keys: ['Esc'], action: 'Close dialog' },
 ];

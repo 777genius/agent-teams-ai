@@ -62,6 +62,12 @@ export const CONFIG_FIND_WSL_CLAUDE_ROOTS = 'config:findWslClaudeRoots';
 /** Open config file in external editor */
 export const CONFIG_OPEN_IN_EDITOR = 'config:openInEditor';
 
+/** Add a custom project path (Select Folder persistence) */
+export const CONFIG_ADD_CUSTOM_PROJECT_PATH = 'config:addCustomProjectPath';
+
+/** Remove a custom project path */
+export const CONFIG_REMOVE_CUSTOM_PROJECT_PATH = 'config:removeCustomProjectPath';
+
 /** Pin a session */
 export const CONFIG_PIN_SESSION = 'config:pinSession';
 
@@ -315,6 +321,12 @@ export const TEAM_SET_TASK_CLARIFICATION = 'team:setTaskClarification';
 /** Show native OS notification for a team message */
 export const TEAM_SHOW_MESSAGE_NOTIFICATION = 'team:showMessageNotification';
 
+/** Add a relationship (blockedBy/blocks/related) between two tasks */
+export const TEAM_ADD_TASK_RELATIONSHIP = 'team:addTaskRelationship';
+
+/** Remove a relationship (blockedBy/blocks/related) between two tasks */
+export const TEAM_REMOVE_TASK_RELATIONSHIP = 'team:removeTaskRelationship';
+
 // =============================================================================
 // CLI Installer API Channels
 // =============================================================================
@@ -431,6 +443,9 @@ export const EDITOR_DELETE_FILE = 'editor:deleteFile';
 /** Move file or directory to a new location */
 export const EDITOR_MOVE_FILE = 'editor:moveFile';
 
+/** Rename file or directory in place */
+export const EDITOR_RENAME_FILE = 'editor:renameFile';
+
 /** Search in files (literal string search) */
 export const EDITOR_SEARCH_IN_FILES = 'editor:searchInFiles';
 
@@ -443,5 +458,17 @@ export const EDITOR_GIT_STATUS = 'editor:gitStatus';
 /** Enable/disable file watcher for current project */
 export const EDITOR_WATCH_DIR = 'editor:watchDir';
 
+/** Update list of watched file paths (open tabs) */
+export const EDITOR_SET_WATCHED_FILES = 'editor:setWatchedFiles';
+
+/** Update list of watched directories (shallow: depth=0) */
+export const EDITOR_SET_WATCHED_DIRS = 'editor:setWatchedDirs';
+
+/** Read binary file as base64 for inline preview */
+export const EDITOR_READ_BINARY_PREVIEW = 'editor:readBinaryPreview';
+
 /** File change event from watcher (main -> renderer) */
 export const EDITOR_CHANGE = 'editor:change';
+
+/** List project files by path (for @file mentions, independent of editor state) */
+export const PROJECT_LIST_FILES = 'project:listFiles';

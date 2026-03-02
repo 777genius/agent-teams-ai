@@ -717,7 +717,7 @@ describe('teamctl.js', () => {
       });
     });
 
-    it('adds a comment with valid ID and timestamp', () => {
+    it('adds a comment with valid ID, timestamp, and type=regular', () => {
       const { stdout, exitCode } = run(claudeDir, [
         'task',
         'comment',
@@ -735,6 +735,7 @@ describe('teamctl.js', () => {
       expect(comments).toHaveLength(1);
       expect(comments[0].text).toBe('Hello world');
       expect(comments[0].author).toBe('alice');
+      expect(comments[0].type).toBe('regular');
       expect(String(comments[0].id)).toMatch(UUID_RE);
       expect(String(comments[0].createdAt)).toMatch(ISO_RE);
     });
@@ -753,7 +754,7 @@ describe('teamctl.js', () => {
       expect(readInbox(claudeDir, 'bob').length).toBe(1); // still 1
     });
 
-    it('multiple comments accumulate with unique IDs', () => {
+    it('multiple comments accumulate with unique IDs and type=regular', () => {
       run(claudeDir, ['task', 'comment', '1', '--text', 'First', '--from', 'alice']);
       run(claudeDir, ['task', 'comment', '1', '--text', 'Second', '--from', 'bob']);
       run(claudeDir, ['task', 'comment', '1', '--text', 'Third', '--from', 'alice']);
@@ -763,6 +764,7 @@ describe('teamctl.js', () => {
       expect(comments.map((c) => c.text)).toEqual(['First', 'Second', 'Third']);
       expect(comments.map((c) => c.author)).toEqual(['alice', 'bob', 'alice']);
       expect(new Set(comments.map((c) => c.id)).size).toBe(3);
+      expect(comments.every((c) => c.type === 'regular')).toBe(true);
     });
 
     it('comment on task without comments array initializes it', () => {
@@ -1282,6 +1284,83 @@ describe('teamctl.js', () => {
       const { exitCode, stderr } = run(claudeDir, ['review', 'approve']);
       expect(exitCode).not.toBe(0);
       expect(stderr).toContain('Usage');
+    });
+
+    it('approve records review_approved comment in task.comments', () => {
+      run(claudeDir, ['review', 'approve', '1', '--from', 'alice']);
+      const task = readTask(claudeDir, '1');
+      const comments = task.comments as Record<string, unknown>[];
+      expect(comments).toHaveLength(1);
+      expect(comments[0].type).toBe('review_approved');
+      expect(comments[0].author).toBe('alice');
+      expect(comments[0].text).toBe('Approved');
+      expect(String(comments[0].id)).toMatch(UUID_RE);
+      expect(String(comments[0].createdAt)).toMatch(ISO_RE);
+    });
+
+    it('approve records review_approved comment with --note text', () => {
+      run(claudeDir, [
+        'review',
+        'approve',
+        '1',
+        '--notify-owner',
+        '--from',
+        'alice',
+        '--note',
+        'Looks great!',
+      ]);
+      const comments = readTask(claudeDir, '1').comments as Record<string, unknown>[];
+      expect(comments).toHaveLength(1);
+      expect(comments[0].type).toBe('review_approved');
+      expect(comments[0].text).toBe('Looks great!');
+    });
+
+    it('request-changes records review_request comment in task.comments', () => {
+      run(claudeDir, [
+        'review',
+        'request-changes',
+        '1',
+        '--comment',
+        'Fix the edge case',
+        '--from',
+        'alice',
+      ]);
+      const comments = readTask(claudeDir, '1').comments as Record<string, unknown>[];
+      expect(comments).toHaveLength(1);
+      expect(comments[0].type).toBe('review_request');
+      expect(comments[0].author).toBe('alice');
+      expect(comments[0].text).toBe('Fix the edge case');
+      expect(String(comments[0].id)).toMatch(UUID_RE);
+      expect(String(comments[0].createdAt)).toMatch(ISO_RE);
+    });
+
+    it('request-changes without --comment records default text as review_request', () => {
+      run(claudeDir, ['review', 'request-changes', '1', '--from', 'alice']);
+      const comments = readTask(claudeDir, '1').comments as Record<string, unknown>[];
+      expect(comments).toHaveLength(1);
+      expect(comments[0].type).toBe('review_request');
+      expect(comments[0].text).toBe('Reviewer requested changes.');
+    });
+
+    it('review comments preserve existing task comments', () => {
+      // Add a regular comment first
+      run(claudeDir, ['task', 'comment', '1', '--text', 'Working on it', '--from', 'bob']);
+      // Then request changes
+      run(claudeDir, [
+        'review',
+        'request-changes',
+        '1',
+        '--comment',
+        'Needs tests',
+        '--from',
+        'alice',
+      ]);
+      const comments = readTask(claudeDir, '1').comments as Record<string, unknown>[];
+      expect(comments).toHaveLength(2);
+      expect(comments[0].type).toBe('regular');
+      expect(comments[0].text).toBe('Working on it');
+      expect(comments[1].type).toBe('review_request');
+      expect(comments[1].text).toBe('Needs tests');
     });
   });
 
@@ -1824,8 +1903,8 @@ describe('teamctl.js', () => {
       expect(comments[0].text).toBe('Hello');
     });
 
-    // --- reviewApprove without --notify-owner creates NO inbox ---
-    it('review approve without --notify-owner does NOT create inbox', () => {
+    // --- reviewApprove without --notify-owner creates NO inbox but DOES record comment ---
+    it('review approve without --notify-owner does NOT create inbox but records comment', () => {
       writeTask(claudeDir, '1', {
         id: '1',
         subject: 'Feature',
@@ -1835,10 +1914,14 @@ describe('teamctl.js', () => {
       run(claudeDir, ['kanban', 'set-column', '1', 'review']);
       run(claudeDir, ['review', 'approve', '1']); // no --notify-owner
       expect(readInbox(claudeDir, 'bob')).toEqual([]);
+      // Comment is still recorded
+      const comments = readTask(claudeDir, '1').comments as Record<string, unknown>[];
+      expect(comments).toHaveLength(1);
+      expect(comments[0].type).toBe('review_approved');
     });
 
-    // --- request-changes: verify ALL three side effects ---
-    it('review request-changes: kanban cleared + status in_progress + inbox sent', () => {
+    // --- request-changes: verify ALL four side effects ---
+    it('review request-changes: kanban cleared + status in_progress + comment recorded + inbox sent', () => {
       writeTask(claudeDir, '1', {
         id: '1',
         subject: 'PR',
@@ -1859,7 +1942,13 @@ describe('teamctl.js', () => {
       expect((readKanban(claudeDir).tasks as Record<string, unknown>)['1']).toBeUndefined();
       // 2) Status changed to in_progress
       expect(readTask(claudeDir, '1').status).toBe('in_progress');
-      // 3) Inbox message sent
+      // 3) Review comment recorded
+      const comments = readTask(claudeDir, '1').comments as Record<string, unknown>[];
+      expect(comments).toHaveLength(1);
+      expect(comments[0].type).toBe('review_request');
+      expect(comments[0].author).toBe('alice');
+      expect(comments[0].text).toBe('Missing tests');
+      // 4) Inbox message sent
       const inbox = readInbox(claudeDir, 'bob') as Record<string, unknown>[];
       expect(inbox).toHaveLength(1);
       expect(inbox[0].from).toBe('alice');
@@ -2249,8 +2338,8 @@ describe('teamctl.js', () => {
       expect(after[0].label).toBe('server-1');
     });
 
-    // --- review approve also writes to kanban (column=approved) ---
-    it('review approve sets kanban column to approved with movedAt', () => {
+    // --- review approve also writes to kanban (column=approved) + comment ---
+    it('review approve sets kanban column to approved with movedAt and records comment', () => {
       writeTask(claudeDir, '1', {
         id: '1',
         subject: 'PR task',
@@ -2262,6 +2351,10 @@ describe('teamctl.js', () => {
       const entry = (readKanban(claudeDir).tasks as Record<string, Record<string, unknown>>)['1'];
       expect(entry.column).toBe('approved');
       expect(String(entry.movedAt)).toMatch(ISO_RE);
+      // Review comment recorded
+      const comments = readTask(claudeDir, '1').comments as Record<string, unknown>[];
+      expect(comments).toHaveLength(1);
+      expect(comments[0].type).toBe('review_approved');
     });
 
     // --- Task create without --description defaults to subject ---

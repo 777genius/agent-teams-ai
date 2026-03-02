@@ -55,7 +55,7 @@ import { ProjectFileService } from '../../../../src/main/services/editor/Project
 // Setup
 // =============================================================================
 
-const PROJECT_ROOT = '/Users/test/my-project';
+const PROJECT_ROOT = path.resolve('/Users/test/my-project');
 let service: ProjectFileService;
 
 const mockLstat = vi.mocked(fs.lstat);
@@ -219,7 +219,7 @@ describe('ProjectFileService.readDir', () => {
 
     mockRealpath.mockImplementation(async (p) => {
       const name = path.basename(String(p));
-      if (name === 'safe-link') return PROJECT_ROOT + '/actual-dir';
+      if (name === 'safe-link') return path.join(PROJECT_ROOT, 'actual-dir');
       return '/etc/shadow'; // escapes project
     });
 
@@ -559,8 +559,8 @@ describe('ProjectFileService.deleteFile', () => {
 // =============================================================================
 
 describe('ProjectFileService.moveFile', () => {
-  const SRC_DIR = PROJECT_ROOT + '/src';
-  const DEST_DIR = PROJECT_ROOT + '/lib';
+  const SRC_DIR = path.join(PROJECT_ROOT, 'src');
+  const DEST_DIR = path.join(PROJECT_ROOT, 'lib');
 
   beforeEach(() => {
     mockRename.mockResolvedValue(undefined);

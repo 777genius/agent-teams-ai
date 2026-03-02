@@ -598,6 +598,7 @@ export const TaskDetailDialog = ({
                 taskId={currentTask.id}
                 taskOwner={currentTask.owner}
                 taskStatus={currentTask.status}
+                taskWorkIntervals={currentTask.workIntervals}
               />
             </div>
           </CollapsibleTeamSection>

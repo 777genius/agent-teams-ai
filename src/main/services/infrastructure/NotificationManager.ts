@@ -12,6 +12,7 @@
  * - Emit IPC events to renderer: notification:new, notification:updated
  */
 
+import { getAppIconPath } from '@main/utils/appIcon';
 import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { type BrowserWindow, Notification } from 'electron';
@@ -394,11 +395,13 @@ export class NotificationManager extends EventEmitter {
 
     const config = this.configManager.getConfig();
 
+    const iconPath = getAppIconPath();
     const notification = new Notification({
       title: 'Claude Code Error',
       subtitle: error.context.projectName,
       body: error.message.slice(0, 200),
       sound: config.notifications.soundEnabled ? 'default' : undefined,
+      ...(iconPath ? { icon: iconPath } : {}),
     });
 
     notification.on('click', () => {

@@ -10,6 +10,8 @@
  * - R (renamed) — cyan
  */
 
+import React from 'react';
+
 import type { GitFileStatusType } from '@shared/types/editor';
 
 // =============================================================================
@@ -33,11 +35,13 @@ interface GitStatusBadgeProps {
   status: GitFileStatusType;
 }
 
-export const GitStatusBadge = ({ status }: GitStatusBadgeProps): React.ReactElement => {
+export const GitStatusBadge = React.memo(function GitStatusBadge({
+  status,
+}: GitStatusBadgeProps): React.ReactElement {
   const config = STATUS_CONFIG[status];
   return (
     <span className={`ml-auto shrink-0 text-[10px] leading-none ${config.color}`} title={status}>
       {config.letter}
     </span>
   );
-};
+});

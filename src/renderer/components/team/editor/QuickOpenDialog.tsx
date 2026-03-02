@@ -37,10 +37,17 @@ export const QuickOpenDialog = ({
   const [allFiles, setAllFiles] = useState<QuickOpenFile[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Reset loading state when projectPath changes (React-recommended
+  // "adjusting state when props change" pattern without effects or refs)
+  const [prevProjectPath, setPrevProjectPath] = useState(projectPath);
+  if (prevProjectPath !== projectPath) {
+    setPrevProjectPath(projectPath);
+    setLoading(true);
+  }
+
   // Load all project files on mount via backend API
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
 
     window.electronAPI.editor
       .listFiles()

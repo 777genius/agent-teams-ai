@@ -1,3 +1,4 @@
+import { computeDiffContextHash } from '@shared/utils/diffContextHash';
 import { structuredPatch } from 'diff';
 
 import type { SnippetDiff } from '@shared/types';
@@ -36,6 +37,7 @@ export class HunkSnippetMatcher {
       if (hunkIdx < 0 || hunkIdx >= patch.hunks.length) continue;
       const hunk = patch.hunks[hunkIdx];
       const snippetSet = new Set<number>();
+      const strongMatches = new Set<number>();
 
       // Reconstruct old/new side of hunk INCLUDING context lines.
       // Context lines (` ` prefix) are critical — without them, snippets whose
@@ -55,9 +57,18 @@ export class HunkSnippetMatcher {
         if (this.hasContentOverlap(snippet, oldSideContent, newSideContent)) {
           snippetSet.add(sIdx);
         }
+
+        // Strong match: contextHash matches the hunk's contextual fingerprint.
+        // This reduces false positives when repeated patterns exist in a file.
+        if (snippet.contextHash) {
+          const h = computeDiffContextHash(oldSideContent, newSideContent);
+          if (h === snippet.contextHash) {
+            strongMatches.add(sIdx);
+          }
+        }
       }
 
-      mapping.set(hunkIdx, snippetSet);
+      mapping.set(hunkIdx, strongMatches.size > 0 ? strongMatches : snippetSet);
     }
 
     return mapping;
@@ -134,17 +145,20 @@ export class HunkSnippetMatcher {
     if (!snippet.newString && !snippet.oldString) return false;
 
     if (snippet.type === 'write-new' || snippet.type === 'write-update') {
-      // For Write: snippet.newString is the full file content — check if hunk's new side is within it
-      if (snippet.newString && hunkNewSide) {
-        return snippet.newString.includes(hunkNewSide);
-      }
+      // Full-file writes are intentionally excluded from localized hunk↔snippet matching.
+      // They are handled by whole-file reject logic or hunk-level inverse patch.
       return false;
     }
 
     // For Edit/MultiEdit: check if snippet falls within hunk's file range
-    const matchesOld = snippet.oldString ? hunkOldSide.includes(snippet.oldString) : false;
-    const matchesNew = snippet.newString ? hunkNewSide.includes(snippet.newString) : false;
+    const hasOld = snippet.oldString.length > 0;
+    const hasNew = snippet.newString.length > 0;
+    const matchesOld = hasOld ? hunkOldSide.includes(snippet.oldString) : false;
+    const matchesNew = hasNew ? hunkNewSide.includes(snippet.newString) : false;
 
-    return matchesOld || matchesNew;
+    // Prefer stricter matching when both sides exist to avoid over-matching.
+    if (hasOld && hasNew) return matchesOld && matchesNew;
+    if (hasOld) return matchesOld;
+    return matchesNew;
   }
 }

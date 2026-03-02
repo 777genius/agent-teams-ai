@@ -5,13 +5,14 @@
  * Results are clickable to open the file at the matched line.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
+import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { Loader2, Search, X } from 'lucide-react';
 
-import { getFileIcon } from './fileIcons';
+import { FileIcon } from './FileIcon';
 
 import type { SearchFileResult, SearchInFilesResult } from '@shared/types/editor';
 
@@ -154,13 +155,20 @@ export const SearchInFilesPanel = ({
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="text-xs font-medium text-text-secondary">Search in Files</span>
-        <button
-          onClick={onClose}
-          className="rounded p-0.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
-          aria-label="Close search"
-        >
-          <X className="size-3.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-6 text-text-muted"
+              onClick={onClose}
+              aria-label="Close search"
+            >
+              <X className="size-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Close search (Esc)</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Search input */}
@@ -259,9 +267,6 @@ const SearchFileGroup = ({
   const dirPath = relativePath.includes('/')
     ? relativePath.slice(0, relativePath.lastIndexOf('/'))
     : '';
-  const iconInfo = getFileIcon(fileName);
-  const Icon = iconInfo.icon;
-
   return (
     <div className="border-border/50 border-b">
       <button
@@ -269,7 +274,7 @@ const SearchFileGroup = ({
         className="flex w-full items-center gap-1.5 px-3 py-1 text-left transition-colors hover:bg-surface-raised"
       >
         <span className="text-[10px] text-text-muted">{expanded ? '▼' : '▶'}</span>
-        <Icon className="size-3.5 shrink-0" style={{ color: iconInfo.color }} />
+        <FileIcon fileName={fileName} className="size-3.5" />
         <span className="truncate text-xs font-medium text-text">{fileName}</span>
         {dirPath && <span className="ml-1 truncate text-[10px] text-text-muted">{dirPath}</span>}
         <span className="ml-auto shrink-0 text-[10px] text-text-muted">
@@ -310,11 +315,11 @@ interface HighlightedLineProps {
   caseSensitive: boolean;
 }
 
-const HighlightedLine = ({
+const HighlightedLine = React.memo(function HighlightedLine({
   text,
   query,
   caseSensitive,
-}: HighlightedLineProps): React.ReactElement => {
+}: HighlightedLineProps): React.ReactElement {
   if (!query) {
     return <span className="truncate text-[11px] text-text-secondary">{text}</span>;
   }
@@ -351,4 +356,4 @@ const HighlightedLine = ({
   }
 
   return <span className="truncate text-[11px]">{parts}</span>;
-};
+});

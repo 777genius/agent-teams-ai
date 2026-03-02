@@ -52,6 +52,11 @@ const SOURCE_CONFIG: Record<WorktreeSource, SourceConfig> = {
     bgColor: WORKTREE_BADGE_BG,
     textColor: WORKTREE_BADGE_TEXT,
   },
+  'claude-code': {
+    label: 'Worktree',
+    bgColor: WORKTREE_BADGE_BG,
+    textColor: WORKTREE_BADGE_TEXT,
+  },
   ccswitch: {
     label: 'ccswitch',
     bgColor: WORKTREE_BADGE_BG,

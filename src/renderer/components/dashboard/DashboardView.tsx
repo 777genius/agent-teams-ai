@@ -24,8 +24,9 @@ import { createLogger } from '@shared/utils/logger';
 import { useShallow } from 'zustand/react/shallow';
 
 const logger = createLogger('Component:DashboardView');
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { formatDistanceToNow } from 'date-fns';
-import { Command, FolderGit2, FolderOpen, GitBranch, Search, Users } from 'lucide-react';
+import { Command, FolderGit2, FolderOpen, GitBranch, GitFork, Search, Users } from 'lucide-react';
 
 import { CliStatusBanner } from './CliStatusBanner';
 
@@ -52,7 +53,7 @@ const CommandSearch = ({ value, onChange }: Readonly<CommandSearchProps>): React
   // Handle Cmd+K to open full command palette
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.code === 'KeyK') {
         e.preventDefault();
         openCommandPalette();
       }
@@ -138,6 +139,41 @@ const RepositoryCard = ({
   const mainWorktree = repo.worktrees.find((w) => w.isMainWorktree) ?? repo.worktrees[0];
   const mainBranch = mainWorktree?.gitBranch;
 
+  // Detect if this is a worktree project:
+  // 1. No main worktree in the group (isMainWorktree flag)
+  // 2. OR the shown worktree has a tool-created source
+  // 3. OR path-based fallback for .claude/worktrees/ directories
+  const WORKTREE_PATH_MARKERS = [
+    '/.claude/worktrees/',
+    '/.claude-worktrees/',
+    '/.auto-claude/worktrees/',
+    '/.21st/worktrees/',
+    '/.ccswitch/worktrees/',
+    '/.cursor/worktrees/',
+    '/vibe-kanban/worktrees/',
+    '/conductor/workspaces/',
+  ];
+
+  const shownWorktree = repo.worktrees[0];
+  const isWorktreeBySource =
+    shownWorktree?.source && !['git', 'unknown'].includes(shownWorktree.source);
+  const isWorktreeByPath =
+    shownWorktree && WORKTREE_PATH_MARKERS.some((m) => shownWorktree.path.includes(m));
+  const isWorktreeProject =
+    !repo.worktrees.some((w) => w.isMainWorktree) || isWorktreeBySource || isWorktreeByPath;
+
+  // Get the source label for worktree badge
+  const SOURCE_LABELS: Record<string, string> = {
+    'vibe-kanban': 'Vibe',
+    conductor: 'Conductor',
+    'auto-claude': 'Auto',
+    '21st': '21st',
+    'claude-desktop': 'Desktop',
+    'claude-code': 'Worktree',
+    ccswitch: 'ccswitch',
+  };
+  const worktreeSourceLabel = shownWorktree?.source && SOURCE_LABELS[shownWorktree.source];
+
   const color = useMemo(() => projectColor(repo.name), [repo.name]);
   const cardRef = useRef<HTMLButtonElement>(null);
   const [isHovered, setIsHovered] = useState(false);
@@ -171,30 +207,49 @@ const RepositoryCard = ({
       {/* Icon + Project name */}
       <div className="mb-1 flex items-center gap-2.5">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface-overlay transition-colors duration-300 group-hover:border-border-emphasis">
-          <FolderGit2
-            className="size-4 transition-colors group-hover:text-text"
-            style={{ color: color.icon }}
-          />
+          {isWorktreeProject ? (
+            <GitFork
+              className="size-4 transition-colors group-hover:text-text"
+              style={{ color: color.icon }}
+            />
+          ) : (
+            <FolderGit2
+              className="size-4 transition-colors group-hover:text-text"
+              style={{ color: color.icon }}
+            />
+          )}
         </div>
         <h3 className="min-w-0 truncate text-sm font-medium text-text transition-colors duration-200 group-hover:text-text">
           {repo.name}
         </h3>
+        {isWorktreeProject && (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-purple-500/15 px-1.5 py-0.5 text-[9px] font-medium text-purple-400">
+            {worktreeSourceLabel ?? 'Worktree'}
+          </span>
+        )}
       </div>
 
       {/* Project path - monospace, muted, clickable to open in file manager */}
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={handleOpenPath}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') handleOpenPath(e as unknown as React.MouseEvent);
-        }}
-        className="flex w-full min-w-0 cursor-pointer items-center gap-1 truncate text-left font-mono text-[10px] text-text-muted transition-colors hover:text-text-secondary"
-        title={`Open in file manager: ${projectPath}`}
-      >
-        <FolderOpen className="size-3 shrink-0" />
-        <span className="truncate">{formattedPath}</span>
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={handleOpenPath}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ')
+                handleOpenPath(e as unknown as React.MouseEvent);
+            }}
+            className="flex w-full min-w-0 cursor-pointer items-center gap-1 truncate text-left font-mono text-[10px] text-text-muted transition-colors hover:text-text-secondary"
+          >
+            <FolderOpen className="size-3 shrink-0" />
+            <span className="truncate">{formattedPath}</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" align="start">
+          <p className="font-mono text-[11px]">{projectPath}</p>
+        </TooltipContent>
+      </Tooltip>
 
       {/* Git branch / worktree info */}
       {mainBranch ? (
@@ -316,10 +371,11 @@ function findMatchingWorktree(
 }
 
 const NewProjectCard = (): React.JSX.Element => {
-  const { repositoryGroups, fetchRepositoryGroups } = useStore(
+  const { repositoryGroups, fetchRepositoryGroups, openTeamsTab } = useStore(
     useShallow((s) => ({
       repositoryGroups: s.repositoryGroups,
       fetchRepositoryGroups: s.fetchRepositoryGroups,
+      openTeamsTab: s.openTeamsTab,
     }))
   );
 
@@ -341,6 +397,7 @@ const NewProjectCard = (): React.JSX.Element => {
       const match = findMatchingWorktree(repositoryGroups, selectedPath);
       if (match) {
         navigateToMatch(match);
+        openTeamsTab();
         return;
       }
 
@@ -350,11 +407,15 @@ const NewProjectCard = (): React.JSX.Element => {
       const matchAfterRefresh = findMatchingWorktree(refreshedGroups, selectedPath);
       if (matchAfterRefresh) {
         navigateToMatch(matchAfterRefresh);
+        openTeamsTab();
         return;
       }
 
       // Still no match — create a synthetic group for this new folder and navigate to it.
       // This allows launching teams in projects that don't have Claude sessions yet.
+      // Persist the path so it survives app restarts.
+      await api.config.addCustomProjectPath(selectedPath);
+
       const encodedId = selectedPath.replace(/[/\\]/g, '-');
       const folderName = selectedPath.split(/[/\\]/).filter(Boolean).pop() ?? selectedPath;
       const now = Date.now();
@@ -382,6 +443,7 @@ const NewProjectCard = (): React.JSX.Element => {
         repositoryGroups: [syntheticGroup, ...state.repositoryGroups],
       }));
       navigateToMatch({ repoId: encodedId, worktreeId: encodedId });
+      openTeamsTab();
     } catch (error) {
       logger.error('Error selecting folder:', error);
     }

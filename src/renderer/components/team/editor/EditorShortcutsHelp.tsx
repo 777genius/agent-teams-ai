@@ -5,10 +5,10 @@
  * the appropriate modifier symbols.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@renderer/components/ui/dialog';
 import { IS_MAC } from '@renderer/utils/platformKeys';
-import { X } from 'lucide-react';
 
 // =============================================================================
 // Types
@@ -65,6 +65,13 @@ const SHORTCUT_GROUPS: { title: string; shortcuts: ShortcutDef[] }[] = [
     ],
   },
   {
+    title: 'Markdown',
+    shortcuts: [
+      { mac: '⌘ ⇧ M', other: 'Ctrl+Shift+M', description: 'Split Preview' },
+      { mac: '⌘ ⇧ V', other: 'Ctrl+Shift+V', description: 'Full Preview' },
+    ],
+  },
+  {
     title: 'General',
     shortcuts: [{ mac: 'Esc', other: 'Esc', description: 'Close Editor' }],
   },
@@ -75,19 +82,6 @@ const SHORTCUT_GROUPS: { title: string; shortcuts: ShortcutDef[] }[] = [
 // =============================================================================
 
 export const EditorShortcutsHelp = ({ onClose }: EditorShortcutsHelpProps): React.ReactElement => {
-  // Escape closes help (capture phase)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [onClose]);
-
   // Resolve platform-specific keys once
   const resolvedGroups = useMemo(
     () =>
@@ -102,29 +96,11 @@ export const EditorShortcutsHelp = ({ onClose }: EditorShortcutsHelpProps): Reac
   );
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center" role="presentation">
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-
-      {/* Dialog */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="shortcuts-dialog-title"
-        className="relative z-10 w-[480px] rounded-lg border border-border-emphasis bg-surface p-6 shadow-2xl"
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 id="shortcuts-dialog-title" className="text-sm font-semibold text-text">
-            Keyboard Shortcuts
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded p-1 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
-            aria-label="Close"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="w-[480px] max-w-[480px]">
+        <DialogHeader>
+          <DialogTitle className="text-sm">Keyboard Shortcuts</DialogTitle>
+        </DialogHeader>
 
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           {resolvedGroups.map((group) => (
@@ -143,7 +119,7 @@ export const EditorShortcutsHelp = ({ onClose }: EditorShortcutsHelpProps): Reac
             </div>
           ))}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

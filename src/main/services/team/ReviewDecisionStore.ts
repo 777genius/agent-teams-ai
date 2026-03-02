@@ -12,6 +12,8 @@ const logger = createLogger('ReviewDecisionStore');
 export interface ReviewDecisionsData {
   hunkDecisions: Record<string, HunkDecision>;
   fileDecisions: Record<string, HunkDecision>;
+  /** filePath -> (hunkIndex -> contextHash) */
+  hunkContextHashesByFile?: Record<string, Record<number, string>>;
   updatedAt: string;
 }
 
@@ -30,6 +32,7 @@ export class ReviewDecisionStore {
   ): Promise<{
     hunkDecisions: Record<string, HunkDecision>;
     fileDecisions: Record<string, HunkDecision>;
+    hunkContextHashesByFile?: Record<string, Record<number, string>>;
   } | null> {
     const filePath = this.getFilePath(teamName, scopeKey);
 
@@ -62,8 +65,12 @@ export class ReviewDecisionStore {
       data.hunkDecisions && typeof data.hunkDecisions === 'object' ? data.hunkDecisions : {};
     const fileDecisions: Record<string, HunkDecision> =
       data.fileDecisions && typeof data.fileDecisions === 'object' ? data.fileDecisions : {};
+    const hunkContextHashesByFile: Record<string, Record<number, string>> | undefined =
+      data.hunkContextHashesByFile && typeof data.hunkContextHashesByFile === 'object'
+        ? data.hunkContextHashesByFile
+        : undefined;
 
-    return { hunkDecisions, fileDecisions };
+    return { hunkDecisions, fileDecisions, hunkContextHashesByFile };
   }
 
   async save(
@@ -72,12 +79,14 @@ export class ReviewDecisionStore {
     data: {
       hunkDecisions: Record<string, HunkDecision>;
       fileDecisions: Record<string, HunkDecision>;
+      hunkContextHashesByFile?: Record<string, Record<number, string>>;
     }
   ): Promise<void> {
     try {
       const payload: ReviewDecisionsData = {
         hunkDecisions: data.hunkDecisions,
         fileDecisions: data.fileDecisions,
+        hunkContextHashesByFile: data.hunkContextHashesByFile,
         updatedAt: new Date().toISOString(),
       };
       await atomicWriteAsync(

@@ -147,6 +147,7 @@ export class FileSearchService {
     }
 
     const sorted = [...entries].sort((a, b) => a.name.localeCompare(b.name));
+    const subdirs: string[] = [];
 
     for (const entry of sorted) {
       if (signal?.aborted || files.length >= MAX_FILES) break;
@@ -158,7 +159,7 @@ export class FileSearchService {
 
       if (entry.isDirectory()) {
         if (IGNORED_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
-        await this.collectFilePaths(projectRoot, fullPath, files, signal);
+        subdirs.push(fullPath);
       } else if (entry.isFile()) {
         if (IGNORED_FILES.has(entry.name)) continue;
         const relativePath = fullPath.startsWith(projectRoot)
@@ -166,6 +167,14 @@ export class FileSearchService {
           : entry.name;
         files.push({ path: fullPath, name: entry.name, relativePath });
       }
+    }
+
+    // Parallel subdirectory traversal (batched)
+    const DIR_CONCURRENCY = 10;
+    for (let i = 0; i < subdirs.length; i += DIR_CONCURRENCY) {
+      if (signal?.aborted || files.length >= MAX_FILES) break;
+      const batch = subdirs.slice(i, i + DIR_CONCURRENCY);
+      await Promise.all(batch.map((dir) => this.collectFilePaths(projectRoot, dir, files, signal)));
     }
   }
 
@@ -194,8 +203,11 @@ export class FileSearchService {
       return a.name.localeCompare(b.name);
     });
 
+    const candidates: string[] = [];
+    const subdirs: string[] = [];
+
     for (const entry of sorted) {
-      if (signal?.aborted || files.length >= MAX_FILES) break;
+      if (signal?.aborted) break;
 
       const fullPath = path.join(dirPath, entry.name);
 
@@ -207,32 +219,48 @@ export class FileSearchService {
 
       if (entry.isDirectory()) {
         if (IGNORED_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
-        await this.collectFiles(projectRoot, fullPath, files, signal);
+        subdirs.push(fullPath);
       } else if (entry.isFile()) {
         if (IGNORED_FILES.has(entry.name)) continue;
-
-        // Skip files > 1MB
-        try {
-          const stat = await fs.stat(fullPath);
-          if (stat.size > MAX_FILE_SIZE) continue;
-        } catch {
-          continue;
-        }
-
-        // Skip binary files (quick check via first 512 bytes)
-        try {
-          if (await isBinaryFile(fullPath)) continue;
-        } catch {
-          continue;
-        }
-
-        files.push(fullPath);
+        candidates.push(fullPath);
       }
+    }
+
+    // Parallel stat + binary check (batched by 20 for I/O concurrency)
+    const CHECK_CONCURRENCY = 20;
+    for (let i = 0; i < candidates.length; i += CHECK_CONCURRENCY) {
+      if (signal?.aborted || files.length >= MAX_FILES) break;
+      const batch = candidates.slice(i, i + CHECK_CONCURRENCY);
+      const results = await Promise.all(
+        batch.map(async (fp) => {
+          try {
+            const stat = await fs.stat(fp);
+            if (stat.size > MAX_FILE_SIZE) return null;
+            if (await isBinaryFile(fp)) return null;
+            return fp;
+          } catch {
+            return null;
+          }
+        })
+      );
+      for (const fp of results) {
+        if (fp && files.length < MAX_FILES) files.push(fp);
+      }
+    }
+
+    // Parallel subdirectory traversal (batched)
+    const DIR_CONCURRENCY = 10;
+    for (let i = 0; i < subdirs.length; i += DIR_CONCURRENCY) {
+      if (signal?.aborted || files.length >= MAX_FILES) break;
+      const batch = subdirs.slice(i, i + DIR_CONCURRENCY);
+      await Promise.all(batch.map((dir) => this.collectFiles(projectRoot, dir, files, signal)));
     }
   }
 
   /**
    * Search a single file for literal string matches.
+   * Uses indexOf on the full content instead of split() — avoids 50k+ string allocations
+   * for a 1MB file. Running line counter keeps O(n) total regardless of match count.
    */
   private async searchFile(
     filePath: string,
@@ -242,29 +270,38 @@ export class FileSearchService {
   ): Promise<SearchMatch[]> {
     if (signal?.aborted) return [];
 
-    const content = await fs.readFile(filePath, 'utf8');
-    const lines = content.split('\n');
+    const raw = await fs.readFile(filePath, 'utf8');
+    const content = caseSensitive ? raw : raw.toLowerCase();
     const matches: SearchMatch[] = [];
 
-    for (let i = 0; i < lines.length; i++) {
+    let searchFrom = 0;
+    let line = 1;
+    let lastCountedPos = 0;
+
+    while (true) {
       if (signal?.aborted) break;
+      const idx = content.indexOf(query, searchFrom);
+      if (idx === -1) break;
 
-      const line = lines[i];
-      const searchLine = caseSensitive ? line : line.toLowerCase();
-      let startIndex = 0;
-
-      while (true) {
-        const idx = searchLine.indexOf(query, startIndex);
-        if (idx === -1) break;
-
-        matches.push({
-          line: i + 1,
-          column: idx,
-          lineContent: line.trim(),
-        });
-
-        startIndex = idx + query.length;
+      // Running line counter — count \n from lastCountedPos to idx
+      for (let i = lastCountedPos; i < idx; i++) {
+        if (content.charCodeAt(i) === 10) line++;
       }
+      lastCountedPos = idx;
+
+      // Extract line content from raw text
+      let lineStart = raw.lastIndexOf('\n', idx);
+      lineStart = lineStart === -1 ? 0 : lineStart + 1;
+      let lineEnd = raw.indexOf('\n', idx);
+      if (lineEnd === -1) lineEnd = raw.length;
+
+      matches.push({
+        line,
+        column: idx - lineStart,
+        lineContent: raw.slice(lineStart, lineEnd).trim(),
+      });
+
+      searchFrom = idx + query.length;
     }
 
     return matches;

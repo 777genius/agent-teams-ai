@@ -29,6 +29,7 @@ import { normalizePath } from '@renderer/utils/pathNormalize';
 import { getMemberColor } from '@shared/constants/memberColors';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
+import { ExtendedContextCheckbox } from './ExtendedContextCheckbox';
 import { MembersJsonEditor } from './MembersJsonEditor';
 import { ProjectPathSelector } from './ProjectPathSelector';
 
@@ -142,15 +143,33 @@ function buildMembers(members: MemberDraft[]): TeamCreateRequest['members'] {
     .filter((member): member is NonNullable<typeof member> => member !== null);
 }
 
-// eslint-disable-next-line security/detect-unsafe-regex -- kebab-case pattern is linear, no ReDoS
-const TEAM_NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const MEMBER_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
+/** Mirrors Claude CLI's `zuA()` sanitization: non-alphanumeric → `-`, then lowercase. */
+function sanitizeTeamName(name: string): string {
+  let result = name
+    .replace(/[^a-zA-Z0-9]/g, '-')
+    .replace(/-{2,}/g, '-')
+    .toLowerCase();
+  // Trim leading/trailing dashes without backtracking-vulnerable regex
+  while (result.startsWith('-')) result = result.slice(1);
+  while (result.endsWith('-')) result = result.slice(0, -1);
+  return result;
+}
+
+function isValidMemberName(name: string): boolean {
+  if (name.length < 1 || name.length > 128) return false;
+  if (!/^[a-zA-Z0-9]/.test(name)) return false;
+  return /^[a-zA-Z0-9._-]+$/.test(name);
+}
 
 function validateTeamNameInline(name: string): string | null {
   const trimmed = name.trim();
   if (!trimmed) return null;
-  if (!TEAM_NAME_RE.test(trimmed) || trimmed.length > 64) {
-    return 'Use kebab-case [a-z0-9-], max 64 chars';
+  const sanitized = sanitizeTeamName(trimmed);
+  if (!sanitized) {
+    return 'Name must contain at least one letter or digit';
+  }
+  if (sanitized.length > 128) {
+    return 'Name is too long (max 128 chars)';
   }
   return null;
 }
@@ -158,7 +177,7 @@ function validateTeamNameInline(name: string): string | null {
 function validateMemberNameInline(name: string): string | null {
   const trimmed = name.trim();
   if (!trimmed) return null;
-  if (!MEMBER_NAME_RE.test(trimmed)) {
+  if (!isValidMemberName(trimmed)) {
     return 'Start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars';
   }
   return null;
@@ -169,11 +188,20 @@ function validateRequest(
   options?: { requireCwd?: boolean }
 ): ValidationResult {
   const requireCwd = options?.requireCwd ?? true;
-  if (!TEAM_NAME_RE.test(request.teamName) || request.teamName.length > 64) {
+  const sanitized = sanitizeTeamName(request.teamName);
+  if (!sanitized) {
     return {
       valid: false,
       errors: {
-        teamName: 'Use kebab-case [a-z0-9-], max 64 chars',
+        teamName: 'Name must contain at least one letter or digit',
+      },
+    };
+  }
+  if (sanitized.length > 128) {
+    return {
+      valid: false,
+      errors: {
+        teamName: 'Name is too long (max 128 chars)',
       },
     };
   }
@@ -201,7 +229,7 @@ function validateRequest(
       },
     };
   }
-  if (request.members.some((member) => !MEMBER_NAME_RE.test(member.name.trim()))) {
+  if (request.members.some((member) => !isValidMemberName(member.name.trim()))) {
     return {
       valid: false,
       errors: {
@@ -257,10 +285,25 @@ export const CreateTeamDialog = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [launchTeam, setLaunchTeam] = useState(true);
   const [teamColor, setTeamColor] = useState('');
-  const [selectedModel, setSelectedModel] = useState('');
+  const [selectedModel, setSelectedModelRaw] = useState(
+    () => localStorage.getItem('team:lastSelectedModel') ?? ''
+  );
+  const [extendedContext, setExtendedContextRaw] = useState(
+    () => localStorage.getItem('team:lastExtendedContext') === 'true'
+  );
   const [jsonEditorOpen, setJsonEditorOpen] = useState(false);
   const [jsonText, setJsonText] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
+
+  const setSelectedModel = (value: string): void => {
+    setSelectedModelRaw(value);
+    localStorage.setItem('team:lastSelectedModel', value);
+  };
+
+  const setExtendedContext = (value: boolean): void => {
+    setExtendedContextRaw(value);
+    localStorage.setItem('team:lastExtendedContext', String(value));
+  };
 
   const resetUIState = (): void => {
     setLocalError(null);
@@ -281,7 +324,6 @@ export const CreateTeamDialog = ({
     setSelectedProjectPath('');
     setCustomCwd('');
     setLaunchTeam(true);
-    setSelectedModel('');
     setJsonEditorOpen(false);
     setJsonText('');
     setJsonError(null);
@@ -516,12 +558,19 @@ export const CreateTeamDialog = ({
     [members]
   );
 
-  const effectiveModel =
-    selectedModel && selectedModel !== '__default__' ? selectedModel : undefined;
+  const effectiveModel = useMemo(() => {
+    const base = selectedModel && selectedModel !== '__default__' ? selectedModel : undefined;
+    if (!extendedContext) return base;
+    // 1M context is only supported for opus and sonnet
+    if (base === 'haiku') return base;
+    return base ? `${base}[1m]` : 'sonnet[1m]';
+  }, [selectedModel, extendedContext]);
+
+  const sanitizedTeamName = sanitizeTeamName(teamName.trim());
 
   const request = useMemo<TeamCreateRequest>(
     () => ({
-      teamName: teamName.trim(),
+      teamName: sanitizedTeamName,
       description: description.trim() || undefined,
       color: teamColor || undefined,
       members: buildMembers(members),
@@ -529,7 +578,7 @@ export const CreateTeamDialog = ({
       prompt: prompt.trim() || undefined,
       model: effectiveModel,
     }),
-    [teamName, description, teamColor, members, effectiveCwd, prompt, effectiveModel]
+    [sanitizedTeamName, description, teamColor, members, effectiveCwd, prompt, effectiveModel]
   );
 
   const activeError = localError ?? provisioningError;
@@ -576,7 +625,7 @@ export const CreateTeamDialog = ({
   };
 
   const handleSubmit = (): void => {
-    if (existingTeamNames.includes(request.teamName)) {
+    if (existingTeamNames.includes(sanitizedTeamName)) {
       setFieldErrors({ teamName: 'Team name already exists' });
       setLocalError('Check form fields');
       return;
@@ -600,6 +649,7 @@ export const CreateTeamDialog = ({
             description: request.description,
             color: request.color,
             members: request.members,
+            cwd: effectiveCwd || undefined,
           });
           onOpenTeam(request.teamName, effectiveCwd || undefined);
           resetFormState();
@@ -710,12 +760,17 @@ export const CreateTeamDialog = ({
               onChange={(event) => setTeamName(event.target.value)}
               placeholder="team-alpha"
             />
-            {existingTeamNames.includes(teamName.trim()) ? (
+            {existingTeamNames.includes(sanitizedTeamName) ? (
               <p className="text-[11px] text-red-300">Team name already exists</p>
             ) : validateTeamNameInline(teamName) ? (
               <p className="text-[11px] text-red-300">{validateTeamNameInline(teamName)}</p>
             ) : fieldErrors.teamName ? (
               <p className="text-[11px] text-red-300">{fieldErrors.teamName}</p>
+            ) : null}
+            {sanitizedTeamName && sanitizedTeamName !== teamName.trim() ? (
+              <p className="text-[11px] text-[var(--color-text-muted)]">
+                On disk: <span className="font-mono">{sanitizedTeamName}</span>
+              </p>
             ) : null}
           </div>
 
@@ -870,6 +925,7 @@ export const CreateTeamDialog = ({
                     value={prompt}
                     onValueChange={promptDraft.setValue}
                     suggestions={mentionSuggestions}
+                    projectPath={effectiveCwd || null}
                     placeholder="Instructions for the team lead during provisioning..."
                     footerRight={
                       promptDraft.isSaved ? (
@@ -881,19 +937,27 @@ export const CreateTeamDialog = ({
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="label-optional">Model (optional)</Label>
-                  <Select value={selectedModel} onValueChange={setSelectedModel}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Default (account setting)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__default__">Default (account setting)</SelectItem>
-                      <SelectItem value="opus">Opus 4.6</SelectItem>
-                      <SelectItem value="sonnet">Sonnet 4.5</SelectItem>
-                      <SelectItem value="haiku">Haiku 4.5</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <Label className="label-optional shrink-0">Model (optional)</Label>
+                    <Select value={selectedModel} onValueChange={setSelectedModel}>
+                      <SelectTrigger className="h-8 w-auto min-w-[180px] text-xs">
+                        <SelectValue placeholder="Default (account setting)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__default__">Default (account setting)</SelectItem>
+                        <SelectItem value="opus">Opus 4.6</SelectItem>
+                        <SelectItem value="sonnet">Sonnet 4.5</SelectItem>
+                        <SelectItem value="haiku">Haiku 4.5</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <ExtendedContextCheckbox
+                    id="create-extended-context"
+                    checked={extendedContext}
+                    onCheckedChange={setExtendedContext}
+                    disabled={selectedModel === 'haiku'}
+                  />
                 </div>
 
                 {canCreate && (prepareState === 'idle' || prepareState === 'loading') ? (

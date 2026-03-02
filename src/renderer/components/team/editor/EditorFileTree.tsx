@@ -16,13 +16,23 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import { Button } from '@renderer/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@renderer/components/ui/dialog';
 import { useStore } from '@renderer/store';
 import { sortTreeNodes } from '@renderer/utils/fileTreeBuilder';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronDown, ChevronRight, Folder, FolderOpen, Lock } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { EditorContextMenu } from './EditorContextMenu';
-import { getFileIcon } from './fileIcons';
+import { FileIcon } from './FileIcon';
 import { GitStatusBadge } from './GitStatusBadge';
 import { NewFileDialog } from './NewFileDialog';
 
@@ -37,6 +47,10 @@ import type { FileTreeEntry, GitFileStatusType } from '@shared/types/editor';
 interface EditorFileTreeProps {
   selectedFilePath: string | null;
   onFileSelect: (filePath: string) => void;
+  /** Trigger "Create Task" with a file mention from context menu */
+  onCreateTask?: (filePath: string) => void;
+  /** Trigger "Write Teammate" with a file mention from context menu */
+  onSendMessage?: (filePath: string) => void;
 }
 
 interface NewItemState {
@@ -64,29 +78,57 @@ const AUTO_EXPAND_DELAY_MS = 500;
 // Component
 // =============================================================================
 
+// Render counter for debugging — tracks how often the tree re-renders
+let fileTreeRenderCount = 0;
+
 export const EditorFileTree = ({
   selectedFilePath,
   onFileSelect,
+  onCreateTask,
+  onSendMessage,
 }: EditorFileTreeProps): React.ReactElement => {
-  const fileTree = useStore((s) => s.editorFileTree);
-  const expandedDirs = useStore((s) => s.editorExpandedDirs);
+  fileTreeRenderCount++;
+  if (fileTreeRenderCount % 5 === 0) {
+    console.debug(`[perf] EditorFileTree render #${fileTreeRenderCount}`);
+  }
+  // Data selectors — grouped with useShallow to prevent unnecessary re-renders
+  const { fileTree, expandedDirs, loading, error, gitFiles, projectPath } = useStore(
+    useShallow((s) => ({
+      fileTree: s.editorFileTree,
+      expandedDirs: s.editorExpandedDirs,
+      loading: s.editorFileTreeLoading,
+      error: s.editorFileTreeError,
+      gitFiles: s.editorGitFiles,
+      projectPath: s.editorProjectPath,
+    }))
+  );
+
+  // Actions — stable references in Zustand, no grouping needed
   const expandDirectory = useStore((s) => s.expandDirectory);
   const collapseDirectory = useStore((s) => s.collapseDirectory);
-  const loading = useStore((s) => s.editorFileTreeLoading);
-  const error = useStore((s) => s.editorFileTreeError);
   const createFileInTree = useStore((s) => s.createFileInTree);
   const createDirInTree = useStore((s) => s.createDirInTree);
   const deleteFileFromTree = useStore((s) => s.deleteFileFromTree);
   const moveFileInTree = useStore((s) => s.moveFileInTree);
+  const renameFileInTree = useStore((s) => s.renameFileInTree);
   const openFile = useStore((s) => s.openFile);
-  const gitFiles = useStore((s) => s.editorGitFiles);
-  const projectPath = useStore((s) => s.editorProjectPath);
 
   const [newItemState, setNewItemState] = useState<NewItemState | null>(null);
+  const [renamingPath, setRenamingPath] = useState<string | null>(null);
+  const [deleteConfirmPath, setDeleteConfirmPath] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<FlatTreeItem | null>(null);
   const [dropTargetPath, setDropTargetPath] = useState<string | null>(null);
   const autoExpandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Defer DnD initialization — mount tree without drag/drop first, enable after idle
+  const [dndReady, setDndReady] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setDndReady(true));
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   // Cleanup auto-expand timer on unmount
   useEffect(() => {
@@ -101,14 +143,21 @@ export const EditorFileTree = ({
   // Convert hierarchical FileTreeEntry[] → TreeNode[] (respects entry.type)
   const treeNodes = useMemo(() => {
     if (!fileTree) return [];
-    return sortTreeNodes(convertEntriesToNodes(fileTree));
+    const t0 = performance.now();
+    const nodes = sortTreeNodes(convertEntriesToNodes(fileTree));
+    const ms = performance.now() - t0;
+    if (ms > 2) console.debug(`[perf] treeNodes: ${ms.toFixed(1)}ms, nodes=${nodes.length}`);
+    return nodes;
   }, [fileTree]);
 
   // Flatten tree into visible items list for virtualization
   // expandedDirs is keyed by absolute path, and node.fullPath = entry.path (absolute)
   const flatItems = useMemo(() => {
+    const t0 = performance.now();
     const items: FlatTreeItem[] = [];
     flattenVisible(treeNodes, expandedDirs, items, 0);
+    const ms = performance.now() - t0;
+    if (ms > 2) console.debug(`[perf] flatItems: ${ms.toFixed(1)}ms, items=${items.length}`);
     return items;
   }, [treeNodes, expandedDirs]);
 
@@ -121,16 +170,42 @@ export const EditorFileTree = ({
     return map;
   }, [flatItems]);
 
-  // Virtual scrolling — increase overscan during drag for more drop targets
+  // Compute insertion index for inline new-item input
+  const newItemInsert = useMemo(() => {
+    if (!newItemState) return null;
+    const { parentDir } = newItemState;
+
+    const parentIdx = flatItems.findIndex((fi) => fi.node.fullPath === parentDir);
+
+    if (parentIdx === -1) {
+      // parentDir is the project root (not a node in flatItems) — insert at top
+      return { index: 0, depth: 0 };
+    }
+
+    // Insert right after the parent directory node (top of its children)
+    return { index: parentIdx + 1, depth: flatItems[parentIdx].depth + 1 };
+  }, [newItemState, flatItems]);
+
+  // Virtual scrolling — reduced overscan during initial mount, increase during drag
   const virtualizer = useVirtualizer({
-    count: flatItems.length,
+    count: flatItems.length + (newItemInsert ? 1 : 0),
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ITEM_HEIGHT,
-    overscan: draggedItem ? 20 : 10,
+    overscan: !dndReady ? 3 : draggedItem ? 20 : 10,
   });
+
+  // Scroll to file when selectedFilePath changes (e.g. from revealFileInEditor)
+  useEffect(() => {
+    if (!selectedFilePath) return;
+    const idx = flatItems.findIndex((fi) => fi.node.fullPath === selectedFilePath);
+    if (idx >= 0) {
+      virtualizer.scrollToIndex(idx, { align: 'center' });
+    }
+  }, [selectedFilePath, flatItems, virtualizer]);
 
   // Git status lookup: absolute path → status type
   const gitStatusMap = useMemo(() => {
+    const t0 = performance.now();
     const map = new Map<string, GitFileStatusType>();
     if (!gitFiles.length || !projectPath) return map;
     for (const file of gitFiles) {
@@ -139,6 +214,8 @@ export const EditorFileTree = ({
         : `${projectPath}/${file.path}`;
       map.set(absPath, file.status);
     }
+    const ms = performance.now() - t0;
+    if (ms > 2) console.debug(`[perf] gitStatusMap: ${ms.toFixed(1)}ms, files=${gitFiles.length}`);
     return map;
   }, [gitFiles, projectPath]);
 
@@ -163,24 +240,57 @@ export const EditorFileTree = ({
     [onFileSelect, expandedDirs, expandDirectory, collapseDirectory]
   );
 
-  // Context menu handlers
-  const handleNewFile = useCallback((parentDir: string) => {
-    setNewItemState({ parentDir, type: 'file' });
-  }, []);
-
-  const handleNewFolder = useCallback((parentDir: string) => {
-    setNewItemState({ parentDir, type: 'directory' });
-  }, []);
-
-  const handleDelete = useCallback(
-    async (path: string) => {
-      const fileName = path.split('/').pop() ?? path;
-      const confirmed = window.confirm(`Move "${fileName}" to Trash?`);
-      if (!confirmed) return;
-      await deleteFileFromTree(path);
+  // Context menu handlers — expand parent directory so the input appears inline
+  const handleNewFile = useCallback(
+    (parentDir: string) => {
+      if (parentDir !== projectPath && !expandedDirs[parentDir]) {
+        void expandDirectory(parentDir);
+      }
+      setNewItemState({ parentDir, type: 'file' });
     },
-    [deleteFileFromTree]
+    [projectPath, expandedDirs, expandDirectory]
   );
+
+  const handleNewFolder = useCallback(
+    (parentDir: string) => {
+      if (parentDir !== projectPath && !expandedDirs[parentDir]) {
+        void expandDirectory(parentDir);
+      }
+      setNewItemState({ parentDir, type: 'directory' });
+    },
+    [projectPath, expandedDirs, expandDirectory]
+  );
+
+  const handleDelete = useCallback((path: string) => {
+    setDeleteConfirmPath(path);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteConfirmPath) return;
+    await deleteFileFromTree(deleteConfirmPath);
+    setDeleteConfirmPath(null);
+  }, [deleteConfirmPath, deleteFileFromTree]);
+
+  const handleCancelDelete = useCallback(() => {
+    setDeleteConfirmPath(null);
+  }, []);
+
+  const handleRename = useCallback((path: string) => {
+    setRenamingPath(path);
+  }, []);
+
+  const handleRenameSubmit = useCallback(
+    async (newName: string) => {
+      if (!renamingPath) return;
+      await renameFileInTree(renamingPath, newName);
+      setRenamingPath(null);
+    },
+    [renamingPath, renameFileInTree]
+  );
+
+  const handleRenameCancel = useCallback(() => {
+    setRenamingPath(null);
+  }, []);
 
   const handleNewItemSubmit = useCallback(
     async (name: string) => {
@@ -332,9 +442,13 @@ export const EditorFileTree = ({
 
   return (
     <EditorContextMenu
+      projectPath={projectPath}
       onNewFile={handleNewFile}
       onNewFolder={handleNewFolder}
       onDelete={handleDelete}
+      onRename={handleRename}
+      onCreateTask={onCreateTask}
+      onSendMessage={onSendMessage}
     >
       <DndContext
         sensors={sensors}
@@ -344,7 +458,11 @@ export const EditorFileTree = ({
         onDragCancel={handleDragCancel}
         autoScroll={{ threshold: { x: 0, y: 0.15 } }}
       >
-        <RootDropZone ref={scrollRef} projectPath={projectPath}>
+        <RootDropZone
+          ref={scrollRef}
+          projectPath={projectPath}
+          isDropTarget={dropTargetPath === projectPath}
+        >
           <div
             style={{
               height: `${virtualizer.getTotalSize()}px`,
@@ -353,41 +471,91 @@ export const EditorFileTree = ({
             }}
           >
             {virtualizer.getVirtualItems().map((virtualItem) => {
-              const item = flatItems[virtualItem.index];
+              const { index } = virtualItem;
+
+              // Render inline new-item input at the correct tree position
+              if (index === newItemInsert?.index) {
+                return (
+                  <div
+                    key="__new-item-input__"
+                    style={{
+                      position: 'absolute',
+                      top: `${virtualItem.start}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${virtualItem.size}px`,
+                      paddingLeft: `${Math.min(newItemInsert.depth, MAX_DEPTH) * INDENT_PX}px`,
+                    }}
+                  >
+                    <NewFileDialog
+                      type={newItemState!.type}
+                      parentDir={newItemState!.parentDir}
+                      onSubmit={handleNewItemSubmit}
+                      onCancel={handleNewItemCancel}
+                    />
+                  </div>
+                );
+              }
+
+              // Adjust index for items after the insertion point
+              const flatIdx = newItemInsert && index > newItemInsert.index ? index - 1 : index;
+              const item = flatItems[flatIdx];
+
               return (
-                <DraggableTreeItem
+                <div
                   key={item.node.fullPath}
-                  item={item}
-                  activeNodePath={activeNodePath}
-                  gitStatusMap={gitStatusMap}
-                  dropTargetPath={dropTargetPath}
-                  isDragActive={!!draggedItem}
-                  onClick={handleNodeClick}
                   style={{
                     position: 'absolute',
-                    top: 0,
+                    top: `${virtualItem.start}px`,
                     left: 0,
                     width: '100%',
                     height: `${virtualItem.size}px`,
-                    transform: `translateY(${virtualItem.start}px)`,
                   }}
-                />
+                >
+                  <DraggableTreeItem
+                    item={item}
+                    activeNodePath={activeNodePath}
+                    gitStatus={gitStatusMap.get(item.node.fullPath)}
+                    dropTargetPath={dropTargetPath}
+                    isDragActive={!!draggedItem}
+                    onClick={handleNodeClick}
+                    isRenaming={renamingPath === item.node.fullPath}
+                    onRenameSubmit={handleRenameSubmit}
+                    onRenameCancel={handleRenameCancel}
+                  />
+                </div>
               );
             })}
           </div>
+          {/* Spacer at bottom — drop here to move to project root */}
+          {draggedItem && (
+            <div className="h-16 w-full shrink-0" aria-label="Drop here for project root" />
+          )}
         </RootDropZone>
         <DragOverlay dropAnimation={null}>
           {draggedItem && <DragOverlayFileItem item={draggedItem} />}
         </DragOverlay>
       </DndContext>
-      {newItemState && (
-        <NewFileDialog
-          type={newItemState.type}
-          parentDir={newItemState.parentDir}
-          onSubmit={handleNewItemSubmit}
-          onCancel={handleNewItemCancel}
-        />
-      )}
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteConfirmPath} onOpenChange={(open) => !open && handleCancelDelete()}>
+        <DialogContent className="w-96 max-w-96">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Move to Trash</DialogTitle>
+            <DialogDescription>
+              Move &ldquo;{deleteConfirmPath?.split('/').pop() ?? ''}&rdquo; to Trash?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={handleCancelDelete}>
+              Cancel
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => void handleConfirmDelete()}>
+              Move to Trash
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </EditorContextMenu>
   );
 };
@@ -398,8 +566,8 @@ export const EditorFileTree = ({
 
 const RootDropZone = React.forwardRef<
   HTMLDivElement,
-  { projectPath: string | null; children: React.ReactNode }
->(({ projectPath, children }, ref) => {
+  { projectPath: string | null; isDropTarget: boolean; children: React.ReactNode }
+>(({ projectPath, isDropTarget, children }, ref) => {
   const { setNodeRef } = useDroppable({
     id: 'root-drop-zone',
     data: { isRoot: true, path: projectPath },
@@ -417,7 +585,13 @@ const RootDropZone = React.forwardRef<
   );
 
   return (
-    <div ref={combinedRef} className="h-full overflow-y-auto" role="tree">
+    <div
+      ref={combinedRef}
+      className={`scrollbar-thin h-full overflow-y-auto transition-colors ${
+        isDropTarget ? 'bg-blue-400/5 ring-1 ring-inset ring-blue-400/30' : ''
+      }`}
+      role="tree"
+    >
       {children}
     </div>
   );
@@ -432,11 +606,13 @@ RootDropZone.displayName = 'RootDropZone';
 interface DraggableTreeItemProps {
   item: FlatTreeItem;
   activeNodePath: string | null;
-  gitStatusMap: Map<string, GitFileStatusType>;
+  gitStatus?: GitFileStatusType;
   dropTargetPath: string | null;
   isDragActive: boolean;
   onClick: (node: TreeNode<FileTreeEntry>) => void;
-  style: React.CSSProperties;
+  isRenaming?: boolean;
+  onRenameSubmit?: (newName: string) => void;
+  onRenameCancel?: () => void;
 }
 
 /* eslint-disable react/jsx-props-no-spreading -- dnd-kit requires prop spreading for drag attributes, listeners, and data attributes */
@@ -444,11 +620,13 @@ const DraggableTreeItem = React.memo(
   ({
     item,
     activeNodePath,
-    gitStatusMap,
+    gitStatus,
     dropTargetPath,
     isDragActive,
     onClick,
-    style,
+    isRenaming,
+    onRenameSubmit,
+    onRenameCancel,
   }: DraggableTreeItemProps): React.ReactElement => {
     const { node, depth, isExpanded } = item;
     const isSelected = activeNodePath === node.fullPath;
@@ -483,8 +661,10 @@ const DraggableTreeItem = React.memo(
       [setDragRef, setDropRef, node.isFile]
     );
 
-    // Visual: highlight drop target directory
+    // Visual: highlight drop target directory and its visible children
     const isDropTarget = !node.isFile && dropTargetPath === node.fullPath;
+    const isInsideDropTarget =
+      dropTargetPath != null && node.fullPath.startsWith(dropTargetPath + '/');
 
     const dataAttrs: Record<string, string> = {};
     if (node.data) {
@@ -508,9 +688,7 @@ const DraggableTreeItem = React.memo(
     if (node.data?.isSensitive) {
       icon = <Lock className="size-3.5 shrink-0 text-yellow-500" />;
     } else if (node.isFile) {
-      const fileIcon = getFileIcon(node.name);
-      const FileIcon = fileIcon.icon;
-      icon = <FileIcon className="size-3.5 shrink-0" style={{ color: fileIcon.color }} />;
+      icon = <FileIcon fileName={node.name} className="size-3.5" />;
     } else if (isExpanded) {
       icon = <FolderOpen className="size-3.5 shrink-0 text-text-muted" />;
     } else {
@@ -525,17 +703,12 @@ const DraggableTreeItem = React.memo(
         role="treeitem"
         aria-selected={node.isFile ? isSelected : undefined}
         aria-expanded={!node.isFile ? isExpanded : undefined}
-        className={`flex cursor-pointer select-none items-center gap-1 truncate px-2 text-xs transition-colors hover:bg-surface-raised ${
+        className={`flex h-full cursor-pointer select-none items-center gap-1 truncate px-2 text-xs transition-colors hover:bg-surface-raised ${
           isSelected ? 'bg-surface-raised text-text' : 'text-text-secondary'
         } ${isDragging ? 'opacity-30' : ''} ${
           isDropTarget ? 'rounded bg-blue-400/10 ring-2 ring-blue-400/50' : ''
-        }`}
-        style={{
-          ...style,
-          paddingLeft: `${visualDepth * INDENT_PX + 8}px`,
-          display: 'flex',
-          alignItems: 'center',
-        }}
+        } ${isInsideDropTarget && !isDropTarget ? 'border-l-2 border-l-blue-400/40 bg-blue-400/5' : ''}`}
+        style={{ paddingLeft: `${visualDepth * INDENT_PX + 8}px` }}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         tabIndex={0}
@@ -549,10 +722,16 @@ const DraggableTreeItem = React.memo(
             <ChevronRight className="size-3 shrink-0 text-text-muted" />
           ))}
         {icon}
-        <span className="truncate">{node.name}</span>
-        {node.data && gitStatusMap.has(node.data.path) && (
-          <GitStatusBadge status={gitStatusMap.get(node.data.path)!} />
+        {isRenaming ? (
+          <InlineRenameInput
+            initialName={node.name}
+            onSubmit={onRenameSubmit!}
+            onCancel={onRenameCancel!}
+          />
+        ) : (
+          <span className="truncate">{node.name}</span>
         )}
+        {!isRenaming && gitStatus && <GitStatusBadge status={gitStatus} />}
       </div>
     );
   }
@@ -570,9 +749,7 @@ const DragOverlayFileItem = ({ item }: { item: FlatTreeItem }): React.ReactEleme
 
   let icon: React.ReactNode;
   if (node.isFile) {
-    const fileIcon = getFileIcon(node.name);
-    const FileIcon = fileIcon.icon;
-    icon = <FileIcon className="size-3.5" style={{ color: fileIcon.color }} />;
+    icon = <FileIcon fileName={node.name} className="size-3.5" />;
   } else {
     icon = <FolderOpen className="size-3.5 text-text-muted" />;
   }
@@ -582,6 +759,89 @@ const DragOverlayFileItem = ({ item }: { item: FlatTreeItem }): React.ReactEleme
       {icon}
       <span className="truncate">{node.name}</span>
     </div>
+  );
+};
+
+// =============================================================================
+// Inline rename input
+// =============================================================================
+
+const InlineRenameInput = ({
+  initialName,
+  onSubmit,
+  onCancel,
+}: {
+  initialName: string;
+  onSubmit: (newName: string) => void;
+  onCancel: () => void;
+}): React.ReactElement => {
+  const [value, setValue] = useState(initialName);
+  const submitted = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focus + select on mount (delayed to survive Radix/DnD focus interference)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const input = inputRef.current;
+      if (!input) return;
+      input.focus();
+      const dotIdx = initialName.lastIndexOf('.');
+      if (dotIdx > 0) {
+        input.setSelectionRange(0, dotIdx);
+      } else {
+        input.select();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [initialName]);
+
+  // Click-outside → submit (replaces unreliable onBlur)
+  useEffect(() => {
+    const handlePointerDown = (e: PointerEvent): void => {
+      if (inputRef.current && !inputRef.current.contains(e.target as Node)) {
+        doSubmit();
+      }
+    };
+    const timer = setTimeout(() => {
+      document.addEventListener('pointerdown', handlePointerDown, true);
+    }, 150);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- doSubmit reads value via ref pattern
+  }, []);
+
+  const doSubmit = (): void => {
+    if (submitted.current) return;
+    submitted.current = true;
+    const trimmed = inputRef.current?.value.trim() ?? '';
+    if (trimmed && trimmed !== initialName) {
+      onSubmit(trimmed);
+    } else {
+      onCancel();
+    }
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          doSubmit();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          onCancel();
+        }
+        e.stopPropagation();
+      }}
+      onBlur={() => requestAnimationFrame(() => inputRef.current?.focus())}
+      onClick={(e) => e.stopPropagation()}
+      className="min-w-0 flex-1 rounded border border-blue-400/50 bg-surface px-1 py-0 text-xs text-text outline-none focus:ring-1 focus:ring-blue-400/50"
+    />
   );
 };
 

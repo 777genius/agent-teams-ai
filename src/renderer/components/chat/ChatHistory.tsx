@@ -224,6 +224,46 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     return map;
   }, [conversation]);
 
+  // --- New-item animation tracking ---
+  const knownGroupIdsRef = useRef<Set<string>>(new Set());
+  const isInitialRenderRef = useRef(true);
+  const prevTabIdRef = useRef(effectiveTabId);
+
+  // Reset animation tracking when switching tabs/sessions
+  if (prevTabIdRef.current !== effectiveTabId) {
+    prevTabIdRef.current = effectiveTabId;
+    knownGroupIdsRef.current.clear();
+    isInitialRenderRef.current = true;
+  }
+
+  const newGroupIds = useMemo(() => {
+    const items = conversation?.items;
+    if (!items || items.length === 0) {
+      knownGroupIdsRef.current.clear();
+      isInitialRenderRef.current = true;
+      return new Set<string>();
+    }
+
+    // First render: seed all known IDs, no animations
+    if (isInitialRenderRef.current) {
+      isInitialRenderRef.current = false;
+      for (const item of items) {
+        knownGroupIdsRef.current.add(item.group.id);
+      }
+      return new Set<string>();
+    }
+
+    // Subsequent updates: detect new items
+    const newIds = new Set<string>();
+    for (const item of items) {
+      if (!knownGroupIdsRef.current.has(item.group.id)) {
+        newIds.add(item.group.id);
+        knownGroupIdsRef.current.add(item.group.id);
+      }
+    }
+    return newIds;
+  }, [conversation]);
+
   const rowVirtualizer = useVirtualizer({
     count: shouldVirtualize ? (conversation?.items.length ?? 0) : 0,
     getScrollElement: () => scrollContainerRef.current,
@@ -849,6 +889,7 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
                           isSearchHighlight={isSearchHighlight}
                           isNavigationHighlight={isNavigationHighlight}
                           highlightColor={effectiveHighlightColor}
+                          isNew={newGroupIds.has(item.group.id)}
                           registerChatItemRef={registerChatItemRef}
                           registerAIGroupRef={registerAIGroupRefCombined}
                           registerToolRef={registerToolRef}
@@ -867,6 +908,7 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
                     isSearchHighlight={isSearchHighlight}
                     isNavigationHighlight={isNavigationHighlight}
                     highlightColor={effectiveHighlightColor}
+                    isNew={newGroupIds.has(item.group.id)}
                     registerChatItemRef={registerChatItemRef}
                     registerAIGroupRef={registerAIGroupRefCombined}
                     registerToolRef={registerToolRef}

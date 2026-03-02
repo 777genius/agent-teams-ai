@@ -23,7 +23,7 @@ import {
   PROSE_TABLE_HEADER_BG,
 } from '@renderer/constants/cssVariables';
 import { useStore } from '@renderer/store';
-import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
+import { REHYPE_PLUGINS, REHYPE_PLUGINS_NO_HIGHLIGHT } from '@renderer/utils/markdownPlugins';
 import { FileText } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 import { useShallow } from 'zustand/react/shallow';
@@ -33,6 +33,8 @@ import {
   highlightSearchInChildren,
   type SearchContext,
 } from '../searchHighlightUtils';
+
+import { MermaidDiagram } from './MermaidDiagram';
 
 // =============================================================================
 // Types
@@ -49,6 +51,100 @@ interface MarkdownViewerProps {
   copyable?: boolean;
   /** When true, renders without wrapper background/border (for embedding inside cards) */
   bare?: boolean;
+  /** Base directory for resolving relative URLs (images, links) via local-resource:// protocol */
+  baseDir?: string;
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/** Check if a URL is relative (not absolute, not data, not mailto, not hash) */
+function isRelativeUrl(url: string): boolean {
+  return (
+    !!url &&
+    !url.startsWith('http://') &&
+    !url.startsWith('https://') &&
+    !url.startsWith('data:') &&
+    !url.startsWith('#') &&
+    !url.startsWith('mailto:')
+  );
+}
+
+/** Resolve a relative path to an absolute path given a base directory */
+function resolveRelativePath(relativeSrc: string, baseDir: string): string {
+  const cleaned = relativeSrc.startsWith('./') ? relativeSrc.slice(2) : relativeSrc;
+  return `${baseDir}/${cleaned}`;
+}
+
+// =============================================================================
+// LocalImage — loads images via IPC (readBinaryPreview) for local file access
+// =============================================================================
+
+interface LocalImageProps {
+  src: string;
+  alt?: string;
+  baseDir: string;
+}
+
+const LocalImage = React.memo(function LocalImage({
+  src,
+  alt,
+  baseDir,
+}: LocalImageProps): React.ReactElement {
+  const [dataUrl, setDataUrl] = React.useState<string | null>(null);
+  const [error, setError] = React.useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setDataUrl(null);
+    setError(false);
+
+    const fullPath = resolveRelativePath(src, baseDir);
+    window.electronAPI.editor
+      .readBinaryPreview(fullPath)
+      .then((result) => {
+        if (!cancelled) {
+          setDataUrl(`data:${result.mimeType};base64,${result.base64}`);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [src, baseDir]);
+
+  if (error) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-text-muted">
+        [Image: {alt || src}]
+      </span>
+    );
+  }
+
+  if (!dataUrl) {
+    return (
+      <span className="inline-block size-4 animate-pulse rounded bg-surface-raised align-middle" />
+    );
+  }
+
+  return <img src={dataUrl} alt={alt || ''} className="my-2 max-w-full rounded" />;
+});
+
+/** Extract plain text from a hast (HTML AST) node tree */
+interface HastNode {
+  type: string;
+  value?: string;
+  children?: HastNode[];
+}
+
+function hastToText(node: HastNode): string {
+  if (node.type === 'text') return node.value ?? '';
+  if (node.children) return node.children.map(hastToText).join('');
+  return '';
 }
 
 // =============================================================================
@@ -180,18 +276,29 @@ function createViewerMarkdownComponents(searchCtx: SearchContext | null): Compon
       );
     },
 
-    // Code blocks
-    pre: ({ children }) => (
-      <pre
-        className="my-3 max-w-full overflow-x-auto rounded-lg p-3 text-xs leading-relaxed"
-        style={{
-          backgroundColor: PROSE_PRE_BG,
-          border: `1px solid ${PROSE_PRE_BORDER}`,
-        }}
-      >
-        {children}
-      </pre>
-    ),
+    // Code blocks — intercept mermaid diagrams at the pre level
+    pre: ({ children, node }) => {
+      // Check if this pre contains a mermaid code block
+      const codeEl = node?.children?.[0];
+      if (codeEl && 'tagName' in codeEl && codeEl.tagName === 'code' && 'properties' in codeEl) {
+        const cls = (codeEl.properties as Record<string, unknown>)?.className;
+        if (Array.isArray(cls) && cls.some((c) => String(c) === 'language-mermaid')) {
+          return <MermaidDiagram code={hastToText(codeEl as unknown as HastNode)} />;
+        }
+      }
+
+      return (
+        <pre
+          className="my-3 max-w-full overflow-x-auto rounded-lg p-3 text-xs leading-relaxed"
+          style={{
+            backgroundColor: PROSE_PRE_BG,
+            border: `1px solid ${PROSE_PRE_BORDER}`,
+          }}
+        >
+          {children}
+        </pre>
+      );
+    },
 
     // Blockquotes
     blockquote: ({ children }) => (
@@ -288,6 +395,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   itemId,
   copyable = false,
   bare = false,
+  baseDir,
 }) => {
   const [showRaw, setShowRaw] = React.useState(false);
   const [rawLimit, setRawLimit] = React.useState(LARGE_PREVIEW_CHARS);
@@ -435,7 +543,20 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   // Create markdown components with optional search highlighting
   // When search is active, create fresh each render (match counter is stateful and must start at 0)
   // useMemo would cache stale closures when parent re-renders without search deps changing
-  const components = searchCtx ? createViewerMarkdownComponents(searchCtx) : defaultComponents;
+  const baseComponents = searchCtx ? createViewerMarkdownComponents(searchCtx) : defaultComponents;
+
+  // When baseDir is set (editor preview), override img to load local files via IPC
+  const components = baseDir
+    ? {
+        ...baseComponents,
+        img: ({ src, alt }: { src?: string; alt?: string }) => {
+          if (src && isRelativeUrl(src)) {
+            return <LocalImage src={src} alt={alt} baseDir={baseDir} />;
+          }
+          return <img src={src} alt={alt || ''} className="my-2 max-w-full rounded" />;
+        },
+      }
+    : baseComponents;
 
   return (
     <div
@@ -481,8 +602,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
         <div className="min-w-0 break-words p-4">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
-            rehypePlugins={disableHighlight ? [] : REHYPE_PLUGINS}
-            urlTransform={(url) => url}
+            rehypePlugins={disableHighlight ? REHYPE_PLUGINS_NO_HIGHLIGHT : REHYPE_PLUGINS}
             components={components}
           >
             {content}

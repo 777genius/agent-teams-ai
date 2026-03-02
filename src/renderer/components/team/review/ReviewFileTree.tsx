@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -11,7 +12,6 @@ import {
   Circle,
   CircleDot,
   Eye,
-  File,
   Folder,
   FolderOpen,
   X as XIcon,
@@ -139,7 +139,7 @@ const TreeItem = ({
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
         <FileStatusIcon status={status} />
-        <File className="size-3.5 shrink-0" />
+        <FileIcon fileName={node.name} className="size-3.5" />
         {viewedSet && viewedSet.has(node.data.filePath) && (
           <Tooltip>
             <TooltipTrigger asChild>

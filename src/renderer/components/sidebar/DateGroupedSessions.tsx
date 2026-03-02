@@ -57,6 +57,7 @@ const SOURCE_LABELS: Record<WorktreeSource, string> = {
   'auto-claude': 'Auto Claude',
   '21st': '21st',
   'claude-desktop': 'Claude Desktop',
+  'claude-code': 'Claude Code',
   ccswitch: 'ccswitch',
   git: 'Git',
   unknown: 'Other',

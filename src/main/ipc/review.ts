@@ -221,7 +221,44 @@ async function handleApplyDecisions(
   if (!request || !Array.isArray(request.decisions)) {
     return { success: false, error: 'Invalid request: decisions array required' };
   }
-  return wrapReviewHandler('applyDecisions', () => getApplier().applyReviewDecisions(request));
+  return wrapReviewHandler('applyDecisions', async () => {
+    // Build file contents map for the applier. Prefer renderer-provided context
+    // (snippets + full contents), falling back to resolver when missing.
+    const fileContents = new Map<string, FileChangeWithContent>();
+    const memberName = request.memberName ?? '';
+
+    for (const d of request.decisions) {
+      const snippets = d.snippets ?? [];
+
+      // If renderer provided full contents, use them directly.
+      if (d.originalFullContent !== undefined || d.modifiedFullContent !== undefined) {
+        fileContents.set(d.filePath, {
+          filePath: d.filePath,
+          relativePath: d.filePath.split('/').slice(-3).join('/'),
+          snippets,
+          linesAdded: 0,
+          linesRemoved: 0,
+          isNewFile: d.isNewFile ?? snippets.some((s) => s.type === 'write-new'),
+          originalFullContent: d.originalFullContent ?? null,
+          modifiedFullContent: d.modifiedFullContent ?? null,
+          // Source is informational only; "unavailable" avoids lying.
+          contentSource: 'unavailable',
+        });
+        continue;
+      }
+
+      // Fallback: resolve in main process (best-effort; task mode may not have memberName).
+      const resolved = await getContentResolver().getFileContent(
+        request.teamName,
+        memberName,
+        d.filePath,
+        snippets
+      );
+      fileContents.set(d.filePath, resolved);
+    }
+
+    return getApplier().applyReviewDecisions(request, fileContents);
+  });
 }
 
 async function handleGetFileContent(
@@ -241,12 +278,14 @@ async function handleGetFileContent(
 async function handleSaveEditedFile(
   _event: IpcMainInvokeEvent,
   filePath: string,
-  content: string
+  content: string,
+  projectPath?: string
 ): Promise<IpcResult<{ success: boolean }>> {
   if (!filePath || typeof content !== 'string') {
     return { success: false, error: 'Invalid parameters' };
   }
-  const pathCheck = validateFilePath(filePath, null);
+  const resolvedProjectPath = projectPath && typeof projectPath === 'string' ? projectPath : null;
+  const pathCheck = validateFilePath(filePath, resolvedProjectPath);
   if (!pathCheck.valid) {
     logger.error(`saveEditedFile blocked: ${String(pathCheck.error)} (path: ${String(filePath)})`);
     return { success: false, error: `Path validation failed: ${String(pathCheck.error)}` };
@@ -284,6 +323,7 @@ async function handleLoadDecisions(
   IpcResult<{
     hunkDecisions: Record<string, HunkDecision>;
     fileDecisions: Record<string, HunkDecision>;
+    hunkContextHashesByFile?: Record<string, Record<number, string>>;
   } | null>
 > {
   return wrapReviewHandler('loadDecisions', () => reviewDecisionStore.load(teamName, scopeKey));
@@ -294,10 +334,15 @@ async function handleSaveDecisions(
   teamName: string,
   scopeKey: string,
   hunkDecisions: Record<string, HunkDecision>,
-  fileDecisions: Record<string, HunkDecision>
+  fileDecisions: Record<string, HunkDecision>,
+  hunkContextHashesByFile: Record<string, Record<number, string>> | null = null
 ): Promise<IpcResult<void>> {
   return wrapReviewHandler('saveDecisions', () =>
-    reviewDecisionStore.save(teamName, scopeKey, { hunkDecisions, fileDecisions })
+    reviewDecisionStore.save(teamName, scopeKey, {
+      hunkDecisions,
+      fileDecisions,
+      hunkContextHashesByFile: hunkContextHashesByFile ?? undefined,
+    })
   );
 }
 

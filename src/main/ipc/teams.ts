@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
+import { getAppIconPath } from '@main/utils/appIcon';
 import {
   TEAM_ADD_MEMBER,
   TEAM_ADD_TASK_COMMENT,
+  TEAM_ADD_TASK_RELATIONSHIP,
   TEAM_ALIVE_LIST,
   TEAM_CANCEL_PROVISIONING,
   TEAM_CREATE,
@@ -28,6 +30,7 @@ import {
   TEAM_PROVISIONING_PROGRESS,
   TEAM_PROVISIONING_STATUS,
   TEAM_REMOVE_MEMBER,
+  TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTORE,
   TEAM_RESTORE_TASK,
@@ -215,6 +218,8 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_DELETED_TASKS, handleGetDeletedTasks);
   ipcMain.handle(TEAM_SET_TASK_CLARIFICATION, handleSetTaskClarification);
   ipcMain.handle(TEAM_SHOW_MESSAGE_NOTIFICATION, handleShowMessageNotification);
+  ipcMain.handle(TEAM_ADD_TASK_RELATIONSHIP, handleAddTaskRelationship);
+  ipcMain.handle(TEAM_REMOVE_TASK_RELATIONSHIP, handleRemoveTaskRelationship);
   logger.info('Team handlers registered');
 }
 
@@ -261,6 +266,8 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_GET_DELETED_TASKS);
   ipcMain.removeHandler(TEAM_SET_TASK_CLARIFICATION);
   ipcMain.removeHandler(TEAM_SHOW_MESSAGE_NOTIFICATION);
+  ipcMain.removeHandler(TEAM_ADD_TASK_RELATIONSHIP);
+  ipcMain.removeHandler(TEAM_REMOVE_TASK_RELATIONSHIP);
 }
 
 function getTeamDataService(): TeamDataService {
@@ -1306,6 +1313,14 @@ async function handleCreateConfig(
   if (payload.color !== undefined && typeof payload.color !== 'string') {
     return { success: false, error: 'color must be a string' };
   }
+  if (payload.cwd !== undefined) {
+    if (typeof payload.cwd !== 'string' || payload.cwd.trim().length === 0) {
+      return { success: false, error: 'cwd must be a non-empty string if provided' };
+    }
+    if (!path.isAbsolute(payload.cwd.trim())) {
+      return { success: false, error: 'cwd must be an absolute path' };
+    }
+  }
 
   const seenNames = new Set<string>();
   const members: TeamCreateConfigRequest['members'] = [];
@@ -1337,6 +1352,7 @@ async function handleCreateConfig(
       description: payload.description?.trim() || undefined,
       color: typeof payload.color === 'string' ? payload.color.trim() || undefined : undefined,
       members,
+      cwd: typeof payload.cwd === 'string' ? payload.cwd.trim() || undefined : undefined,
     })
   );
 }
@@ -1370,7 +1386,12 @@ async function handleGetLogsForTask(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
   taskId: unknown,
-  options?: { owner?: string; status?: string }
+  options?: {
+    owner?: string;
+    status?: string;
+    intervals?: { startedAt: string; completedAt?: string }[];
+    since?: string;
+  }
 ): Promise<IpcResult<MemberLogSummary[]>> {
   const vTeam = validateTeamName(teamName);
   if (!vTeam.valid) {
@@ -1385,6 +1406,17 @@ async function handleGetLogsForTask(
       ? {
           owner: typeof options.owner === 'string' ? options.owner : undefined,
           status: typeof options.status === 'string' ? options.status : undefined,
+          since: typeof options.since === 'string' ? options.since : undefined,
+          intervals: Array.isArray(options.intervals)
+            ? (options.intervals as unknown[]).filter(
+                (i): i is { startedAt: string; completedAt?: string } =>
+                  Boolean(i) &&
+                  typeof i === 'object' &&
+                  typeof (i as Record<string, unknown>).startedAt === 'string' &&
+                  ((i as Record<string, unknown>).completedAt === undefined ||
+                    typeof (i as Record<string, unknown>).completedAt === 'string')
+              )
+            : undefined,
         }
       : undefined;
   return wrapTeamHandler('getLogsForTask', () =>
@@ -1714,22 +1746,31 @@ export function showTeamNativeNotification(opts: {
   body: string;
 }): void {
   const config = ConfigManager.getInstance().getConfig();
-  if (!config.notifications.enabled) return;
-  if (config.notifications.snoozedUntil && Date.now() < config.notifications.snoozedUntil) return;
+  if (!config.notifications.enabled) {
+    logger.debug('[native-notification] skipped: notifications disabled');
+    return;
+  }
+  if (config.notifications.snoozedUntil && Date.now() < config.notifications.snoozedUntil) {
+    logger.debug('[native-notification] skipped: snoozed');
+    return;
+  }
 
   if (
     typeof Notification === 'undefined' ||
     typeof Notification.isSupported !== 'function' ||
     !Notification.isSupported()
   ) {
+    logger.warn('[native-notification] skipped: Notification not supported on this platform');
     return;
   }
 
+  const iconPath = getAppIconPath();
   const notification = new Notification({
     title: opts.title,
     subtitle: opts.subtitle,
     body: opts.body.slice(0, 300),
     sound: config.notifications.soundEnabled ? 'default' : undefined,
+    ...(iconPath ? { icon: iconPath } : {}),
   });
 
   notification.on('click', () => {
@@ -1739,6 +1780,14 @@ export function showTeamNativeNotification(opts: {
       mainWin.show();
       mainWin.focus();
     }
+  });
+
+  notification.on('show', () => {
+    logger.debug(`[native-notification] shown: "${opts.title}" — ${opts.subtitle ?? ''}`);
+  });
+
+  notification.on('failed', (_, error) => {
+    logger.warn(`[native-notification] failed: ${error}`);
   });
 
   notification.show();
@@ -1761,5 +1810,68 @@ async function handleAddTaskComment(
 
   return wrapTeamHandler('addTaskComment', () =>
     getTeamDataService().addTaskComment(vTeam.value!, vTask.value!, text.trim())
+  );
+}
+
+const VALID_RELATIONSHIP_TYPES = ['blockedBy', 'blocks', 'related'] as const;
+type RelationshipType = (typeof VALID_RELATIONSHIP_TYPES)[number];
+
+async function handleAddTaskRelationship(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown,
+  targetId: unknown,
+  type: unknown
+): Promise<IpcResult<void>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  const vTask = validateTaskId(taskId);
+  if (!vTask.valid) return { success: false, error: vTask.error ?? 'Invalid taskId' };
+  const vTarget = validateTaskId(targetId);
+  if (!vTarget.valid) return { success: false, error: vTarget.error ?? 'Invalid targetId' };
+  if (typeof type !== 'string' || !VALID_RELATIONSHIP_TYPES.includes(type as RelationshipType)) {
+    return {
+      success: false,
+      error: `type must be one of: ${VALID_RELATIONSHIP_TYPES.join(', ')}`,
+    };
+  }
+
+  return wrapTeamHandler('addTaskRelationship', () =>
+    getTeamDataService().addTaskRelationship(
+      vTeam.value!,
+      vTask.value!,
+      vTarget.value!,
+      type as RelationshipType
+    )
+  );
+}
+
+async function handleRemoveTaskRelationship(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown,
+  targetId: unknown,
+  type: unknown
+): Promise<IpcResult<void>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  const vTask = validateTaskId(taskId);
+  if (!vTask.valid) return { success: false, error: vTask.error ?? 'Invalid taskId' };
+  const vTarget = validateTaskId(targetId);
+  if (!vTarget.valid) return { success: false, error: vTarget.error ?? 'Invalid targetId' };
+  if (typeof type !== 'string' || !VALID_RELATIONSHIP_TYPES.includes(type as RelationshipType)) {
+    return {
+      success: false,
+      error: `type must be one of: ${VALID_RELATIONSHIP_TYPES.join(', ')}`,
+    };
+  }
+
+  return wrapTeamHandler('removeTaskRelationship', () =>
+    getTeamDataService().removeTaskRelationship(
+      vTeam.value!,
+      vTask.value!,
+      vTarget.value!,
+      type as RelationshipType
+    )
   );
 }

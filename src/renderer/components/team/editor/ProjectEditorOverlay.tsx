@@ -7,10 +7,19 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { Button } from '@renderer/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useEditorKeyboardShortcuts } from '@renderer/hooks/useEditorKeyboardShortcuts';
 import { useStore } from '@renderer/store';
-import { buildSelectionAction } from '@renderer/utils/buildSelectionAction';
+import { buildFileAction, buildSelectionAction } from '@renderer/utils/buildSelectionAction';
 import { shortcutLabel } from '@renderer/utils/platformKeys';
 import {
   AlertTriangle,
@@ -22,6 +31,7 @@ import {
   RotateCcw,
   X,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { CodeMirrorEditor } from './CodeMirrorEditor';
 import { EditorBinaryState } from './EditorBinaryState';
@@ -34,9 +44,12 @@ import { EditorShortcutsHelp } from './EditorShortcutsHelp';
 import { EditorStatusBar } from './EditorStatusBar';
 import { EditorTabBar } from './EditorTabBar';
 import { EditorToolbar } from './EditorToolbar';
+import { GoToLineDialog } from './GoToLineDialog';
+import { MarkdownSplitView } from './MarkdownSplitView';
 import { QuickOpenDialog } from './QuickOpenDialog';
 import { SearchInFilesPanel } from './SearchInFilesPanel';
 
+import type { MdPreviewMode } from './EditorToolbar';
 import type {
   EditorSelectionAction,
   EditorSelectionInfo,
@@ -63,23 +76,29 @@ export const ProjectEditorOverlay = ({
   onClose,
   onEditorAction,
 }: ProjectEditorOverlayProps): React.ReactElement => {
+  // Data selectors — grouped with useShallow to prevent unnecessary re-renders
+  const { activeTabId, openTabs, modifiedFiles, saveErrors, externalChanges, conflictFile } =
+    useStore(
+      useShallow((s) => ({
+        activeTabId: s.editorActiveTabId,
+        openTabs: s.editorOpenTabs,
+        modifiedFiles: s.editorModifiedFiles,
+        saveErrors: s.editorSaveError,
+        externalChanges: s.editorExternalChanges,
+        conflictFile: s.editorConflictFile,
+      }))
+    );
+
+  // Actions — stable references in Zustand, no grouping needed
   const openEditor = useStore((s) => s.openEditor);
   const closeEditor = useStore((s) => s.closeEditor);
   const openFile = useStore((s) => s.openFile);
   const closeEditorTab = useStore((s) => s.closeEditorTab);
   const saveFile = useStore((s) => s.saveFile);
-  const activeTabId = useStore((s) => s.editorActiveTabId);
-  const openTabs = useStore((s) => s.editorOpenTabs);
-  const modifiedFiles = useStore((s) => s.editorModifiedFiles);
-  const saveErrors = useStore((s) => s.editorSaveError);
   const hasUnsavedChanges = useStore((s) => s.hasUnsavedChanges);
   const saveAllFiles = useStore((s) => s.saveAllFiles);
   const discardChanges = useStore((s) => s.discardChanges);
-
-  // Iter-5: git, watcher, conflict
-  const externalChanges = useStore((s) => s.editorExternalChanges);
   const clearExternalChange = useStore((s) => s.clearExternalChange);
-  const conflictFile = useStore((s) => s.editorConflictFile);
   const forceOverwrite = useStore((s) => s.forceOverwrite);
   const resolveConflict = useStore((s) => s.resolveConflict);
   const setFileMtime = useStore((s) => s.setFileMtime);
@@ -104,9 +123,22 @@ export const ProjectEditorOverlay = ({
   const editorContentRef = useRef<HTMLDivElement>(null);
   const [containerRect, setContainerRect] = useState<DOMRect>(() => new DOMRect());
 
+  // Markdown preview state
+  const [mdPreviewMode, setMdPreviewMode] = useState<MdPreviewMode>('off');
+  const [liveContent, setLiveContent] = useState('');
+  const [splitRatio, setSplitRatio] = useState(() => {
+    try {
+      const stored = localStorage.getItem('editor:mdSplitRatio');
+      return stored ? Math.max(0.2, Math.min(0.8, Number(stored))) : 0.5;
+    } catch {
+      return 0.5;
+    }
+  });
+
   // Iter-4: New state
   const [quickOpenVisible, setQuickOpenVisible] = useState(false);
   const [searchPanelVisible, setSearchPanelVisible] = useState(false);
+  const [goToLineVisible, setGoToLineVisible] = useState(false);
   const [shortcutsHelpVisible, setShortcutsHelpVisible] = useState(false);
   const [sidebarVisible, setSidebarVisibleRaw] = useState(() => {
     try {
@@ -123,6 +155,48 @@ export const ProjectEditorOverlay = ({
 
   // Active tab metadata
   const activeTab = openTabs.find((t) => t.id === activeTabId) ?? null;
+  const isMarkdown = activeTab?.language === 'Markdown';
+
+  // Auto-enable split preview for markdown tabs, reset for non-markdown
+  useEffect(() => {
+    if (isMarkdown) {
+      setMdPreviewMode((m) => (m === 'off' ? 'split' : m));
+    } else {
+      setMdPreviewMode('off');
+    }
+  }, [isMarkdown, activeTabId]);
+
+  // Persist split ratio
+  const handleSplitRatioChange = useCallback((ratio: number) => {
+    setSplitRatio(ratio);
+    try {
+      localStorage.setItem('editor:mdSplitRatio', String(ratio));
+    } catch {
+      // localStorage unavailable
+    }
+  }, []);
+
+  const handleLiveContent = useCallback((content: string) => {
+    setLiveContent(content);
+  }, []);
+
+  const toggleMdSplit = useCallback(() => {
+    setMdPreviewMode((m) => (m === 'split' ? 'off' : 'split'));
+  }, []);
+
+  const toggleMdPreview = useCallback(() => {
+    setMdPreviewMode((m) => (m === 'preview' ? 'off' : 'preview'));
+  }, []);
+
+  // Initialize live content when entering preview mode or switching files
+  useEffect(() => {
+    if (mdPreviewMode !== 'off' && fileContent?.content) {
+      setLiveContent(fileContent.content);
+    }
+  }, [mdPreviewMode, fileContent?.content]);
+
+  // Content for preview: use live content when available, fallback to file content
+  const previewContent = liveContent || fileContent?.content || '';
 
   const loadFileContent = useCallback(
     async (filePath: string) => {
@@ -131,13 +205,19 @@ export const ProjectEditorOverlay = ({
       setFileContent(null);
 
       try {
+        const t0 = performance.now();
         let promise = pendingReads.current.get(filePath);
+        const wasCached = !!promise;
         if (!promise) {
           promise = window.electronAPI.editor.readFile(filePath);
           pendingReads.current.set(filePath, promise);
           void promise.finally(() => pendingReads.current.delete(filePath));
         }
         const result = await promise;
+        const ipcMs = performance.now() - t0;
+        console.debug(
+          `[perf] loadFileContent: IPC=${ipcMs.toFixed(1)}ms, size=${result.size}, truncated=${result.truncated}, cached=${wasCached}, file=${filePath.split('/').pop() ?? ''}`
+        );
         setFileContent(result);
 
         // Track baseline mtime for conflict detection
@@ -157,6 +237,9 @@ export const ProjectEditorOverlay = ({
   // Active tab save error
   const activeSaveError = activeTabId ? (saveErrors[activeTabId] ?? null) : null;
 
+  const pendingRevealFile = useStore((s) => s.editorPendingRevealFile);
+  const revealAndOpenFile = useStore((s) => s.revealAndOpenFile);
+
   // Initialize editor on mount
   useEffect(() => {
     void openEditor(projectPath);
@@ -164,6 +247,18 @@ export const ProjectEditorOverlay = ({
       closeEditor();
     };
   }, [projectPath, openEditor, closeEditor]);
+
+  // Process pending file reveal after editor initializes.
+  // Guard: wait until the file tree is actually loaded (not null) and not loading.
+  // Without the fileTree check, the effect fires on mount when fileTreeLoading is
+  // still at its initial `false` value — before openEditor sets it to `true`.
+  const fileTreeLoading = useStore((s) => s.editorFileTreeLoading);
+  const fileTreeLoaded = useStore((s) => s.editorFileTree !== null);
+  useEffect(() => {
+    if (pendingRevealFile && !fileTreeLoading && fileTreeLoaded) {
+      void revealAndOpenFile(pendingRevealFile);
+    }
+  }, [pendingRevealFile, fileTreeLoading, fileTreeLoaded, revealAndOpenFile]);
 
   // Keep container rect fresh for selection menu positioning (resize, sidebar toggle)
   useEffect(() => {
@@ -180,6 +275,9 @@ export const ProjectEditorOverlay = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        // Skip if another handler already consumed this Escape
+        // (e.g. CodeMirror search panel close, or React search input onKeyDown)
+        if (e.defaultPrevented) return;
         // Don't close overlay if a dialog is open — dialog handles its own Escape
         if (quickOpenVisible || searchPanelVisible || shortcutsHelpVisible) return;
         if (showConfirmClose || confirmCloseTabId) return;
@@ -381,6 +479,10 @@ export const ProjectEditorOverlay = ({
     setSearchPanelVisible((v) => !v);
   }, []);
 
+  const toggleGoToLine = useCallback(() => {
+    setGoToLineVisible((v) => !v);
+  }, []);
+
   const toggleSidebar = useCallback(() => {
     setSidebarVisibleRaw((v) => {
       const next = !v;
@@ -410,8 +512,11 @@ export const ProjectEditorOverlay = ({
   useEditorKeyboardShortcuts({
     onToggleQuickOpen: toggleQuickOpen,
     onToggleSearchPanel: toggleSearchPanel,
+    onToggleGoToLine: toggleGoToLine,
     onToggleSidebar: toggleSidebar,
     onClose: handleCloseRequest,
+    onToggleMdSplit: isMarkdown ? toggleMdSplit : undefined,
+    onToggleMdPreview: isMarkdown ? toggleMdPreview : undefined,
   });
 
   const projectName = projectPath.split('/').pop() ?? projectPath;
@@ -437,35 +542,46 @@ export const ProjectEditorOverlay = ({
         <div className="flex items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 text-text-muted"
                 onClick={handleManualRefresh}
-                className="rounded p-1 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
                 aria-label="Refresh (F5)"
               >
                 <RefreshCw className="size-4" />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Refresh git status (F5)</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 text-text-muted"
                 onClick={() => setShortcutsHelpVisible(true)}
-                className="rounded p-1 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
                 aria-label="Keyboard shortcuts"
               >
                 <HelpCircle className="size-4" />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Keyboard shortcuts</TooltipContent>
           </Tooltip>
-          <button
-            onClick={handleCloseRequest}
-            className="rounded p-1 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
-            aria-label="Close editor"
-          >
-            <X className="size-4" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 text-text-muted"
+                onClick={handleCloseRequest}
+                aria-label="Close editor"
+              >
+                <X className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Close editor (Esc)</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -491,13 +607,15 @@ export const ProjectEditorOverlay = ({
               </span>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 text-text-muted"
                     onClick={toggleSidebar}
-                    className="rounded p-0.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
                     aria-label="Hide sidebar"
                   >
                     <PanelLeftClose className="size-3.5" />
-                  </button>
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   Hide sidebar ({shortcutLabel('⌘ B', 'Ctrl+B')})
@@ -505,7 +623,22 @@ export const ProjectEditorOverlay = ({
               </Tooltip>
             </div>
             <div className="flex-1 overflow-hidden">
-              <EditorFileTree selectedFilePath={activeTabId} onFileSelect={handleFileSelect} />
+              <EditorFileTree
+                selectedFilePath={activeTabId}
+                onFileSelect={handleFileSelect}
+                onCreateTask={
+                  onEditorAction
+                    ? (filePath: string) =>
+                        onEditorAction(buildFileAction('createTask', filePath, projectPath))
+                    : undefined
+                }
+                onSendMessage={
+                  onEditorAction
+                    ? (filePath: string) =>
+                        onEditorAction(buildFileAction('sendMessage', filePath, projectPath))
+                    : undefined
+                }
+              />
             </div>
           </div>
         )}
@@ -514,13 +647,14 @@ export const ProjectEditorOverlay = ({
         {!sidebarVisible && !searchPanelVisible && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
+                variant="ghost"
+                className="flex h-full w-6 shrink-0 items-start justify-center rounded-none border-r border-border bg-surface-sidebar pt-2 text-text-muted"
                 onClick={toggleSidebar}
-                className="flex h-full w-6 shrink-0 items-start justify-center border-r border-border bg-surface-sidebar pt-2 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
                 aria-label="Show sidebar"
               >
                 <PanelLeftOpen className="size-3.5" />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="right">
               Show sidebar ({shortcutLabel('⌘ B', 'Ctrl+B')})
@@ -534,25 +668,34 @@ export const ProjectEditorOverlay = ({
           <EditorTabBar onRequestCloseTab={handleRequestCloseTab} />
 
           {/* Toolbar */}
-          <EditorToolbar />
+          <EditorToolbar
+            isMarkdown={isMarkdown}
+            mdPreviewMode={mdPreviewMode}
+            onToggleSplit={toggleMdSplit}
+            onToggleFullPreview={toggleMdPreview}
+          />
 
           {/* Draft recovery banner */}
           {draftRecoveredFile && activeTabId === draftRecoveredFile && (
             <div className="flex shrink-0 items-center gap-2 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">
               <RotateCcw className="size-3.5 shrink-0" />
               <span>Recovered unsaved changes from a previous session.</span>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto h-auto px-2 py-0.5"
                 onClick={handleDismissDraftBanner}
-                className="ml-auto rounded px-2 py-0.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
               >
                 Keep
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-auto px-2 py-0.5"
                 onClick={handleDiscardDraft}
-                className="rounded px-2 py-0.5 text-red-400 transition-colors hover:bg-red-400/10"
               >
                 Discard
-              </button>
+              </Button>
             </div>
           )}
 
@@ -561,12 +704,14 @@ export const ProjectEditorOverlay = ({
             <div className="flex shrink-0 items-center gap-2 border-b border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-300">
               <AlertTriangle className="size-3.5 shrink-0" />
               <span className="truncate">Save failed: {activeSaveError}</span>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto h-auto shrink-0 px-2 py-0.5"
                 onClick={() => activeTabId && void saveFile(activeTabId)}
-                className="ml-auto shrink-0 rounded px-2 py-0.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
               >
                 Retry
-              </button>
+              </Button>
             </div>
           )}
 
@@ -580,26 +725,32 @@ export const ProjectEditorOverlay = ({
                   : 'File changed on disk.'}
               </span>
               {externalChanges[activeTabId] === 'delete' ? (
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto h-auto px-2 py-0.5"
                   onClick={() => closeEditorTab(activeTabId)}
-                  className="ml-auto rounded px-2 py-0.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
                 >
                   Close tab
-                </button>
+                </Button>
               ) : (
                 <>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto h-auto px-2 py-0.5"
                     onClick={handleReloadExternalChange}
-                    className="ml-auto rounded px-2 py-0.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
                   >
                     Reload
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto px-2 py-0.5"
                     onClick={handleKeepMine}
-                    className="rounded px-2 py-0.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
                   >
                     Keep mine
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -620,18 +771,42 @@ export const ProjectEditorOverlay = ({
             )}
 
             {fileContent && !fileContent.isBinary && activeTabId && (
-              <EditorErrorBoundary filePath={activeTabId} onRetry={handleRetry}>
-                <CodeMirrorEditor
-                  key={`${activeTabId}-${editorResetKey}`}
-                  filePath={activeTabId}
-                  content={fileContent.content}
-                  fileName={activeTabId.split('/').pop() ?? 'file'}
-                  mtimeMs={fileContent.mtimeMs}
-                  onCursorChange={handleCursorChange}
-                  onDraftRecovered={handleDraftRecovered}
-                  onSelectionChange={setSelectionInfo}
-                />
-              </EditorErrorBoundary>
+              <div className="flex h-full">
+                {/* Code editor — always mounted, hidden via display:none in preview mode */}
+                <div
+                  className="h-full overflow-hidden"
+                  style={{
+                    display: mdPreviewMode === 'preview' ? 'none' : 'block',
+                    width: mdPreviewMode === 'split' ? `${splitRatio * 100}%` : '100%',
+                  }}
+                >
+                  <EditorErrorBoundary filePath={activeTabId} onRetry={handleRetry}>
+                    <CodeMirrorEditor
+                      key={`${activeTabId}-${editorResetKey}`}
+                      filePath={activeTabId}
+                      content={fileContent.content}
+                      fileName={activeTabId.split('/').pop() ?? 'file'}
+                      mtimeMs={fileContent.mtimeMs}
+                      onCursorChange={handleCursorChange}
+                      onDraftRecovered={handleDraftRecovered}
+                      onSelectionChange={setSelectionInfo}
+                      onDocChange={mdPreviewMode !== 'off' ? handleLiveContent : undefined}
+                    />
+                  </EditorErrorBoundary>
+                </div>
+
+                {/* Resize handle + Preview pane */}
+                {mdPreviewMode !== 'off' && (
+                  <MarkdownSplitView
+                    content={previewContent}
+                    mode={mdPreviewMode}
+                    splitRatio={splitRatio}
+                    onSplitRatioChange={handleSplitRatioChange}
+                    viewKey={activeTabId}
+                    baseDir={activeTabId?.substring(0, activeTabId.lastIndexOf('/'))}
+                  />
+                )}
+              </div>
             )}
 
             {!fileLoading && !fileError && !fileContent && !activeTabId && <EditorEmptyState />}
@@ -668,101 +843,80 @@ export const ProjectEditorOverlay = ({
         />
       )}
 
+      {/* Go to Line dialog */}
+      {goToLineVisible && <GoToLineDialog onClose={() => setGoToLineVisible(false)} />}
+
       {/* Shortcuts help modal */}
       {shortcutsHelpVisible && (
         <EditorShortcutsHelp onClose={() => setShortcutsHelpVisible(false)} />
       )}
 
       {/* Unsaved changes confirmation dialog — overlay close */}
-      {showConfirmClose && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-          <div className="w-96 rounded-lg border border-border bg-surface p-6 shadow-xl">
-            <h3 className="mb-2 text-sm font-semibold text-text">Unsaved Changes</h3>
-            <p className="mb-4 text-sm text-text-secondary">
+      <Dialog open={showConfirmClose} onOpenChange={(open) => !open && handleCancelClose()}>
+        <DialogContent className="w-96 max-w-96">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Unsaved Changes</DialogTitle>
+            <DialogDescription>
               You have unsaved changes. What would you like to do?
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={handleCancelClose}
-                className="rounded px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDiscardAndClose}
-                className="rounded px-3 py-1.5 text-sm text-red-400 transition-colors hover:bg-red-400/10"
-              >
-                Discard & Close
-              </button>
-              <button
-                onClick={() => void handleSaveAndClose()}
-                className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-blue-500"
-              >
-                Save All & Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={handleCancelClose}>
+              Cancel
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleDiscardAndClose}>
+              Discard & Close
+            </Button>
+            <Button size="sm" onClick={() => void handleSaveAndClose()}>
+              Save All & Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Save conflict dialog */}
-      {conflictFile && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-          <div className="w-96 rounded-lg border border-border bg-surface p-6 shadow-xl">
-            <h3 className="mb-2 text-sm font-semibold text-text">Save Conflict</h3>
-            <p className="mb-4 text-sm text-text-secondary">
+      <Dialog open={!!conflictFile} onOpenChange={(open) => !open && handleCancelConflict()}>
+        <DialogContent className="w-96 max-w-96">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Save Conflict</DialogTitle>
+            <DialogDescription>
               The file has been modified externally since you opened it. Overwrite with your
               changes?
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={handleCancelConflict}
-                className="rounded px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleForceOverwrite}
-                className="rounded bg-orange-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-orange-500"
-              >
-                Overwrite
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={handleCancelConflict}>
+              Cancel
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleForceOverwrite}>
+              Overwrite
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Unsaved changes confirmation dialog — single tab close */}
-      {confirmCloseTabId && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-          <div className="w-96 rounded-lg border border-border bg-surface p-6 shadow-xl">
-            <h3 className="mb-2 text-sm font-semibold text-text">Unsaved Changes</h3>
-            <p className="mb-4 text-sm text-text-secondary">
+      <Dialog open={!!confirmCloseTabId} onOpenChange={(open) => !open && handleCancelCloseTab()}>
+        <DialogContent className="w-96 max-w-96">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Unsaved Changes</DialogTitle>
+            <DialogDescription>
               This file has unsaved changes. What would you like to do?
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={handleCancelCloseTab}
-                className="rounded px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDiscardAndCloseTab}
-                className="rounded px-3 py-1.5 text-sm text-red-400 transition-colors hover:bg-red-400/10"
-              >
-                Discard
-              </button>
-              <button
-                onClick={() => void handleSaveAndCloseTab()}
-                className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-blue-500"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={handleCancelCloseTab}>
+              Cancel
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleDiscardAndCloseTab}>
+              Discard
+            </Button>
+            <Button size="sm" onClick={() => void handleSaveAndCloseTab()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

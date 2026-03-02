@@ -17,6 +17,8 @@
  * - POST /api/config/triggers/:triggerId/test - Test trigger
  * - POST /api/config/pin-session - Pin session
  * - POST /api/config/unpin-session - Unpin session
+ * - POST /api/config/add-custom-project-path - Add custom project path
+ * - POST /api/config/remove-custom-project-path - Remove custom project path
  * - POST /api/config/select-folders - No-op in browser
  * - POST /api/config/open-in-editor - No-op in browser
  */
@@ -465,6 +467,44 @@ export function registerConfigRoutes(app: FastifyInstance): void {
         return { success: true };
       } catch (error) {
         logger.error('Error in POST /api/config/unhide-sessions:', error);
+        return { success: false, error: getErrorMessage(error) };
+      }
+    }
+  );
+
+  // Add custom project path
+  app.post<{ Body: { projectPath: string } }>(
+    '/api/config/add-custom-project-path',
+    async (request): Promise<ConfigResult> => {
+      try {
+        const { projectPath } = request.body;
+        if (!projectPath || typeof projectPath !== 'string') {
+          return { success: false, error: 'Project path is required and must be a string' };
+        }
+
+        configManager.addCustomProjectPath(projectPath);
+        return { success: true };
+      } catch (error) {
+        logger.error('Error in POST /api/config/add-custom-project-path:', error);
+        return { success: false, error: getErrorMessage(error) };
+      }
+    }
+  );
+
+  // Remove custom project path
+  app.post<{ Body: { projectPath: string } }>(
+    '/api/config/remove-custom-project-path',
+    async (request): Promise<ConfigResult> => {
+      try {
+        const { projectPath } = request.body;
+        if (!projectPath || typeof projectPath !== 'string') {
+          return { success: false, error: 'Project path is required and must be a string' };
+        }
+
+        configManager.removeCustomProjectPath(projectPath);
+        return { success: true };
+      } catch (error) {
+        logger.error('Error in POST /api/config/remove-custom-project-path:', error);
         return { success: false, error: getErrorMessage(error) };
       }
     }

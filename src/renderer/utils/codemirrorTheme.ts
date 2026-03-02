@@ -14,6 +14,7 @@ export const baseEditorTheme = EditorView.theme({
     color: 'var(--color-text)',
     fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
     fontSize: '13px',
+    height: '100%',
   },
   '&.cm-focused': {
     outline: 'none',

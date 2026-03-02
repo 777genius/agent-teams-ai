@@ -17,11 +17,16 @@ import {
   EDITOR_LIST_FILES,
   EDITOR_MOVE_FILE,
   EDITOR_OPEN,
+  EDITOR_READ_BINARY_PREVIEW,
   EDITOR_READ_DIR,
   EDITOR_READ_FILE,
+  EDITOR_RENAME_FILE,
   EDITOR_SEARCH_IN_FILES,
+  EDITOR_SET_WATCHED_DIRS,
+  EDITOR_SET_WATCHED_FILES,
   EDITOR_WATCH_DIR,
   EDITOR_WRITE_FILE,
+  PROJECT_LIST_FILES,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
 import { createLogger } from '@shared/utils/logger';
@@ -40,6 +45,7 @@ import {
 import { createIpcWrapper } from './ipcWrapper';
 
 import type {
+  BinaryPreviewResult,
   CreateDirResponse,
   CreateFileResponse,
   DeleteFileResponse,
@@ -245,6 +251,20 @@ async function handleEditorMoveFile(
 }
 
 /**
+ * Rename a file or directory in place.
+ */
+async function handleEditorRenameFile(
+  _event: IpcMainInvokeEvent,
+  sourcePath: string,
+  newName: string
+): Promise<IpcResult<MoveFileResponse>> {
+  return wrapHandler('renameFile', async () => {
+    if (!activeProjectRoot) throw new Error('Editor not initialized');
+    return projectFileService.renameFile(activeProjectRoot, sourcePath, newName);
+  });
+}
+
+/**
  * Search in files (literal string search, SEC-8 timeout).
  */
 async function handleEditorSearchInFiles(
@@ -283,12 +303,43 @@ async function handleEditorListFiles(): Promise<IpcResult<QuickOpenFile[]>> {
 }
 
 /**
+ * List project files by explicit path (for @file mentions).
+ * Independent of editor state — works without editor:open.
+ */
+async function handleProjectListFiles(
+  _event: IpcMainInvokeEvent,
+  projectPath: string
+): Promise<IpcResult<QuickOpenFile[]>> {
+  return wrapHandler('project:listFiles', async () => {
+    if (typeof projectPath !== 'string' || projectPath.length === 0) {
+      throw new Error('projectPath is required');
+    }
+    const normalized = path.resolve(projectPath);
+    await fs.access(normalized);
+    return fileSearchService.listFiles(normalized);
+  });
+}
+
+/**
  * Get git status for current project (cached 5s).
  */
 async function handleEditorGitStatus(): Promise<IpcResult<GitStatusResult>> {
   return wrapHandler('gitStatus', async () => {
     if (!activeProjectRoot) throw new Error('Editor not initialized');
     return gitStatusService.getStatus();
+  });
+}
+
+/**
+ * Read binary file as base64 for inline preview.
+ */
+async function handleEditorReadBinaryPreview(
+  _event: IpcMainInvokeEvent,
+  filePath: string
+): Promise<IpcResult<BinaryPreviewResult>> {
+  return wrapHandler('readBinaryPreview', async () => {
+    if (!activeProjectRoot) throw new Error('Editor not initialized');
+    return projectFileService.readBinaryPreview(activeProjectRoot, filePath);
   });
 }
 
@@ -304,8 +355,13 @@ async function handleEditorWatchDir(
 
     if (enable) {
       editorFileWatcher.start(activeProjectRoot, (event) => {
-        // Invalidate git cache on file changes
-        gitStatusService.invalidateCache();
+        // Structural changes (create/delete): immediate invalidation.
+        // Content changes: debounced (500ms) to coalesce rapid saves/builds.
+        if (event.type === 'create' || event.type === 'delete') {
+          gitStatusService.invalidateCache();
+        } else {
+          gitStatusService.invalidateCacheDebounced();
+        }
 
         // Forward event to renderer
         if (mainWindowRef && !mainWindowRef.isDestroyed()) {
@@ -315,6 +371,32 @@ async function handleEditorWatchDir(
     } else {
       editorFileWatcher.stop();
     }
+  });
+}
+
+/**
+ * Update watched file list (open tabs).
+ */
+async function handleEditorSetWatchedFiles(
+  _event: IpcMainInvokeEvent,
+  filePaths: string[]
+): Promise<IpcResult<void>> {
+  return wrapHandler('setWatchedFiles', async () => {
+    if (!activeProjectRoot) throw new Error('Editor not initialized');
+    editorFileWatcher.setWatchedFiles(Array.isArray(filePaths) ? filePaths : []);
+  });
+}
+
+/**
+ * Update watched directory list (shallow, depth=0).
+ */
+async function handleEditorSetWatchedDirs(
+  _event: IpcMainInvokeEvent,
+  dirPaths: string[]
+): Promise<IpcResult<void>> {
+  return wrapHandler('setWatchedDirs', async () => {
+    if (!activeProjectRoot) throw new Error('Editor not initialized');
+    editorFileWatcher.setWatchedDirs(Array.isArray(dirPaths) ? dirPaths : []);
   });
 }
 
@@ -344,10 +426,15 @@ export function registerEditorHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(EDITOR_CREATE_DIR, handleEditorCreateDir);
   ipcMain.handle(EDITOR_DELETE_FILE, handleEditorDeleteFile);
   ipcMain.handle(EDITOR_MOVE_FILE, handleEditorMoveFile);
+  ipcMain.handle(EDITOR_RENAME_FILE, handleEditorRenameFile);
   ipcMain.handle(EDITOR_SEARCH_IN_FILES, handleEditorSearchInFiles);
   ipcMain.handle(EDITOR_LIST_FILES, handleEditorListFiles);
+  ipcMain.handle(EDITOR_READ_BINARY_PREVIEW, handleEditorReadBinaryPreview);
   ipcMain.handle(EDITOR_GIT_STATUS, handleEditorGitStatus);
   ipcMain.handle(EDITOR_WATCH_DIR, handleEditorWatchDir);
+  ipcMain.handle(EDITOR_SET_WATCHED_FILES, handleEditorSetWatchedFiles);
+  ipcMain.handle(EDITOR_SET_WATCHED_DIRS, handleEditorSetWatchedDirs);
+  ipcMain.handle(PROJECT_LIST_FILES, handleProjectListFiles);
 }
 
 export function removeEditorHandlers(ipcMain: IpcMain): void {
@@ -360,10 +447,15 @@ export function removeEditorHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(EDITOR_CREATE_DIR);
   ipcMain.removeHandler(EDITOR_DELETE_FILE);
   ipcMain.removeHandler(EDITOR_MOVE_FILE);
+  ipcMain.removeHandler(EDITOR_RENAME_FILE);
   ipcMain.removeHandler(EDITOR_SEARCH_IN_FILES);
   ipcMain.removeHandler(EDITOR_LIST_FILES);
+  ipcMain.removeHandler(EDITOR_READ_BINARY_PREVIEW);
   ipcMain.removeHandler(EDITOR_GIT_STATUS);
   ipcMain.removeHandler(EDITOR_WATCH_DIR);
+  ipcMain.removeHandler(EDITOR_SET_WATCHED_FILES);
+  ipcMain.removeHandler(EDITOR_SET_WATCHED_DIRS);
+  ipcMain.removeHandler(PROJECT_LIST_FILES);
 }
 
 /**

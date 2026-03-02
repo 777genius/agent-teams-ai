@@ -38,11 +38,16 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   EDITOR_CREATE_DIR: 'editor:createDir',
   EDITOR_DELETE_FILE: 'editor:deleteFile',
   EDITOR_MOVE_FILE: 'editor:moveFile',
+  EDITOR_RENAME_FILE: 'editor:renameFile',
   EDITOR_SEARCH_IN_FILES: 'editor:searchInFiles',
   EDITOR_LIST_FILES: 'editor:listFiles',
+  EDITOR_READ_BINARY_PREVIEW: 'editor:readBinaryPreview',
   EDITOR_GIT_STATUS: 'editor:gitStatus',
   EDITOR_WATCH_DIR: 'editor:watchDir',
+  EDITOR_SET_WATCHED_FILES: 'editor:setWatchedFiles',
+  EDITOR_SET_WATCHED_DIRS: 'editor:setWatchedDirs',
   EDITOR_CHANGE: 'editor:change',
+  PROJECT_LIST_FILES: 'project:listFiles',
 }));
 
 // Mock atomicWrite used by ProjectFileService
@@ -145,8 +150,8 @@ describe('Editor IPC handlers', () => {
   });
 
   describe('registration', () => {
-    it('registers all 13 editor channels', () => {
-      expect(mockIpc.handle).toHaveBeenCalledTimes(13);
+    it('registers all 18 editor channels', () => {
+      expect(mockIpc.handle).toHaveBeenCalledTimes(18);
       expect(mockIpc._handlers.has('editor:open')).toBe(true);
       expect(mockIpc._handlers.has('editor:close')).toBe(true);
       expect(mockIpc._handlers.has('editor:readDir')).toBe(true);
@@ -156,15 +161,20 @@ describe('Editor IPC handlers', () => {
       expect(mockIpc._handlers.has('editor:createDir')).toBe(true);
       expect(mockIpc._handlers.has('editor:deleteFile')).toBe(true);
       expect(mockIpc._handlers.has('editor:moveFile')).toBe(true);
+      expect(mockIpc._handlers.has('editor:renameFile')).toBe(true);
       expect(mockIpc._handlers.has('editor:searchInFiles')).toBe(true);
       expect(mockIpc._handlers.has('editor:listFiles')).toBe(true);
+      expect(mockIpc._handlers.has('editor:readBinaryPreview')).toBe(true);
       expect(mockIpc._handlers.has('editor:gitStatus')).toBe(true);
       expect(mockIpc._handlers.has('editor:watchDir')).toBe(true);
+      expect(mockIpc._handlers.has('editor:setWatchedFiles')).toBe(true);
+      expect(mockIpc._handlers.has('editor:setWatchedDirs')).toBe(true);
+      expect(mockIpc._handlers.has('project:listFiles')).toBe(true);
     });
 
     it('removeEditorHandlers clears all channels', () => {
       removeEditorHandlers(mockIpc as unknown as IpcMain);
-      expect(mockIpc.removeHandler).toHaveBeenCalledTimes(13);
+      expect(mockIpc.removeHandler).toHaveBeenCalledTimes(18);
     });
   });
 

@@ -21,6 +21,8 @@ interface ChatHistoryItemProps {
   readonly isSearchHighlight: boolean;
   readonly isNavigationHighlight: boolean;
   readonly highlightColor?: TriggerColor;
+  /** Whether this item just appeared (triggers enter animation) */
+  readonly isNew?: boolean;
   readonly registerChatItemRef: (groupId: string) => (el: HTMLElement | null) => void;
   readonly registerAIGroupRef: (groupId: string) => (el: HTMLElement | null) => void;
   /** Register ref for individual tool items (for precise scroll targeting) */
@@ -54,10 +56,13 @@ const ChatHistoryItemInner = ({
   isSearchHighlight,
   isNavigationHighlight,
   highlightColor,
+  isNew,
   registerChatItemRef,
   registerAIGroupRef,
   registerToolRef,
 }: ChatHistoryItemProps): JSX.Element | null => {
+  const enterClass = isNew ? 'chat-message-enter-animate' : '';
+
   switch (item.type) {
     case 'user': {
       const isHighlighted = highlightedGroupId === item.group.id;
@@ -70,7 +75,7 @@ const ChatHistoryItemInner = ({
       return (
         <div
           ref={registerChatItemRef(item.group.id)}
-          className={`duration-[3000ms] rounded-lg transition-all ease-out ${hl.className}`}
+          className={`duration-[3000ms] rounded-lg transition-all ease-out ${hl.className} ${enterClass}`}
           style={hl.style}
         >
           <UserChatGroup userGroup={item.group} />
@@ -88,7 +93,7 @@ const ChatHistoryItemInner = ({
       return (
         <div
           ref={registerChatItemRef(item.group.id)}
-          className={`duration-[3000ms] rounded-lg transition-all ease-out ${hl.className}`}
+          className={`duration-[3000ms] rounded-lg transition-all ease-out ${hl.className} ${enterClass}`}
           style={hl.style}
         >
           <SystemChatGroup systemGroup={item.group} />
@@ -110,7 +115,7 @@ const ChatHistoryItemInner = ({
       return (
         <div
           ref={registerAIGroupRef(item.group.id)}
-          className={`duration-[3000ms] rounded-lg transition-all ease-out ${hl.className}`}
+          className={`duration-[3000ms] rounded-lg transition-all ease-out ${hl.className} ${enterClass}`}
           style={hl.style}
         >
           <AIChatGroup
@@ -123,7 +128,13 @@ const ChatHistoryItemInner = ({
       );
     }
     case 'compact':
-      return <CompactBoundary compactGroup={item.group} />;
+      return isNew ? (
+        <div className={enterClass}>
+          <CompactBoundary compactGroup={item.group} />
+        </div>
+      ) : (
+        <CompactBoundary compactGroup={item.group} />
+      );
     default:
       return null;
   }

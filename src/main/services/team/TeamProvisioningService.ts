@@ -59,6 +59,8 @@ const UI_LOGS_TAIL_LIMIT = 128 * 1024;
 const SHELL_ENV_TIMEOUT_MS = 12000;
 const CLI_PREPARE_TIMEOUT_MS = 10000;
 const PREFLIGHT_TIMEOUT_MS = 30000;
+const PREFLIGHT_AUTH_RETRY_DELAY_MS = 2000;
+const PREFLIGHT_AUTH_MAX_RETRIES = 2;
 const KEYCHAIN_TIMEOUT_MS = 5000;
 const FS_MONITOR_POLL_MS = 2000;
 const TASK_WAIT_FALLBACK_MS = 15_000;
@@ -144,6 +146,18 @@ interface ProvisioningRun {
   detectedSessionId: string | null;
   /** Lead process activity: 'active' during turn processing, 'idle' waiting for input, 'offline' after exit. */
   leadActivityState: LeadActivityState;
+  /** Whether an auth failure retry was already attempted for this run. */
+  authFailureRetried: boolean;
+  /** Set to true while auth-failure respawn is in progress to prevent duplicate handling. */
+  authRetryInProgress: boolean;
+  /** Saved spawn context for auth-failure respawn. */
+  spawnContext: {
+    claudePath: string;
+    args: string[];
+    cwd: string;
+    env: NodeJS.ProcessEnv;
+    prompt: string;
+  } | null;
 }
 
 type LeadActivityState = 'active' | 'idle' | 'offline';
@@ -336,6 +350,9 @@ function buildTaskStatusProtocol(teamName: string): string {
        If the lead replies via SendMessage instead, clear the flag yourself once you have the answer:
        node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-clarification <taskId> clear --from "<your-name>"
     d) Do NOT set clarification to "user" yourself — only the team lead escalates to the user.
+11. DEPENDENCY AWARENESS:
+    When your task has blockedBy dependencies, check if they are completed before starting.
+    When you complete a task that blocks others, mention this in your completion message so blocked teammates can proceed.
 Failure to follow this protocol means the task board will show incorrect status.`);
 }
 
@@ -358,11 +375,31 @@ function buildTeamCtlOpsInstructions(teamName: string, leadName: string): string
       `Internal task board tooling (teamctl.js):`,
       `- Use teamctl.js (via Bash) for tasks that must appear on the team board (assigned work, substantial work, or when the user explicitly asks to create a task).`,
       ``,
+      `Parallelization guideline (IMPORTANT):`,
+      `- If a task is genuinely parallelizable, split it into multiple smaller tasks owned by different members.`,
+      `  - Prefer splitting by independent deliverables (e.g. frontend/backend, API/UI, parsing/rendering, tests/docs) rather than arbitrary slices.`,
+      `  - Use --blocked-by only when one piece truly cannot start without another; otherwise link with --related.`,
+      `  - Do NOT split when work is inherently sequential, requires one person to keep consistent context, or the overhead would exceed the benefit.`,
+      `  - When splitting, make each task have a clear completion criterion and a single accountable owner.`,
+      ``,
       `Task board operations — use teamctl.js via Bash:`,
       `- Create task: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task create --subject "..." --description "..." --owner "<actual-member-name>" --notify --from "${leadName}"`,
       `- Assign/reassign owner: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-owner <id> <member-name> --notify --from "${leadName}"`,
       `- Clear owner: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-owner <id> clear`,
       `- Update status: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-status <id> <pending|in_progress|completed|deleted>`,
+      `- Create with deps (blocked work MUST be pending): node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task create --subject "..." --blocked-by 1,2 --related 3 --status pending --owner "<member>" --notify --from "${leadName}"`,
+      `- Link dependency: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task link <id> --blocked-by <targetId>`,
+      `- Link related: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task link <id> --related <targetId>`,
+      `- Unlink: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task unlink <id> --blocked-by <targetId>`,
+      ``,
+      `Dependency guidelines:`,
+      `- Use --blocked-by when a task cannot start until another is done.`,
+      `- If you set --blocked-by, create the task in pending (use --status pending). Do NOT put blocked tasks into in_progress.`,
+      `- Use --related to link related work (e.g. frontend + backend) without blocking.`,
+      `- Review tasks: Prefer NOT creating a separate "review task". Reviews apply to the work task (#X) via: review approve/request-changes #X.`,
+      `  - If you must create a separate review reminder/assignment task, keep it pending and link it to #X with --related (and optionally --blocked-by #X if it truly cannot start yet).`,
+      `  - Dependencies do not auto-start tasks; the owner must explicitly start it when ready.`,
+      `- Avoid over-specifying. Only add dependencies when execution order matters.`,
       ``,
       `Notification policy:`,
       `- The --notify flag sends the assignment to the member automatically, so do NOT send a separate SendMessage for the same task.`,
@@ -431,7 +468,10 @@ function buildMemberTaskSnapshot(memberName: string, tasks: TeamTask[]): string 
 
   const lines = activeTasks.map((t) => {
     const desc = t.description ? ` — ${t.description.slice(0, 120)}` : '';
-    return `  - #${t.id} [${t.status}] ${t.subject}${desc}`;
+    const deps = t.blockedBy?.length
+      ? ` [blocked by: ${t.blockedBy.map((id) => '#' + id).join(', ')}]`
+      : '';
+    return `  - #${t.id} [${t.status}] ${t.subject}${deps}${desc}`;
   });
   return `\nYour pending tasks from last session (RESUME these immediately):\n${lines.join('\n')}\n`;
 }
@@ -446,7 +486,10 @@ function buildTaskBoardSnapshot(tasks: TeamTask[]): string {
   const lines = active.map((t) => {
     const owner = t.owner ? ` (owner: ${t.owner})` : ' (unassigned)';
     const desc = t.description ? ` — ${t.description.slice(0, 120)}` : '';
-    return `  - #${t.id} [${t.status}]${owner} ${t.subject}${desc}`;
+    const deps = t.blockedBy?.length
+      ? ` [blocked by: ${t.blockedBy.map((id) => '#' + id).join(', ')}]`
+      : '';
+    return `  - #${t.id} [${t.status}]${owner} ${t.subject}${deps}${desc}`;
   });
   return `\nCurrent task board (pending/in_progress):\n${lines.join('\n')}\n`;
 }
@@ -521,6 +564,15 @@ ${processRegistration}
 3) If user instructions explicitly ask to create tasks OR describe substantial/assigned work that should be tracked — create tasks on the team board.
    - Prefer fewer, broader tasks over many micro-tasks.
    - Avoid duplicate notifications for the same assignment.
+   - When tasks have natural ordering (e.g. setup → implementation → testing), use --blocked-by.
+   - If a task is blocked (uses --blocked-by), it MUST be created as pending (use --status pending). Do NOT mark blocked tasks in_progress.
+     - Review guidance:
+       - Prefer NOT creating a separate "review task". Our workflow reviews the work task itself: run review approve/request-changes on the implementation task #X.
+       - If you MUST create a separate review reminder/assignment task, create it as pending and link it to the work task:
+         - Use --related to connect it to #X (non-blocking link).
+         - If the review truly cannot start until #X is done, ALSO add --blocked-by #X.
+       - There is no automatic status transition when dependencies resolve — the owner must explicitly start it (task start / set-status in_progress) when ready.
+   - Use --related to connect tasks working on the same feature without blocking.
 
 4) After all steps, output a short summary.
 
@@ -872,6 +924,231 @@ export class TeamProvisioningService {
     );
   }
 
+  /**
+   * Detects auth failure keywords in stderr/stdout during provisioning.
+   * On first detection: kills process, waits, and respawns automatically.
+   * On second detection (after retry): fails fast with a clear error.
+   */
+  private handleAuthFailureInOutput(run: ProvisioningRun, text: string, source: string): void {
+    if (run.provisioningComplete || run.processKilled || run.authRetryInProgress) return;
+    if (!this.isAuthFailureWarning(text)) return;
+
+    if (!run.authFailureRetried) {
+      logger.warn(
+        `[${run.teamName}] Auth failure detected in ${source} during provisioning — ` +
+          `will kill process and retry after ${PREFLIGHT_AUTH_RETRY_DELAY_MS}ms`
+      );
+      run.authRetryInProgress = true;
+      void this.respawnAfterAuthFailure(run);
+    } else {
+      logger.error(`[${run.teamName}] Auth failure detected in ${source} after retry — giving up`);
+      run.processKilled = true;
+      killProcessTree(run.child);
+      const progress = updateProgress(run, 'failed', 'Authentication failed — CLI requires login', {
+        error:
+          'Claude CLI is not authenticated. Run `claude` in a terminal to complete login, ' +
+          'or set ANTHROPIC_API_KEY / CLAUDE_CODE_OAUTH_TOKEN and try again.',
+        cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
+      });
+      run.onProgress(progress);
+      this.cleanupRun(run);
+    }
+  }
+
+  /**
+   * Kills the current process, waits for lock release, and respawns with saved context.
+   * Reattaches all stream listeners and resends the prompt.
+   */
+  private async respawnAfterAuthFailure(run: ProvisioningRun): Promise<void> {
+    const ctx = run.spawnContext;
+    if (!ctx) {
+      logger.error(`[${run.teamName}] Cannot respawn — no spawn context saved`);
+      run.authRetryInProgress = false;
+      return;
+    }
+
+    // Tear down current process without full cleanupRun (keep run alive)
+    if (run.timeoutHandle) {
+      clearTimeout(run.timeoutHandle);
+      run.timeoutHandle = null;
+    }
+    this.stopFilesystemMonitor(run);
+    if (run.child) {
+      run.child.stdout?.removeAllListeners('data');
+      run.child.stderr?.removeAllListeners('data');
+      run.child.removeAllListeners('error');
+      run.child.removeAllListeners('exit');
+      killProcessTree(run.child);
+      run.child = null;
+    }
+
+    // Reset buffers for fresh attempt
+    run.stdoutBuffer = '';
+    run.stderrBuffer = '';
+    run.authFailureRetried = true;
+
+    updateProgress(run, 'spawning', 'Auth failed — retrying after short delay');
+    run.onProgress(run.progress);
+
+    await sleep(PREFLIGHT_AUTH_RETRY_DELAY_MS);
+
+    if (run.cancelRequested) {
+      run.authRetryInProgress = false;
+      return;
+    }
+
+    // Respawn
+    let child: ReturnType<typeof spawn>;
+    try {
+      child = spawnCli(ctx.claudePath, ctx.args, {
+        cwd: ctx.cwd,
+        env: { ...ctx.env },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    } catch (error) {
+      run.authRetryInProgress = false;
+      const progress = updateProgress(run, 'failed', 'Failed to respawn Claude CLI', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      run.onProgress(progress);
+      this.cleanupRun(run);
+      return;
+    }
+
+    logger.info(
+      `[${run.teamName}] Respawned CLI process after auth failure (pid=${child.pid ?? '?'})`
+    );
+    run.child = child;
+    run.authRetryInProgress = false;
+
+    updateProgress(run, 'spawning', 'CLI respawned — sending prompt', {
+      pid: child.pid ?? undefined,
+    });
+    run.onProgress(run.progress);
+
+    // Resend prompt
+    if (child.stdin?.writable) {
+      const message = JSON.stringify({
+        type: 'user',
+        message: {
+          role: 'user',
+          content: [{ type: 'text', text: ctx.prompt }],
+        },
+      });
+      child.stdin.write(message + '\n');
+    }
+
+    // Reattach stdout handler
+    this.attachStdoutHandler(run);
+
+    // Reattach stderr handler
+    this.attachStderrHandler(run);
+
+    // Restart filesystem monitor for createTeam (launch skips it)
+    if (!run.isLaunch) {
+      this.startFilesystemMonitor(run, run.request);
+    } else {
+      updateProgress(run, 'monitoring', 'CLI running — reconnecting with teammates');
+      run.onProgress(run.progress);
+    }
+
+    // Restart timeout
+    run.timeoutHandle = setTimeout(() => {
+      if (!run.processKilled && !run.provisioningComplete) {
+        run.processKilled = true;
+        run.finalizingByTimeout = true;
+        void (async () => {
+          const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
+          run.child?.stdin?.end();
+          killProcessTree(run.child);
+          if (readyOnTimeout) return;
+
+          const hint = run.isLaunch ? ' (launch)' : '';
+          const progress = updateProgress(run, 'failed', `Timed out waiting for CLI${hint}`, {
+            error: `Timed out waiting for CLI${hint}.`,
+            cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
+          });
+          run.onProgress(progress);
+          this.cleanupRun(run);
+        })();
+      }
+    }, RUN_TIMEOUT_MS);
+
+    child.once('error', (error) => {
+      const hint = run.isLaunch ? ' (launch)' : '';
+      const progress = updateProgress(run, 'failed', `Failed to start Claude CLI${hint}`, {
+        error: error.message,
+        cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
+      });
+      run.onProgress(progress);
+      this.cleanupRun(run);
+    });
+
+    child.once('exit', (code) => {
+      void this.handleProcessExit(run, code);
+    });
+  }
+
+  /** Attaches the stdout stream-json parser to the current child process. */
+  private attachStdoutHandler(run: ProvisioningRun): void {
+    const child = run.child;
+    if (!child?.stdout) return;
+
+    let stdoutLineBuf = '';
+    child.stdout.on('data', (chunk: Buffer) => {
+      const text = chunk.toString('utf8');
+      run.stdoutBuffer += text;
+      if (run.stdoutBuffer.length > STDOUT_RING_LIMIT) {
+        run.stdoutBuffer = run.stdoutBuffer.slice(run.stdoutBuffer.length - STDOUT_RING_LIMIT);
+      }
+
+      // Parse stream-json lines (newline-delimited JSON)
+      stdoutLineBuf += text;
+      const lines = stdoutLineBuf.split('\n');
+      stdoutLineBuf = lines.pop() ?? '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          const msg = JSON.parse(trimmed) as Record<string, unknown>;
+          this.handleStreamJsonMessage(run, msg);
+        } catch {
+          // Not valid JSON — check for auth failure in raw text output
+          this.handleAuthFailureInOutput(run, trimmed, 'stdout');
+        }
+      }
+
+      const currentTs = Date.now();
+      if (currentTs - run.lastLogProgressAt >= LOG_PROGRESS_THROTTLE_MS) {
+        run.lastLogProgressAt = currentTs;
+        emitLogsProgress(run);
+      }
+    });
+  }
+
+  /** Attaches the stderr handler with auth failure detection. */
+  private attachStderrHandler(run: ProvisioningRun): void {
+    const child = run.child;
+    if (!child?.stderr) return;
+
+    child.stderr.on('data', (chunk: Buffer) => {
+      const text = chunk.toString('utf8');
+      run.stderrBuffer += text;
+      if (run.stderrBuffer.length > STDERR_RING_LIMIT) {
+        run.stderrBuffer = run.stderrBuffer.slice(run.stderrBuffer.length - STDERR_RING_LIMIT);
+      }
+
+      // Detect auth failure early instead of waiting for 5-minute timeout
+      this.handleAuthFailureInOutput(run, text, 'stderr');
+
+      const currentTs = Date.now();
+      if (currentTs - run.lastLogProgressAt >= LOG_PROGRESS_THROTTLE_MS) {
+        run.lastLogProgressAt = currentTs;
+        emitLogsProgress(run);
+      }
+    });
+  }
+
   async createTeam(
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
@@ -924,6 +1201,9 @@ export class TeamProvisioningService {
       provisioningOutputParts: [],
       detectedSessionId: null,
       leadActivityState: 'active',
+      authFailureRetried: false,
+      authRetryInProgress: false,
+      spawnContext: null,
       progress: {
         runId,
         teamName: request.teamName,
@@ -948,30 +1228,25 @@ export class TeamProvisioningService {
           'Attempting spawn anyway — CLI may authenticate via apiKeyHelper, SSO, or other mechanism.'
       );
     }
+    const spawnArgs = [
+      '--input-format',
+      'stream-json',
+      '--output-format',
+      'stream-json',
+      '--verbose',
+      '--setting-sources',
+      'user,project,local',
+      '--disallowedTools',
+      'TeamDelete,TodoWrite',
+      '--dangerously-skip-permissions',
+      ...(request.model ? ['--model', request.model] : []),
+    ];
     try {
-      child = spawnCli(
-        claudePath,
-        [
-          '--input-format',
-          'stream-json',
-          '--output-format',
-          'stream-json',
-          '--verbose',
-          '--setting-sources',
-          'user,project,local',
-          '--disallowedTools',
-          'TeamDelete,TodoWrite',
-          '--dangerously-skip-permissions',
-          ...(request.model ? ['--model', request.model] : []),
-        ],
-        {
-          cwd: request.cwd,
-          env: {
-            ...shellEnv,
-          },
-          stdio: ['pipe', 'pipe', 'pipe'],
-        }
-      );
+      child = spawnCli(claudePath, spawnArgs, {
+        cwd: request.cwd,
+        env: { ...shellEnv },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
     } catch (error) {
       this.runs.delete(runId);
       this.activeByTeam.delete(request.teamName);
@@ -981,6 +1256,13 @@ export class TeamProvisioningService {
     updateProgress(run, 'spawning', 'Starting Claude CLI process', { pid: child.pid ?? undefined });
     run.onProgress(run.progress);
     run.child = child;
+    run.spawnContext = {
+      claudePath,
+      args: spawnArgs,
+      cwd: request.cwd,
+      env: { ...shellEnv },
+      prompt,
+    };
 
     // Send provisioning prompt as first stream-json message (SDKUserMessage format)
     if (child.stdin?.writable) {
@@ -994,51 +1276,8 @@ export class TeamProvisioningService {
       child.stdin.write(message + '\n');
     }
 
-    if (child.stdout) {
-      let stdoutLineBuf = '';
-      child.stdout.on('data', (chunk: Buffer) => {
-        const text = chunk.toString('utf8');
-        run.stdoutBuffer += text;
-        if (run.stdoutBuffer.length > STDOUT_RING_LIMIT) {
-          run.stdoutBuffer = run.stdoutBuffer.slice(run.stdoutBuffer.length - STDOUT_RING_LIMIT);
-        }
-
-        // Parse stream-json lines (newline-delimited JSON)
-        stdoutLineBuf += text;
-        const lines = stdoutLineBuf.split('\n');
-        stdoutLineBuf = lines.pop() ?? '';
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed) continue;
-          try {
-            const msg = JSON.parse(trimmed) as Record<string, unknown>;
-            this.handleStreamJsonMessage(run, msg);
-          } catch {
-            // Not valid JSON — raw text output, ignore
-          }
-        }
-
-        const currentTs = Date.now();
-        if (currentTs - run.lastLogProgressAt >= LOG_PROGRESS_THROTTLE_MS) {
-          run.lastLogProgressAt = currentTs;
-          emitLogsProgress(run);
-        }
-      });
-    }
-
-    if (child.stderr) {
-      child.stderr.on('data', (chunk: Buffer) => {
-        run.stderrBuffer += chunk.toString('utf8');
-        if (run.stderrBuffer.length > STDERR_RING_LIMIT) {
-          run.stderrBuffer = run.stderrBuffer.slice(run.stderrBuffer.length - STDERR_RING_LIMIT);
-        }
-        const currentTs = Date.now();
-        if (currentTs - run.lastLogProgressAt >= LOG_PROGRESS_THROTTLE_MS) {
-          run.lastLogProgressAt = currentTs;
-          emitLogsProgress(run);
-        }
-      });
-    }
+    this.attachStdoutHandler(run);
+    this.attachStderrHandler(run);
 
     // Filesystem-based progress monitor: actively polls team files instead
     // of relying on stdout (which only arrives at the end in text mode).
@@ -1126,23 +1365,35 @@ export class TeamProvisioningService {
           configParsed.leadSessionId.trim().length > 0
         ) {
           const candidateId = configParsed.leadSessionId.trim();
-          const projectPath =
+          const storedProjectPath =
             typeof configParsed.projectPath === 'string' &&
             configParsed.projectPath.trim().length > 0
               ? configParsed.projectPath.trim()
-              : request.cwd;
-          const projectId = encodePath(projectPath);
-          const baseDir = extractBaseDir(projectId);
-          const jsonlPath = path.join(getProjectsBasePath(), baseDir, `${candidateId}.jsonl`);
-          if (await this.pathExists(jsonlPath)) {
-            previousSessionId = candidateId;
+              : null;
+
+          // Sessions are stored per-project (~/.claude/projects/{encodePath(cwd)}/).
+          // If the project path changed, the old session JSONL won't be found by the CLI
+          // at the new project directory. Skip resume to avoid passing an invalid --resume arg.
+          if (storedProjectPath && path.resolve(storedProjectPath) !== path.resolve(request.cwd)) {
             logger.info(
-              `[${request.teamName}] Found previous session JSONL for resume: ${candidateId}`
+              `[${request.teamName}] Project path changed: ${storedProjectPath} → ${request.cwd}. ` +
+                `Skipping session resume — sessions are per-project.`
             );
           } else {
-            logger.info(
-              `[${request.teamName}] Previous session JSONL not found at ${jsonlPath}, starting fresh`
-            );
+            const resumeProjectPath = storedProjectPath ?? request.cwd;
+            const projectId = encodePath(resumeProjectPath);
+            const baseDir = extractBaseDir(projectId);
+            const jsonlPath = path.join(getProjectsBasePath(), baseDir, `${candidateId}.jsonl`);
+            if (await this.pathExists(jsonlPath)) {
+              previousSessionId = candidateId;
+              logger.info(
+                `[${request.teamName}] Found previous session JSONL for resume: ${candidateId}`
+              );
+            } else {
+              logger.info(
+                `[${request.teamName}] Previous session JSONL not found at ${jsonlPath}, starting fresh`
+              );
+            }
           }
         }
       } catch {
@@ -1155,6 +1406,11 @@ export class TeamProvisioningService {
     // IMPORTANT: The CLI auto-suffixes teammate names when they already exist in config.json.
     // Normalize config.json to keep only the team-lead before spawning the CLI, so we get stable names.
     await this.normalizeTeamConfigForLaunch(request.teamName, configRaw);
+
+    // Update projectPath in config IMMEDIATELY so TeamDetailView shows the correct path
+    // even if provisioning is interrupted or the user stops the team early.
+    // If launch fails, restorePrelaunchConfig() will revert to the backup (old projectPath).
+    await this.updateConfigProjectPath(request.teamName, request.cwd);
 
     let claudePath: string | null;
     try {
@@ -1207,6 +1463,9 @@ export class TeamProvisioningService {
       provisioningOutputParts: [],
       detectedSessionId: null,
       leadActivityState: 'active',
+      authFailureRetried: false,
+      authRetryInProgress: false,
+      spawnContext: null,
       progress: {
         runId,
         teamName: request.teamName,
@@ -1291,6 +1550,13 @@ export class TeamProvisioningService {
     });
     run.onProgress(run.progress);
     run.child = child;
+    run.spawnContext = {
+      claudePath,
+      args: launchArgs,
+      cwd: request.cwd,
+      env: { ...shellEnv },
+      prompt,
+    };
 
     // Send launch prompt
     if (child.stdin?.writable) {
@@ -1304,50 +1570,8 @@ export class TeamProvisioningService {
       child.stdin.write(message + '\n');
     }
 
-    if (child.stdout) {
-      let stdoutLineBuf = '';
-      child.stdout.on('data', (chunk: Buffer) => {
-        const text = chunk.toString('utf8');
-        run.stdoutBuffer += text;
-        if (run.stdoutBuffer.length > STDOUT_RING_LIMIT) {
-          run.stdoutBuffer = run.stdoutBuffer.slice(run.stdoutBuffer.length - STDOUT_RING_LIMIT);
-        }
-
-        stdoutLineBuf += text;
-        const lines = stdoutLineBuf.split('\n');
-        stdoutLineBuf = lines.pop() ?? '';
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed) continue;
-          try {
-            const msg = JSON.parse(trimmed) as Record<string, unknown>;
-            this.handleStreamJsonMessage(run, msg);
-          } catch {
-            // Not valid JSON
-          }
-        }
-
-        const currentTs = Date.now();
-        if (currentTs - run.lastLogProgressAt >= LOG_PROGRESS_THROTTLE_MS) {
-          run.lastLogProgressAt = currentTs;
-          emitLogsProgress(run);
-        }
-      });
-    }
-
-    if (child.stderr) {
-      child.stderr.on('data', (chunk: Buffer) => {
-        run.stderrBuffer += chunk.toString('utf8');
-        if (run.stderrBuffer.length > STDERR_RING_LIMIT) {
-          run.stderrBuffer = run.stderrBuffer.slice(run.stderrBuffer.length - STDERR_RING_LIMIT);
-        }
-        const currentTs = Date.now();
-        if (currentTs - run.lastLogProgressAt >= LOG_PROGRESS_THROTTLE_MS) {
-          run.lastLogProgressAt = currentTs;
-          emitLogsProgress(run);
-        }
-      });
-    }
+    this.attachStdoutHandler(run);
+    this.attachStderrHandler(run);
 
     // For launch, skip the filesystem monitor — files (config, inboxes, tasks)
     // already exist from the previous run and would trigger immediate false
@@ -2217,6 +2441,13 @@ export class TeamProvisioningService {
     if (run.progress.state === 'failed' || run.cancelRequested) {
       return;
     }
+    // Skip if respawn after auth failure is in progress — the old process is being replaced
+    if (run.authRetryInProgress) {
+      logger.info(
+        `[${run.teamName}] Process exited (code ${code ?? '?'}) during auth-failure respawn — ignoring`
+      );
+      return;
+    }
 
     // === Process exited AFTER provisioning completed ===
     // This means the team went offline (crash, kill, or natural exit).
@@ -2608,6 +2839,35 @@ export class TeamProvisioningService {
     }
     const token = oauth.accessToken.trim();
     return token.length > 0 ? token : null;
+  }
+
+  /**
+   * Immediately update projectPath in config.json at launch start, before CLI spawn.
+   * Ensures TeamDetailView shows the correct project path even if provisioning
+   * is interrupted. On failure, restorePrelaunchConfig() reverts to the backup.
+   */
+  private async updateConfigProjectPath(teamName: string, cwd: string): Promise<void> {
+    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+    try {
+      const raw = await fs.promises.readFile(configPath, 'utf8');
+      const config = JSON.parse(raw) as Record<string, unknown>;
+
+      config.projectPath = cwd;
+
+      const pathHistory = Array.isArray(config.projectPathHistory)
+        ? (config.projectPathHistory as string[]).filter((p) => typeof p === 'string' && p !== cwd)
+        : [];
+      pathHistory.push(cwd);
+      config.projectPathHistory = pathHistory.slice(-500);
+
+      await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
+      logger.info(`[${teamName}] Updated config.projectPath immediately: ${cwd}`);
+    } catch (error) {
+      // Non-fatal: updateConfigPostLaunch will update it later if provisioning succeeds.
+      logger.warn(
+        `[${teamName}] Failed to update projectPath early: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   /**
@@ -3119,40 +3379,67 @@ export class TeamProvisioningService {
       throw new Error(`Failed to warm up Claude CLI: ${errorText}`);
     }
 
-    // Stage 2: verify `-p` mode auth actually works
-    let pingProbe: { exitCode: number | null; stdout: string; stderr: string } | null = null;
-    try {
-      pingProbe = await this.spawnProbe(
-        claudePath,
-        ['-p', 'Reply with the single word PONG and nothing else', '--output-format', 'text'],
-        cwd,
-        env,
-        PREFLIGHT_TIMEOUT_MS
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return {
-        warning:
-          'Preflight check for `claude -p` did not complete. ' +
-          `Proceeding anyway. Details: ${message}`,
-      };
-    }
+    // Stage 2: verify `-p` mode auth actually works (with retry for stale locks after Ctrl+C)
+    for (let attempt = 1; attempt <= PREFLIGHT_AUTH_MAX_RETRIES; attempt++) {
+      let pingProbe: { exitCode: number | null; stdout: string; stderr: string } | null = null;
+      try {
+        pingProbe = await this.spawnProbe(
+          claudePath,
+          ['-p', 'Reply with the single word PONG and nothing else', '--output-format', 'text'],
+          cwd,
+          env,
+          PREFLIGHT_TIMEOUT_MS
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (attempt < PREFLIGHT_AUTH_MAX_RETRIES) {
+          logger.warn(
+            `Preflight ping failed (attempt ${attempt}/${PREFLIGHT_AUTH_MAX_RETRIES}), ` +
+              `retrying in ${PREFLIGHT_AUTH_RETRY_DELAY_MS}ms: ${message}`
+          );
+          await new Promise((resolve) => setTimeout(resolve, PREFLIGHT_AUTH_RETRY_DELAY_MS));
+          continue;
+        }
+        return {
+          warning:
+            'Preflight check for `claude -p` did not complete. ' +
+            `Proceeding anyway. Details: ${message}`,
+        };
+      }
 
-    const combinedOutput = buildCombinedLogs(pingProbe.stdout, pingProbe.stderr);
-    const lowerOutput = combinedOutput.toLowerCase();
-    const isAuthFailure =
-      lowerOutput.includes('not logged in') ||
-      lowerOutput.includes('please run /login') ||
-      lowerOutput.includes('missing api key') ||
-      lowerOutput.includes('invalid api key');
+      const combinedOutput = buildCombinedLogs(pingProbe.stdout, pingProbe.stderr);
+      const lowerOutput = combinedOutput.toLowerCase();
+      const isAuthFailure =
+        lowerOutput.includes('not logged in') ||
+        lowerOutput.includes('please run /login') ||
+        lowerOutput.includes('missing api key') ||
+        lowerOutput.includes('invalid api key');
 
-    if (isAuthFailure || pingProbe.exitCode !== 0) {
-      const hint = isAuthFailure
-        ? 'Claude CLI `-p` mode is not authenticated. ' +
-          'Set ANTHROPIC_API_KEY, or run `claude setup-token` to generate a long-lived OAuth token, ' +
-          'then export it as CLAUDE_CODE_OAUTH_TOKEN.'
-        : `Claude CLI preflight check failed (exit code ${pingProbe.exitCode ?? 'unknown'}).`;
-      return { warning: hint };
+      if (isAuthFailure && attempt < PREFLIGHT_AUTH_MAX_RETRIES) {
+        logger.warn(
+          `Preflight auth failure detected (attempt ${attempt}/${PREFLIGHT_AUTH_MAX_RETRIES}), ` +
+            `retrying in ${PREFLIGHT_AUTH_RETRY_DELAY_MS}ms — likely stale locks from interrupted process`
+        );
+        await new Promise((resolve) => setTimeout(resolve, PREFLIGHT_AUTH_RETRY_DELAY_MS));
+        continue;
+      }
+
+      if (isAuthFailure || pingProbe.exitCode !== 0) {
+        const hint = isAuthFailure
+          ? 'Claude CLI `-p` mode is not authenticated. ' +
+            'Set ANTHROPIC_API_KEY, or run `claude setup-token` to generate a long-lived OAuth token, ' +
+            'then export it as CLAUDE_CODE_OAUTH_TOKEN.' +
+            (attempt > 1 ? ` (failed after ${attempt} attempts)` : '')
+          : `Claude CLI preflight check failed (exit code ${pingProbe.exitCode ?? 'unknown'}).`;
+        return { warning: hint };
+      }
+
+      if (attempt > 1) {
+        logger.info(
+          `Preflight auth succeeded on attempt ${attempt} (previous attempt had auth failure)`
+        );
+      }
+      return {};
     }
 
     return {};

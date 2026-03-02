@@ -29,7 +29,7 @@ import { isBinaryFile } from 'isbinaryfile';
 
 import { FileSearchService } from '@main/services/editor/FileSearchService';
 
-const PROJECT_ROOT = '/test/project';
+const PROJECT_ROOT = path.resolve('/test/project');
 
 describe('FileSearchService', () => {
   let service: FileSearchService;
@@ -40,6 +40,12 @@ describe('FileSearchService', () => {
   });
 
   function mockFileSystem(files: Record<string, string>) {
+    // Normalize keys so lookups work on Windows (backslash vs forward slash)
+    const normalizedFiles: Record<string, string> = {};
+    for (const [key, value] of Object.entries(files)) {
+      normalizedFiles[path.normalize(key)] = value;
+    }
+
     const entries = Object.keys(files).map((filePath) => {
       const name = path.basename(filePath);
       return { name, isFile: () => true, isDirectory: () => false };
@@ -49,15 +55,15 @@ describe('FileSearchService', () => {
     vi.mocked(isBinaryFile).mockResolvedValue(false);
 
     vi.mocked(fs.stat).mockImplementation(async (filePath: unknown) => {
-      const p = String(filePath);
-      const content = files[p];
+      const p = path.normalize(String(filePath));
+      const content = normalizedFiles[p];
       if (content === undefined) throw new Error('ENOENT');
       return { size: content.length } as never;
     });
 
     vi.mocked(fs.readFile).mockImplementation(async (filePath: unknown) => {
-      const p = String(filePath);
-      const content = files[p];
+      const p = path.normalize(String(filePath));
+      const content = normalizedFiles[p];
       if (content === undefined) throw new Error('ENOENT');
       return content as never;
     });

@@ -32,7 +32,13 @@ interface NotificationsSectionProps {
   readonly ignoredRepositoryItems: RepositoryDropdownItem[];
   readonly excludedRepositoryIds: string[];
   readonly onNotificationToggle: (
-    key: 'enabled' | 'soundEnabled' | 'includeSubagentErrors',
+    key:
+      | 'enabled'
+      | 'soundEnabled'
+      | 'includeSubagentErrors'
+      | 'notifyOnLeadInbox'
+      | 'notifyOnUserInbox'
+      | 'notifyOnClarifications',
     value: boolean
   ) => void;
   readonly onSnooze: (minutes: number) => Promise<void>;
@@ -127,6 +133,36 @@ export const NotificationsSection = ({
         <SettingsToggle
           enabled={safeConfig.notifications.includeSubagentErrors}
           onChange={(v) => onNotificationToggle('includeSubagentErrors', v)}
+          disabled={saving || !safeConfig.notifications.enabled}
+        />
+      </SettingRow>
+      <SettingRow
+        label="Lead inbox notifications"
+        description="Notify when teammates send messages to the team lead"
+      >
+        <SettingsToggle
+          enabled={safeConfig.notifications.notifyOnLeadInbox}
+          onChange={(v) => onNotificationToggle('notifyOnLeadInbox', v)}
+          disabled={saving || !safeConfig.notifications.enabled}
+        />
+      </SettingRow>
+      <SettingRow
+        label="User inbox notifications"
+        description="Notify when teammates send messages to you"
+      >
+        <SettingsToggle
+          enabled={safeConfig.notifications.notifyOnUserInbox}
+          onChange={(v) => onNotificationToggle('notifyOnUserInbox', v)}
+          disabled={saving || !safeConfig.notifications.enabled}
+        />
+      </SettingRow>
+      <SettingRow
+        label="Task clarification notifications"
+        description="Show native OS notifications when a task needs your input"
+      >
+        <SettingsToggle
+          enabled={safeConfig.notifications.notifyOnClarifications}
+          onChange={(v) => onNotificationToggle('notifyOnClarifications', v)}
           disabled={saving || !safeConfig.notifications.enabled}
         />
       </SettingRow>

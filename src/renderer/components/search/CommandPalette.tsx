@@ -330,7 +330,7 @@ export const CommandPalette = (): React.JSX.Element | null => {
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'g' && (e.metaKey || e.ctrlKey)) {
+      if (e.code === 'KeyG' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setGlobalSearchEnabled((prev) => !prev);
         return;

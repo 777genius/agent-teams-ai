@@ -34,6 +34,7 @@ const MessageRowWithObserver = ({
   memberColor,
   recipientColor,
   isUnread,
+  isNew,
   onMemberNameClick,
   onCreateTask,
   onReply,
@@ -46,6 +47,7 @@ const MessageRowWithObserver = ({
   memberColor?: string;
   recipientColor?: string;
   isUnread?: boolean;
+  isNew?: boolean;
   onMemberNameClick?: (name: string) => void;
   onCreateTask?: (subject: string, description: string) => void;
   onReply?: (message: InboxMessage) => void;
@@ -83,7 +85,7 @@ const MessageRowWithObserver = ({
   }, [onVisible]);
 
   return (
-    <div ref={ref} className="min-h-px">
+    <div ref={ref} className={isNew ? 'message-enter-animate min-h-px' : 'min-h-px'}>
       <ActivityItem
         message={message}
         teamName={teamName}
@@ -112,6 +114,11 @@ export const ActivityTimeline = ({
   onTaskIdClick,
 }: ActivityTimelineProps): React.JSX.Element => {
   const [visibleCount, setVisibleCount] = useState(MESSAGES_PAGE_SIZE);
+
+  // --- New-message animation tracking ---
+  const knownKeysRef = useRef<Set<string>>(new Set<string>());
+  const isInitializedRef = useRef(false);
+  const prevVisibleCountRef = useRef(visibleCount);
 
   // Track whether the user was seeing ALL messages (no hidden ones).
   // If so, auto-expand when new messages push count past the limit,
@@ -152,18 +159,58 @@ export const ActivityTimeline = ({
 
   // Auto-expand when user was seeing all and new messages arrive — derived state sync.
   // Reading/updating ref during render is intentional (React docs: derived state sync).
-  /* eslint-disable react-hooks/refs -- ref stores previous frame's "showing all" for derived state sync */
+  /* eslint-disable react-hooks/refs -- intentional ref access during render for animation tracking */
+
   const wasShowingAll = wasShowingAllRef.current;
   if (wasShowingAll && hiddenCount > 0) {
     setVisibleCount(messages.length);
   }
   wasShowingAllRef.current = hiddenCount === 0;
-  /* eslint-enable react-hooks/refs -- end of intentional ref access during render */
 
   const visibleMessages = useMemo(
     () => (hiddenCount > 0 ? messages.slice(0, visibleCount) : messages),
     [messages, visibleCount, hiddenCount]
   );
+
+  // Determine which messages are "new" (should animate).
+
+  const newMessageKeys = useMemo(() => {
+    const getKey = (msg: InboxMessage, idx: number): string =>
+      `${msg.messageId ?? idx}-${msg.timestamp}-${msg.from}`;
+
+    // First render: seed known keys, no animations
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true;
+      for (let i = 0; i < visibleMessages.length; i++) {
+        knownKeysRef.current.add(getKey(visibleMessages[i], i));
+      }
+      prevVisibleCountRef.current = visibleCount;
+      return new Set<string>();
+    }
+
+    // Pagination expansion ("Show more" / "Show all"): add keys silently
+    const isPaginationExpansion = visibleCount > prevVisibleCountRef.current;
+    prevVisibleCountRef.current = visibleCount;
+
+    if (isPaginationExpansion) {
+      for (let i = 0; i < visibleMessages.length; i++) {
+        knownKeysRef.current.add(getKey(visibleMessages[i], i));
+      }
+      return new Set<string>();
+    }
+
+    // Normal update: unknown keys are new messages
+    const newKeys = new Set<string>();
+    for (let i = 0; i < visibleMessages.length; i++) {
+      const key = getKey(visibleMessages[i], i);
+      if (!knownKeysRef.current.has(key)) {
+        newKeys.add(key);
+        knownKeysRef.current.add(key);
+      }
+    }
+    return newKeys;
+  }, [visibleMessages, visibleCount]);
+  /* eslint-enable react-hooks/refs -- end animation tracking block */
 
   const handleShowMore = (): void => {
     setVisibleCount((prev) => prev + MESSAGES_PAGE_SIZE);
@@ -203,6 +250,7 @@ export const ActivityTimeline = ({
             memberColor={info?.color}
             recipientColor={recipientColor}
             isUnread={isUnread}
+            isNew={newMessageKeys.has(messageKey)}
             onMemberNameClick={onMemberClick ? handleMemberNameClick : undefined}
             onCreateTask={onCreateTaskFromMessage}
             onReply={onReplyToMessage}

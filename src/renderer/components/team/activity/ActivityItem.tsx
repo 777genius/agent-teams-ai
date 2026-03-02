@@ -317,7 +317,12 @@ export const ActivityItem = ({
             <span style={{ color: CARD_ICON_MUTED }} className="text-[10px]">
               &rarr;
             </span>
-            <MemberBadge name={message.to} color={recipientColor} onClick={onMemberNameClick} />
+            <MemberBadge
+              name={message.to}
+              color={recipientColor}
+              hideAvatar={message.to === 'user'}
+              onClick={onMemberNameClick}
+            />
           </>
         ) : null}
 

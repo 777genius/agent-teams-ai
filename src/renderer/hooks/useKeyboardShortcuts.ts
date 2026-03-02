@@ -8,6 +8,7 @@
 
 import { useEffect } from 'react';
 
+import { physicalKey } from '@renderer/utils/keyboardUtils';
 import { createLogger } from '@shared/utils/logger';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -78,27 +79,29 @@ export function useKeyboardShortcuts(): void {
     function handleKeyDown(event: KeyboardEvent): void {
       // Check if Cmd (macOS) or Ctrl (Windows/Linux) is pressed
       const isMod = event.metaKey || event.ctrlKey;
+      // Layout-independent key (uses event.code for letters/symbols)
+      const key = physicalKey(event);
 
       // Editor scope guard: when the editor overlay is open, these shortcuts are
       // handled by useEditorKeyboardShortcuts — yield control to avoid conflicts.
       if (editorOpen) {
         const isConflicting =
           // Ctrl+Tab — editor tab cycling
-          (event.ctrlKey && event.key === 'Tab') ||
+          (event.ctrlKey && key === 'Tab') ||
           // Cmd+W — editor close tab
-          (isMod && event.key === 'w' && !event.altKey && !event.shiftKey) ||
+          (isMod && key === 'w' && !event.altKey && !event.shiftKey) ||
           // Cmd+B — editor sidebar toggle
-          (isMod && event.key === 'b') ||
+          (isMod && key === 'b') ||
           // Cmd+F — editor find in file (CM6)
-          (isMod && event.key === 'f') ||
+          (isMod && key === 'f') ||
           // Cmd+Shift+[ / ] — editor tab switching
-          (isMod && event.shiftKey && (event.key === '[' || event.key === ']'));
+          (isMod && event.shiftKey && (key === '[' || key === ']'));
 
         if (isConflicting) return;
       }
 
       // Ctrl+Tab / Ctrl+Shift+Tab: Switch tabs within focused pane (universal shortcut)
-      if (event.ctrlKey && event.key === 'Tab') {
+      if (event.ctrlKey && key === 'Tab') {
         event.preventDefault();
         const currentIndex = openTabs.findIndex((t) => t.id === activeTabId);
 
@@ -128,7 +131,7 @@ export function useKeyboardShortcuts(): void {
 
       // Cmd+Option+1-4: Focus pane by index
       if (event.altKey && !event.shiftKey) {
-        const numKey = parseInt(event.key);
+        const numKey = parseInt(key);
         if (numKey >= 1 && numKey <= 4) {
           event.preventDefault();
           const targetPane = paneLayout.panes[numKey - 1];
@@ -139,7 +142,7 @@ export function useKeyboardShortcuts(): void {
         }
 
         // Cmd+Option+W: Close current pane
-        if (event.key === 'w') {
+        if (key === 'w') {
           event.preventDefault();
           if (paneLayout.panes.length > 1) {
             closePane(paneLayout.focusedPaneId);
@@ -149,7 +152,7 @@ export function useKeyboardShortcuts(): void {
       }
 
       // Cmd+\: Split right with current tab
-      if (event.key === '\\' && !event.altKey && !event.shiftKey) {
+      if (key === '\\' && !event.altKey && !event.shiftKey) {
         event.preventDefault();
         if (activeTabId) {
           splitPane(paneLayout.focusedPaneId, activeTabId, 'right');
@@ -158,21 +161,21 @@ export function useKeyboardShortcuts(): void {
       }
 
       // Cmd+T: New tab (Dashboard)
-      if (event.key === 't') {
+      if (key === 't') {
         event.preventDefault();
         openDashboard();
         return;
       }
 
       // Cmd+Shift+W: Close all tabs
-      if (event.key === 'w' && event.shiftKey && !event.altKey) {
+      if (key === 'w' && event.shiftKey && !event.altKey) {
         event.preventDefault();
         closeAllTabs();
         return;
       }
 
       // Cmd+W: Close selected tabs (if multi-selected) or active tab
-      if (event.key === 'w' && !event.altKey) {
+      if (key === 'w' && !event.altKey) {
         event.preventDefault();
         if (selectedTabIds.length > 0) {
           closeTabs(selectedTabIds);
@@ -183,7 +186,7 @@ export function useKeyboardShortcuts(): void {
       }
 
       // Cmd+[1-9]: Switch to tab by index within focused pane
-      const numKey = parseInt(event.key);
+      const numKey = parseInt(key);
       if (numKey >= 1 && numKey <= 9 && !event.altKey) {
         event.preventDefault();
         const targetTab = openTabs[numKey - 1];
@@ -194,7 +197,7 @@ export function useKeyboardShortcuts(): void {
       }
 
       // Cmd+Shift+]: Next tab within focused pane
-      if (event.key === ']' && event.shiftKey) {
+      if (key === ']' && event.shiftKey) {
         event.preventDefault();
         const currentIndex = openTabs.findIndex((t) => t.id === activeTabId);
         if (currentIndex !== -1 && currentIndex < openTabs.length - 1) {
@@ -204,7 +207,7 @@ export function useKeyboardShortcuts(): void {
       }
 
       // Cmd+Shift+[: Previous tab within focused pane
-      if (event.key === '[' && event.shiftKey) {
+      if (key === '[' && event.shiftKey) {
         event.preventDefault();
         const currentIndex = openTabs.findIndex((t) => t.id === activeTabId);
         if (currentIndex > 0) {
@@ -214,7 +217,7 @@ export function useKeyboardShortcuts(): void {
       }
 
       // Cmd+Option+Right: Next tab (browser-style) within focused pane
-      if (event.key === 'ArrowRight' && event.altKey) {
+      if (key === 'ArrowRight' && event.altKey) {
         event.preventDefault();
         const currentIndex = openTabs.findIndex((t) => t.id === activeTabId);
         if (currentIndex !== -1 && currentIndex < openTabs.length - 1) {
@@ -224,7 +227,7 @@ export function useKeyboardShortcuts(): void {
       }
 
       // Cmd+Option+Left: Previous tab (browser-style) within focused pane
-      if (event.key === 'ArrowLeft' && event.altKey) {
+      if (key === 'ArrowLeft' && event.altKey) {
         event.preventDefault();
         const currentIndex = openTabs.findIndex((t) => t.id === activeTabId);
         if (currentIndex > 0) {
@@ -234,7 +237,7 @@ export function useKeyboardShortcuts(): void {
       }
 
       // Cmd+Shift+K: Cycle to next workspace context
-      if (event.key === 'k' && event.shiftKey) {
+      if (key === 'k' && event.shiftKey) {
         event.preventDefault();
         if (!isContextSwitching && availableContexts.length > 1) {
           const currentIndex = availableContexts.findIndex((c) => c.id === activeContextId);
@@ -245,21 +248,21 @@ export function useKeyboardShortcuts(): void {
       }
 
       // Cmd+K: Open command palette for global search
-      if (event.key === 'k') {
+      if (key === 'k') {
         event.preventDefault();
         openCommandPalette();
         return;
       }
 
       // Cmd+,: Open settings (standard macOS shortcut)
-      if (event.key === ',') {
+      if (key === ',') {
         event.preventDefault();
         openSettingsTab();
         return;
       }
 
       // Cmd+F: Find in session
-      if (event.key === 'f') {
+      if (key === 'f') {
         event.preventDefault();
         const activeTab = getActiveTab();
         // Only enable search in session views, not dashboard
@@ -270,14 +273,14 @@ export function useKeyboardShortcuts(): void {
       }
 
       // Cmd+O: Open project (placeholder for future implementation)
-      if (event.key === 'o') {
+      if (key === 'o') {
         event.preventDefault();
         logger.debug('Open project shortcut triggered (not yet implemented)');
         return;
       }
 
       // Cmd+R: Refresh current session and sidebar session list
-      if (event.key === 'r') {
+      if (key === 'r') {
         event.preventDefault();
         if (selectedProjectId && selectedSessionId) {
           void Promise.all([
@@ -289,7 +292,7 @@ export function useKeyboardShortcuts(): void {
       }
 
       // Cmd+B: Toggle sidebar
-      if (event.key === 'b') {
+      if (key === 'b') {
         event.preventDefault();
         toggleSidebar();
       }

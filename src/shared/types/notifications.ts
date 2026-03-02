@@ -247,6 +247,12 @@ export interface AppConfig {
     snoozeMinutes: number;
     /** Whether to include errors from subagent sessions */
     includeSubagentErrors: boolean;
+    /** Whether to show native OS notifications when teammates send messages to the team lead */
+    notifyOnLeadInbox: boolean;
+    /** Whether to show native OS notifications when teammates send messages to you (the user) */
+    notifyOnUserInbox: boolean;
+    /** Whether to show native OS notifications when a task needs user clarification */
+    notifyOnClarifications: boolean;
     /** Notification triggers - define when to generate notifications */
     triggers: NotificationTrigger[];
   };

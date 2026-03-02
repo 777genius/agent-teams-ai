@@ -42,6 +42,9 @@ export interface SafeConfig {
     snoozedUntil: number | null;
     snoozeMinutes: number;
     includeSubagentErrors: boolean;
+    notifyOnLeadInbox: boolean;
+    notifyOnUserInbox: boolean;
+    notifyOnClarifications: boolean;
     triggers: AppConfig['notifications']['triggers'];
   };
   display: {
@@ -169,6 +172,9 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
         snoozedUntil: displayConfig?.notifications?.snoozedUntil ?? null,
         snoozeMinutes: displayConfig?.notifications?.snoozeMinutes ?? 30,
         includeSubagentErrors: displayConfig?.notifications?.includeSubagentErrors ?? true,
+        notifyOnLeadInbox: displayConfig?.notifications?.notifyOnLeadInbox ?? false,
+        notifyOnUserInbox: displayConfig?.notifications?.notifyOnUserInbox ?? true,
+        notifyOnClarifications: displayConfig?.notifications?.notifyOnClarifications ?? true,
         triggers: displayConfig?.notifications?.triggers ?? [],
       },
       display: {

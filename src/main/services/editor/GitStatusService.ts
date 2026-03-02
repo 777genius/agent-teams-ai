@@ -20,6 +20,8 @@ const log = createLogger('GitStatusService');
 
 const GIT_TIMEOUT_MS = 10_000;
 const CACHE_TTL_MS = 5_000;
+const CHANGE_INVALIDATION_DEBOUNCE_MS = 500;
+const GIT_STATUS_ARGS: string[] = ['--untracked-files=no'];
 
 // =============================================================================
 // Service
@@ -28,10 +30,13 @@ const CACHE_TTL_MS = 5_000;
 export class GitStatusService {
   private git: SimpleGit | null = null;
   private projectRoot: string | null = null;
+  /** Set to true when we confirm the project is not a git repo — skip all future git calls. */
+  private notAGitRepo = false;
 
   // Cache
   private cachedResult: GitStatusResult | null = null;
   private cacheTimestamp = 0;
+  private changeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Initialize service for a project root.
@@ -39,6 +44,7 @@ export class GitStatusService {
    */
   init(projectRoot: string): void {
     this.projectRoot = projectRoot;
+    this.notAGitRepo = false;
     this.git = simpleGit({
       baseDir: projectRoot,
       timeout: { block: GIT_TIMEOUT_MS },
@@ -50,18 +56,36 @@ export class GitStatusService {
    * Reset service state.
    */
   destroy(): void {
+    this.clearDebounceTimer();
     this.git = null;
     this.projectRoot = null;
+    this.notAGitRepo = false;
     this.cachedResult = null;
     this.cacheTimestamp = 0;
   }
 
   /**
-   * Invalidate cached status (e.g. on file watcher event).
+   * Immediate cache invalidation for structural changes (create/delete).
+   * Also cancels any pending debounced invalidation.
    */
   invalidateCache(): void {
+    this.clearDebounceTimer();
     this.cachedResult = null;
     this.cacheTimestamp = 0;
+  }
+
+  /**
+   * Debounced cache invalidation for content changes.
+   * Coalesces rapid file saves (typing, format-on-save, build output)
+   * into a single invalidation after the burst settles.
+   */
+  invalidateCacheDebounced(): void {
+    this.clearDebounceTimer();
+    this.changeDebounceTimer = setTimeout(() => {
+      this.changeDebounceTimer = null;
+      this.cachedResult = null;
+      this.cacheTimestamp = 0;
+    }, CHANGE_INVALIDATION_DEBOUNCE_MS);
   }
 
   /**
@@ -69,51 +93,67 @@ export class GitStatusService {
    * Returns cached result if within TTL.
    */
   async getStatus(): Promise<GitStatusResult> {
-    if (!this.git || !this.projectRoot) {
-      return { files: [], isGitRepo: false, branch: null };
+    const notGitResult: GitStatusResult = { files: [], isGitRepo: false, branch: null };
+
+    if (!this.git || !this.projectRoot || this.notAGitRepo) {
+      return notGitResult;
+    }
+
+    // Flush pending debounced invalidation — when data is actually requested,
+    // stale cache must not be served even if the debounce hasn't settled yet.
+    if (this.changeDebounceTimer) {
+      this.invalidateCache();
     }
 
     // Return cached if fresh
     if (this.cachedResult && Date.now() - this.cacheTimestamp < CACHE_TTL_MS) {
+      log.info('[perf] gitStatus: cache hit');
       return this.cachedResult;
     }
 
     try {
-      // Check if it's a git repo first
-      const isRepo = await this.isGitRepo();
-      if (!isRepo) {
-        const result: GitStatusResult = { files: [], isGitRepo: false, branch: null };
-        this.setCacheResult(result);
-        return result;
-      }
-
-      const statusResult = await this.git.status();
+      const t0 = performance.now();
+      // `--untracked-files=no` is a major performance win for large repos with many untracked files.
+      // Most editors treat untracked as a separate concern; showing them can overwhelm the UI.
+      const statusResult = await this.git.status(GIT_STATUS_ARGS);
+      const gitMs = performance.now() - t0;
       const files = mapStatusResult(statusResult);
       const branch = statusResult.current ?? null;
+      log.info(
+        `[perf] gitStatus: git=${gitMs.toFixed(1)}ms, files=${files.length}, branch=${branch ?? 'detached'}, untracked=off`
+      );
 
       const result: GitStatusResult = { files, isGitRepo: true, branch };
       this.setCacheResult(result);
       return result;
     } catch (error) {
-      log.error('Failed to get git status:', error);
-      // Graceful degradation: return empty non-repo result
-      return { files: [], isGitRepo: false, branch: null };
-    }
-  }
+      const message = error instanceof Error ? error.message : String(error);
 
-  private async isGitRepo(): Promise<boolean> {
-    if (!this.git) return false;
-    try {
-      await this.git.revparse(['--is-inside-work-tree']);
-      return true;
-    } catch {
-      return false;
+      if (message.includes('not a git repository')) {
+        // Expected condition — project is not a git repo. Stop all future git calls
+        // until init() is called again with a different project.
+        log.info('Project is not a git repository, disabling git status');
+        this.notAGitRepo = true;
+        return notGitResult;
+      }
+
+      log.error('Failed to get git status:', error);
+      // Transient error — cache negative result to avoid hammering git, but allow retry after TTL
+      this.setCacheResult(notGitResult);
+      return notGitResult;
     }
   }
 
   private setCacheResult(result: GitStatusResult): void {
     this.cachedResult = result;
     this.cacheTimestamp = Date.now();
+  }
+
+  private clearDebounceTimer(): void {
+    if (this.changeDebounceTimer) {
+      clearTimeout(this.changeDebounceTimer);
+      this.changeDebounceTimer = null;
+    }
   }
 }
 

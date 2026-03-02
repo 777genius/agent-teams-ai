@@ -33,6 +33,7 @@ export const TaskCommentInput = ({
 }: TaskCommentInputProps): React.JSX.Element => {
   const addTaskComment = useStore((s) => s.addTaskComment);
   const addingComment = useStore((s) => s.addingComment);
+  const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
 
   const draft = useDraftPersistence({ key: `taskComment:${teamName}:${taskId}` });
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
@@ -109,6 +110,7 @@ export const TaskCommentInput = ({
           value={draft.value}
           onValueChange={draft.setValue}
           suggestions={mentionSuggestions}
+          projectPath={projectPath}
           minRows={2}
           maxRows={8}
           maxLength={MAX_COMMENT_LENGTH}
