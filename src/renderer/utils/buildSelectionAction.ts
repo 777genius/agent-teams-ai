@@ -5,6 +5,8 @@
  * without pulling in CodeMirror dependencies.
  */
 
+import { getBasename } from '@shared/utils/platformPath';
+
 import type { EditorSelectionAction, EditorSelectionInfo } from '@shared/types/editor';
 
 // =============================================================================
@@ -66,7 +68,7 @@ export function buildFileAction(
   filePath: string,
   projectPath?: string | null
 ): EditorSelectionAction {
-  const fileName = filePath.split('/').pop() ?? 'file';
+  const fileName = getBasename(filePath) || 'file';
   const displayPath =
     projectPath && filePath.startsWith(projectPath + '/')
       ? filePath.slice(projectPath.length + 1)
@@ -87,7 +89,7 @@ export function buildSelectionAction(
   type: EditorSelectionAction['type'],
   info: EditorSelectionInfo
 ): EditorSelectionAction {
-  const fileName = info.filePath.split('/').pop() ?? 'file';
+  const fileName = getBasename(info.filePath) || 'file';
   const lang = getCodeFenceLanguage(fileName);
   const lineRef =
     info.fromLine === info.toLine

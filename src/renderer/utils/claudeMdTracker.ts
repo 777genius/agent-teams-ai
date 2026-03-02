@@ -7,6 +7,11 @@
  * - Directory-specific CLAUDE.md files (detected from Read tool calls and @ mentions)
  */
 
+import {
+  lastSeparatorIndex,
+  splitPath as splitPathCrossPlatform,
+} from '@shared/utils/platformPath';
+
 import { extractFileReferences } from './groupTransformer';
 
 import type { ClaudeMdInjection, ClaudeMdSource, ClaudeMdStats } from '../types/claudeMd';
@@ -147,26 +152,9 @@ function normalizeSeparators(input: string, separator: '/' | '\\'): string {
   return output;
 }
 
+/** Local alias — delegates to the shared cross-platform splitPath. */
 function splitPath(input: string): string[] {
-  const parts: string[] = [];
-  let current = '';
-
-  for (const char of input) {
-    if (char === '/' || char === '\\') {
-      if (current.length > 0) {
-        parts.push(current);
-        current = '';
-      }
-    } else {
-      current += char;
-    }
-  }
-
-  if (current.length > 0) {
-    parts.push(current);
-  }
-
-  return parts;
+  return splitPathCrossPlatform(input);
 }
 
 function normalizeForComparison(input: string): string {
@@ -177,7 +165,7 @@ function normalizeForComparison(input: string): string {
  * Get the directory containing a file.
  */
 export function getDirectory(filePath: string): string {
-  const lastSep = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+  const lastSep = lastSeparatorIndex(filePath);
   if (lastSep === -1) return '';
   return filePath.slice(0, lastSep);
 }
@@ -186,7 +174,7 @@ export function getDirectory(filePath: string): string {
  * Get the parent directory of a path.
  */
 export function getParentDirectory(dirPath: string): string | null {
-  const lastSep = Math.max(dirPath.lastIndexOf('/'), dirPath.lastIndexOf('\\'));
+  const lastSep = lastSeparatorIndex(dirPath);
   if (lastSep <= 0) return null; // At root or invalid
   return dirPath.slice(0, lastSep);
 }

@@ -60,6 +60,58 @@ A new approach to task management with AI agents.
 ---
 -->
 
+## FAQ
+
+<details>
+<summary><strong>Do I need to install Claude Code before using this app?</strong></summary>
+<br />
+No. The app includes built-in installation and authentication — just launch and follow the setup wizard.
+</details>
+
+<details>
+<summary><strong>Does it read or upload my code?</strong></summary>
+<br />
+No. Everything runs locally on your machine. The app reads Claude Code's session logs from <code>~/.claude/</code> — your source code is never sent anywhere.
+</details>
+
+<details>
+<summary><strong>Can agents communicate with each other?</strong></summary>
+<br />
+Yes. Agents send direct messages, create shared tasks, and leave comments — all coordinated automatically through Claude Code's team protocol.
+</details>
+
+<details>
+<summary><strong>Is it free?</strong></summary>
+<br />
+Yes, completely free and open source. The app itself requires no API keys or subscriptions. You only need a Claude Code plan from Anthropic to run agents.
+</details>
+
+<details>
+<summary><strong>Can I review code changes before they're applied?</strong></summary>
+<br />
+Yes. Every task shows a full diff view where you can accept, reject, or comment on individual code hunks — similar to Cursor's review flow.
+</details>
+
+<details>
+<summary><strong>What happens if an agent gets stuck?</strong></summary>
+<br />
+You can send a direct message to any agent at any time to course-correct, or stop and restart it from the process dashboard. If an agent needs your input, you'll get a notification and the task will be marked with a distinct badge on the board so you won't miss it.
+</details>
+
+<details>
+<summary><strong>Can I use it just to view past sessions without running agents?</strong></summary>
+<br />
+Yes. The app works as a session viewer too — browse, search, and analyze any Claude Code session history.
+</details>
+
+<details>
+<summary><strong>Does it support multiple projects and teams?</strong></summary>
+<br />
+Yes. Run multiple teams in one project or across different projects, even simultaneously. To avoid Git conflicts, ask agents to use git worktree in your provisioning prompt.
+</details>
+
+---
+
 ## Installation
 
 No prerequisites — Claude Code can be installed and configured directly from the app.

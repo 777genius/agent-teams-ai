@@ -2700,15 +2700,19 @@ export class TeamProvisioningService {
     // getHomeDir() uses Electron's app.getPath('home') which handles Unicode
     // correctly on Windows. Prefer it over process.env which may be garbled.
     const electronHome = getHomeDir();
+    const isWindows = process.platform === 'win32';
     const home = shellEnv.HOME?.trim() || electronHome;
-    const user = shellEnv.USER?.trim() || process.env.USER?.trim() || os.userInfo().username;
-    const shell = shellEnv.SHELL?.trim() || process.env.SHELL?.trim() || '/bin/zsh';
-    const xdgConfigHome =
-      shellEnv.XDG_CONFIG_HOME?.trim() || process.env.XDG_CONFIG_HOME?.trim() || `${home}/.config`;
-    const xdgStateHome =
-      shellEnv.XDG_STATE_HOME?.trim() ||
-      process.env.XDG_STATE_HOME?.trim() ||
-      `${home}/.local/state`;
+    const user =
+      shellEnv.USER?.trim() ||
+      process.env.USER?.trim() ||
+      process.env.USERNAME?.trim() ||
+      os.userInfo().username;
+
+    // Shell: on Windows there is no SHELL env var; use COMSPEC (cmd.exe / powershell).
+    // On Unix, prefer the user's login shell from env or fall back to /bin/zsh.
+    const shell = isWindows
+      ? (process.env.COMSPEC ?? 'powershell.exe')
+      : shellEnv.SHELL?.trim() || process.env.SHELL?.trim() || '/bin/zsh';
 
     const env: NodeJS.ProcessEnv = {
       ...process.env,
@@ -2717,15 +2721,32 @@ export class TeamProvisioningService {
       USERPROFILE: home,
       USER: user,
       LOGNAME: shellEnv.LOGNAME?.trim() || process.env.LOGNAME?.trim() || user,
-      SHELL: shell,
       TERM: shellEnv.TERM?.trim() || process.env.TERM?.trim() || 'xterm-256color',
-      XDG_CONFIG_HOME: xdgConfigHome,
-      XDG_STATE_HOME: xdgStateHome,
       // Ensure CLI reads/writes from the same Claude root as the app.
       // This aligns teams/tasks locations when the app overrides claudeRootPath.
       CLAUDE_CONFIG_DIR: getClaudeBasePath(),
       CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: '1',
     };
+
+    // SHELL is a Unix concept — only set it on non-Windows platforms.
+    if (!isWindows) {
+      env.SHELL = shell;
+    }
+
+    // XDG directories are a freedesktop.org (Linux/macOS) convention.
+    // On Windows, these are unused by most tools and can cause confusion.
+    if (!isWindows) {
+      const xdgConfigHome =
+        shellEnv.XDG_CONFIG_HOME?.trim() ||
+        process.env.XDG_CONFIG_HOME?.trim() ||
+        `${home}/.config`;
+      const xdgStateHome =
+        shellEnv.XDG_STATE_HOME?.trim() ||
+        process.env.XDG_STATE_HOME?.trim() ||
+        `${home}/.local/state`;
+      env.XDG_CONFIG_HOME = xdgConfigHome;
+      env.XDG_STATE_HOME = xdgStateHome;
+    }
 
     // 1. Explicit ANTHROPIC_API_KEY — works with `-p` mode directly
     if (typeof env.ANTHROPIC_API_KEY === 'string' && env.ANTHROPIC_API_KEY.trim().length > 0) {

@@ -9,6 +9,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 
 import * as ContextMenu from '@radix-ui/react-context-menu';
+import { lastSeparatorIndex } from '@shared/utils/platformPath';
 import {
   ClipboardCopy,
   FilePlus,
@@ -84,7 +85,7 @@ export const EditorContextMenu = ({
   const parentDir = target
     ? target.isDir
       ? target.path
-      : target.path.substring(0, target.path.lastIndexOf('/'))
+      : target.path.substring(0, lastSeparatorIndex(target.path))
     : null;
 
   return (

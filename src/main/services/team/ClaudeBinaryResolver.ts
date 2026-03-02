@@ -61,6 +61,10 @@ function expandWindowsBinaryNames(binaryName: string): string[] {
 }
 
 async function collectNvmCandidates(): Promise<string[]> {
+  if (process.platform === 'win32') {
+    return collectNvmWindowsCandidates();
+  }
+
   const nvmNodeRoot = path.join(getHomeDir(), '.nvm', 'versions', 'node');
   let versions: string[];
   try {
@@ -71,6 +75,29 @@ async function collectNvmCandidates(): Promise<string[]> {
 
   return versions
     .map((version) => path.join(nvmNodeRoot, version, 'bin', 'claude'))
+    .sort((a, b) => a.localeCompare(b))
+    .reverse();
+}
+
+/**
+ * Collect NVM for Windows (nvm-windows) candidates.
+ * nvm-windows stores Node versions under %APPDATA%\nvm\<version>\.
+ */
+async function collectNvmWindowsCandidates(): Promise<string[]> {
+  const appdata = process.env.APPDATA;
+  if (!appdata) return [];
+
+  const nvmRoot = path.join(appdata, 'nvm');
+  let versions: string[];
+  try {
+    versions = await fs.promises.readdir(nvmRoot);
+  } catch {
+    return [];
+  }
+
+  const exts = getWindowsExecutableExtensions();
+  return versions
+    .flatMap((version) => exts.map((ext) => path.join(nvmRoot, version, `claude${ext}`)))
     .sort((a, b) => a.localeCompare(b))
     .reverse();
 }
@@ -176,22 +203,34 @@ export class ClaudeBinaryResolver {
     const platformBinaryNames =
       process.platform === 'win32' ? expandWindowsBinaryNames(baseBinaryName) : [baseBinaryName];
 
-    const candidateDirs: string[] = [
-      // Native binary installation path (claude install)
-      path.join(getHomeDir(), '.local', 'bin'),
-      path.join(getHomeDir(), '.npm-global', 'bin'),
-      path.join(getHomeDir(), '.npm', 'bin'),
+    const candidateDirs: string[] =
       process.platform === 'win32'
-        ? path.join(getHomeDir(), 'AppData', 'Roaming', 'npm')
-        : '/usr/local/bin',
-      process.platform === 'win32' ? '' : '/opt/homebrew/bin',
-    ].filter((candidate) => candidate.length > 0);
+        ? [
+            // Windows: npm global install
+            path.join(getHomeDir(), 'AppData', 'Roaming', 'npm'),
+            // Windows: scoop, chocolatey, and other package managers
+            path.join(getHomeDir(), 'scoop', 'shims'),
+            // Windows: Local programs
+            ...(process.env.LOCALAPPDATA
+              ? [path.join(process.env.LOCALAPPDATA, 'Programs', 'claude')]
+              : []),
+            // Windows: Program Files
+            ...(process.env.ProgramFiles ? [path.join(process.env.ProgramFiles, 'claude')] : []),
+          ]
+        : [
+            // Unix: native binary installation path (claude install)
+            path.join(getHomeDir(), '.local', 'bin'),
+            path.join(getHomeDir(), '.npm-global', 'bin'),
+            path.join(getHomeDir(), '.npm', 'bin'),
+            '/usr/local/bin',
+            '/opt/homebrew/bin',
+          ];
 
     const candidates = candidateDirs.flatMap((dir) =>
       platformBinaryNames.map((name) => path.join(dir, name))
     );
 
-    const nvmCandidates = process.platform === 'win32' ? [] : await collectNvmCandidates();
+    const nvmCandidates = await collectNvmCandidates();
     const allCandidates = [...candidates, ...nvmCandidates];
 
     // Check all fallback candidates in parallel for speed

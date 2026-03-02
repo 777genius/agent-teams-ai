@@ -1,4 +1,5 @@
 import { normalizePath } from '@renderer/utils/pathNormalize';
+import { splitPath } from '@shared/utils/platformPath';
 import { differenceInDays, isToday, isYesterday } from 'date-fns';
 
 import { DATE_CATEGORY_ORDER } from '../types/tabs';
@@ -101,10 +102,7 @@ function trimTrailingPathSep(p: string): string {
 
 export function projectLabelFromPath(path: string): string {
   const normalized = trimTrailingPathSep(path);
-  const segments = normalized
-    .split('/')
-    .flatMap((s) => s.split('\\'))
-    .filter(Boolean);
+  const segments = splitPath(normalized);
   return segments.length > 0 ? segments[segments.length - 1] : path || NO_PROJECT_LABEL;
 }
 

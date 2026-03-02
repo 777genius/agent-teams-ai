@@ -5,6 +5,8 @@
  * Used by ReviewFileTree (FileChangeSummary) and EditorFileTree (FileTreeEntry).
  */
 
+import { splitPath as splitPathCrossPlatform } from '@shared/utils/platformPath';
+
 export interface TreeNode<T> {
   name: string;
   fullPath: string;
@@ -28,7 +30,7 @@ export function buildTree<T>(
   const root: TreeNode<T> = { name: '', fullPath: '', isFile: false, children: [] };
 
   for (const item of items) {
-    const parts = getPath(item).split('/');
+    const parts = splitPathCrossPlatform(getPath(item));
     let current = root;
 
     for (let i = 0; i < parts.length; i++) {

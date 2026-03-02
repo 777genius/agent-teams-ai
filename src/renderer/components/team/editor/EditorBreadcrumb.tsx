@@ -7,6 +7,7 @@
 import { useCallback, useMemo } from 'react';
 
 import { useStore } from '@renderer/store';
+import { splitPath } from '@shared/utils/platformPath';
 import { ChevronRight } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -32,7 +33,7 @@ export const EditorBreadcrumb = (): React.ReactElement | null => {
       ? activeTabId.slice(projectPath.length + 1)
       : activeTabId;
 
-    return relativePath.split('/');
+    return splitPath(relativePath);
   }, [activeTabId, projectPath]);
 
   const handleSegmentClick = useCallback(

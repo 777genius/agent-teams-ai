@@ -176,8 +176,11 @@ async function shutdown(): Promise<void> {
 // Signal Handlers
 // =============================================================================
 
-process.on('SIGTERM', () => void shutdown());
+// SIGINT works on all platforms (Ctrl+C), but SIGTERM does not exist on Windows.
 process.on('SIGINT', () => void shutdown());
+if (process.platform !== 'win32') {
+  process.on('SIGTERM', () => void shutdown());
+}
 
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled promise rejection:', reason);

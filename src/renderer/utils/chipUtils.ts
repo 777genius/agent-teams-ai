@@ -4,6 +4,7 @@
 
 import { chipToken } from '@renderer/types/inlineChip';
 import { getCodeFenceLanguage } from '@renderer/utils/buildSelectionAction';
+import { getBasename } from '@shared/utils/platformPath';
 
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { EditorSelectionAction } from '@shared/types/editor';
@@ -31,7 +32,7 @@ export function createChipFromSelection(
     );
     if (isDuplicate) return null;
 
-    const fileName = action.filePath.split('/').pop() ?? 'file';
+    const fileName = getBasename(action.filePath) || 'file';
     return {
       id: `chip-${++chipCounter}-${Date.now()}`,
       filePath: action.filePath,
@@ -51,7 +52,7 @@ export function createChipFromSelection(
   );
   if (isDuplicate) return null;
 
-  const fileName = action.filePath.split('/').pop() ?? 'file';
+  const fileName = getBasename(action.filePath) || 'file';
   const language = getCodeFenceLanguage(fileName);
 
   return {

@@ -13,6 +13,7 @@ import { editorBridge } from '@renderer/utils/editorBridge';
 import { invalidateQuickOpenCache } from '@renderer/utils/quickOpenCache';
 import { computeDisambiguatedTabs } from '@renderer/utils/tabLabelDisambiguation';
 import { createLogger } from '@shared/utils/logger';
+import { getBasename, getDirname, lastSeparatorIndex, splitPath } from '@shared/utils/platformPath';
 
 import type { AppState } from '../types';
 import type {
@@ -330,7 +331,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
       : null;
 
     if (relative) {
-      const segments = relative.split('/');
+      const segments = splitPath(relative);
       // Expand each parent directory sequentially (root → child → grandchild).
       // Skip the last segment (the file name itself).
       // Each expandDirectory call is awaited so that its children are merged
@@ -577,7 +578,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
       return;
     }
 
-    const fileName = filePath.split('/').pop() ?? 'file';
+    const fileName = getBasename(filePath) || 'file';
     const language = getLanguageFromFileName(fileName);
 
     const tab: EditorFileTab = {
@@ -881,7 +882,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
       }
 
       // Refresh parent directory
-      const parentDir = filePath.substring(0, filePath.lastIndexOf('/'));
+      const parentDir = filePath.substring(0, lastSeparatorIndex(filePath));
       if (parentDir) {
         await refreshDirectory(get, set, parentDir);
       }
@@ -906,7 +907,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
     try {
       const result = await api.editor.moveFile(sourcePath, destDir);
       const { newPath, isDirectory } = result;
-      const oldParent = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
+      const oldParent = sourcePath.substring(0, lastSeparatorIndex(sourcePath));
 
       // Record move timestamps for watcher cooldown
       recentMoveTimestamps.set(sourcePath, Date.now());
@@ -917,7 +918,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
         const tabs = s.editorOpenTabs.map((tab) => {
           const remapped = remapPath(tab.filePath, sourcePath, newPath);
           if (remapped === tab.filePath) return tab;
-          const fileName = remapped.split('/').pop() ?? 'file';
+          const fileName = getBasename(remapped) || 'file';
           return {
             ...tab,
             id: remapped,
@@ -1009,7 +1010,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
     try {
       const result = await api.editor.renameFile(sourcePath, newName);
       const { newPath, isDirectory } = result;
-      const parentDir = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
+      const parentDir = sourcePath.substring(0, lastSeparatorIndex(sourcePath));
 
       recentMoveTimestamps.set(sourcePath, Date.now());
       recentMoveTimestamps.set(newPath, Date.now());
@@ -1018,7 +1019,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
         const tabs = s.editorOpenTabs.map((tab) => {
           const remapped = remapPath(tab.filePath, sourcePath, newPath);
           if (remapped === tab.filePath) return tab;
-          const fileName = remapped.split('/').pop() ?? 'file';
+          const fileName = getBasename(remapped) || 'file';
           return {
             ...tab,
             id: remapped,
@@ -1208,7 +1209,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
     // Refresh parent directory in tree for create/delete
     if (event.type === 'create' || event.type === 'delete') {
       invalidateQuickOpenCache();
-      const parentDir = event.path.substring(0, event.path.lastIndexOf('/'));
+      const parentDir = event.path.substring(0, lastSeparatorIndex(event.path));
       if (parentDir && editorProjectPath) {
         const existing = dirRefreshDebounceTimers.get(parentDir);
         if (existing) clearTimeout(existing);
@@ -1295,7 +1296,7 @@ async function refreshDirectory(
     const t0 = performance.now();
     const result = await api.editor.readDir(dirPath);
     log.info(
-      `[perf] refreshDirectory: IPC=${(performance.now() - t0).toFixed(1)}ms, entries=${result.entries.length}, dir=${dirPath.split('/').pop() ?? ''}`
+      `[perf] refreshDirectory: IPC=${(performance.now() - t0).toFixed(1)}ms, entries=${result.entries.length}, dir=${getBasename(dirPath)}`
     );
     const currentTree = get().editorFileTree;
     if (!currentTree) return;

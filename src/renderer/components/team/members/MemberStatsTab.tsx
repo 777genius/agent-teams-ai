@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@renderer/api';
 import { cn } from '@renderer/lib/utils';
 import { formatRelativeTime } from '@renderer/utils/formatters';
+import { getBasename } from '@shared/utils/platformPath';
 import { formatTokensCompact } from '@shared/utils/tokenFormatting';
 import {
   AlertCircle,
@@ -247,7 +248,7 @@ const FilesTouchedSection = ({
       </div>
       <div className="space-y-0.5">
         {visibleFiles.map((filePath) => {
-          const basename = filePath.split('/').pop() ?? filePath;
+          const basename = getBasename(filePath) || filePath;
           const fStats = fileStats?.[filePath];
           return (
             <button

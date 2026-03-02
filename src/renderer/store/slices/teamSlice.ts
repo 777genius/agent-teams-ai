@@ -116,6 +116,8 @@ export interface TeamSlice {
   teamByName: Record<string, TeamSummary>;
   /** O(1) lookup: sessionId -> owning team (lead + history) */
   teamBySessionId: Record<string, TeamSummary>;
+  /** Centralized git branch cache: normalizedPath → branch name | null */
+  branchByPath: Record<string, string | null>;
   teamsLoading: boolean;
   teamsError: string | null;
   globalTasks: GlobalTask[];
@@ -141,6 +143,7 @@ export interface TeamSlice {
   provisioningError: string | null;
   kanbanFilterQuery: string | null;
   provisioningProgressUnsubscribe: (() => void) | null;
+  fetchBranches: (paths: string[]) => Promise<void>;
   fetchTeams: () => Promise<void>;
   fetchAllTasks: () => Promise<void>;
   openTeamsTab: () => void;
@@ -213,6 +216,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   teams: [],
   teamByName: {},
   teamBySessionId: {},
+  branchByPath: {},
   teamsLoading: false,
   teamsError: null,
   globalTasks: [],
@@ -243,6 +247,21 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   provisioningProgressUnsubscribe: null,
   deletedTasks: [],
   deletedTasksLoading: false,
+
+  fetchBranches: async (paths: string[]) => {
+    const results: Record<string, string | null> = {};
+    for (const p of paths) {
+      try {
+        const branch = await api.teams.getProjectBranch(p);
+        results[normalizePath(p)] = branch;
+      } catch {
+        results[normalizePath(p)] = null;
+      }
+    }
+    if (Object.keys(results).length > 0) {
+      set((state) => ({ branchByPath: { ...state.branchByPath, ...results } }));
+    }
+  },
 
   fetchTeams: async () => {
     // Guard: prevent concurrent fetches (component mount + centralized init chain).

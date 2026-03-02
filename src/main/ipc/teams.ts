@@ -1764,11 +1764,13 @@ export function showTeamNativeNotification(opts: {
     return;
   }
 
+  const isMac = process.platform === 'darwin';
+  const truncatedBody = opts.body.slice(0, 300);
   const iconPath = getAppIconPath();
   const notification = new Notification({
     title: opts.title,
-    subtitle: opts.subtitle,
-    body: opts.body.slice(0, 300),
+    ...(isMac && opts.subtitle ? { subtitle: opts.subtitle } : {}),
+    body: !isMac && opts.subtitle ? `${opts.subtitle}\n${truncatedBody}` : truncatedBody,
     sound: config.notifications.soundEnabled ? 'default' : undefined,
     ...(iconPath ? { icon: iconPath } : {}),
   });

@@ -844,6 +844,9 @@ function createWindow(): void {
     if (!mainWindow || mainWindow.isDestroyed()) return;
     if (input.type !== 'keyDown') return;
 
+    // Cmd on macOS, Ctrl on Windows/Linux — unified modifier for cross-platform shortcuts
+    const isMod = input.meta || input.control;
+
     // Prevent Electron's default Ctrl+R / Cmd+R page reload so the renderer
     // keyboard handler can use it as "Refresh Session" (fixes #58).
     // Also prevent Ctrl+Shift+R / Cmd+Shift+R (hard reload).
@@ -852,14 +855,14 @@ function createWindow(): void {
       return;
     }
 
-    // Prevent Cmd+N from opening new window; forward to renderer for review shortcuts
-    if (input.meta && input.key.toLowerCase() === 'n') {
+    // Prevent Cmd+N / Ctrl+N from opening new window; forward to renderer for review shortcuts
+    if (isMod && input.key.toLowerCase() === 'n') {
       event.preventDefault();
       mainWindow.webContents.send('review:cmdN');
       return;
     }
 
-    if (!input.meta) return;
+    if (!isMod) return;
 
     const currentLevel = mainWindow.webContents.getZoomLevel();
 

@@ -8,6 +8,8 @@
  * 4. Unique file names get no label (disambiguatedLabel = undefined)
  */
 
+import { splitPath } from '@shared/utils/platformPath';
+
 import type { EditorFileTab } from '@shared/types/editor';
 
 /**
@@ -49,7 +51,7 @@ export function computeDisambiguatedTabs(tabs: EditorFileTab[]): EditorFileTab[]
 
     // Split paths into segments for comparison
     const pathSegments = group.map((tab) => {
-      const parts = tab.filePath.split('/');
+      const parts = splitPath(tab.filePath);
       // Remove the file name (last segment)
       parts.pop();
       return parts;

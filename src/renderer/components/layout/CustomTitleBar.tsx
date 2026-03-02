@@ -14,6 +14,14 @@ import { Minus, Square, X } from 'lucide-react';
 
 const TITLE_BAR_HEIGHT = 32;
 
+/**
+ * Detect whether the custom title bar should be shown.
+ *
+ * In Electron, the userAgent string reliably contains the OS name
+ * (e.g. "Windows NT 10.0", "Linux x86_64"), so this check works on
+ * all three platforms.  macOS is excluded because it uses native
+ * traffic-light window controls instead.
+ */
 function needsCustomTitleBar(): boolean {
   if (!isElectronMode()) return false;
   const ua = window.navigator.userAgent;

@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { getBasename, lastSeparatorIndex } from '@shared/utils/platformPath';
 import { Loader2, Search, X } from 'lucide-react';
 
 import { FileIcon } from './FileIcon';
@@ -263,10 +264,9 @@ const SearchFileGroup = ({
   query,
   caseSensitive,
 }: SearchFileGroupProps): React.ReactElement => {
-  const fileName = relativePath.split('/').pop() ?? relativePath;
-  const dirPath = relativePath.includes('/')
-    ? relativePath.slice(0, relativePath.lastIndexOf('/'))
-    : '';
+  const fileName = getBasename(relativePath) || relativePath;
+  const sepIdx = lastSeparatorIndex(relativePath);
+  const dirPath = sepIdx >= 0 ? relativePath.slice(0, sepIdx) : '';
   return (
     <div className="border-border/50 border-b">
       <button

@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useStore } from '@renderer/store';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { buildTaskCountsByTeam, normalizePath } from '@renderer/utils/pathNormalize';
@@ -182,7 +183,6 @@ export const TeamListView = (): React.JSX.Element => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<TeamListFilterState>(EMPTY_TEAM_FILTER);
   const [aliveTeams, setAliveTeams] = useState<string[]>([]);
-  const [branchByPath, setBranchByPath] = useState<Map<string, string | null>>(new Map());
   const {
     teams,
     teamsLoading,
@@ -337,48 +337,13 @@ export const TeamListView = (): React.JSX.Element => {
     leadActivityByTeam,
   ]);
 
-  // Live branch/worktree for team project paths (poll so it updates during process)
-  const projectPathsToPoll = useMemo(() => {
-    const byKey = new Map<string, string>();
-    for (const team of filteredTeams) {
-      const p = team.projectPath?.trim();
-      if (p) {
-        const key = normalizePath(p);
-        if (!byKey.has(key)) byKey.set(key, p);
-      }
-    }
-    return Array.from(byKey.entries());
-  }, [filteredTeams]);
-
-  useEffect(() => {
-    if (!electronMode || projectPathsToPoll.length === 0) return;
-    let cancelled = false;
-    const poll = async (): Promise<void> => {
-      const next = new Map<string, string | null>();
-      for (const [pathKey, actualPath] of projectPathsToPoll) {
-        if (cancelled) return;
-        try {
-          const branch = await api.teams.getProjectBranch(actualPath);
-          if (!cancelled) next.set(pathKey, branch);
-        } catch {
-          if (!cancelled) next.set(pathKey, null);
-        }
-      }
-      if (!cancelled && next.size > 0) {
-        setBranchByPath((prev) => {
-          const m = new Map(prev);
-          for (const [k, v] of next) m.set(k, v);
-          return m;
-        });
-      }
-    };
-    void poll();
-    const interval = setInterval(poll, 6000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [electronMode, projectPathsToPoll]);
+  // Fetch branches once for all visible team project paths (no live polling)
+  const teamPaths = useMemo(
+    () => filteredTeams.map((t) => t.projectPath?.trim()).filter(Boolean) as string[],
+    [filteredTeams]
+  );
+  useBranchSync(teamPaths, { live: false });
+  const branchByPath = useStore((s) => s.branchByPath);
 
   const restoreTeam = useStore((s) => s.restoreTeam);
   const permanentlyDeleteTeam = useStore((s) => s.permanentlyDeleteTeam);
@@ -748,7 +713,7 @@ export const TeamListView = (): React.JSX.Element => {
                     </p>
                     {team.projectPath &&
                       (() => {
-                        const branch = branchByPath.get(normalizePath(team.projectPath));
+                        const branch = branchByPath[normalizePath(team.projectPath)];
                         if (!branch) return null;
                         return (
                           <span

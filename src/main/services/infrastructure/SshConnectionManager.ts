@@ -396,7 +396,7 @@ export class SshConnectionManager extends EventEmitter {
    * Resolves authentication automatically by trying:
    * 1. IdentityFile from SSH config
    * 2. SSH agent
-   * 3. Default key files (id_ed25519, id_rsa)
+   * 3. Default key files (id_ed25519, id_rsa, id_ecdsa)
    */
   private async resolveAutoAuth(
     sshConfig: SshConfigHostEntry | null
@@ -407,10 +407,7 @@ export class SshConnectionManager extends EventEmitter {
       if (resolved) {
         // The config parser already told us there's an identity file.
         // Try common identity file locations from config
-        const configKeyPaths = [
-          path.join(getHomeDir(), '.ssh', 'id_ed25519'),
-          path.join(getHomeDir(), '.ssh', 'id_rsa'),
-        ];
+        const configKeyPaths = this.getSshKeyPaths();
         for (const keyPath of configKeyPaths) {
           try {
             const keyData = await fs.promises.readFile(keyPath, 'utf8');
@@ -429,11 +426,7 @@ export class SshConnectionManager extends EventEmitter {
     }
 
     // Try default key files
-    const defaultKeys = [
-      path.join(getHomeDir(), '.ssh', 'id_ed25519'),
-      path.join(getHomeDir(), '.ssh', 'id_rsa'),
-      path.join(getHomeDir(), '.ssh', 'id_ecdsa'),
-    ];
+    const defaultKeys = this.getSshKeyPaths();
 
     for (const keyPath of defaultKeys) {
       try {
@@ -445,6 +438,28 @@ export class SshConnectionManager extends EventEmitter {
     }
 
     return {};
+  }
+
+  /**
+   * Returns SSH key candidate paths for the current platform.
+   * On Windows, also checks %USERPROFILE%\.ssh\ (OpenSSH for Windows default).
+   */
+  private getSshKeyPaths(): string[] {
+    const home = getHomeDir();
+    const keyNames = ['id_ed25519', 'id_rsa', 'id_ecdsa'];
+    const candidates = keyNames.map((name) => path.join(home, '.ssh', name));
+
+    // On Windows, USERPROFILE may differ from getHomeDir() when HOME is overridden
+    if (process.platform === 'win32') {
+      const userProfile = process.env.USERPROFILE;
+      if (userProfile && userProfile !== home) {
+        for (const name of keyNames) {
+          candidates.push(path.join(userProfile, '.ssh', name));
+        }
+      }
+    }
+
+    return candidates;
   }
 
   private async resolveRemoteProjectsPath(username: string): Promise<string> {

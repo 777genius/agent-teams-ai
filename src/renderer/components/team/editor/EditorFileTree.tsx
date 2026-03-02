@@ -27,6 +27,7 @@ import {
 } from '@renderer/components/ui/dialog';
 import { useStore } from '@renderer/store';
 import { sortTreeNodes } from '@renderer/utils/fileTreeBuilder';
+import { getBasename, lastSeparatorIndex } from '@shared/utils/platformPath';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronDown, ChevronRight, Folder, FolderOpen, Lock } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -350,7 +351,7 @@ export const EditorFileTree = ({
         const item = flatItemsByPath.get(overId);
         if (item) {
           const p = item.node.fullPath;
-          targetDir = p.substring(0, p.lastIndexOf('/'));
+          targetDir = p.substring(0, lastSeparatorIndex(p));
         }
       }
 
@@ -389,7 +390,7 @@ export const EditorFileTree = ({
       }
 
       const destDir = dropTargetPath;
-      const sourceParent = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
+      const sourceParent = sourcePath.substring(0, lastSeparatorIndex(sourcePath));
 
       // Validation: same folder = no-op
       if (sourceParent === destDir) {
@@ -543,7 +544,7 @@ export const EditorFileTree = ({
           <DialogHeader>
             <DialogTitle className="text-sm">Move to Trash</DialogTitle>
             <DialogDescription>
-              Move &ldquo;{deleteConfirmPath?.split('/').pop() ?? ''}&rdquo; to Trash?
+              Move &ldquo;{deleteConfirmPath ? getBasename(deleteConfirmPath) : ''}&rdquo; to Trash?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

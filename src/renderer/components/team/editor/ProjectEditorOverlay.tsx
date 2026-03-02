@@ -21,6 +21,7 @@ import { useEditorKeyboardShortcuts } from '@renderer/hooks/useEditorKeyboardSho
 import { useStore } from '@renderer/store';
 import { buildFileAction, buildSelectionAction } from '@renderer/utils/buildSelectionAction';
 import { shortcutLabel } from '@renderer/utils/platformKeys';
+import { getBasename, getDirname } from '@shared/utils/platformPath';
 import {
   AlertTriangle,
   HelpCircle,
@@ -216,7 +217,7 @@ export const ProjectEditorOverlay = ({
         const result = await promise;
         const ipcMs = performance.now() - t0;
         console.debug(
-          `[perf] loadFileContent: IPC=${ipcMs.toFixed(1)}ms, size=${result.size}, truncated=${result.truncated}, cached=${wasCached}, file=${filePath.split('/').pop() ?? ''}`
+          `[perf] loadFileContent: IPC=${ipcMs.toFixed(1)}ms, size=${result.size}, truncated=${result.truncated}, cached=${wasCached}, file=${getBasename(filePath)}`
         );
         setFileContent(result);
 
@@ -519,7 +520,7 @@ export const ProjectEditorOverlay = ({
     onToggleMdPreview: isMarkdown ? toggleMdPreview : undefined,
   });
 
-  const projectName = projectPath.split('/').pop() ?? projectPath;
+  const projectName = getBasename(projectPath) || projectPath;
 
   return (
     <div
@@ -785,7 +786,7 @@ export const ProjectEditorOverlay = ({
                       key={`${activeTabId}-${editorResetKey}`}
                       filePath={activeTabId}
                       content={fileContent.content}
-                      fileName={activeTabId.split('/').pop() ?? 'file'}
+                      fileName={getBasename(activeTabId) || 'file'}
                       mtimeMs={fileContent.mtimeMs}
                       onCursorChange={handleCursorChange}
                       onDraftRecovered={handleDraftRecovered}
@@ -803,7 +804,7 @@ export const ProjectEditorOverlay = ({
                     splitRatio={splitRatio}
                     onSplitRatioChange={handleSplitRatioChange}
                     viewKey={activeTabId}
-                    baseDir={activeTabId?.substring(0, activeTabId.lastIndexOf('/'))}
+                    baseDir={activeTabId ? getDirname(activeTabId) : undefined}
                   />
                 )}
               </div>

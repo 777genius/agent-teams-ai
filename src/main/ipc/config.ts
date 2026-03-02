@@ -948,6 +948,16 @@ async function resolveWslHome(distro: string): Promise<string | null> {
   }
 }
 
+async function resolveWslDefaultUser(distro: string): Promise<string | null> {
+  try {
+    const { stdout } = await runWsl(['-d', distro, '--', 'whoami'], 3000);
+    const user = stdout.trim();
+    return user && !user.includes('/') && !user.includes('\\') ? user : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Handler for 'config:findWslClaudeRoots' - Find Windows UNC candidates for WSL Claude roots.
  */
@@ -968,7 +978,10 @@ async function handleFindWslClaudeRoots(
     const seen = new Set<string>();
     for (const distro of distros) {
       const resolvedHomePath = await resolveWslHome(distro);
-      const fallbackHomePath = process.env.USERNAME ? `/home/${process.env.USERNAME}` : null;
+      // Fallback: query the default WSL user, then try Windows USERNAME
+      const wslUser = await resolveWslDefaultUser(distro);
+      const fallbackUser = wslUser || process.env.USERNAME;
+      const fallbackHomePath = fallbackUser ? `/home/${fallbackUser}` : null;
       const normalizedHome =
         normalizeWslHomePath(resolvedHomePath ?? '') ??
         (fallbackHomePath ? normalizeWslHomePath(fallbackHomePath) : null);

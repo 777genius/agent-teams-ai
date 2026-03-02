@@ -85,7 +85,12 @@ function parseArgs(argv) {
 }
 
 function getHomeDir() {
-  return process.env.HOME || process.env.USERPROFILE || '';
+  if (process.env.HOME) return process.env.HOME;
+  if (process.env.USERPROFILE) return process.env.USERPROFILE;
+  if (process.env.HOMEDRIVE && process.env.HOMEPATH) {
+    return process.env.HOMEDRIVE + process.env.HOMEPATH;
+  }
+  try { return require('os').homedir(); } catch { return ''; }
 }
 
 function getClaudeDir(flags) {
@@ -98,7 +103,7 @@ function getClaudeDir(flags) {
   const inferred = inferClaudeDirFromScriptPath();
   if (inferred) return inferred;
   const home = getHomeDir();
-  if (!home) die('HOME is not set');
+  if (!home) die('HOME/USERPROFILE is not set');
   return path.join(home, '.claude');
 }
 
@@ -976,8 +981,8 @@ async function main() {
         parts.push(
           '\n' + ${JSON.stringify(AGENT_BLOCK_OPEN)},
           'Update task status using:',
-          'node "$HOME/.claude/tools/${TOOL_FILE_NAME}" --team ' + String(teamName) + ' task start ' + String(task.id),
-          'node "$HOME/.claude/tools/${TOOL_FILE_NAME}" --team ' + String(teamName) + ' task complete ' + String(task.id),
+          'node "' + __filename + '" --team ' + String(teamName) + ' task start ' + String(task.id),
+          'node "' + __filename + '" --team ' + String(teamName) + ' task complete ' + String(task.id),
           ${JSON.stringify(AGENT_BLOCK_CLOSE)}
         );
         sendInboxMessage(paths, teamName, {
@@ -1053,8 +1058,8 @@ async function main() {
         parts.push(
           '\n' + ${JSON.stringify(AGENT_BLOCK_OPEN)},
           'Update task status using:',
-          'node "$HOME/.claude/tools/${TOOL_FILE_NAME}" --team ' + String(teamName) + ' task start ' + String(task.id),
-          'node "$HOME/.claude/tools/${TOOL_FILE_NAME}" --team ' + String(teamName) + ' task complete ' + String(task.id),
+          'node "' + __filename + '" --team ' + String(teamName) + ' task start ' + String(task.id),
+          'node "' + __filename + '" --team ' + String(teamName) + ' task complete ' + String(task.id),
           ${JSON.stringify(AGENT_BLOCK_CLOSE)}
         );
         sendInboxMessage(paths, teamName, {

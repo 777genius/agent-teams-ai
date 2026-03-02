@@ -6,6 +6,7 @@ import {
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
 import { isProcessAlive } from '@main/utils/processHealth';
+import { killProcessByPid } from '@main/utils/processKill';
 import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
 import { getMemberColor } from '@shared/constants/memberColors';
 import { createLogger } from '@shared/utils/logger';
@@ -458,9 +459,9 @@ export class TeamDataService {
   async killProcess(teamName: string, pid: number): Promise<void> {
     const processesPath = path.join(getTeamsBasePath(), teamName, 'processes.json');
 
-    // Try to kill the process
+    // Try to kill the process (cross-platform: SIGTERM on Unix, taskkill on Windows)
     try {
-      process.kill(pid, 'SIGTERM');
+      killProcessByPid(pid);
     } catch (err: unknown) {
       // ESRCH = process not found — still mark as stopped below
       if (

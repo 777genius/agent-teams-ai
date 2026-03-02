@@ -4,6 +4,7 @@
  */
 
 import { getPreviewType, isPreviewable } from '@renderer/utils/previewRegistry';
+import { getBasename } from '@shared/utils/platformPath';
 
 import { EditorBinaryPlaceholder } from './EditorBinaryPlaceholder';
 import { EditorImagePreview } from './EditorImagePreview';
@@ -17,7 +18,7 @@ export const EditorBinaryState = ({
   filePath,
   size,
 }: EditorBinaryStateProps): React.ReactElement => {
-  const fileName = filePath.split('/').pop() ?? filePath;
+  const fileName = getBasename(filePath) || filePath;
   const previewType = getPreviewType(fileName);
 
   if (previewType === 'image' && isPreviewable(fileName, size)) {

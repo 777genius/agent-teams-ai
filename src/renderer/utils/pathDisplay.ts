@@ -9,6 +9,8 @@
  * Also provides resolveAbsolutePath() for clipboard copy (~ → real home, relative → absolute).
  */
 
+import { splitPath } from '@shared/utils/platformPath';
+
 /**
  * Shorten a file path for display in compact UI elements.
  * Full path should still be available via tooltip (title attribute).
@@ -82,7 +84,7 @@ export function formatProjectPath(path: string): string {
   const p = path.replace(/\\/g, '/');
 
   if (p.startsWith('/Users/') || p.startsWith('/home/')) {
-    const parts = p.split('/').filter(Boolean);
+    const parts = splitPath(p);
     if (parts.length >= 2) {
       const rest = parts.slice(2).join('/');
       return rest ? `~/${rest}` : '~';
@@ -90,7 +92,7 @@ export function formatProjectPath(path: string): string {
   }
 
   if (isWindowsUserPath(path)) {
-    const parts = p.split('/').filter(Boolean);
+    const parts = splitPath(p);
     if (parts.length >= 3) {
       const rest = parts.slice(3).join('/');
       return rest ? `~/${rest}` : '~';

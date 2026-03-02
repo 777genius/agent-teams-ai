@@ -3,7 +3,7 @@
  *
  * Responsibilities:
  * - Store error history at ~/.claude/claude-devtools-notifications.json (max 100 entries)
- * - Show native macOS notifications using Electron's Notification API
+ * - Show native notifications using Electron's Notification API (cross-platform)
  * - Implement throttling (5 seconds per unique error hash)
  * - Respect config.notifications.enabled and snoozedUntil
  * - Filter errors matching ignoredRegex patterns
@@ -380,7 +380,9 @@ export class NotificationManager extends EventEmitter {
   // ===========================================================================
 
   /**
-   * Shows a native macOS notification for an error.
+   * Shows a native notification for an error.
+   * Note: Electron's `subtitle` option only works on macOS.
+   * On Windows/Linux, we prepend the subtitle to the body instead.
    */
   private showNativeNotification(error: DetectedError): void {
     // Guard against standalone/Docker mode where Electron's Notification API is unavailable
@@ -395,11 +397,13 @@ export class NotificationManager extends EventEmitter {
 
     const config = this.configManager.getConfig();
 
+    const isMac = process.platform === 'darwin';
+    const truncatedMessage = error.message.slice(0, 200);
     const iconPath = getAppIconPath();
     const notification = new Notification({
       title: 'Claude Code Error',
-      subtitle: error.context.projectName,
-      body: error.message.slice(0, 200),
+      ...(isMac ? { subtitle: error.context.projectName } : {}),
+      body: isMac ? truncatedMessage : `${error.context.projectName}\n${truncatedMessage}`,
       sound: config.notifications.soundEnabled ? 'default' : undefined,
       ...(iconPath ? { icon: iconPath } : {}),
     });

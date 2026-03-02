@@ -13,12 +13,13 @@ import {
 } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
 import { formatProjectPath } from '@renderer/utils/pathDisplay';
-import { buildTaskCountsByOwner } from '@renderer/utils/pathNormalize';
+import { buildTaskCountsByOwner, normalizePath } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { resolveProjectIdByPath } from '@renderer/utils/projectLookup';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
@@ -350,27 +351,16 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     };
   }, [projectId]);
 
-  // Resolve lead's git branch from project path
-  const [leadBranch, setLeadBranch] = useState<string | null>(null);
-  useEffect(() => {
-    const projectPath = data?.config.projectPath?.trim();
-    if (!projectPath || typeof api.teams?.getProjectBranch !== 'function') {
-      setLeadBranch(null);
-      return;
-    }
-    let cancelled = false;
-    void api.teams.getProjectBranch(projectPath).then(
-      (branch) => {
-        if (!cancelled) setLeadBranch(branch);
-      },
-      () => {
-        if (!cancelled) setLeadBranch(null);
-      }
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [data?.config.projectPath]);
+  // Live git branch polling for the team's project path
+  const teamProjectPath = data?.config.projectPath?.trim() ?? null;
+  const branchSyncPaths = useMemo(
+    () => (teamProjectPath ? [teamProjectPath] : []),
+    [teamProjectPath]
+  );
+  useBranchSync(branchSyncPaths, { live: true });
+  const leadBranch = useStore((s) =>
+    teamProjectPath ? (s.branchByPath[normalizePath(teamProjectPath)] ?? null) : null
+  );
 
   // Filter sessions to team-only using sessionHistory + leadSessionId
   const teamSessions = useMemo(() => {
