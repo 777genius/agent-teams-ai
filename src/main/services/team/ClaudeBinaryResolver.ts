@@ -97,7 +97,7 @@ async function collectNvmWindowsCandidates(): Promise<string[]> {
 
   const exts = getWindowsExecutableExtensions();
   return versions
-    .sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }))
+    .toSorted((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }))
     .flatMap((version) => exts.map((ext) => path.join(nvmRoot, version, `claude${ext}`)));
 }
 
