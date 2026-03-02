@@ -3441,14 +3441,26 @@ export class TeamProvisioningService {
     cwd: string,
     env: NodeJS.ProcessEnv
   ): Promise<{ warning?: string }> {
-    // Stage 1: verify binary works
-    const versionProbe = await this.spawnProbe(
+    // Stage 1 + Stage 2 attempt #1 in parallel.
+    // Rationale: both are independent process spawns and the combined wall time
+    // is dominated by startup/IO. We still prioritize the stage-1 error message.
+    const versionProbePromise = this.spawnProbe(
       claudePath,
       ['--version'],
       cwd,
       env,
       CLI_PREPARE_TIMEOUT_MS
     );
+    const pingAttempt1Promise = this.spawnProbe(
+      claudePath,
+      ['-p', 'Reply with the single word PONG and nothing else', '--output-format', 'text'],
+      cwd,
+      env,
+      PREFLIGHT_TIMEOUT_MS
+    );
+
+    // Stage 1: verify binary works (awaited first for clearer errors)
+    const versionProbe = await versionProbePromise;
     if (versionProbe.exitCode !== 0) {
       const errorText =
         buildCombinedLogs(versionProbe.stdout, versionProbe.stderr) ||
@@ -3460,13 +3472,21 @@ export class TeamProvisioningService {
     for (let attempt = 1; attempt <= PREFLIGHT_AUTH_MAX_RETRIES; attempt++) {
       let pingProbe: { exitCode: number | null; stdout: string; stderr: string } | null = null;
       try {
-        pingProbe = await this.spawnProbe(
-          claudePath,
-          ['-p', 'Reply with the single word PONG and nothing else', '--output-format', 'text'],
-          cwd,
-          env,
-          PREFLIGHT_TIMEOUT_MS
-        );
+        pingProbe =
+          attempt === 1
+            ? await pingAttempt1Promise
+            : await this.spawnProbe(
+                claudePath,
+                [
+                  '-p',
+                  'Reply with the single word PONG and nothing else',
+                  '--output-format',
+                  'text',
+                ],
+                cwd,
+                env,
+                PREFLIGHT_TIMEOUT_MS
+              );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (attempt < PREFLIGHT_AUTH_MAX_RETRIES) {
