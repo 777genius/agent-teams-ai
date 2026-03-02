@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { indentUnit, syntaxHighlighting } from '@codemirror/language';
+import { foldGutter, foldKeymap, indentUnit, syntaxHighlighting } from '@codemirror/language';
 import { goToNextChunk, goToPreviousChunk, unifiedMergeView } from '@codemirror/merge';
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
@@ -395,6 +395,7 @@ export const CodeMirrorDiffView = ({
       ...(isEffectivelyEmptyOriginal ? [emptyOriginalOverrideTheme] : []),
       lineNumbers(),
       syntaxHighlighting(oneDarkHighlightStyle),
+      foldGutter(),
       EditorView.editable.of(!readOnly),
       EditorState.readOnly.of(readOnly),
     ];
@@ -405,7 +406,9 @@ export const CodeMirrorDiffView = ({
       extensions.push(mergeUndoSupport);
       extensions.push(mirrorEditsAfterResolve);
       extensions.push(indentUnit.of('  '));
-      extensions.push(keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]));
+      extensions.push(
+        keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap, ...foldKeymap])
+      );
     }
 
     // Language placeholder — actual language injected async via compartment reconfigure
@@ -426,6 +429,7 @@ export const CodeMirrorDiffView = ({
           key: 'Ctrl-Alt-ArrowUp',
           run: goToPreviousChunk,
         },
+        ...foldKeymap,
       ])
     );
 

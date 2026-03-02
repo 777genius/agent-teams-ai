@@ -10,14 +10,32 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { useStore } from '@renderer/store';
 import { editorBridge } from '@renderer/utils/editorBridge';
 import { shortcutLabel } from '@renderer/utils/platformKeys';
-import { Redo2, Save, Undo2, WrapText } from 'lucide-react';
+import { Columns2, Eye, Redo2, Save, Undo2, WrapText } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+
+// =============================================================================
+// Types
+// =============================================================================
+
+export type MdPreviewMode = 'off' | 'split' | 'preview';
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export const EditorToolbar = (): React.ReactElement | null => {
+interface EditorToolbarProps {
+  isMarkdown?: boolean;
+  mdPreviewMode?: MdPreviewMode;
+  onToggleSplit?: () => void;
+  onToggleFullPreview?: () => void;
+}
+
+export const EditorToolbar = ({
+  isMarkdown = false,
+  mdPreviewMode = 'off',
+  onToggleSplit,
+  onToggleFullPreview,
+}: EditorToolbarProps): React.ReactElement | null => {
   const { activeTabId, modifiedFiles, saving, lineWrap } = useStore(
     useShallow((s) => ({
       activeTabId: s.editorActiveTabId,
@@ -77,6 +95,25 @@ export const EditorToolbar = (): React.ReactElement | null => {
         onClick={toggleLineWrap}
         active={lineWrap}
       />
+      {isMarkdown && (
+        <>
+          <div className="mx-1 h-4 w-px bg-border" />
+          <ToolbarButton
+            icon={<Columns2 className="size-3.5" />}
+            label={mdPreviewMode === 'split' ? 'Close split preview' : 'Split preview'}
+            shortcut={shortcutLabel('⌘ ⇧ M', 'Ctrl+Shift+M')}
+            onClick={onToggleSplit ?? (() => {})}
+            active={mdPreviewMode === 'split'}
+          />
+          <ToolbarButton
+            icon={<Eye className="size-3.5" />}
+            label={mdPreviewMode === 'preview' ? 'Close preview' : 'Full preview'}
+            shortcut={shortcutLabel('⌘ ⇧ V', 'Ctrl+Shift+V')}
+            onClick={onToggleFullPreview ?? (() => {})}
+            active={mdPreviewMode === 'preview'}
+          />
+        </>
+      )}
     </div>
   );
 };

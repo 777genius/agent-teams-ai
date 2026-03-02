@@ -14,7 +14,16 @@ import { getModifierKeyName } from '@renderer/utils/keyboardUtils';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { formatDistanceToNow } from 'date-fns';
-import { ChevronDown, ChevronUp, MessageSquare, Reply, Send, X } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  MessageCircleWarning,
+  MessageSquare,
+  Reply,
+  Send,
+  X,
+} from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { ResolvedTeamMember, TaskComment } from '@shared/types';
@@ -145,8 +154,23 @@ export const TaskCommentsSection = ({
           ) : null}
 
           {visibleComments.map((comment) => (
-            <div key={comment.id} className="group p-2.5">
+            <div
+              key={comment.id}
+              className={`group rounded-md p-2.5 ${
+                comment.type === 'review_approved'
+                  ? 'bg-emerald-500/8 border border-emerald-500/15'
+                  : comment.type === 'review_request'
+                    ? 'bg-amber-500/8 border border-amber-500/15'
+                    : ''
+              }`}
+            >
               <div className="mb-1 flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
+                {comment.type === 'review_approved' && (
+                  <CheckCircle2 size={12} className="shrink-0 text-emerald-400" />
+                )}
+                {comment.type === 'review_request' && (
+                  <MessageCircleWarning size={12} className="shrink-0 text-amber-400" />
+                )}
                 <span
                   className="font-medium"
                   style={{
@@ -158,6 +182,16 @@ export const TaskCommentsSection = ({
                 >
                   {comment.author}
                 </span>
+                {comment.type === 'review_approved' && (
+                  <span className="rounded-full bg-emerald-500/15 px-1.5 py-px text-[9px] font-medium text-emerald-400">
+                    Approved
+                  </span>
+                )}
+                {comment.type === 'review_request' && (
+                  <span className="rounded-full bg-amber-500/15 px-1.5 py-px text-[9px] font-medium text-amber-400">
+                    Changes requested
+                  </span>
+                )}
                 <span>
                   {(() => {
                     const date = new Date(comment.createdAt);

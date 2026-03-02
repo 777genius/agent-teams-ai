@@ -173,6 +173,22 @@ describe('EditorFileWatcher', () => {
     });
   });
 
+  describe('setWatchedFiles before start', () => {
+    it('returns silently when watcher not initialized', () => {
+      // Should NOT throw — graceful no-op when projectRoot is null
+      expect(() => watcher.setWatchedFiles(['/some/file.ts'])).not.toThrow();
+      expect(watch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setWatchedDirs before start', () => {
+    it('returns silently when watcher not initialized', () => {
+      // Should NOT throw — graceful no-op when projectRoot is null
+      expect(() => watcher.setWatchedDirs(['/some/dir'])).not.toThrow();
+      expect(watch).not.toHaveBeenCalled();
+    });
+  });
+
   describe('isWatching', () => {
     it('returns false when not started', () => {
       expect(watcher.isWatching()).toBe(false);

@@ -195,10 +195,37 @@ function writeTask(taskPath, task) {
   return verify;
 }
 
+function applyWorkIntervalsForStatusTransition(task, prevStatus, nextStatus, now) {
+  var wasInProgress = prevStatus === 'in_progress';
+  var isInProgress = nextStatus === 'in_progress';
+  var intervals = Array.isArray(task.workIntervals) ? task.workIntervals.slice() : [];
+  var last = intervals.length ? intervals[intervals.length - 1] : null;
+
+  if (!wasInProgress && isInProgress) {
+    if (!last || typeof last.completedAt === 'string') {
+      intervals.push({ startedAt: now });
+    }
+  } else if (wasInProgress && !isInProgress) {
+    // Close the most recent open interval (if any).
+    for (var i = intervals.length - 1; i >= 0; i--) {
+      if (intervals[i] && typeof intervals[i].startedAt === 'string' && !intervals[i].completedAt) {
+        intervals[i].completedAt = now;
+        break;
+      }
+    }
+  }
+
+  if (intervals.length > 0) task.workIntervals = intervals;
+  else delete task.workIntervals;
+}
+
 function setTaskStatus(paths, taskId, status) {
   const normalized = normalizeStatus(status);
   if (!normalized) die('Invalid status: ' + String(status));
   const { taskPath, task } = readTask(paths, taskId);
+  var prev = task.status;
+  var now = nowIso();
+  applyWorkIntervalsForStatusTransition(task, prev, normalized, now);
   task.status = normalized;
   writeTask(taskPath, task);
 }
@@ -244,6 +271,7 @@ function addTaskComment(paths, taskId, flags) {
         id: commentId,
         author: from,
         text: text,
+        type: 'regular',
         createdAt: nowIso(),
       };
       task.comments = existing.concat([comment]);
@@ -413,7 +441,6 @@ function createTask(paths, flags) {
         : '';
   const owner = typeof flags.owner === 'string' && flags.owner.trim() ? flags.owner.trim() : undefined;
   const explicitStatus = typeof flags.status === 'string' ? flags.status : '';
-  const status = normalizeStatus(explicitStatus) || (owner ? 'in_progress' : 'pending');
   const activeForm =
     typeof flags.activeForm === 'string'
       ? flags.activeForm
@@ -423,6 +450,13 @@ function createTask(paths, flags) {
 
   var blockedByIds = parseIdList(flags['blocked-by']);
   var relatedIds = parseIdList(flags.related);
+  // Default status rule:
+  // - explicit --status always wins
+  // - tasks with dependencies should start as pending, even if assigned (owner)
+  // - otherwise, assigned tasks default to in_progress, unassigned to pending
+  const status =
+    normalizeStatus(explicitStatus) ||
+    (blockedByIds.length > 0 ? 'pending' : owner ? 'in_progress' : 'pending');
   for (var v = 0; v < blockedByIds.length; v++) { if (!taskExists(paths, blockedByIds[v])) die('Blocked-by task not found: #' + blockedByIds[v]); }
   for (var w = 0; w < relatedIds.length; w++) { if (!taskExists(paths, relatedIds[w])) die('Related task not found: #' + relatedIds[w]); }
 
@@ -434,6 +468,7 @@ function createTask(paths, flags) {
   while (true) {
     nextId = getNextTaskId(paths);
     taskPath = path.join(paths.tasksDir, String(nextId) + '.json');
+    var createdAt = nowIso();
     task = {
       id: nextId,
       subject,
@@ -442,6 +477,8 @@ function createTask(paths, flags) {
       owner,
       createdBy: from,
       status,
+      createdAt: createdAt,
+      workIntervals: status === 'in_progress' ? [{ startedAt: createdAt }] : undefined,
       blocks: [],
       blockedBy: blockedByIds,
       related: relatedIds.length > 0 ? relatedIds : undefined,
@@ -563,18 +600,32 @@ function sendInboxMessage(paths, teamName, flags) {
 
 function reviewApprove(paths, teamName, taskId, flags) {
   setKanbanColumn(paths, teamName, taskId, 'approved');
-  const notify = flags.notify === true || flags['notify-owner'] === true;
-  if (!notify) return;
-  const { task } = readTask(paths, taskId);
-  if (!task.owner) return;
+  const { taskPath, task } = readTask(paths, taskId);
   const from = typeof flags.from === 'string' && flags.from.trim() ? flags.from.trim() : inferLeadName(paths);
   const note = typeof flags.note === 'string' ? flags.note.trim() : '';
-  const text = note
+
+  // Record review comment in task.comments
+  var existing = Array.isArray(task.comments) ? task.comments : [];
+  var reviewCommentId = crypto.randomUUID
+    ? crypto.randomUUID()
+    : String(Date.now()) + '-' + String(Math.random());
+  task.comments = existing.concat([{
+    id: reviewCommentId,
+    author: from,
+    text: note || 'Approved',
+    type: 'review_approved',
+    createdAt: nowIso(),
+  }]);
+  writeTask(taskPath, task);
+
+  const notify = flags.notify === true || flags['notify-owner'] === true;
+  if (!notify || !task.owner) return;
+  const inboxText = note
     ? 'Task #' + String(taskId) + ' approved.\n\n' + note
     : 'Task #' + String(taskId) + ' approved.';
   sendInboxMessage(paths, teamName, {
     to: task.owner,
-    text,
+    text: inboxText,
     summary: 'Approved #' + String(taskId),
     from,
   });
@@ -585,12 +636,29 @@ function reviewRequestChanges(paths, teamName, taskId, flags) {
   const { taskPath, task } = readTask(paths, taskId);
   if (!task.owner) die('No owner found for task ' + String(taskId));
 
+  const from = typeof flags.from === 'string' && flags.from.trim() ? flags.from.trim() : inferLeadName(paths);
+
   clearKanban(paths, teamName, taskId);
+  var now = nowIso();
+  applyWorkIntervalsForStatusTransition(task, task.status, 'in_progress', now);
   task.status = 'in_progress';
+
+  // Record review comment in task.comments
+  var existing = Array.isArray(task.comments) ? task.comments : [];
+  var reviewCommentId = crypto.randomUUID
+    ? crypto.randomUUID()
+    : String(Date.now()) + '-' + String(Math.random());
+  task.comments = existing.concat([{
+    id: reviewCommentId,
+    author: from,
+    text: comment || 'Reviewer requested changes.',
+    type: 'review_request',
+    createdAt: now,
+  }]);
+
   writeTask(taskPath, task);
 
-  const from = typeof flags.from === 'string' && flags.from.trim() ? flags.from.trim() : inferLeadName(paths);
-  const text =
+  const inboxText =
     'Task #' +
     String(taskId) +
     ' needs fixes.\n\n' +
@@ -599,7 +667,7 @@ function reviewRequestChanges(paths, teamName, taskId, flags) {
     'Please fix and mark it as completed when ready.';
   sendInboxMessage(paths, teamName, {
     to: task.owner,
-    text,
+    text: inboxText,
     summary: 'Fix request for #' + String(taskId),
     from,
   });

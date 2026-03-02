@@ -32,7 +32,13 @@ export const MemberList = ({
   onAssignTask,
   onOpenTask,
 }: MemberListProps): React.JSX.Element => {
-  const activeMembers = members.filter((m) => !m.removedAt);
+  const activeMembers = members
+    .filter((m) => !m.removedAt)
+    .sort((a, b) => {
+      if (a.agentType === 'team-lead') return -1;
+      if (b.agentType === 'team-lead') return 1;
+      return 0;
+    });
   const removedMembers = members.filter((m) => m.removedAt);
   const colorMap = buildMemberColorMap(members);
 

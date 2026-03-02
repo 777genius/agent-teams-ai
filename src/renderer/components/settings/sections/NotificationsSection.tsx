@@ -36,7 +36,8 @@ interface NotificationsSectionProps {
       | 'enabled'
       | 'soundEnabled'
       | 'includeSubagentErrors'
-      | 'notifyOnInboxMessages'
+      | 'notifyOnLeadInbox'
+      | 'notifyOnUserInbox'
       | 'notifyOnClarifications',
     value: boolean
   ) => void;
@@ -136,12 +137,22 @@ export const NotificationsSection = ({
         />
       </SettingRow>
       <SettingRow
-        label="Team inbox notifications"
-        description="Show native OS notifications when teammates send messages to the lead"
+        label="Lead inbox notifications"
+        description="Notify when teammates send messages to the team lead"
       >
         <SettingsToggle
-          enabled={safeConfig.notifications.notifyOnInboxMessages}
-          onChange={(v) => onNotificationToggle('notifyOnInboxMessages', v)}
+          enabled={safeConfig.notifications.notifyOnLeadInbox}
+          onChange={(v) => onNotificationToggle('notifyOnLeadInbox', v)}
+          disabled={saving || !safeConfig.notifications.enabled}
+        />
+      </SettingRow>
+      <SettingRow
+        label="User inbox notifications"
+        description="Notify when teammates send messages to you"
+      >
+        <SettingsToggle
+          enabled={safeConfig.notifications.notifyOnUserInbox}
+          onChange={(v) => onNotificationToggle('notifyOnUserInbox', v)}
           disabled={saving || !safeConfig.notifications.enabled}
         />
       </SettingRow>

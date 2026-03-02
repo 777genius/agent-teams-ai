@@ -40,8 +40,10 @@ export interface NotificationConfig {
   snoozeMinutes: number; // Default snooze duration
   /** Whether to include errors from subagent sessions */
   includeSubagentErrors: boolean;
-  /** Whether to show native OS notifications for team inbox messages */
-  notifyOnInboxMessages: boolean;
+  /** Whether to show native OS notifications when teammates send messages to the team lead */
+  notifyOnLeadInbox: boolean;
+  /** Whether to show native OS notifications when teammates send messages to you (the user) */
+  notifyOnUserInbox: boolean;
   /** Whether to show native OS notifications when a task needs user clarification */
   notifyOnClarifications: boolean;
   /** Notification triggers - define when to generate notifications */
@@ -249,7 +251,8 @@ const DEFAULT_CONFIG: AppConfig = {
     snoozedUntil: null,
     snoozeMinutes: 30,
     includeSubagentErrors: true,
-    notifyOnInboxMessages: true,
+    notifyOnLeadInbox: false,
+    notifyOnUserInbox: true,
     notifyOnClarifications: true,
     triggers: DEFAULT_TRIGGERS,
   },
@@ -416,6 +419,7 @@ export class ConfigManager {
   private mergeWithDefaults(loaded: Partial<AppConfig>): AppConfig {
     const loadedNotifications = loaded.notifications ?? ({} as Partial<NotificationConfig>);
     const loadedTriggers = loadedNotifications.triggers ?? [];
+
     const mergedGeneral: GeneralConfig = {
       ...DEFAULT_CONFIG.general,
       ...(loaded.general ?? {}),

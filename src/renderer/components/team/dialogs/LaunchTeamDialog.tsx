@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { api } from '@renderer/api';
+import { ExtendedContextCheckbox } from '@renderer/components/team/dialogs/ExtendedContextCheckbox';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import {
@@ -66,6 +67,7 @@ export const LaunchTeamDialog = ({
   const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedModel, setSelectedModel] = useState('');
+  const [extendedContext, setExtendedContext] = useState(false);
   const [clearContext, setClearContext] = useState(false);
 
   const resetFormState = (): void => {
@@ -78,6 +80,7 @@ export const LaunchTeamDialog = ({
     setSelectedProjectPath('');
     setCustomCwd('');
     setSelectedModel('');
+    setExtendedContext(false);
     setClearContext(false);
   };
 
@@ -240,7 +243,12 @@ export const LaunchTeamDialog = ({
           teamName,
           cwd: effectiveCwd,
           prompt: promptDraft.value.trim() || undefined,
-          model: selectedModel || undefined,
+          model: (() => {
+            if (!extendedContext) return selectedModel || undefined;
+            // 1M context is only supported for opus and sonnet
+            if (selectedModel === 'haiku') return selectedModel;
+            return selectedModel ? `${selectedModel}[1m]` : 'sonnet[1m]';
+          })(),
           clearContext: clearContext || undefined,
         });
         resetFormState();
@@ -353,30 +361,38 @@ export const LaunchTeamDialog = ({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="label-optional">Model (optional)</Label>
-            <div className="inline-flex rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
-              {[
-                { value: '', label: 'Default' },
-                { value: 'opus', label: 'Opus 4.6' },
-                { value: 'sonnet', label: 'Sonnet 4.5' },
-                { value: 'haiku', label: 'Haiku 4.5' },
-              ].map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  className={cn(
-                    'rounded-[3px] px-3 py-1 text-xs font-medium transition-colors',
-                    selectedModel === opt.value
-                      ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
-                      : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
-                  )}
-                  onClick={() => setSelectedModel(opt.value)}
-                >
-                  {opt.label}
-                </button>
-              ))}
+          <div>
+            <div className="flex items-center gap-2.5">
+              <Label className="label-optional shrink-0">Model (optional)</Label>
+              <div className="inline-flex rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
+                {[
+                  { value: '', label: 'Default' },
+                  { value: 'opus', label: 'Opus 4.6' },
+                  { value: 'sonnet', label: 'Sonnet 4.5' },
+                  { value: 'haiku', label: 'Haiku 4.5' },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={cn(
+                      'rounded-[3px] px-3 py-1 text-xs font-medium transition-colors',
+                      selectedModel === opt.value
+                        ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
+                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
+                    )}
+                    onClick={() => setSelectedModel(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
+            <ExtendedContextCheckbox
+              id="launch-extended-context"
+              checked={extendedContext}
+              onCheckedChange={setExtendedContext}
+              disabled={selectedModel === 'haiku'}
+            />
           </div>
 
           <div className="space-y-2">

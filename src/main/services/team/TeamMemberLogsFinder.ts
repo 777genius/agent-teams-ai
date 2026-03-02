@@ -110,7 +110,12 @@ export class TeamMemberLogsFinder {
   async findLogsForTask(
     teamName: string,
     taskId: string,
-    options?: { owner?: string; status?: string }
+    options?: {
+      owner?: string;
+      status?: string;
+      intervals?: { startedAt: string; completedAt?: string }[];
+      since?: string;
+    }
   ): Promise<MemberLogSummary[]> {
     const discovery = await this.discoverProjectSessions(teamName);
     if (!discovery) return [];
@@ -171,6 +176,56 @@ export class TeamMemberLogsFinder {
       options.owner.trim().length > 0;
     if (includeOwnerSessions) {
       const ownerLogs = await this.findMemberLogs(teamName, options.owner!.trim());
+
+      const TASK_LOG_INTERVAL_GRACE_MS = 10_000;
+      const fallbackRecentMs = 30 * 60_000; // if caller doesn't supply intervals/since, avoid pulling in old owner history
+      const now = Date.now();
+
+      const normalizedIntervals = Array.isArray(options?.intervals)
+        ? options.intervals
+            .map((i) => {
+              const startMs = Date.parse(i.startedAt);
+              const endMsRaw =
+                typeof i.completedAt === 'string' ? Date.parse(i.completedAt) : Number.NaN;
+              const endMs = Number.isFinite(endMsRaw) ? endMsRaw : null;
+              return Number.isFinite(startMs) ? { startMs, endMs } : null;
+            })
+            .filter((v): v is { startMs: number; endMs: number | null } => v !== null)
+        : [];
+
+      // Back-compat: single since timestamp -> treat as open interval.
+      const sinceMsRaw = typeof options?.since === 'string' ? Date.parse(options.since) : NaN;
+      const sinceMs = Number.isFinite(sinceMsRaw) ? sinceMsRaw : null;
+      const effectiveIntervals =
+        normalizedIntervals.length > 0
+          ? normalizedIntervals
+          : sinceMs != null
+            ? [{ startMs: sinceMs, endMs: null }]
+            : [];
+
+      const overlapsAnyInterval = (logStartMs: number, logEndMs: number): boolean => {
+        for (const it of effectiveIntervals) {
+          const start = it.startMs - TASK_LOG_INTERVAL_GRACE_MS;
+          const end = (it.endMs ?? now) + TASK_LOG_INTERVAL_GRACE_MS;
+          if (logStartMs <= end && logEndMs >= start) return true;
+        }
+        return false;
+      };
+
+      const filteredOwnerLogs = ownerLogs.filter((log) => {
+        if (log.isOngoing) return true;
+        const startMs = new Date(log.startTime).getTime();
+        if (!Number.isFinite(startMs)) return false;
+        const durationMs =
+          typeof log.durationMs === 'number' && log.durationMs > 0 ? log.durationMs : 0;
+        const endMs = startMs + durationMs;
+
+        if (effectiveIntervals.length > 0) {
+          return overlapsAnyInterval(startMs, endMs);
+        }
+
+        return startMs >= now - fallbackRecentMs;
+      });
       const seen = new Set<string>();
       for (const log of results) {
         const key =
@@ -179,7 +234,7 @@ export class TeamMemberLogsFinder {
             : `lead:${log.sessionId}`;
         seen.add(key);
       }
-      for (const log of ownerLogs) {
+      for (const log of filteredOwnerLogs) {
         const key =
           log.kind === 'subagent'
             ? `subagent:${log.sessionId}:${log.subagentId}`
@@ -409,12 +464,17 @@ export class TeamMemberLogsFinder {
     const patterns: RegExp[] = [
       new RegExp(`"task_id"\\s*:\\s*"${escaped}"`, 'i'),
       new RegExp(`"taskId"\\s*:\\s*"${escaped}"`, 'i'),
-      new RegExp(`#${escaped}\\b`),
     ];
     if (numericTaskId) {
       patterns.push(
         new RegExp(`"task_id"\\s*:\\s*${numericTaskId}\\b`),
-        new RegExp(`"taskId"\\s*:\\s*${numericTaskId}\\b`)
+        new RegExp(`"taskId"\\s*:\\s*${numericTaskId}\\b`),
+        // Support teamctl command lines (may appear in tool output).
+        // Example: node ".../teamctl.js" --team "t" task start 10
+        new RegExp(
+          `\\bteamctl(?:\\.js)?\\b.{0,250}\\b(?:task|review)\\b.{0,250}\\b${numericTaskId}\\b`,
+          'i'
+        )
       );
     }
     try {

@@ -45,9 +45,11 @@ import { EditorStatusBar } from './EditorStatusBar';
 import { EditorTabBar } from './EditorTabBar';
 import { EditorToolbar } from './EditorToolbar';
 import { GoToLineDialog } from './GoToLineDialog';
+import { MarkdownSplitView } from './MarkdownSplitView';
 import { QuickOpenDialog } from './QuickOpenDialog';
 import { SearchInFilesPanel } from './SearchInFilesPanel';
 
+import type { MdPreviewMode } from './EditorToolbar';
 import type {
   EditorSelectionAction,
   EditorSelectionInfo,
@@ -121,6 +123,18 @@ export const ProjectEditorOverlay = ({
   const editorContentRef = useRef<HTMLDivElement>(null);
   const [containerRect, setContainerRect] = useState<DOMRect>(() => new DOMRect());
 
+  // Markdown preview state
+  const [mdPreviewMode, setMdPreviewMode] = useState<MdPreviewMode>('off');
+  const [liveContent, setLiveContent] = useState('');
+  const [splitRatio, setSplitRatio] = useState(() => {
+    try {
+      const stored = localStorage.getItem('editor:mdSplitRatio');
+      return stored ? Math.max(0.2, Math.min(0.8, Number(stored))) : 0.5;
+    } catch {
+      return 0.5;
+    }
+  });
+
   // Iter-4: New state
   const [quickOpenVisible, setQuickOpenVisible] = useState(false);
   const [searchPanelVisible, setSearchPanelVisible] = useState(false);
@@ -141,6 +155,48 @@ export const ProjectEditorOverlay = ({
 
   // Active tab metadata
   const activeTab = openTabs.find((t) => t.id === activeTabId) ?? null;
+  const isMarkdown = activeTab?.language === 'Markdown';
+
+  // Auto-enable split preview for markdown tabs, reset for non-markdown
+  useEffect(() => {
+    if (isMarkdown) {
+      setMdPreviewMode((m) => (m === 'off' ? 'split' : m));
+    } else {
+      setMdPreviewMode('off');
+    }
+  }, [isMarkdown, activeTabId]);
+
+  // Persist split ratio
+  const handleSplitRatioChange = useCallback((ratio: number) => {
+    setSplitRatio(ratio);
+    try {
+      localStorage.setItem('editor:mdSplitRatio', String(ratio));
+    } catch {
+      // localStorage unavailable
+    }
+  }, []);
+
+  const handleLiveContent = useCallback((content: string) => {
+    setLiveContent(content);
+  }, []);
+
+  const toggleMdSplit = useCallback(() => {
+    setMdPreviewMode((m) => (m === 'split' ? 'off' : 'split'));
+  }, []);
+
+  const toggleMdPreview = useCallback(() => {
+    setMdPreviewMode((m) => (m === 'preview' ? 'off' : 'preview'));
+  }, []);
+
+  // Initialize live content when entering preview mode or switching files
+  useEffect(() => {
+    if (mdPreviewMode !== 'off' && fileContent?.content) {
+      setLiveContent(fileContent.content);
+    }
+  }, [mdPreviewMode, fileContent?.content]);
+
+  // Content for preview: use live content when available, fallback to file content
+  const previewContent = liveContent || fileContent?.content || '';
 
   const loadFileContent = useCallback(
     async (filePath: string) => {
@@ -444,6 +500,8 @@ export const ProjectEditorOverlay = ({
     onToggleGoToLine: toggleGoToLine,
     onToggleSidebar: toggleSidebar,
     onClose: handleCloseRequest,
+    onToggleMdSplit: isMarkdown ? toggleMdSplit : undefined,
+    onToggleMdPreview: isMarkdown ? toggleMdPreview : undefined,
   });
 
   const projectName = projectPath.split('/').pop() ?? projectPath;
@@ -580,7 +638,12 @@ export const ProjectEditorOverlay = ({
           <EditorTabBar onRequestCloseTab={handleRequestCloseTab} />
 
           {/* Toolbar */}
-          <EditorToolbar />
+          <EditorToolbar
+            isMarkdown={isMarkdown}
+            mdPreviewMode={mdPreviewMode}
+            onToggleSplit={toggleMdSplit}
+            onToggleFullPreview={toggleMdPreview}
+          />
 
           {/* Draft recovery banner */}
           {draftRecoveredFile && activeTabId === draftRecoveredFile && (
@@ -678,18 +741,42 @@ export const ProjectEditorOverlay = ({
             )}
 
             {fileContent && !fileContent.isBinary && activeTabId && (
-              <EditorErrorBoundary filePath={activeTabId} onRetry={handleRetry}>
-                <CodeMirrorEditor
-                  key={`${activeTabId}-${editorResetKey}`}
-                  filePath={activeTabId}
-                  content={fileContent.content}
-                  fileName={activeTabId.split('/').pop() ?? 'file'}
-                  mtimeMs={fileContent.mtimeMs}
-                  onCursorChange={handleCursorChange}
-                  onDraftRecovered={handleDraftRecovered}
-                  onSelectionChange={setSelectionInfo}
-                />
-              </EditorErrorBoundary>
+              <div className="flex h-full">
+                {/* Code editor — always mounted, hidden via display:none in preview mode */}
+                <div
+                  className="h-full overflow-hidden"
+                  style={{
+                    display: mdPreviewMode === 'preview' ? 'none' : 'block',
+                    width: mdPreviewMode === 'split' ? `${splitRatio * 100}%` : '100%',
+                  }}
+                >
+                  <EditorErrorBoundary filePath={activeTabId} onRetry={handleRetry}>
+                    <CodeMirrorEditor
+                      key={`${activeTabId}-${editorResetKey}`}
+                      filePath={activeTabId}
+                      content={fileContent.content}
+                      fileName={activeTabId.split('/').pop() ?? 'file'}
+                      mtimeMs={fileContent.mtimeMs}
+                      onCursorChange={handleCursorChange}
+                      onDraftRecovered={handleDraftRecovered}
+                      onSelectionChange={setSelectionInfo}
+                      onDocChange={mdPreviewMode !== 'off' ? handleLiveContent : undefined}
+                    />
+                  </EditorErrorBoundary>
+                </div>
+
+                {/* Resize handle + Preview pane */}
+                {mdPreviewMode !== 'off' && (
+                  <MarkdownSplitView
+                    content={previewContent}
+                    mode={mdPreviewMode}
+                    splitRatio={splitRatio}
+                    onSplitRatioChange={handleSplitRatioChange}
+                    viewKey={activeTabId}
+                    baseDir={activeTabId?.substring(0, activeTabId.lastIndexOf('/'))}
+                  />
+                )}
+              </div>
             )}
 
             {!fileLoading && !fileError && !fileContent && !activeTabId && <EditorEmptyState />}

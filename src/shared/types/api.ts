@@ -426,7 +426,14 @@ export interface TeamsAPI {
   getLogsForTask: (
     teamName: string,
     taskId: string,
-    options?: { owner?: string; status?: string }
+    options?: {
+      owner?: string;
+      status?: string;
+      /** Persisted work intervals (preferred for reliable owner-log attribution). */
+      intervals?: { startedAt: string; completedAt?: string }[];
+      /** Back-compat: single since timestamp (deprecated). */
+      since?: string;
+    }
   ) => Promise<MemberLogSummary[]>;
   getMemberStats: (teamName: string, memberName: string) => Promise<MemberFullStats>;
   launchTeam: (request: TeamLaunchRequest) => Promise<TeamLaunchResponse>;

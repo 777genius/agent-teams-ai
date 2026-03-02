@@ -1,8 +1,15 @@
 /**
  * Rehype plugins for markdown rendering (used with react-markdown).
- * Rehype runs after remark; rehype-highlight adds syntax highlighting to code blocks.
+ *
+ * - rehype-raw: parse and render inline HTML in markdown
+ * - rehype-highlight: syntax highlighting for code blocks
  */
 
 import rehypeHighlight from 'rehype-highlight';
+import rehypeRaw from 'rehype-raw';
 
-export const REHYPE_PLUGINS = [rehypeHighlight];
+/** Full plugin chain: raw HTML + syntax highlighting */
+export const REHYPE_PLUGINS = [rehypeRaw, rehypeHighlight];
+
+/** Lightweight chain: raw HTML only (used when highlighting is disabled for large content) */
+export const REHYPE_PLUGINS_NO_HIGHLIGHT = [rehypeRaw];

@@ -29,6 +29,7 @@ import { normalizePath } from '@renderer/utils/pathNormalize';
 import { getMemberColor } from '@shared/constants/memberColors';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
+import { ExtendedContextCheckbox } from './ExtendedContextCheckbox';
 import { MembersJsonEditor } from './MembersJsonEditor';
 import { ProjectPathSelector } from './ProjectPathSelector';
 
@@ -279,6 +280,7 @@ export const CreateTeamDialog = ({
   const [launchTeam, setLaunchTeam] = useState(true);
   const [teamColor, setTeamColor] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
+  const [extendedContext, setExtendedContext] = useState(false);
   const [jsonEditorOpen, setJsonEditorOpen] = useState(false);
   const [jsonText, setJsonText] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
@@ -303,6 +305,7 @@ export const CreateTeamDialog = ({
     setCustomCwd('');
     setLaunchTeam(true);
     setSelectedModel('');
+    setExtendedContext(false);
     setJsonEditorOpen(false);
     setJsonText('');
     setJsonError(null);
@@ -537,8 +540,13 @@ export const CreateTeamDialog = ({
     [members]
   );
 
-  const effectiveModel =
-    selectedModel && selectedModel !== '__default__' ? selectedModel : undefined;
+  const effectiveModel = useMemo(() => {
+    const base = selectedModel && selectedModel !== '__default__' ? selectedModel : undefined;
+    if (!extendedContext) return base;
+    // 1M context is only supported for opus and sonnet
+    if (base === 'haiku') return base;
+    return base ? `${base}[1m]` : 'sonnet[1m]';
+  }, [selectedModel, extendedContext]);
 
   const sanitizedTeamName = sanitizeTeamName(teamName.trim());
 
@@ -623,6 +631,7 @@ export const CreateTeamDialog = ({
             description: request.description,
             color: request.color,
             members: request.members,
+            cwd: effectiveCwd || undefined,
           });
           onOpenTeam(request.teamName, effectiveCwd || undefined);
           resetFormState();
@@ -909,19 +918,27 @@ export const CreateTeamDialog = ({
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="label-optional">Model (optional)</Label>
-                  <Select value={selectedModel} onValueChange={setSelectedModel}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Default (account setting)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__default__">Default (account setting)</SelectItem>
-                      <SelectItem value="opus">Opus 4.6</SelectItem>
-                      <SelectItem value="sonnet">Sonnet 4.5</SelectItem>
-                      <SelectItem value="haiku">Haiku 4.5</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <Label className="label-optional shrink-0">Model (optional)</Label>
+                    <Select value={selectedModel} onValueChange={setSelectedModel}>
+                      <SelectTrigger className="h-8 w-auto min-w-[180px] text-xs">
+                        <SelectValue placeholder="Default (account setting)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__default__">Default (account setting)</SelectItem>
+                        <SelectItem value="opus">Opus 4.6</SelectItem>
+                        <SelectItem value="sonnet">Sonnet 4.5</SelectItem>
+                        <SelectItem value="haiku">Haiku 4.5</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <ExtendedContextCheckbox
+                    id="create-extended-context"
+                    checked={extendedContext}
+                    onCheckedChange={setExtendedContext}
+                    disabled={selectedModel === 'haiku'}
+                  />
                 </div>
 
                 {canCreate && (prepareState === 'idle' || prepareState === 'loading') ? (

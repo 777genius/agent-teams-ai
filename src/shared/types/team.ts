@@ -55,11 +55,21 @@ export interface TeamSummary {
 
 export type TeamTaskStatus = 'pending' | 'in_progress' | 'completed' | 'deleted';
 
+export interface TaskWorkInterval {
+  /** ISO timestamp when task entered in_progress */
+  startedAt: string;
+  /** ISO timestamp when task left in_progress (optional for active interval) */
+  completedAt?: string;
+}
+
+export type TaskCommentType = 'regular' | 'review_request' | 'review_approved';
+
 export interface TaskComment {
   id: string;
   author: string;
   text: string;
   createdAt: string;
+  type: TaskCommentType;
 }
 
 // Fields are validated in TeamTaskReader.getTasks() using `satisfies Record<keyof TeamTask, unknown>`.
@@ -72,6 +82,11 @@ export interface TeamTask {
   owner?: string;
   createdBy?: string;
   status: TeamTaskStatus;
+  /**
+   * One task can be worked on in multiple disjoint periods (e.g. review sends it back to in_progress).
+   * We persist intervals for reliable log attribution without relying on heuristics.
+   */
+  workIntervals?: TaskWorkInterval[];
   blocks?: string[];
   blockedBy?: string[];
   /**
@@ -271,6 +286,7 @@ export interface TeamCreateConfigRequest {
   description?: string;
   color?: string;
   members: TeamProvisioningMemberInput[];
+  cwd?: string;
 }
 
 export interface TeamCreateResponse {

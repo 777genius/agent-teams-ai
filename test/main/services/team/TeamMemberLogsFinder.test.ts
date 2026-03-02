@@ -245,4 +245,186 @@ describe('TeamMemberLogsFinder', () => {
     // Full file has 200 messages — must NOT be capped at 50 or 100
     expect(carolLogs[0]?.messageCount).toBe(200);
   });
+
+  it('findLogsForTask does not treat arbitrary "#<id>" as a task reference', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-task-logs-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 't4';
+    const projectPath = '/Users/test/proj4';
+    const projectId = '-Users-test-proj4';
+    const leadSessionId = 's4';
+
+    await fs.mkdir(path.join(tmpDir, 'teams', teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamName, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        projectPath,
+        leadSessionId,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'bob', agentType: 'general-purpose' },
+        ],
+      }),
+      'utf8'
+    );
+
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    await fs.mkdir(path.join(projectRoot, leadSessionId, 'subagents'), { recursive: true });
+
+    // Lead session mentions "PR #1" but NOT a task reference
+    await fs.writeFile(
+      path.join(projectRoot, `${leadSessionId}.jsonl`),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:00.000Z',
+          type: 'assistant',
+          message: { role: 'assistant', content: [{ type: 'text', text: 'Fix PR #1 please' }] },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    // Subagent session includes a structured taskId reference (should match)
+    await fs.writeFile(
+      path.join(projectRoot, leadSessionId, 'subagents', 'agent-abc111.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:01.000Z',
+          type: 'user',
+          message: { role: 'user', content: 'You are bob, a developer on team "t4" (t4).' },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:02.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                name: 'TaskUpdate',
+                input: { taskId: '1', status: 'in_progress' },
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+    const logs = await finder.findLogsForTask(teamName, '1');
+
+    // Should include the subagent log, but must NOT include the lead session just because it had "PR #1"
+    expect(logs.some((l) => l.kind === 'lead_session')).toBe(false);
+    expect(logs.some((l) => l.kind === 'subagent')).toBe(true);
+  });
+
+  it('findLogsForTask includes only owner sessions overlapping workIntervals', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-task-owner-since-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 't5';
+    const projectPath = '/Users/test/proj5';
+    const projectId = '-Users-test-proj5';
+    const leadSessionId = 's5';
+
+    await fs.mkdir(path.join(tmpDir, 'teams', teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamName, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        projectPath,
+        leadSessionId,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'bob', agentType: 'general-purpose' },
+          { name: 'alice', agentType: 'general-purpose' },
+        ],
+      }),
+      'utf8'
+    );
+
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    await fs.mkdir(path.join(projectRoot, leadSessionId, 'subagents'), { recursive: true });
+
+    // Alice file references taskId 10 via structured tool input (so results is non-empty).
+    await fs.writeFile(
+      path.join(projectRoot, leadSessionId, 'subagents', 'agent-alice10.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:01.000Z',
+          type: 'user',
+          message: { role: 'user', content: 'You are alice, a developer on team "t5" (t5).' },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:02.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              { type: 'tool_use', name: 'TaskUpdate', input: { taskId: '10', status: 'pending' } },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    // Bob has an old session (should NOT be pulled in by owner include).
+    await fs.writeFile(
+      path.join(projectRoot, leadSessionId, 'subagents', 'agent-bob-old.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2025-12-31T00:00:00.000Z',
+          type: 'user',
+          message: { role: 'user', content: 'You are bob, a developer on team "t5" (t5).' },
+        }),
+        JSON.stringify({
+          timestamp: '2025-12-31T00:00:01.000Z',
+          type: 'assistant',
+          message: { role: 'assistant', content: [{ type: 'text', text: 'Old work' }] },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    // Bob has a recent session within workIntervals (should be included).
+    await fs.writeFile(
+      path.join(projectRoot, leadSessionId, 'subagents', 'agent-bob-new.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T12:00:00.000Z',
+          type: 'user',
+          message: { role: 'user', content: 'You are bob, a developer on team "t5" (t5).' },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T12:00:01.000Z',
+          type: 'assistant',
+          message: { role: 'assistant', content: [{ type: 'text', text: 'New work' }] },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+    const logs = await finder.findLogsForTask(teamName, '10', {
+      owner: 'bob',
+      status: 'in_progress',
+      intervals: [
+        { startedAt: '2026-01-01T10:00:00.000Z', completedAt: '2026-01-01T13:00:00.000Z' },
+      ],
+    });
+
+    const bobDescriptions = logs
+      .filter((l) => l.kind === 'subagent' && l.memberName?.toLowerCase() === 'bob')
+      .map((l) => l.description);
+
+    expect(bobDescriptions.some((d) => d.includes('Old'))).toBe(false);
+    // At least one bob log should be present (the recent one).
+    expect(logs.some((l) => l.kind === 'subagent' && l.memberName?.toLowerCase() === 'bob')).toBe(
+      true
+    );
+  });
 });

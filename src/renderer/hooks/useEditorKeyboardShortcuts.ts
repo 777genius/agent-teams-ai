@@ -25,6 +25,8 @@ interface UseEditorKeyboardShortcutsOptions {
   onToggleGoToLine: () => void;
   onToggleSidebar: () => void;
   onClose: () => void;
+  onToggleMdSplit?: () => void;
+  onToggleMdPreview?: () => void;
 }
 
 /** Dependencies injected into the key handler for testability. */
@@ -40,6 +42,8 @@ export interface EditorKeyHandlerDeps {
   onToggleGoToLine: () => void;
   onToggleSidebar: () => void;
   onToggleLineWrap: () => void;
+  onToggleMdSplit?: () => void;
+  onToggleMdPreview?: () => void;
   getEditorView: () => { dispatch: unknown } | null;
 }
 
@@ -105,6 +109,22 @@ export function createEditorKeyHandler(deps: EditorKeyHandlerDeps): (e: Keyboard
       e.preventDefault();
       e.stopPropagation();
       if (deps.hasUnsavedChanges()) void deps.saveAllFiles();
+      return;
+    }
+
+    // Cmd+Shift+M: Toggle markdown split preview
+    if (key === 'm' && e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      deps.onToggleMdSplit?.();
+      return;
+    }
+
+    // Cmd+Shift+V: Toggle markdown full preview
+    if (key === 'v' && e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      deps.onToggleMdPreview?.();
       return;
     }
 
@@ -190,6 +210,8 @@ export function useEditorKeyboardShortcuts({
   onToggleGoToLine,
   onToggleSidebar,
   onClose: _onClose,
+  onToggleMdSplit,
+  onToggleMdPreview,
 }: UseEditorKeyboardShortcutsOptions): void {
   const { openTabs, activeTabId } = useStore(
     useShallow((s) => ({
@@ -217,6 +239,8 @@ export function useEditorKeyboardShortcuts({
     onToggleGoToLine,
     onToggleSidebar,
     onToggleLineWrap: toggleLineWrap,
+    onToggleMdSplit,
+    onToggleMdPreview,
     getEditorView: () => editorBridge.getView(),
   };
 

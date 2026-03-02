@@ -956,11 +956,15 @@ export class TeamDataService {
     await fs.promises.mkdir(tasksDir, { recursive: true });
 
     const joinedAt = Date.now();
-    const config = {
+    const config: Record<string, unknown> = {
       name: request.displayName?.trim() || request.teamName,
       description: request.description?.trim() || undefined,
       color: request.color?.trim() || undefined,
     };
+    if (request.cwd?.trim()) {
+      config.projectPath = request.cwd.trim();
+      config.projectPathHistory = [request.cwd.trim()];
+    }
 
     await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
     await this.membersMetaStore.writeMembers(

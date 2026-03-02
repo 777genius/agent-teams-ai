@@ -24,6 +24,7 @@ import {
   EDITOR_READ_FILE,
   EDITOR_RENAME_FILE,
   EDITOR_SEARCH_IN_FILES,
+  EDITOR_SET_WATCHED_DIRS,
   EDITOR_SET_WATCHED_FILES,
   EDITOR_WATCH_DIR,
   EDITOR_WRITE_FILE,
@@ -710,7 +711,12 @@ const electronAPI: ElectronAPI = {
     getLogsForTask: async (
       teamName: string,
       taskId: string,
-      options?: { owner?: string; status?: string }
+      options?: {
+        owner?: string;
+        status?: string;
+        intervals?: { startedAt: string; completedAt?: string }[];
+        since?: string;
+      }
     ) => {
       return invokeIpcWithResult<MemberLogSummary[]>(
         TEAM_GET_LOGS_FOR_TASK,
@@ -1035,6 +1041,8 @@ const electronAPI: ElectronAPI = {
     watchDir: (enable: boolean) => invokeIpcWithResult<void>(EDITOR_WATCH_DIR, enable),
     setWatchedFiles: (filePaths: string[]) =>
       invokeIpcWithResult<void>(EDITOR_SET_WATCHED_FILES, filePaths),
+    setWatchedDirs: (dirPaths: string[]) =>
+      invokeIpcWithResult<void>(EDITOR_SET_WATCHED_DIRS, dirPaths),
     onEditorChange: (callback: (event: EditorFileChangeEvent) => void): (() => void) => {
       const listener = (_event: Electron.IpcRendererEvent, data: EditorFileChangeEvent): void =>
         callback(data);

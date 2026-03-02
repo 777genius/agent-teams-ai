@@ -9,7 +9,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { defaultKeymap, history, historyKeymap, redo, undo } from '@codemirror/commands';
-import { bracketMatching, indentOnInput, syntaxHighlighting } from '@codemirror/language';
+import {
+  bracketMatching,
+  foldGutter,
+  foldKeymap,
+  indentOnInput,
+  syntaxHighlighting,
+} from '@codemirror/language';
 import { gotoLine, search, searchKeymap } from '@codemirror/search';
 import { Compartment, EditorState } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
@@ -67,6 +73,8 @@ interface CodeMirrorEditorProps {
   onDraftRecovered?: (filePath: string) => void;
   /** Called when text selection changes (for floating action menu) */
   onSelectionChange?: (info: EditorSelectionInfo | null) => void;
+  /** Called with the current document text on changes (debounced, for live preview) */
+  onDocChange?: (content: string) => void;
 }
 
 // =============================================================================
@@ -95,6 +103,7 @@ function buildEditableExtensions(
     highlightActiveLineGutter(),
     bracketMatching(),
     indentOnInput(),
+    foldGutter(),
 
     // History
     history(),
@@ -129,6 +138,7 @@ function buildEditableExtensions(
       ...defaultKeymap,
       ...historyKeymap,
       ...searchKeymap.filter((k) => k.run !== gotoLine),
+      ...foldKeymap,
     ]),
 
     // Update listener for dirty flag + cursor position + selection
@@ -220,6 +230,8 @@ function enforceDraftLimit(): void {
 // Component
 // =============================================================================
 
+const DOC_CHANGE_DEBOUNCE_MS = 150;
+
 export const CodeMirrorEditor = ({
   filePath,
   content,
@@ -228,6 +240,7 @@ export const CodeMirrorEditor = ({
   onCursorChange,
   onDraftRecovered,
   onSelectionChange,
+  onDocChange,
 }: CodeMirrorEditorProps): React.ReactElement => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -241,6 +254,8 @@ export const CodeMirrorEditor = ({
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Selection debounce
   const selectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Doc change debounce (live preview)
+  const docChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const markFileModified = useStore((s) => s.markFileModified);
   const discardChanges = useStore((s) => s.discardChanges);
@@ -259,6 +274,9 @@ export const CodeMirrorEditor = ({
 
   const onSelectionChangeRef = useRef(onSelectionChange);
   onSelectionChangeRef.current = onSelectionChange;
+
+  const onDocChangeRef = useRef(onDocChange);
+  onDocChangeRef.current = onDocChange;
 
   const lineWrapRef = useRef(lineWrap);
   lineWrapRef.current = lineWrap;
@@ -282,6 +300,13 @@ export const CodeMirrorEditor = ({
         saveDraft(filePathRef.current, view.state.doc.toString());
       }
     }, AUTOSAVE_DELAY_MS);
+
+    // Live content callback for markdown preview
+    if (docChangeTimerRef.current) clearTimeout(docChangeTimerRef.current);
+    docChangeTimerRef.current = setTimeout(() => {
+      const view = viewRef.current;
+      if (view) onDocChangeRef.current?.(view.state.doc.toString());
+    }, DOC_CHANGE_DEBOUNCE_MS);
   }, [markFileModified]);
 
   const handleCursorMove = useCallback((line: number, col: number) => {
@@ -421,6 +446,7 @@ export const CodeMirrorEditor = ({
     const dirtyTimer = dirtyTimerRef;
     const autosaveTimer = autosaveTimerRef;
     const selectionTimer = selectionTimerRef;
+    const docChangeTimer = docChangeTimerRef;
 
     return () => {
       // Save scroll position before destroying
@@ -433,6 +459,7 @@ export const CodeMirrorEditor = ({
       if (dirtyTimer.current) clearTimeout(dirtyTimer.current);
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
       if (selectionTimer.current) clearTimeout(selectionTimer.current);
+      if (docChangeTimer.current) clearTimeout(docChangeTimer.current);
 
       view.destroy();
       viewRef.current = null;
@@ -475,5 +502,5 @@ export const CodeMirrorEditor = ({
     };
   }, []);
 
-  return <div ref={containerRef} className="size-full overflow-auto" />;
+  return <div ref={containerRef} className="size-full overflow-hidden" />;
 };

@@ -1313,6 +1313,14 @@ async function handleCreateConfig(
   if (payload.color !== undefined && typeof payload.color !== 'string') {
     return { success: false, error: 'color must be a string' };
   }
+  if (payload.cwd !== undefined) {
+    if (typeof payload.cwd !== 'string' || payload.cwd.trim().length === 0) {
+      return { success: false, error: 'cwd must be a non-empty string if provided' };
+    }
+    if (!path.isAbsolute(payload.cwd.trim())) {
+      return { success: false, error: 'cwd must be an absolute path' };
+    }
+  }
 
   const seenNames = new Set<string>();
   const members: TeamCreateConfigRequest['members'] = [];
@@ -1344,6 +1352,7 @@ async function handleCreateConfig(
       description: payload.description?.trim() || undefined,
       color: typeof payload.color === 'string' ? payload.color.trim() || undefined : undefined,
       members,
+      cwd: typeof payload.cwd === 'string' ? payload.cwd.trim() || undefined : undefined,
     })
   );
 }
@@ -1377,7 +1386,12 @@ async function handleGetLogsForTask(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
   taskId: unknown,
-  options?: { owner?: string; status?: string }
+  options?: {
+    owner?: string;
+    status?: string;
+    intervals?: { startedAt: string; completedAt?: string }[];
+    since?: string;
+  }
 ): Promise<IpcResult<MemberLogSummary[]>> {
   const vTeam = validateTeamName(teamName);
   if (!vTeam.valid) {
@@ -1392,6 +1406,17 @@ async function handleGetLogsForTask(
       ? {
           owner: typeof options.owner === 'string' ? options.owner : undefined,
           status: typeof options.status === 'string' ? options.status : undefined,
+          since: typeof options.since === 'string' ? options.since : undefined,
+          intervals: Array.isArray(options.intervals)
+            ? (options.intervals as unknown[]).filter(
+                (i): i is { startedAt: string; completedAt?: string } =>
+                  Boolean(i) &&
+                  typeof i === 'object' &&
+                  typeof (i as Record<string, unknown>).startedAt === 'string' &&
+                  ((i as Record<string, unknown>).completedAt === undefined ||
+                    typeof (i as Record<string, unknown>).completedAt === 'string')
+              )
+            : undefined,
         }
       : undefined;
   return wrapTeamHandler('getLogsForTask', () =>

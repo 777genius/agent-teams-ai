@@ -182,19 +182,23 @@ function extractNotificationContent(text: string): { summary: string; body: stri
 }
 
 async function notifyNewInboxMessages(teamName: string, detail: string): Promise<void> {
-  // Check config toggle
+  // Check global toggle
   const config = configManager.getConfig();
-  if (!config.notifications.enabled || !config.notifications.notifyOnInboxMessages) return;
+  if (!config.notifications.enabled) return;
 
   // detail is like "inboxes/carol.json" — extract member name
   const match = /^inboxes\/(.+)\.json$/.exec(detail);
   if (!match) return;
   const memberName = match[1];
 
-  // Only notify for the lead's inbox (messages addressed to the human user).
-  // CLI doesn't set msg.to, so we filter by inbox file name instead.
+  // Determine inbox type and check per-inbox toggle
   const leadName = teamDataService ? await teamDataService.getLeadMemberName(teamName) : null;
-  if (leadName !== null && memberName !== leadName && memberName !== 'user') return;
+  const isLeadInbox = leadName !== null && memberName === leadName;
+  const isUserInbox = memberName === 'user';
+
+  if (isLeadInbox && !config.notifications.notifyOnLeadInbox) return;
+  if (isUserInbox && !config.notifications.notifyOnUserInbox) return;
+  if (!isLeadInbox && !isUserInbox) return;
 
   const key = `${teamName}:${memberName}`;
 
@@ -400,7 +404,7 @@ function wireFileWatcherEvents(context: ServiceContext): void {
       // These don't go through inbox files — they're held in-memory by TeamProvisioningService.
       if (detail === 'lead-process-reply' || detail === 'lead-direct-reply') {
         const cfg = configManager.getConfig();
-        if (cfg.notifications.enabled && cfg.notifications.notifyOnInboxMessages) {
+        if (cfg.notifications.enabled && cfg.notifications.notifyOnUserInbox) {
           const messages = teamProvisioningService.getLiveLeadProcessMessages(teamName);
           const latest = messages.length > 0 ? messages[messages.length - 1] : undefined;
           // Only notify for messages addressed to the human user, skip noise

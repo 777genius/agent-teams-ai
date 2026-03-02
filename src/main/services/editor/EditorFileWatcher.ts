@@ -31,6 +31,7 @@ const MAX_EMITTED_EVENTS_PER_FLUSH = 300;
 
 export class EditorFileWatcher {
   private watcher: FSWatcher | null = null;
+  private dirWatcher: FSWatcher | null = null;
   private projectRoot: string | null = null;
   private pendingEvents = new Map<string, EditorFileChangeEvent['type']>();
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -39,6 +40,7 @@ export class EditorFileWatcher {
   private readonly DEBOUNCE_MS = 350;
   private ignoreChangeUntilMs = 0;
   private watchedFilesKey = '';
+  private watchedDirsKey = '';
 
   /**
    * Initialize watcher context for a project root.
@@ -51,6 +53,7 @@ export class EditorFileWatcher {
     this.projectRoot = projectRoot;
     this.ignoreChangeUntilMs = Date.now() + STARTUP_IGNORE_CHANGE_MS;
     this.watchedFilesKey = '';
+    this.watchedDirsKey = '';
 
     log.info('Starting file watcher (open files only) for:', projectRoot);
     this.onChangeCallback = onChange;
@@ -62,7 +65,7 @@ export class EditorFileWatcher {
    */
   setWatchedFiles(filePaths: string[]): void {
     if (!this.projectRoot) {
-      throw new Error('Watcher not initialized');
+      return; // Watcher not initialized yet — will sync when start() is called
     }
 
     const normalized = filePaths
@@ -114,6 +117,60 @@ export class EditorFileWatcher {
   }
 
   /**
+   * Update list of watched directory paths (shallow: depth=0).
+   * Watches only immediate children changes (create/delete/rename) in those folders.
+   */
+  setWatchedDirs(dirPaths: string[]): void {
+    if (!this.projectRoot) {
+      return; // Watcher not initialized yet — will sync when start() is called
+    }
+
+    const normalized = dirPaths
+      .filter((p): p is string => typeof p === 'string' && p.length > 0)
+      .filter((p) => isPathWithinRoot(p, this.projectRoot!));
+
+    normalized.sort();
+    const key = normalized.join('\n');
+    if (key === this.watchedDirsKey) return;
+    this.watchedDirsKey = key;
+
+    if (this.dirWatcher) {
+      void this.dirWatcher.close();
+      this.dirWatcher = null;
+    }
+
+    if (normalized.length === 0) {
+      return;
+    }
+
+    this.dirWatcher = watch(normalized, {
+      ignoreInitial: true,
+      ignorePermissionErrors: true,
+      followSymlinks: false,
+      depth: 0,
+    });
+
+    const emitSafe = (type: EditorFileChangeEvent['type'], filePath: string): void => {
+      if (!isPathWithinRoot(filePath, this.projectRoot!)) {
+        log.warn('Watcher event outside project root, ignoring:', filePath);
+        return;
+      }
+      this.pendingEvents.set(filePath, type);
+      this.scheduleFlush();
+    };
+
+    // For directories, we only care about structural changes.
+    this.dirWatcher.on('add', (p) => emitSafe('create', p));
+    this.dirWatcher.on('unlink', (p) => emitSafe('delete', p));
+    this.dirWatcher.on('addDir', (p) => emitSafe('create', p));
+    this.dirWatcher.on('unlinkDir', (p) => emitSafe('delete', p));
+
+    this.dirWatcher.on('error', (error) => {
+      log.error('Dir watcher error:', error);
+    });
+  }
+
+  /**
    * Stop watching. Safe to call multiple times.
    */
   stop(): void {
@@ -125,10 +182,16 @@ export class EditorFileWatcher {
     this.onChangeCallback = null;
     this.ignoreChangeUntilMs = 0;
     this.watchedFilesKey = '';
+    this.watchedDirsKey = '';
     if (this.watcher) {
       log.info('Stopping file watcher');
       void this.watcher.close();
       this.watcher = null;
+    }
+    if (this.dirWatcher) {
+      log.info('Stopping directory watcher');
+      void this.dirWatcher.close();
+      this.dirWatcher = null;
     }
     this.projectRoot = null;
   }

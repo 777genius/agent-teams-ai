@@ -22,6 +22,7 @@ import {
   EDITOR_READ_FILE,
   EDITOR_RENAME_FILE,
   EDITOR_SEARCH_IN_FILES,
+  EDITOR_SET_WATCHED_DIRS,
   EDITOR_SET_WATCHED_FILES,
   EDITOR_WATCH_DIR,
   EDITOR_WRITE_FILE,
@@ -366,6 +367,19 @@ async function handleEditorSetWatchedFiles(
   });
 }
 
+/**
+ * Update watched directory list (shallow, depth=0).
+ */
+async function handleEditorSetWatchedDirs(
+  _event: IpcMainInvokeEvent,
+  dirPaths: string[]
+): Promise<IpcResult<void>> {
+  return wrapHandler('setWatchedDirs', async () => {
+    if (!activeProjectRoot) throw new Error('Editor not initialized');
+    editorFileWatcher.setWatchedDirs(Array.isArray(dirPaths) ? dirPaths : []);
+  });
+}
+
 // =============================================================================
 // Registration
 // =============================================================================
@@ -399,6 +413,7 @@ export function registerEditorHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(EDITOR_GIT_STATUS, handleEditorGitStatus);
   ipcMain.handle(EDITOR_WATCH_DIR, handleEditorWatchDir);
   ipcMain.handle(EDITOR_SET_WATCHED_FILES, handleEditorSetWatchedFiles);
+  ipcMain.handle(EDITOR_SET_WATCHED_DIRS, handleEditorSetWatchedDirs);
 }
 
 export function removeEditorHandlers(ipcMain: IpcMain): void {
@@ -418,6 +433,7 @@ export function removeEditorHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(EDITOR_GIT_STATUS);
   ipcMain.removeHandler(EDITOR_WATCH_DIR);
   ipcMain.removeHandler(EDITOR_SET_WATCHED_FILES);
+  ipcMain.removeHandler(EDITOR_SET_WATCHED_DIRS);
 }
 
 /**

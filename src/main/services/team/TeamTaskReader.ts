@@ -3,7 +3,7 @@ import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import type { TaskComment, TeamTask } from '@shared/types';
+import type { TaskComment, TaskWorkInterval, TeamTask } from '@shared/types';
 
 const logger = createLogger('Service:TeamTaskReader');
 
@@ -97,6 +97,21 @@ export class TeamTaskReader {
         // `satisfies Record<keyof TeamTask, unknown>` ensures compile-time
         // safety: if a field is added to TeamTask but not mapped here,
         // TypeScript will error. This prevents silently dropping new fields.
+        const workIntervals: TaskWorkInterval[] | undefined = Array.isArray(parsed.workIntervals)
+          ? (parsed.workIntervals as unknown[])
+              .filter(
+                (i): i is { startedAt: string; completedAt?: string } =>
+                  Boolean(i) &&
+                  typeof i === 'object' &&
+                  typeof (i as Record<string, unknown>).startedAt === 'string' &&
+                  ((i as Record<string, unknown>).completedAt === undefined ||
+                    typeof (i as Record<string, unknown>).completedAt === 'string')
+              )
+              .map((i) => ({
+                startedAt: i.startedAt,
+                completedAt: i.completedAt,
+              }))
+          : undefined;
         const task: TeamTask = {
           id:
             typeof parsed.id === 'string' || typeof parsed.id === 'number' ? String(parsed.id) : '',
@@ -110,6 +125,7 @@ export class TeamTaskReader {
           )
             ? (parsed.status as TeamTask['status'])
             : 'pending',
+          workIntervals,
           blocks: Array.isArray(parsed.blocks) ? (parsed.blocks as string[]) : undefined,
           blockedBy: Array.isArray(parsed.blockedBy) ? (parsed.blockedBy as string[]) : undefined,
           related: Array.isArray(parsed.related)
@@ -119,15 +135,22 @@ export class TeamTaskReader {
           updatedAt,
           projectPath: typeof parsed.projectPath === 'string' ? parsed.projectPath : undefined,
           comments: Array.isArray(parsed.comments)
-            ? (parsed.comments as TaskComment[]).filter(
-                (c) =>
-                  c &&
-                  typeof c === 'object' &&
-                  typeof c.id === 'string' &&
-                  typeof c.author === 'string' &&
-                  typeof c.text === 'string' &&
-                  typeof c.createdAt === 'string'
-              )
+            ? (parsed.comments as TaskComment[])
+                .filter(
+                  (c) =>
+                    c &&
+                    typeof c === 'object' &&
+                    typeof c.id === 'string' &&
+                    typeof c.author === 'string' &&
+                    typeof c.text === 'string' &&
+                    typeof c.createdAt === 'string'
+                )
+                .map((c) => ({
+                  ...c,
+                  type: (['regular', 'review_request', 'review_approved'] as const).includes(c.type)
+                    ? c.type
+                    : ('regular' as const),
+                }))
             : undefined,
           needsClarification: (['lead', 'user'] as const).includes(
             parsed.needsClarification as 'lead' | 'user'

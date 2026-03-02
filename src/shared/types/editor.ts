@@ -201,6 +201,12 @@ export interface EditorAPI {
    * Intended as a performance optimization: avoids watching the whole project tree.
    */
   setWatchedFiles: (filePaths: string[]) => Promise<void>;
+  /**
+   * Provide the list of directories to watch shallowly (depth=0).
+   * Intended to keep the explorer tree in sync with external changes without
+   * recursively watching the whole project.
+   */
+  setWatchedDirs: (dirPaths: string[]) => Promise<void>;
   /** Subscribe to file change events (main → renderer). Returns cleanup function. */
   onEditorChange: (callback: (event: EditorFileChangeEvent) => void) => () => void;
 }

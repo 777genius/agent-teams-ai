@@ -65,6 +65,13 @@ const SHORTCUT_GROUPS: { title: string; shortcuts: ShortcutDef[] }[] = [
     ],
   },
   {
+    title: 'Markdown',
+    shortcuts: [
+      { mac: '⌘ ⇧ M', other: 'Ctrl+Shift+M', description: 'Split Preview' },
+      { mac: '⌘ ⇧ V', other: 'Ctrl+Shift+V', description: 'Full Preview' },
+    ],
+  },
+  {
     title: 'General',
     shortcuts: [{ mac: 'Esc', other: 'Esc', description: 'Close Editor' }],
   },

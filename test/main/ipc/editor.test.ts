@@ -45,6 +45,7 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   EDITOR_GIT_STATUS: 'editor:gitStatus',
   EDITOR_WATCH_DIR: 'editor:watchDir',
   EDITOR_SET_WATCHED_FILES: 'editor:setWatchedFiles',
+  EDITOR_SET_WATCHED_DIRS: 'editor:setWatchedDirs',
   EDITOR_CHANGE: 'editor:change',
 }));
 
@@ -148,8 +149,8 @@ describe('Editor IPC handlers', () => {
   });
 
   describe('registration', () => {
-    it('registers all 16 editor channels', () => {
-      expect(mockIpc.handle).toHaveBeenCalledTimes(16);
+    it('registers all 17 editor channels', () => {
+      expect(mockIpc.handle).toHaveBeenCalledTimes(17);
       expect(mockIpc._handlers.has('editor:open')).toBe(true);
       expect(mockIpc._handlers.has('editor:close')).toBe(true);
       expect(mockIpc._handlers.has('editor:readDir')).toBe(true);
@@ -166,11 +167,12 @@ describe('Editor IPC handlers', () => {
       expect(mockIpc._handlers.has('editor:gitStatus')).toBe(true);
       expect(mockIpc._handlers.has('editor:watchDir')).toBe(true);
       expect(mockIpc._handlers.has('editor:setWatchedFiles')).toBe(true);
+      expect(mockIpc._handlers.has('editor:setWatchedDirs')).toBe(true);
     });
 
     it('removeEditorHandlers clears all channels', () => {
       removeEditorHandlers(mockIpc as unknown as IpcMain);
-      expect(mockIpc.removeHandler).toHaveBeenCalledTimes(16);
+      expect(mockIpc.removeHandler).toHaveBeenCalledTimes(17);
     });
   });
 

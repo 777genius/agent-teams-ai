@@ -380,14 +380,18 @@ function buildTeamCtlOpsInstructions(teamName: string, leadName: string): string
       `- Assign/reassign owner: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-owner <id> <member-name> --notify --from "${leadName}"`,
       `- Clear owner: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-owner <id> clear`,
       `- Update status: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-status <id> <pending|in_progress|completed|deleted>`,
-      `- Create with deps: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task create --subject "..." --blocked-by 1,2 --related 3 --owner "<member>" --notify --from "${leadName}"`,
+      `- Create with deps (blocked work MUST be pending): node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task create --subject "..." --blocked-by 1,2 --related 3 --status pending --owner "<member>" --notify --from "${leadName}"`,
       `- Link dependency: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task link <id> --blocked-by <targetId>`,
       `- Link related: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task link <id> --related <targetId>`,
       `- Unlink: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task unlink <id> --blocked-by <targetId>`,
       ``,
       `Dependency guidelines:`,
       `- Use --blocked-by when a task cannot start until another is done.`,
+      `- If you set --blocked-by, create the task in pending (use --status pending). Do NOT put blocked tasks into in_progress.`,
       `- Use --related to link related work (e.g. frontend + backend) without blocking.`,
+      `- Review tasks: Prefer NOT creating a separate "review task". Reviews apply to the work task (#X) via: review approve/request-changes #X.`,
+      `  - If you must create a separate review reminder/assignment task, keep it pending and link it to #X with --related (and optionally --blocked-by #X if it truly cannot start yet).`,
+      `  - Dependencies do not auto-start tasks; the owner must explicitly start it when ready.`,
       `- Avoid over-specifying. Only add dependencies when execution order matters.`,
       ``,
       `Notification policy:`,
@@ -554,6 +558,13 @@ ${processRegistration}
    - Prefer fewer, broader tasks over many micro-tasks.
    - Avoid duplicate notifications for the same assignment.
    - When tasks have natural ordering (e.g. setup → implementation → testing), use --blocked-by.
+   - If a task is blocked (uses --blocked-by), it MUST be created as pending (use --status pending). Do NOT mark blocked tasks in_progress.
+     - Review guidance:
+       - Prefer NOT creating a separate "review task". Our workflow reviews the work task itself: run review approve/request-changes on the implementation task #X.
+       - If you MUST create a separate review reminder/assignment task, create it as pending and link it to the work task:
+         - Use --related to connect it to #X (non-blocking link).
+         - If the review truly cannot start until #X is done, ALSO add --blocked-by #X.
+       - There is no automatic status transition when dependencies resolve — the owner must explicitly start it (task start / set-status in_progress) when ready.
    - Use --related to connect tasks working on the same feature without blocking.
 
 4) After all steps, output a short summary.
@@ -1347,23 +1358,35 @@ export class TeamProvisioningService {
           configParsed.leadSessionId.trim().length > 0
         ) {
           const candidateId = configParsed.leadSessionId.trim();
-          const projectPath =
+          const storedProjectPath =
             typeof configParsed.projectPath === 'string' &&
             configParsed.projectPath.trim().length > 0
               ? configParsed.projectPath.trim()
-              : request.cwd;
-          const projectId = encodePath(projectPath);
-          const baseDir = extractBaseDir(projectId);
-          const jsonlPath = path.join(getProjectsBasePath(), baseDir, `${candidateId}.jsonl`);
-          if (await this.pathExists(jsonlPath)) {
-            previousSessionId = candidateId;
+              : null;
+
+          // Sessions are stored per-project (~/.claude/projects/{encodePath(cwd)}/).
+          // If the project path changed, the old session JSONL won't be found by the CLI
+          // at the new project directory. Skip resume to avoid passing an invalid --resume arg.
+          if (storedProjectPath && path.resolve(storedProjectPath) !== path.resolve(request.cwd)) {
             logger.info(
-              `[${request.teamName}] Found previous session JSONL for resume: ${candidateId}`
+              `[${request.teamName}] Project path changed: ${storedProjectPath} → ${request.cwd}. ` +
+                `Skipping session resume — sessions are per-project.`
             );
           } else {
-            logger.info(
-              `[${request.teamName}] Previous session JSONL not found at ${jsonlPath}, starting fresh`
-            );
+            const resumeProjectPath = storedProjectPath ?? request.cwd;
+            const projectId = encodePath(resumeProjectPath);
+            const baseDir = extractBaseDir(projectId);
+            const jsonlPath = path.join(getProjectsBasePath(), baseDir, `${candidateId}.jsonl`);
+            if (await this.pathExists(jsonlPath)) {
+              previousSessionId = candidateId;
+              logger.info(
+                `[${request.teamName}] Found previous session JSONL for resume: ${candidateId}`
+              );
+            } else {
+              logger.info(
+                `[${request.teamName}] Previous session JSONL not found at ${jsonlPath}, starting fresh`
+              );
+            }
           }
         }
       } catch {
@@ -1376,6 +1399,11 @@ export class TeamProvisioningService {
     // IMPORTANT: The CLI auto-suffixes teammate names when they already exist in config.json.
     // Normalize config.json to keep only the team-lead before spawning the CLI, so we get stable names.
     await this.normalizeTeamConfigForLaunch(request.teamName, configRaw);
+
+    // Update projectPath in config IMMEDIATELY so TeamDetailView shows the correct path
+    // even if provisioning is interrupted or the user stops the team early.
+    // If launch fails, restorePrelaunchConfig() will revert to the backup (old projectPath).
+    await this.updateConfigProjectPath(request.teamName, request.cwd);
 
     let claudePath: string | null;
     try {
@@ -2804,6 +2832,35 @@ export class TeamProvisioningService {
     }
     const token = oauth.accessToken.trim();
     return token.length > 0 ? token : null;
+  }
+
+  /**
+   * Immediately update projectPath in config.json at launch start, before CLI spawn.
+   * Ensures TeamDetailView shows the correct project path even if provisioning
+   * is interrupted. On failure, restorePrelaunchConfig() reverts to the backup.
+   */
+  private async updateConfigProjectPath(teamName: string, cwd: string): Promise<void> {
+    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+    try {
+      const raw = await fs.promises.readFile(configPath, 'utf8');
+      const config = JSON.parse(raw) as Record<string, unknown>;
+
+      config.projectPath = cwd;
+
+      const pathHistory = Array.isArray(config.projectPathHistory)
+        ? (config.projectPathHistory as string[]).filter((p) => typeof p === 'string' && p !== cwd)
+        : [];
+      pathHistory.push(cwd);
+      config.projectPathHistory = pathHistory.slice(-500);
+
+      await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
+      logger.info(`[${teamName}] Updated config.projectPath immediately: ${cwd}`);
+    } catch (error) {
+      // Non-fatal: updateConfigPostLaunch will update it later if provisioning succeeds.
+      logger.warn(
+        `[${teamName}] Failed to update projectPath early: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   /**

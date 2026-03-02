@@ -67,24 +67,56 @@ let watcherEventCounts: Record<EditorFileChangeEvent['type'], number> = {
 
 let watchedFilesSyncTimer: ReturnType<typeof setTimeout> | null = null;
 let lastWatchedFilesKey = '';
+let watchedDirsSyncTimer: ReturnType<typeof setTimeout> | null = null;
+let lastWatchedDirsKey = '';
+const WATCHED_DIRS_DEBOUNCE_MS = 250;
+const MAX_WATCHED_DIRS = 120;
 
 function scheduleSyncWatchedFiles(get: () => AppState): void {
-  if (!api.editor) return;
+  // Editor watcher is Electron-only. In browser mode, api.editor exists but throws.
+  if (!window.electronAPI?.editor) return;
   const state = get();
   if (!state.editorWatcherEnabled) return;
-  if (!state.editorProjectPath) return;
+  const projectPath = state.editorProjectPath;
+  if (!projectPath) return;
 
   const filePaths = state.editorOpenTabs.map((t) => t.filePath).filter(Boolean);
   filePaths.sort();
-  const key = filePaths.join('\n');
+  const key = `${projectPath}\n${filePaths.join('\n')}`;
   if (key === lastWatchedFilesKey) return;
   lastWatchedFilesKey = key;
 
   if (watchedFilesSyncTimer) clearTimeout(watchedFilesSyncTimer);
   watchedFilesSyncTimer = setTimeout(() => {
     watchedFilesSyncTimer = null;
-    void api.editor.setWatchedFiles(filePaths);
+    void window.electronAPI.editor.setWatchedFiles(filePaths);
   }, 150);
+}
+
+function scheduleSyncWatchedDirs(get: () => AppState): void {
+  if (!window.electronAPI?.editor) return;
+  const state = get();
+  if (!state.editorWatcherEnabled) return;
+  const projectPath = state.editorProjectPath;
+  if (!projectPath) return;
+
+  const expanded = Object.entries(state.editorExpandedDirs)
+    .filter(([, v]) => v === true)
+    .map(([k]) => k);
+
+  // Always include root (depth=0), plus expanded folders (depth=0).
+  // Cap to protect chokidar from too many watched paths if user expands a lot.
+  const dirs = [projectPath, ...expanded].slice(0, MAX_WATCHED_DIRS);
+  dirs.sort();
+  const key = `${projectPath}\n${dirs.join('\n')}`;
+  if (key === lastWatchedDirsKey) return;
+  lastWatchedDirsKey = key;
+
+  if (watchedDirsSyncTimer) clearTimeout(watchedDirsSyncTimer);
+  watchedDirsSyncTimer = setTimeout(() => {
+    watchedDirsSyncTimer = null;
+    void window.electronAPI.editor.setWatchedDirs(dirs);
+  }, WATCHED_DIRS_DEBOUNCE_MS);
 }
 
 /**
@@ -103,11 +135,16 @@ const MOVE_COOLDOWN_MS = 2000;
 function scheduleIdleWork(cb: () => void): void {
   // Prefer requestIdleCallback when available; fall back to a short timeout.
   // This keeps editor open responsive for large repos.
+  // timeout ensures the callback fires within 2s even if the event loop is busy
+  // (without it, requestIdleCallback can be delayed indefinitely).
   try {
-    const ric = (window as unknown as { requestIdleCallback?: (fn: () => void) => number })
-      .requestIdleCallback;
+    const ric = (
+      window as unknown as {
+        requestIdleCallback?: (fn: () => void, opts?: { timeout: number }) => number;
+      }
+    ).requestIdleCallback;
     if (typeof ric === 'function') {
-      ric(cb);
+      ric(cb, { timeout: 2000 });
       return;
     }
   } catch {
@@ -330,8 +367,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
 
       scheduleIdleWork(() => {
         if (editorOpenSeq !== openSeq || get().editorProjectPath !== projectPath) return;
-        // TODO: temporarily disabled file watcher — re-enable when stabilized
-        if (watcherDesired) void get().toggleWatcher(false);
+        if (watcherDesired) void get().toggleWatcher(true);
         // Defer initial git status a bit more — it can be expensive on large repos.
         setTimeout(() => {
           if (editorOpenSeq !== openSeq || get().editorProjectPath !== projectPath) return;
@@ -355,6 +391,18 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
   closeEditor: () => {
     // Cancel any in-flight openEditor async work
     editorOpenSeq++;
+    // Cancel any pending watcher sync (avoid calling into main after close)
+    if (watchedFilesSyncTimer) {
+      clearTimeout(watchedFilesSyncTimer);
+      watchedFilesSyncTimer = null;
+    }
+    if (watchedDirsSyncTimer) {
+      clearTimeout(watchedDirsSyncTimer);
+      watchedDirsSyncTimer = null;
+    }
+    lastWatchedFilesKey = '';
+    lastWatchedDirsKey = '';
+
     // Clear cooldown timestamps (no stale entries across editor sessions)
     recentSaveTimestamps.clear();
     recentMoveTimestamps.clear();
@@ -428,6 +476,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
       set({
         editorExpandedDirs: { ...editorExpandedDirs, [dirPath]: true },
       });
+      scheduleSyncWatchedDirs(get);
     }
 
     try {
@@ -456,6 +505,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
   collapseDirectory: (dirPath: string) => {
     const { editorExpandedDirs } = get();
     set({ editorExpandedDirs: omitKey(editorExpandedDirs, dirPath) });
+    scheduleSyncWatchedDirs(get);
   },
 
   // ═══════════════════════════════════════════════════════
@@ -1027,9 +1077,13 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
       }
       if (enable) {
         scheduleSyncWatchedFiles(get);
+        scheduleSyncWatchedDirs(get);
       } else {
         // Ensure main process stops watching files promptly.
         lastWatchedFilesKey = '';
+        lastWatchedDirsKey = '';
+        void api.editor.setWatchedFiles([]);
+        void api.editor.setWatchedDirs([]);
       }
     } catch (error) {
       log.error('Failed to toggle watcher:', error);

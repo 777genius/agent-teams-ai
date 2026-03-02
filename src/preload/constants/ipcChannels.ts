@@ -461,6 +461,9 @@ export const EDITOR_WATCH_DIR = 'editor:watchDir';
 /** Update list of watched file paths (open tabs) */
 export const EDITOR_SET_WATCHED_FILES = 'editor:setWatchedFiles';
 
+/** Update list of watched directories (shallow: depth=0) */
+export const EDITOR_SET_WATCHED_DIRS = 'editor:setWatchedDirs';
+
 /** Read binary file as base64 for inline preview */
 export const EDITOR_READ_BINARY_PREVIEW = 'editor:readBinaryPreview';
 

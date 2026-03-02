@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -29,6 +29,9 @@ import { removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { X } from 'lucide-react';
+
+import { MarkdownViewer } from '../../chat/viewers/MarkdownViewer';
+import { MemberBadge } from '../MemberBadge';
 
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
@@ -72,6 +75,7 @@ export const SendMessageDialog = ({
 }: SendMessageDialogProps): React.JSX.Element => {
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
   const [quote, setQuote] = useState<QuotedMessage | undefined>(undefined);
+  const [quoteExpanded, setQuoteExpanded] = useState(false);
   const [member, setMember] = useState('');
   const textDraft = useDraftPersistence({ key: 'sendMessage:text' });
   const chipDraft = useChipDraftPersistence('sendMessage:chips');
@@ -84,6 +88,7 @@ export const SendMessageDialog = ({
     setMember(defaultRecipient ?? '');
     setSummary('');
     setQuote(quotedMessage);
+    setQuoteExpanded(false);
     setPrevResult(lastResult);
     if (defaultChip) {
       const token = chipToken(defaultChip);
@@ -116,6 +121,9 @@ export const SendMessageDialog = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only trigger on pendingAutoClose flag
   }, [pendingAutoClose]);
+
+  const QUOTE_COLLAPSE_THRESHOLD = 120;
+  const isQuoteLong = (quote?.text.length ?? 0) > QUOTE_COLLAPSE_THRESHOLD;
 
   const mentionSuggestions = useMemo<MentionSuggestion[]>(
     () =>
@@ -204,47 +212,71 @@ export const SendMessageDialog = ({
             </Select>
           </div>
 
-          {quote ? (
-            <div className="relative rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="absolute right-1.5 top-1.5 rounded p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                    onClick={() => setQuote(undefined)}
-                  >
-                    <X size={12} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="left">Remove quote</TooltipContent>
-              </Tooltip>
-              <span className="mb-0.5 block text-[10px] font-medium text-[var(--color-text-muted)]">
-                Replying to @{quote.from}
-              </span>
-              <p className="line-clamp-3 pr-5 text-xs text-[var(--color-text-muted)]">
-                {quote.text}
-              </p>
-            </div>
-          ) : null}
-
           <div className="grid gap-2">
             <Label htmlFor="smd-message">Message</Label>
-            <MentionableTextarea
-              id="smd-message"
-              placeholder="Write your message..."
-              value={textDraft.value}
-              onValueChange={textDraft.setValue}
-              suggestions={mentionSuggestions}
-              chips={chipDraft.chips}
-              onChipRemove={handleChipRemove}
-              minRows={4}
-              maxRows={12}
-              footerRight={
-                textDraft.isSaved ? (
-                  <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-                ) : null
-              }
-            />
+            <div className={quote ? 'flex flex-col' : 'contents'}>
+              {quote ? (
+                <div className="relative overflow-hidden rounded-t-md border border-b-0 border-blue-500/20 bg-blue-950/20 py-2 pl-3 pr-2">
+                  {/* Decorative quotation mark */}
+                  <span className="pointer-events-none absolute -right-1 top-1/2 -translate-y-1/2 select-none font-serif text-[64px] leading-none text-blue-400/[0.08]">
+                    &ldquo;
+                  </span>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="absolute right-1.5 top-1.5 z-10 rounded p-0.5 text-blue-300/40 hover:text-blue-200"
+                        onClick={() => setQuote(undefined)}
+                      >
+                        <X size={12} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">Remove quote</TooltipContent>
+                  </Tooltip>
+
+                  <div className="mb-1 flex items-center gap-1.5">
+                    <span className="text-[10px] text-blue-300/60">Replying to</span>
+                    <MemberBadge name={quote.from} color={colorMap.get(quote.from)} size="sm" />
+                  </div>
+                  <div
+                    className={`pr-5 opacity-50 ${quoteExpanded ? '' : 'max-h-[3.75rem] overflow-hidden'}`}
+                  >
+                    <MarkdownViewer
+                      content={quote.text}
+                      bare
+                      maxHeight={quoteExpanded ? 'max-h-48' : 'max-h-[3.75rem]'}
+                    />
+                  </div>
+                  {isQuoteLong ? (
+                    <button
+                      type="button"
+                      className="mt-0.5 text-[10px] text-blue-400/60 hover:text-blue-300"
+                      onClick={() => setQuoteExpanded((v) => !v)}
+                    >
+                      {quoteExpanded ? 'less' : 'more'}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+              <MentionableTextarea
+                id="smd-message"
+                className={quote ? 'rounded-t-none' : undefined}
+                placeholder="Write your message..."
+                value={textDraft.value}
+                onValueChange={textDraft.setValue}
+                suggestions={mentionSuggestions}
+                chips={chipDraft.chips}
+                onChipRemove={handleChipRemove}
+                minRows={4}
+                maxRows={12}
+                footerRight={
+                  textDraft.isSaved ? (
+                    <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                  ) : null
+                }
+              />
+            </div>
           </div>
 
           <div className="grid gap-2">
