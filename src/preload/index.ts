@@ -174,6 +174,7 @@ import type {
   MemberLogSummary,
   NotificationTrigger,
   RejectResult,
+  ReplaceMembersRequest,
   SendMessageRequest,
   SendMessageResult,
   SessionsByIdsOptions,
@@ -742,10 +743,7 @@ const electronAPI: ElectronAPI = {
     addMember: async (teamName: string, request: AddMemberRequest) => {
       return invokeIpcWithResult<void>(TEAM_ADD_MEMBER, teamName, request);
     },
-    replaceMembers: async (
-      teamName: string,
-      request: import('@shared/types').ReplaceMembersRequest
-    ) => {
+    replaceMembers: async (teamName: string, request: ReplaceMembersRequest) => {
       return invokeIpcWithResult<void>(TEAM_REPLACE_MEMBERS, teamName, request);
     },
     removeMember: async (teamName: string, memberName: string) => {

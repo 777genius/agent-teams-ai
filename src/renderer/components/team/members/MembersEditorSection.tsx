@@ -8,13 +8,10 @@ import { getMemberColor } from '@shared/constants/memberColors';
 import { MembersJsonEditor } from '../dialogs/MembersJsonEditor';
 
 import { MemberDraftRow } from './MemberDraftRow';
-import {
-  buildMembersFromDrafts,
-  createMemberDraft,
-  getWorkflowForExport,
-} from './membersEditorUtils';
+import { createMemberDraft, getWorkflowForExport } from './membersEditorUtils';
 
 import type { MemberDraft } from './membersEditorTypes';
+import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
 
 function membersToJsonText(drafts: MemberDraft[]): string {
@@ -91,7 +88,7 @@ export const MembersEditorSection = ({
 
   useEffect(() => {
     if (!jsonEditorOpen || jsonError !== null) return;
-    setJsonText(membersToJsonText(members));
+    queueMicrotask(() => setJsonText(membersToJsonText(members)));
   }, [members, jsonEditorOpen, jsonError]);
 
   const handleJsonChange = (text: string): void => {
@@ -132,10 +129,7 @@ export const MembersEditorSection = ({
     onChange(members.map((c) => (c.id === memberId ? { ...c, workflow } : c)));
   };
 
-  const updateMemberWorkflowChips = (
-    memberId: string,
-    workflowChips: import('@renderer/types/inlineChip').InlineChip[]
-  ): void => {
+  const updateMemberWorkflowChips = (memberId: string, workflowChips: InlineChip[]): void => {
     onChange(members.map((c) => (c.id === memberId ? { ...c, workflowChips } : c)));
   };
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
@@ -18,6 +18,7 @@ import { getMemberColor } from '@shared/constants/memberColors';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import type { MemberDraft } from './membersEditorTypes';
+import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
 
 interface MemberDraftRowProps {
@@ -30,10 +31,7 @@ interface MemberDraftRowProps {
   onRemove: (id: string) => void;
   showWorkflow?: boolean;
   onWorkflowChange?: (id: string, workflow: string) => void;
-  onWorkflowChipsChange?: (
-    id: string,
-    chips: import('@renderer/types/inlineChip').InlineChip[]
-  ) => void;
+  onWorkflowChipsChange?: (id: string, chips: InlineChip[]) => void;
   draftKeyPrefix?: string;
   projectPath?: string | null;
   mentionSuggestions?: MentionSuggestion[];
@@ -68,7 +66,7 @@ export const MemberDraftRow = ({
     enabled: !!draftKey,
   });
 
-  const chips = member.workflowChips ?? [];
+  const chips = useMemo(() => member.workflowChips ?? [], [member.workflowChips]);
 
   const handleWorkflowChange = useCallback(
     (v: string) => {
@@ -83,7 +81,7 @@ export const MemberDraftRow = ({
   );
 
   const handleFileChipInsert = useCallback(
-    (chip: import('@renderer/types/inlineChip').InlineChip) => {
+    (chip: InlineChip) => {
       onWorkflowChipsChange?.(member.id, [...chips, chip]);
     },
     [member.id, chips, onWorkflowChipsChange]

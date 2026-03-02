@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
+import { CUSTOM_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { cn } from '@renderer/lib/utils';
 import { Loader2 } from 'lucide-react';

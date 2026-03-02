@@ -39,6 +39,7 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   TEAM_GET_ALL_TASKS: 'team:getAllTasks',
   TEAM_ADD_TASK_COMMENT: 'team:addTaskComment',
   TEAM_ADD_MEMBER: 'team:addMember',
+  TEAM_REPLACE_MEMBERS: 'team:replaceMembers',
   TEAM_REMOVE_MEMBER: 'team:removeMember',
   TEAM_UPDATE_MEMBER_ROLE: 'team:updateMemberRole',
   TEAM_GET_PROJECT_BRANCH: 'team:getProjectBranch',
