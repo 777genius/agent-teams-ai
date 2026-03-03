@@ -185,6 +185,16 @@ export const ChangeReviewDialog = ({
     [scrollToFile]
   );
 
+  // Double rAF to ensure DOM/layout is ready before scrolling (reduces nesting in keydown handler)
+  const scheduleScrollToFile = useCallback(
+    (path: string) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => scrollToFile(path));
+      });
+    },
+    [scrollToFile]
+  );
+
   // Accept/Reject all across all files
   const handleAcceptAll = useCallback(() => {
     if (!activeChangeSet) return;
@@ -629,9 +639,7 @@ export const ChangeReviewDialog = ({
           };
           addReviewFile(snap.file, { index: snap.index, content: restoredContent });
           setActiveFilePath(snap.file.filePath);
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => scrollToFile(snap.file.filePath));
-          });
+          scheduleScrollToFile(snap.file.filePath);
           updateEditedContent(snap.file.filePath, snap.restoreContent);
           // Ensure editedContents is set before saveEditedFile reads it.
           void Promise.resolve().then(() => saveEditedFile(snap.file.filePath, projectPath));
@@ -687,7 +695,7 @@ export const ChangeReviewDialog = ({
     updateEditedContent,
     saveEditedFile,
     projectPath,
-    scrollToFile,
+    scheduleScrollToFile,
   ]);
 
   // Cmd+N IPC listener (forwarded from main process)

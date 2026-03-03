@@ -107,7 +107,7 @@ export const MemberLogsTab = ({
       cancelled = true;
       if (interval) clearInterval(interval);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intervalsKey drives refresh; deps intentionally minimal to avoid refetch loops
   }, [teamName, memberName, taskId, taskOwner, taskStatus, intervalsKey]);
 
   const handleExpand = useCallback(

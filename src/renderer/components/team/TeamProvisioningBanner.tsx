@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';

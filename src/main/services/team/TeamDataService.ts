@@ -928,13 +928,9 @@ export class TeamDataService {
         await this.taskWriter.setNeedsClarification(teamName, taskId, null);
       }
 
-      if (task?.owner) {
+      if (task?.owner && !this.isLeadOwner(task.owner, leadName)) {
         // UX: don't echo a user comment as an inbox notification "from the lead" when the
         // task is already owned by the lead. This creates confusing self-notifications.
-        if (this.isLeadOwner(task.owner, leadName)) {
-          return comment;
-        }
-
         const parts = [
           `Comment on task #${taskId} "${task.subject}":\n\n${text}`,
           `\n${AGENT_BLOCK_OPEN}`,

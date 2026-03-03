@@ -52,7 +52,9 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
   // without stale closures, using the same sync-ref pattern as keyRef.
   const chipsRef = useRef<InlineChip[]>([]);
 
-  keyRef.current = key;
+  useEffect(() => {
+    keyRef.current = key;
+  }, [key]);
 
   // Load on mount
   useEffect(() => {
