@@ -176,6 +176,8 @@ export const ActivityItem = ({
   const structured = parseStructuredAgentMessage(message.text);
   // Only flag agent messages as rate-limited, not user's own quotes
   const rateLimited = message.from !== 'user' && isRateLimitMessage(message.text);
+  // Highlight messages containing API errors
+  const isApiError = message.text.includes('API Error');
   // Never collapse rate limit messages as noise — they must be visible
   const noiseLabel = structured && !rateLimited ? getNoiseLabel(structured) : null;
 
@@ -225,11 +227,15 @@ export const ActivityItem = ({
     <article
       className="group overflow-hidden rounded-md"
       style={{
-        backgroundColor: rateLimited ? 'var(--tool-result-error-bg)' : CARD_BG,
-        border: rateLimited ? '1px solid var(--tool-result-error-border)' : CARD_BORDER_STYLE,
-        borderLeft: rateLimited
-          ? '3px solid var(--tool-result-error-text)'
-          : `3px solid ${colors.border}`,
+        backgroundColor: rateLimited || isApiError ? 'var(--tool-result-error-bg)' : CARD_BG,
+        border:
+          rateLimited || isApiError
+            ? '1px solid var(--tool-result-error-border)'
+            : CARD_BORDER_STYLE,
+        borderLeft:
+          rateLimited || isApiError
+            ? '3px solid var(--tool-result-error-text)'
+            : `3px solid ${colors.border}`,
       }}
     >
       {/* Header — div with role=button (cannot use <button> due to nested buttons inside) */}
@@ -308,6 +314,14 @@ export const ActivityItem = ({
           <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
             <AlertTriangle size={10} />
             Rate Limited
+          </span>
+        ) : null}
+
+        {/* API Error warning badge */}
+        {isApiError && !rateLimited ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+            <AlertTriangle size={10} />
+            API Error
           </span>
         ) : null}
 

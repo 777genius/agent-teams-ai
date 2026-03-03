@@ -111,6 +111,7 @@ export const TeamProvisioningBanner = ({
           </Button>
         </div>
         <ProvisioningProgressBlock
+          key={progress.runId}
           title="Launch failed"
           message={progress.error ?? null}
           tone="error"
@@ -119,6 +120,7 @@ export const TeamProvisioningBanner = ({
           pid={progress.pid}
           cliLogsTail={progress.cliLogsTail}
           assistantOutput={progress.assistantOutput}
+          defaultLiveOutputOpen
           onCancel={null}
         />
       </div>
@@ -157,6 +159,7 @@ export const TeamProvisioningBanner = ({
           </Button>
         </div>
         <ProvisioningProgressBlock
+          key={progress.runId}
           title="Launch details"
           message={progress.message}
           currentStepIndex={progressStepIndex >= 0 ? progressStepIndex : -1}
@@ -164,6 +167,7 @@ export const TeamProvisioningBanner = ({
           pid={progress.pid}
           cliLogsTail={progress.cliLogsTail}
           assistantOutput={progress.assistantOutput}
+          defaultLiveOutputOpen={false}
           onCancel={null}
         />
       </div>
@@ -174,6 +178,7 @@ export const TeamProvisioningBanner = ({
     return (
       <div className="mb-3">
         <ProvisioningProgressBlock
+          key={progress.runId}
           title="Launching team"
           message={progress.message}
           currentStepIndex={progressStepIndex >= 0 ? progressStepIndex : -1}
@@ -182,6 +187,7 @@ export const TeamProvisioningBanner = ({
           pid={progress.pid}
           cliLogsTail={progress.cliLogsTail}
           assistantOutput={progress.assistantOutput}
+          defaultLiveOutputOpen
           onCancel={
             canCancel
               ? () => {

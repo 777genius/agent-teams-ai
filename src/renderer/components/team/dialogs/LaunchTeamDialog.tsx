@@ -432,9 +432,27 @@ export const LaunchTeamDialog = ({
         ) : null}
 
         {prepareState === 'ready' ? (
-          <div className="flex items-center gap-2 text-xs text-emerald-400">
-            <CheckCircle2 className="size-3.5 shrink-0" />
-            <span>CLI environment ready</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs text-emerald-400">
+              <CheckCircle2 className="size-3.5 shrink-0" />
+              <span>
+                {prepareWarnings.length > 0
+                  ? 'CLI environment ready (with warnings)'
+                  : 'CLI environment ready'}
+              </span>
+            </div>
+            {prepareMessage ? (
+              <p className="text-[11px] text-[var(--color-text-muted)]">{prepareMessage}</p>
+            ) : null}
+            {prepareWarnings.length > 0 ? (
+              <div className="space-y-0.5">
+                {prepareWarnings.map((warning) => (
+                  <p key={warning} className="text-[11px] text-amber-300">
+                    {warning}
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </div>
         ) : null}
 

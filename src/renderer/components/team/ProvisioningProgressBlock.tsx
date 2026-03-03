@@ -19,6 +19,8 @@ export interface ProvisioningProgressBlockProps {
   message?: string | null;
   /** Visual tone (e.g. highlight errors) */
   tone?: 'default' | 'error';
+  /** Whether Live output is expanded by default */
+  defaultLiveOutputOpen?: boolean;
   /** Index of the current step in STEP_ORDER (0-based), or -1 if unknown */
   currentStepIndex: number;
   /** Show spinner next to title */
@@ -69,6 +71,7 @@ export const ProvisioningProgressBlock = ({
   title,
   message,
   tone = 'default',
+  defaultLiveOutputOpen = true,
   currentStepIndex,
   loading = false,
   onCancel,
@@ -80,16 +83,21 @@ export const ProvisioningProgressBlock = ({
 }: ProvisioningProgressBlockProps): React.JSX.Element => {
   const elapsed = useElapsedTimer(startedAt);
   const [logsOpen, setLogsOpen] = useState(false);
+  const [liveOutputOpen, setLiveOutputOpen] = useState(defaultLiveOutputOpen);
   const outputScrollRef = useRef<HTMLDivElement>(null);
   const isError = tone === 'error';
-  const hasAnyOutput = !!assistantOutput || !!cliLogsTail;
 
   // Auto-scroll assistant output
   useEffect(() => {
-    if (outputScrollRef.current) {
+    if (liveOutputOpen && outputScrollRef.current) {
       outputScrollRef.current.scrollTop = outputScrollRef.current.scrollHeight;
     }
-  }, [assistantOutput]);
+  }, [assistantOutput, liveOutputOpen]);
+
+  // If parent changes the default (e.g. transitioning to "ready"), respect it.
+  useEffect(() => {
+    setLiveOutputOpen(defaultLiveOutputOpen);
+  }, [defaultLiveOutputOpen]);
 
   return (
     <div
@@ -165,20 +173,38 @@ export const ProvisioningProgressBlock = ({
           );
         })}
       </div>
-      {assistantOutput ? (
-        <div className="mt-2">
-          <p className="mb-1 text-[11px] font-medium text-[var(--color-text-muted)]">Live output</p>
+      <div className="mt-2">
+        <button
+          type="button"
+          className="flex items-center gap-1 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+          onClick={() => setLiveOutputOpen((v) => !v)}
+        >
+          {liveOutputOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          Live output
+        </button>
+        {liveOutputOpen ? (
           <div
             ref={outputScrollRef}
             className={cn(
-              'max-h-[400px] overflow-y-auto rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-2',
+              'mt-1 max-h-[400px] overflow-y-auto rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-2',
               isError && 'border-red-500/40'
             )}
           >
-            <MarkdownViewer content={assistantOutput} bare maxHeight="max-h-none" />
+            {assistantOutput ? (
+              <MarkdownViewer content={assistantOutput} bare maxHeight="max-h-none" />
+            ) : (
+              <p
+                className={cn(
+                  'text-[11px]',
+                  isError ? 'text-red-200/80' : 'text-[var(--color-text-muted)]'
+                )}
+              >
+                No output captured yet.
+              </p>
+            )}
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
       {cliLogsTail ? (
         <div className="mt-2">
           <button
@@ -191,16 +217,6 @@ export const ProvisioningProgressBlock = ({
           </button>
           {logsOpen ? <CliLogsRichView cliLogsTail={cliLogsTail} className="mt-1" /> : null}
         </div>
-      ) : null}
-      {!hasAnyOutput ? (
-        <p
-          className={cn(
-            'mt-2 text-[11px]',
-            isError ? 'text-red-200/80' : 'text-[var(--color-text-muted)]'
-          )}
-        >
-          No output captured yet.
-        </p>
       ) : null}
     </div>
   );
