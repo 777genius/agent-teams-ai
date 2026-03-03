@@ -91,6 +91,7 @@ export const GlobalTaskList = ({
   const {
     globalTasks,
     globalTasksLoading,
+    globalTasksInitialized,
     fetchAllTasks,
     projects,
     viewMode,
@@ -100,6 +101,7 @@ export const GlobalTaskList = ({
     useShallow((s) => ({
       globalTasks: s.globalTasks,
       globalTasksLoading: s.globalTasksLoading,
+      globalTasksInitialized: s.globalTasksInitialized,
       fetchAllTasks: s.fetchAllTasks,
       projects: s.projects,
       viewMode: s.viewMode,
@@ -295,7 +297,7 @@ export const GlobalTaskList = ({
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {globalTasksLoading && globalTasks.length === 0 && (
+        {globalTasksLoading && !globalTasksInitialized && (
           <div className="space-y-2 p-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-[48px] animate-pulse rounded bg-surface-raised" />
@@ -303,7 +305,7 @@ export const GlobalTaskList = ({
           </div>
         )}
 
-        {!globalTasksLoading && !hasContent && (
+        {globalTasksInitialized && !hasContent && (
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-text-muted">
             <ListTodo className="size-8 opacity-40" />
             <span className="text-[12px]">

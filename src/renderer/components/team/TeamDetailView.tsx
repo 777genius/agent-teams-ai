@@ -135,6 +135,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const provisioningBannerRef = useRef<HTMLDivElement>(null);
+  const wasProvisioningRef = useRef(false);
 
   // Set inert on background content when editor overlay is open (a11y focus trap)
   useEffect(() => {
@@ -258,6 +260,14 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       deletedTasks: s.deletedTasks,
     }))
   );
+
+  useEffect(() => {
+    const wasProvisioning = wasProvisioningRef.current;
+    wasProvisioningRef.current = isTeamProvisioning;
+    if (!wasProvisioning && isTeamProvisioning) {
+      provisioningBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [isTeamProvisioning]);
 
   const [kanbanSearch, setKanbanSearch] = useState('');
   const [messagesSearchQuery, setMessagesSearchQuery] = useState('');
@@ -690,7 +700,9 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     return (
       <div className="size-full overflow-auto p-4">
         <div className="mb-4 h-10 animate-pulse rounded-md bg-[var(--color-surface-raised)]" />
-        <TeamProvisioningBanner teamName={teamName} />
+        <div ref={provisioningBannerRef}>
+          <TeamProvisioningBanner teamName={teamName} />
+        </div>
         <div className="space-y-3">
           <div className="h-24 animate-pulse rounded-md bg-[var(--color-surface-raised)]" />
           <div className="h-48 animate-pulse rounded-md bg-[var(--color-surface-raised)]" />
@@ -897,7 +909,9 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           </div>
         ) : null}
 
-        <TeamProvisioningBanner teamName={teamName} />
+        <div ref={provisioningBannerRef}>
+          <TeamProvisioningBanner teamName={teamName} />
+        </div>
 
         {data.warnings?.some((warning) => warning.toLowerCase().includes('kanban')) ? (
           <div className="mb-3 rounded-md border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-200">

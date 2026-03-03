@@ -403,11 +403,11 @@ export const TeamListView = (): React.JSX.Element => {
           const existingNames = teams.map((t) => t.teamName);
           const uniqueName = generateUniqueName(teamName, existingNames);
           const members = (data.members ?? [])
-            .filter((m) => !m.removedAt)
+            .filter((m) => !m.removedAt && m.agentType !== 'team-lead')
             .map((m) => {
               let role = m.role;
               if (!role && m.agentType && m.agentType !== 'general-purpose') {
-                role = m.agentType === 'team-lead' ? 'lead' : m.agentType;
+                role = m.agentType;
               }
               return { name: m.name, role };
             });

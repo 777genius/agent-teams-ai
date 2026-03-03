@@ -1,3 +1,4 @@
+import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { createLogger } from '@shared/utils/logger';
@@ -9,6 +10,7 @@ import { atomicWriteAsync } from './atomicWrite';
 import type { KanbanColumnId, KanbanState, UpdateKanbanPatch } from '@shared/types';
 
 const logger = createLogger('Service:TeamKanbanManager');
+const MAX_KANBAN_STATE_BYTES = 512 * 1024;
 
 function createDefaultState(teamName: string): KanbanState {
   return {
@@ -45,9 +47,16 @@ export class TeamKanbanManager {
 
     let raw: string;
     try {
-      raw = await fs.promises.readFile(statePath, 'utf8');
+      const stat = await fs.promises.stat(statePath);
+      if (!stat.isFile() || stat.size > MAX_KANBAN_STATE_BYTES) {
+        return createDefaultState(teamName);
+      }
+      raw = await readFileUtf8WithTimeout(statePath, 5_000);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return createDefaultState(teamName);
+      }
+      if (error instanceof FileReadTimeoutError) {
         return createDefaultState(teamName);
       }
       throw error;

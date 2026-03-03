@@ -1,3 +1,4 @@
+import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -40,6 +41,9 @@ export class TeamMembersMetaStore {
     const metaPath = this.getMetaPath(teamName);
     try {
       const stat = await fs.promises.stat(metaPath);
+      if (!stat.isFile()) {
+        return [];
+      }
       if (stat.isFile() && stat.size > MAX_META_FILE_BYTES) {
         return [];
       }
@@ -48,9 +52,12 @@ export class TeamMembersMetaStore {
     }
     let raw: string;
     try {
-      raw = await fs.promises.readFile(metaPath, 'utf8');
+      raw = await readFileUtf8WithTimeout(metaPath, 5_000);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return [];
+      }
+      if (error instanceof FileReadTimeoutError) {
         return [];
       }
       throw error;

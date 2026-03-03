@@ -1,8 +1,31 @@
+import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import type { InboxMessage } from '@shared/types';
+
+const MAX_INBOX_FILE_BYTES = 10 * 1024 * 1024; // 10MB — skip corrupt/oversized inbox files
+const INBOX_READ_CONCURRENCY = process.platform === 'win32' ? 4 : 12;
+
+async function mapLimit<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let index = 0;
+  const workerCount = Math.max(1, Math.min(limit, items.length));
+  const workers = new Array(workerCount).fill(0).map(async () => {
+    while (true) {
+      const i = index++;
+      if (i >= items.length) return;
+      results[i] = await fn(items[i]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
 
 export class TeamInboxReader {
   async listInboxNames(teamName: string): Promise<string[]> {
@@ -28,9 +51,17 @@ export class TeamInboxReader {
 
     let raw: string;
     try {
-      raw = await fs.promises.readFile(inboxPath, 'utf8');
+      const stat = await fs.promises.stat(inboxPath);
+      // Avoid hangs on non-regular files (FIFO, sockets) and unbounded memory usage on huge files.
+      if (!stat.isFile() || stat.size > MAX_INBOX_FILE_BYTES) {
+        return [];
+      }
+      raw = await readFileUtf8WithTimeout(inboxPath, 5_000);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return [];
+      }
+      if (error instanceof FileReadTimeoutError) {
         return [];
       }
       throw error;
@@ -85,21 +116,19 @@ export class TeamInboxReader {
 
   async getMessages(teamName: string): Promise<InboxMessage[]> {
     const members = await this.listInboxNames(teamName);
-    const chunks = await Promise.all(
-      members.map(async (member) => {
-        try {
-          const msgs = await this.getMessagesFor(teamName, member);
-          for (const msg of msgs) {
-            if (!msg.to) {
-              msg.to = member;
-            }
+    const chunks = await mapLimit(members, INBOX_READ_CONCURRENCY, async (member) => {
+      try {
+        const msgs = await this.getMessagesFor(teamName, member);
+        for (const msg of msgs) {
+          if (!msg.to) {
+            msg.to = member;
           }
-          return msgs;
-        } catch {
-          return [] as InboxMessage[];
         }
-      })
-    );
+        return msgs;
+      } catch {
+        return [] as InboxMessage[];
+      }
+    });
 
     const merged = chunks.flat();
     merged.sort((a, b) => {

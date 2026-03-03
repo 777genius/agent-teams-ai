@@ -6,6 +6,19 @@ const hoisted = vi.hoisted(() => {
   // Normalize path separators so tests pass on Windows (backslash → forward slash)
   const norm = (p: string): string => p.replace(/\\/g, '/');
 
+  const stat = vi.fn(async (filePath: string) => {
+    const data = files.get(norm(filePath));
+    if (data === undefined) {
+      const error = new Error('ENOENT') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      throw error;
+    }
+    return {
+      isFile: () => true,
+      size: Buffer.byteLength(data, 'utf8'),
+    };
+  });
+
   const readFile = vi.fn(async (filePath: string) => {
     const data = files.get(norm(filePath));
     if (data === undefined) {
@@ -18,14 +31,20 @@ const hoisted = vi.hoisted(() => {
   const atomicWrite = vi.fn(async (filePath: string, data: string) => {
     files.set(norm(filePath), data);
   });
-  return { files, readFile, atomicWrite };
+  return { files, stat, readFile, atomicWrite };
 });
 
-vi.mock('fs', () => ({
-  promises: {
-    readFile: hoisted.readFile,
-  },
-}));
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  return {
+    ...actual,
+    promises: {
+      ...actual.promises,
+      stat: hoisted.stat,
+      readFile: hoisted.readFile,
+    },
+  };
+});
 
 vi.mock('../../../../src/main/utils/pathDecoder', () => ({
   getTeamsBasePath: () => '/mock/teams',

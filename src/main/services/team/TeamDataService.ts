@@ -1,3 +1,4 @@
+import { readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import {
   encodePath,
   extractBaseDir,
@@ -57,6 +58,7 @@ const logger = createLogger('Service:TeamDataService');
 const MIN_TEXT_LENGTH = 30;
 const MAX_LEAD_TEXTS = 50;
 const PROCESS_HEALTH_INTERVAL_MS = 2_000;
+const MAX_PROCESSES_FILE_BYTES = 2 * 1024 * 1024;
 
 export class TeamDataService {
   private processHealthTimer: ReturnType<typeof setInterval> | null = null;
@@ -379,7 +381,11 @@ export class TeamDataService {
         const processesPath = path.join(getTeamsBasePath(), teamName, 'processes.json');
         let raw: unknown[];
         try {
-          const content = await fs.promises.readFile(processesPath, 'utf8');
+          const stat = await fs.promises.stat(processesPath);
+          if (!stat.isFile() || stat.size > MAX_PROCESSES_FILE_BYTES) {
+            continue;
+          }
+          const content = await readFileUtf8WithTimeout(processesPath, 5_000);
           const parsed: unknown = JSON.parse(content);
           raw = Array.isArray(parsed) ? (parsed as unknown[]) : [];
         } catch {
@@ -418,7 +424,11 @@ export class TeamDataService {
     const processesPath = path.join(getTeamsBasePath(), teamName, 'processes.json');
     let raw: unknown[];
     try {
-      const content = await fs.promises.readFile(processesPath, 'utf8');
+      const stat = await fs.promises.stat(processesPath);
+      if (!stat.isFile() || stat.size > MAX_PROCESSES_FILE_BYTES) {
+        return [];
+      }
+      const content = await readFileUtf8WithTimeout(processesPath, 5_000);
       const parsed: unknown = JSON.parse(content);
       raw = Array.isArray(parsed) ? (parsed as unknown[]) : [];
     } catch {
@@ -476,7 +486,7 @@ export class TeamDataService {
     // Update processes.json to set stoppedAt
     let raw: unknown[];
     try {
-      const content = await fs.promises.readFile(processesPath, 'utf8');
+      const content = await readFileUtf8WithTimeout(processesPath, 5_000);
       const parsed: unknown = JSON.parse(content);
       raw = Array.isArray(parsed) ? (parsed as unknown[]) : [];
     } catch {

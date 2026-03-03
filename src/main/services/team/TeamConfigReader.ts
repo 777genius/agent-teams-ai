@@ -1,3 +1,4 @@
+import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -12,6 +13,8 @@ const logger = createLogger('Service:TeamConfigReader');
 const TEAM_LIST_CONCURRENCY = process.platform === 'win32' ? 4 : 12;
 const LARGE_CONFIG_BYTES = 512 * 1024;
 const CONFIG_HEAD_BYTES = 64 * 1024;
+const MAX_CONFIG_READ_BYTES = 10 * 1024 * 1024; // 10MB hard limit for full config reads
+const PER_TEAM_READ_TIMEOUT_MS = 5_000;
 const MAX_SESSION_HISTORY_IN_SUMMARY = 2000;
 const MAX_PROJECT_PATH_HISTORY_IN_SUMMARY = 200;
 
@@ -32,6 +35,16 @@ async function mapLimit<T, R>(
   });
   await Promise.all(workers);
   return results;
+}
+
+function withReadTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error('Team config read timeout')), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
 }
 
 async function readFileHead(filePath: string, maxBytes: number): Promise<string> {
@@ -82,125 +95,15 @@ export class TeamConfigReader {
       TEAM_LIST_CONCURRENCY,
       async (entry): Promise<TeamSummary | null> => {
         const teamName = entry.name;
-        const configPath = path.join(teamsDir, teamName, 'config.json');
 
         try {
-          let config: TeamConfig | null = null;
-          let displayName: string | null = null;
-          let description = '';
-          let color: string | undefined;
-          let projectPath: string | undefined;
-          let leadSessionId: string | undefined;
-          let deletedAt: string | undefined;
-          let projectPathHistory: TeamConfig['projectPathHistory'] | undefined;
-          let sessionHistory: TeamConfig['sessionHistory'] | undefined;
-
-          let stat: fs.Stats | null = null;
-          try {
-            stat = await fs.promises.stat(configPath);
-          } catch {
-            stat = null;
-          }
-
-          if (stat && stat.isFile() && stat.size > LARGE_CONFIG_BYTES) {
-            const head = await readFileHead(configPath, CONFIG_HEAD_BYTES);
-            displayName = extractQuotedString(head, 'name');
-            const desc = extractQuotedString(head, 'description');
-            description = typeof desc === 'string' ? desc : '';
-            const c = extractQuotedString(head, 'color');
-            color = typeof c === 'string' && c.trim().length > 0 ? c : undefined;
-            const pp = extractQuotedString(head, 'projectPath');
-            projectPath = typeof pp === 'string' && pp.trim().length > 0 ? pp : undefined;
-            const lead = extractQuotedString(head, 'leadSessionId');
-            leadSessionId = typeof lead === 'string' && lead.trim().length > 0 ? lead : undefined;
-            const del = extractQuotedString(head, 'deletedAt');
-            deletedAt = typeof del === 'string' ? del : undefined;
-          } else {
-            const raw = await fs.promises.readFile(configPath, 'utf8');
-            config = JSON.parse(raw) as TeamConfig;
-            displayName = typeof config.name === 'string' ? config.name : null;
-            description = typeof config.description === 'string' ? config.description : '';
-            color =
-              typeof config.color === 'string' && config.color.trim().length > 0
-                ? config.color
-                : undefined;
-            projectPath =
-              typeof config.projectPath === 'string' && config.projectPath.trim().length > 0
-                ? config.projectPath
-                : undefined;
-            leadSessionId =
-              typeof config.leadSessionId === 'string' && config.leadSessionId.trim().length > 0
-                ? config.leadSessionId
-                : undefined;
-            projectPathHistory = Array.isArray(config.projectPathHistory)
-              ? config.projectPathHistory.slice(-MAX_PROJECT_PATH_HISTORY_IN_SUMMARY)
-              : undefined;
-            sessionHistory = Array.isArray(config.sessionHistory)
-              ? config.sessionHistory.slice(-MAX_SESSION_HISTORY_IN_SUMMARY)
-              : undefined;
-            deletedAt = typeof config.deletedAt === 'string' ? config.deletedAt : undefined;
-          }
-
-          if (typeof displayName !== 'string' || displayName.trim() === '') {
-            logger.debug(`Skipping team dir with invalid config name: ${teamName}`);
-            return null;
-          }
-
-          // Case-insensitive dedup: key is lowercase name, value keeps the original casing
-          const memberMap = new Map<string, TeamSummaryMember>();
-
-          const mergeMember = (m: TeamMember): void => {
-            const name = m.name?.trim();
-            if (!name) return;
-            const key = name.toLowerCase();
-            const existing = memberMap.get(key);
-            memberMap.set(key, {
-              name: existing?.name ?? name,
-              role: m.role?.trim() || existing?.role,
-              color: m.color?.trim() || existing?.color,
-            });
-          };
-
-          if (config && Array.isArray(config.members)) {
-            for (const member of config.members) {
-              if (member && typeof member.name === 'string') {
-                mergeMember(member);
-              }
-            }
-          }
-
-          // Also read members.meta.json — UI-created teams store members there,
-          // and CLI-created teams may have additional members added via the UI.
-          try {
-            const metaMembers = await this.membersMetaStore.getMembers(teamName);
-            for (const member of metaMembers) {
-              if (!member.removedAt) {
-                mergeMember(member);
-              }
-            }
-          } catch {
-            // best-effort — don't fail listing if meta file is broken
-          }
-
-          const members = Array.from(memberMap.values());
-          const summary: TeamSummary = {
-            teamName,
-            displayName,
-            description,
-            memberCount: memberMap.size,
-            taskCount: 0,
-            lastActivity: null,
-            ...(members.length > 0 ? { members } : {}),
-            ...(color ? { color } : {}),
-            ...(projectPath ? { projectPath } : {}),
-            ...(leadSessionId ? { leadSessionId } : {}),
-            ...(projectPathHistory ? { projectPathHistory } : {}),
-            ...(sessionHistory ? { sessionHistory } : {}),
-            ...(deletedAt ? { deletedAt } : {}),
-          };
-          return summary;
-        } catch {
-          logger.debug(`Skipping team dir without valid config: ${teamName}`);
+          return await withReadTimeout(
+            this.readTeamSummary(teamsDir, teamName),
+            PER_TEAM_READ_TIMEOUT_MS
+          );
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : 'unknown';
+          logger.warn(`Skipping team dir (${reason}): ${teamName}`);
           return null;
         }
       }
@@ -209,16 +112,162 @@ export class TeamConfigReader {
     return perTeam.filter((t): t is TeamSummary => t !== null);
   }
 
+  private async readTeamSummary(teamsDir: string, teamName: string): Promise<TeamSummary | null> {
+    const configPath = path.join(teamsDir, teamName, 'config.json');
+
+    try {
+      let config: TeamConfig | null = null;
+      let displayName: string | null = null;
+      let description = '';
+      let color: string | undefined;
+      let projectPath: string | undefined;
+      let leadSessionId: string | undefined;
+      let deletedAt: string | undefined;
+      let projectPathHistory: TeamConfig['projectPathHistory'] | undefined;
+      let sessionHistory: TeamConfig['sessionHistory'] | undefined;
+
+      let stat: fs.Stats | null = null;
+      try {
+        stat = await fs.promises.stat(configPath);
+      } catch {
+        stat = null;
+      }
+
+      // Skip non-regular files (pipes, sockets, etc.) — readFile could hang on them
+      if (!stat?.isFile()) {
+        logger.debug(`Skipping team dir with missing/non-file config: ${teamName}`);
+        return null;
+      }
+
+      // Safety: refuse to touch extremely large configs. Even "head" parsing can be misleading,
+      // and full reads/parses can stall the main process.
+      if (stat.size > MAX_CONFIG_READ_BYTES) {
+        logger.warn(
+          `Skipping team dir with oversized config.json (${stat.size} bytes): ${teamName}`
+        );
+        return null;
+      }
+
+      if (stat.size > LARGE_CONFIG_BYTES) {
+        // Defensive: avoid any reads from very large configs during listing.
+        // If the team is real, it can still be opened later via getConfig().
+        displayName = teamName;
+      } else {
+        const raw = await readFileUtf8WithTimeout(configPath, PER_TEAM_READ_TIMEOUT_MS);
+        config = JSON.parse(raw) as TeamConfig;
+        displayName = typeof config.name === 'string' ? config.name : null;
+        description = typeof config.description === 'string' ? config.description : '';
+        color =
+          typeof config.color === 'string' && config.color.trim().length > 0
+            ? config.color
+            : undefined;
+        projectPath =
+          typeof config.projectPath === 'string' && config.projectPath.trim().length > 0
+            ? config.projectPath
+            : undefined;
+        leadSessionId =
+          typeof config.leadSessionId === 'string' && config.leadSessionId.trim().length > 0
+            ? config.leadSessionId
+            : undefined;
+        projectPathHistory = Array.isArray(config.projectPathHistory)
+          ? config.projectPathHistory.slice(-MAX_PROJECT_PATH_HISTORY_IN_SUMMARY)
+          : undefined;
+        sessionHistory = Array.isArray(config.sessionHistory)
+          ? config.sessionHistory.slice(-MAX_SESSION_HISTORY_IN_SUMMARY)
+          : undefined;
+        deletedAt = typeof config.deletedAt === 'string' ? config.deletedAt : undefined;
+      }
+
+      if (typeof displayName !== 'string' || displayName.trim() === '') {
+        logger.debug(`Skipping team dir with invalid config name: ${teamName}`);
+        return null;
+      }
+
+      // Case-insensitive dedup: key is lowercase name, value keeps the original casing
+      const memberMap = new Map<string, TeamSummaryMember>();
+
+      const mergeMember = (m: TeamMember): void => {
+        const name = m.name?.trim();
+        if (!name) return;
+        const key = name.toLowerCase();
+        const existing = memberMap.get(key);
+        memberMap.set(key, {
+          name: existing?.name ?? name,
+          role: m.role?.trim() || existing?.role,
+          color: m.color?.trim() || existing?.color,
+        });
+      };
+
+      if (config && Array.isArray(config.members)) {
+        for (const member of config.members) {
+          if (member && typeof member.name === 'string') {
+            mergeMember(member);
+          }
+        }
+      }
+
+      // Also read members.meta.json — UI-created teams store members there,
+      // and CLI-created teams may have additional members added via the UI.
+      try {
+        const metaMembers = await this.membersMetaStore.getMembers(teamName);
+        for (const member of metaMembers) {
+          if (!member.removedAt) {
+            mergeMember(member);
+          }
+        }
+      } catch {
+        // best-effort — don't fail listing if meta file is broken
+      }
+
+      const members = Array.from(memberMap.values());
+      const summary: TeamSummary = {
+        teamName,
+        displayName,
+        description,
+        memberCount: memberMap.size,
+        taskCount: 0,
+        lastActivity: null,
+        ...(members.length > 0 ? { members } : {}),
+        ...(color ? { color } : {}),
+        ...(projectPath ? { projectPath } : {}),
+        ...(leadSessionId ? { leadSessionId } : {}),
+        ...(projectPathHistory ? { projectPathHistory } : {}),
+        ...(sessionHistory ? { sessionHistory } : {}),
+        ...(deletedAt ? { deletedAt } : {}),
+      };
+      return summary;
+    } catch {
+      logger.debug(`Skipping team dir without valid config: ${teamName}`);
+      return null;
+    }
+  }
+
   async getConfig(teamName: string): Promise<TeamConfig | null> {
     const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
     try {
-      const raw = await fs.promises.readFile(configPath, 'utf8');
+      const stat = await fs.promises.stat(configPath);
+      // Safety: refuse special files and huge/binary configs
+      if (!stat.isFile()) {
+        return null;
+      }
+      if (stat.size > MAX_CONFIG_READ_BYTES) {
+        logger.warn(
+          `Refusing to load oversized config.json (${stat.size} bytes) for team: ${teamName}`
+        );
+        return null;
+      }
+
+      const raw = await readFileUtf8WithTimeout(configPath, PER_TEAM_READ_TIMEOUT_MS);
       const config = JSON.parse(raw) as TeamConfig;
       if (typeof config.name !== 'string' || config.name.trim() === '') {
         return null;
       }
       return config;
-    } catch {
+    } catch (error) {
+      if (error instanceof FileReadTimeoutError) {
+        logger.warn(`[getConfig] ${error.message}`);
+        return null;
+      }
       return null;
     }
   }

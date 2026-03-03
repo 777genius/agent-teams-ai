@@ -8,8 +8,19 @@ import { getWorktreeNavigationState } from '../utils/stateResetHelpers';
 const logger = createLogger('teamSlice');
 
 const TEAM_GET_DATA_TIMEOUT_MS = 30_000;
+const TEAM_FETCH_TIMEOUT_MS = 30_000;
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const TERMINAL_PROVISIONING_STATES = new Set(['ready', 'failed', 'disconnected', 'cancelled']);
+
+function isPendingProvisioningRunId(runId: string): boolean {
+  return runId.startsWith('pending:');
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -22,6 +33,32 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   return Promise.race([promise, timeout]).finally(() => {
     if (timer) clearTimeout(timer);
   });
+}
+
+async function pollProvisioningStatus(
+  getState: () => TeamSlice,
+  runId: string,
+  opts?: { maxAttempts?: number; initialDelayMs?: number }
+): Promise<void> {
+  const maxAttempts = opts?.maxAttempts ?? 12;
+  let delayMs = opts?.initialDelayMs ?? 150;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const state = getState();
+    const current = state.provisioningRuns[runId];
+    if (current && TERMINAL_PROVISIONING_STATES.has(current.state)) {
+      return;
+    }
+    try {
+      const progress = await state.getProvisioningStatus(runId);
+      if (TERMINAL_PROVISIONING_STATES.has(progress.state)) {
+        return;
+      }
+    } catch {
+      // best-effort polling; don't fail launch because status fetch is flaky
+    }
+    await sleep(delayMs);
+    delayMs = Math.min(1500, Math.round(delayMs * 1.5));
+  }
 }
 
 import type { AppState } from '../types';
@@ -125,6 +162,7 @@ export interface TeamSlice {
   teamsError: string | null;
   globalTasks: GlobalTask[];
   globalTasksLoading: boolean;
+  globalTasksInitialized: boolean;
   globalTasksError: string | null;
   globalTaskDetail: GlobalTaskDetailState | null;
   openGlobalTaskDetail: (teamName: string, taskId: string) => void;
@@ -214,7 +252,7 @@ export interface TeamSlice {
   createTeam: (request: TeamCreateRequest) => Promise<string>;
   launchTeam: (request: TeamLaunchRequest) => Promise<string>;
   cancelProvisioning: (runId: string) => Promise<void>;
-  getProvisioningStatus: (runId: string) => Promise<void>;
+  getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;
   onProvisioningProgress: (progress: TeamProvisioningProgress) => void;
   subscribeProvisioningProgress: () => void;
   unsubscribeProvisioningProgress: () => void;
@@ -229,6 +267,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   teamsError: null,
   globalTasks: [],
   globalTasksLoading: false,
+  globalTasksInitialized: false,
   globalTasksError: null,
   selectedTeamName: null,
   selectedTeamData: null,
@@ -283,7 +322,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       set({ teamsLoading: true, teamsError: null });
     }
     try {
-      const teams = await unwrapIpc('team:list', () => api.teams.list());
+      const teams = await withTimeout(
+        unwrapIpc('team:list', () => api.teams.list()),
+        TEAM_FETCH_TIMEOUT_MS,
+        'fetchTeams'
+      );
       const teamByName: Record<string, TeamSummary> = {};
       const teamBySessionId: Record<string, TeamSummary> = {};
       for (const team of teams) {
@@ -318,7 +361,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   fetchAllTasks: async () => {
     // Guard: prevent concurrent fetches (component mount + centralized init chain)
     if (get().globalTasksLoading) return;
-    const isInitialLoad = get().globalTasks.length === 0;
+    // Show skeleton only on the very first fetch — not on subsequent refreshes
+    // even when the task list is empty (avoids flickering skeleton on every watcher event).
+    const isInitialLoad = !get().globalTasksInitialized;
     if (isInitialLoad) {
       set({ globalTasksLoading: true, globalTasksError: null });
     }
@@ -326,7 +371,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const wasFirst = isFirstFetchAllTasks;
     isFirstFetchAllTasks = false;
     try {
-      const tasks = await unwrapIpc('team:getAllTasks', () => api.teams.getAllTasks());
+      const tasks = await withTimeout(
+        unwrapIpc('team:getAllTasks', () => api.teams.getAllTasks()),
+        TEAM_FETCH_TIMEOUT_MS,
+        'fetchAllTasks'
+      );
 
       if (!wasFirst) {
         const notifyOnClarifications =
@@ -341,10 +390,16 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         }
       }
 
-      set({ globalTasks: tasks, globalTasksLoading: false, globalTasksError: null });
+      set({
+        globalTasks: tasks,
+        globalTasksLoading: false,
+        globalTasksInitialized: true,
+        globalTasksError: null,
+      });
     } catch (error) {
       set({
         globalTasksLoading: false,
+        globalTasksInitialized: true,
         globalTasksError: isInitialLoad
           ? error instanceof IpcError
             ? error.message
@@ -533,7 +588,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     // Silent refresh — update data without showing loading skeleton.
     // Only selectTeam() sets loading: true (for initial load).
     try {
-      const data = await unwrapIpc('team:getData', () => api.teams.getData(teamName));
+      const data = await withTimeout(
+        unwrapIpc('team:getData', () => api.teams.getData(teamName)),
+        TEAM_GET_DATA_TIMEOUT_MS,
+        `refreshTeamData(${teamName})`
+      );
       // Re-check after async: the user might have navigated away.
       if (get().selectedTeamName !== teamName) {
         return;
@@ -546,14 +605,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       if (get().selectedTeamName !== teamName) {
         return;
       }
-      set({
-        selectedTeamError:
-          error instanceof IpcError
+      const msg =
+        error instanceof IpcError
+          ? error.message
+          : error instanceof Error
             ? error.message
-            : error instanceof Error
-              ? error.message
-              : 'Failed to refresh team data',
-      });
+            : 'Failed to refresh team data';
+      logger.warn(`refreshTeamData(${teamName}) failed: ${msg}`);
+      set({ selectedTeamError: msg });
     }
   },
 
@@ -777,6 +836,23 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       return { provisioningError: null, provisioningRuns: cleaned };
     });
+
+    // Optimistic progress entry: ensures banner shows even if IPC progress is delayed/missed.
+    const pendingRunId = `pending:${request.teamName}:${Date.now()}`;
+    set((state) => ({
+      provisioningRuns: {
+        ...state.provisioningRuns,
+        [pendingRunId]: {
+          runId: pendingRunId,
+          teamName: request.teamName,
+          state: 'spawning',
+          message: 'Starting Claude CLI process...',
+          startedAt: floor,
+          updatedAt: floor,
+        },
+      },
+      activeProvisioningRunId: pendingRunId,
+    }));
     try {
       if (typeof api.teams.createTeam !== 'function') {
         throw new Error(
@@ -788,7 +864,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         activeProvisioningRunId: response.runId,
         provisioningError: null,
       });
-      await get().getProvisioningStatus(response.runId);
+      try {
+        await get().getProvisioningStatus(response.runId);
+      } catch {
+        // ignore — polling below will retry
+      }
+      void pollProvisioningStatus(get, response.runId);
       return response.runId;
     } catch (error) {
       set({
@@ -826,13 +907,35 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       return { provisioningError: null, provisioningRuns: cleaned };
     });
+
+    // Optimistic progress entry: ensures banner shows even if IPC progress is delayed/missed.
+    const pendingRunId = `pending:${request.teamName}:${Date.now()}`;
+    set((state) => ({
+      provisioningRuns: {
+        ...state.provisioningRuns,
+        [pendingRunId]: {
+          runId: pendingRunId,
+          teamName: request.teamName,
+          state: 'spawning',
+          message: 'Starting Claude CLI process...',
+          startedAt: floor,
+          updatedAt: floor,
+        },
+      },
+      activeProvisioningRunId: pendingRunId,
+    }));
     try {
       const response = await unwrapIpc('team:launch', () => api.teams.launchTeam(request));
       set({
         activeProvisioningRunId: response.runId,
         provisioningError: null,
       });
-      await get().getProvisioningStatus(response.runId);
+      try {
+        await get().getProvisioningStatus(response.runId);
+      } catch {
+        // ignore — polling below will retry
+      }
+      void pollProvisioningStatus(get, response.runId);
       return response.runId;
     } catch (error) {
       set({
@@ -852,6 +955,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       api.teams.getProvisioningStatus(runId)
     );
     get().onProvisioningProgress(progress);
+    return progress;
   },
 
   cancelProvisioning: async (runId: string) => {
@@ -864,14 +968,25 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       // Ignore late progress from a previous run (common after stop→launch).
       return;
     }
-    set((state) => ({
-      provisioningRuns: {
+    set((state) => {
+      const nextRuns: Record<string, TeamProvisioningProgress> = {
         ...state.provisioningRuns,
         [progress.runId]: progress,
-      },
-      activeProvisioningRunId: progress.runId,
-      provisioningError: progress.state === 'failed' ? (progress.error ?? null) : null,
-    }));
+      };
+      // When real progress arrives, drop any pending placeholder runs for this team.
+      if (!isPendingProvisioningRunId(progress.runId)) {
+        for (const [runId, run] of Object.entries(nextRuns)) {
+          if (isPendingProvisioningRunId(runId) && run.teamName === progress.teamName) {
+            delete nextRuns[runId];
+          }
+        }
+      }
+      return {
+        provisioningRuns: nextRuns,
+        activeProvisioningRunId: progress.runId,
+        provisioningError: progress.state === 'failed' ? (progress.error ?? null) : null,
+      };
+    });
 
     if (progress.state === 'ready' || progress.state === 'disconnected') {
       void get().fetchTeams();

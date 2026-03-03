@@ -1,3 +1,4 @@
+import { readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTasksBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -6,6 +7,7 @@ import * as path from 'path';
 import type { TaskComment, TaskWorkInterval, TeamTask } from '@shared/types';
 
 const logger = createLogger('Service:TeamTaskReader');
+const MAX_TASK_FILE_BYTES = 2 * 1024 * 1024;
 
 export class TeamTaskReader {
   /**
@@ -63,7 +65,12 @@ export class TeamTaskReader {
 
       const taskPath = path.join(tasksDir, file);
       try {
-        const raw = await fs.promises.readFile(taskPath, 'utf8');
+        const fileStat = await fs.promises.stat(taskPath);
+        if (!fileStat.isFile() || fileStat.size > MAX_TASK_FILE_BYTES) {
+          logger.debug(`Skipping suspicious task file: ${taskPath}`);
+          continue;
+        }
+        const raw = await readFileUtf8WithTimeout(taskPath, 5_000);
         const parsed = JSON.parse(raw) as Record<string, unknown>;
         // Skip internal CLI tracking entries (spawned subagent bookkeeping)
         const metadata = parsed.metadata as Record<string, unknown> | undefined;
@@ -77,19 +84,18 @@ export class TeamTaskReader {
             : typeof parsed.title === 'string'
               ? parsed.title
               : '';
-        // Resolve createdAt: prefer JSON field, fallback to fs.stat
+        // Resolve createdAt: prefer JSON field, fallback to fs.stat (reuse fileStat from above)
         let createdAt: string | undefined;
         let updatedAt: string | undefined;
         if (typeof parsed.createdAt === 'string') {
           createdAt = parsed.createdAt;
         }
         try {
-          const stat = await fs.promises.stat(taskPath);
           if (!createdAt) {
-            const bt = stat.birthtime.getTime();
-            createdAt = (bt > 0 ? stat.birthtime : stat.mtime).toISOString();
+            const bt = fileStat.birthtime.getTime();
+            createdAt = (bt > 0 ? fileStat.birthtime : fileStat.mtime).toISOString();
           }
-          updatedAt = stat.mtime.toISOString();
+          updatedAt = fileStat.mtime.toISOString();
         } catch {
           /* leave undefined */
         }
@@ -197,7 +203,12 @@ export class TeamTaskReader {
 
       const taskPath = path.join(tasksDir, file);
       try {
-        const raw = await fs.promises.readFile(taskPath, 'utf8');
+        const fileStat = await fs.promises.stat(taskPath);
+        if (!fileStat.isFile() || fileStat.size > MAX_TASK_FILE_BYTES) {
+          logger.debug(`Skipping suspicious task file: ${taskPath}`);
+          continue;
+        }
+        const raw = await readFileUtf8WithTimeout(taskPath, 5_000);
         const parsed = JSON.parse(raw) as Record<string, unknown>;
         // Skip internal CLI tracking entries
         const metadata = parsed.metadata as Record<string, unknown> | undefined;

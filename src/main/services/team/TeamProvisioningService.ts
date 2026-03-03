@@ -1,6 +1,7 @@
 /* eslint-disable no-param-reassign -- ProvisioningRun object is intentionally mutated as a state tracker throughout the provisioning lifecycle */
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { killProcessTree, spawnCli } from '@main/utils/childProcess';
+import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import {
   encodePath,
   extractBaseDir,
@@ -65,6 +66,9 @@ const PREFLIGHT_AUTH_MAX_RETRIES = 2;
 const KEYCHAIN_TIMEOUT_MS = 5000;
 const FS_MONITOR_POLL_MS = 2000;
 const TASK_WAIT_FALLBACK_MS = 15_000;
+const TEAM_JSON_READ_TIMEOUT_MS = 5_000;
+const TEAM_CONFIG_MAX_BYTES = 10 * 1024 * 1024;
+const TEAM_INBOX_MAX_BYTES = 2 * 1024 * 1024;
 
 const execFileAsync = promisify(execFile);
 
@@ -181,6 +185,37 @@ function nowIso(): string {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function tryReadRegularFileUtf8(
+  filePath: string,
+  opts: { timeoutMs: number; maxBytes: number }
+): Promise<string | null> {
+  let stat: fs.Stats;
+  try {
+    stat = await fs.promises.stat(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    return null;
+  }
+
+  if (!stat.isFile() || stat.size > opts.maxBytes) {
+    return null;
+  }
+
+  try {
+    return await readFileUtf8WithTimeout(filePath, opts.timeoutMs);
+  } catch (error) {
+    if (error instanceof FileReadTimeoutError) {
+      return null;
+    }
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    return null;
+  }
 }
 
 let cachedInteractiveShellEnv: NodeJS.ProcessEnv | null = null;
@@ -1420,10 +1455,11 @@ export class TeamProvisioningService {
 
     // Verify config.json exists — team must already be provisioned
     const configPath = path.join(getTeamsBasePath(), request.teamName, 'config.json');
-    let configRaw: string;
-    try {
-      configRaw = await fs.promises.readFile(configPath, 'utf8');
-    } catch {
+    const configRaw = await tryReadRegularFileUtf8(configPath, {
+      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+      maxBytes: TEAM_CONFIG_MAX_BYTES,
+    });
+    if (!configRaw) {
       throw new Error(`Team "${request.teamName}" not found — config.json does not exist`);
     }
 
@@ -2066,14 +2102,12 @@ export class TeamProvisioningService {
     const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${member}.json`);
 
     await withInboxLock(inboxPath, async () => {
-      let raw: string;
-      try {
-        raw = await fs.promises.readFile(inboxPath, 'utf8');
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          return;
-        }
-        throw error;
+      const raw = await tryReadRegularFileUtf8(inboxPath, {
+        timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+        maxBytes: TEAM_INBOX_MAX_BYTES,
+      });
+      if (!raw) {
+        return;
       }
 
       let parsed: unknown;
@@ -2689,7 +2723,13 @@ export class TeamProvisioningService {
       }
       for (const probe of probes) {
         try {
-          const raw = await fs.promises.readFile(probe.configPath, 'utf8');
+          const raw = await tryReadRegularFileUtf8(probe.configPath, {
+            timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+            maxBytes: TEAM_CONFIG_MAX_BYTES,
+          });
+          if (!raw) {
+            continue;
+          }
           const parsed = JSON.parse(raw) as unknown;
           if (parsed && typeof parsed === 'object') {
             const candidate = parsed as { name?: unknown };
@@ -2984,7 +3024,13 @@ export class TeamProvisioningService {
   private async updateConfigProjectPath(teamName: string, cwd: string): Promise<void> {
     const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
     try {
-      const raw = await fs.promises.readFile(configPath, 'utf8');
+      const raw = await tryReadRegularFileUtf8(configPath, {
+        timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+        maxBytes: TEAM_CONFIG_MAX_BYTES,
+      });
+      if (!raw) {
+        throw new Error('config.json unreadable');
+      }
       const config = JSON.parse(raw) as Record<string, unknown>;
 
       config.projectPath = cwd;
@@ -3019,7 +3065,13 @@ export class TeamProvisioningService {
     const MAX_PROJECT_PATH_HISTORY = 500;
     const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
     try {
-      const raw = await fs.promises.readFile(configPath, 'utf8');
+      const raw = await tryReadRegularFileUtf8(configPath, {
+        timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+        maxBytes: TEAM_CONFIG_MAX_BYTES,
+      });
+      if (!raw) {
+        throw new Error('config.json unreadable');
+      }
       const config = JSON.parse(raw) as Record<string, unknown>;
 
       const sessionHistory = Array.isArray(config.sessionHistory)
@@ -3224,7 +3276,13 @@ export class TeamProvisioningService {
     const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
     const backupPath = `${configPath}.prelaunch.bak`;
     try {
-      const backupRaw = await fs.promises.readFile(backupPath, 'utf8');
+      const backupRaw = await tryReadRegularFileUtf8(backupPath, {
+        timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+        maxBytes: TEAM_CONFIG_MAX_BYTES,
+      });
+      if (!backupRaw) {
+        return;
+      }
       await atomicWriteAsync(configPath, backupRaw);
       logger.info(`[${teamName}] Restored config.json from prelaunch backup after launch failure`);
     } catch {
@@ -3278,7 +3336,14 @@ export class TeamProvisioningService {
       const canonicalPath = path.join(inboxDir, canonicalFile);
       let canonicalRaw: string;
       try {
-        canonicalRaw = await fs.promises.readFile(canonicalPath, 'utf8');
+        const raw = await tryReadRegularFileUtf8(canonicalPath, {
+          timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+          maxBytes: TEAM_INBOX_MAX_BYTES,
+        });
+        if (!raw) {
+          continue;
+        }
+        canonicalRaw = raw;
       } catch {
         // If cannot read, skip cleanup for this base.
         continue;
@@ -3297,7 +3362,14 @@ export class TeamProvisioningService {
         const dupPath = path.join(inboxDir, dupFile);
         let dupRaw: string;
         try {
-          dupRaw = await fs.promises.readFile(dupPath, 'utf8');
+          const raw = await tryReadRegularFileUtf8(dupPath, {
+            timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+            maxBytes: TEAM_INBOX_MAX_BYTES,
+          });
+          if (!raw) {
+            continue;
+          }
+          dupRaw = raw;
         } catch {
           continue;
         }

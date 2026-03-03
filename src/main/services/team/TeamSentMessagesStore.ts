@@ -1,3 +1,4 @@
+import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -8,6 +9,7 @@ import { atomicWriteAsync } from './atomicWrite';
 import type { InboxMessage } from '@shared/types';
 
 const MAX_MESSAGES = 200;
+const MAX_SENT_MESSAGES_FILE_BYTES = 2 * 1024 * 1024;
 const logger = createLogger('TeamSentMessagesStore');
 
 export class TeamSentMessagesStore {
@@ -20,9 +22,18 @@ export class TeamSentMessagesStore {
 
     let raw: string;
     try {
-      raw = await fs.promises.readFile(filePath, 'utf8');
+      const stat = await fs.promises.stat(filePath);
+      // Avoid hangs on non-regular files (FIFO, sockets) and huge/binary files.
+      if (!stat.isFile() || stat.size > MAX_SENT_MESSAGES_FILE_BYTES) {
+        return [];
+      }
+      raw = await readFileUtf8WithTimeout(filePath, 5_000);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return [];
+      }
+      if (error instanceof FileReadTimeoutError) {
+        logger.error(`Timed out reading sent messages for ${teamName}`);
         return [];
       }
       // Bug #4: graceful degradation instead of crashing
