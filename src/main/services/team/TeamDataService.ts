@@ -914,11 +914,10 @@ export class TeamDataService {
     const comment = await this.taskWriter.addComment(teamName, taskId, text);
 
     try {
-      const [tasks, toolPath, config, metaMembers] = await Promise.all([
+      const [tasks, toolPath, config] = await Promise.all([
         this.taskReader.getTasks(teamName),
         this.toolsInstaller.ensureInstalled(),
         this.configReader.getConfig(teamName).catch(() => null),
-        this.membersMetaStore.getMembers(teamName).catch(() => []),
       ]);
       const task = tasks.find((t) => t.id === taskId);
       const leadName = this.resolveLeadNameFromConfig(config);
@@ -930,12 +929,9 @@ export class TeamDataService {
       }
 
       if (task?.owner) {
-        // Solo team UX: if the user comments on a lead-owned task, don't echo the
-        // comment back as an inbox notification from the lead. The comment is already visible.
-        if (
-          this.isSoloTeamFromMembers(config, metaMembers, leadName) &&
-          this.isLeadOwner(task.owner, leadName)
-        ) {
+        // UX: don't echo a user comment as an inbox notification "from the lead" when the
+        // task is already owned by the lead. This creates confusing self-notifications.
+        if (this.isLeadOwner(task.owner, leadName)) {
           return comment;
         }
 
@@ -980,30 +976,9 @@ export class TeamDataService {
   }
 
   private isLeadOwner(owner: string, leadName: string): boolean {
-    const normalized = owner.trim();
+    const normalized = owner.trim().toLowerCase();
     if (!normalized) return false;
-    return normalized === leadName || normalized === 'team-lead';
-  }
-
-  private isSoloTeamFromMembers(
-    config: TeamConfig | null,
-    metaMembers: TeamMember[],
-    leadName: string
-  ): boolean {
-    const configMembers = config?.members ?? [];
-    const combined = [...configMembers, ...(metaMembers ?? [])];
-
-    const activeNonLead = combined.filter((m) => {
-      const name = m.name?.trim();
-      if (!name) return false;
-      if (m.removedAt) return false;
-      if (m.agentType === 'team-lead') return false;
-      if (name === 'team-lead') return false;
-      if (name === leadName) return false;
-      return true;
-    });
-
-    return activeNonLead.length === 0;
+    return normalized === leadName.trim().toLowerCase() || normalized === 'team-lead';
   }
 
   async sendDirectToLead(

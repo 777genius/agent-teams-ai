@@ -727,10 +727,10 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     memberName?: string
   ) => {
     const { hunkDecisions, fileDecisions, fileChunkCounts, activeChangeSet, fileContents } = get();
-    if (!activeChangeSet) return;
+    if (!activeChangeSet) return null;
 
     const file = activeChangeSet.files.find((f) => f.filePath === filePath);
-    if (!file) return;
+    if (!file) return null;
 
     const fileDecision = fileDecisions[filePath] ?? 'pending';
     const hunkDecs: Record<number, HunkDecision> = {};
@@ -743,7 +743,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
 
     const hasRejected =
       fileDecision === 'rejected' || Object.values(hunkDecs).some((d) => d === 'rejected');
-    if (!hasRejected) return;
+    if (!hasRejected) return null;
 
     try {
       const content = fileContents[filePath];

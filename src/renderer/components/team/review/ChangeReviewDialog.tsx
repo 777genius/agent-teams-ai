@@ -115,6 +115,7 @@ export const ChangeReviewDialog = ({
   // Track recent per-hunk actions so Ctrl/Cmd+Z can clear persisted decisions (reopen-safe)
   const lastHunkActionAtRef = useRef<Record<string, number>>({});
   const hunkDecisionUndoStackRef = useRef<Record<string, number[]>>({});
+  const newFileApplyInFlightRef = useRef(new Set<string>());
 
   // Proxy ref for useDiffNavigation (points to active file's editor)
   const activeEditorViewRef = useRef<EditorView | null>(null);
@@ -230,21 +231,28 @@ export const ChangeReviewDialog = ({
 
   const handleRejectNewFile = useCallback(
     async (filePath: string) => {
-      // Mark rejected in store + update CM view immediately for feedback
-      rejectAllFile(filePath);
-      const view = editorViewMapRef.current.get(filePath);
-      if (view) {
-        requestAnimationFrame(() => rejectAllChunks(view));
-      }
+      if (newFileApplyInFlightRef.current.has(filePath)) return;
+      newFileApplyInFlightRef.current.add(filePath);
+      try {
+        // Mark rejected in store + update CM view immediately for feedback
+        rejectAllFile(filePath);
+        const view = editorViewMapRef.current.get(filePath);
+        if (view) {
+          requestAnimationFrame(() => rejectAllChunks(view));
+        }
 
-      // Always apply immediately: rejecting a NEW file means deleting it from disk.
-      const isNew = activeChangeSet?.files.find((f) => f.filePath === filePath)?.isNewFile ?? false;
-      if (!isNew) return;
+        // Always apply immediately: rejecting a NEW file means deleting it from disk.
+        const isNew =
+          activeChangeSet?.files.find((f) => f.filePath === filePath)?.isNewFile ?? false;
+        if (!isNew) return;
 
-      const result = await applySingleFileDecision(teamName, filePath, taskId, memberName);
-      const hasErrorForFile = !!result?.errors.some((e) => e.filePath === filePath);
-      if (result && !hasErrorForFile) {
-        removeReviewFile(filePath);
+        const result = await applySingleFileDecision(teamName, filePath, taskId, memberName);
+        const hasErrorForFile = !!result?.errors.some((e) => e.filePath === filePath);
+        if (result && !hasErrorForFile) {
+          removeReviewFile(filePath);
+        }
+      } finally {
+        newFileApplyInFlightRef.current.delete(filePath);
       }
     },
     [
