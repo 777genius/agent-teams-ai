@@ -478,6 +478,12 @@ ${AGENT_BLOCK_OPEN}
 ${AGENT_BLOCK_CLOSE}
 - Put ONLY the internal instructions inside the agent-only block.
 - CRITICAL: Messages to "user" (the human) must NEVER contain agent-only blocks. Write them as plain readable text — the human sees these messages directly in the UI. Agent-only blocks are stripped before display, so a message containing ONLY an agent-only block will appear completely empty.
+- CRITICAL: Messages to "user" must NEVER mention internal tooling, scripts, or CLI commands — not even in plain text. The user interacts through the UI, NOT the terminal. Specifically, NEVER include in user-facing messages:
+  - teamctl.js commands or references
+  - any node/bash commands (e.g. node "$HOME/.claude/tools/...")
+  - internal file paths (~/.claude/tools/, ~/.claude/teams/, etc.)
+  - instructions to run commands in terminal
+  Instead, describe the action in human-friendly language (e.g. "Task #6 is complete." instead of showing a command to mark it complete). If you need to update task status, do it YOURSELF — never ask the user to run a command.
 - CRITICAL: When processing relayed inbox messages, your text output is shown to the user. Do NOT wrap your entire response in an agent-only block. If you need agent-only instructions, put them in a separate block and include a brief human-readable summary outside of it (e.g. "Delegated task to carol." or "Acknowledged, no action needed.").`;
 }
 
@@ -572,6 +578,7 @@ Constraints:
 - Keep the task board high-signal: avoid creating tasks for trivial micro-items.
 - Use the team task board for assigned/substantial work.
 - TaskCreate is optional for private planning only; do NOT use it for team-board tasks.
+- When messaging "user" (the human): NEVER mention teamctl.js, internal scripts, CLI commands, or file paths under ~/.claude/. The user sees messages in the UI — write plain human language. If a task needs a status update, do it yourself via Bash; never ask the user to run a command.
 
 ${teamCtlOps}
 
@@ -590,6 +597,12 @@ Steps (execute in this exact order):
 
 2) Spawn each member as a live teammate using the Task tool. For each member below, use the exact prompt shown:
 
+// NOTE: taskProtocol & processRegistration are deliberately inlined into EACH member's spawn prompt
+// below, even though the text is identical across members. This duplicates ~4K chars per member
+// in the lead's context, but ensures the lead passes the EXACT protocol verbatim via Task tool.
+// Extracting them once and telling the lead to "insert the protocol block" risks hallucination
+// or omission — the lead may rephrase rules, skip items, or forget to include them.
+// Cost: ~1K tokens per extra member. At 200K context window this is negligible.
 ${request.members
   .map(
     (m) => `   For "${m.name}":
@@ -691,6 +704,7 @@ Constraints:
 - Keep the task board high-signal: avoid creating tasks for trivial micro-items.
 - Use the team task board for assigned/substantial work.
 - TaskCreate is optional for private planning only; do NOT use it for team-board tasks.
+- When messaging "user" (the human): NEVER mention teamctl.js, internal scripts, CLI commands, or file paths under ~/.claude/. The user sees messages in the UI — write plain human language. If a task needs a status update, do it yourself via Bash; never ask the user to run a command.
 
 ${teamCtlOps}
 
@@ -1937,7 +1951,7 @@ export class TeamProvisioningService {
       // that is not meant for the human user.
       const cleanReply = replyText ? stripAgentBlocks(replyText) : null;
       if (cleanReply) {
-        this.pushLiveLeadProcessMessage(teamName, {
+        const relayMsg: InboxMessage = {
           from: leadName,
           to: 'user',
           text: cleanReply,
@@ -1946,7 +1960,10 @@ export class TeamProvisioningService {
           summary: cleanReply.length > 60 ? cleanReply.slice(0, 57) + '...' : cleanReply,
           messageId: `lead-process-${runId}-${Date.now()}`,
           source: 'lead_process',
-        });
+        };
+        this.pushLiveLeadProcessMessage(teamName, relayMsg);
+        // Persist to disk so relayed replies survive app restart and trigger FileWatcher
+        void this.sentMessagesStore.appendMessage(teamName, relayMsg).catch(() => undefined);
         this.teamChangeEmitter?.({
           type: 'inbox',
           teamName,

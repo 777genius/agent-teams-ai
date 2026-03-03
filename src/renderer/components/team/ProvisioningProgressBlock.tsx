@@ -82,6 +82,7 @@ export const ProvisioningProgressBlock = ({
   const [logsOpen, setLogsOpen] = useState(false);
   const outputScrollRef = useRef<HTMLDivElement>(null);
   const isError = tone === 'error';
+  const hasAnyOutput = !!assistantOutput || !!cliLogsTail;
 
   // Auto-scroll assistant output
   useEffect(() => {
@@ -190,6 +191,16 @@ export const ProvisioningProgressBlock = ({
           </button>
           {logsOpen ? <CliLogsRichView cliLogsTail={cliLogsTail} className="mt-1" /> : null}
         </div>
+      ) : null}
+      {!hasAnyOutput ? (
+        <p
+          className={cn(
+            'mt-2 text-[11px]',
+            isError ? 'text-red-200/80' : 'text-[var(--color-text-muted)]'
+          )}
+        >
+          No output captured yet.
+        </p>
       ) : null}
     </div>
   );

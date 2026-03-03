@@ -337,12 +337,26 @@ export function initializeNotificationListeners(): () => void {
     const cleanup = api.teams.onTeamChange((_event: unknown, event: TeamChangeEvent) => {
       // Immediate in-memory update for lead activity — no filesystem refresh needed
       if (event.type === 'lead-activity' && event.detail) {
-        useStore.setState((prev) => ({
-          leadActivityByTeam: {
-            ...prev.leadActivityByTeam,
-            [event.teamName]: event.detail as 'active' | 'idle' | 'offline',
-          },
-        }));
+        const nextActivity = event.detail as 'active' | 'idle' | 'offline';
+        useStore.setState((prev) => {
+          const nextState: Partial<typeof prev> = {
+            leadActivityByTeam: {
+              ...prev.leadActivityByTeam,
+              [event.teamName]: nextActivity,
+            },
+          };
+
+          // Keep TeamDetailView in sync: it historically relied on selectedTeamData.isAlive,
+          // which isn't refreshed for lead-activity events.
+          if (prev.selectedTeamName === event.teamName && prev.selectedTeamData) {
+            nextState.selectedTeamData = {
+              ...prev.selectedTeamData,
+              isAlive: nextActivity !== 'offline',
+            };
+          }
+
+          return nextState as typeof prev;
+        });
         return;
       }
 

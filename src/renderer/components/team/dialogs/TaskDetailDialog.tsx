@@ -97,6 +97,8 @@ export const TaskDetailDialog = ({
   const currentTask = task ? (taskMap.get(task.id) ?? task) : null;
   const updateTaskFields = useStore((s) => s.updateTaskFields);
 
+  const [logsRefreshing, setLogsRefreshing] = useState(false);
+
   // Inline editing: subject
   const [editingSubject, setEditingSubject] = useState(false);
   const [subjectDraft, setSubjectDraft] = useState('');
@@ -590,6 +592,14 @@ export const TaskDetailDialog = ({
           <CollapsibleTeamSection
             title="Execution Logs"
             icon={<ScrollText size={14} />}
+            headerExtra={
+              logsRefreshing ? (
+                <span className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
+                  <Loader2 size={10} className="animate-spin" />
+                  Updating...
+                </span>
+              ) : null
+            }
             defaultOpen
           >
             <div className="min-w-0 overflow-hidden">
@@ -599,6 +609,7 @@ export const TaskDetailDialog = ({
                 taskOwner={currentTask.owner}
                 taskStatus={currentTask.status}
                 taskWorkIntervals={currentTask.workIntervals}
+                onRefreshingChange={setLogsRefreshing}
               />
             </div>
           </CollapsibleTeamSection>

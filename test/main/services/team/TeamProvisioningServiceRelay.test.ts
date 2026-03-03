@@ -187,6 +187,14 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(first).toBe(1);
     expect(second).toBe(0);
     expect(writeSpy).toHaveBeenCalledTimes(1);
+
+    // Relay now also persists to sentMessages.json via appendMessage() which uses
+    // atomicWriteAsync — expected to fail here since atomicWriteShouldFail=true.
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('TeamSentMessagesStore'),
+      expect.stringContaining('Failed to append sent message')
+    );
+    vi.mocked(console.error).mockClear();
   });
 
   it('does not mark as relayed when stdin is not writable', async () => {

@@ -105,6 +105,9 @@ function validateNotificationsSection(
     'enabled',
     'soundEnabled',
     'includeSubagentErrors',
+    'notifyOnLeadInbox',
+    'notifyOnUserInbox',
+    'notifyOnClarifications',
     'ignoredRegex',
     'ignoredRepositories',
     'snoozedUntil',
@@ -140,6 +143,24 @@ function validateNotificationsSection(
           return { valid: false, error: `notifications.${key} must be a boolean` };
         }
         result.includeSubagentErrors = value;
+        break;
+      case 'notifyOnLeadInbox':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnLeadInbox = value;
+        break;
+      case 'notifyOnUserInbox':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnUserInbox = value;
+        break;
+      case 'notifyOnClarifications':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnClarifications = value;
         break;
       case 'ignoredRegex':
         if (!isStringArray(value)) {

@@ -109,6 +109,34 @@ describe('configValidation', () => {
     }
   });
 
+  it.each(['notifyOnLeadInbox', 'notifyOnUserInbox', 'notifyOnClarifications'] as const)(
+    'accepts boolean %s toggle',
+    (key) => {
+      const resultOn = validateConfigUpdatePayload('notifications', { [key]: true });
+      expect(resultOn.valid).toBe(true);
+      if (resultOn.valid) {
+        expect(resultOn.data).toEqual({ [key]: true });
+      }
+
+      const resultOff = validateConfigUpdatePayload('notifications', { [key]: false });
+      expect(resultOff.valid).toBe(true);
+      if (resultOff.valid) {
+        expect(resultOff.data).toEqual({ [key]: false });
+      }
+    }
+  );
+
+  it.each(['notifyOnLeadInbox', 'notifyOnUserInbox', 'notifyOnClarifications'] as const)(
+    'rejects non-boolean %s',
+    (key) => {
+      const result = validateConfigUpdatePayload('notifications', { [key]: 'yes' });
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.error).toContain('boolean');
+      }
+    }
+  );
+
   it('rejects out-of-range snoozeMinutes', () => {
     const result = validateConfigUpdatePayload('notifications', { snoozeMinutes: 0 });
     expect(result.valid).toBe(false);

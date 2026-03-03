@@ -63,7 +63,7 @@ export class TeamSentMessagesStore {
         messageId: typeof row.messageId === 'string' ? row.messageId : undefined,
         color: typeof row.color === 'string' ? row.color : undefined,
         attachments: Array.isArray(row.attachments) ? row.attachments : undefined,
-        source: 'user_sent',
+        source: typeof row.source === 'string' ? (row.source as InboxMessage['source']) : undefined,
       });
     }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { MemberExecutionLog } from '@renderer/components/team/members/MemberExecutionLog';
@@ -26,6 +26,8 @@ interface MemberLogsTabProps {
   taskStatus?: string;
   /** Persisted work intervals for filtering owner sessions (avoid unrelated tasks) */
   taskWorkIntervals?: { startedAt: string; completedAt?: string }[];
+  /** Notifies parent when a background refresh starts/ends. */
+  onRefreshingChange?: (isRefreshing: boolean) => void;
 }
 
 export const MemberLogsTab = ({
@@ -35,17 +37,29 @@ export const MemberLogsTab = ({
   taskOwner,
   taskStatus,
   taskWorkIntervals,
+  onRefreshingChange,
 }: MemberLogsTabProps): React.JSX.Element => {
+  const intervalsKey = useMemo(
+    () => (taskWorkIntervals ? JSON.stringify(taskWorkIntervals) : ''),
+    [taskWorkIntervals]
+  );
+  const hasLoadedRef = useRef(false);
+
   const [logs, setLogs] = useState<MemberLogSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detailChunks, setDetailChunks] = useState<EnhancedChunk[] | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
+    onRefreshingChange?.(refreshing);
+    return () => onRefreshingChange?.(false);
+  }, [refreshing, onRefreshingChange]);
+
+  useEffect(() => {
     let cancelled = false;
-    let isInitial = true;
     const shouldAutoRefresh = taskId != null && taskStatus === 'in_progress';
 
     const load = async (): Promise<void> => {
@@ -54,8 +68,10 @@ export const MemberLogsTab = ({
           if (!cancelled) setLogs([]);
           return;
         }
-        if (isInitial) {
+        if (!hasLoadedRef.current) {
           setLoading(true);
+        } else {
+          setRefreshing(true);
         }
         setError(null);
 
@@ -69,16 +85,17 @@ export const MemberLogsTab = ({
             : await api.teams.getMemberLogs(teamName, memberName!);
         if (!cancelled) {
           setLogs(result);
+          hasLoadedRef.current = true;
         }
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : 'Unknown error');
         }
       } finally {
-        if (!cancelled && isInitial) {
+        if (!cancelled) {
           setLoading(false);
+          setRefreshing(false);
         }
-        isInitial = false;
       }
     };
 
@@ -90,7 +107,8 @@ export const MemberLogsTab = ({
       cancelled = true;
       if (interval) clearInterval(interval);
     };
-  }, [teamName, memberName, taskId, taskOwner, taskStatus, taskWorkIntervals]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamName, memberName, taskId, taskOwner, taskStatus, intervalsKey]);
 
   const handleExpand = useCallback(
     async (log: MemberLogSummary) => {
@@ -124,7 +142,7 @@ export const MemberLogsTab = ({
     [expandedId]
   );
 
-  if (loading) {
+  if (loading && logs.length === 0) {
     return (
       <div className="flex items-center justify-center gap-2 py-8 text-xs text-[var(--color-text-muted)]">
         <Loader2 size={14} className="animate-spin" />

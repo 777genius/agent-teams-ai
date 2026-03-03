@@ -53,13 +53,24 @@ export const TeamProvisioningBanner = ({
     if (progress?.state !== 'ready') {
       return;
     }
+    // If we captured any logs/output, keep the banner visible so the user
+    // can inspect what happened (common for fast stop→start cycles).
+    if (progress.assistantOutput || progress.cliLogsTail || progress.error) {
+      return;
+    }
     const timer = window.setTimeout(() => {
       setDismissed(true);
     }, READY_DISMISS_MS);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [progress?.state, progress?.runId]);
+  }, [
+    progress?.state,
+    progress?.runId,
+    progress?.assistantOutput,
+    progress?.cliLogsTail,
+    progress?.error,
+  ]);
 
   if (!progress || dismissed) {
     return null;
@@ -132,17 +143,29 @@ export const TeamProvisioningBanner = ({
 
   if (isReady) {
     return (
-      <div className="mb-3 flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2">
-        <CheckCircle2 size={14} className="shrink-0 text-emerald-400" />
-        <p className="flex-1 text-xs text-emerald-200">Team launched — process alive</p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-6 shrink-0 border-emerald-500/40 px-2 text-xs text-emerald-300 hover:bg-emerald-500/10 hover:text-emerald-200"
-          onClick={() => setDismissed(true)}
-        >
-          <X size={12} />
-        </Button>
+      <div className="mb-3">
+        <div className="mb-2 flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2">
+          <CheckCircle2 size={14} className="shrink-0 text-emerald-400" />
+          <p className="flex-1 text-xs text-emerald-200">Team launched — process alive</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 shrink-0 border-emerald-500/40 px-2 text-xs text-emerald-300 hover:bg-emerald-500/10 hover:text-emerald-200"
+            onClick={() => setDismissed(true)}
+          >
+            <X size={12} />
+          </Button>
+        </div>
+        <ProvisioningProgressBlock
+          title="Launch details"
+          message={progress.message}
+          currentStepIndex={progressStepIndex >= 0 ? progressStepIndex : -1}
+          startedAt={progress.startedAt}
+          pid={progress.pid}
+          cliLogsTail={progress.cliLogsTail}
+          assistantOutput={progress.assistantOutput}
+          onCancel={null}
+        />
       </div>
     );
   }

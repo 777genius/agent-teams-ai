@@ -44,6 +44,7 @@ import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { showTeamNativeNotification } from './ipc/teams';
 import { HttpServer } from './services/infrastructure/HttpServer';
 import { TeamInboxReader } from './services/team/TeamInboxReader';
+import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
 import { getAppIconPath } from './utils/appIcon';
 import { getProjectsBasePath, getTodosBasePath } from './utils/pathDecoder';
 import {
@@ -71,8 +72,11 @@ const logger = createLogger('App');
 
 // --- Team message notification tracking ---
 const teamInboxReader = new TeamInboxReader();
+const sentMessagesStore = new TeamSentMessagesStore();
 /** Track last-seen message count per inbox file to detect new messages. */
 const inboxMessageCounts = new Map<string, number>();
+/** Track last-seen message count per team sentMessages.json to detect new user-directed messages. */
+const sentMessageCounts = new Map<string, number>();
 /** Debounce per-inbox to avoid flooding during batch writes. */
 const inboxNotifyTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const INBOX_NOTIFY_DEBOUNCE_MS = 500;
@@ -245,6 +249,57 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
   }
 }
 
+/**
+ * Notify for new messages in sentMessages.json (lead → user messages).
+ * Mirrors notifyNewInboxMessages() but reads from TeamSentMessagesStore.
+ */
+async function notifyNewSentMessages(teamName: string): Promise<void> {
+  const config = configManager.getConfig();
+  if (!config.notifications.enabled) return;
+  if (!config.notifications.notifyOnUserInbox) return;
+
+  try {
+    const messages = await sentMessagesStore.readMessages(teamName);
+    const isFirstLoad = !sentMessageCounts.has(teamName);
+    const prevCount = sentMessageCounts.get(teamName) ?? 0;
+
+    if (isFirstLoad) {
+      sentMessageCounts.set(teamName, messages.length);
+      return;
+    }
+
+    if (messages.length <= prevCount) {
+      sentMessageCounts.set(teamName, messages.length);
+      return;
+    }
+
+    // Messages are appended at the end, new ones are at the tail
+    const newMessages = messages.slice(prevCount);
+    sentMessageCounts.set(teamName, messages.length);
+
+    const teamDisplayName = await resolveTeamDisplayName(teamName);
+
+    for (const msg of newMessages) {
+      // Skip messages sent from our own UI
+      if (msg.source && suppressedSources.has(msg.source)) continue;
+      // Skip internal coordination noise
+      if (isInboxNoiseMessage(msg.text)) continue;
+
+      const fromLabel = msg.from || 'team-lead';
+      const extracted = extractNotificationContent(msg.text);
+      const summary = msg.summary || extracted.summary;
+
+      showTeamNativeNotification({
+        title: teamDisplayName,
+        subtitle: `${fromLabel}: ${summary}`,
+        body: extracted.body,
+      });
+    }
+  } catch (error) {
+    logger.warn(`Failed to check sent messages for ${teamName}:`, error);
+  }
+}
+
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled promise rejection in main process:', reason);
 });
@@ -400,29 +455,18 @@ function wireFileWatcherEvents(context: ServiceContext): void {
         );
       }
 
-      // Show native OS notification for live lead process replies.
-      // These don't go through inbox files — they're held in-memory by TeamProvisioningService.
-      if (detail === 'lead-process-reply' || detail === 'lead-direct-reply') {
-        const cfg = configManager.getConfig();
-        if (cfg.notifications.enabled && cfg.notifications.notifyOnUserInbox) {
-          const messages = teamProvisioningService.getLiveLeadProcessMessages(teamName);
-          const latest = messages.length > 0 ? messages[messages.length - 1] : undefined;
-          // Only notify for messages addressed to the human user, skip noise
-          if (latest?.to === 'user' && !isInboxNoiseMessage(latest.text)) {
-            const fromLabel = latest.from || 'team-lead';
-            const extracted = extractNotificationContent(latest.text);
-            const summary = latest.summary || extracted.summary;
-            void resolveTeamDisplayName(teamName)
-              .then((displayName) => {
-                showTeamNativeNotification({
-                  title: displayName,
-                  subtitle: `${fromLabel}: ${summary}`,
-                  body: extracted.body,
-                });
-              })
-              .catch(() => undefined);
-          }
-        }
+      // Show native OS notification for new lead → user messages (sentMessages.json).
+      if (detail === 'sentMessages.json') {
+        const timerKey = `${teamName}:sentMessages`;
+        const existing = inboxNotifyTimers.get(timerKey);
+        if (existing) clearTimeout(existing);
+        inboxNotifyTimers.set(
+          timerKey,
+          setTimeout(() => {
+            inboxNotifyTimers.delete(timerKey);
+            void notifyNewSentMessages(teamName).catch(() => undefined);
+          }, INBOX_NOTIFY_DEBOUNCE_MS)
+        );
       }
     } catch {
       // ignore
