@@ -492,6 +492,11 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     [data?.members]
   );
 
+  const activeTeammateCount = useMemo(
+    () => activeMembers.filter((m) => m.agentType !== 'team-lead' && m.name !== 'team-lead').length,
+    [activeMembers]
+  );
+
   const taskMap = useMemo(() => new Map((data?.tasks ?? []).map((t) => [t.id, t])), [data?.tasks]);
 
   const memberTaskCounts = useMemo(() => buildTaskCountsByOwner(data?.tasks ?? []), [data?.tasks]);
@@ -928,7 +933,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           sectionId="team"
           title="Team"
           icon={<Users size={14} />}
-          badge={activeMembers.length}
+          badge={activeTeammateCount === 0 ? 'Solo' : activeTeammateCount}
           defaultOpen
           action={
             <Button

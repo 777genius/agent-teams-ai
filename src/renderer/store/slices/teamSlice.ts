@@ -361,9 +361,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   fetchAllTasks: async () => {
     // Guard: prevent concurrent fetches (component mount + centralized init chain)
     if (get().globalTasksLoading) return;
-    if (import.meta.env.DEV) {
-      console.warn('[Perf:Renderer] fetchAllTasks:enter');
-    }
     // Show skeleton only on the very first fetch — not on subsequent refreshes
     // even when the task list is empty (avoids flickering skeleton on every watcher event).
     const isInitialLoad = !get().globalTasksInitialized;
@@ -374,18 +371,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const wasFirst = isFirstFetchAllTasks;
     isFirstFetchAllTasks = false;
     try {
-      if (import.meta.env.DEV) {
-        console.warn('[Perf:Renderer] fetchAllTasks:invoke');
-      }
       const tasks = await withTimeout(
         unwrapIpc('team:getAllTasks', () => api.teams.getAllTasks()),
         TEAM_FETCH_TIMEOUT_MS,
         'fetchAllTasks'
       );
-      if (import.meta.env.DEV) {
-        console.warn(`[Perf:Renderer] fetchAllTasks:received count=${tasks.length}`);
-      }
-
       if (!wasFirst) {
         const notifyOnClarifications =
           get().appConfig?.notifications?.notifyOnClarifications ?? true;
@@ -405,9 +395,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         globalTasksInitialized: true,
         globalTasksError: null,
       });
-      if (import.meta.env.DEV) {
-        console.warn('[Perf:Renderer] fetchAllTasks:setState:done');
-      }
     } catch (error) {
       set({
         globalTasksLoading: false,

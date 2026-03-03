@@ -60,9 +60,9 @@ const logger = createLogger('Discovery:ProjectScanner');
 
 // IPC payload safety: session ID arrays can be extremely large for long-lived projects.
 // Keep counts accurate via totalSessions, but truncate ID lists to keep renderer responsive.
-// We no longer need session IDs in project/repository listings (session lists are fetched separately).
-// Keeping this at 0 avoids huge IPC payloads that can stall the renderer thread.
-const MAX_SESSION_IDS_EXPORTED = 0;
+// Keep this non-zero because parts of the renderer still rely on a (partial) sessionId list
+// for lookups and navigation; a small cap preserves that behavior without huge payloads.
+const MAX_SESSION_IDS_EXPORTED = 200;
 
 export class ProjectScanner {
   private readonly projectsDir: string;

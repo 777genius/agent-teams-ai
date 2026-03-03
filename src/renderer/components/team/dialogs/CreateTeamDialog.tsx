@@ -156,14 +156,6 @@ function validateRequest(
       },
     };
   }
-  if (request.members.length === 0) {
-    return {
-      valid: false,
-      errors: {
-        members: 'At least one member is required',
-      },
-    };
-  }
   if (request.members.some((member) => !member.name.trim())) {
     return {
       valid: false,

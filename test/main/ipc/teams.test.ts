@@ -98,6 +98,7 @@ import {
   TEAM_UPDATE_MEMBER_ROLE,
   TEAM_ADD_TASK_RELATIONSHIP,
   TEAM_REMOVE_TASK_RELATIONSHIP,
+  TEAM_REPLACE_MEMBERS,
 } from '../../../src/preload/constants/ipcChannels';
 import {
   initializeTeamHandlers,
@@ -149,6 +150,8 @@ describe('ipc teams handlers', () => {
     setTaskNeedsClarification: vi.fn(async () => undefined),
     addTaskRelationship: vi.fn(async () => undefined),
     removeTaskRelationship: vi.fn(async () => undefined),
+    replaceMembers: vi.fn(async () => undefined),
+    createTeamConfig: vi.fn(async () => undefined),
   };
   const provisioningService = {
     prepareForProvisioning: vi.fn(async () => ({
@@ -615,6 +618,70 @@ describe('ipc teams handlers', () => {
         success: boolean;
       };
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe('solo team (zero members)', () => {
+    it('createTeam accepts members: [] (provisioning validation)', async () => {
+      const handler = handlers.get(TEAM_CREATE)!;
+      const result = (await handler({ sender: { send: vi.fn() } } as never, {
+        teamName: 'solo-team',
+        members: [],
+        cwd: os.tmpdir(),
+      })) as { success: boolean };
+      expect(result.success).toBe(true);
+      expect(provisioningService.createTeam).toHaveBeenCalledTimes(1);
+      const callArg = provisioningService.createTeam.mock.calls[0][0];
+      expect(callArg.members).toEqual([]);
+    });
+
+    it('handleCreateConfig accepts members: []', async () => {
+      const handler = handlers.get(TEAM_CREATE_CONFIG)!;
+      const result = (await handler({} as never, {
+        teamName: 'solo-team',
+        members: [],
+        cwd: os.tmpdir(),
+      })) as { success: boolean };
+      expect(result.success).toBe(true);
+    });
+
+    it('handleReplaceMembers accepts members: []', async () => {
+      const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
+      const result = (await handler({} as never, 'my-team', {
+        members: [],
+      })) as { success: boolean };
+      expect(result.success).toBe(true);
+      expect(service.replaceMembers).toHaveBeenCalledWith('my-team', { members: [] });
+    });
+
+    it('still rejects members as non-array in createTeam', async () => {
+      const handler = handlers.get(TEAM_CREATE)!;
+      const result = (await handler({ sender: { send: vi.fn() } } as never, {
+        teamName: 'solo-team',
+        members: 'not-array',
+        cwd: os.tmpdir(),
+      })) as { success: boolean; error: string };
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('members must be an array');
+    });
+
+    it('still rejects members as non-array in handleCreateConfig', async () => {
+      const handler = handlers.get(TEAM_CREATE_CONFIG)!;
+      const result = (await handler({} as never, {
+        teamName: 'solo-team',
+        members: 'not-array',
+      })) as { success: boolean; error: string };
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('members must be an array');
+    });
+
+    it('still rejects members as non-array in handleReplaceMembers', async () => {
+      const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
+      const result = (await handler({} as never, 'my-team', {
+        members: 'not-array',
+      })) as { success: boolean; error: string };
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('members must be an array');
     });
   });
 });

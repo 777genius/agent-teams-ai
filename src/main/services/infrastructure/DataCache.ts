@@ -359,9 +359,12 @@ export class DataCache {
    */
   startAutoCleanup(intervalMinutes: number = 5): NodeJS.Timeout {
     const intervalMs = intervalMinutes * 60 * 1000;
-    return setInterval(() => {
+    const timer = setInterval(() => {
       this.cleanExpired();
     }, intervalMs);
+    // Background maintenance should not keep the process alive.
+    timer.unref();
+    return timer;
   }
 
   /**

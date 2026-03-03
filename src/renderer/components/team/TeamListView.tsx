@@ -729,6 +729,10 @@ export const TeamListView = (): React.JSX.Element => {
                   <div className="mt-3 flex flex-wrap items-center gap-1.5">
                     {team.members && team.members.length > 0 ? (
                       renderMemberChips(team.members)
+                    ) : team.memberCount === 0 ? (
+                      <Badge variant="secondary" className="text-[10px] font-normal">
+                        Solo
+                      </Badge>
                     ) : (
                       <Badge variant="secondary" className="text-[10px] font-normal">
                         Members: {team.memberCount}

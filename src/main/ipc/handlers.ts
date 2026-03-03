@@ -42,6 +42,7 @@ import {
   registerProjectHandlers,
   removeProjectHandlers,
 } from './projects';
+import { registerRendererLogHandlers, removeRendererLogHandlers } from './rendererLogs';
 import { initializeReviewHandlers, registerReviewHandlers, removeReviewHandlers } from './review';
 import { initializeSearchHandlers, registerSearchHandlers, removeSearchHandlers } from './search';
 import {
@@ -69,7 +70,6 @@ import {
 import { registerUtilityHandlers, removeUtilityHandlers } from './utility';
 import { registerValidationHandlers, removeValidationHandlers } from './validation';
 import { registerWindowHandlers, removeWindowHandlers } from './window';
-import { registerRendererLogHandlers, removeRendererLogHandlers } from './rendererLogs';
 
 import type {
   ChangeExtractorService,

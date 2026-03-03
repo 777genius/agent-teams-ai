@@ -531,8 +531,8 @@ async function validateProvisioningRequest(
     return { valid: false, error: 'description must be string' };
   }
 
-  if (!Array.isArray(payload.members) || payload.members.length === 0) {
-    return { valid: false, error: 'members must contain at least one member' };
+  if (!Array.isArray(payload.members)) {
+    return { valid: false, error: 'members must be an array' };
   }
 
   const seenNames = new Set<string>();
@@ -1317,8 +1317,8 @@ async function handleCreateConfig(
     return { success: false, error: 'teamName must be kebab-case [a-z0-9-], max 64 chars' };
   }
 
-  if (!Array.isArray(payload.members) || payload.members.length === 0) {
-    return { success: false, error: 'members must contain at least one member' };
+  if (!Array.isArray(payload.members)) {
+    return { success: false, error: 'members must be an array' };
   }
 
   if (payload.displayName !== undefined && typeof payload.displayName !== 'string') {
@@ -1590,8 +1590,8 @@ async function handleReplaceMembers(
     return { success: false, error: 'request must be an object' };
   }
   const payload = request as { members?: unknown };
-  if (!Array.isArray(payload.members) || payload.members.length === 0) {
-    return { success: false, error: 'members must contain at least one member' };
+  if (!Array.isArray(payload.members)) {
+    return { success: false, error: 'members must be an array' };
   }
   const seenNames = new Set<string>();
   const members: { name: string; role?: string; workflow?: string }[] = [];

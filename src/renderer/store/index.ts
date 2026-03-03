@@ -81,43 +81,17 @@ export function initializeNotificationListeners(): () => void {
   // Components also fire these from useEffect — loading guards in each action
   // prevent duplicate IPC calls (whichever caller starts first wins).
   void (async () => {
-    const isDev = import.meta.env.DEV;
-    const log = (msg: string): void => {
-      if (!isDev) return;
-      console.warn(`[Perf:Renderer] init ${msg}`);
-    };
-    const startedAt = Date.now();
-
     // Config: fast (in-memory read) — needed for theme before first paint.
-    log('fetchConfig:start');
-    const configStartedAt = Date.now();
     await useStore.getState().fetchConfig();
-    log(`fetchConfig:done ms=${Date.now() - configStartedAt}`);
 
     // Remaining fetches have no data dependency on each other — run in parallel
     // to avoid blocking teams/notifications behind a slow repository scan.
-    const run = async (label: string, fn: () => Promise<void>): Promise<void> => {
-      log(`${label}:start`);
-      const s = Date.now();
-      try {
-        await fn();
-        log(`${label}:done ms=${Date.now() - s}`);
-      } catch (e) {
-        log(
-          `${label}:error ms=${Date.now() - s} msg=${e instanceof Error ? e.message : String(e)}`
-        );
-        throw e;
-      }
-    };
-
     await Promise.all([
-      run('fetchRepositoryGroups', () => useStore.getState().fetchRepositoryGroups()),
-      run('fetchAllTasks', () => useStore.getState().fetchAllTasks()),
-      run('fetchTeams', () => useStore.getState().fetchTeams()),
-      run('fetchNotifications', () => useStore.getState().fetchNotifications()),
+      useStore.getState().fetchRepositoryGroups(),
+      useStore.getState().fetchAllTasks(),
+      useStore.getState().fetchTeams(),
+      useStore.getState().fetchNotifications(),
     ]);
-
-    log(`init:done ms=${Date.now() - startedAt}`);
   })();
 
   // CLI status check is non-critical for initial render (spawns child processes

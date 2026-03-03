@@ -98,10 +98,6 @@ export const EditTeamDialog = ({
       return;
     }
     const builtMembers = buildMembersFromDrafts(members);
-    if (builtMembers.length === 0) {
-      setError('At least one member is required');
-      return;
-    }
     setSaving(true);
     setError(null);
     void (async () => {

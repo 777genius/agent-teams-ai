@@ -45,7 +45,7 @@ export const MemberList = ({
   if (members.length === 0) {
     return (
       <div className="rounded-md border border-[var(--color-border)] p-4 text-sm text-[var(--color-text-muted)]">
-        No members found
+        Solo team — lead only
       </div>
     );
   }

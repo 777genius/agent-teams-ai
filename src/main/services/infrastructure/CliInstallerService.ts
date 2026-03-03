@@ -253,17 +253,24 @@ export class CliInstallerService {
     // Run the actual status gathering with an overall timeout.
     // On timeout, return whatever partial result was collected so far.
     const ref = { current: result };
-    await Promise.race([
-      this.gatherStatus(ref),
-      new Promise<void>((resolve) =>
-        setTimeout(() => {
-          logger.warn(
-            `getStatus() timed out after ${GET_STATUS_TIMEOUT_MS}ms, returning partial result`
-          );
-          resolve();
-        }, GET_STATUS_TIMEOUT_MS)
-      ),
-    ]);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      await Promise.race([
+        this.gatherStatus(ref),
+        new Promise<void>((resolve) => {
+          timer = setTimeout(() => {
+            logger.warn(
+              `getStatus() timed out after ${GET_STATUS_TIMEOUT_MS}ms, returning partial result`
+            );
+            resolve();
+          }, GET_STATUS_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
 
     return result;
   }
@@ -347,15 +354,22 @@ export class CliInstallerService {
     };
 
     // Own timeout so slow auth doesn't eat the overall getStatus budget
-    await Promise.race([
-      doCheck(),
-      new Promise<void>((resolve) =>
-        setTimeout(() => {
-          logger.warn(`Auth status check timed out after ${AUTH_TOTAL_TIMEOUT_MS}ms`);
-          resolve();
-        }, AUTH_TOTAL_TIMEOUT_MS)
-      ),
-    ]);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      await Promise.race([
+        doCheck(),
+        new Promise<void>((resolve) => {
+          timer = setTimeout(() => {
+            logger.warn(`Auth status check timed out after ${AUTH_TOTAL_TIMEOUT_MS}ms`);
+            resolve();
+          }, AUTH_TOTAL_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
   }
 
   /**

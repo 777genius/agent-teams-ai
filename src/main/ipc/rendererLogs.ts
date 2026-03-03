@@ -23,6 +23,7 @@ const lastHeartbeatByWebContentsId = new Map<number, number>();
 const lastHeartbeatWarnedAtByWebContentsId = new Map<number, number>();
 const hasReceivedHeartbeatByWebContentsId = new Set<number>();
 let heartbeatMonitorStarted = false;
+let heartbeatMonitorInterval: ReturnType<typeof setInterval> | null = null;
 
 function startHeartbeatMonitor(): void {
   if (heartbeatMonitorStarted) return;
@@ -32,7 +33,7 @@ function startHeartbeatMonitor(): void {
   const STALE_AFTER_MS = 5000;
   const WARN_THROTTLE_MS = 10_000;
 
-  setInterval(() => {
+  heartbeatMonitorInterval = setInterval(() => {
     const now = Date.now();
     for (const [id, last] of lastHeartbeatByWebContentsId.entries()) {
       if (!hasReceivedHeartbeatByWebContentsId.has(id)) {
@@ -48,6 +49,9 @@ function startHeartbeatMonitor(): void {
       logger.warn(`Renderer heartbeat stale webContentsId=${id} ageMs=${age}`);
     }
   }, CHECK_EVERY_MS);
+
+  // Diagnostics-only: should not keep the app alive.
+  heartbeatMonitorInterval.unref();
 }
 
 export function registerRendererLogHandlers(ipcMain: IpcMain): void {
@@ -91,4 +95,13 @@ export function removeRendererLogHandlers(ipcMain: IpcMain): void {
   ipcMain.removeAllListeners(RENDERER_LOG);
   ipcMain.removeAllListeners(RENDERER_BOOT);
   ipcMain.removeAllListeners(RENDERER_HEARTBEAT);
+
+  if (heartbeatMonitorInterval) {
+    clearInterval(heartbeatMonitorInterval);
+    heartbeatMonitorInterval = null;
+  }
+  heartbeatMonitorStarted = false;
+  lastHeartbeatByWebContentsId.clear();
+  lastHeartbeatWarnedAtByWebContentsId.clear();
+  hasReceivedHeartbeatByWebContentsId.clear();
 }

@@ -595,44 +595,14 @@ function buildProvisioningPrompt(request: TeamCreateRequest): string {
   const teamCtlOps = buildTeamCtlOpsInstructions(request.teamName, leadName);
   const projectName = path.basename(request.cwd);
 
-  return `Team Start [Agent Team: "${request.teamName}" | Project: "${projectName}" | Lead: "${leadName}"]
+  const isSolo = request.members.length === 0;
+  const soloConstraint = isSolo
+    ? '\n- You are starting as a SOLO team lead with no teammates. Do NOT use the Task tool to spawn teammates unless/until the team has members added later. Do NOT call SendMessage to any teammate unless/until such teammates exist (you may still message "user").'
+    : '';
 
-You are running in a non-interactive CLI session. Do not ask questions. Do everything in a single turn.
-You are "${leadName}", the team lead.
-
-Goal: Provision a Claude Code agent team with live teammates.
-${userPromptBlock}
-${languageInstruction}
-
-Constraints:
-- Do NOT call TeamDelete under any circumstances.
-- Do NOT use TodoWrite.
-- Do NOT send shutdown_request messages (SendMessage type: "shutdown_request" is FORBIDDEN).
-- Do NOT shut down, terminate, or clean up the team or its members.
-- Do NOT spawn or create a member named "user". "user" is a reserved system name for the human operator — it is NOT a teammate.
-- Keep assistant text minimal.
-- NEVER send duplicate messages to the same member. One SendMessage per member per topic is enough.
-- Keep the task board high-signal: avoid creating tasks for trivial micro-items.
-- Use the team task board for assigned/substantial work.
-- TaskCreate is optional for private planning only; do NOT use it for team-board tasks.
-- When messaging "user" (the human): NEVER mention teamctl.js, internal scripts, CLI commands, or file paths under ~/.claude/. The user sees messages in the UI — write plain human language. If a task needs a status update, do it yourself via Bash; never ask the user to run a command.
-
-${teamCtlOps}
-
-Communication protocol (CRITICAL — you are running headless, no one sees your text output):
-- When you receive a <teammate-message> from a teammate, ALWAYS reply using the SendMessage tool with the sender's name as recipient.
-- Your plain text output is invisible to teammates — they are separate processes and can only read their inbox.
-- Example: if you receive <teammate-message teammate_id="alice">...</teammate-message>, respond with SendMessage(type: "message", recipient: "alice", content: "your reply").
-
-Message formatting:
-${agentBlockPolicy}
-
-Steps (execute in this exact order):
-
-1) TeamCreate — create team "${request.teamName}":
-   - description: "${description}"
-
-2) Spawn each member as a live teammate using the Task tool. For each member below, use the exact prompt shown:
+  const step2Block = isSolo
+    ? '2) Skip — this is a solo team with no teammates to spawn.'
+    : `2) Spawn each member as a live teammate using the Task tool. For each member below, use the exact prompt shown:
 
 // NOTE: taskProtocol & processRegistration are deliberately inlined into EACH member's spawn prompt
 // below, even though the text is identical across members. This duplicates ~4K chars per member
@@ -649,7 +619,48 @@ ${buildMemberSpawnPrompt(m, displayName, request.teamName, taskProtocol, process
   .map((line) => `     ${line}`)
   .join('\n')}`
   )
-  .join('\n\n')}
+  .join('\n\n')}`;
+
+  const membersFooter = members ? `Members:\n${members}` : 'Members: (none — solo team lead)';
+
+  return `Team Start [Agent Team: "${request.teamName}" | Project: "${projectName}" | Lead: "${leadName}"]
+
+You are running in a non-interactive CLI session. Do not ask questions. Do everything in a single turn.
+You are "${leadName}", the team lead.
+
+Goal: Provision a Claude Code agent team${request.members.length === 0 ? ' (solo — lead only)' : ' with live teammates'}.
+${userPromptBlock}
+${languageInstruction}
+
+Constraints:
+- Do NOT call TeamDelete under any circumstances.
+- Do NOT use TodoWrite.
+- Do NOT send shutdown_request messages (SendMessage type: "shutdown_request" is FORBIDDEN).
+- Do NOT shut down, terminate, or clean up the team or its members.
+- Do NOT spawn or create a member named "user". "user" is a reserved system name for the human operator — it is NOT a teammate.
+- Keep assistant text minimal.
+- NEVER send duplicate messages to the same member. One SendMessage per member per topic is enough.
+- Keep the task board high-signal: avoid creating tasks for trivial micro-items.
+- Use the team task board for assigned/substantial work.
+- TaskCreate is optional for private planning only; do NOT use it for team-board tasks.
+- When messaging "user" (the human): NEVER mention teamctl.js, internal scripts, CLI commands, or file paths under ~/.claude/. The user sees messages in the UI — write plain human language. If a task needs a status update, do it yourself via Bash; never ask the user to run a command.${soloConstraint}
+
+${teamCtlOps}
+
+Communication protocol (CRITICAL — you are running headless, no one sees your text output):
+- When you receive a <teammate-message> from a teammate, ALWAYS reply using the SendMessage tool with the sender's name as recipient.
+- Your plain text output is invisible to teammates — they are separate processes and can only read their inbox.
+- Example: if you receive <teammate-message teammate_id="alice">...</teammate-message>, respond with SendMessage(type: "message", recipient: "alice", content: "your reply").
+
+Message formatting:
+${agentBlockPolicy}
+
+Steps (execute in this exact order):
+
+1) TeamCreate — create team "${request.teamName}":
+   - description: "${description}"
+
+${step2Block}
 
 3) If user instructions explicitly ask to create tasks OR describe substantial/assigned work that should be tracked — create tasks on the team board.
    - Prefer fewer, broader tasks over many micro-tasks.
@@ -666,8 +677,7 @@ ${buildMemberSpawnPrompt(m, displayName, request.teamName, taskProtocol, process
 
 4) After all steps, output a short summary.
 
-Members:
-${members}
+${membersFooter}
 `;
 }
 
@@ -690,23 +700,34 @@ function buildLaunchPrompt(
   const teamCtlOps = buildTeamCtlOpsInstructions(request.teamName, leadName);
   const projectName = path.basename(request.cwd);
 
-  // Build per-member task snapshots to include in each teammate's spawn prompt
-  const memberTaskBlocks = new Map<string, string>();
-  for (const m of members) {
-    const snapshot = buildMemberTaskSnapshot(m.name, tasks);
-    if (snapshot) memberTaskBlocks.set(m.name, snapshot);
-  }
+  const isSolo = members.length === 0;
+  const soloConstraint = isSolo
+    ? '\n- You are starting as a SOLO team lead with no teammates. Do NOT use the Task tool to spawn teammates unless/until the team has members added later. Do NOT call SendMessage to any teammate unless/until such teammates exist (you may still message "user").'
+    : '';
 
-  // Build the teammate spawn prompt template with member-specific task injection
-  const memberSpawnInstructions = members
-    .map((m) => {
-      const taskBlock = memberTaskBlocks.get(m.name) || '';
-      const hasTasks = Boolean(taskBlock);
-      const workflowBlock = m.workflow?.trim()
-        ? `\n\nYour workflow and how you should behave:${formatWorkflowBlock(m.workflow, '     ')}`
-        : '';
+  let step2And3Block: string;
+  if (isSolo) {
+    step2And3Block = `2) Skip — solo team, no teammates to spawn.
 
-      return `   For "${m.name}":
+3) Check the task board. Work on pending tasks directly.`;
+  } else {
+    // Build per-member task snapshots to include in each teammate's spawn prompt
+    const memberTaskBlocks = new Map<string, string>();
+    for (const m of members) {
+      const snapshot = buildMemberTaskSnapshot(m.name, tasks);
+      if (snapshot) memberTaskBlocks.set(m.name, snapshot);
+    }
+
+    // Build the teammate spawn prompt template with member-specific task injection
+    const memberSpawnInstructions = members
+      .map((m) => {
+        const taskBlock = memberTaskBlocks.get(m.name) || '';
+        const hasTasks = Boolean(taskBlock);
+        const workflowBlock = m.workflow?.trim()
+          ? `\n\nYour workflow and how you should behave:${formatWorkflowBlock(m.workflow, '     ')}`
+          : '';
+
+        return `   For "${m.name}":
    - prompt:
      You are ${m.name}, a ${m.role || 'team member'} on team "${request.teamName}".${workflowBlock}
 
@@ -718,8 +739,29 @@ function buildLaunchPrompt(
      node "$HOME/.claude/tools/teamctl.js" --team "${request.teamName}" task briefing --for "${m.name}"
      Then resume in_progress tasks first, then pending tasks.
      If you have no tasks, wait for new assignments.`;
-    })
-    .join('\n\n');
+      })
+      .join('\n\n');
+
+    step2And3Block = `2) Spawn each existing member as a live teammate using the Task tool:
+   - team_name: "${request.teamName}"
+   - name: the member's name
+   - subagent_type: "general-purpose"
+   - IMPORTANT: Include each member's pending tasks in their spawn prompt so they resume work immediately.
+     Include the following agent-only instructions verbatim in each teammate's prompt:
+
+${taskProtocol}
+
+${processRegistration}
+
+   Per-member spawn instructions:
+${memberSpawnInstructions}
+
+3) After spawning all members, check the task board. If any pending tasks are unassigned, assign them to appropriate members using teamctl.`;
+  }
+
+  const membersFooter = membersBlock
+    ? `Members:\n${membersBlock}`
+    : 'Members: (none — solo team lead)';
 
   return `Team Start [Agent Team: "${request.teamName}" | Project: "${projectName}" | Lead: "${leadName}"]
 
@@ -741,7 +783,7 @@ Constraints:
 - Keep the task board high-signal: avoid creating tasks for trivial micro-items.
 - Use the team task board for assigned/substantial work.
 - TaskCreate is optional for private planning only; do NOT use it for team-board tasks.
-- When messaging "user" (the human): NEVER mention teamctl.js, internal scripts, CLI commands, or file paths under ~/.claude/. The user sees messages in the UI — write plain human language. If a task needs a status update, do it yourself via Bash; never ask the user to run a command.
+- When messaging "user" (the human): NEVER mention teamctl.js, internal scripts, CLI commands, or file paths under ~/.claude/. The user sees messages in the UI — write plain human language. If a task needs a status update, do it yourself via Bash; never ask the user to run a command.${soloConstraint}
 
 ${teamCtlOps}
 
@@ -757,26 +799,11 @@ Steps (execute in this exact order):
 
 1) Read team config at ~/.claude/teams/${request.teamName}/config.json — understand current team state.
 
-2) Spawn each existing member as a live teammate using the Task tool:
-   - team_name: "${request.teamName}"
-   - name: the member's name
-   - subagent_type: "general-purpose"
-   - IMPORTANT: Include each member's pending tasks in their spawn prompt so they resume work immediately.
-     Include the following agent-only instructions verbatim in each teammate's prompt:
-
-${taskProtocol}
-
-${processRegistration}
-
-   Per-member spawn instructions:
-${memberSpawnInstructions}
-
-3) After spawning all members, check the task board. If any pending tasks are unassigned, assign them to appropriate members using teamctl.
+${step2And3Block}
 
 4) After all steps, output a short summary of reconnected members and resumed tasks.
 
-Members:
-${membersBlock}
+${membersFooter}
 `;
 }
 
@@ -878,6 +905,7 @@ let cachedProbeResult: CachedProbeResult | null = null;
 export class TeamProvisioningService {
   private readonly runs = new Map<string, ProvisioningRun>();
   private readonly activeByTeam = new Map<string, string>();
+  private readonly teamOpLocks = new Map<string, Promise<void>>();
   private readonly leadInboxRelayInFlight = new Map<string, Promise<number>>();
   private readonly relayedLeadInboxMessageIds = new Map<string, Set<string>>();
   private readonly relayedLeadInboxFallbackKeys = new Map<string, Set<string>>();
@@ -890,6 +918,29 @@ export class TeamProvisioningService {
     private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore(),
     private readonly sentMessagesStore: TeamSentMessagesStore = new TeamSentMessagesStore()
   ) {}
+
+  /**
+   * Serializes operations per team name using promise-chaining.
+   * Same pattern as withInboxLock / withTaskLock.
+   * Prevents TOCTOU races between concurrent createTeam/launchTeam calls.
+   */
+  private async withTeamLock<T>(teamName: string, fn: () => Promise<T>): Promise<T> {
+    const prev = this.teamOpLocks.get(teamName) ?? Promise.resolve();
+    let release!: () => void;
+    const mine = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    this.teamOpLocks.set(teamName, mine);
+    await prev;
+    try {
+      return await fn();
+    } finally {
+      release();
+      if (this.teamOpLocks.get(teamName) === mine) {
+        this.teamOpLocks.delete(teamName);
+      }
+    }
+  }
 
   setTeamChangeEmitter(emitter: ((event: TeamChangeEvent) => void) | null): void {
     this.teamChangeEmitter = emitter;
@@ -1274,178 +1325,210 @@ export class TeamProvisioningService {
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamCreateResponse> {
+    return this.withTeamLock(request.teamName, async () => {
+      return this._createTeamInner(request, onProgress);
+    });
+  }
+
+  private async _createTeamInner(
+    request: TeamCreateRequest,
+    onProgress: (progress: TeamProvisioningProgress) => void
+  ): Promise<TeamCreateResponse> {
     if (this.activeByTeam.has(request.teamName)) {
       throw new Error('Provisioning already running');
     }
 
-    const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
-    for (const probe of teamsBasePathsToProbe) {
-      const configPath = path.join(probe.basePath, request.teamName, 'config.json');
-      if (await this.pathExists(configPath)) {
-        const suffix = probe.location === 'configured' ? '' : ` (found under ${probe.basePath})`;
-        throw new Error(`Team already exists${suffix}`);
+    // Set immediately to prevent TOCTOU (defense in depth alongside withTeamLock)
+    const pendingKey = `pending-${randomUUID()}`;
+    this.activeByTeam.set(request.teamName, pendingKey);
+
+    try {
+      const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
+      for (const probe of teamsBasePathsToProbe) {
+        const configPath = path.join(probe.basePath, request.teamName, 'config.json');
+        if (await this.pathExists(configPath)) {
+          const suffix = probe.location === 'configured' ? '' : ` (found under ${probe.basePath})`;
+          throw new Error(`Team already exists${suffix}`);
+        }
       }
-    }
 
-    await ensureCwdExists(request.cwd);
+      await ensureCwdExists(request.cwd);
 
-    const claudePath = await ClaudeBinaryResolver.resolve();
-    if (!claudePath) {
-      throw new Error('Claude CLI not found; install it or provide a valid path');
-    }
+      const claudePath = await ClaudeBinaryResolver.resolve();
+      if (!claudePath) {
+        throw new Error('Claude CLI not found; install it or provide a valid path');
+      }
 
-    const runId = randomUUID();
-    const startedAt = nowIso();
-    const run: ProvisioningRun = {
-      runId,
-      teamName: request.teamName,
-      startedAt,
-      stdoutBuffer: '',
-      stderrBuffer: '',
-      processKilled: false,
-      finalizingByTimeout: false,
-      cancelRequested: false,
-      teamsBasePathsToProbe,
-      child: null,
-      timeoutHandle: null,
-      fsMonitorHandle: null,
-      onProgress,
-      expectedMembers: request.members.map((member) => member.name),
-      request,
-      lastLogProgressAt: 0,
-      waitingTasksSince: null,
-      provisioningComplete: false,
-      isLaunch: false,
-      fsPhase: 'waiting_config',
-      leadRelayCapture: null,
-      directReplyParts: [],
-      provisioningOutputParts: [],
-      detectedSessionId: null,
-      leadActivityState: 'active',
-      authFailureRetried: false,
-      authRetryInProgress: false,
-      spawnContext: null,
-      progress: {
+      const runId = randomUUID();
+      const startedAt = nowIso();
+      const run: ProvisioningRun = {
         runId,
         teamName: request.teamName,
-        state: 'validating',
-        message: 'Validating team provisioning request',
         startedAt,
-        updatedAt: startedAt,
-        cliLogsTail: undefined,
-      },
-    };
+        stdoutBuffer: '',
+        stderrBuffer: '',
+        processKilled: false,
+        finalizingByTimeout: false,
+        cancelRequested: false,
+        teamsBasePathsToProbe,
+        child: null,
+        timeoutHandle: null,
+        fsMonitorHandle: null,
+        onProgress,
+        expectedMembers: request.members.map((member) => member.name),
+        request,
+        lastLogProgressAt: 0,
+        waitingTasksSince: null,
+        provisioningComplete: false,
+        isLaunch: false,
+        fsPhase: 'waiting_config',
+        leadRelayCapture: null,
+        directReplyParts: [],
+        provisioningOutputParts: [],
+        detectedSessionId: null,
+        leadActivityState: 'active',
+        authFailureRetried: false,
+        authRetryInProgress: false,
+        spawnContext: null,
+        progress: {
+          runId,
+          teamName: request.teamName,
+          state: 'validating',
+          message: 'Validating team provisioning request',
+          startedAt,
+          updatedAt: startedAt,
+          cliLogsTail: undefined,
+        },
+      };
 
-    this.runs.set(runId, run);
-    this.activeByTeam.set(request.teamName, runId);
-    run.onProgress(run.progress);
+      this.runs.set(runId, run);
+      this.activeByTeam.set(request.teamName, runId);
+      run.onProgress(run.progress);
 
-    const prompt = buildProvisioningPrompt(request);
-    let child: ReturnType<typeof spawn>;
-    const { env: shellEnv, authSource } = await this.buildProvisioningEnv();
-    if (authSource === 'none') {
-      logger.warn(
-        'No explicit auth env var found for `-p` mode. ' +
-          'Attempting spawn anyway — CLI may authenticate via apiKeyHelper, SSO, or other mechanism.'
-      );
-    }
-    const spawnArgs = [
-      '--input-format',
-      'stream-json',
-      '--output-format',
-      'stream-json',
-      '--verbose',
-      '--setting-sources',
-      'user,project,local',
-      '--disallowedTools',
-      'TeamDelete,TodoWrite',
-      '--dangerously-skip-permissions',
-      ...(request.model ? ['--model', request.model] : []),
-    ];
-    try {
-      child = spawnCli(claudePath, spawnArgs, {
+      const prompt = buildProvisioningPrompt(request);
+      let child: ReturnType<typeof spawn>;
+      const { env: shellEnv, authSource } = await this.buildProvisioningEnv();
+      if (authSource === 'none') {
+        logger.warn(
+          'No explicit auth env var found for `-p` mode. ' +
+            'Attempting spawn anyway — CLI may authenticate via apiKeyHelper, SSO, or other mechanism.'
+        );
+      }
+      const spawnArgs = [
+        '--input-format',
+        'stream-json',
+        '--output-format',
+        'stream-json',
+        '--verbose',
+        '--setting-sources',
+        'user,project,local',
+        '--disallowedTools',
+        request.members.length === 0 ? 'TeamDelete,TodoWrite,Task' : 'TeamDelete,TodoWrite',
+        '--dangerously-skip-permissions',
+        ...(request.model ? ['--model', request.model] : []),
+      ];
+      try {
+        child = spawnCli(claudePath, spawnArgs, {
+          cwd: request.cwd,
+          env: { ...shellEnv },
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+      } catch (error) {
+        this.runs.delete(runId);
+        this.activeByTeam.delete(request.teamName);
+        throw error;
+      }
+
+      updateProgress(run, 'spawning', 'Starting Claude CLI process', {
+        pid: child.pid ?? undefined,
+      });
+      run.onProgress(run.progress);
+      run.child = child;
+      run.spawnContext = {
+        claudePath,
+        args: spawnArgs,
         cwd: request.cwd,
         env: { ...shellEnv },
-        stdio: ['pipe', 'pipe', 'pipe'],
+        prompt,
+      };
+
+      // Send provisioning prompt as first stream-json message (SDKUserMessage format)
+      if (child.stdin?.writable) {
+        const message = JSON.stringify({
+          type: 'user',
+          message: {
+            role: 'user',
+            content: [{ type: 'text', text: prompt }],
+          },
+        });
+        child.stdin.write(message + '\n');
+      }
+
+      this.attachStdoutHandler(run);
+      this.attachStderrHandler(run);
+
+      // Filesystem-based progress monitor: actively polls team files instead
+      // of relying on stdout (which only arrives at the end in text mode).
+      // When config + members + tasks are all present, kill the process early
+      // rather than waiting for it to deadlock on system-reminder shutdown.
+      this.startFilesystemMonitor(run, request);
+
+      run.timeoutHandle = setTimeout(() => {
+        if (!run.processKilled && !run.provisioningComplete) {
+          run.processKilled = true;
+          run.finalizingByTimeout = true;
+          void (async () => {
+            const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
+            run.child?.stdin?.end();
+            killProcessTree(run.child);
+            if (readyOnTimeout) {
+              return; // cleanupRun already called inside tryCompleteAfterTimeout
+            }
+
+            const progress = updateProgress(run, 'failed', 'Timed out waiting for CLI', {
+              error:
+                'Timed out waiting for CLI. Run `claude` once in terminal to complete onboarding and try again.',
+              cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
+            });
+            run.onProgress(progress);
+            this.cleanupRun(run);
+          })();
+        }
+      }, RUN_TIMEOUT_MS);
+
+      child.once('error', (error) => {
+        const progress = updateProgress(run, 'failed', 'Failed to start Claude CLI', {
+          error: error.message,
+          cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
+        });
+        run.onProgress(progress);
+        this.cleanupRun(run);
       });
+
+      child.once('exit', (code) => {
+        void this.handleProcessExit(run, code);
+      });
+
+      return { runId };
     } catch (error) {
-      this.runs.delete(runId);
-      this.activeByTeam.delete(request.teamName);
+      // Ensure the per-team lock doesn't get stuck on failures.
+      if (this.activeByTeam.get(request.teamName) === pendingKey) {
+        this.activeByTeam.delete(request.teamName);
+      }
       throw error;
     }
-
-    updateProgress(run, 'spawning', 'Starting Claude CLI process', { pid: child.pid ?? undefined });
-    run.onProgress(run.progress);
-    run.child = child;
-    run.spawnContext = {
-      claudePath,
-      args: spawnArgs,
-      cwd: request.cwd,
-      env: { ...shellEnv },
-      prompt,
-    };
-
-    // Send provisioning prompt as first stream-json message (SDKUserMessage format)
-    if (child.stdin?.writable) {
-      const message = JSON.stringify({
-        type: 'user',
-        message: {
-          role: 'user',
-          content: [{ type: 'text', text: prompt }],
-        },
-      });
-      child.stdin.write(message + '\n');
-    }
-
-    this.attachStdoutHandler(run);
-    this.attachStderrHandler(run);
-
-    // Filesystem-based progress monitor: actively polls team files instead
-    // of relying on stdout (which only arrives at the end in text mode).
-    // When config + members + tasks are all present, kill the process early
-    // rather than waiting for it to deadlock on system-reminder shutdown.
-    this.startFilesystemMonitor(run, request);
-
-    run.timeoutHandle = setTimeout(() => {
-      if (!run.processKilled && !run.provisioningComplete) {
-        run.processKilled = true;
-        run.finalizingByTimeout = true;
-        void (async () => {
-          const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
-          run.child?.stdin?.end();
-          killProcessTree(run.child);
-          if (readyOnTimeout) {
-            return; // cleanupRun already called inside tryCompleteAfterTimeout
-          }
-
-          const progress = updateProgress(run, 'failed', 'Timed out waiting for CLI', {
-            error:
-              'Timed out waiting for CLI. Run `claude` once in terminal to complete onboarding and try again.',
-            cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
-          });
-          run.onProgress(progress);
-          this.cleanupRun(run);
-        })();
-      }
-    }, RUN_TIMEOUT_MS);
-
-    child.once('error', (error) => {
-      const progress = updateProgress(run, 'failed', 'Failed to start Claude CLI', {
-        error: error.message,
-        cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
-      });
-      run.onProgress(progress);
-      this.cleanupRun(run);
-    });
-
-    child.once('exit', (code) => {
-      void this.handleProcessExit(run, code);
-    });
-
-    return { runId };
   }
 
   async launchTeam(
+    request: TeamLaunchRequest,
+    onProgress: (progress: TeamProvisioningProgress) => void
+  ): Promise<TeamLaunchResponse> {
+    return this.withTeamLock(request.teamName, async () => {
+      return this._launchTeamInner(request, onProgress);
+    });
+  }
+
+  private async _launchTeamInner(
     request: TeamLaunchRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamLaunchResponse> {
@@ -1453,290 +1536,307 @@ export class TeamProvisioningService {
       throw new Error('Team is already running');
     }
 
-    // Verify config.json exists — team must already be provisioned
-    const configPath = path.join(getTeamsBasePath(), request.teamName, 'config.json');
-    const configRaw = await tryReadRegularFileUtf8(configPath, {
-      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-      maxBytes: TEAM_CONFIG_MAX_BYTES,
-    });
-    if (!configRaw) {
-      throw new Error(`Team "${request.teamName}" not found — config.json does not exist`);
-    }
+    // Set immediately to prevent TOCTOU (defense in depth alongside withTeamLock)
+    const pendingKey = `pending-${randomUUID()}`;
+    this.activeByTeam.set(request.teamName, pendingKey);
 
-    const {
-      members: expectedMemberSpecs,
-      source,
-      warning,
-    } = await this.resolveLaunchExpectedMembers(request.teamName, configRaw);
-    const expectedMembers = expectedMemberSpecs.map((m) => m.name);
+    try {
+      // Verify config.json exists — team must already be provisioned
+      const configPath = path.join(getTeamsBasePath(), request.teamName, 'config.json');
+      const configRaw = await tryReadRegularFileUtf8(configPath, {
+        timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+        maxBytes: TEAM_CONFIG_MAX_BYTES,
+      });
+      if (!configRaw) {
+        throw new Error(`Team "${request.teamName}" not found — config.json does not exist`);
+      }
 
-    // Extract leadSessionId for session resume on reconnect.
-    // If a valid JSONL file exists for the previous session, we can resume it
-    // so the lead retains full context of prior work.
-    // When clearContext is true, skip resume entirely to start a fresh session.
-    let previousSessionId: string | undefined;
-    if (request.clearContext) {
-      logger.info(
-        `[${request.teamName}] clearContext requested — skipping session resume, starting fresh`
-      );
-    } else {
-      try {
-        const configParsed = JSON.parse(configRaw) as Record<string, unknown>;
-        if (
-          typeof configParsed.leadSessionId === 'string' &&
-          configParsed.leadSessionId.trim().length > 0
-        ) {
-          const candidateId = configParsed.leadSessionId.trim();
-          const storedProjectPath =
-            typeof configParsed.projectPath === 'string' &&
-            configParsed.projectPath.trim().length > 0
-              ? configParsed.projectPath.trim()
-              : null;
+      const {
+        members: expectedMemberSpecs,
+        source,
+        warning,
+      } = await this.resolveLaunchExpectedMembers(request.teamName, configRaw);
+      const expectedMembers = expectedMemberSpecs.map((m) => m.name);
 
-          // Sessions are stored per-project (~/.claude/projects/{encodePath(cwd)}/).
-          // If the project path changed, the old session JSONL won't be found by the CLI
-          // at the new project directory. Skip resume to avoid passing an invalid --resume arg.
-          if (storedProjectPath && path.resolve(storedProjectPath) !== path.resolve(request.cwd)) {
-            logger.info(
-              `[${request.teamName}] Project path changed: ${storedProjectPath} → ${request.cwd}. ` +
-                `Skipping session resume — sessions are per-project.`
-            );
-          } else {
-            const resumeProjectPath = storedProjectPath ?? request.cwd;
-            const projectId = encodePath(resumeProjectPath);
-            const baseDir = extractBaseDir(projectId);
-            const jsonlPath = path.join(getProjectsBasePath(), baseDir, `${candidateId}.jsonl`);
-            if (await this.pathExists(jsonlPath)) {
-              previousSessionId = candidateId;
+      // Extract leadSessionId for session resume on reconnect.
+      // If a valid JSONL file exists for the previous session, we can resume it
+      // so the lead retains full context of prior work.
+      // When clearContext is true, skip resume entirely to start a fresh session.
+      let previousSessionId: string | undefined;
+      if (request.clearContext) {
+        logger.info(
+          `[${request.teamName}] clearContext requested — skipping session resume, starting fresh`
+        );
+      } else {
+        try {
+          const configParsed = JSON.parse(configRaw) as Record<string, unknown>;
+          if (
+            typeof configParsed.leadSessionId === 'string' &&
+            configParsed.leadSessionId.trim().length > 0
+          ) {
+            const candidateId = configParsed.leadSessionId.trim();
+            const storedProjectPath =
+              typeof configParsed.projectPath === 'string' &&
+              configParsed.projectPath.trim().length > 0
+                ? configParsed.projectPath.trim()
+                : null;
+
+            // Sessions are stored per-project (~/.claude/projects/{encodePath(cwd)}/).
+            // If the project path changed, the old session JSONL won't be found by the CLI
+            // at the new project directory. Skip resume to avoid passing an invalid --resume arg.
+            if (
+              storedProjectPath &&
+              path.resolve(storedProjectPath) !== path.resolve(request.cwd)
+            ) {
               logger.info(
-                `[${request.teamName}] Found previous session JSONL for resume: ${candidateId}`
+                `[${request.teamName}] Project path changed: ${storedProjectPath} → ${request.cwd}. ` +
+                  `Skipping session resume — sessions are per-project.`
               );
             } else {
-              logger.info(
-                `[${request.teamName}] Previous session JSONL not found at ${jsonlPath}, starting fresh`
-              );
+              const resumeProjectPath = storedProjectPath ?? request.cwd;
+              const projectId = encodePath(resumeProjectPath);
+              const baseDir = extractBaseDir(projectId);
+              const jsonlPath = path.join(getProjectsBasePath(), baseDir, `${candidateId}.jsonl`);
+              if (await this.pathExists(jsonlPath)) {
+                previousSessionId = candidateId;
+                logger.info(
+                  `[${request.teamName}] Found previous session JSONL for resume: ${candidateId}`
+                );
+              } else {
+                logger.info(
+                  `[${request.teamName}] Previous session JSONL not found at ${jsonlPath}, starting fresh`
+                );
+              }
             }
           }
+        } catch {
+          logger.debug(
+            `[${request.teamName}] Failed to extract leadSessionId from config for resume`
+          );
         }
-      } catch {
-        logger.debug(
-          `[${request.teamName}] Failed to extract leadSessionId from config for resume`
-        );
       }
-    }
 
-    // IMPORTANT: The CLI auto-suffixes teammate names when they already exist in config.json.
-    // Normalize config.json to keep only the team-lead before spawning the CLI, so we get stable names.
-    await this.normalizeTeamConfigForLaunch(request.teamName, configRaw);
+      // IMPORTANT: The CLI auto-suffixes teammate names when they already exist in config.json.
+      // Normalize config.json to keep only the team-lead before spawning the CLI, so we get stable names.
+      await this.normalizeTeamConfigForLaunch(request.teamName, configRaw);
 
-    // Update projectPath in config IMMEDIATELY so TeamDetailView shows the correct path
-    // even if provisioning is interrupted or the user stops the team early.
-    // If launch fails, restorePrelaunchConfig() will revert to the backup (old projectPath).
-    await this.updateConfigProjectPath(request.teamName, request.cwd);
+      // Update projectPath in config IMMEDIATELY so TeamDetailView shows the correct path
+      // even if provisioning is interrupted or the user stops the team early.
+      // If launch fails, restorePrelaunchConfig() will revert to the backup (old projectPath).
+      await this.updateConfigProjectPath(request.teamName, request.cwd);
 
-    let claudePath: string | null;
-    try {
-      await ensureCwdExists(request.cwd);
+      let claudePath: string | null;
+      try {
+        await ensureCwdExists(request.cwd);
 
-      claudePath = await ClaudeBinaryResolver.resolve();
-      if (!claudePath) {
-        throw new Error('Claude CLI not found; install it or provide a valid path');
+        claudePath = await ClaudeBinaryResolver.resolve();
+        if (!claudePath) {
+          throw new Error('Claude CLI not found; install it or provide a valid path');
+        }
+      } catch (error) {
+        // Restore pre-launch backup so config.json is not left in normalized (lead-only) state
+        await this.restorePrelaunchConfig(request.teamName);
+        throw error;
       }
-    } catch (error) {
-      // Restore pre-launch backup so config.json is not left in normalized (lead-only) state
-      await this.restorePrelaunchConfig(request.teamName);
-      throw error;
-    }
 
-    const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
-    const runId = randomUUID();
-    const startedAt = nowIso();
+      const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
+      const runId = randomUUID();
+      const startedAt = nowIso();
 
-    // Build a synthetic TeamCreateRequest for reuse by shared infrastructure
-    const syntheticRequest: TeamCreateRequest = {
-      teamName: request.teamName,
-      members: expectedMemberSpecs,
-      cwd: request.cwd,
-    };
+      // Build a synthetic TeamCreateRequest for reuse by shared infrastructure
+      const syntheticRequest: TeamCreateRequest = {
+        teamName: request.teamName,
+        members: expectedMemberSpecs,
+        cwd: request.cwd,
+      };
 
-    const run: ProvisioningRun = {
-      runId,
-      teamName: request.teamName,
-      startedAt,
-      stdoutBuffer: '',
-      stderrBuffer: '',
-      processKilled: false,
-      finalizingByTimeout: false,
-      cancelRequested: false,
-      teamsBasePathsToProbe,
-      child: null,
-      timeoutHandle: null,
-      fsMonitorHandle: null,
-      onProgress,
-      expectedMembers,
-      request: syntheticRequest,
-      lastLogProgressAt: 0,
-      waitingTasksSince: null,
-      provisioningComplete: false,
-      isLaunch: true,
-      fsPhase: 'waiting_members',
-      leadRelayCapture: null,
-      directReplyParts: [],
-      provisioningOutputParts: [],
-      detectedSessionId: null,
-      leadActivityState: 'active',
-      authFailureRetried: false,
-      authRetryInProgress: false,
-      spawnContext: null,
-      progress: {
+      const run: ProvisioningRun = {
         runId,
         teamName: request.teamName,
-        state: 'validating',
-        message:
-          source === 'members-meta'
-            ? 'Validating team launch request (members from members.meta.json)'
-            : source === 'inboxes'
-              ? 'Validating team launch request (members from inboxes)'
-              : 'Validating team launch request (fallback members from config.json)',
         startedAt,
-        updatedAt: startedAt,
-        warnings: warning ? [warning] : undefined,
-        cliLogsTail: undefined,
-      },
-    };
-
-    this.runs.set(runId, run);
-    this.activeByTeam.set(request.teamName, runId);
-    run.onProgress(run.progress);
-
-    // Read existing tasks to include in teammate prompts for work resumption
-    const taskReader = new TeamTaskReader();
-    let existingTasks: TeamTask[] = [];
-    try {
-      existingTasks = await taskReader.getTasks(request.teamName);
-    } catch (error) {
-      logger.warn(`[${request.teamName}] Failed to read tasks for launch prompt: ${String(error)}`);
-    }
-
-    const prompt = buildLaunchPrompt(request, expectedMemberSpecs, existingTasks);
-    let child: ReturnType<typeof spawn>;
-    const { env: shellEnv, authSource } = await this.buildProvisioningEnv();
-    if (authSource === 'none') {
-      logger.warn(
-        'No explicit auth env var found for `-p` mode (launch). ' +
-          'Attempting spawn anyway — CLI may authenticate via apiKeyHelper, SSO, or other mechanism.'
-      );
-    }
-    const launchArgs = [
-      '--input-format',
-      'stream-json',
-      '--output-format',
-      'stream-json',
-      '--verbose',
-      '--setting-sources',
-      'user,project,local',
-      '--disallowedTools',
-      'TeamDelete,TodoWrite',
-      '--dangerously-skip-permissions',
-    ];
-    if (previousSessionId) {
-      launchArgs.push('--resume', previousSessionId);
-      logger.info(
-        `[${request.teamName}] Launching with --resume ${previousSessionId} for session continuity`
-      );
-    }
-    if (request.model) {
-      launchArgs.push('--model', request.model);
-    }
-    // New sessions: CLI creates its own ID. No --resume with synthetic name — docs say
-    // --resume is for existing sessions and may show an interactive picker if not found.
-
-    try {
-      child = spawnCli(claudePath, launchArgs, {
-        cwd: request.cwd,
-        env: {
-          ...shellEnv,
+        stdoutBuffer: '',
+        stderrBuffer: '',
+        processKilled: false,
+        finalizingByTimeout: false,
+        cancelRequested: false,
+        teamsBasePathsToProbe,
+        child: null,
+        timeoutHandle: null,
+        fsMonitorHandle: null,
+        onProgress,
+        expectedMembers,
+        request: syntheticRequest,
+        lastLogProgressAt: 0,
+        waitingTasksSince: null,
+        provisioningComplete: false,
+        isLaunch: true,
+        fsPhase: 'waiting_members',
+        leadRelayCapture: null,
+        directReplyParts: [],
+        provisioningOutputParts: [],
+        detectedSessionId: null,
+        leadActivityState: 'active',
+        authFailureRetried: false,
+        authRetryInProgress: false,
+        spawnContext: null,
+        progress: {
+          runId,
+          teamName: request.teamName,
+          state: 'validating',
+          message:
+            source === 'members-meta'
+              ? 'Validating team launch request (members from members.meta.json)'
+              : source === 'inboxes'
+                ? 'Validating team launch request (members from inboxes)'
+                : 'Validating team launch request (fallback members from config.json)',
+          startedAt,
+          updatedAt: startedAt,
+          warnings: warning ? [warning] : undefined,
+          cliLogsTail: undefined,
         },
-        stdio: ['pipe', 'pipe', 'pipe'],
+      };
+
+      this.runs.set(runId, run);
+      this.activeByTeam.set(request.teamName, runId);
+      run.onProgress(run.progress);
+
+      // Read existing tasks to include in teammate prompts for work resumption
+      const taskReader = new TeamTaskReader();
+      let existingTasks: TeamTask[] = [];
+      try {
+        existingTasks = await taskReader.getTasks(request.teamName);
+      } catch (error) {
+        logger.warn(
+          `[${request.teamName}] Failed to read tasks for launch prompt: ${String(error)}`
+        );
+      }
+
+      const prompt = buildLaunchPrompt(request, expectedMemberSpecs, existingTasks);
+      let child: ReturnType<typeof spawn>;
+      const { env: shellEnv, authSource } = await this.buildProvisioningEnv();
+      if (authSource === 'none') {
+        logger.warn(
+          'No explicit auth env var found for `-p` mode (launch). ' +
+            'Attempting spawn anyway — CLI may authenticate via apiKeyHelper, SSO, or other mechanism.'
+        );
+      }
+      const launchArgs = [
+        '--input-format',
+        'stream-json',
+        '--output-format',
+        'stream-json',
+        '--verbose',
+        '--setting-sources',
+        'user,project,local',
+        '--disallowedTools',
+        expectedMemberSpecs.length === 0 ? 'TeamDelete,TodoWrite,Task' : 'TeamDelete,TodoWrite',
+        '--dangerously-skip-permissions',
+      ];
+      if (previousSessionId) {
+        launchArgs.push('--resume', previousSessionId);
+        logger.info(
+          `[${request.teamName}] Launching with --resume ${previousSessionId} for session continuity`
+        );
+      }
+      if (request.model) {
+        launchArgs.push('--model', request.model);
+      }
+      // New sessions: CLI creates its own ID. No --resume with synthetic name — docs say
+      // --resume is for existing sessions and may show an interactive picker if not found.
+
+      try {
+        child = spawnCli(claudePath, launchArgs, {
+          cwd: request.cwd,
+          env: {
+            ...shellEnv,
+          },
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+      } catch (error) {
+        this.runs.delete(runId);
+        this.activeByTeam.delete(request.teamName);
+        await this.restorePrelaunchConfig(request.teamName);
+        throw error;
+      }
+
+      const resumeHint = previousSessionId ? ' (resuming previous session)' : '';
+      updateProgress(run, 'spawning', `Starting Claude CLI process for team launch${resumeHint}`, {
+        pid: child.pid ?? undefined,
       });
+      run.onProgress(run.progress);
+      run.child = child;
+      run.spawnContext = {
+        claudePath,
+        args: launchArgs,
+        cwd: request.cwd,
+        env: { ...shellEnv },
+        prompt,
+      };
+
+      // Send launch prompt
+      if (child.stdin?.writable) {
+        const message = JSON.stringify({
+          type: 'user',
+          message: {
+            role: 'user',
+            content: [{ type: 'text', text: prompt }],
+          },
+        });
+        child.stdin.write(message + '\n');
+      }
+
+      this.attachStdoutHandler(run);
+      this.attachStderrHandler(run);
+
+      // For launch, skip the filesystem monitor — files (config, inboxes, tasks)
+      // already exist from the previous run and would trigger immediate false
+      // completion on the first poll. Rely on stream-json result.success instead.
+      updateProgress(run, 'monitoring', 'CLI running — reconnecting with teammates');
+      run.onProgress(run.progress);
+
+      run.timeoutHandle = setTimeout(() => {
+        if (!run.processKilled && !run.provisioningComplete) {
+          run.processKilled = true;
+          run.finalizingByTimeout = true;
+          void (async () => {
+            const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
+            run.child?.stdin?.end();
+            killProcessTree(run.child);
+            if (readyOnTimeout) {
+              return;
+            }
+
+            const progress = updateProgress(run, 'failed', 'Timed out waiting for CLI (launch)', {
+              error: 'Timed out waiting for CLI during team launch.',
+              cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
+            });
+            run.onProgress(progress);
+            this.cleanupRun(run);
+          })();
+        }
+      }, RUN_TIMEOUT_MS);
+
+      child.once('error', (error) => {
+        const progress = updateProgress(run, 'failed', 'Failed to start Claude CLI (launch)', {
+          error: error.message,
+          cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
+        });
+        run.onProgress(progress);
+        this.cleanupRun(run);
+      });
+
+      child.once('exit', (code) => {
+        void this.handleProcessExit(run, code);
+      });
+
+      return { runId };
     } catch (error) {
-      this.runs.delete(runId);
-      this.activeByTeam.delete(request.teamName);
-      await this.restorePrelaunchConfig(request.teamName);
+      // Clean up pending key if failure occurred before runId was set
+      if (this.activeByTeam.get(request.teamName) === pendingKey) {
+        this.activeByTeam.delete(request.teamName);
+      }
       throw error;
     }
-
-    const resumeHint = previousSessionId ? ' (resuming previous session)' : '';
-    updateProgress(run, 'spawning', `Starting Claude CLI process for team launch${resumeHint}`, {
-      pid: child.pid ?? undefined,
-    });
-    run.onProgress(run.progress);
-    run.child = child;
-    run.spawnContext = {
-      claudePath,
-      args: launchArgs,
-      cwd: request.cwd,
-      env: { ...shellEnv },
-      prompt,
-    };
-
-    // Send launch prompt
-    if (child.stdin?.writable) {
-      const message = JSON.stringify({
-        type: 'user',
-        message: {
-          role: 'user',
-          content: [{ type: 'text', text: prompt }],
-        },
-      });
-      child.stdin.write(message + '\n');
-    }
-
-    this.attachStdoutHandler(run);
-    this.attachStderrHandler(run);
-
-    // For launch, skip the filesystem monitor — files (config, inboxes, tasks)
-    // already exist from the previous run and would trigger immediate false
-    // completion on the first poll. Rely on stream-json result.success instead.
-    updateProgress(run, 'monitoring', 'CLI running — reconnecting with teammates');
-    run.onProgress(run.progress);
-
-    run.timeoutHandle = setTimeout(() => {
-      if (!run.processKilled && !run.provisioningComplete) {
-        run.processKilled = true;
-        run.finalizingByTimeout = true;
-        void (async () => {
-          const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
-          run.child?.stdin?.end();
-          killProcessTree(run.child);
-          if (readyOnTimeout) {
-            return;
-          }
-
-          const progress = updateProgress(run, 'failed', 'Timed out waiting for CLI (launch)', {
-            error: 'Timed out waiting for CLI during team launch.',
-            cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
-          });
-          run.onProgress(progress);
-          this.cleanupRun(run);
-        })();
-      }
-    }, RUN_TIMEOUT_MS);
-
-    child.once('error', (error) => {
-      const progress = updateProgress(run, 'failed', 'Failed to start Claude CLI (launch)', {
-        error: error.message,
-        cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
-      });
-      run.onProgress(progress);
-      this.cleanupRun(run);
-    });
-
-    child.once('exit', (code) => {
-      void this.handleProcessExit(run, code);
-    });
-
-    return { runId };
   }
 
   async getProvisioningStatus(runId: string): Promise<TeamProvisioningProgress> {
@@ -2381,6 +2481,34 @@ export class TeamProvisioningService {
     if (run.isLaunch) {
       await this.updateConfigPostLaunch(run.teamName, run.request.cwd, run.detectedSessionId);
       await this.cleanupPrelaunchBackup(run.teamName);
+
+      // Best-effort: detect CLI-suffixed member names (alice-2, bob-2) that indicate
+      // a stale config.json was present during launch (double-launch race).
+      try {
+        const postLaunchConfigPath = path.join(getTeamsBasePath(), run.teamName, 'config.json');
+        const raw = await tryReadRegularFileUtf8(postLaunchConfigPath, {
+          timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+          maxBytes: TEAM_CONFIG_MAX_BYTES,
+        });
+        if (raw) {
+          const config = JSON.parse(raw) as {
+            members?: { name?: string; agentType?: string }[];
+          };
+          const suffixed = (config.members ?? []).filter(
+            (m) => typeof m.name === 'string' && /-\d+$/.test(m.name) && m.agentType !== 'team-lead'
+          );
+          if (suffixed.length > 0) {
+            logger.warn(
+              `[${run.teamName}] Post-launch: detected suffixed members: ` +
+                `${suffixed.map((m) => m.name).join(', ')}. ` +
+                'This usually means the team was launched with stale config.json.'
+            );
+          }
+        }
+      } catch {
+        /* best-effort */
+      }
+
       const readyMessage = 'Team launched — process alive and ready';
       const progress = updateProgress(run, 'ready', readyMessage, {
         cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
@@ -2513,24 +2641,34 @@ export class TeamProvisioningService {
         }
 
         if (run.fsPhase === 'waiting_members') {
-          const teamDir = (await resolveTeamDir()) ?? configuredTeamDir;
-          const inboxDir = path.join(teamDir, 'inboxes');
-          const inboxCount = await countFiles(inboxDir, '.json');
-          if (inboxCount >= request.members.length) {
+          if (request.members.length === 0) {
             run.fsPhase = 'waiting_tasks';
             const progress = updateProgress(
               run,
               'monitoring',
-              `All ${inboxCount} member inboxes created, waiting for tasks`
+              'Solo team, skipping member inbox wait'
             );
             run.onProgress(progress);
-          } else if (inboxCount > 0) {
-            const progress = updateProgress(
-              run,
-              'monitoring',
-              `${inboxCount}/${request.members.length} member inboxes created`
-            );
-            run.onProgress(progress);
+          } else {
+            const teamDir = (await resolveTeamDir()) ?? configuredTeamDir;
+            const inboxDir = path.join(teamDir, 'inboxes');
+            const inboxCount = await countFiles(inboxDir, '.json');
+            if (inboxCount >= request.members.length) {
+              run.fsPhase = 'waiting_tasks';
+              const progress = updateProgress(
+                run,
+                'monitoring',
+                `All ${inboxCount} member inboxes created, waiting for tasks`
+              );
+              run.onProgress(progress);
+            } else if (inboxCount > 0) {
+              const progress = updateProgress(
+                run,
+                'monitoring',
+                `${inboxCount}/${request.members.length} member inboxes created`
+              );
+              run.onProgress(progress);
+            }
           }
         }
 
@@ -3229,10 +3367,18 @@ export class TeamProvisioningService {
       // ignore
     }
     if (baseNames.size === 0) {
+      const allConfigNames = new Set<string>();
       for (const member of members) {
         const name = typeof member.name === 'string' ? member.name.trim() : '';
         const agentType = typeof member.agentType === 'string' ? member.agentType : '';
-        if (name && agentType && agentType !== 'team-lead' && !/-\d+$/.test(name)) {
+        if (name && agentType && agentType !== 'team-lead') {
+          allConfigNames.add(name);
+        }
+      }
+      for (const name of allConfigNames) {
+        const match = /^(.+)-\d+$/.exec(name);
+        // Only exclude CLI-suffixed names (alice-2) when the base name (alice) also exists
+        if (!match || !allConfigNames.has(match[1])) {
           baseNames.add(name);
         }
       }
@@ -3476,8 +3622,12 @@ export class TeamProvisioningService {
       const metaMembers = await this.membersMetaStore.getMembers(teamName);
       const byName = new Map<string, TeamCreateRequest['members'][number]>();
       for (const member of metaMembers) {
+        if (member.agentType === 'team-lead' || member.name === 'team-lead') {
+          continue;
+        }
         const name = member.name?.trim();
         if (!name) continue;
+        if (member.removedAt) continue;
         const role = typeof member.role === 'string' ? member.role.trim() || undefined : undefined;
         const workflow =
           typeof member.workflow === 'string' ? member.workflow.trim() || undefined : undefined;
@@ -3505,13 +3655,21 @@ export class TeamProvisioningService {
     }
 
     try {
-      const inboxNames = Array.from(
+      const allInboxNames = Array.from(
         new Set(
           (await this.inboxReader.listInboxNames(teamName))
             .map((name) => name.trim())
             .filter((name) => name.length > 0)
         )
       );
+      const inboxNameSet = new Set(allInboxNames);
+      const inboxNames = allInboxNames
+        .filter((name) => name !== 'team-lead')
+        .filter((name) => {
+          const match = /^(.+)-\d+$/.exec(name);
+          // Only filter CLI-suffixed names (alice-2) when the base name (alice) also exists
+          return !match || !inboxNameSet.has(match[1]);
+        });
       if (inboxNames.length > 0) {
         const members = inboxNames.map((name) => ({ name }));
         return { members, source: 'inboxes' };
@@ -3535,11 +3693,23 @@ export class TeamProvisioningService {
       };
     }
 
+    let configParseFailed = false;
+    try {
+      JSON.parse(configRaw);
+    } catch {
+      configParseFailed = true;
+    }
+
     return {
       members: [],
       source: 'config-fallback',
-      warning:
-        'No teammate roster found in members.meta.json, inboxes, or config.json. Launch will continue without explicit teammate names.',
+      ...(configParseFailed
+        ? {
+            warning:
+              'Config could not be parsed during launch roster discovery. ' +
+              'Launch will continue without explicit teammate names.',
+          }
+        : {}),
     };
   }
 
@@ -3554,7 +3724,7 @@ export class TeamProvisioningService {
       }
       const byName = new Map<string, TeamCreateRequest['members'][number]>();
       for (const member of parsed.members) {
-        if (!member || member.agentType === 'team-lead') continue;
+        if (!member || member.agentType === 'team-lead' || member.name === 'team-lead') continue;
         const name = typeof member.name === 'string' ? member.name.trim() : '';
         if (!name) continue;
         byName.set(name, { name });

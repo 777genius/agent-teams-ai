@@ -227,6 +227,8 @@ export class TeamConfigReader {
       const mergeMember = (m: TeamMember): void => {
         const name = m.name?.trim();
         if (!name) return;
+        // Summary/memberCount should represent teammates (exclude the lead process).
+        if (name === 'team-lead' || m.agentType === 'team-lead') return;
         const key = name.toLowerCase();
         const existing = memberMap.get(key);
         memberMap.set(key, {

@@ -5,6 +5,8 @@
  * This is the default provider used when operating in local mode.
  */
 
+import * as path from 'node:path';
+
 import * as fs from 'fs';
 
 import type {
@@ -20,6 +22,18 @@ const STAT_TIMEOUT_MS = 2000;
 // saturate the thread pool. In those cases, prefer returning bare dirents and
 // let callers stat only the files they actually need.
 const STAT_PREFETCH_LIMIT = 1500;
+
+async function statWithTimeout(filePath: string, timeoutMs: number): Promise<fs.Stats> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error('stat timeout')), timeoutMs);
+  });
+  try {
+    return await Promise.race([fs.promises.stat(filePath), timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 async function mapLimit<T, R>(
   items: readonly T[],
@@ -57,12 +71,7 @@ export class LocalFileSystemProvider implements FileSystemProvider {
   }
 
   async stat(filePath: string): Promise<FsStatResult> {
-    const stats = await Promise.race([
-      fs.promises.stat(filePath),
-      new Promise<fs.Stats>((_resolve, reject) =>
-        setTimeout(() => reject(new Error('stat timeout')), STAT_TIMEOUT_MS)
-      ),
-    ]);
+    const stats = await statWithTimeout(filePath, STAT_TIMEOUT_MS);
     return {
       size: stats.size,
       mtimeMs: stats.mtimeMs,
@@ -90,13 +99,8 @@ export class LocalFileSystemProvider implements FileSystemProvider {
       let birthtimeMs: number | undefined;
       let size: number | undefined;
       try {
-        const fullPath = `${dirPath}/${entry.name}`;
-        const stat = await Promise.race([
-          fs.promises.stat(fullPath),
-          new Promise<fs.Stats>((_resolve, reject) =>
-            setTimeout(() => reject(new Error('stat timeout')), STAT_TIMEOUT_MS)
-          ),
-        ]);
+        const fullPath = path.join(dirPath, entry.name);
+        const stat = await statWithTimeout(fullPath, STAT_TIMEOUT_MS);
         mtimeMs = stat.mtimeMs;
         birthtimeMs = stat.birthtimeMs;
         size = stat.size;

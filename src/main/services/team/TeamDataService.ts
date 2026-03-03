@@ -657,15 +657,15 @@ export class TeamDataService {
     teamName: string,
     request: { members: { name: string; role?: string; workflow?: string }[] }
   ): Promise<void> {
-    if (!request.members.length) {
-      throw new Error('At least one member is required');
-    }
     const existing = await this.membersMetaStore.getMembers(teamName);
     const existingByName = new Map(existing.map((m) => [m.name.toLowerCase(), m]));
     const joinedAt = Date.now();
-    const newMembers: TeamMember[] = request.members.map((member, index) => {
+    const nextByName = new Set<string>();
+
+    const nextActive: TeamMember[] = request.members.map((member, index) => {
       const name = member.name.trim();
       if (!name) throw new Error('Member name cannot be empty');
+      nextByName.add(name.toLowerCase());
       const prev = existingByName.get(name.toLowerCase());
       return {
         name,
@@ -674,9 +674,24 @@ export class TeamDataService {
         agentType: prev?.agentType ?? 'general-purpose',
         color: prev?.color ?? getMemberColor(index),
         joinedAt: prev?.joinedAt ?? joinedAt,
+        removedAt: undefined,
       };
     });
-    await this.membersMetaStore.writeMembers(teamName, newMembers);
+
+    // Preserve/mark removed members so stale inbox files don't resurrect them in the UI.
+    const nextRemoved: TeamMember[] = [];
+    for (const prev of existing) {
+      const prevName = prev.name.trim();
+      if (!prevName) continue;
+      const key = prevName.toLowerCase();
+      if (nextByName.has(key)) continue;
+      nextRemoved.push({
+        ...prev,
+        removedAt: prev.removedAt ?? joinedAt,
+      });
+    }
+
+    await this.membersMetaStore.writeMembers(teamName, [...nextActive, ...nextRemoved]);
   }
 
   async removeMember(teamName: string, memberName: string): Promise<void> {

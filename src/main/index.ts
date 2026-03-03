@@ -765,6 +765,11 @@ function shutdownServices(): void {
     }
   }
 
+  // Stop background polling timers (prevents hanging shutdown).
+  if (teamDataService) {
+    teamDataService.stopProcessHealthPolling();
+  }
+
   // Kill all PTY processes
   if (ptyTerminalService) {
     ptyTerminalService.killAll();
