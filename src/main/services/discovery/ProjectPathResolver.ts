@@ -72,7 +72,11 @@ export class ProjectPathResolver {
 
     // In SSH mode, avoid scanning every remote session file just to resolve display path.
     // One successful cwd extraction is sufficient.
-    const maxPathsToInspect = this.fsProvider.type === 'ssh' ? 1 : sessionPaths.length;
+    const MAX_LOCAL_PATHS_TO_INSPECT = 5;
+    const maxPathsToInspect =
+      this.fsProvider.type === 'ssh'
+        ? 1
+        : Math.min(sessionPaths.length, MAX_LOCAL_PATHS_TO_INSPECT);
     for (const sessionPath of sessionPaths.slice(0, maxPathsToInspect)) {
       try {
         const cwd = await extractCwd(sessionPath, this.fsProvider);

@@ -10,6 +10,7 @@
 import { createLogger } from '@shared/utils/logger';
 import { type IpcMain, type IpcMainInvokeEvent } from 'electron';
 
+import { setCurrentMainOp } from '../services/infrastructure/EventLoopLagMonitor';
 import { type Project, type RepositoryGroup, type Session } from '../types';
 
 import { validateProjectId } from './guards';
@@ -59,6 +60,12 @@ export function removeProjectHandlers(ipcMain: IpcMain): void {
  * Lists all projects from ~/.claude/projects/
  */
 async function handleGetProjects(_event: IpcMainInvokeEvent): Promise<Project[]> {
+  setCurrentMainOp('projects:getProjects');
+  const startedAt = Date.now();
+  const watchdogMs = 10_000;
+  const watchdog = setTimeout(() => {
+    logger.warn(`get-projects still running after ${watchdogMs}ms`);
+  }, watchdogMs);
   try {
     const { projectScanner } = registry.getActive();
     const projects = await projectScanner.scan();
@@ -66,6 +73,13 @@ async function handleGetProjects(_event: IpcMainInvokeEvent): Promise<Project[]>
   } catch (error) {
     logger.error('Error in get-projects:', error);
     return [];
+  } finally {
+    clearTimeout(watchdog);
+    const ms = Date.now() - startedAt;
+    if (ms >= 1500) {
+      logger.warn(`get-projects slow ms=${ms}`);
+    }
+    setCurrentMainOp(null);
   }
 }
 
@@ -75,6 +89,12 @@ async function handleGetProjects(_event: IpcMainInvokeEvent): Promise<Project[]>
  * Worktrees of the same repo are grouped together.
  */
 async function handleGetRepositoryGroups(_event: IpcMainInvokeEvent): Promise<RepositoryGroup[]> {
+  setCurrentMainOp('projects:getRepositoryGroups');
+  const startedAt = Date.now();
+  const watchdogMs = 10_000;
+  const watchdog = setTimeout(() => {
+    logger.warn(`get-repository-groups still running after ${watchdogMs}ms`);
+  }, watchdogMs);
   try {
     const { projectScanner } = registry.getActive();
     const groups = await projectScanner.scanWithWorktreeGrouping();
@@ -82,6 +102,13 @@ async function handleGetRepositoryGroups(_event: IpcMainInvokeEvent): Promise<Re
   } catch (error) {
     logger.error('Error in get-repository-groups:', error);
     return [];
+  } finally {
+    clearTimeout(watchdog);
+    const ms = Date.now() - startedAt;
+    if (ms >= 2000) {
+      logger.warn(`get-repository-groups slow ms=${ms}`);
+    }
+    setCurrentMainOp(null);
   }
 }
 

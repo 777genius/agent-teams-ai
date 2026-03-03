@@ -32,6 +32,9 @@ import {
   HTTP_SERVER_START,
   HTTP_SERVER_STOP,
   PROJECT_LIST_FILES,
+  RENDERER_BOOT,
+  RENDERER_HEARTBEAT,
+  RENDERER_LOG,
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
   REVIEW_CLEAR_DECISIONS,
@@ -245,6 +248,63 @@ async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Prom
   }
   return result.data as T;
 }
+
+function formatConsoleArg(arg: unknown): string {
+  if (typeof arg === 'string') return arg;
+  if (arg instanceof Error) return arg.stack ?? arg.message;
+  try {
+    return JSON.stringify(arg);
+  } catch {
+    return String(arg);
+  }
+}
+
+function shouldForwardConsoleText(text: string): boolean {
+  return (
+    text.startsWith('[Store:') ||
+    text.startsWith('[Component:') ||
+    text.startsWith('[IPC:') ||
+    text.startsWith('[Service:') ||
+    text.startsWith('[Perf:')
+  );
+}
+
+function installRendererLogForwarding(): void {
+  const originalWarn = console.warn.bind(console);
+  const originalError = console.error.bind(console);
+
+  console.warn = (...args: unknown[]): void => {
+    originalWarn(...args);
+    try {
+      const text = args.map(formatConsoleArg).join(' ').trim();
+      if (!text || !shouldForwardConsoleText(text)) return;
+      ipcRenderer.send(RENDERER_LOG, { level: 'warn', message: text });
+    } catch {
+      // ignore
+    }
+  };
+
+  console.error = (...args: unknown[]): void => {
+    originalError(...args);
+    try {
+      const text = args.map(formatConsoleArg).join(' ').trim();
+      if (!text || !shouldForwardConsoleText(text)) return;
+      ipcRenderer.send(RENDERER_LOG, { level: 'error', message: text });
+    } catch {
+      // ignore
+    }
+  };
+}
+
+installRendererLogForwarding();
+
+// Signal that preload executed (helps diagnose "UI stuck" with no logs).
+ipcRenderer.send(RENDERER_BOOT);
+
+// Heartbeat to detect renderer thread stalls.
+setInterval(() => {
+  ipcRenderer.send(RENDERER_HEARTBEAT, Date.now());
+}, 1000);
 
 // Keep latest zoom factor cached even before renderer UI subscribes.
 let currentZoomFactor = 1;

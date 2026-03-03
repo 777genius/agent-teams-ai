@@ -151,7 +151,7 @@ export const GlobalTaskList = ({
               path: r.worktrees[0]?.path,
             }))
         : projects
-            .filter((p) => p.sessions.length > 0)
+            .filter((p) => (p.totalSessions ?? p.sessions.length) > 0)
             .map((p) => ({
               value: p.path,
               label: p.name,

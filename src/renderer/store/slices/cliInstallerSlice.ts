@@ -45,6 +45,8 @@ export interface CliInstallerSlice {
   installCli: () => void;
 }
 
+let cliStatusInFlight: Promise<void> | null = null;
+
 // =============================================================================
 // Slice Creator
 // =============================================================================
@@ -67,17 +69,25 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   cliCompletedVersion: null,
 
   fetchCliStatus: async () => {
-    set({ cliStatusLoading: true, cliStatusError: null });
-    try {
-      const status = await api.cliInstaller.getStatus();
-      set({ cliStatus: status });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to check CLI status';
-      logger.error('Failed to fetch CLI status:', error);
-      set({ cliStatusError: message });
-    } finally {
-      set({ cliStatusLoading: false });
-    }
+    if (!api.cliInstaller) return;
+    if (cliStatusInFlight) return cliStatusInFlight;
+
+    cliStatusInFlight = (async () => {
+      set({ cliStatusLoading: true, cliStatusError: null });
+      try {
+        const status = await api.cliInstaller.getStatus();
+        set({ cliStatus: status });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to check CLI status';
+        logger.error('Failed to fetch CLI status:', error);
+        set({ cliStatusError: message });
+      } finally {
+        set({ cliStatusLoading: false });
+        cliStatusInFlight = null;
+      }
+    })();
+
+    return cliStatusInFlight;
   },
 
   installCli: () => {

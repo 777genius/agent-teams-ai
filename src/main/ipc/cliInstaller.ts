@@ -22,6 +22,9 @@ import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 const logger = createLogger('IPC:cliInstaller');
 
 let service: CliInstallerService;
+let statusInFlight: Promise<CliInstallationStatus> | null = null;
+let cachedStatus: { value: CliInstallationStatus; at: number } | null = null;
+const STATUS_CACHE_TTL_MS = 5_000;
 
 /**
  * Initializes CLI installer handlers with the service instance.
@@ -58,7 +61,28 @@ async function handleGetStatus(
   _event: IpcMainInvokeEvent
 ): Promise<IpcResult<CliInstallationStatus>> {
   try {
-    const status = await service.getStatus();
+    if (cachedStatus && Date.now() - cachedStatus.at < STATUS_CACHE_TTL_MS) {
+      return { success: true, data: cachedStatus.value };
+    }
+
+    if (!statusInFlight) {
+      const startedAt = Date.now();
+      statusInFlight = service
+        .getStatus()
+        .then((status) => {
+          cachedStatus = { value: status, at: Date.now() };
+          return status;
+        })
+        .finally(() => {
+          const ms = Date.now() - startedAt;
+          if (ms >= 2000) {
+            logger.warn(`cliInstaller:getStatus slow ms=${ms}`);
+          }
+          statusInFlight = null;
+        });
+    }
+
+    const status = await statusInFlight;
     return { success: true, data: status };
   } catch (error) {
     const msg = getErrorMessage(error);

@@ -5,6 +5,19 @@
  */
 
 // =============================================================================
+// Diagnostics / Logging Channels
+// =============================================================================
+
+/** Renderer -> main log forwarding (filtered in preload) */
+export const RENDERER_LOG = 'renderer:log';
+
+/** Renderer -> main lifecycle signal (preload executed) */
+export const RENDERER_BOOT = 'renderer:boot';
+
+/** Renderer -> main heartbeat (detect renderer stalls) */
+export const RENDERER_HEARTBEAT = 'renderer:heartbeat';
+
+// =============================================================================
 // Config API Channels
 // =============================================================================
 

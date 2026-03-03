@@ -431,6 +431,7 @@ const NewProjectCard = (): React.JSX.Element => {
             isMainWorktree: true,
             source: 'unknown',
             sessions: [],
+            totalSessions: 0,
             createdAt: now,
           },
         ],
@@ -481,6 +482,7 @@ const ProjectsGrid = ({
   const {
     repositoryGroups,
     repositoryGroupsLoading,
+    repositoryGroupsError,
     fetchRepositoryGroups,
     selectRepository,
     globalTasks,
@@ -491,6 +493,7 @@ const ProjectsGrid = ({
     useShallow((s) => ({
       repositoryGroups: s.repositoryGroups,
       repositoryGroupsLoading: s.repositoryGroupsLoading,
+      repositoryGroupsError: s.repositoryGroupsError,
       fetchRepositoryGroups: s.fetchRepositoryGroups,
       selectRepository: s.selectRepository,
       globalTasks: s.globalTasks,
@@ -503,14 +506,17 @@ const ProjectsGrid = ({
   const hasFetchedTasksRef = React.useRef(false);
 
   useEffect(() => {
-    if (repositoryGroups.length === 0) {
+    if (repositoryGroups.length === 0 && !repositoryGroupsLoading) {
       void fetchRepositoryGroups();
     }
-    if (!hasFetchedTasksRef.current) {
+  }, [repositoryGroups.length, repositoryGroupsLoading, fetchRepositoryGroups]);
+
+  useEffect(() => {
+    if (repositoryGroups.length > 0 && !hasFetchedTasksRef.current && !repositoryGroupsLoading) {
       hasFetchedTasksRef.current = true;
       void fetchAllTasks();
     }
-  }, [repositoryGroups.length, fetchRepositoryGroups, fetchAllTasks]);
+  }, [repositoryGroups.length, repositoryGroupsLoading, fetchAllTasks]);
 
   const taskCountsMap = useMemo(() => buildTaskCountsByProject(globalTasks), [globalTasks]);
 
@@ -583,6 +589,26 @@ const ProjectsGrid = ({
             </div>
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (repositoryGroupsError && repositoryGroups.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 rounded-sm border border-dashed border-border px-8 py-16">
+        <div className="mb-1 flex size-12 items-center justify-center rounded-sm border border-border bg-surface-raised">
+          <FolderGit2 className="size-6 text-text-muted" />
+        </div>
+        <div className="text-center">
+          <p className="mb-1 text-sm text-text-secondary">Failed to load projects</p>
+          <p className="max-w-xl text-xs text-text-muted">{repositoryGroupsError}</p>
+        </div>
+        <button
+          onClick={() => void fetchRepositoryGroups()}
+          className="rounded-sm border border-border bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-emphasis hover:text-text"
+        >
+          Retry
+        </button>
       </div>
     );
   }

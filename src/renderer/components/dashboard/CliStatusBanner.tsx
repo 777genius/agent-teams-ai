@@ -131,8 +131,13 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
 
   useEffect(() => {
     if (!isElectron) return;
-
-    void fetchCliStatus();
+    // IMPORTANT: do NOT auto-fetch on mount.
+    // Store initialization already schedules a deferred CLI status check to avoid
+    // competing with initial teams/tasks/project scans.
+    // Keep a low-frequency refresh, but only after we've successfully loaded a status.
+    if (!cliStatus) {
+      return;
+    }
 
     const interval = setInterval(
       () => {
@@ -142,7 +147,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
     );
 
     return () => clearInterval(interval);
-  }, [isElectron, fetchCliStatus]);
+  }, [isElectron, cliStatus, fetchCliStatus]);
 
   const handleInstall = useCallback(() => {
     installCli();
@@ -200,7 +205,31 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         </div>
       );
     }
-    // Still loading or initial render
+
+    // If we aren't currently loading, avoid showing a "stuck" spinner.
+    // The initial CLI status check is deferred; allow user to trigger manually.
+    if (!cliStatusLoading) {
+      return (
+        <div
+          className="mb-6 flex items-center justify-between gap-3 rounded-lg border-l-4 px-4 py-3"
+          style={{ borderColor: styles.border, backgroundColor: styles.bg }}
+        >
+          <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            Claude CLI status will be checked in the background.
+          </span>
+          <button
+            onClick={handleRefresh}
+            className="flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
+            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+          >
+            <RefreshCw className="size-3.5" />
+            Check now
+          </button>
+        </div>
+      );
+    }
+
+    // Loading state: show spinner only while an actual request is in-flight.
     return (
       <div
         className="mb-6 flex items-center gap-3 rounded-lg border-l-4 px-4 py-3"

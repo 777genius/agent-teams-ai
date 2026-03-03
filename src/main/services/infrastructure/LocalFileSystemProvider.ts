@@ -14,6 +14,32 @@ import type {
   ReadStreamOptions,
 } from './FileSystemProvider';
 
+const STAT_CONCURRENCY = process.platform === 'win32' ? 32 : 128;
+const STAT_TIMEOUT_MS = 2000;
+// If a directory is huge, pre-statting every entry can take seconds+ and
+// saturate the thread pool. In those cases, prefer returning bare dirents and
+// let callers stat only the files they actually need.
+const STAT_PREFETCH_LIMIT = 1500;
+
+async function mapLimit<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let index = 0;
+  const workerCount = Math.max(1, Math.min(limit, items.length));
+  const workers = new Array(workerCount).fill(0).map(async () => {
+    while (true) {
+      const i = index++;
+      if (i >= items.length) return;
+      results[i] = await fn(items[i]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
 export class LocalFileSystemProvider implements FileSystemProvider {
   readonly type = 'local' as const;
 
@@ -31,7 +57,12 @@ export class LocalFileSystemProvider implements FileSystemProvider {
   }
 
   async stat(filePath: string): Promise<FsStatResult> {
-    const stats = await fs.promises.stat(filePath);
+    const stats = await Promise.race([
+      fs.promises.stat(filePath),
+      new Promise<fs.Stats>((_resolve, reject) =>
+        setTimeout(() => reject(new Error('stat timeout')), STAT_TIMEOUT_MS)
+      ),
+    ]);
     return {
       size: stats.size,
       mtimeMs: stats.mtimeMs,
@@ -43,32 +74,44 @@ export class LocalFileSystemProvider implements FileSystemProvider {
 
   async readdir(dirPath: string): Promise<FsDirent[]> {
     const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-    // Stat all entries concurrently to populate mtimeMs/birthtimeMs/size.
-    // Populating all three avoids a second stat() call in resolveFileDetails().
-    // Failures are silently ignored (fields stay undefined).
-    return Promise.all(
-      entries.map(async (entry) => {
-        let mtimeMs: number | undefined;
-        let birthtimeMs: number | undefined;
-        let size: number | undefined;
-        try {
-          const stat = await fs.promises.stat(`${dirPath}/${entry.name}`);
-          mtimeMs = stat.mtimeMs;
-          birthtimeMs = stat.birthtimeMs;
-          size = stat.size;
-        } catch {
-          // ignore
-        }
-        return {
-          name: entry.name,
-          mtimeMs,
-          birthtimeMs,
-          size,
-          isFile: () => entry.isFile(),
-          isDirectory: () => entry.isDirectory(),
-        };
-      })
-    );
+    if (entries.length > STAT_PREFETCH_LIMIT) {
+      return entries.map((entry) => ({
+        name: entry.name,
+        isFile: () => entry.isFile(),
+        isDirectory: () => entry.isDirectory(),
+      }));
+    }
+    // Stat entries with bounded concurrency.
+    // Unbounded Promise.all(stat(...)) can saturate the UV thread pool (even with
+    // increased UV_THREADPOOL_SIZE) when directories contain thousands of files,
+    // causing unrelated operations (teams/tasks/CLI checks) to time out.
+    return mapLimit(entries, STAT_CONCURRENCY, async (entry) => {
+      let mtimeMs: number | undefined;
+      let birthtimeMs: number | undefined;
+      let size: number | undefined;
+      try {
+        const fullPath = `${dirPath}/${entry.name}`;
+        const stat = await Promise.race([
+          fs.promises.stat(fullPath),
+          new Promise<fs.Stats>((_resolve, reject) =>
+            setTimeout(() => reject(new Error('stat timeout')), STAT_TIMEOUT_MS)
+          ),
+        ]);
+        mtimeMs = stat.mtimeMs;
+        birthtimeMs = stat.birthtimeMs;
+        size = stat.size;
+      } catch {
+        // ignore
+      }
+      return {
+        name: entry.name,
+        mtimeMs,
+        birthtimeMs,
+        size,
+        isFile: () => entry.isFile(),
+        isDirectory: () => entry.isDirectory(),
+      };
+    });
   }
 
   createReadStream(filePath: string, opts?: ReadStreamOptions): fs.ReadStream {

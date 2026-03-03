@@ -58,6 +58,12 @@ import type { FileSystemProvider, FsDirent } from '../infrastructure/FileSystemP
 
 const logger = createLogger('Discovery:ProjectScanner');
 
+// IPC payload safety: session ID arrays can be extremely large for long-lived projects.
+// Keep counts accurate via totalSessions, but truncate ID lists to keep renderer responsive.
+// We no longer need session IDs in project/repository listings (session lists are fetched separately).
+// Keeping this at 0 avoids huge IPC payloads that can stall the renderer thread.
+const MAX_SESSION_IDS_EXPORTED = 0;
+
 export class ProjectScanner {
   private readonly projectsDir: string;
   private readonly todosDir: string;
@@ -84,8 +90,8 @@ export class ProjectScanner {
   private static readonly SCAN_CACHE_TTL_MS = 2000;
 
   // Platform-aware batch sizes to avoid UV thread pool saturation on Windows
-  private static readonly LOCAL_SESSION_BATCH = process.platform === 'win32' ? 32 : 128;
-  private static readonly LOCAL_PROJECT_BATCH = process.platform === 'win32' ? 8 : 24;
+  private static readonly LOCAL_SESSION_BATCH = process.platform === 'win32' ? 16 : 64;
+  private static readonly LOCAL_PROJECT_BATCH = process.platform === 'win32' ? 4 : 12;
 
   // Delegated services
   private readonly fsProvider: FileSystemProvider;
@@ -127,7 +133,15 @@ export class ProjectScanner {
     }
 
     const startedAt = Date.now();
+    let stage = 'start';
+    const slowWarnAfterMs = 10_000;
+    const slowWarnTimer = setTimeout(() => {
+      logger.warn(
+        `[scan] still running after ${slowWarnAfterMs}ms stage=${stage} projectsDir=${this.projectsDir}`
+      );
+    }, slowWarnAfterMs);
     try {
+      stage = 'exists';
       if (!(await this.fsProvider.exists(this.projectsDir))) {
         logger.warn(`Projects directory does not exist: ${this.projectsDir}`);
         return [];
@@ -136,7 +150,13 @@ export class ProjectScanner {
       // Clear the subproject registry on full re-scan
       subprojectRegistry.clear();
 
+      stage = 'readdirProjectsDir';
+      const readdirStartedAt = Date.now();
       const entries = await this.fsProvider.readdir(this.projectsDir);
+      const readdirMs = Date.now() - readdirStartedAt;
+      if (readdirMs >= 2000) {
+        logger.warn(`[scan] readdir slow ms=${readdirMs} entries=${entries.length}`);
+      }
 
       // Filter to only directories with valid encoding pattern
       const projectDirs = entries.filter(
@@ -144,6 +164,7 @@ export class ProjectScanner {
       );
 
       // Process each project directory (may return multiple projects per dir)
+      stage = 'scanProjects';
       const projectArrays = await this.collectFulfilledInBatches(
         projectDirs,
         this.fsProvider.type === 'ssh' ? 8 : ProjectScanner.LOCAL_PROJECT_BATCH,
@@ -160,11 +181,19 @@ export class ProjectScanner {
         );
       }
 
+      const ms = Date.now() - startedAt;
+      if (ms >= 2000) {
+        logger.warn(
+          `[scan] completed slow ms=${ms} projectDirs=${projectDirs.length} projects=${validProjects.length}`
+        );
+      }
       this.scanCache = { projects: validProjects, timestamp: Date.now() };
       return validProjects;
     } catch (error) {
       logger.error('Error scanning projects directory:', error);
       return [];
+    } finally {
+      clearTimeout(slowWarnTimer);
     }
   }
 
@@ -199,25 +228,29 @@ export class ProjectScanner {
       // 2. Convert each project to a simple RepositoryGroup (git resolution disabled)
       // Git identity resolution is bypassed to avoid blocking I/O on startup.
       // Each project becomes a single-worktree group.
-      const groups: RepositoryGroup[] = projects.map((project) => ({
-        id: project.id,
-        identity: null,
-        worktrees: [
-          {
-            id: project.id,
-            path: project.path,
-            name: project.name,
-            isMainWorktree: true,
-            source: 'unknown' as const,
-            sessions: project.sessions,
-            createdAt: project.createdAt,
-            mostRecentSession: project.mostRecentSession,
-          },
-        ],
-        name: project.name,
-        mostRecentSession: project.mostRecentSession,
-        totalSessions: project.sessions.length,
-      }));
+      const groups: RepositoryGroup[] = projects.map((project) => {
+        const totalSessions = project.totalSessions ?? project.sessions.length;
+        return {
+          id: project.id,
+          identity: null,
+          worktrees: [
+            {
+              id: project.id,
+              path: project.path,
+              name: project.name,
+              isMainWorktree: true,
+              source: 'unknown' as const,
+              sessions: project.sessions,
+              totalSessions,
+              createdAt: project.createdAt,
+              mostRecentSession: project.mostRecentSession,
+            },
+          ],
+          name: project.name,
+          mostRecentSession: project.mostRecentSession,
+          totalSessions,
+        };
+      });
 
       // 3. Merge custom project paths from config (persisted "Select Folder" picks)
       const { configManager } = await import('../infrastructure/ConfigManager');
@@ -244,6 +277,7 @@ export class ProjectScanner {
               isMainWorktree: true,
               source: 'unknown' as const,
               sessions: [],
+              totalSessions: 0,
               createdAt: now,
             },
           ],
@@ -305,7 +339,13 @@ export class ProjectScanner {
         cwd: string | null;
       }
 
-      const shouldSplitByCwd = this.fsProvider.type !== 'ssh';
+      // Reading JSONL heads for cwd across hundreds/thousands of sessions can saturate I/O and
+      // make the renderer appear frozen while waiting for repository groups.
+      // Prefer correctness for small projects; for large ones, skip cwd splitting and fall back
+      // to encoded-path decoding / limited path probing.
+      const MAX_CWD_SPLIT_FILES = 80;
+      const shouldSplitByCwd =
+        this.fsProvider.type !== 'ssh' && sessionFiles.length <= MAX_CWD_SPLIT_FILES;
       const sessionInfos = await this.collectFulfilledInBatches(
         sessionFiles,
         this.fsProvider.type === 'ssh' ? 32 : ProjectScanner.LOCAL_SESSION_BATCH,
@@ -356,6 +396,7 @@ export class ProjectScanner {
       const realCwdKeys = [...cwdGroups.keys()].filter((k) => !k.startsWith('__decoded__'));
       if (realCwdKeys.length <= 1) {
         const allSessionIds = sessionInfos.map((s) => s.sessionId);
+        const exportedSessionIds = allSessionIds.slice(0, MAX_SESSION_IDS_EXPORTED);
         let mostRecentSession: number | undefined;
         let createdAt = Date.now();
         for (const info of sessionInfos) {
@@ -369,6 +410,7 @@ export class ProjectScanner {
 
         const sessionPaths = sessionInfos.map((s) => s.filePath);
         const actualPath = await this.projectPathResolver.resolveProjectPath(encodedName, {
+          cwdHint: firstCwd ?? undefined,
           sessionPaths,
         });
 
@@ -381,7 +423,8 @@ export class ProjectScanner {
             id: encodedName,
             path: actualPath,
             name: resolvedName,
-            sessions: allSessionIds,
+            sessions: exportedSessionIds,
+            totalSessions: allSessionIds.length,
             createdAt: Math.floor(createdAt),
             mostRecentSession: mostRecentSession ? Math.floor(mostRecentSession) : undefined,
           },
@@ -411,6 +454,7 @@ export class ProjectScanner {
           actualCwd ?? decodedFallback,
           sessionIds
         );
+        const exportedSessionIds = sessionIds.slice(0, MAX_SESSION_IDS_EXPORTED);
 
         // Compute timestamps
         let mostRecentSession: number | undefined;
@@ -438,7 +482,8 @@ export class ProjectScanner {
           id: compositeId,
           path: actualCwd ?? decodedFallback,
           name: displayName,
-          sessions: sessionIds,
+          sessions: exportedSessionIds,
+          totalSessions: sessionIds.length,
           createdAt: Math.floor(createdAt),
           mostRecentSession: mostRecentSession ? Math.floor(mostRecentSession) : undefined,
         });
@@ -504,8 +549,10 @@ export class ProjectScanner {
       const sessionPaths = sessionFiles.map((file) => path.join(projectPath, file.name));
       const decodedPath = await this.resolveProjectPathForId(projectId, sessionPaths);
 
-      const sessions = await Promise.all(
-        sessionFiles.map(async (file) => {
+      const sessions = await this.collectFulfilledInBatches(
+        sessionFiles,
+        this.fsProvider.type === 'ssh' ? 8 : 16,
+        async (file) => {
           const sessionId = extractSessionId(file.name);
           const filePath = path.join(projectPath, file.name);
           const fileDetails = await this.resolveFileDetails(file, filePath);
@@ -535,7 +582,7 @@ export class ProjectScanner {
             prefetchedSize,
             prefetchedBirthtimeMs
           );
-        })
+        }
       );
 
       // Filter out null results (noise-only sessions)

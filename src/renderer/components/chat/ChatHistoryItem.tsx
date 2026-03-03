@@ -62,6 +62,7 @@ const ChatHistoryItemInner = ({
   registerToolRef,
 }: ChatHistoryItemProps): JSX.Element | null => {
   const enterClass = isNew ? 'chat-message-enter-animate' : '';
+  const transitionStyle: React.CSSProperties = { transitionDuration: '3000ms' };
 
   switch (item.type) {
     case 'user': {
@@ -75,8 +76,8 @@ const ChatHistoryItemInner = ({
       return (
         <div
           ref={registerChatItemRef(item.group.id)}
-          className={`duration-[3000ms] rounded-lg transition-all ease-out ${hl.className} ${enterClass}`}
-          style={hl.style}
+          className={`rounded-lg transition-all ease-out ${hl.className} ${enterClass}`}
+          style={{ ...transitionStyle, ...(hl.style ?? {}) }}
         >
           <UserChatGroup userGroup={item.group} />
         </div>
@@ -93,8 +94,8 @@ const ChatHistoryItemInner = ({
       return (
         <div
           ref={registerChatItemRef(item.group.id)}
-          className={`duration-[3000ms] rounded-lg transition-all ease-out ${hl.className} ${enterClass}`}
-          style={hl.style}
+          className={`rounded-lg transition-all ease-out ${hl.className} ${enterClass}`}
+          style={{ ...transitionStyle, ...(hl.style ?? {}) }}
         >
           <SystemChatGroup systemGroup={item.group} />
         </div>
@@ -115,8 +116,8 @@ const ChatHistoryItemInner = ({
       return (
         <div
           ref={registerAIGroupRef(item.group.id)}
-          className={`duration-[3000ms] rounded-lg transition-all ease-out ${hl.className} ${enterClass}`}
-          style={hl.style}
+          className={`rounded-lg transition-all ease-out ${hl.className} ${enterClass}`}
+          style={{ ...transitionStyle, ...(hl.style ?? {}) }}
         >
           <AIChatGroup
             aiGroup={item.group}

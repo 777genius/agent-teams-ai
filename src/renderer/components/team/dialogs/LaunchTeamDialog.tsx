@@ -174,6 +174,7 @@ export const LaunchTeamDialog = ({
                 path: wt.path,
                 name: wt.name,
                 sessions: [],
+                totalSessions: 0,
                 createdAt: wt.createdAt ?? Date.now(),
               });
             }

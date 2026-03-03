@@ -4,6 +4,7 @@ import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { getTeamFsWorkerClient } from './TeamFsWorkerClient';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 
 import type { TeamConfig, TeamMember, TeamSummary, TeamSummaryMember } from '@shared/types';
@@ -79,6 +80,43 @@ export class TeamConfigReader {
   ) {}
 
   async listTeams(): Promise<TeamSummary[]> {
+    const worker = getTeamFsWorkerClient();
+    if (worker.isAvailable()) {
+      const startedAt = Date.now();
+      try {
+        const { teams, diag } = await worker.listTeams({
+          largeConfigBytes: LARGE_CONFIG_BYTES,
+          configHeadBytes: CONFIG_HEAD_BYTES,
+          maxConfigBytes: MAX_CONFIG_READ_BYTES,
+          maxMembersMetaBytes: 256 * 1024,
+          maxSessionHistoryInSummary: MAX_SESSION_HISTORY_IN_SUMMARY,
+          maxProjectPathHistoryInSummary: MAX_PROJECT_PATH_HISTORY_IN_SUMMARY,
+          concurrency: TEAM_LIST_CONCURRENCY,
+          maxConfigReadMs: PER_TEAM_READ_TIMEOUT_MS,
+        });
+        const ms = Date.now() - startedAt;
+        const skipReasons =
+          diag && typeof diag === 'object' ? (diag as Record<string, unknown>).skipReasons : null;
+        if (skipReasons && typeof skipReasons === 'object') {
+          const bad =
+            Number((skipReasons as Record<string, unknown>).config_parse_failed ?? 0) +
+            Number((skipReasons as Record<string, unknown>).config_read_timeout ?? 0);
+          if (bad > 0) {
+            logger.warn(`[listTeams] worker skipped broken team configs count=${bad}`);
+          }
+        }
+        if (ms >= 1500) {
+          logger.warn(`[listTeams] worker slow ms=${ms} diag=${JSON.stringify(diag)}`);
+        }
+        return teams;
+      } catch (error) {
+        logger.warn(
+          `[listTeams] worker failed: ${error instanceof Error ? error.message : String(error)}`
+        );
+        // Fall through to in-process implementation.
+      }
+    }
+
     const teamsDir = getTeamsBasePath();
 
     let entries: fs.Dirent[];

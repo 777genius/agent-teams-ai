@@ -200,7 +200,20 @@ export const ChangeReviewDialog = ({
         rejectAllChunks(view);
       }
     });
-  }, [activeChangeSet, rejectAllFile, pushReviewUndoSnapshot]);
+    if (REVIEW_INSTANT_APPLY) {
+      // In instant-apply mode we don't show an "Apply" button, so bulk reject must
+      // be applied immediately to match Cursor-like UX (including deleting new files).
+      void applyReview(teamName, taskId, memberName);
+    }
+  }, [
+    activeChangeSet,
+    rejectAllFile,
+    pushReviewUndoSnapshot,
+    applyReview,
+    teamName,
+    taskId,
+    memberName,
+  ]);
 
   // Per-file callbacks for ContinuousScrollView
   const handleHunkAccepted = useCallback(

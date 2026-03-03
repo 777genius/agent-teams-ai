@@ -69,6 +69,7 @@ import {
 import { registerUtilityHandlers, removeUtilityHandlers } from './utility';
 import { registerValidationHandlers, removeValidationHandlers } from './validation';
 import { registerWindowHandlers, removeWindowHandlers } from './window';
+import { registerRendererLogHandlers, removeRendererLogHandlers } from './rendererLogs';
 
 import type {
   ChangeExtractorService,
@@ -171,6 +172,7 @@ export function initializeIpcHandlers(
   registerReviewHandlers(ipcMain);
   registerEditorHandlers(ipcMain);
   registerWindowHandlers(ipcMain);
+  registerRendererLogHandlers(ipcMain);
   if (cliInstaller) {
     registerCliInstallerHandlers(ipcMain);
   }
@@ -204,6 +206,7 @@ export function removeIpcHandlers(): void {
   removeReviewHandlers(ipcMain);
   removeEditorHandlers(ipcMain);
   removeWindowHandlers(ipcMain);
+  removeRendererLogHandlers(ipcMain);
   removeCliInstallerHandlers(ipcMain);
   removeTerminalHandlers(ipcMain);
   removeHttpServerHandlers(ipcMain);

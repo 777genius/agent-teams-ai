@@ -32,6 +32,14 @@ const logger = createLogger('Service:SessionContentFilter');
 
 const defaultProvider = new LocalFileSystemProvider();
 
+const SESSION_SCAN_TIMEOUT_MS = 2500;
+const SESSION_SCAN_MAX_BYTES = 2 * 1024 * 1024;
+const SESSION_SCAN_MAX_LINES = 2000;
+
+function byteLen(chunk: string): number {
+  return Buffer.byteLength(chunk, 'utf8');
+}
+
 /**
  * Hard noise tags - user messages with ONLY these tags are filtered out.
  */
@@ -66,14 +74,39 @@ export class SessionContentFilter {
       return false;
     }
 
+    try {
+      const stat = await fsProvider.stat(filePath);
+      if (!stat.isFile()) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+
     const fileStream = fsProvider.createReadStream(filePath, { encoding: 'utf8' });
+    let bytes = 0;
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      fileStream.destroy();
+    }, SESSION_SCAN_TIMEOUT_MS);
+    fileStream.on('data', (chunk: string) => {
+      bytes += byteLen(chunk);
+      if (bytes > SESSION_SCAN_MAX_BYTES) {
+        fileStream.destroy();
+      }
+    });
     const rl = readline.createInterface({
       input: fileStream,
       crlfDelay: Infinity,
     });
 
     try {
+      let lines = 0;
       for await (const line of rl) {
+        if (++lines > SESSION_SCAN_MAX_LINES) {
+          break;
+        }
         if (!line.trim()) continue;
 
         try {
@@ -87,6 +120,7 @@ export class SessionContentFilter {
           // Check if this entry would create a displayable chunk
           // This aligns with ChunkBuilder.categorizeMessage() logic
           if (SessionContentFilter.isDisplayableEntry(entry)) {
+            rl.close();
             fileStream.destroy();
             return true;
           }
@@ -96,10 +130,21 @@ export class SessionContentFilter {
         }
       }
     } catch (error) {
-      logger.error(`Error checking displayable messages in ${filePath}:`, error);
+      if (!timedOut) {
+        logger.debug(`Error checking displayable messages in ${filePath}:`, error);
+      }
+    } finally {
+      clearTimeout(timer);
+      rl.close();
+      fileStream.destroy();
     }
 
-    // No displayable messages found
+    // If we hit limits/timeouts, be conservative: treat as having content so we
+    // don't accidentally hide sessions due to partial reads.
+    if (timedOut || bytes > SESSION_SCAN_MAX_BYTES) {
+      return true;
+    }
+
     return false;
   }
 

@@ -15,10 +15,18 @@ const logger = createLogger('Util:metadataExtraction');
 
 const defaultProvider = new LocalFileSystemProvider();
 
+const JSONL_HEAD_TIMEOUT_MS = 2000;
+const JSONL_HEAD_MAX_BYTES = 256 * 1024;
+const JSONL_HEAD_MAX_LINES = 400;
+
 interface MessagePreview {
   text: string;
   timestamp: string;
   isCommand: boolean;
+}
+
+function byteLen(chunk: string): number {
+  return Buffer.byteLength(chunk, 'utf8');
 }
 
 /**
@@ -33,17 +41,47 @@ export async function extractCwd(
     return null;
   }
 
+  try {
+    const stat = await fsProvider.stat(filePath);
+    if (!stat.isFile()) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
   const fileStream = fsProvider.createReadStream(filePath, { encoding: 'utf8' });
+  let bytes = 0;
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    fileStream.destroy();
+  }, JSONL_HEAD_TIMEOUT_MS);
+  fileStream.on('data', (chunk: string) => {
+    bytes += byteLen(chunk);
+    if (bytes > JSONL_HEAD_MAX_BYTES) {
+      fileStream.destroy();
+    }
+  });
   const rl = readline.createInterface({
     input: fileStream,
     crlfDelay: Infinity,
   });
 
   try {
+    let lines = 0;
     for await (const line of rl) {
+      if (++lines > JSONL_HEAD_MAX_LINES) {
+        break;
+      }
       if (!line.trim()) continue;
 
-      const entry = JSON.parse(line) as ChatHistoryEntry;
+      let entry: ChatHistoryEntry;
+      try {
+        entry = JSON.parse(line) as ChatHistoryEntry;
+      } catch {
+        continue;
+      }
       // Only conversational entries have cwd
       if ('cwd' in entry && entry.cwd) {
         rl.close();
@@ -52,8 +90,11 @@ export async function extractCwd(
       }
     }
   } catch (error) {
-    logger.error(`Error extracting cwd from ${filePath}:`, error);
+    if (!timedOut) {
+      logger.debug(`Error extracting cwd from ${filePath}:`, error);
+    }
   } finally {
+    clearTimeout(timer);
     rl.close();
     fileStream.destroy();
   }
@@ -71,7 +112,28 @@ export async function extractFirstUserMessagePreview(
   maxLines: number = 200
 ): Promise<{ text: string; timestamp: string } | null> {
   const safeMaxLines = Math.max(1, maxLines);
+  try {
+    const stat = await fsProvider.stat(filePath);
+    if (!stat.isFile()) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
   const fileStream = fsProvider.createReadStream(filePath, { encoding: 'utf8' });
+  let bytes = 0;
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    fileStream.destroy();
+  }, JSONL_HEAD_TIMEOUT_MS);
+  fileStream.on('data', (chunk: string) => {
+    bytes += byteLen(chunk);
+    if (bytes > JSONL_HEAD_MAX_BYTES) {
+      fileStream.destroy();
+    }
+  });
   const rl = readline.createInterface({
     input: fileStream,
     crlfDelay: Infinity,
@@ -114,9 +176,12 @@ export async function extractFirstUserMessagePreview(
       }
     }
   } catch (error) {
-    logger.debug(`Error extracting first user preview from ${filePath}:`, error);
-    throw error;
+    if (!timedOut) {
+      logger.debug(`Error extracting first user preview from ${filePath}:`, error);
+    }
+    return commandFallback;
   } finally {
+    clearTimeout(timer);
     rl.close();
     fileStream.destroy();
   }
@@ -192,5 +257,5 @@ function extractPreviewFromUserEntry(entry: UserEntry): MessagePreview | null {
 
 function extractCommandName(content: string): string {
   const commandMatch = /<command-name>\/([^<]+)<\/command-name>/.exec(content);
-  return commandMatch ? `/${commandMatch[1]}` : '/command';
+  return commandMatch?.[1] ? `/${commandMatch[1]}` : '/command';
 }

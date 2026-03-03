@@ -17,6 +17,10 @@ declare global {
 // module-level side effect guarded by a global flag.
 if (!window.__claudeTeamsUiDidInit) {
   window.__claudeTeamsUiDidInit = true;
+  if (import.meta.env.DEV) {
+    // Intentionally console.warn so it shows up in main terminal via preload forwarding.
+    console.warn('[Perf:Renderer] boot renderer/main.tsx');
+  }
   initializeNotificationListeners();
 }
 

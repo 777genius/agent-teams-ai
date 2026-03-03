@@ -1,8 +1,11 @@
+import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTasksBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import { getTeamFsWorkerClient } from './TeamFsWorkerClient';
 
 import type { TaskComment, TaskWorkInterval, TeamTask } from '@shared/types';
 
@@ -53,6 +56,7 @@ export class TeamTaskReader {
     }
 
     const tasks: TeamTask[] = [];
+    let processed = 0;
     for (const file of entries) {
       if (
         !file.endsWith('.json') ||
@@ -172,6 +176,10 @@ export class TeamTaskReader {
       } catch {
         logger.debug(`Skipping invalid task file: ${taskPath}`);
       }
+      processed++;
+      if (processed % 50 === 0) {
+        await yieldToEventLoop();
+      }
     }
 
     return tasks;
@@ -191,6 +199,7 @@ export class TeamTaskReader {
     }
 
     const tasks: TeamTask[] = [];
+    let processed = 0;
     for (const file of entries) {
       if (
         !file.endsWith('.json') ||
@@ -241,12 +250,46 @@ export class TeamTaskReader {
       } catch {
         logger.debug(`Skipping invalid task file: ${taskPath}`);
       }
+      processed++;
+      if (processed % 50 === 0) {
+        await yieldToEventLoop();
+      }
     }
 
     return tasks;
   }
 
   async getAllTasks(): Promise<(TeamTask & { teamName: string })[]> {
+    const worker = getTeamFsWorkerClient();
+    if (worker.isAvailable()) {
+      const startedAt = Date.now();
+      try {
+        const { tasks, diag } = await worker.getAllTasks({
+          maxTaskBytes: MAX_TASK_FILE_BYTES,
+        });
+        const ms = Date.now() - startedAt;
+        const skipReasons =
+          diag && typeof diag === 'object' ? (diag as Record<string, unknown>).skipReasons : null;
+        if (skipReasons && typeof skipReasons === 'object') {
+          const bad =
+            Number((skipReasons as Record<string, unknown>).task_parse_failed ?? 0) +
+            Number((skipReasons as Record<string, unknown>).task_read_timeout ?? 0);
+          if (bad > 0) {
+            logger.warn(`[getAllTasks] worker skipped broken task files count=${bad}`);
+          }
+        }
+        if (ms >= 2000) {
+          logger.warn(`[getAllTasks] worker slow ms=${ms} diag=${JSON.stringify(diag)}`);
+        }
+        return tasks;
+      } catch (error) {
+        logger.warn(
+          `[getAllTasks] worker failed: ${error instanceof Error ? error.message : String(error)}`
+        );
+        // fall back
+      }
+    }
+
     const tasksBase = getTasksBasePath();
 
     let entries: fs.Dirent[];
@@ -260,6 +303,7 @@ export class TeamTaskReader {
     }
 
     const result: (TeamTask & { teamName: string })[] = [];
+    let dirCount = 0;
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       try {
@@ -269,6 +313,11 @@ export class TeamTaskReader {
         }
       } catch {
         logger.debug(`Skipping tasks dir: ${entry.name}`);
+      }
+      dirCount++;
+      if (dirCount % 2 === 0) {
+        // Yield periodically to keep the main process responsive in worst-case directories.
+        await yieldToEventLoop();
       }
     }
 

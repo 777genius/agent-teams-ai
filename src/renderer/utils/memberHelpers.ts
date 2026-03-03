@@ -1,4 +1,4 @@
-import { getMemberColor } from '@shared/constants/memberColors';
+import { getMemberColor, MEMBER_COLOR_PALETTE } from '@shared/constants/memberColors';
 
 import type {
   LeadActivityState,
@@ -87,12 +87,20 @@ export function buildMemberColorMap(members: MemberColorInput[]): Map<string, st
   const removed = members.filter((m) => m.removedAt);
   const usedColors = new Set<string>();
 
+  const paletteSize = MEMBER_COLOR_PALETTE.length;
   let nextFallback = 0;
   for (const member of active) {
     let color = member.color;
     if (!color || usedColors.has(color)) {
+      // Search for an unused palette color, but cap iterations to avoid
+      // an infinite loop when there are more members than palette colors.
+      const searchStart = nextFallback;
       while (usedColors.has(getMemberColor(nextFallback))) {
         nextFallback++;
+        if (nextFallback - searchStart >= paletteSize) {
+          // All palette colors exhausted — reuse by cycling
+          break;
+        }
       }
       color = getMemberColor(nextFallback);
       nextFallback++;

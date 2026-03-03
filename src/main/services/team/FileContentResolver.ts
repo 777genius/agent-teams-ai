@@ -374,7 +374,9 @@ export class FileContentResolver {
     currentContent: string | null,
     snippets: SnippetDiff[]
   ): string | null {
-    if (!currentContent) return null;
+    // `readFile()` can legitimately return an empty string for empty files.
+    // Only treat `null` as "missing on disk".
+    if (currentContent === null) return null;
     if (snippets.length === 0) return null;
 
     // Filter out errored snippets

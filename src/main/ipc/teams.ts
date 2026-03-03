@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { getAppIconPath } from '@main/utils/appIcon';
 import {
   TEAM_ADD_MEMBER,
@@ -319,7 +320,17 @@ async function handleGetProjectBranch(
 }
 
 async function handleListTeams(_event: IpcMainInvokeEvent): Promise<IpcResult<TeamSummary[]>> {
-  return wrapTeamHandler('list', () => getTeamDataService().listTeams());
+  setCurrentMainOp('team:list');
+  const startedAt = Date.now();
+  try {
+    return await wrapTeamHandler('list', () => getTeamDataService().listTeams());
+  } finally {
+    const ms = Date.now() - startedAt;
+    if (ms >= 1500) {
+      logger.warn(`[teams:list] slow ms=${ms}`);
+    }
+    setCurrentMainOp(null);
+  }
 }
 
 async function handleGetData(
@@ -332,7 +343,6 @@ async function handleGetData(
   }
   const tn = validated.value!;
   const startedAt = Date.now();
-  logger.info(`[teams:getData] start team=${tn}`);
   let data: TeamData;
   try {
     data = await getTeamDataService().getTeamData(tn);
@@ -348,12 +358,8 @@ async function handleGetData(
     return { success: false, error: message };
   }
   const getDataMs = Date.now() - startedAt;
-  if (getDataMs >= 1000) {
-    logger.warn(
-      `[teams:getData] slow team=${tn} ms=${getDataMs} tasks=${data.tasks.length} members=${data.members.length} messages=${data.messages.length}`
-    );
-  } else {
-    logger.info(`[teams:getData] done team=${tn} ms=${getDataMs}`);
+  if (getDataMs >= 1500) {
+    logger.warn(`[teams:getData] slow team=${tn} ms=${getDataMs}`);
   }
   const provisioning = getTeamProvisioningService();
   const isAlive = provisioning.isTeamAlive(tn);
@@ -1517,7 +1523,17 @@ async function handleStartTask(
 }
 
 async function handleGetAllTasks(_event: IpcMainInvokeEvent): Promise<IpcResult<GlobalTask[]>> {
-  return wrapTeamHandler('getAllTasks', () => getTeamDataService().getAllTasks());
+  setCurrentMainOp('team:getAllTasks');
+  const startedAt = Date.now();
+  try {
+    return await wrapTeamHandler('getAllTasks', () => getTeamDataService().getAllTasks());
+  } finally {
+    const ms = Date.now() - startedAt;
+    if (ms >= 1500) {
+      logger.warn(`[teams:getAllTasks] slow ms=${ms}`);
+    }
+    setCurrentMainOp(null);
+  }
 }
 
 async function handleAddMember(

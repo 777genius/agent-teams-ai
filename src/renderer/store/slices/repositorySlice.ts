@@ -12,6 +12,22 @@ import type { RepositoryGroup } from '@renderer/types/data';
 import type { StateCreator } from 'zustand';
 
 const logger = createLogger('Store:repository');
+const FETCH_REPOSITORY_GROUPS_TIMEOUT_MS = 30_000;
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<T>((_resolve, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new Error(`${label} timed out after ${timeoutMs}ms`)),
+      timeoutMs
+    );
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
 
 // =============================================================================
 // Slice Interface
@@ -53,12 +69,25 @@ export const createRepositorySlice: StateCreator<AppState, [], [], RepositorySli
   fetchRepositoryGroups: async () => {
     // Guard: prevent concurrent fetches (component mount + centralized init chain)
     if (get().repositoryGroupsLoading) return;
+    const startedAt = Date.now();
     set({ repositoryGroupsLoading: true, repositoryGroupsError: null });
     try {
-      const groups = await api.getRepositoryGroups();
+      const groups = await withTimeout(
+        api.getRepositoryGroups(),
+        FETCH_REPOSITORY_GROUPS_TIMEOUT_MS,
+        'get-repository-groups'
+      );
       // Already sorted by most recent session in the scanner
       set({ repositoryGroups: groups, repositoryGroupsLoading: false });
+      const ms = Date.now() - startedAt;
+      if (ms >= 2000) {
+        logger.warn(`fetchRepositoryGroups slow ms=${ms} count=${groups.length}`);
+      }
     } catch (error) {
+      const ms = Date.now() - startedAt;
+      logger.warn(
+        `fetchRepositoryGroups failed ms=${ms}: ${error instanceof Error ? error.message : String(error)}`
+      );
       set({
         repositoryGroupsError:
           error instanceof Error ? error.message : 'Failed to fetch repository groups',

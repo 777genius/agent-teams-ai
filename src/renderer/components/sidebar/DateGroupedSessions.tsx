@@ -129,7 +129,7 @@ const WorktreeItem = ({
         {truncateMiddle(worktree.name, 28)}
       </span>
       <span className="shrink-0 text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-        {worktree.sessions.length}
+        {worktree.totalSessions ?? worktree.sessions.length}
       </span>
       {isSelected && <Check className="size-3.5 shrink-0 text-indigo-400" />}
     </button>
@@ -263,12 +263,13 @@ export const DateGroupedSessions = (): React.JSX.Element => {
     const items =
       viewMode === 'grouped'
         ? repositoryGroups.filter((r) => r.totalSessions > 0)
-        : projects.filter((p) => p.sessions.length > 0);
+        : projects.filter((p) => (p.totalSessions ?? p.sessions.length) > 0);
     return items.map((item) => {
       const sessionCount =
         viewMode === 'grouped'
           ? (item as (typeof repositoryGroups)[0]).totalSessions
-          : (item as (typeof projects)[0]).sessions.length;
+          : ((item as (typeof projects)[0]).totalSessions ??
+            (item as (typeof projects)[0]).sessions.length);
       const path =
         viewMode === 'grouped'
           ? (item as (typeof repositoryGroups)[0]).worktrees[0]?.path
@@ -292,7 +293,9 @@ export const DateGroupedSessions = (): React.JSX.Element => {
   // Worktree state
   const activeRepo = repositoryGroups.find((r) => r.id === selectedRepositoryId);
   const activeWorktree = activeRepo?.worktrees.find((w) => w.id === selectedWorktreeId);
-  const worktrees = (activeRepo?.worktrees ?? []).filter((w) => w.sessions.length > 0);
+  const worktrees = (activeRepo?.worktrees ?? []).filter(
+    (w) => (w.totalSessions ?? w.sessions.length) > 0
+  );
   const hasMultipleWorktrees = worktrees.length > 1;
   const worktreeGroupingResult = useMemo(() => groupWorktreesBySource(worktrees), [worktrees]);
   const mainWorktree = worktreeGroupingResult.mainWorktree;

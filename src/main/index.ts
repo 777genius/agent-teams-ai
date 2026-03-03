@@ -42,6 +42,7 @@ import { join } from 'path';
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { showTeamNativeNotification } from './ipc/teams';
+import { startEventLoopLagMonitor } from './services/infrastructure/EventLoopLagMonitor';
 import { HttpServer } from './services/infrastructure/HttpServer';
 import { TeamInboxReader } from './services/team/TeamInboxReader';
 import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
@@ -69,6 +70,7 @@ import type { FileChangeEvent } from '@main/types';
 import type { TeamChangeEvent } from '@shared/types';
 
 const logger = createLogger('App');
+startEventLoopLagMonitor();
 
 // --- Team message notification tracking ---
 const teamInboxReader = new TeamInboxReader();
@@ -792,6 +794,7 @@ function syncTrafficLightPosition(win: BrowserWindow): void {
  */
 function createWindow(): void {
   const isMac = process.platform === 'darwin';
+  const isDev = process.env.NODE_ENV === 'development';
   const iconPath = isMac ? undefined : getAppIconPath();
   const useNativeTitleBar = !isMac && configManager.getConfig().general.useNativeTitleBar;
   mainWindow = new BrowserWindow({
@@ -802,6 +805,10 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      // In development, avoid persistent Chromium storage locks (IndexedDB/Quota)
+      // when multiple dev instances are started or ports rotate (5173 -> 5174, etc).
+      // This keeps startup resilient and prevents "LOCK" contention.
+      ...(isDev ? { partition: `temp:dev-${process.pid}` } : {}),
     },
     backgroundColor: '#1a1a1a',
     ...(useNativeTitleBar ? {} : { titleBarStyle: 'hidden' as const }),
@@ -809,9 +816,53 @@ function createWindow(): void {
     title: 'Claude Agent Teams UI',
   });
 
+  // In dev, forward selected renderer console warnings/errors to the main terminal.
+  // Use the new single-argument event payload to avoid Electron deprecation warnings.
+  if (isDev) {
+    mainWindow.webContents.on('console-message', (details: unknown) => {
+      if (!details || typeof details !== 'object') return;
+      const d = details as {
+        level?: unknown;
+        message?: unknown;
+        lineNumber?: unknown;
+        sourceId?: unknown;
+      };
+      const level = typeof d.level === 'string' ? d.level : 'info';
+      if (level !== 'warning' && level !== 'error') return;
+      const message = typeof d.message === 'string' ? d.message.trim() : '';
+      if (!message) return;
+      const isNamespaced =
+        message.startsWith('[Store:') ||
+        message.startsWith('[Component:') ||
+        message.startsWith('[IPC:') ||
+        message.startsWith('[Service:') ||
+        message.startsWith('[Perf:') ||
+        message.startsWith('[startup]');
+      if (!isNamespaced) return;
+      const sourceId = typeof d.sourceId === 'string' ? d.sourceId : 'unknown';
+      const line = typeof d.lineNumber === 'number' ? d.lineNumber : -1;
+      logger.warn(`RendererConsole: ${message} (${sourceId}:${line})`);
+    });
+  }
+
   // Load the renderer
-  if (process.env.NODE_ENV === 'development') {
-    void mainWindow.loadURL(`http://localhost:${DEV_SERVER_PORT}`);
+  if (isDev) {
+    // electron-vite may move the dev server off 5173 if it's already taken.
+    // Always prefer the URL it provides via env; fallback to the default port.
+    const envUrl =
+      process.env.ELECTRON_RENDERER_URL ||
+      process.env.VITE_DEV_SERVER_URL ||
+      process.env.ELECTRON_VITE_DEV_SERVER_URL;
+    const devUrl = envUrl?.trim() || `http://localhost:${DEV_SERVER_PORT}`;
+    if (!envUrl) {
+      logger.warn(
+        `[dev] renderer dev server URL env not set; falling back to ${devUrl}. ` +
+          `If you see "Port 5173 is in use" in the terminal, the UI may appear stuck until this is fixed.`
+      );
+    } else {
+      logger.warn(`[dev] loading renderer from ${devUrl}`);
+    }
+    void mainWindow.loadURL(devUrl);
     mainWindow.webContents.openDevTools();
   } else {
     void mainWindow.loadFile(getRendererIndexPath()).catch((error: unknown) => {
@@ -834,6 +885,7 @@ function createWindow(): void {
   // Set traffic light position + notify renderer on first load, and auto-check for updates
   mainWindow.webContents.on('did-finish-load', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
+      logger.warn('[startup] renderer did-finish-load');
       syncTrafficLightPosition(mainWindow);
       setTimeout(() => {
         if (mainWindow && !mainWindow.isDestroyed()) {
@@ -863,6 +915,10 @@ function createWindow(): void {
         teamDataService.startProcessHealthPolling();
       }, 5000);
     }
+  });
+
+  mainWindow.webContents.on('dom-ready', () => {
+    logger.warn('[startup] renderer dom-ready');
   });
 
   // Log top-level renderer load failures (helps diagnose blank/black window issues in packaged apps)
@@ -986,10 +1042,13 @@ void app.whenReady().then(() => {
     // Apply configuration settings
     const config = configManager.getConfig();
 
-    // Apply launch at login setting
-    app.setLoginItemSettings({
-      openAtLogin: config.general.launchAtLogin,
-    });
+    // Apply launch-at-login setting only in packaged builds.
+    // In dev, macOS may deny this (and Electron logs a noisy error to stderr).
+    if (app.isPackaged) {
+      app.setLoginItemSettings({
+        openAtLogin: config.general.launchAtLogin,
+      });
+    }
 
     // Apply dock visibility and icon (macOS)
     if (process.platform === 'darwin') {

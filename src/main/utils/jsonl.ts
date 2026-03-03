@@ -27,6 +27,8 @@ import {
   type ToolCall,
 } from '../types';
 
+import { yieldToEventLoop } from './asyncYield';
+import { extractFirstUserMessagePreview } from './metadataExtraction';
 // Import from extracted modules
 import { extractToolCalls, extractToolResults } from './toolExtraction';
 
@@ -65,6 +67,7 @@ export async function parseJsonlFile(
     crlfDelay: Infinity,
   });
 
+  let lineCount = 0;
   for await (const line of rl) {
     if (!line.trim()) continue;
 
@@ -75,6 +78,11 @@ export async function parseJsonlFile(
       }
     } catch (error) {
       logger.error(`Error parsing line in ${filePath}:`, error);
+    }
+
+    lineCount++;
+    if (lineCount % 250 === 0) {
+      await yieldToEventLoop();
     }
   }
 
@@ -344,6 +352,41 @@ export async function analyzeSessionFileMetadata(
     };
   }
 
+  const MAX_DEEP_SCAN_BYTES = 50 * 1024 * 1024; // 50MB
+  try {
+    const stat = await fsProvider.stat(filePath);
+    if (!stat.isFile()) {
+      return {
+        firstUserMessage: null,
+        messageCount: 0,
+        isOngoing: false,
+        gitBranch: null,
+      };
+    }
+    if (stat.size > MAX_DEEP_SCAN_BYTES) {
+      // Too large for deep scan — avoid blocking main/renderer.
+      // Prefer a best-effort preview from the head (already size/time bounded).
+      try {
+        const preview = await extractFirstUserMessagePreview(filePath, fsProvider);
+        return {
+          firstUserMessage: preview,
+          messageCount: 0,
+          isOngoing: false,
+          gitBranch: null,
+        };
+      } catch {
+        return {
+          firstUserMessage: null,
+          messageCount: 0,
+          isOngoing: false,
+          gitBranch: null,
+        };
+      }
+    }
+  } catch {
+    // best effort — proceed to scan
+  }
+
   const fileStream = fsProvider.createReadStream(filePath, { encoding: 'utf8' });
   const rl = readline.createInterface({
     input: fileStream,
@@ -371,10 +414,15 @@ export async function analyzeSessionFileMetadata(
 
   let awaitingPostCompaction = false;
 
+  let lineCount = 0;
   for await (const line of rl) {
     const trimmed = line.trim();
     if (!trimmed) {
       continue;
+    }
+    lineCount++;
+    if (lineCount % 250 === 0) {
+      await yieldToEventLoop();
     }
 
     let entry: ChatHistoryEntry;

@@ -51,8 +51,13 @@ export interface Project {
   path: string;
   /** Display name (last path segment) */
   name: string;
-  /** List of session IDs (JSONL filenames without extension) */
+  /**
+   * List of session IDs (JSONL filenames without extension).
+   * Note: this list may be truncated for performance; use totalSessions for counts.
+   */
   sessions: string[];
+  /** Total session count (may exceed sessions.length if sessions list is truncated) */
+  totalSessions?: number;
   /** Unix timestamp when project directory was created */
   createdAt: number;
   /** Unix timestamp of most recent session activity */
@@ -184,8 +189,13 @@ export interface Worktree {
   isMainWorktree: boolean;
   /** Worktree source for badge display (vibe-kanban, conductor, etc.) */
   source: WorktreeSource;
-  /** List of session IDs */
+  /**
+   * List of session IDs.
+   * Note: this list may be truncated for performance; use totalSessions for counts.
+   */
   sessions: string[];
+  /** Total session count (may exceed sessions.length if sessions list is truncated) */
+  totalSessions?: number;
   /** Unix timestamp when first session was created */
   createdAt: number;
   /** Unix timestamp of most recent session activity */

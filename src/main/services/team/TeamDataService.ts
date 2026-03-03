@@ -1,3 +1,4 @@
+import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import {
   encodePath,
@@ -59,6 +60,7 @@ const MIN_TEXT_LENGTH = 30;
 const MAX_LEAD_TEXTS = 50;
 const PROCESS_HEALTH_INTERVAL_MS = 2_000;
 const MAX_PROCESSES_FILE_BYTES = 2 * 1024 * 1024;
+const TASK_MAP_YIELD_EVERY = 250;
 
 export class TeamDataService {
   private processHealthTimer: ReturnType<typeof setInterval> | null = null;
@@ -82,10 +84,8 @@ export class TeamDataService {
   }
 
   async getAllTasks(): Promise<GlobalTask[]> {
-    const [rawTasks, teams] = await Promise.all([
-      this.taskReader.getAllTasks(),
-      this.configReader.listTeams(),
-    ]);
+    const rawTasks = await this.taskReader.getAllTasks();
+    const teams = await this.configReader.listTeams();
 
     const teamInfoMap = new Map<
       string,
@@ -116,24 +116,62 @@ export class TeamDataService {
       })
     );
 
-    return rawTasks
-      .filter((task) => teamInfoMap.has(task.teamName))
-      .map((task) => {
-        const info = teamInfoMap.get(task.teamName)!;
-        const kanban = kanbanByTeam.get(task.teamName);
-        const kanbanEntry = kanban?.tasks[task.id];
-        const kanbanColumn =
-          kanbanEntry?.column === 'review' || kanbanEntry?.column === 'approved'
-            ? kanbanEntry.column
-            : undefined;
-        return {
-          ...task,
-          teamDisplayName: info.displayName,
-          projectPath: task.projectPath ?? info.projectPath,
-          kanbanColumn,
-          teamDeleted: deletedTeams.has(task.teamName) || undefined,
-        };
+    const out: GlobalTask[] = [];
+    let processed = 0;
+    for (const task of rawTasks) {
+      if (!teamInfoMap.has(task.teamName)) {
+        continue;
+      }
+      const info = teamInfoMap.get(task.teamName)!;
+      const kanban = kanbanByTeam.get(task.teamName);
+      const kanbanEntry = kanban?.tasks[task.id];
+      const kanbanColumn =
+        kanbanEntry?.column === 'review' || kanbanEntry?.column === 'approved'
+          ? kanbanEntry.column
+          : undefined;
+
+      // IPC payload safety: GlobalTask lists can be enormous (especially comments and large nested fields).
+      // Return a "light" task object and defer heavy details to team/task detail views.
+      const projectPath = task.projectPath ?? info.projectPath;
+      const subject =
+        typeof task.subject === 'string'
+          ? task.subject.slice(0, 300)
+          : String(task.subject).slice(0, 300);
+      out.push({
+        id: task.id,
+        subject,
+        owner: task.owner,
+        status: task.status,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        projectPath,
+        needsClarification: task.needsClarification,
+        deletedAt: task.deletedAt,
+        // Intentionally omit description/comments/activeForm/workIntervals/links to keep payload small
+        kanbanColumn,
+        teamName: task.teamName,
+        teamDisplayName: info.displayName,
+        teamDeleted: deletedTeams.has(task.teamName) || undefined,
       });
+      processed++;
+      if (processed % TASK_MAP_YIELD_EVERY === 0) {
+        await yieldToEventLoop();
+      }
+    }
+
+    // Hard cap: keep renderer responsive even with huge task sets.
+    const MAX_GLOBAL_TASKS_EXPORTED = 500;
+    if (out.length > MAX_GLOBAL_TASKS_EXPORTED) {
+      // Prefer newest first if timestamps exist.
+      out.sort((a, b) => {
+        const at = Date.parse(a.updatedAt ?? a.createdAt ?? '') || 0;
+        const bt = Date.parse(b.updatedAt ?? b.createdAt ?? '') || 0;
+        return bt - at;
+      });
+      return out.slice(0, MAX_GLOBAL_TASKS_EXPORTED);
+    }
+
+    return out;
   }
 
   async updateConfig(
@@ -320,7 +358,7 @@ export class TeamDataService {
     const totalMs = Date.now() - startedAt;
     if (totalMs >= 1500) {
       logger.warn(
-        `[getTeamData] slow team=${teamName} total=${totalMs}ms config=${msSince('config')} tasks=${msSince('tasks')} inboxNames=${msSince(
+        `getTeamData team=${teamName} slow total=${totalMs}ms config=${msSince('config')} tasks=${msSince('tasks')} inboxNames=${msSince(
           'inboxNames'
         )} messages=${msSince('messages')} leadTexts=${msSince('leadTexts')} sent=${msSince(
           'sentMessages'
