@@ -957,17 +957,6 @@ export class TeamProvisioningService {
         'Using ANTHROPIC_AUTH_TOKEN (proxy) mapped to ANTHROPIC_API_KEY for `-p` mode.'
       );
     }
-    if (authSource === 'claude_code_oauth_token_credentials') {
-      const source =
-        process.platform === 'darwin'
-          ? 'macOS Keychain or credentials file'
-          : `${path.join(getClaudeBasePath(), '.credentials.json')}`;
-      warnings.push(
-        `Using OAuth token from ${source}. ` +
-          'Note: this token may be stale if Claude Code refreshed it in-memory without persisting. ' +
-          'If auth fails, run `claude setup-token` and export CLAUDE_CODE_OAUTH_TOKEN.'
-      );
-    }
 
     const probe = await this.probeClaudeRuntime(claudePath, targetCwd, executionEnv);
 

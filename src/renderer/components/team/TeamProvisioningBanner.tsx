@@ -26,8 +26,6 @@ function findProgressForTeam(
   return matching[0] ?? null;
 }
 
-const READY_DISMISS_MS = 5_000;
-
 export const TeamProvisioningBanner = ({
   teamName,
 }: TeamProvisioningBannerProps): React.JSX.Element | null => {
@@ -49,28 +47,9 @@ export const TeamProvisioningBanner = ({
     }
   }
 
-  useEffect(() => {
-    if (progress?.state !== 'ready') {
-      return;
-    }
-    // If we captured any logs/output, keep the banner visible so the user
-    // can inspect what happened (common for fast stop→start cycles).
-    if (progress.assistantOutput || progress.cliLogsTail || progress.error) {
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      setDismissed(true);
-    }, READY_DISMISS_MS);
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [
-    progress?.state,
-    progress?.runId,
-    progress?.assistantOutput,
-    progress?.cliLogsTail,
-    progress?.error,
-  ]);
+  // NOTE: we intentionally do NOT auto-dismiss "ready" banners.
+  // Users frequently need to inspect launch output after fast stop→start cycles,
+  // and auto-dismiss can make it look like no progress/logs were produced.
 
   if (!progress || dismissed) {
     return null;
