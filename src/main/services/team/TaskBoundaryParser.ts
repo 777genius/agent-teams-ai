@@ -34,7 +34,7 @@ const TEAMCTL_TASK_REGEX = /task\s+(start|complete|set-status)\s+(\d+)/;
 
 export class TaskBoundaryParser {
   private cache = new Map<string, BoundaryCacheEntry>();
-  private readonly CACHE_TTL = 60 * 1000; // 60s
+  private readonly cacheTtl = 60 * 1000; // 60s
 
   /** Парсинг JSONL файла для обнаружения границ задач */
   async parseBoundaries(filePath: string): Promise<TaskBoundariesResult> {
@@ -127,7 +127,7 @@ export class TaskBoundaryParser {
     this.cache.set(filePath, {
       data: result,
       mtime: fileStat.mtimeMs,
-      expiresAt: Date.now() + this.CACHE_TTL,
+      expiresAt: Date.now() + this.cacheTtl,
     });
     return result;
   }

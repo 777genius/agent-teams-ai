@@ -133,6 +133,7 @@ export function useFileSuggestions(
     const cached = getQuickOpenCache(projectPath);
     if (cached) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- setLoading before async fetch is intentional
     return fetchFiles(projectPath);
   }, [projectPath, fetchTrigger, fetchFiles]);
 

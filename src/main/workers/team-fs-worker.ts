@@ -29,6 +29,105 @@ type WorkerResponse =
   | { id: string; ok: true; result: unknown; diag?: unknown }
   | { id: string; ok: false; error: string };
 
+// ---------------------------------------------------------------------------
+// Diagnostic types
+// ---------------------------------------------------------------------------
+
+interface SlowEntry {
+  teamName: string;
+  ms: number;
+}
+
+interface ListTeamsDiag {
+  op: string;
+  startedAt: number;
+  teamsDir: string;
+  totalDirs: number;
+  returned: number;
+  skipped: number;
+  skipReasons: Record<string, number>;
+  slowest: SlowEntry[];
+  totalMs: number;
+}
+
+interface GetAllTasksDiag {
+  op: string;
+  startedAt: number;
+  tasksBase: string;
+  teamDirs: number;
+  returned: number;
+  skipped: number;
+  skipReasons: Record<string, number>;
+  slowestTeams: SlowEntry[];
+  totalMs: number;
+}
+
+interface TaskReadDiag {
+  skipped: number;
+  skipReasons: Record<string, number>;
+}
+
+// ---------------------------------------------------------------------------
+// Parsed JSON types (loose shapes from disk)
+// ---------------------------------------------------------------------------
+
+interface ParsedConfig {
+  name?: unknown;
+  description?: unknown;
+  color?: unknown;
+  projectPath?: unknown;
+  leadSessionId?: unknown;
+  deletedAt?: unknown;
+  projectPathHistory?: unknown;
+  sessionHistory?: unknown;
+  members?: unknown;
+}
+
+interface RawMember {
+  name?: unknown;
+  agentType?: unknown;
+  role?: unknown;
+  color?: unknown;
+  removedAt?: unknown;
+}
+
+interface ParsedTask {
+  id?: unknown;
+  subject?: unknown;
+  title?: unknown;
+  description?: unknown;
+  activeForm?: unknown;
+  owner?: unknown;
+  createdBy?: unknown;
+  status?: unknown;
+  blocks?: unknown;
+  blockedBy?: unknown;
+  related?: unknown;
+  createdAt?: unknown;
+  projectPath?: unknown;
+  comments?: unknown;
+  needsClarification?: unknown;
+  metadata?: { _internal?: unknown };
+  workIntervals?: unknown;
+}
+
+interface RawWorkInterval {
+  startedAt?: unknown;
+  completedAt?: unknown;
+}
+
+interface RawComment {
+  id?: unknown;
+  author?: unknown;
+  text?: unknown;
+  createdAt?: unknown;
+  type?: unknown;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function isAbortError(error: unknown): boolean {
   return (
     !!error &&
@@ -71,7 +170,7 @@ async function readFileHeadUtf8(filePath: string, maxBytes: number): Promise<str
 
 function extractQuotedString(head: string, key: string): string | null {
   const re = new RegExp(`"${key}"\\s*:\\s*("(?:\\\\.|[^"\\\\])*")`);
-  const match = head.match(re);
+  const match = re.exec(head);
   if (!match?.[1]) return null;
   try {
     const value = JSON.parse(match[1]) as unknown;
@@ -104,9 +203,49 @@ function nowMs(): number {
   return Date.now();
 }
 
-async function listTeams(payload: ListTeamsPayload): Promise<{ teams: unknown[]; diag: unknown }> {
+function bumpSkipReason(reasons: Record<string, number>, reason: string): void {
+  // eslint-disable-next-line no-param-reassign -- accumulator mutation is intentional
+  reasons[reason] = (reasons[reason] || 0) + 1;
+}
+
+function pushSlowest(list: SlowEntry[], entry: SlowEntry, maxLen: number): void {
+  list.push(entry);
+  list.sort((a, b) => b.ms - a.ms);
+  // eslint-disable-next-line no-param-reassign -- truncate in-place is intentional
+  if (list.length > maxLen) list.length = maxLen;
+}
+
+// ---------------------------------------------------------------------------
+// listTeams
+// ---------------------------------------------------------------------------
+
+function isRawMember(v: unknown): v is RawMember {
+  return !!v && typeof v === 'object';
+}
+
+function mergeMember(
+  m: RawMember,
+  memberMap: Map<string, { name: string; role?: string; color?: string }>,
+  removedKeys: ReadonlySet<string>
+): void {
+  const name = typeof m.name === 'string' ? m.name.trim() : '';
+  if (!name) return;
+  if (name === 'team-lead' || name === 'user' || m.agentType === 'team-lead') return;
+  const key = name.toLowerCase();
+  if (removedKeys.has(key)) return;
+  const existing = memberMap.get(key);
+  memberMap.set(key, {
+    name: existing?.name ?? name,
+    role: (typeof m.role === 'string' && m.role.trim()) || existing?.role,
+    color: (typeof m.color === 'string' && m.color.trim()) || existing?.color,
+  });
+}
+
+async function listTeams(
+  payload: ListTeamsPayload
+): Promise<{ teams: unknown[]; diag: ListTeamsDiag }> {
   const startedAt = nowMs();
-  const diag: any = {
+  const diag: ListTeamsDiag = {
     op: 'listTeams',
     startedAt,
     teamsDir: payload.teamsDir,
@@ -136,7 +275,7 @@ async function listTeams(payload: ListTeamsPayload): Promise<{ teams: unknown[];
 
     const skip = (reason: string): null => {
       diag.skipped++;
-      diag.skipReasons[reason] = (diag.skipReasons[reason] || 0) + 1;
+      bumpSkipReason(diag.skipReasons, reason);
       return null;
     };
 
@@ -149,7 +288,7 @@ async function listTeams(payload: ListTeamsPayload): Promise<{ teams: unknown[];
     if (!stat.isFile()) return skip('config_not_file');
     if (stat.size > payload.maxConfigBytes) return skip('config_too_large');
 
-    let config: any = null;
+    let config: ParsedConfig | null = null;
     let displayName: string | null = null;
     let description = '';
     let color: string | undefined;
@@ -175,7 +314,7 @@ async function listTeams(payload: ListTeamsPayload): Promise<{ teams: unknown[];
         deletedAt = typeof del === 'string' ? del : undefined;
       } else {
         const raw = await readFileUtf8WithTimeout(configPath, payload.maxConfigReadMs);
-        config = JSON.parse(raw);
+        config = JSON.parse(raw) as ParsedConfig;
         displayName = typeof config.name === 'string' ? config.name : null;
         description = typeof config.description === 'string' ? config.description : '';
         color =
@@ -191,10 +330,10 @@ async function listTeams(payload: ListTeamsPayload): Promise<{ teams: unknown[];
             ? config.leadSessionId
             : undefined;
         projectPathHistory = Array.isArray(config.projectPathHistory)
-          ? config.projectPathHistory.slice(-payload.maxProjectPathHistoryInSummary)
+          ? (config.projectPathHistory as string[]).slice(-payload.maxProjectPathHistoryInSummary)
           : undefined;
         sessionHistory = Array.isArray(config.sessionHistory)
-          ? config.sessionHistory.slice(-payload.maxSessionHistoryInSummary)
+          ? (config.sessionHistory as string[]).slice(-payload.maxSessionHistoryInSummary)
           : undefined;
         deletedAt = typeof config.deletedAt === 'string' ? config.deletedAt : undefined;
       }
@@ -210,41 +349,25 @@ async function listTeams(payload: ListTeamsPayload): Promise<{ teams: unknown[];
 
     const memberMap = new Map<string, { name: string; role?: string; color?: string }>();
     const removedKeys = new Set<string>();
-    const mergeMember = (m: any): void => {
-      const name = typeof m?.name === 'string' ? m.name.trim() : '';
-      if (!name) return;
-      // Summary/memberCount should represent teammates (exclude the lead process).
-      if (name === 'team-lead' || name === 'user' || m?.agentType === 'team-lead') return;
-      const key = name.toLowerCase();
-      // If meta marks this name removed, do not surface it in summaries
-      if (removedKeys.has(key)) return;
-      const existing = memberMap.get(key);
-      memberMap.set(key, {
-        name: existing?.name ?? name,
-        role: (typeof m.role === 'string' && m.role.trim()) || existing?.role,
-        color: (typeof m.color === 'string' && m.color.trim()) || existing?.color,
-      });
-    };
 
     try {
       const metaPath = path.join(payload.teamsDir, teamName, 'members.meta.json');
       const metaStat = await fs.promises.stat(metaPath);
       if (metaStat.isFile() && metaStat.size <= payload.maxMembersMetaBytes) {
         const raw = await readFileUtf8WithTimeout(metaPath, payload.maxConfigReadMs);
-        const parsed = JSON.parse(raw);
-        const members: any[] = Array.isArray(parsed?.members) ? parsed.members : [];
+        const parsed = JSON.parse(raw) as { members?: unknown };
+        const members: unknown[] = Array.isArray(parsed?.members) ? parsed.members : [];
         for (const member of members) {
-          if (!member || typeof member !== 'object') continue;
+          if (!isRawMember(member)) continue;
           const name = typeof member.name === 'string' ? member.name.trim() : '';
           if (!name) continue;
-          // Summary/memberCount should represent teammates (exclude the lead process).
           if (name === 'team-lead' || member.agentType === 'team-lead') continue;
           const key = name.toLowerCase();
           if (member.removedAt) {
             removedKeys.add(key);
             continue;
           }
-          mergeMember(member);
+          mergeMember(member, memberMap, removedKeys);
         }
       }
     } catch {
@@ -253,8 +376,10 @@ async function listTeams(payload: ListTeamsPayload): Promise<{ teams: unknown[];
 
     // Merge config members AFTER meta so removedAt can suppress stale config entries.
     if (config && Array.isArray(config.members)) {
-      for (const member of config.members) {
-        mergeMember(member);
+      for (const member of config.members as unknown[]) {
+        if (isRawMember(member)) {
+          mergeMember(member, memberMap, removedKeys);
+        }
       }
     }
 
@@ -277,9 +402,7 @@ async function listTeams(payload: ListTeamsPayload): Promise<{ teams: unknown[];
 
     const ms = nowMs() - t0;
     if (ms >= 250) {
-      diag.slowest.push({ teamName, ms });
-      diag.slowest.sort((a: any, b: any) => b.ms - a.ms);
-      if (diag.slowest.length > 10) diag.slowest.length = 10;
+      pushSlowest(diag.slowest, { teamName, ms }, 10);
     }
     return summary;
   });
@@ -290,59 +413,69 @@ async function listTeams(payload: ListTeamsPayload): Promise<{ teams: unknown[];
   return { teams, diag };
 }
 
+// ---------------------------------------------------------------------------
+// Task normalization helpers
+// ---------------------------------------------------------------------------
+
 function normalizeWorkIntervals(
-  parsed: any
+  parsed: ParsedTask
 ): { startedAt: string; completedAt?: string }[] | undefined {
-  if (!Array.isArray(parsed?.workIntervals)) return undefined;
+  if (!Array.isArray(parsed.workIntervals)) return undefined;
   return (parsed.workIntervals as unknown[])
     .filter(
-      (i): i is { startedAt: string; completedAt?: string } =>
+      (i): i is RawWorkInterval =>
         Boolean(i) &&
         typeof i === 'object' &&
-        typeof (i as any).startedAt === 'string' &&
-        ((i as any).completedAt === undefined || typeof (i as any).completedAt === 'string')
+        typeof (i as RawWorkInterval).startedAt === 'string' &&
+        ((i as RawWorkInterval).completedAt === undefined ||
+          typeof (i as RawWorkInterval).completedAt === 'string')
     )
-    .map((i) => ({ startedAt: i.startedAt, completedAt: i.completedAt }));
+    .map((i) => ({
+      startedAt: i.startedAt as string,
+      completedAt: i.completedAt as string | undefined,
+    }));
 }
 
-function normalizeComments(parsed: any): unknown[] | undefined {
-  if (!Array.isArray(parsed?.comments)) return undefined;
+function normalizeComments(parsed: ParsedTask): unknown[] | undefined {
+  if (!Array.isArray(parsed.comments)) return undefined;
   return (parsed.comments as unknown[])
     .filter(
-      (c) =>
-        c &&
+      (c): c is RawComment =>
+        !!c &&
         typeof c === 'object' &&
-        typeof (c as any).id === 'string' &&
-        typeof (c as any).author === 'string' &&
-        typeof (c as any).text === 'string' &&
-        typeof (c as any).createdAt === 'string'
+        typeof (c as RawComment).id === 'string' &&
+        typeof (c as RawComment).author === 'string' &&
+        typeof (c as RawComment).text === 'string' &&
+        typeof (c as RawComment).createdAt === 'string'
     )
     .map((c) => ({
-      id: (c as any).id,
-      author: (c as any).author,
-      text: (c as any).text,
-      createdAt: (c as any).createdAt,
+      id: c.id as string,
+      author: c.author as string,
+      text: c.text as string,
+      createdAt: c.createdAt as string,
       type:
-        (c as any).type === 'regular' ||
-        (c as any).type === 'review_request' ||
-        (c as any).type === 'review_approved'
-          ? (c as any).type
+        c.type === 'regular' || c.type === 'review_request' || c.type === 'review_approved'
+          ? (c.type as string)
           : 'regular',
     }));
 }
 
+// ---------------------------------------------------------------------------
+// getAllTasks
+// ---------------------------------------------------------------------------
+
 async function readTasksDirForTeam(
   tasksDir: string,
   teamName: string,
-  payload: GetAllTasksPayload,
-  diag: any
-): Promise<unknown[]> {
+  payload: GetAllTasksPayload
+): Promise<{ tasks: unknown[]; taskDiag: TaskReadDiag }> {
+  const taskDiag: TaskReadDiag = { skipped: 0, skipReasons: {} };
   let entries: string[];
   try {
     entries = await fs.promises.readdir(tasksDir);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return [];
+      return { tasks: [], taskDiag };
     }
     throw error;
   }
@@ -362,23 +495,22 @@ async function readTasksDirForTeam(
     try {
       const stat = await fs.promises.stat(taskPath);
       if (!stat.isFile() || stat.size > payload.maxTaskBytes) {
-        diag.skipped++;
-        diag.skipReasons.task_not_file_or_large =
-          (diag.skipReasons.task_not_file_or_large || 0) + 1;
+        taskDiag.skipped++;
+        bumpSkipReason(taskDiag.skipReasons, 'task_not_file_or_large');
         continue;
       }
 
       const raw = await readFileUtf8WithTimeout(taskPath, payload.maxTaskReadMs);
-      const parsed = JSON.parse(raw);
-      const metadata = parsed?.metadata;
+      const parsed = JSON.parse(raw) as ParsedTask;
+      const metadata = parsed.metadata;
       if (metadata?._internal === true) {
-        diag.skipped++;
-        diag.skipReasons.task_internal = (diag.skipReasons.task_internal || 0) + 1;
+        taskDiag.skipped++;
+        bumpSkipReason(taskDiag.skipReasons, 'task_internal');
         continue;
       }
-      if (parsed?.status === 'deleted') {
-        diag.skipped++;
-        diag.skipReasons.task_deleted = (diag.skipReasons.task_deleted || 0) + 1;
+      if (parsed.status === 'deleted') {
+        taskDiag.skipped++;
+        bumpSkipReason(taskDiag.skipReasons, 'task_deleted');
         continue;
       }
 
@@ -404,7 +536,7 @@ async function readTasksDirForTeam(
 
       const needsClarification =
         parsed.needsClarification === 'lead' || parsed.needsClarification === 'user'
-          ? parsed.needsClarification
+          ? (parsed.needsClarification as string)
           : undefined;
 
       tasks.push({
@@ -419,7 +551,7 @@ async function readTasksDirForTeam(
           parsed.status === 'in_progress' ||
           parsed.status === 'completed' ||
           parsed.status === 'deleted'
-            ? parsed.status
+            ? (parsed.status as string)
             : 'pending',
         workIntervals: normalizeWorkIntervals(parsed),
         blocks: Array.isArray(parsed.blocks) ? (parsed.blocks as unknown[]) : undefined,
@@ -436,23 +568,32 @@ async function readTasksDirForTeam(
         teamName,
       });
     } catch (error) {
-      diag.skipped++;
+      taskDiag.skipped++;
       const code = (error as NodeJS.ErrnoException).code;
       if (code === 'READ_TIMEOUT') {
-        diag.skipReasons.task_read_timeout = (diag.skipReasons.task_read_timeout || 0) + 1;
+        bumpSkipReason(taskDiag.skipReasons, 'task_read_timeout');
       } else {
-        diag.skipReasons.task_parse_failed = (diag.skipReasons.task_parse_failed || 0) + 1;
+        bumpSkipReason(taskDiag.skipReasons, 'task_parse_failed');
       }
     }
   }
-  return tasks;
+  return { tasks, taskDiag };
+}
+
+function mergeTaskDiag(target: GetAllTasksDiag, source: TaskReadDiag): void {
+  // eslint-disable-next-line no-param-reassign -- accumulator mutation is intentional
+  target.skipped += source.skipped;
+  for (const [reason, count] of Object.entries(source.skipReasons)) {
+    // eslint-disable-next-line no-param-reassign -- accumulator mutation is intentional
+    target.skipReasons[reason] = (target.skipReasons[reason] || 0) + count;
+  }
 }
 
 async function getAllTasks(
   payload: GetAllTasksPayload
-): Promise<{ tasks: unknown[]; diag: unknown }> {
+): Promise<{ tasks: unknown[]; diag: GetAllTasksDiag }> {
   const startedAt = nowMs();
-  const diag: any = {
+  const diag: GetAllTasksDiag = {
     op: 'getAllTasks',
     startedAt,
     tasksBase: payload.tasksBase,
@@ -483,17 +624,16 @@ async function getAllTasks(
     const t0 = nowMs();
     try {
       const tasksDir = path.join(payload.tasksBase, teamName);
-      const tasks = await readTasksDirForTeam(tasksDir, teamName, payload, diag);
+      const { tasks, taskDiag } = await readTasksDirForTeam(tasksDir, teamName, payload);
+      mergeTaskDiag(diag, taskDiag);
       const ms = nowMs() - t0;
       if (ms >= 250) {
-        diag.slowestTeams.push({ teamName, ms });
-        diag.slowestTeams.sort((a: any, b: any) => b.ms - a.ms);
-        if (diag.slowestTeams.length > 10) diag.slowestTeams.length = 10;
+        pushSlowest(diag.slowestTeams, { teamName, ms }, 10);
       }
       return tasks;
     } catch {
       diag.skipped++;
-      diag.skipReasons.team_dir_failed = (diag.skipReasons.team_dir_failed || 0) + 1;
+      bumpSkipReason(diag.skipReasons, 'team_dir_failed');
       return [];
     }
   });
@@ -503,6 +643,10 @@ async function getAllTasks(
   diag.totalMs = nowMs() - startedAt;
   return { tasks, diag };
 }
+
+// ---------------------------------------------------------------------------
+// Worker message handler
+// ---------------------------------------------------------------------------
 
 function post(msg: WorkerResponse): void {
   parentPort?.postMessage(msg);
@@ -521,7 +665,7 @@ parentPort?.on('message', async (msg: WorkerRequest) => {
       post({ id, ok: true, result: tasks, diag });
       return;
     }
-    post({ id, ok: false, error: `Unknown op: ${String((msg as any).op)}` });
+    post({ id, ok: false, error: `Unknown op: ${String(op)}` });
   } catch (error) {
     post({ id, ok: false, error: error instanceof Error ? error.message : String(error) });
   }

@@ -44,7 +44,7 @@ type WorkerResponse =
   | { id: string; ok: false; error: string };
 
 function makeId(): string {
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${Date.now()}-${crypto.randomUUID().slice(0, 12)}`;
 }
 
 function resolveWorkerPath(): string | null {
@@ -172,11 +172,7 @@ export class TeamFsWorkerClient {
           reject(error);
         },
       });
-      const msg: WorkerRequest =
-        op === 'listTeams'
-          ? ({ id, op, payload } as WorkerRequest)
-          : ({ id, op, payload } as WorkerRequest);
-      worker.postMessage(msg);
+      worker.postMessage({ id, op, payload } as WorkerRequest);
     });
   }
 

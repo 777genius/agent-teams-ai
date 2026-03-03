@@ -335,7 +335,8 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
     const rootParts = splitPath(root);
     const fileParts = splitPath(filePath);
     const win = isWindowsishPath(root);
-    const eq = (a: string, b: string) => (win ? a.toLowerCase() === b.toLowerCase() : a === b);
+    const eq = (a: string, b: string): boolean =>
+      win ? a.toLowerCase() === b.toLowerCase() : a === b;
     const hasPrefix =
       fileParts.length >= rootParts.length && rootParts.every((seg, i) => eq(seg, fileParts[i]));
 
@@ -1344,7 +1345,8 @@ function remapPath(p: string, oldPath: string, newPath: string): string {
   if (oldParts.length === 0) return p;
 
   const win = isWindowsishPath(oldPath) || isWindowsishPath(p) || isWindowsishPath(newPath);
-  const eq = (a: string, b: string) => (win ? a.toLowerCase() === b.toLowerCase() : a === b);
+  const eq = (a: string, b: string): boolean =>
+    win ? a.toLowerCase() === b.toLowerCase() : a === b;
 
   const matchesPrefix =
     pParts.length >= oldParts.length && oldParts.every((seg, i) => eq(seg, pParts[i]));
@@ -1364,7 +1366,8 @@ function reverseRemapPath(p: string, oldPath: string, newPath: string): string {
   if (newParts.length === 0) return p;
 
   const win = isWindowsishPath(oldPath) || isWindowsishPath(p) || isWindowsishPath(newPath);
-  const eq = (a: string, b: string) => (win ? a.toLowerCase() === b.toLowerCase() : a === b);
+  const eq = (a: string, b: string): boolean =>
+    win ? a.toLowerCase() === b.toLowerCase() : a === b;
 
   const matchesPrefix =
     pParts.length >= newParts.length && newParts.every((seg, i) => eq(seg, pParts[i]));

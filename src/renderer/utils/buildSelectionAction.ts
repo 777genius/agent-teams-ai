@@ -74,7 +74,8 @@ export function buildFileAction(
     const fullParts = splitPath(filePath);
     const rootParts = splitPath(projectPath);
     const win = isWindowsishPath(projectPath);
-    const eq = (a: string, b: string) => (win ? a.toLowerCase() === b.toLowerCase() : a === b);
+    const eq = (a: string, b: string): boolean =>
+      win ? a.toLowerCase() === b.toLowerCase() : a === b;
     const hasPrefix =
       fullParts.length >= rootParts.length && rootParts.every((seg, i) => eq(seg, fullParts[i]));
     if (hasPrefix) {

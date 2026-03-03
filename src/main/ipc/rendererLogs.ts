@@ -1,5 +1,9 @@
-import { RENDERER_BOOT, RENDERER_HEARTBEAT, RENDERER_LOG } from '@preload/constants/ipcChannels';
 import { type IpcMain } from 'electron';
+
+// IPC channel names — must match the preload bindings in src/preload/index.ts
+const RENDERER_LOG = 'renderer:log';
+const RENDERER_BOOT = 'renderer:boot';
+const RENDERER_HEARTBEAT = 'renderer:heartbeat';
 
 const lastHeartbeatByWebContentsId = new Map<number, number>();
 const lastHeartbeatWarnedAtByWebContentsId = new Map<number, number>();

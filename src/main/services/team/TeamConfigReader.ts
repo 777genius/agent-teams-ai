@@ -48,32 +48,6 @@ function withReadTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-async function readFileHead(filePath: string, maxBytes: number): Promise<string> {
-  const handle = await fs.promises.open(filePath, 'r');
-  try {
-    const stat = await handle.stat();
-    const bytesToRead = Math.max(0, Math.min(stat.size, maxBytes));
-    if (bytesToRead === 0) return '';
-    const buffer = Buffer.alloc(bytesToRead);
-    await handle.read(buffer, 0, bytesToRead, 0);
-    return buffer.toString('utf8');
-  } finally {
-    await handle.close();
-  }
-}
-
-function extractQuotedString(head: string, key: string): string | null {
-  const re = new RegExp(`"${key}"\\s*:\\s*("(?:\\\\.|[^"\\\\])*")`);
-  const match = re.exec(head);
-  if (!match?.[1]) return null;
-  try {
-    const value = JSON.parse(match[1]) as unknown;
-    return typeof value === 'string' ? value : null;
-  } catch {
-    return null;
-  }
-}
-
 export class TeamConfigReader {
   constructor(
     private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore()

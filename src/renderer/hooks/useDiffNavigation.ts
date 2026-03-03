@@ -281,7 +281,7 @@ export function useDiffNavigation(
   useEffect(() => {
     if (!isDialogOpen) return;
 
-    const handler = (event: KeyboardEvent) => {
+    const handler = (event: KeyboardEvent): void => {
       if (event.defaultPrevented) return;
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;

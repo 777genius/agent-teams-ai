@@ -39,7 +39,10 @@ export function stripTrailingSeparators(filePath: string): string {
   if (!filePath) return filePath;
   const p = filePath.replace(/\\/g, '/');
   if (p === '/' || /^[A-Za-z]:\/$/.test(p)) return filePath;
-  return filePath.replace(/[/\\]+$/, '');
+  // Trim trailing separators manually to avoid sonarjs/slow-regex
+  let end = filePath.length;
+  while (end > 0 && (filePath[end - 1] === '/' || filePath[end - 1] === '\\')) end--;
+  return end === filePath.length ? filePath : filePath.slice(0, end);
 }
 
 /** Prefer the separator style already present in the path. */
@@ -55,7 +58,12 @@ export function joinPath(base: string, ...segments: string[]): string {
   const sep = getPreferredSeparator(base);
   let out = stripTrailingSeparators(base);
   for (const seg of segments) {
-    const cleaned = seg.replace(/^[\\/]+|[\\/]+$/g, '');
+    // Trim leading and trailing separators manually to avoid sonarjs/slow-regex
+    let start = 0;
+    while (start < seg.length && (seg[start] === '/' || seg[start] === '\\')) start++;
+    let segEnd = seg.length;
+    while (segEnd > start && (seg[segEnd - 1] === '/' || seg[segEnd - 1] === '\\')) segEnd--;
+    const cleaned = seg.slice(start, segEnd);
     if (!cleaned) continue;
     if (!out || out.endsWith('/') || out.endsWith('\\')) {
       out += cleaned;

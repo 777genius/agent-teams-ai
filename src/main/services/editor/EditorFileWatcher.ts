@@ -37,7 +37,7 @@ export class EditorFileWatcher {
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private onChangeCallback: ((event: EditorFileChangeEvent) => void) | null = null;
   // Higher debounce = fewer IPC events during large bursts (checkout/build/format).
-  private readonly DEBOUNCE_MS = 350;
+  private readonly debounceMs = 350;
   private ignoreChangeUntilMs = 0;
   private watchedFilesKey = '';
   private watchedDirsKey = '';
@@ -229,7 +229,7 @@ export class EditorFileWatcher {
       emit('delete');
       if (emitted < MAX_EMITTED_EVENTS_PER_FLUSH) emit('create');
       if (emitted < MAX_EMITTED_EVENTS_PER_FLUSH) emit('change');
-    }, this.DEBOUNCE_MS);
+    }, this.debounceMs);
   }
 
   /**

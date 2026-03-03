@@ -105,7 +105,8 @@ export function initializeNotificationListeners(): () => void {
     const nav: NavigatorWithUserAgentData | null =
       typeof navigator !== 'undefined' ? (navigator as NavigatorWithUserAgentData) : null;
     // Prefer UA-CH when available; fall back to deprecated-but-still-supported navigator.platform.
-    const platform = nav?.userAgentData?.platform ?? nav?.platform ?? nav?.userAgent ?? '';
+    // eslint-disable-next-line sonarjs/deprecation -- navigator.platform is deprecated but needed as fallback
+    const platform: string = nav?.userAgentData?.platform ?? nav?.platform ?? nav?.userAgent ?? '';
     const isWindows = platform.toLowerCase().includes('win');
     const delayMs = isWindows ? 3000 : 0;
     cliStatusTimer = setTimeout(() => {
