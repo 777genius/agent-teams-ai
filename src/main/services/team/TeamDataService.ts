@@ -826,7 +826,7 @@ export class TeamDataService {
       throw new Error(`Task #${taskId} is not pending (current: ${task.status})`);
     }
 
-    await this.taskWriter.updateStatus(teamName, taskId, 'in_progress');
+    await this.taskWriter.updateStatus(teamName, taskId, 'in_progress', 'user');
 
     if (task.owner) {
       try {
@@ -856,16 +856,21 @@ export class TeamDataService {
     return { notifiedOwner: !!task.owner };
   }
 
-  async updateTaskStatus(teamName: string, taskId: string, status: TeamTaskStatus): Promise<void> {
-    await this.taskWriter.updateStatus(teamName, taskId, status);
+  async updateTaskStatus(
+    teamName: string,
+    taskId: string,
+    status: TeamTaskStatus,
+    actor?: string
+  ): Promise<void> {
+    await this.taskWriter.updateStatus(teamName, taskId, status, actor);
   }
 
   async softDeleteTask(teamName: string, taskId: string): Promise<void> {
-    await this.taskWriter.softDelete(teamName, taskId);
+    await this.taskWriter.softDelete(teamName, taskId, 'user');
   }
 
   async restoreTask(teamName: string, taskId: string): Promise<void> {
-    await this.taskWriter.restoreTask(teamName, taskId);
+    await this.taskWriter.restoreTask(teamName, taskId, 'user');
   }
 
   async getDeletedTasks(teamName: string): Promise<TeamTask[]> {
@@ -929,8 +934,7 @@ export class TeamDataService {
       }
 
       if (task?.owner && !this.isLeadOwner(task.owner, leadName)) {
-        // UX: don't echo a user comment as an inbox notification "from the lead" when the
-        // task is already owned by the lead. This creates confusing self-notifications.
+        // Notify non-lead task owner via inbox (lead → member message)
         const parts = [
           `Comment on task #${taskId} "${task.subject}":\n\n${text}`,
           `\n${AGENT_BLOCK_OPEN}`,
@@ -941,6 +945,22 @@ export class TeamDataService {
         await this.sendMessage(teamName, {
           member: task.owner,
           from: leadName,
+          text: parts.join('\n'),
+          summary: `Comment on #${taskId}`,
+        });
+      } else if (task?.owner && this.isLeadOwner(task.owner, leadName)) {
+        // Notify lead about user's comment on their own task.
+        // Write to lead's inbox — relay delivers to stdin when process is alive.
+        const parts = [
+          `New comment from user on your task #${taskId} "${task.subject}":\n\n${text}`,
+          `\n${AGENT_BLOCK_OPEN}`,
+          `Reply to this comment using:`,
+          `node "${toolPath}" --team ${teamName} task comment ${taskId} --text "<your reply>" --from "${leadName}"`,
+          AGENT_BLOCK_CLOSE,
+        ];
+        await this.sendMessage(teamName, {
+          member: leadName,
+          from: 'user',
           text: parts.join('\n'),
           summary: `Comment on #${taskId}`,
         });
@@ -1269,7 +1289,7 @@ export class TeamDataService {
     await this.kanbanManager.updateTask(teamName, taskId, { op: 'remove' });
 
     try {
-      await this.taskWriter.updateStatus(teamName, taskId, 'in_progress');
+      await this.taskWriter.updateStatus(teamName, taskId, 'in_progress', 'reviewer');
       const leadName = await this.resolveLeadName(teamName);
       await this.sendMessage(teamName, {
         member: task.owner,
@@ -1281,7 +1301,9 @@ export class TeamDataService {
         summary: `Fix request for #${taskId}`,
       });
     } catch (error) {
-      await this.taskWriter.updateStatus(teamName, taskId, previousStatus).catch(() => undefined);
+      await this.taskWriter
+        .updateStatus(teamName, taskId, previousStatus, 'system')
+        .catch(() => undefined);
       if (previousKanbanEntry) {
         await this.kanbanManager
           .updateTask(teamName, taskId, { op: 'set_column', column: previousKanbanEntry.column })

@@ -5,7 +5,13 @@ import * as path from 'path';
 
 import { atomicWriteAsync } from './atomicWrite';
 
-import type { TaskComment, TaskCommentType, TeamTask, TeamTaskStatus } from '@shared/types';
+import type {
+  StatusTransition,
+  TaskComment,
+  TaskCommentType,
+  TeamTask,
+  TeamTaskStatus,
+} from '@shared/types';
 
 const taskWriteLocks = new Map<string, Promise<void>>();
 
@@ -25,6 +31,18 @@ async function withTaskLock<T>(taskPath: string, fn: () => Promise<T>): Promise<
       taskWriteLocks.delete(taskPath);
     }
   }
+}
+
+function appendTransition(
+  history: StatusTransition[] | undefined,
+  from: TeamTaskStatus | null,
+  to: TeamTaskStatus,
+  timestamp: string,
+  actor?: string
+): StatusTransition[] {
+  const entry: StatusTransition = { from, to, timestamp };
+  if (actor) entry.actor = actor;
+  return [...(history ?? []), entry];
 }
 
 export class TeamTaskWriter {
@@ -63,6 +81,13 @@ export class TeamTaskWriter {
                   : [{ startedAt: createdAt }]),
               ]
             : task.workIntervals,
+        statusHistory: appendTransition(
+          task.statusHistory,
+          null,
+          task.status,
+          createdAt,
+          task.createdBy
+        ),
       };
 
       await atomicWriteAsync(taskPath, JSON.stringify(cliCompatibleTask, null, 2));
@@ -272,7 +297,12 @@ export class TeamTaskWriter {
     }
   }
 
-  async updateStatus(teamName: string, taskId: string, status: TeamTaskStatus): Promise<void> {
+  async updateStatus(
+    teamName: string,
+    taskId: string,
+    status: TeamTaskStatus,
+    actor?: string
+  ): Promise<void> {
     const taskPath = path.join(getTasksBasePath(), teamName, `${taskId}.json`);
 
     await withTaskLock(taskPath, async () => {
@@ -310,6 +340,13 @@ export class TeamTaskWriter {
       }
 
       task.workIntervals = intervals.length > 0 ? intervals : undefined;
+      task.statusHistory = appendTransition(
+        Array.isArray(task.statusHistory) ? task.statusHistory : undefined,
+        prevStatus,
+        status,
+        nowIso,
+        actor
+      );
       task.status = status;
       await atomicWriteAsync(taskPath, JSON.stringify(task, null, 2));
 
@@ -345,7 +382,7 @@ export class TeamTaskWriter {
     });
   }
 
-  async softDelete(teamName: string, taskId: string): Promise<void> {
+  async softDelete(teamName: string, taskId: string, actor?: string): Promise<void> {
     const taskPath = path.join(getTasksBasePath(), teamName, `${taskId}.json`);
 
     await withTaskLock(taskPath, async () => {
@@ -360,6 +397,7 @@ export class TeamTaskWriter {
       }
 
       const task = JSON.parse(raw) as TeamTask;
+      const prevStatus = task.status;
       const nowIso = new Date().toISOString();
 
       // Ensure any open in_progress interval is closed on delete.
@@ -374,6 +412,13 @@ export class TeamTaskWriter {
 
       task.status = 'deleted';
       task.deletedAt = nowIso;
+      task.statusHistory = appendTransition(
+        Array.isArray(task.statusHistory) ? task.statusHistory : undefined,
+        prevStatus,
+        'deleted',
+        nowIso,
+        actor
+      );
       await atomicWriteAsync(taskPath, JSON.stringify(task, null, 2));
 
       const verifyRaw = await fs.promises.readFile(taskPath, 'utf8');
@@ -384,7 +429,7 @@ export class TeamTaskWriter {
     });
   }
 
-  async restoreTask(teamName: string, taskId: string): Promise<void> {
+  async restoreTask(teamName: string, taskId: string, actor?: string): Promise<void> {
     const taskPath = path.join(getTasksBasePath(), teamName, `${taskId}.json`);
 
     await withTaskLock(taskPath, async () => {
@@ -399,6 +444,15 @@ export class TeamTaskWriter {
       }
 
       const task = JSON.parse(raw) as TeamTask;
+      const prevStatus = task.status;
+      const nowIso = new Date().toISOString();
+      task.statusHistory = appendTransition(
+        Array.isArray(task.statusHistory) ? task.statusHistory : undefined,
+        prevStatus,
+        'pending',
+        nowIso,
+        actor ?? 'user'
+      );
       task.status = 'pending';
       delete task.deletedAt;
       await atomicWriteAsync(taskPath, JSON.stringify(task, null, 2));

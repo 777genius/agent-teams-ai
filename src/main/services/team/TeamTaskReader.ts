@@ -7,7 +7,13 @@ import * as path from 'path';
 
 import { getTeamFsWorkerClient } from './TeamFsWorkerClient';
 
-import type { TaskComment, TaskWorkInterval, TeamTask } from '@shared/types';
+import type {
+  StatusTransition,
+  TaskComment,
+  TaskWorkInterval,
+  TeamTask,
+  TeamTaskStatus,
+} from '@shared/types';
 
 const logger = createLogger('Service:TeamTaskReader');
 const MAX_TASK_FILE_BYTES = 2 * 1024 * 1024;
@@ -107,6 +113,26 @@ export class TeamTaskReader {
         // `satisfies Record<keyof TeamTask, unknown>` ensures compile-time
         // safety: if a field is added to TeamTask but not mapped here,
         // TypeScript will error. This prevents silently dropping new fields.
+        const statusHistory: StatusTransition[] | undefined = Array.isArray(parsed.statusHistory)
+          ? (parsed.statusHistory as unknown[])
+              .filter(
+                (e): e is { from: string | null; to: string; timestamp: string; actor?: string } =>
+                  Boolean(e) &&
+                  typeof e === 'object' &&
+                  ((e as Record<string, unknown>).from === null ||
+                    typeof (e as Record<string, unknown>).from === 'string') &&
+                  typeof (e as Record<string, unknown>).to === 'string' &&
+                  typeof (e as Record<string, unknown>).timestamp === 'string' &&
+                  ((e as Record<string, unknown>).actor === undefined ||
+                    typeof (e as Record<string, unknown>).actor === 'string')
+              )
+              .map((e) => ({
+                from: e.from as TeamTaskStatus | null,
+                to: e.to as TeamTaskStatus,
+                timestamp: e.timestamp,
+                ...(e.actor ? { actor: e.actor } : {}),
+              }))
+          : undefined;
         const workIntervals: TaskWorkInterval[] | undefined = Array.isArray(parsed.workIntervals)
           ? (parsed.workIntervals as unknown[])
               .filter(
@@ -136,6 +162,7 @@ export class TeamTaskReader {
             ? (parsed.status as TeamTask['status'])
             : 'pending',
           workIntervals,
+          statusHistory,
           blocks: Array.isArray(parsed.blocks) ? (parsed.blocks as string[]) : undefined,
           blockedBy: Array.isArray(parsed.blockedBy) ? (parsed.blockedBy as string[]) : undefined,
           related: Array.isArray(parsed.related)

@@ -243,13 +243,22 @@ function applyWorkIntervalsForStatusTransition(task, prevStatus, nextStatus, now
   else delete task.workIntervals;
 }
 
-function setTaskStatus(paths, taskId, status) {
+function appendStatusTransition(task, fromStatus, toStatus, timestamp, actor) {
+  var entry = { from: fromStatus, to: toStatus, timestamp: timestamp };
+  if (actor) entry.actor = actor;
+  var history = Array.isArray(task.statusHistory) ? task.statusHistory.slice() : [];
+  history.push(entry);
+  task.statusHistory = history;
+}
+
+function setTaskStatus(paths, taskId, status, actor) {
   const normalized = normalizeStatus(status);
   if (!normalized) die('Invalid status: ' + String(status));
   const { taskPath, task } = readTask(paths, taskId);
   var prev = task.status;
   var now = nowIso();
   applyWorkIntervalsForStatusTransition(task, prev, normalized, now);
+  appendStatusTransition(task, prev, normalized, now, actor);
   task.status = normalized;
   writeTask(taskPath, task);
 }
@@ -503,6 +512,7 @@ function createTask(paths, flags) {
       status,
       createdAt: createdAt,
       workIntervals: status === 'in_progress' ? [{ startedAt: createdAt }] : undefined,
+      statusHistory: [{ from: null, to: status, timestamp: createdAt, actor: from }],
       blocks: [],
       blockedBy: blockedByIds,
       related: relatedIds.length > 0 ? relatedIds : undefined,
@@ -664,7 +674,9 @@ function reviewRequestChanges(paths, teamName, taskId, flags) {
 
   clearKanban(paths, teamName, taskId);
   var now = nowIso();
-  applyWorkIntervalsForStatusTransition(task, task.status, 'in_progress', now);
+  var prevStatus = task.status;
+  applyWorkIntervalsForStatusTransition(task, prevStatus, 'in_progress', now);
+  appendStatusTransition(task, prevStatus, 'in_progress', now, from);
   task.status = 'in_progress';
 
   // Record review comment in task.comments
@@ -957,27 +969,30 @@ async function main() {
 
   const teamName = getTeamName(args.flags);
   const paths = getPaths(args.flags, teamName);
+  var actor = typeof args.flags.from === 'string' && args.flags.from.trim()
+    ? args.flags.from.trim()
+    : inferLeadName(paths);
 
   if (domain === 'task') {
     if (action === 'set-status') {
       const id = rest[0] || args.flags.id;
       const status = rest[1] || args.flags.status;
       if (!id || !status) die('Usage: task set-status <id> <status>');
-      setTaskStatus(paths, String(id), status);
+      setTaskStatus(paths, String(id), status, actor);
       process.stdout.write('OK task #' + String(id) + ' status=' + String(status) + '\n');
       return;
     }
     if (action === 'complete' || action === 'done') {
       const id = rest[0] || args.flags.id;
       if (!id) die('Usage: task complete <id>');
-      setTaskStatus(paths, String(id), 'completed');
+      setTaskStatus(paths, String(id), 'completed', actor);
       process.stdout.write('OK task #' + String(id) + ' status=completed\n');
       return;
     }
     if (action === 'start') {
       const id = rest[0] || args.flags.id;
       if (!id) die('Usage: task start <id>');
-      setTaskStatus(paths, String(id), 'in_progress');
+      setTaskStatus(paths, String(id), 'in_progress', actor);
       process.stdout.write('OK task #' + String(id) + ' status=in_progress\n');
       return;
     }

@@ -64,6 +64,18 @@ export interface TaskWorkInterval {
   completedAt?: string;
 }
 
+/** Records a single status transition for audit/timeline display. */
+export interface StatusTransition {
+  /** Previous status (null for initial creation). */
+  from: TeamTaskStatus | null;
+  /** New status after the transition. */
+  to: TeamTaskStatus;
+  /** ISO timestamp when the transition occurred. */
+  timestamp: string;
+  /** Who triggered the change: member name, 'user', or undefined if unknown. */
+  actor?: string;
+}
+
 export type TaskCommentType = 'regular' | 'review_request' | 'review_approved';
 
 export interface TaskComment {
@@ -89,6 +101,12 @@ export interface TeamTask {
    * We persist intervals for reliable log attribution without relying on heuristics.
    */
   workIntervals?: TaskWorkInterval[];
+  /**
+   * Chronological record of every status change.
+   * Append-only — each transition records from, to, timestamp, actor.
+   * Optional for backwards compatibility with pre-existing tasks.
+   */
+  statusHistory?: StatusTransition[];
   blocks?: string[];
   blockedBy?: string[];
   /**

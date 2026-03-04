@@ -371,7 +371,9 @@ async function handleGetData(
   const isAlive = provisioning.isTeamAlive(tn);
 
   if (isAlive) {
-    void provisioning.relayLeadInboxMessages(tn).catch(() => undefined);
+    void provisioning
+      .relayLeadInboxMessages(tn)
+      .catch((e: unknown) => logger.warn(`Relay failed for ${tn}: ${e}`));
   }
 
   const displayName = data.config.name || tn;
@@ -891,9 +893,18 @@ async function handleSendMessage(
     if (isLeadRecipient && isAlive) {
       // Separate try blocks: stdin delivery vs persistence
       // If stdin succeeds but persistence fails, do NOT fallback to inbox (would duplicate)
+      // Wrap with instructions so lead responds with visible text (not just agent-only blocks)
+      const wrappedText = [
+        `You received a direct message from the user.`,
+        `IMPORTANT: Your text response here is shown to the user in the Messages panel. Always include a brief human-readable reply. Do NOT respond with only an agent-only block.`,
+        ``,
+        `Message from user:`,
+        payload.text!,
+      ].join('\n');
+
       let stdinSent = false;
       try {
-        await provisioning.sendMessageToTeam(tn, payload.text!, validatedAttachments);
+        await provisioning.sendMessageToTeam(tn, wrappedText, validatedAttachments);
         stdinSent = true;
       } catch (stdinError: unknown) {
         // Stdin failed (process died between check and write)
@@ -963,7 +974,9 @@ async function handleSendMessage(
 
     // Best-effort relay for lead via inbox
     if (isLeadRecipient && isAlive) {
-      void provisioning.relayLeadInboxMessages(tn).catch(() => undefined);
+      void provisioning
+        .relayLeadInboxMessages(tn)
+        .catch((e: unknown) => logger.warn(`Relay after sendMessage failed for ${tn}: ${e}`));
     }
 
     return result;

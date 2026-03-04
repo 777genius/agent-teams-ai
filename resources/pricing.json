@@ -2084,7 +2084,8 @@
     "cache_read_input_token_cost": 3.3e-7,
     "litellm_provider": "deepinfra",
     "mode": "chat",
-    "supports_tool_choice": true
+    "supports_tool_choice": true,
+    "supports_function_calling": true
   },
   "deepinfra/anthropic/claude-4-opus": {
     "max_tokens": 200000,
@@ -2094,7 +2095,8 @@
     "output_cost_per_token": 0.0000825,
     "litellm_provider": "deepinfra",
     "mode": "chat",
-    "supports_tool_choice": true
+    "supports_tool_choice": true,
+    "supports_function_calling": true
   },
   "deepinfra/anthropic/claude-4-sonnet": {
     "max_tokens": 200000,
@@ -2104,7 +2106,8 @@
     "output_cost_per_token": 0.0000165,
     "litellm_provider": "deepinfra",
     "mode": "chat",
-    "supports_tool_choice": true
+    "supports_tool_choice": true,
+    "supports_function_calling": true
   },
   "eu.anthropic.claude-3-5-haiku-20241022-v1:0": {
     "input_cost_per_token": 2.5e-7,

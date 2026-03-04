@@ -109,11 +109,19 @@ interface ParsedTask {
   needsClarification?: unknown;
   metadata?: { _internal?: unknown };
   workIntervals?: unknown;
+  statusHistory?: unknown;
 }
 
 interface RawWorkInterval {
   startedAt?: unknown;
   completedAt?: unknown;
+}
+
+interface RawStatusTransition {
+  from?: unknown;
+  to?: unknown;
+  timestamp?: unknown;
+  actor?: unknown;
 }
 
 interface RawComment {
@@ -436,6 +444,28 @@ function normalizeWorkIntervals(
     }));
 }
 
+function normalizeStatusHistory(
+  parsed: ParsedTask
+): { from: string | null; to: string; timestamp: string; actor?: string }[] | undefined {
+  if (!Array.isArray(parsed.statusHistory)) return undefined;
+  return (parsed.statusHistory as unknown[])
+    .filter(
+      (i): i is RawStatusTransition =>
+        Boolean(i) &&
+        typeof i === 'object' &&
+        ((i as RawStatusTransition).from === null ||
+          typeof (i as RawStatusTransition).from === 'string') &&
+        typeof (i as RawStatusTransition).to === 'string' &&
+        typeof (i as RawStatusTransition).timestamp === 'string'
+    )
+    .map((i) => ({
+      from: i.from as string | null,
+      to: i.to as string,
+      timestamp: i.timestamp as string,
+      ...(typeof i.actor === 'string' ? { actor: i.actor } : {}),
+    }));
+}
+
 function normalizeComments(parsed: ParsedTask): unknown[] | undefined {
   if (!Array.isArray(parsed.comments)) return undefined;
   return (parsed.comments as unknown[])
@@ -554,6 +584,7 @@ async function readTasksDirForTeam(
             ? (parsed.status as string)
             : 'pending',
         workIntervals: normalizeWorkIntervals(parsed),
+        statusHistory: normalizeStatusHistory(parsed),
         blocks: Array.isArray(parsed.blocks) ? (parsed.blocks as unknown[]) : undefined,
         blockedBy: Array.isArray(parsed.blockedBy) ? (parsed.blockedBy as unknown[]) : undefined,
         related: Array.isArray(parsed.related)

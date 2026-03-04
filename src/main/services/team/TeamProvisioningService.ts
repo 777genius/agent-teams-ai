@@ -1959,7 +1959,13 @@ export class TeamProvisioningService {
         content: contentBlocks,
       },
     });
-    run.child.stdin.write(payload + '\n');
+    const stdin = run.child.stdin;
+    await new Promise<void>((resolve, reject) => {
+      stdin.write(payload + '\n', (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
     this.setLeadActivity(run, 'active');
   }
 
@@ -2145,7 +2151,11 @@ export class TeamProvisioningService {
         };
         this.pushLiveLeadProcessMessage(teamName, relayMsg);
         // Persist to disk so relayed replies survive app restart and trigger FileWatcher
-        void this.sentMessagesStore.appendMessage(teamName, relayMsg).catch(() => undefined);
+        void this.sentMessagesStore
+          .appendMessage(teamName, relayMsg)
+          .catch((e: unknown) =>
+            logger.warn(`[${teamName}] sentMessagesStore persist failed: ${e}`)
+          );
         this.teamChangeEmitter?.({
           type: 'inbox',
           teamName,
@@ -2457,7 +2467,32 @@ export class TeamProvisioningService {
             // Persist to disk so replies survive app restart
             void this.sentMessagesStore
               .appendMessage(run.teamName, replyMsg)
-              .catch(() => undefined);
+              .catch((e: unknown) =>
+                logger.warn(`[${run.teamName}] sentMessagesStore persist failed: ${e}`)
+              );
+            this.teamChangeEmitter?.({
+              type: 'inbox',
+              teamName: run.teamName,
+              detail: 'lead-direct-reply',
+            });
+          } else if (rawReply.length > 0) {
+            // Lead responded but only with agent-only content — send generic acknowledgment
+            const fallbackMsg: InboxMessage = {
+              from: leadName,
+              to: 'user',
+              text: '(Message received and processed)',
+              timestamp: nowIso(),
+              read: true,
+              summary: 'Message processed',
+              messageId: `lead-direct-${run.runId}-${Date.now()}`,
+              source: 'lead_process',
+            };
+            this.pushLiveLeadProcessMessage(run.teamName, fallbackMsg);
+            void this.sentMessagesStore
+              .appendMessage(run.teamName, fallbackMsg)
+              .catch((e: unknown) =>
+                logger.warn(`[${run.teamName}] sentMessagesStore persist failed: ${e}`)
+              );
             this.teamChangeEmitter?.({
               type: 'inbox',
               teamName: run.teamName,
@@ -2572,7 +2607,9 @@ export class TeamProvisioningService {
       logger.info(`[${run.teamName}] Launch complete. Process alive for subsequent tasks.`);
 
       // Pick up any direct messages that arrived before/while reconnecting.
-      void this.relayLeadInboxMessages(run.teamName).catch(() => undefined);
+      void this.relayLeadInboxMessages(run.teamName).catch((e: unknown) =>
+        logger.warn(`[${run.teamName}] post-reconnect relay failed: ${e}`)
+      );
       return;
     }
 
@@ -2613,7 +2650,9 @@ export class TeamProvisioningService {
     logger.info(`[${run.teamName}] Provisioning complete. Process alive for subsequent tasks.`);
 
     // Pick up any direct messages that arrived during provisioning.
-    void this.relayLeadInboxMessages(run.teamName).catch(() => undefined);
+    void this.relayLeadInboxMessages(run.teamName).catch((e: unknown) =>
+      logger.warn(`[${run.teamName}] post-provisioning relay failed: ${e}`)
+    );
   }
 
   /**

@@ -440,7 +440,9 @@ function wireFileWatcherEvents(context: ServiceContext): void {
 
       // Auto-relay direct messages to live team lead process (no UI dependency).
       if (teamProvisioningService.isTeamAlive(teamName)) {
-        void teamProvisioningService.relayLeadInboxMessages(teamName).catch(() => undefined);
+        void teamProvisioningService
+          .relayLeadInboxMessages(teamName)
+          .catch((e: unknown) => logger.warn(`[FileWatcher] relay failed for ${teamName}: ${e}`));
       }
 
       // Show native OS notification for new inbox messages (debounced per inbox).

@@ -34,7 +34,10 @@ import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { spawnCli } from '@main/utils/childProcess';
 
 function createFakeChild() {
-  const writeSpy = vi.fn();
+  const writeSpy = vi.fn((_data: unknown, cb?: (err?: Error | null) => void) => {
+    if (typeof cb === 'function') cb(null);
+    return true;
+  });
   const endSpy = vi.fn();
   const child = Object.assign(new EventEmitter(), {
     pid: 12345,

@@ -155,4 +155,175 @@ describe('TeamTaskWriter', () => {
       'Task status update verification failed: 12'
     );
   });
+
+  describe('statusHistory', () => {
+    it('createTask records initial statusHistory entry', async () => {
+      await writer.createTask('my-team', {
+        id: '10',
+        subject: 'New task',
+        status: 'pending',
+        createdBy: 'alice',
+      });
+
+      const writtenPath = '/mock/tasks/my-team/10.json';
+      const persisted = JSON.parse(hoisted.files.get(writtenPath) ?? '{}');
+      expect(persisted.statusHistory).toHaveLength(1);
+      expect(persisted.statusHistory[0]).toMatchObject({
+        from: null,
+        to: 'pending',
+        actor: 'alice',
+      });
+      expect(typeof persisted.statusHistory[0].timestamp).toBe('string');
+    });
+
+    it('createTask with in_progress records initial transition', async () => {
+      await writer.createTask('my-team', {
+        id: '11',
+        subject: 'Start immediately',
+        status: 'in_progress',
+        createdBy: 'bob',
+      });
+
+      const writtenPath = '/mock/tasks/my-team/11.json';
+      const persisted = JSON.parse(hoisted.files.get(writtenPath) ?? '{}');
+      expect(persisted.statusHistory).toHaveLength(1);
+      expect(persisted.statusHistory[0]).toMatchObject({
+        from: null,
+        to: 'in_progress',
+        actor: 'bob',
+      });
+    });
+
+    it('createTask without createdBy omits actor', async () => {
+      await writer.createTask('my-team', {
+        id: '13',
+        subject: 'No author',
+        status: 'pending',
+      });
+
+      const writtenPath = '/mock/tasks/my-team/13.json';
+      const persisted = JSON.parse(hoisted.files.get(writtenPath) ?? '{}');
+      expect(persisted.statusHistory).toHaveLength(1);
+      expect(persisted.statusHistory[0].actor).toBeUndefined();
+    });
+
+    it('updateStatus appends transition to statusHistory', async () => {
+      hoisted.files.set(
+        taskPath,
+        JSON.stringify({
+          id: '12',
+          subject: 'task',
+          status: 'pending',
+          statusHistory: [
+            { from: null, to: 'pending', timestamp: '2024-01-01T00:00:00.000Z', actor: 'user' },
+          ],
+        })
+      );
+
+      await writer.updateStatus('my-team', '12', 'in_progress', 'alice');
+
+      const persisted = JSON.parse(hoisted.files.get(taskPath) ?? '{}');
+      expect(persisted.statusHistory).toHaveLength(2);
+      expect(persisted.statusHistory[1]).toMatchObject({
+        from: 'pending',
+        to: 'in_progress',
+        actor: 'alice',
+      });
+    });
+
+    it('updateStatus works on legacy task without statusHistory', async () => {
+      hoisted.files.set(
+        taskPath,
+        JSON.stringify({
+          id: '12',
+          subject: 'legacy task',
+          status: 'pending',
+        })
+      );
+
+      await writer.updateStatus('my-team', '12', 'in_progress');
+
+      const persisted = JSON.parse(hoisted.files.get(taskPath) ?? '{}');
+      expect(persisted.statusHistory).toHaveLength(1);
+      expect(persisted.statusHistory[0]).toMatchObject({
+        from: 'pending',
+        to: 'in_progress',
+      });
+      expect(persisted.statusHistory[0].actor).toBeUndefined();
+    });
+
+    it('softDelete appends deleted transition', async () => {
+      hoisted.files.set(
+        taskPath,
+        JSON.stringify({
+          id: '12',
+          subject: 'task',
+          status: 'in_progress',
+          statusHistory: [
+            { from: null, to: 'pending', timestamp: '2024-01-01T00:00:00.000Z' },
+            { from: 'pending', to: 'in_progress', timestamp: '2024-01-01T00:01:00.000Z' },
+          ],
+        })
+      );
+
+      await writer.softDelete('my-team', '12', 'user');
+
+      const persisted = JSON.parse(hoisted.files.get(taskPath) ?? '{}');
+      expect(persisted.statusHistory).toHaveLength(3);
+      expect(persisted.statusHistory[2]).toMatchObject({
+        from: 'in_progress',
+        to: 'deleted',
+        actor: 'user',
+      });
+    });
+
+    it('restoreTask appends pending transition', async () => {
+      hoisted.files.set(
+        taskPath,
+        JSON.stringify({
+          id: '12',
+          subject: 'task',
+          status: 'deleted',
+          deletedAt: '2024-01-01T00:02:00.000Z',
+          statusHistory: [
+            { from: null, to: 'pending', timestamp: '2024-01-01T00:00:00.000Z' },
+            { from: 'pending', to: 'deleted', timestamp: '2024-01-01T00:02:00.000Z' },
+          ],
+        })
+      );
+
+      await writer.restoreTask('my-team', '12', 'user');
+
+      const persisted = JSON.parse(hoisted.files.get(taskPath) ?? '{}');
+      expect(persisted.status).toBe('pending');
+      expect(persisted.statusHistory).toHaveLength(3);
+      expect(persisted.statusHistory[2]).toMatchObject({
+        from: 'deleted',
+        to: 'pending',
+        actor: 'user',
+      });
+    });
+
+    it('restoreTask defaults actor to user when not provided', async () => {
+      hoisted.files.set(
+        taskPath,
+        JSON.stringify({
+          id: '12',
+          subject: 'task',
+          status: 'deleted',
+          deletedAt: '2024-01-01T00:02:00.000Z',
+        })
+      );
+
+      await writer.restoreTask('my-team', '12');
+
+      const persisted = JSON.parse(hoisted.files.get(taskPath) ?? '{}');
+      expect(persisted.statusHistory).toHaveLength(1);
+      expect(persisted.statusHistory[0]).toMatchObject({
+        from: 'deleted',
+        to: 'pending',
+        actor: 'user',
+      });
+    });
+  });
 });

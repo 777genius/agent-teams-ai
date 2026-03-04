@@ -94,7 +94,10 @@ function attachAliveRun(
   opts?: { writable?: boolean }
 ): { writeSpy: ReturnType<typeof vi.fn> } {
   const runId = 'run-1';
-  const writeSpy = vi.fn();
+  const writeSpy = vi.fn((_data: unknown, cb?: (err?: Error | null) => void) => {
+    if (typeof cb === 'function') cb(null);
+    return true;
+  });
   const writable = opts?.writable ?? true;
 
   (service as unknown as { activeByTeam: Map<string, string> }).activeByTeam.set(teamName, runId);

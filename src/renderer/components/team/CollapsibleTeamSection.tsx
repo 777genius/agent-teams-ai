@@ -57,15 +57,11 @@ export const CollapsibleTeamSection = ({
   }, [handleNavigate]);
 
   return (
-    <section
-      ref={sectionRef}
-      data-section-id={sectionId}
-      className="min-w-0 overflow-hidden border-b border-[var(--color-border)] pb-3 last:border-b-0"
-    >
-      <div className="relative -mx-4 flex min-h-10 w-full items-stretch py-3">
+    <section ref={sectionRef} data-section-id={sectionId} className="min-w-0">
+      <div className="relative -mx-4 flex min-h-9 w-[calc(100%+2rem)] items-stretch py-1.5">
         <button
           type="button"
-          className="absolute inset-0 z-0 cursor-pointer rounded-md transition-colors hover:bg-[var(--color-surface-raised)]"
+          className={`absolute inset-0 z-0 cursor-pointer transition-colors ${isOpen ? 'rounded-t-md bg-white/[0.07] hover:bg-white/[0.1]' : 'rounded-md bg-white/[0.04] hover:bg-white/[0.08]'}`}
           onClick={() => setOpen((prev) => !prev)}
           aria-label={isOpen ? 'Collapse section' : 'Expand section'}
         />
@@ -97,7 +93,7 @@ export const CollapsibleTeamSection = ({
         </div>
         {action && <div className="relative z-10 flex shrink-0 items-center">{action}</div>}
       </div>
-      {isOpen && <div className="mt-2 min-w-0 overflow-hidden">{children}</div>}
+      {isOpen && <div className="mt-1.5 min-w-0 overflow-x-hidden pb-2 pl-2.5">{children}</div>}
     </section>
   );
 };
