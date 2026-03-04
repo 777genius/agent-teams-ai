@@ -47,7 +47,7 @@ import { HttpServer } from './services/infrastructure/HttpServer';
 import { TeamInboxReader } from './services/team/TeamInboxReader';
 import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
 import { getAppIconPath } from './utils/appIcon';
-import { getProjectsBasePath, getTodosBasePath } from './utils/pathDecoder';
+import { getProjectsBasePath, getTeamsBasePath, getTodosBasePath } from './utils/pathDecoder';
 import {
   CliInstallerService,
   configManager,
@@ -191,6 +191,15 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
   // Check global toggle
   const config = configManager.getConfig();
   if (!config.notifications.enabled) return;
+
+  // Skip orphaned team directories without config.json (e.g., "default").
+  // Claude Code may write to these when its internal teamContext is lost after session resume.
+  // Our stdout capture in TeamProvisioningService already persists these messages under the
+  // correct team name via sentMessages.json, so inbox notifications from orphaned dirs
+  // would be duplicates with a wrong team name.
+  if (!existsSync(join(getTeamsBasePath(), teamName, 'config.json'))) {
+    return; // No config.json → orphaned team dir, skip notification
+  }
 
   // detail is like "inboxes/carol.json" — extract member name
   const match = /^inboxes\/(.+)\.json$/.exec(detail);
