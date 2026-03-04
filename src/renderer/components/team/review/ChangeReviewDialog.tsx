@@ -122,6 +122,7 @@ export const ChangeReviewDialog = ({
   const lastHunkActionAtRef = useRef<Record<string, number>>({});
   const hunkDecisionUndoStackRef = useRef<Record<string, number[]>>({});
   const newFileApplyInFlightRef = useRef(new Set<string>());
+  const lastFileActionAtRef = useRef<number>(0);
   const removedNewFileUndoStackRef = useRef<
     { file: FileChangeSummary; index: number; restoreContent: string; removedAt: number }[]
   >([]);
@@ -237,9 +238,10 @@ export const ChangeReviewDialog = ({
     memberName,
   ]);
 
-  // Per-new-file accept/reject (Cursor-style)
-  const handleAcceptNewFile = useCallback(
+  // File-level accept/reject (Cursor-style)
+  const handleAcceptFile = useCallback(
     (filePath: string) => {
+      lastFileActionAtRef.current = Date.now();
       acceptAllFile(filePath);
       const view = editorViewMapRef.current.get(filePath);
       if (view) {
@@ -249,46 +251,52 @@ export const ChangeReviewDialog = ({
     [acceptAllFile]
   );
 
-  const handleRejectNewFile = useCallback(
+  const handleRejectFile = useCallback(
     async (filePath: string) => {
       if (newFileApplyInFlightRef.current.has(filePath)) return;
       newFileApplyInFlightRef.current.add(filePath);
       try {
+        const file = activeChangeSet?.files.find((f) => f.filePath === filePath);
+        const isNew = file?.isNewFile ?? false;
+
         // Mark rejected in store + update CM view immediately for feedback
+        lastFileActionAtRef.current = Date.now();
         rejectAllFile(filePath);
         const view = editorViewMapRef.current.get(filePath);
         if (view) {
           requestAnimationFrame(() => rejectAllChunks(view));
         }
 
-        // Always apply immediately: rejecting a NEW file means deleting it from disk.
-        const file = activeChangeSet?.files.find((f) => f.filePath === filePath);
-        const isNew = file?.isNewFile ?? false;
-        if (!isNew) return;
+        if (REVIEW_INSTANT_APPLY) {
+          // Reject a whole file should apply immediately (restore original on disk),
+          // and NEW-file reject should delete it.
+          const result = await applySingleFileDecision(teamName, filePath, taskId, memberName);
 
-        const result = await applySingleFileDecision(teamName, filePath, taskId, memberName);
-        const hasErrorForFile = !!result?.errors.some((e) => e.filePath === filePath);
-        if (result && !hasErrorForFile && file) {
-          // Keep undo payload so Ctrl/Cmd+Z can restore the file (and re-add it to the review list).
-          const cachedModified = fileContents[filePath]?.modifiedFullContent;
-          const restoreContent =
-            cachedModified ??
-            (() => {
-              const writeSnippets = file.snippets.filter(
-                (s) => !s.isError && (s.type === 'write-new' || s.type === 'write-update')
-              );
-              if (writeSnippets.length === 0) return '';
-              return writeSnippets[writeSnippets.length - 1].newString;
-            })();
-          const index = activeChangeSet?.files.findIndex((f) => f.filePath === filePath) ?? 0;
-          removedNewFileUndoStackRef.current.push({
-            file,
-            index: Math.max(0, index),
-            restoreContent,
-            removedAt: Date.now(),
-          });
-          lastNewFileRemoveAtRef.current = Date.now();
-          removeReviewFile(filePath);
+          if (isNew) {
+            const hasErrorForFile = !!result?.errors.some((e) => e.filePath === filePath);
+            if (result && !hasErrorForFile && file) {
+              // Keep undo payload so Ctrl/Cmd+Z can restore the file (and re-add it to the review list).
+              const cachedModified = fileContents[filePath]?.modifiedFullContent;
+              const restoreContent =
+                cachedModified ??
+                (() => {
+                  const writeSnippets = file.snippets.filter(
+                    (s) => !s.isError && (s.type === 'write-new' || s.type === 'write-update')
+                  );
+                  if (writeSnippets.length === 0) return '';
+                  return writeSnippets[writeSnippets.length - 1].newString;
+                })();
+              const index = activeChangeSet?.files.findIndex((f) => f.filePath === filePath) ?? 0;
+              removedNewFileUndoStackRef.current.push({
+                file,
+                index: Math.max(0, index),
+                restoreContent,
+                removedAt: Date.now(),
+              });
+              lastNewFileRemoveAtRef.current = Date.now();
+              removeReviewFile(filePath);
+            }
+          }
         }
       } finally {
         newFileApplyInFlightRef.current.delete(filePath);
@@ -622,7 +630,11 @@ export const ChangeReviewDialog = ({
           (max, v) => Math.max(max, v),
           0
         );
-        const lastReviewActionAt = Math.max(lastBulkActionAtRef.current, lastHunkAt);
+        const lastReviewActionAt = Math.max(
+          lastBulkActionAtRef.current,
+          lastHunkAt,
+          lastFileActionAtRef.current
+        );
         const newFileWasLastAction = lastNewFileRemoveAtRef.current >= lastReviewActionAt;
         const isInEditor = !!document.activeElement?.closest('.cm-editor');
         const lastViewConnected = !!lastFocusedEditorRef.current?.dom.isConnected;
@@ -949,8 +961,8 @@ export const ChangeReviewDialog = ({
                 onContentChanged={handleContentChanged}
                 onDiscard={handleDiscardFile}
                 onSave={handleSaveFile}
-                onAcceptNewFile={handleAcceptNewFile}
-                onRejectNewFile={handleRejectNewFile}
+                onAcceptFile={handleAcceptFile}
+                onRejectFile={handleRejectFile}
                 onRestoreMissingFile={handleRestoreMissingFile}
                 onVisibleFileChange={handleVisibleFileChange}
                 scrollContainerRef={scrollContainerRef}

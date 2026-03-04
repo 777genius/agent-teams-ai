@@ -14,6 +14,7 @@ import {
   Eye,
   Folder,
   FolderOpen,
+  Search,
   X as XIcon,
 } from 'lucide-react';
 
@@ -255,7 +256,63 @@ export const ReviewFileTree = ({
   const hunkDecisions = useStore((state) => state.hunkDecisions);
   const fileDecisions = useStore((state) => state.fileDecisions);
   const fileChunkCounts = useStore((state) => state.fileChunkCounts);
-  const tree = useMemo(() => buildTree(files, (f) => f.relativePath), [files]);
+  const [query, setQuery] = useState('');
+  const [filterUnresolved, setFilterUnresolved] = useState(false);
+  const [filterRejected, setFilterRejected] = useState(false);
+  const [filterNew, setFilterNew] = useState(false);
+
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const filteredFiles = useMemo(() => {
+    const hasAnyFilter =
+      filterUnresolved || filterRejected || filterNew || normalizedQuery.length > 0;
+    if (!hasAnyFilter) return files;
+
+    const matchesQuery = (f: FileChangeSummary): boolean => {
+      if (!normalizedQuery) return true;
+      const name = f.relativePath.split(/[\\/]/).pop() ?? f.relativePath;
+      return (
+        f.relativePath.toLowerCase().includes(normalizedQuery) ||
+        f.filePath.toLowerCase().includes(normalizedQuery) ||
+        name.toLowerCase().includes(normalizedQuery)
+      );
+    };
+
+    const hasAnyRejected = (f: FileChangeSummary): boolean => {
+      if (fileDecisions[f.filePath] === 'rejected') return true;
+      const count = getFileHunkCount(f.filePath, f.snippets.length, fileChunkCounts);
+      for (let i = 0; i < count; i++) {
+        if (hunkDecisions[`${f.filePath}:${i}`] === 'rejected') return true;
+      }
+      return false;
+    };
+
+    return files.filter((f) => {
+      if (!matchesQuery(f)) return false;
+
+      if (filterNew && !f.isNewFile) return false;
+
+      if (filterUnresolved) {
+        const status = getFileStatus(f, hunkDecisions, fileDecisions, fileChunkCounts);
+        if (!(status === 'pending' || status === 'mixed')) return false;
+      }
+
+      if (filterRejected && !hasAnyRejected(f)) return false;
+
+      return true;
+    });
+  }, [
+    files,
+    normalizedQuery,
+    filterUnresolved,
+    filterRejected,
+    filterNew,
+    hunkDecisions,
+    fileDecisions,
+    fileChunkCounts,
+  ]);
+
+  const tree = useMemo(() => buildTree(filteredFiles, (f) => f.relativePath), [filteredFiles]);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => new Set());
 
   const toggleFolder = useCallback((fullPath: string) => {
@@ -300,23 +357,94 @@ export const ReviewFileTree = ({
   }
 
   return (
-    <div className="py-1">
-      {sortTreeNodes(tree).map((node) => (
-        <TreeItem
-          key={node.fullPath}
-          node={node}
-          selectedFilePath={selectedFilePath}
-          activeFilePath={activeFilePath}
-          onSelectFile={onSelectFile}
-          depth={0}
-          hunkDecisions={hunkDecisions}
-          fileDecisions={fileDecisions}
-          fileChunkCounts={fileChunkCounts}
-          viewedSet={viewedSet}
-          collapsedFolders={collapsedFolders}
-          onToggleFolder={toggleFolder}
-        />
-      ))}
+    <div className="flex h-full flex-col">
+      <div className="border-b border-border p-2">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-text-muted" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search files…"
+            className="h-8 w-full rounded border border-border bg-surface px-7 text-xs text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          />
+        </div>
+
+        <div className="mt-2 flex flex-wrap gap-1">
+          <button
+            type="button"
+            onClick={() => setFilterUnresolved((v) => !v)}
+            className={cn(
+              'rounded px-2 py-1 text-[11px] font-medium transition-colors',
+              filterUnresolved
+                ? 'bg-blue-500/20 text-blue-300'
+                : 'bg-surface-raised text-text-muted hover:text-text'
+            )}
+          >
+            Unresolved
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterRejected((v) => !v)}
+            className={cn(
+              'rounded px-2 py-1 text-[11px] font-medium transition-colors',
+              filterRejected
+                ? 'bg-red-500/20 text-red-300'
+                : 'bg-surface-raised text-text-muted hover:text-text'
+            )}
+          >
+            Rejected
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterNew((v) => !v)}
+            className={cn(
+              'rounded px-2 py-1 text-[11px] font-medium transition-colors',
+              filterNew
+                ? 'bg-green-500/20 text-green-300'
+                : 'bg-surface-raised text-text-muted hover:text-text'
+            )}
+          >
+            New
+          </button>
+          {(filterUnresolved || filterRejected || filterNew || normalizedQuery.length > 0) && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('');
+                setFilterUnresolved(false);
+                setFilterRejected(false);
+                setFilterNew(false);
+              }}
+              className="ml-auto rounded px-2 py-1 text-[11px] font-medium text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {filteredFiles.length === 0 ? (
+        <div className="flex-1 p-4 text-center text-xs text-text-muted">No matching files</div>
+      ) : (
+        <div className="flex-1 overflow-y-auto py-1">
+          {sortTreeNodes(tree).map((node) => (
+            <TreeItem
+              key={node.fullPath}
+              node={node}
+              selectedFilePath={selectedFilePath}
+              activeFilePath={activeFilePath}
+              onSelectFile={onSelectFile}
+              depth={0}
+              hunkDecisions={hunkDecisions}
+              fileDecisions={fileDecisions}
+              fileChunkCounts={fileChunkCounts}
+              viewedSet={viewedSet}
+              collapsedFolders={collapsedFolders}
+              onToggleFolder={toggleFolder}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

@@ -38,8 +38,8 @@ interface ContinuousScrollViewProps {
   onContentChanged: (filePath: string, content: string) => void;
   onDiscard: (filePath: string) => void;
   onSave: (filePath: string) => void;
-  onAcceptNewFile: (filePath: string) => void;
-  onRejectNewFile: (filePath: string) => void;
+  onAcceptFile: (filePath: string) => void;
+  onRejectFile: (filePath: string) => void;
   onRestoreMissingFile?: (filePath: string, content: string) => void;
   onVisibleFileChange: (filePath: string) => void;
   scrollContainerRef: React.RefObject<HTMLDivElement>;
@@ -74,8 +74,8 @@ export const ContinuousScrollView = ({
   onContentChanged,
   onDiscard,
   onSave,
-  onAcceptNewFile,
-  onRejectNewFile,
+  onAcceptFile,
+  onRejectFile,
   onRestoreMissingFile,
   onVisibleFileChange,
   scrollContainerRef,
@@ -228,8 +228,8 @@ export const ContinuousScrollView = ({
               onToggleCollapse={handleToggleCollapse}
               onDiscard={onDiscard}
               onSave={onSave}
-              onAcceptNewFile={onAcceptNewFile}
-              onRejectNewFile={onRejectNewFile}
+              onAcceptFile={onAcceptFile}
+              onRejectFile={onRejectFile}
               onRestoreMissingFile={onRestoreMissingFile}
             />
 

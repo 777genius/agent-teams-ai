@@ -26,8 +26,8 @@ interface FileSectionHeaderProps {
   onDiscard: (filePath: string) => void;
   onSave: (filePath: string) => void;
   onRestoreMissingFile?: (filePath: string, content: string) => void;
-  onAcceptNewFile?: (filePath: string) => void;
-  onRejectNewFile?: (filePath: string) => void;
+  onAcceptFile?: (filePath: string) => void;
+  onRejectFile?: (filePath: string) => void;
 }
 
 export const FileSectionHeader = ({
@@ -41,8 +41,8 @@ export const FileSectionHeader = ({
   onDiscard,
   onSave,
   onRestoreMissingFile,
-  onAcceptNewFile,
-  onRejectNewFile,
+  onAcceptFile,
+  onRejectFile,
 }: FileSectionHeaderProps): React.ReactElement => {
   const isMissingOnDisk = fileContent?.contentSource === 'unavailable';
   const restoreContent =
@@ -145,11 +145,11 @@ export const FileSectionHeader = ({
       )}
 
       <div className="ml-auto flex items-center gap-1.5" data-no-collapse>
-        {file.isNewFile && (onAcceptNewFile || onRejectNewFile) && (
+        {(onAcceptFile || onRejectFile) && (
           <div className="mr-1 flex items-center gap-1.5">
-            {onAcceptNewFile && (
+            {onAcceptFile && (
               <button
-                onClick={() => onAcceptNewFile(file.filePath)}
+                onClick={() => onAcceptFile(file.filePath)}
                 disabled={applying}
                 className={[
                   'rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50',
@@ -161,9 +161,9 @@ export const FileSectionHeader = ({
                 Accept
               </button>
             )}
-            {onRejectNewFile && (
+            {onRejectFile && (
               <button
-                onClick={() => onRejectNewFile(file.filePath)}
+                onClick={() => onRejectFile(file.filePath)}
                 disabled={applying}
                 className={[
                   'rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50',
