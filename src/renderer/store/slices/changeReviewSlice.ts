@@ -131,6 +131,11 @@ export interface ChangeReviewSlice {
     file: FileChangeSummary,
     options?: { index?: number; content?: FileChangeWithContent }
   ) => void;
+  /**
+   * Clear in-memory review state for a single file after applying changes to disk.
+   * Prevents stale decisions from being re-applied later and forces fresh content resolve.
+   */
+  clearReviewStateForFile: (filePath: string) => void;
   invalidateChangeStats: (teamName: string) => void;
 
   // Editable diff actions
@@ -885,6 +890,44 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         selectedReviewFilePath: s.selectedReviewFilePath ?? file.filePath,
         fileContents: nextFileContents,
         fileContentsLoading: nextFileContentsLoading,
+      };
+    });
+  },
+
+  clearReviewStateForFile: (filePath: string) => {
+    set((s) => {
+      const nextHunkDecisions = { ...s.hunkDecisions };
+      const prefix = `${filePath}:`;
+      for (const key of Object.keys(nextHunkDecisions)) {
+        if (key.startsWith(prefix) && nextHunkDecisions[key] === 'rejected') {
+          delete nextHunkDecisions[key];
+        }
+      }
+
+      const nextFileDecisions = { ...s.fileDecisions };
+      if (nextFileDecisions[filePath] === 'rejected') {
+        delete nextFileDecisions[filePath];
+      }
+
+      const nextFileChunkCounts = { ...s.fileChunkCounts };
+      delete nextFileChunkCounts[filePath];
+
+      const nextFileContents = { ...s.fileContents };
+      delete nextFileContents[filePath];
+
+      const nextFileContentsLoading = { ...s.fileContentsLoading };
+      delete nextFileContentsLoading[filePath];
+
+      const nextEditedContents = { ...s.editedContents };
+      delete nextEditedContents[filePath];
+
+      return {
+        hunkDecisions: nextHunkDecisions,
+        fileDecisions: nextFileDecisions,
+        fileChunkCounts: nextFileChunkCounts,
+        fileContents: nextFileContents,
+        fileContentsLoading: nextFileContentsLoading,
+        editedContents: nextEditedContents,
       };
     });
   },

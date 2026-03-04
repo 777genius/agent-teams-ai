@@ -20,10 +20,16 @@ import {
 
 import type { TreeNode } from '@renderer/utils/fileTreeBuilder';
 import type { HunkDecision } from '@shared/types';
+import type { FileChangeWithContent } from '@shared/types';
 import type { FileChangeSummary } from '@shared/types/review';
 
 interface ReviewFileTreeProps {
   files: FileChangeSummary[];
+  fileContents?: Record<string, FileChangeWithContent>;
+  pathChangeLabels?: Record<
+    string,
+    { kind: 'deleted' } | { kind: 'moved' | 'renamed'; direction: 'from' | 'to'; otherPath: string }
+  >;
   selectedFilePath: string | null;
   onSelectFile: (filePath: string) => void;
   viewedSet?: Set<string>;
@@ -108,6 +114,7 @@ const TreeItem = ({
   viewedSet,
   collapsedFolders,
   onToggleFolder,
+  pathChangeLabels,
 }: {
   node: TreeNode<FileChangeSummary>;
   selectedFilePath: string | null;
@@ -120,11 +127,13 @@ const TreeItem = ({
   viewedSet?: Set<string>;
   collapsedFolders: Set<string>;
   onToggleFolder: (fullPath: string) => void;
+  pathChangeLabels?: ReviewFileTreeProps['pathChangeLabels'];
 }): JSX.Element => {
   if (node.isFile && node.data) {
     const isSelected = node.data.filePath === selectedFilePath;
     const isActive = node.data.filePath === activeFilePath && !isSelected;
     const status = getFileStatus(node.data, hunkDecisions, fileDecisions, fileChunkCounts);
+    const label = pathChangeLabels?.[node.data.filePath];
     return (
       <button
         data-tree-file={node.data.filePath}
@@ -162,6 +171,16 @@ const TreeItem = ({
         {node.data.isNewFile && (
           <span className="shrink-0 rounded bg-green-500/20 px-1.5 py-0.5 text-[10px] font-medium text-green-400">
             new
+          </span>
+        )}
+        {label?.kind === 'deleted' && (
+          <span className="shrink-0 rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-300">
+            deleted
+          </span>
+        )}
+        {label && label.kind !== 'deleted' && (
+          <span className="shrink-0 rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-medium text-purple-300">
+            {label.kind}
           </span>
         )}
         <span className="ml-1 flex shrink-0 items-center gap-1">
@@ -210,6 +229,7 @@ const TreeItem = ({
             viewedSet={viewedSet}
             collapsedFolders={collapsedFolders}
             onToggleFolder={onToggleFolder}
+            pathChangeLabels={pathChangeLabels}
           />
         ))}
     </div>
@@ -248,6 +268,7 @@ function getAncestorFolderPaths(tree: TreeNode<FileChangeSummary>[], filePath: s
 
 export const ReviewFileTree = ({
   files,
+  pathChangeLabels,
   selectedFilePath,
   onSelectFile,
   viewedSet,
@@ -441,6 +462,7 @@ export const ReviewFileTree = ({
               viewedSet={viewedSet}
               collapsedFolders={collapsedFolders}
               onToggleFolder={toggleFolder}
+              pathChangeLabels={pathChangeLabels}
             />
           ))}
         </div>

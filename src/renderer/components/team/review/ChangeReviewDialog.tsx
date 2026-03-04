@@ -83,6 +83,7 @@ export const ChangeReviewDialog = ({
     applySingleFileDecision,
     removeReviewFile,
     addReviewFile,
+    clearReviewStateForFile,
     editedContents,
     updateEditedContent,
     discardFileEdits,
@@ -98,11 +99,33 @@ export const ChangeReviewDialog = ({
     hunkContextHashesByFile,
   } = useStore();
 
+  // Build scope keys (pure values — safe to compute before hooks that depend on them)
+  const scopeKey = mode === 'task' ? `task:${taskId ?? ''}` : `agent:${memberName ?? ''}`;
+  // Filesystem-safe: use `-` instead of `:` for decision persistence key
+  const decisionScopeKey = mode === 'task' ? `task-${taskId ?? ''}` : `agent-${memberName ?? ''}`;
+
   // Active file from scroll-spy (replaces selectedReviewFilePath for continuous scroll)
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
   const [autoViewed, setAutoViewed] = useState(true);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [discardCounters, setDiscardCounters] = useState<Record<string, number>>({});
+  const collapseStorageKey = useMemo(
+    () => `review:collapsed:${teamName}:${decisionScopeKey}`,
+    [teamName, decisionScopeKey]
+  );
+  const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set<string>();
+    try {
+      const raw = window.localStorage.getItem(collapseStorageKey);
+      const parsed = raw ? (JSON.parse(raw) as unknown) : null;
+      if (Array.isArray(parsed)) {
+        return new Set(parsed.filter((v): v is string => typeof v === 'string'));
+      }
+    } catch {
+      // ignore
+    }
+    return new Set<string>();
+  });
 
   // Selection menu state
   const [selectionInfo, setSelectionInfo] = useState<EditorSelectionInfo | null>(null);
@@ -148,17 +171,91 @@ export const ChangeReviewDialog = ({
     scrollContainerRef,
   });
 
-  // Build scope key for viewed storage
-  const scopeKey = mode === 'task' ? `task:${taskId ?? ''}` : `agent:${memberName ?? ''}`;
-
-  // Build scope key for decision persistence (filesystem-safe: use `-` instead of `:`)
-  const decisionScopeKey = mode === 'task' ? `task-${taskId ?? ''}` : `agent-${memberName ?? ''}`;
-
   // File paths for viewed tracking
   const allFilePaths = useMemo(
     () => (activeChangeSet?.files ?? []).map((f) => f.filePath),
     [activeChangeSet]
   );
+
+  const pathChangeLabels = useMemo(() => {
+    if (!activeChangeSet)
+      return {} as Record<
+        string,
+        | { kind: 'deleted' }
+        | { kind: 'moved' | 'renamed'; direction: 'from' | 'to'; otherPath: string }
+      >;
+
+    const normalize = (s: string): string =>
+      s.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd();
+    const hashFull = (s: string): string => {
+      // DJB2 (full string) — good enough for heuristic rename/move pairing
+      let h = 5381;
+      for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+      return (h >>> 0).toString(36);
+    };
+    const baseName = (p: string): string => p.split(/[\\/]/).filter(Boolean).pop() ?? p;
+
+    type Label =
+      | { kind: 'deleted' }
+      | { kind: 'moved' | 'renamed'; direction: 'from' | 'to'; otherPath: string };
+
+    const out: Record<string, Label> = {};
+
+    const deletedCandidates: { file: FileChangeSummary; hash: string }[] = [];
+    const newCandidates: { file: FileChangeSummary; hash: string }[] = [];
+
+    for (const f of activeChangeSet.files) {
+      const content = fileContents[f.filePath];
+      if (!content) continue;
+
+      const modified = content.modifiedFullContent;
+      const original = content.originalFullContent;
+
+      if (!f.isNewFile && modified == null) {
+        if (original != null) {
+          deletedCandidates.push({ file: f, hash: hashFull(normalize(original)) });
+        } else {
+          out[f.filePath] = { kind: 'deleted' };
+        }
+      }
+
+      if (f.isNewFile && modified != null) {
+        newCandidates.push({ file: f, hash: hashFull(normalize(modified)) });
+      }
+    }
+
+    const deletedByHash = new Map<string, { file: FileChangeSummary; count: number }>();
+    for (const d of deletedCandidates) {
+      const prev = deletedByHash.get(d.hash);
+      deletedByHash.set(d.hash, { file: d.file, count: (prev?.count ?? 0) + 1 });
+    }
+
+    const usedDeleted = new Set<string>();
+    for (const n of newCandidates) {
+      const entry = deletedByHash.get(n.hash);
+      if (!entry) continue;
+      if (entry.count !== 1) continue; // ambiguous
+      const oldFile = entry.file;
+      if (usedDeleted.has(oldFile.filePath)) continue;
+      usedDeleted.add(oldFile.filePath);
+
+      const oldName = baseName(oldFile.relativePath);
+      const newName = baseName(n.file.relativePath);
+      const kind: 'moved' | 'renamed' =
+        oldName === newName && oldFile.relativePath !== n.file.relativePath ? 'moved' : 'renamed';
+
+      out[n.file.filePath] = { kind, direction: 'from', otherPath: oldFile.relativePath };
+      out[oldFile.filePath] = { kind, direction: 'to', otherPath: n.file.relativePath };
+    }
+
+    for (const d of deletedCandidates) {
+      if (!usedDeleted.has(d.file.filePath) && !(d.file.filePath in out)) {
+        out[d.file.filePath] = { kind: 'deleted' };
+      }
+    }
+
+    return out;
+  }, [activeChangeSet, fileContents]);
 
   const {
     viewedSet,
@@ -296,6 +393,15 @@ export const ChangeReviewDialog = ({
               lastNewFileRemoveAtRef.current = Date.now();
               removeReviewFile(filePath);
             }
+          } else {
+            const hasErrorForFile = !!result?.errors.some((e) => e.filePath === filePath);
+            if (result && !hasErrorForFile) {
+              // Disk state is now authoritative. Clear stale decisions/cache so reopening
+              // doesn't try to re-apply and the diff can re-resolve from disk.
+              clearReviewStateForFile(filePath);
+              setDiscardCounters((prev) => ({ ...prev, [filePath]: (prev[filePath] ?? 0) + 1 }));
+              void fetchFileContent(teamName, memberName, filePath);
+            }
           }
         }
       } finally {
@@ -311,6 +417,8 @@ export const ChangeReviewDialog = ({
       memberName,
       removeReviewFile,
       fileContents,
+      clearReviewStateForFile,
+      fetchFileContent,
     ]
   );
 
@@ -336,10 +444,25 @@ export const ChangeReviewDialog = ({
       }
       hunkDecisionUndoStackRef.current[filePath].push(originalIndex);
       if (REVIEW_INSTANT_APPLY) {
-        void applySingleFileDecision(teamName, filePath, taskId, memberName);
+        void applySingleFileDecision(teamName, filePath, taskId, memberName).then((result) => {
+          const hasErrorForFile = !!result?.errors.some((e) => e.filePath === filePath);
+          if (result && !hasErrorForFile) {
+            clearReviewStateForFile(filePath);
+            setDiscardCounters((prev) => ({ ...prev, [filePath]: (prev[filePath] ?? 0) + 1 }));
+            void fetchFileContent(teamName, memberName, filePath);
+          }
+        });
       }
     },
-    [setHunkDecision, applySingleFileDecision, teamName, taskId, memberName]
+    [
+      setHunkDecision,
+      applySingleFileDecision,
+      teamName,
+      taskId,
+      memberName,
+      clearReviewStateForFile,
+      fetchFileContent,
+    ]
   );
 
   const handleContentChanged = useCallback(
@@ -489,6 +612,42 @@ export const ChangeReviewDialog = ({
     (filePath, fallbackSnippetsLength) =>
       getFileHunkCount(filePath, fallbackSnippetsLength, fileChunkCounts)
   );
+
+  const toggleCollapsedFile = useCallback((filePath: string) => {
+    setCollapsedFiles((prev) => {
+      const next = new Set(prev);
+      if (next.has(filePath)) next.delete(filePath);
+      else next.add(filePath);
+      return next;
+    });
+  }, []);
+
+  // Persist collapsed state (best-effort)
+  useEffect(() => {
+    if (!open) return;
+    if (typeof window === 'undefined') return;
+    const id = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(collapseStorageKey, JSON.stringify([...collapsedFiles]));
+      } catch {
+        // ignore
+      }
+    }, 200);
+    return () => window.clearTimeout(id);
+  }, [open, collapseStorageKey, collapsedFiles]);
+
+  // Prune collapsed entries to only current files to avoid stale growth
+  useEffect(() => {
+    if (!activeChangeSet) return;
+    const allowed = new Set(activeChangeSet.files.map((f) => f.filePath));
+    setCollapsedFiles((prev) => {
+      const next = new Set<string>();
+      for (const fp of prev) {
+        if (allowed.has(fp)) next.add(fp);
+      }
+      return next.size === prev.size ? prev : next;
+    });
+  }, [activeChangeSet]);
 
   // Load data on open
   useEffect(() => {
@@ -902,6 +1061,8 @@ export const ChangeReviewDialog = ({
             <div className="w-64 shrink-0 overflow-y-auto border-r border-border bg-surface-sidebar">
               <ReviewFileTree
                 files={activeChangeSet.files}
+                fileContents={fileContents}
+                pathChangeLabels={pathChangeLabels}
                 selectedFilePath={null}
                 onSelectFile={handleTreeFileClick}
                 viewedSet={viewedSet}
@@ -964,6 +1125,9 @@ export const ChangeReviewDialog = ({
                 onAcceptFile={handleAcceptFile}
                 onRejectFile={handleRejectFile}
                 onRestoreMissingFile={handleRestoreMissingFile}
+                pathChangeLabels={pathChangeLabels}
+                collapsedFiles={collapsedFiles}
+                onToggleCollapse={toggleCollapsedFile}
                 onVisibleFileChange={handleVisibleFileChange}
                 scrollContainerRef={scrollContainerRef}
                 editorViewMapRef={editorViewMapRef}

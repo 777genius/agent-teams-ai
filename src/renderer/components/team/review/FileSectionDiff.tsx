@@ -93,7 +93,7 @@ export const FileSectionDiff = ({
     })();
 
   const resolvedOriginal = fileContent?.originalFullContent ?? null;
-  const isMissingOnDisk = fileContent?.contentSource === 'unavailable';
+  const isMissingOnDisk = fileContent ? fileContent.modifiedFullContent == null : false;
 
   // Show CodeMirror only when we have a trustworthy original baseline:
   // - new files: original is legitimately empty

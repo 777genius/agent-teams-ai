@@ -19,6 +19,9 @@ interface FileSectionHeaderProps {
   file: FileChangeSummary;
   fileContent: FileChangeWithContent | null;
   fileDecision: HunkDecision | undefined;
+  pathChangeLabel?:
+    | { kind: 'deleted' }
+    | { kind: 'moved' | 'renamed'; direction: 'from' | 'to'; otherPath: string };
   hasEdits: boolean;
   applying: boolean;
   isCollapsed: boolean;
@@ -34,6 +37,7 @@ export const FileSectionHeader = ({
   file,
   fileContent,
   fileDecision,
+  pathChangeLabel,
   hasEdits,
   applying,
   isCollapsed,
@@ -44,7 +48,8 @@ export const FileSectionHeader = ({
   onAcceptFile,
   onRejectFile,
 }: FileSectionHeaderProps): React.ReactElement => {
-  const isMissingOnDisk = fileContent?.contentSource === 'unavailable';
+  const isMissingOnDisk = fileContent ? fileContent.modifiedFullContent == null : false;
+  const isPreviewOnly = isMissingOnDisk || fileContent?.contentSource === 'unavailable';
   const restoreContent =
     fileContent?.modifiedFullContent ??
     (() => {
@@ -54,8 +59,7 @@ export const FileSectionHeader = ({
       if (writeSnippets.length === 0) return null;
       return writeSnippets[writeSnippets.length - 1].newString;
     })();
-  const canRestore =
-    !!onRestoreMissingFile && isMissingOnDisk && !hasEdits && restoreContent != null;
+  const canRestore = !!onRestoreMissingFile && isPreviewOnly && !hasEdits && restoreContent != null;
 
   const handleHeaderClick = (e: React.MouseEvent): void => {
     // Don't collapse when clicking action buttons
@@ -89,22 +93,41 @@ export const FileSectionHeader = ({
         </span>
       )}
 
+      {pathChangeLabel?.kind === 'deleted' && (
+        <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] text-red-300">
+          DELETED
+        </span>
+      )}
+
+      {pathChangeLabel && pathChangeLabel.kind !== 'deleted' && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] text-purple-300">
+              {pathChangeLabel.kind.toUpperCase()}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-xs">
+            {pathChangeLabel.direction === 'from' ? 'From' : 'To'} {pathChangeLabel.otherPath}
+          </TooltipContent>
+        </Tooltip>
+      )}
+
       {fileContent?.contentSource && (
         <Tooltip>
           <TooltipTrigger asChild>
             <span
               className={[
                 'rounded px-1.5 py-0.5 text-[10px]',
-                fileContent.contentSource === 'unavailable'
-                  ? 'bg-red-500/20 text-red-300'
-                  : 'bg-surface-raised text-text-muted',
+                isPreviewOnly ? 'bg-red-500/20 text-red-300' : 'bg-surface-raised text-text-muted',
               ].join(' ')}
             >
-              {CONTENT_SOURCE_LABELS[fileContent.contentSource] ?? fileContent.contentSource}
+              {isPreviewOnly
+                ? 'Missing on disk'
+                : (CONTENT_SOURCE_LABELS[fileContent.contentSource] ?? fileContent.contentSource)}
             </span>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-xs">
-            {fileContent.contentSource === 'unavailable' ? (
+            {isPreviewOnly ? (
               <div className="space-y-1">
                 <div className="font-medium text-text">File is missing on disk</div>
                 <div className="text-text-muted">
@@ -148,32 +171,54 @@ export const FileSectionHeader = ({
         {(onAcceptFile || onRejectFile) && (
           <div className="mr-1 flex items-center gap-1.5">
             {onAcceptFile && (
-              <button
-                onClick={() => onAcceptFile(file.filePath)}
-                disabled={applying}
-                className={[
-                  'rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50',
-                  fileDecision === 'accepted'
-                    ? 'bg-green-500/25 text-green-300'
-                    : 'bg-green-500/15 text-green-400 hover:bg-green-500/25',
-                ].join(' ')}
-              >
-                Accept
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <button
+                      onClick={() => onAcceptFile(file.filePath)}
+                      disabled={applying || isPreviewOnly}
+                      className={[
+                        'rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50',
+                        fileDecision === 'accepted'
+                          ? 'bg-green-500/25 text-green-300'
+                          : 'bg-green-500/15 text-green-400 hover:bg-green-500/25',
+                      ].join(' ')}
+                    >
+                      Accept
+                    </button>
+                  </span>
+                </TooltipTrigger>
+                {isPreviewOnly && (
+                  <TooltipContent side="bottom">
+                    Accept/Reject is disabled while the file is missing on disk.
+                  </TooltipContent>
+                )}
+              </Tooltip>
             )}
             {onRejectFile && (
-              <button
-                onClick={() => onRejectFile(file.filePath)}
-                disabled={applying}
-                className={[
-                  'rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50',
-                  fileDecision === 'rejected'
-                    ? 'bg-red-500/25 text-red-300'
-                    : 'bg-red-500/15 text-red-400 hover:bg-red-500/25',
-                ].join(' ')}
-              >
-                Reject
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <button
+                      onClick={() => onRejectFile(file.filePath)}
+                      disabled={applying || isPreviewOnly}
+                      className={[
+                        'rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50',
+                        fileDecision === 'rejected'
+                          ? 'bg-red-500/25 text-red-300'
+                          : 'bg-red-500/15 text-red-400 hover:bg-red-500/25',
+                      ].join(' ')}
+                    >
+                      Reject
+                    </button>
+                  </span>
+                </TooltipTrigger>
+                {isPreviewOnly && (
+                  <TooltipContent side="bottom">
+                    Accept/Reject is disabled while the file is missing on disk.
+                  </TooltipContent>
+                )}
+              </Tooltip>
             )}
           </div>
         )}

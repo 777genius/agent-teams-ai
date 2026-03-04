@@ -41,6 +41,13 @@ interface ContinuousScrollViewProps {
   onAcceptFile: (filePath: string) => void;
   onRejectFile: (filePath: string) => void;
   onRestoreMissingFile?: (filePath: string, content: string) => void;
+  pathChangeLabels?: Record<
+    string,
+    { kind: 'deleted' } | { kind: 'moved' | 'renamed'; direction: 'from' | 'to'; otherPath: string }
+  >;
+  /** Controlled collapsed state (persisted by parent). If omitted, component manages it locally. */
+  collapsedFiles?: Set<string>;
+  onToggleCollapse?: (filePath: string) => void;
   onVisibleFileChange: (filePath: string) => void;
   scrollContainerRef: React.RefObject<HTMLDivElement>;
   editorViewMapRef: React.MutableRefObject<Map<string, EditorView>>;
@@ -77,6 +84,9 @@ export const ContinuousScrollView = ({
   onAcceptFile,
   onRejectFile,
   onRestoreMissingFile,
+  pathChangeLabels,
+  collapsedFiles: collapsedFilesProp,
+  onToggleCollapse: onToggleCollapseProp,
   onVisibleFileChange,
   scrollContainerRef,
   editorViewMapRef,
@@ -87,19 +97,27 @@ export const ContinuousScrollView = ({
   onSelectionChange,
 }: ContinuousScrollViewProps): React.ReactElement => {
   const setFileChunkCount = useStore((s) => s.setFileChunkCount);
-  const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set());
+  const [localCollapsedFiles, setLocalCollapsedFiles] = useState<Set<string>>(() => new Set());
+  const collapsedFiles = collapsedFilesProp ?? localCollapsedFiles;
 
-  const handleToggleCollapse = useCallback((filePath: string) => {
-    setCollapsedFiles((prev) => {
-      const next = new Set(prev);
-      if (next.has(filePath)) {
-        next.delete(filePath);
-      } else {
-        next.add(filePath);
+  const handleToggleCollapse = useCallback(
+    (filePath: string) => {
+      if (onToggleCollapseProp) {
+        onToggleCollapseProp(filePath);
+        return;
       }
-      return next;
-    });
-  }, []);
+      setLocalCollapsedFiles((prev) => {
+        const next = new Set(prev);
+        if (next.has(filePath)) {
+          next.delete(filePath);
+        } else {
+          next.add(filePath);
+        }
+        return next;
+      });
+    },
+    [onToggleCollapseProp]
+  );
 
   const filePaths = useMemo(() => files.map((f) => f.filePath), [files]);
 
@@ -222,6 +240,7 @@ export const ContinuousScrollView = ({
               file={file}
               fileContent={content}
               fileDecision={decision}
+              pathChangeLabel={pathChangeLabels?.[filePath]}
               hasEdits={hasEdits}
               applying={applying}
               isCollapsed={isCollapsed}

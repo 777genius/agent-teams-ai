@@ -257,7 +257,19 @@ async function handleApplyDecisions(
       fileContents.set(d.filePath, resolved);
     }
 
-    return getApplier().applyReviewDecisions(request, fileContents);
+    const result = await getApplier().applyReviewDecisions(request, fileContents);
+
+    // Invalidate resolved file content cache after applying decisions so subsequent
+    // diff operations read the latest disk state (avoids "stuck" decisions in instant-apply flows).
+    try {
+      for (const d of request.decisions) {
+        getContentResolver().invalidateFile(d.filePath);
+      }
+    } catch (error) {
+      logger.debug('applyDecisions cache invalidation failed:', error);
+    }
+
+    return result;
   });
 }
 
