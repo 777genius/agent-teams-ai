@@ -102,6 +102,10 @@ export const CreateTaskDialog = ({
         descChipDraft.setChips([defaultChip]);
       } else if (defaultDescription) {
         descriptionDraft.setValue(defaultDescription);
+        descChipDraft.clearChipDraft();
+      } else {
+        descriptionDraft.clearDraft();
+        descChipDraft.clearChipDraft();
       }
       setOwner(defaultOwner);
       setBlockedBy([]);

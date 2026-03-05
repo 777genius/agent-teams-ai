@@ -106,7 +106,14 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
 
   // Load persisted attachments on mount
   useEffect(() => {
-    if (!persistenceKey) return;
+    if (!persistenceKey) {
+      // Transitioning to non-persistent context: flush pending save and clear stale state
+      flushPending();
+      attachmentsRef.current = [];
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync reset on key transition
+      setAttachments([]);
+      return;
+    }
 
     let cancelled = false;
     // Flush any pending debounced save for the previous key before switching.

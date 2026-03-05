@@ -175,57 +175,63 @@ export const ConfigEditorDialog = ({
     setJsonError(null);
 
     const init = async (): Promise<void> => {
-      const config = await api.config.get();
-      if (destroyed) return;
+      try {
+        const config = await api.config.get();
+        if (destroyed) return;
 
-      const jsonText = JSON.stringify(config, null, 2);
-      initialConfigRef.current = jsonText;
-      setLoading(false);
+        const jsonText = JSON.stringify(config, null, 2);
+        initialConfigRef.current = jsonText;
+        setLoading(false);
 
-      // Wait for DOM render
-      requestAnimationFrame(() => {
-        if (destroyed || !editorRef.current) return;
+        // Wait for DOM render
+        requestAnimationFrame(() => {
+          if (destroyed || !editorRef.current) return;
 
-        // Clean up existing view
-        if (viewRef.current) {
-          viewRef.current.destroy();
-          viewRef.current = null;
-        }
+          // Clean up existing view
+          if (viewRef.current) {
+            viewRef.current.destroy();
+            viewRef.current = null;
+          }
 
-        const state = EditorState.create({
-          doc: jsonText,
-          extensions: [
-            lineNumbers(),
-            highlightActiveLineGutter(),
-            highlightActiveLine(),
-            history(),
-            foldGutter(),
-            indentOnInput(),
-            bracketMatching(),
-            json(),
-            syntaxHighlighting(oneDarkHighlightStyle),
-            jsonLinter,
-            lintGutter(),
-            search(),
-            keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, ...searchKeymap]),
-            baseEditorTheme,
-            configEditorTheme,
-            // eslint-disable-next-line sonarjs/no-nested-functions -- CodeMirror listener callback within useEffect setup
-            EditorView.updateListener.of((update) => {
-              if (update.docChanged) {
-                const text = update.state.doc.toString();
-                scheduleSave(text);
-              }
-            }),
-          ],
+          const state = EditorState.create({
+            doc: jsonText,
+            extensions: [
+              lineNumbers(),
+              highlightActiveLineGutter(),
+              highlightActiveLine(),
+              history(),
+              foldGutter(),
+              indentOnInput(),
+              bracketMatching(),
+              json(),
+              syntaxHighlighting(oneDarkHighlightStyle),
+              jsonLinter,
+              lintGutter(),
+              search(),
+              keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, ...searchKeymap]),
+              baseEditorTheme,
+              configEditorTheme,
+              // eslint-disable-next-line sonarjs/no-nested-functions -- CodeMirror listener callback within useEffect setup
+              EditorView.updateListener.of((update) => {
+                if (update.docChanged) {
+                  const text = update.state.doc.toString();
+                  scheduleSave(text);
+                }
+              }),
+            ],
+          });
+
+          const view = new EditorView({
+            state,
+            parent: editorRef.current,
+          });
+          viewRef.current = view;
         });
-
-        const view = new EditorView({
-          state,
-          parent: editorRef.current,
-        });
-        viewRef.current = view;
-      });
+      } catch (e) {
+        if (destroyed) return;
+        setLoading(false);
+        setJsonError(e instanceof Error ? e.message : 'Failed to load config');
+      }
     };
 
     void init();
