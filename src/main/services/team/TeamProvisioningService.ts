@@ -157,6 +157,10 @@ interface ProvisioningRun {
    * Flushed to liveLeadProcessMessages on result.success.
    */
   directReplyParts: string[];
+  /** Whether we already emitted live lead text during the current turn (before result). */
+  leadTextPushedInCurrentTurn: boolean;
+  /** Throttle timestamp for emitting inbox refresh events for lead text. */
+  lastLeadTextEmitMs: number;
   /**
    * When set, the current stdin-injected turn is an internal "forward user DM to teammate"
    * request triggered by the UI. We suppress any lead→user echo for that turn.
@@ -1166,6 +1170,8 @@ export class TeamProvisioningService {
   }
 
   private static readonly CONTEXT_EMIT_THROTTLE_MS = 2000;
+  private static readonly LEAD_TEXT_EMIT_THROTTLE_MS = 2000;
+  private static readonly LEAD_TEXT_MIN_LENGTH = 30;
 
   private emitLeadContextUsage(run: ProvisioningRun): void {
     if (!run.leadContextUsage || !run.provisioningComplete) return;
@@ -1694,6 +1700,8 @@ export class TeamProvisioningService {
         fsPhase: 'waiting_config',
         leadRelayCapture: null,
         directReplyParts: [],
+        leadTextPushedInCurrentTurn: false,
+        lastLeadTextEmitMs: 0,
         silentUserDmForward: null,
         silentUserDmForwardClearHandle: null,
         provisioningOutputParts: [],
@@ -1992,6 +2000,8 @@ export class TeamProvisioningService {
         fsPhase: 'waiting_members',
         leadRelayCapture: null,
         directReplyParts: [],
+        leadTextPushedInCurrentTurn: false,
+        lastLeadTextEmitMs: 0,
         silentUserDmForward: null,
         silentUserDmForwardClearHandle: null,
         provisioningOutputParts: [],
@@ -2798,6 +2808,39 @@ export class TeamProvisioningService {
           return;
         }
         logger.debug(`[${run.teamName}] assistant: ${text.slice(0, 200)}`);
+        // After provisioning, surface lead assistant output in Messages immediately.
+        // Lead session JSONL changes are not watched, so without an explicit trigger
+        // the Messages tab may lag behind Claude Logs until another team-change event.
+        if (run.provisioningComplete && !run.leadRelayCapture && !run.silentUserDmForward) {
+          const cleanText = stripAgentBlocks(text).trim();
+          if (cleanText.length >= TeamProvisioningService.LEAD_TEXT_MIN_LENGTH) {
+            const leadName =
+              run.request.members.find((m) => m.role?.toLowerCase().includes('lead'))?.name ||
+              'team-lead';
+            const leadMsg: InboxMessage = {
+              from: leadName,
+              to: 'user',
+              text: cleanText,
+              timestamp: nowIso(),
+              read: true,
+              summary: cleanText.length > 60 ? cleanText.slice(0, 57) + '...' : cleanText,
+              messageId: `lead-text-${run.runId}-${Date.now()}`,
+              source: 'lead_process',
+            };
+            this.pushLiveLeadProcessMessage(run.teamName, leadMsg);
+            run.leadTextPushedInCurrentTurn = true;
+
+            const now = Date.now();
+            if (now - run.lastLeadTextEmitMs >= TeamProvisioningService.LEAD_TEXT_EMIT_THROTTLE_MS) {
+              run.lastLeadTextEmitMs = now;
+              this.teamChangeEmitter?.({
+                type: 'inbox',
+                teamName: run.teamName,
+                detail: 'lead-text',
+              });
+            }
+          }
+        }
         // During provisioning (before provisioningComplete), accumulate for live UI preview.
         // Emission is handled by the throttled emitLogsProgress() in the stdout data handler.
         if (!run.provisioningComplete) {
@@ -2965,59 +3008,63 @@ export class TeamProvisioningService {
           // Flush accumulated assistant reply from direct user→lead message
           const rawReply = run.directReplyParts.join('').trim();
           run.directReplyParts = [];
-          const leadName =
-            run.request.members.find((m) => m.role?.toLowerCase().includes('lead'))?.name ||
-            'team-lead';
-          // Strip agent-only blocks — lead may include coordination content not meant for the user
-          const replyText = stripAgentBlocks(rawReply);
-          if (replyText.length > 0) {
-            const replyMsg: InboxMessage = {
-              from: leadName,
-              to: 'user',
-              text: replyText,
-              timestamp: nowIso(),
-              read: true,
-              summary: replyText.length > 60 ? replyText.slice(0, 57) + '...' : replyText,
-              messageId: `lead-direct-${run.runId}-${Date.now()}`,
-              source: 'lead_process',
-            };
-            this.pushLiveLeadProcessMessage(run.teamName, replyMsg);
-            // Persist to disk so replies survive app restart
-            void this.sentMessagesStore
-              .appendMessage(run.teamName, replyMsg)
-              .catch((e: unknown) =>
-                logger.warn(`[${run.teamName}] sentMessagesStore persist failed: ${e}`)
-              );
-            this.teamChangeEmitter?.({
-              type: 'inbox',
-              teamName: run.teamName,
-              detail: 'lead-direct-reply',
-            });
-          } else if (rawReply.length > 0) {
-            // Lead responded but only with agent-only content — send generic acknowledgment
-            const fallbackMsg: InboxMessage = {
-              from: leadName,
-              to: 'user',
-              text: '(Message received and processed)',
-              timestamp: nowIso(),
-              read: true,
-              summary: 'Message processed',
-              messageId: `lead-direct-${run.runId}-${Date.now()}`,
-              source: 'lead_process',
-            };
-            this.pushLiveLeadProcessMessage(run.teamName, fallbackMsg);
-            void this.sentMessagesStore
-              .appendMessage(run.teamName, fallbackMsg)
-              .catch((e: unknown) =>
-                logger.warn(`[${run.teamName}] sentMessagesStore persist failed: ${e}`)
-              );
-            this.teamChangeEmitter?.({
-              type: 'inbox',
-              teamName: run.teamName,
-              detail: 'lead-direct-reply',
-            });
+          if (!run.leadTextPushedInCurrentTurn) {
+            const leadName =
+              run.request.members.find((m) => m.role?.toLowerCase().includes('lead'))?.name ||
+              'team-lead';
+            // Strip agent-only blocks — lead may include coordination content not meant for the user
+            const replyText = stripAgentBlocks(rawReply);
+            if (replyText.length > 0) {
+              const replyMsg: InboxMessage = {
+                from: leadName,
+                to: 'user',
+                text: replyText,
+                timestamp: nowIso(),
+                read: true,
+                summary: replyText.length > 60 ? replyText.slice(0, 57) + '...' : replyText,
+                messageId: `lead-direct-${run.runId}-${Date.now()}`,
+                source: 'lead_process',
+              };
+              this.pushLiveLeadProcessMessage(run.teamName, replyMsg);
+              // Persist to disk so replies survive app restart
+              void this.sentMessagesStore
+                .appendMessage(run.teamName, replyMsg)
+                .catch((e: unknown) =>
+                  logger.warn(`[${run.teamName}] sentMessagesStore persist failed: ${e}`)
+                );
+              this.teamChangeEmitter?.({
+                type: 'inbox',
+                teamName: run.teamName,
+                detail: 'lead-direct-reply',
+              });
+            } else if (rawReply.length > 0) {
+              // Lead responded but only with agent-only content — send generic acknowledgment
+              const fallbackMsg: InboxMessage = {
+                from: leadName,
+                to: 'user',
+                text: '(Message received and processed)',
+                timestamp: nowIso(),
+                read: true,
+                summary: 'Message processed',
+                messageId: `lead-direct-${run.runId}-${Date.now()}`,
+                source: 'lead_process',
+              };
+              this.pushLiveLeadProcessMessage(run.teamName, fallbackMsg);
+              void this.sentMessagesStore
+                .appendMessage(run.teamName, fallbackMsg)
+                .catch((e: unknown) =>
+                  logger.warn(`[${run.teamName}] sentMessagesStore persist failed: ${e}`)
+                );
+              this.teamChangeEmitter?.({
+                type: 'inbox',
+                teamName: run.teamName,
+                detail: 'lead-direct-reply',
+              });
+            }
           }
         }
+        // Turn boundary: reset per-turn lead text tracking.
+        run.leadTextPushedInCurrentTurn = false;
         // Clear silent relay flag after any successful turn.
         run.silentUserDmForward = null;
         if (run.silentUserDmForwardClearHandle) {
@@ -3034,6 +3081,8 @@ export class TeamProvisioningService {
         if (run.leadRelayCapture) {
           run.leadRelayCapture.rejectOnce(errorMsg);
         }
+        // Turn boundary: reset per-turn lead text tracking.
+        run.leadTextPushedInCurrentTurn = false;
         // Clear silent relay flag after any errored turn.
         run.silentUserDmForward = null;
         if (run.silentUserDmForwardClearHandle) {

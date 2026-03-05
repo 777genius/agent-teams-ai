@@ -111,7 +111,7 @@ export const TaskTooltip = ({
               color={colorMap.get(task.owner)}
             />
           ) : (
-            <span className="text-[10px] text-[var(--color-text-muted)]">Не назначено</span>
+            <span className="text-[10px] text-[var(--color-text-muted)]">Unassigned</span>
           )}
         </div>
 

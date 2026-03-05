@@ -14,7 +14,7 @@ export const TaskRow = ({ task }: TaskRowProps): React.JSX.Element => {
     <tr className="border-t border-[var(--color-border)]">
       <td className="px-3 py-2 text-xs text-[var(--color-text-muted)]">{task.id}</td>
       <td className="px-3 py-2 text-sm text-[var(--color-text)]">{task.subject}</td>
-      <td className="px-3 py-2 text-xs text-[var(--color-text-muted)]">{task.owner ?? 'Не назначено'}</td>
+      <td className="px-3 py-2 text-xs text-[var(--color-text-muted)]">{task.owner ?? 'Unassigned'}</td>
       <td className="px-3 py-2 text-xs text-[var(--color-text-muted)]">
         {task.kanbanColumn && task.kanbanColumn in KANBAN_COLUMN_DISPLAY
           ? KANBAN_COLUMN_DISPLAY[task.kanbanColumn].label

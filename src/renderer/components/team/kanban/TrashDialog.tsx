@@ -66,7 +66,7 @@ export const TrashDialog = ({
                       <td className="py-2 pr-3 text-[var(--color-text-muted)]">{task.id}</td>
                       <td className="py-2 pr-3 text-[var(--color-text)]">{task.subject}</td>
                       <td className="py-2 pr-3 text-[var(--color-text-secondary)]">
-                        {task.owner ?? 'Не назначено'}
+                        {task.owner ?? 'Unassigned'}
                       </td>
                       <td className="py-2 pr-3 text-[var(--color-text-muted)]">
                         {task.deletedAt

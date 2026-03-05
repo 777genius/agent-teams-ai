@@ -357,7 +357,7 @@ export const TaskDetailDialog = ({
                 size="md"
               />
             ) : (
-              <span className="text-xs italic text-[var(--color-text-muted)]">Не назначено</span>
+              <span className="text-xs italic text-[var(--color-text-muted)]">Unassigned</span>
             )}
           </div>
           {currentTask.createdBy ? (

@@ -1381,6 +1381,14 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             title="CLI Processes"
             icon={<Terminal size={14} />}
             badge={data.processes.filter((p) => !p.stoppedAt).length}
+            headerExtra={
+              data.processes.some((p) => !p.stoppedAt) ? (
+                <span className="pointer-events-none relative inline-flex size-2 shrink-0" title="Active">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
+                  <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
+                </span>
+              ) : null
+            }
             defaultOpen
           >
             <ProcessesSection />
