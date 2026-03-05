@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useTaskLocalState } from '@renderer/hooks/useTaskLocalState';
 import { cn } from '@renderer/lib/utils';
@@ -96,6 +97,7 @@ export const GlobalTaskList = ({
     globalTasksLoading,
     globalTasksInitialized,
     fetchAllTasks,
+    softDeleteTask,
     projects,
     viewMode,
     repositoryGroups,
@@ -106,6 +108,7 @@ export const GlobalTaskList = ({
       globalTasksLoading: s.globalTasksLoading,
       globalTasksInitialized: s.globalTasksInitialized,
       fetchAllTasks: s.fetchAllTasks,
+      softDeleteTask: s.softDeleteTask,
       projects: s.projects,
       viewMode: s.viewMode,
       repositoryGroups: s.repositoryGroups,
@@ -143,6 +146,20 @@ export const GlobalTaskList = ({
 
   const handleRenameCancel = (): void => {
     setRenamingTaskKey(null);
+  };
+
+  const handleDeleteTask = async (teamName: string, taskId: string): Promise<void> => {
+    const confirmed = await confirm({
+      title: 'Delete task',
+      message: `Move task #${taskId} to trash?`,
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      variant: 'danger',
+    });
+    if (confirmed) {
+      await softDeleteTask(teamName, taskId);
+      await fetchAllTasks();
+    }
   };
 
   // Fetch tasks on mount — loading guard in the store action prevents
@@ -329,6 +346,7 @@ export const GlobalTaskList = ({
               onTogglePin={() => taskLocalState.togglePin(task.teamName, task.id)}
               onToggleArchive={() => taskLocalState.toggleArchive(task.teamName, task.id)}
               onRename={() => setRenamingTaskKey(`${task.teamName}:${task.id}`)}
+              onDelete={() => handleDeleteTask(task.teamName, task.id)}
             >
               <SidebarTaskItem
                 task={task}
@@ -425,6 +443,7 @@ export const GlobalTaskList = ({
               onTogglePin={() => taskLocalState.togglePin(task.teamName, task.id)}
               onToggleArchive={() => taskLocalState.toggleArchive(task.teamName, task.id)}
               onRename={() => setRenamingTaskKey(`${task.teamName}:${task.id}`)}
+              onDelete={() => handleDeleteTask(task.teamName, task.id)}
             >
               <SidebarTaskItem
                 task={task}
@@ -472,6 +491,7 @@ export const GlobalTaskList = ({
                         onTogglePin={() => taskLocalState.togglePin(task.teamName, task.id)}
                         onToggleArchive={() => taskLocalState.toggleArchive(task.teamName, task.id)}
                         onRename={() => setRenamingTaskKey(`${task.teamName}:${task.id}`)}
+                        onDelete={() => handleDeleteTask(task.teamName, task.id)}
                       >
                         <SidebarTaskItem
                           task={task}
@@ -523,6 +543,7 @@ export const GlobalTaskList = ({
                         onTogglePin={() => taskLocalState.togglePin(task.teamName, task.id)}
                         onToggleArchive={() => taskLocalState.toggleArchive(task.teamName, task.id)}
                         onRename={() => setRenamingTaskKey(`${task.teamName}:${task.id}`)}
+                        onDelete={() => handleDeleteTask(task.teamName, task.id)}
                       >
                         <SidebarTaskItem
                           task={task}

@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';
-import { ImagePlus, Loader2, Trash2, X } from 'lucide-react';
+import { File, ImagePlus, Loader2, Trash2, X } from 'lucide-react';
 
-import type { AttachmentMediaType, TaskAttachmentMeta } from '@shared/types';
+import { isImageMimeType } from '@renderer/utils/attachmentUtils';
+
+import type { TaskAttachmentMeta } from '@shared/types';
 
 const ACCEPTED_TYPES = new Set<string>(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 
@@ -30,7 +32,7 @@ export const TaskAttachments = ({
   const [error, setError] = useState<string | null>(null);
   const [previewAttachment, setPreviewAttachment] = useState<{
     id: string;
-    mimeType: AttachmentMediaType;
+    mimeType: string;
     dataUrl: string | null;
     loading: boolean;
   } | null>(null);
@@ -73,7 +75,7 @@ export const TaskAttachments = ({
   );
 
   const handleDelete = useCallback(
-    async (attachmentId: string, mimeType: AttachmentMediaType) => {
+    async (attachmentId: string, mimeType: string) => {
       setDeletingId(attachmentId);
       try {
         await deleteTaskAttachment(teamName, taskId, attachmentId, mimeType);
@@ -89,8 +91,39 @@ export const TaskAttachments = ({
     [teamName, taskId, deleteTaskAttachment, previewAttachment]
   );
 
+  const handleDownload = useCallback(
+    async (att: TaskAttachmentMeta) => {
+      setError(null);
+      try {
+        const base64 = await getTaskAttachmentData(teamName, taskId, att.id, att.mimeType);
+        if (!base64) {
+          setError('Attachment file not found');
+          return;
+        }
+        const mime = att.mimeType && typeof att.mimeType === 'string' ? att.mimeType : 'application/octet-stream';
+        const dataUrl = `data:${mime};base64,${base64}`;
+        const blob = await fetch(dataUrl).then((r) => r.blob());
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = att.filename || 'attachment';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to download');
+      }
+    },
+    [getTaskAttachmentData, teamName, taskId]
+  );
+
   const handlePreview = useCallback(
     async (att: TaskAttachmentMeta) => {
+      if (!isImageMimeType(att.mimeType)) {
+        void handleDownload(att);
+        return;
+      }
       if (previewAttachment?.id === att.id && previewAttachment.dataUrl) {
         setPreviewAttachment(null);
         return;
@@ -114,7 +147,7 @@ export const TaskAttachments = ({
         setError('Failed to load attachment');
       }
     },
-    [teamName, taskId, getTaskAttachmentData, previewAttachment]
+    [teamName, taskId, getTaskAttachmentData, previewAttachment, handleDownload]
   );
 
   // Handle paste events for quick image attachment
@@ -277,6 +310,7 @@ const AttachmentThumbnail = ({
     let cancelled = false;
     void (async () => {
       try {
+        if (!isImageMimeType(attachment.mimeType)) return;
         const base64 = await getTaskAttachmentData(
           teamName,
           taskId,
@@ -311,10 +345,19 @@ const AttachmentThumbnail = ({
       } bg-[var(--color-surface)]`}
       onClick={onPreview}
     >
-      {thumbUrl ? (
-        <img src={thumbUrl} alt={attachment.filename} className="size-full object-cover" />
+      {isImageMimeType(attachment.mimeType) ? (
+        thumbUrl ? (
+          <img src={thumbUrl} alt={attachment.filename} className="size-full object-cover" />
+        ) : (
+          <Loader2 size={16} className="animate-spin text-[var(--color-text-muted)]" />
+        )
       ) : (
-        <Loader2 size={16} className="animate-spin text-[var(--color-text-muted)]" />
+        <div className="flex flex-col items-center gap-1 px-1 text-center">
+          <File size={18} className="text-[var(--color-text-muted)]" />
+          <div className="max-w-full truncate text-[9px] text-[var(--color-text-muted)]">
+            {attachment.filename}
+          </div>
+        </div>
       )}
       {/* Delete button overlay */}
       <button

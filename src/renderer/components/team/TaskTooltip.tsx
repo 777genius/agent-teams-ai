@@ -110,7 +110,9 @@ export const TaskTooltip = ({
               name={task.owner}
               color={colorMap.get(task.owner)}
             />
-          ) : null}
+          ) : (
+            <span className="text-[10px] text-[var(--color-text-muted)]">Unassigned</span>
+          )}
         </div>
 
         {/* Description — full markdown with scroll */}

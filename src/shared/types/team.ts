@@ -84,7 +84,7 @@ export interface TaskComment {
   text: string;
   createdAt: string;
   type: TaskCommentType;
-  /** Image attachments on this comment. Metadata only — files stored on disk. */
+  /** Attachments on this comment. Metadata only — files stored on disk. */
   attachments?: TaskAttachmentMeta[];
 }
 
@@ -125,7 +125,7 @@ export interface TeamTask {
   needsClarification?: 'lead' | 'user';
   /** ISO timestamp — when the task was soft-deleted. Only set for status === 'deleted'. */
   deletedAt?: string;
-  /** Image attachments associated with this task. Metadata only — actual files stored on disk. */
+  /** Attachments associated with this task. Metadata only — actual files stored on disk. */
   attachments?: TaskAttachmentMeta[];
 }
 
@@ -135,7 +135,7 @@ export interface TeamTaskWithKanban extends TeamTask {
   kanbanColumn?: 'review' | 'approved';
 }
 
-/** Metadata for an image attached to a task description. */
+/** Metadata for an attachment associated with a task or comment. */
 export interface TaskAttachmentMeta {
   /** Unique attachment ID (uuid). */
   id: string;
@@ -157,7 +157,16 @@ export interface CommentAttachmentPayload {
   base64Data: string;
 }
 
-export type AttachmentMediaType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
+/**
+ * Broad MIME type string (e.g. "image/png", "application/pdf").
+ *
+ * Note: the UI may still choose to preview only certain types (e.g. images),
+ * but tasks/comments can store arbitrary attachments for agent workflows.
+ */
+export type AttachmentMediaType = string;
+
+/** Supported image MIME types (used for preview/validation in UI). */
+export type ImageMimeType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
 
 export interface AttachmentMeta {
   id: string;

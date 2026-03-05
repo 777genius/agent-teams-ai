@@ -3,6 +3,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { api } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Button } from '@renderer/components/ui/button';
+import { SessionContextPanel } from '@renderer/components/chat/SessionContextPanel/index';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,7 @@ import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import { useTabUI } from '@renderer/hooks/useTabUI';
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
 import { formatProjectPath } from '@renderer/utils/pathDisplay';
 import { buildTaskCountsByOwner, normalizePath } from '@renderer/utils/pathNormalize';
@@ -77,6 +79,7 @@ import { TeamSessionsSection } from './TeamSessionsSection';
 
 import type { KanbanFilterState } from './kanban/KanbanFilterPopover';
 import type { MessagesFilterState } from './messages/MessagesFilterPopover';
+import type { ContextInjection } from '@renderer/types/contextInjection';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { InboxMessage, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
@@ -192,6 +195,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     projects,
     repositoryGroups,
     teams,
+    fetchSessionDetail,
+    initTabUIState,
     selectTeam,
     updateKanban,
     updateKanbanColumnOrder,
@@ -230,6 +235,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       projects: s.projects,
       repositoryGroups: s.repositoryGroups,
       teams: s.teams,
+      fetchSessionDetail: s.fetchSessionDetail,
+      initTabUIState: s.initTabUIState,
       selectTeam: s.selectTeam,
       updateKanban: s.updateKanban,
       updateKanbanColumnOrder: s.updateKanbanColumnOrder,
@@ -264,6 +271,22 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       deletedTasks: s.deletedTasks,
     }))
   );
+
+  // Per-tab UI state (context panel visibility + selected phase)
+  const {
+    tabId,
+    isContextPanelVisible,
+    setContextPanelVisible,
+    selectedContextPhase,
+    setSelectedContextPhase,
+  } = useTabUI();
+  const [isContextButtonHovered, setIsContextButtonHovered] = useState(false);
+
+  useEffect(() => {
+    if (tabId) {
+      initTabUIState(tabId);
+    }
+  }, [tabId, initTabUIState]);
 
   useEffect(() => {
     const wasProvisioning = wasProvisioningRef.current;
@@ -335,6 +358,78 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     () => resolveProjectIdByPath(data?.config.projectPath, projects, repositoryGroups),
     [projects, repositoryGroups, data?.config.projectPath]
   );
+
+  // Lead session context panel (reuses the same session context pipeline for exact stats)
+  const leadSessionId = data?.config.leadSessionId ?? null;
+  const leadTabData = useStore(
+    useShallow((s) => (tabId ? s.tabSessionData[tabId] : null))
+  );
+  const leadSessionDetail = leadTabData?.sessionDetail ?? null;
+  const leadConversation = leadTabData?.conversation ?? null;
+  const leadSessionContextStats = leadTabData?.sessionContextStats ?? null;
+  const leadSessionPhaseInfo = leadTabData?.sessionPhaseInfo ?? null;
+  const leadSessionLoading = leadTabData?.sessionDetailLoading ?? false;
+  const leadSessionLoaded = Boolean(leadSessionId && leadSessionDetail?.session?.id === leadSessionId);
+
+  const leadSubagentCostUsd = useMemo(() => {
+    const processes = leadSessionDetail?.processes;
+    if (!processes || processes.length === 0) return undefined;
+    const total = processes.reduce((sum, p) => sum + (p.metrics.costUsd ?? 0), 0);
+    return total > 0 ? total : undefined;
+  }, [leadSessionDetail?.processes]);
+
+  const { allContextInjections, lastAiGroupTotalTokens } = useMemo(() => {
+    if (!leadSessionLoaded || !leadSessionContextStats || !leadConversation?.items.length) {
+      return { allContextInjections: [] as ContextInjection[], lastAiGroupTotalTokens: undefined };
+    }
+
+    // Determine which phase to show
+    const effectivePhase = selectedContextPhase;
+
+    // If a specific phase is selected, find the last AI group in that phase
+    let targetAiGroupId: string | undefined;
+    if (effectivePhase !== null && leadSessionPhaseInfo) {
+      const phase = leadSessionPhaseInfo.phases.find((p) => p.phaseNumber === effectivePhase);
+      if (phase) {
+        targetAiGroupId = phase.lastAIGroupId;
+      }
+    }
+
+    // Default: use the last AI group overall
+    if (!targetAiGroupId) {
+      const lastAiItem = [...leadConversation.items].reverse().find((item) => item.type === 'ai');
+      if (lastAiItem?.type !== 'ai') {
+        return { allContextInjections: [] as ContextInjection[], lastAiGroupTotalTokens: undefined };
+      }
+      targetAiGroupId = lastAiItem.group.id;
+    }
+
+    const stats = leadSessionContextStats.get(targetAiGroupId);
+    const injections = stats?.accumulatedInjections ?? [];
+
+    // Get total tokens from the target AI group
+    let totalTokens: number | undefined;
+    const targetItem = leadConversation.items.find(
+      (item) => item.type === 'ai' && item.group.id === targetAiGroupId
+    );
+    if (targetItem?.type === 'ai') {
+      const responses = targetItem.group.responses || [];
+      for (let i = responses.length - 1; i >= 0; i--) {
+        const msg = responses[i];
+        if (msg.type === 'assistant' && msg.usage) {
+          const usage = msg.usage;
+          totalTokens =
+            (usage.input_tokens ?? 0) +
+            (usage.output_tokens ?? 0) +
+            (usage.cache_read_input_tokens ?? 0) +
+            (usage.cache_creation_input_tokens ?? 0);
+          break;
+        }
+      }
+    }
+
+    return { allContextInjections: injections, lastAiGroupTotalTokens: totalTokens };
+  }, [leadSessionLoaded, leadSessionContextStats, leadConversation, selectedContextPhase, leadSessionPhaseInfo]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -746,7 +841,49 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
 
   return (
     <>
-      <div ref={contentRef} className="size-full overflow-auto p-4" data-team-name={teamName}>
+      <div className="flex size-full overflow-hidden">
+        <div
+          ref={contentRef}
+          className="size-full flex-1 overflow-auto p-4"
+          data-team-name={teamName}
+        >
+          {/* Sticky Context button (same interaction as Session view) */}
+          {leadSessionId && (
+            <div className="pointer-events-none sticky top-0 z-10 flex justify-end pb-0 pt-3">
+              <button
+                onClick={() => {
+                  const next = !isContextPanelVisible;
+                  setContextPanelVisible(next);
+                  if (next && tabId && projectId && leadSessionId && !leadSessionLoaded) {
+                    void fetchSessionDetail(projectId, leadSessionId, tabId);
+                  }
+                }}
+                onMouseEnter={() => setIsContextButtonHovered(true)}
+                onMouseLeave={() => setIsContextButtonHovered(false)}
+                className="pointer-events-auto flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs shadow-lg backdrop-blur-md transition-colors"
+                style={{
+                  backgroundColor: isContextPanelVisible
+                    ? 'var(--context-btn-active-bg)'
+                    : isContextButtonHovered
+                      ? 'var(--context-btn-bg-hover)'
+                      : 'var(--context-btn-bg)',
+                  color: isContextPanelVisible
+                    ? 'var(--context-btn-active-text)'
+                    : 'var(--color-text-secondary)',
+                }}
+                title={
+                  leadSessionLoaded
+                    ? `Session: ${leadSessionId}`
+                    : leadSessionLoading
+                      ? 'Loading context…'
+                      : leadSessionId
+                }
+              >
+                {leadSessionLoaded ? `Context (${allContextInjections.length})` : 'Context'}
+              </button>
+            </div>
+          )}
+
         <div
           className="relative mb-3 overflow-hidden rounded-lg border border-[var(--color-border)] px-4 py-3"
           style={
@@ -1601,6 +1738,53 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           projectPath={data.config.projectPath}
           onEditorAction={handleEditorAction}
         />
+        </div>
+
+        {/* Context panel sidebar */}
+        {isContextPanelVisible && leadSessionId && (
+          <div className="w-80 shrink-0">
+            {leadSessionLoaded ? (
+              <SessionContextPanel
+                injections={allContextInjections}
+                onClose={() => setContextPanelVisible(false)}
+                projectRoot={leadSessionDetail?.session?.projectPath ?? data.config.projectPath}
+                totalSessionTokens={lastAiGroupTotalTokens}
+                sessionMetrics={leadSessionDetail?.metrics}
+                subagentCostUsd={leadSubagentCostUsd}
+                phaseInfo={leadSessionPhaseInfo ?? undefined}
+                selectedPhase={selectedContextPhase}
+                onPhaseChange={setSelectedContextPhase}
+              />
+            ) : (
+              <div
+                className="flex h-full flex-col border-l border-[var(--color-border)] bg-[var(--color-surface)]"
+                style={{ backgroundColor: 'var(--color-surface)' }}
+              >
+                <div className="flex items-center justify-between border-b border-[var(--color-border)] px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--color-text)]">Visible Context</p>
+                    <p className="text-[10px] text-[var(--color-text-muted)]">
+                      {leadSessionLoading ? 'Loading…' : 'No session loaded'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+                    onClick={() => setContextPanelVisible(false)}
+                    aria-label="Close panel"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="flex flex-1 items-center justify-center p-4">
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    {leadSessionLoading ? 'Loading context…' : 'Open the team lead session to view context.'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {editorOpen && data.config.projectPath && (

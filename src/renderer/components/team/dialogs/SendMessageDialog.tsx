@@ -27,7 +27,8 @@ import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { Check, ImagePlus, X } from 'lucide-react';
+import { getModifierKeyName } from '@renderer/utils/keyboardUtils';
+import { AlertCircle, Check, ImagePlus, Send, X } from 'lucide-react';
 
 import { MemberBadge } from '../MemberBadge';
 
@@ -39,6 +40,8 @@ interface QuotedMessage {
   from: string;
   text: string;
 }
+
+const MAX_MESSAGE_LENGTH = 4000;
 
 interface SendMessageDialogProps {
   open: boolean;
@@ -177,9 +180,13 @@ export const SendMessageDialog = ({
 
   const attachmentsBlocked = attachments.length > 0 && !supportsAttachments;
 
+  const trimmedText = textDraft.value.trim();
+  const remaining = MAX_MESSAGE_LENGTH - trimmedText.length;
+
   const canSend =
     member.trim().length > 0 &&
-    textDraft.value.trim().length > 0 &&
+    trimmedText.length > 0 &&
+    trimmedText.length <= MAX_MESSAGE_LENGTH &&
     summary.trim().length > 0 &&
     !sending &&
     !attachmentsBlocked;
@@ -262,7 +269,7 @@ export const SendMessageDialog = ({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="sm:max-w-[560px]"
+        className="sm:max-w-[720px]"
         onDragEnter={canAttach ? handleDragEnter : undefined}
         onDragLeave={canAttach ? handleDragLeave : undefined}
         onDragOver={canAttach ? handleDragOver : undefined}
@@ -415,7 +422,7 @@ export const SendMessageDialog = ({
               <MentionableTextarea
                 id="smd-message"
                 className={quote ? 'rounded-t-none' : undefined}
-                placeholder="Write your message..."
+                placeholder={`Write your message... (${getModifierKeyName()}+Enter to send)`}
                 value={textDraft.value}
                 onValueChange={textDraft.setValue}
                 suggestions={mentionSuggestions}
@@ -426,10 +433,38 @@ export const SendMessageDialog = ({
                 onModEnter={handleSubmit}
                 minRows={4}
                 maxRows={12}
+                maxLength={MAX_MESSAGE_LENGTH}
+                disabled={sending}
+                cornerAction={
+                  <button
+                    type="button"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!canSend}
+                    onClick={handleSubmit}
+                  >
+                    <Send size={12} />
+                    {sending ? 'Sending...' : 'Send'}
+                  </button>
+                }
                 footerRight={
-                  textDraft.isSaved ? (
-                    <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-                  ) : null
+                  <div className="flex items-center gap-2">
+                    {sendError ? (
+                      <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">
+                        <AlertCircle size={10} className="shrink-0" />
+                        {sendError}
+                      </span>
+                    ) : null}
+                    {remaining < 200 ? (
+                      <span
+                        className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
+                      >
+                        {remaining} chars left
+                      </span>
+                    ) : null}
+                    {textDraft.isSaved ? (
+                      <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                    ) : null}
+                  </div>
                 }
               />
             </div>
@@ -449,15 +484,11 @@ export const SendMessageDialog = ({
             </p>
           </div>
 
-          {sendError ? <p className="text-xs text-red-400">{sendError}</p> : null}
         </div>
 
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose} disabled={sending}>
             Cancel
-          </Button>
-          <Button size="sm" onClick={handleSubmit} disabled={!canSend}>
-            {sending ? 'Sending...' : 'Send'}
           </Button>
         </DialogFooter>
       </DialogContent>

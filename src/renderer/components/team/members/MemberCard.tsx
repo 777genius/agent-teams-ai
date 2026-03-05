@@ -146,19 +146,26 @@ export const MemberCard = ({
               </span>
             ) : null;
           })()}
-          <Badge
-            variant="secondary"
-            className={`shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none ${isRemoved ? 'bg-zinc-600 text-zinc-300' : 'text-[var(--color-text-muted)]'}`}
-            title={
-              isRemoved
-                ? 'This member has been removed'
-                : member.currentTaskId
-                  ? `Current task: ${member.currentTaskId}`
-                  : undefined
-            }
-          >
-            {isRemoved ? 'removed' : presenceLabel}
-          </Badge>
+          {presenceLabel === 'connecting' && !isRemoved ? (
+            <Loader2
+              className="size-3.5 shrink-0 animate-spin text-[var(--color-text-muted)]"
+              aria-label="connecting"
+            />
+          ) : (
+            <Badge
+              variant="secondary"
+              className={`shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none ${isRemoved ? 'bg-zinc-600 text-zinc-300' : 'text-[var(--color-text-muted)]'}`}
+              title={
+                isRemoved
+                  ? 'This member has been removed'
+                  : member.currentTaskId
+                    ? `Current task: ${member.currentTaskId}`
+                    : undefined
+              }
+            >
+              {isRemoved ? 'removed' : presenceLabel}
+            </Badge>
+          )}
           <div
             className="shrink-0"
             title={totalTasks > 0 ? `${completed}/${totalTasks} completed` : undefined}

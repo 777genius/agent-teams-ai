@@ -11,11 +11,12 @@ import { useMarkCommentsRead } from '@renderer/hooks/useMarkCommentsRead';
 import { useStore } from '@renderer/store';
 import { buildReplyBlock, parseMessageReply } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
+import { isImageMimeType } from '@renderer/utils/attachmentUtils';
 import { getModifierKeyName } from '@renderer/utils/keyboardUtils';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { formatDistanceToNow } from 'date-fns';
-import { CheckCircle2, Eye, Loader2, MessageSquare, Reply, Send, X } from 'lucide-react';
+import { CheckCircle2, Eye, File, Loader2, MessageSquare, Reply, Send, X } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { ResolvedTeamMember, TaskAttachmentMeta, TaskComment } from '@shared/types';
@@ -414,11 +415,13 @@ const CommentAttachmentThumbnail = ({
 }: CommentAttachmentThumbnailProps): React.JSX.Element => {
   const getTaskAttachmentData = useStore((s) => s.getTaskAttachmentData);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
+        if (!isImageMimeType(attachment.mimeType)) return;
         const base64 = await getTaskAttachmentData(
           teamName,
           taskId,
@@ -440,12 +443,51 @@ const CommentAttachmentThumbnail = ({
   return (
     <div
       className="group relative flex size-14 cursor-pointer items-center justify-center overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] transition-colors hover:border-[var(--color-border-emphasis)]"
-      onClick={() => thumbUrl && onPreview(thumbUrl)}
+      onClick={() => {
+        if (isImageMimeType(attachment.mimeType)) {
+          if (thumbUrl) onPreview(thumbUrl);
+          return;
+        }
+        void (async () => {
+          setDownloading(true);
+          try {
+            const base64 = await getTaskAttachmentData(
+              teamName,
+              taskId,
+              attachment.id,
+              attachment.mimeType
+            );
+            if (!base64) return;
+            const mime =
+              attachment.mimeType && typeof attachment.mimeType === 'string'
+                ? attachment.mimeType
+                : 'application/octet-stream';
+            const dataUrl = `data:${mime};base64,${base64}`;
+            const blob = await fetch(dataUrl).then((r) => r.blob());
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = attachment.filename || 'attachment';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+          } finally {
+            setDownloading(false);
+          }
+        })();
+      }}
     >
-      {thumbUrl ? (
-        <img src={thumbUrl} alt={attachment.filename} className="size-full object-cover" />
-      ) : (
+      {isImageMimeType(attachment.mimeType) ? (
+        thumbUrl ? (
+          <img src={thumbUrl} alt={attachment.filename} className="size-full object-cover" />
+        ) : (
+          <Loader2 size={12} className="animate-spin text-[var(--color-text-muted)]" />
+        )
+      ) : downloading ? (
         <Loader2 size={12} className="animate-spin text-[var(--color-text-muted)]" />
+      ) : (
+        <File size={14} className="text-[var(--color-text-muted)]" />
       )}
       <div className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-0.5 py-px text-center text-[7px] text-white opacity-0 transition-opacity group-hover:opacity-100">
         {attachment.filename}

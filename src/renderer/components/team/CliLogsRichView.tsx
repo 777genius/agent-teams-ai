@@ -18,6 +18,7 @@ import type { StreamJsonGroup } from '@renderer/utils/streamJsonParser';
 
 interface CliLogsRichViewProps {
   cliLogsTail: string;
+  order?: 'oldest-first' | 'newest-first';
   className?: string;
 }
 
@@ -128,6 +129,7 @@ const StreamGroup = ({
 
 export const CliLogsRichView = ({
   cliLogsTail,
+  order = 'oldest-first',
   className,
 }: CliLogsRichViewProps): React.JSX.Element => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -151,9 +153,13 @@ export const CliLogsRichView = ({
   // Auto-scroll to bottom on new content
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      if (order === 'newest-first') {
+        scrollRef.current.scrollTop = 0;
+      } else {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
     }
-  }, [cliLogsTail]);
+  }, [cliLogsTail, order]);
 
   const handleGroupToggle = useCallback((groupId: string) => {
     setCollapsedGroupIds((prev) => {
@@ -203,9 +209,11 @@ export const CliLogsRichView = ({
     );
   }
 
+  const visibleGroups = order === 'newest-first' ? [...groups].reverse() : groups;
+
   return (
     <div ref={scrollRef} className={cn('max-h-[400px] space-y-1.5 overflow-y-auto', className)}>
-      {groups.map((group) =>
+      {visibleGroups.map((group) =>
         group.items.length === 1 ? (
           // Single item — render flat without collapsible group wrapper
           <FlatGroupItem

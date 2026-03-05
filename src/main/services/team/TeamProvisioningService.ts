@@ -116,6 +116,8 @@ interface ProvisioningRun {
   stderrBuffer: string;
   /** Rolling buffer of CLI log lines (oldest -> newest). */
   claudeLogLines: string[];
+  /** Last stream used for claudeLogLines markers. */
+  lastClaudeLogStream: 'stdout' | 'stderr' | null;
   /** Carry buffer for stdout line splitting (CLI output). */
   stdoutLogLineBuf: string;
   /** Carry buffer for stderr line splitting (CLI output). */
@@ -486,10 +488,19 @@ function buildTeamCtlOpsInstructions(teamName: string, leadName: string): string
       `- Start task (preferred over set-status): node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task start <id>`,
       `- Complete task (preferred over set-status): node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task complete <id>`,
       `- Update status: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-status <id> <pending|in_progress|completed|deleted>`,
+      `- Add comment: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task comment <id> --text "..." --from "${leadName}"`,
+      `- Attach file to task: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task attach <id> --file "<path>" [--mode copy|link] [--filename "<name>"] [--mime-type "<type>"]`,
+      `- Attach file to a specific comment:`,
+      `  1) Find commentId: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task get <id>`,
+      `  2) Attach: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task comment-attach <id> <commentId> --file "<path>" [--mode copy|link] [--filename "<name>"] [--mime-type "<type>"]`,
       `- Create with deps (blocked work MUST be pending): node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task create --subject "..." --blocked-by 1,2 --related 3 --status pending --owner "<member>" --notify --from "${leadName}"`,
       `- Link dependency: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task link <id> --blocked-by <targetId>`,
       `- Link related: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task link <id> --related <targetId>`,
       `- Unlink: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task unlink <id> --blocked-by <targetId>`,
+      ``,
+      `Attachment storage modes (IMPORTANT):`,
+      `- Default is copy (safe, robust).`,
+      `- Use --mode link to try a hardlink (no duplication). It may fall back to copy unless you add --no-fallback.`,
       ``,
       `Dependency guidelines:`,
       `- Use --blocked-by when a task cannot start until another is done.`,
@@ -1021,7 +1032,16 @@ export class TeamProvisioningService {
 
     const newestExclusive = Math.max(0, total - offset);
     const oldestInclusive = Math.max(0, newestExclusive - limit);
-    const windowOldestToNewest = run.claudeLogLines.slice(oldestInclusive, newestExclusive);
+    const normalizeLine = (line: string): string => {
+      // Back-compat: older builds prefixed every line with "[stdout] " / "[stderr] "
+      if (line.startsWith('[stdout] ') && line !== '[stdout]') return line.slice('[stdout] '.length);
+      if (line.startsWith('[stderr] ') && line !== '[stderr]') return line.slice('[stderr] '.length);
+      return line;
+    };
+
+    const windowOldestToNewest = run.claudeLogLines
+      .slice(oldestInclusive, newestExclusive)
+      .map(normalizeLine);
     const lines = windowOldestToNewest.reverse();
     return {
       lines,
@@ -1035,14 +1055,19 @@ export class TeamProvisioningService {
     const nowMs = Date.now();
     run.claudeLogsUpdatedAt = new Date(nowMs).toISOString();
 
-    const prefix = stream === 'stdout' ? '[stdout] ' : '[stderr] ';
+    const marker = stream === 'stdout' ? '[stdout]' : '[stderr]';
+    if (run.lastClaudeLogStream !== stream) {
+      run.lastClaudeLogStream = stream;
+      run.claudeLogLines.push(marker);
+    }
+
     if (stream === 'stdout') {
       run.stdoutLogLineBuf += text;
       const parts = run.stdoutLogLineBuf.split('\n');
       run.stdoutLogLineBuf = parts.pop() ?? '';
       for (const part of parts) {
         const normalized = part.endsWith('\r') ? part.slice(0, -1) : part;
-        run.claudeLogLines.push(prefix + normalized);
+        run.claudeLogLines.push(normalized);
       }
     } else {
       run.stderrLogLineBuf += text;
@@ -1050,7 +1075,7 @@ export class TeamProvisioningService {
       run.stderrLogLineBuf = parts.pop() ?? '';
       for (const part of parts) {
         const normalized = part.endsWith('\r') ? part.slice(0, -1) : part;
-        run.claudeLogLines.push(prefix + normalized);
+        run.claudeLogLines.push(normalized);
       }
     }
     if (run.claudeLogLines.length > TeamProvisioningService.CLAUDE_LOG_LINES_LIMIT) {
@@ -1390,6 +1415,7 @@ export class TeamProvisioningService {
     run.stdoutBuffer = '';
     run.stderrBuffer = '';
     run.claudeLogLines = [];
+    run.lastClaudeLogStream = null;
     run.stdoutLogLineBuf = '';
     run.stderrLogLineBuf = '';
     run.claudeLogsUpdatedAt = undefined;
@@ -1612,6 +1638,7 @@ export class TeamProvisioningService {
         stdoutBuffer: '',
         stderrBuffer: '',
         claudeLogLines: [],
+        lastClaudeLogStream: null,
         stdoutLogLineBuf: '',
         stderrLogLineBuf: '',
         claudeLogsUpdatedAt: undefined,
@@ -1900,6 +1927,7 @@ export class TeamProvisioningService {
         stdoutBuffer: '',
         stderrBuffer: '',
         claudeLogLines: [],
+        lastClaudeLogStream: null,
         stdoutLogLineBuf: '',
         stderrLogLineBuf: '',
         claudeLogsUpdatedAt: undefined,

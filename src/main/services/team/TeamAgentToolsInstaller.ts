@@ -26,6 +26,10 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function makeId() {
+  return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + String(Math.random());
+}
+
 function formatError(err) {
   if (!err) return 'Unknown error';
   if (typeof err === 'string') return err;
@@ -175,6 +179,234 @@ function atomicWrite(filePath, data) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Attachments (task + comment)
+// ---------------------------------------------------------------------------
+
+const TASK_ATTACHMENTS_DIR = 'task-attachments';
+const MAX_TASK_ATTACHMENT_BYTES = 20 * 1024 * 1024; // 20 MB
+
+function sanitizeFilename(original) {
+  const raw = String(original == null ? '' : original).trim();
+  const parts = raw.split(/[\\/]/);
+  const base = (parts.length ? parts[parts.length - 1] : raw).trim();
+  const cleaned = base
+    .replace(/\0/g, '')
+    .replace(/[\r\n\t]/g, ' ')
+    .replace(/[\\/]/g, '_')
+    .trim();
+  if (!cleaned) return 'attachment';
+  return cleaned.length > 180 ? cleaned.slice(0, 180) : cleaned;
+}
+
+function readFileHeader(filePath, maxBytes) {
+  const fd = fs.openSync(filePath, 'r');
+  try {
+    const buf = Buffer.alloc(maxBytes);
+    const bytes = fs.readSync(fd, buf, 0, maxBytes, 0);
+    return buf.slice(0, bytes);
+  } finally {
+    try { fs.closeSync(fd); } catch { /* ignore */ }
+  }
+}
+
+function startsWithBytes(buf, bytes) {
+  if (!buf || buf.length < bytes.length) return false;
+  for (let i = 0; i < bytes.length; i++) {
+    if (buf[i] !== bytes[i]) return false;
+  }
+  return true;
+}
+
+function detectMimeTypeFromPathAndHeader(filePath, filename) {
+  const name = String(filename || '').toLowerCase();
+  const ext = path.extname(name);
+
+  // Fast path by extension for common types.
+  if (ext === '.png') return 'image/png';
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+  if (ext === '.gif') return 'image/gif';
+  if (ext === '.webp') return 'image/webp';
+  if (ext === '.pdf') return 'application/pdf';
+  if (ext === '.txt') return 'text/plain';
+  if (ext === '.md') return 'text/markdown';
+  if (ext === '.json') return 'application/json';
+  if (ext === '.zip') return 'application/zip';
+
+  // Sniff magic bytes for a few important formats.
+  let header;
+  try {
+    header = readFileHeader(filePath, 16);
+  } catch {
+    return 'application/octet-stream';
+  }
+  if (startsWithBytes(header, [0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])) return 'image/png'; // PNG
+  if (startsWithBytes(header, [0xff,0xd8,0xff])) return 'image/jpeg'; // JPEG
+  if (header.length >= 6) {
+    const sig6 = header.slice(0, 6).toString('ascii');
+    if (sig6 === 'GIF87a' || sig6 === 'GIF89a') return 'image/gif';
+  }
+  if (header.length >= 12) {
+    const riff = header.slice(0, 4).toString('ascii');
+    const webp = header.slice(8, 12).toString('ascii');
+    if (riff === 'RIFF' && webp === 'WEBP') return 'image/webp';
+  }
+  if (header.length >= 5 && header.slice(0, 5).toString('ascii') === '%PDF-') return 'application/pdf';
+  if (startsWithBytes(header, [0x50,0x4b,0x03,0x04])) return 'application/zip';
+
+  return 'application/octet-stream';
+}
+
+function getTaskAttachmentsDir(paths, taskId) {
+  return path.join(paths.teamDir, TASK_ATTACHMENTS_DIR, String(taskId));
+}
+
+function getStoredAttachmentPath(paths, taskId, attachmentId, filename) {
+  const safeName = sanitizeFilename(filename);
+  return path.join(getTaskAttachmentsDir(paths, taskId), String(attachmentId) + '--' + safeName);
+}
+
+function ensureSourceFileReadable(srcPath) {
+  const st = fs.statSync(srcPath);
+  if (!st.isFile()) die('Not a file: ' + String(srcPath));
+  if (st.size > MAX_TASK_ATTACHMENT_BYTES) {
+    die(
+      'Attachment too large: ' +
+        (st.size / (1024 * 1024)).toFixed(1) +
+        ' MB (max ' +
+        String(MAX_TASK_ATTACHMENT_BYTES / (1024 * 1024)) +
+        ' MB)'
+    );
+  }
+  return st;
+}
+
+function copyOrLinkFile(srcPath, destPath, mode, allowFallback) {
+  const m = String(mode || 'copy').toLowerCase();
+  if (m === 'link') {
+    try {
+      fs.linkSync(srcPath, destPath);
+      return { mode: 'link', fallbackUsed: false };
+    } catch (e) {
+      if (!allowFallback) throw e;
+      // Fall back to copy (cross-device link, permissions, etc.)
+      try {
+        fs.copyFileSync(srcPath, destPath);
+        return { mode: 'copy', fallbackUsed: true };
+      } catch (e2) {
+        // Bubble up most useful error
+        throw e2 || e;
+      }
+    }
+  }
+  fs.copyFileSync(srcPath, destPath);
+  return { mode: 'copy', fallbackUsed: false };
+}
+
+function saveTaskAttachmentFile(paths, taskId, flags) {
+  const rawFile = (typeof flags.file === 'string' && flags.file.trim())
+    ? flags.file.trim()
+    : (typeof flags.path === 'string' && flags.path.trim())
+      ? flags.path.trim()
+      : '';
+  if (!rawFile) die('Missing --file <path>');
+
+  const srcPath = path.resolve(rawFile);
+  ensureSourceFileReadable(srcPath);
+
+  const filename = (typeof flags.filename === 'string' && flags.filename.trim())
+    ? flags.filename.trim()
+    : path.basename(srcPath);
+  const mimeType = (typeof flags['mime-type'] === 'string' && flags['mime-type'].trim())
+    ? flags['mime-type'].trim()
+    : (typeof flags.mimeType === 'string' && flags.mimeType.trim())
+      ? flags.mimeType.trim()
+      : detectMimeTypeFromPathAndHeader(srcPath, filename);
+
+  const attachmentId = makeId();
+  const dir = getTaskAttachmentsDir(paths, taskId);
+  ensureDir(dir);
+  const destPath = getStoredAttachmentPath(paths, taskId, attachmentId, filename);
+  const allowFallback = !(flags['no-fallback'] === true);
+
+  if (fs.existsSync(destPath)) die('Attachment destination already exists');
+  const result = copyOrLinkFile(srcPath, destPath, flags.mode, allowFallback);
+
+  // Verify write/link
+  const st = fs.statSync(destPath);
+  if (!st.isFile() || st.size < 0) die('Attachment write verification failed');
+
+  const meta = {
+    id: attachmentId,
+    filename: filename,
+    mimeType: mimeType,
+    size: st.size,
+    addedAt: nowIso(),
+  };
+  return { meta: meta, storedPath: destPath, storageMode: result.mode, fallbackUsed: result.fallbackUsed };
+}
+
+function addAttachmentToTask(paths, taskId, meta) {
+  var lastErr;
+  for (var attempt = 0; attempt < 8; attempt++) {
+    try {
+      const ref = readTask(paths, taskId);
+      const task = ref.task;
+      const taskPath = ref.taskPath;
+      const existing = Array.isArray(task.attachments) ? task.attachments : [];
+      if (existing.some(function(a) { return a && a.id === meta.id; })) return;
+      task.attachments = existing.concat([meta]);
+      writeTask(taskPath, task);
+      // Verify meta persisted (best-effort)
+      const verify = readJson(taskPath, null);
+      if (verify && Array.isArray(verify.attachments) && verify.attachments.some(function(a) { return a && a.id === meta.id; })) {
+        return;
+      }
+      // Verification failed (concurrent overwrite) — retry
+    } catch (e) {
+      lastErr = e;
+      if (attempt === 7) throw e;
+    }
+  }
+  throw lastErr;
+}
+
+function addAttachmentToComment(paths, taskId, commentId, meta) {
+  var lastErr;
+  for (var attempt = 0; attempt < 8; attempt++) {
+    try {
+      const ref = readTask(paths, taskId);
+      const task = ref.task;
+      const taskPath = ref.taskPath;
+      const comments = Array.isArray(task.comments) ? task.comments : [];
+      const idx = comments.findIndex(function(c) { return c && String(c.id) === String(commentId); });
+      if (idx < 0) die('Comment not found: ' + String(commentId));
+      const comment = comments[idx];
+      const existing = Array.isArray(comment.attachments) ? comment.attachments : [];
+      if (!existing.some(function(a) { return a && a.id === meta.id; })) {
+        comment.attachments = existing.concat([meta]);
+      }
+      // Persist update (single atomic write)
+      task.comments = comments;
+      writeTask(taskPath, task);
+
+      // Verify
+      const verify = readJson(taskPath, null);
+      if (verify && Array.isArray(verify.comments)) {
+        const vc = verify.comments.find(function(c) { return c && String(c.id) === String(commentId); });
+        if (vc && Array.isArray(vc.attachments) && vc.attachments.some(function(a) { return a && a.id === meta.id; })) {
+          return;
+        }
+      }
+      // Retry on verification failure
+    } catch (e) {
+      lastErr = e;
+      if (attempt === 7) throw e;
+    }
+  }
+  throw lastErr;
+}
+
 function normalizeStatus(value) {
   const v = String(value || '').trim();
   if (v === 'pending' || v === 'in_progress' || v === 'completed' || v === 'deleted') return v;
@@ -297,9 +529,7 @@ function addTaskComment(paths, taskId, flags) {
       }
 
       existing = Array.isArray(task.comments) ? task.comments : [];
-      commentId = crypto.randomUUID
-        ? crypto.randomUUID()
-        : String(Date.now()) + '-' + String(Math.random());
+      commentId = makeId();
       comment = {
         id: commentId,
         author: from,
@@ -598,9 +828,7 @@ function sendInboxMessage(paths, teamName, flags) {
   const inboxPath = path.join(paths.teamDir, 'inboxes', String(to) + '.json');
   ensureDir(path.dirname(inboxPath));
 
-  const messageId = crypto.randomUUID
-    ? crypto.randomUUID()
-    : String(Date.now()) + '-' + String(Math.random());
+  const messageId = makeId();
   const payload = {
     from,
     to,
@@ -640,9 +868,7 @@ function reviewApprove(paths, teamName, taskId, flags) {
 
   // Record review comment in task.comments
   var existing = Array.isArray(task.comments) ? task.comments : [];
-  var reviewCommentId = crypto.randomUUID
-    ? crypto.randomUUID()
-    : String(Date.now()) + '-' + String(Math.random());
+  var reviewCommentId = makeId();
   task.comments = existing.concat([{
     id: reviewCommentId,
     author: from,
@@ -681,9 +907,7 @@ function reviewRequestChanges(paths, teamName, taskId, flags) {
 
   // Record review comment in task.comments
   var existing = Array.isArray(task.comments) ? task.comments : [];
-  var reviewCommentId = crypto.randomUUID
-    ? crypto.randomUUID()
-    : String(Date.now()) + '-' + String(Math.random());
+  var reviewCommentId = makeId();
   task.comments = existing.concat([{
     id: reviewCommentId,
     author: from,
@@ -747,7 +971,7 @@ function processRegister(paths, flags) {
   const existingIdx = list.findIndex(function (p) { return p.pid === pid; });
 
   const entry = {
-    id: existingIdx >= 0 ? list[existingIdx].id : (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + String(Math.random())),
+    id: existingIdx >= 0 ? list[existingIdx].id : makeId(),
     port: port,
     url: url,
     label: label,
@@ -936,6 +1160,8 @@ function printHelp() {
       '  node teamctl.js task unlink <id> --related <targetId> [--team <team>]',
       '  node teamctl.js task set-owner <id> <member|clear> [--notify --from "member"] [--team <team>]',
       '  node teamctl.js task comment <id> --text "..." [--from "member"] [--team <team>]',
+      '  node teamctl.js task attach <id> --file <path> [--mode copy|link] [--filename <name>] [--mime-type <type>] [--no-fallback] [--team <team>]',
+      '  node teamctl.js task comment-attach <id> <commentId> --file <path> [--mode copy|link] [--filename <name>] [--mime-type <type>] [--no-fallback] [--team <team>]',
       '  node teamctl.js task set-clarification <id> <lead|user|clear> [--from "member"] [--team <team>]',
       '  node teamctl.js task briefing --for <member-name> [--team <team>]',
       '  node teamctl.js kanban set-column <id> <review|approved> [--team <team>]',
@@ -951,6 +1177,8 @@ function printHelp() {
       'Options:',
       '  --team <name>           Team name (if not under ~/.claude/teams/<team>/tools)',
       '  --claude-dir <path>     Override ~/.claude location',
+      '  --mode <copy|link>      For attachments: copy into storage (default) or try hardlink to avoid duplication',
+      '  --no-fallback           For --mode link: fail instead of falling back to copy',
       '',
     ].join('\n')
   );
@@ -1067,6 +1295,42 @@ async function main() {
         } catch (e) { /* best-effort */ }
       }
       process.stdout.write('OK comment added to task #' + String(id) + '\n');
+      return;
+    }
+    if (action === 'attach') {
+      const id = rest[0] || args.flags.id;
+      if (!id) die('Usage: task attach <id> --file <path>');
+      // Save file to storage first, then update task metadata
+      const saved = saveTaskAttachmentFile(paths, String(id), args.flags);
+      try {
+        addAttachmentToTask(paths, String(id), saved.meta);
+      } catch (e) {
+        // Best-effort cleanup of orphaned file on failure
+        try { fs.unlinkSync(saved.storedPath); } catch { /* ignore */ }
+        throw e;
+      }
+      if (saved.fallbackUsed) {
+        process.stderr.write('WARN: link failed; fell back to copy\n');
+      }
+      process.stdout.write(JSON.stringify(saved.meta, null, 2) + '\n');
+      return;
+    }
+    if (action === 'comment-attach') {
+      const id = rest[0] || args.flags.id;
+      const commentId = rest[1] || args.flags['comment-id'] || args.flags.commentId;
+      if (!id || !commentId) die('Usage: task comment-attach <id> <commentId> --file <path>');
+      const saved = saveTaskAttachmentFile(paths, String(id), args.flags);
+      try {
+        addAttachmentToComment(paths, String(id), String(commentId), saved.meta);
+      } catch (e) {
+        // Best-effort cleanup of orphaned file on failure
+        try { fs.unlinkSync(saved.storedPath); } catch { /* ignore */ }
+        throw e;
+      }
+      if (saved.fallbackUsed) {
+        process.stderr.write('WARN: link failed; fell back to copy\n');
+      }
+      process.stdout.write(JSON.stringify(saved.meta, null, 2) + '\n');
       return;
     }
     if (action === 'set-clarification') {

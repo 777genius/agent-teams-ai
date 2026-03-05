@@ -783,6 +783,161 @@ describe('teamctl.js', () => {
   });
 
   // =========================================================================
+  // Attachments (task + comment)
+  // =========================================================================
+  describe('attachments', () => {
+    it('task attach copies file into storage and records metadata', () => {
+      // Create task
+      expect(run(claudeDir, ['task', 'create', '--subject', 'With attachment']).exitCode).toBe(0);
+
+      const samplePath = path.join(claudeDir, 'sample.txt');
+      fs.writeFileSync(samplePath, 'hello');
+
+      const { stdout, exitCode } = run(claudeDir, ['task', 'attach', '1', '--file', samplePath]);
+      expect(exitCode).toBe(0);
+
+      const meta = JSON.parse(stdout) as {
+        id: string;
+        filename: string;
+        mimeType: string;
+        size: number;
+        addedAt: string;
+      };
+      expect(meta.id).toBeDefined();
+      expect(meta.filename).toBe('sample.txt');
+      expect(meta.mimeType).toBe('text/plain');
+      expect(meta.size).toBe(5);
+      expect(meta.addedAt).toMatch(ISO_RE);
+
+      const storedPath = path.join(
+        claudeDir,
+        'teams',
+        TEAM,
+        'task-attachments',
+        '1',
+        `${meta.id}--${meta.filename}`
+      );
+      expect(fs.existsSync(storedPath)).toBe(true);
+      expect(fs.readFileSync(storedPath, 'utf8')).toBe('hello');
+
+      const task = readTask(claudeDir, '1');
+      const attachments = task.attachments as Record<string, unknown>[];
+      expect(attachments).toHaveLength(1);
+      expect(attachments[0].id).toBe(meta.id);
+      expect(attachments[0].filename).toBe(meta.filename);
+      expect(attachments[0].mimeType).toBe(meta.mimeType);
+    });
+
+    it('task attach supports --filename and --mime-type overrides', () => {
+      expect(run(claudeDir, ['task', 'create', '--subject', 'With override']).exitCode).toBe(0);
+
+      const samplePath = path.join(claudeDir, 'sample.bin');
+      fs.writeFileSync(samplePath, Buffer.from([1, 2, 3, 4]));
+
+      const { stdout, exitCode } = run(claudeDir, [
+        'task',
+        'attach',
+        '1',
+        '--file',
+        samplePath,
+        '--filename',
+        'renamed.dat',
+        '--mime-type',
+        'application/octet-stream',
+      ]);
+      expect(exitCode).toBe(0);
+      const meta = JSON.parse(stdout) as { id: string; filename: string; mimeType: string; size: number };
+      expect(meta.filename).toBe('renamed.dat');
+      expect(meta.mimeType).toBe('application/octet-stream');
+
+      const storedPath = path.join(
+        claudeDir,
+        'teams',
+        TEAM,
+        'task-attachments',
+        '1',
+        `${meta.id}--${meta.filename}`
+      );
+      expect(fs.existsSync(storedPath)).toBe(true);
+      expect(fs.readFileSync(storedPath)).toEqual(Buffer.from([1, 2, 3, 4]));
+    });
+
+    it('task comment-attach adds attachment to a specific comment', () => {
+      expect(run(claudeDir, ['task', 'create', '--subject', 'Comment attach']).exitCode).toBe(0);
+      expect(run(claudeDir, ['task', 'comment', '1', '--text', 'First comment', '--from', 'alice']).exitCode).toBe(
+        0
+      );
+
+      const taskAfterComment = readTask(claudeDir, '1');
+      const commentId = String((taskAfterComment.comments as Record<string, unknown>[])[0].id);
+
+      const samplePath = path.join(claudeDir, 'comment.txt');
+      fs.writeFileSync(samplePath, 'comment-file');
+
+      const { stdout, exitCode } = run(claudeDir, [
+        'task',
+        'comment-attach',
+        '1',
+        commentId,
+        '--file',
+        samplePath,
+      ]);
+      expect(exitCode).toBe(0);
+      const meta = JSON.parse(stdout) as { id: string; filename: string; mimeType: string };
+      expect(meta.filename).toBe('comment.txt');
+
+      const storedPath = path.join(
+        claudeDir,
+        'teams',
+        TEAM,
+        'task-attachments',
+        '1',
+        `${meta.id}--${meta.filename}`
+      );
+      expect(fs.existsSync(storedPath)).toBe(true);
+
+      const taskAfterAttach = readTask(claudeDir, '1');
+      const comment = (taskAfterAttach.comments as Record<string, unknown>[]).find(
+        (c) => String(c.id) === commentId
+      ) as Record<string, unknown>;
+      expect(comment).toBeDefined();
+      const attachments = comment.attachments as Record<string, unknown>[];
+      expect(attachments).toHaveLength(1);
+      expect(attachments[0].id).toBe(meta.id);
+      expect(attachments[0].filename).toBe(meta.filename);
+      expect(attachments[0].mimeType).toBe(meta.mimeType);
+    });
+
+    it('task attach with --mode link succeeds (may fall back to copy)', () => {
+      expect(run(claudeDir, ['task', 'create', '--subject', 'Link mode']).exitCode).toBe(0);
+
+      const samplePath = path.join(claudeDir, 'link.txt');
+      fs.writeFileSync(samplePath, 'link');
+
+      const { stdout, exitCode } = run(claudeDir, [
+        'task',
+        'attach',
+        '1',
+        '--file',
+        samplePath,
+        '--mode',
+        'link',
+      ]);
+      expect(exitCode).toBe(0);
+      const meta = JSON.parse(stdout) as { id: string; filename: string };
+      const storedPath = path.join(
+        claudeDir,
+        'teams',
+        TEAM,
+        'task-attachments',
+        '1',
+        `${meta.id}--${meta.filename}`
+      );
+      expect(fs.existsSync(storedPath)).toBe(true);
+    });
+  });
+
+  // =========================================================================
   // Comment Auto-Clear needsClarification
   // =========================================================================
   describe('comment auto-clear needsClarification', () => {

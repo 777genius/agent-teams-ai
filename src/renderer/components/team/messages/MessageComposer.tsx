@@ -447,6 +447,9 @@ export const MessageComposer = ({
         }
         footerRight={
           <div className="flex items-center gap-2">
+            <span className="text-[10px] text-[var(--color-text-muted)] opacity-70">
+              Mention &quot;create a task&quot; to add it to the board
+            </span>
             {sendError ? (
               <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">
                 <AlertCircle size={10} className="shrink-0" />

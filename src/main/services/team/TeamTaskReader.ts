@@ -8,7 +8,6 @@ import * as path from 'path';
 import { getTeamFsWorkerClient } from './TeamFsWorkerClient';
 
 import type {
-  AttachmentMediaType,
   StatusTransition,
   TaskAttachmentMeta,
   TaskComment,
@@ -20,12 +19,18 @@ import type {
 const logger = createLogger('Service:TeamTaskReader');
 const MAX_TASK_FILE_BYTES = 2 * 1024 * 1024;
 
-const VALID_ATTACHMENT_MIME_TYPES: ReadonlySet<string> = new Set<AttachmentMediaType>([
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-]);
+function isValidMimeTypeString(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const v = value.trim();
+  if (!v) return false;
+  // Keep it reasonably bounded and avoid control characters.
+  if (v.length > 200) return false;
+  if (v.includes('\0') || /[\r\n]/.test(v)) return false;
+  // Minimal MIME shape: type/subtype
+  const slash = v.indexOf('/');
+  if (slash <= 0 || slash === v.length - 1) return false;
+  return true;
+}
 
 export class TeamTaskReader {
   /**
@@ -203,23 +208,25 @@ export class TeamTaskReader {
                   attachments: Array.isArray(c.attachments)
                     ? (() => {
                         const filtered = (c.attachments as unknown[])
-                          .filter(
-                            (a): a is TaskAttachmentMeta =>
-                              Boolean(a) &&
-                              typeof a === 'object' &&
-                              typeof (a as Record<string, unknown>).id === 'string' &&
-                              typeof (a as Record<string, unknown>).filename === 'string' &&
-                              typeof (a as Record<string, unknown>).mimeType === 'string' &&
-                              VALID_ATTACHMENT_MIME_TYPES.has(
-                                (a as Record<string, unknown>).mimeType as string
-                              ) &&
-                              typeof (a as Record<string, unknown>).size === 'number' &&
-                              typeof (a as Record<string, unknown>).addedAt === 'string'
-                          )
+                          .filter((a): a is TaskAttachmentMeta => {
+                            if (!a || typeof a !== 'object') return false;
+                            const row = a as Record<string, unknown>;
+                            const size = row.size;
+                            return (
+                              typeof row.id === 'string' &&
+                              typeof row.filename === 'string' &&
+                              typeof row.mimeType === 'string' &&
+                              isValidMimeTypeString(row.mimeType) &&
+                              typeof size === 'number' &&
+                              Number.isFinite(size) &&
+                              size >= 0 &&
+                              typeof row.addedAt === 'string'
+                            );
+                          })
                           .map((a) => ({
                             id: a.id,
                             filename: a.filename,
-                            mimeType: a.mimeType,
+                            mimeType: String(a.mimeType).trim(),
                             size: a.size,
                             addedAt: a.addedAt,
                           }));
@@ -236,23 +243,25 @@ export class TeamTaskReader {
           deletedAt: undefined, // deleted tasks are filtered out below
           attachments: Array.isArray(parsed.attachments)
             ? (parsed.attachments as unknown[])
-                .filter(
-                  (a): a is TaskAttachmentMeta =>
-                    Boolean(a) &&
-                    typeof a === 'object' &&
-                    typeof (a as Record<string, unknown>).id === 'string' &&
-                    typeof (a as Record<string, unknown>).filename === 'string' &&
-                    typeof (a as Record<string, unknown>).mimeType === 'string' &&
-                    VALID_ATTACHMENT_MIME_TYPES.has(
-                      (a as Record<string, unknown>).mimeType as string
-                    ) &&
-                    typeof (a as Record<string, unknown>).size === 'number' &&
-                    typeof (a as Record<string, unknown>).addedAt === 'string'
-                )
+                .filter((a): a is TaskAttachmentMeta => {
+                  if (!a || typeof a !== 'object') return false;
+                  const row = a as Record<string, unknown>;
+                  const size = row.size;
+                  return (
+                    typeof row.id === 'string' &&
+                    typeof row.filename === 'string' &&
+                    typeof row.mimeType === 'string' &&
+                    isValidMimeTypeString(row.mimeType) &&
+                    typeof size === 'number' &&
+                    Number.isFinite(size) &&
+                    size >= 0 &&
+                    typeof row.addedAt === 'string'
+                  );
+                })
                 .map((a) => ({
                   id: a.id,
                   filename: a.filename,
-                  mimeType: a.mimeType,
+                  mimeType: String(a.mimeType).trim(),
                   size: a.size,
                   addedAt: a.addedAt,
                 }))
