@@ -176,7 +176,6 @@ function linkifyMentionsInMarkdown(text: string, memberColorMap: Map<string, str
     return `${prefix}[@${canonical}](mention://${encodeURIComponent(color)}/${encodeURIComponent(canonical)})`;
   });
 }
-
 /** Render `#<digits>` in plain text as clickable inline elements with TaskTooltip. */
 function linkifyTaskIds(text: string, onClick: (taskId: string) => void): React.ReactNode[] {
   return text.split(/(#\d+)/g).map((part, i) => {

@@ -271,8 +271,16 @@ export class TeamTaskReader {
       }
     }
 
-    // Sort by numeric ID so kanban default order is deterministic (#1, #2, ..., #10, #11)
-    tasks.sort((a, b) => Number(a.id) - Number(b.id));
+    // Sort by numeric ID so kanban default order is deterministic (#1, #2, ..., #10, #11).
+    // Fall back to stable lexicographic ordering for unexpected non-numeric IDs.
+    tasks.sort((a, b) => {
+      const aIsNumeric = /^\d+$/.test(a.id);
+      const bIsNumeric = /^\d+$/.test(b.id);
+      if (aIsNumeric && bIsNumeric) return Number(a.id) - Number(b.id);
+      if (aIsNumeric) return -1;
+      if (bIsNumeric) return 1;
+      return a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' });
+    });
 
     return tasks;
   }

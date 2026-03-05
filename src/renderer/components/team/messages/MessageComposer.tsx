@@ -168,7 +168,8 @@ export const MessageComposer = ({
     if (!canSend) return;
     pendingSendRef.current = true;
     const serialized = serializeChipsWithText(trimmed, chipDraft.chips);
-    onSend(recipient, serialized, serialized, attachments.length > 0 ? attachments : undefined);
+    // Summary should stay compact (no expanded chip markdown)
+    onSend(recipient, serialized, trimmed, attachments.length > 0 ? attachments : undefined);
   }, [canSend, recipient, trimmed, onSend, attachments, chipDraft.chips]);
 
   // Clear draft only after send completes successfully (sending: true → false, no error)

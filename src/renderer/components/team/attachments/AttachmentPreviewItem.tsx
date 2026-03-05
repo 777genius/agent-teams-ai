@@ -21,7 +21,7 @@ export const AttachmentPreviewItem = ({
   return (
     <div className="group/att relative flex shrink-0 items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5">
       {disabled ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-black/50">
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-md bg-black/50">
           <Ban size={18} className="text-red-400" />
         </div>
       ) : null}

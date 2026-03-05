@@ -95,6 +95,17 @@ export function useResizableColumns({
     });
   }, [handlePointerMove, storageKey]);
 
+  // Safety: if the board unmounts or storageKey changes mid-drag, clean up global listeners/styles.
+  useEffect(() => {
+    return () => {
+      draggingRef.current = null;
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [handlePointerMove, handlePointerUp]);
+
   const getHandleProps = useCallback(
     (leftColumnId: string) => ({
       onPointerDown: (e: React.PointerEvent) => {
