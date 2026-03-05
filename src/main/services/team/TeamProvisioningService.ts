@@ -156,6 +156,11 @@ interface ProvisioningRun {
    * Flushed to liveLeadProcessMessages on result.success.
    */
   directReplyParts: string[];
+  /**
+   * When set, the current stdin-injected turn is an internal "forward user DM to teammate"
+   * request triggered by the UI. We suppress any lead→user echo for that turn.
+   */
+  silentUserDmForward: { target: string; startedAt: string } | null;
   /** Accumulates assistant text during provisioning phase for live UI preview. */
   provisioningOutputParts: string[];
   /** Session ID detected from stream-json output (result.session_id or message.session_id). */
@@ -1678,6 +1683,7 @@ export class TeamProvisioningService {
         fsPhase: 'waiting_config',
         leadRelayCapture: null,
         directReplyParts: [],
+        silentUserDmForward: null,
         provisioningOutputParts: [],
         detectedSessionId: null,
         leadActivityState: 'active',
@@ -1967,6 +1973,7 @@ export class TeamProvisioningService {
         fsPhase: 'waiting_members',
         leadRelayCapture: null,
         directReplyParts: [],
+        silentUserDmForward: null,
         provisioningOutputParts: [],
         detectedSessionId: null,
         leadActivityState: 'active',
@@ -2206,6 +2213,52 @@ export class TeamProvisioningService {
       });
     });
     this.setLeadActivity(run, 'active');
+  }
+
+  /**
+   * Best-effort: forward a user-written DM to a teammate via the live lead process.
+   * This covers cases where teammates don't automatically respond to inbox JSON,
+   * and only react to Claude Code internal SendMessage routing.
+   *
+   * Note: We suppress the lead's textual output for this injected turn to avoid
+   * confusing lead responses like "No action needed."
+   */
+  async forwardUserDmToTeammate(
+    teamName: string,
+    teammateName: string,
+    userText: string,
+    userSummary?: string
+  ): Promise<void> {
+    const runId = this.activeByTeam.get(teamName);
+    if (!runId) {
+      throw new Error(`No active process for team "${teamName}"`);
+    }
+    const run = this.runs.get(runId);
+    if (!run?.child?.stdin?.writable) {
+      throw new Error(`Team "${teamName}" process stdin is not writable`);
+    }
+    if (!run.provisioningComplete) {
+      // Don't inject extra turns during provisioning/bootstrap.
+      return;
+    }
+
+    run.silentUserDmForward = { target: teammateName, startedAt: nowIso() };
+
+    const summaryLine = userSummary?.trim() ? `Summary: ${userSummary.trim()}` : null;
+    const message = [
+      `INTERNAL: The human user sent a direct message to teammate "${teammateName}" via the UI.`,
+      `Action: forward it to that teammate using the SendMessage tool.`,
+      `IMPORTANT: Do NOT reply to the human user for this turn.`,
+      `In the forwarded message, ask the teammate to reply to recipient "user" with a short answer.`,
+      ``,
+      `User message:`,
+      ...(summaryLine ? [summaryLine] : []),
+      userText,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    await this.sendMessageToTeam(teamName, message);
   }
 
   /**
@@ -2731,7 +2784,9 @@ export class TeamProvisioningService {
           }
         } else if (run.provisioningComplete) {
           // Accumulate assistant text for direct user→lead messages (no relay capture).
-          run.directReplyParts.push(text);
+          if (!run.silentUserDmForward) {
+            run.directReplyParts.push(text);
+          }
         }
       }
 
@@ -2740,7 +2795,7 @@ export class TeamProvisioningService {
       // (e.g., after session resume when teamContext is lost). We intercept the tool calls
       // from stdout and persist them to sentMessages.json under the correct team name,
       // ensuring the UI and notifications show the right team.
-      if (run.provisioningComplete) {
+      if (run.provisioningComplete && !run.silentUserDmForward) {
         this.captureSendMessageToUser(run, content ?? []);
       }
 

@@ -1367,7 +1367,34 @@ export class TeamDataService {
 
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
     if (patch.op !== 'request_changes') {
+      // Keep kanban + task.status consistent:
+      // - moving a task into kanban review/approved implies the work is complete
+      // - request_changes already moves it back to in_progress and clears kanban entry
+      if (patch.op !== 'set_column') {
+        await this.kanbanManager.updateTask(teamName, taskId, patch);
+        return;
+      }
+
+      const previousState = await this.kanbanManager.getState(teamName);
+      const previousKanbanEntry: KanbanTaskState | undefined = previousState.tasks[taskId];
+
       await this.kanbanManager.updateTask(teamName, taskId, patch);
+
+      try {
+        await this.taskWriter.updateStatus(teamName, taskId, 'completed', 'user');
+      } catch (error) {
+        // Best-effort rollback of kanban move if task status update failed.
+        if (previousKanbanEntry) {
+          await this.kanbanManager
+            .updateTask(teamName, taskId, { op: 'set_column', column: previousKanbanEntry.column })
+            .catch(() => undefined);
+        } else {
+          await this.kanbanManager
+            .updateTask(teamName, taskId, { op: 'remove' })
+            .catch(() => undefined);
+        }
+        throw error;
+      }
       return;
     }
 

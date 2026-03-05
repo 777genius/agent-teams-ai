@@ -398,6 +398,7 @@ export const ClaudeLogsSection = ({ teamName }: ClaudeLogsSectionProps): React.J
             // Parser expects chronological order; UI shows newest-first.
             cliLogsTail={filteredText}
             order="newest-first"
+            searchQueryOverride={searchQuery.trim() ? searchQuery : undefined}
             className="max-h-[320px] p-2"
             containerRefCallback={(el) => {
               logContainerRef.current = el;
