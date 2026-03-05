@@ -3,6 +3,7 @@ import React from 'react';
 import { Brain } from 'lucide-react';
 
 import { MarkdownViewer } from '../viewers';
+import { highlightQueryInText } from '../searchHighlightUtils';
 
 import { BaseItem } from './BaseItem';
 import { truncateText } from './baseItemHelpers';
@@ -40,6 +41,11 @@ export const ThinkingItem: React.FC<ThinkingItemProps> = ({
 }) => {
   const fullContent = step.content.thinkingText ?? preview;
   const truncatedPreview = truncateText(preview, 60);
+  const summary = searchQueryOverride
+    ? highlightQueryInText(truncatedPreview, searchQueryOverride, `${markdownItemId ?? step.id}:summary`, {
+        forceAllActive: true,
+      })
+    : truncatedPreview;
 
   // Get token count from step.tokens.output or step.content.tokenCount
   const tokenCount = step.tokens?.output ?? step.content.tokenCount ?? 0;
@@ -48,7 +54,7 @@ export const ThinkingItem: React.FC<ThinkingItemProps> = ({
     <BaseItem
       icon={<Brain className="size-4" />}
       label="Thinking"
-      summary={truncatedPreview}
+      summary={summary}
       tokenCount={tokenCount}
       onClick={onClick}
       isExpanded={isExpanded}

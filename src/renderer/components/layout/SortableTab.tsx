@@ -7,6 +7,7 @@ import { useCallback, useState } from 'react';
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
 import {
   Activity,
@@ -66,6 +67,13 @@ export const SortableTab = ({
     )
   );
 
+  const teamColor = useStore((s) => {
+    if (tab.type !== 'team' || !tab.teamName) return null;
+    const team = s.teamByName[tab.teamName];
+    return team?.color ?? null;
+  });
+  const teamColorSet = teamColor ? getTeamColorSet(teamColor) : null;
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tab.id,
     data: {
@@ -81,13 +89,18 @@ export const SortableTab = ({
     transition: isDragging ? 'none' : transition,
     opacity: isDragging ? 0.3 : 1,
     backgroundColor: isActive
-      ? 'var(--color-surface-raised)'
+      ? teamColorSet
+        ? teamColorSet.badge
+        : 'var(--color-surface-raised)'
       : isHovered
-        ? 'var(--color-surface-overlay)'
+        ? teamColorSet
+          ? teamColorSet.badge
+          : 'var(--color-surface-overlay)'
         : 'transparent',
     color: isActive || isHovered ? 'var(--color-text)' : 'var(--color-text-muted)',
     outline: isSelected ? '1px solid var(--color-border-emphasis)' : 'none',
     outlineOffset: '-1px',
+    borderLeft: isActive && teamColorSet ? `2px solid ${teamColorSet.border}` : undefined,
   };
 
   const Icon = TAB_ICONS[tab.type];

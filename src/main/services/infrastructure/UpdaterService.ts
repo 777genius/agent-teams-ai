@@ -41,6 +41,7 @@ export class UpdaterService {
       await autoUpdater.checkForUpdates();
     } catch (error) {
       logger.error('Check for updates failed:', getErrorMessage(error));
+      this.sendStatus({ type: 'error', error: getErrorMessage(error) });
     }
   }
 
@@ -52,6 +53,7 @@ export class UpdaterService {
       await autoUpdater.downloadUpdate();
     } catch (error) {
       logger.error('Download update failed:', getErrorMessage(error));
+      this.sendStatus({ type: 'error', error: getErrorMessage(error) });
     }
   }
 

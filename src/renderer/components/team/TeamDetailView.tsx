@@ -1081,15 +1081,22 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         </div>
 
         {!data.isAlive && !isTeamProvisioning ? (
-          <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2">
-            <span className="flex items-center gap-1.5 text-xs text-amber-200">
-              <AlertTriangle size={14} className="shrink-0 text-amber-400" />
+          <div
+            className="mb-3 flex items-center justify-between gap-3 rounded-md border px-3 py-2"
+            style={{
+              backgroundColor: 'var(--warning-bg)',
+              borderColor: 'var(--warning-border)',
+              color: 'var(--warning-text)',
+            }}
+          >
+            <span className="flex items-center gap-1.5 text-xs">
+              <AlertTriangle size={14} className="shrink-0" />
               Team is offline
             </span>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 shrink-0 gap-1 px-2 text-xs text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+              className="h-7 shrink-0 gap-1 px-2 text-xs text-[var(--step-done-text)] hover:bg-[var(--step-done-bg)]"
               onClick={() => setLaunchDialogOpen(true)}
             >
               <Play size={12} />
@@ -1103,12 +1110,12 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         </div>
 
         {data.warnings?.some((warning) => warning.toLowerCase().includes('kanban')) ? (
-          <div className="mb-3 rounded-md border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-200">
+          <div className="mb-3 rounded-md border border-[var(--step-warning-border)] bg-[var(--step-warning-bg)] px-3 py-2 text-xs text-[var(--step-warning-text)]">
             Failed to fully load kanban. Displaying safe data.
           </div>
         ) : null}
         {reviewActionError ? (
-          <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+          <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-[var(--step-error-text)]">
             {reviewActionError}
           </div>
         ) : null}

@@ -600,6 +600,10 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
     effectiveQuery && itemId
       ? createSearchContext(effectiveQuery, itemId, effectiveMatches, effectiveIndex)
       : null;
+  // Local search (Claude logs): use bright highlight for all matches (no "current result" concept).
+  if (searchCtx && searchQueryOverride) {
+    searchCtx.forceAllActive = true;
+  }
 
   // Create markdown components with optional search highlighting
   // When search is active, create fresh each render (match counter is stateful and must start at 0)

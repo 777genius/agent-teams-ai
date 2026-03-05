@@ -7,11 +7,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, isElectronMode } from '@renderer/api';
 import appIcon from '@renderer/favicon.png';
 import { useStore } from '@renderer/store';
-import { CheckCircle, Code2, Download, Loader2, RefreshCw, Upload } from 'lucide-react';
+import { CheckCircle, Code2, Download, FileEdit, Loader2, RefreshCw, Upload } from 'lucide-react';
 
 import { SettingsSectionHeader } from '../components';
 
 import { CliStatusSection } from './CliStatusSection';
+import { ConfigEditorDialog } from './ConfigEditorDialog';
 
 interface AdvancedSectionProps {
   readonly saving: boolean;
@@ -30,6 +31,7 @@ export const AdvancedSection = ({
 }: AdvancedSectionProps): React.JSX.Element => {
   const isElectron = useMemo(() => isElectronMode(), []);
   const [version, setVersion] = useState<string>('');
+  const [configEditorOpen, setConfigEditorOpen] = useState(false);
   const updateStatus = useStore((s) => s.updateStatus);
   const availableVersion = useStore((s) => s.availableVersion);
   const checkForUpdates = useStore((s) => s.checkForUpdates);
@@ -95,6 +97,17 @@ export const AdvancedSection = ({
     <div>
       <SettingsSectionHeader title="Configuration" />
       <div className="space-y-2 py-2">
+        <button
+          onClick={() => setConfigEditorOpen(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all duration-150 hover:bg-white/5"
+          style={{
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text)',
+          }}
+        >
+          <FileEdit className="size-4" />
+          Edit Config
+        </button>
         <button
           onClick={onResetToDefaults}
           disabled={saving}
@@ -195,6 +208,14 @@ export const AdvancedSection = ({
           </p>
         </div>
       </div>
+
+      <ConfigEditorDialog
+        open={configEditorOpen}
+        onClose={() => setConfigEditorOpen(false)}
+        onConfigSaved={() => {
+          // Config saved via editor — settings page will pick up changes on next render
+        }}
+      />
     </div>
   );
 };

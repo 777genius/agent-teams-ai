@@ -241,9 +241,16 @@ export const CreateTaskDialog = ({
         </DialogHeader>
 
         {!isTeamAlive ? (
-          <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-            <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-400" />
-            <p className="text-xs leading-relaxed text-amber-300">
+          <div
+            className="flex items-start gap-2 rounded-md border px-3 py-2"
+            style={{
+              backgroundColor: 'var(--warning-bg)',
+              borderColor: 'var(--warning-border)',
+              color: 'var(--warning-text)',
+            }}
+          >
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+            <p className="text-xs leading-relaxed">
               Team is offline. The task will be added to <strong>TODO</strong> &mdash; launch the
               team to start execution.
             </p>

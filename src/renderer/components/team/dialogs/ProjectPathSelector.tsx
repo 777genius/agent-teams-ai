@@ -137,7 +137,7 @@ export const ProjectPathSelector = ({
           ) : null}
           {projectsError ? <p className="text-[11px] text-red-300">{projectsError}</p> : null}
           {!projectsLoading && projects.length === 0 ? (
-            <p className="text-[11px] text-amber-300">No projects found, switch to custom path.</p>
+            <p className="text-[11px]" style={{ color: 'var(--warning-text)' }}>No projects found, switch to custom path.</p>
           ) : null}
         </div>
       ) : (

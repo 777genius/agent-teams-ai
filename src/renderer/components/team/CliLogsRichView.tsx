@@ -10,6 +10,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { DisplayItemList } from '@renderer/components/chat/DisplayItemList';
+import { highlightQueryInText } from '@renderer/components/chat/searchHighlightUtils';
 import { cn } from '@renderer/lib/utils';
 import { parseStreamJsonToGroups } from '@renderer/utils/streamJsonParser';
 import { Bot, ChevronRight } from 'lucide-react';
@@ -119,7 +120,11 @@ const StreamGroup = ({
         />
         <Bot size={13} className="shrink-0 text-[var(--color-text-muted)]" />
         <span className="min-w-0 truncate text-[11px] text-[var(--color-text-secondary)]">
-          {group.summary}
+          {searchQueryOverride && searchQueryOverride.trim().length > 0
+            ? highlightQueryInText(group.summary, searchQueryOverride, `${group.id}:group-summary`, {
+                forceAllActive: true,
+              })
+            : group.summary}
         </span>
       </button>
       {isExpanded && (

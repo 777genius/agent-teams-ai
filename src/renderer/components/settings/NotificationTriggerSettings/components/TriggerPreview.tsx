@@ -63,7 +63,14 @@ export const TriggerPreview = ({
 
           {/* Truncation warning - only shown when timeout or count limit hit */}
           {previewResult.truncated && (
-            <div className="flex items-center gap-2 rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+            <div
+              className="flex items-center gap-2 rounded border px-3 py-2 text-xs"
+              style={{
+                backgroundColor: 'var(--warning-bg)',
+                borderColor: 'var(--warning-border)',
+                color: 'var(--warning-text)',
+              }}
+            >
               <AlertTriangle className="size-4 shrink-0" />
               <span>
                 Search stopped early (timeout or count limit). Actual matches may be higher.

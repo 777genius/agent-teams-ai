@@ -185,7 +185,7 @@ export const ProvisioningProgressBlock = ({
         <p
           className={cn(
             'mt-1.5 text-xs',
-            isError ? 'text-red-200' : 'text-[var(--color-text-muted)]'
+            isError ? 'text-[var(--step-error-text)]' : 'text-[var(--color-text-muted)]'
           )}
         >
           {message}
@@ -201,9 +201,9 @@ export const ProvisioningProgressBlock = ({
                 variant="secondary"
                 className={cn(
                   'whitespace-nowrap px-2 py-0.5 text-[11px] font-normal',
-                  isDone && 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200',
+                  isDone && 'border-[var(--step-done-border)] bg-[var(--step-done-bg)] text-[var(--step-done-text)]',
                   isCurrent &&
-                    'border-[var(--color-accent)]/70 bg-[var(--color-accent)]/15 text-[var(--color-text)]'
+                    'border-[var(--step-current-border)] bg-[var(--step-current-bg)] text-[var(--step-current-text)]'
                 )}
               >
                 <span className="mr-1 inline-flex size-4 items-center justify-center rounded-full border border-current text-[10px]">
@@ -241,7 +241,7 @@ export const ProvisioningProgressBlock = ({
               <p
                 className={cn(
                   'text-[11px]',
-                  isError ? 'text-red-200/80' : 'text-[var(--color-text-muted)]'
+                  isError ? 'text-[var(--step-error-text-dim)]' : 'text-[var(--color-text-muted)]'
                 )}
               >
                 No output captured yet.

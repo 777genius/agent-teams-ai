@@ -38,9 +38,12 @@ export const AttachmentPreviewList = ({
         </div>
       ) : null}
       {disabled && disabledHint && attachments.length > 0 ? (
-        <div className="flex items-center gap-1.5 rounded-md bg-amber-500/10 px-2.5 py-1.5">
-          <AlertCircle size={13} className="shrink-0 text-amber-400" />
-          <p className="text-[11px] text-amber-400">{disabledHint}</p>
+        <div
+          className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5"
+          style={{ backgroundColor: 'var(--warning-bg)', color: 'var(--warning-text)' }}
+        >
+          <AlertCircle size={13} className="shrink-0" />
+          <p className="text-[11px]">{disabledHint}</p>
         </div>
       ) : null}
       {error ? (

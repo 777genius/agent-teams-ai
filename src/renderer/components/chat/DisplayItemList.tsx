@@ -162,6 +162,7 @@ export const DisplayItemList = ({
                 linkedTool={item.tool}
                 onClick={() => onItemClick(itemKey)}
                 isExpanded={expandedItemIds.has(itemKey)}
+                searchQueryOverride={searchQueryOverride}
                 isHighlighted={highlightToolUseId === item.tool.id}
                 highlightColor={highlightColor}
                 notificationDotColor={notificationColorMap?.get(item.tool.id)}

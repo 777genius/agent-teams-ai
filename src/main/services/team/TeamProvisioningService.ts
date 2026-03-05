@@ -161,6 +161,8 @@ interface ProvisioningRun {
    * request triggered by the UI. We suppress any lead→user echo for that turn.
    */
   silentUserDmForward: { target: string; startedAt: string } | null;
+  /** Safety valve: clears silentUserDmForward if turn never completes. */
+  silentUserDmForwardClearHandle: NodeJS.Timeout | null;
   /** Accumulates assistant text during provisioning phase for live UI preview. */
   provisioningOutputParts: string[];
   /** Session ID detected from stream-json output (result.session_id or message.session_id). */
@@ -659,8 +661,14 @@ function buildProvisioningPrompt(request: TeamCreateRequest): string {
       `   - CRITICAL: Do NOT start working on the tasks now. Provisioning is ONLY for setting up the team structure.\n` +
       `   - The tasks will be executed after the team is launched separately.`
     : `3) If user instructions explicitly ask to create tasks OR describe substantial/assigned work that should be tracked — create tasks on the team board.
-   - Prefer fewer, broader tasks over many micro-tasks.
-   - Avoid duplicate notifications for the same assignment.
+   - PRIORITY (delegation-first): your default behavior is to translate user requests into a task plan, create the tasks, and delegate them to teammates.
+     - Do NOT start executing/implementing tasks yourself in this turn.
+     - Do NOT “block” on doing the work before creating/assigning tasks — keep this turn fast so the user can send more instructions.
+     - Exception: only if the team is truly SOLO (no teammates) may you execute tasks yourself. This is NOT the case here.
+   - Decompose the request into a small set of clear, outcome-based tasks (prefer fewer, broader tasks over many micro-tasks).
+   - Assign each created task to an appropriate teammate as owner (NOT to yourself), based on role/workflow and current load.
+     - If ownership is unclear, pick the best default owner and note assumptions in the task description or a task comment.
+   - Avoid duplicate notifications for the same assignment (one message per member per topic is enough).
    - When tasks have natural ordering (e.g. setup → implementation → testing), use --blocked-by.
    - If a task is blocked (uses --blocked-by), it MUST be created as pending (use --status pending). Do NOT mark blocked tasks in_progress.
      - Review guidance:
@@ -713,6 +721,7 @@ Constraints:
 - NEVER send duplicate messages to the same member. One SendMessage per member per topic is enough.
 - Keep the task board high-signal: avoid creating tasks for trivial micro-items.
 - Use the team task board for assigned/substantial work.
+- DELEGATION-FIRST (behavior rule for ALL future turns): When "user" gives you work, your top priority is to (a) decompose into tasks, (b) create tasks on the team board, (c) assign them to teammates, and (d) SendMessage "user" a short confirmation (task IDs + owners). Do NOT start implementing yourself unless the team is truly in SOLO MODE (no teammates).
 - TaskCreate is optional for private planning only; do NOT use it for team-board tasks.
 - When messaging "user" (the human): NEVER mention teamctl.js, internal scripts, CLI commands, or file paths under ~/.claude/. The user sees messages in the UI — write plain human language. If a task needs a status update, do it yourself via Bash; never ask the user to run a command.${soloConstraint}
 
@@ -875,6 +884,7 @@ Constraints:
 - NEVER send duplicate messages to the same member. One SendMessage per member per topic is enough.
 - Keep the task board high-signal: avoid creating tasks for trivial micro-items.
 - Use the team task board for assigned/substantial work.
+- DELEGATION-FIRST (behavior rule for ALL future turns): When "user" gives you work, your top priority is to (a) decompose into tasks, (b) create tasks on the team board, (c) assign them to teammates, and (d) SendMessage "user" a short confirmation (task IDs + owners). Do NOT start implementing yourself unless the team is truly in SOLO MODE (no teammates).
 - TaskCreate is optional for private planning only; do NOT use it for team-board tasks.
 - When messaging "user" (the human): NEVER mention teamctl.js, internal scripts, CLI commands, or file paths under ~/.claude/. The user sees messages in the UI — write plain human language. If a task needs a status update, do it yourself via Bash; never ask the user to run a command.${soloConstraint}
 
@@ -1684,6 +1694,7 @@ export class TeamProvisioningService {
         leadRelayCapture: null,
         directReplyParts: [],
         silentUserDmForward: null,
+        silentUserDmForwardClearHandle: null,
         provisioningOutputParts: [],
         detectedSessionId: null,
         leadActivityState: 'active',
@@ -1974,6 +1985,7 @@ export class TeamProvisioningService {
         leadRelayCapture: null,
         directReplyParts: [],
         silentUserDmForward: null,
+        silentUserDmForwardClearHandle: null,
         provisioningOutputParts: [],
         detectedSessionId: null,
         leadActivityState: 'active',
@@ -2243,20 +2255,34 @@ export class TeamProvisioningService {
     }
 
     run.silentUserDmForward = { target: teammateName, startedAt: nowIso() };
+    if (run.silentUserDmForwardClearHandle) {
+      clearTimeout(run.silentUserDmForwardClearHandle);
+      run.silentUserDmForwardClearHandle = null;
+    }
+    // Safety valve: if the CLI never emits a result message, don't stay in "silent" mode forever.
+    run.silentUserDmForwardClearHandle = setTimeout(() => {
+      run.silentUserDmForward = null;
+      run.silentUserDmForwardClearHandle = null;
+    }, 60_000);
+    run.silentUserDmForwardClearHandle.unref();
 
     const summaryLine = userSummary?.trim() ? `Summary: ${userSummary.trim()}` : null;
+    const internal = wrapInAgentBlock(
+      [
+        `UI relay request — forward a direct message to teammate "${teammateName}".`,
+        `MUST: use the SendMessage tool with recipient="${teammateName}".`,
+        `MUST: ask the teammate to reply back to recipient "user" (short answer).`,
+        `CRITICAL: Do NOT send any message to recipient "user" for this turn.`,
+      ].join('\n')
+    );
     const message = [
-      `INTERNAL: The human user sent a direct message to teammate "${teammateName}" via the UI.`,
-      `Action: forward it to that teammate using the SendMessage tool.`,
-      `IMPORTANT: Do NOT reply to the human user for this turn.`,
-      `In the forwarded message, ask the teammate to reply to recipient "user" with a short answer.`,
+      `User DM relay (internal).`,
+      internal,
       ``,
-      `User message:`,
+      `Message to forward:`,
       ...(summaryLine ? [summaryLine] : []),
       userText,
-    ]
-      .filter(Boolean)
-      .join('\n');
+    ].join('\n');
 
     await this.sendMessageToTeam(teamName, message);
   }
@@ -2986,6 +3012,10 @@ export class TeamProvisioningService {
         }
         // Clear silent relay flag after any successful turn.
         run.silentUserDmForward = null;
+        if (run.silentUserDmForwardClearHandle) {
+          clearTimeout(run.silentUserDmForwardClearHandle);
+          run.silentUserDmForwardClearHandle = null;
+        }
         if (!run.provisioningComplete && !run.cancelRequested) {
           void this.handleProvisioningTurnComplete(run);
         }
@@ -2998,6 +3028,10 @@ export class TeamProvisioningService {
         }
         // Clear silent relay flag after any errored turn.
         run.silentUserDmForward = null;
+        if (run.silentUserDmForwardClearHandle) {
+          clearTimeout(run.silentUserDmForwardClearHandle);
+          run.silentUserDmForwardClearHandle = null;
+        }
         if (!run.provisioningComplete && !run.cancelRequested) {
           const progress = updateProgress(
             run,
@@ -3237,6 +3271,10 @@ export class TeamProvisioningService {
     if (run.timeoutHandle) {
       clearTimeout(run.timeoutHandle);
       run.timeoutHandle = null;
+    }
+    if (run.silentUserDmForwardClearHandle) {
+      clearTimeout(run.silentUserDmForwardClearHandle);
+      run.silentUserDmForwardClearHandle = null;
     }
     this.stopFilesystemMonitor(run);
     // Remove stream listeners to prevent data handlers firing on a cleaned-up run

@@ -556,10 +556,14 @@ export const TeamListView = (): React.JSX.Element => {
           <Button
             variant="outline"
             size="sm"
+            disabled={teamsLoading}
             onClick={() => {
               void fetchTeams();
             }}
           >
+            {teamsLoading ? (
+              <RotateCcw className="size-3.5 animate-spin" />
+            ) : null}
             Refresh
           </Button>
         </div>

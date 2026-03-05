@@ -392,7 +392,7 @@ export const MessageComposer = ({
         ) : null}
 
         {!isTeamAlive ? (
-          <span className="ml-auto text-[10px] text-amber-400">Team offline</span>
+          <span className="ml-auto text-[10px]" style={{ color: 'var(--warning-text)' }}>Team offline</span>
         ) : null}
       </div>
 

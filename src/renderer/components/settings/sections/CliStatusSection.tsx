@@ -27,6 +27,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
     fetchCliStatus,
     installCli,
     isBusy,
+    cliStatusLoading,
   } = useCliInstaller();
 
   useEffect(() => {
@@ -129,14 +130,24 @@ export const CliStatusSection = (): React.JSX.Element | null => {
               {cliStatus.installed && !cliStatus.updateAvailable && (
                 <button
                   onClick={handleRefresh}
-                  className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
+                  disabled={cliStatusLoading}
+                  className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                   style={{
                     borderColor: 'var(--color-border)',
                     color: 'var(--color-text-secondary)',
                   }}
                 >
-                  <RefreshCw className="size-3.5" />
-                  Check for Updates
+                  {cliStatusLoading ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" />
+                      Checking...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="size-3.5" />
+                      Check for Updates
+                    </>
+                  )}
                 </button>
               )}
             </div>
