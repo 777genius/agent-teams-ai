@@ -34,6 +34,7 @@ import {
   getTrafficLightPositionForZoom,
   WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL,
 } from '@shared/constants';
+import { isInboxNoiseMessage, parseInboxJson } from '@shared/utils/inboxNoise';
 import { createLogger } from '@shared/utils/logger';
 import { app, BrowserWindow } from 'electron';
 import { existsSync } from 'fs';
@@ -130,42 +131,6 @@ async function resolveTeamDisplayName(teamName: string): Promise<string> {
     expiresAt: Date.now() + TEAM_DISPLAY_NAME_TTL_MS,
   });
   return resolved;
-}
-
-/**
- * Inbox message types that are internal coordination noise — not useful as OS notifications.
- * Matches renderer-side NOISE_TYPES in agentMessageFormatting.ts.
- */
-const INBOX_NOISE_TYPES = new Set([
-  'idle_notification',
-  'shutdown_approved',
-  'teammate_terminated',
-  'shutdown_request',
-]);
-
-/**
- * Parses an inbox message text that may be serialized JSON.
- * Returns null if not valid JSON or not an object.
- */
-function parseInboxJson(text: string): Record<string, unknown> | null {
-  const trimmed = text.trim();
-  if (!trimmed.startsWith('{')) return null;
-  try {
-    const parsed = JSON.parse(trimmed) as unknown;
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
-    }
-  } catch {
-    // not JSON — plain text message
-  }
-  return null;
-}
-
-/** Returns true if the inbox message text is a noise type that should not trigger an OS notification. */
-function isInboxNoiseMessage(text: string): boolean {
-  const parsed = parseInboxJson(text);
-  if (!parsed) return false;
-  return typeof parsed.type === 'string' && INBOX_NOISE_TYPES.has(parsed.type);
 }
 
 /**
@@ -448,11 +413,22 @@ function wireFileWatcherEvents(context: ServiceContext): void {
 
       // --- Inbox change events: relay to lead + native OS notifications ---
       if (row.type === 'inbox') {
-        // Auto-relay direct messages to live team lead process (no UI dependency).
-        if (teamProvisioningService.isTeamAlive(teamName)) {
-          void teamProvisioningService
-            .relayLeadInboxMessages(teamName)
-            .catch((e: unknown) => logger.warn(`[FileWatcher] relay failed for ${teamName}: ${e}`));
+        // Auto-relay ONLY lead-inbox changes into the live lead process.
+        // (Relaying on *any* inbox change causes the lead to process irrelevant status noise.)
+        if (teamProvisioningService.isTeamAlive(teamName) && detail.startsWith('inboxes/')) {
+          const match = /^inboxes\/(.+)\.json$/.exec(detail);
+          if (match && teamDataService) {
+            const inboxName = match[1];
+            void teamDataService
+              .getLeadMemberName(teamName)
+              .then((leadName) => {
+                if (!leadName || inboxName !== leadName) return;
+                return teamProvisioningService.relayLeadInboxMessages(teamName);
+              })
+              .catch((e: unknown) =>
+                logger.warn(`[FileWatcher] relay failed for ${teamName}: ${String(e)}`)
+              );
+          }
         }
 
         // Show native OS notification for new inbox messages (debounced per inbox).
@@ -490,7 +466,9 @@ function wireFileWatcherEvents(context: ServiceContext): void {
         void teamDataService
           .notifyLeadOnTeammateTaskStart(teamName, taskId)
           .catch((e: unknown) =>
-            logger.warn(`[FileWatcher] task start notify failed for ${teamName}#${taskId}: ${e}`)
+            logger.warn(
+              `[FileWatcher] task start notify failed for ${teamName}#${taskId}: ${String(e)}`
+            )
           );
       }
     } catch {

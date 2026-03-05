@@ -5,7 +5,7 @@
  * Returns up to 8 matching files filtered by name or relative path.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   getQuickOpenCache,
@@ -72,17 +72,16 @@ export function useFileSuggestions(
   // Bumped on cache invalidation (file create/delete) to trigger refetch
   const [fetchTrigger, setFetchTrigger] = useState(0);
 
-  // Re-seed from cache when projectPath changes (setState-during-render pattern)
-  const [prevPath, setPrevPath] = useState(projectPath);
-  if (prevPath !== projectPath) {
-    setPrevPath(projectPath);
-    const cached = projectPath ? getQuickOpenCache(projectPath) : null;
-    if (cached) {
-      setAllFiles(cached.files);
-    } else {
+  // Re-seed from cache when projectPath changes
+  useEffect(() => {
+    if (!projectPath) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync with prop change
       setAllFiles([]);
+      return;
     }
-  }
+    const cached = getQuickOpenCache(projectPath);
+    setAllFiles(cached?.files ?? []);
+  }, [projectPath]);
 
   // React to cache invalidation from EditorFileWatcher (create/delete events)
   useEffect(() => {
@@ -90,13 +89,14 @@ export function useFileSuggestions(
   }, []);
 
   // Lazy refetch: when dropdown opens and cache is stale, trigger a reload
-  const [prevEnabled, setPrevEnabled] = useState(enabled);
-  if (enabled && !prevEnabled && projectPath && !getQuickOpenCache(projectPath)) {
-    setFetchTrigger((n) => n + 1);
-  }
-  if (prevEnabled !== enabled) {
-    setPrevEnabled(enabled);
-  }
+  const prevEnabledRef = useRef(enabled);
+  useEffect(() => {
+    if (enabled && !prevEnabledRef.current && projectPath && !getQuickOpenCache(projectPath)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional trigger on state transition
+      setFetchTrigger((n) => n + 1);
+    }
+    prevEnabledRef.current = enabled;
+  }, [enabled, projectPath]);
 
   // Load files from API when cache is empty.
   // Uses project:listFiles (not editor:listFiles) — works without editor being open.
@@ -126,7 +126,7 @@ export function useFileSuggestions(
 
   // Fetch only when cache is empty. Cache seeding is handled by:
   // - lazy initializer (first mount)
-  // - setState-during-render (projectPath change)
+  // - effect (projectPath change)
   useEffect(() => {
     if (!projectPath) return;
 

@@ -1,58 +1,86 @@
-import { useCallback, useEffect } from 'react';
+import 'yet-another-react-lightbox/styles.css';
+import 'yet-another-react-lightbox/plugins/counter.css';
 
-interface ImageLightboxProps {
+import { useMemo } from 'react';
+
+import Lightbox from 'yet-another-react-lightbox';
+import Counter from 'yet-another-react-lightbox/plugins/counter';
+import Fullscreen from 'yet-another-react-lightbox/plugins/fullscreen';
+import Zoom from 'yet-another-react-lightbox/plugins/zoom';
+
+import type { Plugin, Slide } from 'yet-another-react-lightbox';
+
+export interface ImageLightboxSlide {
   src: string;
   alt?: string;
+  title?: string;
+}
+
+interface ImageLightboxProps {
   open: boolean;
   onClose: () => void;
+  /** Array of slides for gallery mode. */
+  slides?: ImageLightboxSlide[];
+  /** Starting slide index (default: 0). */
+  index?: number;
+  /** Single image src — convenience shorthand for `slides={[{ src }]}`. */
+  src?: string;
+  /** Alt text for single-image mode. */
+  alt?: string;
+  enableZoom?: boolean;
+  enableFullscreen?: boolean;
+  showCounter?: boolean;
 }
 
 export const ImageLightbox = ({
-  src,
-  alt = 'Image',
   open,
   onClose,
+  slides: slidesProp,
+  index = 0,
+  src,
+  alt,
+  enableZoom = true,
+  enableFullscreen = true,
+  showCounter,
 }: ImageLightboxProps): React.JSX.Element | null => {
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    },
-    [onClose]
-  );
+  const slides = useMemo<Slide[]>(() => {
+    if (slidesProp && slidesProp.length > 0) {
+      return slidesProp.map((s) => ({ src: s.src, alt: s.alt, title: s.title }));
+    }
+    if (src) {
+      return [{ src, alt }];
+    }
+    return [];
+  }, [slidesProp, src, alt]);
 
-  useEffect(() => {
-    if (!open) return;
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open, handleKeyDown]);
+  const plugins = useMemo<Plugin[]>(() => {
+    const list: Plugin[] = [];
+    if (enableZoom) list.push(Zoom);
+    if (enableFullscreen) list.push(Fullscreen);
+    // Show counter only when multiple slides (unless explicitly set)
+    const shouldShowCounter = showCounter ?? slides.length > 1;
+    if (shouldShowCounter) list.push(Counter);
+    return list;
+  }, [enableZoom, enableFullscreen, showCounter, slides.length]);
 
-  if (!open) return null;
+  if (!open || slides.length === 0) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm duration-150 animate-in fade-in"
-      role="dialog"
-      aria-modal="true"
-      aria-label={alt}
-    >
-      <button
-        type="button"
-        className="absolute inset-0 border-0 bg-transparent p-0"
-        onClick={onClose}
-        aria-label="Close"
-      />
-      <button
-        type="button"
-        className="relative z-10 max-h-[85vh] max-w-[90vw] border-0 bg-transparent p-0"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <img
-          src={src}
-          alt={alt}
-          className="rounded-lg object-contain shadow-2xl"
-          draggable={false}
-        />
-      </button>
-    </div>
+    <Lightbox
+      open={open}
+      close={onClose}
+      slides={slides}
+      index={index}
+      plugins={plugins}
+      carousel={{ finite: slides.length <= 1 }}
+      animation={{ fade: 200 }}
+      zoom={{
+        maxZoomPixelRatio: 5,
+        scrollToZoom: true,
+      }}
+      styles={{
+        container: { backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)' },
+      }}
+    />
   );
 };

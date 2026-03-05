@@ -255,6 +255,21 @@ export const TeamListView = (): React.JSX.Element => {
     };
   }, [electronMode, teams]);
 
+  // Refresh alive teams when opening the create dialog so conflict warning is accurate.
+  useEffect(() => {
+    if (!electronMode || !showCreateDialog) return;
+    let cancelled = false;
+    void api.teams
+      .aliveList()
+      .then((list) => {
+        if (!cancelled) setAliveTeams(list);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [electronMode, showCreateDialog]);
+
   const currentProjectPath = useMemo(() => {
     if (viewMode === 'grouped') {
       const repo = repositoryGroups.find((r) => r.id === selectedRepositoryId);
@@ -367,7 +382,11 @@ export const TeamListView = (): React.JSX.Element => {
           variant: 'danger',
         });
         if (confirmed) {
-          void deleteTeam(teamName);
+          try {
+            await deleteTeam(teamName);
+          } catch {
+            // error via store
+          }
         }
       })();
     },
@@ -377,7 +396,13 @@ export const TeamListView = (): React.JSX.Element => {
   const handleRestoreTeam = useCallback(
     (teamName: string, e: React.MouseEvent) => {
       e.stopPropagation();
-      void restoreTeam(teamName);
+      void (async () => {
+        try {
+          await restoreTeam(teamName);
+        } catch {
+          // error via store
+        }
+      })();
     },
     [restoreTeam]
   );
@@ -394,7 +419,11 @@ export const TeamListView = (): React.JSX.Element => {
           variant: 'danger',
         });
         if (confirmed) {
-          void permanentlyDeleteTeam(teamName);
+          try {
+            await permanentlyDeleteTeam(teamName);
+          } catch {
+            // error via store
+          }
         }
       })();
     },
@@ -527,10 +556,14 @@ export const TeamListView = (): React.JSX.Element => {
           <Button
             variant="outline"
             size="sm"
+            disabled={teamsLoading}
             onClick={() => {
               void fetchTeams();
             }}
           >
+            {teamsLoading ? (
+              <RotateCcw className="size-3.5 animate-spin" />
+            ) : null}
             Refresh
           </Button>
         </div>

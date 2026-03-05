@@ -8,57 +8,11 @@ vi.mock('electron', () => ({
   BrowserWindow: { getAllWindows: vi.fn(() => []) },
 }));
 
-vi.mock('@preload/constants/ipcChannels', () => ({
-  TEAM_LIST: 'team:list',
-  TEAM_GET_DATA: 'team:getData',
-  TEAM_DELETE_TEAM: 'team:deleteTeam',
-  TEAM_PREPARE_PROVISIONING: 'team:prepareProvisioning',
-  TEAM_CREATE: 'team:create',
-  TEAM_LAUNCH: 'team:launch',
-  TEAM_CREATE_CONFIG: 'team:createConfig',
-  TEAM_CREATE_TASK: 'team:createTask',
-  TEAM_PROVISIONING_STATUS: 'team:provisioningStatus',
-  TEAM_CANCEL_PROVISIONING: 'team:cancelProvisioning',
-  TEAM_PROVISIONING_PROGRESS: 'team:provisioningProgress',
-  TEAM_SEND_MESSAGE: 'team:sendMessage',
-  TEAM_REQUEST_REVIEW: 'team:requestReview',
-  TEAM_UPDATE_KANBAN: 'team:updateKanban',
-  TEAM_UPDATE_KANBAN_COLUMN_ORDER: 'team:updateKanbanColumnOrder',
-  TEAM_UPDATE_TASK_STATUS: 'team:updateTaskStatus',
-  TEAM_UPDATE_TASK_FIELDS: 'team:updateTaskFields',
-  TEAM_UPDATE_TASK_OWNER: 'team:updateTaskOwner',
-  TEAM_PROCESS_SEND: 'team:processSend',
-  TEAM_PROCESS_ALIVE: 'team:processAlive',
-  TEAM_ALIVE_LIST: 'team:aliveList',
-  TEAM_STOP: 'team:stop',
-  TEAM_GET_MEMBER_LOGS: 'team:getMemberLogs',
-  TEAM_GET_LOGS_FOR_TASK: 'team:getLogsForTask',
-  TEAM_GET_MEMBER_STATS: 'team:getMemberStats',
-  TEAM_UPDATE_CONFIG: 'team:updateConfig',
-  TEAM_START_TASK: 'team:startTask',
-  TEAM_GET_ALL_TASKS: 'team:getAllTasks',
-  TEAM_ADD_TASK_COMMENT: 'team:addTaskComment',
-  TEAM_ADD_MEMBER: 'team:addMember',
-  TEAM_REPLACE_MEMBERS: 'team:replaceMembers',
-  TEAM_REMOVE_MEMBER: 'team:removeMember',
-  TEAM_UPDATE_MEMBER_ROLE: 'team:updateMemberRole',
-  TEAM_GET_PROJECT_BRANCH: 'team:getProjectBranch',
-  TEAM_GET_ATTACHMENTS: 'team:getAttachments',
-  TEAM_KILL_PROCESS: 'team:killProcess',
-  TEAM_LEAD_ACTIVITY: 'team:leadActivity',
-  TEAM_SOFT_DELETE_TASK: 'team:softDeleteTask',
-  TEAM_GET_DELETED_TASKS: 'team:getDeletedTasks',
-  TEAM_SET_TASK_CLARIFICATION: 'team:setTaskClarification',
-  TEAM_SHOW_MESSAGE_NOTIFICATION: 'team:showMessageNotification',
-  TEAM_ADD_TASK_RELATIONSHIP: 'team:addTaskRelationship',
-  TEAM_REMOVE_TASK_RELATIONSHIP: 'team:removeTaskRelationship',
-  TEAM_RESTORE: 'team:restoreTeam',
-  TEAM_PERMANENTLY_DELETE: 'team:permanentlyDeleteTeam',
-  TEAM_RESTORE_TASK: 'team:restoreTask',
-  TEAM_SAVE_TASK_ATTACHMENT: 'team:saveTaskAttachment',
-  TEAM_GET_TASK_ATTACHMENT: 'team:getTaskAttachment',
-  TEAM_DELETE_TASK_ATTACHMENT: 'team:deleteTaskAttachment',
-}));
+// Keep this mock resilient to new exports (avoid drift).
+vi.mock('@preload/constants/ipcChannels', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@preload/constants/ipcChannels')>();
+  return { ...actual };
+});
 
 import {
   TEAM_ALIVE_LIST,
@@ -102,6 +56,14 @@ import {
   TEAM_ADD_TASK_RELATIONSHIP,
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REPLACE_MEMBERS,
+  TEAM_UPDATE_TASK_OWNER,
+  TEAM_UPDATE_TASK_FIELDS,
+  TEAM_LEAD_CONTEXT,
+  TEAM_RESTORE_TASK,
+  TEAM_SHOW_MESSAGE_NOTIFICATION,
+  TEAM_SAVE_TASK_ATTACHMENT,
+  TEAM_GET_TASK_ATTACHMENT,
+  TEAM_DELETE_TASK_ATTACHMENT,
 } from '../../../src/preload/constants/ipcChannels';
 import {
   initializeTeamHandlers,
@@ -231,6 +193,17 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_PERMANENTLY_DELETE)).toBe(true);
     expect(handlers.has(TEAM_ADD_TASK_RELATIONSHIP)).toBe(true);
     expect(handlers.has(TEAM_REMOVE_TASK_RELATIONSHIP)).toBe(true);
+    expect(handlers.has(TEAM_UPDATE_TASK_OWNER)).toBe(true);
+    expect(handlers.has(TEAM_UPDATE_TASK_FIELDS)).toBe(true);
+    expect(handlers.has(TEAM_REPLACE_MEMBERS)).toBe(true);
+    expect(handlers.has(TEAM_GET_PROJECT_BRANCH)).toBe(true);
+    expect(handlers.has(TEAM_GET_ATTACHMENTS)).toBe(true);
+    expect(handlers.has(TEAM_LEAD_CONTEXT)).toBe(true);
+    expect(handlers.has(TEAM_RESTORE_TASK)).toBe(true);
+    expect(handlers.has(TEAM_SHOW_MESSAGE_NOTIFICATION)).toBe(true);
+    expect(handlers.has(TEAM_SAVE_TASK_ATTACHMENT)).toBe(true);
+    expect(handlers.has(TEAM_GET_TASK_ATTACHMENT)).toBe(true);
+    expect(handlers.has(TEAM_DELETE_TASK_ATTACHMENT)).toBe(true);
   });
 
   it('returns success false on invalid sendMessage args', async () => {
@@ -552,6 +525,15 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_PERMANENTLY_DELETE)).toBe(false);
     expect(handlers.has(TEAM_ADD_TASK_RELATIONSHIP)).toBe(false);
     expect(handlers.has(TEAM_REMOVE_TASK_RELATIONSHIP)).toBe(false);
+    expect(handlers.has(TEAM_UPDATE_TASK_OWNER)).toBe(false);
+    expect(handlers.has(TEAM_UPDATE_TASK_FIELDS)).toBe(false);
+    expect(handlers.has(TEAM_REPLACE_MEMBERS)).toBe(false);
+    expect(handlers.has(TEAM_LEAD_CONTEXT)).toBe(false);
+    expect(handlers.has(TEAM_RESTORE_TASK)).toBe(false);
+    expect(handlers.has(TEAM_SHOW_MESSAGE_NOTIFICATION)).toBe(false);
+    expect(handlers.has(TEAM_SAVE_TASK_ATTACHMENT)).toBe(false);
+    expect(handlers.has(TEAM_GET_TASK_ATTACHMENT)).toBe(false);
+    expect(handlers.has(TEAM_DELETE_TASK_ATTACHMENT)).toBe(false);
   });
 
   describe('addTaskRelationship', () => {

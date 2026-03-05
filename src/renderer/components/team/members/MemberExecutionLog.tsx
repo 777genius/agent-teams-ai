@@ -214,6 +214,7 @@ const AIExecutionGroup = ({
         <div className="py-1 pl-2">
           <DisplayItemList
             items={enhanced.displayItems}
+            order="newest-first"
             onItemClick={onToggleItem}
             expandedItemIds={expandedItemIds}
             aiGroupId={group.id}

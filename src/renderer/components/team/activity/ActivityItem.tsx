@@ -3,6 +3,8 @@ import { useMemo, useState } from 'react';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { AttachmentDisplay } from '@renderer/components/team/attachments/AttachmentDisplay';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
+import { TaskTooltip } from '@renderer/components/team/TaskTooltip';
+import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   CARD_BG,
@@ -174,25 +176,25 @@ function linkifyMentionsInMarkdown(text: string, memberColorMap: Map<string, str
     return `${prefix}[@${canonical}](mention://${encodeURIComponent(color)}/${encodeURIComponent(canonical)})`;
   });
 }
-
-/** Render `#<digits>` in plain text as clickable inline elements. */
+/** Render `#<digits>` in plain text as clickable inline elements with TaskTooltip. */
 function linkifyTaskIds(text: string, onClick: (taskId: string) => void): React.ReactNode[] {
   return text.split(/(#\d+)/g).map((part, i) => {
     const match = /^#(\d+)$/.exec(part);
     if (!match) return <span key={i}>{part}</span>;
     const taskId = match[1];
     return (
-      <button
-        key={i}
-        type="button"
-        className="cursor-pointer font-medium text-blue-400 hover:underline"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick(taskId);
-        }}
-      >
-        {part}
-      </button>
+      <TaskTooltip key={i} taskId={taskId}>
+        <button
+          type="button"
+          className="cursor-pointer font-medium text-blue-400 hover:underline"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick(taskId);
+          }}
+        >
+          {part}
+        </button>
+      </TaskTooltip>
     );
   });
 }
@@ -233,25 +235,30 @@ export const ActivityItem = ({
   const systemLabel = !structured && !rateLimited ? getSystemMessageLabel(message.text) : null;
   const [isExpanded, setIsExpanded] = useState(!systemLabel);
 
-  // Strip agent-only blocks from displayed text + linkify task IDs + @mentions
-  const displayText = useMemo(() => {
+  // Strip agent-only blocks + normalize escape sequences (before linkification)
+  const strippedText = useMemo(() => {
     if (structured) return null;
     const stripped = stripAgentBlocks(message.text).trim();
     if (!stripped) return null; // All content was agent-only blocks → show summary instead
     // Normalize literal \n from CLI tools (teamctl.js) to real newlines
-    const normalized = stripped.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
-    let result = normalized;
-    if (onTaskIdClick) result = linkifyTaskIdsInMarkdown(result);
+    return stripped.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  }, [structured, message.text]);
+
+  // Parse reply BEFORE linkification — linkifyMentionsInMarkdown transforms @name
+  // into markdown links which breaks the reply regex matcher
+  const parsedReply = useMemo(
+    () => (strippedText ? parseMessageReply(strippedText) : null),
+    [strippedText]
+  );
+
+  // Linkify task IDs (always, for TaskTooltip) + @mentions for display
+  const displayText = useMemo(() => {
+    if (!strippedText) return null;
+    let result = linkifyTaskIdsInMarkdown(strippedText);
     if (memberColorMap && memberColorMap.size > 0)
       result = linkifyMentionsInMarkdown(result, memberColorMap);
     return result;
-  }, [structured, message.text, onTaskIdClick, memberColorMap]);
-
-  // Check if this is a reply message
-  const parsedReply = useMemo(
-    () => (displayText ? parseMessageReply(displayText) : null),
-    [displayText]
-  );
+  }, [strippedText, memberColorMap]);
 
   const rawSummary =
     message.summary || (structured ? getStructuredMessageSummary(structured) : '') || '';
@@ -276,25 +283,34 @@ export const ActivityItem = ({
   };
 
   const isHeaderClickable = Boolean(systemLabel);
+  const isUserSent = message.source === 'user_sent';
+  const isSystemMessage = message.from === 'system';
 
   return (
     <article
-      className="group overflow-hidden rounded-md"
+      className="group rounded-md [overflow:clip]"
       style={{
+        marginLeft: isUserSent ? 15 : undefined,
         backgroundColor:
           rateLimited || isApiError
             ? 'var(--tool-result-error-bg)'
-            : zebraShade
-              ? CARD_BG_ZEBRA
-              : CARD_BG,
+            : isSystemMessage
+              ? 'var(--system-activity-bg)'
+              : zebraShade
+                ? CARD_BG_ZEBRA
+                : CARD_BG,
         border:
           rateLimited || isApiError
             ? '1px solid var(--tool-result-error-border)'
-            : CARD_BORDER_STYLE,
+            : isSystemMessage
+              ? '1px solid var(--system-activity-border)'
+              : CARD_BORDER_STYLE,
         borderLeft:
           rateLimited || isApiError
             ? '3px solid var(--tool-result-error-text)'
-            : `3px solid ${colors.border}`,
+            : isSystemMessage
+              ? '3px solid var(--system-activity-accent)'
+              : `3px solid ${colors.border}`,
       }}
     >
       {/* Header — div with role=button (cannot use <button> due to nested buttons inside) */}
@@ -336,7 +352,7 @@ export const ActivityItem = ({
         <MemberBadge
           name={message.from}
           color={memberColor ?? message.color}
-          hideAvatar={message.from === 'user'}
+          hideAvatar={message.from === 'user' || message.from === 'system'}
           onClick={onMemberNameClick}
         />
 
@@ -467,27 +483,29 @@ export const ActivityItem = ({
               </details>
             </div>
           ) : parsedReply ? (
-            <ReplyQuoteBlock reply={parsedReply} />
+            <ReplyQuoteBlock reply={parsedReply} memberColor={memberColorMap?.get(parsedReply.agentName)} />
           ) : displayText ? (
-            <span
-              onClickCapture={
-                onTaskIdClick
-                  ? (e) => {
-                      const link = (e.target as HTMLElement).closest<HTMLAnchorElement>(
-                        'a[href^="task://"]'
-                      );
-                      if (link) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const taskId = link.getAttribute('href')?.replace('task://', '');
-                        if (taskId) onTaskIdClick(taskId);
+            <ExpandableContent>
+              <span
+                onClickCapture={
+                  onTaskIdClick
+                    ? (e) => {
+                        const link = (e.target as HTMLElement).closest<HTMLAnchorElement>(
+                          'a[href^="task://"]'
+                        );
+                        if (link) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const taskId = link.getAttribute('href')?.replace('task://', '');
+                          if (taskId) onTaskIdClick(taskId);
+                        }
                       }
-                    }
-                  : undefined
-              }
-            >
-              <MarkdownViewer content={displayText} maxHeight="max-h-56" copyable bare />
-            </span>
+                    : undefined
+                }
+              >
+                <MarkdownViewer content={displayText} maxHeight="max-h-none" copyable bare />
+              </span>
+            </ExpandableContent>
           ) : summaryText ? (
             <p className="text-xs italic" style={{ color: CARD_TEXT_LIGHT }}>
               {summaryText}

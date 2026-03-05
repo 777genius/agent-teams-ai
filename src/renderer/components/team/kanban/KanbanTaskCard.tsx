@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { UnreadCommentsBadge } from '@renderer/components/team/UnreadCommentsBadge';
-import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -207,6 +206,12 @@ export const KanbanTaskCard = ({
   }, [showChangesColumn, task.status, task.id, teamName, taskHasChanges, checkTaskHasChanges]);
 
   const isReviewManual = columnId === 'review' && !hasReviewers;
+  const multiButton =
+    compact ||
+    columnId === 'todo' ||
+    columnId === 'in_progress' ||
+    columnId === 'done' ||
+    columnId === 'review';
 
   const metaActions = (
     <>
@@ -243,7 +248,7 @@ export const KanbanTaskCard = ({
   return (
     <div
       data-task-id={task.id}
-      className={`cursor-pointer rounded-md border p-3 transition-colors hover:border-[var(--color-border-emphasis)] ${
+      className={`relative cursor-pointer rounded-md border p-3 transition-colors hover:border-[var(--color-border-emphasis)] ${
         hasBlockedBy
           ? 'border-yellow-500/30 bg-[var(--color-surface-raised)]'
           : 'border-[var(--color-border)] bg-[var(--color-surface-raised)]'
@@ -258,12 +263,14 @@ export const KanbanTaskCard = ({
         }
       }}
     >
-      <div className="mb-2">
+      <span className="absolute left-[3px] top-[2px] text-[9px] leading-none text-[var(--color-text-muted)]">
+        #{task.id}
+      </span>
+      <div className="mb-2 pt-2">
         <div className="flex items-center gap-1">
-          <Badge variant="secondary" className="shrink-0 px-1 py-0 text-[10px] font-normal">
-            #{task.id}
-          </Badge>
-          {task.owner ? <MemberBadge name={task.owner} color={colorMap.get(task.owner)} /> : null}
+          {task.owner ? (
+            <MemberBadge name={task.owner} color={colorMap.get(task.owner)} />
+          ) : null}
           {!compact && <TruncatedTitle text={task.subject} className="min-w-0" />}
         </div>
         {task.needsClarification ? (
@@ -315,7 +322,7 @@ export const KanbanTaskCard = ({
         </div>
       ) : null}
 
-      <div className="flex items-end gap-2">
+      <div className={multiButton ? 'space-y-2' : 'flex items-end gap-2'}>
         <div className="flex flex-1 flex-wrap gap-2">
           {columnId === 'todo' ? (
             <>
@@ -448,7 +455,11 @@ export const KanbanTaskCard = ({
           ) : null}
         </div>
 
-        {!isReviewManual ? <div className="flex items-center gap-1.5">{metaActions}</div> : null}
+        {!isReviewManual ? (
+          <div className={`flex items-center gap-1.5 ${multiButton ? 'justify-end' : ''}`}>
+            {metaActions}
+          </div>
+        ) : null}
       </div>
     </div>
   );

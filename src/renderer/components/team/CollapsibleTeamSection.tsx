@@ -114,7 +114,7 @@ export const CollapsibleTeamSection = ({
         {action && <div className="relative z-10 flex shrink-0 items-center">{action}</div>}
       </div>
       {isOpen && (
-        <div className={`mt-1.5 min-w-0 overflow-x-clip pb-2 ${contentClassName ?? ''}`}>
+        <div className={cn('mt-1.5 min-w-0 overflow-x-clip pb-2', contentClassName)}>
           {children}
         </div>
       )}

@@ -29,6 +29,10 @@ interface DisplayItemListProps {
   onItemClick: (itemId: string) => void;
   expandedItemIds: Set<string>;
   aiGroupId: string;
+  /** Render order for display items (visual only). */
+  order?: 'chronological' | 'newest-first';
+  /** Optional local search query override for markdown highlighting */
+  searchQueryOverride?: string;
   /** Tool use ID to highlight for error deep linking */
   highlightToolUseId?: string;
   /** Custom highlight color from trigger */
@@ -66,6 +70,8 @@ export const DisplayItemList = ({
   onItemClick,
   expandedItemIds,
   aiGroupId,
+  order = 'chronological',
+  searchQueryOverride,
   highlightToolUseId,
   highlightColor,
   notificationColorMap,
@@ -96,7 +102,13 @@ export const DisplayItemList = ({
   }
 
   return (
-    <div className="min-w-0 space-y-2">
+    <div
+      className={
+        order === 'newest-first'
+          ? 'min-w-0 flex flex-col-reverse gap-2'
+          : 'min-w-0 space-y-2'
+      }
+    >
       {items.map((item, index) => {
         let itemKey = '';
         let element: React.ReactNode = null;
@@ -120,6 +132,8 @@ export const DisplayItemList = ({
                 preview={truncateText(item.content, 150)}
                 onClick={() => onItemClick(itemKey)}
                 isExpanded={expandedItemIds.has(itemKey)}
+                markdownItemId={searchQueryOverride ? `${aiGroupId}:${itemKey}` : undefined}
+                searchQueryOverride={searchQueryOverride}
               />
             );
             break;
@@ -143,6 +157,8 @@ export const DisplayItemList = ({
                 preview={truncateText(item.content, 150)}
                 onClick={() => onItemClick(itemKey)}
                 isExpanded={expandedItemIds.has(itemKey)}
+                markdownItemId={searchQueryOverride ? `${aiGroupId}:${itemKey}` : undefined}
+                searchQueryOverride={searchQueryOverride}
               />
             );
             break;
@@ -155,6 +171,7 @@ export const DisplayItemList = ({
                 linkedTool={item.tool}
                 onClick={() => onItemClick(itemKey)}
                 isExpanded={expandedItemIds.has(itemKey)}
+                searchQueryOverride={searchQueryOverride}
                 isHighlighted={highlightToolUseId === item.tool.id}
                 highlightColor={highlightColor}
                 notificationDotColor={notificationColorMap?.get(item.tool.id)}
@@ -235,7 +252,12 @@ export const DisplayItemList = ({
                 onClick={() => onItemClick(itemKey)}
                 isExpanded={expandedItemIds.has(itemKey)}
               >
-                <MarkdownViewer content={inputContent} copyable />
+                <MarkdownViewer
+                  content={inputContent}
+                  copyable
+                  itemId={searchQueryOverride ? `${aiGroupId}:${itemKey}` : undefined}
+                  searchQueryOverride={searchQueryOverride}
+                />
               </BaseItem>
             );
             break;

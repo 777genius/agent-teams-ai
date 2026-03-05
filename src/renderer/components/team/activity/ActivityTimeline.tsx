@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import { parseStructuredAgentMessage } from '@renderer/utils/agentMessageFormatting';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 
 import { ActivityItem, isNoiseMessage } from './ActivityItem';
+import { groupTimelineItems, LeadThoughtsGroupRow } from './LeadThoughtsGroup';
 
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
+import type { TimelineItem } from './LeadThoughtsGroup';
 
 interface ActivityTimelineProps {
   messages: InboxMessage[];
@@ -158,7 +159,7 @@ export const ActivityTimeline = ({
     if (leadMember) {
       const leadInfo = memberInfo.get(leadMember.name);
       if (leadInfo) {
-        memberInfo.set('user', { role: leadInfo.role, color: colorMap.get('user') });
+        memberInfo.set('user', { role: undefined, color: colorMap.get('user') });
       }
     }
   }
@@ -185,29 +186,50 @@ export const ActivityTimeline = ({
     [messages, visibleCount, hiddenCount]
   );
 
-  // Zebra striping: alternate shade on non-noise (full card) messages only.
+  // Group consecutive lead thoughts into collapsible blocks.
+  const timelineItems = useMemo(() => groupTimelineItems(visibleMessages), [visibleMessages]);
+
+  // Zebra striping: alternate shade on non-noise (full card) items only.
   const zebraShadeSet = useMemo(() => {
     const result = new Set<number>();
     let cardCount = 0;
-    for (let i = 0; i < visibleMessages.length; i++) {
-      if (isNoiseMessage(visibleMessages[i].text)) continue;
-      if (cardCount % 2 === 1) result.add(i);
-      cardCount++;
+    for (let i = 0; i < timelineItems.length; i++) {
+      const item = timelineItems[i];
+      if (item.type === 'lead-thoughts') {
+        // Thought groups count as one card for striping
+        if (cardCount % 2 === 1) result.add(i);
+        cardCount++;
+      } else {
+        if (isNoiseMessage(item.message.text)) continue;
+        if (cardCount % 2 === 1) result.add(i);
+        cardCount++;
+      }
     }
     return result;
-  }, [visibleMessages]);
+  }, [timelineItems]);
 
-  // Determine which messages are "new" (should animate).
+  // Determine which items are "new" (should animate).
 
-  const newMessageKeys = useMemo(() => {
-    const getKey = (msg: InboxMessage, idx: number): string =>
-      `${msg.messageId ?? idx}-${msg.timestamp}-${msg.from}`;
+  const newItemKeys = useMemo(() => {
+    const getItemKey = (item: TimelineItem): string => {
+      if (item.type === 'lead-thoughts') {
+        // Stable key: identify group by its first thought, not by count (which changes)
+        return `thoughts-${item.group.thoughts[0].messageId ?? item.originalIndices[0]}`;
+      }
+      const msg = item.message;
+      return `${msg.messageId ?? item.originalIndex}-${msg.timestamp}-${msg.from}`;
+    };
+
+    const allKeys: string[] = [];
+    for (const item of timelineItems) {
+      allKeys.push(getItemKey(item));
+    }
 
     // First render: seed known keys, no animations
     if (!isInitializedRef.current) {
       isInitializedRef.current = true;
-      for (let i = 0; i < visibleMessages.length; i++) {
-        knownKeysRef.current.add(getKey(visibleMessages[i], i));
+      for (const key of allKeys) {
+        knownKeysRef.current.add(key);
       }
       prevVisibleCountRef.current = visibleCount;
       return new Set<string>();
@@ -218,23 +240,22 @@ export const ActivityTimeline = ({
     prevVisibleCountRef.current = visibleCount;
 
     if (isPaginationExpansion) {
-      for (let i = 0; i < visibleMessages.length; i++) {
-        knownKeysRef.current.add(getKey(visibleMessages[i], i));
+      for (const key of allKeys) {
+        knownKeysRef.current.add(key);
       }
       return new Set<string>();
     }
 
-    // Normal update: unknown keys are new messages
+    // Normal update: unknown keys are new items
     const newKeys = new Set<string>();
-    for (let i = 0; i < visibleMessages.length; i++) {
-      const key = getKey(visibleMessages[i], i);
+    for (const key of allKeys) {
       if (!knownKeysRef.current.has(key)) {
         newKeys.add(key);
         knownKeysRef.current.add(key);
       }
     }
     return newKeys;
-  }, [visibleMessages, visibleCount]);
+  }, [timelineItems, visibleCount]);
   /* eslint-enable react-hooks/refs -- end animation tracking block */
 
   const handleShowMore = (): void => {
@@ -254,37 +275,83 @@ export const ActivityTimeline = ({
     );
   }
 
+  const getItemSessionId = (item: TimelineItem): string | undefined =>
+    item.type === 'lead-thoughts'
+      ? item.group.thoughts[0].leadSessionId
+      : item.message.leadSessionId;
+
   return (
     <div className="space-y-1">
-      {visibleMessages.map((message, index) => {
+      {timelineItems.map((item, index) => {
+        // Session boundary separator (messages sorted desc — new on top)
+        let sessionSeparator: React.JSX.Element | null = null;
+        if (index > 0) {
+          const prevSessionId = getItemSessionId(timelineItems[index - 1]);
+          const currSessionId = getItemSessionId(item);
+          if (prevSessionId && currSessionId && prevSessionId !== currSessionId) {
+            sessionSeparator = (
+              <div
+                className="flex items-center gap-3"
+                style={{ paddingTop: 30, paddingBottom: 30 }}
+              >
+                <div className="h-px flex-1 bg-[var(--color-border-emphasis)]" />
+                <span className="whitespace-nowrap text-[11px] text-[var(--color-text-muted)]">
+                  New session
+                </span>
+                <div className="h-px flex-1 bg-[var(--color-border-emphasis)]" />
+              </div>
+            );
+          }
+        }
+
+        if (item.type === 'lead-thoughts') {
+          const { group } = item;
+          const firstThought = group.thoughts[0];
+          const info = memberInfo.get(firstThought.from);
+          const itemKey = `thoughts-${firstThought.messageId ?? item.originalIndices[0]}`;
+          return (
+            <React.Fragment key={itemKey}>
+              {sessionSeparator}
+              <LeadThoughtsGroupRow
+                group={group}
+                memberColor={info?.color}
+                isNew={newItemKeys.has(itemKey)}
+                onVisible={onMessageVisible}
+              />
+            </React.Fragment>
+          );
+        }
+
+        const { message } = item;
         const info = memberInfo.get(message.from);
         const recipientInfo = message.to ? memberInfo.get(message.to) : undefined;
         const recipientColor =
           recipientInfo?.color ?? (message.to ? colorMap.get(message.to) : undefined);
-        const globalIndex = index;
-        const messageKey = `${message.messageId ?? globalIndex}-${message.timestamp}-${message.from}`;
+        const messageKey = `${message.messageId ?? item.originalIndex}-${message.timestamp}-${message.from}`;
         const isUnread = readState
           ? !message.read && !readState.readSet.has(readState.getMessageKey(message))
           : !message.read;
         return (
-          <MessageRowWithObserver
-            key={messageKey}
-            message={message}
-            teamName={teamName}
-            memberRole={info?.role}
-            memberColor={info?.color}
-            recipientColor={recipientColor}
-            isUnread={isUnread}
-            isNew={newMessageKeys.has(messageKey)}
-            zebraShade={zebraShadeSet.has(index)}
-            memberColorMap={colorMap}
-            onMemberNameClick={onMemberClick ? handleMemberNameClick : undefined}
-            onCreateTask={onCreateTaskFromMessage}
-            onReply={onReplyToMessage}
-            onVisible={onMessageVisible}
-            onTaskIdClick={onTaskIdClick}
-            onRestartTeam={onRestartTeam}
-          />
+          <React.Fragment key={messageKey}>
+            {sessionSeparator}
+            <MessageRowWithObserver
+              message={message}
+              teamName={teamName}
+              memberRole={info?.role}
+              memberColor={info?.color}
+              recipientColor={recipientColor}
+              isUnread={isUnread}
+              isNew={newItemKeys.has(messageKey)}
+              zebraShade={zebraShadeSet.has(index)}
+              memberColorMap={colorMap}
+              onMemberNameClick={onMemberClick ? handleMemberNameClick : undefined}
+              onCreateTask={onCreateTaskFromMessage}
+              onReply={onReplyToMessage}
+              onVisible={onMessageVisible}
+              onTaskIdClick={onTaskIdClick}
+              onRestartTeam={onRestartTeam}
+            />
+          </React.Fragment>
         );
       })}
       {hiddenCount > 0 && (

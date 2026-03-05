@@ -18,7 +18,7 @@ interface BaseItemProps {
   /** Primary label (e.g., "Thinking", "Output", tool name) */
   label: string;
   /** Summary text shown after the label */
-  summary?: string;
+  summary?: React.ReactNode;
   /** Token count to display */
   tokenCount?: number;
   /** Label for tokens (default: "tokens") */

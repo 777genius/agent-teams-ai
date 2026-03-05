@@ -7,14 +7,25 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { Crown, Filter } from 'lucide-react';
 
 import type { Session } from '@renderer/types/data';
-import type { ResolvedTeamMember } from '@shared/types';
+import type { KanbanColumnId, ResolvedTeamMember } from '@shared/types';
 
 export const UNASSIGNED_OWNER = '__unassigned__';
 
 export interface KanbanFilterState {
   sessionId: string | null;
   selectedOwners: Set<string>;
+  /** When non-empty, only these columns are visible on the kanban board. Empty = all columns. */
+  columns: Set<KanbanColumnId>;
 }
+
+/** Column definitions with display labels and accent colors for filter UI. */
+export const KANBAN_COLUMNS: { id: KanbanColumnId; label: string; color: string }[] = [
+  { id: 'todo', label: 'TODO', color: 'rgb(59, 130, 246)' },
+  { id: 'in_progress', label: 'IN PROGRESS', color: 'rgb(234, 179, 8)' },
+  { id: 'done', label: 'DONE', color: 'rgb(34, 197, 94)' },
+  { id: 'review', label: 'REVIEW', color: 'rgb(139, 92, 246)' },
+  { id: 'approved', label: 'APPROVED', color: 'rgb(22, 163, 74)' },
+];
 
 interface KanbanFilterPopoverProps {
   filter: KanbanFilterState;
@@ -35,8 +46,9 @@ export const KanbanFilterPopover = ({
     let count = 0;
     if (filter.sessionId !== null) count += 1;
     if (filter.selectedOwners.size > 0) count += 1;
+    if (filter.columns.size > 0) count += 1;
     return count;
-  }, [filter.sessionId, filter.selectedOwners]);
+  }, [filter.sessionId, filter.selectedOwners, filter.columns]);
 
   const handleSessionSelect = (sessionId: string | null): void => {
     onFilterChange({ ...filter, sessionId });
@@ -52,8 +64,18 @@ export const KanbanFilterPopover = ({
     onFilterChange({ ...filter, selectedOwners: next });
   };
 
+  const handleColumnToggle = (columnId: KanbanColumnId): void => {
+    const next = new Set(filter.columns);
+    if (next.has(columnId)) {
+      next.delete(columnId);
+    } else {
+      next.add(columnId);
+    }
+    onFilterChange({ ...filter, columns: next });
+  };
+
   const handleClearAll = (): void => {
-    onFilterChange({ sessionId: null, selectedOwners: new Set() });
+    onFilterChange({ sessionId: null, selectedOwners: new Set(), columns: new Set() });
   };
 
   return (
@@ -145,6 +167,28 @@ export const KanbanFilterPopover = ({
               />
               (unassigned)
             </label>
+          </div>
+        </div>
+
+        {/* Column section */}
+        <div className="border-b border-[var(--color-border)] p-3">
+          <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+            Column
+          </p>
+          <div className="space-y-1.5">
+            {KANBAN_COLUMNS.map((col) => (
+              <label
+                key={col.id}
+                className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs hover:bg-[var(--color-surface-raised)]"
+                style={{ color: col.color }}
+              >
+                <Checkbox
+                  checked={filter.columns.has(col.id)}
+                  onCheckedChange={() => handleColumnToggle(col.id)}
+                />
+                {col.label}
+              </label>
+            ))}
           </div>
         </div>
 

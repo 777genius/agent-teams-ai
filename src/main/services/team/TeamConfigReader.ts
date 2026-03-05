@@ -1,6 +1,7 @@
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -241,6 +242,15 @@ export class TeamConfigReader {
           if (member && typeof member.name === 'string') {
             mergeMember(member);
           }
+        }
+      }
+
+      // Defense: drop CLI auto-suffixed duplicates (alice-2) when base name exists.
+      const allNames = Array.from(memberMap.values()).map((m) => m.name);
+      const keepName = createCliAutoSuffixNameGuard(allNames);
+      for (const [key, member] of Array.from(memberMap.entries())) {
+        if (!keepName(member.name)) {
+          memberMap.delete(key);
         }
       }
 

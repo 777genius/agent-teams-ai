@@ -250,6 +250,25 @@ function mergeMember(
   });
 }
 
+function dropCliAutoSuffixedMembers(
+  memberMap: Map<string, { name: string; role?: string; color?: string }>
+): void {
+  const keys = Array.from(memberMap.keys());
+  const allLower = new Set(keys); // keys are already lowercased
+  for (const key of keys) {
+    const member = memberMap.get(key);
+    const name = member?.name ?? '';
+    const match = /^(.+)-(\d+)$/.exec(name.trim());
+    if (!match?.[1] || !match[2]) continue;
+    const suffix = Number(match[2]);
+    if (!Number.isFinite(suffix) || suffix < 2) continue;
+    const baseLower = match[1].toLowerCase();
+    if (allLower.has(baseLower)) {
+      memberMap.delete(key);
+    }
+  }
+}
+
 async function listTeams(
   payload: ListTeamsPayload
 ): Promise<{ teams: unknown[]; diag: ListTeamsDiag }> {
@@ -391,6 +410,8 @@ async function listTeams(
         }
       }
     }
+
+    dropCliAutoSuffixedMembers(memberMap);
 
     const members = Array.from(memberMap.values());
     const summary = {

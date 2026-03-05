@@ -84,7 +84,7 @@ export interface TaskComment {
   text: string;
   createdAt: string;
   type: TaskCommentType;
-  /** Image attachments on this comment. Metadata only — files stored on disk. */
+  /** Attachments on this comment. Metadata only — files stored on disk. */
   attachments?: TaskAttachmentMeta[];
 }
 
@@ -125,7 +125,7 @@ export interface TeamTask {
   needsClarification?: 'lead' | 'user';
   /** ISO timestamp — when the task was soft-deleted. Only set for status === 'deleted'. */
   deletedAt?: string;
-  /** Image attachments associated with this task. Metadata only — actual files stored on disk. */
+  /** Attachments associated with this task. Metadata only — actual files stored on disk. */
   attachments?: TaskAttachmentMeta[];
 }
 
@@ -135,7 +135,7 @@ export interface TeamTaskWithKanban extends TeamTask {
   kanbanColumn?: 'review' | 'approved';
 }
 
-/** Metadata for an image attached to a task description. */
+/** Metadata for an attachment associated with a task or comment. */
 export interface TaskAttachmentMeta {
   /** Unique attachment ID (uuid). */
   id: string;
@@ -157,7 +157,17 @@ export interface CommentAttachmentPayload {
   base64Data: string;
 }
 
-export type AttachmentMediaType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
+/**
+ * Broad MIME type string (e.g. "image/png", "application/pdf").
+ *
+ * Note: the UI may still choose to preview only certain types (e.g. images),
+ * but tasks/comments can store arbitrary attachments for agent workflows.
+ */
+// eslint-disable-next-line sonarjs/redundant-type-aliases -- semantic alias for documentation/readability
+export type AttachmentMediaType = string;
+
+/** Supported image MIME types (used for preview/validation in UI). */
+export type ImageMimeType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
 
 export interface AttachmentMeta {
   id: string;
@@ -185,8 +195,10 @@ export interface InboxMessage {
   summary?: string;
   color?: string;
   messageId?: string;
-  source?: 'inbox' | 'lead_session' | 'lead_process' | 'user_sent';
+  source?: 'inbox' | 'lead_session' | 'lead_process' | 'user_sent' | 'system_notification';
   attachments?: AttachmentMeta[];
+  /** Lead session ID that produced this message (for session boundary detection). */
+  leadSessionId?: string;
 }
 
 export interface SendMessageRequest {
@@ -195,6 +207,7 @@ export interface SendMessageRequest {
   summary?: string;
   from?: string;
   attachments?: AttachmentPayload[];
+  source?: InboxMessage['source'];
 }
 
 export interface SendMessageResult {
@@ -309,6 +322,24 @@ export interface TeamChangeEvent {
   type: 'config' | 'inbox' | 'task' | 'lead-activity' | 'lead-context' | 'process';
   teamName: string;
   detail?: string;
+}
+
+export interface TeamClaudeLogsQuery {
+  /** Offset in lines from the newest log line (0 = newest). */
+  offset?: number;
+  /** Max number of lines to return. */
+  limit?: number;
+}
+
+export interface TeamClaudeLogsResponse {
+  /** Log lines ordered newest-first. */
+  lines: string[];
+  /** Total number of buffered lines available in memory. */
+  total: number;
+  /** True when there are older lines beyond the current window. */
+  hasMore: boolean;
+  /** ISO timestamp of the last observed CLI output for this team. */
+  updatedAt?: string;
 }
 
 export type TeamProvisioningState =
@@ -444,6 +475,7 @@ export interface MemberFullStats {
 export interface AddMemberRequest {
   name: string;
   role?: string;
+  workflow?: string;
 }
 
 export interface RemoveMemberRequest {

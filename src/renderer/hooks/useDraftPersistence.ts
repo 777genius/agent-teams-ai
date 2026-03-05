@@ -25,15 +25,52 @@ export function useDraftPersistence({
   const [value, setValueState] = useState(initialValue ?? '');
   const [isSaved, setIsSaved] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingValueRef = useRef<string | null>(null);
+  const pendingValueRef = useRef<{ key: string; value: string } | null>(null);
   const keyRef = useRef(key);
-  keyRef.current = key;
+  const mountedRef = useRef(true);
 
-  // Load draft on mount
   useEffect(() => {
-    if (!enabled) return;
+    keyRef.current = key;
+  }, [key]);
 
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const flushPending = useCallback(() => {
+    if (timerRef.current != null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (pendingValueRef.current != null) {
+      const pending = pendingValueRef.current;
+      pendingValueRef.current = null;
+      if (pending.value.length === 0) {
+        void draftStorage.deleteDraft(pending.key);
+      } else {
+        void draftStorage.saveDraft(pending.key, pending.value);
+      }
+    }
+  }, []);
+
+  // Load draft on mount / key change
+  useEffect(() => {
     let cancelled = false;
+    // Prevent debounced saves for the previous key from landing under the new key.
+    flushPending();
+    // Reset local state for the new key immediately. If a draft exists, it will overwrite below.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset on key change before async load
+    setValueState(initialValue ?? '');
+
+    setIsSaved(false);
+
+    if (!enabled)
+      return () => {
+        cancelled = true;
+      };
     void (async () => {
       const draft = await draftStorage.loadDraft(key);
       if (cancelled) return;
@@ -46,24 +83,7 @@ export function useDraftPersistence({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
-  }, [key, enabled]);
-
-  const flushPending = useCallback(() => {
-    if (timerRef.current != null) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    if (pendingValueRef.current != null) {
-      const val = pendingValueRef.current;
-      pendingValueRef.current = null;
-      if (val.length === 0) {
-        void draftStorage.deleteDraft(keyRef.current);
-      } else {
-        void draftStorage.saveDraft(keyRef.current, val);
-      }
-    }
-  }, []);
+  }, [key, enabled, initialValue, flushPending]);
 
   // Flush on unmount
   useEffect(() => {
@@ -79,7 +99,7 @@ export function useDraftPersistence({
 
       if (!enabled) return;
 
-      pendingValueRef.current = v;
+      pendingValueRef.current = { key: keyRef.current, value: v };
 
       if (timerRef.current != null) {
         clearTimeout(timerRef.current);
@@ -91,11 +111,11 @@ export function useDraftPersistence({
         pendingValueRef.current = null;
         if (pending == null) return;
 
-        if (pending.length === 0) {
-          void draftStorage.deleteDraft(keyRef.current);
+        if (pending.value.length === 0) {
+          void draftStorage.deleteDraft(pending.key);
         } else {
-          void draftStorage.saveDraft(keyRef.current, pending).then(() => {
-            setIsSaved(true);
+          void draftStorage.saveDraft(pending.key, pending.value).then(() => {
+            if (mountedRef.current) setIsSaved(true);
           });
         }
       }, debounceMs);

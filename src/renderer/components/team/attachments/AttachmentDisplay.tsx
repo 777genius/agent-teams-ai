@@ -87,10 +87,10 @@ export const AttachmentDisplay = ({
       </div>
       {lightboxIndex !== null && items[lightboxIndex] ? (
         <ImageLightbox
-          src={items[lightboxIndex].dataUrl}
-          alt={items[lightboxIndex].meta.filename}
           open
           onClose={() => setLightboxIndex(null)}
+          slides={items.map((item) => ({ src: item.dataUrl, alt: item.meta.filename }))}
+          index={lightboxIndex}
         />
       ) : null}
     </>

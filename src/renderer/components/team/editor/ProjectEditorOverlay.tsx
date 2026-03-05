@@ -678,7 +678,14 @@ export const ProjectEditorOverlay = ({
 
           {/* Draft recovery banner */}
           {draftRecoveredFile && activeTabId === draftRecoveredFile && (
-            <div className="flex shrink-0 items-center gap-2 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">
+            <div
+              className="flex shrink-0 items-center gap-2 border-b px-3 py-1.5 text-xs"
+              style={{
+                backgroundColor: 'var(--warning-bg)',
+                borderColor: 'var(--warning-border)',
+                color: 'var(--warning-text)',
+              }}
+            >
               <RotateCcw className="size-3.5 shrink-0" />
               <span>Recovered unsaved changes from a previous session.</span>
               <Button

@@ -8,7 +8,7 @@ This document evaluates approaches for storing images/attachments locally in our
 
 ## Approach 1: Filesystem + SQLite Metadata (Recommended)
 
-**How it works:** Store image files on disk under `app.getPath('userData')/attachments/`, serve them to the renderer via a custom `protocol.handle` scheme (`app://attachments/...`), and track metadata (path, original name, size, hash, created date, linked entity) in a `better-sqlite3` table.
+**How it works:** Store image files on disk under `app.getPath('userData')/attachments/`, serve them to the renderer via a custom `protocol.handle` scheme (`app-img://...`), and track metadata (path, original name, size, hash, created date, linked entity) in a `better-sqlite3` table.
 
 ### Pros
 - Best I/O performance — direct filesystem reads, no serialization overhead.

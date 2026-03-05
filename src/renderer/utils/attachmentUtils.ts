@@ -1,6 +1,6 @@
-import type { AttachmentMediaType, AttachmentPayload } from '@shared/types';
+import type { AttachmentPayload, ImageMimeType } from '@shared/types';
 
-export const ALLOWED_MIME_TYPES = new Set<AttachmentMediaType>([
+export const ALLOWED_MIME_TYPES = new Set<ImageMimeType>([
   'image/png',
   'image/jpeg',
   'image/gif',
@@ -11,8 +11,8 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const MAX_FILES = 5;
 export const MAX_TOTAL_SIZE = 20 * 1024 * 1024; // 20MB
 
-export function isImageMimeType(type: string): type is AttachmentMediaType {
-  return ALLOWED_MIME_TYPES.has(type as AttachmentMediaType);
+export function isImageMimeType(type: string): type is ImageMimeType {
+  return ALLOWED_MIME_TYPES.has(type as ImageMimeType);
 }
 
 export function validateAttachment(file: File): { valid: true } | { valid: false; error: string } {
@@ -35,7 +35,7 @@ export async function fileToAttachmentPayload(file: File): Promise<AttachmentPay
       resolve({
         id: crypto.randomUUID(),
         filename: file.name,
-        mimeType: file.type as AttachmentMediaType,
+        mimeType: file.type,
         size: file.size,
         data: base64,
       });

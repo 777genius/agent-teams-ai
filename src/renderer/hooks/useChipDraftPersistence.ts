@@ -46,19 +46,50 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
   const [chips, setChipsState] = useState<InlineChip[]>([]);
   const [isSaved, setIsSaved] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingRef = useRef<InlineChip[] | null>(null);
+  const pendingRef = useRef<{ key: string; value: InlineChip[] } | null>(null);
   const keyRef = useRef(key);
-  // Ref for current chips — allows addChip/removeChip to read latest value
-  // without stale closures, using the same sync-ref pattern as keyRef.
-  const chipsRef = useRef<InlineChip[]>([]);
 
   useEffect(() => {
     keyRef.current = key;
   }, [key]);
+  // Ref for current chips — allows addChip/removeChip to read latest value
+  // without stale closures, using the same sync-ref pattern as keyRef.
+  const chipsRef = useRef<InlineChip[]>([]);
+  const mountedRef = useRef(true);
 
-  // Load on mount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const flushPending = useCallback(() => {
+    if (timerRef.current != null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (pendingRef.current != null) {
+      const pending = pendingRef.current;
+      pendingRef.current = null;
+      if (pending.value.length === 0) {
+        void draftStorage.deleteDraft(pending.key);
+      } else {
+        void draftStorage.saveDraft(pending.key, JSON.stringify(pending.value));
+      }
+    }
+  }, []);
+
+  // Load on mount / key change
   useEffect(() => {
     let cancelled = false;
+    // Flush any pending debounced save for the previous key and reset local state for the new key.
+    flushPending();
+    chipsRef.current = [];
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset on key change before async load
+    setChipsState([]);
+
+    setIsSaved(false);
     void (async () => {
       const raw = await draftStorage.loadDraft(key);
       if (cancelled || raw == null) return;
@@ -76,23 +107,7 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
     return () => {
       cancelled = true;
     };
-  }, [key]);
-
-  const flushPending = useCallback(() => {
-    if (timerRef.current != null) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    if (pendingRef.current != null) {
-      const val = pendingRef.current;
-      pendingRef.current = null;
-      if (val.length === 0) {
-        void draftStorage.deleteDraft(keyRef.current);
-      } else {
-        void draftStorage.saveDraft(keyRef.current, JSON.stringify(val));
-      }
-    }
-  }, []);
+  }, [key, flushPending]);
 
   // Flush on unmount
   useEffect(() => {
@@ -105,7 +120,7 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
     chipsRef.current = nextChips;
     setChipsState(nextChips);
     setIsSaved(false);
-    pendingRef.current = nextChips;
+    pendingRef.current = { key: keyRef.current, value: nextChips };
 
     if (timerRef.current != null) {
       clearTimeout(timerRef.current);
@@ -117,11 +132,11 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
       pendingRef.current = null;
       if (pending == null) return;
 
-      if (pending.length === 0) {
-        void draftStorage.deleteDraft(keyRef.current);
+      if (pending.value.length === 0) {
+        void draftStorage.deleteDraft(pending.key);
       } else {
-        void draftStorage.saveDraft(keyRef.current, JSON.stringify(pending)).then(() => {
-          setIsSaved(true);
+        void draftStorage.saveDraft(pending.key, JSON.stringify(pending.value)).then(() => {
+          if (mountedRef.current) setIsSaved(true);
         });
       }
     }, DEBOUNCE_MS);

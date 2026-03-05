@@ -14,20 +14,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
+import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
 import { Input } from '@renderer/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@renderer/components/ui/select';
+import { MemberSelect } from '@renderer/components/ui/MemberSelect';
 import { Textarea } from '@renderer/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { markAsRead } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
-import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import {
   buildMemberColorMap,
   KANBAN_COLUMN_DISPLAY,
@@ -107,6 +100,7 @@ export const TaskDetailDialog = ({
   const updateTaskFields = useStore((s) => s.updateTaskFields);
 
   const [logsRefreshing, setLogsRefreshing] = useState(false);
+  const [executionPreviewOnline, setExecutionPreviewOnline] = useState(false);
 
   // Inline editing: subject
   const [editingSubject, setEditingSubject] = useState(false);
@@ -296,6 +290,12 @@ export const TaskDetailDialog = ({
     .map((t) => t.id);
   const isTodo = status === 'pending' && !kanbanColumn;
   const canReassign = isTodo && onOwnerChange;
+  const leadName =
+    members.find((m) => m.agentType === 'team-lead' || m.name === 'team-lead')?.name ?? 'team-lead';
+  const isLeadOwnedTask =
+    (currentTask.owner ?? '').trim().toLowerCase() === leadName.trim().toLowerCase() ||
+    (currentTask.owner ?? '').trim().toLowerCase() === 'team-lead';
+  const allowLeadExecutionPreview = true;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -349,42 +349,14 @@ export const TaskDetailDialog = ({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
           <div className="flex min-w-0 items-center gap-2">
             {canReassign ? (
-              <Select
-                value={currentTask.owner ?? '__unassigned__'}
-                onValueChange={(v) => {
-                  onOwnerChange(currentTask.id, v === '__unassigned__' ? null : v);
-                }}
-              >
-                <SelectTrigger className="h-8 w-auto min-w-[140px] text-xs">
-                  <SelectValue placeholder="Unassigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__unassigned__">Unassigned</SelectItem>
-                  {members.map((m) => {
-                    const role = formatAgentRole(m.role) ?? formatAgentRole(m.agentType);
-                    const resolvedColor = colorMap.get(m.name);
-                    const memberColor = resolvedColor ? getTeamColorSet(resolvedColor) : null;
-                    return (
-                      <SelectItem key={m.name} value={m.name}>
-                        <span className="inline-flex items-center gap-1.5">
-                          {memberColor ? (
-                            <span
-                              className="inline-block size-2 shrink-0 rounded-full"
-                              style={{ backgroundColor: memberColor.border }}
-                            />
-                          ) : null}
-                          <span style={memberColor ? { color: memberColor.text } : undefined}>
-                            {m.name}
-                          </span>
-                          {role ? (
-                            <span className="text-[var(--color-text-muted)]">({role})</span>
-                          ) : null}
-                        </span>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              <MemberSelect
+                members={members}
+                value={currentTask.owner ?? null}
+                onChange={(v) => onOwnerChange(currentTask.id, v)}
+                allowUnassigned
+                size="sm"
+                className="min-w-[160px]"
+              />
             ) : currentTask.owner ? (
               <MemberBadge
                 name={currentTask.owner}
@@ -392,7 +364,7 @@ export const TaskDetailDialog = ({
                 size="md"
               />
             ) : (
-              <span className="text-xs text-[var(--color-text-muted)]">&mdash;</span>
+              <span className="text-xs italic text-[var(--color-text-muted)]">Unassigned</span>
             )}
           </div>
           {currentTask.createdBy ? (
@@ -545,7 +517,7 @@ export const TaskDetailDialog = ({
             <div
               role="button"
               tabIndex={0}
-              className="group max-h-[200px] cursor-pointer overflow-y-auto"
+              className="group cursor-pointer"
               onClick={startEditDescription}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -554,7 +526,9 @@ export const TaskDetailDialog = ({
                 }
               }}
             >
-              <MarkdownViewer content={currentTask.description} maxHeight="max-h-[180px]" bare />
+              <ExpandableContent collapsedHeight={200}>
+                <MarkdownViewer content={currentTask.description} maxHeight="max-h-none" bare />
+              </ExpandableContent>
               <Pencil
                 size={12}
                 className="mt-1 text-[var(--color-text-muted)] opacity-0 transition-opacity group-hover:opacity-100"
@@ -680,10 +654,23 @@ export const TaskDetailDialog = ({
             title="Execution Logs"
             icon={<ScrollText size={14} />}
             headerExtra={
-              logsRefreshing ? (
-                <span className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
-                  <Loader2 size={10} className="animate-spin" />
-                  Updating...
+              logsRefreshing || executionPreviewOnline ? (
+                <span className="flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
+                  {executionPreviewOnline ? (
+                    <span
+                      className="pointer-events-none relative inline-flex size-2 shrink-0"
+                      title="Online"
+                    >
+                      <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
+                      <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
+                    </span>
+                  ) : null}
+                  {logsRefreshing ? (
+                    <span className="flex items-center gap-1">
+                      <Loader2 size={10} className="animate-spin" />
+                      Updating...
+                    </span>
+                  ) : null}
                 </span>
               ) : null
             }
@@ -700,6 +687,13 @@ export const TaskDetailDialog = ({
                 taskStatus={currentTask.status}
                 taskWorkIntervals={currentTask.workIntervals}
                 onRefreshingChange={setLogsRefreshing}
+                // Only show a "latest messages" preview when this task is owned by a subagent.
+                // For lead-owned tasks, the lead session is a mixed stream (lead + multiple agents),
+                // so filtering to "just the member messages" is unreliable and easy to mislead.
+                showSubagentPreview={Boolean(currentTask.owner) && !isLeadOwnedTask}
+                // Temporary debug option: for lead-owned tasks, show quick preview from lead session.
+                showLeadPreview={allowLeadExecutionPreview && isLeadOwnedTask}
+                onPreviewOnlineChange={setExecutionPreviewOnline}
               />
             </div>
           </CollapsibleTeamSection>
@@ -858,18 +852,20 @@ export const TaskDetailDialog = ({
               ? (currentTask.comments?.length ?? 0)
               : undefined
           }
-          contentClassName="pl-2.5"
+          contentClassName="overflow-x-visible pl-0"
           headerClassName="-mx-6 w-[calc(100%+3rem)]"
           headerContentClassName="pl-6"
           defaultOpen
         >
-          <TaskCommentInput
-            teamName={teamName}
-            taskId={currentTask.id}
-            members={members}
-            replyTo={effectiveReplyTo}
-            onClearReply={clearReply}
-          />
+          <div className="pl-2.5">
+            <TaskCommentInput
+              teamName={teamName}
+              taskId={currentTask.id}
+              members={members}
+              replyTo={effectiveReplyTo}
+              onClearReply={clearReply}
+            />
+          </div>
           <TaskCommentsSection
             teamName={teamName}
             taskId={currentTask.id}
@@ -879,6 +875,7 @@ export const TaskDetailDialog = ({
             hideInput
             onReply={handleReply}
             onTaskIdClick={onScrollToTask ? (taskId) => handleDependencyClick(taskId) : undefined}
+            containerClassName="-mx-6"
           />
         </CollapsibleTeamSection>
 

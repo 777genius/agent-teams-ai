@@ -210,6 +210,9 @@ export const TEAM_LIST = 'team:list';
 /** Get detailed team data */
 export const TEAM_GET_DATA = 'team:getData';
 
+/** Get buffered Claude CLI logs (paged, newest-first) */
+export const TEAM_GET_CLAUDE_LOGS = 'team:getClaudeLogs';
+
 /** Update team kanban state */
 export const TEAM_UPDATE_KANBAN = 'team:updateKanban';
 

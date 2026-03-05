@@ -1,17 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@renderer/components/ui/select';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { reconcileChips, removeChipTokenFromText } from '@renderer/utils/chipUtils';
@@ -143,33 +136,15 @@ export const MemberDraftRow = ({
         />
         {nameError ? <p className="text-[10px] text-red-300">{nameError}</p> : null}
       </div>
-      <div className="space-y-1">
-        <Select
-          value={member.roleSelection || NO_ROLE}
+      <div>
+        <RoleSelect
+          value={member.roleSelection || '__none__'}
           onValueChange={(roleSelection) => onRoleChange(member.id, roleSelection)}
-        >
-          <SelectTrigger className="h-8 text-xs" aria-label={`Member ${index + 1} role`}>
-            <SelectValue placeholder="No role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NO_ROLE}>No role</SelectItem>
-            {PRESET_ROLES.map((role) => (
-              <SelectItem key={role} value={role}>
-                {role}
-              </SelectItem>
-            ))}
-            <SelectItem value={CUSTOM_ROLE}>Custom role...</SelectItem>
-          </SelectContent>
-        </Select>
-        {member.roleSelection === CUSTOM_ROLE ? (
-          <Input
-            className="h-8 text-xs"
-            value={member.customRole}
-            aria-label={`Member ${index + 1} custom role`}
-            onChange={(event) => onCustomRoleChange(member.id, event.target.value)}
-            placeholder="e.g. architect"
-          />
-        ) : null}
+          customRole={member.customRole}
+          onCustomRoleChange={(customRole) => onCustomRoleChange(member.id, customRole)}
+          triggerClassName="h-8 text-xs"
+          inputClassName="h-8 text-xs"
+        />
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
         {showWorkflow && onWorkflowChange ? (
@@ -216,7 +191,7 @@ export const MemberDraftRow = ({
             onChipRemove={handleChipRemove}
             projectPath={projectPath ?? undefined}
             onFileChipInsert={handleFileChipInsert}
-            placeholder="How this agent should behave, interact with others. Use @ to mention teammates or add files."
+            placeholder="How this agent should behave, interact with others..."
             footerRight={
               workflowDraft.isSaved ? (
                 <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>

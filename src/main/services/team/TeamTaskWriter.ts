@@ -319,6 +319,9 @@ export class TeamTaskWriter {
 
       const task = JSON.parse(raw) as TeamTask;
       const prevStatus = task.status;
+      if (prevStatus === status) {
+        return;
+      }
       const nowIso = new Date().toISOString();
 
       // Maintain workIntervals as periods of time where status === 'in_progress'.

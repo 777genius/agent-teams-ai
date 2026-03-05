@@ -137,7 +137,7 @@ export const ProjectPathSelector = ({
           ) : null}
           {projectsError ? <p className="text-[11px] text-red-300">{projectsError}</p> : null}
           {!projectsLoading && projects.length === 0 ? (
-            <p className="text-[11px] text-amber-300">No projects found, switch to custom path.</p>
+            <p className="text-[11px]" style={{ color: 'var(--warning-text)' }}>No projects found, switch to custom path.</p>
           ) : null}
         </div>
       ) : (
@@ -155,9 +155,13 @@ export const ProjectPathSelector = ({
               size="sm"
               onClick={() => {
                 void (async () => {
-                  const paths = await api.config.selectFolders();
-                  if (paths.length > 0) {
-                    onCustomCwdChange(paths[0]);
+                  try {
+                    const paths = await api.config.selectFolders();
+                    if (paths.length > 0) {
+                      onCustomCwdChange(paths[0]);
+                    }
+                  } catch {
+                    // IPC error — dialog may have been cancelled or failed
                   }
                 })();
               }}

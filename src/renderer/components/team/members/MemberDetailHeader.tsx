@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Badge } from '@renderer/components/ui/badge';
 import { DialogDescription, DialogTitle } from '@renderer/components/ui/dialog';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { useStore } from '@renderer/store';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { agentAvatarUrl, getMemberDotClass, getPresenceLabel } from '@renderer/utils/memberHelpers';
 import { Pencil } from 'lucide-react';
@@ -31,20 +30,15 @@ export const MemberDetailHeader = ({
 }: MemberDetailHeaderProps): React.JSX.Element => {
   const [editing, setEditing] = useState(false);
 
-  const teamName = useStore((s) => s.selectedTeamName);
-  const leadContext = useStore((s) =>
-    member.agentType === 'team-lead' && teamName ? s.leadContextByTeam[teamName] : undefined
-  );
+  // NOTE: lead context display disabled — usage formula is inaccurate
+  // const teamName = useStore((s) => s.selectedTeamName);
+  // const leadContext = useStore((s) =>
+  //   member.agentType === 'team-lead' && teamName ? s.leadContextByTeam[teamName] : undefined
+  // );
 
   const colors = getTeamColorSet(member.color ?? '');
   const role = member.role || formatAgentRole(member.agentType);
-  const presenceLabel = getPresenceLabel(
-    member,
-    isTeamAlive,
-    isTeamProvisioning,
-    leadActivity,
-    leadContext?.percent
-  );
+  const presenceLabel = getPresenceLabel(member, isTeamAlive, isTeamProvisioning, leadActivity);
   const dotClass = getMemberDotClass(member, isTeamAlive, isTeamProvisioning, leadActivity);
 
   const canEditRole =
@@ -107,12 +101,7 @@ export const MemberDetailHeader = ({
                 >
                   {presenceLabel}
                 </Badge>
-                {leadContext && leadContext.percent > 0 && (
-                  <span className="text-[10px] text-[var(--color-text-muted)]">
-                    {(leadContext.currentTokens / 1000).toFixed(1)}k /{' '}
-                    {(leadContext.contextWindow / 1000).toFixed(0)}k
-                  </span>
-                )}
+                {/* NOTE: lead context token display disabled — usage formula is inaccurate */}
               </>
             )}
           </div>

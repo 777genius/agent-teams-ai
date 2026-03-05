@@ -45,6 +45,8 @@ import type {
   SshLastConnection,
   SubagentDetail,
   TeamChangeEvent,
+  TeamClaudeLogsQuery,
+  TeamClaudeLogsResponse,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamData,
@@ -643,6 +645,13 @@ export class HttpAPIClient implements ElectronAPI {
     },
     getData: async (_teamName: string): Promise<TeamData> => {
       throw new Error('Teams detail is not available in browser mode');
+    },
+    getClaudeLogs: async (
+      _teamName: string,
+      _query?: TeamClaudeLogsQuery
+    ): Promise<TeamClaudeLogsResponse> => {
+      console.warn('[HttpAPIClient] getClaudeLogs is not available in browser mode');
+      return { lines: [], total: 0, hasMore: false };
     },
     deleteTeam: async (_teamName: string): Promise<void> => {
       throw new Error('Team deletion is not available in browser mode');

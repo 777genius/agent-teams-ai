@@ -65,6 +65,7 @@ import type { AppState } from '../types';
 import type { AppConfig } from '@renderer/types/data';
 import type {
   AddMemberRequest,
+  CommentAttachmentPayload,
   CreateTaskRequest,
   GlobalTask,
   KanbanColumnId,
@@ -294,7 +295,7 @@ export interface TeamSlice {
     teamName: string,
     taskId: string,
     text: string,
-    attachments?: import('@shared/types').CommentAttachmentPayload[]
+    attachments?: CommentAttachmentPayload[]
   ) => Promise<TaskComment>;
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
   removeMember: (teamName: string, memberName: string) => Promise<void>;
@@ -549,7 +550,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const state = get();
     // Use display name from teams list or selected team data if available
     const teamSummary = state.teamByName[teamName];
-    const displayName = teamSummary?.displayName || state.selectedTeamData?.config.name || teamName;
+    const selectedTeamDisplayName =
+      state.selectedTeamName === teamName ? state.selectedTeamData?.config.name : undefined;
+    const displayName = teamSummary?.displayName || selectedTeamDisplayName || teamName;
 
     const allTabs = state.getAllPaneTabs();
     const existing = allTabs.find((tab) => tab.type === 'team' && tab.teamName === teamName);

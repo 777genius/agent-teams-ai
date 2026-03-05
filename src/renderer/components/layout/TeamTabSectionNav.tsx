@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { ChevronDown, Columns3, History, MessageSquare, Users } from 'lucide-react';
+import { ChevronDown, Columns3, History, MessageSquare, Terminal, Users } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -14,6 +14,7 @@ const SECTIONS: readonly { id: string; label: string; icon: LucideIcon }[] = [
   { id: 'team', label: 'Team', icon: Users },
   { id: 'sessions', label: 'Sessions', icon: History },
   { id: 'kanban', label: 'Kanban', icon: Columns3 },
+  { id: 'claude-logs', label: 'Claude Logs', icon: Terminal },
   { id: 'messages', label: 'Messages', icon: MessageSquare },
 ];
 
@@ -70,11 +71,11 @@ export const TeamTabSectionNav = ({
   }, [open]);
 
   return (
-    <div className="w-full" onPointerDown={(e) => e.stopPropagation()}>
+    <div className="shrink-0" onPointerDown={(e) => e.stopPropagation()}>
       <button
         ref={buttonRef}
         type="button"
-        className="flex h-3.5 w-full items-center justify-center text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
+        className="flex size-4 items-center justify-center rounded-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
         onClick={(e) => {
           e.stopPropagation();
           setOpen((prev) => !prev);

@@ -19,7 +19,9 @@ import {
 } from '@shared/constants/agentBlocks';
 import { getMemberColor } from '@shared/constants/memberColors';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
+import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
 import { createLogger } from '@shared/utils/logger';
+import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
 import { spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
@@ -58,9 +60,8 @@ const STDOUT_RING_LIMIT = 64 * 1024;
 const LOG_PROGRESS_THROTTLE_MS = 300;
 const UI_LOGS_TAIL_LIMIT = 128 * 1024;
 const SHELL_ENV_TIMEOUT_MS = 12000;
-// const CLI_PREPARE_TIMEOUT_MS = 10000;
 const PROBE_CACHE_TTL_MS = 10 * 60_000;
-const PREFLIGHT_TIMEOUT_MS = 30000;
+const PREFLIGHT_TIMEOUT_MS = 60000;
 const PREFLIGHT_AUTH_RETRY_DELAY_MS = 2000;
 const PREFLIGHT_AUTH_MAX_RETRIES = 2;
 const FS_MONITOR_POLL_MS = 2000;
@@ -68,8 +69,20 @@ const TASK_WAIT_FALLBACK_MS = 15_000;
 const TEAM_JSON_READ_TIMEOUT_MS = 5_000;
 const TEAM_CONFIG_MAX_BYTES = 10 * 1024 * 1024;
 const TEAM_INBOX_MAX_BYTES = 2 * 1024 * 1024;
-const PREFLIGHT_PING_PROMPT = 'Reply with the single word PONG and nothing else';
-const PREFLIGHT_PING_ARGS = ['-p', PREFLIGHT_PING_PROMPT, '--output-format', 'text'] as const;
+const PREFLIGHT_PING_PROMPT = 'Output only the single word PONG.';
+const PREFLIGHT_PING_ARGS = [
+  '-p',
+  PREFLIGHT_PING_PROMPT,
+  '--output-format',
+  'text',
+  '--model',
+  'haiku',
+  '--max-turns',
+  '1',
+  '--max-budget-usd',
+  '0.05',
+  '--no-session-persistence',
+] as const;
 const PREFLIGHT_EXPECTED = 'PONG';
 
 type TeamsBaseLocation = 'configured' | 'default';
@@ -114,6 +127,16 @@ interface ProvisioningRun {
   progress: TeamProvisioningProgress;
   stdoutBuffer: string;
   stderrBuffer: string;
+  /** Rolling buffer of CLI log lines (oldest -> newest). */
+  claudeLogLines: string[];
+  /** Last stream used for claudeLogLines markers. */
+  lastClaudeLogStream: 'stdout' | 'stderr' | null;
+  /** Carry buffer for stdout line splitting (CLI output). */
+  stdoutLogLineBuf: string;
+  /** Carry buffer for stderr line splitting (CLI output). */
+  stderrLogLineBuf: string;
+  /** ISO timestamp when the last CLI line was recorded. */
+  claudeLogsUpdatedAt?: string;
   processKilled: boolean;
   finalizingByTimeout: boolean;
   cancelRequested: boolean;
@@ -145,6 +168,19 @@ interface ProvisioningRun {
    * Flushed to liveLeadProcessMessages on result.success.
    */
   directReplyParts: string[];
+  /** Monotonic counter for stream-json turns (incremented on result). */
+  leadTurnSeq: number;
+  /** Stable timestamp used for the current aggregated lead turn message. */
+  leadTurnMessageTimestamp: string | null;
+  /** Throttle timestamp for emitting inbox refresh events for lead text. */
+  lastLeadTextEmitMs: number;
+  /**
+   * When set, the current stdin-injected turn is an internal "forward user DM to teammate"
+   * request triggered by the UI. We suppress any lead→user echo for that turn.
+   */
+  silentUserDmForward: { target: string; startedAt: string } | null;
+  /** Safety valve: clears silentUserDmForward if turn never completes. */
+  silentUserDmForwardClearHandle: NodeJS.Timeout | null;
   /** Accumulates assistant text during provisioning phase for live UI preview. */
   provisioningOutputParts: string[];
   /** Session ID detected from stream-json output (result.session_id or message.session_id). */
@@ -478,10 +514,19 @@ function buildTeamCtlOpsInstructions(teamName: string, leadName: string): string
       `- Start task (preferred over set-status): node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task start <id>`,
       `- Complete task (preferred over set-status): node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task complete <id>`,
       `- Update status: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task set-status <id> <pending|in_progress|completed|deleted>`,
+      `- Add comment: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task comment <id> --text "..." --from "${leadName}"`,
+      `- Attach file to task: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task attach <id> --file "<path>" [--mode copy|link] [--filename "<name>"] [--mime-type "<type>"]`,
+      `- Attach file to a specific comment:`,
+      `  1) Find commentId: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task get <id>`,
+      `  2) Attach: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task comment-attach <id> <commentId> --file "<path>" [--mode copy|link] [--filename "<name>"] [--mime-type "<type>"]`,
       `- Create with deps (blocked work MUST be pending): node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task create --subject "..." --blocked-by 1,2 --related 3 --status pending --owner "<member>" --notify --from "${leadName}"`,
       `- Link dependency: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task link <id> --blocked-by <targetId>`,
       `- Link related: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task link <id> --related <targetId>`,
       `- Unlink: node "$HOME/.claude/tools/teamctl.js" --team "${teamName}" task unlink <id> --blocked-by <targetId>`,
+      ``,
+      `Attachment storage modes (IMPORTANT):`,
+      `- Default is copy (safe, robust).`,
+      `- Use --mode link to try a hardlink (no duplication). It may fall back to copy unless you add --no-fallback.`,
       ``,
       `Dependency guidelines:`,
       `- Use --blocked-by when a task cannot start until another is done.`,
@@ -634,8 +679,14 @@ function buildProvisioningPrompt(request: TeamCreateRequest): string {
       `   - CRITICAL: Do NOT start working on the tasks now. Provisioning is ONLY for setting up the team structure.\n` +
       `   - The tasks will be executed after the team is launched separately.`
     : `3) If user instructions explicitly ask to create tasks OR describe substantial/assigned work that should be tracked — create tasks on the team board.
-   - Prefer fewer, broader tasks over many micro-tasks.
-   - Avoid duplicate notifications for the same assignment.
+   - PRIORITY (delegation-first): your default behavior is to translate user requests into a task plan, create the tasks, and delegate them to teammates.
+     - Do NOT start executing/implementing tasks yourself in this turn.
+     - Do NOT “block” on doing the work before creating/assigning tasks — keep this turn fast so the user can send more instructions.
+     - Exception: only if the team is truly SOLO (no teammates) may you execute tasks yourself. This is NOT the case here.
+   - Decompose the request into a small set of clear, outcome-based tasks (prefer fewer, broader tasks over many micro-tasks).
+   - Assign each created task to an appropriate teammate as owner (NOT to yourself), based on role/workflow and current load.
+     - If ownership is unclear, pick the best default owner and note assumptions in the task description or a task comment.
+   - Avoid duplicate notifications for the same assignment (one message per member per topic is enough).
    - When tasks have natural ordering (e.g. setup → implementation → testing), use --blocked-by.
    - If a task is blocked (uses --blocked-by), it MUST be created as pending (use --status pending). Do NOT mark blocked tasks in_progress.
      - Review guidance:
@@ -688,6 +739,7 @@ Constraints:
 - NEVER send duplicate messages to the same member. One SendMessage per member per topic is enough.
 - Keep the task board high-signal: avoid creating tasks for trivial micro-items.
 - Use the team task board for assigned/substantial work.
+- DELEGATION-FIRST (behavior rule for ALL future turns): When "user" gives you work, your top priority is to (a) decompose into tasks, (b) create tasks on the team board, (c) assign them to teammates, and (d) SendMessage "user" a short confirmation (task IDs + owners). Do NOT start implementing yourself unless the team is truly in SOLO MODE (no teammates).
 - TaskCreate is optional for private planning only; do NOT use it for team-board tasks.
 - When messaging "user" (the human): NEVER mention teamctl.js, internal scripts, CLI commands, or file paths under ~/.claude/. The user sees messages in the UI — write plain human language. If a task needs a status update, do it yourself via Bash; never ask the user to run a command.${soloConstraint}
 
@@ -719,7 +771,8 @@ ${membersFooter}
 function buildLaunchPrompt(
   request: TeamLaunchRequest,
   members: TeamCreateRequest['members'],
-  tasks: TeamTask[]
+  tasks: TeamTask[],
+  isResume: boolean
 ): string {
   const membersBlock = buildMembersPrompt(members);
   const userPromptBlock = request.prompt?.trim()
@@ -828,7 +881,9 @@ ${memberSpawnInstructions}
     ? `Members:\n${membersBlock}`
     : 'Members: (none — solo team lead)';
 
-  return `Team Start [Agent Team: "${request.teamName}" | Project: "${projectName}" | Lead: "${leadName}"]
+  const startLabel = isResume ? 'Team Start (resume)' : 'Team Start';
+
+  return `${startLabel} [Agent Team: "${request.teamName}" | Project: "${projectName}" | Lead: "${leadName}"]
 
 You are running in a non-interactive CLI session. Do not ask questions. Do everything in a single turn.
 You are "${leadName}", the team lead.
@@ -847,6 +902,7 @@ Constraints:
 - NEVER send duplicate messages to the same member. One SendMessage per member per topic is enough.
 - Keep the task board high-signal: avoid creating tasks for trivial micro-items.
 - Use the team task board for assigned/substantial work.
+- DELEGATION-FIRST (behavior rule for ALL future turns): When "user" gives you work, your top priority is to (a) decompose into tasks, (b) create tasks on the team board, (c) assign them to teammates, and (d) SendMessage "user" a short confirmation (task IDs + owners). Do NOT start implementing yourself unless the team is truly in SOLO MODE (no teammates).
 - TaskCreate is optional for private planning only; do NOT use it for team-board tasks.
 - When messaging "user" (the human): NEVER mention teamctl.js, internal scripts, CLI commands, or file paths under ~/.claude/. The user sees messages in the UI — write plain human language. If a task needs a status update, do it yourself via Bash; never ask the user to run a command.${soloConstraint}
 
@@ -965,8 +1021,27 @@ interface CachedProbeResult {
 }
 
 let cachedProbeResult: CachedProbeResult | null = null;
+let probeInFlight: Promise<{
+  claudePath: string;
+  authSource: ProvisioningAuthSource;
+  warning?: string;
+} | null> | null = null;
+
+function isTransientProbeWarning(warning: string): boolean {
+  const lower = warning.toLowerCase();
+  return (
+    lower.includes('timeout running:') ||
+    lower.includes('did not complete') ||
+    lower.includes('timed out') ||
+    lower.includes('etimedout') ||
+    lower.includes('econnreset') ||
+    lower.includes('eai_again')
+  );
+}
 
 export class TeamProvisioningService {
+  private static readonly CLAUDE_LOG_LINES_LIMIT = 50_000;
+
   private readonly runs = new Map<string, ProvisioningRun>();
   private readonly activeByTeam = new Map<string, string>();
   private readonly teamOpLocks = new Map<string, Promise<void>>();
@@ -982,6 +1057,89 @@ export class TeamProvisioningService {
     private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore(),
     private readonly sentMessagesStore: TeamSentMessagesStore = new TeamSentMessagesStore()
   ) {}
+
+  getClaudeLogs(
+    teamName: string,
+    query?: { offset?: number; limit?: number }
+  ): { lines: string[]; total: number; hasMore: boolean; updatedAt?: string } {
+    const runId = this.activeByTeam.get(teamName);
+    if (!runId) {
+      return { lines: [], total: 0, hasMore: false };
+    }
+    const run = this.runs.get(runId);
+    if (!run) {
+      return { lines: [], total: 0, hasMore: false };
+    }
+
+    const offsetRaw = query?.offset ?? 0;
+    const limitRaw = query?.limit ?? 100;
+    const offset = Number.isFinite(offsetRaw) ? Math.max(0, Math.floor(offsetRaw)) : 0;
+    const limit = Number.isFinite(limitRaw)
+      ? Math.max(1, Math.min(1000, Math.floor(limitRaw)))
+      : 100;
+
+    const total = run.claudeLogLines.length;
+    if (total === 0) {
+      return { lines: [], total: 0, hasMore: false, updatedAt: run.claudeLogsUpdatedAt };
+    }
+
+    const newestExclusive = Math.max(0, total - offset);
+    const oldestInclusive = Math.max(0, newestExclusive - limit);
+    const normalizeLine = (line: string): string => {
+      // Back-compat: older builds prefixed every line with "[stdout] " / "[stderr] "
+      if (line.startsWith('[stdout] ') && line !== '[stdout]')
+        return line.slice('[stdout] '.length);
+      if (line.startsWith('[stderr] ') && line !== '[stderr]')
+        return line.slice('[stderr] '.length);
+      return line;
+    };
+
+    const lines = run.claudeLogLines
+      .slice(oldestInclusive, newestExclusive)
+      .map(normalizeLine)
+      .toReversed();
+    return {
+      lines,
+      total,
+      hasMore: oldestInclusive > 0,
+      updatedAt: run.claudeLogsUpdatedAt,
+    };
+  }
+
+  private appendCliLogs(run: ProvisioningRun, stream: 'stdout' | 'stderr', text: string): void {
+    const nowMs = Date.now();
+    run.claudeLogsUpdatedAt = new Date(nowMs).toISOString();
+
+    const marker = stream === 'stdout' ? '[stdout]' : '[stderr]';
+    if (run.lastClaudeLogStream !== stream) {
+      run.lastClaudeLogStream = stream;
+      run.claudeLogLines.push(marker);
+    }
+
+    if (stream === 'stdout') {
+      run.stdoutLogLineBuf += text;
+      const parts = run.stdoutLogLineBuf.split('\n');
+      run.stdoutLogLineBuf = parts.pop() ?? '';
+      for (const part of parts) {
+        const normalized = part.endsWith('\r') ? part.slice(0, -1) : part;
+        run.claudeLogLines.push(normalized);
+      }
+    } else {
+      run.stderrLogLineBuf += text;
+      const parts = run.stderrLogLineBuf.split('\n');
+      run.stderrLogLineBuf = parts.pop() ?? '';
+      for (const part of parts) {
+        const normalized = part.endsWith('\r') ? part.slice(0, -1) : part;
+        run.claudeLogLines.push(normalized);
+      }
+    }
+    if (run.claudeLogLines.length > TeamProvisioningService.CLAUDE_LOG_LINES_LIMIT) {
+      run.claudeLogLines.splice(
+        0,
+        run.claudeLogLines.length - TeamProvisioningService.CLAUDE_LOG_LINES_LIMIT
+      );
+    }
+  }
 
   /**
    * Serializes operations per team name using promise-chaining.
@@ -1028,7 +1186,8 @@ export class TeamProvisioningService {
     const run = this.runs.get(runId);
     if (!run?.leadContextUsage || run.processKilled || run.cancelRequested) return null;
     const { currentTokens, contextWindow } = run.leadContextUsage;
-    const percent = contextWindow > 0 ? Math.round((currentTokens / contextWindow) * 100) : 0;
+    const percentRaw = contextWindow > 0 ? Math.round((currentTokens / contextWindow) * 100) : 0;
+    const percent = Math.max(0, Math.min(100, percentRaw));
     return { currentTokens, contextWindow, percent, updatedAt: new Date().toISOString() };
   }
 
@@ -1043,6 +1202,8 @@ export class TeamProvisioningService {
   }
 
   private static readonly CONTEXT_EMIT_THROTTLE_MS = 2000;
+  private static readonly LEAD_TEXT_EMIT_THROTTLE_MS = 2000;
+  private static readonly LEAD_TEXT_MIN_LENGTH = 30;
 
   private emitLeadContextUsage(run: ProvisioningRun): void {
     if (!run.leadContextUsage || !run.provisioningComplete) return;
@@ -1055,7 +1216,8 @@ export class TeamProvisioningService {
     }
     run.leadContextUsage.lastEmittedAt = now;
     const { currentTokens, contextWindow } = run.leadContextUsage;
-    const percent = contextWindow > 0 ? Math.round((currentTokens / contextWindow) * 100) : 0;
+    const percentRaw = contextWindow > 0 ? Math.round((currentTokens / contextWindow) * 100) : 0;
+    const percent = Math.max(0, Math.min(100, percentRaw));
     const payload: LeadContextUsage = {
       currentTokens,
       contextWindow,
@@ -1071,21 +1233,10 @@ export class TeamProvisioningService {
 
   async warmup(): Promise<void> {
     try {
-      if (cachedProbeResult && Date.now() - cachedProbeResult.cachedAtMs < PROBE_CACHE_TTL_MS) {
+      if (cachedProbeResult && Date.now() - cachedProbeResult.cachedAtMs < PROBE_CACHE_TTL_MS)
         return;
-      }
-      const claudePath = await ClaudeBinaryResolver.resolve();
-      if (!claudePath) return;
-      const { env, authSource } = await this.buildProvisioningEnv();
-      const cwd = process.cwd();
-      const probe = await this.probeClaudeRuntime(claudePath, cwd, env);
-      const warning = probe.warning;
-      if (warning && this.isAuthFailureWarning(warning)) {
-        // Don't pin auth failures in cache — user may log in after startup.
-        cachedProbeResult = null;
-      } else {
-        cachedProbeResult = { claudePath, authSource, warning, cachedAtMs: Date.now() };
-      }
+      const result = await this.getCachedOrProbeResult(process.cwd());
+      if (!result) return;
       logger.info('CLI warmup completed');
     } catch (error) {
       logger.warn(`CLI warmup failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -1099,30 +1250,24 @@ export class TeamProvisioningService {
       await ensureCwdExists(targetCwdForValidation);
     }
 
-    if (cachedProbeResult) {
-      const ageMs = Date.now() - cachedProbeResult.cachedAtMs;
-      if (ageMs >= PROBE_CACHE_TTL_MS) {
-        cachedProbeResult = null;
-      } else {
-        const { warning, authSource } = cachedProbeResult;
-        const warnings: string[] = [];
-        if (warning) warnings.push(warning);
-        const isAuthFailure = warning ? this.isAuthFailureWarning(warning) : false;
-        const ready = !warning || authSource !== 'none' || !isAuthFailure;
-        return {
-          ready,
-          message: ready ? 'CLI is warmed up and ready to launch' : warning || 'CLI is not ready',
-          warnings: warnings.length > 0 ? warnings : undefined,
-        };
-      }
+    const cached = this.getFreshCachedProbeResult();
+    if (cached) {
+      const { warning, authSource } = cached;
+      const warnings: string[] = [];
+      if (warning) warnings.push(warning);
+      const isAuthFailure = warning ? this.isAuthFailureWarning(warning) : false;
+      const ready = !warning || authSource !== 'none' || !isAuthFailure;
+      return {
+        ready,
+        message: ready
+          ? warnings.length > 0
+            ? 'CLI is ready to launch (see notes)'
+            : 'CLI is warmed up and ready to launch'
+          : warning || 'CLI is not ready',
+        warnings: warnings.length > 0 ? warnings : undefined,
+      };
     }
 
-    const claudePath = await ClaudeBinaryResolver.resolve();
-    if (!claudePath) {
-      throw new Error('Claude CLI not found; install it or provide a valid path');
-    }
-
-    const { env: executionEnv, authSource } = await this.buildProvisioningEnv();
     const targetCwd = cwd?.trim() || process.cwd();
     if (!path.isAbsolute(targetCwd)) {
       throw new Error('cwd must be an absolute path');
@@ -1131,46 +1276,99 @@ export class TeamProvisioningService {
 
     const warnings: string[] = [];
 
+    const probeResult = await this.getCachedOrProbeResult(targetCwd);
+    if (!probeResult?.claudePath) {
+      throw new Error('Claude CLI not found; install it or provide a valid path');
+    }
+
+    const { authSource } = probeResult;
     if (authSource === 'anthropic_api_key') {
       logger.info('Auth: using explicit ANTHROPIC_API_KEY');
     } else if (authSource === 'anthropic_auth_token') {
       logger.info('Auth: using ANTHROPIC_AUTH_TOKEN mapped to ANTHROPIC_API_KEY');
     }
 
-    const probe = await this.probeClaudeRuntime(claudePath, targetCwd, executionEnv);
-
-    if (probe.warning) {
-      const isAuthFailure = this.isAuthFailureWarning(probe.warning);
+    if (probeResult.warning) {
+      const isAuthFailure = this.isAuthFailureWarning(probeResult.warning);
       if (authSource === 'none' && isAuthFailure) {
         // No auth source + preflight indicates auth failure — block to avoid a confusing hang later.
         return {
           ready: false,
-          message: probe.warning,
+          message: probeResult.warning,
           warnings: warnings.length > 0 ? warnings : undefined,
         };
       }
       // Preflight warnings (including timeouts) should not block provisioning.
-      warnings.push(probe.warning);
-    }
-
-    // Cache successful/non-auth-failure results so dialogs don't rerun preflight repeatedly.
-    // Avoid caching auth failures — user may authenticate externally and retry without app restart.
-    if (!probe.warning || !this.isAuthFailureWarning(probe.warning)) {
-      cachedProbeResult = {
-        claudePath,
-        authSource,
-        warning: probe.warning,
-        cachedAtMs: Date.now(),
-      };
-    } else {
-      cachedProbeResult = null;
+      warnings.push(probeResult.warning);
     }
 
     return {
       ready: true,
-      message: 'CLI is warmed up and ready to launch',
+      message:
+        warnings.length > 0
+          ? 'CLI is ready to launch (see notes)'
+          : 'CLI is warmed up and ready to launch',
       warnings: warnings.length > 0 ? warnings : undefined,
     };
+  }
+
+  private getFreshCachedProbeResult(): CachedProbeResult | null {
+    if (!cachedProbeResult) return null;
+    const ageMs = Date.now() - cachedProbeResult.cachedAtMs;
+    if (ageMs >= PROBE_CACHE_TTL_MS) {
+      cachedProbeResult = null;
+      return null;
+    }
+    return cachedProbeResult;
+  }
+
+  private async getCachedOrProbeResult(
+    cwd: string
+  ): Promise<{ claudePath: string; authSource: ProvisioningAuthSource; warning?: string } | null> {
+    const cached = this.getFreshCachedProbeResult();
+    if (cached) {
+      return {
+        claudePath: cached.claudePath,
+        authSource: cached.authSource,
+        warning: cached.warning,
+      };
+    }
+
+    if (probeInFlight) {
+      return await probeInFlight;
+    }
+
+    probeInFlight = (async () => {
+      const claudePath = await ClaudeBinaryResolver.resolve();
+      if (!claudePath) return null;
+
+      const { env, authSource } = await this.buildProvisioningEnv();
+      const probe = await this.probeClaudeRuntime(claudePath, cwd, env);
+      const result = {
+        claudePath,
+        authSource,
+        ...(probe.warning ? { warning: probe.warning } : {}),
+      };
+
+      const shouldCache =
+        !probe.warning ||
+        (!this.isAuthFailureWarning(probe.warning) && !isTransientProbeWarning(probe.warning));
+
+      if (shouldCache) {
+        cachedProbeResult = { ...result, cachedAtMs: Date.now() };
+      } else {
+        // Don't pin auth failures / transient failures in cache — user may fix and retry.
+        cachedProbeResult = null;
+      }
+
+      return result;
+    })();
+
+    try {
+      return await probeInFlight;
+    } finally {
+      probeInFlight = null;
+    }
   }
 
   private isAuthFailureWarning(text: string): boolean {
@@ -1185,6 +1383,68 @@ export class TeamProvisioningService {
       lower.includes('unauthorized') ||
       has401
     );
+  }
+
+  private hasApiError(text: string): boolean {
+    return /api error:\s*\d{3}\b/i.test(text) || /invalid_request_error/i.test(text);
+  }
+
+  private sanitizeCliSnippet(text: string): string {
+    // Remove control characters that often show up as binary noise in CLI error payloads.
+    // Preserve newlines/tabs for readability.
+    // eslint-disable-next-line no-control-regex, sonarjs/no-control-regex -- intentionally stripping control chars
+    return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  }
+
+  private extractApiErrorSnippet(text: string): string | null {
+    const match = /api error:\s*\d{3}\b/i.exec(text) ?? /invalid_request_error/i.exec(text);
+    if (match?.index === undefined) return null;
+    const start = Math.max(0, match.index - 200);
+    const end = Math.min(text.length, match.index + 4000);
+    const raw = text.slice(start, end).trim();
+    if (!raw) return null;
+    // Avoid breaking markdown fences if the payload contains ``` accidentally.
+    return this.sanitizeCliSnippet(raw).replace(/```/g, '``\\`');
+  }
+
+  private failProvisioningWithApiError(run: ProvisioningRun, source: string): void {
+    if (run.provisioningComplete || run.processKilled || run.authRetryInProgress) return;
+    if (run.progress.state === 'failed' || run.cancelRequested) return;
+
+    const combined = [
+      buildCombinedLogs(run.stdoutBuffer, run.stderrBuffer),
+      run.provisioningOutputParts.length > 0 ? run.provisioningOutputParts.join('\n') : '',
+    ]
+      .filter(Boolean)
+      .join('\n')
+      .trim();
+
+    const snippet =
+      this.extractApiErrorSnippet(combined) ?? this.extractApiErrorSnippet(source) ?? null;
+    const status =
+      /api error:\s*(\d{3})\b/i.exec(combined)?.[1] ?? /api error:\s*(\d{3})\b/i.exec(source)?.[1];
+
+    const hint = run.isLaunch ? 'Launch' : 'Provisioning';
+    const statusLabel = status ? `API Error ${status}` : 'API Error';
+    if (snippet) {
+      run.provisioningOutputParts.push(
+        `**${hint} failed: ${statusLabel} detected**\n\n\`\`\`\n${snippet}\n\`\`\``
+      );
+    } else {
+      run.provisioningOutputParts.push(`**${hint} failed: ${statusLabel} detected**`);
+    }
+
+    const progress = updateProgress(run, 'failed', `${hint} failed — ${statusLabel}`, {
+      error: `Claude CLI reported ${statusLabel} during startup. The team was not started.`,
+      cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
+    });
+    run.onProgress(progress);
+
+    run.processKilled = true;
+    run.cancelRequested = true;
+    run.child?.stdin?.end();
+    killProcessTree(run.child);
+    this.cleanupRun(run);
   }
 
   /**
@@ -1248,6 +1508,11 @@ export class TeamProvisioningService {
     // Reset buffers for fresh attempt
     run.stdoutBuffer = '';
     run.stderrBuffer = '';
+    run.claudeLogLines = [];
+    run.lastClaudeLogStream = null;
+    run.stdoutLogLineBuf = '';
+    run.stderrLogLineBuf = '';
+    run.claudeLogsUpdatedAt = undefined;
     run.authFailureRetried = true;
 
     updateProgress(run, 'spawning', 'Auth failed — retrying after short delay');
@@ -1360,6 +1625,7 @@ export class TeamProvisioningService {
     let stdoutLineBuf = '';
     child.stdout.on('data', (chunk: Buffer) => {
       const text = chunk.toString('utf8');
+      this.appendCliLogs(run, 'stdout', text);
       run.stdoutBuffer += text;
       if (run.stdoutBuffer.length > STDOUT_RING_LIMIT) {
         run.stdoutBuffer = run.stdoutBuffer.slice(run.stdoutBuffer.length - STDOUT_RING_LIMIT);
@@ -1378,6 +1644,9 @@ export class TeamProvisioningService {
         } catch {
           // Not valid JSON — check for auth failure in raw text output
           this.handleAuthFailureInOutput(run, trimmed, 'stdout');
+          if (this.hasApiError(trimmed) && !this.isAuthFailureWarning(trimmed)) {
+            this.failProvisioningWithApiError(run, trimmed);
+          }
         }
       }
 
@@ -1396,6 +1665,7 @@ export class TeamProvisioningService {
 
     child.stderr.on('data', (chunk: Buffer) => {
       const text = chunk.toString('utf8');
+      this.appendCliLogs(run, 'stderr', text);
       run.stderrBuffer += text;
       if (run.stderrBuffer.length > STDERR_RING_LIMIT) {
         run.stderrBuffer = run.stderrBuffer.slice(run.stderrBuffer.length - STDERR_RING_LIMIT);
@@ -1403,6 +1673,9 @@ export class TeamProvisioningService {
 
       // Detect auth failure early instead of waiting for 5-minute timeout
       this.handleAuthFailureInOutput(run, text, 'stderr');
+      if (this.hasApiError(text) && !this.isAuthFailureWarning(text)) {
+        this.failProvisioningWithApiError(run, text);
+      }
 
       const currentTs = Date.now();
       if (currentTs - run.lastLogProgressAt >= LOG_PROGRESS_THROTTLE_MS) {
@@ -1458,6 +1731,11 @@ export class TeamProvisioningService {
         startedAt,
         stdoutBuffer: '',
         stderrBuffer: '',
+        claudeLogLines: [],
+        lastClaudeLogStream: null,
+        stdoutLogLineBuf: '',
+        stderrLogLineBuf: '',
+        claudeLogsUpdatedAt: undefined,
         processKilled: false,
         finalizingByTimeout: false,
         cancelRequested: false,
@@ -1475,6 +1753,11 @@ export class TeamProvisioningService {
         fsPhase: 'waiting_config',
         leadRelayCapture: null,
         directReplyParts: [],
+        leadTurnSeq: 0,
+        leadTurnMessageTimestamp: null,
+        lastLeadTextEmitMs: 0,
+        silentUserDmForward: null,
+        silentUserDmForwardClearHandle: null,
         provisioningOutputParts: [],
         detectedSessionId: null,
         leadActivityState: 'active',
@@ -1704,12 +1987,19 @@ export class TeamProvisioningService {
 
       // IMPORTANT: The CLI auto-suffixes teammate names when they already exist in config.json.
       // Normalize config.json to keep only the team-lead before spawning the CLI, so we get stable names.
-      await this.normalizeTeamConfigForLaunch(request.teamName, configRaw);
+      try {
+        await this.normalizeTeamConfigForLaunch(request.teamName, configRaw);
+        await this.assertConfigLeadOnlyForLaunch(request.teamName);
 
-      // Update projectPath in config IMMEDIATELY so TeamDetailView shows the correct path
-      // even if provisioning is interrupted or the user stops the team early.
-      // If launch fails, restorePrelaunchConfig() will revert to the backup (old projectPath).
-      await this.updateConfigProjectPath(request.teamName, request.cwd);
+        // Update projectPath in config IMMEDIATELY so TeamDetailView shows the correct path
+        // even if provisioning is interrupted or the user stops the team early.
+        // If launch fails, restorePrelaunchConfig() will revert to the backup (old projectPath).
+        await this.updateConfigProjectPath(request.teamName, request.cwd);
+      } catch (error) {
+        // Restore pre-launch backup so config.json is not left in normalized (lead-only) state.
+        await this.restorePrelaunchConfig(request.teamName);
+        throw error;
+      }
 
       let claudePath: string | null;
       try {
@@ -1742,6 +2032,11 @@ export class TeamProvisioningService {
         startedAt,
         stdoutBuffer: '',
         stderrBuffer: '',
+        claudeLogLines: [],
+        lastClaudeLogStream: null,
+        stdoutLogLineBuf: '',
+        stderrLogLineBuf: '',
+        claudeLogsUpdatedAt: undefined,
         processKilled: false,
         finalizingByTimeout: false,
         cancelRequested: false,
@@ -1759,6 +2054,11 @@ export class TeamProvisioningService {
         fsPhase: 'waiting_members',
         leadRelayCapture: null,
         directReplyParts: [],
+        leadTurnSeq: 0,
+        leadTurnMessageTimestamp: null,
+        lastLeadTextEmitMs: 0,
+        silentUserDmForward: null,
+        silentUserDmForwardClearHandle: null,
         provisioningOutputParts: [],
         detectedSessionId: null,
         leadActivityState: 'active',
@@ -1798,7 +2098,12 @@ export class TeamProvisioningService {
         );
       }
 
-      const prompt = buildLaunchPrompt(request, expectedMemberSpecs, existingTasks);
+      const prompt = buildLaunchPrompt(
+        request,
+        expectedMemberSpecs,
+        existingTasks,
+        Boolean(previousSessionId)
+      );
       let child: ReturnType<typeof spawn>;
       const { env: shellEnv } = await this.buildProvisioningEnv();
       const launchArgs = [
@@ -1996,6 +2301,66 @@ export class TeamProvisioningService {
   }
 
   /**
+   * Best-effort: forward a user-written DM to a teammate via the live lead process.
+   * This covers cases where teammates don't automatically respond to inbox JSON,
+   * and only react to Claude Code internal SendMessage routing.
+   *
+   * Note: We suppress the lead's textual output for this injected turn to avoid
+   * confusing lead responses like "No action needed."
+   */
+  async forwardUserDmToTeammate(
+    teamName: string,
+    teammateName: string,
+    userText: string,
+    userSummary?: string
+  ): Promise<void> {
+    const runId = this.activeByTeam.get(teamName);
+    if (!runId) {
+      throw new Error(`No active process for team "${teamName}"`);
+    }
+    const run = this.runs.get(runId);
+    if (!run?.child?.stdin?.writable) {
+      throw new Error(`Team "${teamName}" process stdin is not writable`);
+    }
+    if (!run.provisioningComplete) {
+      // Don't inject extra turns during provisioning/bootstrap.
+      return;
+    }
+
+    run.silentUserDmForward = { target: teammateName, startedAt: nowIso() };
+    if (run.silentUserDmForwardClearHandle) {
+      clearTimeout(run.silentUserDmForwardClearHandle);
+      run.silentUserDmForwardClearHandle = null;
+    }
+    // Safety valve: if the CLI never emits a result message, don't stay in "silent" mode forever.
+    run.silentUserDmForwardClearHandle = setTimeout(() => {
+      run.silentUserDmForward = null;
+      run.silentUserDmForwardClearHandle = null;
+    }, 60_000);
+    run.silentUserDmForwardClearHandle.unref();
+
+    const summaryLine = userSummary?.trim() ? `Summary: ${userSummary.trim()}` : null;
+    const internal = wrapInAgentBlock(
+      [
+        `UI relay request — forward a direct message to teammate "${teammateName}".`,
+        `MUST: use the SendMessage tool with recipient="${teammateName}".`,
+        `MUST: ask the teammate to reply back to recipient "user" (short answer).`,
+        `CRITICAL: Do NOT send any message to recipient "user" for this turn.`,
+      ].join('\n')
+    );
+    const message = [
+      `User DM relay (internal).`,
+      internal,
+      ``,
+      `Message to forward:`,
+      ...(summaryLine ? [summaryLine] : []),
+      userText,
+    ].join('\n');
+
+    await this.sendMessageToTeam(teamName, message);
+  }
+
+  /**
    * Relay unread inbox messages addressed to the team lead into the live lead process.
    *
    * Why: teammates (and the UI) write to `inboxes/<lead>.json`, but the live lead CLI
@@ -2051,8 +2416,23 @@ export class TeamProvisioningService {
 
       if (unread.length === 0) return 0;
 
+      // Ignore (and auto-mark read) internal coordination noise like idle/shutdown messages.
+      // These frequently appear when teammates are idle/available and should not prompt
+      // the lead to respond with "No action needed."
+      const noiseUnread = unread.filter((m) => isInboxNoiseMessage(m.text));
+      if (noiseUnread.length > 0) {
+        try {
+          await this.markInboxMessagesRead(teamName, leadName, noiseUnread);
+        } catch {
+          // best-effort
+        }
+      }
+
+      const actionableUnread = unread.filter((m) => !isInboxNoiseMessage(m.text));
+      if (actionableUnread.length === 0) return 0;
+
       const MAX_RELAY = 10;
-      const batch = unread.slice(0, MAX_RELAY);
+      const batch = actionableUnread.slice(0, MAX_RELAY);
 
       const message = [
         `You have new inbox messages addressed to you (team lead "${leadName}").`,
@@ -2180,7 +2560,7 @@ export class TeamProvisioningService {
         void this.sentMessagesStore
           .appendMessage(teamName, relayMsg)
           .catch((e: unknown) =>
-            logger.warn(`[${teamName}] sentMessagesStore persist failed: ${e}`)
+            logger.warn(`[${teamName}] sentMessagesStore persist failed: ${String(e)}`)
           );
         this.teamChangeEmitter?.({
           type: 'inbox',
@@ -2401,7 +2781,7 @@ export class TeamProvisioningService {
         .appendMessage(run.teamName, msg)
         .catch((e: unknown) =>
           logger.warn(
-            `[${run.teamName}] sentMessagesStore persist (SendMessage capture) failed: ${e}`
+            `[${run.teamName}] sentMessagesStore persist (SendMessage capture) failed: ${String(e)}`
           )
         );
       this.teamChangeEmitter?.({
@@ -2419,11 +2799,34 @@ export class TeamProvisioningService {
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void {
     const MAX = 100;
     const list = this.liveLeadProcessMessages.get(teamName) ?? [];
-    list.push(message);
+    const id = typeof message.messageId === 'string' ? message.messageId.trim() : '';
+    if (id) {
+      const existingIdx = list.findIndex((m) => (m.messageId ?? '').trim() === id);
+      if (existingIdx >= 0) {
+        list[existingIdx] = message;
+      } else {
+        list.push(message);
+      }
+    } else {
+      list.push(message);
+    }
     if (list.length > MAX) {
       list.splice(0, list.length - MAX);
     }
     this.liveLeadProcessMessages.set(teamName, list);
+  }
+
+  private removeLiveLeadProcessMessage(teamName: string, messageId: string): void {
+    const id = messageId.trim();
+    if (!id) return;
+    const list = this.liveLeadProcessMessages.get(teamName);
+    if (!list || list.length === 0) return;
+    const next = list.filter((m) => (m.messageId ?? '').trim() !== id);
+    if (next.length === 0) {
+      this.liveLeadProcessMessages.delete(teamName);
+    } else {
+      this.liveLeadProcessMessages.set(teamName, next);
+    }
   }
 
   /**
@@ -2470,6 +2873,14 @@ export class TeamProvisioningService {
             return Array.isArray(inner) ? (inner as Record<string, unknown>[]) : null;
           })();
 
+      const hasSendMessageToUser = (content ?? []).some((part) => {
+        if (!part || typeof part !== 'object') return false;
+        if (part.type !== 'tool_use' || part.name !== 'SendMessage') return false;
+        const input = (part as Record<string, unknown>).input;
+        if (!input || typeof input !== 'object') return false;
+        return (input as Record<string, unknown>).recipient === 'user';
+      });
+
       const textParts = (content ?? [])
         .filter((part) => part.type === 'text' && typeof part.text === 'string')
         .map((part) => part.text as string);
@@ -2478,6 +2889,10 @@ export class TeamProvisioningService {
         // Auth failures sometimes show up as assistant text (e.g. "401", "Please run /login")
         // rather than stderr or a result.subtype=error. Detect early to avoid false "ready".
         this.handleAuthFailureInOutput(run, text, 'assistant');
+        if (this.hasApiError(text) && !this.isAuthFailureWarning(text)) {
+          this.failProvisioningWithApiError(run, text);
+          return;
+        }
         logger.debug(`[${run.teamName}] assistant: ${text.slice(0, 200)}`);
         // During provisioning (before provisioningComplete), accumulate for live UI preview.
         // Emission is handled by the throttled emitLogsProgress() in the stdout data handler.
@@ -2498,8 +2913,53 @@ export class TeamProvisioningService {
             }, capture.idleMs);
           }
         } else if (run.provisioningComplete) {
-          // Accumulate assistant text for direct user→lead messages (no relay capture).
-          run.directReplyParts.push(text);
+          // Accumulate assistant text for a single "live lead turn" message in Messages.
+          // If the same assistant message includes SendMessage(to:"user"), prefer the captured
+          // SendMessage and avoid duplicating it as a separate lead text entry.
+          if (!run.silentUserDmForward && !hasSendMessageToUser) {
+            run.directReplyParts.push(text);
+            const raw = run.directReplyParts.join('');
+            const cleanText = stripAgentBlocks(raw).trim();
+            if (cleanText.length >= TeamProvisioningService.LEAD_TEXT_MIN_LENGTH) {
+              const leadName =
+                run.request.members.find((m) => m.role?.toLowerCase().includes('lead'))?.name ||
+                'team-lead';
+              if (!run.leadTurnMessageTimestamp) {
+                run.leadTurnMessageTimestamp = nowIso();
+              }
+              const messageId = `lead-turn-${run.runId}-${run.leadTurnSeq}`;
+              const leadMsg: InboxMessage = {
+                from: leadName,
+                text: cleanText,
+                timestamp: run.leadTurnMessageTimestamp,
+                read: true,
+                summary: cleanText.length > 60 ? cleanText.slice(0, 57) + '...' : cleanText,
+                messageId,
+                source: 'lead_process',
+              };
+              this.pushLiveLeadProcessMessage(run.teamName, leadMsg);
+
+              const now = Date.now();
+              if (
+                now - run.lastLeadTextEmitMs >=
+                TeamProvisioningService.LEAD_TEXT_EMIT_THROTTLE_MS
+              ) {
+                run.lastLeadTextEmitMs = now;
+                this.teamChangeEmitter?.({
+                  type: 'inbox',
+                  teamName: run.teamName,
+                  detail: 'lead-text',
+                });
+              }
+            }
+          } else if (hasSendMessageToUser) {
+            run.directReplyParts = [];
+            run.leadTurnMessageTimestamp = null;
+            this.removeLiveLeadProcessMessage(
+              run.teamName,
+              `lead-turn-${run.runId}-${run.leadTurnSeq}`
+            );
+          }
         }
       }
 
@@ -2508,7 +2968,7 @@ export class TeamProvisioningService {
       // (e.g., after session resume when teamContext is lost). We intercept the tool calls
       // from stdout and persist them to sentMessages.json under the correct team name,
       // ensuring the UI and notifications show the right team.
-      if (run.provisioningComplete) {
+      if (run.provisioningComplete && !run.silentUserDmForward) {
         this.captureSendMessageToUser(run, content ?? []);
       }
 
@@ -2584,11 +3044,18 @@ export class TeamProvisioningService {
               typeof modelData.contextWindow === 'number' &&
               modelData.contextWindow > 0
             ) {
-              if (run.leadContextUsage) {
+              if (!run.leadContextUsage) {
+                run.leadContextUsage = {
+                  currentTokens: 0,
+                  contextWindow: modelData.contextWindow,
+                  lastUsageMessageId: null,
+                  lastEmittedAt: 0,
+                };
+              } else {
                 run.leadContextUsage.contextWindow = modelData.contextWindow;
                 run.leadContextUsage.lastEmittedAt = 0; // force re-emit
-                this.emitLeadContextUsage(run);
               }
+              this.emitLeadContextUsage(run);
               break;
             }
           }
@@ -2610,9 +3077,18 @@ export class TeamProvisioningService {
               ? resultUsage.cache_read_input_tokens
               : 0;
           const total = inp + cc + cr;
-          if (total > 0 && run.leadContextUsage) {
-            run.leadContextUsage.currentTokens = total;
-            run.leadContextUsage.lastEmittedAt = 0;
+          if (total > 0) {
+            if (!run.leadContextUsage) {
+              run.leadContextUsage = {
+                currentTokens: total,
+                contextWindow: 0,
+                lastUsageMessageId: null,
+                lastEmittedAt: 0,
+              };
+            } else {
+              run.leadContextUsage.currentTokens = total;
+              run.leadContextUsage.lastEmittedAt = 0;
+            }
             this.emitLeadContextUsage(run);
           }
         }
@@ -2625,61 +3101,52 @@ export class TeamProvisioningService {
           const combined = capture.textParts.join('').trim();
           capture.resolveOnce(combined);
         } else if (run.provisioningComplete && run.directReplyParts.length > 0) {
-          // Flush accumulated assistant reply from direct user→lead message
+          // Finalize the current live lead turn message (single messageId per turn).
           const rawReply = run.directReplyParts.join('').trim();
           run.directReplyParts = [];
           const leadName =
             run.request.members.find((m) => m.role?.toLowerCase().includes('lead'))?.name ||
             'team-lead';
-          // Strip agent-only blocks — lead may include coordination content not meant for the user
-          const replyText = stripAgentBlocks(rawReply);
-          if (replyText.length > 0) {
+          const replyText = stripAgentBlocks(rawReply).trim();
+          const finalText =
+            replyText.length > 0
+              ? replyText
+              : rawReply.length > 0
+                ? '(Message received and processed)'
+                : '';
+          if (finalText.length > 0) {
+            if (!run.leadTurnMessageTimestamp) {
+              run.leadTurnMessageTimestamp = nowIso();
+            }
+            const messageId = `lead-turn-${run.runId}-${run.leadTurnSeq}`;
             const replyMsg: InboxMessage = {
               from: leadName,
-              to: 'user',
-              text: replyText,
-              timestamp: nowIso(),
+              text: finalText,
+              timestamp: run.leadTurnMessageTimestamp,
               read: true,
-              summary: replyText.length > 60 ? replyText.slice(0, 57) + '...' : replyText,
-              messageId: `lead-direct-${run.runId}-${Date.now()}`,
+              summary: finalText.length > 60 ? finalText.slice(0, 57) + '...' : finalText,
+              messageId,
               source: 'lead_process',
             };
             this.pushLiveLeadProcessMessage(run.teamName, replyMsg);
-            // Persist to disk so replies survive app restart
-            void this.sentMessagesStore
-              .appendMessage(run.teamName, replyMsg)
-              .catch((e: unknown) =>
-                logger.warn(`[${run.teamName}] sentMessagesStore persist failed: ${e}`)
-              );
             this.teamChangeEmitter?.({
               type: 'inbox',
               teamName: run.teamName,
-              detail: 'lead-direct-reply',
-            });
-          } else if (rawReply.length > 0) {
-            // Lead responded but only with agent-only content — send generic acknowledgment
-            const fallbackMsg: InboxMessage = {
-              from: leadName,
-              to: 'user',
-              text: '(Message received and processed)',
-              timestamp: nowIso(),
-              read: true,
-              summary: 'Message processed',
-              messageId: `lead-direct-${run.runId}-${Date.now()}`,
-              source: 'lead_process',
-            };
-            this.pushLiveLeadProcessMessage(run.teamName, fallbackMsg);
-            void this.sentMessagesStore
-              .appendMessage(run.teamName, fallbackMsg)
-              .catch((e: unknown) =>
-                logger.warn(`[${run.teamName}] sentMessagesStore persist failed: ${e}`)
-              );
-            this.teamChangeEmitter?.({
-              type: 'inbox',
-              teamName: run.teamName,
-              detail: 'lead-direct-reply',
+              detail: 'lead-turn-final',
             });
           }
+        }
+        // Turn boundary: advance lead turn sequence.
+        if (run.provisioningComplete) {
+          run.leadTurnSeq += 1;
+          run.leadTurnMessageTimestamp = null;
+          run.directReplyParts = [];
+        }
+        // Clear silent relay flag after any successful turn.
+        run.silentUserDmForward = null;
+        if (run.silentUserDmForwardClearHandle) {
+          clearTimeout(run.silentUserDmForwardClearHandle);
+          run.silentUserDmForwardClearHandle = null;
         }
         if (!run.provisioningComplete && !run.cancelRequested) {
           void this.handleProvisioningTurnComplete(run);
@@ -2690,6 +3157,18 @@ export class TeamProvisioningService {
         logger.warn(`[${run.teamName}] stream-json result: error — ${errorMsg}`);
         if (run.leadRelayCapture) {
           run.leadRelayCapture.rejectOnce(errorMsg);
+        }
+        // Turn boundary: advance lead turn sequence.
+        if (run.provisioningComplete) {
+          run.leadTurnSeq += 1;
+          run.leadTurnMessageTimestamp = null;
+          run.directReplyParts = [];
+        }
+        // Clear silent relay flag after any errored turn.
+        run.silentUserDmForward = null;
+        if (run.silentUserDmForwardClearHandle) {
+          clearTimeout(run.silentUserDmForwardClearHandle);
+          run.silentUserDmForwardClearHandle = null;
         }
         if (!run.provisioningComplete && !run.cancelRequested) {
           const progress = updateProgress(
@@ -2717,9 +3196,35 @@ export class TeamProvisioningService {
     // Handle compact_boundary — context was compacted, next assistant message will carry fresh usage
     if (msg.type === 'system') {
       const sub = typeof msg.subtype === 'string' ? msg.subtype : undefined;
-      if (sub === 'compact_boundary' && run.leadContextUsage) {
-        run.leadContextUsage.lastUsageMessageId = null;
-        logger.info(`[${run.teamName}] compact_boundary — context will refresh on next turn`);
+      if (sub === 'compact_boundary') {
+        if (run.leadContextUsage) {
+          run.leadContextUsage.lastUsageMessageId = null;
+        }
+
+        // Extract compact metadata for the system message
+        const meta = msg.compact_metadata as Record<string, unknown> | undefined;
+        const trigger = typeof meta?.trigger === 'string' ? meta.trigger : 'auto';
+        const preTokens = typeof meta?.pre_tokens === 'number' ? meta.pre_tokens : null;
+        const tokenInfo = preTokens ? ` (was ~${(preTokens / 1000).toFixed(0)}k tokens)` : '';
+
+        const compactMsg: InboxMessage = {
+          from: 'system',
+          text: `Context compacted${tokenInfo}, trigger: ${trigger}`,
+          timestamp: nowIso(),
+          read: true,
+          summary: `Context compacted (${trigger})`,
+          messageId: `compact-${run.runId}-${Date.now()}`,
+          source: 'lead_process',
+        };
+        this.pushLiveLeadProcessMessage(run.teamName, compactMsg);
+        this.teamChangeEmitter?.({
+          type: 'inbox',
+          teamName: run.teamName,
+          detail: 'compact_boundary',
+        });
+        logger.info(
+          `[${run.teamName}] compact_boundary — context will refresh on next turn${tokenInfo}`
+        );
       }
     }
   }
@@ -2732,19 +3237,33 @@ export class TeamProvisioningService {
   private async handleProvisioningTurnComplete(run: ProvisioningRun): Promise<void> {
     // Guard: must be set synchronously BEFORE any await to prevent
     // double-invocation from filesystem monitor + stream-json racing.
-    if (run.provisioningComplete || run.cancelRequested) return;
+    if (
+      run.provisioningComplete ||
+      run.cancelRequested ||
+      run.processKilled ||
+      run.progress.state === 'failed'
+    )
+      return;
 
     // Prevent false "ready" when auth failure was printed as assistant text or logs
     // but the filesystem monitor observed files on disk.
-    const authFailureText = [
+    const preCompleteText = [
       buildCombinedLogs(run.stdoutBuffer, run.stderrBuffer),
       run.provisioningOutputParts.length > 0 ? run.provisioningOutputParts.join('\n') : '',
     ]
       .filter(Boolean)
       .join('\n')
       .trim();
-    if (authFailureText && this.isAuthFailureWarning(authFailureText)) {
-      this.handleAuthFailureInOutput(run, authFailureText, 'pre-complete');
+    if (
+      preCompleteText &&
+      this.hasApiError(preCompleteText) &&
+      !this.isAuthFailureWarning(preCompleteText)
+    ) {
+      this.failProvisioningWithApiError(run, preCompleteText);
+      return;
+    }
+    if (preCompleteText && this.isAuthFailureWarning(preCompleteText)) {
+      this.handleAuthFailureInOutput(run, preCompleteText, 'pre-complete');
       return;
     }
 
@@ -2761,6 +3280,10 @@ export class TeamProvisioningService {
     if (run.isLaunch) {
       await this.updateConfigPostLaunch(run.teamName, run.request.cwd, run.detectedSessionId);
       await this.cleanupPrelaunchBackup(run.teamName);
+
+      // Defense in depth: if the CLI (or a stale config) produced auto-suffixed members (alice-2),
+      // clean them up so they don't persist and reappear in the UI.
+      await this.cleanupCliAutoSuffixedMembers(run.teamName);
 
       // Best-effort: detect CLI-suffixed member names (alice-2, bob-2) that indicate
       // a stale config.json was present during launch (double-launch race).
@@ -2798,7 +3321,7 @@ export class TeamProvisioningService {
 
       // Pick up any direct messages that arrived before/while reconnecting.
       void this.relayLeadInboxMessages(run.teamName).catch((e: unknown) =>
-        logger.warn(`[${run.teamName}] post-reconnect relay failed: ${e}`)
+        logger.warn(`[${run.teamName}] post-reconnect relay failed: ${String(e)}`)
       );
 
       // Solo teams have no teammate processes to resume work; kick off task execution
@@ -2883,7 +3406,7 @@ export class TeamProvisioningService {
 
     // Pick up any direct messages that arrived during provisioning.
     void this.relayLeadInboxMessages(run.teamName).catch((e: unknown) =>
-      logger.warn(`[${run.teamName}] post-provisioning relay failed: ${e}`)
+      logger.warn(`[${run.teamName}] post-provisioning relay failed: ${String(e)}`)
     );
   }
 
@@ -2896,6 +3419,10 @@ export class TeamProvisioningService {
       clearTimeout(run.timeoutHandle);
       run.timeoutHandle = null;
     }
+    if (run.silentUserDmForwardClearHandle) {
+      clearTimeout(run.silentUserDmForwardClearHandle);
+      run.silentUserDmForwardClearHandle = null;
+    }
     this.stopFilesystemMonitor(run);
     // Remove stream listeners to prevent data handlers firing on a cleaned-up run
     if (run.child) {
@@ -2907,6 +3434,8 @@ export class TeamProvisioningService {
     this.relayedLeadInboxMessageIds.delete(run.teamName);
     this.relayedLeadInboxFallbackKeys.delete(run.teamName);
     this.liveLeadProcessMessages.delete(run.teamName);
+    // Remove from runs Map to free memory (stdoutBuffer, stderrBuffer, claudeLogLines)
+    this.runs.delete(run.runId);
   }
 
   /**
@@ -3516,6 +4045,112 @@ export class TeamProvisioningService {
     }
   }
 
+  private async cleanupCliAutoSuffixedMembers(teamName: string): Promise<void> {
+    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+
+    const removedFromConfig: string[] = [];
+    try {
+      const raw = await tryReadRegularFileUtf8(configPath, {
+        timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+        maxBytes: TEAM_CONFIG_MAX_BYTES,
+      });
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        const membersRaw = Array.isArray(parsed.members)
+          ? (parsed.members as Record<string, unknown>[])
+          : [];
+        if (membersRaw.length > 0) {
+          const teammateNames = membersRaw
+            .map((m) => (typeof m.name === 'string' ? m.name.trim() : ''))
+            .filter(
+              (n) => n.length > 0 && n.toLowerCase() !== 'team-lead' && n.toLowerCase() !== 'user'
+            );
+
+          const keepName = createCliAutoSuffixNameGuard(teammateNames);
+          const nextMembers: Record<string, unknown>[] = [];
+          for (const m of membersRaw) {
+            const name = typeof m.name === 'string' ? m.name.trim() : '';
+            const agentType = typeof m.agentType === 'string' ? m.agentType : '';
+            if (!name) continue;
+            if (agentType === 'team-lead' || name === 'team-lead' || name === 'user') {
+              nextMembers.push(m);
+              continue;
+            }
+            if (!keepName(name)) {
+              removedFromConfig.push(name);
+              continue;
+            }
+            nextMembers.push(m);
+          }
+
+          if (removedFromConfig.length > 0) {
+            parsed.members = nextMembers;
+            await atomicWriteAsync(configPath, JSON.stringify(parsed, null, 2));
+            logger.warn(
+              `[${teamName}] Removed CLI auto-suffixed members from config.json: ${removedFromConfig.join(', ')}`
+            );
+          }
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    let activeNamesForInboxCleanup = new Set<string>();
+    try {
+      const metaMembers = await this.membersMetaStore.getMembers(teamName);
+      if (metaMembers.length > 0) {
+        const activeNames = metaMembers
+          .filter((m) => !m.removedAt)
+          .map((m) => m.name.trim())
+          .filter(
+            (n) => n.length > 0 && n.toLowerCase() !== 'team-lead' && n.toLowerCase() !== 'user'
+          );
+
+        const keepName = createCliAutoSuffixNameGuard(activeNames);
+        const removedFromMeta: string[] = [];
+        const nextMeta = metaMembers.filter((m) => {
+          const name = m.name?.trim() ?? '';
+          if (!name) return false;
+          const lower = name.toLowerCase();
+          if (lower === 'team-lead' || lower === 'user' || m.agentType === 'team-lead') return true;
+          if (!m.removedAt && !keepName(name)) {
+            removedFromMeta.push(name);
+            return false;
+          }
+          return true;
+        });
+
+        if (removedFromMeta.length > 0) {
+          await this.membersMetaStore.writeMembers(teamName, nextMeta);
+          logger.warn(
+            `[${teamName}] Removed CLI auto-suffixed members from members.meta.json: ${removedFromMeta.join(', ')}`
+          );
+        }
+
+        activeNamesForInboxCleanup = new Set(
+          nextMeta
+            .filter((m) => !m.removedAt)
+            .map((m) => m.name.trim())
+            .filter(
+              (n) => n.length > 0 && n.toLowerCase() !== 'team-lead' && n.toLowerCase() !== 'user'
+            )
+        );
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Also attempt inbox cleanup (merge alice-2.json into alice.json).
+    if (activeNamesForInboxCleanup.size > 0) {
+      try {
+        await this.mergeAndRemoveDuplicateInboxes(teamName, activeNamesForInboxCleanup);
+      } catch {
+        // best-effort
+      }
+    }
+  }
+
   /**
    * Fallback: scan the project directory for the newest JSONL file
    * that isn't already in sessionHistory. Returns the session ID or null.
@@ -3548,6 +4183,55 @@ export class TeamProvisioningService {
       return newest?.id ?? null;
     } catch {
       return null;
+    }
+  }
+
+  private async assertConfigLeadOnlyForLaunch(teamName: string): Promise<void> {
+    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+    const raw = await tryReadRegularFileUtf8(configPath, {
+      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+      maxBytes: TEAM_CONFIG_MAX_BYTES,
+    });
+    if (!raw) {
+      throw new Error('config.json unreadable');
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw) as unknown;
+    } catch {
+      throw new Error('config.json could not be parsed');
+    }
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error('config.json has invalid shape');
+    }
+
+    const config = parsed as Record<string, unknown>;
+    const members = Array.isArray(config.members)
+      ? (config.members as Record<string, unknown>[])
+      : [];
+    if (members.length === 0) return;
+
+    for (const member of members) {
+      const name = typeof member.name === 'string' ? member.name.trim() : '';
+      if (!name) continue;
+      const lower = name.toLowerCase();
+      const agentType = typeof member.agentType === 'string' ? member.agentType : '';
+
+      if (agentType === 'team-lead' || lower === 'team-lead' || lower === 'user') continue;
+
+      const leadAgentId = config.leadAgentId;
+      if (
+        typeof leadAgentId === 'string' &&
+        typeof member.agentId === 'string' &&
+        member.agentId === leadAgentId
+      ) {
+        continue;
+      }
+
+      throw new Error(
+        `Refusing to launch: config.json still contains teammates (e.g. "${name}"), which can trigger CLI auto-suffixes like "${name}-2".`
+      );
     }
   }
 
@@ -3905,6 +4589,14 @@ export class TeamProvisioningService {
           });
         }
       }
+      // Defense: ignore CLI auto-suffixed duplicates (alice-2) when base name exists.
+      const allNames = Array.from(byName.keys());
+      const keepName = createCliAutoSuffixNameGuard(allNames);
+      for (const name of allNames) {
+        if (!keepName(name)) {
+          byName.delete(name);
+        }
+      }
       const members = Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name));
       if (members.length > 0) {
         return { members, source: 'members-meta' };
@@ -4004,6 +4696,14 @@ export class TeamProvisioningService {
         if (!name) continue;
         byName.set(name, { name });
       }
+      // Defense: ignore CLI auto-suffixed duplicates (alice-2) when base name exists.
+      const allNames = Array.from(byName.keys());
+      const keepName = createCliAutoSuffixNameGuard(allNames);
+      for (const name of allNames) {
+        if (!keepName(name)) {
+          byName.delete(name);
+        }
+      }
       return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name));
     } catch {
       logger.warn(`[${teamName}] Failed to parse config.json for launch fallback members`);
@@ -4050,7 +4750,13 @@ export class TeamProvisioningService {
           [...PREFLIGHT_PING_ARGS],
           cwd,
           env,
-          PREFLIGHT_TIMEOUT_MS
+          PREFLIGHT_TIMEOUT_MS,
+          {
+            resolveOnOutputMatch: ({ stdout, stderr }) => {
+              const combined = `${stdout}\n${stderr}`.trim();
+              return /\bPONG\b/i.test(combined);
+            },
+          }
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -4097,7 +4803,7 @@ export class TeamProvisioningService {
       }
 
       const pongCandidate = pingProbe.stdout.trim() || pingProbe.stderr.trim();
-      const isPong = pongCandidate.toUpperCase() === PREFLIGHT_EXPECTED;
+      const isPong = new RegExp(`\\b${PREFLIGHT_EXPECTED}\\b`, 'i').test(pongCandidate);
       if (!isPong) {
         return {
           warning:
@@ -4122,7 +4828,15 @@ export class TeamProvisioningService {
     args: string[],
     cwd: string,
     env: NodeJS.ProcessEnv,
-    timeoutMs: number
+    timeoutMs: number,
+    options?: {
+      /**
+       * Optional early success predicate. If this returns true based on
+       * buffered stdout/stderr, the probe resolves immediately (and the process
+       * is best-effort terminated) instead of waiting for `close`.
+       */
+      resolveOnOutputMatch?: (ctx: { stdout: string; stderr: string }) => boolean;
+    }
   ): Promise<{ exitCode: number | null; stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
       const child = spawnCli(claudePath, args, {
@@ -4130,26 +4844,52 @@ export class TeamProvisioningService {
         env,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
-      const stdoutChunks: Buffer[] = [];
-      const stderrChunks: Buffer[] = [];
+      let stdoutText = '';
+      let stderrText = '';
+      let settled = false;
 
       const timeoutHandle = setTimeout(() => {
+        settled = true;
         killProcessTree(child);
         reject(new Error(`Timeout running: claude ${args.join(' ')}`));
       }, timeoutMs);
 
-      child.stdout?.on('data', (chunk: Buffer) => stdoutChunks.push(chunk));
-      child.stderr?.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
+      const maybeResolveEarly = (): void => {
+        if (settled) return;
+        if (!options?.resolveOnOutputMatch) return;
+        const ctx = { stdout: stdoutText.trim(), stderr: stderrText.trim() };
+        if (!options.resolveOnOutputMatch(ctx)) return;
+
+        settled = true;
+        clearTimeout(timeoutHandle);
+        // If the process printed the match but hangs during teardown, don't
+        // block the UI; terminate best-effort and resolve.
+        killProcessTree(child);
+        resolve({ exitCode: 0, stdout: ctx.stdout, stderr: ctx.stderr });
+      };
+
+      child.stdout?.on('data', (chunk: Buffer) => {
+        stdoutText += chunk.toString('utf8');
+        maybeResolveEarly();
+      });
+      child.stderr?.on('data', (chunk: Buffer) => {
+        stderrText += chunk.toString('utf8');
+        maybeResolveEarly();
+      });
       child.once('error', (error) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timeoutHandle);
         reject(error);
       });
       child.once('close', (exitCode) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timeoutHandle);
         resolve({
           exitCode,
-          stdout: Buffer.concat(stdoutChunks).toString('utf8').trim(),
-          stderr: Buffer.concat(stderrChunks).toString('utf8').trim(),
+          stdout: stdoutText.trim(),
+          stderr: stderrText.trim(),
         });
       });
     });

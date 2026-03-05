@@ -75,6 +75,7 @@ export class TeamSentMessagesStore {
         color: typeof row.color === 'string' ? row.color : undefined,
         attachments: Array.isArray(row.attachments) ? row.attachments : undefined,
         source: typeof row.source === 'string' ? (row.source as InboxMessage['source']) : undefined,
+        leadSessionId: typeof row.leadSessionId === 'string' ? row.leadSessionId : undefined,
       });
     }
 

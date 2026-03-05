@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 
-import type { TeamTask } from '../../../../src/shared/types/team';
+import type { InboxMessage, TeamTask } from '../../../../src/shared/types/team';
 
 describe('TeamDataService', () => {
   it('runs kanban garbage-collect only after tasks are loaded', async () => {
@@ -45,6 +45,72 @@ describe('TeamDataService', () => {
 
     await service.getTeamData('my-team');
     expect(order).toEqual(['tasks', 'gc']);
+  });
+
+  it('does not sync automated comment notifications into task comments', async () => {
+    const tasks: TeamTask[] = [
+      {
+        id: '12',
+        subject: 'Task',
+        status: 'pending',
+      },
+    ];
+
+    const addComment = vi.fn(async () => {
+      throw new Error('Should not be called');
+    });
+
+    const messages: InboxMessage[] = [
+      {
+        from: 'team-lead',
+        to: 'alice',
+        summary: 'Comment on #12',
+        messageId: 'm1',
+        timestamp: new Date().toISOString(),
+        read: false,
+        text:
+          'Comment on task #12 "Task":\n\nHello\n\n' +
+          '<agent-block>\n' +
+          'Reply to this comment using:\n' +
+          'node "tool.js" --team my-team task comment 12 --text "..." --from "alice"\n' +
+          '</agent-block>',
+      },
+    ];
+
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [{ name: 'team-lead', role: 'Lead' }] })),
+      } as never,
+      {
+        getTasks: vi.fn(async () => tasks),
+      } as never,
+      {
+        listInboxNames: vi.fn(async () => []),
+        getMessages: vi.fn(async () => messages),
+      } as never,
+      {} as never,
+      {
+        addComment,
+      } as never,
+      {
+        resolveMembers: vi.fn(() => []),
+      } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
+        garbageCollect: vi.fn(async () => undefined),
+      } as never,
+      {} as never,
+      {
+        readMembers: vi.fn(async () => []),
+      } as never,
+      {
+        readMessages: vi.fn(async () => []),
+      } as never
+    );
+
+    await service.getTeamData('my-team');
+    expect(addComment).not.toHaveBeenCalled();
   });
 
   it('skips kanban garbage-collect when tasks fail to load', async () => {

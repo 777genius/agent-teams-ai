@@ -240,13 +240,13 @@ export const SessionItem = ({
     }
   }, [activeProjectId, openTab, selectSession, session.id, sessionLabel, splitPane]);
 
-  // Height must match SESSION_HEIGHT (48px) in DateGroupedSessions.tsx for virtual scroll
+  // Height must match SESSION_HEIGHT (58px) in DateGroupedSessions.tsx for virtual scroll
   return (
     <>
       <button
         onClick={handleClick}
         onContextMenu={handleContextMenu}
-        className={`h-[48px] w-full overflow-hidden border-b px-3 py-2 text-left transition-colors ${isActive ? '' : 'bg-transparent hover:bg-surface-raised'}`}
+        className={`h-[58px] w-full overflow-hidden border-b px-3 py-2 text-left transition-colors ${isActive ? '' : 'bg-transparent hover:bg-surface-raised'}`}
         style={{
           borderColor: 'var(--color-border)',
           ...(isActive ? { backgroundColor: 'var(--color-surface-raised)' } : {}),
@@ -268,7 +268,7 @@ export const SessionItem = ({
           {isPinned && <Pin className="size-2.5 shrink-0 text-blue-400" />}
           {isHidden && <EyeOff className="size-2.5 shrink-0 text-zinc-500" />}
           <span
-            className="truncate text-[13px] font-medium leading-tight"
+            className="line-clamp-2 text-[13px] font-medium leading-tight"
             style={{ color: isActive ? 'var(--color-text)' : 'var(--color-text-muted)' }}
           >
             {session.firstMessage ?? 'Untitled'}

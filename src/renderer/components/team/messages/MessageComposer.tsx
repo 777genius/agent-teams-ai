@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
+import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useAttachments } from '@renderer/hooks/useAttachments';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
@@ -13,12 +13,11 @@ import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
-import { getModifierKeyName } from '@renderer/utils/keyboardUtils';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { AlertCircle, Check, ChevronDown, ImagePlus, Send } from 'lucide-react';
+import { AlertCircle, Check, ChevronDown, ImagePlus, Mic, Search, Send } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { AttachmentPayload, ResolvedTeamMember } from '@shared/types';
+import type { AttachmentPayload, LeadContextUsage, ResolvedTeamMember } from '@shared/types';
 
 interface MessageComposerProps {
   teamName: string;
@@ -36,6 +35,58 @@ interface MessageComposerProps {
 
 const MAX_MESSAGE_LENGTH = 4000;
 
+/** Circular progress indicator for lead context usage. */
+const _ContextRing = ({ ctx }: { ctx: LeadContextUsage }): React.JSX.Element => {
+  const size = 26;
+  const stroke = 2.5;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const pct = Math.min(ctx.percent, 100);
+  const offset = circumference - (pct / 100) * circumference;
+  const color = pct > 90 ? '#ef4444' : pct > 70 ? '#f59e0b' : '#3b82f6';
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          className="relative flex shrink-0 cursor-default items-center justify-center"
+          style={{ width: size, height: size }}
+        >
+          <svg width={size} height={size} className="-rotate-90">
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke="var(--color-border)"
+              strokeWidth={stroke}
+            />
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke={color}
+              strokeWidth={stroke}
+              strokeDasharray={circumference}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+              className="transition-all duration-500"
+            />
+          </svg>
+          <span className="absolute text-[8px] font-medium" style={{ color }}>
+            {Math.round(pct)}
+          </span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        Context: {Math.round(pct)}% ({(ctx.currentTokens / 1000).toFixed(1)}k /{' '}
+        {(ctx.contextWindow / 1000).toFixed(0)}k tokens)
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
 export const MessageComposer = ({
   teamName,
   members,
@@ -49,6 +100,8 @@ export const MessageComposer = ({
     return lead?.name ?? members[0]?.name ?? '';
   });
   const [recipientOpen, setRecipientOpen] = useState(false);
+  const [recipientSearch, setRecipientSearch] = useState('');
+  const recipientSearchRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounterRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,14 +146,24 @@ export const MessageComposer = ({
   );
 
   const trimmed = draft.value.trim();
-  const canSend =
-    recipient.length > 0 && trimmed.length > 0 && trimmed.length <= MAX_MESSAGE_LENGTH && !sending;
 
   const selectedMember = members.find((m) => m.name === recipient);
   const selectedResolvedColor = selectedMember ? colorMap.get(selectedMember.name) : undefined;
-  const selectedColorSet = selectedResolvedColor ? getTeamColorSet(selectedResolvedColor) : null;
   const isLeadRecipient = selectedMember?.role === 'lead' || selectedMember?.name === 'team-lead';
-  const canAttach = isLeadRecipient && isTeamAlive && canAddMore;
+  // NOTE: lead context ring disabled — usage formula is inaccurate
+  // const isLeadAgentRecipient = selectedMember?.agentType === 'team-lead';
+  // const leadContext = useStore((s) =>
+  //   isLeadAgentRecipient ? s.leadContextByTeam[teamName] : undefined
+  // );
+  const supportsAttachments = isLeadRecipient && !!isTeamAlive;
+  const canAttach = supportsAttachments && canAddMore;
+  const attachmentsBlocked = attachments.length > 0 && !supportsAttachments;
+  const canSend =
+    recipient.length > 0 &&
+    trimmed.length > 0 &&
+    trimmed.length <= MAX_MESSAGE_LENGTH &&
+    !sending &&
+    !attachmentsBlocked;
 
   // Track whether we initiated a send — clear draft only on confirmed success
   const pendingSendRef = useRef(false);
@@ -109,7 +172,8 @@ export const MessageComposer = ({
     if (!canSend) return;
     pendingSendRef.current = true;
     const serialized = serializeChipsWithText(trimmed, chipDraft.chips);
-    onSend(recipient, serialized, serialized, attachments.length > 0 ? attachments : undefined);
+    // Summary should stay compact (no expanded chip markdown)
+    onSend(recipient, serialized, trimmed, attachments.length > 0 ? attachments : undefined);
   }, [canSend, recipient, trimmed, onSend, attachments, chipDraft.chips]);
 
   // Clear draft only after send completes successfully (sending: true → false, no error)
@@ -127,7 +191,7 @@ export const MessageComposer = ({
 
   const handleKeyDownCapture = useCallback(
     (e: React.KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         e.stopPropagation();
         handleSend();
@@ -204,68 +268,94 @@ export const MessageComposer = ({
               type="button"
               className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs transition-colors hover:border-[var(--color-border-emphasis)] hover:bg-[var(--color-surface-raised)]"
             >
-              {selectedColorSet ? (
-                <span
-                  className="inline-block size-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: selectedColorSet.border }}
+              {recipient ? (
+                <MemberBadge
+                  name={recipient}
+                  color={selectedResolvedColor}
+                  size="sm"
+                  hideAvatar={recipient === 'user'}
                 />
               ) : (
-                <span className="inline-block size-2 shrink-0 rounded-full bg-[var(--color-text-muted)]" />
+                <span className="text-[var(--color-text-muted)]">Select...</span>
               )}
-              <span
-                className="max-w-[120px] truncate font-medium"
-                style={selectedColorSet ? { color: selectedColorSet.text } : undefined}
-              >
-                {recipient || 'Select...'}
-              </span>
               <ChevronDown size={12} className="shrink-0 text-[var(--color-text-muted)]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-56 p-1.5">
+          <PopoverContent
+            align="start"
+            className="w-56 p-1.5"
+            onOpenAutoFocus={(e) => {
+              e.preventDefault();
+              setRecipientSearch('');
+              setTimeout(() => recipientSearchRef.current?.focus(), 0);
+            }}
+          >
+            {members.length > 5 && (
+              <div className="relative mb-1">
+                <Search
+                  size={12}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
+                />
+                <input
+                  ref={recipientSearchRef}
+                  type="text"
+                  className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] py-1 pl-6 pr-2 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
+                  placeholder="Search..."
+                  value={recipientSearch}
+                  onChange={(e) => setRecipientSearch(e.target.value)}
+                />
+              </div>
+            )}
             <div className="max-h-48 space-y-0.5 overflow-y-auto">
-              {members.map((m) => {
-                const resolvedColor = colorMap.get(m.name);
-                const colorSet = resolvedColor ? getTeamColorSet(resolvedColor) : null;
-                const role = formatAgentRole(m.role) ?? formatAgentRole(m.agentType);
-                const isSelected = m.name === recipient;
-                return (
-                  <button
-                    key={m.name}
-                    type="button"
-                    className={cn(
-                      'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
-                      isSelected && 'bg-[var(--color-surface-raised)]'
-                    )}
-                    onClick={() => {
-                      setRecipient(m.name);
-                      setRecipientOpen(false);
-                    }}
-                  >
-                    {colorSet ? (
-                      <span
-                        className="inline-block size-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: colorSet.border }}
-                      />
-                    ) : (
-                      <span className="inline-block size-2 shrink-0 rounded-full bg-[var(--color-text-muted)]" />
-                    )}
-                    <span
-                      className="min-w-0 truncate font-medium"
-                      style={colorSet ? { color: colorSet.text } : undefined}
+              {/* eslint-disable-next-line sonarjs/function-return-type -- IIFE rendering mixed elements/null */}
+              {(() => {
+                const query = recipientSearch.toLowerCase().trim();
+                const filtered = query
+                  ? members.filter((m) => m.name.toLowerCase().includes(query))
+                  : members;
+                if (filtered.length === 0) {
+                  return (
+                    <div className="px-2 py-3 text-center text-xs text-[var(--color-text-muted)]">
+                      No results
+                    </div>
+                  );
+                }
+                return filtered.map((m) => {
+                  const resolvedColor = colorMap.get(m.name);
+                  const role = formatAgentRole(m.role) ?? formatAgentRole(m.agentType);
+                  const isSelected = m.name === recipient;
+                  return (
+                    <button
+                      key={m.name}
+                      type="button"
+                      className={cn(
+                        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
+                        isSelected && 'bg-[var(--color-surface-raised)]'
+                      )}
+                      onClick={() => {
+                        setRecipient(m.name);
+                        setRecipientOpen(false);
+                        setRecipientSearch('');
+                      }}
                     >
-                      {m.name}
-                    </span>
-                    {role ? (
-                      <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                        {role}
-                      </span>
-                    ) : null}
-                    {isSelected ? (
-                      <Check size={12} className="ml-auto shrink-0 text-blue-400" />
-                    ) : null}
-                  </button>
-                );
-              })}
+                      <MemberBadge
+                        name={m.name}
+                        color={resolvedColor}
+                        size="sm"
+                        hideAvatar={m.name === 'user'}
+                      />
+                      {role ? (
+                        <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
+                          {role}
+                        </span>
+                      ) : null}
+                      {isSelected ? (
+                        <Check size={12} className="ml-auto shrink-0 text-blue-400" />
+                      ) : null}
+                    </button>
+                  );
+                });
+              })()}
             </div>
           </PopoverContent>
         </Popover>
@@ -308,7 +398,9 @@ export const MessageComposer = ({
         ) : null}
 
         {!isTeamAlive ? (
-          <span className="ml-auto text-[10px] text-amber-400">Team offline</span>
+          <span className="ml-auto text-[10px]" style={{ color: 'var(--warning-text)' }}>
+            Team offline
+          </span>
         ) : null}
       </div>
 
@@ -316,11 +408,13 @@ export const MessageComposer = ({
         attachments={attachments}
         onRemove={removeAttachment}
         error={attachmentError}
+        disabled={attachmentsBlocked}
+        disabledHint="Image attachments are only supported when sending to the team lead while the team is online. Remove attachments or switch recipient."
       />
 
       <MentionableTextarea
         id={`compose-${teamName}`}
-        placeholder={`Write a message... (${getModifierKeyName()}+Enter to send)`}
+        placeholder="Write a message... (Enter to send)"
         value={draft.value}
         onValueChange={draft.setValue}
         suggestions={mentionSuggestions}
@@ -328,23 +422,42 @@ export const MessageComposer = ({
         onChipRemove={chipDraft.removeChip}
         projectPath={projectPath}
         onFileChipInsert={chipDraft.addChip}
+        onModEnter={handleSend}
         minRows={2}
         maxRows={6}
         maxLength={MAX_MESSAGE_LENGTH}
         disabled={sending}
         cornerAction={
-          <button
-            type="button"
-            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!canSend}
-            onClick={handleSend}
-          >
-            <Send size={12} />
-            Send
-          </button>
+          <div className="flex items-center gap-2">
+            {/* NOTE: ContextRing disabled — usage formula is inaccurate */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex shrink-0 items-center rounded-full p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text-secondary)]"
+                  onClick={() => void window.electronAPI.openExternal('https://voicetext.site')}
+                >
+                  <Mic size={14} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Voice to text</TooltipContent>
+            </Tooltip>
+            <button
+              type="button"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!canSend}
+              onClick={handleSend}
+            >
+              <Send size={12} />
+              Send
+            </button>
+          </div>
         }
         footerRight={
           <div className="flex items-center gap-2">
+            <span className="text-[10px] text-[var(--color-text-muted)] opacity-70">
+              Mention &quot;create a task&quot; to add it to the board
+            </span>
             {sendError ? (
               <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">
                 <AlertCircle size={10} className="shrink-0" />

@@ -7,6 +7,7 @@ import { useCallback, useState } from 'react';
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
 import {
   Activity,
@@ -66,6 +67,13 @@ export const SortableTab = ({
     )
   );
 
+  const teamColor = useStore((s) => {
+    if (tab.type !== 'team' || !tab.teamName) return null;
+    const team = s.teamByName[tab.teamName];
+    return team?.color ?? null;
+  });
+  const teamColorSet = teamColor ? getTeamColorSet(teamColor) : null;
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tab.id,
     data: {
@@ -81,13 +89,18 @@ export const SortableTab = ({
     transition: isDragging ? 'none' : transition,
     opacity: isDragging ? 0.3 : 1,
     backgroundColor: isActive
-      ? 'var(--color-surface-raised)'
+      ? teamColorSet
+        ? teamColorSet.badge
+        : 'var(--color-surface-raised)'
       : isHovered
-        ? 'var(--color-surface-overlay)'
+        ? teamColorSet
+          ? teamColorSet.badge
+          : 'var(--color-surface-overlay)'
         : 'transparent',
     color: isActive || isHovered ? 'var(--color-text)' : 'var(--color-text-muted)',
     outline: isSelected ? '1px solid var(--color-border-emphasis)' : 'none',
     outlineOffset: '-1px',
+    borderLeft: isActive && teamColorSet ? `2px solid ${teamColorSet.border}` : undefined,
   };
 
   const Icon = TAB_ICONS[tab.type];
@@ -112,11 +125,7 @@ export const SortableTab = ({
       role="tab"
       tabIndex={0}
       aria-selected={isActive}
-      className={
-        isTeamTab
-          ? 'group flex min-w-0 max-w-[200px] shrink-0 cursor-grab flex-col rounded-md'
-          : 'group flex min-w-0 max-w-[200px] shrink-0 cursor-grab items-center gap-2 rounded-md px-3 py-1.5'
-      }
+      className="group flex min-w-0 max-w-[200px] shrink-0 cursor-grab items-center gap-2 rounded-md px-3 py-1.5"
       style={style}
       onClick={(e) => onTabClick(tab.id, e)}
       onMouseDown={(e) => onMouseDown(tab.id, e)}
@@ -130,32 +139,18 @@ export const SortableTab = ({
         }
       }}
     >
-      <div className={isTeamTab ? 'flex min-w-0 items-center gap-2 px-3 pb-0.5 pt-1' : 'contents'}>
-        <Icon className="size-4 shrink-0" />
-        {tab.fromSearch && (
-          <span title="Opened from search">
-            <Search className="size-3 shrink-0 text-amber-400" />
-          </span>
-        )}
-        {isPinned && (
-          <span title="Pinned session">
-            <Pin className="size-3 shrink-0 text-blue-400" />
-          </span>
-        )}
-        <span className="truncate text-sm">{tab.label}</span>
-        <button
-          className="flex size-4 shrink-0 items-center justify-center rounded-sm opacity-0 transition-opacity group-hover:opacity-100"
-          style={{ backgroundColor: 'transparent' }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose(tab.id);
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          title="Close tab"
-        >
-          <X className="size-3" />
-        </button>
-      </div>
+      <Icon className="size-4 shrink-0" />
+      {tab.fromSearch && (
+        <span title="Opened from search">
+          <Search className="size-3 shrink-0 text-amber-400" />
+        </span>
+      )}
+      {isPinned && (
+        <span title="Pinned session">
+          <Pin className="size-3 shrink-0 text-blue-400" />
+        </span>
+      )}
+      <span className="truncate text-sm">{tab.label}</span>
       {isTeamTab && (
         <TeamTabSectionNav
           teamName={tab.teamName!}
@@ -169,6 +164,18 @@ export const SortableTab = ({
           }}
         />
       )}
+      <button
+        className="flex size-4 shrink-0 items-center justify-center rounded-sm opacity-0 transition-opacity group-hover:opacity-100"
+        style={{ backgroundColor: 'transparent' }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose(tab.id);
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        title="Close tab"
+      >
+        <X className="size-3" />
+      </button>
     </div>
   );
 };

@@ -33,15 +33,15 @@ export const EditorImagePreview = ({
   const [dimensions, setDimensions] = useState<{ w: number; h: number } | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  // Reset state when filePath changes (setState-during-render, React-approved pattern)
-  const [prevFilePath, setPrevFilePath] = useState(filePath);
-  if (prevFilePath !== filePath) {
-    setPrevFilePath(filePath);
+  // Reset state when filePath changes
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
     setLoading(true);
     setError(null);
     setDataUrl(null);
     setDimensions(null);
-  }
+    setLightboxOpen(false);
+  }, [filePath]);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,10 +127,10 @@ export const EditorImagePreview = ({
       </div>
 
       <ImageLightbox
-        src={dataUrl}
-        alt={fileName}
         open={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
+        src={dataUrl}
+        alt={fileName}
       />
     </div>
   );

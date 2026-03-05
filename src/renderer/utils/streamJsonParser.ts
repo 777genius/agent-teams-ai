@@ -142,6 +142,32 @@ function buildGroupSummary(items: AIGroupDisplayItem[]): string {
   return parts.join(', ') || 'empty';
 }
 
+function extractAssistantMessageId(parsed: unknown): string | null {
+  if (!parsed || typeof parsed !== 'object') return null;
+  const obj = parsed as Record<string, unknown>;
+  if (obj.type !== 'assistant') return null;
+
+  // Direct format can include id at top-level
+  if (typeof obj.id === 'string' && obj.id.trim()) return obj.id.trim();
+
+  // Wrapped format: { type: "assistant", message: { id, ... } }
+  const msg = obj.message;
+  if (msg && typeof msg === 'object') {
+    const inner = msg as Record<string, unknown>;
+    if (typeof inner.id === 'string' && inner.id.trim()) return inner.id.trim();
+  }
+
+  return null;
+}
+
+/**
+ * Module-level timestamp cache keyed by line content.
+ * Ensures re-parses of the same log lines preserve their original timestamps
+ * instead of getting new Date() each time.
+ */
+const lineTimestampCache = new Map<string, Date>();
+const MAX_TIMESTAMP_CACHE_SIZE = 5000;
+
 /**
  * Parses stream-json CLI output lines into structured groups for rich rendering.
  *
@@ -155,28 +181,32 @@ export function parseStreamJsonToGroups(cliLogsTail: string): StreamJsonGroup[] 
   const groups: StreamJsonGroup[] = [];
   let currentItems: AIGroupDisplayItem[] = [];
   let currentTimestamp: Date | null = null;
-  let groupCounter = 0;
-  // Stable timestamp for the entire parse (deterministic across re-renders)
-  const parseTimestamp = new Date();
+  let currentGroupId: string | null = null;
+  // Track how many times each messageId has been seen to disambiguate duplicates
+  const msgIdOccurrences = new Map<string, number>();
 
   const flushGroup = (): void => {
     if (currentItems.length > 0 && currentTimestamp) {
+      const id = currentGroupId ?? `stream-group-fallback-${groups.length}`;
       groups.push({
-        id: `stream-group-${groupCounter++}`,
+        id,
         items: currentItems,
         summary: buildGroupSummary(currentItems),
         timestamp: currentTimestamp,
       });
       currentItems = [];
       currentTimestamp = null;
+      currentGroupId = null;
     }
   };
 
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     const trimmed = lines[lineIndex].trim();
 
-    // Skip empty lines and stream markers
-    if (!trimmed || trimmed.startsWith('[stdout]') || trimmed.startsWith('[stderr]')) {
+    // Skip empty lines; stream markers break groups
+    if (!trimmed) continue;
+    if (trimmed.startsWith('[stdout]') || trimmed.startsWith('[stderr]')) {
+      flushGroup();
       continue;
     }
 
@@ -197,9 +227,33 @@ export function parseStreamJsonToGroups(cliLogsTail: string): StreamJsonGroup[] 
       continue;
     }
 
-    if (!currentTimestamp) currentTimestamp = parseTimestamp;
+    if (!currentTimestamp) {
+      // Use stable cached timestamp keyed by line content to survive re-parses
+      let ts = lineTimestampCache.get(trimmed);
+      if (!ts) {
+        ts = new Date();
+        if (lineTimestampCache.size >= MAX_TIMESTAMP_CACHE_SIZE) {
+          // Evict oldest entry (first inserted)
+          const firstKey = lineTimestampCache.keys().next().value!;
+          lineTimestampCache.delete(firstKey);
+        }
+        lineTimestampCache.set(trimmed, ts);
+      }
+      currentTimestamp = ts;
+    }
+    if (!currentGroupId) {
+      const msgId = extractAssistantMessageId(parsed);
+      if (msgId) {
+        const occurrence = msgIdOccurrences.get(msgId) ?? 0;
+        msgIdOccurrences.set(msgId, occurrence + 1);
+        currentGroupId =
+          occurrence === 0 ? `stream-group-${msgId}` : `stream-group-${msgId}-${occurrence}`;
+      } else {
+        currentGroupId = `stream-group-L${lineIndex}`;
+      }
+    }
 
-    const items = contentBlocksToDisplayItems(blocks, parseTimestamp, lineIndex);
+    const items = contentBlocksToDisplayItems(blocks, currentTimestamp, lineIndex);
     currentItems.push(...items);
   }
 

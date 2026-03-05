@@ -35,6 +35,8 @@ export interface SearchContext {
   matchCounter: { current: number };
   isCurrentItem: boolean;
   currentMatchIndexInItem: number | null;
+  /** When true, render all matches using the "current" highlight style */
+  forceAllActive?: boolean;
 }
 
 /**
@@ -79,7 +81,8 @@ function highlightSearchText(text: string, ctx: SearchContext): React.ReactNode 
     }
 
     const isCurrentResult =
-      ctx.isCurrentItem && ctx.currentMatchIndexInItem === ctx.matchCounter.current;
+      ctx.forceAllActive === true ||
+      (ctx.isCurrentItem && ctx.currentMatchIndexInItem === ctx.matchCounter.current);
 
     parts.push(
       React.createElement(
@@ -107,6 +110,19 @@ function highlightSearchText(text: string, ctx: SearchContext): React.ReactNode 
   if (parts.length === 0) return text;
   if (parts.length === 1) return parts[0];
   return parts;
+}
+
+// eslint-disable-next-line sonarjs/function-return-type -- React child manipulation inherently returns mixed node types
+export function highlightQueryInText(
+  text: string,
+  query: string,
+  itemId: string,
+  options?: { forceAllActive?: boolean }
+): React.ReactNode {
+  const ctx = createSearchContext(query, itemId, [], -1);
+  if (!ctx) return text;
+  if (options?.forceAllActive) ctx.forceAllActive = true;
+  return highlightSearchInChildren(text, ctx);
 }
 
 /**

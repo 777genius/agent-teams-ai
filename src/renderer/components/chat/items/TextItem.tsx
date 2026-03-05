@@ -2,6 +2,7 @@ import React from 'react';
 
 import { MessageSquare } from 'lucide-react';
 
+import { highlightQueryInText } from '../searchHighlightUtils';
 import { MarkdownViewer } from '../viewers';
 
 import { BaseItem } from './BaseItem';
@@ -15,6 +16,10 @@ interface TextItemProps {
   preview: string;
   onClick: () => void;
   isExpanded: boolean;
+  /** Optional local search query for inline highlighting */
+  searchQueryOverride?: string;
+  /** Optional stable item id for search highlighting */
+  markdownItemId?: string;
   /** Additional classes for highlighting (e.g., error deep linking) */
   highlightClasses?: string;
   /** Inline styles for highlighting (used by custom hex colors) */
@@ -28,12 +33,24 @@ export const TextItem: React.FC<TextItemProps> = ({
   preview,
   onClick,
   isExpanded,
+  searchQueryOverride,
+  markdownItemId,
   highlightClasses,
   highlightStyle,
   notificationDotColor,
 }) => {
   const fullContent = step.content.outputText ?? preview;
   const truncatedPreview = truncateText(preview, 60);
+  const summary = searchQueryOverride
+    ? highlightQueryInText(
+        truncatedPreview,
+        searchQueryOverride,
+        `${markdownItemId ?? step.id}:summary`,
+        {
+          forceAllActive: true,
+        }
+      )
+    : truncatedPreview;
 
   // Get token count from step.tokens.output or step.content.tokenCount
   const tokenCount = step.tokens?.output ?? step.content.tokenCount ?? 0;
@@ -42,7 +59,7 @@ export const TextItem: React.FC<TextItemProps> = ({
     <BaseItem
       icon={<MessageSquare className="size-4" />}
       label="Output"
-      summary={truncatedPreview}
+      summary={summary}
       tokenCount={tokenCount}
       onClick={onClick}
       isExpanded={isExpanded}
@@ -50,7 +67,13 @@ export const TextItem: React.FC<TextItemProps> = ({
       highlightStyle={highlightStyle}
       notificationDotColor={notificationDotColor}
     >
-      <MarkdownViewer content={fullContent} maxHeight="max-h-96" copyable />
+      <MarkdownViewer
+        content={fullContent}
+        maxHeight="max-h-96"
+        copyable
+        itemId={markdownItemId}
+        searchQueryOverride={searchQueryOverride}
+      />
     </BaseItem>
   );
 };

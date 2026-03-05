@@ -302,13 +302,14 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
           scrollContainerRef.current = el;
           setDroppableRef(el);
         }}
-        className="scrollbar-none flex min-w-0 shrink items-center gap-1 overflow-x-auto"
+        className="scrollbar-none flex min-w-0 flex-1 items-center gap-1"
         style={
           {
-            maxWidth: '75%',
             WebkitAppRegion: 'no-drag',
             outline: isDroppableOver ? '1px dashed var(--color-accent, #6366f1)' : 'none',
             outlineOffset: '-1px',
+            overflowX: 'auto',
+            overflowY: 'hidden',
           } as React.CSSProperties
         }
       >
@@ -351,7 +352,7 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
           Gives users a reliable window-drag target regardless of how many tabs are open.
           Only applied on the leftmost pane in Electron to match the TabBar drag region logic. */}
       <div
-        className="flex-1 self-stretch"
+        className="min-w-[48px] flex-1 self-stretch"
         style={
           {
             WebkitAppRegion: isElectronMode() && isLeftmostPane ? 'drag' : undefined,

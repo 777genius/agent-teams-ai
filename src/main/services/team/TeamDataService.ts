@@ -12,6 +12,7 @@ import { killProcessByPid } from '@main/utils/processKill';
 import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
 import { getMemberColor } from '@shared/constants/memberColors';
 import { createLogger } from '@shared/utils/logger';
+import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -32,6 +33,7 @@ import { TeamTaskWriter } from './TeamTaskWriter';
 
 import type {
   AddMemberRequest,
+  AttachmentMeta,
   CreateTaskRequest,
   GlobalTask,
   InboxMessage,
@@ -41,6 +43,7 @@ import type {
   ResolvedTeamMember,
   SendMessageRequest,
   SendMessageResult,
+  TaskAttachmentMeta,
   TaskComment,
   TeamConfig,
   TeamCreateConfigRequest,
@@ -256,8 +259,9 @@ export class TeamDataService {
     }
     mark('messages');
 
+    let leadTexts: InboxMessage[] = [];
     try {
-      const leadTexts = await this.extractLeadSessionTexts(config);
+      leadTexts = await this.extractLeadSessionTexts(config);
       if (leadTexts.length > 0) {
         messages = [...messages, ...leadTexts];
       }
@@ -266,8 +270,9 @@ export class TeamDataService {
     }
     mark('leadTexts');
 
+    let sentMessages: InboxMessage[] = [];
     try {
-      const sentMessages = await this.sentMessagesStore.readMessages(teamName);
+      sentMessages = await this.sentMessagesStore.readMessages(teamName);
       if (sentMessages.length > 0) {
         messages = [...messages, ...sentMessages];
       }
@@ -275,6 +280,33 @@ export class TeamDataService {
       warnings.push('Sent messages failed to load');
     }
     mark('sentMessages');
+
+    // Dedup: if a lead_process message text is also present in lead_session, prefer lead_session.
+    // This avoids double-rendering when we persist lead process messages and later load the lead JSONL.
+    if (leadTexts.length > 0 && sentMessages.length > 0) {
+      const normalizeText = (text: string): string => text.trim().replace(/\r\n/g, '\n');
+      const leadSessionFingerprints = new Set<string>();
+      for (const msg of leadTexts) {
+        if (msg.source !== 'lead_session') continue;
+        leadSessionFingerprints.add(`${msg.from}\0${normalizeText(msg.text)}`);
+      }
+      messages = messages.filter((m) => {
+        if (m.source !== 'lead_process') return true;
+        const fp = `${m.from}\0${normalizeText(m.text ?? '')}`;
+        return !leadSessionFingerprints.has(fp);
+      });
+    }
+
+    // Enrich messages without leadSessionId: assign current session for lead_process/user_sent.
+    // lead_process messages surviving dedup are from the current session;
+    // user_sent messages written before this feature lack the field.
+    if (config.leadSessionId) {
+      for (const msg of messages) {
+        if (!msg.leadSessionId && (msg.source === 'lead_process' || msg.source === 'user_sent')) {
+          msg.leadSessionId = config.leadSessionId;
+        }
+      }
+    }
 
     messages.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 
@@ -618,19 +650,31 @@ export class TeamDataService {
   }
 
   async addMember(teamName: string, request: AddMemberRequest): Promise<void> {
+    const name = request.name.trim();
+    if (!name) {
+      throw new Error('Member name cannot be empty');
+    }
+    const suffixInfo = parseNumericSuffixName(name);
+    if (suffixInfo && suffixInfo.suffix >= 2) {
+      throw new Error(
+        `Member name "${name}" is not allowed (reserved for Claude CLI auto-suffix). Use "${suffixInfo.base}" instead.`
+      );
+    }
+
     const members = await this.membersMetaStore.getMembers(teamName);
-    const existing = members.find((m) => m.name.toLowerCase() === request.name.toLowerCase());
+    const existing = members.find((m) => m.name.toLowerCase() === name.toLowerCase());
 
     if (existing) {
       if (existing.removedAt) {
-        throw new Error(`Name "${request.name}" was previously used by a removed member`);
+        throw new Error(`Name "${name}" was previously used by a removed member`);
       }
-      throw new Error(`Member "${request.name}" already exists`);
+      throw new Error(`Member "${name}" already exists`);
     }
 
     const newMember: TeamMember = {
-      name: request.name,
+      name,
       role: request.role?.trim() || undefined,
+      workflow: request.workflow?.trim() || undefined,
       agentType: 'general-purpose',
       color: getMemberColor(members.filter((m) => !m.removedAt).length),
       joinedAt: Date.now(),
@@ -677,6 +721,12 @@ export class TeamDataService {
       if (!name) throw new Error('Member name cannot be empty');
       if (name.toLowerCase() === 'team-lead') {
         throw new Error('Member name "team-lead" is reserved');
+      }
+      const suffixInfo = parseNumericSuffixName(name);
+      if (suffixInfo && suffixInfo.suffix >= 2) {
+        throw new Error(
+          `Member name "${name}" is not allowed (reserved for Claude CLI auto-suffix). Use "${suffixInfo.base}" instead.`
+        );
       }
       nextByName.add(name.toLowerCase());
       const prev = existingByName.get(name.toLowerCase());
@@ -812,6 +862,7 @@ export class TeamDataService {
             from: leadName,
             text: parts.join('\n'),
             summary: `New task #${task.id} assigned`,
+            source: 'system_notification',
           });
         }
       } catch {
@@ -856,6 +907,7 @@ export class TeamDataService {
             from: leadName,
             text: parts.join('\n'),
             summary: `Task #${task.id} started`,
+            source: 'system_notification',
           });
         }
       } catch {
@@ -911,9 +963,10 @@ export class TeamDataService {
         from: last.actor,
         text: `Task #${task.id} "${task.subject}" has been started by ${last.actor}.`,
         summary: `Task #${task.id} started`,
+        source: 'system_notification',
       });
     } catch (error) {
-      logger.warn(`[TeamDataService] notifyLeadOnTeammateTaskStart failed: ${error}`);
+      logger.warn(`[TeamDataService] notifyLeadOnTeammateTaskStart failed: ${String(error)}`);
     }
   }
 
@@ -944,7 +997,7 @@ export class TeamDataService {
   async addTaskAttachment(
     teamName: string,
     taskId: string,
-    meta: import('@shared/types').TaskAttachmentMeta
+    meta: TaskAttachmentMeta
   ): Promise<void> {
     await this.taskWriter.addAttachment(teamName, taskId, meta);
   }
@@ -987,7 +1040,7 @@ export class TeamDataService {
     teamName: string,
     taskId: string,
     text: string,
-    attachments?: import('@shared/types').TaskAttachmentMeta[]
+    attachments?: TaskAttachmentMeta[]
   ): Promise<TaskComment> {
     const comment = await this.taskWriter.addComment(teamName, taskId, text, {
       attachments,
@@ -1001,14 +1054,14 @@ export class TeamDataService {
       ]);
       const task = tasks.find((t) => t.id === taskId);
       const leadName = this.resolveLeadNameFromConfig(config);
-
+      const owner = task?.owner?.trim() || null;
       // Auto-clear needsClarification: "user" on UI comment
       // UI comments always have author "user" (TeamTaskWriter default)
       if (task?.needsClarification === 'user') {
         await this.taskWriter.setNeedsClarification(teamName, taskId, null);
       }
 
-      if (task?.owner && !this.isLeadOwner(task.owner, leadName)) {
+      if (task && owner && !this.isLeadOwner(owner, leadName)) {
         // Notify non-lead task owner via inbox (lead → member message)
         const parts = [
           `Comment on task #${taskId} "${task.subject}":\n\n${text}`,
@@ -1018,12 +1071,13 @@ export class TeamDataService {
           AGENT_BLOCK_CLOSE,
         ];
         await this.sendMessage(teamName, {
-          member: task.owner,
+          member: owner,
           from: leadName,
           text: parts.join('\n'),
           summary: `Comment on #${taskId}`,
+          source: 'system_notification',
         });
-      } else if (task?.owner && this.isLeadOwner(task.owner, leadName)) {
+      } else if (task && owner && this.isLeadOwner(owner, leadName)) {
         // Notify lead about user's comment on their own task.
         // Write to lead's inbox — relay delivers to stdin when process is alive.
         const parts = [
@@ -1038,6 +1092,7 @@ export class TeamDataService {
           from: 'user',
           text: parts.join('\n'),
           summary: `Comment on #${taskId}`,
+          source: 'system_notification',
         });
       }
     } catch {
@@ -1076,9 +1131,19 @@ export class TeamDataService {
     teamName: string,
     leadName: string,
     text: string,
-    summary?: string
+    summary?: string,
+    attachments?: AttachmentMeta[]
   ): Promise<SendMessageResult> {
     const messageId = randomUUID();
+
+    let leadSessionId: string | undefined;
+    try {
+      const config = await this.configReader.getConfig(teamName);
+      leadSessionId = config?.leadSessionId;
+    } catch {
+      // non-critical — proceed without sessionId
+    }
+
     const msg: InboxMessage = {
       from: 'user',
       to: leadName,
@@ -1088,6 +1153,8 @@ export class TeamDataService {
       summary,
       messageId,
       source: 'user_sent',
+      attachments: attachments?.length ? attachments : undefined,
+      leadSessionId,
     };
     await this.sentMessagesStore.appendMessage(teamName, msg);
     return { deliveredToInbox: false, deliveredViaStdin: true, messageId };
@@ -1146,6 +1213,7 @@ export class TeamDataService {
           `node "${toolPath}" --team ${teamName} review request-changes ${taskId} --comment "..."\n` +
           AGENT_BLOCK_CLOSE,
         summary: `Review request for #${taskId}`,
+        source: 'system_notification',
       });
     } catch (error) {
       await this.kanbanManager
@@ -1187,7 +1255,19 @@ export class TeamDataService {
     await this.membersMetaStore.writeMembers(
       request.teamName,
       request.members.map((member, index) => ({
-        name: member.name,
+        name: (() => {
+          const name = member.name.trim();
+          if (!name) throw new Error('Member name cannot be empty');
+          if (name.toLowerCase() === 'team-lead')
+            throw new Error('Member name "team-lead" is reserved');
+          const suffixInfo = parseNumericSuffixName(name);
+          if (suffixInfo && suffixInfo.suffix >= 2) {
+            throw new Error(
+              `Member name "${name}" is not allowed (reserved for Claude CLI auto-suffix). Use "${suffixInfo.base}" instead.`
+            );
+          }
+          return name;
+        })(),
         role: member.role?.trim() || undefined,
         agentType: 'general-purpose',
         color: getMemberColor(index),
@@ -1217,9 +1297,24 @@ export class TeamDataService {
     // Dedup broadcasts: same sender + same text → process only once
     const processedTexts = new Set<string>();
 
+    function isAutomatedCommentNotification(msg: InboxMessage): boolean {
+      const summary = typeof msg.summary === 'string' ? msg.summary : '';
+      if (!/^Comment on #\d+/.test(summary)) return false;
+      const text = typeof msg.text === 'string' ? msg.text : '';
+      if (!text) return false;
+      // These are system-generated inbox messages that already correspond to a real task comment.
+      // Syncing them into task.comments causes an immediate "duplicate" (lead echo) in the UI.
+      if (text.includes('Reply to this comment using:')) return true;
+      if (text.startsWith('Comment on task #')) return true;
+      if (text.startsWith('New comment from user on your task #')) return true;
+      return false;
+    }
+
     for (const msg of messages) {
       if (!msg.messageId || !msg.summary || msg.from === 'user') continue;
       if (msg.source === 'lead_session' || msg.source === 'lead_process') continue;
+      if (msg.source === 'system_notification') continue;
+      if (isAutomatedCommentNotification(msg)) continue;
 
       const textKey = `${msg.from}\0${msg.text}`;
       if (processedTexts.has(textKey)) continue;
@@ -1325,6 +1420,7 @@ export class TeamDataService {
               timestamp,
               read: true,
               source: 'lead_session',
+              leadSessionId: config.leadSessionId,
             });
             if (textsReversed.length >= MAX_LEAD_TEXTS) break;
           }
@@ -1347,7 +1443,34 @@ export class TeamDataService {
 
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
     if (patch.op !== 'request_changes') {
+      // Keep kanban + task.status consistent:
+      // - moving a task into kanban review/approved implies the work is complete
+      // - request_changes already moves it back to in_progress and clears kanban entry
+      if (patch.op !== 'set_column') {
+        await this.kanbanManager.updateTask(teamName, taskId, patch);
+        return;
+      }
+
+      const previousState = await this.kanbanManager.getState(teamName);
+      const previousKanbanEntry: KanbanTaskState | undefined = previousState.tasks[taskId];
+
       await this.kanbanManager.updateTask(teamName, taskId, patch);
+
+      try {
+        await this.taskWriter.updateStatus(teamName, taskId, 'completed', 'user');
+      } catch (error) {
+        // Best-effort rollback of kanban move if task status update failed.
+        if (previousKanbanEntry) {
+          await this.kanbanManager
+            .updateTask(teamName, taskId, { op: 'set_column', column: previousKanbanEntry.column })
+            .catch(() => undefined);
+        } else {
+          await this.kanbanManager
+            .updateTask(teamName, taskId, { op: 'remove' })
+            .catch(() => undefined);
+        }
+        throw error;
+      }
       return;
     }
 
@@ -1374,6 +1497,7 @@ export class TeamDataService {
           `${patch.comment?.trim() || 'Reviewer requested changes.'}\n\n` +
           `Please fix and mark it as completed when ready.`,
         summary: `Fix request for #${taskId}`,
+        source: 'system_notification',
       });
     } catch (error) {
       await this.taskWriter

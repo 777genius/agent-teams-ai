@@ -15,8 +15,18 @@ export interface ParsedMessageReply {
 const REPLY_BLOCK_RE = new RegExp(
   '```' +
     MESSAGE_REPLY_TAG +
-    '\\nReply on @([\\w-]+) original message with text "([\\s\\S]*?)", here is answer: "([\\s\\S]*?)"\\n```'
+    '\\nReply on @([\\w.-]+) original message with text "([\\s\\S]*?)", here is answer: "([\\s\\S]*?)"\\n```'
 );
+
+function encodeReplyField(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function decodeReplyField(value: string): string {
+  // Backwards-compat: avoid touching legacy content that has no escapes.
+  if (!value.includes('\\"') && !value.includes('\\\\')) return value;
+  return value.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+}
 
 /**
  * Parses a message_reply_for_agent block from content.
@@ -27,8 +37,8 @@ export function parseMessageReply(content: string): ParsedMessageReply | null {
   if (!match) return null;
   return {
     agentName: match[1],
-    originalText: match[2],
-    replyText: match[3],
+    originalText: decodeReplyField(match[2]),
+    replyText: decodeReplyField(match[3]),
   };
 }
 
@@ -43,7 +53,7 @@ export function buildReplyBlock(
   const tag = MESSAGE_REPLY_TAG;
   return [
     '```' + tag,
-    `Reply on @${agentName} original message with text "${originalText}", here is answer: "${replyText}"`,
+    `Reply on @${agentName} original message with text "${encodeReplyField(originalText)}", here is answer: "${encodeReplyField(replyText)}"`,
     '```',
   ].join('\n');
 }

@@ -13,6 +13,13 @@ export class TeamInboxWriter {
     const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${request.member}.json`);
     const messageId = randomUUID();
 
+    const attachmentMeta = request.attachments?.map((a) => ({
+      id: a.id,
+      filename: a.filename,
+      mimeType: a.mimeType,
+      size: a.size,
+    }));
+
     const payload: InboxMessage = {
       from: request.from ?? 'user',
       to: request.member,
@@ -21,6 +28,8 @@ export class TeamInboxWriter {
       read: false,
       summary: request.summary,
       messageId,
+      attachments: attachmentMeta?.length ? attachmentMeta : undefined,
+      ...(request.source && { source: request.source }),
     };
 
     await withInboxLock(inboxPath, async () => {

@@ -97,8 +97,11 @@ export class FileWatcher extends EventEmitter {
   private pendingReprocess = new Set<string>();
   /** Flag to prevent reuse after disposal */
   private disposed = false;
-  /** Timestamp when this FileWatcher instance was created (used to distinguish old vs new files) */
-  private readonly instanceCreatedAt = Date.now();
+  /** Timestamp when this FileWatcher instance was created (used to distinguish old vs new files).
+   * Floored to second granularity because filesystem birthtimeMs may have lower resolution
+   * than Date.now() — without this, a file created in the same millisecond-window could
+   * appear older than the watcher on some platforms (e.g. ext4 on Linux). */
+  private readonly instanceCreatedAt = Math.floor(Date.now() / 1000) * 1000;
 
   constructor(
     dataCache: DataCache,

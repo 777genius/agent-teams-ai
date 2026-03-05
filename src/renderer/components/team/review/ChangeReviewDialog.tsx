@@ -724,14 +724,12 @@ export const ChangeReviewDialog = ({
     });
   }, [activeChangeSet, initialFilePath, scrollToFile]);
 
-  // Clear selection state on close (React-approved setState-during-render pattern)
-  const [prevOpen, setPrevOpen] = useState(open);
-  if (prevOpen !== open) {
-    setPrevOpen(open);
+  // Clear selection state on close
+  useEffect(() => {
     if (!open) {
       setSelectionInfo(null);
     }
-  }
+  }, [open]);
 
   // Cleanup refs/timers on close
   useEffect(() => {

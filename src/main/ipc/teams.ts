@@ -11,15 +11,18 @@ import {
   TEAM_CREATE,
   TEAM_CREATE_CONFIG,
   TEAM_CREATE_TASK,
+  TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_DELETE_TEAM,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
+  TEAM_GET_CLAUDE_LOGS,
   TEAM_GET_DATA,
   TEAM_GET_DELETED_TASKS,
   TEAM_GET_LOGS_FOR_TASK,
   TEAM_GET_MEMBER_LOGS,
   TEAM_GET_MEMBER_STATS,
   TEAM_GET_PROJECT_BRANCH,
+  TEAM_GET_TASK_ATTACHMENT,
   TEAM_KILL_PROCESS,
   TEAM_LAUNCH,
   TEAM_LEAD_ACTIVITY,
@@ -37,6 +40,7 @@ import {
   TEAM_REQUEST_REVIEW,
   TEAM_RESTORE,
   TEAM_RESTORE_TASK,
+  TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SEND_MESSAGE,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SHOW_MESSAGE_NOTIFICATION,
@@ -50,11 +54,9 @@ import {
   TEAM_UPDATE_TASK_FIELDS,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
-  TEAM_SAVE_TASK_ATTACHMENT,
-  TEAM_GET_TASK_ATTACHMENT,
-  TEAM_DELETE_TASK_ATTACHMENT,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
+import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { createLogger } from '@shared/utils/logger';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
@@ -89,7 +91,6 @@ import type {
 } from '../services';
 import type {
   AttachmentFileData,
-  AttachmentMediaType,
   AttachmentMeta,
   AttachmentPayload,
   CreateTaskRequest,
@@ -103,6 +104,8 @@ import type {
   SendMessageResult,
   TaskAttachmentMeta,
   TaskComment,
+  TeamClaudeLogsQuery,
+  TeamClaudeLogsResponse,
   TeamConfig,
   TeamCreateConfigRequest,
   TeamCreateRequest,
@@ -195,6 +198,7 @@ export function initializeTeamHandlers(
 export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_LIST, handleListTeams);
   ipcMain.handle(TEAM_GET_DATA, handleGetData);
+  ipcMain.handle(TEAM_GET_CLAUDE_LOGS, handleGetClaudeLogs);
   ipcMain.handle(TEAM_PREPARE_PROVISIONING, handlePrepareProvisioning);
   ipcMain.handle(TEAM_CREATE, handleCreateTeam);
   ipcMain.handle(TEAM_LAUNCH, handleLaunchTeam);
@@ -248,6 +252,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
 export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_LIST);
   ipcMain.removeHandler(TEAM_GET_DATA);
+  ipcMain.removeHandler(TEAM_GET_CLAUDE_LOGS);
   ipcMain.removeHandler(TEAM_PREPARE_PROVISIONING);
   ipcMain.removeHandler(TEAM_CREATE);
   ipcMain.removeHandler(TEAM_LAUNCH);
@@ -386,12 +391,6 @@ async function handleGetData(
   }
   const provisioning = getTeamProvisioningService();
   const isAlive = provisioning.isTeamAlive(tn);
-
-  if (isAlive) {
-    void provisioning
-      .relayLeadInboxMessages(tn)
-      .catch((e: unknown) => logger.warn(`Relay failed for ${tn}: ${e}`));
-  }
 
   const displayName = data.config.name || tn;
   const projectPath = data.config.projectPath;
@@ -632,6 +631,39 @@ async function validateProvisioningRequest(
       model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
     },
   };
+}
+
+async function handleGetClaudeLogs(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  query?: unknown
+): Promise<IpcResult<TeamClaudeLogsResponse>> {
+  const validated = validateTeamName(teamName);
+  if (!validated.valid) {
+    return { success: false, error: validated.error ?? 'Invalid teamName' };
+  }
+
+  let parsed: TeamClaudeLogsQuery | undefined;
+  if (query !== undefined) {
+    if (!query || typeof query !== 'object') {
+      return { success: false, error: 'query must be an object' };
+    }
+    const q = query as Record<string, unknown>;
+    parsed = {
+      offset: typeof q.offset === 'number' ? q.offset : undefined,
+      limit: typeof q.limit === 'number' ? q.limit : undefined,
+    };
+  }
+
+  return wrapTeamHandler('getClaudeLogs', async () => {
+    const data = getTeamProvisioningService().getClaudeLogs(validated.value!, parsed);
+    return {
+      lines: data.lines,
+      total: data.total,
+      hasMore: data.hasMore,
+      updatedAt: data.updatedAt,
+    };
+  });
 }
 
 async function handleCreateTeam(
@@ -937,6 +969,13 @@ async function handleSendMessage(
       }
 
       if (stdinSent) {
+        const attachmentMeta: AttachmentMeta[] | undefined = validatedAttachments?.map((a) => ({
+          id: a.id,
+          filename: a.filename,
+          mimeType: a.mimeType,
+          size: a.size,
+        }));
+
         // Persistence is best-effort — stdin already delivered the message
         let result: SendMessageResult;
         try {
@@ -944,19 +983,13 @@ async function handleSendMessage(
             tn,
             leadName,
             payload.text!,
-            payload.summary
+            payload.summary,
+            attachmentMeta
           );
         } catch (persistError) {
           logger.warn(`Persistence failed after stdin delivery for ${tn}: ${String(persistError)}`);
           result = { deliveredToInbox: false, messageId: `stdin-${Date.now()}` };
         }
-
-        const attachmentMeta: AttachmentMeta[] | undefined = validatedAttachments?.map((a) => ({
-          id: a.id,
-          filename: a.filename,
-          mimeType: a.mimeType,
-          size: a.size,
-        }));
 
         // Save attachment binary data to disk (best-effort)
         if (validatedAttachments?.length && result.messageId) {
@@ -982,18 +1015,42 @@ async function handleSendMessage(
     }
 
     // Inbox path: offline lead or regular members (no attachment support)
+    const baseText = payload.text!.trim();
+    const memberDeliveryText = isLeadRecipient
+      ? baseText
+      : [
+          baseText,
+          '',
+          AGENT_BLOCK_OPEN,
+          'You received a direct message from the human user via the UI.',
+          'Please reply back to recipient "user" with a short, human-readable answer.',
+          'If you cannot respond now, reply with a brief status (e.g. "Busy, will reply later").',
+          AGENT_BLOCK_CLOSE,
+        ].join('\n');
     const result = await getTeamDataService().sendMessage(tn, {
       member: memberName,
-      text: payload.text!,
+      text: memberDeliveryText,
       summary: payload.summary,
       from: payload.from,
     });
+
+    // Best-effort: if team is alive and recipient is a teammate (not lead),
+    // also forward via the live lead process so in-process teammates receive it.
+    if (!isLeadRecipient && isAlive) {
+      try {
+        await provisioning.forwardUserDmToTeammate(tn, memberName, baseText, payload.summary);
+      } catch (e: unknown) {
+        logger.warn(`Failed to forward user DM to teammate "${memberName}" via lead: ${String(e)}`);
+      }
+    }
 
     // Best-effort relay for lead via inbox
     if (isLeadRecipient && isAlive) {
       void provisioning
         .relayLeadInboxMessages(tn)
-        .catch((e: unknown) => logger.warn(`Relay after sendMessage failed for ${tn}: ${e}`));
+        .catch((e: unknown) =>
+          logger.warn(`Relay after sendMessage failed for ${tn}: ${String(e)}`)
+        );
     }
 
     return result;
@@ -1982,7 +2039,7 @@ async function handleAddTaskComment(
           vTask.value!,
           safeId,
           a.filename,
-          a.mimeType as AttachmentMediaType,
+          a.mimeType,
           a.base64Data
         );
         savedAttachments.push(meta);
@@ -2104,9 +2161,9 @@ async function handleSaveTaskAttachment(
       vTeam.value!,
       vTask.value!,
       safeAttId,
-      filename as string,
-      mimeType as AttachmentMediaType,
-      base64Data as string
+      filename,
+      mimeType,
+      base64Data
     );
     // Write metadata into the task JSON
     await getTeamDataService().addTaskAttachment(vTeam.value!, vTask.value!, meta);
@@ -2137,12 +2194,7 @@ async function handleGetTaskAttachment(
   }
 
   return wrapTeamHandler('getTaskAttachment', () =>
-    taskAttachmentStore.getAttachment(
-      vTeam.value!,
-      vTask.value!,
-      safeAttId,
-      mimeType as AttachmentMediaType
-    )
+    taskAttachmentStore.getAttachment(vTeam.value!, vTask.value!, safeAttId, mimeType)
   );
 }
 
@@ -2169,12 +2221,7 @@ async function handleDeleteTaskAttachment(
   }
 
   return wrapTeamHandler('deleteTaskAttachment', async () => {
-    await taskAttachmentStore.deleteAttachment(
-      vTeam.value!,
-      vTask.value!,
-      safeAttId,
-      mimeType as AttachmentMediaType
-    );
+    await taskAttachmentStore.deleteAttachment(vTeam.value!, vTask.value!, safeAttId, mimeType);
     // Remove metadata from task JSON
     await getTeamDataService().removeTaskAttachment(vTeam.value!, vTask.value!, safeAttId);
   });

@@ -204,6 +204,8 @@ interface MentionableTextareaProps extends Omit<
   projectPath?: string | null;
   /** Called when a file chip is created via @ selection. Parent must add chip to state. */
   onFileChipInsert?: (chip: InlineChip) => void;
+  /** Called when Enter (without Shift) is pressed. */
+  onModEnter?: () => void;
 }
 
 export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, MentionableTextareaProps>(
@@ -220,6 +222,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       onChipRemove,
       projectPath,
       onFileChipInsert,
+      onModEnter,
       style,
       className,
       ...textareaProps
@@ -497,9 +500,15 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       [isOpen, allSuggestions, mergedIndex, handleMergedSelect, dismiss]
     );
 
-    // Composed key handler: chip logic → (file-aware OR original) mention logic
+    // Composed key handler: Mod+Enter submit → chip logic → mention logic
     const composedHandleKeyDown = React.useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        // Enter (without Shift) → submit; Shift+Enter → newline
+        if (e.key === 'Enter' && !e.shiftKey && onModEnter) {
+          e.preventDefault();
+          onModEnter();
+          return;
+        }
         handleChipKeyDown(e);
         if (!e.defaultPrevented) {
           if (enableFiles) {
@@ -509,7 +518,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           }
         }
       },
-      [handleChipKeyDown, enableFiles, fileMentionHandleKeyDown, mentionHandleKeyDown]
+      [onModEnter, handleChipKeyDown, enableFiles, fileMentionHandleKeyDown, mentionHandleKeyDown]
     );
 
     // --- Chip reconciliation on text change ---

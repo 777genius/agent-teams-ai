@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightbox';
 import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';
-import { ImagePlus, Loader2, Trash2, X } from 'lucide-react';
+import { isImageMimeType } from '@renderer/utils/attachmentUtils';
+import { File, ImagePlus, Loader2, Trash2 } from 'lucide-react';
 
-import type { AttachmentMediaType, TaskAttachmentMeta } from '@shared/types';
+import type { TaskAttachmentMeta } from '@shared/types';
 
 const ACCEPTED_TYPES = new Set<string>(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 
@@ -28,13 +30,20 @@ export const TaskAttachments = ({
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [previewAttachment, setPreviewAttachment] = useState<{
-    id: string;
-    mimeType: AttachmentMediaType;
-    dataUrl: string | null;
-    loading: boolean;
-  } | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [thumbCache, setThumbCache] = useState<Map<string, string>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const imageAttachments = attachments.filter((a) => isImageMimeType(a.mimeType));
+
+  const handleThumbLoaded = useCallback((attachmentId: string, dataUrl: string) => {
+    setThumbCache((prev) => {
+      if (prev.get(attachmentId) === dataUrl) return prev;
+      const next = new Map(prev);
+      next.set(attachmentId, dataUrl);
+      return next;
+    });
+  }, []);
 
   const handleFileSelect = useCallback(
     async (files: FileList | null) => {
@@ -73,48 +82,74 @@ export const TaskAttachments = ({
   );
 
   const handleDelete = useCallback(
-    async (attachmentId: string, mimeType: AttachmentMediaType) => {
+    async (attachmentId: string, mimeType: string) => {
       setDeletingId(attachmentId);
       try {
         await deleteTaskAttachment(teamName, taskId, attachmentId, mimeType);
-        if (previewAttachment?.id === attachmentId) {
-          setPreviewAttachment(null);
-        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to delete');
       } finally {
         setDeletingId(null);
       }
     },
-    [teamName, taskId, deleteTaskAttachment, previewAttachment]
+    [teamName, taskId, deleteTaskAttachment]
+  );
+
+  const handleDownload = useCallback(
+    async (att: TaskAttachmentMeta) => {
+      setError(null);
+      try {
+        const base64 = await getTaskAttachmentData(teamName, taskId, att.id, att.mimeType);
+        if (!base64) {
+          setError('Attachment file not found');
+          return;
+        }
+        const mime =
+          att.mimeType && typeof att.mimeType === 'string'
+            ? att.mimeType
+            : 'application/octet-stream';
+        const dataUrl = `data:${mime};base64,${base64}`;
+        const blob = await fetch(dataUrl).then((r) => r.blob());
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = att.filename || 'attachment';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to download');
+      }
+    },
+    [getTaskAttachmentData, teamName, taskId]
+  );
+
+  // 1x1 transparent PNG placeholder for slides where thumb is not yet loaded
+  const PLACEHOLDER_SRC =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualIQAAAABJRU5ErkJggg==';
+
+  const lightboxSlides = useMemo(
+    () =>
+      imageAttachments.map((a) => ({
+        src: thumbCache.get(a.id) ?? PLACEHOLDER_SRC,
+        alt: a.filename,
+      })),
+    [imageAttachments, thumbCache]
   );
 
   const handlePreview = useCallback(
-    async (att: TaskAttachmentMeta) => {
-      if (previewAttachment?.id === att.id && previewAttachment.dataUrl) {
-        setPreviewAttachment(null);
+    (att: TaskAttachmentMeta) => {
+      if (!isImageMimeType(att.mimeType)) {
+        void handleDownload(att);
         return;
       }
-      setPreviewAttachment({ id: att.id, mimeType: att.mimeType, dataUrl: null, loading: true });
-      try {
-        const base64 = await getTaskAttachmentData(teamName, taskId, att.id, att.mimeType);
-        if (base64) {
-          setPreviewAttachment({
-            id: att.id,
-            mimeType: att.mimeType,
-            dataUrl: `data:${att.mimeType};base64,${base64}`,
-            loading: false,
-          });
-        } else {
-          setPreviewAttachment(null);
-          setError('Attachment file not found');
-        }
-      } catch {
-        setPreviewAttachment(null);
-        setError('Failed to load attachment');
+      const idx = imageAttachments.findIndex((a) => a.id === att.id);
+      if (idx >= 0) {
+        setLightboxIndex(idx);
       }
     },
-    [teamName, taskId, getTaskAttachmentData, previewAttachment]
+    [imageAttachments, handleDownload]
   );
 
   // Handle paste events for quick image attachment
@@ -179,38 +214,31 @@ export const TaskAttachments = ({
               teamName={teamName}
               taskId={taskId}
               isDeleting={deletingId === att.id}
-              isPreviewActive={previewAttachment?.id === att.id}
-              onPreview={() => void handlePreview(att)}
-              onDelete={() => void handleDelete(att.id, att.mimeType)}
+              onPreview={() => {
+                // eslint-disable-next-line sonarjs/void-use -- void needed to mark floating promise
+                void handlePreview(att);
+              }}
+              onDelete={() => {
+                // eslint-disable-next-line sonarjs/void-use -- void needed to mark floating promise
+                void handleDelete(att.id, att.mimeType);
+              }}
+              onDataLoaded={handleThumbLoaded}
             />
           ))}
         </div>
       ) : null}
 
-      {/* Preview panel */}
-      {previewAttachment ? (
-        <div className="relative rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
-          <button
-            type="button"
-            className="absolute right-2 top-2 rounded p-0.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
-            onClick={() => setPreviewAttachment(null)}
-          >
-            <X size={14} />
-          </button>
-          {previewAttachment.loading ? (
-            <div className="flex items-center gap-2 py-4 text-xs text-[var(--color-text-muted)]">
-              <Loader2 size={14} className="animate-spin" />
-              Loading image...
-            </div>
-          ) : previewAttachment.dataUrl ? (
-            <img
-              src={previewAttachment.dataUrl}
-              alt="Attachment preview"
-              className="max-h-[400px] max-w-full rounded object-contain"
-            />
-          ) : null}
-        </div>
-      ) : null}
+      {/* Image lightbox */}
+      {lightboxIndex !== null && (
+        <ImageLightbox
+          open
+          onClose={() => {
+            setLightboxIndex(null);
+          }}
+          slides={lightboxSlides}
+          index={lightboxIndex}
+        />
+      )}
 
       {/* Drop zone indicator */}
       {dragOver ? (
@@ -256,9 +284,9 @@ interface AttachmentThumbnailProps {
   teamName: string;
   taskId: string;
   isDeleting: boolean;
-  isPreviewActive: boolean;
   onPreview: () => void;
   onDelete: () => void;
+  onDataLoaded?: (attachmentId: string, dataUrl: string) => void;
 }
 
 const AttachmentThumbnail = ({
@@ -266,9 +294,9 @@ const AttachmentThumbnail = ({
   teamName,
   taskId,
   isDeleting,
-  isPreviewActive,
   onPreview,
   onDelete,
+  onDataLoaded,
 }: AttachmentThumbnailProps): React.JSX.Element => {
   const getTaskAttachmentData = useStore((s) => s.getTaskAttachmentData);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
@@ -277,6 +305,7 @@ const AttachmentThumbnail = ({
     let cancelled = false;
     void (async () => {
       try {
+        if (!isImageMimeType(attachment.mimeType)) return;
         const base64 = await getTaskAttachmentData(
           teamName,
           taskId,
@@ -284,7 +313,9 @@ const AttachmentThumbnail = ({
           attachment.mimeType
         );
         if (!cancelled && base64) {
-          setThumbUrl(`data:${attachment.mimeType};base64,${base64}`);
+          const dataUrl = `data:${attachment.mimeType};base64,${base64}`;
+          setThumbUrl(dataUrl);
+          onDataLoaded?.(attachment.id, dataUrl);
         }
       } catch {
         // ignore
@@ -293,7 +324,7 @@ const AttachmentThumbnail = ({
     return () => {
       cancelled = true;
     };
-  }, [teamName, taskId, attachment.id, attachment.mimeType, getTaskAttachmentData]);
+  }, [teamName, taskId, attachment.id, attachment.mimeType, getTaskAttachmentData, onDataLoaded]);
 
   const sizeLabel =
     attachment.size < 1024
@@ -304,17 +335,22 @@ const AttachmentThumbnail = ({
 
   return (
     <div
-      className={`group relative flex size-20 cursor-pointer items-center justify-center overflow-hidden rounded border transition-colors ${
-        isPreviewActive
-          ? 'border-blue-500/60 ring-1 ring-blue-500/30'
-          : 'border-[var(--color-border)] hover:border-[var(--color-border-emphasis)]'
-      } bg-[var(--color-surface)]`}
+      className={`group relative flex size-20 cursor-pointer items-center justify-center overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] transition-colors hover:border-[var(--color-border-emphasis)]`}
       onClick={onPreview}
     >
-      {thumbUrl ? (
-        <img src={thumbUrl} alt={attachment.filename} className="size-full object-cover" />
+      {isImageMimeType(attachment.mimeType) ? (
+        thumbUrl ? (
+          <img src={thumbUrl} alt={attachment.filename} className="size-full object-cover" />
+        ) : (
+          <Loader2 size={16} className="animate-spin text-[var(--color-text-muted)]" />
+        )
       ) : (
-        <Loader2 size={16} className="animate-spin text-[var(--color-text-muted)]" />
+        <div className="flex flex-col items-center gap-1 px-1 text-center">
+          <File size={18} className="text-[var(--color-text-muted)]" />
+          <div className="max-w-full truncate text-[9px] text-[var(--color-text-muted)]">
+            {attachment.filename}
+          </div>
+        </div>
       )}
       {/* Delete button overlay */}
       <button
@@ -353,7 +389,7 @@ function fileToBase64(file: File): Promise<string> {
         reject(new Error('Failed to read file as base64'));
       }
     };
-    reader.onerror = () => reject(reader.error);
+    reader.onerror = () => reject(reader.error ?? new Error('File read failed'));
     reader.readAsDataURL(file);
   });
 }

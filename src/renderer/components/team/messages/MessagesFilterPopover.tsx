@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { useStore } from '@renderer/store';
+import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { Filter } from 'lucide-react';
 
 import type { InboxMessage } from '@shared/types';
@@ -11,6 +14,8 @@ import type { InboxMessage } from '@shared/types';
 export interface MessagesFilterState {
   from: Set<string>;
   to: Set<string>;
+  /** When true, include internal coordination noise (idle/shutdown/etc.) */
+  showNoise: boolean;
 }
 
 interface MessagesFilterPopoverProps {
@@ -44,18 +49,26 @@ export const MessagesFilterPopover = ({
   onOpenChange,
   onApply,
 }: MessagesFilterPopoverProps): React.JSX.Element => {
-  const [draft, setDraft] = useState<MessagesFilterState>({ from: new Set(), to: new Set() });
+  const [draft, setDraft] = useState<MessagesFilterState>({
+    from: new Set(),
+    to: new Set(),
+    showNoise: false,
+  });
 
   useEffect(() => {
     if (open) {
       const next = {
         from: new Set(filter.from),
         to: new Set(filter.to),
+        showNoise: !!filter.showNoise,
       };
       const schedule = (): void => setDraft(next);
       queueMicrotask(schedule);
     }
-  }, [open, filter.from, filter.to]);
+  }, [open, filter.from, filter.to, filter.showNoise]);
+
+  const members = useStore((s) => s.selectedTeamData?.members ?? []);
+  const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
 
   const fromOptions = useMemo(() => collectFromOptions(messages), [messages]);
   const toOptions = useMemo(() => collectToOptions(messages), [messages]);
@@ -87,7 +100,7 @@ export const MessagesFilterPopover = ({
   };
 
   const handleReset = (): void => {
-    const empty = { from: new Set<string>(), to: new Set<string>() };
+    const empty = { from: new Set<string>(), to: new Set<string>(), showNoise: false };
     setDraft(empty);
     onApply(empty);
   };
@@ -124,6 +137,7 @@ export const MessagesFilterPopover = ({
               <p className="text-xs italic text-[var(--color-text-muted)]">No data</p>
             ) : (
               fromOptions.map((name) => (
+                // eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox which renders native input internally
                 <label
                   key={name}
                   className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
@@ -132,7 +146,12 @@ export const MessagesFilterPopover = ({
                     checked={draft.from.has(name)}
                     onCheckedChange={() => toggleFrom(name)}
                   />
-                  {name}
+                  <MemberBadge
+                    name={name}
+                    color={colorMap.get(name)}
+                    size="sm"
+                    hideAvatar={name === 'user'}
+                  />
                 </label>
               ))
             )}
@@ -147,23 +166,39 @@ export const MessagesFilterPopover = ({
               <p className="text-xs italic text-[var(--color-text-muted)]">No data</p>
             ) : (
               toOptions.map((name) => (
+                // eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox which renders native input internally
                 <label
                   key={name}
                   className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
                 >
                   <Checkbox checked={draft.to.has(name)} onCheckedChange={() => toggleTo(name)} />
-                  {name}
+                  <MemberBadge
+                    name={name}
+                    color={colorMap.get(name)}
+                    size="sm"
+                    hideAvatar={name === 'user'}
+                  />
                 </label>
               ))
             )}
           </div>
+        </div>
+        <div className="border-b border-[var(--color-border)] p-3">
+          {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox */}
+          <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
+            <Checkbox
+              checked={draft.showNoise}
+              onCheckedChange={() => setDraft((prev) => ({ ...prev, showNoise: !prev.showNoise }))}
+            />
+            <span>Show status updates (idle/shutdown)</span>
+          </label>
         </div>
         <div className="flex justify-between gap-2 p-2">
           <Button
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-            disabled={draftCount === 0}
+            disabled={draftCount === 0 && !draft.showNoise}
             onClick={handleReset}
           >
             Reset

@@ -1,3 +1,5 @@
+import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
+
 import type {
   InboxMessage,
   MemberStatus,
@@ -77,6 +79,14 @@ export class TeamMemberResolver {
     // "user" is a built-in pseudo-member in Claude Code's team framework
     // (recipient of SendMessage to "user"). It's not a real AI teammate.
     names.delete('user');
+
+    // Defense: hide CLI auto-suffixed duplicates (alice-2) when base name (alice) exists.
+    const keepName = createCliAutoSuffixNameGuard(names);
+    for (const name of Array.from(names)) {
+      if (!keepName(name)) {
+        names.delete(name);
+      }
+    }
 
     const members: ResolvedTeamMember[] = [];
     for (const name of names) {

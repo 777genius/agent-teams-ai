@@ -491,10 +491,11 @@ export const CreateTeamDialog = ({
     activeError?.includes('Team already exists') === true && request.teamName.length > 0;
 
   const conflictingTeam = useMemo(() => {
+    if (!launchTeam) return null;
     if (!activeTeams?.length || !effectiveCwd) return null;
     const norm = normalizePath(effectiveCwd);
     return activeTeams.find((t) => normalizePath(t.projectPath) === norm) ?? null;
-  }, [activeTeams, effectiveCwd]);
+  }, [activeTeams, effectiveCwd, launchTeam]);
 
   // Reset dismiss when conflict target changes
   useEffect(() => {
@@ -554,6 +555,19 @@ export const CreateTeamDialog = ({
     })();
   };
 
+  const handleTeamNameChange = (value: string): void => {
+    setTeamName(value);
+    setFieldErrors((prev) => {
+      if (!prev.teamName) return prev;
+      // eslint-disable-next-line sonarjs/no-unused-vars -- destructured to omit teamName from rest
+      const { teamName: _teamName, ...rest } = prev;
+      if (!rest.members && !rest.cwd && localError === 'Check form fields') {
+        setLocalError(null);
+      }
+      return rest;
+    });
+  };
+
   return (
     <Dialog
       open={open}
@@ -575,22 +589,32 @@ export const CreateTeamDialog = ({
         </DialogHeader>
 
         {conflictingTeam && !conflictDismissed ? (
-          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+          <div
+            className="rounded-md border p-3 text-xs"
+            style={{
+              backgroundColor: 'var(--warning-bg)',
+              borderColor: 'var(--warning-border)',
+              color: 'var(--warning-text)',
+            }}
+          >
             <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               <div className="min-w-0 flex-1 space-y-1">
-                <p className="font-medium text-amber-300">
-                  Team &ldquo;{conflictingTeam.displayName}&rdquo; is already running in this
-                  project
+                <p className="font-medium">
+                  Another team &ldquo;{conflictingTeam.displayName}&rdquo; is already running for
+                  this working directory
                 </p>
-                <p className="text-amber-300/80">
+                <p className="opacity-80">
                   Running two teams in the same directory is risky — they may conflict editing the
                   same files. Consider using a different directory or a git worktree for isolation.
+                </p>
+                <p className="text-[11px] opacity-70">
+                  Working directory: <span className="font-mono">{effectiveCwd}</span>
                 </p>
               </div>
               <button
                 type="button"
-                className="shrink-0 rounded p-0.5 text-amber-400/60 transition-colors hover:text-amber-300"
+                className="shrink-0 rounded p-0.5 opacity-60 transition-colors hover:opacity-100"
                 onClick={() => setConflictDismissed(true)}
               >
                 <X className="size-3.5" />
@@ -613,7 +637,11 @@ export const CreateTeamDialog = ({
                 {prepareWarnings.length > 0 ? (
                   <div className="space-y-0.5">
                     {prepareWarnings.map((warning) => (
-                      <p key={warning} className="text-[11px] text-amber-300">
+                      <p
+                        key={warning}
+                        className="text-[11px]"
+                        style={{ color: 'var(--warning-text)' }}
+                      >
                         {warning}
                       </p>
                     ))}
@@ -629,7 +657,14 @@ export const CreateTeamDialog = ({
         ) : null}
 
         {!canCreate ? (
-          <p className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-300">
+          <p
+            className="rounded border p-2 text-xs"
+            style={{
+              backgroundColor: 'var(--warning-bg)',
+              borderColor: 'var(--warning-border)',
+              color: 'var(--warning-text)',
+            }}
+          >
             Available only in local Electron mode.
           </p>
         ) : null}
@@ -641,7 +676,7 @@ export const CreateTeamDialog = ({
               id="team-name"
               className="h-8 text-xs"
               value={teamName}
-              onChange={(event) => setTeamName(event.target.value)}
+              onChange={(event) => handleTeamNameChange(event.target.value)}
               placeholder="team-alpha"
             />
             {existingTeamNames.includes(sanitizedTeamName) ? (

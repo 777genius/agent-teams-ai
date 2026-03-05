@@ -370,9 +370,7 @@ export function initializeNotificationListeners(): () => void {
           // Clear context data when lead goes offline
           if (nextActivity === 'offline') {
             nextState.leadContextByTeam = { ...prev.leadContextByTeam };
-            delete (nextState.leadContextByTeam as Record<string, LeadContextUsage>)[
-              event.teamName
-            ];
+            delete nextState.leadContextByTeam[event.teamName];
           }
 
           return nextState as typeof prev;

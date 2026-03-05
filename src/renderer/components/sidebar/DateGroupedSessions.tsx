@@ -150,7 +150,7 @@ type VirtualItem =
  * Mismatch causes items to overlap!
  */
 const HEADER_HEIGHT = 28;
-const SESSION_HEIGHT = 48; // Must match h-[48px] in SessionItem.tsx
+const SESSION_HEIGHT = 58; // Must match h-[58px] in SessionItem.tsx
 const LOADER_HEIGHT = 36;
 const OVERSCAN = 5;
 

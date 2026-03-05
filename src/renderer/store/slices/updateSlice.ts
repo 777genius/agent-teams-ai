@@ -57,6 +57,7 @@ export const createUpdateSlice: StateCreator<AppState, [], [], UpdateSlice> = (s
     set({ updateStatus: 'checking', updateError: null });
     api.updater.check().catch((error) => {
       logger.error('Failed to check for updates:', error);
+      set({ updateStatus: 'error', updateError: error instanceof Error ? error.message : 'Check failed' });
     });
   },
 

@@ -46,7 +46,11 @@ export const PaneContent = ({ pane }: PaneContentProps): React.JSX.Element => {
             {tab.type === 'notifications' && <NotificationsView />}
             {tab.type === 'settings' && <SettingsView />}
             {tab.type === 'teams' && <TeamListView />}
-            {tab.type === 'team' && <TeamDetailView teamName={tab.teamName ?? ''} />}
+            {tab.type === 'team' && (
+              <TabUIProvider tabId={tab.id}>
+                <TeamDetailView teamName={tab.teamName ?? ''} />
+              </TabUIProvider>
+            )}
             {tab.type === 'session' && (
               <TabUIProvider tabId={tab.id}>
                 <SessionTabContent tab={tab} isActive={isActive} />

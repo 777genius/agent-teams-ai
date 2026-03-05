@@ -6,6 +6,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { useResizableColumns } from '@renderer/hooks/useResizableColumns';
 import { cn } from '@renderer/lib/utils';
 import {
   CheckCircle2,
@@ -402,6 +403,17 @@ export const KanbanBoard = ({
     );
   };
 
+  const visibleColumns = useMemo(
+    () => (filter.columns.size > 0 ? COLUMNS.filter((c) => filter.columns.has(c.id)) : COLUMNS),
+    [filter.columns]
+  );
+
+  const resizableColumnIds = useMemo(() => visibleColumns.map((c) => c.id), [visibleColumns]);
+  const { widths: columnWidths, getHandleProps } = useResizableColumns({
+    storageKey: teamName,
+    columnIds: resizableColumnIds,
+  });
+
   const boardContent = (
     <>
       <div className={cn('mb-2 flex items-center gap-2', toolbarLeft == null && 'justify-end')}>
@@ -475,7 +487,7 @@ export const KanbanBoard = ({
 
       {viewMode === 'grid' ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-          {COLUMNS.map((column) => {
+          {visibleColumns.map((column) => {
             const columnTasks = groupedOrdered.get(column.id) ?? [];
             const accent = COLUMN_ACCENTS[column.id];
             return (
@@ -493,21 +505,32 @@ export const KanbanBoard = ({
           })}
         </div>
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {COLUMNS.map((column) => {
+        <div className="flex overflow-x-auto pb-2">
+          {visibleColumns.map((column, index) => {
             const columnTasks = groupedOrdered.get(column.id) ?? [];
             const accent = COLUMN_ACCENTS[column.id];
+            const width = columnWidths.get(column.id) ?? 256;
             return (
-              <div key={column.id} className="w-64 shrink-0">
-                <KanbanColumn
-                  title={column.title}
-                  count={columnTasks.length}
-                  icon={accent.icon}
-                  headerBg={accent.headerBg}
-                  bodyBg={accent.bodyBg}
-                >
-                  {renderCards(column.id, columnTasks, true)}
-                </KanbanColumn>
+              <div key={column.id} className="flex shrink-0">
+                <div style={{ width }}>
+                  <KanbanColumn
+                    title={column.title}
+                    count={columnTasks.length}
+                    icon={accent.icon}
+                    headerBg={accent.headerBg}
+                    bodyBg={accent.bodyBg}
+                  >
+                    {renderCards(column.id, columnTasks, true)}
+                  </KanbanColumn>
+                </div>
+                {index < visibleColumns.length - 1 ? (
+                  <div
+                    className="group relative mx-0.5 flex items-center"
+                    {...getHandleProps(column.id)}
+                  >
+                    <div className="h-full w-px bg-[var(--color-border)] transition-colors group-hover:bg-blue-500/50 group-active:bg-blue-500" />
+                  </div>
+                ) : null}
               </div>
             );
           })}

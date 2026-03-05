@@ -5,7 +5,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@renderer/components/ui/context-menu';
-import { Archive, ArchiveRestore, Pencil, Pin, PinOff } from 'lucide-react';
+import { Archive, ArchiveRestore, Pencil, Pin, PinOff, Trash2 } from 'lucide-react';
 
 import type { GlobalTask } from '@shared/types';
 
@@ -16,6 +16,7 @@ export interface TaskContextMenuProps {
   onTogglePin: () => void;
   onToggleArchive: () => void;
   onRename: () => void;
+  onDelete?: () => void;
   children: React.ReactNode;
 }
 
@@ -26,6 +27,7 @@ export const TaskContextMenu = ({
   onTogglePin,
   onToggleArchive,
   onRename,
+  onDelete,
   children,
 }: TaskContextMenuProps): React.JSX.Element => {
   return (
@@ -68,6 +70,19 @@ export const TaskContextMenu = ({
             </>
           )}
         </ContextMenuItem>
+
+        {onDelete && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onSelect={onDelete}
+              className="text-red-400 focus:text-red-400"
+            >
+              <Trash2 className="size-3.5 shrink-0" />
+              <span>Delete task</span>
+            </ContextMenuItem>
+          </>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   );

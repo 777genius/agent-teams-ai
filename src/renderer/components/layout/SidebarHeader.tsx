@@ -44,9 +44,11 @@ export const SidebarHeader = (): React.JSX.Element => {
           } as React.CSSProperties
         }
       >
-        <div style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          <AppLogo size={22} className="shrink-0" />
-        </div>
+        {isMacElectron && (
+          <div style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+            <AppLogo size={22} className="shrink-0" />
+          </div>
+        )}
         <div className="flex-1" />
         <button
           onClick={toggleSidebar}

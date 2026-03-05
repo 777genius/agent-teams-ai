@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
+import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -11,15 +12,14 @@ import {
 } from '@renderer/components/ui/dialog';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@renderer/components/ui/select';
-import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
+import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
+import { CUSTOM_ROLE, NO_ROLE } from '@renderer/constants/teamRoles';
+import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { Loader2 } from 'lucide-react';
+
+import type { MentionSuggestion } from '@renderer/types/mention';
+import type { ResolvedTeamMember } from '@shared/types';
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]*$/;
 
@@ -28,8 +28,12 @@ interface AddMemberDialogProps {
   teamName: string;
   existingNames: string[];
   onClose: () => void;
-  onAdd: (name: string, role?: string) => void;
+  onAdd: (name: string, role?: string, workflow?: string) => void;
   adding?: boolean;
+  /** Project path for @file mentions in workflow field. */
+  projectPath?: string | null;
+  /** Existing team members for @mention suggestions. */
+  existingMembers?: ResolvedTeamMember[];
 }
 
 export const AddMemberDialog = ({
@@ -39,11 +43,35 @@ export const AddMemberDialog = ({
   onClose,
   onAdd,
   adding,
+  projectPath,
+  existingMembers = [],
 }: AddMemberDialogProps): React.JSX.Element => {
   const [name, setName] = useState('');
   const [roleSelect, setRoleSelect] = useState<string>(NO_ROLE);
   const [customRole, setCustomRole] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const draftKey = `addMember:${teamName}:workflow`;
+  const workflowDraft = useDraftPersistence({
+    key: draftKey,
+    enabled: open,
+  });
+
+  // Pre-warm file list cache for @file mentions
+  useFileListCacheWarmer(open && projectPath ? projectPath : null);
+
+  const mentionSuggestions = useMemo<MentionSuggestion[]>(
+    () =>
+      existingMembers
+        .filter((m) => !m.removedAt)
+        .map((m) => ({
+          id: m.name,
+          name: m.name,
+          subtitle: m.role ?? undefined,
+          color: m.color,
+        })),
+    [existingMembers]
+  );
 
   const effectiveRole =
     roleSelect === CUSTOM_ROLE
@@ -72,7 +100,9 @@ export const AddMemberDialog = ({
       return;
     }
     setError(null);
-    onAdd(name.trim().toLowerCase(), effectiveRole);
+    const wf = workflowDraft.value.trim() || undefined;
+    onAdd(name.trim().toLowerCase(), effectiveRole, wf);
+    workflowDraft.clearDraft();
   };
 
   const handleOpenChange = (nextOpen: boolean): void => {
@@ -80,10 +110,19 @@ export const AddMemberDialog = ({
       setName('');
       setRoleSelect(NO_ROLE);
       setCustomRole('');
+      workflowDraft.setValue('');
+      workflowDraft.clearDraft();
       setError(null);
       onClose();
     }
   };
+
+  const handleWorkflowChange = useCallback(
+    (v: string) => {
+      workflowDraft.setValue(v);
+    },
+    [workflowDraft]
+  );
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -113,27 +152,31 @@ export const AddMemberDialog = ({
 
           <div className="space-y-2">
             <Label className="label-optional">Role (optional)</Label>
-            <Select value={roleSelect} onValueChange={setRoleSelect}>
-              <SelectTrigger>
-                <SelectValue placeholder="No role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_ROLE}>No role</SelectItem>
-                {PRESET_ROLES.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
-                <SelectItem value={CUSTOM_ROLE}>Custom...</SelectItem>
-              </SelectContent>
-            </Select>
-            {roleSelect === CUSTOM_ROLE && (
-              <Input
-                placeholder="Custom role"
-                value={customRole}
-                onChange={(e) => setCustomRole(e.target.value)}
-              />
-            )}
+            <RoleSelect
+              value={roleSelect}
+              onValueChange={setRoleSelect}
+              customRole={customRole}
+              onCustomRoleChange={setCustomRole}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="label-optional">Workflow (optional)</Label>
+            <MentionableTextarea
+              className="text-xs"
+              minRows={3}
+              maxRows={8}
+              value={workflowDraft.value}
+              onValueChange={handleWorkflowChange}
+              suggestions={mentionSuggestions}
+              projectPath={projectPath ?? undefined}
+              placeholder="How this agent should behave, what tasks it handles..."
+              footerRight={
+                workflowDraft.isSaved ? (
+                  <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                ) : null
+              }
+            />
           </div>
         </div>
 

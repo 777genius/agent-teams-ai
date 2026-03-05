@@ -30,7 +30,6 @@ import type {
 import type {
   AddMemberRequest,
   AttachmentFileData,
-  AttachmentMediaType,
   CommentAttachmentPayload,
   CreateTaskRequest,
   GlobalTask,
@@ -45,6 +44,8 @@ import type {
   TaskAttachmentMeta,
   TaskComment,
   TeamChangeEvent,
+  TeamClaudeLogsQuery,
+  TeamClaudeLogsResponse,
   TeamConfig,
   TeamCreateConfigRequest,
   TeamCreateRequest,
@@ -398,6 +399,7 @@ export interface HttpServerAPI {
 export interface TeamsAPI {
   list: () => Promise<TeamSummary[]>;
   getData: (teamName: string) => Promise<TeamData>;
+  getClaudeLogs: (teamName: string, query?: TeamClaudeLogsQuery) => Promise<TeamClaudeLogsResponse>;
   deleteTeam: (teamName: string) => Promise<void>;
   restoreTeam: (teamName: string) => Promise<void>;
   permanentlyDeleteTeam: (teamName: string) => Promise<void>;

@@ -1,7 +1,6 @@
 import { Badge } from '@renderer/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { useStore } from '@renderer/store';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { agentAvatarUrl, getMemberDotClass, getPresenceLabel } from '@renderer/utils/memberHelpers';
 import { GitBranch, Loader2, MessageSquare, Plus } from 'lucide-react';
@@ -40,18 +39,13 @@ export const MemberCard = ({
   onSendMessage,
   onAssignTask,
 }: MemberCardProps): React.JSX.Element => {
-  const teamName = useStore((s) => s.selectedTeamName);
-  const leadContext = useStore((s) =>
-    member.agentType === 'team-lead' && teamName ? s.leadContextByTeam[teamName] : undefined
-  );
+  // NOTE: lead context display disabled — usage formula is inaccurate
+  // const teamName = useStore((s) => s.selectedTeamName);
+  // const leadContext = useStore((s) =>
+  //   member.agentType === 'team-lead' && teamName ? s.leadContextByTeam[teamName] : undefined
+  // );
   const dotClass = getMemberDotClass(member, isTeamAlive, isTeamProvisioning, leadActivity);
-  const presenceLabel = getPresenceLabel(
-    member,
-    isTeamAlive,
-    isTeamProvisioning,
-    leadActivity,
-    leadContext?.percent
-  );
+  const presenceLabel = getPresenceLabel(member, isTeamAlive, isTeamProvisioning, leadActivity);
   const colors = getTeamColorSet(memberColor);
   const pending = taskCounts?.pending ?? 0;
   const inProgress = taskCounts?.inProgress ?? 0;
@@ -151,19 +145,26 @@ export const MemberCard = ({
               </span>
             ) : null;
           })()}
-          <Badge
-            variant="secondary"
-            className={`shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none ${isRemoved ? 'bg-zinc-600 text-zinc-300' : 'text-[var(--color-text-muted)]'}`}
-            title={
-              isRemoved
-                ? 'This member has been removed'
-                : member.currentTaskId
-                  ? `Current task: ${member.currentTaskId}`
-                  : undefined
-            }
-          >
-            {isRemoved ? 'removed' : presenceLabel}
-          </Badge>
+          {presenceLabel === 'connecting' && !isRemoved ? (
+            <Loader2
+              className="size-3.5 shrink-0 animate-spin text-[var(--color-text-muted)]"
+              aria-label="connecting"
+            />
+          ) : (
+            <Badge
+              variant="secondary"
+              className={`shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none ${isRemoved ? 'bg-zinc-600 text-zinc-300' : 'text-[var(--color-text-muted)]'}`}
+              title={
+                isRemoved
+                  ? 'This member has been removed'
+                  : member.currentTaskId
+                    ? `Current task: ${member.currentTaskId}`
+                    : undefined
+              }
+            >
+              {isRemoved ? 'removed' : presenceLabel}
+            </Badge>
+          )}
           <div
             className="shrink-0"
             title={totalTasks > 0 ? `${completed}/${totalTasks} completed` : undefined}
@@ -182,29 +183,7 @@ export const MemberCard = ({
                 />
               </div>
             )}
-            {leadContext && leadContext.percent > 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="mx-0.5 mt-0.5 h-[2px] rounded-full bg-[var(--color-border)]">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        leadContext.percent > 90
-                          ? 'bg-red-500'
-                          : leadContext.percent > 70
-                            ? 'bg-amber-500'
-                            : 'bg-blue-500'
-                      }`}
-                      style={{ width: `${Math.min(leadContext.percent, 100)}%` }}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  Context: {Math.round(leadContext.percent)}% (
-                  {(leadContext.currentTokens / 1000).toFixed(1)}k /{' '}
-                  {(leadContext.contextWindow / 1000).toFixed(0)}k tokens)
-                </TooltipContent>
-              </Tooltip>
-            )}
+            {/* NOTE: lead context bar disabled — usage formula is inaccurate */}
           </div>
           {!isRemoved && (
             <div className="flex shrink-0 items-center gap-0.5">

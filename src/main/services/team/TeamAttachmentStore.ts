@@ -10,6 +10,7 @@ import type { AttachmentFileData, AttachmentPayload } from '@shared/types';
 const logger = createLogger('Service:TeamAttachmentStore');
 
 const ATTACHMENTS_DIR = 'attachments';
+const MAX_ATTACHMENTS_FILE_BYTES = 64 * 1024 * 1024; // 64MB safety cap
 
 export class TeamAttachmentStore {
   private assertSafePathSegment(label: string, value: string): void {
@@ -58,6 +59,10 @@ export class TeamAttachmentStore {
 
     let raw: string;
     try {
+      const stat = await fs.promises.stat(filePath);
+      if (!stat.isFile() || stat.size > MAX_ATTACHMENTS_FILE_BYTES) {
+        return [];
+      }
       raw = await fs.promises.readFile(filePath, 'utf8');
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {

@@ -36,10 +36,17 @@ export const ExtendedContextCheckbox: React.FC<ExtendedContextCheckboxProps> = (
       </Label>
     </div>
     {checked && (
-      <div className="mt-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
+      <div
+        className="mt-1.5 rounded-md border px-3 py-2 text-xs"
+        style={{
+          backgroundColor: 'var(--warning-bg)',
+          borderColor: 'var(--warning-border)',
+          color: 'var(--warning-text)',
+        }}
+      >
         <div className="flex items-start gap-2">
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
-          <div className="space-y-1 text-amber-300/90">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          <div className="space-y-1">
             <p>
               Beyond 200K tokens, premium pricing applies: 2x input cost, 1.5x output cost. For
               subscribers, extra usage is billed separately.
@@ -48,7 +55,7 @@ export const ExtendedContextCheckbox: React.FC<ExtendedContextCheckboxProps> = (
               Requires API tier 4+ or extra usage enabled.{' '}
               <button
                 type="button"
-                className="underline underline-offset-2 hover:text-amber-200"
+                className="underline underline-offset-2 hover:opacity-80"
                 onClick={() =>
                   window.electronAPI.openExternal(
                     'https://platform.claude.com/docs/en/build-with-claude/context-windows#1m-token-context-window'

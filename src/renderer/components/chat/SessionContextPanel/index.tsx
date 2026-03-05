@@ -11,6 +11,7 @@ import {
   COLOR_SURFACE_OVERLAY,
   COLOR_TEXT_MUTED,
 } from '@renderer/constants/cssVariables';
+import { sumContextInjectionTokens } from '@renderer/utils/contextMath';
 
 import { ClaudeMdFilesSection } from './components/ClaudeMdFilesSection';
 import { FlatInjectionList } from './components/FlatInjectionList';
@@ -132,10 +133,7 @@ export const SessionContextPanel = ({
   }, [injections]);
 
   // Calculate total tokens
-  const totalTokens = useMemo(
-    () => injections.reduce((sum, inj) => sum + inj.estimatedTokens, 0),
-    [injections]
-  );
+  const totalTokens = useMemo(() => sumContextInjectionTokens(injections), [injections]);
 
   // Section token counts
   const claudeMdTokens = useMemo(

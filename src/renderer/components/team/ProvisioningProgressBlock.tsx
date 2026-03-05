@@ -44,27 +44,67 @@ function formatElapsed(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-function useElapsedTimer(startedAt?: string): string | null {
-  const [elapsed, setElapsed] = useState<string | null>(null);
+function useElapsedTimer(startedAt?: string, isRunning = true): string | null {
+  const [elapsedSeconds, setElapsedSeconds] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!startedAt) return () => setElapsed(null);
+    if (!startedAt) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
+      setElapsedSeconds(null);
+      return;
+    }
+
     const startMs = Date.parse(startedAt);
-    if (isNaN(startMs)) return () => setElapsed(null);
+    if (isNaN(startMs)) {
+      setElapsedSeconds(null);
+      return;
+    }
+
+    const computeElapsedSeconds = (): number =>
+      Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+
+    if (!isRunning) {
+      // Freeze timer on terminal states (failed/ready/cancelled) instead of continuing to tick.
+      setElapsedSeconds((prev) => (prev === null ? computeElapsedSeconds() : prev));
+      return;
+    }
 
     const tick = (): void => {
-      const seconds = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
-      setElapsed(formatElapsed(seconds));
+      setElapsedSeconds(computeElapsedSeconds());
     };
+
     tick();
     const id = window.setInterval(tick, 1000);
     return () => {
       window.clearInterval(id);
     };
-  }, [startedAt]);
+  }, [startedAt, isRunning]);
 
   if (!startedAt) return null;
-  return elapsed;
+  if (elapsedSeconds === null) return null;
+  return formatElapsed(elapsedSeconds);
+}
+
+function sanitizeAssistantOutput(raw?: string, isError = false): string | null {
+  if (!raw) return null;
+  if (!isError) return raw;
+
+  const looksLikeRawApiEnvelope =
+    raw.includes('API Error: 400') &&
+    (raw.includes('"_requests"') ||
+      raw.includes('"session_id"') ||
+      raw.includes('"parent_tool_use_id"') ||
+      raw.includes('\\u000'));
+
+  if (!looksLikeRawApiEnvelope) {
+    return raw;
+  }
+
+  return (
+    'API Error: 400\n\n' +
+    'Raw payload from CLI stream hidden because it contains encoded/binary-like content.\n\n' +
+    'Open **CLI logs** below for readable diagnostics.'
+  );
 }
 
 export const ProvisioningProgressBlock = ({
@@ -81,11 +121,12 @@ export const ProvisioningProgressBlock = ({
   assistantOutput,
   className,
 }: ProvisioningProgressBlockProps): React.JSX.Element => {
-  const elapsed = useElapsedTimer(startedAt);
-  const [logsOpen, setLogsOpen] = useState(false);
+  const elapsed = useElapsedTimer(startedAt, loading);
+  const [logsOpen, setLogsOpen] = useState(() => tone === 'error' && Boolean(cliLogsTail));
   const [liveOutputOpen, setLiveOutputOpen] = useState(defaultLiveOutputOpen);
   const outputScrollRef = useRef<HTMLDivElement>(null);
   const isError = tone === 'error';
+  const displayAssistantOutput = sanitizeAssistantOutput(assistantOutput, isError);
 
   // Auto-scroll assistant output
   useEffect(() => {
@@ -98,6 +139,14 @@ export const ProvisioningProgressBlock = ({
   useEffect(() => {
     setLiveOutputOpen(defaultLiveOutputOpen);
   }, [defaultLiveOutputOpen]);
+
+  // On error with logs available, prioritize logs view over noisy live stream payload.
+  useEffect(() => {
+    if (isError && cliLogsTail) {
+      setLogsOpen(true);
+      setLiveOutputOpen(false);
+    }
+  }, [isError, cliLogsTail]);
 
   return (
     <div
@@ -137,27 +186,26 @@ export const ProvisioningProgressBlock = ({
         <p
           className={cn(
             'mt-1.5 text-xs',
-            isError ? 'text-red-200' : 'text-[var(--color-text-muted)]'
+            isError ? 'text-[var(--step-error-text)]' : 'text-[var(--color-text-muted)]'
           )}
         >
           {message}
         </p>
       ) : null}
-      <div className="mt-2 flex items-center gap-1 overflow-x-auto pb-0.5">
+      <div className="mt-2 flex items-center justify-center gap-1 overflow-x-auto pb-0.5">
         {STEP_ORDER.filter((s): s is ProvisioningStep => s !== 'ready').map((step, index) => {
           const isDone = currentStepIndex >= 0 && index < currentStepIndex;
           const isCurrent = currentStepIndex >= 0 && index === currentStepIndex;
-
           return (
             <div key={step} className="flex items-center gap-1">
-              {/* eslint-disable tailwindcss/no-custom-classname -- theme CSS vars */}
               <Badge
                 variant="secondary"
                 className={cn(
                   'whitespace-nowrap px-2 py-0.5 text-[11px] font-normal',
-                  isDone && 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200',
+                  isDone &&
+                    'border-[var(--step-done-border)] bg-[var(--step-done-bg)] text-[var(--step-done-text)]',
                   isCurrent &&
-                    'border-[var(--color-accent)]/70 bg-[var(--color-accent)]/15 text-[var(--color-text)]'
+                    'border-[var(--step-current-border)] bg-[var(--step-current-bg)] text-[var(--step-current-text)]'
                 )}
               >
                 <span className="mr-1 inline-flex size-4 items-center justify-center rounded-full border border-current text-[10px]">
@@ -165,7 +213,6 @@ export const ProvisioningProgressBlock = ({
                 </span>
                 {STEP_LABELS[step]}
               </Badge>
-              {/* eslint-enable tailwindcss/no-custom-classname -- end theme CSS vars block */}
               {index < STEP_ORDER.filter((s) => s !== 'ready').length - 1 ? (
                 <span className="text-[var(--color-text-muted)]">&rarr;</span>
               ) : null}
@@ -190,13 +237,13 @@ export const ProvisioningProgressBlock = ({
               isError && 'border-red-500/40'
             )}
           >
-            {assistantOutput ? (
-              <MarkdownViewer content={assistantOutput} bare maxHeight="max-h-none" />
+            {displayAssistantOutput ? (
+              <MarkdownViewer content={displayAssistantOutput} bare maxHeight="max-h-none" />
             ) : (
               <p
                 className={cn(
                   'text-[11px]',
-                  isError ? 'text-red-200/80' : 'text-[var(--color-text-muted)]'
+                  isError ? 'text-[var(--step-error-text-dim)]' : 'text-[var(--color-text-muted)]'
                 )}
               >
                 No output captured yet.

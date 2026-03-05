@@ -130,4 +130,28 @@ describe('TeamInboxWriter', () => {
     expect(persisted).toHaveLength(2);
     expect(persisted.map((row) => row.text).sort()).toEqual(['first', 'second']);
   });
+
+  it('includes source field in payload when provided in request', async () => {
+    await writer.sendMessage('my-team', {
+      member: 'alice',
+      text: 'task assigned',
+      summary: 'New task #1 assigned',
+      source: 'system_notification',
+    });
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0].source).toBe('system_notification');
+  });
+
+  it('omits source field from payload when not provided in request', async () => {
+    await writer.sendMessage('my-team', {
+      member: 'alice',
+      text: 'hello',
+    });
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]).not.toHaveProperty('source');
+  });
 });

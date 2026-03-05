@@ -78,11 +78,11 @@ export const TeamProvisioningBanner = ({
     return (
       <div className="mb-3">
         <div className="mb-2 flex items-center gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2">
-          <p className="flex-1 text-xs text-red-200">{progress.message}</p>
+          <p className="flex-1 text-xs text-[var(--step-error-text)]">{progress.message}</p>
           <Button
             variant="outline"
             size="sm"
-            className="h-6 shrink-0 border-red-500/40 px-2 text-xs text-red-300 hover:bg-red-500/10 hover:text-red-200"
+            className="h-6 shrink-0 border-red-500/40 px-2 text-xs text-[var(--step-error-text)] hover:bg-red-500/10"
             onClick={() => setDismissed(true)}
           >
             <X size={12} />
@@ -108,13 +108,13 @@ export const TeamProvisioningBanner = ({
   if (isReady) {
     return (
       <div className="mb-3">
-        <div className="mb-2 flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2">
-          <CheckCircle2 size={14} className="shrink-0 text-emerald-400" />
-          <p className="flex-1 text-xs text-emerald-200">Team launched — process alive</p>
+        <div className="mb-2 flex items-center gap-2 rounded-md border border-[var(--step-done-border)] bg-[var(--step-done-bg)] px-3 py-2">
+          <CheckCircle2 size={14} className="shrink-0 text-[var(--step-done-text)]" />
+          <p className="flex-1 text-xs text-[var(--step-success-text)]">Team launched — process alive</p>
           <Button
             variant="outline"
             size="sm"
-            className="h-6 shrink-0 border-emerald-500/40 px-2 text-xs text-emerald-300 hover:bg-emerald-500/10 hover:text-emerald-200"
+            className="h-6 shrink-0 border-[var(--step-done-border)] px-2 text-xs text-[var(--step-done-text)] hover:bg-[var(--step-done-bg)]"
             onClick={() => setDismissed(true)}
           >
             <X size={12} />

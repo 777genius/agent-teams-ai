@@ -28,6 +28,8 @@ import {
 } from '@shared/constants/triggerColors';
 import { Wrench } from 'lucide-react';
 
+import { highlightQueryInText } from '../searchHighlightUtils';
+
 import { BaseItem, StatusDot } from './BaseItem';
 import { formatDuration } from './baseItemHelpers';
 import {
@@ -45,6 +47,8 @@ interface LinkedToolItemProps {
   linkedTool: LinkedToolItemType;
   onClick: () => void;
   isExpanded: boolean;
+  /** Optional local search query override for inline highlighting */
+  searchQueryOverride?: string;
   /** Whether this item should be highlighted for error deep linking */
   isHighlighted?: boolean;
   /** Custom highlight color from trigger */
@@ -59,6 +63,7 @@ export const LinkedToolItem: React.FC<LinkedToolItemProps> = ({
   linkedTool,
   onClick,
   isExpanded,
+  searchQueryOverride,
   isHighlighted,
   highlightColor,
   notificationDotColor,
@@ -66,6 +71,17 @@ export const LinkedToolItem: React.FC<LinkedToolItemProps> = ({
 }) => {
   const status = getToolStatus(linkedTool);
   const summary = getToolSummary(linkedTool.name, linkedTool.input);
+  const summaryNode =
+    searchQueryOverride && searchQueryOverride.trim().length > 0
+      ? highlightQueryInText(
+          summary,
+          searchQueryOverride,
+          `${linkedTool.id ?? linkedTool.name}:summary`,
+          {
+            forceAllActive: true,
+          }
+        )
+      : summary;
   const elementRef = useRef<HTMLDivElement>(null);
 
   // Combined ref callback - handles both internal ref and external registration
@@ -155,7 +171,7 @@ export const LinkedToolItem: React.FC<LinkedToolItemProps> = ({
           />
         }
         label={linkedTool.name}
-        summary={summary}
+        summary={summaryNode}
         tokenCount={getToolContextTokens(linkedTool)}
         status={status}
         durationMs={linkedTool.durationMs}

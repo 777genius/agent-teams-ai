@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
-import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -14,16 +14,9 @@ import {
 } from '@renderer/components/ui/dialog';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
+import { MemberSelect } from '@renderer/components/ui/MemberSelect';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@renderer/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useAttachments } from '@renderer/hooks/useAttachments';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
@@ -32,8 +25,9 @@ import { chipToken, serializeChipsWithText } from '@renderer/types/inlineChip';
 import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
+import { getModifierKeyName } from '@renderer/utils/keyboardUtils';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { ImagePlus, X } from 'lucide-react';
+import { AlertCircle, ImagePlus, Send, X } from 'lucide-react';
 
 import { MemberBadge } from '../MemberBadge';
 
@@ -45,6 +39,8 @@ interface QuotedMessage {
   from: string;
   text: string;
 }
+
+const MAX_MESSAGE_LENGTH = 4000;
 
 interface SendMessageDialogProps {
   open: boolean;
@@ -69,8 +65,6 @@ interface SendMessageDialogProps {
   onClose: () => void;
 }
 
-const NO_MEMBER = '__none__';
-
 export const SendMessageDialog = ({
   open,
   teamName,
@@ -91,11 +85,11 @@ export const SendMessageDialog = ({
   const [quote, setQuote] = useState<QuotedMessage | undefined>(undefined);
   const [quoteExpanded, setQuoteExpanded] = useState(false);
   const [member, setMember] = useState('');
-  const textDraft = useDraftPersistence({ key: 'sendMessage:text' });
-  const chipDraft = useChipDraftPersistence('sendMessage:chips');
+  const textDraft = useDraftPersistence({ key: `sendMessage:${teamName}:text` });
+  const chipDraft = useChipDraftPersistence(`sendMessage:${teamName}:chips`);
   const [summary, setSummary] = useState('');
-  const [prevOpen, setPrevOpen] = useState(false);
-  const [prevResult, setPrevResult] = useState<SendMessageResult | null>(null);
+  const prevOpenRef = useRef(false);
+  const prevResultRef = useRef<SendMessageResult | null>(null);
 
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounterRef = useRef(0);
@@ -114,35 +108,48 @@ export const SendMessageDialog = ({
 
   const selectedMember = members.find((m) => m.name === member);
   const isLeadRecipient = selectedMember?.role === 'lead' || selectedMember?.name === 'team-lead';
-  const canAttach = isLeadRecipient && isTeamAlive && canAddMore;
+  const supportsAttachments = isLeadRecipient && !!isTeamAlive;
+  const canAttach = supportsAttachments && canAddMore;
 
-  // Reset form when dialog opens
-  if (open && !prevOpen) {
-    setMember(defaultRecipient ?? '');
-    setSummary('');
-    setQuote(quotedMessage);
-    setQuoteExpanded(false);
-    setPrevResult(lastResult);
-    if (defaultChip) {
-      const token = chipToken(defaultChip);
-      textDraft.setValue(token + '\n');
-      chipDraft.setChips([defaultChip]);
-    } else if (defaultText) {
-      textDraft.setValue(defaultText);
-    }
-  }
-  if (open !== prevOpen) {
-    setPrevOpen(open);
-  }
-
-  // Track whether auto-close is needed (setState in render phase is fine)
   const [pendingAutoClose, setPendingAutoClose] = useState(false);
-  if (open && lastResult && lastResult !== prevResult) {
-    setPrevResult(lastResult);
-    setMember('');
-    setSummary('');
-    setPendingAutoClose(true);
-  }
+  // Reset form on open transition (avoid setState in render)
+  useEffect(() => {
+    if (open && !prevOpenRef.current) {
+      setMember(defaultRecipient ?? '');
+      setSummary('');
+      setQuote(quotedMessage);
+      setQuoteExpanded(false);
+      prevResultRef.current = lastResult;
+      if (defaultChip) {
+        const token = chipToken(defaultChip);
+        textDraft.setValue(token + '\n');
+        chipDraft.setChips([defaultChip]);
+      } else if (defaultText) {
+        textDraft.setValue(defaultText);
+      }
+    }
+    prevOpenRef.current = open;
+  }, [
+    open,
+    defaultRecipient,
+    defaultText,
+    defaultChip,
+    quotedMessage,
+    lastResult,
+    textDraft,
+    chipDraft,
+  ]);
+
+  // Track whether auto-close is needed (avoid setState in render)
+  useEffect(() => {
+    if (!open) return;
+    if (lastResult && lastResult !== prevResultRef.current) {
+      prevResultRef.current = lastResult;
+      setMember('');
+      setSummary('');
+      setPendingAutoClose(true);
+    }
+  }, [open, lastResult]);
 
   // Side effects (onClose mutates parent state) must run in useEffect, not render phase
   useEffect(() => {
@@ -170,11 +177,20 @@ export const SendMessageDialog = ({
     [members, colorMap]
   );
 
+  const attachmentsBlocked = attachments.length > 0 && !supportsAttachments;
+
+  const trimmedText = textDraft.value.trim();
+  const serialized = serializeChipsWithText(trimmedText, chipDraft.chips);
+  const finalText = quote ? buildReplyBlock(quote.from, quote.text, serialized) : serialized;
+  const remaining = MAX_MESSAGE_LENGTH - finalText.length;
+
   const canSend =
     member.trim().length > 0 &&
-    textDraft.value.trim().length > 0 &&
+    finalText.length > 0 &&
+    finalText.length <= MAX_MESSAGE_LENGTH &&
     summary.trim().length > 0 &&
-    !sending;
+    !sending &&
+    !attachmentsBlocked;
 
   const handleChipRemove = (chipId: string): void => {
     const chip = chipDraft.chips.find((c) => c.id === chipId);
@@ -186,8 +202,6 @@ export const SendMessageDialog = ({
 
   const handleSubmit = (): void => {
     if (!canSend) return;
-    const serialized = serializeChipsWithText(textDraft.value.trim(), chipDraft.chips);
-    const finalText = quote ? buildReplyBlock(quote.from, quote.text, serialized) : serialized;
     onSend(
       member.trim(),
       finalText,
@@ -254,7 +268,7 @@ export const SendMessageDialog = ({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="sm:max-w-[560px]"
+        className="sm:max-w-[720px]"
         onDragEnter={canAttach ? handleDragEnter : undefined}
         onDragLeave={canAttach ? handleDragLeave : undefined}
         onDragOver={canAttach ? handleDragOver : undefined}
@@ -271,40 +285,13 @@ export const SendMessageDialog = ({
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
             <Label htmlFor="smd-recipient">Recipient</Label>
-            <Select
-              value={member || NO_MEMBER}
-              onValueChange={(v) => setMember(v === NO_MEMBER ? '' : v)}
-            >
-              <SelectTrigger id="smd-recipient">
-                <SelectValue placeholder="Select member..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_MEMBER}>Select member...</SelectItem>
-                {members.map((m) => {
-                  const role = formatAgentRole(m.role) ?? formatAgentRole(m.agentType);
-                  const resolvedColor = colorMap.get(m.name);
-                  const memberColor = resolvedColor ? getTeamColorSet(resolvedColor) : null;
-                  return (
-                    <SelectItem key={m.name} value={m.name}>
-                      <span className="inline-flex items-center gap-1.5">
-                        {memberColor ? (
-                          <span
-                            className="inline-block size-2 shrink-0 rounded-full"
-                            style={{ backgroundColor: memberColor.border }}
-                          />
-                        ) : null}
-                        <span style={memberColor ? { color: memberColor.text } : undefined}>
-                          {m.name}
-                        </span>
-                        {role ? (
-                          <span className="text-[var(--color-text-muted)]">({role})</span>
-                        ) : null}
-                      </span>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+            <MemberSelect
+              members={members}
+              value={member || null}
+              onChange={(v) => setMember(v ?? '')}
+              placeholder="Select member..."
+              size="sm"
+            />
           </div>
 
           <div className="grid gap-2">
@@ -351,6 +338,8 @@ export const SendMessageDialog = ({
               attachments={attachments}
               onRemove={removeAttachment}
               error={attachmentError}
+              disabled={attachmentsBlocked}
+              disabledHint="Image attachments are only supported when sending to the team lead while the team is online. Remove attachments or switch recipient."
             />
 
             <div className={quote ? 'flex flex-col' : 'contents'}>
@@ -401,7 +390,7 @@ export const SendMessageDialog = ({
               <MentionableTextarea
                 id="smd-message"
                 className={quote ? 'rounded-t-none' : undefined}
-                placeholder="Write your message..."
+                placeholder="Write your message... (Enter to send)"
                 value={textDraft.value}
                 onValueChange={textDraft.setValue}
                 suggestions={mentionSuggestions}
@@ -409,12 +398,43 @@ export const SendMessageDialog = ({
                 onChipRemove={handleChipRemove}
                 projectPath={projectPath}
                 onFileChipInsert={(chip) => chipDraft.setChips([...chipDraft.chips, chip])}
+                onModEnter={handleSubmit}
                 minRows={4}
                 maxRows={12}
+                maxLength={MAX_MESSAGE_LENGTH}
+                disabled={sending}
+                cornerAction={
+                  <button
+                    type="button"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!canSend}
+                    onClick={handleSubmit}
+                  >
+                    <Send size={12} />
+                    {sending ? 'Sending...' : 'Send'}
+                  </button>
+                }
                 footerRight={
-                  textDraft.isSaved ? (
-                    <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-                  ) : null
+                  <div className="flex items-center gap-2">
+                    {sendError ? (
+                      <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">
+                        <AlertCircle size={10} className="shrink-0" />
+                        {sendError}
+                      </span>
+                    ) : null}
+                    {remaining < 200 ? (
+                      <span
+                        className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
+                      >
+                        {remaining} chars left
+                      </span>
+                    ) : null}
+                    {textDraft.isSaved ? (
+                      <span className="text-[10px] text-[var(--color-text-muted)]">
+                        Draft saved
+                      </span>
+                    ) : null}
+                  </div>
                 }
               />
             </div>
@@ -433,16 +453,11 @@ export const SendMessageDialog = ({
               Shown as notification preview. Team lead also sees this for peer messages.
             </p>
           </div>
-
-          {sendError ? <p className="text-xs text-red-400">{sendError}</p> : null}
         </div>
 
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose} disabled={sending}>
             Cancel
-          </Button>
-          <Button size="sm" onClick={handleSubmit} disabled={!canSend}>
-            {sending ? 'Sending...' : 'Send'}
           </Button>
         </DialogFooter>
       </DialogContent>

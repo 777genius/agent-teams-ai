@@ -162,7 +162,7 @@ export class SubagentResolver {
     if (!firstUserMessage) return undefined;
 
     const text = typeof firstUserMessage.content === 'string' ? firstUserMessage.content : '';
-    const match = /<teammate-message\s+[^>]*\bteammate_id="([^"]+)"/.exec(text);
+    const match = /<teammate-message\s[^>]*?\bteammate_id="([^"]+)"/.exec(text);
     return match?.[1];
   }
 

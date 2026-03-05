@@ -10,6 +10,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { DisplayItemList } from '@renderer/components/chat/DisplayItemList';
+import { highlightQueryInText } from '@renderer/components/chat/searchHighlightUtils';
 import { cn } from '@renderer/lib/utils';
 import { parseStreamJsonToGroups } from '@renderer/utils/streamJsonParser';
 import { Bot, ChevronRight } from 'lucide-react';
@@ -18,6 +19,11 @@ import type { StreamJsonGroup } from '@renderer/utils/streamJsonParser';
 
 interface CliLogsRichViewProps {
   cliLogsTail: string;
+  order?: 'oldest-first' | 'newest-first';
+  onScroll?: (params: { scrollTop: number; scrollHeight: number; clientHeight: number }) => void;
+  containerRefCallback?: (el: HTMLDivElement | null) => void;
+  /** Optional local search query override for inline highlighting */
+  searchQueryOverride?: string;
   className?: string;
 }
 
@@ -43,10 +49,12 @@ const FlatGroupItem = ({
   group,
   expandedItemIds,
   onItemClick,
+  searchQueryOverride,
 }: {
   group: StreamJsonGroup;
   expandedItemIds: Set<string>;
   onItemClick: (itemId: string) => void;
+  searchQueryOverride?: string;
 }): React.JSX.Element => {
   const groupItemIds = useMemo(
     () => scopedItemIds(expandedItemIds, group.id),
@@ -63,6 +71,7 @@ const FlatGroupItem = ({
       onItemClick={handleItemClick}
       expandedItemIds={groupItemIds}
       aiGroupId={group.id}
+      searchQueryOverride={searchQueryOverride}
     />
   );
 };
@@ -76,12 +85,14 @@ const StreamGroup = ({
   onToggle,
   expandedItemIds,
   onItemClick,
+  searchQueryOverride,
 }: {
   group: StreamJsonGroup;
   isExpanded: boolean;
   onToggle: () => void;
   expandedItemIds: Set<string>;
   onItemClick: (itemId: string) => void;
+  searchQueryOverride?: string;
 }): React.JSX.Element => {
   // Scope item IDs to this group to avoid cross-group collisions
   const groupItemIds = useMemo(
@@ -109,7 +120,11 @@ const StreamGroup = ({
         />
         <Bot size={13} className="shrink-0 text-[var(--color-text-muted)]" />
         <span className="min-w-0 truncate text-[11px] text-[var(--color-text-secondary)]">
-          {group.summary}
+          {searchQueryOverride && searchQueryOverride.trim().length > 0
+            ? highlightQueryInText(group.summary, searchQueryOverride, `${group.id}:group-summary`, {
+                forceAllActive: true,
+              })
+            : group.summary}
         </span>
       </button>
       {isExpanded && (
@@ -119,6 +134,7 @@ const StreamGroup = ({
             onItemClick={handleItemClick}
             expandedItemIds={groupItemIds}
             aiGroupId={group.id}
+            searchQueryOverride={searchQueryOverride}
           />
         </div>
       )}
@@ -128,9 +144,13 @@ const StreamGroup = ({
 
 export const CliLogsRichView = ({
   cliLogsTail,
+  order = 'oldest-first',
+  onScroll,
+  containerRefCallback,
+  searchQueryOverride,
   className,
 }: CliLogsRichViewProps): React.JSX.Element => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   // Tracks groups manually collapsed by user (default: all auto-expanded)
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(new Set());
   const [expandedItemIds, setExpandedItemIds] = useState<Set<string>>(new Set());
@@ -151,9 +171,13 @@ export const CliLogsRichView = ({
   // Auto-scroll to bottom on new content
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      if (order === 'newest-first') {
+        scrollRef.current.scrollTop = 0;
+      } else {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
     }
-  }, [cliLogsTail]);
+  }, [cliLogsTail, order]);
 
   const handleGroupToggle = useCallback((groupId: string) => {
     setCollapsedGroupIds((prev) => {
@@ -184,11 +208,18 @@ export const CliLogsRichView = ({
     const hasContent = cliLogsTail.trim().length > 0;
     return (
       <div
-        ref={scrollRef}
+        ref={(el) => {
+          scrollRef.current = el;
+          containerRefCallback?.(el);
+        }}
         className={cn(
           'max-h-[400px] overflow-y-auto rounded border border-[var(--color-border)] bg-[var(--color-surface)]',
           className
         )}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          onScroll?.({ scrollTop: el.scrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight });
+        }}
       >
         {hasContent ? (
           <pre className="p-2 font-mono text-[11px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -203,9 +234,21 @@ export const CliLogsRichView = ({
     );
   }
 
+  const visibleGroups = order === 'newest-first' ? [...groups].reverse() : groups;
+
   return (
-    <div ref={scrollRef} className={cn('max-h-[400px] space-y-1.5 overflow-y-auto', className)}>
-      {groups.map((group) =>
+    <div
+      ref={(el) => {
+        scrollRef.current = el;
+        containerRefCallback?.(el);
+      }}
+      className={cn('max-h-[400px] space-y-1.5 overflow-y-auto', className)}
+      onScroll={(e) => {
+        const el = e.currentTarget;
+        onScroll?.({ scrollTop: el.scrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight });
+      }}
+    >
+      {visibleGroups.map((group) =>
         group.items.length === 1 ? (
           // Single item — render flat without collapsible group wrapper
           <FlatGroupItem
@@ -213,6 +256,7 @@ export const CliLogsRichView = ({
             group={group}
             expandedItemIds={expandedItemIds}
             onItemClick={handleItemClick}
+            searchQueryOverride={searchQueryOverride}
           />
         ) : (
           <StreamGroup
@@ -222,6 +266,7 @@ export const CliLogsRichView = ({
             onToggle={() => handleGroupToggle(group.id)}
             expandedItemIds={expandedItemIds}
             onItemClick={handleItemClick}
+            searchQueryOverride={searchQueryOverride}
           />
         )
       )}

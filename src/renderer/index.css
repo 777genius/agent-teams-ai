@@ -182,6 +182,11 @@
   --card-text-lighter: #e2e8f0;
   --card-separator: #2a2c38;
 
+  /* System activity messages */
+  --system-activity-bg: rgba(59, 130, 246, 0.06);
+  --system-activity-border: rgba(59, 130, 246, 0.12);
+  --system-activity-accent: rgba(96, 165, 250, 0.5);
+
   /* Assessment severity colors (badges, health indicators) */
   --assess-good: #4ade80;
   --assess-warning: #fbbf24;
@@ -198,6 +203,20 @@
   --skeleton-base: #1a1c28;
   --skeleton-base-light: #23252f;
   --skeleton-base-dim: rgba(26, 28, 40, 0.6);
+
+  /* Provisioning step badges */
+  --step-done-bg: rgba(16, 185, 129, 0.1);
+  --step-done-border: rgba(52, 211, 153, 0.6);
+  --step-done-text: #6ee7b7;
+  --step-current-bg: rgba(99, 102, 241, 0.15);
+  --step-current-border: rgba(129, 140, 248, 0.7);
+  --step-current-text: #f1f5f9;
+  --step-error-text: #fca5a5;
+  --step-error-text-dim: rgba(252, 165, 165, 0.8);
+  --step-success-text: #6ee7b7;
+  --step-warning-text: #fde68a;
+  --step-warning-border: rgba(245, 158, 11, 0.4);
+  --step-warning-bg: rgba(245, 158, 11, 0.1);
 }
 
 /* File icon glow — halo so dark icons stay visible on dark backgrounds */
@@ -390,6 +409,11 @@
   --card-text-lighter: #2a2925;
   --card-separator: #d5d3cf;
 
+  /* System activity messages */
+  --system-activity-bg: rgba(59, 130, 246, 0.06);
+  --system-activity-border: rgba(59, 130, 246, 0.15);
+  --system-activity-accent: rgba(37, 99, 235, 0.5);
+
   /* Sticky Context button - transparent glass */
   --context-btn-bg: rgba(0, 0, 0, 0.06);
   --context-btn-bg-hover: rgba(0, 0, 0, 0.1);
@@ -400,6 +424,20 @@
   --skeleton-base: #d6d8de;
   --skeleton-base-light: #cdd0d7;
   --skeleton-base-dim: rgba(205, 208, 215, 0.6);
+
+  /* Provisioning step badges — dark enough for light backgrounds */
+  --step-done-bg: rgba(16, 185, 129, 0.12);
+  --step-done-border: rgba(5, 150, 105, 0.5);
+  --step-done-text: #047857;
+  --step-current-bg: rgba(79, 70, 229, 0.1);
+  --step-current-border: rgba(79, 70, 229, 0.5);
+  --step-current-text: #1c1b19;
+  --step-error-text: #dc2626;
+  --step-error-text-dim: rgba(220, 38, 38, 0.7);
+  --step-success-text: #047857;
+  --step-warning-text: #b45309;
+  --step-warning-border: rgba(180, 83, 9, 0.4);
+  --step-warning-bg: rgba(245, 158, 11, 0.1);
 }
 
 /* rehype-highlight (highlight.js) — map hljs classes to app theme variables */

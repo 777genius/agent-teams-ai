@@ -52,8 +52,9 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
 
   const attachmentsRef = useRef<AttachmentPayload[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingRef = useRef<AttachmentPayload[] | null>(null);
+  const pendingRef = useRef<{ key: string; value: AttachmentPayload[] } | null>(null);
   const keyRef = useRef(persistenceKey);
+  // eslint-disable-next-line react-hooks/refs -- synchronous ref sync during render is intentional to avoid stale key in callbacks
   keyRef.current = persistenceKey;
 
   // Sync ref with state
@@ -67,7 +68,7 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
     const key = keyRef.current;
     if (!key) return;
 
-    pendingRef.current = nextAttachments;
+    pendingRef.current = { key, value: nextAttachments };
 
     if (timerRef.current != null) {
       clearTimeout(timerRef.current);
@@ -79,10 +80,10 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
       pendingRef.current = null;
       if (pending == null) return;
 
-      if (pending.length === 0) {
-        void draftStorage.deleteDraft(key);
+      if (pending.value.length === 0) {
+        void draftStorage.deleteDraft(pending.key);
       } else {
-        void draftStorage.saveDraft(key, JSON.stringify(pending));
+        void draftStorage.saveDraft(pending.key, JSON.stringify(pending.value));
       }
     }, DEBOUNCE_MS);
   }, []);
@@ -93,23 +94,34 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
       timerRef.current = null;
     }
     if (pendingRef.current != null) {
-      const val = pendingRef.current;
-      const key = keyRef.current;
+      const pending = pendingRef.current;
       pendingRef.current = null;
-      if (!key) return;
-      if (val.length === 0) {
-        void draftStorage.deleteDraft(key);
+      if (pending.value.length === 0) {
+        void draftStorage.deleteDraft(pending.key);
       } else {
-        void draftStorage.saveDraft(key, JSON.stringify(val));
+        void draftStorage.saveDraft(pending.key, JSON.stringify(pending.value));
       }
     }
   }, []);
 
   // Load persisted attachments on mount
   useEffect(() => {
-    if (!persistenceKey) return;
+    if (!persistenceKey) {
+      // Transitioning to non-persistent context: flush pending save and clear stale state
+      flushPending();
+      attachmentsRef.current = [];
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync reset on key transition
+      setAttachments([]);
+      return;
+    }
 
     let cancelled = false;
+    // Flush any pending debounced save for the previous key before switching.
+    flushPending();
+    // Clear stale attachments from previous persistenceKey before loading
+    attachmentsRef.current = [];
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync reset before async load
+    setAttachments([]);
     void (async () => {
       const raw = await draftStorage.loadDraft(persistenceKey);
       if (cancelled || raw == null) return;
@@ -133,7 +145,7 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
     return () => {
       cancelled = true;
     };
-  }, [persistenceKey]);
+  }, [persistenceKey, flushPending]);
 
   // Flush on unmount
   useEffect(() => {
@@ -192,7 +204,6 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
         schedulePersist(next);
         return next;
       });
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- schedulePersist is stable
     },
     [schedulePersist]
   );
@@ -206,7 +217,6 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
         return next;
       });
       setError(null);
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- schedulePersist is stable
     },
     [schedulePersist]
   );

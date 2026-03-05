@@ -1,9 +1,9 @@
 import React from 'react';
-import ReactMarkdown, { type Components } from 'react-markdown';
+import ReactMarkdown, { type Components, defaultUrlTransform } from 'react-markdown';
 
 import { api } from '@renderer/api';
 import { CopyButton } from '@renderer/components/common/CopyButton';
-import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { TaskTooltip } from '@renderer/components/team/TaskTooltip';
 import {
   CODE_BG,
   CODE_BORDER,
@@ -23,6 +23,7 @@ import {
   PROSE_TABLE_BORDER,
   PROSE_TABLE_HEADER_BG,
 } from '@renderer/constants/cssVariables';
+import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
 import { REHYPE_PLUGINS, REHYPE_PLUGINS_NO_HIGHLIGHT } from '@renderer/utils/markdownPlugins';
 import { FileText } from 'lucide-react';
@@ -48,6 +49,8 @@ interface MarkdownViewerProps {
   label?: string; // Optional label like "Thinking", "Output", etc.
   /** When provided, enables search term highlighting within the markdown */
   itemId?: string;
+  /** Optional override for search highlighting (local search, e.g. Claude logs) */
+  searchQueryOverride?: string;
   /** When true, shows a copy button (overlay when no label, inline in header when label exists) */
   copyable?: boolean;
   /** When true, renders without wrapper background/border (for embedding inside cards) */
@@ -59,6 +62,15 @@ interface MarkdownViewerProps {
 // =============================================================================
 // Helpers
 // =============================================================================
+
+/**
+ * Custom URL transform that preserves task:// and mention:// protocols.
+ * react-markdown v10 strips non-standard protocols by default.
+ */
+function allowCustomProtocols(url: string): string {
+  if (url.startsWith('task://') || url.startsWith('mention://')) return url;
+  return defaultUrlTransform(url);
+}
 
 /** Check if a URL is relative (not absolute, not data, not mailto, not hash) */
 function isRelativeUrl(url: string): boolean {
@@ -200,13 +212,18 @@ function createViewerMarkdownComponents(searchCtx: SearchContext | null): Compon
     ),
 
     // Links — inline element, no hl(); parent block element's hl() descends here
-    // task:// links are handled by ancestor onClickCapture handlers (e.g. ActivityItem)
+    // task:// links render with TaskTooltip + are clickable via ancestor onClickCapture
     // mention:// links render as colored inline badges
     a: ({ href, children }) => {
       if (href?.startsWith('mention://')) {
         const path = href.slice('mention://'.length);
         const slashIdx = path.indexOf('/');
-        const color = slashIdx >= 0 ? decodeURIComponent(path.slice(0, slashIdx)) : '';
+        let color = '';
+        try {
+          color = slashIdx >= 0 ? decodeURIComponent(path.slice(0, slashIdx)) : '';
+        } catch {
+          // malformed percent-encoding — use empty color
+        }
         const colorSet = getTeamColorSet(color);
         const bg = colorSet.badge;
         return (
@@ -223,6 +240,21 @@ function createViewerMarkdownComponents(searchCtx: SearchContext | null): Compon
           </span>
         );
       }
+      if (href?.startsWith('task://')) {
+        const taskId = href.slice('task://'.length);
+        return (
+          <TaskTooltip taskId={taskId}>
+            <a
+              href={href}
+              className="cursor-pointer font-medium no-underline hover:underline"
+              style={{ color: PROSE_LINK }}
+              onClick={(e) => e.preventDefault()}
+            >
+              {children}
+            </a>
+          </TaskTooltip>
+        );
+      }
       return (
         <a
           href={href}
@@ -230,7 +262,7 @@ function createViewerMarkdownComponents(searchCtx: SearchContext | null): Compon
           style={{ color: PROSE_LINK }}
           onClick={(e) => {
             e.preventDefault();
-            if (href && !href.startsWith('task://')) {
+            if (href) {
               void api.openExternal(href);
             }
           }}
@@ -418,6 +450,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   className = '',
   label,
   itemId,
+  searchQueryOverride,
   copyable = false,
   bare = false,
   baseDir,
@@ -560,10 +593,17 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   }
 
   // Create search context (fresh each render so counter starts at 0)
+  const effectiveQuery = (searchQueryOverride ?? searchQuery).trim();
+  const effectiveMatches = searchQueryOverride ? [] : searchMatches;
+  const effectiveIndex = searchQueryOverride ? -1 : currentSearchIndex;
   const searchCtx =
-    searchQuery && itemId
-      ? createSearchContext(searchQuery, itemId, searchMatches, currentSearchIndex)
+    effectiveQuery && itemId
+      ? createSearchContext(effectiveQuery, itemId, effectiveMatches, effectiveIndex)
       : null;
+  // Local search (Claude logs): use bright highlight for all matches (no "current result" concept).
+  if (searchCtx && searchQueryOverride) {
+    searchCtx.forceAllActive = true;
+  }
 
   // Create markdown components with optional search highlighting
   // When search is active, create fresh each render (match counter is stateful and must start at 0)
@@ -629,6 +669,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
             remarkPlugins={[remarkGfm]}
             rehypePlugins={disableHighlight ? REHYPE_PLUGINS_NO_HIGHLIGHT : REHYPE_PLUGINS}
             components={components}
+            urlTransform={allowCustomProtocols}
           >
             {content}
           </ReactMarkdown>

@@ -7,9 +7,8 @@ import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useStore } from '@renderer/store';
 import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
-import { getModifierKeyName } from '@renderer/utils/keyboardUtils';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { ImagePlus, Send, Trash2, X } from 'lucide-react';
+import { ImagePlus, Mic, Send, Trash2, X } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CommentAttachmentPayload, ResolvedTeamMember } from '@shared/types';
@@ -71,51 +70,45 @@ export const TaskCommentInput = ({
     trimmed.length <= MAX_COMMENT_LENGTH &&
     !addingComment;
 
-  const addFiles = useCallback(
-    (files: FileList | File[]) => {
-      setAttachError(null);
-      const fileArray = Array.from(files);
-      for (const file of fileArray) {
-        if (!ACCEPTED_TYPES.has(file.type)) {
-          setAttachError(`Unsupported type: ${file.type}`);
-          continue;
-        }
-        if (file.size > MAX_FILE_SIZE) {
-          setAttachError(
-            `File too large: ${(file.size / (1024 * 1024)).toFixed(1)} MB (max 20 MB)`
-          );
-          continue;
-        }
-        if (pendingAttachments.length >= MAX_ATTACHMENTS) {
-          setAttachError(`Maximum ${MAX_ATTACHMENTS} attachments per comment`);
-          break;
-        }
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          const base64 = result.split(',')[1];
-          if (!base64) return;
-          const id = crypto.randomUUID();
-          setPendingAttachments((prev) => {
-            if (prev.length >= MAX_ATTACHMENTS) return prev;
-            return [
-              ...prev,
-              {
-                id,
-                filename: file.name,
-                mimeType: file.type,
-                base64Data: base64,
-                previewUrl: result,
-                size: file.size,
-              },
-            ];
-          });
-        };
-        reader.readAsDataURL(file);
+  const addFiles = useCallback((files: FileList | File[]) => {
+    setAttachError(null);
+    const fileArray = Array.from(files);
+    for (const file of fileArray) {
+      if (!ACCEPTED_TYPES.has(file.type)) {
+        setAttachError(`Unsupported type: ${file.type}`);
+        continue;
       }
-    },
-    [pendingAttachments.length]
-  );
+      if (file.size > MAX_FILE_SIZE) {
+        setAttachError(`File too large: ${(file.size / (1024 * 1024)).toFixed(1)} MB (max 20 MB)`);
+        continue;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1];
+        if (!base64) return;
+        const id = crypto.randomUUID();
+        setPendingAttachments((prev) => {
+          if (prev.length >= MAX_ATTACHMENTS) {
+            setAttachError(`Maximum ${MAX_ATTACHMENTS} attachments per comment`);
+            return prev;
+          }
+          return [
+            ...prev,
+            {
+              id,
+              filename: file.name,
+              mimeType: file.type,
+              base64Data: base64,
+              previewUrl: result,
+              size: file.size,
+            },
+          ];
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  }, []);
 
   const removeAttachment = useCallback((id: string) => {
     setPendingAttachments((prev) => prev.filter((a) => a.id !== id));
@@ -132,7 +125,7 @@ export const TaskCommentInput = ({
           ? pendingAttachments.map((a) => ({
               id: a.id,
               filename: a.filename,
-              mimeType: a.mimeType as CommentAttachmentPayload['mimeType'],
+              mimeType: a.mimeType,
               base64Data: a.base64Data,
             }))
           : undefined;
@@ -246,16 +239,18 @@ export const TaskCommentInput = ({
           className="hidden"
           onChange={(e) => {
             if (e.target.files) addFiles(e.target.files);
+            // eslint-disable-next-line no-param-reassign -- reset file input to allow re-selecting same file
             e.target.value = '';
           }}
         />
         <MentionableTextarea
           id={`task-comment-${taskId}`}
-          placeholder={`Add a comment... (${getModifierKeyName()}+Enter to send)`}
+          placeholder="Add a comment... (Enter to send)"
           value={draft.value}
           onValueChange={draft.setValue}
           suggestions={mentionSuggestions}
           projectPath={projectPath}
+          onModEnter={() => void handleSubmit()}
           minRows={2}
           maxRows={8}
           maxLength={MAX_COMMENT_LENGTH}
@@ -274,6 +269,18 @@ export const TaskCommentInput = ({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top">Attach image (or paste)</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex shrink-0 items-center rounded-full p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text-secondary)]"
+                    onClick={() => void window.electronAPI.openExternal('https://voicetext.site')}
+                  >
+                    <Mic size={14} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Voice to text</TooltipContent>
               </Tooltip>
               <button
                 type="button"

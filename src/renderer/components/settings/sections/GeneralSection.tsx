@@ -366,11 +366,16 @@ export const GeneralSection = ({
                 confirmLabel: 'Restart',
               });
               if (shouldRelaunch) {
-                onGeneralToggle('useNativeTitleBar', v);
-                // Small delay to let config persist before relaunch
-                setTimeout(() => {
-                  void window.electronAPI?.windowControls?.relaunch();
-                }, 200);
+                // Await config write before relaunch to avoid race condition on Windows
+                // (antivirus/NTFS can delay file writes beyond a fixed timeout)
+                try {
+                  await api.config.update('general', { useNativeTitleBar: v });
+                } catch {
+                  // If save fails, still try to toggle via the normal path
+                  onGeneralToggle('useNativeTitleBar', v);
+                  await new Promise((r) => setTimeout(r, 500));
+                }
+                void window.electronAPI?.windowControls?.relaunch();
               }
             }}
             disabled={saving}
@@ -503,7 +508,7 @@ export const GeneralSection = ({
                           {candidate.path}
                         </p>
                         {!candidate.hasProjectsDir && (
-                          <p className="text-[11px] text-amber-400">
+                          <p className="text-[11px]" style={{ color: 'var(--warning-text)' }}>
                             No projects directory detected
                           </p>
                         )}

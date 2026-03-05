@@ -1,29 +1,65 @@
+import { useState } from 'react';
+
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
+import { MemberBadge } from '@renderer/components/team/MemberBadge';
 
 import type { ParsedMessageReply } from '@renderer/utils/agentMessageFormatting';
 
 interface ReplyQuoteBlockProps {
   reply: ParsedMessageReply;
+  /** Color name for the quoted agent (resolved from memberColorMap). */
+  memberColor?: string;
   /** When set, limits height of the reply body (e.g. "max-h-56"). Omit to show full content. */
   bodyMaxHeight?: string;
 }
 
+/** Threshold (characters) above which the "more/less" toggle is shown. */
+const LONG_QUOTE_THRESHOLD = 200;
+
 export const ReplyQuoteBlock = ({
   reply,
+  memberColor,
   bodyMaxHeight = 'max-h-56',
-}: ReplyQuoteBlockProps): React.JSX.Element => (
-  <div className="space-y-2">
-    <div
-      className="rounded-md border-l-2 border-[var(--color-border-emphasis)] bg-[var(--color-surface)] px-3 py-2"
-      style={{ opacity: 0.7 }}
-    >
-      <span className="mb-0.5 block text-[10px] font-medium text-[var(--color-text-muted)]">
-        @{reply.agentName}
-      </span>
-      <div className="line-clamp-3 text-xs text-[var(--color-text-muted)]">
-        <MarkdownViewer content={reply.originalText} maxHeight="max-h-[60px]" bare />
+}: ReplyQuoteBlockProps): React.JSX.Element => {
+  const isLong = reply.originalText.length > LONG_QUOTE_THRESHOLD;
+  const [expanded, setExpanded] = useState(false);
+
+  const quoteMaxHeight = expanded ? 'max-h-48' : 'max-h-[3.75rem]';
+
+  return (
+    <div className="space-y-2">
+      {/* Quote block — styled like SendMessageDialog */}
+      <div className="relative overflow-hidden rounded-md border border-blue-500/20 bg-blue-950/20 py-2 pl-3 pr-2">
+        {/* Decorative quotation mark */}
+        <span className="pointer-events-none absolute -right-1 top-1/2 -translate-y-1/2 select-none font-serif text-[48px] leading-none text-blue-400/[0.08]">
+          &ldquo;
+        </span>
+
+        {/* "Replying to" + MemberBadge */}
+        <div className="mb-1 flex items-center gap-1.5">
+          <span className="text-[10px] text-blue-300/60">Replying to</span>
+          <MemberBadge name={reply.agentName} color={memberColor} size="sm" />
+        </div>
+
+        {/* Quote text */}
+        <div className={`pr-5 opacity-50 ${expanded ? '' : 'max-h-[3.75rem] overflow-hidden'}`}>
+          <MarkdownViewer content={reply.originalText} bare maxHeight={quoteMaxHeight} />
+        </div>
+
+        {/* More/less toggle */}
+        {isLong ? (
+          <button
+            type="button"
+            className="mt-0.5 text-[10px] text-blue-400/60 hover:text-blue-300"
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {expanded ? 'less' : 'more'}
+          </button>
+        ) : null}
       </div>
+
+      {/* Reply text */}
+      <MarkdownViewer content={reply.replyText} maxHeight={bodyMaxHeight} copyable bare />
     </div>
-    <MarkdownViewer content={reply.replyText} maxHeight={bodyMaxHeight} copyable bare />
-  </div>
-);
+  );
+};
