@@ -155,9 +155,13 @@ export const ProjectPathSelector = ({
               size="sm"
               onClick={() => {
                 void (async () => {
-                  const paths = await api.config.selectFolders();
-                  if (paths.length > 0) {
-                    onCustomCwdChange(paths[0]);
+                  try {
+                    const paths = await api.config.selectFolders();
+                    if (paths.length > 0) {
+                      onCustomCwdChange(paths[0]);
+                    }
+                  } catch {
+                    // IPC error — dialog may have been cancelled or failed
                   }
                 })();
               }}

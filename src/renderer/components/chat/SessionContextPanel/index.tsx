@@ -29,6 +29,7 @@ import {
   SECTION_TOOL_OUTPUTS,
   SECTION_USER_MESSAGES,
 } from './types';
+import { sumContextInjectionTokens } from '@renderer/utils/contextMath';
 
 import type { ContextViewMode, SectionType, SessionContextPanelProps } from './types';
 import type {
@@ -133,7 +134,7 @@ export const SessionContextPanel = ({
 
   // Calculate total tokens
   const totalTokens = useMemo(
-    () => injections.reduce((sum, inj) => sum + inj.estimatedTokens, 0),
+    () => sumContextInjectionTokens(injections),
     [injections]
   );
 

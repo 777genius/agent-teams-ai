@@ -16,6 +16,7 @@ import { formatCostUsd } from '@shared/utils/costFormatting';
 import { ArrowDownWideNarrow, FileText, LayoutList, X } from 'lucide-react';
 
 import { formatTokens } from '../utils/formatting';
+import { formatPercentOfTotal } from '@renderer/utils/contextMath';
 
 import { SessionContextHelpTooltip } from './SessionContextHelpTooltip';
 
@@ -110,7 +111,7 @@ export const SessionContextHeader = ({
           )}
         </div>
         {/* Percentage of total */}
-        {totalSessionTokens !== undefined && totalSessionTokens > 0 && (
+        {formatPercentOfTotal(totalTokens, totalSessionTokens) && (
           <span
             className="rounded px-1.5 py-0.5 tabular-nums"
             style={{
@@ -118,7 +119,7 @@ export const SessionContextHeader = ({
               color: COLOR_TEXT_MUTED,
             }}
           >
-            {Math.min((totalTokens / totalSessionTokens) * 100, 100).toFixed(1)}% of total
+            {formatPercentOfTotal(totalTokens, totalSessionTokens)}
           </span>
         )}
       </div>

@@ -195,10 +195,8 @@ export const ProvisioningProgressBlock = ({
         {STEP_ORDER.filter((s): s is ProvisioningStep => s !== 'ready').map((step, index) => {
           const isDone = currentStepIndex >= 0 && index < currentStepIndex;
           const isCurrent = currentStepIndex >= 0 && index === currentStepIndex;
-
           return (
             <div key={step} className="flex items-center gap-1">
-              {/* eslint-disable tailwindcss/no-custom-classname -- theme CSS vars */}
               <Badge
                 variant="secondary"
                 className={cn(
@@ -213,7 +211,6 @@ export const ProvisioningProgressBlock = ({
                 </span>
                 {STEP_LABELS[step]}
               </Badge>
-              {/* eslint-enable tailwindcss/no-custom-classname -- end theme CSS vars block */}
               {index < STEP_ORDER.filter((s) => s !== 'ready').length - 1 ? (
                 <span className="text-[var(--color-text-muted)]">&rarr;</span>
               ) : null}

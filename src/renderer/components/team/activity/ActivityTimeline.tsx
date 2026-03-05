@@ -158,7 +158,7 @@ export const ActivityTimeline = ({
     if (leadMember) {
       const leadInfo = memberInfo.get(leadMember.name);
       if (leadInfo) {
-        memberInfo.set('user', { role: leadInfo.role, color: colorMap.get('user') });
+        memberInfo.set('user', { role: undefined, color: colorMap.get('user') });
       }
     }
   }

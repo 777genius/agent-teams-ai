@@ -20,6 +20,7 @@ import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { useTabUI } from '@renderer/hooks/useTabUI';
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
+import { formatPercentOfTotal, sumContextInjectionTokens } from '@renderer/utils/contextMath';
 import { formatProjectPath } from '@renderer/utils/pathDisplay';
 import { buildTaskCountsByOwner, normalizePath } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
@@ -434,14 +435,14 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     return { allContextInjections: injections, lastAiGroupTotalTokens: totalTokens };
   }, [leadSessionLoaded, leadSessionContextStats, leadConversation, selectedContextPhase, leadSessionPhaseInfo]);
 
-  const visibleContextTokens = useMemo(() => {
-    return allContextInjections.reduce((sum, inj) => sum + (inj.estimatedTokens ?? 0), 0);
-  }, [allContextInjections]);
-
-  const visibleContextPercentOfTotal = useMemo(() => {
-    if (lastAiGroupTotalTokens === undefined || lastAiGroupTotalTokens <= 0) return null;
-    return Math.min((visibleContextTokens / lastAiGroupTotalTokens) * 100, 100);
-  }, [visibleContextTokens, lastAiGroupTotalTokens]);
+  const visibleContextTokens = useMemo(
+    () => sumContextInjectionTokens(allContextInjections),
+    [allContextInjections]
+  );
+  const visibleContextPercentLabel = useMemo(
+    () => formatPercentOfTotal(visibleContextTokens, lastAiGroupTotalTokens),
+    [visibleContextTokens, lastAiGroupTotalTokens]
+  );
 
   useEffect(() => {
     if (!projectId) return;
@@ -863,9 +864,12 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           className="relative size-full flex-1 overflow-auto p-4"
           data-team-name={teamName}
         >
-          {/* Sticky context button in top-right while scrolling */}
+          {/* Context button pinned to bottom-right of viewport */}
           {leadSessionId && (
-            <div className="pointer-events-none sticky top-0 z-20 ml-auto w-fit pb-2">
+            <div
+              className="pointer-events-none fixed bottom-4 z-20"
+              style={{ right: isContextPanelVisible ? 'calc(20rem + 1rem)' : '1rem' }}
+            >
               <button
                 onClick={() => {
                   const next = !isContextPanelVisible;
@@ -876,7 +880,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                 }}
                 onMouseEnter={() => setIsContextButtonHovered(true)}
                 onMouseLeave={() => setIsContextButtonHovered(false)}
-                className="pointer-events-auto flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs shadow-lg backdrop-blur-md transition-colors"
+                className="pointer-events-auto flex w-fit items-center gap-1 rounded-md px-2.5 py-1.5 text-xs shadow-lg backdrop-blur-md transition-colors"
                 style={{
                   backgroundColor: isContextPanelVisible
                     ? 'var(--context-btn-active-bg)'
@@ -895,8 +899,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                       : leadSessionId
                 }
               >
-                {visibleContextPercentOfTotal !== null
-                  ? `${visibleContextPercentOfTotal.toFixed(1)}% of total`
+                {visibleContextPercentLabel
+                  ? visibleContextPercentLabel
                   : typeof leadContextPercent === 'number'
                     ? `${Math.round(leadContextPercent)}%`
                     : 'Context'}
@@ -1320,7 +1324,13 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               })();
             }}
             onColumnOrderChange={(columnId, orderedTaskIds) => {
-              void updateKanbanColumnOrder(teamName, columnId, orderedTaskIds);
+              void (async () => {
+                try {
+                  await updateKanbanColumnOrder(teamName, columnId, orderedTaskIds);
+                } catch {
+                  // error via store
+                }
+              })();
             }}
             onScrollToTask={(taskId) => {
               const el = document.querySelector(`[data-task-id="${taskId}"]`);
@@ -1744,7 +1754,13 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             }
           }}
           onOwnerChange={(taskId, owner) => {
-            void updateTaskOwner(teamName, taskId, owner);
+            void (async () => {
+              try {
+                await updateTaskOwner(teamName, taskId, owner);
+              } catch {
+                // error via store
+              }
+            })();
           }}
           onViewChanges={handleViewChangesForFile}
           onOpenInEditor={(filePath) => {
@@ -1759,7 +1775,13 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           tasks={deletedTasks}
           onClose={() => setTrashOpen(false)}
           onRestore={(taskId) => {
-            void restoreTask(teamName, taskId);
+            void (async () => {
+              try {
+                await restoreTask(teamName, taskId);
+              } catch {
+                // error via store
+              }
+            })();
           }}
         />
 

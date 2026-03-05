@@ -142,6 +142,24 @@ function buildGroupSummary(items: AIGroupDisplayItem[]): string {
   return parts.join(', ') || 'empty';
 }
 
+function extractAssistantMessageId(parsed: unknown): string | null {
+  if (!parsed || typeof parsed !== 'object') return null;
+  const obj = parsed as Record<string, unknown>;
+  if (obj.type !== 'assistant') return null;
+
+  // Direct format can include id at top-level
+  if (typeof obj.id === 'string' && obj.id.trim()) return obj.id.trim();
+
+  // Wrapped format: { type: "assistant", message: { id, ... } }
+  const msg = obj.message;
+  if (msg && typeof msg === 'object') {
+    const inner = msg as Record<string, unknown>;
+    if (typeof inner.id === 'string' && inner.id.trim()) return inner.id.trim();
+  }
+
+  return null;
+}
+
 /**
  * Parses stream-json CLI output lines into structured groups for rich rendering.
  *
@@ -155,20 +173,23 @@ export function parseStreamJsonToGroups(cliLogsTail: string): StreamJsonGroup[] 
   const groups: StreamJsonGroup[] = [];
   let currentItems: AIGroupDisplayItem[] = [];
   let currentTimestamp: Date | null = null;
+  let currentGroupId: string | null = null;
   let groupCounter = 0;
   // Stable timestamp for the entire parse (deterministic across re-renders)
   const parseTimestamp = new Date();
 
   const flushGroup = (): void => {
     if (currentItems.length > 0 && currentTimestamp) {
+      const id = currentGroupId ?? `stream-group-${groupCounter++}`;
       groups.push({
-        id: `stream-group-${groupCounter++}`,
+        id,
         items: currentItems,
         summary: buildGroupSummary(currentItems),
         timestamp: currentTimestamp,
       });
       currentItems = [];
       currentTimestamp = null;
+      currentGroupId = null;
     }
   };
 
@@ -198,6 +219,10 @@ export function parseStreamJsonToGroups(cliLogsTail: string): StreamJsonGroup[] 
     }
 
     if (!currentTimestamp) currentTimestamp = parseTimestamp;
+    if (!currentGroupId) {
+      const msgId = extractAssistantMessageId(parsed);
+      currentGroupId = msgId ? `stream-group-${msgId}` : `stream-group-L${lineIndex}`;
+    }
 
     const items = contentBlocksToDisplayItems(blocks, parseTimestamp, lineIndex);
     currentItems.push(...items);
