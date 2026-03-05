@@ -114,6 +114,14 @@ interface ProvisioningRun {
   progress: TeamProvisioningProgress;
   stdoutBuffer: string;
   stderrBuffer: string;
+  /** Rolling buffer of CLI log lines (oldest -> newest). */
+  claudeLogLines: string[];
+  /** Carry buffer for stdout line splitting (CLI output). */
+  stdoutLogLineBuf: string;
+  /** Carry buffer for stderr line splitting (CLI output). */
+  stderrLogLineBuf: string;
+  /** ISO timestamp when the last CLI line was recorded. */
+  claudeLogsUpdatedAt?: string;
   processKilled: boolean;
   finalizingByTimeout: boolean;
   cancelRequested: boolean;
@@ -719,7 +727,8 @@ ${membersFooter}
 function buildLaunchPrompt(
   request: TeamLaunchRequest,
   members: TeamCreateRequest['members'],
-  tasks: TeamTask[]
+  tasks: TeamTask[],
+  isResume: boolean
 ): string {
   const membersBlock = buildMembersPrompt(members);
   const userPromptBlock = request.prompt?.trim()
@@ -828,7 +837,9 @@ ${memberSpawnInstructions}
     ? `Members:\n${membersBlock}`
     : 'Members: (none — solo team lead)';
 
-  return `Team Start [Agent Team: "${request.teamName}" | Project: "${projectName}" | Lead: "${leadName}"]
+  const startLabel = isResume ? 'Team Start (resume)' : 'Team Start';
+
+  return `${startLabel} [Agent Team: "${request.teamName}" | Project: "${projectName}" | Lead: "${leadName}"]
 
 You are running in a non-interactive CLI session. Do not ask questions. Do everything in a single turn.
 You are "${leadName}", the team lead.
@@ -967,6 +978,8 @@ interface CachedProbeResult {
 let cachedProbeResult: CachedProbeResult | null = null;
 
 export class TeamProvisioningService {
+  private static readonly CLAUDE_LOG_LINES_LIMIT = 50_000;
+
   private readonly runs = new Map<string, ProvisioningRun>();
   private readonly activeByTeam = new Map<string, string>();
   private readonly teamOpLocks = new Map<string, Promise<void>>();
@@ -982,6 +995,71 @@ export class TeamProvisioningService {
     private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore(),
     private readonly sentMessagesStore: TeamSentMessagesStore = new TeamSentMessagesStore()
   ) {}
+
+  getClaudeLogs(
+    teamName: string,
+    query?: { offset?: number; limit?: number }
+  ): { lines: string[]; total: number; hasMore: boolean; updatedAt?: string } {
+    const runId = this.activeByTeam.get(teamName);
+    if (!runId) {
+      return { lines: [], total: 0, hasMore: false };
+    }
+    const run = this.runs.get(runId);
+    if (!run) {
+      return { lines: [], total: 0, hasMore: false };
+    }
+
+    const offsetRaw = query?.offset ?? 0;
+    const limitRaw = query?.limit ?? 100;
+    const offset = Number.isFinite(offsetRaw) ? Math.max(0, Math.floor(offsetRaw)) : 0;
+    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(1000, Math.floor(limitRaw))) : 100;
+
+    const total = run.claudeLogLines.length;
+    if (total === 0) {
+      return { lines: [], total: 0, hasMore: false, updatedAt: run.claudeLogsUpdatedAt };
+    }
+
+    const newestExclusive = Math.max(0, total - offset);
+    const oldestInclusive = Math.max(0, newestExclusive - limit);
+    const windowOldestToNewest = run.claudeLogLines.slice(oldestInclusive, newestExclusive);
+    const lines = windowOldestToNewest.reverse();
+    return {
+      lines,
+      total,
+      hasMore: oldestInclusive > 0,
+      updatedAt: run.claudeLogsUpdatedAt,
+    };
+  }
+
+  private appendCliLogs(run: ProvisioningRun, stream: 'stdout' | 'stderr', text: string): void {
+    const nowMs = Date.now();
+    run.claudeLogsUpdatedAt = new Date(nowMs).toISOString();
+
+    const prefix = stream === 'stdout' ? '[stdout] ' : '[stderr] ';
+    if (stream === 'stdout') {
+      run.stdoutLogLineBuf += text;
+      const parts = run.stdoutLogLineBuf.split('\n');
+      run.stdoutLogLineBuf = parts.pop() ?? '';
+      for (const part of parts) {
+        const normalized = part.endsWith('\r') ? part.slice(0, -1) : part;
+        run.claudeLogLines.push(prefix + normalized);
+      }
+    } else {
+      run.stderrLogLineBuf += text;
+      const parts = run.stderrLogLineBuf.split('\n');
+      run.stderrLogLineBuf = parts.pop() ?? '';
+      for (const part of parts) {
+        const normalized = part.endsWith('\r') ? part.slice(0, -1) : part;
+        run.claudeLogLines.push(prefix + normalized);
+      }
+    }
+    if (run.claudeLogLines.length > TeamProvisioningService.CLAUDE_LOG_LINES_LIMIT) {
+      run.claudeLogLines.splice(
+        0,
+        run.claudeLogLines.length - TeamProvisioningService.CLAUDE_LOG_LINES_LIMIT
+      );
+    }
+  }
 
   /**
    * Serializes operations per team name using promise-chaining.
@@ -1189,6 +1267,67 @@ export class TeamProvisioningService {
     );
   }
 
+  private hasApiError(text: string): boolean {
+    return /api error:\s*\d{3}\b/i.test(text) || /invalid_request_error/i.test(text);
+  }
+
+  private sanitizeCliSnippet(text: string): string {
+    // Remove control characters that often show up as binary noise in CLI error payloads.
+    // Preserve newlines/tabs for readability.
+    return text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
+  }
+
+  private extractApiErrorSnippet(text: string): string | null {
+    const match = /api error:\s*\d{3}\b/i.exec(text) ?? /invalid_request_error/i.exec(text);
+    if (!match || match.index === undefined) return null;
+    const start = Math.max(0, match.index - 200);
+    const end = Math.min(text.length, match.index + 4000);
+    const raw = text.slice(start, end).trim();
+    if (!raw) return null;
+    // Avoid breaking markdown fences if the payload contains ``` accidentally.
+    return this.sanitizeCliSnippet(raw).replace(/```/g, '``\\`');
+  }
+
+  private failProvisioningWithApiError(run: ProvisioningRun, source: string): void {
+    if (run.provisioningComplete || run.processKilled || run.authRetryInProgress) return;
+    if (run.progress.state === 'failed' || run.cancelRequested) return;
+
+    const combined = [
+      buildCombinedLogs(run.stdoutBuffer, run.stderrBuffer),
+      run.provisioningOutputParts.length > 0 ? run.provisioningOutputParts.join('\n') : '',
+    ]
+      .filter(Boolean)
+      .join('\n')
+      .trim();
+
+    const snippet =
+      this.extractApiErrorSnippet(combined) ?? this.extractApiErrorSnippet(source) ?? null;
+    const status =
+      /api error:\s*(\d{3})\b/i.exec(combined)?.[1] ?? /api error:\s*(\d{3})\b/i.exec(source)?.[1];
+
+    const hint = run.isLaunch ? 'Launch' : 'Provisioning';
+    const statusLabel = status ? `API Error ${status}` : 'API Error';
+    if (snippet) {
+      run.provisioningOutputParts.push(
+        `**${hint} failed: ${statusLabel} detected**\n\n\`\`\`\n${snippet}\n\`\`\``
+      );
+    } else {
+      run.provisioningOutputParts.push(`**${hint} failed: ${statusLabel} detected**`);
+    }
+
+    const progress = updateProgress(run, 'failed', `${hint} failed — ${statusLabel}`, {
+      error: `Claude CLI reported ${statusLabel} during startup. The team was not started.`,
+      cliLogsTail: extractLogsTail(run.stdoutBuffer, run.stderrBuffer),
+    });
+    run.onProgress(progress);
+
+    run.processKilled = true;
+    run.cancelRequested = true;
+    run.child?.stdin?.end();
+    killProcessTree(run.child);
+    this.cleanupRun(run);
+  }
+
   /**
    * Detects auth failure keywords in stderr/stdout during provisioning.
    * On first detection: kills process, waits, and respawns automatically.
@@ -1250,6 +1389,10 @@ export class TeamProvisioningService {
     // Reset buffers for fresh attempt
     run.stdoutBuffer = '';
     run.stderrBuffer = '';
+    run.claudeLogLines = [];
+    run.stdoutLogLineBuf = '';
+    run.stderrLogLineBuf = '';
+    run.claudeLogsUpdatedAt = undefined;
     run.authFailureRetried = true;
 
     updateProgress(run, 'spawning', 'Auth failed — retrying after short delay');
@@ -1362,6 +1505,7 @@ export class TeamProvisioningService {
     let stdoutLineBuf = '';
     child.stdout.on('data', (chunk: Buffer) => {
       const text = chunk.toString('utf8');
+      this.appendCliLogs(run, 'stdout', text);
       run.stdoutBuffer += text;
       if (run.stdoutBuffer.length > STDOUT_RING_LIMIT) {
         run.stdoutBuffer = run.stdoutBuffer.slice(run.stdoutBuffer.length - STDOUT_RING_LIMIT);
@@ -1380,6 +1524,9 @@ export class TeamProvisioningService {
         } catch {
           // Not valid JSON — check for auth failure in raw text output
           this.handleAuthFailureInOutput(run, trimmed, 'stdout');
+          if (this.hasApiError(trimmed) && !this.isAuthFailureWarning(trimmed)) {
+            this.failProvisioningWithApiError(run, trimmed);
+          }
         }
       }
 
@@ -1398,6 +1545,7 @@ export class TeamProvisioningService {
 
     child.stderr.on('data', (chunk: Buffer) => {
       const text = chunk.toString('utf8');
+      this.appendCliLogs(run, 'stderr', text);
       run.stderrBuffer += text;
       if (run.stderrBuffer.length > STDERR_RING_LIMIT) {
         run.stderrBuffer = run.stderrBuffer.slice(run.stderrBuffer.length - STDERR_RING_LIMIT);
@@ -1405,6 +1553,9 @@ export class TeamProvisioningService {
 
       // Detect auth failure early instead of waiting for 5-minute timeout
       this.handleAuthFailureInOutput(run, text, 'stderr');
+      if (this.hasApiError(text) && !this.isAuthFailureWarning(text)) {
+        this.failProvisioningWithApiError(run, text);
+      }
 
       const currentTs = Date.now();
       if (currentTs - run.lastLogProgressAt >= LOG_PROGRESS_THROTTLE_MS) {
@@ -1460,6 +1611,10 @@ export class TeamProvisioningService {
         startedAt,
         stdoutBuffer: '',
         stderrBuffer: '',
+        claudeLogLines: [],
+        stdoutLogLineBuf: '',
+        stderrLogLineBuf: '',
+        claudeLogsUpdatedAt: undefined,
         processKilled: false,
         finalizingByTimeout: false,
         cancelRequested: false,
@@ -1744,6 +1899,10 @@ export class TeamProvisioningService {
         startedAt,
         stdoutBuffer: '',
         stderrBuffer: '',
+        claudeLogLines: [],
+        stdoutLogLineBuf: '',
+        stderrLogLineBuf: '',
+        claudeLogsUpdatedAt: undefined,
         processKilled: false,
         finalizingByTimeout: false,
         cancelRequested: false,
@@ -1800,7 +1959,12 @@ export class TeamProvisioningService {
         );
       }
 
-      const prompt = buildLaunchPrompt(request, expectedMemberSpecs, existingTasks);
+      const prompt = buildLaunchPrompt(
+        request,
+        expectedMemberSpecs,
+        existingTasks,
+        Boolean(previousSessionId)
+      );
       let child: ReturnType<typeof spawn>;
       const { env: shellEnv } = await this.buildProvisioningEnv();
       const launchArgs = [
@@ -2480,6 +2644,10 @@ export class TeamProvisioningService {
         // Auth failures sometimes show up as assistant text (e.g. "401", "Please run /login")
         // rather than stderr or a result.subtype=error. Detect early to avoid false "ready".
         this.handleAuthFailureInOutput(run, text, 'assistant');
+        if (this.hasApiError(text) && !this.isAuthFailureWarning(text)) {
+          this.failProvisioningWithApiError(run, text);
+          return;
+        }
         logger.debug(`[${run.teamName}] assistant: ${text.slice(0, 200)}`);
         // During provisioning (before provisioningComplete), accumulate for live UI preview.
         // Emission is handled by the throttled emitLogsProgress() in the stdout data handler.
@@ -2735,9 +2903,39 @@ export class TeamProvisioningService {
     // Handle compact_boundary — context was compacted, next assistant message will carry fresh usage
     if (msg.type === 'system') {
       const sub = typeof msg.subtype === 'string' ? msg.subtype : undefined;
-      if (sub === 'compact_boundary' && run.leadContextUsage) {
-        run.leadContextUsage.lastUsageMessageId = null;
-        logger.info(`[${run.teamName}] compact_boundary — context will refresh on next turn`);
+      if (sub === 'compact_boundary') {
+        if (run.leadContextUsage) {
+          run.leadContextUsage.lastUsageMessageId = null;
+        }
+
+        // Extract compact metadata for the system message
+        const meta = (msg as Record<string, unknown>).compact_metadata as
+          | Record<string, unknown>
+          | undefined;
+        const trigger = typeof meta?.trigger === 'string' ? meta.trigger : 'auto';
+        const preTokens = typeof meta?.pre_tokens === 'number' ? meta.pre_tokens : null;
+        const tokenInfo = preTokens
+          ? ` (was ~${(preTokens / 1000).toFixed(0)}k tokens)`
+          : '';
+
+        const compactMsg: InboxMessage = {
+          from: 'system',
+          text: `Context compacted${tokenInfo}, trigger: ${trigger}`,
+          timestamp: nowIso(),
+          read: true,
+          summary: `Context compacted (${trigger})`,
+          messageId: `compact-${run.runId}-${Date.now()}`,
+          source: 'lead_process',
+        };
+        this.pushLiveLeadProcessMessage(run.teamName, compactMsg);
+        this.teamChangeEmitter?.({
+          type: 'inbox',
+          teamName: run.teamName,
+          detail: 'compact_boundary',
+        });
+        logger.info(
+          `[${run.teamName}] compact_boundary — context will refresh on next turn${tokenInfo}`
+        );
       }
     }
   }
@@ -2750,19 +2948,24 @@ export class TeamProvisioningService {
   private async handleProvisioningTurnComplete(run: ProvisioningRun): Promise<void> {
     // Guard: must be set synchronously BEFORE any await to prevent
     // double-invocation from filesystem monitor + stream-json racing.
-    if (run.provisioningComplete || run.cancelRequested) return;
+    if (run.provisioningComplete || run.cancelRequested || run.processKilled || run.progress.state === 'failed')
+      return;
 
     // Prevent false "ready" when auth failure was printed as assistant text or logs
     // but the filesystem monitor observed files on disk.
-    const authFailureText = [
+    const preCompleteText = [
       buildCombinedLogs(run.stdoutBuffer, run.stderrBuffer),
       run.provisioningOutputParts.length > 0 ? run.provisioningOutputParts.join('\n') : '',
     ]
       .filter(Boolean)
       .join('\n')
       .trim();
-    if (authFailureText && this.isAuthFailureWarning(authFailureText)) {
-      this.handleAuthFailureInOutput(run, authFailureText, 'pre-complete');
+    if (preCompleteText && this.hasApiError(preCompleteText) && !this.isAuthFailureWarning(preCompleteText)) {
+      this.failProvisioningWithApiError(run, preCompleteText);
+      return;
+    }
+    if (preCompleteText && this.isAuthFailureWarning(preCompleteText)) {
+      this.handleAuthFailureInOutput(run, preCompleteText, 'pre-complete');
       return;
     }
 

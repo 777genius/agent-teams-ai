@@ -148,10 +148,11 @@ export const MessageComposer = ({
   const selectedMember = members.find((m) => m.name === recipient);
   const selectedResolvedColor = selectedMember ? colorMap.get(selectedMember.name) : undefined;
   const isLeadRecipient = selectedMember?.role === 'lead' || selectedMember?.name === 'team-lead';
-  const isLeadAgentRecipient = selectedMember?.agentType === 'team-lead';
-  const leadContext = useStore((s) =>
-    isLeadAgentRecipient ? s.leadContextByTeam[teamName] : undefined
-  );
+  // TODO: lead context ring disabled — usage formula is inaccurate
+  // const isLeadAgentRecipient = selectedMember?.agentType === 'team-lead';
+  // const leadContext = useStore((s) =>
+  //   isLeadAgentRecipient ? s.leadContextByTeam[teamName] : undefined
+  // );
   const supportsAttachments = isLeadRecipient && !!isTeamAlive;
   const canAttach = supportsAttachments && canAddMore;
   const attachmentsBlocked = attachments.length > 0 && !supportsAttachments;
@@ -420,7 +421,7 @@ export const MessageComposer = ({
         disabled={sending}
         cornerAction={
           <div className="flex items-center gap-2">
-            {leadContext && leadContext.percent > 0 && <ContextRing ctx={leadContext} />}
+            {/* TODO: ContextRing disabled — usage formula is inaccurate */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button

@@ -549,7 +549,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const state = get();
     // Use display name from teams list or selected team data if available
     const teamSummary = state.teamByName[teamName];
-    const displayName = teamSummary?.displayName || state.selectedTeamData?.config.name || teamName;
+    const selectedTeamDisplayName =
+      state.selectedTeamName === teamName ? state.selectedTeamData?.config.name : undefined;
+    const displayName = teamSummary?.displayName || selectedTeamDisplayName || teamName;
 
     const allTabs = state.getAllPaneTabs();
     const existing = allTabs.find((tab) => tab.type === 'team' && tab.teamName === teamName);

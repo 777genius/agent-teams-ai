@@ -491,10 +491,11 @@ export const CreateTeamDialog = ({
     activeError?.includes('Team already exists') === true && request.teamName.length > 0;
 
   const conflictingTeam = useMemo(() => {
+    if (!launchTeam) return null;
     if (!activeTeams?.length || !effectiveCwd) return null;
     const norm = normalizePath(effectiveCwd);
     return activeTeams.find((t) => normalizePath(t.projectPath) === norm) ?? null;
-  }, [activeTeams, effectiveCwd]);
+  }, [activeTeams, effectiveCwd, launchTeam]);
 
   // Reset dismiss when conflict target changes
   useEffect(() => {
@@ -554,6 +555,18 @@ export const CreateTeamDialog = ({
     })();
   };
 
+  const handleTeamNameChange = (value: string): void => {
+    setTeamName(value);
+    setFieldErrors((prev) => {
+      if (!prev.teamName) return prev;
+      const { teamName: _teamName, ...rest } = prev;
+      if (!rest.members && !rest.cwd && localError === 'Check form fields') {
+        setLocalError(null);
+      }
+      return rest;
+    });
+  };
+
   return (
     <Dialog
       open={open}
@@ -580,12 +593,15 @@ export const CreateTeamDialog = ({
               <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
               <div className="min-w-0 flex-1 space-y-1">
                 <p className="font-medium text-amber-300">
-                  Team &ldquo;{conflictingTeam.displayName}&rdquo; is already running in this
-                  project
+                  Another team &ldquo;{conflictingTeam.displayName}&rdquo; is already running for
+                  this working directory
                 </p>
                 <p className="text-amber-300/80">
                   Running two teams in the same directory is risky — they may conflict editing the
                   same files. Consider using a different directory or a git worktree for isolation.
+                </p>
+                <p className="text-[11px] text-amber-300/70">
+                  Working directory: <span className="font-mono">{effectiveCwd}</span>
                 </p>
               </div>
               <button
@@ -641,7 +657,7 @@ export const CreateTeamDialog = ({
               id="team-name"
               className="h-8 text-xs"
               value={teamName}
-              onChange={(event) => setTeamName(event.target.value)}
+              onChange={(event) => handleTeamNameChange(event.target.value)}
               placeholder="team-alpha"
             />
             {existingTeamNames.includes(sanitizedTeamName) ? (

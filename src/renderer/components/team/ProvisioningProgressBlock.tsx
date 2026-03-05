@@ -44,27 +44,66 @@ function formatElapsed(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-function useElapsedTimer(startedAt?: string): string | null {
-  const [elapsed, setElapsed] = useState<string | null>(null);
+function useElapsedTimer(startedAt?: string, isRunning = true): string | null {
+  const [elapsedSeconds, setElapsedSeconds] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!startedAt) return () => setElapsed(null);
+    if (!startedAt) {
+      setElapsedSeconds(null);
+      return;
+    }
+
     const startMs = Date.parse(startedAt);
-    if (isNaN(startMs)) return () => setElapsed(null);
+    if (isNaN(startMs)) {
+      setElapsedSeconds(null);
+      return;
+    }
+
+    const computeElapsedSeconds = (): number =>
+      Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+
+    if (!isRunning) {
+      // Freeze timer on terminal states (failed/ready/cancelled) instead of continuing to tick.
+      setElapsedSeconds((prev) => (prev === null ? computeElapsedSeconds() : prev));
+      return;
+    }
 
     const tick = (): void => {
-      const seconds = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
-      setElapsed(formatElapsed(seconds));
+      setElapsedSeconds(computeElapsedSeconds());
     };
+
     tick();
     const id = window.setInterval(tick, 1000);
     return () => {
       window.clearInterval(id);
     };
-  }, [startedAt]);
+  }, [startedAt, isRunning]);
 
   if (!startedAt) return null;
-  return elapsed;
+  if (elapsedSeconds === null) return null;
+  return formatElapsed(elapsedSeconds);
+}
+
+function sanitizeAssistantOutput(raw?: string, isError = false): string | null {
+  if (!raw) return null;
+  if (!isError) return raw;
+
+  const looksLikeRawApiEnvelope =
+    raw.includes('API Error: 400') &&
+    (raw.includes('"_requests"') ||
+      raw.includes('"session_id"') ||
+      raw.includes('"parent_tool_use_id"') ||
+      raw.includes('\\u000'));
+
+  if (!looksLikeRawApiEnvelope) {
+    return raw;
+  }
+
+  return (
+    'API Error: 400\n\n' +
+    'Raw payload from CLI stream hidden because it contains encoded/binary-like content.\n\n' +
+    'Open **CLI logs** below for readable diagnostics.'
+  );
 }
 
 export const ProvisioningProgressBlock = ({
@@ -81,11 +120,12 @@ export const ProvisioningProgressBlock = ({
   assistantOutput,
   className,
 }: ProvisioningProgressBlockProps): React.JSX.Element => {
-  const elapsed = useElapsedTimer(startedAt);
-  const [logsOpen, setLogsOpen] = useState(false);
+  const elapsed = useElapsedTimer(startedAt, loading);
+  const [logsOpen, setLogsOpen] = useState(() => tone === 'error' && Boolean(cliLogsTail));
   const [liveOutputOpen, setLiveOutputOpen] = useState(defaultLiveOutputOpen);
   const outputScrollRef = useRef<HTMLDivElement>(null);
   const isError = tone === 'error';
+  const displayAssistantOutput = sanitizeAssistantOutput(assistantOutput, isError);
 
   // Auto-scroll assistant output
   useEffect(() => {
@@ -98,6 +138,14 @@ export const ProvisioningProgressBlock = ({
   useEffect(() => {
     setLiveOutputOpen(defaultLiveOutputOpen);
   }, [defaultLiveOutputOpen]);
+
+  // On error with logs available, prioritize logs view over noisy live stream payload.
+  useEffect(() => {
+    if (isError && cliLogsTail) {
+      setLogsOpen(true);
+      setLiveOutputOpen(false);
+    }
+  }, [isError, cliLogsTail]);
 
   return (
     <div
@@ -190,8 +238,8 @@ export const ProvisioningProgressBlock = ({
               isError && 'border-red-500/40'
             )}
           >
-            {assistantOutput ? (
-              <MarkdownViewer content={assistantOutput} bare maxHeight="max-h-none" />
+            {displayAssistantOutput ? (
+              <MarkdownViewer content={displayAssistantOutput} bare maxHeight="max-h-none" />
             ) : (
               <p
                 className={cn(

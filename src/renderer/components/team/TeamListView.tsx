@@ -255,6 +255,21 @@ export const TeamListView = (): React.JSX.Element => {
     };
   }, [electronMode, teams]);
 
+  // Refresh alive teams when opening the create dialog so conflict warning is accurate.
+  useEffect(() => {
+    if (!electronMode || !showCreateDialog) return;
+    let cancelled = false;
+    void api.teams
+      .aliveList()
+      .then((list) => {
+        if (!cancelled) setAliveTeams(list);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [electronMode, showCreateDialog]);
+
   const currentProjectPath = useMemo(() => {
     if (viewMode === 'grouped') {
       const repo = repositoryGroups.find((r) => r.id === selectedRepositoryId);

@@ -319,12 +319,15 @@ export const LaunchTeamDialog = ({
               <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
               <div className="min-w-0 flex-1 space-y-1">
                 <p className="font-medium text-amber-300">
-                  Team &ldquo;{conflictingTeam.displayName}&rdquo; is already running in this
-                  project
+                  Another team &ldquo;{conflictingTeam.displayName}&rdquo; is already running for
+                  this working directory
                 </p>
                 <p className="text-amber-300/80">
                   Running two teams in the same directory is risky — they may conflict editing the
                   same files. Consider using a different directory or a git worktree for isolation.
+                </p>
+                <p className="text-[11px] text-amber-300/70">
+                  Working directory: <span className="font-mono">{effectiveCwd}</span>
                 </p>
               </div>
               <button

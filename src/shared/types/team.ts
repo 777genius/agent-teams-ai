@@ -311,6 +311,24 @@ export interface TeamChangeEvent {
   detail?: string;
 }
 
+export interface TeamClaudeLogsQuery {
+  /** Offset in lines from the newest log line (0 = newest). */
+  offset?: number;
+  /** Max number of lines to return. */
+  limit?: number;
+}
+
+export interface TeamClaudeLogsResponse {
+  /** Log lines ordered newest-first. */
+  lines: string[];
+  /** Total number of buffered lines available in memory. */
+  total: number;
+  /** True when there are older lines beyond the current window. */
+  hasMore: boolean;
+  /** ISO timestamp of the last observed CLI output for this team. */
+  updatedAt?: string;
+}
+
 export type TeamProvisioningState =
   | 'idle'
   | 'validating'

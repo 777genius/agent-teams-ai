@@ -70,6 +70,7 @@ import {
   TEAM_DELETE_TEAM,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
+  TEAM_GET_CLAUDE_LOGS,
   TEAM_GET_DATA,
   TEAM_GET_DELETED_TASKS,
   TEAM_GET_LOGS_FOR_TASK,
@@ -197,6 +198,8 @@ import type {
   TaskChangeSetV2,
   TaskComment,
   TeamChangeEvent,
+  TeamClaudeLogsQuery,
+  TeamClaudeLogsResponse,
   TeamConfig,
   TeamCreateConfigRequest,
   TeamCreateRequest,
@@ -695,6 +698,9 @@ const electronAPI: ElectronAPI = {
     },
     getData: async (teamName: string) => {
       return invokeIpcWithResult<TeamData>(TEAM_GET_DATA, teamName);
+    },
+    getClaudeLogs: async (teamName: string, query?: TeamClaudeLogsQuery) => {
+      return invokeIpcWithResult<TeamClaudeLogsResponse>(TEAM_GET_CLAUDE_LOGS, teamName, query);
     },
     deleteTeam: async (teamName: string) => {
       return invokeIpcWithResult<void>(TEAM_DELETE_TEAM, teamName);

@@ -14,6 +14,7 @@ import {
   TEAM_DELETE_TEAM,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
+  TEAM_GET_CLAUDE_LOGS,
   TEAM_GET_DATA,
   TEAM_GET_DELETED_TASKS,
   TEAM_GET_LOGS_FOR_TASK,
@@ -108,6 +109,8 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamData,
+  TeamClaudeLogsQuery,
+  TeamClaudeLogsResponse,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamMessageNotificationData,
@@ -195,6 +198,7 @@ export function initializeTeamHandlers(
 export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_LIST, handleListTeams);
   ipcMain.handle(TEAM_GET_DATA, handleGetData);
+  ipcMain.handle(TEAM_GET_CLAUDE_LOGS, handleGetClaudeLogs);
   ipcMain.handle(TEAM_PREPARE_PROVISIONING, handlePrepareProvisioning);
   ipcMain.handle(TEAM_CREATE, handleCreateTeam);
   ipcMain.handle(TEAM_LAUNCH, handleLaunchTeam);
@@ -248,6 +252,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
 export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_LIST);
   ipcMain.removeHandler(TEAM_GET_DATA);
+  ipcMain.removeHandler(TEAM_GET_CLAUDE_LOGS);
   ipcMain.removeHandler(TEAM_PREPARE_PROVISIONING);
   ipcMain.removeHandler(TEAM_CREATE);
   ipcMain.removeHandler(TEAM_LAUNCH);
@@ -632,6 +637,39 @@ async function validateProvisioningRequest(
       model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
     },
   };
+}
+
+async function handleGetClaudeLogs(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  query?: unknown
+): Promise<IpcResult<TeamClaudeLogsResponse>> {
+  const validated = validateTeamName(teamName);
+  if (!validated.valid) {
+    return { success: false, error: validated.error ?? 'Invalid teamName' };
+  }
+
+  let parsed: TeamClaudeLogsQuery | undefined;
+  if (query !== undefined) {
+    if (!query || typeof query !== 'object') {
+      return { success: false, error: 'query must be an object' };
+    }
+    const q = query as Record<string, unknown>;
+    parsed = {
+      offset: typeof q.offset === 'number' ? q.offset : undefined,
+      limit: typeof q.limit === 'number' ? q.limit : undefined,
+    };
+  }
+
+  return wrapTeamHandler('getClaudeLogs', async () => {
+    const data = getTeamProvisioningService().getClaudeLogs(validated.value!, parsed);
+    return {
+      lines: data.lines,
+      total: data.total,
+      hasMore: data.hasMore,
+      updatedAt: data.updatedAt,
+    };
+  });
 }
 
 async function handleCreateTeam(

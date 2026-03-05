@@ -398,6 +398,10 @@ export interface HttpServerAPI {
 export interface TeamsAPI {
   list: () => Promise<TeamSummary[]>;
   getData: (teamName: string) => Promise<TeamData>;
+  getClaudeLogs: (
+    teamName: string,
+    query?: import('./team').TeamClaudeLogsQuery
+  ) => Promise<import('./team').TeamClaudeLogsResponse>;
   deleteTeam: (teamName: string) => Promise<void>;
   restoreTeam: (teamName: string) => Promise<void>;
   permanentlyDeleteTeam: (teamName: string) => Promise<void>;

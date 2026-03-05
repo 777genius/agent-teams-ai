@@ -70,6 +70,7 @@ import { MessageComposer } from './messages/MessageComposer';
 import { MessagesFilterPopover } from './messages/MessagesFilterPopover';
 import { ChangeReviewDialog } from './review/ChangeReviewDialog';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
+import { ClaudeLogsSection } from './ClaudeLogsSection';
 import { ProcessesSection } from './ProcessesSection';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { TeamSessionsSection } from './TeamSessionsSection';
@@ -1170,6 +1171,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             <ProcessesSection />
           </CollapsibleTeamSection>
         )}
+
+        <ClaudeLogsSection teamName={teamName} />
 
         <CollapsibleTeamSection
           sectionId="messages"
