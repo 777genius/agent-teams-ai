@@ -139,6 +139,7 @@ export const LeadThoughtsGroupRow = ({
   const [isLive, setIsLive] = useState(computeIsLive);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional immediate sync to avoid 1s stale gap
     setIsLive(computeIsLive());
     const id = window.setInterval(() => setIsLive(computeIsLive()), 1000);
     return () => window.clearInterval(id);

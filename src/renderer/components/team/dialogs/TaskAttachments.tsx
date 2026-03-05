@@ -219,7 +219,6 @@ export const TaskAttachments = ({
                 void handlePreview(att);
               }}
               onDelete={() => {
-                // eslint-disable-next-line sonarjs/void-use -- void needed to mark floating promise
                 void handleDelete(att.id, att.mimeType);
               }}
               onDataLoaded={handleThumbLoaded}
