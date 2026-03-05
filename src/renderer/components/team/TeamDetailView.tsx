@@ -27,6 +27,7 @@ import { nameColorSet } from '@renderer/utils/projectColor';
 import { resolveProjectIdByPath } from '@renderer/utils/projectLookup';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
+import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
 import {
   AlertTriangle,
   Bell,
@@ -304,6 +305,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   const [messagesFilter, setMessagesFilter] = useState<MessagesFilterState>({
     from: new Set(),
     to: new Set(),
+    showNoise: false,
   });
   const [messagesFilterOpen, setMessagesFilterOpen] = useState(false);
 
@@ -444,6 +446,24 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     [visibleContextTokens, lastAiGroupTotalTokens]
   );
 
+  const activeTabId = useStore((s) => s.activeTabId);
+  const isThisTabActive = tabId ? activeTabId === tabId : false;
+
+  // Keep lead-session context fresh in the background while the team tab is active.
+  // This keeps the button value current even when the panel is closed.
+  useEffect(() => {
+    if (!isThisTabActive) return;
+    if (!tabId || !projectId || !leadSessionId) return;
+    if (!data?.isAlive) return;
+
+    const tick = (): void => {
+      void fetchSessionDetail(projectId, leadSessionId, tabId, { silent: true });
+    };
+    tick();
+    const id = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(id);
+  }, [isThisTabActive, tabId, projectId, leadSessionId, data?.isAlive, fetchSessionDetail]);
+
   useEffect(() => {
     if (!projectId) return;
 
@@ -557,6 +577,9 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         const ts = new Date(m.timestamp).getTime();
         return ts >= timeWindow.start && ts < timeWindow.end;
       });
+    }
+    if (!messagesFilter.showNoise) {
+      list = list.filter((m) => !isInboxNoiseMessage(typeof m.text === 'string' ? m.text : ''));
     }
     if (messagesFilter.from.size > 0) {
       list = list.filter((m) => m.from?.trim() && messagesFilter.from.has(m.from.trim()));
@@ -874,8 +897,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                 onClick={() => {
                   const next = !isContextPanelVisible;
                   setContextPanelVisible(next);
-                  if (next && tabId && projectId && leadSessionId && !leadSessionLoaded) {
-                    void fetchSessionDetail(projectId, leadSessionId, tabId);
+                  if (tabId && projectId && leadSessionId) {
+                    void fetchSessionDetail(projectId, leadSessionId, tabId, { silent: true });
                   }
                 }}
                 onMouseEnter={() => setIsContextButtonHovered(true)}
@@ -899,11 +922,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                       : leadSessionId
                 }
               >
-                {visibleContextPercentLabel
-                  ? visibleContextPercentLabel
-                  : typeof leadContextPercent === 'number'
-                    ? `${Math.round(leadContextPercent)}%`
-                    : 'Context'}
+                {visibleContextPercentLabel ?? 'Context'}
               </button>
             </div>
           )}

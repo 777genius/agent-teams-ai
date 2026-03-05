@@ -19,6 +19,7 @@ import {
 } from '@shared/constants/agentBlocks';
 import { getMemberColor } from '@shared/constants/memberColors';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
+import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
 import { createLogger } from '@shared/utils/logger';
 import { spawn } from 'child_process';
 import { randomUUID } from 'crypto';
@@ -2245,8 +2246,23 @@ export class TeamProvisioningService {
 
       if (unread.length === 0) return 0;
 
+      // Ignore (and auto-mark read) internal coordination noise like idle/shutdown messages.
+      // These frequently appear when teammates are idle/available and should not prompt
+      // the lead to respond with "No action needed."
+      const noiseUnread = unread.filter((m) => isInboxNoiseMessage(m.text));
+      if (noiseUnread.length > 0) {
+        try {
+          await this.markInboxMessagesRead(teamName, leadName, noiseUnread);
+        } catch {
+          // best-effort
+        }
+      }
+
+      const actionableUnread = unread.filter((m) => !isInboxNoiseMessage(m.text));
+      if (actionableUnread.length === 0) return 0;
+
       const MAX_RELAY = 10;
-      const batch = unread.slice(0, MAX_RELAY);
+      const batch = actionableUnread.slice(0, MAX_RELAY);
 
       const message = [
         `You have new inbox messages addressed to you (team lead "${leadName}").`,
@@ -3156,6 +3172,8 @@ export class TeamProvisioningService {
     this.relayedLeadInboxMessageIds.delete(run.teamName);
     this.relayedLeadInboxFallbackKeys.delete(run.teamName);
     this.liveLeadProcessMessages.delete(run.teamName);
+    // Remove from runs Map to free memory (stdoutBuffer, stderrBuffer, claudeLogLines)
+    this.runs.delete(run.runId);
   }
 
   /**

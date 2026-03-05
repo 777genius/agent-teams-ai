@@ -46,6 +46,29 @@ function die(message, code = 1) {
   process.exit(code);
 }
 
+function isSafePathSegment(value) {
+  const v = String(value == null ? '' : value);
+  if (v.length === 0 || v.trim().length === 0) return false;
+  if (v === '.' || v === '..') return false;
+  if (v.includes('/') || v.includes('\\\\')) return false;
+  if (v.includes('..')) return false;
+  if (v.includes('\0')) return false;
+  return true;
+}
+
+function assertSafePathSegment(label, value) {
+  const v = String(value == null ? '' : value);
+  if (!isSafePathSegment(v)) {
+    die('Invalid ' + String(label));
+  }
+  return v;
+}
+
+function getTaskJsonPath(paths, taskId) {
+  const id = assertSafePathSegment('taskId', taskId);
+  return path.join(paths.tasksDir, id + '.json');
+}
+
 function parseArgs(argv) {
   const out = { _: [], flags: {} };
   for (let i = 0; i < argv.length; i++) {
@@ -128,7 +151,7 @@ function getTeamName(flags) {
     (typeof flags.team === 'string' && flags.team.trim()) ||
     (typeof flags['teamName'] === 'string' && flags['teamName'].trim()) ||
     '';
-  if (explicit) return explicit;
+  if (explicit) return assertSafePathSegment('team', explicit);
   const inferred = inferTeamNameFromScriptPath();
   if (inferred) return inferred;
   die('Missing --team (and could not infer team name from script path)');
@@ -258,7 +281,8 @@ function detectMimeTypeFromPathAndHeader(filePath, filename) {
 }
 
 function getTaskAttachmentsDir(paths, taskId) {
-  return path.join(paths.teamDir, TASK_ATTACHMENTS_DIR, String(taskId));
+  const id = assertSafePathSegment('taskId', taskId);
+  return path.join(paths.teamDir, TASK_ATTACHMENTS_DIR, id);
 }
 
 function getStoredAttachmentPath(paths, taskId, attachmentId, filename) {
@@ -421,8 +445,9 @@ function normalizeColumn(value) {
 
 function getPaths(flags, teamName) {
   const claudeDir = getClaudeDir(flags);
-  const teamDir = path.join(claudeDir, 'teams', teamName);
-  const tasksDir = path.join(claudeDir, 'tasks', teamName);
+  const safeTeam = assertSafePathSegment('team', teamName);
+  const teamDir = path.join(claudeDir, 'teams', safeTeam);
+  const tasksDir = path.join(claudeDir, 'tasks', safeTeam);
   const kanbanPath = path.join(teamDir, 'kanban-state.json');
   const processesPath = path.join(teamDir, 'processes.json');
   return { claudeDir, teamDir, tasksDir, kanbanPath, processesPath };
@@ -438,7 +463,7 @@ function inferLeadName(paths) {
 }
 
 function readTask(paths, taskId) {
-  const taskPath = path.join(paths.tasksDir, String(taskId) + '.json');
+  const taskPath = getTaskJsonPath(paths, taskId);
   const task = readJson(taskPath, null);
   if (!task) die('Task not found: ' + String(taskId));
   return { taskPath, task };
@@ -607,13 +632,13 @@ function parseIdList(value) {
 
 function taskExists(paths, taskId) {
   try {
-    fs.accessSync(path.join(paths.tasksDir, String(taskId) + '.json'), fs.constants.F_OK);
+    fs.accessSync(getTaskJsonPath(paths, taskId), fs.constants.F_OK);
     return true;
   } catch (e) { return false; }
 }
 
 function readTaskObject(paths, taskId) {
-  var taskPath = path.join(paths.tasksDir, String(taskId) + '.json');
+  var taskPath = getTaskJsonPath(paths, taskId);
   var t = readJson(taskPath, null);
   if (!t) die('Task not found: #' + taskId);
   return { task: t, taskPath: taskPath };
@@ -628,7 +653,8 @@ function wouldCreateBlockCycle(paths, sourceId, targetId) {
     if (visited[current]) continue;
     visited[current] = true;
     try {
-      var t = readJson(path.join(paths.tasksDir, current + '.json'), null);
+      if (!isSafePathSegment(current)) continue;
+      var t = readJson(getTaskJsonPath(paths, current), null);
       if (t && Array.isArray(t.blockedBy)) {
         for (var i = 0; i < t.blockedBy.length; i++) stack.push(String(t.blockedBy[i]));
       }
@@ -730,7 +756,7 @@ function createTask(paths, flags) {
   let taskPath;
   while (true) {
     nextId = getNextTaskId(paths);
-    taskPath = path.join(paths.tasksDir, String(nextId) + '.json');
+    taskPath = getTaskJsonPath(paths, nextId);
     var createdAt = nowIso();
     task = {
       id: nextId,
@@ -825,7 +851,8 @@ function sendInboxMessage(paths, teamName, flags) {
   const summary = typeof flags.summary === 'string' ? flags.summary : undefined;
   const from = typeof flags.from === 'string' && flags.from.trim() ? flags.from.trim() : inferLeadName(paths);
 
-  const inboxPath = path.join(paths.teamDir, 'inboxes', String(to) + '.json');
+  const safeTo = assertSafePathSegment('to', to);
+  const inboxPath = path.join(paths.teamDir, 'inboxes', safeTo + '.json');
   ensureDir(path.dirname(inboxPath));
 
   const messageId = makeId();
@@ -1026,7 +1053,8 @@ function taskBriefing(paths, teamName, flags) {
   var allTasks = [];
   for (var i = 0; i < ids.length; i++) {
     try {
-      var taskPath = path.join(paths.tasksDir, ids[i] + '.json');
+      if (!isSafePathSegment(ids[i])) continue;
+      var taskPath = getTaskJsonPath(paths, ids[i]);
       var t = readJson(taskPath, null);
       if (t && !String(t.id).startsWith('_internal') && !(t.metadata && t.metadata._internal === true)) {
         try { t._mtime = fs.statSync(taskPath).mtime.toISOString(); } catch (_e) { t._mtime = ''; }
@@ -1272,7 +1300,7 @@ async function main() {
       const tasks = [];
       for (const id of ids) {
         try {
-          tasks.push(readJson(path.join(paths.tasksDir, String(id) + '.json'), null));
+          tasks.push(readJson(getTaskJsonPath(paths, id), null));
         } catch {}
       }
       process.stdout.write(JSON.stringify(tasks.filter(Boolean), null, 2) + '\n');

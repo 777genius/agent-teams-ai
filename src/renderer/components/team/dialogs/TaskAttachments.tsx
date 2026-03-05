@@ -32,6 +32,7 @@ export const TaskAttachments = ({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [lightboxSlides, setLightboxSlides] = useState<{ src: string; alt: string }[]>([]);
   const [thumbCache, setThumbCache] = useState<Map<string, string>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -130,9 +131,19 @@ export const TaskAttachments = ({
         return;
       }
       const idx = imageAttachments.findIndex((a) => a.id === att.id);
-      if (idx >= 0) setLightboxIndex(idx);
+      if (idx >= 0) {
+        const snapshot = imageAttachments.map((a) => {
+          const dataUrl = thumbCache.get(a.id);
+          return {
+            src: dataUrl ?? `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>`,
+            alt: a.filename,
+          };
+        });
+        setLightboxSlides(snapshot);
+        setLightboxIndex(idx);
+      }
     },
-    [imageAttachments, handleDownload]
+    [imageAttachments, thumbCache, handleDownload]
   );
 
   // Handle paste events for quick image attachment
@@ -209,13 +220,11 @@ export const TaskAttachments = ({
       {lightboxIndex !== null && (
         <ImageLightbox
           open
-          onClose={() => setLightboxIndex(null)}
-          slides={imageAttachments
-            .map((att) => {
-              const dataUrl = thumbCache.get(att.id);
-              return dataUrl ? { src: dataUrl, alt: att.filename } : null;
-            })
-            .filter(Boolean) as { src: string; alt: string }[]}
+          onClose={() => {
+            setLightboxIndex(null);
+            setLightboxSlides([]);
+          }}
+          slides={lightboxSlides}
           index={lightboxIndex}
         />
       )}

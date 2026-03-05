@@ -12,8 +12,8 @@ export function computePercentOfTotal(
   visibleTokens: number,
   totalSessionTokens: number | undefined
 ): number | null {
-  if (!Number.isFinite(visibleTokens) || visibleTokens <= 0) return 0;
   if (totalSessionTokens === undefined || totalSessionTokens <= 0) return null;
+  if (!Number.isFinite(visibleTokens) || visibleTokens <= 0) return 0;
   return Math.min((visibleTokens / totalSessionTokens) * 100, 100);
 }
 

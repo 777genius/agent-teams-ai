@@ -171,12 +171,14 @@ export const SendMessageDialog = ({
   const attachmentsBlocked = attachments.length > 0 && !supportsAttachments;
 
   const trimmedText = textDraft.value.trim();
-  const remaining = MAX_MESSAGE_LENGTH - trimmedText.length;
+  const serialized = serializeChipsWithText(trimmedText, chipDraft.chips);
+  const finalText = quote ? buildReplyBlock(quote.from, quote.text, serialized) : serialized;
+  const remaining = MAX_MESSAGE_LENGTH - finalText.length;
 
   const canSend =
     member.trim().length > 0 &&
-    trimmedText.length > 0 &&
-    trimmedText.length <= MAX_MESSAGE_LENGTH &&
+    finalText.length > 0 &&
+    finalText.length <= MAX_MESSAGE_LENGTH &&
     summary.trim().length > 0 &&
     !sending &&
     !attachmentsBlocked;
@@ -191,8 +193,6 @@ export const SendMessageDialog = ({
 
   const handleSubmit = (): void => {
     if (!canSend) return;
-    const serialized = serializeChipsWithText(textDraft.value.trim(), chipDraft.chips);
-    const finalText = quote ? buildReplyBlock(quote.from, quote.text, serialized) : serialized;
     onSend(
       member.trim(),
       finalText,

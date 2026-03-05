@@ -19,6 +19,8 @@ import type { StreamJsonGroup } from '@renderer/utils/streamJsonParser';
 interface CliLogsRichViewProps {
   cliLogsTail: string;
   order?: 'oldest-first' | 'newest-first';
+  onScroll?: (params: { scrollTop: number; scrollHeight: number; clientHeight: number }) => void;
+  containerRefCallback?: (el: HTMLDivElement | null) => void;
   className?: string;
 }
 
@@ -130,9 +132,11 @@ const StreamGroup = ({
 export const CliLogsRichView = ({
   cliLogsTail,
   order = 'oldest-first',
+  onScroll,
+  containerRefCallback,
   className,
 }: CliLogsRichViewProps): React.JSX.Element => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   // Tracks groups manually collapsed by user (default: all auto-expanded)
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(new Set());
   const [expandedItemIds, setExpandedItemIds] = useState<Set<string>>(new Set());
@@ -190,11 +194,18 @@ export const CliLogsRichView = ({
     const hasContent = cliLogsTail.trim().length > 0;
     return (
       <div
-        ref={scrollRef}
+        ref={(el) => {
+          scrollRef.current = el;
+          containerRefCallback?.(el);
+        }}
         className={cn(
           'max-h-[400px] overflow-y-auto rounded border border-[var(--color-border)] bg-[var(--color-surface)]',
           className
         )}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          onScroll?.({ scrollTop: el.scrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight });
+        }}
       >
         {hasContent ? (
           <pre className="p-2 font-mono text-[11px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -212,7 +223,17 @@ export const CliLogsRichView = ({
   const visibleGroups = order === 'newest-first' ? [...groups].reverse() : groups;
 
   return (
-    <div ref={scrollRef} className={cn('max-h-[400px] space-y-1.5 overflow-y-auto', className)}>
+    <div
+      ref={(el) => {
+        scrollRef.current = el;
+        containerRefCallback?.(el);
+      }}
+      className={cn('max-h-[400px] space-y-1.5 overflow-y-auto', className)}
+      onScroll={(e) => {
+        const el = e.currentTarget;
+        onScroll?.({ scrollTop: el.scrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight });
+      }}
+    >
       {visibleGroups.map((group) =>
         group.items.length === 1 ? (
           // Single item — render flat without collapsible group wrapper

@@ -174,13 +174,14 @@ export function parseStreamJsonToGroups(cliLogsTail: string): StreamJsonGroup[] 
   let currentItems: AIGroupDisplayItem[] = [];
   let currentTimestamp: Date | null = null;
   let currentGroupId: string | null = null;
-  let groupCounter = 0;
+  // Track how many times each messageId has been seen to disambiguate duplicates
+  const msgIdOccurrences = new Map<string, number>();
   // Stable timestamp for the entire parse (deterministic across re-renders)
   const parseTimestamp = new Date();
 
   const flushGroup = (): void => {
     if (currentItems.length > 0 && currentTimestamp) {
-      const id = currentGroupId ?? `stream-group-${groupCounter++}`;
+      const id = currentGroupId ?? `stream-group-fallback-${groups.length}`;
       groups.push({
         id,
         items: currentItems,
@@ -221,7 +222,15 @@ export function parseStreamJsonToGroups(cliLogsTail: string): StreamJsonGroup[] 
     if (!currentTimestamp) currentTimestamp = parseTimestamp;
     if (!currentGroupId) {
       const msgId = extractAssistantMessageId(parsed);
-      currentGroupId = msgId ? `stream-group-${msgId}` : `stream-group-L${lineIndex}`;
+      if (msgId) {
+        const occurrence = msgIdOccurrences.get(msgId) ?? 0;
+        msgIdOccurrences.set(msgId, occurrence + 1);
+        currentGroupId = occurrence === 0
+          ? `stream-group-${msgId}`
+          : `stream-group-${msgId}-${occurrence}`;
+      } else {
+        currentGroupId = `stream-group-L${lineIndex}`;
+      }
     }
 
     const items = contentBlocksToDisplayItems(blocks, parseTimestamp, lineIndex);

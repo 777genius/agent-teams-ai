@@ -14,6 +14,8 @@ import type { InboxMessage } from '@shared/types';
 export interface MessagesFilterState {
   from: Set<string>;
   to: Set<string>;
+  /** When true, include internal coordination noise (idle/shutdown/etc.) */
+  showNoise: boolean;
 }
 
 interface MessagesFilterPopoverProps {
@@ -47,18 +49,23 @@ export const MessagesFilterPopover = ({
   onOpenChange,
   onApply,
 }: MessagesFilterPopoverProps): React.JSX.Element => {
-  const [draft, setDraft] = useState<MessagesFilterState>({ from: new Set(), to: new Set() });
+  const [draft, setDraft] = useState<MessagesFilterState>({
+    from: new Set(),
+    to: new Set(),
+    showNoise: false,
+  });
 
   useEffect(() => {
     if (open) {
       const next = {
         from: new Set(filter.from),
         to: new Set(filter.to),
+        showNoise: !!filter.showNoise,
       };
       const schedule = (): void => setDraft(next);
       queueMicrotask(schedule);
     }
-  }, [open, filter.from, filter.to]);
+  }, [open, filter.from, filter.to, filter.showNoise]);
 
   const members = useStore((s) => s.selectedTeamData?.members ?? []);
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
@@ -93,7 +100,7 @@ export const MessagesFilterPopover = ({
   };
 
   const handleReset = (): void => {
-    const empty = { from: new Set<string>(), to: new Set<string>() };
+    const empty = { from: new Set<string>(), to: new Set<string>(), showNoise: false };
     setDraft(empty);
     onApply(empty);
   };
@@ -164,12 +171,21 @@ export const MessagesFilterPopover = ({
             )}
           </div>
         </div>
+        <div className="border-b border-[var(--color-border)] p-3">
+          <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
+            <Checkbox
+              checked={draft.showNoise}
+              onCheckedChange={() => setDraft((prev) => ({ ...prev, showNoise: !prev.showNoise }))}
+            />
+            <span>Show status updates (idle/shutdown)</span>
+          </label>
+        </div>
         <div className="flex justify-between gap-2 p-2">
           <Button
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-            disabled={draftCount === 0}
+            disabled={draftCount === 0 && !draft.showNoise}
             onClick={handleReset}
           >
             Reset

@@ -120,7 +120,12 @@ export interface SessionDetailSlice {
   tabSessionData: Record<string, TabSessionData>;
 
   // Actions
-  fetchSessionDetail: (projectId: string, sessionId: string, tabId?: string) => Promise<void>;
+  fetchSessionDetail: (
+    projectId: string,
+    sessionId: string,
+    tabId?: string,
+    options?: { silent?: boolean }
+  ) => Promise<void>;
   /** Refresh session without loading states or UI resets - for real-time updates */
   refreshSessionInPlace: (projectId: string, sessionId: string) => Promise<void>;
   setVisibleAIGroup: (aiGroupId: string | null) => void;
@@ -162,16 +167,23 @@ export const createSessionDetailSlice: StateCreator<AppState, [], [], SessionDet
   tabSessionData: {},
 
   // Fetch full session detail with chunks and subagents
-  fetchSessionDetail: async (projectId: string, sessionId: string, tabId?: string) => {
+  fetchSessionDetail: async (
+    projectId: string,
+    sessionId: string,
+    tabId?: string,
+    options?: { silent?: boolean }
+  ) => {
     const requestGeneration = incrementTabGeneration(tabId);
-    set({
-      sessionDetailLoading: true,
-      sessionDetailError: null,
-      conversationLoading: true,
-    });
+    if (!options?.silent) {
+      set({
+        sessionDetailLoading: true,
+        sessionDetailError: null,
+        conversationLoading: true,
+      });
+    }
 
     // Also set per-tab loading state
-    if (tabId) {
+    if (tabId && !options?.silent) {
       const prev = get().tabSessionData;
       set({
         tabSessionData: {
@@ -461,10 +473,12 @@ export const createSessionDetailSlice: StateCreator<AppState, [], [], SessionDet
           sessionPhaseInfo: phaseInfo,
         });
       } else {
-        set({
-          sessionDetailLoading: false,
-          conversationLoading: false,
-        });
+        if (!options?.silent) {
+          set({
+            sessionDetailLoading: false,
+            conversationLoading: false,
+          });
+        }
       }
     } catch (error) {
       logger.error('fetchSessionDetail error:', error);
@@ -472,14 +486,16 @@ export const createSessionDetailSlice: StateCreator<AppState, [], [], SessionDet
         return;
       }
       const errorMsg = error instanceof Error ? error.message : 'Failed to fetch session detail';
-      set({
-        sessionDetailError: errorMsg,
-        sessionDetailLoading: false,
-        conversationLoading: false,
-      });
+      if (!options?.silent) {
+        set({
+          sessionDetailError: errorMsg,
+          sessionDetailLoading: false,
+          conversationLoading: false,
+        });
+      }
 
       // Store per-tab error state
-      if (tabId) {
+      if (tabId && !options?.silent) {
         const prev = get().tabSessionData;
         set({
           tabSessionData: {

@@ -392,12 +392,6 @@ async function handleGetData(
   const provisioning = getTeamProvisioningService();
   const isAlive = provisioning.isTeamAlive(tn);
 
-  if (isAlive) {
-    void provisioning
-      .relayLeadInboxMessages(tn)
-      .catch((e: unknown) => logger.warn(`Relay failed for ${tn}: ${e}`));
-  }
-
   const displayName = data.config.name || tn;
   const projectPath = data.config.projectPath;
 
