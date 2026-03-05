@@ -2984,6 +2984,8 @@ export class TeamProvisioningService {
             });
           }
         }
+        // Clear silent relay flag after any successful turn.
+        run.silentUserDmForward = null;
         if (!run.provisioningComplete && !run.cancelRequested) {
           void this.handleProvisioningTurnComplete(run);
         }
@@ -2994,6 +2996,8 @@ export class TeamProvisioningService {
         if (run.leadRelayCapture) {
           run.leadRelayCapture.rejectOnce(errorMsg);
         }
+        // Clear silent relay flag after any errored turn.
+        run.silentUserDmForward = null;
         if (!run.provisioningComplete && !run.cancelRequested) {
           const progress = updateProgress(
             run,

@@ -74,6 +74,7 @@ import {
   validateTeammateName,
   validateTeamName,
 } from './guards';
+import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
 
 /** Track rate limit message keys already notified to avoid duplicate OS notifications across refreshes. */
 const notifiedRateLimitKeys = new Set<string>();
