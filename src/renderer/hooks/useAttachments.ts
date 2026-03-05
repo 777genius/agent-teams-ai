@@ -54,9 +54,8 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef<{ key: string; value: AttachmentPayload[] } | null>(null);
   const keyRef = useRef(persistenceKey);
-  useEffect(() => {
-    keyRef.current = persistenceKey;
-  }, [persistenceKey]);
+  // eslint-disable-next-line react-hooks/refs -- synchronous ref sync during render is intentional to avoid stale key in callbacks
+  keyRef.current = persistenceKey;
 
   // Sync ref with state
   const updateAttachments = useCallback((next: AttachmentPayload[]) => {
