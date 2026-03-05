@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { Textarea } from '@renderer/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { markAsRead } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
@@ -43,19 +44,23 @@ import {
   Eye,
   FileCode,
   FileDiff,
+  GitCompareArrows,
   HelpCircle,
   History,
+  ImageIcon,
   Link2,
   Loader2,
   MessageSquare,
   Pencil,
   PenLine,
   ScrollText,
+  SquarePen,
   Trash2,
   X,
 } from 'lucide-react';
 
 import { StatusHistoryTimeline } from './StatusHistoryTimeline';
+import { TaskAttachments } from './TaskAttachments';
 import { TaskCommentInput } from './TaskCommentInput';
 import { TaskCommentsSection } from './TaskCommentsSection';
 
@@ -74,6 +79,7 @@ interface TaskDetailDialogProps {
   onScrollToTask?: (taskId: string) => void;
   onOwnerChange?: (taskId: string, owner: string | null) => void;
   onViewChanges?: (taskId: string, filePath?: string) => void;
+  onOpenInEditor?: (filePath: string) => void;
   onDeleteTask?: (taskId: string) => void;
   /** Extra content rendered in the dialog header (e.g. "Open team" button). */
   headerExtra?: React.ReactNode;
@@ -92,6 +98,7 @@ export const TaskDetailDialog = ({
   onScrollToTask,
   onOwnerChange,
   onViewChanges,
+  onOpenInEditor,
   onDeleteTask,
   headerExtra,
 }: TaskDetailDialogProps): React.JSX.Element => {
@@ -457,6 +464,8 @@ export const TaskDetailDialog = ({
           title="Description"
           icon={<AlignLeft size={14} />}
           contentClassName="pl-2.5"
+          headerClassName="-mx-6 w-[calc(100%+3rem)]"
+          headerContentClassName="pl-6"
           defaultOpen
         >
           {editingDescription ? (
@@ -562,6 +571,27 @@ export const TaskDetailDialog = ({
           )}
         </CollapsibleTeamSection>
 
+        {/* Attachments */}
+        <CollapsibleTeamSection
+          title="Attachments"
+          icon={<ImageIcon size={14} />}
+          badge={
+            (currentTask.attachments?.length ?? 0) > 0
+              ? (currentTask.attachments?.length ?? 0)
+              : undefined
+          }
+          contentClassName="pl-2.5"
+          headerClassName="-mx-6 w-[calc(100%+3rem)]"
+          headerContentClassName="pl-6"
+          defaultOpen={(currentTask.attachments?.length ?? 0) > 0}
+        >
+          <TaskAttachments
+            teamName={teamName}
+            taskId={currentTask.id}
+            attachments={currentTask.attachments ?? []}
+          />
+        </CollapsibleTeamSection>
+
         {/* Changes */}
         {variant === 'team' && isTaskCompleted && onViewChanges ? (
           <CollapsibleTeamSection
@@ -569,6 +599,8 @@ export const TaskDetailDialog = ({
             icon={<FileDiff size={14} />}
             badge={taskChangesFiles ? taskChangesFiles.length : undefined}
             contentClassName="pl-2.5"
+            headerClassName="-mx-6 w-[calc(100%+3rem)]"
+            headerContentClassName="pl-6"
             defaultOpen={taskKnownHasChanges}
           >
             {changeSetLoading || (!taskChangesFiles && taskKnownHasChanges) ? (
@@ -579,19 +611,21 @@ export const TaskDetailDialog = ({
             ) : taskChangesFiles && taskChangesFiles.length > 0 ? (
               <div className="max-h-[200px] space-y-0.5 overflow-y-auto">
                 {taskChangesFiles.map((file) => (
-                  <button
+                  <div
                     key={file.filePath}
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]"
-                    onClick={() => {
-                      handleClose();
-                      onViewChanges(currentTask.id, file.filePath);
-                    }}
+                    className="group flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]"
                   >
                     <FileCode size={14} className="shrink-0 text-[var(--color-text-muted)]" />
-                    <span className="truncate font-mono text-[var(--color-text-secondary)]">
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 truncate text-left font-mono text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text)]"
+                      onClick={() => {
+                        handleClose();
+                        onViewChanges(currentTask.id, file.filePath);
+                      }}
+                    >
                       {file.relativePath}
-                    </span>
+                    </button>
                     <span className="flex shrink-0 items-center gap-1.5">
                       {file.linesAdded > 0 ? (
                         <span className="text-emerald-400">+{file.linesAdded}</span>
@@ -600,7 +634,38 @@ export const TaskDetailDialog = ({
                         <span className="text-red-400">-{file.linesRemoved}</span>
                       ) : null}
                     </span>
-                  </button>
+                    <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-border-emphasis)] hover:text-[var(--color-text)]"
+                            onClick={() => {
+                              handleClose();
+                              onViewChanges(currentTask.id, file.filePath);
+                            }}
+                          >
+                            <GitCompareArrows size={13} />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Review diff</TooltipContent>
+                      </Tooltip>
+                      {onOpenInEditor ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-border-emphasis)] hover:text-[var(--color-text)]"
+                              onClick={() => onOpenInEditor(file.filePath)}
+                            >
+                              <SquarePen size={13} />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Open in editor</TooltipContent>
+                        </Tooltip>
+                      ) : null}
+                    </span>
+                  </div>
                 ))}
               </div>
             ) : (
@@ -623,6 +688,8 @@ export const TaskDetailDialog = ({
               ) : null
             }
             contentClassName="pl-2.5"
+            headerClassName="-mx-6 w-[calc(100%+3rem)]"
+            headerContentClassName="pl-6"
             defaultOpen
           >
             <div className="min-w-0">
@@ -774,6 +841,8 @@ export const TaskDetailDialog = ({
             icon={<History size={14} />}
             badge={currentTask.statusHistory.length}
             contentClassName="pl-2.5"
+            headerClassName="-mx-6 w-[calc(100%+3rem)]"
+            headerContentClassName="pl-6"
             defaultOpen={false}
           >
             <StatusHistoryTimeline history={currentTask.statusHistory} />
@@ -790,6 +859,8 @@ export const TaskDetailDialog = ({
               : undefined
           }
           contentClassName="pl-2.5"
+          headerClassName="-mx-6 w-[calc(100%+3rem)]"
+          headerContentClassName="pl-6"
           defaultOpen
         >
           <TaskCommentInput
@@ -807,6 +878,7 @@ export const TaskDetailDialog = ({
             hideHeader
             hideInput
             onReply={handleReply}
+            onTaskIdClick={onScrollToTask ? (taskId) => handleDependencyClick(taskId) : undefined}
           />
         </CollapsibleTeamSection>
 

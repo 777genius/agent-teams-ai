@@ -41,13 +41,19 @@ export function getPresenceLabel(
   member: ResolvedTeamMember,
   isTeamAlive?: boolean,
   isTeamProvisioning?: boolean,
-  leadActivity?: LeadActivityState
+  leadActivity?: LeadActivityState,
+  leadContextPercent?: number
 ): string {
   if (member.status === 'terminated') return 'terminated';
   if (isTeamProvisioning) return 'connecting';
   if (isTeamAlive === false) return 'offline';
   if (leadActivity && member.agentType === 'team-lead') {
-    return leadActivity === 'active' ? 'processing' : 'ready';
+    if (leadActivity === 'active') {
+      return leadContextPercent != null && leadContextPercent > 0
+        ? `processing (${Math.round(leadContextPercent)}%)`
+        : 'processing';
+    }
+    return 'ready';
   }
   if (member.status === 'unknown') return 'idle';
   return member.currentTaskId ? 'working' : 'idle';

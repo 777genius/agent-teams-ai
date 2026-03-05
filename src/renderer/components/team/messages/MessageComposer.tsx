@@ -77,7 +77,7 @@ export const MessageComposer = ({
     clearAttachments,
     handlePaste,
     handleDrop,
-  } = useAttachments();
+  } = useAttachments({ persistenceKey: `compose:${teamName}:attachments` });
 
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
 

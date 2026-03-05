@@ -1498,20 +1498,22 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
 
         <SendMessageDialog
           open={sendDialogOpen}
+          teamName={teamName}
           members={activeMembers}
           defaultRecipient={sendDialogRecipient}
           defaultText={sendDialogDefaultText}
           defaultChip={sendDialogDefaultChip}
           quotedMessage={replyQuote}
+          isTeamAlive={data.isAlive}
           sending={sendingMessage}
           sendError={sendMessageError}
           lastResult={lastSendMessageResult}
-          onSend={(member, text, summary) => {
+          onSend={(member, text, summary, attachments) => {
             void (async () => {
               const sentAtMs = Date.now();
               setPendingRepliesByMember((prev) => ({ ...prev, [member]: sentAtMs }));
               try {
-                await sendTeamMessage(teamName, { member, text, summary });
+                await sendTeamMessage(teamName, { member, text, summary, attachments });
               } catch {
                 setPendingRepliesByMember((prev) => {
                   if (prev[member] !== sentAtMs) return prev;
@@ -1551,6 +1553,10 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             void updateTaskOwner(teamName, taskId, owner);
           }}
           onViewChanges={handleViewChangesForFile}
+          onOpenInEditor={(filePath) => {
+            const { revealFileInEditor } = useStore.getState();
+            revealFileInEditor(filePath);
+          }}
           onDeleteTask={handleDeleteTask}
         />
 

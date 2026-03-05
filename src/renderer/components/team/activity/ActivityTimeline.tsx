@@ -39,6 +39,7 @@ const MessageRowWithObserver = ({
   isUnread,
   isNew,
   zebraShade,
+  memberColorMap,
   onMemberNameClick,
   onCreateTask,
   onReply,
@@ -54,6 +55,7 @@ const MessageRowWithObserver = ({
   isUnread?: boolean;
   isNew?: boolean;
   zebraShade?: boolean;
+  memberColorMap?: Map<string, string>;
   onMemberNameClick?: (name: string) => void;
   onCreateTask?: (subject: string, description: string) => void;
   onReply?: (message: InboxMessage) => void;
@@ -101,6 +103,7 @@ const MessageRowWithObserver = ({
         recipientColor={recipientColor}
         isUnread={isUnread}
         zebraShade={zebraShade}
+        memberColorMap={memberColorMap}
         onMemberNameClick={onMemberNameClick}
         onCreateTask={onCreateTask}
         onReply={onReply}
@@ -274,6 +277,7 @@ export const ActivityTimeline = ({
             isUnread={isUnread}
             isNew={newMessageKeys.has(messageKey)}
             zebraShade={zebraShadeSet.has(index)}
+            memberColorMap={colorMap}
             onMemberNameClick={onMemberClick ? handleMemberNameClick : undefined}
             onCreateTask={onCreateTaskFromMessage}
             onReply={onReplyToMessage}

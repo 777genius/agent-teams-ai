@@ -23,6 +23,7 @@ import {
   TEAM_KILL_PROCESS,
   TEAM_LAUNCH,
   TEAM_LEAD_ACTIVITY,
+  TEAM_LEAD_CONTEXT,
   TEAM_LIST,
   TEAM_PERMANENTLY_DELETE,
   TEAM_PREPARE_PROVISIONING,
@@ -49,6 +50,9 @@ import {
   TEAM_UPDATE_TASK_FIELDS,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
+  TEAM_SAVE_TASK_ATTACHMENT,
+  TEAM_GET_TASK_ATTACHMENT,
+  TEAM_DELETE_TASK_ATTACHMENT,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
@@ -75,6 +79,7 @@ const notifiedRateLimitKeys = new Set<string>();
 const RATE_LIMIT_KEYS_MAX = 500;
 
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
+import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 
 import type {
   MemberStatsComputer,
@@ -84,16 +89,19 @@ import type {
 } from '../services';
 import type {
   AttachmentFileData,
+  AttachmentMediaType,
   AttachmentMeta,
   AttachmentPayload,
   CreateTaskRequest,
   GlobalTask,
   IpcResult,
   KanbanColumnId,
+  LeadContextUsage,
   MemberFullStats,
   MemberLogSummary,
   SendMessageRequest,
   SendMessageResult,
+  TaskAttachmentMeta,
   TaskComment,
   TeamConfig,
   TeamCreateConfigRequest,
@@ -165,6 +173,7 @@ let teamMemberLogsFinder: TeamMemberLogsFinder | null = null;
 let memberStatsComputer: MemberStatsComputer | null = null;
 
 const attachmentStore = new TeamAttachmentStore();
+const taskAttachmentStore = new TeamTaskAttachmentStore();
 
 const ALLOWED_ATTACHMENT_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB per file
@@ -222,6 +231,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_ATTACHMENTS, handleGetAttachments);
   ipcMain.handle(TEAM_KILL_PROCESS, handleKillProcess);
   ipcMain.handle(TEAM_LEAD_ACTIVITY, handleLeadActivity);
+  ipcMain.handle(TEAM_LEAD_CONTEXT, handleLeadContext);
   ipcMain.handle(TEAM_SOFT_DELETE_TASK, handleSoftDeleteTask);
   ipcMain.handle(TEAM_RESTORE_TASK, handleRestoreTask);
   ipcMain.handle(TEAM_GET_DELETED_TASKS, handleGetDeletedTasks);
@@ -229,6 +239,9 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_SHOW_MESSAGE_NOTIFICATION, handleShowMessageNotification);
   ipcMain.handle(TEAM_ADD_TASK_RELATIONSHIP, handleAddTaskRelationship);
   ipcMain.handle(TEAM_REMOVE_TASK_RELATIONSHIP, handleRemoveTaskRelationship);
+  ipcMain.handle(TEAM_SAVE_TASK_ATTACHMENT, handleSaveTaskAttachment);
+  ipcMain.handle(TEAM_GET_TASK_ATTACHMENT, handleGetTaskAttachment);
+  ipcMain.handle(TEAM_DELETE_TASK_ATTACHMENT, handleDeleteTaskAttachment);
   logger.info('Team handlers registered');
 }
 
@@ -271,6 +284,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_GET_ATTACHMENTS);
   ipcMain.removeHandler(TEAM_KILL_PROCESS);
   ipcMain.removeHandler(TEAM_LEAD_ACTIVITY);
+  ipcMain.removeHandler(TEAM_LEAD_CONTEXT);
   ipcMain.removeHandler(TEAM_SOFT_DELETE_TASK);
   ipcMain.removeHandler(TEAM_RESTORE_TASK);
   ipcMain.removeHandler(TEAM_GET_DELETED_TASKS);
@@ -278,6 +292,9 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_SHOW_MESSAGE_NOTIFICATION);
   ipcMain.removeHandler(TEAM_ADD_TASK_RELATIONSHIP);
   ipcMain.removeHandler(TEAM_REMOVE_TASK_RELATIONSHIP);
+  ipcMain.removeHandler(TEAM_SAVE_TASK_ATTACHMENT);
+  ipcMain.removeHandler(TEAM_GET_TASK_ATTACHMENT);
+  ipcMain.removeHandler(TEAM_DELETE_TASK_ATTACHMENT);
 }
 
 function getTeamDataService(): TeamDataService {
@@ -1280,12 +1297,21 @@ async function handleUpdateTaskOwner(
     return { success: false, error: validatedTaskId.error ?? 'Invalid taskId' };
   }
 
-  if (owner !== null && (typeof owner !== 'string' || owner.length === 0)) {
-    return { success: false, error: 'owner must be a non-empty string or null' };
+  let nextOwner: string | null = null;
+  if (owner !== null) {
+    const validatedOwner = validateMemberName(owner);
+    if (!validatedOwner.valid) {
+      return { success: false, error: validatedOwner.error ?? 'Invalid owner' };
+    }
+    nextOwner = validatedOwner.value!;
   }
 
   return wrapTeamHandler('updateTaskOwner', () =>
-    getTeamDataService().updateTaskOwner(validatedTeamName.value!, validatedTaskId.value!, owner)
+    getTeamDataService().updateTaskOwner(
+      validatedTeamName.value!,
+      validatedTaskId.value!,
+      nextOwner
+    )
   );
 }
 
@@ -1510,6 +1536,19 @@ async function handleLeadActivity(
   );
 }
 
+async function handleLeadContext(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown
+): Promise<IpcResult<LeadContextUsage | null>> {
+  const validated = validateTeamName(teamName);
+  if (!validated.valid) {
+    return { success: false, error: validated.error ?? 'Invalid teamName' };
+  }
+  return wrapTeamHandler('leadContext', async () =>
+    getTeamProvisioningService().getLeadContextUsage(validated.value!)
+  );
+}
+
 async function handleStopTeam(
   _event: IpcMainInvokeEvent,
   teamName: unknown
@@ -1680,9 +1719,9 @@ async function handleUpdateTaskFields(
 ): Promise<IpcResult<void>> {
   const vTeam = validateTeamName(teamName);
   if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
-  if (typeof taskId !== 'string' || !taskId.trim()) {
-    return { success: false, error: 'taskId must be a non-empty string' };
-  }
+  const vTask = validateTaskId(taskId);
+  if (!vTask.valid) return { success: false, error: vTask.error ?? 'Invalid taskId' };
+  const tid = vTask.value!;
   if (!fields || typeof fields !== 'object') {
     return { success: false, error: 'fields must be an object' };
   }
@@ -1698,7 +1737,7 @@ async function handleUpdateTaskFields(
   }
 
   const validFields: { subject?: string; description?: string } = {};
-  if (typeof subject === 'string') validFields.subject = subject;
+  if (typeof subject === 'string') validFields.subject = subject.trim();
   if (typeof description === 'string') validFields.description = description;
 
   if (Object.keys(validFields).length === 0) {
@@ -1707,7 +1746,7 @@ async function handleUpdateTaskFields(
 
   return wrapTeamHandler('updateTaskFields', async () => {
     const tn = vTeam.value!;
-    await getTeamDataService().updateTaskFields(tn, taskId, validFields);
+    await getTeamDataService().updateTaskFields(tn, tid, validFields);
 
     // Notify the lead about updated task fields
     const provisioning = getTeamProvisioningService();
@@ -1716,12 +1755,12 @@ async function handleUpdateTaskFields(
       if (validFields.subject) changedParts.push('title');
       if (validFields.description !== undefined) changedParts.push('description');
       const message =
-        `Task #${taskId} has been updated by the user (changed: ${changedParts.join(', ')}). ` +
+        `Task #${tid} has been updated by the user (changed: ${changedParts.join(', ')}). ` +
         `New title: "${validFields.subject ?? '(unchanged)'}".`;
       try {
         await provisioning.sendMessageToTeam(tn, message);
       } catch {
-        logger.warn(`Failed to notify lead about task fields update for #${taskId} in ${tn}`);
+        logger.warn(`Failed to notify lead about task fields update for #${tid} in ${tn}`);
       }
     }
   });
@@ -1897,7 +1936,8 @@ async function handleAddTaskComment(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
   taskId: unknown,
-  text: unknown
+  text: unknown,
+  attachments?: unknown
 ): Promise<IpcResult<TaskComment>> {
   const vTeam = validateTeamName(teamName);
   if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
@@ -1908,9 +1948,54 @@ async function handleAddTaskComment(
   if (text.trim().length > 2000)
     return { success: false, error: 'Comment exceeds 2000 characters' };
 
-  return wrapTeamHandler('addTaskComment', () =>
-    getTeamDataService().addTaskComment(vTeam.value!, vTask.value!, text.trim())
-  );
+  const rawAttachments = Array.isArray(attachments) ? attachments : [];
+  if (rawAttachments.length > MAX_ATTACHMENTS) {
+    return { success: false, error: `Maximum ${MAX_ATTACHMENTS} attachments per comment` };
+  }
+
+  return wrapTeamHandler('addTaskComment', async () => {
+    // Save comment attachments (images). Done inside wrapTeamHandler so failures return IpcResult.
+    let savedAttachments: TaskAttachmentMeta[] | undefined;
+    if (rawAttachments.length > 0) {
+      savedAttachments = [];
+      for (const att of rawAttachments) {
+        if (!att || typeof att !== 'object') {
+          throw new Error('Invalid attachment data');
+        }
+        const a = att as Record<string, unknown>;
+        if (
+          typeof a.id !== 'string' ||
+          typeof a.filename !== 'string' ||
+          typeof a.mimeType !== 'string' ||
+          typeof a.base64Data !== 'string' ||
+          a.base64Data.length === 0 ||
+          !ALLOWED_ATTACHMENT_TYPES.has(a.mimeType)
+        ) {
+          throw new Error('Invalid attachment data');
+        }
+        const safeId = a.id.trim();
+        if (safeId.includes('/') || safeId.includes('\\') || safeId.includes('..')) {
+          throw new Error('Invalid attachment ID');
+        }
+        const meta = await taskAttachmentStore.saveAttachment(
+          vTeam.value!,
+          vTask.value!,
+          safeId,
+          a.filename,
+          a.mimeType as AttachmentMediaType,
+          a.base64Data
+        );
+        savedAttachments.push(meta);
+      }
+    }
+
+    return getTeamDataService().addTaskComment(
+      vTeam.value!,
+      vTask.value!,
+      text.trim(),
+      savedAttachments
+    );
+  });
 }
 
 const VALID_RELATIONSHIP_TYPES = ['blockedBy', 'blocks', 'related'] as const;
@@ -1974,4 +2059,123 @@ async function handleRemoveTaskRelationship(
       type as RelationshipType
     )
   );
+}
+
+// ---------------------------------------------------------------------------
+// Task Attachment Handlers
+// ---------------------------------------------------------------------------
+
+async function handleSaveTaskAttachment(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown,
+  attachmentId: unknown,
+  filename: unknown,
+  mimeType: unknown,
+  base64Data: unknown
+): Promise<IpcResult<TaskAttachmentMeta>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  const vTask = validateTaskId(taskId);
+  if (!vTask.valid) return { success: false, error: vTask.error ?? 'Invalid taskId' };
+  if (typeof attachmentId !== 'string' || attachmentId.trim().length === 0) {
+    return { success: false, error: 'attachmentId must be a non-empty string' };
+  }
+  if (typeof filename !== 'string' || filename.trim().length === 0) {
+    return { success: false, error: 'filename must be a non-empty string' };
+  }
+  if (typeof mimeType !== 'string' || !ALLOWED_ATTACHMENT_TYPES.has(mimeType)) {
+    return {
+      success: false,
+      error: `mimeType must be one of: ${[...ALLOWED_ATTACHMENT_TYPES].join(', ')}`,
+    };
+  }
+  if (typeof base64Data !== 'string' || base64Data.length === 0) {
+    return { success: false, error: 'base64Data must be a non-empty string' };
+  }
+  // Sanitize IDs against path traversal
+  const safeAttId = attachmentId.trim();
+  if (safeAttId.includes('/') || safeAttId.includes('\\') || safeAttId.includes('..')) {
+    return { success: false, error: 'Invalid attachmentId' };
+  }
+
+  return wrapTeamHandler('saveTaskAttachment', async () => {
+    const meta = await taskAttachmentStore.saveAttachment(
+      vTeam.value!,
+      vTask.value!,
+      safeAttId,
+      filename as string,
+      mimeType as AttachmentMediaType,
+      base64Data as string
+    );
+    // Write metadata into the task JSON
+    await getTeamDataService().addTaskAttachment(vTeam.value!, vTask.value!, meta);
+    return meta;
+  });
+}
+
+async function handleGetTaskAttachment(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown,
+  attachmentId: unknown,
+  mimeType: unknown
+): Promise<IpcResult<string | null>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  const vTask = validateTaskId(taskId);
+  if (!vTask.valid) return { success: false, error: vTask.error ?? 'Invalid taskId' };
+  if (typeof attachmentId !== 'string' || attachmentId.trim().length === 0) {
+    return { success: false, error: 'attachmentId must be a non-empty string' };
+  }
+  if (typeof mimeType !== 'string' || !ALLOWED_ATTACHMENT_TYPES.has(mimeType)) {
+    return { success: false, error: 'Invalid mimeType' };
+  }
+  const safeAttId = attachmentId.trim();
+  if (safeAttId.includes('/') || safeAttId.includes('\\') || safeAttId.includes('..')) {
+    return { success: false, error: 'Invalid attachmentId' };
+  }
+
+  return wrapTeamHandler('getTaskAttachment', () =>
+    taskAttachmentStore.getAttachment(
+      vTeam.value!,
+      vTask.value!,
+      safeAttId,
+      mimeType as AttachmentMediaType
+    )
+  );
+}
+
+async function handleDeleteTaskAttachment(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown,
+  attachmentId: unknown,
+  mimeType: unknown
+): Promise<IpcResult<void>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  const vTask = validateTaskId(taskId);
+  if (!vTask.valid) return { success: false, error: vTask.error ?? 'Invalid taskId' };
+  if (typeof attachmentId !== 'string' || attachmentId.trim().length === 0) {
+    return { success: false, error: 'attachmentId must be a non-empty string' };
+  }
+  if (typeof mimeType !== 'string' || !ALLOWED_ATTACHMENT_TYPES.has(mimeType)) {
+    return { success: false, error: 'Invalid mimeType' };
+  }
+  const safeAttId = attachmentId.trim();
+  if (safeAttId.includes('/') || safeAttId.includes('\\') || safeAttId.includes('..')) {
+    return { success: false, error: 'Invalid attachmentId' };
+  }
+
+  return wrapTeamHandler('deleteTaskAttachment', async () => {
+    await taskAttachmentStore.deleteAttachment(
+      vTeam.value!,
+      vTask.value!,
+      safeAttId,
+      mimeType as AttachmentMediaType
+    );
+    // Remove metadata from task JSON
+    await getTeamDataService().removeTaskAttachment(vTeam.value!, vTask.value!, safeAttId);
+  });
 }

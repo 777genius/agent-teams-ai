@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { draftStorage } from '@renderer/services/draftStorage';
 import {
   fileToAttachmentPayload,
   MAX_FILES,
@@ -8,6 +9,11 @@ import {
 } from '@renderer/utils/attachmentUtils';
 
 import type { AttachmentPayload } from '@shared/types';
+
+interface UseAttachmentsOptions {
+  /** When provided, attachments are persisted to IndexedDB under this key. */
+  persistenceKey?: string;
+}
 
 interface UseAttachmentsReturn {
   attachments: AttachmentPayload[];
@@ -21,67 +27,204 @@ interface UseAttachmentsReturn {
   handleDrop: (event: React.DragEvent) => void;
 }
 
-export function useAttachments(): UseAttachmentsReturn {
+const DEBOUNCE_MS = 500;
+
+function isValidAttachmentArray(data: unknown): data is AttachmentPayload[] {
+  if (!Array.isArray(data)) return false;
+  return data.every((raw) => {
+    if (typeof raw !== 'object' || raw === null) return false;
+    const item = raw as Record<string, unknown>;
+    return (
+      typeof item.id === 'string' &&
+      typeof item.filename === 'string' &&
+      typeof item.mimeType === 'string' &&
+      typeof item.size === 'number' &&
+      typeof item.data === 'string'
+    );
+  });
+}
+
+export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsReturn {
+  const persistenceKey = options?.persistenceKey;
+
   const [attachments, setAttachments] = useState<AttachmentPayload[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const attachmentsRef = useRef<AttachmentPayload[]>([]);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRef = useRef<AttachmentPayload[] | null>(null);
+  const keyRef = useRef(persistenceKey);
+  keyRef.current = persistenceKey;
+
+  // Sync ref with state
+  const updateAttachments = useCallback((next: AttachmentPayload[]) => {
+    attachmentsRef.current = next;
+    setAttachments(next);
+  }, []);
+
+  // Persist helper — schedule debounced save
+  const schedulePersist = useCallback((nextAttachments: AttachmentPayload[]) => {
+    const key = keyRef.current;
+    if (!key) return;
+
+    pendingRef.current = nextAttachments;
+
+    if (timerRef.current != null) {
+      clearTimeout(timerRef.current);
+    }
+
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      const pending = pendingRef.current;
+      pendingRef.current = null;
+      if (pending == null) return;
+
+      if (pending.length === 0) {
+        void draftStorage.deleteDraft(key);
+      } else {
+        void draftStorage.saveDraft(key, JSON.stringify(pending));
+      }
+    }, DEBOUNCE_MS);
+  }, []);
+
+  const flushPending = useCallback(() => {
+    if (timerRef.current != null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (pendingRef.current != null) {
+      const val = pendingRef.current;
+      const key = keyRef.current;
+      pendingRef.current = null;
+      if (!key) return;
+      if (val.length === 0) {
+        void draftStorage.deleteDraft(key);
+      } else {
+        void draftStorage.saveDraft(key, JSON.stringify(val));
+      }
+    }
+  }, []);
+
+  // Load persisted attachments on mount
+  useEffect(() => {
+    if (!persistenceKey) return;
+
+    let cancelled = false;
+    void (async () => {
+      const raw = await draftStorage.loadDraft(persistenceKey);
+      if (cancelled || raw == null) return;
+      try {
+        const parsed: unknown = JSON.parse(raw);
+        if (isValidAttachmentArray(parsed)) {
+          // Verify total size is still within limits
+          const total = parsed.reduce((sum, a) => sum + a.size, 0);
+          if (total <= MAX_TOTAL_SIZE && parsed.length <= MAX_FILES) {
+            attachmentsRef.current = parsed;
+            setAttachments(parsed);
+          } else {
+            // Stored data exceeds limits — discard
+            void draftStorage.deleteDraft(persistenceKey);
+          }
+        }
+      } catch {
+        // Invalid JSON — ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [persistenceKey]);
+
+  // Flush on unmount
+  useEffect(() => {
+    return () => {
+      flushPending();
+    };
+  }, [flushPending]);
 
   const totalSize = attachments.reduce((sum, a) => sum + a.size, 0);
   const canAddMore = attachments.length < MAX_FILES && totalSize < MAX_TOTAL_SIZE;
 
-  const addFiles = useCallback(async (files: FileList | File[]) => {
-    setError(null);
-    const fileArray = Array.from(files);
-    if (fileArray.length === 0) return;
+  const addFiles = useCallback(
+    async (files: FileList | File[]) => {
+      setError(null);
+      const fileArray = Array.from(files);
+      if (fileArray.length === 0) return;
 
-    let batchSize = 0;
-    let valid = true;
-    for (const file of fileArray) {
-      const validation = validateAttachment(file);
-      if (!validation.valid) {
-        setError(validation.error);
-        valid = false;
-        break;
+      let batchSize = 0;
+      let valid = true;
+      for (const file of fileArray) {
+        const validation = validateAttachment(file);
+        if (!validation.valid) {
+          setError(validation.error);
+          valid = false;
+          break;
+        }
+        batchSize += file.size;
       }
-      batchSize += file.size;
-    }
-    if (!valid) return;
+      if (!valid) return;
 
-    const newPayloads: AttachmentPayload[] = [];
-    for (const file of fileArray) {
-      try {
-        const payload = await fileToAttachmentPayload(file);
-        newPayloads.push(payload);
-      } catch {
-        setError(`Failed to read file: ${file.name}`);
-        valid = false;
-        break;
+      const newPayloads: AttachmentPayload[] = [];
+      for (const file of fileArray) {
+        try {
+          const payload = await fileToAttachmentPayload(file);
+          newPayloads.push(payload);
+        } catch {
+          setError(`Failed to read file: ${file.name}`);
+          valid = false;
+          break;
+        }
       }
-    }
-    if (!valid) return;
+      if (!valid) return;
 
-    setAttachments((prev) => {
-      if (prev.length + newPayloads.length > MAX_FILES) {
-        setError(`Maximum ${MAX_FILES} attachments allowed`);
-        return prev;
-      }
-      const currentTotal = prev.reduce((sum, a) => sum + a.size, 0);
-      if (currentTotal + batchSize > MAX_TOTAL_SIZE) {
-        setError('Total attachment size exceeds 20MB limit');
-        return prev;
-      }
-      return [...prev, ...newPayloads];
-    });
-  }, []);
+      setAttachments((prev) => {
+        if (prev.length + newPayloads.length > MAX_FILES) {
+          setError(`Maximum ${MAX_FILES} attachments allowed`);
+          return prev;
+        }
+        const currentTotal = prev.reduce((sum, a) => sum + a.size, 0);
+        if (currentTotal + batchSize > MAX_TOTAL_SIZE) {
+          setError('Total attachment size exceeds 20MB limit');
+          return prev;
+        }
+        const next = [...prev, ...newPayloads];
+        attachmentsRef.current = next;
+        schedulePersist(next);
+        return next;
+      });
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- schedulePersist is stable
+    },
+    [schedulePersist]
+  );
 
-  const removeAttachment = useCallback((id: string) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
-    setError(null);
-  }, []);
+  const removeAttachment = useCallback(
+    (id: string) => {
+      setAttachments((prev) => {
+        const next = prev.filter((a) => a.id !== id);
+        attachmentsRef.current = next;
+        schedulePersist(next);
+        return next;
+      });
+      setError(null);
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- schedulePersist is stable
+    },
+    [schedulePersist]
+  );
 
   const clearAttachments = useCallback(() => {
-    setAttachments([]);
+    if (timerRef.current != null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    pendingRef.current = null;
+    attachmentsRef.current = [];
+    updateAttachments([]);
     setError(null);
-  }, []);
+    const key = keyRef.current;
+    if (key) {
+      void draftStorage.deleteDraft(key);
+    }
+  }, [updateAttachments]);
 
   const handlePaste = useCallback(
     (event: React.ClipboardEvent) => {

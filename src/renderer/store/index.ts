@@ -28,7 +28,12 @@ import { createUpdateSlice } from './slices/updateSlice';
 
 import type { DetectedError } from '../types/data';
 import type { AppState } from './types';
-import type { CliInstallerProgress, TeamChangeEvent, UpdaterStatus } from '@shared/types';
+import type {
+  CliInstallerProgress,
+  LeadContextUsage,
+  TeamChangeEvent,
+  UpdaterStatus,
+} from '@shared/types';
 
 // =============================================================================
 // Store Creation
@@ -362,8 +367,30 @@ export function initializeNotificationListeners(): () => void {
             };
           }
 
+          // Clear context data when lead goes offline
+          if (nextActivity === 'offline') {
+            nextState.leadContextByTeam = { ...prev.leadContextByTeam };
+            delete (nextState.leadContextByTeam as Record<string, LeadContextUsage>)[
+              event.teamName
+            ];
+          }
+
           return nextState as typeof prev;
         });
+        return;
+      }
+
+      // Immediate in-memory update for lead context usage — no filesystem refresh needed
+      if (event.type === 'lead-context' && event.detail) {
+        try {
+          const ctx = JSON.parse(event.detail) as LeadContextUsage;
+          useStore.setState((prev) => ({
+            ...prev,
+            leadContextByTeam: { ...prev.leadContextByTeam, [event.teamName]: ctx },
+          }));
+        } catch {
+          /* ignore malformed detail */
+        }
         return;
       }
 

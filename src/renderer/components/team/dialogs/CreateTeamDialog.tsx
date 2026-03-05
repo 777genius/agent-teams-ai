@@ -411,7 +411,9 @@ export const CreateTeamDialog = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- dev defaults applied once on open
   }, [open]);
 
+  // Pre-select defaultProjectPath when projects loaded (only while dialog is open)
   useEffect(() => {
+    if (!open) return;
     if (cwdMode !== 'project') {
       return;
     }
@@ -426,7 +428,7 @@ export const CreateTeamDialog = ({
       }
     }
     setSelectedProjectPath(projects[0].path);
-  }, [cwdMode, projects, selectedProjectPath, defaultProjectPath]);
+  }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath]);
 
   const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
 

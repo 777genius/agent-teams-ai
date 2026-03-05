@@ -79,6 +79,7 @@ import {
   TEAM_KILL_PROCESS,
   TEAM_LAUNCH,
   TEAM_LEAD_ACTIVITY,
+  TEAM_LEAD_CONTEXT,
   TEAM_LIST,
   TEAM_PERMANENTLY_DELETE,
   TEAM_PREPARE_PROVISIONING,
@@ -89,6 +90,9 @@ import {
   TEAM_REMOVE_MEMBER,
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REPLACE_MEMBERS,
+  TEAM_SAVE_TASK_ATTACHMENT,
+  TEAM_GET_TASK_ATTACHMENT,
+  TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTORE,
   TEAM_RESTORE_TASK,
@@ -173,6 +177,7 @@ import type {
   HunkDecision,
   IpcResult,
   KanbanColumnId,
+  LeadContextUsage,
   MemberFullStats,
   MemberLogSummary,
   NotificationTrigger,
@@ -187,6 +192,8 @@ import type {
   SshConnectionConfig,
   SshConnectionStatus,
   SshLastConnection,
+  CommentAttachmentPayload,
+  TaskAttachmentMeta,
   TaskChangeSetV2,
   TaskComment,
   TeamChangeEvent,
@@ -797,8 +804,19 @@ const electronAPI: ElectronAPI = {
     updateConfig: async (teamName: string, updates: TeamUpdateConfigRequest) => {
       return invokeIpcWithResult<TeamConfig>(TEAM_UPDATE_CONFIG, teamName, updates);
     },
-    addTaskComment: async (teamName: string, taskId: string, text: string) => {
-      return invokeIpcWithResult<TaskComment>(TEAM_ADD_TASK_COMMENT, teamName, taskId, text);
+    addTaskComment: async (
+      teamName: string,
+      taskId: string,
+      text: string,
+      attachments?: CommentAttachmentPayload[]
+    ) => {
+      return invokeIpcWithResult<TaskComment>(
+        TEAM_ADD_TASK_COMMENT,
+        teamName,
+        taskId,
+        text,
+        attachments
+      );
     },
     addMember: async (teamName: string, request: AddMemberRequest) => {
       return invokeIpcWithResult<void>(TEAM_ADD_MEMBER, teamName, request);
@@ -824,6 +842,9 @@ const electronAPI: ElectronAPI = {
     getLeadActivity: async (teamName: string) => {
       const result = await invokeIpcWithResult<string>(TEAM_LEAD_ACTIVITY, teamName);
       return result as 'active' | 'idle' | 'offline';
+    },
+    getLeadContext: async (teamName: string) => {
+      return invokeIpcWithResult<LeadContextUsage | null>(TEAM_LEAD_CONTEXT, teamName);
     },
     softDeleteTask: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<void>(TEAM_SOFT_DELETE_TASK, teamName, taskId);
@@ -870,6 +891,52 @@ const electronAPI: ElectronAPI = {
         taskId,
         targetId,
         type
+      );
+    },
+    saveTaskAttachment: async (
+      teamName: string,
+      taskId: string,
+      attachmentId: string,
+      filename: string,
+      mimeType: string,
+      base64Data: string
+    ) => {
+      return invokeIpcWithResult<TaskAttachmentMeta>(
+        TEAM_SAVE_TASK_ATTACHMENT,
+        teamName,
+        taskId,
+        attachmentId,
+        filename,
+        mimeType,
+        base64Data
+      );
+    },
+    getTaskAttachment: async (
+      teamName: string,
+      taskId: string,
+      attachmentId: string,
+      mimeType: string
+    ) => {
+      return invokeIpcWithResult<string | null>(
+        TEAM_GET_TASK_ATTACHMENT,
+        teamName,
+        taskId,
+        attachmentId,
+        mimeType
+      );
+    },
+    deleteTaskAttachment: async (
+      teamName: string,
+      taskId: string,
+      attachmentId: string,
+      mimeType: string
+    ) => {
+      return invokeIpcWithResult<void>(
+        TEAM_DELETE_TASK_ATTACHMENT,
+        teamName,
+        taskId,
+        attachmentId,
+        mimeType
       );
     },
     onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {

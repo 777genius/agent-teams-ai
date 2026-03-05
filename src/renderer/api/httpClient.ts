@@ -796,6 +796,9 @@ export class HttpAPIClient implements ElectronAPI {
     getLeadActivity: async (_teamName: string): Promise<'active' | 'idle' | 'offline'> => {
       return 'offline';
     },
+    getLeadContext: async () => {
+      return null;
+    },
     softDeleteTask: async (_teamName: string, _taskId: string): Promise<void> => {
       // Not available via HTTP client — no-op
     },
@@ -830,6 +833,32 @@ export class HttpAPIClient implements ElectronAPI {
       _type: 'blockedBy' | 'blocks' | 'related'
     ): Promise<void> => {
       throw new Error('Task relationships are not available in browser mode');
+    },
+    saveTaskAttachment: async (
+      _teamName: string,
+      _taskId: string,
+      _attachmentId: string,
+      _filename: string,
+      _mimeType: string,
+      _base64Data: string
+    ): Promise<never> => {
+      throw new Error('Task attachments are not available in browser mode');
+    },
+    getTaskAttachment: async (
+      _teamName: string,
+      _taskId: string,
+      _attachmentId: string,
+      _mimeType: string
+    ): Promise<string | null> => {
+      return null;
+    },
+    deleteTaskAttachment: async (
+      _teamName: string,
+      _taskId: string,
+      _attachmentId: string,
+      _mimeType: string
+    ): Promise<void> => {
+      throw new Error('Task attachments are not available in browser mode');
     },
     onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {
       return this.addEventListener('team-change', (data: unknown) =>

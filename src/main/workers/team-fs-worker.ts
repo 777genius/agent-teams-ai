@@ -110,6 +110,7 @@ interface ParsedTask {
   metadata?: { _internal?: unknown };
   workIntervals?: unknown;
   statusHistory?: unknown;
+  attachments?: unknown;
 }
 
 interface RawWorkInterval {
@@ -596,6 +597,9 @@ async function readTasksDirForTeam(
         comments: normalizeComments(parsed),
         needsClarification,
         deletedAt: undefined,
+        attachments: Array.isArray(parsed.attachments)
+          ? (parsed.attachments as unknown[])
+          : undefined,
         teamName,
       });
     } catch (error) {

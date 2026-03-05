@@ -284,7 +284,7 @@ export function useKeyboardShortcuts(): void {
         event.preventDefault();
         if (selectedProjectId && selectedSessionId) {
           void Promise.all([
-            fetchSessionDetail(selectedProjectId, selectedSessionId),
+            fetchSessionDetail(selectedProjectId, selectedSessionId, activeTabId ?? undefined),
             fetchSessions(selectedProjectId),
           ]);
         }

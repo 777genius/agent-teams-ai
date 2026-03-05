@@ -20,8 +20,10 @@ export const ReplyQuoteBlock = ({
       <span className="mb-0.5 block text-[10px] font-medium text-[var(--color-text-muted)]">
         @{reply.agentName}
       </span>
-      <p className="line-clamp-3 text-xs text-[var(--color-text-muted)]">{reply.originalText}</p>
+      <div className="line-clamp-3 text-xs text-[var(--color-text-muted)]">
+        <MarkdownViewer content={reply.originalText} maxHeight="max-h-[60px]" bare />
+      </div>
     </div>
-    <MarkdownViewer content={reply.replyText} maxHeight={bodyMaxHeight} copyable />
+    <MarkdownViewer content={reply.replyText} maxHeight={bodyMaxHeight} copyable bare />
   </div>
 );

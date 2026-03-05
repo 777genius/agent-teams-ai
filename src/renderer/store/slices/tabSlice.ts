@@ -550,6 +550,7 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
     const tabsToClose = pane.tabs.filter((t) => t.id !== tabId);
     for (const tab of tabsToClose) {
       state.cleanupTabUIState(tab.id);
+      state.cleanupTabSessionData(tab.id);
     }
 
     const keepTab = pane.tabs.find((t) => t.id === tabId);
@@ -581,6 +582,7 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
     const tabsToClose = pane.tabs.slice(index + 1);
     for (const tab of tabsToClose) {
       state.cleanupTabUIState(tab.id);
+      state.cleanupTabSessionData(tab.id);
     }
 
     const newTabs = pane.tabs.slice(0, index + 1);

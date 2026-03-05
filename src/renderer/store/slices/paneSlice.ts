@@ -180,9 +180,10 @@ export const createPaneSlice: StateCreator<AppState, [], [], PaneSlice> = (set, 
     const pane = findPane(paneLayout, paneId);
     if (!pane) return;
 
-    // Cleanup tab UI state for all tabs in the pane
+    // Cleanup tab UI state and session data for all tabs in the pane
     for (const tab of pane.tabs) {
       state.cleanupTabUIState(tab.id);
+      state.cleanupTabSessionData(tab.id);
     }
 
     const newLayout = removePane(paneLayout, paneId);

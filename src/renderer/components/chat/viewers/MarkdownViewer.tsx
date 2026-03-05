@@ -3,6 +3,7 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 
 import { api } from '@renderer/api';
 import { CopyButton } from '@renderer/components/common/CopyButton';
+import { getTeamColorSet } from '@renderer/constants/teamColors';
 import {
   CODE_BG,
   CODE_BORDER,
@@ -199,21 +200,45 @@ function createViewerMarkdownComponents(searchCtx: SearchContext | null): Compon
     ),
 
     // Links — inline element, no hl(); parent block element's hl() descends here
-    a: ({ href, children }) => (
-      <a
-        href={href}
-        className="cursor-pointer no-underline hover:underline"
-        style={{ color: PROSE_LINK }}
-        onClick={(e) => {
-          e.preventDefault();
-          if (href) {
-            void api.openExternal(href);
-          }
-        }}
-      >
-        {children}
-      </a>
-    ),
+    // task:// links are handled by ancestor onClickCapture handlers (e.g. ActivityItem)
+    // mention:// links render as colored inline badges
+    a: ({ href, children }) => {
+      if (href?.startsWith('mention://')) {
+        const path = href.slice('mention://'.length);
+        const slashIdx = path.indexOf('/');
+        const color = slashIdx >= 0 ? decodeURIComponent(path.slice(0, slashIdx)) : '';
+        const colorSet = getTeamColorSet(color);
+        const bg = colorSet.badge;
+        return (
+          <span
+            style={{
+              backgroundColor: bg,
+              color: colorSet.text,
+              borderRadius: '3px',
+              boxShadow: `0 0 0 1.5px ${bg}`,
+              fontSize: 'inherit',
+            }}
+          >
+            {children}
+          </span>
+        );
+      }
+      return (
+        <a
+          href={href}
+          className="cursor-pointer no-underline hover:underline"
+          style={{ color: PROSE_LINK }}
+          onClick={(e) => {
+            e.preventDefault();
+            if (href && !href.startsWith('task://')) {
+              void api.openExternal(href);
+            }
+          }}
+        >
+          {children}
+        </a>
+      );
+    },
 
     // Strong/Bold — inline element, no hl()
     strong: ({ children }) => (

@@ -30,15 +30,19 @@ import type {
 import type {
   AddMemberRequest,
   AttachmentFileData,
+  AttachmentMediaType,
+  CommentAttachmentPayload,
   CreateTaskRequest,
   GlobalTask,
   KanbanColumnId,
   LeadActivityState,
+  LeadContextUsage,
   MemberFullStats,
   MemberLogSummary,
   ReplaceMembersRequest,
   SendMessageRequest,
   SendMessageResult,
+  TaskAttachmentMeta,
   TaskComment,
   TeamChangeEvent,
   TeamConfig,
@@ -448,7 +452,12 @@ export interface TeamsAPI {
     memberName: string,
     role: string | undefined
   ) => Promise<void>;
-  addTaskComment: (teamName: string, taskId: string, text: string) => Promise<TaskComment>;
+  addTaskComment: (
+    teamName: string,
+    taskId: string,
+    text: string,
+    attachments?: CommentAttachmentPayload[]
+  ) => Promise<TaskComment>;
   setTaskClarification: (
     teamName: string,
     taskId: string,
@@ -458,6 +467,7 @@ export interface TeamsAPI {
   getAttachments: (teamName: string, messageId: string) => Promise<AttachmentFileData[]>;
   killProcess: (teamName: string, pid: number) => Promise<void>;
   getLeadActivity: (teamName: string) => Promise<LeadActivityState>;
+  getLeadContext: (teamName: string) => Promise<LeadContextUsage | null>;
   softDeleteTask: (teamName: string, taskId: string) => Promise<void>;
   restoreTask: (teamName: string, taskId: string) => Promise<void>;
   getDeletedTasks: (teamName: string) => Promise<TeamTask[]>;
@@ -473,6 +483,26 @@ export interface TeamsAPI {
     taskId: string,
     targetId: string,
     type: 'blockedBy' | 'blocks' | 'related'
+  ) => Promise<void>;
+  saveTaskAttachment: (
+    teamName: string,
+    taskId: string,
+    attachmentId: string,
+    filename: string,
+    mimeType: string,
+    base64Data: string
+  ) => Promise<TaskAttachmentMeta>;
+  getTaskAttachment: (
+    teamName: string,
+    taskId: string,
+    attachmentId: string,
+    mimeType: string
+  ) => Promise<string | null>;
+  deleteTaskAttachment: (
+    teamName: string,
+    taskId: string,
+    attachmentId: string,
+    mimeType: string
   ) => Promise<void>;
   onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void) => () => void;
   onProvisioningProgress: (

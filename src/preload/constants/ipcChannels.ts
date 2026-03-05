@@ -325,6 +325,9 @@ export const TEAM_KILL_PROCESS = 'team:killProcess';
 /** Get lead process activity state (active/idle/offline) */
 export const TEAM_LEAD_ACTIVITY = 'team:leadActivity';
 
+/** Get lead process context window usage */
+export const TEAM_LEAD_CONTEXT = 'team:leadContext';
+
 /** Soft-delete a task (set status to 'deleted' with deletedAt timestamp) */
 export const TEAM_SOFT_DELETE_TASK = 'team:softDeleteTask';
 
@@ -342,6 +345,15 @@ export const TEAM_ADD_TASK_RELATIONSHIP = 'team:addTaskRelationship';
 
 /** Remove a relationship (blockedBy/blocks/related) between two tasks */
 export const TEAM_REMOVE_TASK_RELATIONSHIP = 'team:removeTaskRelationship';
+
+/** Save an image attachment to a task */
+export const TEAM_SAVE_TASK_ATTACHMENT = 'team:saveTaskAttachment';
+
+/** Get base64 data for a task attachment */
+export const TEAM_GET_TASK_ATTACHMENT = 'team:getTaskAttachment';
+
+/** Delete an attachment from a task */
+export const TEAM_DELETE_TASK_ATTACHMENT = 'team:deleteTaskAttachment';
 
 // =============================================================================
 // CLI Installer API Channels

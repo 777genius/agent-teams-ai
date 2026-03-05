@@ -65,6 +65,8 @@ const TASK_MAP_YIELD_EVERY = 250;
 export class TeamDataService {
   private processHealthTimer: ReturnType<typeof setInterval> | null = null;
   private processHealthTeams = new Set<string>();
+  /** Tracks notified task-start transitions to avoid duplicate lead notifications. */
+  private notifiedTaskStarts = new Set<string>();
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -873,6 +875,48 @@ export class TeamDataService {
     await this.taskWriter.updateStatus(teamName, taskId, status, actor);
   }
 
+  /**
+   * Called when a task file changes on disk (e.g. teammate CLI wrote it).
+   * If the latest statusHistory entry shows a non-user actor started the task,
+   * sends an inbox notification to the team lead.
+   */
+  async notifyLeadOnTeammateTaskStart(teamName: string, taskId: string): Promise<void> {
+    try {
+      const tasks = await this.taskReader.getTasks(teamName);
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+
+      const history = task.statusHistory;
+      if (!Array.isArray(history) || history.length === 0) return;
+
+      const last = history[history.length - 1];
+      if (last.to !== 'in_progress') return;
+      if (!last.actor || last.actor === 'user') return;
+
+      // Dedup: only notify once per unique transition (keyed by team+task+timestamp).
+      const dedupKey = `${teamName}:${taskId}:${last.timestamp}`;
+      if (this.notifiedTaskStarts.has(dedupKey)) return;
+      this.notifiedTaskStarts.add(dedupKey);
+      // Prevent unbounded growth in long-running sessions.
+      if (this.notifiedTaskStarts.size > 500) {
+        const first = this.notifiedTaskStarts.values().next().value!;
+        this.notifiedTaskStarts.delete(first);
+      }
+
+      const leadName = await this.resolveLeadName(teamName);
+      if (this.isLeadOwner(last.actor, leadName)) return;
+
+      await this.sendMessage(teamName, {
+        member: leadName,
+        from: last.actor,
+        text: `Task #${task.id} "${task.subject}" has been started by ${last.actor}.`,
+        summary: `Task #${task.id} started`,
+      });
+    } catch (error) {
+      logger.warn(`[TeamDataService] notifyLeadOnTeammateTaskStart failed: ${error}`);
+    }
+  }
+
   async softDeleteTask(teamName: string, taskId: string): Promise<void> {
     await this.taskWriter.softDelete(teamName, taskId, 'user');
   }
@@ -895,6 +939,22 @@ export class TeamDataService {
     fields: { subject?: string; description?: string }
   ): Promise<void> {
     await this.taskWriter.updateFields(teamName, taskId, fields);
+  }
+
+  async addTaskAttachment(
+    teamName: string,
+    taskId: string,
+    meta: import('@shared/types').TaskAttachmentMeta
+  ): Promise<void> {
+    await this.taskWriter.addAttachment(teamName, taskId, meta);
+  }
+
+  async removeTaskAttachment(
+    teamName: string,
+    taskId: string,
+    attachmentId: string
+  ): Promise<void> {
+    await this.taskWriter.removeAttachment(teamName, taskId, attachmentId);
   }
 
   async setTaskNeedsClarification(
@@ -923,8 +983,15 @@ export class TeamDataService {
     await this.taskWriter.removeRelationship(teamName, taskId, targetId, type);
   }
 
-  async addTaskComment(teamName: string, taskId: string, text: string): Promise<TaskComment> {
-    const comment = await this.taskWriter.addComment(teamName, taskId, text);
+  async addTaskComment(
+    teamName: string,
+    taskId: string,
+    text: string,
+    attachments?: import('@shared/types').TaskAttachmentMeta[]
+  ): Promise<TaskComment> {
+    const comment = await this.taskWriter.addComment(teamName, taskId, text, {
+      attachments,
+    });
 
     try {
       const [tasks, toolPath, config] = await Promise.all([

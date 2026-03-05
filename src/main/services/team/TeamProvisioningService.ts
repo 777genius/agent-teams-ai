@@ -37,6 +37,7 @@ import { TeamTaskReader } from './TeamTaskReader';
 
 import type {
   InboxMessage,
+  LeadContextUsage,
   TeamChangeEvent,
   TeamCreateRequest,
   TeamCreateResponse,
@@ -58,7 +59,7 @@ const LOG_PROGRESS_THROTTLE_MS = 300;
 const UI_LOGS_TAIL_LIMIT = 128 * 1024;
 const SHELL_ENV_TIMEOUT_MS = 12000;
 // const CLI_PREPARE_TIMEOUT_MS = 10000;
-const PROBE_CACHE_TTL_MS = 60_000;
+const PROBE_CACHE_TTL_MS = 10 * 60_000;
 const PREFLIGHT_TIMEOUT_MS = 30000;
 const PREFLIGHT_AUTH_RETRY_DELAY_MS = 2000;
 const PREFLIGHT_AUTH_MAX_RETRIES = 2;
@@ -154,6 +155,13 @@ interface ProvisioningRun {
   authFailureRetried: boolean;
   /** Set to true while auth-failure respawn is in progress to prevent duplicate handling. */
   authRetryInProgress: boolean;
+  /** Tracks lead process context window usage from stream-json usage data. */
+  leadContextUsage: {
+    currentTokens: number;
+    contextWindow: number;
+    lastUsageMessageId: string | null;
+    lastEmittedAt: number;
+  } | null;
   /** Saved spawn context for auth-failure respawn. */
   spawnContext: {
     claudePath: string;
@@ -1014,6 +1022,16 @@ export class TeamProvisioningService {
     return run.leadActivityState;
   }
 
+  getLeadContextUsage(teamName: string): LeadContextUsage | null {
+    const runId = this.activeByTeam.get(teamName);
+    if (!runId) return null;
+    const run = this.runs.get(runId);
+    if (!run?.leadContextUsage || run.processKilled || run.cancelRequested) return null;
+    const { currentTokens, contextWindow } = run.leadContextUsage;
+    const percent = contextWindow > 0 ? Math.round((currentTokens / contextWindow) * 100) : 0;
+    return { currentTokens, contextWindow, percent, updatedAt: new Date().toISOString() };
+  }
+
   private setLeadActivity(run: ProvisioningRun, state: 'active' | 'idle' | 'offline'): void {
     if (run.leadActivityState === state) return;
     run.leadActivityState = state;
@@ -1021,6 +1039,33 @@ export class TeamProvisioningService {
       type: 'lead-activity',
       teamName: run.teamName,
       detail: state,
+    });
+  }
+
+  private static readonly CONTEXT_EMIT_THROTTLE_MS = 2000;
+
+  private emitLeadContextUsage(run: ProvisioningRun): void {
+    if (!run.leadContextUsage || !run.provisioningComplete) return;
+    const now = Date.now();
+    if (
+      now - run.leadContextUsage.lastEmittedAt <
+      TeamProvisioningService.CONTEXT_EMIT_THROTTLE_MS
+    ) {
+      return;
+    }
+    run.leadContextUsage.lastEmittedAt = now;
+    const { currentTokens, contextWindow } = run.leadContextUsage;
+    const percent = contextWindow > 0 ? Math.round((currentTokens / contextWindow) * 100) : 0;
+    const payload: LeadContextUsage = {
+      currentTokens,
+      contextWindow,
+      percent,
+      updatedAt: new Date().toISOString(),
+    };
+    this.teamChangeEmitter?.({
+      type: 'lead-context',
+      teamName: run.teamName,
+      detail: JSON.stringify(payload),
     });
   }
 
@@ -1433,6 +1478,7 @@ export class TeamProvisioningService {
         provisioningOutputParts: [],
         detectedSessionId: null,
         leadActivityState: 'active',
+        leadContextUsage: null,
         authFailureRetried: false,
         authRetryInProgress: false,
         spawnContext: null,
@@ -1716,6 +1762,7 @@ export class TeamProvisioningService {
         provisioningOutputParts: [],
         detectedSessionId: null,
         leadActivityState: 'active',
+        leadContextUsage: null,
         authFailureRetried: false,
         authRetryInProgress: false,
         spawnContext: null,
@@ -2464,6 +2511,40 @@ export class TeamProvisioningService {
       if (run.provisioningComplete) {
         this.captureSendMessageToUser(run, content ?? []);
       }
+
+      // Extract context window usage from message.usage for real-time tracking.
+      // SDKAssistantMessage wraps BetaMessage which contains usage stats.
+      const messageObj = (msg.message ?? msg) as Record<string, unknown>;
+      if (messageObj && typeof messageObj === 'object') {
+        const msgId = typeof messageObj.id === 'string' ? messageObj.id : null;
+        const usage = messageObj.usage as Record<string, unknown> | undefined;
+        if (usage && typeof usage === 'object') {
+          // Dedup: skip if same message.id (SDK bug: multi-block = same usage repeated)
+          if (!msgId || run.leadContextUsage?.lastUsageMessageId !== msgId) {
+            const inputTokens = typeof usage.input_tokens === 'number' ? usage.input_tokens : 0;
+            const cacheCreation =
+              typeof usage.cache_creation_input_tokens === 'number'
+                ? usage.cache_creation_input_tokens
+                : 0;
+            const cacheRead =
+              typeof usage.cache_read_input_tokens === 'number' ? usage.cache_read_input_tokens : 0;
+            const currentTokens = inputTokens + cacheCreation + cacheRead;
+
+            if (!run.leadContextUsage) {
+              run.leadContextUsage = {
+                currentTokens,
+                contextWindow: 200_000,
+                lastUsageMessageId: msgId,
+                lastEmittedAt: 0,
+              };
+            } else {
+              run.leadContextUsage.currentTokens = currentTokens;
+              run.leadContextUsage.lastUsageMessageId = msgId;
+            }
+            this.emitLeadContextUsage(run);
+          }
+        }
+      }
     }
 
     // Capture session_id from any message type (first occurrence wins)
@@ -2489,6 +2570,53 @@ export class TeamProvisioningService {
             })();
       if (subtype === 'success') {
         logger.info(`[${run.teamName}] stream-json result: success — turn complete, process alive`);
+
+        // Extract contextWindow from modelUsage if available (SDKResultSuccess.modelUsage)
+        const modelUsageObj = (msg.modelUsage ??
+          (msg.result as Record<string, unknown> | undefined)?.modelUsage) as
+          | Record<string, Record<string, unknown>>
+          | undefined;
+        if (modelUsageObj && typeof modelUsageObj === 'object') {
+          for (const modelData of Object.values(modelUsageObj)) {
+            if (
+              modelData &&
+              typeof modelData === 'object' &&
+              typeof modelData.contextWindow === 'number' &&
+              modelData.contextWindow > 0
+            ) {
+              if (run.leadContextUsage) {
+                run.leadContextUsage.contextWindow = modelData.contextWindow;
+                run.leadContextUsage.lastEmittedAt = 0; // force re-emit
+                this.emitLeadContextUsage(run);
+              }
+              break;
+            }
+          }
+        }
+
+        // Extract usage from result message itself (final turn usage)
+        const resultUsage = (msg.usage ??
+          (msg.result as Record<string, unknown> | undefined)?.usage) as
+          | Record<string, unknown>
+          | undefined;
+        if (resultUsage && typeof resultUsage === 'object') {
+          const inp = typeof resultUsage.input_tokens === 'number' ? resultUsage.input_tokens : 0;
+          const cc =
+            typeof resultUsage.cache_creation_input_tokens === 'number'
+              ? resultUsage.cache_creation_input_tokens
+              : 0;
+          const cr =
+            typeof resultUsage.cache_read_input_tokens === 'number'
+              ? resultUsage.cache_read_input_tokens
+              : 0;
+          const total = inp + cc + cr;
+          if (total > 0 && run.leadContextUsage) {
+            run.leadContextUsage.currentTokens = total;
+            run.leadContextUsage.lastEmittedAt = 0;
+            this.emitLeadContextUsage(run);
+          }
+        }
+
         if (run.provisioningComplete) {
           this.setLeadActivity(run, 'idle');
         }
@@ -2583,6 +2711,15 @@ export class TeamProvisioningService {
           // Post-provisioning error: process alive, waiting for input
           this.setLeadActivity(run, 'idle');
         }
+      }
+    }
+
+    // Handle compact_boundary — context was compacted, next assistant message will carry fresh usage
+    if (msg.type === 'system') {
+      const sub = typeof msg.subtype === 'string' ? msg.subtype : undefined;
+      if (sub === 'compact_boundary' && run.leadContextUsage) {
+        run.leadContextUsage.lastUsageMessageId = null;
+        logger.info(`[${run.teamName}] compact_boundary — context will refresh on next turn`);
       }
     }
   }

@@ -55,6 +55,9 @@ vi.mock('@preload/constants/ipcChannels', () => ({
   TEAM_RESTORE: 'team:restoreTeam',
   TEAM_PERMANENTLY_DELETE: 'team:permanentlyDeleteTeam',
   TEAM_RESTORE_TASK: 'team:restoreTask',
+  TEAM_SAVE_TASK_ATTACHMENT: 'team:saveTaskAttachment',
+  TEAM_GET_TASK_ATTACHMENT: 'team:getTaskAttachment',
+  TEAM_DELETE_TASK_ATTACHMENT: 'team:deleteTaskAttachment',
 }));
 
 import {

@@ -84,6 +84,8 @@ export interface TaskComment {
   text: string;
   createdAt: string;
   type: TaskCommentType;
+  /** Image attachments on this comment. Metadata only — files stored on disk. */
+  attachments?: TaskAttachmentMeta[];
 }
 
 // Fields are validated in TeamTaskReader.getTasks() using `satisfies Record<keyof TeamTask, unknown>`.
@@ -123,12 +125,36 @@ export interface TeamTask {
   needsClarification?: 'lead' | 'user';
   /** ISO timestamp — when the task was soft-deleted. Only set for status === 'deleted'. */
   deletedAt?: string;
+  /** Image attachments associated with this task. Metadata only — actual files stored on disk. */
+  attachments?: TaskAttachmentMeta[];
 }
 
 /** Task enriched for UI/DTO use (overlay from kanban-state.json). */
 export interface TeamTaskWithKanban extends TeamTask {
   /** Set when task is in team kanban (review or approved column). */
   kanbanColumn?: 'review' | 'approved';
+}
+
+/** Metadata for an image attached to a task description. */
+export interface TaskAttachmentMeta {
+  /** Unique attachment ID (uuid). */
+  id: string;
+  /** Original filename (e.g. "screenshot.png"). */
+  filename: string;
+  /** MIME type. */
+  mimeType: AttachmentMediaType;
+  /** File size in bytes. */
+  size: number;
+  /** ISO timestamp when the attachment was added. */
+  addedAt: string;
+}
+
+/** Payload for uploading an attachment with base64 data (renderer → main). */
+export interface CommentAttachmentPayload {
+  id: string;
+  filename: string;
+  mimeType: AttachmentMediaType;
+  base64Data: string;
 }
 
 export type AttachmentMediaType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
@@ -268,8 +294,19 @@ export interface CreateTaskRequest {
 
 export type LeadActivityState = 'active' | 'idle' | 'offline';
 
+export interface LeadContextUsage {
+  /** Total tokens currently in context (input + cache_creation + cache_read) */
+  currentTokens: number;
+  /** Model's context window size */
+  contextWindow: number;
+  /** Usage percentage (0-100) */
+  percent: number;
+  /** ISO timestamp of last update */
+  updatedAt: string;
+}
+
 export interface TeamChangeEvent {
-  type: 'config' | 'inbox' | 'task' | 'lead-activity' | 'process';
+  type: 'config' | 'inbox' | 'task' | 'lead-activity' | 'lead-context' | 'process';
   teamName: string;
   detail?: string;
 }

@@ -12,11 +12,25 @@ const logger = createLogger('Service:TeamAttachmentStore');
 const ATTACHMENTS_DIR = 'attachments';
 
 export class TeamAttachmentStore {
+  private assertSafePathSegment(label: string, value: string): void {
+    if (
+      value.length === 0 ||
+      value.includes('/') ||
+      value.includes('\\') ||
+      value.includes('..') ||
+      value.includes('\0')
+    ) {
+      throw new Error(`Invalid ${label}`);
+    }
+  }
+
   private getDir(teamName: string): string {
+    this.assertSafePathSegment('teamName', teamName);
     return path.join(getTeamsBasePath(), teamName, ATTACHMENTS_DIR);
   }
 
   private getFilePath(teamName: string, messageId: string): string {
+    this.assertSafePathSegment('messageId', messageId);
     return path.join(this.getDir(teamName), `${messageId}.json`);
   }
 

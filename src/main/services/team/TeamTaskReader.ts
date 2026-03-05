@@ -8,7 +8,9 @@ import * as path from 'path';
 import { getTeamFsWorkerClient } from './TeamFsWorkerClient';
 
 import type {
+  AttachmentMediaType,
   StatusTransition,
+  TaskAttachmentMeta,
   TaskComment,
   TaskWorkInterval,
   TeamTask,
@@ -17,6 +19,13 @@ import type {
 
 const logger = createLogger('Service:TeamTaskReader');
 const MAX_TASK_FILE_BYTES = 2 * 1024 * 1024;
+
+const VALID_ATTACHMENT_MIME_TYPES: ReadonlySet<string> = new Set<AttachmentMediaType>([
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+]);
 
 export class TeamTaskReader {
   /**
@@ -187,6 +196,21 @@ export class TeamTaskReader {
                   type: (['regular', 'review_request', 'review_approved'] as const).includes(c.type)
                     ? c.type
                     : ('regular' as const),
+                  attachments: Array.isArray(c.attachments)
+                    ? (c.attachments as unknown[]).filter(
+                        (a): a is TaskAttachmentMeta =>
+                          Boolean(a) &&
+                          typeof a === 'object' &&
+                          typeof (a as Record<string, unknown>).id === 'string' &&
+                          typeof (a as Record<string, unknown>).filename === 'string' &&
+                          typeof (a as Record<string, unknown>).mimeType === 'string' &&
+                          VALID_ATTACHMENT_MIME_TYPES.has(
+                            (a as Record<string, unknown>).mimeType as string
+                          ) &&
+                          typeof (a as Record<string, unknown>).size === 'number' &&
+                          typeof (a as Record<string, unknown>).addedAt === 'string'
+                      )
+                    : undefined,
                 }))
             : undefined,
           needsClarification: (['lead', 'user'] as const).includes(
@@ -195,6 +219,29 @@ export class TeamTaskReader {
             ? (parsed.needsClarification as 'lead' | 'user')
             : undefined,
           deletedAt: undefined, // deleted tasks are filtered out below
+          attachments: Array.isArray(parsed.attachments)
+            ? (parsed.attachments as unknown[])
+                .filter(
+                  (a): a is TaskAttachmentMeta =>
+                    Boolean(a) &&
+                    typeof a === 'object' &&
+                    typeof (a as Record<string, unknown>).id === 'string' &&
+                    typeof (a as Record<string, unknown>).filename === 'string' &&
+                    typeof (a as Record<string, unknown>).mimeType === 'string' &&
+                    VALID_ATTACHMENT_MIME_TYPES.has(
+                      (a as Record<string, unknown>).mimeType as string
+                    ) &&
+                    typeof (a as Record<string, unknown>).size === 'number' &&
+                    typeof (a as Record<string, unknown>).addedAt === 'string'
+                )
+                .map((a) => ({
+                  id: a.id,
+                  filename: a.filename,
+                  mimeType: a.mimeType,
+                  size: a.size,
+                  addedAt: a.addedAt,
+                }))
+            : undefined,
         } satisfies Record<keyof TeamTask, unknown>;
         if (task.status === 'deleted') {
           continue;

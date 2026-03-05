@@ -703,6 +703,11 @@ export class ProjectScanner {
       let startIndex = 0;
       if (cursor) {
         try {
+          // Defensive limit: cursor originates from a query param / IPC input and should be tiny.
+          // Prevent pathological memory allocation on Buffer.from(cursor, 'base64').
+          if (cursor.length > 4096) {
+            throw new Error('cursor too large');
+          }
           const decoded = JSON.parse(
             Buffer.from(cursor, 'base64').toString('utf8')
           ) as SessionCursor;

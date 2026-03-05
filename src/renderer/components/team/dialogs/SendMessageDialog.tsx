@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
+import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -22,6 +24,7 @@ import {
 } from '@renderer/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useAttachments } from '@renderer/hooks/useAttachments';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useStore } from '@renderer/store';
@@ -30,13 +33,13 @@ import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { X } from 'lucide-react';
+import { ImagePlus, X } from 'lucide-react';
 
 import { MemberBadge } from '../MemberBadge';
 
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { ResolvedTeamMember, SendMessageResult } from '@shared/types';
+import type { AttachmentPayload, ResolvedTeamMember, SendMessageResult } from '@shared/types';
 
 interface QuotedMessage {
   from: string;
@@ -45,6 +48,7 @@ interface QuotedMessage {
 
 interface SendMessageDialogProps {
   open: boolean;
+  teamName: string;
   members: ResolvedTeamMember[];
   defaultRecipient?: string;
   /** Pre-filled message text (e.g. from editor selection action) */
@@ -52,10 +56,16 @@ interface SendMessageDialogProps {
   /** Pre-filled inline code chip (from editor selection action) */
   defaultChip?: InlineChip;
   quotedMessage?: QuotedMessage;
+  isTeamAlive?: boolean;
   sending: boolean;
   sendError: string | null;
   lastResult: SendMessageResult | null;
-  onSend: (member: string, text: string, summary?: string) => void;
+  onSend: (
+    member: string,
+    text: string,
+    summary?: string,
+    attachments?: AttachmentPayload[]
+  ) => void;
   onClose: () => void;
 }
 
@@ -63,11 +73,13 @@ const NO_MEMBER = '__none__';
 
 export const SendMessageDialog = ({
   open,
+  teamName,
   members,
   defaultRecipient,
   defaultText,
   defaultChip,
   quotedMessage,
+  isTeamAlive,
   sending,
   sendError,
   lastResult,
@@ -84,6 +96,25 @@ export const SendMessageDialog = ({
   const [summary, setSummary] = useState('');
   const [prevOpen, setPrevOpen] = useState(false);
   const [prevResult, setPrevResult] = useState<SendMessageResult | null>(null);
+
+  const [isDragOver, setIsDragOver] = useState(false);
+  const dragCounterRef = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const {
+    attachments,
+    error: attachmentError,
+    canAddMore,
+    addFiles,
+    removeAttachment,
+    clearAttachments,
+    handlePaste,
+    handleDrop,
+  } = useAttachments({ persistenceKey: `sendMessage:${teamName}:attachments` });
+
+  const selectedMember = members.find((m) => m.name === member);
+  const isLeadRecipient = selectedMember?.role === 'lead' || selectedMember?.name === 'team-lead';
+  const canAttach = isLeadRecipient && isTeamAlive && canAddMore;
 
   // Reset form when dialog opens
   if (open && !prevOpen) {
@@ -118,6 +149,7 @@ export const SendMessageDialog = ({
     if (pendingAutoClose) {
       textDraft.clearDraft();
       chipDraft.clearChipDraft();
+      clearAttachments();
       setPendingAutoClose(false);
       onClose();
     }
@@ -156,9 +188,15 @@ export const SendMessageDialog = ({
     if (!canSend) return;
     const serialized = serializeChipsWithText(textDraft.value.trim(), chipDraft.chips);
     const finalText = quote ? buildReplyBlock(quote.from, quote.text, serialized) : serialized;
-    onSend(member.trim(), finalText, summary.trim());
+    onSend(
+      member.trim(),
+      finalText,
+      summary.trim(),
+      attachments.length > 0 ? attachments : undefined
+    );
     textDraft.clearDraft();
     chipDraft.clearChipDraft();
+    clearAttachments();
   };
 
   const handleOpenChange = (nextOpen: boolean): void => {
@@ -167,9 +205,64 @@ export const SendMessageDialog = ({
     }
   };
 
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const input = e.target;
+      if (input.files?.length) {
+        void addFiles(input.files);
+      }
+      input.value = '';
+    },
+    [addFiles]
+  );
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current += 1;
+    if (dragCounterRef.current === 1) setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const handleDropWrapper = useCallback(
+    (e: React.DragEvent) => {
+      dragCounterRef.current = 0;
+      setIsDragOver(false);
+      if (canAttach) handleDrop(e);
+    },
+    [canAttach, handleDrop]
+  );
+
+  const handlePasteWrapper = useCallback(
+    (e: React.ClipboardEvent) => {
+      if (canAttach) handlePaste(e);
+    },
+    [canAttach, handlePaste]
+  );
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[440px]">
+      <DialogContent
+        className="sm:max-w-[560px]"
+        onDragEnter={canAttach ? handleDragEnter : undefined}
+        onDragLeave={canAttach ? handleDragLeave : undefined}
+        onDragOver={canAttach ? handleDragOver : undefined}
+        onDrop={canAttach ? handleDropWrapper : undefined}
+        onPaste={canAttach ? handlePasteWrapper : undefined}
+      >
+        <DropZoneOverlay active={isDragOver && !!canAttach} />
+
         <DialogHeader>
           <DialogTitle>Send Message</DialogTitle>
           <DialogDescription>Send a direct message to a team member.</DialogDescription>
@@ -215,7 +308,51 @@ export const SendMessageDialog = ({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="smd-message">Message</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="smd-message">Message</Label>
+              {isLeadRecipient ? (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/gif,image/webp"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileInputChange}
+                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className={`inline-flex items-center gap-1 rounded p-1 transition-colors ${
+                          canAttach
+                            ? 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+                            : 'text-[var(--color-text-muted)] opacity-40'
+                        }`}
+                        disabled={!canAttach}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <ImagePlus size={14} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {!isTeamAlive
+                        ? 'Team must be online to attach images'
+                        : !canAddMore
+                          ? 'Maximum attachments reached'
+                          : 'Attach images (paste or drag & drop)'}
+                    </TooltipContent>
+                  </Tooltip>
+                </>
+              ) : null}
+            </div>
+
+            <AttachmentPreviewList
+              attachments={attachments}
+              onRemove={removeAttachment}
+              error={attachmentError}
+            />
+
             <div className={quote ? 'flex flex-col' : 'contents'}>
               {quote ? (
                 <div className="relative overflow-hidden rounded-t-md border border-b-0 border-blue-500/20 bg-blue-950/20 py-2 pl-3 pr-2">

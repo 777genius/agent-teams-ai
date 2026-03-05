@@ -215,8 +215,9 @@ export const LaunchTeamDialog = ({
     };
   }, [open, repositoryGroups]);
 
-  // Pre-select defaultProjectPath when projects loaded
+  // Pre-select defaultProjectPath when projects loaded (only while dialog is open)
   useEffect(() => {
+    if (!open) return;
     if (cwdMode !== 'project') {
       return;
     }
@@ -231,7 +232,7 @@ export const LaunchTeamDialog = ({
       }
     }
     setSelectedProjectPath(projects[0].path);
-  }, [cwdMode, projects, selectedProjectPath, defaultProjectPath]);
+  }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath]);
 
   const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
 

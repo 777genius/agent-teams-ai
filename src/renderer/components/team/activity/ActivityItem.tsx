@@ -39,6 +39,8 @@ interface ActivityItemProps {
   recipientColor?: string;
   /** When true, show a blue unread dot. */
   isUnread?: boolean;
+  /** Map of member name → color name for @mention badge rendering. */
+  memberColorMap?: Map<string, string>;
   onMemberNameClick?: (memberName: string) => void;
   onCreateTask?: (subject: string, description: string) => void;
   onReply?: (message: InboxMessage) => void;
@@ -153,6 +155,26 @@ function linkifyTaskIdsInMarkdown(text: string): string {
   return text.replace(/#(\d+)/g, '[#$1](task://$1)');
 }
 
+/**
+ * Convert `@memberName` in plain text to markdown links with mention:// protocol.
+ * Encodes color in the URL so MarkdownViewer can render colored badges without extra context.
+ * Greedy match: longer names are tried first to avoid partial matches.
+ */
+function linkifyMentionsInMarkdown(text: string, memberColorMap: Map<string, string>): string {
+  if (memberColorMap.size === 0) return text;
+  // Sort by name length descending for greedy matching
+  const names = [...memberColorMap.keys()].sort((a, b) => b.length - a.length);
+  // Build regex that matches @name at start or after whitespace, followed by boundary
+  const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const pattern = new RegExp(`(^|\\s)@(${escaped.join('|')})(?=[\\s,.:;!?)\\]}-]|$)`, 'gi');
+  return text.replace(pattern, (match, prefix: string, name: string) => {
+    // Find the canonical name (case-insensitive lookup)
+    const canonical = names.find((n) => n.toLowerCase() === name.toLowerCase()) ?? name;
+    const color = memberColorMap.get(canonical) ?? '';
+    return `${prefix}[@${canonical}](mention://${encodeURIComponent(color)}/${encodeURIComponent(canonical)})`;
+  });
+}
+
 /** Render `#<digits>` in plain text as clickable inline elements. */
 function linkifyTaskIds(text: string, onClick: (taskId: string) => void): React.ReactNode[] {
   return text.split(/(#\d+)/g).map((part, i) => {
@@ -182,6 +204,7 @@ export const ActivityItem = ({
   memberColor,
   recipientColor,
   isUnread,
+  memberColorMap,
   onMemberNameClick,
   onCreateTask,
   onReply,
@@ -210,13 +233,19 @@ export const ActivityItem = ({
   const systemLabel = !structured && !rateLimited ? getSystemMessageLabel(message.text) : null;
   const [isExpanded, setIsExpanded] = useState(!systemLabel);
 
-  // Strip agent-only blocks from displayed text + linkify task IDs
+  // Strip agent-only blocks from displayed text + linkify task IDs + @mentions
   const displayText = useMemo(() => {
     if (structured) return null;
     const stripped = stripAgentBlocks(message.text).trim();
     if (!stripped) return null; // All content was agent-only blocks → show summary instead
-    return onTaskIdClick ? linkifyTaskIdsInMarkdown(stripped) : stripped;
-  }, [structured, message.text, onTaskIdClick]);
+    // Normalize literal \n from CLI tools (teamctl.js) to real newlines
+    const normalized = stripped.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+    let result = normalized;
+    if (onTaskIdClick) result = linkifyTaskIdsInMarkdown(result);
+    if (memberColorMap && memberColorMap.size > 0)
+      result = linkifyMentionsInMarkdown(result, memberColorMap);
+    return result;
+  }, [structured, message.text, onTaskIdClick, memberColorMap]);
 
   // Check if this is a reply message
   const parsedReply = useMemo(

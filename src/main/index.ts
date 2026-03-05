@@ -438,48 +438,60 @@ function wireFileWatcherEvents(context: ServiceContext): void {
     }
     httpServer?.broadcast('team-change', event);
 
-    // Process inbox change events — relay to lead + native OS notifications.
+    // Process inbox and task change events.
     try {
       if (!event || typeof event !== 'object') return;
       const row = event as { type?: unknown; teamName?: unknown; detail?: unknown };
-      if (row.type !== 'inbox') return;
       if (typeof row.teamName !== 'string' || row.teamName.trim().length === 0) return;
       const teamName = row.teamName.trim();
       const detail = typeof row.detail === 'string' ? row.detail : '';
 
-      // Auto-relay direct messages to live team lead process (no UI dependency).
-      if (teamProvisioningService.isTeamAlive(teamName)) {
-        void teamProvisioningService
-          .relayLeadInboxMessages(teamName)
-          .catch((e: unknown) => logger.warn(`[FileWatcher] relay failed for ${teamName}: ${e}`));
+      // --- Inbox change events: relay to lead + native OS notifications ---
+      if (row.type === 'inbox') {
+        // Auto-relay direct messages to live team lead process (no UI dependency).
+        if (teamProvisioningService.isTeamAlive(teamName)) {
+          void teamProvisioningService
+            .relayLeadInboxMessages(teamName)
+            .catch((e: unknown) => logger.warn(`[FileWatcher] relay failed for ${teamName}: ${e}`));
+        }
+
+        // Show native OS notification for new inbox messages (debounced per inbox).
+        if (detail.startsWith('inboxes/')) {
+          const timerKey = `${teamName}:${detail}`;
+          const existing = inboxNotifyTimers.get(timerKey);
+          if (existing) clearTimeout(existing);
+          inboxNotifyTimers.set(
+            timerKey,
+            setTimeout(() => {
+              inboxNotifyTimers.delete(timerKey);
+              void notifyNewInboxMessages(teamName, detail).catch(() => undefined);
+            }, INBOX_NOTIFY_DEBOUNCE_MS)
+          );
+        }
+
+        // Show native OS notification for new lead → user messages (sentMessages.json).
+        if (detail === 'sentMessages.json') {
+          const timerKey = `${teamName}:sentMessages`;
+          const existing = inboxNotifyTimers.get(timerKey);
+          if (existing) clearTimeout(existing);
+          inboxNotifyTimers.set(
+            timerKey,
+            setTimeout(() => {
+              inboxNotifyTimers.delete(timerKey);
+              void notifyNewSentMessages(teamName).catch(() => undefined);
+            }, INBOX_NOTIFY_DEBOUNCE_MS)
+          );
+        }
       }
 
-      // Show native OS notification for new inbox messages (debounced per inbox).
-      if (detail.startsWith('inboxes/')) {
-        const timerKey = `${teamName}:${detail}`;
-        const existing = inboxNotifyTimers.get(timerKey);
-        if (existing) clearTimeout(existing);
-        inboxNotifyTimers.set(
-          timerKey,
-          setTimeout(() => {
-            inboxNotifyTimers.delete(timerKey);
-            void notifyNewInboxMessages(teamName, detail).catch(() => undefined);
-          }, INBOX_NOTIFY_DEBOUNCE_MS)
-        );
-      }
-
-      // Show native OS notification for new lead → user messages (sentMessages.json).
-      if (detail === 'sentMessages.json') {
-        const timerKey = `${teamName}:sentMessages`;
-        const existing = inboxNotifyTimers.get(timerKey);
-        if (existing) clearTimeout(existing);
-        inboxNotifyTimers.set(
-          timerKey,
-          setTimeout(() => {
-            inboxNotifyTimers.delete(timerKey);
-            void notifyNewSentMessages(teamName).catch(() => undefined);
-          }, INBOX_NOTIFY_DEBOUNCE_MS)
-        );
+      // --- Task change events: notify lead when teammate starts a task via CLI ---
+      if (row.type === 'task' && detail.endsWith('.json') && teamDataService) {
+        const taskId = detail.replace('.json', '');
+        void teamDataService
+          .notifyLeadOnTeammateTaskStart(teamName, taskId)
+          .catch((e: unknown) =>
+            logger.warn(`[FileWatcher] task start notify failed for ${teamName}#${taskId}: ${e}`)
+          );
       }
     } catch {
       // ignore
