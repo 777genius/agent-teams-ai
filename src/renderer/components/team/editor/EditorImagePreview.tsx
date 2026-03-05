@@ -35,6 +35,7 @@ export const EditorImagePreview = ({
 
   // Reset state when filePath changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
     setLoading(true);
     setError(null);
     setDataUrl(null);

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
+import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -12,7 +13,6 @@ import {
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
-import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { CUSTOM_ROLE, NO_ROLE } from '@renderer/constants/teamRoles';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';

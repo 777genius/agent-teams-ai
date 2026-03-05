@@ -12,11 +12,11 @@ import {
   COLOR_TEXT_MUTED,
   COLOR_TEXT_SECONDARY,
 } from '@renderer/constants/cssVariables';
+import { formatPercentOfTotal } from '@renderer/utils/contextMath';
 import { formatCostUsd } from '@shared/utils/costFormatting';
 import { ArrowDownWideNarrow, FileText, LayoutList, X } from 'lucide-react';
 
 import { formatTokens } from '../utils/formatting';
-import { formatPercentOfTotal } from '@renderer/utils/contextMath';
 
 import { SessionContextHelpTooltip } from './SessionContextHelpTooltip';
 

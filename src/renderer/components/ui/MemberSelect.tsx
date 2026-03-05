@@ -43,7 +43,7 @@ export const MemberSelect = ({
   const colorMap = React.useMemo(() => buildMemberColorMap(members), [members]);
   const selectedMember = React.useMemo(
     () => (value ? members.find((m) => m.name === value) : null),
-    [members, value],
+    [members, value]
   );
 
   const avatarSize = size === 'md' ? 32 : 24;
@@ -51,6 +51,7 @@ export const MemberSelect = ({
   const textSize = size === 'md' ? 'text-xs' : 'text-[10px]';
   const triggerHeight = size === 'md' ? 'h-9' : 'h-8';
 
+  // eslint-disable-next-line sonarjs/function-return-type -- option renderer returns mixed node structure
   const renderMemberInline = (member: ResolvedTeamMember): React.ReactNode => {
     const resolvedColor = colorMap.get(member.name);
     const colors = getTeamColorSet(resolvedColor ?? '');
@@ -87,7 +88,7 @@ export const MemberSelect = ({
           disabled={disabled}
           className={cn(
             `flex ${triggerHeight} w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1 text-xs shadow-sm transition-colors placeholder:text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50`,
-            className,
+            className
           )}
         >
           <span className="min-w-0 truncate text-left">
@@ -178,10 +179,7 @@ export const MemberSelect = ({
                       className={`${avatarClass} shrink-0 rounded-full bg-[var(--color-surface-raised)]`}
                       loading="lazy"
                     />
-                    <span
-                      className="min-w-0 truncate font-medium"
-                      style={{ color: colors.text }}
-                    >
+                    <span className="min-w-0 truncate font-medium" style={{ color: colors.text }}>
                       {m.name === 'team-lead' ? 'lead' : m.name}
                     </span>
                     {role ? (

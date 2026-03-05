@@ -49,6 +49,7 @@ function useElapsedTimer(startedAt?: string, isRunning = true): string | null {
 
   useEffect(() => {
     if (!startedAt) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
       setElapsedSeconds(null);
       return;
     }
@@ -201,7 +202,8 @@ export const ProvisioningProgressBlock = ({
                 variant="secondary"
                 className={cn(
                   'whitespace-nowrap px-2 py-0.5 text-[11px] font-normal',
-                  isDone && 'border-[var(--step-done-border)] bg-[var(--step-done-bg)] text-[var(--step-done-text)]',
+                  isDone &&
+                    'border-[var(--step-done-border)] bg-[var(--step-done-bg)] text-[var(--step-done-text)]',
                   isCurrent &&
                     'border-[var(--step-current-border)] bg-[var(--step-current-bg)] text-[var(--step-current-text)]'
                 )}

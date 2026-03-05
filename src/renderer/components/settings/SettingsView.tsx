@@ -26,6 +26,7 @@ export const SettingsView = (): React.JSX.Element | null => {
   // Consume pending section (avoid setState during render)
   useEffect(() => {
     if (pendingSettingsSection) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
       setActiveSection(pendingSettingsSection as SettingsSection);
       clearPendingSettingsSection();
     }

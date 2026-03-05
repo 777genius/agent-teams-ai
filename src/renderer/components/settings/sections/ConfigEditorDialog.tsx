@@ -9,8 +9,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { json } from '@codemirror/lang-json';
-import { bracketMatching, foldGutter, foldKeymap, indentOnInput, syntaxHighlighting } from '@codemirror/language';
-import { lintGutter, linter, type Diagnostic } from '@codemirror/lint';
+import {
+  bracketMatching,
+  foldGutter,
+  foldKeymap,
+  indentOnInput,
+  syntaxHighlighting,
+} from '@codemirror/language';
+import { type Diagnostic, linter, lintGutter } from '@codemirror/lint';
 import { search, searchKeymap } from '@codemirror/search';
 import { EditorState } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
@@ -45,7 +51,7 @@ const jsonLinter = linter((view: EditorView) => {
     JSON.parse(text);
   } catch (e) {
     if (e instanceof SyntaxError) {
-      const match = e.message.match(/position (\d+)/);
+      const match = /position (\d+)/.exec(e.message);
       const pos = match ? parseInt(match[1], 10) : 0;
       const safePos = Math.min(pos, text.length);
       diagnostics.push({
@@ -163,61 +169,69 @@ export const ConfigEditorDialog = ({
     if (!open) return;
 
     let destroyed = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
     setLoading(true);
     setSaveStatus('idle');
     setJsonError(null);
 
     const init = async (): Promise<void> => {
-      const config = await api.config.get();
-      if (destroyed) return;
+      try {
+        const config = await api.config.get();
+        if (destroyed) return;
 
-      const jsonText = JSON.stringify(config, null, 2);
-      initialConfigRef.current = jsonText;
-      setLoading(false);
+        const jsonText = JSON.stringify(config, null, 2);
+        initialConfigRef.current = jsonText;
+        setLoading(false);
 
-      // Wait for DOM render
-      requestAnimationFrame(() => {
-        if (destroyed || !editorRef.current) return;
+        // Wait for DOM render
+        requestAnimationFrame(() => {
+          if (destroyed || !editorRef.current) return;
 
-        // Clean up existing view
-        if (viewRef.current) {
-          viewRef.current.destroy();
-          viewRef.current = null;
-        }
+          // Clean up existing view
+          if (viewRef.current) {
+            viewRef.current.destroy();
+            viewRef.current = null;
+          }
 
-        const state = EditorState.create({
-          doc: jsonText,
-          extensions: [
-            lineNumbers(),
-            highlightActiveLineGutter(),
-            highlightActiveLine(),
-            history(),
-            foldGutter(),
-            indentOnInput(),
-            bracketMatching(),
-            json(),
-            syntaxHighlighting(oneDarkHighlightStyle),
-            jsonLinter,
-            lintGutter(),
-            search(),
-            keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, ...searchKeymap]),
-            baseEditorTheme,
-            configEditorTheme,
-            EditorView.updateListener.of((update) => {
-              if (update.docChanged) {
-                const text = update.state.doc.toString();
-                scheduleSave(text);
-              }
-            }),
-          ],
+          const state = EditorState.create({
+            doc: jsonText,
+            extensions: [
+              lineNumbers(),
+              highlightActiveLineGutter(),
+              highlightActiveLine(),
+              history(),
+              foldGutter(),
+              indentOnInput(),
+              bracketMatching(),
+              json(),
+              syntaxHighlighting(oneDarkHighlightStyle),
+              jsonLinter,
+              lintGutter(),
+              search(),
+              keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, ...searchKeymap]),
+              baseEditorTheme,
+              configEditorTheme,
+              // eslint-disable-next-line sonarjs/no-nested-functions -- CodeMirror listener callback within useEffect setup
+              EditorView.updateListener.of((update) => {
+                if (update.docChanged) {
+                  const text = update.state.doc.toString();
+                  scheduleSave(text);
+                }
+              }),
+            ],
+          });
+
+          const view = new EditorView({
+            state,
+            parent: editorRef.current,
+          });
+          viewRef.current = view;
         });
-
-        const view = new EditorView({
-          state,
-          parent: editorRef.current,
-        });
-        viewRef.current = view;
-      });
+      } catch (e) {
+        if (destroyed) return;
+        setLoading(false);
+        setJsonError(e instanceof Error ? e.message : 'Failed to load config');
+      }
     };
 
     void init();

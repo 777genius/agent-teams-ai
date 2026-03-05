@@ -66,6 +66,7 @@ export function useResizableColumns({
     startX: number;
     startWidth: number;
   } | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const widths = new Map<string, number>();
   for (const id of columnIds) {
@@ -84,8 +85,8 @@ export function useResizableColumns({
     const drag = draggingRef.current;
     if (!drag) return;
     draggingRef.current = null;
-    document.removeEventListener('pointermove', handlePointerMove);
-    document.removeEventListener('pointerup', handlePointerUp);
+    abortRef.current?.abort();
+    abortRef.current = null;
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
     // Persist
@@ -93,18 +94,18 @@ export function useResizableColumns({
       saveWidths(storageKey, current);
       return current;
     });
-  }, [handlePointerMove, storageKey]);
+  }, [storageKey]);
 
   // Safety: if the board unmounts or storageKey changes mid-drag, clean up global listeners/styles.
   useEffect(() => {
     return () => {
       draggingRef.current = null;
-      document.removeEventListener('pointermove', handlePointerMove);
-      document.removeEventListener('pointerup', handlePointerUp);
+      abortRef.current?.abort();
+      abortRef.current = null;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, [handlePointerMove, handlePointerUp]);
+  }, []);
 
   const getHandleProps = useCallback(
     (leftColumnId: string) => ({
@@ -116,8 +117,11 @@ export function useResizableColumns({
           startX: e.clientX,
           startWidth: currentWidth,
         };
-        document.addEventListener('pointermove', handlePointerMove);
-        document.addEventListener('pointerup', handlePointerUp);
+        abortRef.current?.abort();
+        const ac = new AbortController();
+        abortRef.current = ac;
+        document.addEventListener('pointermove', handlePointerMove, { signal: ac.signal });
+        document.addEventListener('pointerup', handlePointerUp, { signal: ac.signal });
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
       },

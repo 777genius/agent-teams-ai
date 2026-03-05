@@ -258,7 +258,7 @@ function dropCliAutoSuffixedMembers(
   for (const key of keys) {
     const member = memberMap.get(key);
     const name = member?.name ?? '';
-    const match = name.trim().match(/^(.+)-(\d+)$/);
+    const match = /^(.+)-(\d+)$/.exec(name.trim());
     if (!match?.[1] || !match[2]) continue;
     const suffix = Number(match[2]);
     if (!Number.isFinite(suffix) || suffix < 2) continue;

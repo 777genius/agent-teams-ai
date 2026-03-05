@@ -3,17 +3,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Combobox } from '@renderer/components/ui/combobox';
 import { Input } from '@renderer/components/ui/input';
 import { CUSTOM_ROLE, FORBIDDEN_ROLES, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
-import {
-  Blocks,
-  BookOpen,
-  Bug,
-  Check,
-  Code2,
-  FileText,
-  Pencil,
-  Shield,
-  Zap,
-} from 'lucide-react';
+import { Blocks, BookOpen, Bug, Check, Code2, FileText, Pencil, Shield, Zap } from 'lucide-react';
 
 import type { ComboboxOption } from '@renderer/components/ui/combobox';
 import type { LucideIcon } from 'lucide-react';
@@ -61,13 +51,14 @@ const roleOptions: ComboboxOption[] = [
   { value: CUSTOM_ROLE, label: 'Custom role...' },
 ];
 
+// eslint-disable-next-line sonarjs/function-return-type -- option renderer returns mixed node structure
 const renderRoleOption = (option: ComboboxOption, isSelected: boolean): React.ReactNode => {
   const Icon =
     option.value === CUSTOM_ROLE
       ? CUSTOM_ICON
       : option.value === NO_ROLE
         ? null
-        : ROLE_ICONS[option.value] ?? null;
+        : (ROLE_ICONS[option.value] ?? null);
 
   return (
     <>

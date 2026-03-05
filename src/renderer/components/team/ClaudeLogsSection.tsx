@@ -6,16 +6,18 @@ import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { Search, Terminal, X } from 'lucide-react';
 
-import { CollapsibleTeamSection } from './CollapsibleTeamSection';
-import { CliLogsRichView } from './CliLogsRichView';
 import { ClaudeLogsFilterPopover, DEFAULT_CLAUDE_LOGS_FILTER } from './ClaudeLogsFilterPopover';
+import { CliLogsRichView } from './CliLogsRichView';
+import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 
-import type { TeamClaudeLogsResponse } from '@shared/types';
 import type { ClaudeLogsFilterState } from './ClaudeLogsFilterPopover';
+import type { TeamClaudeLogsResponse } from '@shared/types';
 
 const PAGE_SIZE = 100;
 const POLL_MS = 2000;
 const ONLINE_WINDOW_MS = 10_000;
+
+type StreamType = 'stdout' | 'stderr';
 
 interface ClaudeLogsSectionProps {
   teamName: string;
@@ -35,9 +37,9 @@ function normalizeToStreamJsonText(linesNewestFirst: string[]): string {
   const chronological = [...linesNewestFirst].reverse();
 
   const out: string[] = [];
-  let lastStream: 'stdout' | 'stderr' | null = null;
+  let lastStream: StreamType | null = null;
 
-  const pushMarker = (stream: 'stdout' | 'stderr'): void => {
+  const pushMarker = (stream: StreamType): void => {
     if (lastStream === stream) return;
     lastStream = stream;
     out.push(stream === 'stdout' ? '[stdout]' : '[stderr]');
@@ -82,8 +84,8 @@ function filterStreamJsonText(
   const q = queryRaw.trim().toLowerCase();
   const chronological = normalizeToStreamJsonText(linesNewestFirst).split('\n');
 
-  let currentStream: 'stdout' | 'stderr' | null = null;
-  let lastEmittedStream: 'stdout' | 'stderr' | null = null;
+  let currentStream: StreamType | null = null;
+  let lastEmittedStream: StreamType | null = null;
   const out: string[] = [];
 
   const emitMarker = (): void => {

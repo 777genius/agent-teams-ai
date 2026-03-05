@@ -33,7 +33,7 @@ function decodeReplyField(value: string): string {
  * Returns null if no reply block is found.
  */
 export function parseMessageReply(content: string): ParsedMessageReply | null {
-  const match = content.match(REPLY_BLOCK_RE);
+  const match = REPLY_BLOCK_RE.exec(content);
   if (!match) return null;
   return {
     agentName: match[1],

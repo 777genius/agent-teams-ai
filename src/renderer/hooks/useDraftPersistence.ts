@@ -27,8 +27,11 @@ export function useDraftPersistence({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingValueRef = useRef<{ key: string; value: string } | null>(null);
   const keyRef = useRef(key);
-  keyRef.current = key;
   const mountedRef = useRef(true);
+
+  useEffect(() => {
+    keyRef.current = key;
+  }, [key]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -59,12 +62,15 @@ export function useDraftPersistence({
     // Prevent debounced saves for the previous key from landing under the new key.
     flushPending();
     // Reset local state for the new key immediately. If a draft exists, it will overwrite below.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset on key change before async load
     setValueState(initialValue ?? '');
+
     setIsSaved(false);
 
-    if (!enabled) return () => {
-      cancelled = true;
-    };
+    if (!enabled)
+      return () => {
+        cancelled = true;
+      };
     void (async () => {
       const draft = await draftStorage.loadDraft(key);
       if (cancelled) return;

@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightbox';
 import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';
-import { File, ImagePlus, Loader2, Trash2 } from 'lucide-react';
-
-import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightbox';
 import { isImageMimeType } from '@renderer/utils/attachmentUtils';
+import { File, ImagePlus, Loader2, Trash2 } from 'lucide-react';
 
 import type { TaskAttachmentMeta } from '@shared/types';
 
@@ -105,7 +104,10 @@ export const TaskAttachments = ({
           setError('Attachment file not found');
           return;
         }
-        const mime = att.mimeType && typeof att.mimeType === 'string' ? att.mimeType : 'application/octet-stream';
+        const mime =
+          att.mimeType && typeof att.mimeType === 'string'
+            ? att.mimeType
+            : 'application/octet-stream';
         const dataUrl = `data:${mime};base64,${base64}`;
         const blob = await fetch(dataUrl).then((r) => r.blob());
         const url = URL.createObjectURL(blob);
@@ -212,8 +214,14 @@ export const TaskAttachments = ({
               teamName={teamName}
               taskId={taskId}
               isDeleting={deletingId === att.id}
-              onPreview={() => void handlePreview(att)}
-              onDelete={() => void handleDelete(att.id, att.mimeType)}
+              onPreview={() => {
+                // eslint-disable-next-line sonarjs/void-use -- void needed to mark floating promise
+                void handlePreview(att);
+              }}
+              onDelete={() => {
+                // eslint-disable-next-line sonarjs/void-use -- void needed to mark floating promise
+                void handleDelete(att.id, att.mimeType);
+              }}
               onDataLoaded={handleThumbLoaded}
             />
           ))}
@@ -327,7 +335,7 @@ const AttachmentThumbnail = ({
 
   return (
     <div
-      className={`group relative flex size-20 cursor-pointer items-center justify-center overflow-hidden rounded border transition-colors border-[var(--color-border)] hover:border-[var(--color-border-emphasis)] bg-[var(--color-surface)]`}
+      className={`group relative flex size-20 cursor-pointer items-center justify-center overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] transition-colors hover:border-[var(--color-border-emphasis)]`}
       onClick={onPreview}
     >
       {isImageMimeType(attachment.mimeType) ? (
@@ -381,7 +389,7 @@ function fileToBase64(file: File): Promise<string> {
         reject(new Error('Failed to read file as base64'));
       }
     };
-    reader.onerror = () => reject(reader.error);
+    reader.onerror = () => reject(reader.error ?? new Error('File read failed'));
     reader.readAsDataURL(file);
   });
 }

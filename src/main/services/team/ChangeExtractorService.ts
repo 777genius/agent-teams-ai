@@ -449,16 +449,16 @@ export class ChangeExtractorService {
         const isError = erroredIds.has(toolUseId);
 
         if (toolName === 'Edit') {
-          const path = typeof input.file_path === 'string' ? input.file_path : '';
+          const targetPath = typeof input.file_path === 'string' ? input.file_path : '';
           const oldString = typeof input.old_string === 'string' ? input.old_string : '';
           const newString = typeof input.new_string === 'string' ? input.new_string : '';
           const replaceAll = input.replace_all === true;
 
-          if (path) {
-            seenFiles.add(path);
+          if (targetPath) {
+            seenFiles.add(targetPath);
             snippets.push({
               toolUseId,
-              filePath: path,
+              filePath: targetPath,
               toolName: 'Edit',
               type: 'edit',
               oldString,
@@ -470,15 +470,15 @@ export class ChangeExtractorService {
             });
           }
         } else if (toolName === 'Write') {
-          const path = typeof input.file_path === 'string' ? input.file_path : '';
+          const targetPath = typeof input.file_path === 'string' ? input.file_path : '';
           const writeContent = typeof input.content === 'string' ? input.content : '';
 
-          if (path) {
-            const isNew = !seenFiles.has(path);
-            seenFiles.add(path);
+          if (targetPath) {
+            const isNew = !seenFiles.has(targetPath);
+            seenFiles.add(targetPath);
             snippets.push({
               toolUseId,
-              filePath: path,
+              filePath: targetPath,
               toolName: 'Write',
               type: isNew ? 'write-new' : 'write-update',
               oldString: '',
@@ -490,11 +490,11 @@ export class ChangeExtractorService {
             });
           }
         } else if (toolName === 'MultiEdit') {
-          const path = typeof input.file_path === 'string' ? input.file_path : '';
+          const targetPath = typeof input.file_path === 'string' ? input.file_path : '';
           const edits = Array.isArray(input.edits) ? input.edits : [];
 
-          if (path) {
-            seenFiles.add(path);
+          if (targetPath) {
+            seenFiles.add(targetPath);
             for (const edit of edits) {
               if (!edit || typeof edit !== 'object') continue;
               const editObj = edit as Record<string, unknown>;
@@ -502,7 +502,7 @@ export class ChangeExtractorService {
               const newString = typeof editObj.new_string === 'string' ? editObj.new_string : '';
               snippets.push({
                 toolUseId,
-                filePath: path,
+                filePath: targetPath,
                 toolName: 'MultiEdit',
                 type: 'multi-edit',
                 oldString,

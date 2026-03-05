@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { ReplyQuoteBlock } from '@renderer/components/team/activity/ReplyQuoteBlock';
-import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightbox';
+import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -11,8 +11,9 @@ import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useMarkCommentsRead } from '@renderer/hooks/useMarkCommentsRead';
 import { useStore } from '@renderer/store';
 import { buildReplyBlock, parseMessageReply } from '@renderer/utils/agentMessageFormatting';
-import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { isImageMimeType } from '@renderer/utils/attachmentUtils';
+import { formatAgentRole } from '@renderer/utils/formatAgentRole';
+import { getModifierKeyName } from '@renderer/utils/keyboardUtils';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { formatDistanceToNow } from 'date-fns';
@@ -91,6 +92,7 @@ export const TaskCommentsSection = ({
 
   // Reset local UI state when team/task changes.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
     setVisibleCount(INITIAL_VISIBLE_COMMENTS);
     setReplyTo(null);
     setPreviewImageUrl(null);

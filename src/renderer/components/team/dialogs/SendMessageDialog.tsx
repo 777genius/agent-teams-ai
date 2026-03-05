@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
-import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -25,6 +25,7 @@ import { chipToken, serializeChipsWithText } from '@renderer/types/inlineChip';
 import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
+import { getModifierKeyName } from '@renderer/utils/keyboardUtils';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { AlertCircle, ImagePlus, Send, X } from 'lucide-react';
 

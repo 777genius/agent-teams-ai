@@ -163,6 +163,7 @@ export interface CommentAttachmentPayload {
  * Note: the UI may still choose to preview only certain types (e.g. images),
  * but tasks/comments can store arbitrary attachments for agent workflows.
  */
+// eslint-disable-next-line sonarjs/redundant-type-aliases -- semantic alias for documentation/readability
 export type AttachmentMediaType = string;
 
 /** Supported image MIME types (used for preview/validation in UI). */

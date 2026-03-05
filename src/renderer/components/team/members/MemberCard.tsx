@@ -1,7 +1,6 @@
 import { Badge } from '@renderer/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-// import { useStore } from '@renderer/store'; // TODO: disabled — lead context display
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { agentAvatarUrl, getMemberDotClass, getPresenceLabel } from '@renderer/utils/memberHelpers';
 import { GitBranch, Loader2, MessageSquare, Plus } from 'lucide-react';
@@ -40,7 +39,7 @@ export const MemberCard = ({
   onSendMessage,
   onAssignTask,
 }: MemberCardProps): React.JSX.Element => {
-  // TODO: lead context display disabled — usage formula is inaccurate
+  // NOTE: lead context display disabled — usage formula is inaccurate
   // const teamName = useStore((s) => s.selectedTeamName);
   // const leadContext = useStore((s) =>
   //   member.agentType === 'team-lead' && teamName ? s.leadContextByTeam[teamName] : undefined
@@ -184,7 +183,7 @@ export const MemberCard = ({
                 />
               </div>
             )}
-            {/* TODO: lead context bar disabled — usage formula is inaccurate */}
+            {/* NOTE: lead context bar disabled — usage formula is inaccurate */}
           </div>
           {!isRemoved && (
             <div className="flex shrink-0 items-center gap-0.5">

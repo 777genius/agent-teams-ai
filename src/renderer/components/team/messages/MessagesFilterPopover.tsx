@@ -137,6 +137,7 @@ export const MessagesFilterPopover = ({
               <p className="text-xs italic text-[var(--color-text-muted)]">No data</p>
             ) : (
               fromOptions.map((name) => (
+                // eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox which renders native input internally
                 <label
                   key={name}
                   className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
@@ -145,7 +146,12 @@ export const MessagesFilterPopover = ({
                     checked={draft.from.has(name)}
                     onCheckedChange={() => toggleFrom(name)}
                   />
-                  <MemberBadge name={name} color={colorMap.get(name)} size="sm" hideAvatar={name === 'user'} />
+                  <MemberBadge
+                    name={name}
+                    color={colorMap.get(name)}
+                    size="sm"
+                    hideAvatar={name === 'user'}
+                  />
                 </label>
               ))
             )}
@@ -160,18 +166,25 @@ export const MessagesFilterPopover = ({
               <p className="text-xs italic text-[var(--color-text-muted)]">No data</p>
             ) : (
               toOptions.map((name) => (
+                // eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox which renders native input internally
                 <label
                   key={name}
                   className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
                 >
                   <Checkbox checked={draft.to.has(name)} onCheckedChange={() => toggleTo(name)} />
-                  <MemberBadge name={name} color={colorMap.get(name)} size="sm" hideAvatar={name === 'user'} />
+                  <MemberBadge
+                    name={name}
+                    color={colorMap.get(name)}
+                    size="sm"
+                    hideAvatar={name === 'user'}
+                  />
                 </label>
               ))
             )}
           </div>
         </div>
         <div className="border-b border-[var(--color-border)] p-3">
+          {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox */}
           <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
             <Checkbox
               checked={draft.showNoise}

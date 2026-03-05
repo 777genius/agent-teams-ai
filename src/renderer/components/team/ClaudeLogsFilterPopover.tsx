@@ -127,12 +127,26 @@ export const ClaudeLogsFilterPopover = ({
             Stream
           </p>
           <div className="space-y-1">
-            <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
-              <Checkbox checked={draft.streams.has('stdout')} onCheckedChange={() => toggleStream('stdout')} />
+            <label
+              htmlFor="filter-stream-stdout"
+              className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
+            >
+              <Checkbox
+                id="filter-stream-stdout"
+                checked={draft.streams.has('stdout')}
+                onCheckedChange={() => toggleStream('stdout')}
+              />
               stdout
             </label>
-            <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
-              <Checkbox checked={draft.streams.has('stderr')} onCheckedChange={() => toggleStream('stderr')} />
+            <label
+              htmlFor="filter-stream-stderr"
+              className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
+            >
+              <Checkbox
+                id="filter-stream-stderr"
+                checked={draft.streams.has('stderr')}
+                onCheckedChange={() => toggleStream('stderr')}
+              />
               stderr
             </label>
           </div>
@@ -143,16 +157,37 @@ export const ClaudeLogsFilterPopover = ({
             Content
           </p>
           <div className="space-y-1">
-            <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
-              <Checkbox checked={draft.kinds.has('output')} onCheckedChange={() => toggleKind('output')} />
+            <label
+              htmlFor="filter-kind-output"
+              className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
+            >
+              <Checkbox
+                id="filter-kind-output"
+                checked={draft.kinds.has('output')}
+                onCheckedChange={() => toggleKind('output')}
+              />
               Output
             </label>
-            <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
-              <Checkbox checked={draft.kinds.has('thinking')} onCheckedChange={() => toggleKind('thinking')} />
+            <label
+              htmlFor="filter-kind-thinking"
+              className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
+            >
+              <Checkbox
+                id="filter-kind-thinking"
+                checked={draft.kinds.has('thinking')}
+                onCheckedChange={() => toggleKind('thinking')}
+              />
               Thinking
             </label>
-            <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
-              <Checkbox checked={draft.kinds.has('tool')} onCheckedChange={() => toggleKind('tool')} />
+            <label
+              htmlFor="filter-kind-tool"
+              className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
+            >
+              <Checkbox
+                id="filter-kind-tool"
+                checked={draft.kinds.has('tool')}
+                onCheckedChange={() => toggleKind('tool')}
+              />
               Tool calls
             </label>
           </div>
@@ -176,4 +211,3 @@ export const ClaudeLogsFilterPopover = ({
     </Popover>
   );
 };
-

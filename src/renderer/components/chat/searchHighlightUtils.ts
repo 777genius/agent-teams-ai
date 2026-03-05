@@ -112,6 +112,7 @@ function highlightSearchText(text: string, ctx: SearchContext): React.ReactNode 
   return parts;
 }
 
+// eslint-disable-next-line sonarjs/function-return-type -- React child manipulation inherently returns mixed node types
 export function highlightQueryInText(
   text: string,
   query: string,

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
@@ -42,14 +42,8 @@ export const ReplyQuoteBlock = ({
         </div>
 
         {/* Quote text */}
-        <div
-          className={`pr-5 opacity-50 ${expanded ? '' : 'max-h-[3.75rem] overflow-hidden'}`}
-        >
-          <MarkdownViewer
-            content={reply.originalText}
-            bare
-            maxHeight={quoteMaxHeight}
-          />
+        <div className={`pr-5 opacity-50 ${expanded ? '' : 'max-h-[3.75rem] overflow-hidden'}`}>
+          <MarkdownViewer content={reply.originalText} bare maxHeight={quoteMaxHeight} />
         </div>
 
         {/* More/less toggle */}

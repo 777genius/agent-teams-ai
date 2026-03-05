@@ -28,6 +28,8 @@ import {
 } from '@shared/constants/triggerColors';
 import { Wrench } from 'lucide-react';
 
+import { highlightQueryInText } from '../searchHighlightUtils';
+
 import { BaseItem, StatusDot } from './BaseItem';
 import { formatDuration } from './baseItemHelpers';
 import {
@@ -38,7 +40,6 @@ import {
   ToolErrorDisplay,
   WriteToolViewer,
 } from './linkedTool';
-import { highlightQueryInText } from '../searchHighlightUtils';
 
 import type { LinkedToolItem as LinkedToolItemType } from '@renderer/types/groups';
 
@@ -72,9 +73,14 @@ export const LinkedToolItem: React.FC<LinkedToolItemProps> = ({
   const summary = getToolSummary(linkedTool.name, linkedTool.input);
   const summaryNode =
     searchQueryOverride && searchQueryOverride.trim().length > 0
-      ? highlightQueryInText(summary, searchQueryOverride, `${linkedTool.id ?? linkedTool.name}:summary`, {
-          forceAllActive: true,
-        })
+      ? highlightQueryInText(
+          summary,
+          searchQueryOverride,
+          `${linkedTool.id ?? linkedTool.name}:summary`,
+          {
+            forceAllActive: true,
+          }
+        )
       : summary;
   const elementRef = useRef<HTMLDivElement>(null);
 

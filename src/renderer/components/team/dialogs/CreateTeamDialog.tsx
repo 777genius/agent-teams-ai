@@ -559,6 +559,7 @@ export const CreateTeamDialog = ({
     setTeamName(value);
     setFieldErrors((prev) => {
       if (!prev.teamName) return prev;
+      // eslint-disable-next-line sonarjs/no-unused-vars -- destructured to omit teamName from rest
       const { teamName: _teamName, ...rest } = prev;
       if (!rest.members && !rest.cwd && localError === 'Check form fields') {
         setLocalError(null);
@@ -636,7 +637,11 @@ export const CreateTeamDialog = ({
                 {prepareWarnings.length > 0 ? (
                   <div className="space-y-0.5">
                     {prepareWarnings.map((warning) => (
-                      <p key={warning} className="text-[11px]" style={{ color: 'var(--warning-text)' }}>
+                      <p
+                        key={warning}
+                        className="text-[11px]"
+                        style={{ color: 'var(--warning-text)' }}
+                      >
                         {warning}
                       </p>
                     ))}

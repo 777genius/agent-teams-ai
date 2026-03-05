@@ -1,3 +1,5 @@
+import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
+
 import type {
   InboxMessage,
   MemberStatus,
@@ -5,8 +7,6 @@ import type {
   TeamConfig,
   TeamTaskWithKanban,
 } from '@shared/types';
-
-import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
 
 export class TeamMemberResolver {
   resolveMembers(

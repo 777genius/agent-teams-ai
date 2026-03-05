@@ -125,7 +125,7 @@ export const TaskCommentInput = ({
           ? pendingAttachments.map((a) => ({
               id: a.id,
               filename: a.filename,
-              mimeType: a.mimeType as CommentAttachmentPayload['mimeType'],
+              mimeType: a.mimeType,
               base64Data: a.base64Data,
             }))
           : undefined;
@@ -239,6 +239,7 @@ export const TaskCommentInput = ({
           className="hidden"
           onChange={(e) => {
             if (e.target.files) addFiles(e.target.files);
+            // eslint-disable-next-line no-param-reassign -- reset file input to allow re-selecting same file
             e.target.value = '';
           }}
         />

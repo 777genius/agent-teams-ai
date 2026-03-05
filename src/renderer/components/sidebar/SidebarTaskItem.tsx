@@ -96,6 +96,7 @@ export const SidebarTaskItem = ({
   // Reset edit value when renaming starts
   useEffect(() => {
     if (isRenaming) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
       setEditValue(displaySubject);
     }
   }, [isRenaming, displaySubject]);

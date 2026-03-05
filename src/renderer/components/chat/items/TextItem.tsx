@@ -2,8 +2,8 @@ import React from 'react';
 
 import { MessageSquare } from 'lucide-react';
 
-import { MarkdownViewer } from '../viewers';
 import { highlightQueryInText } from '../searchHighlightUtils';
+import { MarkdownViewer } from '../viewers';
 
 import { BaseItem } from './BaseItem';
 import { truncateText } from './baseItemHelpers';
@@ -42,9 +42,14 @@ export const TextItem: React.FC<TextItemProps> = ({
   const fullContent = step.content.outputText ?? preview;
   const truncatedPreview = truncateText(preview, 60);
   const summary = searchQueryOverride
-    ? highlightQueryInText(truncatedPreview, searchQueryOverride, `${markdownItemId ?? step.id}:summary`, {
-        forceAllActive: true,
-      })
+    ? highlightQueryInText(
+        truncatedPreview,
+        searchQueryOverride,
+        `${markdownItemId ?? step.id}:summary`,
+        {
+          forceAllActive: true,
+        }
+      )
     : truncatedPreview;
 
   // Get token count from step.tokens.output or step.content.tokenCount

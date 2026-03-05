@@ -6,8 +6,6 @@ import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { MemberLogsTab } from '@renderer/components/team/members/MemberLogsTab';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
-import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
-import { MemberSelect } from '@renderer/components/ui/MemberSelect';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +14,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
+import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
 import { Input } from '@renderer/components/ui/input';
+import { MemberSelect } from '@renderer/components/ui/MemberSelect';
 import { Textarea } from '@renderer/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { markAsRead } from '@renderer/services/commentReadStorage';

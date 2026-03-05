@@ -65,6 +65,7 @@ import type { AppState } from '../types';
 import type { AppConfig } from '@renderer/types/data';
 import type {
   AddMemberRequest,
+  CommentAttachmentPayload,
   CreateTaskRequest,
   GlobalTask,
   KanbanColumnId,
@@ -294,7 +295,7 @@ export interface TeamSlice {
     teamName: string,
     taskId: string,
     text: string,
-    attachments?: import('@shared/types').CommentAttachmentPayload[]
+    attachments?: CommentAttachmentPayload[]
   ) => Promise<TaskComment>;
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
   removeMember: (teamName: string, memberName: string) => Promise<void>;

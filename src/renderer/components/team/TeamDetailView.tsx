@@ -1,9 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
+import { SessionContextPanel } from '@renderer/components/chat/SessionContextPanel/index';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Button } from '@renderer/components/ui/button';
-import { SessionContextPanel } from '@renderer/components/chat/SessionContextPanel/index';
 import {
   Dialog,
   DialogContent,
@@ -15,10 +15,10 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
+import { useTabUI } from '@renderer/hooks/useTabUI';
 import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
-import { useTabUI } from '@renderer/hooks/useTabUI';
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
 import { formatPercentOfTotal, sumContextInjectionTokens } from '@renderer/utils/contextMath';
 import { formatProjectPath } from '@renderer/utils/pathDisplay';
@@ -73,8 +73,8 @@ import { MemberList } from './members/MemberList';
 import { MessageComposer } from './messages/MessageComposer';
 import { MessagesFilterPopover } from './messages/MessagesFilterPopover';
 import { ChangeReviewDialog } from './review/ChangeReviewDialog';
-import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 import { ClaudeLogsSection } from './ClaudeLogsSection';
+import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 import { ProcessesSection } from './ProcessesSection';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { TeamSessionsSection } from './TeamSessionsSection';
@@ -222,7 +222,6 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     clearProvisioningError,
     isTeamProvisioning,
     leadActivityByTeam,
-    leadContextByTeam,
     refreshTeamData,
     kanbanFilterQuery,
     clearKanbanFilter,
@@ -265,7 +264,6 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         (run) => run.teamName === teamName && ACTIVE_PROVISIONING_STATES.has(run.state)
       ),
       leadActivityByTeam: s.leadActivityByTeam,
-      leadContextByTeam: s.leadContextByTeam,
       refreshTeamData: s.refreshTeamData,
       kanbanFilterQuery: s.kanbanFilterQuery,
       clearKanbanFilter: s.clearKanbanFilter,
@@ -366,15 +364,15 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
 
   // Lead session context panel (reuses the same session context pipeline for exact stats)
   const leadSessionId = data?.config.leadSessionId ?? null;
-  const leadTabData = useStore(
-    useShallow((s) => (tabId ? s.tabSessionData[tabId] : null))
-  );
+  const leadTabData = useStore(useShallow((s) => (tabId ? s.tabSessionData[tabId] : null)));
   const leadSessionDetail = leadTabData?.sessionDetail ?? null;
   const leadConversation = leadTabData?.conversation ?? null;
   const leadSessionContextStats = leadTabData?.sessionContextStats ?? null;
   const leadSessionPhaseInfo = leadTabData?.sessionPhaseInfo ?? null;
   const leadSessionLoading = leadTabData?.sessionDetailLoading ?? false;
-  const leadSessionLoaded = Boolean(leadSessionId && leadSessionDetail?.session?.id === leadSessionId);
+  const leadSessionLoaded = Boolean(
+    leadSessionId && leadSessionDetail?.session?.id === leadSessionId
+  );
 
   const leadSubagentCostUsd = useMemo(() => {
     const processes = leadSessionDetail?.processes;
@@ -382,8 +380,6 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     const total = processes.reduce((sum, p) => sum + (p.metrics.costUsd ?? 0), 0);
     return total > 0 ? total : undefined;
   }, [leadSessionDetail?.processes]);
-  const leadContextPercent = leadContextByTeam[teamName]?.percent;
-
   const { allContextInjections, lastAiGroupTotalTokens } = useMemo(() => {
     if (!leadSessionLoaded || !leadSessionContextStats || !leadConversation?.items.length) {
       return { allContextInjections: [] as ContextInjection[], lastAiGroupTotalTokens: undefined };
@@ -405,7 +401,10 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     if (!targetAiGroupId) {
       const lastAiItem = [...leadConversation.items].reverse().find((item) => item.type === 'ai');
       if (lastAiItem?.type !== 'ai') {
-        return { allContextInjections: [] as ContextInjection[], lastAiGroupTotalTokens: undefined };
+        return {
+          allContextInjections: [] as ContextInjection[],
+          lastAiGroupTotalTokens: undefined,
+        };
       }
       targetAiGroupId = lastAiItem.group.id;
     }
@@ -435,7 +434,13 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     }
 
     return { allContextInjections: injections, lastAiGroupTotalTokens: totalTokens };
-  }, [leadSessionLoaded, leadSessionContextStats, leadConversation, selectedContextPhase, leadSessionPhaseInfo]);
+  }, [
+    leadSessionLoaded,
+    leadSessionContextStats,
+    leadConversation,
+    selectedContextPhase,
+    leadSessionPhaseInfo,
+  ]);
 
   const visibleContextTokens = useMemo(
     () => sumContextInjectionTokens(allContextInjections),
@@ -927,438 +932,864 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             </div>
           )}
 
-        <div
-          className="relative mb-3 overflow-hidden rounded-lg border border-[var(--color-border)] px-4 py-3"
-          style={
-            headerColorSet
-              ? { borderLeftWidth: '3px', borderLeftColor: headerColorSet.border }
-              : undefined
-          }
-        >
-          {headerColorSet ? (
-            <div
-              className="pointer-events-none absolute inset-0 z-0 rounded-lg"
-              style={{ backgroundColor: headerColorSet.badge }}
-            />
-          ) : null}
           <div
-            className={cn(
-              'flex items-start justify-between gap-2',
-              headerColorSet && 'relative z-10'
-            )}
+            className="relative mb-3 overflow-hidden rounded-lg border border-[var(--color-border)] px-4 py-3"
+            style={
+              headerColorSet
+                ? { borderLeftWidth: '3px', borderLeftColor: headerColorSet.border }
+                : undefined
+            }
           >
-            <div className="min-w-0 flex-1">
-              <h2 className="text-base font-semibold text-[var(--color-text)]">
-                {data.config.name}
-              </h2>
-            </div>
-            <div className="flex shrink-0 items-center gap-1.5">
-              {data.isAlive && (
+            {headerColorSet ? (
+              <div
+                className="pointer-events-none absolute inset-0 z-0 rounded-lg"
+                style={{ backgroundColor: headerColorSet.badge }}
+              />
+            ) : null}
+            <div
+              className={cn(
+                'flex items-start justify-between gap-2',
+                headerColorSet && 'relative z-10'
+              )}
+            >
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base font-semibold text-[var(--color-text)]">
+                  {data.config.name}
+                </h2>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {data.isAlive && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        disabled={stoppingTeam}
+                        onClick={() => void handleStopTeam()}
+                      >
+                        <Square size={12} className={stoppingTeam ? 'animate-pulse' : ''} />
+                        Stop
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Stop team</TooltipContent>
+                  </Tooltip>
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                      onClick={() => setEditDialogOpen(true)}
+                    >
+                      <Pencil size={12} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Edit team</TooltipContent>
+                </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-7 gap-1 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                      disabled={stoppingTeam}
-                      onClick={() => void handleStopTeam()}
+                      onClick={handleDeleteTeam}
                     >
-                      <Square size={12} className={stoppingTeam ? 'animate-pulse' : ''} />
-                      Stop
+                      <Trash2 size={12} />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom">Stop team</TooltipContent>
+                  <TooltipContent side="bottom">Delete team</TooltipContent>
                 </Tooltip>
-              )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                    onClick={() => setEditDialogOpen(true)}
-                  >
-                    <Pencil size={12} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Edit team</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                    onClick={handleDeleteTeam}
-                  >
-                    <Trash2 size={12} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Delete team</TooltipContent>
-              </Tooltip>
+              </div>
             </div>
-          </div>
-          {data.config.description && (
-            <p
-              className={cn(
-                'min-w-0 truncate text-xs text-[var(--color-text-muted)]',
-                headerColorSet && 'relative z-10'
-              )}
-            >
-              {data.config.description}
-            </p>
-          )}
-          {(data.config.projectPath || leadBranch) && (
-            <div
-              className={cn(
-                'mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5',
-                headerColorSet && 'relative z-10'
-              )}
-            >
-              {data.config.projectPath && (
-                <span
-                  className="flex items-center gap-1 text-[11px] text-[var(--color-text-secondary)]"
-                  title={data.config.projectPath}
-                >
-                  <FolderOpen size={11} className="shrink-0 text-[var(--color-text-muted)]" />
-                  <span className="max-w-60 truncate font-mono">
-                    {formatProjectPath(data.config.projectPath)}
-                  </span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => setEditorOpen(true)}
-                        className="ml-1 flex items-center gap-0.5 rounded border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-border-emphasis)] hover:text-[var(--color-text)]"
-                      >
-                        <Code size={10} className="shrink-0" /> Edit code
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>Open project in built-in editor</TooltipContent>
-                  </Tooltip>
-                </span>
-              )}
-              {leadBranch && (
-                <span
-                  className="flex items-center gap-1 text-[11px] text-[var(--color-text-secondary)]"
-                  title={leadBranch}
-                >
-                  <GitBranch size={11} className="shrink-0 text-[var(--color-text-muted)]" />
-                  <span className="max-w-32 truncate">{leadBranch}</span>
-                </span>
-              )}
-              {data.isAlive && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
-                  <span className="size-1.5 rounded-full bg-emerald-400" />
-                  Running
-                </span>
-              )}
-              {!data.isAlive && isTeamProvisioning && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-medium text-yellow-400">
-                  <span className="size-1.5 animate-pulse rounded-full bg-yellow-400" />
-                  Launching...
-                </span>
-              )}
-            </div>
-          )}
-          {(() => {
-            const currentPath = data.config.projectPath;
-            const history = data.config.projectPathHistory?.filter((p) => p !== currentPath);
-            if (!history || history.length === 0) return null;
-            return (
-              <div
+            {data.config.description && (
+              <p
                 className={cn(
-                  'mt-0.5 flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]',
+                  'min-w-0 truncate text-xs text-[var(--color-text-muted)]',
                   headerColorSet && 'relative z-10'
                 )}
               >
-                <History size={10} className="shrink-0" />
-                <span className="truncate">
-                  Previous: {history.map((p) => formatProjectPath(p)).join(', ')}
-                </span>
+                {data.config.description}
+              </p>
+            )}
+            {(data.config.projectPath || leadBranch) && (
+              <div
+                className={cn(
+                  'mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5',
+                  headerColorSet && 'relative z-10'
+                )}
+              >
+                {data.config.projectPath && (
+                  <span
+                    className="flex items-center gap-1 text-[11px] text-[var(--color-text-secondary)]"
+                    title={data.config.projectPath}
+                  >
+                    <FolderOpen size={11} className="shrink-0 text-[var(--color-text-muted)]" />
+                    <span className="max-w-60 truncate font-mono">
+                      {formatProjectPath(data.config.projectPath)}
+                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setEditorOpen(true)}
+                          className="ml-1 flex items-center gap-0.5 rounded border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-border-emphasis)] hover:text-[var(--color-text)]"
+                        >
+                          <Code size={10} className="shrink-0" /> Edit code
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Open project in built-in editor</TooltipContent>
+                    </Tooltip>
+                  </span>
+                )}
+                {leadBranch && (
+                  <span
+                    className="flex items-center gap-1 text-[11px] text-[var(--color-text-secondary)]"
+                    title={leadBranch}
+                  >
+                    <GitBranch size={11} className="shrink-0 text-[var(--color-text-muted)]" />
+                    <span className="max-w-32 truncate">{leadBranch}</span>
+                  </span>
+                )}
+                {data.isAlive && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
+                    <span className="size-1.5 rounded-full bg-emerald-400" />
+                    Running
+                  </span>
+                )}
+                {!data.isAlive && isTeamProvisioning && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-medium text-yellow-400">
+                    <span className="size-1.5 animate-pulse rounded-full bg-yellow-400" />
+                    Launching...
+                  </span>
+                )}
               </div>
-            );
-          })()}
-        </div>
-
-        {!data.isAlive && !isTeamProvisioning ? (
-          <div
-            className="mb-3 flex items-center justify-between gap-3 rounded-md border px-3 py-2"
-            style={{
-              backgroundColor: 'var(--warning-bg)',
-              borderColor: 'var(--warning-border)',
-              color: 'var(--warning-text)',
-            }}
-          >
-            <span className="flex items-center gap-1.5 text-xs">
-              <AlertTriangle size={14} className="shrink-0" />
-              Team is offline
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 shrink-0 gap-1 px-2 text-xs text-[var(--step-done-text)] hover:bg-[var(--step-done-bg)]"
-              onClick={() => setLaunchDialogOpen(true)}
-            >
-              <Play size={12} />
-              Launch
-            </Button>
+            )}
+            {(() => {
+              const currentPath = data.config.projectPath;
+              const history = data.config.projectPathHistory?.filter((p) => p !== currentPath);
+              if (!history || history.length === 0) return null;
+              return (
+                <div
+                  className={cn(
+                    'mt-0.5 flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]',
+                    headerColorSet && 'relative z-10'
+                  )}
+                >
+                  <History size={10} className="shrink-0" />
+                  <span className="truncate">
+                    Previous: {history.map((p) => formatProjectPath(p)).join(', ')}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
-        ) : null}
 
-        <div ref={provisioningBannerRef}>
-          <TeamProvisioningBanner teamName={teamName} />
-        </div>
-
-        {data.warnings?.some((warning) => warning.toLowerCase().includes('kanban')) ? (
-          <div className="mb-3 rounded-md border border-[var(--step-warning-border)] bg-[var(--step-warning-bg)] px-3 py-2 text-xs text-[var(--step-warning-text)]">
-            Failed to fully load kanban. Displaying safe data.
-          </div>
-        ) : null}
-        {reviewActionError ? (
-          <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-[var(--step-error-text)]">
-            {reviewActionError}
-          </div>
-        ) : null}
-
-        <CollapsibleTeamSection
-          sectionId="team"
-          title="Team"
-          icon={<Users size={14} />}
-          badge={activeTeammateCount === 0 ? 'Solo' : activeTeammateCount}
-          defaultOpen
-          action={
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              onClick={(e) => {
-                e.stopPropagation();
-                setAddMemberDialogOpen(true);
+          {!data.isAlive && !isTeamProvisioning ? (
+            <div
+              className="mb-3 flex items-center justify-between gap-3 rounded-md border px-3 py-2"
+              style={{
+                backgroundColor: 'var(--warning-bg)',
+                borderColor: 'var(--warning-border)',
+                color: 'var(--warning-text)',
               }}
             >
-              <UserPlus size={12} />
-              Member
-            </Button>
-          }
-        >
-          <MemberList
-            members={data.members}
-            memberTaskCounts={memberTaskCounts}
-            taskMap={taskMap}
-            pendingRepliesByMember={pendingRepliesByMember}
+              <span className="flex items-center gap-1.5 text-xs">
+                <AlertTriangle size={14} className="shrink-0" />
+                Team is offline
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 shrink-0 gap-1 px-2 text-xs text-[var(--step-done-text)] hover:bg-[var(--step-done-bg)]"
+                onClick={() => setLaunchDialogOpen(true)}
+              >
+                <Play size={12} />
+                Launch
+              </Button>
+            </div>
+          ) : null}
+
+          <div ref={provisioningBannerRef}>
+            <TeamProvisioningBanner teamName={teamName} />
+          </div>
+
+          {data.warnings?.some((warning) => warning.toLowerCase().includes('kanban')) ? (
+            <div className="mb-3 rounded-md border border-[var(--step-warning-border)] bg-[var(--step-warning-bg)] px-3 py-2 text-xs text-[var(--step-warning-text)]">
+              Failed to fully load kanban. Displaying safe data.
+            </div>
+          ) : null}
+          {reviewActionError ? (
+            <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-[var(--step-error-text)]">
+              {reviewActionError}
+            </div>
+          ) : null}
+
+          <CollapsibleTeamSection
+            sectionId="team"
+            title="Team"
+            icon={<Users size={14} />}
+            badge={activeTeammateCount === 0 ? 'Solo' : activeTeammateCount}
+            defaultOpen
+            action={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAddMemberDialogOpen(true);
+                }}
+              >
+                <UserPlus size={12} />
+                Member
+              </Button>
+            }
+          >
+            <MemberList
+              members={data.members}
+              memberTaskCounts={memberTaskCounts}
+              taskMap={taskMap}
+              pendingRepliesByMember={pendingRepliesByMember}
+              isTeamAlive={data.isAlive}
+              isTeamProvisioning={isTeamProvisioning}
+              leadActivity={leadActivityByTeam[teamName]}
+              onMemberClick={setSelectedMember}
+              onSendMessage={(member) => {
+                setSendDialogRecipient(member.name);
+                setSendDialogDefaultText(undefined);
+                setSendDialogDefaultChip(undefined);
+                setReplyQuote(undefined);
+                setSendDialogOpen(true);
+              }}
+              onAssignTask={(member) => {
+                openCreateTaskDialog('', '', member.name);
+              }}
+              onOpenTask={(task) => setSelectedTask(task)}
+            />
+          </CollapsibleTeamSection>
+
+          <CollapsibleTeamSection
+            sectionId="sessions"
+            title="Sessions"
+            icon={<History size={14} />}
+            defaultOpen={false}
+          >
+            <TeamSessionsSection
+              sessions={teamSessions}
+              sessionsLoading={sessionsLoading}
+              sessionsError={sessionsError}
+              leadSessionId={data.config.leadSessionId}
+              selectedSessionId={kanbanFilter.sessionId}
+              onSelectSession={(id) => setKanbanFilter((prev) => ({ ...prev, sessionId: id }))}
+              projectPath={data.config.projectPath}
+            />
+          </CollapsibleTeamSection>
+
+          <CollapsibleTeamSection
+            sectionId="kanban"
+            title="Kanban"
+            icon={<Columns3 size={14} />}
+            badge={filteredTasks.length}
+            defaultOpen
+            forceOpen={kanbanSearch.trim().length > 0}
+            action={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openCreateTaskDialog();
+                }}
+              >
+                <Plus size={12} />
+                Task
+              </Button>
+            }
+          >
+            <KanbanBoard
+              tasks={kanbanDisplayTasks}
+              teamName={teamName}
+              kanbanState={data.kanbanState}
+              filter={kanbanFilter}
+              sessions={teamSessions}
+              leadSessionId={data.config.leadSessionId}
+              members={activeMembers}
+              onFilterChange={setKanbanFilter}
+              toolbarLeft={
+                <div className="relative max-w-[240px]">
+                  <Search
+                    size={14}
+                    className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search tasks… (#id or text)"
+                    value={kanbanSearch}
+                    onChange={(e) => setKanbanSearch(e.target.value)}
+                    className="h-8 w-full min-w-[140px] max-w-[240px] rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-8 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
+                  />
+                  {kanbanSearch && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                          onClick={() => setKanbanSearch('')}
+                        >
+                          <X size={14} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">Clear search</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              }
+              onRequestReview={(taskId) => {
+                void (async () => {
+                  try {
+                    await requestReview(teamName, taskId);
+                  } catch {
+                    // error via store
+                  }
+                })();
+              }}
+              onApprove={(taskId) => {
+                void (async () => {
+                  try {
+                    await updateKanban(teamName, taskId, { op: 'set_column', column: 'approved' });
+                  } catch {
+                    // error via store
+                  }
+                })();
+              }}
+              onRequestChanges={(taskId) => {
+                setRequestChangesTaskId(taskId);
+              }}
+              onMoveBackToDone={(taskId) => {
+                void (async () => {
+                  try {
+                    await updateKanban(teamName, taskId, { op: 'remove' });
+                    await updateTaskStatus(teamName, taskId, 'completed');
+                  } catch {
+                    // error via store
+                  }
+                })();
+              }}
+              onStartTask={(taskId) => {
+                void (async () => {
+                  try {
+                    const result = await startTask(teamName, taskId);
+                    if (data?.isAlive) {
+                      const task = data.tasks.find((t) => t.id === taskId);
+                      try {
+                        if (result.notifiedOwner && task?.owner) {
+                          await api.teams.processSend(
+                            teamName,
+                            `Task #${taskId} "${task.subject}" has started. Please begin working on it.`
+                          );
+                        } else if (!result.notifiedOwner) {
+                          const desc = task?.description?.trim()
+                            ? `\nDescription: ${task.description.trim()}`
+                            : '';
+                          await api.teams.processSend(
+                            teamName,
+                            `Task #${taskId} "${task?.subject ?? ''}" has been moved to IN PROGRESS but has no assignee.${desc}\nPlease assign it to an available team member, or take it yourself if everyone is busy.`
+                          );
+                        }
+                      } catch {
+                        // best-effort
+                      }
+                    }
+                  } catch {
+                    // error via store
+                  }
+                })();
+              }}
+              onCompleteTask={(taskId) => {
+                void (async () => {
+                  try {
+                    await updateTaskStatus(teamName, taskId, 'completed');
+                  } catch {
+                    // error via store
+                  }
+                })();
+              }}
+              onCancelTask={(taskId) => {
+                void (async () => {
+                  try {
+                    const task = data?.tasks.find((t) => t.id === taskId);
+                    await updateTaskStatus(teamName, taskId, 'pending');
+
+                    // Notify assignee directly via inbox — they'll see it immediately
+                    if (task?.owner) {
+                      try {
+                        await api.teams.sendMessage(teamName, {
+                          member: task.owner,
+                          text: `Task #${taskId} "${task.subject}" has been CANCELLED by the user and moved back to TODO. Stop working on it immediately.`,
+                          summary: `Task #${taskId} cancelled`,
+                        });
+                      } catch {
+                        // best-effort
+                      }
+                    }
+
+                    // Also notify team lead so they can reassign/coordinate
+                    if (data?.isAlive) {
+                      try {
+                        const ownerSuffix = task?.owner
+                          ? ` ${task.owner} has been notified to stop.`
+                          : '';
+                        await api.teams.processSend(
+                          teamName,
+                          `Task #${taskId} "${task?.subject ?? ''}" has been cancelled and moved back to TODO.${ownerSuffix}`
+                        );
+                      } catch {
+                        // best-effort
+                      }
+                    }
+                  } catch {
+                    // error via store
+                  }
+                })();
+              }}
+              onColumnOrderChange={(columnId, orderedTaskIds) => {
+                void (async () => {
+                  try {
+                    await updateKanbanColumnOrder(teamName, columnId, orderedTaskIds);
+                  } catch {
+                    // error via store
+                  }
+                })();
+              }}
+              onScrollToTask={(taskId) => {
+                const el = document.querySelector(`[data-task-id="${taskId}"]`);
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                  el.classList.add('ring-2', 'ring-blue-400/50');
+                  setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400/50'), 1500);
+                }
+              }}
+              onTaskClick={(task) => setSelectedTask(task)}
+              onViewChanges={handleViewChanges}
+              onAddTask={(startImmediately) => openCreateTaskDialog('', '', '', startImmediately)}
+              onDeleteTask={handleDeleteTask}
+              deletedTaskCount={deletedTasks.length}
+              onOpenTrash={() => setTrashOpen(true)}
+            />
+          </CollapsibleTeamSection>
+
+          {(data.processes?.length ?? 0) > 0 && (
+            <CollapsibleTeamSection
+              sectionId="processes"
+              title="CLI Processes"
+              icon={<Terminal size={14} />}
+              badge={data.processes.filter((p) => !p.stoppedAt).length}
+              headerExtra={
+                data.processes.some((p) => !p.stoppedAt) ? (
+                  <span
+                    className="pointer-events-none relative inline-flex size-2 shrink-0"
+                    title="Active"
+                  >
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
+                    <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
+                  </span>
+                ) : null
+              }
+              defaultOpen
+            >
+              <ProcessesSection />
+            </CollapsibleTeamSection>
+          )}
+
+          <ClaudeLogsSection teamName={teamName} />
+
+          <CollapsibleTeamSection
+            sectionId="messages"
+            title="Messages"
+            icon={<MessageSquare size={14} />}
+            badge={filteredMessages.length}
+            secondaryBadge={
+              filteredMessages.length > 0 && messagesUnreadCount > 0
+                ? messagesUnreadCount
+                : undefined
+            }
+            headerExtra={
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="pointer-events-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void window.electronAPI.openExternal(
+                        'https://github.com/777genius/claude-notifications-go'
+                      );
+                    }}
+                  >
+                    <Bell size={12} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Desktop notifications plugin</TooltipContent>
+              </Tooltip>
+            }
+            defaultOpen
+            action={
+              <div className="flex items-center gap-2 pl-2">
+                {messagesUnreadCount > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="pointer-events-auto flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-blue-400 transition-colors hover:bg-blue-500/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkAllRead();
+                        }}
+                      >
+                        <CheckCheck size={12} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Mark all as read</TooltipContent>
+                  </Tooltip>
+                )}
+                <div className="flex w-36 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1">
+                  <Search size={12} className="shrink-0 text-[var(--color-text-muted)]" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={messagesSearchQuery}
+                    onChange={(e) => setMessagesSearchQuery(e.target.value)}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    className="min-w-0 flex-1 bg-transparent text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
+                  />
+                  {messagesSearchQuery && (
+                    <button
+                      type="button"
+                      className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+                      onClick={() => setMessagesSearchQuery('')}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                <MessagesFilterPopover
+                  filter={messagesFilter}
+                  messages={data?.messages ?? []}
+                  open={messagesFilterOpen}
+                  onOpenChange={setMessagesFilterOpen}
+                  onApply={setMessagesFilter}
+                />
+              </div>
+            }
+          >
+            <MessageComposer
+              teamName={teamName}
+              members={activeMembers}
+              isTeamAlive={data.isAlive}
+              sending={sendingMessage}
+              sendError={sendMessageError}
+              onSend={(member, text, summary, attachments) => {
+                const sentAtMs = Date.now();
+                setPendingRepliesByMember((prev) => ({ ...prev, [member]: sentAtMs }));
+                void sendTeamMessage(teamName, { member, text, summary, attachments }).catch(() => {
+                  setPendingRepliesByMember((prev) => {
+                    if (prev[member] !== sentAtMs) return prev;
+                    const next = { ...prev };
+                    delete next[member];
+                    return next;
+                  });
+                });
+              }}
+            />
+            <PendingRepliesBlock
+              members={data.members}
+              pendingRepliesByMember={pendingRepliesByMember}
+              onMemberClick={setSelectedMember}
+            />
+            <ActiveTasksBlock
+              members={data.members}
+              tasks={data.tasks}
+              onMemberClick={setSelectedMember}
+              onTaskClick={setSelectedTask}
+            />
+            <ActivityTimeline
+              messages={filteredMessages}
+              teamName={teamName}
+              members={data.members}
+              readState={{ readSet, getMessageKey: toMessageKey }}
+              onMemberClick={setSelectedMember}
+              onCreateTaskFromMessage={(subject, description) => {
+                openCreateTaskDialog(subject, description);
+              }}
+              onReplyToMessage={(message) => {
+                setSendDialogRecipient(message.from);
+                setSendDialogDefaultText(undefined);
+                setSendDialogDefaultChip(undefined);
+                setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
+                setSendDialogOpen(true);
+              }}
+              onMessageVisible={handleMessageVisible}
+              onRestartTeam={() => setLaunchDialogOpen(true)}
+              onTaskIdClick={(taskId) => {
+                const task = taskMap.get(taskId);
+                if (task) setSelectedTask(task);
+              }}
+            />
+          </CollapsibleTeamSection>
+
+          <ReviewDialog
+            open={requestChangesTaskId !== null}
+            teamName={teamName}
+            taskId={requestChangesTaskId}
+            members={data?.members ?? []}
+            onCancel={() => setRequestChangesTaskId(null)}
+            onSubmit={(comment) => {
+              if (!requestChangesTaskId) {
+                return;
+              }
+              void (async () => {
+                try {
+                  await updateKanban(teamName, requestChangesTaskId, {
+                    op: 'request_changes',
+                    comment,
+                  });
+                  setRequestChangesTaskId(null);
+                } catch {
+                  // error state is handled in the store and shown in the view
+                }
+              })();
+            }}
+          />
+
+          <MemberDetailDialog
+            open={selectedMember !== null}
+            member={selectedMember}
+            teamName={teamName}
+            tasks={data.tasks}
+            messages={data.messages}
             isTeamAlive={data.isAlive}
             isTeamProvisioning={isTeamProvisioning}
             leadActivity={leadActivityByTeam[teamName]}
-            onMemberClick={setSelectedMember}
-            onSendMessage={(member) => {
-              setSendDialogRecipient(member.name);
+            onClose={() => setSelectedMember(null)}
+            onSendMessage={() => {
+              const name = selectedMember?.name ?? '';
+              setSelectedMember(null);
+              setSendDialogRecipient(name || undefined);
               setSendDialogDefaultText(undefined);
               setSendDialogDefaultChip(undefined);
               setReplyQuote(undefined);
               setSendDialogOpen(true);
             }}
-            onAssignTask={(member) => {
-              openCreateTaskDialog('', '', member.name);
+            onAssignTask={() => {
+              const name = selectedMember?.name ?? '';
+              setSelectedMember(null);
+              openCreateTaskDialog('', '', name);
             }}
-            onOpenTask={(task) => setSelectedTask(task)}
+            onTaskClick={(task) => {
+              setSelectedMember(null);
+              setSelectedTask(task);
+            }}
+            onUpdateRole={async (memberName, role) => {
+              setUpdatingRoleLoading(true);
+              try {
+                await updateMemberRole(teamName, memberName, role);
+                // Optimistically update local selectedMember to reflect new role
+                setSelectedMember((prev) => {
+                  if (prev?.name !== memberName) return prev;
+                  const normalized =
+                    typeof role === 'string' && role.trim() ? role.trim() : undefined;
+                  return { ...prev, role: normalized };
+                });
+              } finally {
+                setUpdatingRoleLoading(false);
+              }
+            }}
+            updatingRole={updatingRoleLoading}
+            onRemoveMember={() => {
+              const name = selectedMember?.name;
+              if (!name) return;
+              setRemoveMemberConfirm(name);
+            }}
+            onViewMemberChanges={(memberName, filePath) => {
+              setSelectedMember(null);
+              setReviewDialogState({
+                open: true,
+                mode: 'agent',
+                memberName,
+                initialFilePath: filePath,
+              });
+            }}
           />
-        </CollapsibleTeamSection>
 
-        <CollapsibleTeamSection
-          sectionId="sessions"
-          title="Sessions"
-          icon={<History size={14} />}
-          defaultOpen={false}
-        >
-          <TeamSessionsSection
-            sessions={teamSessions}
-            sessionsLoading={sessionsLoading}
-            sessionsError={sessionsError}
-            leadSessionId={data.config.leadSessionId}
-            selectedSessionId={kanbanFilter.sessionId}
-            onSelectSession={(id) => setKanbanFilter((prev) => ({ ...prev, sessionId: id }))}
-            projectPath={data.config.projectPath}
-          />
-        </CollapsibleTeamSection>
-
-        <CollapsibleTeamSection
-          sectionId="kanban"
-          title="Kanban"
-          icon={<Columns3 size={14} />}
-          badge={filteredTasks.length}
-          defaultOpen
-          forceOpen={kanbanSearch.trim().length > 0}
-          action={
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              onClick={(e) => {
-                e.stopPropagation();
-                openCreateTaskDialog();
-              }}
-            >
-              <Plus size={12} />
-              Task
-            </Button>
-          }
-        >
-          <KanbanBoard
-            tasks={kanbanDisplayTasks}
+          <CreateTaskDialog
+            open={createTaskDialog.open}
             teamName={teamName}
-            kanbanState={data.kanbanState}
-            filter={kanbanFilter}
-            sessions={teamSessions}
-            leadSessionId={data.config.leadSessionId}
             members={activeMembers}
-            onFilterChange={setKanbanFilter}
-            toolbarLeft={
-              <div className="relative max-w-[240px]">
-                <Search
-                  size={14}
-                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-                />
-                <input
-                  type="text"
-                  placeholder="Search tasks… (#id or text)"
-                  value={kanbanSearch}
-                  onChange={(e) => setKanbanSearch(e.target.value)}
-                  className="h-8 w-full min-w-[140px] max-w-[240px] rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-8 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
-                />
-                {kanbanSearch && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                        onClick={() => setKanbanSearch('')}
-                      >
-                        <X size={14} />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">Clear search</TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-            }
-            onRequestReview={(taskId) => {
-              void (async () => {
-                try {
-                  await requestReview(teamName, taskId);
-                } catch {
-                  // error via store
-                }
-              })();
-            }}
-            onApprove={(taskId) => {
-              void (async () => {
-                try {
-                  await updateKanban(teamName, taskId, { op: 'set_column', column: 'approved' });
-                } catch {
-                  // error via store
-                }
-              })();
-            }}
-            onRequestChanges={(taskId) => {
-              setRequestChangesTaskId(taskId);
-            }}
-            onMoveBackToDone={(taskId) => {
-              void (async () => {
-                try {
-                  await updateKanban(teamName, taskId, { op: 'remove' });
-                  await updateTaskStatus(teamName, taskId, 'completed');
-                } catch {
-                  // error via store
-                }
-              })();
-            }}
-            onStartTask={(taskId) => {
-              void (async () => {
-                try {
-                  const result = await startTask(teamName, taskId);
-                  if (data?.isAlive) {
-                    const task = data.tasks.find((t) => t.id === taskId);
-                    try {
-                      if (result.notifiedOwner && task?.owner) {
-                        await api.teams.processSend(
-                          teamName,
-                          `Task #${taskId} "${task.subject}" has started. Please begin working on it.`
-                        );
-                      } else if (!result.notifiedOwner) {
-                        const desc = task?.description?.trim()
-                          ? `\nDescription: ${task.description.trim()}`
-                          : '';
-                        await api.teams.processSend(
-                          teamName,
-                          `Task #${taskId} "${task?.subject ?? ''}" has been moved to IN PROGRESS but has no assignee.${desc}\nPlease assign it to an available team member, or take it yourself if everyone is busy.`
-                        );
-                      }
-                    } catch {
-                      // best-effort
-                    }
-                  }
-                } catch {
-                  // error via store
-                }
-              })();
-            }}
-            onCompleteTask={(taskId) => {
-              void (async () => {
-                try {
-                  await updateTaskStatus(teamName, taskId, 'completed');
-                } catch {
-                  // error via store
-                }
-              })();
-            }}
-            onCancelTask={(taskId) => {
-              void (async () => {
-                try {
-                  const task = data?.tasks.find((t) => t.id === taskId);
-                  await updateTaskStatus(teamName, taskId, 'pending');
+            tasks={data.tasks}
+            isTeamAlive={data.isAlive && !isTeamProvisioning}
+            defaultSubject={createTaskDialog.defaultSubject}
+            defaultDescription={createTaskDialog.defaultDescription}
+            defaultOwner={createTaskDialog.defaultOwner}
+            defaultStartImmediately={createTaskDialog.defaultStartImmediately}
+            defaultChip={createTaskDialog.defaultChip}
+            onClose={closeCreateTaskDialog}
+            onSubmit={handleCreateTask}
+            submitting={creatingTask}
+          />
 
-                  // Notify assignee directly via inbox — they'll see it immediately
-                  if (task?.owner) {
-                    try {
-                      await api.teams.sendMessage(teamName, {
-                        member: task.owner,
-                        text: `Task #${taskId} "${task.subject}" has been CANCELLED by the user and moved back to TODO. Stop working on it immediately.`,
-                        summary: `Task #${taskId} cancelled`,
-                      });
-                    } catch {
-                      // best-effort
-                    }
-                  }
+          <EditTeamDialog
+            open={editDialogOpen}
+            teamName={teamName}
+            currentName={data.config.name}
+            currentDescription={data.config.description ?? ''}
+            currentColor={data.config.color ?? ''}
+            currentMembers={data.members}
+            projectPath={data.config.projectPath}
+            onClose={() => setEditDialogOpen(false)}
+            onSaved={() => void selectTeam(teamName)}
+          />
 
-                  // Also notify team lead so they can reassign/coordinate
-                  if (data?.isAlive) {
-                    try {
-                      const ownerSuffix = task?.owner
-                        ? ` ${task.owner} has been notified to stop.`
-                        : '';
-                      await api.teams.processSend(
-                        teamName,
-                        `Task #${taskId} "${task?.subject ?? ''}" has been cancelled and moved back to TODO.${ownerSuffix}`
-                      );
-                    } catch {
-                      // best-effort
-                    }
-                  }
-                } catch {
-                  // error via store
-                }
-              })();
-            }}
-            onColumnOrderChange={(columnId, orderedTaskIds) => {
+          <AddMemberDialog
+            open={addMemberDialogOpen}
+            teamName={teamName}
+            existingNames={data.members.map((m) => m.name)}
+            existingMembers={data.members}
+            projectPath={data.config.projectPath}
+            adding={addingMemberLoading}
+            onClose={() => setAddMemberDialogOpen(false)}
+            onAdd={(name, role, workflow) => {
+              setAddingMemberLoading(true);
               void (async () => {
                 try {
-                  await updateKanbanColumnOrder(teamName, columnId, orderedTaskIds);
+                  await addMember(teamName, { name, role, workflow });
+                  setAddMemberDialogOpen(false);
                 } catch {
-                  // error via store
+                  // error shown via store
+                } finally {
+                  setAddingMemberLoading(false);
                 }
               })();
             }}
+          />
+
+          <Dialog
+            open={removeMemberConfirm !== null}
+            onOpenChange={(open) => {
+              if (!open) setRemoveMemberConfirm(null);
+            }}
+          >
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>Remove member</DialogTitle>
+                <DialogDescription>
+                  Remove &ldquo;{removeMemberConfirm}&rdquo; from the team? Tasks and messages will
+                  be preserved, but this name cannot be reused.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="ghost" size="sm" onClick={() => setRemoveMemberConfirm(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    const name = removeMemberConfirm;
+                    setRemoveMemberConfirm(null);
+                    setSelectedMember(null);
+                    if (name) void removeMember(teamName, name);
+                  }}
+                >
+                  Remove
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>Delete team</DialogTitle>
+                <DialogDescription>
+                  Delete team &ldquo;{data.config.name}&rdquo;? This action is irreversible. All
+                  team data and tasks will be deleted.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" size="sm" onClick={confirmDeleteTeam}>
+                  Delete
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <LaunchTeamDialog
+            open={launchDialogOpen}
+            teamName={teamName}
+            members={data?.members ?? []}
+            defaultProjectPath={data.config.projectPath}
+            provisioningError={provisioningError}
+            clearProvisioningError={clearProvisioningError}
+            activeTeams={activeTeamsForLaunch}
+            onClose={() => setLaunchDialogOpen(false)}
+            onLaunch={async (request) => {
+              await launchTeam(request);
+            }}
+          />
+
+          <SendMessageDialog
+            open={sendDialogOpen}
+            teamName={teamName}
+            members={activeMembers}
+            defaultRecipient={sendDialogRecipient}
+            defaultText={sendDialogDefaultText}
+            defaultChip={sendDialogDefaultChip}
+            quotedMessage={replyQuote}
+            isTeamAlive={data.isAlive}
+            sending={sendingMessage}
+            sendError={sendMessageError}
+            lastResult={lastSendMessageResult}
+            onSend={(member, text, summary, attachments) => {
+              void (async () => {
+                const sentAtMs = Date.now();
+                setPendingRepliesByMember((prev) => ({ ...prev, [member]: sentAtMs }));
+                try {
+                  await sendTeamMessage(teamName, { member, text, summary, attachments });
+                } catch {
+                  setPendingRepliesByMember((prev) => {
+                    if (prev[member] !== sentAtMs) return prev;
+                    const next = { ...prev };
+                    delete next[member];
+                    return next;
+                  });
+                }
+              })();
+            }}
+            onClose={() => {
+              setSendDialogOpen(false);
+              setReplyQuote(undefined);
+              setSendDialogDefaultText(undefined);
+              setSendDialogDefaultChip(undefined);
+            }}
+          />
+
+          <TaskDetailDialog
+            open={selectedTask !== null}
+            task={selectedTask}
+            teamName={teamName}
+            kanbanTaskState={selectedTask ? data?.kanbanState.tasks[selectedTask.id] : undefined}
+            taskMap={taskMap}
+            members={activeMembers}
+            onClose={() => setSelectedTask(null)}
             onScrollToTask={(taskId) => {
+              setSelectedTask(null);
               const el = document.querySelector(`[data-task-id="${taskId}"]`);
               if (el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1366,476 +1797,55 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                 setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400/50'), 1500);
               }
             }}
-            onTaskClick={(task) => setSelectedTask(task)}
-            onViewChanges={handleViewChanges}
-            onAddTask={(startImmediately) => openCreateTaskDialog('', '', '', startImmediately)}
+            onOwnerChange={(taskId, owner) => {
+              void (async () => {
+                try {
+                  await updateTaskOwner(teamName, taskId, owner);
+                } catch {
+                  // error via store
+                }
+              })();
+            }}
+            onViewChanges={handleViewChangesForFile}
+            onOpenInEditor={(filePath) => {
+              const { revealFileInEditor } = useStore.getState();
+              revealFileInEditor(filePath);
+            }}
             onDeleteTask={handleDeleteTask}
-            deletedTaskCount={deletedTasks.length}
-            onOpenTrash={() => setTrashOpen(true)}
           />
-        </CollapsibleTeamSection>
 
-        {(data.processes?.length ?? 0) > 0 && (
-          <CollapsibleTeamSection
-            sectionId="processes"
-            title="CLI Processes"
-            icon={<Terminal size={14} />}
-            badge={data.processes.filter((p) => !p.stoppedAt).length}
-            headerExtra={
-              data.processes.some((p) => !p.stoppedAt) ? (
-                <span className="pointer-events-none relative inline-flex size-2 shrink-0" title="Active">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
-                  <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
-                </span>
-              ) : null
+          <TrashDialog
+            open={trashOpen}
+            tasks={deletedTasks}
+            onClose={() => setTrashOpen(false)}
+            onRestore={(taskId) => {
+              void (async () => {
+                try {
+                  await restoreTask(teamName, taskId);
+                } catch {
+                  // error via store
+                }
+              })();
+            }}
+          />
+
+          <ChangeReviewDialog
+            open={reviewDialogState.open}
+            onOpenChange={(open) =>
+              setReviewDialogState((prev) => ({
+                ...prev,
+                open,
+                ...(open ? {} : { initialFilePath: undefined }),
+              }))
             }
-            defaultOpen
-          >
-            <ProcessesSection />
-          </CollapsibleTeamSection>
-        )}
-
-        <ClaudeLogsSection teamName={teamName} />
-
-        <CollapsibleTeamSection
-          sectionId="messages"
-          title="Messages"
-          icon={<MessageSquare size={14} />}
-          badge={filteredMessages.length}
-          secondaryBadge={
-            filteredMessages.length > 0 && messagesUnreadCount > 0 ? messagesUnreadCount : undefined
-          }
-          headerExtra={
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="pointer-events-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void window.electronAPI.openExternal(
-                      'https://github.com/777genius/claude-notifications-go'
-                    );
-                  }}
-                >
-                  <Bell size={12} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Desktop notifications plugin</TooltipContent>
-            </Tooltip>
-          }
-          defaultOpen
-          action={
-            <div className="flex items-center gap-2 pl-2">
-              {messagesUnreadCount > 0 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="pointer-events-auto flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-blue-400 transition-colors hover:bg-blue-500/10"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMarkAllRead();
-                      }}
-                    >
-                      <CheckCheck size={12} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Mark all as read</TooltipContent>
-                </Tooltip>
-              )}
-              <div className="flex w-36 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1">
-                <Search size={12} className="shrink-0 text-[var(--color-text-muted)]" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={messagesSearchQuery}
-                  onChange={(e) => setMessagesSearchQuery(e.target.value)}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                  className="min-w-0 flex-1 bg-transparent text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
-                />
-                {messagesSearchQuery && (
-                  <button
-                    type="button"
-                    className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
-                    onClick={() => setMessagesSearchQuery('')}
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-              <MessagesFilterPopover
-                filter={messagesFilter}
-                messages={data?.messages ?? []}
-                open={messagesFilterOpen}
-                onOpenChange={setMessagesFilterOpen}
-                onApply={setMessagesFilter}
-              />
-            </div>
-          }
-        >
-          <MessageComposer
             teamName={teamName}
-            members={activeMembers}
-            isTeamAlive={data.isAlive}
-            sending={sendingMessage}
-            sendError={sendMessageError}
-            onSend={(member, text, summary, attachments) => {
-              const sentAtMs = Date.now();
-              setPendingRepliesByMember((prev) => ({ ...prev, [member]: sentAtMs }));
-              void sendTeamMessage(teamName, { member, text, summary, attachments }).catch(() => {
-                setPendingRepliesByMember((prev) => {
-                  if (prev[member] !== sentAtMs) return prev;
-                  const next = { ...prev };
-                  delete next[member];
-                  return next;
-                });
-              });
-            }}
+            mode={reviewDialogState.mode}
+            memberName={reviewDialogState.memberName}
+            taskId={reviewDialogState.taskId}
+            initialFilePath={reviewDialogState.initialFilePath}
+            projectPath={data.config.projectPath}
+            onEditorAction={handleEditorAction}
           />
-          <PendingRepliesBlock
-            members={data.members}
-            pendingRepliesByMember={pendingRepliesByMember}
-            onMemberClick={setSelectedMember}
-          />
-          <ActiveTasksBlock
-            members={data.members}
-            tasks={data.tasks}
-            onMemberClick={setSelectedMember}
-            onTaskClick={setSelectedTask}
-          />
-          <ActivityTimeline
-            messages={filteredMessages}
-            teamName={teamName}
-            members={data.members}
-            readState={{ readSet, getMessageKey: toMessageKey }}
-            onMemberClick={setSelectedMember}
-            onCreateTaskFromMessage={(subject, description) => {
-              openCreateTaskDialog(subject, description);
-            }}
-            onReplyToMessage={(message) => {
-              setSendDialogRecipient(message.from);
-              setSendDialogDefaultText(undefined);
-              setSendDialogDefaultChip(undefined);
-              setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
-              setSendDialogOpen(true);
-            }}
-            onMessageVisible={handleMessageVisible}
-            onRestartTeam={() => setLaunchDialogOpen(true)}
-            onTaskIdClick={(taskId) => {
-              const task = taskMap.get(taskId);
-              if (task) setSelectedTask(task);
-            }}
-          />
-        </CollapsibleTeamSection>
-
-        <ReviewDialog
-          open={requestChangesTaskId !== null}
-          teamName={teamName}
-          taskId={requestChangesTaskId}
-          members={data?.members ?? []}
-          onCancel={() => setRequestChangesTaskId(null)}
-          onSubmit={(comment) => {
-            if (!requestChangesTaskId) {
-              return;
-            }
-            void (async () => {
-              try {
-                await updateKanban(teamName, requestChangesTaskId, {
-                  op: 'request_changes',
-                  comment,
-                });
-                setRequestChangesTaskId(null);
-              } catch {
-                // error state is handled in the store and shown in the view
-              }
-            })();
-          }}
-        />
-
-        <MemberDetailDialog
-          open={selectedMember !== null}
-          member={selectedMember}
-          teamName={teamName}
-          tasks={data.tasks}
-          messages={data.messages}
-          isTeamAlive={data.isAlive}
-          isTeamProvisioning={isTeamProvisioning}
-          leadActivity={leadActivityByTeam[teamName]}
-          onClose={() => setSelectedMember(null)}
-          onSendMessage={() => {
-            const name = selectedMember?.name ?? '';
-            setSelectedMember(null);
-            setSendDialogRecipient(name || undefined);
-            setSendDialogDefaultText(undefined);
-            setSendDialogDefaultChip(undefined);
-            setReplyQuote(undefined);
-            setSendDialogOpen(true);
-          }}
-          onAssignTask={() => {
-            const name = selectedMember?.name ?? '';
-            setSelectedMember(null);
-            openCreateTaskDialog('', '', name);
-          }}
-          onTaskClick={(task) => {
-            setSelectedMember(null);
-            setSelectedTask(task);
-          }}
-          onUpdateRole={async (memberName, role) => {
-            setUpdatingRoleLoading(true);
-            try {
-              await updateMemberRole(teamName, memberName, role);
-              // Optimistically update local selectedMember to reflect new role
-              setSelectedMember((prev) => {
-                if (prev?.name !== memberName) return prev;
-                const normalized =
-                  typeof role === 'string' && role.trim() ? role.trim() : undefined;
-                return { ...prev, role: normalized };
-              });
-            } finally {
-              setUpdatingRoleLoading(false);
-            }
-          }}
-          updatingRole={updatingRoleLoading}
-          onRemoveMember={() => {
-            const name = selectedMember?.name;
-            if (!name) return;
-            setRemoveMemberConfirm(name);
-          }}
-          onViewMemberChanges={(memberName, filePath) => {
-            setSelectedMember(null);
-            setReviewDialogState({
-              open: true,
-              mode: 'agent',
-              memberName,
-              initialFilePath: filePath,
-            });
-          }}
-        />
-
-        <CreateTaskDialog
-          open={createTaskDialog.open}
-          teamName={teamName}
-          members={activeMembers}
-          tasks={data.tasks}
-          isTeamAlive={data.isAlive && !isTeamProvisioning}
-          defaultSubject={createTaskDialog.defaultSubject}
-          defaultDescription={createTaskDialog.defaultDescription}
-          defaultOwner={createTaskDialog.defaultOwner}
-          defaultStartImmediately={createTaskDialog.defaultStartImmediately}
-          defaultChip={createTaskDialog.defaultChip}
-          onClose={closeCreateTaskDialog}
-          onSubmit={handleCreateTask}
-          submitting={creatingTask}
-        />
-
-        <EditTeamDialog
-          open={editDialogOpen}
-          teamName={teamName}
-          currentName={data.config.name}
-          currentDescription={data.config.description ?? ''}
-          currentColor={data.config.color ?? ''}
-          currentMembers={data.members}
-          projectPath={data.config.projectPath}
-          onClose={() => setEditDialogOpen(false)}
-          onSaved={() => void selectTeam(teamName)}
-        />
-
-        <AddMemberDialog
-          open={addMemberDialogOpen}
-          teamName={teamName}
-          existingNames={data.members.map((m) => m.name)}
-          existingMembers={data.members}
-          projectPath={data.config.projectPath}
-          adding={addingMemberLoading}
-          onClose={() => setAddMemberDialogOpen(false)}
-          onAdd={(name, role, workflow) => {
-            setAddingMemberLoading(true);
-            void (async () => {
-              try {
-                await addMember(teamName, { name, role, workflow });
-                setAddMemberDialogOpen(false);
-              } catch {
-                // error shown via store
-              } finally {
-                setAddingMemberLoading(false);
-              }
-            })();
-          }}
-        />
-
-        <Dialog
-          open={removeMemberConfirm !== null}
-          onOpenChange={(open) => {
-            if (!open) setRemoveMemberConfirm(null);
-          }}
-        >
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Remove member</DialogTitle>
-              <DialogDescription>
-                Remove &ldquo;{removeMemberConfirm}&rdquo; from the team? Tasks and messages will be
-                preserved, but this name cannot be reused.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="ghost" size="sm" onClick={() => setRemoveMemberConfirm(null)}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => {
-                  const name = removeMemberConfirm;
-                  setRemoveMemberConfirm(null);
-                  setSelectedMember(null);
-                  if (name) void removeMember(teamName, name);
-                }}
-              >
-                Remove
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Delete team</DialogTitle>
-              <DialogDescription>
-                Delete team &ldquo;{data.config.name}&rdquo;? This action is irreversible. All team
-                data and tasks will be deleted.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" size="sm" onClick={confirmDeleteTeam}>
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <LaunchTeamDialog
-          open={launchDialogOpen}
-          teamName={teamName}
-          members={data?.members ?? []}
-          defaultProjectPath={data.config.projectPath}
-          provisioningError={provisioningError}
-          clearProvisioningError={clearProvisioningError}
-          activeTeams={activeTeamsForLaunch}
-          onClose={() => setLaunchDialogOpen(false)}
-          onLaunch={async (request) => {
-            await launchTeam(request);
-          }}
-        />
-
-        <SendMessageDialog
-          open={sendDialogOpen}
-          teamName={teamName}
-          members={activeMembers}
-          defaultRecipient={sendDialogRecipient}
-          defaultText={sendDialogDefaultText}
-          defaultChip={sendDialogDefaultChip}
-          quotedMessage={replyQuote}
-          isTeamAlive={data.isAlive}
-          sending={sendingMessage}
-          sendError={sendMessageError}
-          lastResult={lastSendMessageResult}
-          onSend={(member, text, summary, attachments) => {
-            void (async () => {
-              const sentAtMs = Date.now();
-              setPendingRepliesByMember((prev) => ({ ...prev, [member]: sentAtMs }));
-              try {
-                await sendTeamMessage(teamName, { member, text, summary, attachments });
-              } catch {
-                setPendingRepliesByMember((prev) => {
-                  if (prev[member] !== sentAtMs) return prev;
-                  const next = { ...prev };
-                  delete next[member];
-                  return next;
-                });
-              }
-            })();
-          }}
-          onClose={() => {
-            setSendDialogOpen(false);
-            setReplyQuote(undefined);
-            setSendDialogDefaultText(undefined);
-            setSendDialogDefaultChip(undefined);
-          }}
-        />
-
-        <TaskDetailDialog
-          open={selectedTask !== null}
-          task={selectedTask}
-          teamName={teamName}
-          kanbanTaskState={selectedTask ? data?.kanbanState.tasks[selectedTask.id] : undefined}
-          taskMap={taskMap}
-          members={activeMembers}
-          onClose={() => setSelectedTask(null)}
-          onScrollToTask={(taskId) => {
-            setSelectedTask(null);
-            const el = document.querySelector(`[data-task-id="${taskId}"]`);
-            if (el) {
-              el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-              el.classList.add('ring-2', 'ring-blue-400/50');
-              setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400/50'), 1500);
-            }
-          }}
-          onOwnerChange={(taskId, owner) => {
-            void (async () => {
-              try {
-                await updateTaskOwner(teamName, taskId, owner);
-              } catch {
-                // error via store
-              }
-            })();
-          }}
-          onViewChanges={handleViewChangesForFile}
-          onOpenInEditor={(filePath) => {
-            const { revealFileInEditor } = useStore.getState();
-            revealFileInEditor(filePath);
-          }}
-          onDeleteTask={handleDeleteTask}
-        />
-
-        <TrashDialog
-          open={trashOpen}
-          tasks={deletedTasks}
-          onClose={() => setTrashOpen(false)}
-          onRestore={(taskId) => {
-            void (async () => {
-              try {
-                await restoreTask(teamName, taskId);
-              } catch {
-                // error via store
-              }
-            })();
-          }}
-        />
-
-        <ChangeReviewDialog
-          open={reviewDialogState.open}
-          onOpenChange={(open) =>
-            setReviewDialogState((prev) => ({
-              ...prev,
-              open,
-              ...(open ? {} : { initialFilePath: undefined }),
-            }))
-          }
-          teamName={teamName}
-          mode={reviewDialogState.mode}
-          memberName={reviewDialogState.memberName}
-          taskId={reviewDialogState.taskId}
-          initialFilePath={reviewDialogState.initialFilePath}
-          projectPath={data.config.projectPath}
-          onEditorAction={handleEditorAction}
-        />
         </div>
 
         {/* Context panel sidebar */}
@@ -1876,7 +1886,9 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                 </div>
                 <div className="flex flex-1 items-center justify-center p-4">
                   <p className="text-xs text-[var(--color-text-muted)]">
-                    {leadSessionLoading ? 'Loading context…' : 'Open the team lead session to view context.'}
+                    {leadSessionLoading
+                      ? 'Loading context…'
+                      : 'Open the team lead session to view context.'}
                   </p>
                 </div>
               </div>

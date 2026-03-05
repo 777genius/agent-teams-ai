@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
-import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';

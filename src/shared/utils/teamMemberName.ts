@@ -1,9 +1,7 @@
-export function parseNumericSuffixName(
-  name: string
-): { base: string; suffix: number } | null {
+export function parseNumericSuffixName(name: string): { base: string; suffix: number } | null {
   const trimmed = name.trim();
   if (!trimmed) return null;
-  const match = trimmed.match(/^(.+)-(\d+)$/);
+  const match = /^(.+)-(\d+)$/.exec(trimmed);
   if (!match?.[1] || !match[2]) return null;
   const suffix = Number(match[2]);
   if (!Number.isFinite(suffix)) return null;
@@ -17,7 +15,9 @@ export function parseNumericSuffixName(
  *
  * Important: do NOT treat "-1" as auto-suffix; it's commonly intentional ("dev-1").
  */
-export function createCliAutoSuffixNameGuard(allNames: Iterable<string>): (name: string) => boolean {
+export function createCliAutoSuffixNameGuard(
+  allNames: Iterable<string>
+): (name: string) => boolean {
   const trimmed: string[] = [];
   const seen = new Set<string>();
   for (const n of allNames) {
@@ -38,4 +38,3 @@ export function createCliAutoSuffixNameGuard(allNames: Iterable<string>): (name:
     return !allLower.has(info.base.toLowerCase());
   };
 }
-

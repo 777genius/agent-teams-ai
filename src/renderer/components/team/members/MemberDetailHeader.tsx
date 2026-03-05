@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Badge } from '@renderer/components/ui/badge';
 import { DialogDescription, DialogTitle } from '@renderer/components/ui/dialog';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-// import { useStore } from '@renderer/store'; // TODO: disabled — lead context display
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { agentAvatarUrl, getMemberDotClass, getPresenceLabel } from '@renderer/utils/memberHelpers';
 import { Pencil } from 'lucide-react';
@@ -31,7 +30,7 @@ export const MemberDetailHeader = ({
 }: MemberDetailHeaderProps): React.JSX.Element => {
   const [editing, setEditing] = useState(false);
 
-  // TODO: lead context display disabled — usage formula is inaccurate
+  // NOTE: lead context display disabled — usage formula is inaccurate
   // const teamName = useStore((s) => s.selectedTeamName);
   // const leadContext = useStore((s) =>
   //   member.agentType === 'team-lead' && teamName ? s.leadContextByTeam[teamName] : undefined
@@ -102,7 +101,7 @@ export const MemberDetailHeader = ({
                 >
                   {presenceLabel}
                 </Badge>
-                {/* TODO: lead context token display disabled — usage formula is inaccurate */}
+                {/* NOTE: lead context token display disabled — usage formula is inaccurate */}
               </>
             )}
           </div>

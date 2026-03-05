@@ -48,7 +48,10 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef<{ key: string; value: InlineChip[] } | null>(null);
   const keyRef = useRef(key);
-  keyRef.current = key;
+
+  useEffect(() => {
+    keyRef.current = key;
+  }, [key]);
   // Ref for current chips — allows addChip/removeChip to read latest value
   // without stale closures, using the same sync-ref pattern as keyRef.
   const chipsRef = useRef<InlineChip[]>([]);
@@ -83,7 +86,9 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
     // Flush any pending debounced save for the previous key and reset local state for the new key.
     flushPending();
     chipsRef.current = [];
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset on key change before async load
     setChipsState([]);
+
     setIsSaved(false);
     void (async () => {
       const raw = await draftStorage.loadDraft(key);

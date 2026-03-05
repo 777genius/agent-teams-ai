@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
-import { Button } from '@renderer/components/ui/button';
 import { RoleSelect } from '@renderer/components/team/RoleSelect';
+import { Button } from '@renderer/components/ui/button';
 import { CUSTOM_ROLE, FORBIDDEN_ROLES, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 import { Check, Loader2, X } from 'lucide-react';
 

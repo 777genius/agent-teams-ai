@@ -41,6 +41,7 @@ export const QuickOpenDialog = ({
   useEffect(() => {
     let cancelled = false;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
     setLoading(true);
     window.electronAPI.editor
       .listFiles()

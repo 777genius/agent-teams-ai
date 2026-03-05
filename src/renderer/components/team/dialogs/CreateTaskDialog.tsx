@@ -94,6 +94,7 @@ export const CreateTaskDialog = ({
   // Reset form when dialog opens (avoid setState during render)
   useEffect(() => {
     if (open && !prevOpenRef.current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
       setSubject(defaultSubject);
       if (defaultChip) {
         const token = chipToken(defaultChip);
@@ -101,6 +102,10 @@ export const CreateTaskDialog = ({
         descChipDraft.setChips([defaultChip]);
       } else if (defaultDescription) {
         descriptionDraft.setValue(defaultDescription);
+        descChipDraft.clearChipDraft();
+      } else {
+        descriptionDraft.clearDraft();
+        descChipDraft.clearChipDraft();
       }
       setOwner(defaultOwner);
       setBlockedBy([]);

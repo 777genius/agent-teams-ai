@@ -40,7 +40,7 @@ export const ExpandableContent = ({
       }
     },
     // Re-measure when children identity changes (content prop in callers)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- children identity triggers re-measure
     [children, collapsedHeight]
   );
 
@@ -59,10 +59,8 @@ export const ExpandableContent = ({
             ? {
                 maxHeight: collapsedHeight,
                 overflow: 'hidden',
-                WebkitMaskImage:
-                  'linear-gradient(to bottom, black 60%, transparent 100%)',
-                maskImage:
-                  'linear-gradient(to bottom, black 60%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+                maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
               }
             : undefined
         }

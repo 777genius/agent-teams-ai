@@ -234,7 +234,7 @@ export function parseStreamJsonToGroups(cliLogsTail: string): StreamJsonGroup[] 
         ts = new Date();
         if (lineTimestampCache.size >= MAX_TIMESTAMP_CACHE_SIZE) {
           // Evict oldest entry (first inserted)
-          const firstKey = lineTimestampCache.keys().next().value as string;
+          const firstKey = lineTimestampCache.keys().next().value!;
           lineTimestampCache.delete(firstKey);
         }
         lineTimestampCache.set(trimmed, ts);
@@ -246,15 +246,14 @@ export function parseStreamJsonToGroups(cliLogsTail: string): StreamJsonGroup[] 
       if (msgId) {
         const occurrence = msgIdOccurrences.get(msgId) ?? 0;
         msgIdOccurrences.set(msgId, occurrence + 1);
-        currentGroupId = occurrence === 0
-          ? `stream-group-${msgId}`
-          : `stream-group-${msgId}-${occurrence}`;
+        currentGroupId =
+          occurrence === 0 ? `stream-group-${msgId}` : `stream-group-${msgId}-${occurrence}`;
       } else {
         currentGroupId = `stream-group-L${lineIndex}`;
       }
     }
 
-    const items = contentBlocksToDisplayItems(blocks, currentTimestamp!, lineIndex);
+    const items = contentBlocksToDisplayItems(blocks, currentTimestamp, lineIndex);
     currentItems.push(...items);
   }
 

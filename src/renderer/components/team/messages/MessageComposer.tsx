@@ -36,7 +36,7 @@ interface MessageComposerProps {
 const MAX_MESSAGE_LENGTH = 4000;
 
 /** Circular progress indicator for lead context usage. */
-const ContextRing = ({ ctx }: { ctx: LeadContextUsage }): React.JSX.Element => {
+const _ContextRing = ({ ctx }: { ctx: LeadContextUsage }): React.JSX.Element => {
   const size = 26;
   const stroke = 2.5;
   const radius = (size - stroke) / 2;
@@ -150,7 +150,7 @@ export const MessageComposer = ({
   const selectedMember = members.find((m) => m.name === recipient);
   const selectedResolvedColor = selectedMember ? colorMap.get(selectedMember.name) : undefined;
   const isLeadRecipient = selectedMember?.role === 'lead' || selectedMember?.name === 'team-lead';
-  // TODO: lead context ring disabled — usage formula is inaccurate
+  // NOTE: lead context ring disabled — usage formula is inaccurate
   // const isLeadAgentRecipient = selectedMember?.agentType === 'team-lead';
   // const leadContext = useStore((s) =>
   //   isLeadAgentRecipient ? s.leadContextByTeam[teamName] : undefined
@@ -307,6 +307,7 @@ export const MessageComposer = ({
               </div>
             )}
             <div className="max-h-48 space-y-0.5 overflow-y-auto">
+              {/* eslint-disable-next-line sonarjs/function-return-type -- IIFE rendering mixed elements/null */}
               {(() => {
                 const query = recipientSearch.toLowerCase().trim();
                 const filtered = query
@@ -428,7 +429,7 @@ export const MessageComposer = ({
         disabled={sending}
         cornerAction={
           <div className="flex items-center gap-2">
-            {/* TODO: ContextRing disabled — usage formula is inaccurate */}
+            {/* NOTE: ContextRing disabled — usage formula is inaccurate */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button

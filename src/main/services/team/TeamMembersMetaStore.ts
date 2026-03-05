@@ -1,13 +1,12 @@
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { atomicWriteAsync } from './atomicWrite';
 
 import type { TeamMember } from '@shared/types';
-
-import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
 
 interface TeamMembersMetaFile {
   version: 1;

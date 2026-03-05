@@ -54,6 +54,7 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef<{ key: string; value: AttachmentPayload[] } | null>(null);
   const keyRef = useRef(persistenceKey);
+  // eslint-disable-next-line react-hooks/refs -- synchronous ref sync during render is intentional to avoid stale key in callbacks
   keyRef.current = persistenceKey;
 
   // Sync ref with state
@@ -105,13 +106,21 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
 
   // Load persisted attachments on mount
   useEffect(() => {
-    if (!persistenceKey) return;
+    if (!persistenceKey) {
+      // Transitioning to non-persistent context: flush pending save and clear stale state
+      flushPending();
+      attachmentsRef.current = [];
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync reset on key transition
+      setAttachments([]);
+      return;
+    }
 
     let cancelled = false;
     // Flush any pending debounced save for the previous key before switching.
     flushPending();
     // Clear stale attachments from previous persistenceKey before loading
     attachmentsRef.current = [];
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync reset before async load
     setAttachments([]);
     void (async () => {
       const raw = await draftStorage.loadDraft(persistenceKey);
@@ -195,7 +204,6 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
         schedulePersist(next);
         return next;
       });
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- schedulePersist is stable
     },
     [schedulePersist]
   );
@@ -209,7 +217,6 @@ export function useAttachments(options?: UseAttachmentsOptions): UseAttachmentsR
         return next;
       });
       setError(null);
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- schedulePersist is stable
     },
     [schedulePersist]
   );

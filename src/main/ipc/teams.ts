@@ -11,6 +11,7 @@ import {
   TEAM_CREATE,
   TEAM_CREATE_CONFIG,
   TEAM_CREATE_TASK,
+  TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_DELETE_TEAM,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
@@ -21,6 +22,7 @@ import {
   TEAM_GET_MEMBER_LOGS,
   TEAM_GET_MEMBER_STATS,
   TEAM_GET_PROJECT_BRANCH,
+  TEAM_GET_TASK_ATTACHMENT,
   TEAM_KILL_PROCESS,
   TEAM_LAUNCH,
   TEAM_LEAD_ACTIVITY,
@@ -38,6 +40,7 @@ import {
   TEAM_REQUEST_REVIEW,
   TEAM_RESTORE,
   TEAM_RESTORE_TASK,
+  TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SEND_MESSAGE,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SHOW_MESSAGE_NOTIFICATION,
@@ -51,9 +54,6 @@ import {
   TEAM_UPDATE_TASK_FIELDS,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
-  TEAM_SAVE_TASK_ATTACHMENT,
-  TEAM_GET_TASK_ATTACHMENT,
-  TEAM_DELETE_TASK_ATTACHMENT,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
 import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
@@ -91,7 +91,6 @@ import type {
 } from '../services';
 import type {
   AttachmentFileData,
-  AttachmentMediaType,
   AttachmentMeta,
   AttachmentPayload,
   CreateTaskRequest,
@@ -105,13 +104,13 @@ import type {
   SendMessageResult,
   TaskAttachmentMeta,
   TaskComment,
+  TeamClaudeLogsQuery,
+  TeamClaudeLogsResponse,
   TeamConfig,
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamData,
-  TeamClaudeLogsQuery,
-  TeamClaudeLogsResponse,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamMessageNotificationData,
@@ -1049,7 +1048,9 @@ async function handleSendMessage(
     if (isLeadRecipient && isAlive) {
       void provisioning
         .relayLeadInboxMessages(tn)
-        .catch((e: unknown) => logger.warn(`Relay after sendMessage failed for ${tn}: ${e}`));
+        .catch((e: unknown) =>
+          logger.warn(`Relay after sendMessage failed for ${tn}: ${String(e)}`)
+        );
     }
 
     return result;
@@ -2038,7 +2039,7 @@ async function handleAddTaskComment(
           vTask.value!,
           safeId,
           a.filename,
-          a.mimeType as AttachmentMediaType,
+          a.mimeType,
           a.base64Data
         );
         savedAttachments.push(meta);
@@ -2160,9 +2161,9 @@ async function handleSaveTaskAttachment(
       vTeam.value!,
       vTask.value!,
       safeAttId,
-      filename as string,
-      mimeType as AttachmentMediaType,
-      base64Data as string
+      filename,
+      mimeType,
+      base64Data
     );
     // Write metadata into the task JSON
     await getTeamDataService().addTaskAttachment(vTeam.value!, vTask.value!, meta);
@@ -2193,12 +2194,7 @@ async function handleGetTaskAttachment(
   }
 
   return wrapTeamHandler('getTaskAttachment', () =>
-    taskAttachmentStore.getAttachment(
-      vTeam.value!,
-      vTask.value!,
-      safeAttId,
-      mimeType as AttachmentMediaType
-    )
+    taskAttachmentStore.getAttachment(vTeam.value!, vTask.value!, safeAttId, mimeType)
   );
 }
 
@@ -2225,12 +2221,7 @@ async function handleDeleteTaskAttachment(
   }
 
   return wrapTeamHandler('deleteTaskAttachment', async () => {
-    await taskAttachmentStore.deleteAttachment(
-      vTeam.value!,
-      vTask.value!,
-      safeAttId,
-      mimeType as AttachmentMediaType
-    );
+    await taskAttachmentStore.deleteAttachment(vTeam.value!, vTask.value!, safeAttId, mimeType);
     // Remove metadata from task JSON
     await getTeamDataService().removeTaskAttachment(vTeam.value!, vTask.value!, safeAttId);
   });

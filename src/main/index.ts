@@ -426,7 +426,7 @@ function wireFileWatcherEvents(context: ServiceContext): void {
                 return teamProvisioningService.relayLeadInboxMessages(teamName);
               })
               .catch((e: unknown) =>
-                logger.warn(`[FileWatcher] relay failed for ${teamName}: ${e}`)
+                logger.warn(`[FileWatcher] relay failed for ${teamName}: ${String(e)}`)
               );
           }
         }
@@ -466,7 +466,9 @@ function wireFileWatcherEvents(context: ServiceContext): void {
         void teamDataService
           .notifyLeadOnTeammateTaskStart(teamName, taskId)
           .catch((e: unknown) =>
-            logger.warn(`[FileWatcher] task start notify failed for ${teamName}#${taskId}: ${e}`)
+            logger.warn(
+              `[FileWatcher] task start notify failed for ${teamName}#${taskId}: ${String(e)}`
+            )
           );
       }
     } catch {

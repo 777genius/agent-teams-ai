@@ -4,7 +4,6 @@ import ReactMarkdown, { type Components, defaultUrlTransform } from 'react-markd
 import { api } from '@renderer/api';
 import { CopyButton } from '@renderer/components/common/CopyButton';
 import { TaskTooltip } from '@renderer/components/team/TaskTooltip';
-import { getTeamColorSet } from '@renderer/constants/teamColors';
 import {
   CODE_BG,
   CODE_BORDER,
@@ -24,6 +23,7 @@ import {
   PROSE_TABLE_BORDER,
   PROSE_TABLE_HEADER_BG,
 } from '@renderer/constants/cssVariables';
+import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
 import { REHYPE_PLUGINS, REHYPE_PLUGINS_NO_HIGHLIGHT } from '@renderer/utils/markdownPlugins';
 import { FileText } from 'lucide-react';

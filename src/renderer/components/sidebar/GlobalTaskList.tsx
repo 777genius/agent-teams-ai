@@ -250,6 +250,7 @@ export const GlobalTaskList = ({
   // Reset showArchived when archive becomes empty
   useEffect(() => {
     if (showArchived && !hasArchivedTasks) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
       setShowArchived(false);
     }
   }, [showArchived, hasArchivedTasks]);

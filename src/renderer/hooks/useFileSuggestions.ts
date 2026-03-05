@@ -75,6 +75,7 @@ export function useFileSuggestions(
   // Re-seed from cache when projectPath changes
   useEffect(() => {
     if (!projectPath) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync with prop change
       setAllFiles([]);
       return;
     }
@@ -91,6 +92,7 @@ export function useFileSuggestions(
   const prevEnabledRef = useRef(enabled);
   useEffect(() => {
     if (enabled && !prevEnabledRef.current && projectPath && !getQuickOpenCache(projectPath)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional trigger on state transition
       setFetchTrigger((n) => n + 1);
     }
     prevEnabledRef.current = enabled;
