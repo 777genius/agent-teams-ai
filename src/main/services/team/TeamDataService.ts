@@ -1524,7 +1524,7 @@ export class TeamDataService {
             const tBlocks = tContent as Record<string, unknown>[];
             if (tBlocks.some((b) => b.type === 'text')) break; // next text = stop
             for (const b of tBlocks) {
-              if (b.type === 'tool_use' && typeof b.name === 'string') {
+              if (b.type === 'tool_use' && typeof b.name === 'string' && b.name !== 'SendMessage') {
                 toolCounts.set(b.name, (toolCounts.get(b.name) ?? 0) + 1);
               }
             }

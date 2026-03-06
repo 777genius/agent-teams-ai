@@ -1,2 +1,4 @@
+packages:
+  - mcp-server
 ignoredBuiltDependencies:
   - esbuild

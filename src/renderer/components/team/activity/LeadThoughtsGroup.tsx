@@ -10,6 +10,7 @@ import {
   CARD_TEXT_LIGHT,
 } from '@renderer/constants/cssVariables';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { formatToolSummary, parseToolSummary } from '@shared/utils/toolSummary';
 
@@ -99,6 +100,27 @@ function isRecentTimestamp(timestamp: string): boolean {
   const t = Date.parse(timestamp);
   if (Number.isNaN(t)) return false;
   return Date.now() - t <= LIVE_WINDOW_MS;
+}
+
+function ToolSummaryTooltipContent({ summary }: { summary: string }): JSX.Element {
+  const parsed = parseToolSummary(summary);
+  if (!parsed) return <span>{summary}</span>;
+
+  const sorted = Object.entries(parsed.byName).sort((a, b) => b[1] - a[1]);
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="mb-0.5 text-[10px] text-text-secondary">
+        {parsed.total} {parsed.total === 1 ? 'tool call' : 'tool calls'}
+      </div>
+      {sorted.map(([name, count]) => (
+        <div key={name} className="flex justify-between gap-3">
+          <span>{name}</span>
+          <span className="text-text-secondary">{count}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export const LeadThoughtsGroupRow = ({
@@ -244,9 +266,16 @@ export const LeadThoughtsGroupRow = ({
               : `${formatTime(oldest.timestamp)}–${formatTime(newest.timestamp)}`}
           </span>
           {totalToolSummary && (
-            <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-              {totalToolSummary}
-            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-default text-[10px]" style={{ color: CARD_ICON_MUTED }}>
+                  {totalToolSummary}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="font-mono text-[11px]">
+                <ToolSummaryTooltipContent summary={totalToolSummary} />
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
 
@@ -299,12 +328,19 @@ export const LeadThoughtsGroupRow = ({
                 </div>
               </div>
               {thought.toolSummary && (
-                <div
-                  className="px-1 pb-0.5 font-mono text-[9px]"
-                  style={{ color: CARD_ICON_MUTED }}
-                >
-                  🔧 {thought.toolSummary}
-                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="cursor-default pb-0.5 pl-3 pr-1 font-mono text-[9px]"
+                      style={{ color: CARD_ICON_MUTED }}
+                    >
+                      🔧 {thought.toolSummary}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="font-mono text-[11px]">
+                    <ToolSummaryTooltipContent summary={thought.toolSummary} />
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
           ))}

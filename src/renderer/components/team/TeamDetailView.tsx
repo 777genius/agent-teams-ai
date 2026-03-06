@@ -456,16 +456,19 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
 
   // Keep lead-session context fresh in the background while the team tab is active.
   // This keeps the button value current even when the panel is closed.
+  // For offline teams: fetch once on mount so the percentage shows immediately.
+  // For alive teams: fetch on mount + periodic refresh every 30s.
   useEffect(() => {
     if (!isThisTabActive) return;
     if (!tabId || !projectId || !leadSessionId) return;
+
+    void fetchSessionDetail(projectId, leadSessionId, tabId, { silent: true });
+
     if (!data?.isAlive) return;
 
-    const tick = (): void => {
+    const id = window.setInterval(() => {
       void fetchSessionDetail(projectId, leadSessionId, tabId, { silent: true });
-    };
-    tick();
-    const id = window.setInterval(tick, 30_000);
+    }, 30_000);
     return () => window.clearInterval(id);
   }, [isThisTabActive, tabId, projectId, leadSessionId, data?.isAlive, fetchSessionDetail]);
 

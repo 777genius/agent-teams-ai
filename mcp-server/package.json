@@ -1,0 +1,31 @@
+{
+  "name": "@claude-team/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for managing Claude Agent Teams kanban board and tasks",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "team-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "fastmcp": "^3.34.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.1.4",
+    "@types/node": "^22.15.18"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

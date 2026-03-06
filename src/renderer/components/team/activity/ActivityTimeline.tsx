@@ -326,13 +326,11 @@ export const ActivityTimeline = ({
             sessionSeparator = (
               <div
                 className="flex items-center gap-3"
-                style={{ paddingTop: 30, paddingBottom: 30 }}
+                style={{ paddingTop: 90, paddingBottom: 90 }}
               >
-                <div className="h-px flex-1 bg-[var(--color-border-emphasis)]" />
-                <span className="whitespace-nowrap text-[11px] text-[var(--color-text-muted)]">
-                  New session
-                </span>
-                <div className="h-px flex-1 bg-[var(--color-border-emphasis)]" />
+                <div className="h-px flex-1 bg-blue-400/30" />
+                <span className="whitespace-nowrap text-[11px] text-blue-400">New session</span>
+                <div className="h-px flex-1 bg-blue-400/30" />
               </div>
             );
           }
@@ -413,7 +411,7 @@ export const ActivityTimeline = ({
             <span className="text-[11px] tabular-nums text-[var(--color-text-muted)]">
               +{hiddenCount} older
             </span>
-            <span className="h-3 w-px bg-[var(--color-border-emphasis)]" />
+            <span className="h-3 w-px bg-blue-400/30" />
             <button
               onClick={handleShowMore}
               className="rounded-full px-2.5 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)] transition-all hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--color-text)]"
@@ -422,7 +420,7 @@ export const ActivityTimeline = ({
             </button>
             {hiddenCount > MESSAGES_PAGE_SIZE && (
               <>
-                <span className="h-3 w-px bg-[var(--color-border-emphasis)]" />
+                <span className="h-3 w-px bg-blue-400/30" />
                 <button
                   onClick={handleShowAll}
                   className="rounded-full px-2.5 py-0.5 text-[11px] text-[var(--color-text-muted)] transition-all hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--color-text-secondary)]"

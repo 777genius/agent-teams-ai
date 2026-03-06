@@ -2963,7 +2963,11 @@ export class TeamProvisioningService {
       // These counts will be attached to the next text message as toolSummary.
       if (run.provisioningComplete) {
         for (const block of content ?? []) {
-          if (block?.type === 'tool_use' && typeof block.name === 'string') {
+          if (
+            block?.type === 'tool_use' &&
+            typeof block.name === 'string' &&
+            block.name !== 'SendMessage'
+          ) {
             run.pendingToolCounts.set(
               block.name as string,
               (run.pendingToolCounts.get(block.name as string) ?? 0) + 1
