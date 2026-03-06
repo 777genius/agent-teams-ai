@@ -300,30 +300,61 @@ export class TeamDataService {
       });
     }
 
-    // Enrich inbox messages without leadSessionId by propagating from neighboring
-    // messages that have it (lead_session, user_sent).  Sort chronologically (asc),
-    // sweep forward, then sweep backward so orphans at the start also get a session.
+    // Enrich inbox messages without leadSessionId by assigning the nearest neighbor's
+    // session ID (by timestamp).  This avoids the old forward-only propagation bug where
+    // messages between two sessions always inherited the *earlier* session, causing a
+    // spurious "New session" divider even when the message is chronologically closer to
+    // the later session.
     if (config.leadSessionId || messages.some((m) => m.leadSessionId)) {
       messages.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
-      // Forward pass: propagate leadSessionId from earlier messages to later ones
-      let currentSessionId: string | undefined;
-      for (const msg of messages) {
-        if (msg.leadSessionId) {
-          currentSessionId = msg.leadSessionId;
-        } else if (currentSessionId) {
-          msg.leadSessionId = currentSessionId;
+
+      // Collect indices of messages that already have a leadSessionId (anchors).
+      const anchors: { index: number; time: number; sessionId: string }[] = [];
+      for (let i = 0; i < messages.length; i++) {
+        if (messages[i].leadSessionId) {
+          anchors.push({
+            index: i,
+            time: Date.parse(messages[i].timestamp),
+            sessionId: messages[i].leadSessionId!,
+          });
         }
       }
-      // Backward pass: fill messages before the first known session.
-      // Seed with config.leadSessionId so that recent messages without an explicit
-      // session ID inherit the current (most recent) session — this ensures that
-      // session boundary separators work even when inbox entries lack the field.
-      currentSessionId = config.leadSessionId;
-      for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].leadSessionId) {
-          currentSessionId = messages[i].leadSessionId;
-        } else if (currentSessionId) {
-          messages[i].leadSessionId = currentSessionId;
+
+      if (anchors.length > 0) {
+        // For each message without leadSessionId, find the closest anchor by timestamp
+        // and inherit its sessionId.
+        let anchorIdx = 0;
+        for (let i = 0; i < messages.length; i++) {
+          if (messages[i].leadSessionId) {
+            // Advance anchorIdx to track current position for efficient lookup
+            while (anchorIdx < anchors.length - 1 && anchors[anchorIdx].index < i) {
+              anchorIdx++;
+            }
+            continue;
+          }
+
+          const msgTime = Date.parse(messages[i].timestamp);
+
+          // Find closest anchor by timestamp (binary-search-like scan from current position)
+          let bestAnchor = anchors[0];
+          let bestDist = Math.abs(msgTime - bestAnchor.time);
+          for (let a = 0; a < anchors.length; a++) {
+            const dist = Math.abs(msgTime - anchors[a].time);
+            if (dist < bestDist) {
+              bestDist = dist;
+              bestAnchor = anchors[a];
+            } else if (dist > bestDist && anchors[a].time > msgTime) {
+              // Anchors are sorted by index (asc time) — once distance grows past the
+              // message time, further anchors will only be farther.
+              break;
+            }
+          }
+          messages[i].leadSessionId = bestAnchor.sessionId;
+        }
+      } else if (config.leadSessionId) {
+        // No anchors at all — fall back to config.leadSessionId for everything.
+        for (const msg of messages) {
+          msg.leadSessionId = config.leadSessionId;
         }
       }
     }

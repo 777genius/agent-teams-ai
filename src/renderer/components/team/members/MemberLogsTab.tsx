@@ -57,6 +57,7 @@ export const MemberLogsTab = ({
   showLeadPreview = false,
   onPreviewOnlineChange,
 }: MemberLogsTabProps): React.JSX.Element => {
+  const MIN_REFRESH_VISIBLE_MS = 250;
   const intervalsKey = useMemo(
     () => (taskWorkIntervals ? JSON.stringify(taskWorkIntervals) : ''),
     [taskWorkIntervals]
@@ -68,6 +69,8 @@ export const MemberLogsTab = ({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const refreshCountRef = useRef(0);
+  const refreshBeganAtRef = useRef<number | null>(null);
+  const refreshHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const expandedIdRef = useRef<string | null>(null);
@@ -78,6 +81,10 @@ export const MemberLogsTab = ({
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
+      if (refreshHideTimeoutRef.current) {
+        clearTimeout(refreshHideTimeoutRef.current);
+        refreshHideTimeoutRef.current = null;
+      }
     };
   }, []);
 
@@ -86,13 +93,40 @@ export const MemberLogsTab = ({
   }, [expandedId]);
 
   const beginRefreshing = useCallback((): void => {
+    if (refreshCountRef.current === 0) {
+      refreshBeganAtRef.current = Date.now();
+      if (refreshHideTimeoutRef.current) {
+        clearTimeout(refreshHideTimeoutRef.current);
+        refreshHideTimeoutRef.current = null;
+      }
+    }
     refreshCountRef.current += 1;
     if (isMountedRef.current) setRefreshing(true);
   }, []);
 
   const endRefreshing = useCallback((): void => {
     refreshCountRef.current = Math.max(0, refreshCountRef.current - 1);
-    if (isMountedRef.current) setRefreshing(refreshCountRef.current > 0);
+    if (refreshCountRef.current > 0) {
+      if (isMountedRef.current) setRefreshing(true);
+      return;
+    }
+
+    const beganAt = refreshBeganAtRef.current;
+    refreshBeganAtRef.current = null;
+    const elapsed = beganAt ? Date.now() - beganAt : Number.POSITIVE_INFINITY;
+
+    if (!isMountedRef.current) return;
+    if (elapsed >= MIN_REFRESH_VISIBLE_MS) {
+      setRefreshing(false);
+      return;
+    }
+
+    const remaining = Math.max(0, MIN_REFRESH_VISIBLE_MS - elapsed);
+    refreshHideTimeoutRef.current = setTimeout(() => {
+      refreshHideTimeoutRef.current = null;
+      if (!isMountedRef.current) return;
+      if (refreshCountRef.current === 0) setRefreshing(false);
+    }, remaining);
   }, []);
 
   const getRowId = useCallback((log: MemberLogSummary): string => {
@@ -258,12 +292,20 @@ export const MemberLogsTab = ({
   }, [teamName, memberName, taskId, taskOwner, taskStatus, intervalsKey]);
 
   const fetchDetailForLog = useCallback(
-    async (log: MemberLogSummary): Promise<EnhancedChunk[] | null> => {
+    async (
+      log: MemberLogSummary,
+      options?: { bypassCache?: boolean }
+    ): Promise<EnhancedChunk[] | null> => {
       if (log.kind === 'subagent') {
-        const d = await api.getSubagentDetail(log.projectId, log.sessionId, log.subagentId);
+        const d = await api.getSubagentDetail(
+          log.projectId,
+          log.sessionId,
+          log.subagentId,
+          options
+        );
         return d?.chunks ?? null;
       }
-      const d = await api.getSessionDetail(log.projectId, log.sessionId);
+      const d = await api.getSessionDetail(log.projectId, log.sessionId, options);
       return (d?.chunks ?? null) as unknown as EnhancedChunk[] | null;
     },
     []
@@ -281,7 +323,7 @@ export const MemberLogsTab = ({
       const shouldAutoRefreshSummary = taskId != null && taskStatus === 'in_progress';
       if (!shouldAutoRefreshSummary && !nextExpanded.isOngoing) return;
 
-      const next = await fetchDetailForLog(nextExpanded);
+      const next = await fetchDetailForLog(nextExpanded, { bypassCache: true });
       if (!isMountedRef.current) return;
       // Ensure new reference so memoized transforms update.
       setDetailChunks(next ? [...next] : null);
@@ -327,7 +369,7 @@ export const MemberLogsTab = ({
     const interval = setInterval(async () => {
       beginRefreshing();
       try {
-        const next = await fetchDetailForLog(previewLog);
+        const next = await fetchDetailForLog(previewLog, { bypassCache: true });
         if (cancelled) return;
         setPreviewChunks(next ? [...next] : null);
       } catch {
@@ -363,7 +405,7 @@ export const MemberLogsTab = ({
     const refreshDetail = async (): Promise<void> => {
       beginRefreshing();
       try {
-        const next = await fetchDetailForLog(expandedLogSummary);
+        const next = await fetchDetailForLog(expandedLogSummary, { bypassCache: true });
         if (cancelled) return;
         // Ensure new reference so memoized transforms update.
         setDetailChunks(next ? [...next] : null);
@@ -395,7 +437,11 @@ export const MemberLogsTab = ({
       setDetailChunks(null);
       setDetailLoading(true);
       try {
-        const chunks = await fetchDetailForLog(log);
+        const shouldBypassCache = log.isOngoing || taskStatus === 'in_progress';
+        const chunks = await fetchDetailForLog(
+          log,
+          shouldBypassCache ? { bypassCache: true } : undefined
+        );
         setDetailChunks(chunks ? [...chunks] : null);
       } catch {
         setDetailChunks(null);
@@ -403,7 +449,7 @@ export const MemberLogsTab = ({
         setDetailLoading(false);
       }
     },
-    [expandedId, fetchDetailForLog, getRowId]
+    [expandedId, fetchDetailForLog, getRowId, taskStatus]
   );
 
   if (loading && logs.length === 0) {

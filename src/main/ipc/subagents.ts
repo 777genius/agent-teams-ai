@@ -56,7 +56,8 @@ async function handleGetSubagentDetail(
   _event: IpcMainInvokeEvent,
   projectId: string,
   sessionId: string,
-  subagentId: string
+  subagentId: string,
+  options?: { bypassCache?: boolean }
 ): Promise<SubagentDetail | null> {
   try {
     const validatedProject = validateProjectId(projectId);
@@ -85,7 +86,7 @@ async function handleGetSubagentDetail(
     // Check cache first
     let subagentDetail = dataCache.getSubagent(cacheKey);
 
-    if (subagentDetail) {
+    if (subagentDetail && !options?.bypassCache) {
       return subagentDetail;
     }
 

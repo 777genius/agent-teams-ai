@@ -246,7 +246,11 @@ export class HttpAPIClient implements ElectronAPI {
     return this.get<SearchSessionsResult>(`/api/search?${params}`);
   };
 
-  getSessionDetail = (projectId: string, sessionId: string): Promise<SessionDetail | null> =>
+  getSessionDetail = (
+    projectId: string,
+    sessionId: string,
+    _options?: { bypassCache?: boolean }
+  ): Promise<SessionDetail | null> =>
     this.get<SessionDetail | null>(
       `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}`
     );
@@ -264,7 +268,8 @@ export class HttpAPIClient implements ElectronAPI {
   getSubagentDetail = (
     projectId: string,
     sessionId: string,
-    subagentId: string
+    subagentId: string,
+    _options?: { bypassCache?: boolean }
   ): Promise<SubagentDetail | null> =>
     this.get<SubagentDetail | null>(
       `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/subagents/${encodeURIComponent(subagentId)}`

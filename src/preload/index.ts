@@ -347,14 +347,18 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('search-sessions', projectId, query, maxResults),
   searchAllProjects: (query: string, maxResults?: number) =>
     ipcRenderer.invoke('search-all-projects', query, maxResults),
-  getSessionDetail: (projectId: string, sessionId: string) =>
-    ipcRenderer.invoke('get-session-detail', projectId, sessionId),
+  getSessionDetail: (projectId: string, sessionId: string, options?: { bypassCache?: boolean }) =>
+    ipcRenderer.invoke('get-session-detail', projectId, sessionId, options),
   getSessionMetrics: (projectId: string, sessionId: string) =>
     ipcRenderer.invoke('get-session-metrics', projectId, sessionId),
   getWaterfallData: (projectId: string, sessionId: string) =>
     ipcRenderer.invoke('get-waterfall-data', projectId, sessionId),
-  getSubagentDetail: (projectId: string, sessionId: string, subagentId: string) =>
-    ipcRenderer.invoke('get-subagent-detail', projectId, sessionId, subagentId),
+  getSubagentDetail: (
+    projectId: string,
+    sessionId: string,
+    subagentId: string,
+    options?: { bypassCache?: boolean }
+  ) => ipcRenderer.invoke('get-subagent-detail', projectId, sessionId, subagentId, options),
   getSessionGroups: (projectId: string, sessionId: string) =>
     ipcRenderer.invoke('get-session-groups', projectId, sessionId),
   getSessionsByIds: (projectId: string, sessionIds: string[], options?: SessionsByIdsOptions) =>

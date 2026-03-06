@@ -198,7 +198,8 @@ async function handleGetSessionsByIds(
 async function handleGetSessionDetail(
   _event: IpcMainInvokeEvent,
   projectId: string,
-  sessionId: string
+  sessionId: string,
+  options?: { bypassCache?: boolean }
 ): Promise<SessionDetail | null> {
   try {
     const validatedProject = validateProjectId(projectId);
@@ -220,7 +221,7 @@ async function handleGetSessionDetail(
     // Check cache first
     let sessionDetail = dataCache.get(cacheKey);
 
-    if (sessionDetail) {
+    if (sessionDetail && !options?.bypassCache) {
       return sessionDetail;
     }
 

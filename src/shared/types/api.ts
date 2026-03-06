@@ -614,13 +614,18 @@ export interface ElectronAPI {
     maxResults?: number
   ) => Promise<SearchSessionsResult>;
   searchAllProjects: (query: string, maxResults?: number) => Promise<SearchSessionsResult>;
-  getSessionDetail: (projectId: string, sessionId: string) => Promise<SessionDetail | null>;
+  getSessionDetail: (
+    projectId: string,
+    sessionId: string,
+    options?: { bypassCache?: boolean }
+  ) => Promise<SessionDetail | null>;
   getSessionMetrics: (projectId: string, sessionId: string) => Promise<SessionMetrics | null>;
   getWaterfallData: (projectId: string, sessionId: string) => Promise<WaterfallData | null>;
   getSubagentDetail: (
     projectId: string,
     sessionId: string,
-    subagentId: string
+    subagentId: string,
+    options?: { bypassCache?: boolean }
   ) => Promise<SubagentDetail | null>;
   getSessionGroups: (projectId: string, sessionId: string) => Promise<ConversationGroup[]>;
   getSessionsByIds: (
