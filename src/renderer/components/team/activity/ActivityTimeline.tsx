@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { toMessageKey } from '@renderer/utils/teamMessageKey';
 
 import { ActivityItem, isNoiseMessage } from './ActivityItem';
 import { groupTimelineItems, isLeadThought, LeadThoughtsGroupRow } from './LeadThoughtsGroup';
@@ -28,6 +29,10 @@ interface ActivityTimelineProps {
   onRestartTeam?: () => void;
   /** When true, collapse all message bodies — show only headers with expand chevrons. */
   allCollapsed?: boolean;
+  /** Set of stable message keys that the user has manually expanded in collapsed mode. */
+  expandOverrides?: Set<string>;
+  /** Called when user toggles expand/collapse override on a specific message. */
+  onToggleExpandOverride?: (key: string) => void;
 }
 
 const VIEWPORT_THRESHOLD = 0.15;
@@ -50,6 +55,7 @@ const MessageRowWithObserver = ({
   onTaskIdClick,
   onRestartTeam,
   forceCollapsed,
+  onCollapseToggle,
 }: {
   message: InboxMessage;
   teamName: string;
@@ -67,6 +73,7 @@ const MessageRowWithObserver = ({
   onTaskIdClick?: (taskId: string) => void;
   onRestartTeam?: () => void;
   forceCollapsed?: boolean;
+  onCollapseToggle?: () => void;
 }): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
   const reportedRef = useRef(false);
@@ -115,6 +122,7 @@ const MessageRowWithObserver = ({
         onTaskIdClick={onTaskIdClick}
         onRestartTeam={onRestartTeam}
         forceCollapsed={forceCollapsed}
+        onCollapseToggle={onCollapseToggle}
       />
     </div>
   );
@@ -132,6 +140,8 @@ export const ActivityTimeline = ({
   onTaskIdClick,
   onRestartTeam,
   allCollapsed,
+  expandOverrides,
+  onToggleExpandOverride,
 }: ActivityTimelineProps): React.JSX.Element => {
   const [visibleCount, setVisibleCount] = useState(MESSAGES_PAGE_SIZE);
 
@@ -297,6 +307,50 @@ export const ActivityTimeline = ({
   const pinnedThoughtGroup = timelineItems[0]?.type === 'lead-thoughts' ? timelineItems[0] : null;
   const startIndex = pinnedThoughtGroup ? 1 : 0;
 
+  // Determine the index of the "newest" non-thought timeline item (for auto-expand).
+  // Pinned thought group is always at index 0 when present, so newest message is the
+  // first non-thought item in the remaining list.
+  const newestMessageIndex = useMemo(() => {
+    for (let i = startIndex; i < timelineItems.length; i++) {
+      if (timelineItems[i].type !== 'lead-thoughts') return i;
+    }
+    return -1;
+  }, [timelineItems, startIndex]);
+
+  /**
+   * Compute per-item forceCollapsed + onCollapseToggle based on:
+   * - allCollapsed mode enabled/disabled
+   * - Whether this is the newest message (auto-expanded, no chevron)
+   * - Whether user has manually expanded this item (override in localStorage)
+   *
+   * | allCollapsed | isNewest | inOverrides | forceCollapsed | onCollapseToggle |
+   * |-------------|----------|-------------|----------------|------------------|
+   * | false       | any      | any         | undefined      | undefined        |
+   * | true        | yes      | any         | undefined      | undefined        |
+   * | true        | no       | yes         | false          | fn               |
+   * | true        | no       | no          | true           | fn               |
+   */
+  const getItemCollapseProps = useCallback(
+    (
+      stableKey: string,
+      itemIndex: number
+    ): { forceCollapsed?: boolean; onCollapseToggle?: () => void } => {
+      if (!allCollapsed) return {};
+      if (itemIndex === newestMessageIndex) return {};
+      // Pinned thought group (index 0) is always the newest thought → expanded
+      if (itemIndex === 0 && pinnedThoughtGroup) return {};
+
+      const isOverridden = expandOverrides?.has(stableKey) ?? false;
+      return {
+        forceCollapsed: !isOverridden,
+        onCollapseToggle: onToggleExpandOverride
+          ? () => onToggleExpandOverride(stableKey)
+          : undefined,
+      };
+    },
+    [allCollapsed, newestMessageIndex, pinnedThoughtGroup, expandOverrides, onToggleExpandOverride]
+  );
+
   return (
     <div className="space-y-1">
       {/* Pinned (newest) thought group — always at top */}
@@ -306,6 +360,8 @@ export const ActivityTimeline = ({
           const firstThought = group.thoughts[0];
           const info = memberInfo.get(firstThought.from);
           const itemKey = `thoughts-${firstThought.messageId ?? pinnedThoughtGroup.originalIndices[0]}`;
+          const stableKey = toMessageKey(firstThought);
+          const collapseProps = getItemCollapseProps(stableKey, 0);
           return (
             <LeadThoughtsGroupRow
               key={itemKey}
@@ -315,7 +371,8 @@ export const ActivityTimeline = ({
               isNew={newItemKeys.has(itemKey)}
               onVisible={onMessageVisible}
               zebraShade={zebraShadeSet.has(0)}
-              forceCollapsed={allCollapsed}
+              forceCollapsed={collapseProps.forceCollapsed}
+              onCollapseToggle={collapseProps.onCollapseToggle}
             />
           );
         })()}
@@ -348,6 +405,8 @@ export const ActivityTimeline = ({
           const firstThought = group.thoughts[0];
           const info = memberInfo.get(firstThought.from);
           const itemKey = `thoughts-${firstThought.messageId ?? item.originalIndices[0]}`;
+          const stableKey = toMessageKey(firstThought);
+          const collapseProps = getItemCollapseProps(stableKey, realIndex);
           return (
             <React.Fragment key={itemKey}>
               {sessionSeparator}
@@ -358,7 +417,8 @@ export const ActivityTimeline = ({
                 isNew={newItemKeys.has(itemKey)}
                 onVisible={onMessageVisible}
                 zebraShade={zebraShadeSet.has(realIndex)}
-                forceCollapsed={allCollapsed}
+                forceCollapsed={collapseProps.forceCollapsed}
+                onCollapseToggle={collapseProps.onCollapseToggle}
               />
             </React.Fragment>
           );
@@ -370,6 +430,8 @@ export const ActivityTimeline = ({
         const recipientColor =
           recipientInfo?.color ?? (message.to ? colorMap.get(message.to) : undefined);
         const messageKey = `${message.messageId ?? item.originalIndex}-${message.timestamp}-${message.from}`;
+        const stableKey = toMessageKey(message);
+        const collapseProps = getItemCollapseProps(stableKey, realIndex);
         const isUnread = readState
           ? !message.read && !readState.readSet.has(readState.getMessageKey(message))
           : !message.read;
@@ -392,7 +454,8 @@ export const ActivityTimeline = ({
               onVisible={onMessageVisible}
               onTaskIdClick={onTaskIdClick}
               onRestartTeam={onRestartTeam}
-              forceCollapsed={allCollapsed}
+              forceCollapsed={collapseProps.forceCollapsed}
+              onCollapseToggle={collapseProps.onCollapseToggle}
             />
           </React.Fragment>
         );

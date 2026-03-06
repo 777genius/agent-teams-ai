@@ -17,6 +17,7 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useTabUI } from '@renderer/hooks/useTabUI';
 import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
+import { useTeamMessagesExpanded } from '@renderer/hooks/useTeamMessagesExpanded';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
@@ -627,6 +628,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   }, [data, timeWindow, messagesFilter, messagesSearchQuery, leadMemberName]);
 
   const { readSet, markRead, markAllRead } = useTeamMessagesRead(teamName ?? '');
+  const { expandedSet, toggle: toggleExpandOverride } = useTeamMessagesExpanded(teamName ?? '');
   const messagesUnreadCount = useMemo(
     () => filteredMessages.filter((m) => !m.read && !readSet.has(toMessageKey(m))).length,
     [filteredMessages, readSet]
@@ -1562,6 +1564,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               members={data.members}
               readState={{ readSet, getMessageKey: toMessageKey }}
               allCollapsed={messagesCollapsed}
+              expandOverrides={expandedSet}
+              onToggleExpandOverride={toggleExpandOverride}
               onMemberClick={setSelectedMember}
               onCreateTaskFromMessage={(subject, description) => {
                 openCreateTaskDialog(subject, description);

@@ -88,6 +88,8 @@ interface LeadThoughtsGroupRowProps {
   zebraShade?: boolean;
   /** When true, collapse the thought body — show only the header with expand chevron. */
   forceCollapsed?: boolean;
+  /** Called when user toggles expand/collapse in collapsed mode. Presence enables chevron. */
+  onCollapseToggle?: () => void;
 }
 
 function formatTime(timestamp: string): string {
@@ -346,6 +348,7 @@ export const LeadThoughtsGroupRow = ({
   canBeLive,
   zebraShade,
   forceCollapsed,
+  onCollapseToggle,
 }: LeadThoughtsGroupRowProps): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -521,26 +524,34 @@ export const LeadThoughtsGroupRow = ({
         {/* Header */}
         {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- role=button + tabIndex + onKeyDown below; nested tooltips prevent native button */}
         <div
-          role={forceCollapsed === true ? 'button' : undefined}
-          tabIndex={forceCollapsed === true ? 0 : undefined}
+          role={forceCollapsed === true || onCollapseToggle != null ? 'button' : undefined}
+          tabIndex={forceCollapsed === true || onCollapseToggle != null ? 0 : undefined}
           className={[
             'flex select-none items-center gap-2 px-3 py-1.5',
-            forceCollapsed === true ? 'cursor-pointer' : '',
+            forceCollapsed === true || onCollapseToggle != null ? 'cursor-pointer' : '',
           ].join(' ')}
-          onClick={forceCollapsed === true ? () => setIsBodyVisible((v) => !v) : undefined}
+          onClick={
+            forceCollapsed === true || onCollapseToggle != null
+              ? () => {
+                  setIsBodyVisible((v) => !v);
+                  onCollapseToggle?.();
+                }
+              : undefined
+          }
           onKeyDown={
-            forceCollapsed === true
+            forceCollapsed === true || onCollapseToggle != null
               ? (e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     setIsBodyVisible((v) => !v);
+                    onCollapseToggle?.();
                   }
                 }
               : undefined
           }
         >
           {/* Chevron for collapse mode */}
-          {forceCollapsed === true ? (
+          {forceCollapsed === true || onCollapseToggle != null ? (
             <ChevronRight
               className="size-3 shrink-0 transition-transform duration-150"
               style={{

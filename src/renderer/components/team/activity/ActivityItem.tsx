@@ -340,13 +340,21 @@ export const ActivityItem = ({
           'flex items-center gap-2 px-3 py-2',
           isHeaderClickable ? 'cursor-pointer select-none' : '',
         ].join(' ')}
-        onClick={isHeaderClickable ? () => setIsExpanded((v) => !v) : undefined}
+        onClick={
+          isHeaderClickable
+            ? () => {
+                setIsExpanded((v) => !v);
+                onCollapseToggle?.();
+              }
+            : undefined
+        }
         onKeyDown={
           isHeaderClickable
             ? (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   setIsExpanded((v) => !v);
+                  onCollapseToggle?.();
                 }
               }
             : undefined
