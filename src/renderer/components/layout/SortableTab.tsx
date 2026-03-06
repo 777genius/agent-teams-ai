@@ -8,8 +8,8 @@ import { useCallback, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { nameColorSet } from '@renderer/utils/projectColor';
 import { useStore } from '@renderer/store';
+import { nameColorSet } from '@renderer/utils/projectColor';
 import {
   Activity,
   Bell,

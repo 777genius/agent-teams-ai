@@ -607,7 +607,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       const prevByName = get().teamByName;
       const existingEntry = prevByName[teamName];
       const configColor = data.config.color;
-      if (configColor && (!existingEntry || existingEntry.color !== configColor)) {
+      if (configColor && (!existingEntry || existingEntry?.color !== configColor)) {
         const patched: TeamSummary = existingEntry
           ? { ...existingEntry, color: configColor, displayName: data.config.name || teamName }
           : {

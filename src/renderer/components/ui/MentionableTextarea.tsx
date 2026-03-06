@@ -607,16 +607,18 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
     const [tipIndex, setTipIndex] = React.useState(0);
     const [tipVisible, setTipVisible] = React.useState(true);
 
+    const advanceTip = React.useCallback(() => {
+      setTipIndex((prev) => (prev + 1) % rotatingTips.length);
+      setTipVisible(true);
+    }, [rotatingTips.length]);
+
     React.useEffect(() => {
       const interval = setInterval(() => {
         setTipVisible(false);
-        setTimeout(() => {
-          setTipIndex((prev) => (prev + 1) % rotatingTips.length);
-          setTipVisible(true);
-        }, 300);
+        setTimeout(advanceTip, 300);
       }, 10000);
       return () => clearInterval(interval);
-    }, [rotatingTips.length]);
+    }, [advanceTip]);
 
     const resolvedHintText = hintText ?? rotatingTips[tipIndex];
     const showHintRow = showHint && (suggestions.length > 0 || enableFiles);

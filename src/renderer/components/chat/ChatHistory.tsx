@@ -16,11 +16,12 @@ const SCROLL_THRESHOLD = 300;
 /** Must match the `w-80` (320px) context panel width used in the layout below. */
 const CONTEXT_PANEL_WIDTH_PX = 320;
 
+import { formatPercentOfTotal, sumContextInjectionTokens } from '@renderer/utils/contextMath';
+
 import { ChatHistoryEmptyState } from './ChatHistoryEmptyState';
 import { ChatHistoryItem } from './ChatHistoryItem';
 import { ChatHistoryLoadingState } from './ChatHistoryLoadingState';
 
-import { formatPercentOfTotal, sumContextInjectionTokens } from '@renderer/utils/contextMath';
 import type { ContextInjection } from '@renderer/types/contextInjection';
 
 /**

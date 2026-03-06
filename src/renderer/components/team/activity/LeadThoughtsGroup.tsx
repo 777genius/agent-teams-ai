@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   CARD_BG,
   CARD_BG_ZEBRA,
@@ -10,7 +11,6 @@ import {
   CARD_TEXT_LIGHT,
 } from '@renderer/constants/cssVariables';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { formatToolSummary, parseToolSummary } from '@shared/utils/toolSummary';
 
@@ -102,13 +102,13 @@ function isRecentTimestamp(timestamp: string): boolean {
   return Date.now() - t <= LIVE_WINDOW_MS;
 }
 
-function ToolSummaryTooltipContent({
+const ToolSummaryTooltipContent = ({
   toolCalls,
   toolSummary,
-}: {
+}: Readonly<{
   toolCalls?: ToolCallMeta[];
   toolSummary?: string;
-}): JSX.Element {
+}>): JSX.Element => {
   if (toolCalls && toolCalls.length > 0) {
     return (
       <div className="flex max-h-[300px] flex-col gap-0.5 overflow-y-auto">
@@ -118,14 +118,14 @@ function ToolSummaryTooltipContent({
         {toolCalls.map((tc, i) => {
           const isAgent = tc.name === 'Agent' || tc.name === 'TaskCreate';
           return (
-            <div key={i} className={`flex items-baseline gap-2 ${isAgent ? 'mt-0.5' : ''}`}>
+            <div key={i} className={isAgent ? 'mt-0.5' : 'flex items-baseline gap-2'}>
               <span className={`shrink-0 font-semibold ${isAgent ? 'text-violet-400' : ''}`}>
                 {isAgent ? '🤖 ' : ''}
                 {tc.name}
               </span>
               {tc.preview && (
                 <span
-                  className={`text-text-secondary ${isAgent ? 'whitespace-pre-wrap' : 'truncate'}`}
+                  className={`text-text-secondary ${isAgent ? 'mt-0.5 block text-[10px]' : 'truncate'}`}
                 >
                   {tc.preview}
                 </span>
@@ -158,7 +158,7 @@ function ToolSummaryTooltipContent({
   }
 
   return <span>{toolSummary ?? ''}</span>;
-}
+};
 
 export const LeadThoughtsGroupRow = ({
   group,
@@ -268,7 +268,7 @@ export const LeadThoughtsGroupRow = ({
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- scrollRef is stable
+  }, []);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -318,7 +318,7 @@ export const LeadThoughtsGroupRow = ({
                   {totalToolSummary}
                 </span>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="font-mono text-[11px]">
+              <TooltipContent side="bottom" className="max-w-[420px] font-mono text-[11px]">
                 <ToolSummaryTooltipContent
                   toolCalls={allToolCalls}
                   toolSummary={totalToolSummary}
@@ -344,7 +344,7 @@ export const LeadThoughtsGroupRow = ({
           {chronologicalThoughts.map((thought, idx) => (
             <div key={thought.messageId ?? idx} className="thought-expand-in">
               {idx > 0 && (
-                <div className="mx-auto flex w-[40%] items-center justify-center gap-[5px] py-px">
+                <div className="mx-auto flex w-2/5 items-center justify-center gap-[5px] py-px">
                   <hr
                     className="flex-1 border-0"
                     style={{
@@ -386,7 +386,11 @@ export const LeadThoughtsGroupRow = ({
                       🔧 {thought.toolSummary}
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="top" align="start" className="font-mono text-[11px]">
+                  <TooltipContent
+                    side="top"
+                    align="start"
+                    className="max-w-[420px] font-mono text-[11px]"
+                  >
                     <ToolSummaryTooltipContent
                       toolCalls={thought.toolCalls}
                       toolSummary={thought.toolSummary}

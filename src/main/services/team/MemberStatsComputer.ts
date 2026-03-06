@@ -9,11 +9,17 @@ import type { FileLineStats, MemberFullStats } from '@shared/types';
 
 const logger = createLogger('Service:MemberStatsComputer');
 
-const TRAILING_PUNCT = /[;.,]+$/;
+const TRAILING_PUNCT_CHARS = new Set([';', '.', ',']);
 const INVALID_NAMES = new Set(['null', 'undefined', 'None', 'false', 'true', '']);
 
+function stripTrailingPunct(s: string): string {
+  let end = s.length;
+  while (end > 0 && TRAILING_PUNCT_CHARS.has(s[end - 1])) end--;
+  return end === s.length ? s : s.slice(0, end);
+}
+
 export function isValidFilePath(value: string): boolean {
-  const cleaned = value.trim().replace(TRAILING_PUNCT, '');
+  const cleaned = stripTrailingPunct(value.trim());
   return cleaned.length > 1 && !INVALID_NAMES.has(cleaned) && cleaned.includes('/');
 }
 
@@ -133,7 +139,7 @@ export class MemberStatsComputer {
     // Track last known content per file for accurate Write/NotebookEdit diffs
     const fileLastContent = new Map<string, string>();
 
-    const cleanPath = (fp: string): string => fp.trim().replace(TRAILING_PUNCT, '');
+    const cleanPath = (fp: string): string => stripTrailingPunct(fp.trim());
 
     const trackFile = (fp: string): void => {
       if (typeof fp === 'string') {

@@ -59,8 +59,8 @@ import type {
   TeamTask,
   TeamTaskStatus,
   TeamTaskWithKanban,
-  UpdateKanbanPatch,
   ToolCallMeta,
+  UpdateKanbanPatch,
 } from '@shared/types';
 
 const logger = createLogger('Service:TeamDataService');
@@ -344,12 +344,12 @@ export class TeamDataService {
           // Find closest anchor by timestamp (binary-search-like scan from current position)
           let bestAnchor = anchors[0];
           let bestDist = Math.abs(msgTime - bestAnchor.time);
-          for (let a = 0; a < anchors.length; a++) {
-            const dist = Math.abs(msgTime - anchors[a].time);
+          for (const anchor of anchors) {
+            const dist = Math.abs(msgTime - anchor.time);
             if (dist < bestDist) {
               bestDist = dist;
-              bestAnchor = anchors[a];
-            } else if (dist > bestDist && anchors[a].time > msgTime) {
+              bestAnchor = anchor;
+            } else if (dist > bestDist && anchor.time > msgTime) {
               // Anchors are sorted by index (asc time) — once distance grows past the
               // message time, further anchors will only be farther.
               break;
@@ -1161,17 +1161,18 @@ export class TeamDataService {
 
   async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
     // Enrich with leadSessionId so session boundary separators work
-    if (!request.leadSessionId) {
+    let enrichedRequest = request;
+    if (!enrichedRequest.leadSessionId) {
       try {
         const config = await this.configReader.getConfig(teamName);
         if (config?.leadSessionId) {
-          request = { ...request, leadSessionId: config.leadSessionId };
+          enrichedRequest = { ...enrichedRequest, leadSessionId: config.leadSessionId };
         }
       } catch {
         // non-critical
       }
     }
-    return this.inboxWriter.sendMessage(teamName, request);
+    return this.inboxWriter.sendMessage(teamName, enrichedRequest);
   }
 
   private resolveLeadNameFromConfig(config: TeamConfig | null): string {
@@ -1528,8 +1529,8 @@ export class TeamDataService {
               if (b.type === 'tool_use' && typeof b.name === 'string' && b.name !== 'SendMessage') {
                 const input = (b.input ?? {}) as Record<string, unknown>;
                 toolCallsList.push({
-                  name: b.name as string,
-                  preview: extractToolPreview(b.name as string, input),
+                  name: b.name,
+                  preview: extractToolPreview(b.name, input),
                 });
               }
             }

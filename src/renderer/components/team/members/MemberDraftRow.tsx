@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
+import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';

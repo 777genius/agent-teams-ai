@@ -27,11 +27,11 @@ export function buildToolSummary(content: Record<string, unknown>[]): string | u
 
 export function parseToolSummary(summary: string | undefined): ToolSummaryData | null {
   if (!summary) return null;
-  const match = summary.match(/^(\d+)\s+tools?\s+\(([^)]+)\)$/);
+  const match = /^(\d+)\s+tools?\s+\(([^)]+)\)$/.exec(summary);
   if (!match) return null;
   const byName: Record<string, number> = {};
   for (const part of match[2].split(', ')) {
-    const m = part.match(/^(\d+)\s+(.+)$/);
+    const m = /^(\d+)\s+(\S+(?:\s+\S+)*)$/.exec(part);
     if (m) {
       byName[m[2]] = parseInt(m[1], 10);
     } else {
@@ -96,9 +96,9 @@ export function extractToolPreview(
     case 'Agent':
     case 'TaskCreate':
       return typeof input.prompt === 'string'
-        ? truncateStr(input.prompt, 200)
+        ? input.prompt
         : typeof input.description === 'string'
-          ? truncateStr(input.description, 200)
+          ? input.description
           : undefined;
     case 'WebFetch':
       if (typeof input.url === 'string') {

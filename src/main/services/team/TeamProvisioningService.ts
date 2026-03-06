@@ -21,8 +21,8 @@ import { getMemberColor } from '@shared/constants/memberColors';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
 import { createLogger } from '@shared/utils/logger';
-import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
 import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
+import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
 import { spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
@@ -2971,8 +2971,8 @@ export class TeamProvisioningService {
           ) {
             const input = (block.input ?? {}) as Record<string, unknown>;
             run.pendingToolCalls.push({
-              name: block.name as string,
-              preview: extractToolPreview(block.name as string, input),
+              name: block.name,
+              preview: extractToolPreview(block.name, input),
             });
           }
         }
