@@ -14,53 +14,87 @@
 </p>
 
 <p align="center">
-  <sub>100% free, open source. No API keys. No configuration.</sub>
+  <sub>100% free, open source. No API keys. No configuration. Runs entirely locally.</sub>
 </p>
 
 <br />
 
+## Table of Contents
+
+- [What is this](#what-is-this)
+- [Quick start](#quick-start)
+- [Installation](#installation)
+- [FAQ](#faq)
+- [Development](#development)
+- [Roadmap](#roadmap)
+- [Links](#links)
+- [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
+
+---
+
 ## What is this
 
-A new approach to task management with AI agents.
+**Claude Agent Teams UI** is a desktop app that turns Claude Code's "Orchestrate Teams" feature into a full task management experience. Create agent teams, watch them work on a kanban board, review their code changes, and stay in control — all running locally on your machine.
 
-- **Assemble your team** — create agent teams with different roles that work autonomously in parallel
-- **Agents talk to each other** — they communicate, create and manage their own tasks, and leave comments
-- **Sit back and watch** — tasks change status on the kanban board while agents handle everything on their own
-- **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment
-- **Full tool visibility** — inspect exactly which tools an agent used to complete each task
-- **Live process section** — see which agents are running processes and open URLs directly in the browser
-- **Stay in control** — send a direct message to any agent, drop a comment on a task, or pick a quick action right on the kanban card whenever you want to clarify something or add new work
+### Who is this for
+
+- **Developers** who want AI agents to handle tasks in parallel while they oversee progress
+- **Teams** using Claude Code and needing a shared task board, code review workflow, and team messaging
+- **Anyone** who wants to browse and analyze Claude Code session history without running agents
+
+### How it works
+
+1. **Create a team** — Define roles (e.g. lead, frontend, backend) and a provisioning prompt. The app spawns Claude Code sessions as autonomous team members.
+2. **Tasks flow automatically** — Agents create tasks, assign each other, move cards, leave comments, and send messages. You see everything on the kanban board in real time.
+3. **Review like in Cursor** — When a task is done, you see the diff, approve, reject, or request changes. Agents get notified and can fix issues.
+4. **Stay in control** — Send a direct message to any agent, add a comment on a task, or use quick actions on cards whenever you need to clarify or add work.
+
+### Key features
+
+| Feature | Description |
+|---------|-------------|
+| **Kanban board** | Tasks move through columns as agents work. Drag-and-drop, filters, quick actions. |
+| **Code review** | Full diff view per task. Approve, reject, or request changes. Agents get notified. |
+| **Team messaging** | Agents send direct messages. Inbox, notifications, clarification flags. |
+| **Tool visibility** | See exactly which tools agents used (Bash, Read, Edit, etc.) for each task. |
+| **Live processes** | See which agents are running. Open URLs directly in the browser. |
+| **Session analysis** | Deep breakdown of each Claude session: commands, reasoning, subprocesses. |
 
 <details>
 <summary><strong>More features</strong></summary>
 
 <br />
 
-- **Recent tasks across projects** — browse the latest completed tasks from all your projects in one place
-- **Deep session analysis** — detailed breakdown of what happened in each Claude session: bash commands, reasoning, subprocesses
-- **Solo mode** — a one-member team: a single agent (regular claude process) that creates its own tasks, leaves comments, and shows live progress on the kanban board — saves tokens compared to a full team and can be expanded to a full team at any time
-- **Advanced context monitoring system** — comprehensive breakdown of what consumes tokens at every step: user messages, Claude.md instructions, tool outputs, thinking text, and team coordination. Token usage, percentage of context window, and session cost are displayed for each category, with detailed views by category or size.
-- **Smart task-to-log matching** — automatically links Claude session logs to specific tasks based on status change timestamps, even when a task moves back and forth between states
-- **Zero-setup onboarding** — built-in Claude Code installation and authentication, ready to go out of the box
-- **Built-in code editor** — edit project files with Git support and other essential features without leaving the app
-- **Branch strategy control** — choose via prompt whether all agents work on a single branch or each gets its own git worktree
-- **Team member stats** — global performance statistics for every member of the team
-- **Attach code context** — reference files or code snippets in your messages, just like in Cursor
-- **Notification system** — configurable alerts when tasks complete, agents need attention, or errors occur
+- **Recent tasks across projects** — Browse the latest completed tasks from all your projects in one place
+- **Solo mode** — One-member team: a single agent that creates its own tasks and shows live progress. Saves tokens; can expand to a full team anytime
+- **Advanced context monitoring** — Token breakdown: user messages, CLAUDE.md, tool outputs, thinking text, team coordination. See usage, context window %, and cost per category
+- **Smart task-to-log matching** — Links Claude session logs to tasks by status change timestamps, even when tasks move back and forth
+- **Zero-setup onboarding** — Built-in Claude Code installation and authentication
+- **Built-in code editor** — Edit project files with Git support without leaving the app
+- **Branch strategy** — Choose via prompt: single branch or git worktree per agent
+- **Team member stats** — Global performance statistics per member
+- **Attach code context** — Reference files or snippets in messages, like in Cursor
+- **Notification system** — Configurable alerts when tasks complete, agents need attention, or errors occur
+- **MCP integration** — Built-in [mcp-server](./mcp-server) for Cursor, Claude Desktop, and other MCP clients. 13 tools for task CRUD, kanban, reviews, and messaging — see [mcp-server/README.md](./mcp-server/README.md)
 
 </details>
 
----
+### Tech stack
 
-<!--
-<p align="center">
-  <video src="https://github.com/user-attachments/assets/2b420b2c-c4af-4d10-a679-c83269f8ee99">
-    Your browser does not support the video tag.
-  </video>
-</p>
+Electron, React 18, TypeScript 5, Tailwind CSS 3, Zustand 4. Data from `~/.claude/` (session logs, todos, tasks). No cloud backend — everything runs locally.
 
 ---
--->
+
+## Quick start
+
+1. **Download** the app for your platform (see [Installation](#installation))
+2. **Launch** — On first run, the setup wizard will install and authenticate Claude Code
+3. **Create a team** — Pick a project, define roles, write a provisioning prompt
+4. **Watch** — Agents spawn, create tasks, and work. You see it all on the kanban board
+
+---
 
 ## Installation
 
@@ -102,6 +136,8 @@ No prerequisites — Claude Code can be installed and configured directly from t
 </tr>
 </table>
 
+**System requirements:** macOS 10.15+, Windows 10+, or Linux (glibc 2.28+). Node.js is not required for the desktop app.
+
 ---
 
 ## FAQ
@@ -115,19 +151,19 @@ No. The app includes built-in installation and authentication — just launch an
 <details>
 <summary><strong>Does it read or upload my code?</strong></summary>
 <br />
-No. Everything runs locally on your machine. The app reads Claude Code's session logs from <code>~/.claude/</code> — your source code is never sent anywhere.
+No. Everything runs locally. The app reads Claude Code's session logs from <code>~/.claude/</code> — your source code is never sent anywhere.
 </details>
 
 <details>
 <summary><strong>Can agents communicate with each other?</strong></summary>
 <br />
-Yes. Agents send direct messages, create shared tasks, and leave comments — all coordinated automatically through Claude Code's team protocol.
+Yes. Agents send direct messages, create shared tasks, and leave comments — all coordinated through Claude Code's team protocol.
 </details>
 
 <details>
 <summary><strong>Is it free?</strong></summary>
 <br />
-Yes, completely free and open source. The app itself requires no API keys or subscriptions. You only need a Claude Code plan from Anthropic to run agents.
+Yes, completely free and open source. The app requires no API keys or subscriptions. You only need a Claude Code plan from Anthropic to run agents.
 </details>
 
 <details>
@@ -139,13 +175,13 @@ Yes. Every task shows a full diff view where you can accept, reject, or comment 
 <details>
 <summary><strong>What happens if an agent gets stuck?</strong></summary>
 <br />
-You can send a direct message to any agent at any time to course-correct, or stop and restart it from the process dashboard. If an agent needs your input, you'll get a notification and the task will be marked with a distinct badge on the board so you won't miss it.
+Send a direct message to course-correct, or stop and restart from the process dashboard. If an agent needs your input, you'll get a notification and the task will show a distinct badge on the board.
 </details>
 
 <details>
 <summary><strong>Can I use it just to view past sessions without running agents?</strong></summary>
 <br />
-Yes. The app works as a session viewer too — browse, search, and analyze any Claude Code session history.
+Yes. The app works as a session viewer — browse, search, and analyze any Claude Code session history.
 </details>
 
 <details>
@@ -172,9 +208,9 @@ pnpm install
 pnpm dev
 ```
 
-The app auto-discovers your Claude Code projects from `~/.claude/`.
+The app auto-discovers Claude Code projects from `~/.claude/`.
 
-#### Build for Distribution
+### Build for distribution
 
 ```bash
 pnpm dist:mac:arm64  # macOS Apple Silicon (.dmg)
@@ -184,32 +220,45 @@ pnpm dist:linux      # Linux (AppImage/.deb/.rpm/.pacman)
 pnpm dist            # macOS + Windows + Linux
 ```
 
-#### Scripts
+### Scripts
 
 | Command | Description |
 |---------|-------------|
 | `pnpm dev` | Development with hot reload |
 | `pnpm build` | Production build |
 | `pnpm typecheck` | TypeScript type checking |
+| `pnpm lint` | Lint (no auto-fix) |
 | `pnpm lint:fix` | Lint and auto-fix |
+| `pnpm format` | Format code with Prettier |
 | `pnpm test` | Run all tests |
 | `pnpm test:watch` | Watch mode |
 | `pnpm test:coverage` | Coverage report |
+| `pnpm test:coverage:critical` | Critical path coverage |
 | `pnpm check` | Full quality gate (types + lint + test + build) |
+| `pnpm fix` | Lint fix + format |
+| `pnpm quality` | Full check + format check + knip |
 
 </details>
 
 ---
 
-## TODO
+## Roadmap
 
-- [ ] CLI runtime: Run not only on a local PC but in any headless/console environment (web UI), e.g. VPS, remote server, etc.
+- [ ] CLI runtime: Run in headless/console environments (web UI), e.g. VPS, remote server
 - [ ] Visual workflow editor ([@xyflow/react](https://github.com/xyflow/xyflow)) for building and orchestrating agent pipelines with drag & drop
 - [ ] Install skills, MCP, and integrations via an intuitive UI, and only for selected agents
 - [ ] Planning mode to organize agent plans before execution
-- [ ] Сurate what context each agent sees (files, docs, MCP servers, skills)
+- [ ] Curate what context each agent sees (files, docs, MCP servers, skills)
 - [ ] Multi-model support: proxy layer to use other popular LLMs (GPT, Gemini, DeepSeek, Llama, etc.), including offline/local models
-- [ ] 
+
+---
+
+## Links
+
+- [Homepage](https://github.com/777genius/claude_agent_teams_ui)
+- [Releases](https://github.com/777genius/claude_agent_teams_ui/releases)
+- [Issues](https://github.com/777genius/claude_agent_teams_ui/issues)
+- [MCP Server](./mcp-server) — Use Claude Agent Teams UI tools from Cursor, Claude Desktop, and other MCP clients
 
 ---
 
@@ -223,4 +272,4 @@ IPC handlers validate all inputs with strict path containment checks. File reads
 
 ## License
 
-[MIT](LICENSE)
+[AGPL-3.0](LICENSE)

@@ -602,6 +602,26 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       if (get().selectedTeamName !== teamName) {
         return;
       }
+      // Eagerly patch teamByName with color/displayName from detailed data
+      // so that tab color renders immediately without waiting for fetchTeams()
+      const prevByName = get().teamByName;
+      const existingEntry = prevByName[teamName];
+      const configColor = data.config.color;
+      if (configColor && (!existingEntry || existingEntry.color !== configColor)) {
+        const patched: TeamSummary = existingEntry
+          ? { ...existingEntry, color: configColor, displayName: data.config.name || teamName }
+          : {
+              teamName,
+              displayName: data.config.name || teamName,
+              description: data.config.description ?? '',
+              color: configColor,
+              memberCount: data.members.length,
+              taskCount: 0,
+              lastActivity: null,
+            };
+        set({ teamByName: { ...prevByName, [teamName]: patched } });
+      }
+
       set({
         selectedTeamName: teamName,
         selectedTeamData: data,

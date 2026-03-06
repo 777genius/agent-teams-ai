@@ -70,7 +70,12 @@ export const SortableTab = ({
   const teamColor = useStore((s) => {
     if (tab.type !== 'team' || !tab.teamName) return null;
     const team = s.teamByName[tab.teamName];
-    return team?.color ?? null;
+    if (team?.color) return team.color;
+    // Fallback: selectedTeamData may be available before teamByName is populated
+    if (s.selectedTeamName === tab.teamName && s.selectedTeamData?.config.color) {
+      return s.selectedTeamData.config.color;
+    }
+    return null;
   });
   const teamColorSet = teamColor ? getTeamColorSet(teamColor) : null;
 
