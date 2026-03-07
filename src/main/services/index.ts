@@ -16,3 +16,4 @@ export * from './infrastructure';
 export * from './parsing';
 export * from './team';
 export * from './schedule';
+export * from './extensions';

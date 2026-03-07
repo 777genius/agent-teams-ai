@@ -30,6 +30,11 @@ import {
 } from './context';
 import { initializeEditorHandlers, registerEditorHandlers, removeEditorHandlers } from './editor';
 import {
+  initializeExtensionHandlers,
+  registerExtensionHandlers,
+  removeExtensionHandlers,
+} from './extensions';
+import {
   initializeHttpServerHandlers,
   registerHttpServerHandlers,
   removeHttpServerHandlers,
@@ -93,6 +98,9 @@ import type {
   UpdaterService,
 } from '../services';
 import type { HttpServer } from '../services/infrastructure/HttpServer';
+import type { ExtensionFacadeService } from '../services/extensions/ExtensionFacadeService';
+import type { McpInstallService } from '../services/extensions/install/McpInstallService';
+import type { PluginInstallService } from '../services/extensions/install/PluginInstallService';
 import type { SchedulerService } from '../services/schedule/SchedulerService';
 
 /**
@@ -121,7 +129,10 @@ export function initializeIpcHandlers(
   gitDiffFallback?: GitDiffFallback,
   cliInstaller?: CliInstallerService,
   ptyTerminal?: PtyTerminalService,
-  schedulerService?: SchedulerService
+  schedulerService?: SchedulerService,
+  extensionFacade?: ExtensionFacadeService,
+  pluginInstaller?: PluginInstallService,
+  mcpInstaller?: McpInstallService
 ): void {
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -153,9 +164,11 @@ export function initializeIpcHandlers(
     initializeTerminalHandlers(ptyTerminal);
   }
   initializeEditorHandlers();
-
   if (schedulerService) {
     initializeScheduleHandlers(schedulerService);
+  }
+  if (extensionFacade) {
+    initializeExtensionHandlers(extensionFacade, pluginInstaller, mcpInstaller);
   }
 
   if (changeExtractor) {
@@ -194,6 +207,9 @@ export function initializeIpcHandlers(
   if (httpServerDeps) {
     registerHttpServerHandlers(ipcMain);
   }
+  if (extensionFacade) {
+    registerExtensionHandlers(ipcMain);
+  }
 
   logger.info('All handlers registered');
 }
@@ -223,6 +239,7 @@ export function removeIpcHandlers(): void {
   removeCliInstallerHandlers(ipcMain);
   removeTerminalHandlers(ipcMain);
   removeHttpServerHandlers(ipcMain);
+  removeExtensionHandlers(ipcMain);
 
   logger.info('All handlers removed');
 }

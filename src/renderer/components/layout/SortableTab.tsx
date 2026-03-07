@@ -17,6 +17,7 @@ import {
   FileText,
   LayoutDashboard,
   Pin,
+  Puzzle,
   Search,
   Settings,
   Users,
@@ -48,6 +49,7 @@ const TAB_ICONS = {
   teams: Users,
   team: Users,
   report: Activity,
+  extensions: Puzzle,
 } as const;
 
 export const SortableTab = ({
