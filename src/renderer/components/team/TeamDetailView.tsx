@@ -1476,7 +1476,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             }
             defaultOpen
             action={
-              <div className="flex items-center gap-2 pl-2">
+              <div className="flex items-center gap-2 pl-2 pr-2">
                 <div className="flex w-36 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1">
                   <Search size={12} className="shrink-0 text-[var(--color-text-muted)]" />
                   <input

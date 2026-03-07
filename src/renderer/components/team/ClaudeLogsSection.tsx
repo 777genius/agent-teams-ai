@@ -452,32 +452,36 @@ export const ClaudeLogsSection = ({ teamName }: ClaudeLogsSectionProps): React.J
           )}
         </span>
         <div className="flex items-center gap-2">
-          <div className="flex w-48 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1">
-            <Search size={12} className="shrink-0 text-[var(--color-text-muted)]" />
-            <input
-              type="text"
-              placeholder="Search logs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="min-w-0 flex-1 bg-transparent text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
-                onClick={() => setSearchQuery('')}
-                aria-label="Clear search"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-          <ClaudeLogsFilterPopover
-            filter={filter}
-            open={filterOpen}
-            onOpenChange={setFilterOpen}
-            onApply={setFilter}
-          />
+          {data.total > 0 ? (
+            <>
+              <div className="flex w-48 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1">
+                <Search size={12} className="shrink-0 text-[var(--color-text-muted)]" />
+                <input
+                  type="text"
+                  placeholder="Search logs..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="min-w-0 flex-1 bg-transparent text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <ClaudeLogsFilterPopover
+                filter={filter}
+                open={filterOpen}
+                onOpenChange={setFilterOpen}
+                onApply={setFilter}
+              />
+            </>
+          ) : null}
           {pendingNewCount > 0 && (
             <Button
               variant="outline"
@@ -533,9 +537,9 @@ export const ClaudeLogsSection = ({ teamName }: ClaudeLogsSectionProps): React.J
             }
           />
         ) : null}
-        {!error && data.lines.length === 0 ? (
+        {!error && data.lines.length === 0 && isAlive ? (
           <p className="p-2 text-xs text-[var(--color-text-muted)]">
-            {loading ? 'Loading…' : isAlive ? 'No logs captured.' : 'Team is not running.'}
+            {loading ? 'Loading…' : 'No logs captured.'}
           </p>
         ) : null}
         {!error && data.lines.length > 0 && filteredText.trim().length === 0 ? (
