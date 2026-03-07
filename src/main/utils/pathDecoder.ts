@@ -361,3 +361,10 @@ export function getTasksBasePath(): string {
 export function getToolsBasePath(): string {
   return path.join(getClaudeBasePath(), 'tools');
 }
+
+/**
+ * Get the schedules directory path (~/.claude/claude-devtools-schedules).
+ */
+export function getSchedulesBasePath(): string {
+  return path.join(getClaudeBasePath(), 'claude-devtools-schedules');
+}

@@ -36,6 +36,7 @@ import {
   CheckCheck,
   ChevronsDownUp,
   ChevronsUpDown,
+  Clock,
   Code,
   Columns3,
   FolderOpen,
@@ -80,6 +81,7 @@ import { ChangeReviewDialog } from './review/ChangeReviewDialog';
 import { ClaudeLogsSection } from './ClaudeLogsSection';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 import { ProcessesSection } from './ProcessesSection';
+import { ScheduleSection } from './schedule/ScheduleSection';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { TeamSessionsSection } from './TeamSessionsSection';
 
@@ -1398,6 +1400,15 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               deletedTaskCount={deletedTasks.length}
               onOpenTrash={() => setTrashOpen(true)}
             />
+          </CollapsibleTeamSection>
+
+          <CollapsibleTeamSection
+            sectionId="schedules"
+            title="Schedules"
+            icon={<Clock size={14} />}
+            defaultOpen={false}
+          >
+            <ScheduleSection teamName={teamName} />
           </CollapsibleTeamSection>
 
           {(data.processes?.length ?? 0) > 0 && (

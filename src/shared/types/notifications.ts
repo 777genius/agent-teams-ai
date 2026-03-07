@@ -58,7 +58,9 @@ export interface DetectedError {
     | 'lead_inbox'
     | 'user_inbox'
     | 'task_clarification'
-    | 'task_status_change';
+    | 'task_status_change'
+    | 'schedule_completed'
+    | 'schedule_failed';
   /** Explicit key for storage deduplication. Two notifications with the same dedupeKey won't be stored twice. */
   dedupeKey?: string;
   /** Additional context */

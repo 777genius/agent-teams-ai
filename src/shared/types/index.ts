@@ -27,6 +27,9 @@ export type * from './ipc';
 // Re-export Team Management types
 export type * from './team';
 
+// Re-export Schedule types
+export type * from './schedule';
+
 // Re-export Review types (Phase 1)
 export type * from './review';
 

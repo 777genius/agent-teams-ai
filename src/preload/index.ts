@@ -35,6 +35,17 @@ import {
   RENDERER_BOOT,
   RENDERER_HEARTBEAT,
   RENDERER_LOG,
+  SCHEDULE_CHANGE,
+  SCHEDULE_CREATE,
+  SCHEDULE_DELETE,
+  SCHEDULE_GET,
+  SCHEDULE_GET_RUN_LOGS,
+  SCHEDULE_GET_RUNS,
+  SCHEDULE_LIST,
+  SCHEDULE_PAUSE,
+  SCHEDULE_RESUME,
+  SCHEDULE_TRIGGER_NOW,
+  SCHEDULE_UPDATE,
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
   REVIEW_CLEAR_DECISIONS,
@@ -173,6 +184,7 @@ import type {
   CommentAttachmentPayload,
   ConflictCheckResult,
   ContextInfo,
+  CreateScheduleInput,
   CreateTaskRequest,
   ElectronAPI,
   FileChangeWithContent,
@@ -187,6 +199,9 @@ import type {
   NotificationTrigger,
   RejectResult,
   ReplaceMembersRequest,
+  Schedule,
+  ScheduleChangeEvent,
+  ScheduleRun,
   SendMessageRequest,
   SendMessageResult,
   SessionsByIdsOptions,
@@ -219,6 +234,7 @@ import type {
   ToolApprovalEvent,
   TriggerTestResult,
   UpdateKanbanPatch,
+  UpdateSchedulePatch,
   WslClaudeRootCandidate,
 } from '@shared/types';
 import type {
@@ -1245,6 +1261,36 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.on(EDITOR_CHANGE, listener);
       return (): void => {
         ipcRenderer.removeListener(EDITOR_CHANGE, listener);
+      };
+    },
+  },
+
+  schedules: {
+    list: () => invokeIpcWithResult<Schedule[]>(SCHEDULE_LIST),
+    get: (id: string) => invokeIpcWithResult<Schedule | null>(SCHEDULE_GET, id),
+    create: (input: CreateScheduleInput) => invokeIpcWithResult<Schedule>(SCHEDULE_CREATE, input),
+    update: (id: string, patch: UpdateSchedulePatch) =>
+      invokeIpcWithResult<Schedule>(SCHEDULE_UPDATE, id, patch),
+    delete: (id: string) => invokeIpcWithResult<void>(SCHEDULE_DELETE, id),
+    pause: (id: string) => invokeIpcWithResult<void>(SCHEDULE_PAUSE, id),
+    resume: (id: string) => invokeIpcWithResult<void>(SCHEDULE_RESUME, id),
+    triggerNow: (id: string) => invokeIpcWithResult<ScheduleRun>(SCHEDULE_TRIGGER_NOW, id),
+    getRuns: (scheduleId: string, opts?: { limit?: number; offset?: number }) =>
+      invokeIpcWithResult<ScheduleRun[]>(SCHEDULE_GET_RUNS, scheduleId, opts),
+    getRunLogs: (scheduleId: string, runId: string) =>
+      invokeIpcWithResult<{ stdout: string; stderr: string }>(
+        SCHEDULE_GET_RUN_LOGS,
+        scheduleId,
+        runId
+      ),
+    onScheduleChange: (
+      callback: (event: unknown, data: ScheduleChangeEvent) => void
+    ): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: ScheduleChangeEvent): void =>
+        callback(null, data);
+      ipcRenderer.on(SCHEDULE_CHANGE, listener);
+      return (): void => {
+        ipcRenderer.removeListener(SCHEDULE_CHANGE, listener);
       };
     },
   },

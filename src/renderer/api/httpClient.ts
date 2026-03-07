@@ -28,6 +28,8 @@ import type {
   PaginatedSessionsResult,
   Project,
   RepositoryGroup,
+  Schedule,
+  ScheduleRun,
   SearchSessionsResult,
   SendMessageRequest,
   SendMessageResult,
@@ -1067,6 +1069,46 @@ export class HttpAPIClient implements ElectronAPI {
       throw new Error('Editor not available in browser mode');
     },
     onEditorChange: () => {
+      return () => {};
+    },
+  };
+
+  schedules = {
+    list: async () => {
+      console.warn('Schedules not available in browser mode');
+      return [] as Schedule[];
+    },
+    get: async () => {
+      console.warn('Schedules not available in browser mode');
+      return null;
+    },
+    create: async () => {
+      throw new Error('Schedules not available in browser mode');
+    },
+    update: async () => {
+      throw new Error('Schedules not available in browser mode');
+    },
+    delete: async () => {
+      throw new Error('Schedules not available in browser mode');
+    },
+    pause: async () => {
+      throw new Error('Schedules not available in browser mode');
+    },
+    resume: async () => {
+      throw new Error('Schedules not available in browser mode');
+    },
+    triggerNow: async () => {
+      throw new Error('Schedules not available in browser mode');
+    },
+    getRuns: async () => {
+      console.warn('Schedules not available in browser mode');
+      return [] as ScheduleRun[];
+    },
+    getRunLogs: async () => {
+      console.warn('Schedules not available in browser mode');
+      return { stdout: '', stderr: '' };
+    },
+    onScheduleChange: () => {
       return () => {};
     },
   };

@@ -20,8 +20,12 @@ import { ChangeExtractorService } from '@main/services/team/ChangeExtractorServi
 import { FileContentResolver } from '@main/services/team/FileContentResolver';
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
+import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
+import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
+import { SchedulerService } from '@main/services/schedule/SchedulerService';
 import {
   CONTEXT_CHANGED,
+  SCHEDULE_CHANGE,
   SSH_STATUS,
   TEAM_CHANGE,
   TEAM_TOOL_APPROVAL_EVENT,
@@ -318,6 +322,7 @@ let teamProvisioningService: TeamProvisioningService;
 let cliInstallerService: CliInstallerService;
 let ptyTerminalService: PtyTerminalService;
 let httpServer: HttpServer;
+let schedulerService: SchedulerService;
 
 // File watcher event cleanup functions
 let fileChangeCleanup: (() => void) | null = null;
@@ -639,6 +644,20 @@ function initializeServices(): void {
   const fileContentResolver = new FileContentResolver(teamMemberLogsFinder, gitDiffFallback);
   const reviewApplier = new ReviewApplierService();
 
+  // Create SchedulerService for cron-based task execution
+  const scheduleRepository = new JsonScheduleRepository();
+  const scheduledTaskExecutor = new ScheduledTaskExecutor();
+  schedulerService = new SchedulerService(
+    scheduleRepository,
+    scheduledTaskExecutor,
+    async (cwd: string) => {
+      const result = await teamProvisioningService.prepareForProvisioning(cwd, {
+        forceFresh: true,
+      });
+      return { ready: result.ready, message: result.message };
+    }
+  );
+
   // warmup() and ensureInstalled() are deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.
   httpServer = new HttpServer();
@@ -651,6 +670,13 @@ function initializeServices(): void {
     httpServer?.broadcast('team-change', event);
   };
   teamProvisioningService.setTeamChangeEmitter(teamChangeEmitter);
+
+  // Allow SchedulerService to push schedule events to renderer
+  schedulerService.setChangeEmitter((event) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(SCHEDULE_CHANGE, event);
+    }
+  });
 
   teamProvisioningService.setToolApprovalEventEmitter((event) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -675,6 +701,7 @@ function initializeServices(): void {
       full: onContextSwitched,
       onClaudeRootPathUpdated: (_claudeRootPath: string | null) => {
         reconfigureLocalContextForClaudeRoot();
+        void schedulerService?.reloadForClaudeRootChange();
       },
     },
     {
@@ -686,7 +713,8 @@ function initializeServices(): void {
     reviewApplier,
     gitDiffFallback,
     cliInstallerService,
-    ptyTerminalService
+    ptyTerminalService,
+    schedulerService
   );
 
   // Forward SSH state changes to renderer and HTTP SSE clients
@@ -793,6 +821,11 @@ function shutdownServices(): void {
   // Stop background polling timers (prevents hanging shutdown).
   if (teamDataService) {
     teamDataService.stopProcessHealthPolling();
+  }
+
+  // Stop scheduled task execution and croner jobs
+  if (schedulerService) {
+    void schedulerService.stop();
   }
 
   // Kill all PTY processes
@@ -943,6 +976,7 @@ function createWindow(): void {
         void teamProvisioningService.warmup();
         void new TeamAgentToolsInstaller().ensureInstalled();
         teamDataService.startProcessHealthPolling();
+        void schedulerService?.start();
       }, 5000);
     }
   });

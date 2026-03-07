@@ -16,6 +16,13 @@ import type {
   TriggerTestResult,
 } from './notifications';
 import type {
+  CreateScheduleInput,
+  Schedule,
+  ScheduleChangeEvent,
+  ScheduleRun,
+  UpdateSchedulePatch,
+} from './schedule';
+import type {
   AgentChangeSet,
   ApplyReviewRequest,
   ApplyReviewResult,
@@ -522,6 +529,27 @@ export interface TeamsAPI {
 }
 
 // =============================================================================
+// Schedule API
+// =============================================================================
+
+export interface ScheduleAPI {
+  list: () => Promise<Schedule[]>;
+  get: (id: string) => Promise<Schedule | null>;
+  create: (input: CreateScheduleInput) => Promise<Schedule>;
+  update: (id: string, patch: UpdateSchedulePatch) => Promise<Schedule>;
+  delete: (id: string) => Promise<void>;
+  pause: (id: string) => Promise<void>;
+  resume: (id: string) => Promise<void>;
+  triggerNow: (id: string) => Promise<ScheduleRun>;
+  getRuns: (
+    scheduleId: string,
+    opts?: { limit?: number; offset?: number }
+  ) => Promise<ScheduleRun[]>;
+  getRunLogs: (scheduleId: string, runId: string) => Promise<{ stdout: string; stderr: string }>;
+  onScheduleChange: (callback: (event: unknown, data: ScheduleChangeEvent) => void) => () => void;
+}
+
+// =============================================================================
 // Review API
 // =============================================================================
 
@@ -742,6 +770,9 @@ export interface ElectronAPI {
 
   // Project Editor API (file browser + CodeMirror)
   editor: EditorAPI;
+
+  // Schedule API (cron-based task execution)
+  schedules: ScheduleAPI;
 }
 
 // =============================================================================

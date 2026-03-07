@@ -14,6 +14,7 @@ import { createContextSlice } from './slices/contextSlice';
 import { createConversationSlice } from './slices/conversationSlice';
 import { createEditorSlice } from './slices/editorSlice';
 import { createNotificationSlice } from './slices/notificationSlice';
+import { createScheduleSlice } from './slices/scheduleSlice';
 import { createPaneSlice } from './slices/paneSlice';
 import { createProjectSlice } from './slices/projectSlice';
 import { createRepositorySlice } from './slices/repositorySlice';
@@ -31,6 +32,7 @@ import type { AppState } from './types';
 import type {
   CliInstallerProgress,
   LeadContextUsage,
+  ScheduleChangeEvent,
   TeamChangeEvent,
   ToolApprovalEvent,
   ToolApprovalRequest,
@@ -61,6 +63,7 @@ export const useStore = create<AppState>()((...args) => ({
   ...createChangeReviewSlice(...args),
   ...createCliInstallerSlice(...args),
   ...createEditorSlice(...args),
+  ...createScheduleSlice(...args),
 }));
 
 // =============================================================================
@@ -98,6 +101,7 @@ export function initializeNotificationListeners(): () => void {
       useStore.getState().fetchAllTasks(),
       useStore.getState().fetchTeams(),
       useStore.getState().fetchNotifications(),
+      useStore.getState().fetchSchedules(),
     ]);
   })();
 
@@ -475,6 +479,19 @@ export function initializeNotificationListeners(): () => void {
       const state = useStore.getState();
       if (state.editorProjectPath) {
         state.handleExternalFileChange(event);
+      }
+    });
+    if (typeof cleanup === 'function') {
+      cleanupFns.push(cleanup);
+    }
+  }
+
+  // Listen for schedule change events from main process
+  if (api.schedules?.onScheduleChange) {
+    const cleanup = api.schedules.onScheduleChange((_event: unknown, data: unknown) => {
+      const event = data as ScheduleChangeEvent;
+      if (event?.scheduleId) {
+        void useStore.getState().applyScheduleChange(event.scheduleId);
       }
     });
     if (typeof cleanup === 'function') {

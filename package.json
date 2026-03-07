@@ -109,6 +109,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
+    "croner": "^10.0.1",
+    "cronstrue": "^3.13.0",
     "date-fns": "^3.6.0",
     "diff": "^8.0.3",
     "dompurify": "^3.3.1",

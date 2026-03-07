@@ -44,6 +44,11 @@ import {
 } from './projects';
 import { registerRendererLogHandlers, removeRendererLogHandlers } from './rendererLogs';
 import { initializeReviewHandlers, registerReviewHandlers, removeReviewHandlers } from './review';
+import {
+  initializeScheduleHandlers,
+  registerScheduleHandlers,
+  removeScheduleHandlers,
+} from './schedule';
 import { initializeSearchHandlers, registerSearchHandlers, removeSearchHandlers } from './search';
 import {
   initializeSessionHandlers,
@@ -88,6 +93,7 @@ import type {
   UpdaterService,
 } from '../services';
 import type { HttpServer } from '../services/infrastructure/HttpServer';
+import type { SchedulerService } from '../services/schedule/SchedulerService';
 
 /**
  * Initializes IPC handlers with service registry.
@@ -114,7 +120,8 @@ export function initializeIpcHandlers(
   reviewApplier?: ReviewApplierService,
   gitDiffFallback?: GitDiffFallback,
   cliInstaller?: CliInstallerService,
-  ptyTerminal?: PtyTerminalService
+  ptyTerminal?: PtyTerminalService,
+  schedulerService?: SchedulerService
 ): void {
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -147,6 +154,10 @@ export function initializeIpcHandlers(
   }
   initializeEditorHandlers();
 
+  if (schedulerService) {
+    initializeScheduleHandlers(schedulerService);
+  }
+
   if (changeExtractor) {
     initializeReviewHandlers({
       extractor: changeExtractor,
@@ -173,6 +184,7 @@ export function initializeIpcHandlers(
   registerEditorHandlers(ipcMain);
   registerWindowHandlers(ipcMain);
   registerRendererLogHandlers(ipcMain);
+  registerScheduleHandlers(ipcMain);
   if (cliInstaller) {
     registerCliInstallerHandlers(ipcMain);
   }
@@ -207,6 +219,7 @@ export function removeIpcHandlers(): void {
   removeEditorHandlers(ipcMain);
   removeWindowHandlers(ipcMain);
   removeRendererLogHandlers(ipcMain);
+  removeScheduleHandlers(ipcMain);
   removeCliInstallerHandlers(ipcMain);
   removeTerminalHandlers(ipcMain);
   removeHttpServerHandlers(ipcMain);

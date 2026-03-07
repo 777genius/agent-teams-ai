@@ -2,6 +2,7 @@
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
+import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import {
   encodePath,
   extractBaseDir,
@@ -63,7 +64,6 @@ const STDERR_RING_LIMIT = 64 * 1024;
 const STDOUT_RING_LIMIT = 64 * 1024;
 const LOG_PROGRESS_THROTTLE_MS = 300;
 const UI_LOGS_TAIL_LIMIT = 128 * 1024;
-const SHELL_ENV_TIMEOUT_MS = 12000;
 const PROBE_CACHE_TTL_MS = 36 * 60 * 60 * 1000;
 const PREFLIGHT_TIMEOUT_MS = 60000;
 const PREFLIGHT_AUTH_RETRY_DELAY_MS = 2000;
@@ -263,117 +263,6 @@ async function tryReadRegularFileUtf8(
     }
     return null;
   }
-}
-
-let cachedInteractiveShellEnv: NodeJS.ProcessEnv | null = null;
-let shellEnvResolvePromise: Promise<NodeJS.ProcessEnv> | null = null;
-
-function parseNullSeparatedEnv(content: string): NodeJS.ProcessEnv {
-  const parsed: NodeJS.ProcessEnv = {};
-  const lines = content.split('\0');
-  for (const line of lines) {
-    if (!line) {
-      continue;
-    }
-    const separatorIndex = line.indexOf('=');
-    if (separatorIndex <= 0) {
-      continue;
-    }
-    const key = line.slice(0, separatorIndex);
-    const value = line.slice(separatorIndex + 1);
-    parsed[key] = value;
-  }
-  return parsed;
-}
-
-async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.ProcessEnv> {
-  const envDump = await new Promise<string>((resolve, reject) => {
-    const child = spawn(shellPath, args, {
-      env: process.env,
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
-    const chunks: Buffer[] = [];
-    let settled = false;
-    let timeoutHandle: NodeJS.Timeout | null = setTimeout(() => {
-      timeoutHandle = null;
-      child.kill();
-      // SIGKILL fallback if SIGTERM is ignored (e.g., shell stuck on .zshrc)
-      setTimeout(() => {
-        try {
-          child.kill('SIGKILL');
-        } catch {
-          /* already dead */
-        }
-      }, 3000);
-      if (!settled) {
-        settled = true;
-        reject(new Error('shell env resolve timeout'));
-      }
-    }, SHELL_ENV_TIMEOUT_MS);
-
-    child.stdout?.on('data', (chunk: Buffer) => {
-      chunks.push(chunk);
-    });
-    child.once('error', (error) => {
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-        timeoutHandle = null;
-      }
-      if (!settled) {
-        settled = true;
-        reject(error);
-      }
-    });
-    child.once('close', () => {
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
-      if (!settled) {
-        settled = true;
-        resolve(Buffer.concat(chunks).toString('utf8'));
-      }
-    });
-  });
-  return parseNullSeparatedEnv(envDump);
-}
-
-async function resolveInteractiveShellEnv(): Promise<NodeJS.ProcessEnv> {
-  if (cachedInteractiveShellEnv) {
-    return cachedInteractiveShellEnv;
-  }
-  if (shellEnvResolvePromise) {
-    return shellEnvResolvePromise;
-  }
-  if (process.platform === 'win32') {
-    cachedInteractiveShellEnv = {};
-    return cachedInteractiveShellEnv;
-  }
-
-  shellEnvResolvePromise = (async () => {
-    const shellPath = process.env.SHELL || '/bin/zsh';
-    try {
-      const loginEnv = await readShellEnv(shellPath, ['-lic', 'env -0']);
-      cachedInteractiveShellEnv = loginEnv;
-      return loginEnv;
-    } catch (loginError) {
-      const loginMessage = loginError instanceof Error ? loginError.message : String(loginError);
-      logger.warn(`Failed to resolve login shell env: ${loginMessage}`);
-      try {
-        const interactiveEnv = await readShellEnv(shellPath, ['-ic', 'env -0']);
-        cachedInteractiveShellEnv = interactiveEnv;
-        return interactiveEnv;
-      } catch (interactiveError) {
-        const interactiveMessage =
-          interactiveError instanceof Error ? interactiveError.message : String(interactiveError);
-        logger.warn(`Failed to resolve interactive shell env: ${interactiveMessage}`);
-        return {};
-      }
-    } finally {
-      shellEnvResolvePromise = null;
-    }
-  })();
-
-  return shellEnvResolvePromise;
 }
 
 async function ensureCwdExists(cwd: string): Promise<void> {
@@ -1268,11 +1157,19 @@ export class TeamProvisioningService {
     }
   }
 
-  async prepareForProvisioning(cwd?: string): Promise<TeamProvisioningPrepareResult> {
+  async prepareForProvisioning(
+    cwd?: string,
+    opts?: { forceFresh?: boolean }
+  ): Promise<TeamProvisioningPrepareResult> {
     // Always validate cwd even when cache is available
     const targetCwdForValidation = cwd?.trim() || process.cwd();
     if (targetCwdForValidation && path.isAbsolute(targetCwdForValidation)) {
       await ensureCwdExists(targetCwdForValidation);
+    }
+
+    // Allow callers (e.g. scheduler warm-up) to bypass the 36h probe cache
+    if (opts?.forceFresh) {
+      cachedProbeResult = null;
     }
 
     const cached = this.getFreshCachedProbeResult();
