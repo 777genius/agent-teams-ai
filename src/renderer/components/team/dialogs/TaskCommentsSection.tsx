@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { CopyButton } from '@renderer/components/common/CopyButton';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
+import { CopyButton } from '@renderer/components/common/CopyButton';
 import { AnimatedHeightReveal } from '@renderer/components/team/activity/AnimatedHeightReveal';
 import { ReplyQuoteBlock } from '@renderer/components/team/activity/ReplyQuoteBlock';
 import { useNewItemKeys } from '@renderer/components/team/activity/useNewItemKeys';
@@ -17,8 +17,8 @@ import { buildReplyBlock, parseMessageReply } from '@renderer/utils/agentMessage
 import { isImageMimeType } from '@renderer/utils/attachmentUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
+import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { formatDistanceToNow } from 'date-fns';
 import { CheckCircle2, Eye, File, Loader2, MessageSquare, Reply, Send, X } from 'lucide-react';
 
@@ -92,13 +92,17 @@ export const TaskCommentsSection = ({
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COMMENTS);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
-  // Reset local UI state when team/task changes.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
+  // Reset local UI state when team/task changes using the
+  // "adjust state during render" pattern (no effect needed).
+  // See: https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const resetKey = `${teamName}:${taskId}`;
+  const [prevResetKey, setPrevResetKey] = useState(resetKey);
+  if (resetKey !== prevResetKey) {
+    setPrevResetKey(resetKey);
     setVisibleCount(INITIAL_VISIBLE_COMMENTS);
     setReplyTo(null);
     setPreviewImageUrl(null);
-  }, [teamName, taskId]);
+  }
 
   const draft = useDraftPersistence({ key: `taskComment:${teamName}:${taskId}` });
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);

@@ -1,5 +1,5 @@
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { useStore } from '@renderer/store';
+import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 
 import { MemberCard } from './MemberCard';
 

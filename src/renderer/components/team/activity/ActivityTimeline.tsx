@@ -3,14 +3,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 
-import { AnimatedHeightReveal } from './AnimatedHeightReveal';
 import { ActivityItem, isNoiseMessage } from './ActivityItem';
+import { AnimatedHeightReveal } from './AnimatedHeightReveal';
 import { findNewestMessageIndex, resolveTimelineCollapseState } from './collapseState';
 import { groupTimelineItems, isLeadThought, LeadThoughtsGroupRow } from './LeadThoughtsGroup';
 import { useNewItemKeys } from './useNewItemKeys';
 
-import type { TimelineItem } from './LeadThoughtsGroup';
 import type { ActivityCollapseState } from './collapseState';
+import type { TimelineItem } from './LeadThoughtsGroup';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
 interface ActivityTimelineProps {
@@ -253,15 +253,6 @@ export const ActivityTimeline = ({
     setVisibleCount(Infinity);
   };
 
-  if (messages.length === 0) {
-    return (
-      <div className="rounded-md border border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
-        <p>No messages</p>
-        <p className="mt-1 text-[11px]">Send a message to a member to see activity.</p>
-      </div>
-    );
-  }
-
   const getItemSessionId = (item: TimelineItem): string | undefined =>
     item.type === 'lead-thoughts'
       ? item.group.thoughts[0].leadSessionId
@@ -295,6 +286,15 @@ export const ActivityTimeline = ({
       }),
     [allCollapsed, newestMessageIndex, pinnedThoughtGroup, expandOverrides, onToggleExpandOverride]
   );
+
+  if (messages.length === 0) {
+    return (
+      <div className="rounded-md border border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
+        <p>No messages</p>
+        <p className="mt-1 text-[11px]">Send a message to a member to see activity.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-1">

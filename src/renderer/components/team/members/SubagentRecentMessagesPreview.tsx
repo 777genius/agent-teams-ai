@@ -1,8 +1,8 @@
 import { useState } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 export type SubagentPreviewMessageKind =
   | 'output'

@@ -7,9 +7,8 @@
 
 import { randomUUID } from 'crypto';
 
-import type { TriggerColor } from '@shared/constants/triggerColors';
-
 import type { DetectedError } from '../services/error/ErrorMessageBuilder';
+import type { TriggerColor } from '@shared/constants/triggerColors';
 
 // =============================================================================
 // Types

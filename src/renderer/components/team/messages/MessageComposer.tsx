@@ -12,9 +12,8 @@ import { useStore } from '@renderer/store';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { AlertCircle, Check, ChevronDown, ImagePlus, Mic, Search, Send } from 'lucide-react';
-
 import { MAX_TEXT_LENGTH } from '@shared/constants';
+import { AlertCircle, Check, ChevronDown, ImagePlus, Mic, Search, Send } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { AttachmentPayload, LeadContextUsage, ResolvedTeamMember } from '@shared/types';
@@ -112,7 +111,7 @@ export const MessageComposer = ({
     const lead = members.find((m) => m.role === 'lead' || m.name === 'team-lead');
     const next = lead?.name ?? members[0]?.name ?? '';
     if (next && next !== recipient) {
-      setRecipient(next);
+      queueMicrotask(() => setRecipient(next));
     }
   }, [members, recipient]);
 
@@ -189,15 +188,16 @@ export const MessageComposer = ({
     [handleSend]
   );
 
+  const { addFiles: draftAddFiles } = draft;
   const handleFileInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const input = e.target;
       if (input.files?.length) {
-        void draft.addFiles(input.files);
+        void draftAddFiles(input.files);
       }
       input.value = '';
     },
-    [draft.addFiles]
+    [draftAddFiles]
   );
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -219,20 +219,22 @@ export const MessageComposer = ({
     e.preventDefault();
   }, []);
 
+  const { handleDrop: draftHandleDrop } = draft;
   const handleDropWrapper = useCallback(
     (e: React.DragEvent) => {
       dragCounterRef.current = 0;
       setIsDragOver(false);
-      if (canAttach) draft.handleDrop(e);
+      if (canAttach) draftHandleDrop(e);
     },
-    [canAttach, draft.handleDrop]
+    [canAttach, draftHandleDrop]
   );
 
+  const { handlePaste: draftHandlePaste } = draft;
   const handlePasteWrapper = useCallback(
     (e: React.ClipboardEvent) => {
-      if (canAttach) draft.handlePaste(e);
+      if (canAttach) draftHandlePaste(e);
     },
-    [canAttach, draft.handlePaste]
+    [canAttach, draftHandlePaste]
   );
 
   const remaining = MAX_TEXT_LENGTH - trimmed.length;

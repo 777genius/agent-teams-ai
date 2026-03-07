@@ -18,7 +18,8 @@ function assignRef<T>(ref: Ref<T> | undefined, value: T | null): void {
     ref(value);
     return;
   }
-  (ref as MutableRefObject<T | null>).current = value;
+  const mutableRef = ref as MutableRefObject<T | null>;
+  mutableRef.current = value;
 }
 
 export const AnimatedHeightReveal = ({
@@ -28,11 +29,15 @@ export const AnimatedHeightReveal = ({
   containerRef,
   children,
 }: AnimatedHeightRevealProps): JSX.Element => {
-  const shouldAnimateOnMountRef = useRef(Boolean(animate));
+  const [shouldAnimateOnMount] = useState(() => Boolean(animate));
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const prefersReducedMotionRef = useRef(false);
-  const [isExpanded, setIsExpanded] = useState(() => !shouldAnimateOnMountRef.current);
+  const [prefersReducedMotion] = useState(
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+  const [isExpanded, setIsExpanded] = useState(
+    () => !animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
 
   const setWrapperRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -50,9 +55,7 @@ export const AnimatedHeightReveal = ({
   }, []);
 
   useEffect(() => {
-    prefersReducedMotionRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!shouldAnimateOnMountRef.current || prefersReducedMotionRef.current) {
-      setIsExpanded(true);
+    if (!shouldAnimateOnMount || prefersReducedMotion) {
       return;
     }
 
@@ -66,7 +69,7 @@ export const AnimatedHeightReveal = ({
     return () => {
       clearPendingAnimation();
     };
-  }, [clearPendingAnimation]);
+  }, [clearPendingAnimation, shouldAnimateOnMount, prefersReducedMotion]);
 
   useEffect(
     () => () => {
@@ -75,8 +78,7 @@ export const AnimatedHeightReveal = ({
     [clearPendingAnimation]
   );
 
-  const shouldTransition =
-    shouldAnimateOnMountRef.current && !prefersReducedMotionRef.current && isExpanded;
+  const shouldTransition = shouldAnimateOnMount && !prefersReducedMotion && isExpanded;
 
   return (
     <div

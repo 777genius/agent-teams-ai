@@ -32,7 +32,6 @@ import type {
   CliInstallerProgress,
   LeadContextUsage,
   TeamChangeEvent,
-  ToolApprovalDismiss,
   ToolApprovalEvent,
   ToolApprovalRequest,
   UpdaterStatus,
@@ -452,7 +451,7 @@ export function initializeNotificationListeners(): () => void {
     const cleanup = api.teams.onToolApprovalEvent((_event: unknown, data: unknown) => {
       const event = data as ToolApprovalEvent;
       if ('dismissed' in event && event.dismissed) {
-        const dismiss = event as ToolApprovalDismiss;
+        const dismiss = event;
         useStore.setState((s) => ({
           pendingApprovals: s.pendingApprovals.filter(
             (a) => !(a.teamName === dismiss.teamName && a.runId === dismiss.runId)

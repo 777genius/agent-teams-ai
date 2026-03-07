@@ -14,8 +14,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-  composerDraftStorage,
   type ComposerDraftSnapshot,
+  composerDraftStorage,
 } from '@renderer/services/composerDraftStorage';
 import {
   fileToAttachmentPayload,
@@ -190,12 +190,16 @@ export function useComposerDraft(teamName: string): UseComposerDraftResult {
     flushPending();
     userTouchedRef.current = false;
 
-    // Reset to empty immediately for the new teamName
+    // Reset to empty for the new teamName.
+    // Wrapped in queueMicrotask to avoid synchronous setState inside effect body.
     const empty = composerDraftStorage.emptySnapshot(teamName);
-    applySnapshot(empty);
-    setIsSaved(false);
-    setIsLoaded(false);
-    setAttachmentError(null);
+    queueMicrotask(() => {
+      if (cancelled) return;
+      applySnapshot(empty);
+      setIsSaved(false);
+      setIsLoaded(false);
+      setAttachmentError(null);
+    });
 
     void (async () => {
       // Try loading unified snapshot first

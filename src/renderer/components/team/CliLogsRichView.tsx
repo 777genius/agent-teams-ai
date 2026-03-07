@@ -12,14 +12,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DisplayItemList } from '@renderer/components/chat/DisplayItemList';
 import { highlightQueryInText } from '@renderer/components/chat/searchHighlightUtils';
 import { cn } from '@renderer/lib/utils';
-import { parseStreamJsonToGroups, groupBySubagent } from '@renderer/utils/streamJsonParser';
+import { groupBySubagent, parseStreamJsonToGroups } from '@renderer/utils/streamJsonParser';
 import { Bot, ChevronRight } from 'lucide-react';
 
-import type {
-  StreamJsonGroup,
-  StreamJsonEntry,
-  SubagentSection,
-} from '@renderer/utils/streamJsonParser';
+import type { StreamJsonGroup, SubagentSection } from '@renderer/utils/streamJsonParser';
 
 type CliLogsOrder = 'oldest-first' | 'newest-first';
 

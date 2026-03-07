@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
-import { CollapsibleTeamSection } from '@renderer/components/team/CollapsibleTeamSection';
 import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightbox';
+import { CollapsibleTeamSection } from '@renderer/components/team/CollapsibleTeamSection';
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { MemberLogsTab } from '@renderer/components/team/members/MemberLogsTab';

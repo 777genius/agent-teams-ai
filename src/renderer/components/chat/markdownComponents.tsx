@@ -2,8 +2,8 @@ import React from 'react';
 
 import { PROSE_BODY } from '@renderer/constants/cssVariables';
 
-import { highlightSearchInChildren, type SearchContext } from './searchHighlightUtils';
 import { FileLink, isRelativeUrl } from './viewers/FileLink';
+import { highlightSearchInChildren, type SearchContext } from './searchHighlightUtils';
 
 import type { Components } from 'react-markdown';
 

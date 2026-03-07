@@ -49,10 +49,12 @@ export const AttachmentPreviewList = ({
 
     if (newIds.size === 0) return;
 
-    setEnteringIds((prev) => {
-      const next = new Set(prev);
-      for (const id of newIds) next.add(id);
-      return next;
+    queueMicrotask(() => {
+      setEnteringIds((prev) => {
+        const next = new Set(prev);
+        for (const id of newIds) next.add(id);
+        return next;
+      });
     });
 
     // Clear entering state after animation completes
@@ -71,9 +73,11 @@ export const AttachmentPreviewList = ({
 
   // Cleanup timers on unmount
   useEffect(() => {
+    const exitTimers = exitTimersRef.current;
+    const enterTimers = enterTimersRef.current;
     return () => {
-      for (const t of exitTimersRef.current.values()) window.clearTimeout(t);
-      for (const t of enterTimersRef.current.values()) window.clearTimeout(t);
+      for (const t of exitTimers.values()) window.clearTimeout(t);
+      for (const t of enterTimers.values()) window.clearTimeout(t);
     };
   }, []);
 

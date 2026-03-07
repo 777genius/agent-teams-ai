@@ -3355,7 +3355,7 @@ export class TeamProvisioningService {
         currentMembers = config.members
           .filter((m) => m?.agentType !== 'team-lead' && m?.name)
           .map((m) => ({
-            name: m.name!,
+            name: m.name,
             role: m.role ?? undefined,
           }));
       } else {
@@ -3403,7 +3403,7 @@ export class TeamProvisioningService {
     }
     if (run.leadActivityState !== 'idle') {
       logger.info(
-        `[${run.teamName}] post-compact reminder aborted — lead activity changed to ${run.leadActivityState}`
+        `[${run.teamName}] post-compact reminder aborted — lead activity changed to ${run.leadActivityState as string}`
       );
       return;
     }

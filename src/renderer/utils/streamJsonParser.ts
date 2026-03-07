@@ -350,6 +350,7 @@ export function groupBySubagent(groups: StreamJsonGroup[]): StreamJsonEntry[] {
         agentDescMap.set(group.agentId, pendingDescriptions.shift() ?? 'Subagent');
       }
 
+      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- optional chain narrows to `never` in loop body
       if (currentRun && currentRun.agentId === group.agentId) {
         currentRun.groups.push(group);
       } else {

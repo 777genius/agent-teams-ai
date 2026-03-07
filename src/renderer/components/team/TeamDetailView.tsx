@@ -16,8 +16,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useTabUI } from '@renderer/hooks/useTabUI';
-import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { useTeamMessagesExpanded } from '@renderer/hooks/useTeamMessagesExpanded';
+import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';

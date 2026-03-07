@@ -68,6 +68,8 @@ import * as path from 'path';
 import { ConfigManager } from '../services/infrastructure/ConfigManager';
 import { NotificationManager } from '../services/infrastructure/NotificationManager';
 import { gitIdentityResolver } from '../services/parsing/GitIdentityResolver';
+import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
+import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 
 import {
   validateFromField,
@@ -76,9 +78,6 @@ import {
   validateTeammateName,
   validateTeamName,
 } from './guards';
-
-import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
-import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 
 import type {
   MemberStatsComputer,

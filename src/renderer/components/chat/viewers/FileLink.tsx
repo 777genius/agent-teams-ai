@@ -10,8 +10,9 @@ import React from 'react';
 
 import { PROSE_LINK } from '@renderer/constants/cssVariables';
 import { useStore } from '@renderer/store';
-import type { AppState } from '@renderer/store/types';
 import { Check, FileCode } from 'lucide-react';
+
+import type { AppState } from '@renderer/store/types';
 
 // =============================================================================
 // Exported utilities
@@ -25,7 +26,7 @@ export function parsePathWithLine(href: string): { filePath: string; line: numbe
   } catch {
     decoded = href;
   }
-  const match = decoded.match(/^(.+?):(\d+)$/);
+  const match = /^(.+?):(\d+)$/.exec(decoded);
   if (match) return { filePath: match[1], line: parseInt(match[2], 10) };
   return { filePath: decoded, line: null };
 }

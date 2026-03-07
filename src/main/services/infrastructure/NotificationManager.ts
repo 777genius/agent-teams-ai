@@ -31,6 +31,7 @@ import {
   buildDetectedErrorFromTeam,
   type TeamNotificationPayload,
 } from '@main/utils/teamNotificationBuilder';
+
 import { projectPathResolver } from '../discovery/ProjectPathResolver';
 import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 
@@ -39,7 +40,7 @@ import { ConfigManager } from './ConfigManager';
 // Re-export DetectedError for backward compatibility
 export type { DetectedError };
 // Re-export team notification types for callers
-export type { TeamNotificationPayload, TeamEventType } from '@main/utils/teamNotificationBuilder';
+export type { TeamEventType, TeamNotificationPayload } from '@main/utils/teamNotificationBuilder';
 
 /**
  * Stored notification with read status.

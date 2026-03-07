@@ -11,7 +11,7 @@ import type { ToolApprovalRequest } from '@shared/types';
 // Tool icon mapping
 // ---------------------------------------------------------------------------
 
-function getToolIcon(toolName: string): React.ReactNode {
+function getToolIcon(toolName: string): React.JSX.Element {
   const cls = 'size-4 shrink-0';
   switch (toolName) {
     case 'Bash':
@@ -60,9 +60,11 @@ function useElapsed(receivedAt: string): number {
   );
 
   useEffect(() => {
-    setElapsed(Math.max(0, Math.floor((Date.now() - new Date(receivedAt).getTime()) / 1000)));
+    const computeElapsed = (): number =>
+      Math.max(0, Math.floor((Date.now() - new Date(receivedAt).getTime()) / 1000));
+    queueMicrotask(() => setElapsed(computeElapsed()));
     const id = setInterval(() => {
-      setElapsed(Math.max(0, Math.floor((Date.now() - new Date(receivedAt).getTime()) / 1000)));
+      setElapsed(computeElapsed());
     }, 1000);
     return () => clearInterval(id);
   }, [receivedAt]);
@@ -78,6 +80,7 @@ export const ToolApprovalSheet: React.FC = () => {
   const pendingApprovals = useStore((s) => s.pendingApprovals);
   const respondToToolApproval = useStore((s) => s.respondToToolApproval);
   const teams = useStore((s) => s.teams);
+  const { isLight } = useTheme();
 
   const current: ToolApprovalRequest | undefined = pendingApprovals[0];
   const containerRef = useRef<HTMLDivElement>(null);
@@ -96,8 +99,8 @@ export const ToolApprovalSheet: React.FC = () => {
     [current, disabled, respondToToolApproval]
   );
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Enter') {
         e.preventDefault();
         handleRespond(true);
@@ -105,21 +108,20 @@ export const ToolApprovalSheet: React.FC = () => {
         e.preventDefault();
         handleRespond(false);
       }
-    },
-    [handleRespond]
-  );
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleRespond]);
 
   if (!current) return null;
 
   const teamSummary = teams.find((t) => t.teamName === current.teamName);
   const teamColor = teamSummary?.color ? getTeamColorSet(teamSummary.color) : null;
-  const { isLight } = useTheme();
 
   return (
     <div
       ref={containerRef}
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
       className="fixed bottom-4 left-1/2 z-[55] w-full max-w-[480px] -translate-x-1/2 rounded-lg border shadow-xl outline-none duration-200 animate-in fade-in slide-in-from-bottom-4"
       style={{
         backgroundColor: 'var(--color-surface-overlay)',
@@ -183,10 +185,11 @@ export const ToolApprovalSheet: React.FC = () => {
             className="rounded-md px-3.5 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
             style={{ backgroundColor: 'rgb(5, 150, 105)' }}
             onMouseEnter={(e) => {
-              if (!disabled) e.currentTarget.style.backgroundColor = 'rgb(16, 185, 129)';
+              if (!disabled)
+                Object.assign(e.currentTarget.style, { backgroundColor: 'rgb(16, 185, 129)' });
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgb(5, 150, 105)';
+              Object.assign(e.currentTarget.style, { backgroundColor: 'rgb(5, 150, 105)' });
             }}
           >
             Allow
@@ -201,10 +204,13 @@ export const ToolApprovalSheet: React.FC = () => {
               color: 'rgb(248, 113, 113)',
             }}
             onMouseEnter={(e) => {
-              if (!disabled) e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+              if (!disabled)
+                Object.assign(e.currentTarget.style, {
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                });
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
+              Object.assign(e.currentTarget.style, { backgroundColor: 'transparent' });
             }}
           >
             Deny
@@ -224,9 +230,9 @@ export const ToolApprovalSheet: React.FC = () => {
 // Elapsed display sub-component (uses hook)
 // ---------------------------------------------------------------------------
 
-function ElapsedDisplay({ receivedAt }: { receivedAt: string }): React.JSX.Element {
+const ElapsedDisplay = ({ receivedAt }: { receivedAt: string }): React.JSX.Element => {
   const elapsed = useElapsed(receivedAt);
   return (
     <span className="text-[11px] tabular-nums text-[var(--color-text-muted)]">{elapsed}s</span>
   );
-}
+};

@@ -254,8 +254,9 @@ export class HttpAPIClient implements ElectronAPI {
     const params = new URLSearchParams();
     if (options?.bypassCache) params.set('bypassCache', 'true');
     const qs = params.toString();
+    const suffix = qs ? `?${qs}` : '';
     return this.get<SessionDetail | null>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}${qs ? `?${qs}` : ''}`
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}${suffix}`
     );
   };
 
@@ -278,8 +279,9 @@ export class HttpAPIClient implements ElectronAPI {
     const params = new URLSearchParams();
     if (options?.bypassCache) params.set('bypassCache', 'true');
     const qs = params.toString();
+    const suffix = qs ? `?${qs}` : '';
     return this.get<SubagentDetail | null>(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/subagents/${encodeURIComponent(subagentId)}${qs ? `?${qs}` : ''}`
+      `/api/projects/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(sessionId)}/subagents/${encodeURIComponent(subagentId)}${suffix}`
     );
   };
 

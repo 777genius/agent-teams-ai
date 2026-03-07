@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { ChevronDown, ChevronRight, ChevronUp, Reply } from 'lucide-react';
-
-import { CopyButton } from '@renderer/components/common/CopyButton';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
+import { CopyButton } from '@renderer/components/common/CopyButton';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
@@ -17,13 +15,14 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
 import { formatToolSummary, parseToolSummary } from '@shared/utils/toolSummary';
+import { ChevronDown, ChevronRight, ChevronUp, Reply } from 'lucide-react';
 
+import { linkifyMentionsInMarkdown, linkifyTaskIdsInMarkdown } from './ActivityItem';
 import {
   AnimatedHeightReveal,
   ENTRY_REVEAL_ANIMATION_MS,
   ENTRY_REVEAL_EASING,
 } from './AnimatedHeightReveal';
-import { linkifyMentionsInMarkdown, linkifyTaskIdsInMarkdown } from './ActivityItem';
 import { isManagedCollapseState } from './collapseState';
 
 import type { ActivityCollapseState } from './collapseState';
@@ -247,6 +246,21 @@ const LeadThoughtItem = ({
     const content = contentRef.current;
     if (!wrapper || !content) return;
 
+    const applyTransition = (targetHeight: number): void => {
+      wrapper.style.transition = [
+        `height ${THOUGHT_HEIGHT_ANIMATION_MS}ms ${ENTRY_REVEAL_EASING}`,
+        `opacity ${THOUGHT_HEIGHT_ANIMATION_MS}ms ease`,
+      ].join(', ');
+      wrapper.style.height = `${Math.max(targetHeight, 0)}px`;
+      wrapper.style.opacity = '1';
+    };
+
+    const scheduleTransition = (targetHeight: number): void => {
+      animationFrameRef.current = requestAnimationFrame(() => {
+        applyTransition(targetHeight);
+      });
+    };
+
     const animateHeight = (
       targetHeight: number,
       startHeight: number,
@@ -258,17 +272,12 @@ const LeadThoughtItem = ({
       wrapper.style.height = `${Math.max(startHeight, 0)}px`;
       wrapper.style.opacity = `${startOpacity}`;
       wrapper.style.willChange = 'height, opacity';
-      void wrapper.offsetHeight;
+      // Force layout reflow so the browser registers the starting values
+      const _reflow = wrapper.offsetHeight;
+      if (_reflow < -1) return; // unreachable — prevents unused-variable lint
 
       animationFrameRef.current = requestAnimationFrame(() => {
-        animationFrameRef.current = requestAnimationFrame(() => {
-          wrapper.style.transition = [
-            `height ${THOUGHT_HEIGHT_ANIMATION_MS}ms ${ENTRY_REVEAL_EASING}`,
-            `opacity ${THOUGHT_HEIGHT_ANIMATION_MS}ms ease`,
-          ].join(', ');
-          wrapper.style.height = `${Math.max(targetHeight, 0)}px`;
-          wrapper.style.opacity = '1';
-        });
+        scheduleTransition(targetHeight);
       });
 
       cleanupTimerRef.current = window.setTimeout(() => {

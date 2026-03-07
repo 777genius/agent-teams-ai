@@ -8,9 +8,8 @@ import { useStore } from '@renderer/store';
 import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { ImagePlus, Mic, Send, Trash2, X } from 'lucide-react';
-
 import { MAX_TEXT_LENGTH } from '@shared/constants';
+import { ImagePlus, Mic, Send, Trash2, X } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CommentAttachmentPayload, ResolvedTeamMember } from '@shared/types';
