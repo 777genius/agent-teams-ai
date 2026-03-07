@@ -12,6 +12,8 @@ import type {
 
 const logger = createLogger('Service:TaskBoundaryParser');
 
+type TaskBoundaryEvent = 'start' | 'complete' | null;
+
 /** Файл-модифицирующие инструменты, которые включаем в scope.toolUseIds */
 const FILE_MODIFYING_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 
@@ -194,7 +196,7 @@ export class TaskBoundaryParser {
       if (!taskId) continue;
 
       const status = typeof input.status === 'string' ? input.status : '';
-      let event: 'start' | 'complete' | null = null;
+      let event: TaskBoundaryEvent = null;
       if (status === 'in_progress') event = 'start';
       else if (status === 'completed') event = 'complete';
 
@@ -245,7 +247,7 @@ export class TaskBoundaryParser {
             : '';
       if (!taskId) continue;
 
-      let event: 'start' | 'complete' | null = null;
+      let event: TaskBoundaryEvent = null;
       if (toolName === 'task_start') event = 'start';
       else if (toolName === 'task_complete') event = 'complete';
       else {
@@ -302,7 +304,7 @@ export class TaskBoundaryParser {
       const action = match[1]; // start | complete | set-status
       const taskId = match[2];
 
-      let event: 'start' | 'complete' | null = null;
+      let event: TaskBoundaryEvent = null;
       if (action === 'start') event = 'start';
       else if (action === 'complete') event = 'complete';
       else if (action === 'set-status') {
