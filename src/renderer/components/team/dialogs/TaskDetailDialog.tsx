@@ -328,7 +328,7 @@ export const TaskDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="min-w-0 sm:max-w-4xl">
+      <DialogContent className="sm:min-w-[500px] sm:max-w-4xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">

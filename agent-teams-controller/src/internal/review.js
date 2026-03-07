@@ -1,6 +1,7 @@
 const kanban = require('./kanban.js');
 const messages = require('./messages.js');
 const tasks = require('./tasks.js');
+const { wrapAgentBlock } = require('./agentBlocks.js');
 
 function getReviewer(context, flags) {
   if (typeof flags.reviewer === 'string' && flags.reviewer.trim()) {
@@ -33,12 +34,12 @@ function requestReview(context, taskId, flags = {}) {
       from,
       text:
         `Please review task #${task.displayId || task.id}.\n\n` +
-        '<agent-block>\n' +
-        `When approved, use MCP tool review_approve:\n` +
-        `{ teamName: "${context.teamName}", taskId: "${task.id}", notifyOwner: true }\n\n` +
-        `If changes are needed, use MCP tool review_request_changes:\n` +
-        `{ teamName: "${context.teamName}", taskId: "${task.id}", comment: "..." }\n` +
-        '</agent-block>',
+        wrapAgentBlock(
+          `When approved, use MCP tool review_approve:\n` +
+            `{ teamName: "${context.teamName}", taskId: "${task.id}", notifyOwner: true }\n\n` +
+            `If changes are needed, use MCP tool review_request_changes:\n` +
+            `{ teamName: "${context.teamName}", taskId: "${task.id}", comment: "..." }`
+        ),
       summary: `Review request for #${task.displayId || task.id}`,
       source: 'system_notification',
     });

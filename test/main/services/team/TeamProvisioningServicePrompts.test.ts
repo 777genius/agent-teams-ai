@@ -5,6 +5,8 @@ import * as path from 'path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
+
 let tempClaudeRoot = '';
 let tempTeamsBase = '';
 let tempTasksBase = '';
@@ -112,6 +114,8 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain('Default to working ONE task at a time');
     expect(prompt).toContain('task_start');
     expect(prompt).toContain('task_complete');
+    expect(prompt).toContain(`AGENT_BLOCK_OPEN is exactly: ${AGENT_BLOCK_OPEN}`);
+    expect(prompt).toContain(`AGENT_BLOCK_CLOSE is exactly: ${AGENT_BLOCK_CLOSE}`);
     expect(prompt).not.toContain('teamctl.js');
     expect(prompt).not.toContain('.claude/tools');
 
@@ -172,6 +176,8 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain('Execute tasks sequentially and keep the board + user updated');
     expect(prompt).toContain('Do NOT start the next task until the current task is completed');
     expect(prompt).toContain('task_start');
+    expect(prompt).toContain(`AGENT_BLOCK_OPEN is exactly: ${AGENT_BLOCK_OPEN}`);
+    expect(prompt).toContain(`AGENT_BLOCK_CLOSE is exactly: ${AGENT_BLOCK_CLOSE}`);
     expect(prompt).not.toContain('teamctl.js');
     expect(prompt).not.toContain('.claude/tools');
 

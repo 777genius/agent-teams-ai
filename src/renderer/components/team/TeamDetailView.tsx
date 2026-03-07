@@ -1551,17 +1551,19 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                 });
               }}
             />
-            <PendingRepliesBlock
-              members={data.members}
-              pendingRepliesByMember={pendingRepliesByMember}
-              onMemberClick={setSelectedMember}
-            />
-            <ActiveTasksBlock
-              members={data.members}
-              tasks={data.tasks}
-              onMemberClick={setSelectedMember}
-              onTaskClick={setSelectedTask}
-            />
+            <div className="mb-[35px]">
+              <PendingRepliesBlock
+                members={data.members}
+                pendingRepliesByMember={pendingRepliesByMember}
+                onMemberClick={setSelectedMember}
+              />
+              <ActiveTasksBlock
+                members={data.members}
+                tasks={data.tasks}
+                onMemberClick={setSelectedMember}
+                onTaskClick={setSelectedTask}
+              />
+            </div>
             <ActivityTimeline
               messages={filteredMessages}
               teamName={teamName}

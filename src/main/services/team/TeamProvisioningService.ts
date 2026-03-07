@@ -658,15 +658,16 @@ function buildAgentBlockUsagePolicy(): string {
   return `Agent-only formatting policy (applies to ALL messages you write):
 - Humans can see teammate inbox messages and coordination text in the UI.
 - Keep normal reasoning, decisions, and user-facing communication OUTSIDE agent-only blocks.
+- Use agent-only blocks specifically for hidden internal instructions sent between agents/teammates that the human user must NOT see in the UI.
 - Any internal operational instructions about tooling/scripts MUST be hidden inside an agent-only block, including:
   - how to use internal MCP tools, exact tool names, and argument shapes
   - review command phrases like "review_approve" / "review_request_changes"
   - internal file paths under ~/.claude/ (teams, tasks, kanban state, etc.)
   - meta coordination lines like "All teammates are online and have received their assignments via --notify."
-- Use an agent-only fenced block (AGENT_BLOCK_OPEN / AGENT_BLOCK_CLOSE):
+- Use an agent-only tag block (AGENT_BLOCK_OPEN / AGENT_BLOCK_CLOSE):
   - AGENT_BLOCK_OPEN is exactly: ${AGENT_BLOCK_OPEN}
   - AGENT_BLOCK_CLOSE is exactly: ${AGENT_BLOCK_CLOSE}
-  - IMPORTANT: the fence lines must start at the beginning of the line (no indentation).
+  - IMPORTANT: put the opening tag and closing tag on their own lines with no indentation.
 - Example (copy/paste exactly, no indentation):
 ${AGENT_BLOCK_OPEN}
 (internal instructions: commands, script usage, paths, etc.)

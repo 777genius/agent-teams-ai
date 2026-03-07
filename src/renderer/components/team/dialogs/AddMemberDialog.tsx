@@ -102,6 +102,10 @@ export const AddMemberDialog = ({
     setError(null);
     const wf = workflowDraft.value.trim() || undefined;
     onAdd(name.trim().toLowerCase(), effectiveRole, wf);
+    // Reset form fields after successful submission
+    setName('');
+    setRoleSelect(NO_ROLE);
+    setCustomRole('');
     workflowDraft.clearDraft();
   };
 
@@ -132,63 +136,67 @@ export const AddMemberDialog = ({
           <DialogDescription>Add a new member to {teamName}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label>Name</Label>
-            <Input
-              placeholder="e.g. alice, dev-1"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                setError(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSubmit();
-              }}
-              autoFocus
-            />
-            {error && <p className="text-xs text-red-400">{error}</p>}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+        >
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input
+                placeholder="e.g. alice, dev-1"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setError(null);
+                }}
+                autoFocus
+              />
+              {error && <p className="text-xs text-red-400">{error}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="label-optional">Role (optional)</Label>
+              <RoleSelect
+                value={roleSelect}
+                onValueChange={setRoleSelect}
+                customRole={customRole}
+                onCustomRoleChange={setCustomRole}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="label-optional">Workflow (optional)</Label>
+              <MentionableTextarea
+                className="text-xs"
+                minRows={3}
+                maxRows={8}
+                value={workflowDraft.value}
+                onValueChange={handleWorkflowChange}
+                suggestions={mentionSuggestions}
+                projectPath={projectPath ?? undefined}
+                placeholder="How this agent should behave, what tasks it handles..."
+                footerRight={
+                  workflowDraft.isSaved ? (
+                    <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                  ) : null
+                }
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label className="label-optional">Role (optional)</Label>
-            <RoleSelect
-              value={roleSelect}
-              onValueChange={setRoleSelect}
-              customRole={customRole}
-              onCustomRoleChange={setCustomRole}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="label-optional">Workflow (optional)</Label>
-            <MentionableTextarea
-              className="text-xs"
-              minRows={3}
-              maxRows={8}
-              value={workflowDraft.value}
-              onValueChange={handleWorkflowChange}
-              suggestions={mentionSuggestions}
-              projectPath={projectPath ?? undefined}
-              placeholder="How this agent should behave, what tasks it handles..."
-              footerRight={
-                workflowDraft.isSaved ? (
-                  <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-                ) : null
-              }
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={adding}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={adding || !name.trim()}>
-            {adding ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
-            Add
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={adding}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={adding || !name.trim()}>
+              {adding ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
+              Add
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

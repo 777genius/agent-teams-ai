@@ -620,7 +620,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
     const rotatingTips = React.useMemo(
       () => [
         'Tip: Use @ to mention team members or search files',
-        'Tip: Mention "delegate a task to a teammate" to add it to the kanban',
+        'Tip: Mention "create a task" to add it to the kanban',
         "Tip: Don't overload the team lead with tasks — ask them to delegate to teammates",
       ],
       []

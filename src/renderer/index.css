@@ -655,6 +655,22 @@ body {
   animation: thought-expand 350ms ease-out both;
 }
 
+@keyframes activity-card-enter {
+  from {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+  to {
+    max-height: 80px;
+    opacity: 1;
+  }
+}
+
+.activity-card-enter-animate {
+  animation: activity-card-enter 300ms ease-out both;
+}
+
 @keyframes att-scale-in {
   from {
     transform: scale(0);

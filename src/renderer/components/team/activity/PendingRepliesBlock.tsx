@@ -2,9 +2,8 @@ import { CARD_BG, CARD_BORDER_STYLE, CARD_ICON_MUTED } from '@renderer/constants
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { agentAvatarUrl, buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { formatDistanceToNowStrict } from 'date-fns';
-import { Loader2 } from 'lucide-react';
 
 import type { ResolvedTeamMember } from '@shared/types';
 
@@ -47,7 +46,7 @@ export const PendingRepliesBlock = ({
         return (
           <article
             key={`pending-reply:${member.name}:${sentAtMs}`}
-            className="overflow-hidden rounded-md"
+            className="activity-card-enter-animate overflow-hidden rounded-md"
             style={{
               backgroundColor: CARD_BG,
               border: CARD_BORDER_STYLE,
@@ -55,10 +54,18 @@ export const PendingRepliesBlock = ({
             }}
           >
             <div className="flex items-center gap-2 px-3 py-2">
-              <Loader2
-                className="size-3.5 shrink-0 animate-spin"
-                style={{ color: colors.border }}
-              />
+              <span className="relative inline-flex shrink-0">
+                <img
+                  src={agentAvatarUrl(member.name, 24)}
+                  alt=""
+                  className="size-5 rounded-full bg-[var(--color-surface-raised)]"
+                  loading="lazy"
+                />
+                <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+                  <span className="relative inline-flex size-full rounded-full bg-emerald-500" />
+                </span>
+              </span>
               {onMemberClick ? (
                 <button
                   type="button"

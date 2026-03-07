@@ -42,7 +42,7 @@ export const ActiveTasksBlock = ({
         return (
           <article
             key={`${member.name}-${taskId}`}
-            className="overflow-hidden rounded-md"
+            className="activity-card-enter-animate overflow-hidden rounded-md"
             style={{
               backgroundColor: CARD_BG,
               border: CARD_BORDER_STYLE,

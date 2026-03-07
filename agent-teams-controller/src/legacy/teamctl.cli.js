@@ -8,9 +8,18 @@ const path = require('path');
 const crypto = require('crypto');
 
 const TOOL_VERSION = '1.0.0';
+const AGENT_BLOCK_TAG = 'info_for_agent';
+const AGENT_BLOCK_OPEN = '<' + AGENT_BLOCK_TAG + '>';
+const AGENT_BLOCK_CLOSE = '</' + AGENT_BLOCK_TAG + '>';
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function wrapAgentBlock(text) {
+  const trimmed = typeof text === 'string' ? text.trim() : '';
+  if (!trimmed) return '';
+  return AGENT_BLOCK_OPEN + '\n' + trimmed + '\n' + AGENT_BLOCK_CLOSE;
 }
 
 function makeId() {
@@ -1261,11 +1270,14 @@ async function main() {
             parts.push('\nInstructions:\n' + prompt);
           }
           parts.push(
-            '\n' + "```info_for_agent",
-            'Update task status using:',
-            'node "' + __filename + '" --team ' + String(teamName) + ' task start ' + String(task.id),
-            'node "' + __filename + '" --team ' + String(teamName) + ' task complete ' + String(task.id),
-            "```"
+            '\n' +
+              wrapAgentBlock(
+                [
+                  'Update task status using:',
+                  'node "' + __filename + '" --team ' + String(teamName) + ' task start ' + String(task.id),
+                  'node "' + __filename + '" --team ' + String(teamName) + ' task complete ' + String(task.id),
+                ].join('\n')
+              )
           );
           sendInboxMessage(paths, teamName, {
             to: task.owner,
@@ -1377,11 +1389,14 @@ async function main() {
           parts.push('\nDescription:\n' + String(task.description).slice(0, 500));
         }
         parts.push(
-          '\n' + "```info_for_agent",
-          'Update task status using:',
-          'node "' + __filename + '" --team ' + String(teamName) + ' task start ' + String(task.id),
-          'node "' + __filename + '" --team ' + String(teamName) + ' task complete ' + String(task.id),
-          "```"
+          '\n' +
+            wrapAgentBlock(
+              [
+                'Update task status using:',
+                'node "' + __filename + '" --team ' + String(teamName) + ' task start ' + String(task.id),
+                'node "' + __filename + '" --team ' + String(teamName) + ' task complete ' + String(task.id),
+              ].join('\n')
+            )
         );
         sendInboxMessage(paths, teamName, {
           to: effectiveOwner,

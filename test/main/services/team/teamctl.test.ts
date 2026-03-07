@@ -2540,7 +2540,7 @@ describe('teamctl.js', () => {
       ]);
       const inbox = readInbox(claudeDir, 'bob') as Record<string, unknown>[];
       const text = String(inbox[0].text);
-      // Must contain agent block markers (```info_for_agent ... ```)
+      // Must contain agent block markers (<info_for_agent> ... </info_for_agent>)
       expect(text).toContain('info_for_agent');
       expect(text).toContain('task start');
       expect(text).toContain('task complete');

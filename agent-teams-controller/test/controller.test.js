@@ -267,6 +267,24 @@ describe('agent-teams-controller API', () => {
     ]);
   });
 
+  it('wraps review instructions in the canonical agent block format used by the UI', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.tasks.createTask({ subject: 'Review me', owner: 'bob' });
+
+    controller.kanban.addReviewer('alice');
+    controller.tasks.completeTask(task.id, 'bob');
+    controller.review.requestReview(task.id, { from: 'team-lead' });
+
+    const reviewerInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
+    const inbox = JSON.parse(fs.readFileSync(reviewerInboxPath, 'utf8'));
+
+    expect(inbox).toHaveLength(1);
+    expect(inbox[0].text).toContain('<info_for_agent>');
+    expect(inbox[0].text).toContain('review_approve');
+    expect(inbox[0].text).not.toContain('<agent-block>');
+  });
+
   it('persists full inbox metadata through controller messages.sendMessage', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
