@@ -6,7 +6,12 @@ import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { ActivityItem, isNoiseMessage } from './ActivityItem';
 import { AnimatedHeightReveal } from './AnimatedHeightReveal';
 import { findNewestMessageIndex, resolveTimelineCollapseState } from './collapseState';
-import { groupTimelineItems, isLeadThought, LeadThoughtsGroupRow } from './LeadThoughtsGroup';
+import {
+  getThoughtGroupKey,
+  groupTimelineItems,
+  isLeadThought,
+  LeadThoughtsGroupRow,
+} from './LeadThoughtsGroup';
 import { useNewItemKeys } from './useNewItemKeys';
 
 import type { ActivityCollapseState } from './collapseState';
@@ -207,11 +212,12 @@ export const ActivityTimeline = ({
   // Group consecutive lead thoughts into collapsible blocks.
   const timelineItems = useMemo(() => groupTimelineItems(visibleMessages), [visibleMessages]);
 
-  // Zebra striping: alternate shade on non-noise (full card) items only.
+  // Zebra striping is anchored from the bottom of the visible list so prepending
+  // new live messages at the top does not recolor every existing card.
   const zebraShadeSet = useMemo(() => {
     const result = new Set<number>();
     let cardCount = 0;
-    for (let i = 0; i < timelineItems.length; i++) {
+    for (let i = timelineItems.length - 1; i >= 0; i--) {
       const item = timelineItems[i];
       if (item.type === 'lead-thoughts') {
         // Thought groups count as one card for striping
@@ -229,11 +235,9 @@ export const ActivityTimeline = ({
   const timelineItemKeys = useMemo(() => {
     const getItemKey = (item: TimelineItem): string => {
       if (item.type === 'lead-thoughts') {
-        // Stable key: identify group by its first thought, not by count (which changes)
-        return `thoughts-${item.group.thoughts[0].messageId ?? item.originalIndices[0]}`;
+        return getThoughtGroupKey(item.group);
       }
-      const msg = item.message;
-      return `${msg.messageId ?? item.originalIndex}-${msg.timestamp}-${msg.from}`;
+      return toMessageKey(item.message);
     };
 
     return timelineItems.map(getItemKey);
@@ -244,6 +248,22 @@ export const ActivityTimeline = ({
     paginationKey: visibleCount,
     resetKey: teamName,
   });
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+    for (const key of timelineItemKeys) {
+      if (seen.has(key)) duplicates.add(key);
+      seen.add(key);
+    }
+    if (duplicates.size > 0) {
+      console.warn('[ActivityTimeline] Duplicate timeline item keys detected', {
+        teamName,
+        duplicates: [...duplicates],
+      });
+    }
+  }, [teamName, timelineItemKeys]);
 
   const handleShowMore = (): void => {
     setVisibleCount((prev) => prev + MESSAGES_PAGE_SIZE);
@@ -304,8 +324,8 @@ export const ActivityTimeline = ({
           const { group } = pinnedThoughtGroup;
           const firstThought = group.thoughts[0];
           const info = memberInfo.get(firstThought.from);
-          const itemKey = `thoughts-${firstThought.messageId ?? pinnedThoughtGroup.originalIndices[0]}`;
-          const stableKey = toMessageKey(firstThought);
+          const itemKey = getThoughtGroupKey(group);
+          const stableKey = itemKey;
           const collapseState = getItemCollapseState(stableKey, 0);
           return (
             <LeadThoughtsGroupRow
@@ -353,8 +373,8 @@ export const ActivityTimeline = ({
           const { group } = item;
           const firstThought = group.thoughts[0];
           const info = memberInfo.get(firstThought.from);
-          const itemKey = `thoughts-${firstThought.messageId ?? item.originalIndices[0]}`;
-          const stableKey = toMessageKey(firstThought);
+          const itemKey = getThoughtGroupKey(group);
+          const stableKey = itemKey;
           const collapseState = getItemCollapseState(stableKey, realIndex);
           return (
             <React.Fragment key={itemKey}>
@@ -380,8 +400,8 @@ export const ActivityTimeline = ({
         const recipientInfo = message.to ? memberInfo.get(message.to) : undefined;
         const recipientColor =
           recipientInfo?.color ?? (message.to ? colorMap.get(message.to) : undefined);
-        const messageKey = `${message.messageId ?? item.originalIndex}-${message.timestamp}-${message.from}`;
-        const stableKey = toMessageKey(message);
+        const messageKey = toMessageKey(message);
+        const stableKey = messageKey;
         const collapseState = getItemCollapseState(stableKey, realIndex);
         const isUnread = readState
           ? !message.read && !readState.readSet.has(readState.getMessageKey(message))

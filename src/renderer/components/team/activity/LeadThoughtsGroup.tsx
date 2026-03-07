@@ -14,6 +14,7 @@ import {
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
+import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { formatToolSummary, parseToolSummary } from '@shared/utils/toolSummary';
 import { ChevronDown, ChevronRight, ChevronUp, Reply } from 'lucide-react';
 
@@ -44,8 +45,17 @@ export function isLeadThought(msg: InboxMessage): boolean {
 }
 
 export type TimelineItem =
-  | { type: 'message'; message: InboxMessage; originalIndex: number }
-  | { type: 'lead-thoughts'; group: LeadThoughtGroup; originalIndices: number[] };
+  | { type: 'message'; message: InboxMessage }
+  | { type: 'lead-thoughts'; group: LeadThoughtGroup };
+
+/**
+ * Use the oldest thought as the group's stable identity so live thoughts can prepend
+ * without remounting the whole group on every update.
+ */
+export function getThoughtGroupKey(group: LeadThoughtGroup): string {
+  const oldestThought = group.thoughts[group.thoughts.length - 1];
+  return `thoughts-${toMessageKey(oldestThought)}`;
+}
 
 /**
  * Group consecutive lead thoughts into compact blocks.
@@ -54,7 +64,6 @@ export type TimelineItem =
 export function groupTimelineItems(messages: InboxMessage[]): TimelineItem[] {
   const result: TimelineItem[] = [];
   let pendingThoughts: InboxMessage[] = [];
-  let pendingIndices: number[] = [];
   const hasSameLeadSession = (a: InboxMessage, b: InboxMessage): boolean =>
     (a.leadSessionId ?? null) === (b.leadSessionId ?? null);
 
@@ -63,24 +72,20 @@ export function groupTimelineItems(messages: InboxMessage[]): TimelineItem[] {
     result.push({
       type: 'lead-thoughts',
       group: { type: 'lead-thoughts', thoughts: pendingThoughts },
-      originalIndices: pendingIndices,
     });
     pendingThoughts = [];
-    pendingIndices = [];
   };
 
-  for (let i = 0; i < messages.length; i++) {
-    const msg = messages[i];
+  for (const msg of messages) {
     if (isLeadThought(msg)) {
       const previousThought = pendingThoughts[pendingThoughts.length - 1];
       if (previousThought && !hasSameLeadSession(previousThought, msg)) {
         flushThoughts();
       }
       pendingThoughts.push(msg);
-      pendingIndices.push(i);
     } else {
       flushThoughts();
-      result.push({ type: 'message', message: msg, originalIndex: i });
+      result.push({ type: 'message', message: msg });
     }
   }
   flushThoughts();
@@ -756,7 +761,7 @@ export const LeadThoughtsGroupRow = ({
             <div ref={contentRef}>
               {chronologicalThoughts.map((thought, idx) => (
                 <LeadThoughtItem
-                  key={thought.messageId ?? idx}
+                  key={toMessageKey(thought)}
                   thought={thought}
                   showDivider={idx > 0}
                   shouldAnimate={isLive && idx === chronologicalThoughts.length - 1}

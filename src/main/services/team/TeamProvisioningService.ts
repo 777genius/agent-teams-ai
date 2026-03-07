@@ -431,6 +431,18 @@ function buildCompactMembersRoster(members: TeamCreateRequest['members']): strin
     .join('\n');
 }
 
+function buildTeammateAgentBlockReminder(): string {
+  return [
+    `Hidden internal instructions rule (IMPORTANT):`,
+    `- If you send internal operational instructions to another agent/teammate that the human user must NOT see in the UI, wrap ONLY that hidden part in:`,
+    `  ${AGENT_BLOCK_OPEN}`,
+    `  ... hidden instructions only ...`,
+    `  ${AGENT_BLOCK_CLOSE}`,
+    `- Keep normal human-readable coordination outside the block.`,
+    `- NEVER use agent-only blocks in messages to "user".`,
+  ].join('\n');
+}
+
 function buildMemberSpawnPrompt(
   member: TeamCreateRequest['members'][number],
   displayName: string,
@@ -447,6 +459,7 @@ function buildMemberSpawnPrompt(
 ${getAgentLanguageInstruction()}
 Introduce yourself briefly (name and role) and confirm you are ready.
 Then wait for task assignments.
+${buildTeammateAgentBlockReminder()}
 Include the following agent-only instructions verbatim in the prompt:
 
 ${taskProtocol}
@@ -898,6 +911,7 @@ function buildLaunchPrompt(
      ${languageInstruction}
      The team has been reconnected after a restart.
      ${hasTasks ? `You have pending tasks from the previous session.` : 'You have no pending tasks currently.'}
+     ${buildTeammateAgentBlockReminder()}
 
      Your FIRST action: call MCP tool task_briefing with:
      { teamName: "${request.teamName}", memberName: "${m.name}" }

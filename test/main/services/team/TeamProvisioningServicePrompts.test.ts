@@ -187,4 +187,93 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     await svc.cancelProvisioning(runId);
   });
+
+  it('createTeam prompt for teammates includes explicit hidden-instruction block rules', async () => {
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
+    const { child, writeSpy } = createFakeChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService();
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).pathExists = vi.fn(async () => false);
+
+    const { runId } = await svc.createTeam(
+      {
+        teamName: 'multi-team',
+        cwd: process.cwd(),
+        members: [{ name: 'alice', role: 'developer' }],
+        description: 'Multi team prompt test',
+      },
+      () => {}
+    );
+
+    const prompt = extractPromptFromWrite(writeSpy);
+    expect(prompt).toContain('Hidden internal instructions rule (IMPORTANT):');
+    expect(prompt).toContain(`  ${AGENT_BLOCK_OPEN}`);
+    expect(prompt).toContain(`  ${AGENT_BLOCK_CLOSE}`);
+    expect(prompt).toContain('NEVER use agent-only blocks in messages to "user".');
+
+    await svc.cancelProvisioning(runId);
+  });
+
+  it('launchTeam reconnect prompt for teammates includes explicit hidden-instruction block rules', async () => {
+    const teamName = 'multi-team-launch';
+    const teamDir = path.join(tempTeamsBase, teamName);
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        description: 'Multi team prompt test',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'alice', agentType: 'teammate', role: 'developer' },
+        ],
+      }),
+      'utf8'
+    );
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
+    const { child, writeSpy } = createFakeChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService();
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
+    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+      members: [{ name: 'alice', role: 'developer' }],
+      source: 'config-fallback',
+      warning: undefined,
+    }));
+    (svc as any).pathExists = vi.fn(async () => false);
+    (svc as any).startFilesystemMonitor = vi.fn();
+
+    const { runId } = await svc.launchTeam(
+      {
+        teamName,
+        cwd: process.cwd(),
+        clearContext: true,
+      } as any,
+      () => {}
+    );
+
+    const prompt = extractPromptFromWrite(writeSpy);
+    expect(prompt).toContain('The team has been reconnected after a restart.');
+    expect(prompt).toContain('Hidden internal instructions rule (IMPORTANT):');
+    expect(prompt).toContain(`  ${AGENT_BLOCK_OPEN}`);
+    expect(prompt).toContain(`  ${AGENT_BLOCK_CLOSE}`);
+    expect(prompt).toContain('NEVER use agent-only blocks in messages to "user".');
+
+    await svc.cancelProvisioning(runId);
+  });
 });

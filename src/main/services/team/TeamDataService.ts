@@ -339,6 +339,8 @@ export class TeamDataService {
       });
     }
 
+    this.ensureStableMessageIds(messages);
+
     // Enrich inbox messages without leadSessionId by assigning the nearest neighbor's
     // session ID (by timestamp).  This avoids the old forward-only propagation bug where
     // messages between two sessions always inherited the *earlier* session, causing a
@@ -1112,6 +1114,66 @@ export class TeamDataService {
     const normalized = owner.trim().toLowerCase();
     if (!normalized) return false;
     return normalized === leadName.trim().toLowerCase() || normalized === 'team-lead';
+  }
+
+  private normalizeMessageIdPart(value: string | undefined, fallback = 'unknown'): string {
+    const normalized = (value ?? '')
+      .trim()
+      .replace(/\r\n/g, '\n')
+      .replace(/\s+/g, '-')
+      .replace(/[^\p{L}\p{N}_-]/gu, '')
+      .slice(0, 40);
+    return normalized || fallback;
+  }
+
+  /**
+   * Older inbox/sent-message records may not include messageId. Assign deterministic ids
+   * so renderer keys remain stable across refreshes, filtering, and live updates.
+   */
+  private ensureStableMessageIds(messages: InboxMessage[]): void {
+    const seenAssignedIds = new Set<string>();
+    const missingIdOccurrences = new Map<string, number>();
+
+    for (const message of messages) {
+      const existingId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
+      if (existingId) {
+        seenAssignedIds.add(existingId);
+        continue;
+      }
+
+      const textPrefix = this.normalizeMessageIdPart(message.text?.slice(0, 80), 'empty');
+      const fingerprint = [
+        message.source ?? 'unknown',
+        message.timestamp,
+        message.from,
+        message.to ?? '',
+        message.leadSessionId ?? '',
+        textPrefix,
+      ].join('\0');
+      const occurrence = (missingIdOccurrences.get(fingerprint) ?? 0) + 1;
+      missingIdOccurrences.set(fingerprint, occurrence);
+
+      let syntheticId = [
+        'synthetic-msg',
+        this.normalizeMessageIdPart(message.source, 'unknown'),
+        this.normalizeMessageIdPart(message.timestamp, 'unknown'),
+        this.normalizeMessageIdPart(message.from, 'unknown'),
+        this.normalizeMessageIdPart(message.to, 'none'),
+        textPrefix,
+        occurrence,
+      ].join('-');
+
+      if (seenAssignedIds.has(syntheticId)) {
+        let collision = 2;
+        while (seenAssignedIds.has(`${syntheticId}-dup${collision}`)) {
+          collision++;
+        }
+        syntheticId = `${syntheticId}-dup${collision}`;
+      }
+
+      message.messageId = syntheticId;
+      seenAssignedIds.add(syntheticId);
+    }
   }
 
   async sendDirectToLead(
