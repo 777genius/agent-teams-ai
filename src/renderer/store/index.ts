@@ -13,6 +13,7 @@ import { createConnectionSlice } from './slices/connectionSlice';
 import { createContextSlice } from './slices/contextSlice';
 import { createConversationSlice } from './slices/conversationSlice';
 import { createEditorSlice } from './slices/editorSlice';
+import { createExtensionsSlice } from './slices/extensionsSlice';
 import { createNotificationSlice } from './slices/notificationSlice';
 import { createPaneSlice } from './slices/paneSlice';
 import { createProjectSlice } from './slices/projectSlice';
@@ -61,6 +62,7 @@ export const useStore = create<AppState>()((...args) => ({
   ...createChangeReviewSlice(...args),
   ...createCliInstallerSlice(...args),
   ...createEditorSlice(...args),
+  ...createExtensionsSlice(...args),
 }));
 
 // =============================================================================

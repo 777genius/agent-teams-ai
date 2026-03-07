@@ -65,6 +65,17 @@ import {
   TeamProvisioningService,
   UpdaterService,
 } from './services';
+import {
+  ExtensionFacadeService,
+  GlamaMcpEnrichmentService,
+  McpCatalogAggregator,
+  McpInstallationStateService,
+  McpInstallService,
+  OfficialMcpRegistryService,
+  PluginCatalogService,
+  PluginInstallationStateService,
+  PluginInstallService,
+} from './services/extensions';
 
 import type { FileChangeEvent } from '@main/types';
 import type { TeamChangeEvent } from '@shared/types';
@@ -431,9 +442,11 @@ function wireFileWatcherEvents(context: ServiceContext): void {
       // --- Inbox change events: relay to lead + native OS notifications ---
       if (row.type === 'inbox') {
         if (teamDataService) {
-          void teamDataService.reconcileTeamArtifacts(teamName).catch((e: unknown) =>
-            logger.warn(`[FileWatcher] reconcile failed for ${teamName}: ${String(e)}`)
-          );
+          void teamDataService
+            .reconcileTeamArtifacts(teamName)
+            .catch((e: unknown) =>
+              logger.warn(`[FileWatcher] reconcile failed for ${teamName}: ${String(e)}`)
+            );
         }
 
         // Auto-relay ONLY lead-inbox changes into the live lead process.
@@ -485,9 +498,11 @@ function wireFileWatcherEvents(context: ServiceContext): void {
 
       // --- Task change events: notify lead when teammate starts a task via CLI ---
       if (row.type === 'task' && detail.endsWith('.json') && teamDataService) {
-        void teamDataService.reconcileTeamArtifacts(teamName).catch((e: unknown) =>
-          logger.warn(`[FileWatcher] task reconcile failed for ${teamName}: ${String(e)}`)
-        );
+        void teamDataService
+          .reconcileTeamArtifacts(teamName)
+          .catch((e: unknown) =>
+            logger.warn(`[FileWatcher] task reconcile failed for ${teamName}: ${String(e)}`)
+          );
 
         const taskId = detail.replace('.json', '');
         void teamDataService
@@ -648,6 +663,24 @@ function initializeServices(): void {
   const fileContentResolver = new FileContentResolver(teamMemberLogsFinder, gitDiffFallback);
   const reviewApplier = new ReviewApplierService();
 
+  // Extension Store services
+  const pluginCatalogService = new PluginCatalogService();
+  const pluginStateService = new PluginInstallationStateService();
+  const officialMcpRegistry = new OfficialMcpRegistryService();
+  const glamaMcpService = new GlamaMcpEnrichmentService();
+  const mcpAggregator = new McpCatalogAggregator(officialMcpRegistry, glamaMcpService);
+  const mcpStateService = new McpInstallationStateService();
+  const extensionFacadeService = new ExtensionFacadeService(
+    pluginCatalogService,
+    pluginStateService,
+    mcpAggregator,
+    mcpStateService
+  );
+
+  // Install services — pass null for binary (uses PATH lookup via execCli fallback)
+  const pluginInstallService = new PluginInstallService(null, pluginCatalogService);
+  const mcpInstallService = new McpInstallService(null, mcpAggregator);
+
   // warmup() and ensureInstalled() are deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.
   httpServer = new HttpServer();
@@ -695,7 +728,10 @@ function initializeServices(): void {
     reviewApplier,
     gitDiffFallback,
     cliInstallerService,
-    ptyTerminalService
+    ptyTerminalService,
+    extensionFacadeService,
+    pluginInstallService,
+    mcpInstallService
   );
 
   // Forward SSH state changes to renderer and HTTP SSE clients

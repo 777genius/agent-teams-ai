@@ -129,6 +129,16 @@ import {
   WINDOW_IS_MAXIMIZED,
   WINDOW_MAXIMIZE,
   WINDOW_MINIMIZE,
+  PLUGIN_GET_ALL,
+  PLUGIN_GET_README,
+  PLUGIN_INSTALL,
+  PLUGIN_UNINSTALL,
+  MCP_REGISTRY_SEARCH,
+  MCP_REGISTRY_BROWSE,
+  MCP_REGISTRY_GET_BY_ID,
+  MCP_REGISTRY_GET_INSTALLED,
+  MCP_REGISTRY_INSTALL,
+  MCP_REGISTRY_UNINSTALL,
 } from './constants/ipcChannels';
 import {
   CONFIG_ADD_CUSTOM_PROJECT_PATH,
@@ -222,6 +232,15 @@ import type {
   UpdateKanbanPatch,
   WslClaudeRootCandidate,
 } from '@shared/types';
+import type {
+  EnrichedPlugin,
+  InstalledMcpEntry,
+  McpCatalogItem,
+  McpInstallRequest,
+  McpSearchResult,
+  OperationResult,
+  PluginInstallRequest,
+} from '@shared/types/extensions';
 import type {
   BinaryPreviewResult,
   CreateDirResponse,
@@ -1252,6 +1271,38 @@ const electronAPI: ElectronAPI = {
         ipcRenderer.removeListener(EDITOR_CHANGE, listener);
       };
     },
+  },
+
+  // ===== Plugin Catalog API (Electron-only) =====
+  plugins: {
+    getAll: (projectPath?: string, forceRefresh?: boolean) =>
+      invokeIpcWithResult<EnrichedPlugin[]>(PLUGIN_GET_ALL, projectPath, forceRefresh),
+    getReadme: (pluginId: string) =>
+      invokeIpcWithResult<string | null>(PLUGIN_GET_README, pluginId),
+    install: (request: PluginInstallRequest) =>
+      invokeIpcWithResult<OperationResult>(PLUGIN_INSTALL, request),
+    uninstall: (pluginId: string, scope?: string, projectPath?: string) =>
+      invokeIpcWithResult<OperationResult>(PLUGIN_UNINSTALL, pluginId, scope, projectPath),
+  },
+
+  // ===== MCP Registry API (Electron-only) =====
+  mcpRegistry: {
+    search: (query: string, limit?: number) =>
+      invokeIpcWithResult<McpSearchResult>(MCP_REGISTRY_SEARCH, query, limit),
+    browse: (cursor?: string, limit?: number) =>
+      invokeIpcWithResult<{ servers: McpCatalogItem[]; nextCursor?: string }>(
+        MCP_REGISTRY_BROWSE,
+        cursor,
+        limit
+      ),
+    getById: (registryId: string) =>
+      invokeIpcWithResult<McpCatalogItem | null>(MCP_REGISTRY_GET_BY_ID, registryId),
+    getInstalled: (projectPath?: string) =>
+      invokeIpcWithResult<InstalledMcpEntry[]>(MCP_REGISTRY_GET_INSTALLED, projectPath),
+    install: (request: McpInstallRequest) =>
+      invokeIpcWithResult<OperationResult>(MCP_REGISTRY_INSTALL, request),
+    uninstall: (name: string, scope?: string, projectPath?: string) =>
+      invokeIpcWithResult<OperationResult>(MCP_REGISTRY_UNINSTALL, name, scope, projectPath),
   },
 };
 

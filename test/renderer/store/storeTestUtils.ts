@@ -10,6 +10,7 @@ import { createConfigSlice } from '../../../src/renderer/store/slices/configSlic
 import { createConnectionSlice } from '../../../src/renderer/store/slices/connectionSlice';
 import { createContextSlice } from '../../../src/renderer/store/slices/contextSlice';
 import { createEditorSlice } from '../../../src/renderer/store/slices/editorSlice';
+import { createExtensionsSlice } from '../../../src/renderer/store/slices/extensionsSlice';
 import { createConversationSlice } from '../../../src/renderer/store/slices/conversationSlice';
 import { createNotificationSlice } from '../../../src/renderer/store/slices/notificationSlice';
 import { createPaneSlice } from '../../../src/renderer/store/slices/paneSlice';
@@ -51,6 +52,7 @@ export function createTestStore() {
     ...createChangeReviewSlice(...args),
     ...createCliInstallerSlice(...args),
     ...createEditorSlice(...args),
+    ...createExtensionsSlice(...args),
   }));
 }
 

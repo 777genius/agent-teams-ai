@@ -10,6 +10,7 @@
 import type { CliArgsValidationResult } from '../utils/cliArgsParser';
 import type { CliInstallerAPI } from './cliInstaller';
 import type { EditorAPI, ProjectAPI } from './editor';
+import type { McpCatalogAPI, PluginCatalogAPI } from './extensions';
 import type {
   AppConfig,
   DetectedError,
@@ -744,6 +745,12 @@ export interface ElectronAPI {
 
   // Project Editor API (file browser + CodeMirror)
   editor: EditorAPI;
+
+  // Extension Store — Plugin Catalog API (Electron-only, optional)
+  plugins?: PluginCatalogAPI;
+
+  // Extension Store — MCP Registry API (Electron-only, optional)
+  mcpRegistry?: McpCatalogAPI;
 }
 
 // =============================================================================

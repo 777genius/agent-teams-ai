@@ -512,3 +512,41 @@ export const EDITOR_CHANGE = 'editor:change';
 
 /** List project files by path (for @file mentions, independent of editor state) */
 export const PROJECT_LIST_FILES = 'project:listFiles';
+
+// =============================================================================
+// Extensions / Plugin Catalog Channels
+// =============================================================================
+
+/** Get all enriched plugins (catalog + installed state + counts) */
+export const PLUGIN_GET_ALL = 'plugin:getAll';
+
+/** Get README content for a plugin by pluginId */
+export const PLUGIN_GET_README = 'plugin:getReadme';
+
+// =============================================================================
+// Extensions / MCP Registry Channels
+// =============================================================================
+
+/** Search MCP servers across registries */
+export const MCP_REGISTRY_SEARCH = 'mcpRegistry:search';
+
+/** Browse MCP catalog with pagination */
+export const MCP_REGISTRY_BROWSE = 'mcpRegistry:browse';
+
+/** Get a single MCP server by registry ID */
+export const MCP_REGISTRY_GET_BY_ID = 'mcpRegistry:getById';
+
+/** Get installed MCP servers */
+export const MCP_REGISTRY_GET_INSTALLED = 'mcpRegistry:getInstalled';
+
+/** Install a plugin */
+export const PLUGIN_INSTALL = 'plugin:install';
+
+/** Uninstall a plugin */
+export const PLUGIN_UNINSTALL = 'plugin:uninstall';
+
+/** Install an MCP server */
+export const MCP_REGISTRY_INSTALL = 'mcpRegistry:install';
+
+/** Uninstall an MCP server */
+export const MCP_REGISTRY_UNINSTALL = 'mcpRegistry:uninstall';

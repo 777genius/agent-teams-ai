@@ -38,3 +38,6 @@ export type * from './terminal';
 
 // Re-export Editor types
 export type * from './editor';
+
+// Re-export Extension Store types (inferCapabilities is re-exported from extensionNormalizers)
+export type * from './extensions';
