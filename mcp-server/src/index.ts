@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { pathToFileURL } from 'node:url';
+
 import { FastMCP } from 'fastmcp';
 
 import { registerTools } from './tools';
@@ -14,7 +16,7 @@ export function createServer() {
   return server;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const server = createServer();
   void server.start({
     transportType: 'stdio',

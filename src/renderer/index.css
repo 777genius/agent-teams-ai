@@ -233,7 +233,7 @@
 /* Light theme overrides - Warm neutral palette for eye comfort */
 :root.light {
   --color-surface: #f9f9f7; /* Warm off-white (not pure white) */
-  --color-surface-raised: #f0efed; /* Warm raised surface, clearly distinct */
+  --color-surface-raised: #e8e6e3; /* Warm raised surface — stronger contrast for visible hover */
   --color-surface-overlay: #e8e7e4; /* Warm overlay */
   --color-surface-sidebar: #f1f0ee; /* Warm sidebar, distinct from main */
   --color-border: #d5d3cf; /* Warm neutral border */

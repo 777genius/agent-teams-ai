@@ -999,6 +999,7 @@ export class TeamDataService {
   ): Promise<TaskComment> {
     const controller = this.getController(teamName);
     const addResult = controller.tasks.addTaskComment(taskId, {
+      from: 'user',
       text,
       attachments,
     }) as { task?: TeamTask; comment?: TaskComment };

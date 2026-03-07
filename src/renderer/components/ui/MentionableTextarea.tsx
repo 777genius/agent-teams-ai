@@ -488,9 +488,11 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
             setMergedIndex((prev) => (prev - 1 + allSuggestions.length) % allSuggestions.length);
             break;
           case 'Enter':
-            e.preventDefault();
-            if (allSuggestions[mergedIndex]) {
-              handleMergedSelect(allSuggestions[mergedIndex]);
+            if (!e.shiftKey) {
+              e.preventDefault();
+              if (allSuggestions[mergedIndex]) {
+                handleMergedSelect(allSuggestions[mergedIndex]);
+              }
             }
             break;
           case 'Escape':
@@ -502,9 +504,18 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       [isOpen, allSuggestions, mergedIndex, handleMergedSelect, dismiss]
     );
 
-    // Composed key handler: Mod+Enter submit → chip logic → mention logic
+    // Composed key handler: mention logic first (when open) → Mod+Enter submit → chip logic → mention fallback
     const composedHandleKeyDown = React.useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        // When mention dropdown is open, let mention handler consume Enter/Arrow keys first
+        if (isOpen && effectiveSuggestions.length > 0) {
+          if (enableFiles) {
+            fileMentionHandleKeyDown(e);
+          } else {
+            mentionHandleKeyDown(e);
+          }
+          if (e.defaultPrevented) return;
+        }
         // Enter (without Shift) → submit; Shift+Enter → newline
         if (e.key === 'Enter' && !e.shiftKey && onModEnter) {
           e.preventDefault();
@@ -512,7 +523,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           return;
         }
         handleChipKeyDown(e);
-        if (!e.defaultPrevented) {
+        if (!e.defaultPrevented && !isOpen) {
           if (enableFiles) {
             fileMentionHandleKeyDown(e);
           } else {
@@ -520,7 +531,15 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           }
         }
       },
-      [onModEnter, handleChipKeyDown, enableFiles, fileMentionHandleKeyDown, mentionHandleKeyDown]
+      [
+        onModEnter,
+        handleChipKeyDown,
+        enableFiles,
+        fileMentionHandleKeyDown,
+        mentionHandleKeyDown,
+        isOpen,
+        effectiveSuggestions.length,
+      ]
     );
 
     // --- Chip reconciliation on text change ---

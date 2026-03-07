@@ -955,7 +955,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           )}
 
           <div
-            className="relative mb-3 overflow-hidden rounded-lg border border-[var(--color-border)] px-4 py-3"
+            className="relative -mx-4 -mt-4 mb-3 overflow-hidden border-b border-[var(--color-border)] px-4 py-3"
             style={
               headerColorSet
                 ? { borderLeftWidth: '3px', borderLeftColor: headerColorSet.border }
@@ -964,7 +964,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           >
             {headerColorSet ? (
               <div
-                className="pointer-events-none absolute inset-0 z-0 rounded-lg"
+                className="pointer-events-none absolute inset-0 z-0"
                 style={{ backgroundColor: getThemedBadge(headerColorSet, isLight) }}
               />
             ) : null}

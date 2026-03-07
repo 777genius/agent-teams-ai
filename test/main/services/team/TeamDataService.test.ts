@@ -118,6 +118,65 @@ describe('TeamDataService', () => {
     await expect(service.reconcileTeamArtifacts('my-team')).rejects.toThrow('reconcile failed');
   });
 
+  it('writes UI task comments with author user', async () => {
+    const addTaskComment = vi.fn(() => ({
+      comment: {
+        id: 'comment-1',
+        author: 'user',
+        text: 'Need clarification',
+        createdAt: '2026-03-07T20:00:00.000Z',
+        type: 'regular',
+      },
+      task: {
+        id: 'task-1',
+        subject: 'Investigate',
+        status: 'pending',
+        owner: 'team-lead',
+      },
+    }));
+
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [{ name: 'team-lead', role: 'Lead' }] })),
+      } as never,
+      {
+        getTasks: vi.fn(async () => []),
+      } as never,
+      {
+        listInboxNames: vi.fn(async () => []),
+        getMessages: vi.fn(async () => []),
+      } as never,
+      {} as never,
+      {} as never,
+      {
+        resolveMembers: vi.fn(() => []),
+      } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
+        garbageCollect: vi.fn(async () => undefined),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      () =>
+        ({
+          tasks: {
+            addTaskComment,
+            setNeedsClarification: vi.fn(),
+          },
+        }) as never
+    );
+
+    await service.addTaskComment('my-team', 'task-1', 'Need clarification');
+
+    expect(addTaskComment).toHaveBeenCalledWith('task-1', {
+      from: 'user',
+      text: 'Need clarification',
+      attachments: undefined,
+    });
+  });
+
   it('includes projectPath from config when creating a task', async () => {
     const createTaskMock = vi.fn((task) => task);
 

@@ -477,14 +477,15 @@ function buildTaskStatusProtocol(teamName: string): string {
    { teamName: "${teamName}", taskId: "<taskId>", text: "<summary of your finding or decision>", from: "<your-name>" }
    Do NOT comment on trivial coordination messages. Only comment when the information is valuable context for the task.
 8. When sending a message about a specific task, include its short display label like #<displayId> in your SendMessage summary field for traceability.
-9. Review workflow clarity (IMPORTANT):
+9. In ALL human-facing or teammate-facing message text, when you mention a task reference, ALWAYS write it with a leading # (for example: #abcd1234, not abcd1234 or "task abcd1234").
+10. Review workflow clarity (IMPORTANT):
    - The work task (e.g. #1) is the thing that must end up APPROVED after review.
    - If you are reviewing work for task #X, run review_approve/review_request_changes on #X (the work task).
    - Do NOT approve a separate "review task" (e.g. #2 created just to ask for a review) — that will put the wrong task into APPROVED.
    - Typical flow:
      a) Owner finishes work on #X -> task_complete #X
      b) Reviewer accepts -> review_approve #X
-10. CLARIFICATION PROTOCOL (CRITICAL — MANDATORY):
+11. CLARIFICATION PROTOCOL (CRITICAL — MANDATORY):
     When you are blocked and need information to continue a task, you MUST do BOTH steps below — skipping the MCP update breaks the task board:
     a) STEP 1 — FIRST, set the clarification flag with MCP tool task_set_clarification:
        { teamName: "${teamName}", taskId: "<taskId>", value: "lead" }
@@ -494,7 +495,7 @@ function buildTaskStatusProtocol(teamName: string): string {
        If the lead replies via SendMessage instead, clear the flag yourself once you have the answer:
        { teamName: "${teamName}", taskId: "<taskId>", value: "clear" }
     d) Do NOT set clarification to "user" yourself — only the team lead escalates to the user.
-11. DEPENDENCY AWARENESS:
+12. DEPENDENCY AWARENESS:
     When your task has blockedBy dependencies, check if they are completed before starting.
     When you complete a task that blocks others, mention this in your completion message so blocked teammates can proceed.
 Failure to follow this protocol means the task board will show incorrect status.`);
@@ -677,6 +678,7 @@ ${AGENT_BLOCK_CLOSE}
   - any node/bash commands
   - internal file paths (~/.claude/teams/, etc.)
   - instructions to run commands in terminal
+  - task references without a leading # (for example write #abcd1234, not abcd1234)
   Instead, describe the action in human-friendly language (e.g. "Task #6 is complete." instead of showing a command to mark it complete). If you need to update task status, do it YOURSELF — never ask the user to run a command.
 - CRITICAL: When processing relayed inbox messages, your text output is shown to the user. Do NOT wrap your entire response in an agent-only block. If you need agent-only instructions, put them in a separate block and include a brief human-readable summary outside of it (e.g. "Delegated task to carol." or "Acknowledged, no action needed.").`;
 }
@@ -1855,7 +1857,14 @@ export class TeamProvisioningService {
       const prompt = buildProvisioningPrompt(request);
       let child: ReturnType<typeof spawn>;
       const { env: shellEnv } = await this.buildProvisioningEnv();
-      const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile();
+      let mcpConfigPath: string;
+      try {
+        mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile();
+      } catch (error) {
+        this.runs.delete(runId);
+        this.activeByTeam.delete(request.teamName);
+        throw error;
+      }
       const spawnArgs = [
         '--input-format',
         'stream-json',
@@ -2188,7 +2197,15 @@ export class TeamProvisioningService {
       );
       let child: ReturnType<typeof spawn>;
       const { env: shellEnv } = await this.buildProvisioningEnv();
-      const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile();
+      let mcpConfigPath: string;
+      try {
+        mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile();
+      } catch (error) {
+        this.runs.delete(runId);
+        this.activeByTeam.delete(request.teamName);
+        await this.restorePrelaunchConfig(request.teamName);
+        throw error;
+      }
       const launchArgs = [
         '--input-format',
         'stream-json',
