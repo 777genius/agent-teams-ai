@@ -233,7 +233,6 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamData,
-  TeamGetDataOptions,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamMessageNotificationData,
@@ -741,8 +740,8 @@ const electronAPI: ElectronAPI = {
     list: async () => {
       return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
     },
-    getData: async (teamName: string, options?: TeamGetDataOptions) => {
-      return invokeIpcWithResult<TeamData>(TEAM_GET_DATA, teamName, options);
+    getData: async (teamName: string) => {
+      return invokeIpcWithResult<TeamData>(TEAM_GET_DATA, teamName);
     },
     getClaudeLogs: async (teamName: string, query?: TeamClaudeLogsQuery) => {
       return invokeIpcWithResult<TeamClaudeLogsResponse>(TEAM_GET_CLAUDE_LOGS, teamName, query);

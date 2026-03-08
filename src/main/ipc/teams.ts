@@ -114,7 +114,6 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamData,
-  TeamGetDataOptions,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamMessageNotificationData,
@@ -378,23 +377,17 @@ async function handleListTeams(_event: IpcMainInvokeEvent): Promise<IpcResult<Te
 
 async function handleGetData(
   _event: IpcMainInvokeEvent,
-  teamName: unknown,
-  options: unknown
+  teamName: unknown
 ): Promise<IpcResult<TeamData>> {
   const validated = validateTeamName(teamName);
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   const tn = validated.value!;
-  const includeMessages =
-    !options ||
-    typeof options !== 'object' ||
-    !('includeMessages' in options) ||
-    (options as TeamGetDataOptions).includeMessages !== false;
   const startedAt = Date.now();
   let data: TeamData;
   try {
-    data = await getTeamDataService().getTeamData(tn, { includeMessages });
+    data = await getTeamDataService().getTeamData(tn);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (
@@ -415,10 +408,6 @@ async function handleGetData(
 
   const displayName = data.config.name || tn;
   const projectPath = data.config.projectPath;
-
-  if (!includeMessages) {
-    return { success: true, data: { ...data, isAlive } };
-  }
 
   const live = provisioning.getLiveLeadProcessMessages(tn);
   if (live.length === 0) {

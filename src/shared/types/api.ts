@@ -60,7 +60,6 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamData,
-  TeamGetDataOptions,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamMessageNotificationData,
@@ -409,7 +408,7 @@ export interface HttpServerAPI {
 
 export interface TeamsAPI {
   list: () => Promise<TeamSummary[]>;
-  getData: (teamName: string, options?: TeamGetDataOptions) => Promise<TeamData>;
+  getData: (teamName: string) => Promise<TeamData>;
   getClaudeLogs: (teamName: string, query?: TeamClaudeLogsQuery) => Promise<TeamClaudeLogsResponse>;
   deleteTeam: (teamName: string) => Promise<void>;
   restoreTeam: (teamName: string) => Promise<void>;

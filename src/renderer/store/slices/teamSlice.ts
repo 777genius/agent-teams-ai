@@ -264,7 +264,6 @@ export interface TeamSlice {
   selectedTeamName: string | null;
   selectedTeamData: TeamData | null;
   selectedTeamLoading: boolean;
-  selectedTeamMessagesLoading: boolean;
   selectedTeamError: string | null;
   sendingMessage: boolean;
   sendMessageError: string | null;
@@ -290,10 +289,7 @@ export interface TeamSlice {
   openTeamTab: (teamName: string, projectPath?: string, taskId?: string) => void;
   clearKanbanFilter: () => void;
   selectTeam: (teamName: string, opts?: { skipProjectAutoSelect?: boolean }) => Promise<void>;
-  refreshTeamData: (
-    teamName: string,
-    opts?: { includeMessages?: boolean; messagesLoading?: boolean }
-  ) => Promise<void>;
+  refreshTeamData: (teamName: string) => Promise<void>;
   sendTeamMessage: (teamName: string, request: SendMessageRequest) => Promise<void>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
   updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;
@@ -399,7 +395,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   selectedTeamName: null,
   selectedTeamData: null,
   selectedTeamLoading: false,
-  selectedTeamMessagesLoading: false,
   selectedTeamError: null,
   sendingMessage: false,
   sendMessageError: null,
@@ -620,14 +615,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       selectedTeamName: teamName,
       selectedTeamData: prev !== teamName ? null : get().selectedTeamData,
       selectedTeamLoading: true,
-      selectedTeamMessagesLoading: true,
       selectedTeamError: null,
       reviewActionError: null,
     });
 
     try {
       const data = await withTimeout(
-        unwrapIpc('team:getData', () => api.teams.getData(teamName, { includeMessages: false })),
+        unwrapIpc('team:getData', () => api.teams.getData(teamName)),
         TEAM_GET_DATA_TIMEOUT_MS,
         `team:getData(${teamName})`
       );
@@ -718,7 +712,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       if (msg === 'TEAM_PROVISIONING' || (msg.includes('TEAM_PROVISIONING') && isProvisioning)) {
         set({
           selectedTeamLoading: true,
-          selectedTeamMessagesLoading: true,
           selectedTeamData: null,
           selectedTeamError: null,
         });
@@ -733,27 +726,22 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             : 'Failed to fetch team data';
       set({
         selectedTeamLoading: false,
-        selectedTeamMessagesLoading: false,
         selectedTeamData: null,
         selectedTeamError: message,
       });
     }
   },
 
-  refreshTeamData: async (teamName: string, opts) => {
+  refreshTeamData: async (teamName: string) => {
     const state = get();
     if (state.selectedTeamName !== teamName) {
       return;
-    }
-    const includeMessages = opts?.includeMessages !== false;
-    if (opts?.messagesLoading !== undefined) {
-      set({ selectedTeamMessagesLoading: opts.messagesLoading });
     }
     // Silent refresh — update data without showing loading skeleton.
     // Only selectTeam() sets loading: true (for initial load).
     try {
       const data = await withTimeout(
-        unwrapIpc('team:getData', () => api.teams.getData(teamName, { includeMessages })),
+        unwrapIpc('team:getData', () => api.teams.getData(teamName)),
         TEAM_GET_DATA_TIMEOUT_MS,
         `refreshTeamData(${teamName})`
       );
@@ -763,7 +751,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       set({
         selectedTeamData: data,
-        selectedTeamMessagesLoading: includeMessages ? false : get().selectedTeamMessagesLoading,
         selectedTeamError: null,
       });
     } catch (error) {
@@ -777,10 +764,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             ? error.message
             : 'Failed to refresh team data';
       logger.warn(`refreshTeamData(${teamName}) failed: ${msg}`);
-      set({
-        selectedTeamError: msg,
-        selectedTeamMessagesLoading: includeMessages ? false : get().selectedTeamMessagesLoading,
-      });
+      set({ selectedTeamError: msg });
     }
   },
 
@@ -996,13 +980,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     await unwrapIpc('team:permanentlyDeleteTeam', () => api.teams.permanentlyDeleteTeam(teamName));
     const state = get();
     if (state.selectedTeamName === teamName) {
-      set({
-        selectedTeamName: null,
-        selectedTeamData: null,
-        selectedTeamLoading: false,
-        selectedTeamMessagesLoading: false,
-        selectedTeamError: null,
-      });
+      set({ selectedTeamName: null, selectedTeamData: null, selectedTeamError: null });
     }
     await get().fetchTeams();
     await get().fetchAllTasks();

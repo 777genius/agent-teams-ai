@@ -99,7 +99,6 @@ interface TeamDetailViewProps {
 }
 
 const ACTIVE_PROVISIONING_STATES = new Set(['validating', 'spawning', 'monitoring', 'verifying']);
-const MESSAGE_LOAD_DELAY_MS = 2_000;
 
 interface CreateTaskDialogState {
   open: boolean;
@@ -203,7 +202,6 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   const {
     data,
     loading,
-    messagesLoading,
     error,
     projects,
     repositoryGroups,
@@ -244,7 +242,6 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     useShallow((s) => ({
       data: s.selectedTeamData,
       loading: s.selectedTeamLoading,
-      messagesLoading: s.selectedTeamMessagesLoading,
       error: s.selectedTeamError,
       projects: s.projects,
       repositoryGroups: s.repositoryGroups,
@@ -335,20 +332,6 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     void selectTeam(teamName);
     void fetchDeletedTasks(teamName);
   }, [teamName, selectTeam, fetchDeletedTasks]);
-
-  useEffect(() => {
-    if (!teamName || loading || !data || data.teamName !== teamName || !messagesLoading) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      void refreshTeamData(teamName, { includeMessages: true, messagesLoading: true });
-    }, MESSAGE_LOAD_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [teamName, loading, data, messagesLoading, refreshTeamData]);
 
   // Fetch active teams when launch dialog opens (for conflict warning)
   useEffect(() => {
@@ -1459,14 +1442,14 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             sectionId="messages"
             title="Messages"
             icon={<MessageSquare size={14} />}
-            badge={messagesLoading ? '...' : filteredMessages.length}
+            badge={filteredMessages.length}
             secondaryBadge={
-              !messagesLoading && filteredMessages.length > 0 && messagesUnreadCount > 0
+              filteredMessages.length > 0 && messagesUnreadCount > 0
                 ? messagesUnreadCount
                 : undefined
             }
             afterBadge={
-              !messagesLoading && messagesUnreadCount > 0 ? (
+              messagesUnreadCount > 0 ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
@@ -1592,40 +1575,34 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                 onTaskClick={setSelectedTask}
               />
             </div>
-            {messagesLoading ? (
-              <div className="rounded-md border border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
-                Loading messages in 2 seconds so the rest of the team view can open faster.
-              </div>
-            ) : (
-              <ActivityTimeline
-                messages={filteredMessages}
-                teamName={teamName}
-                members={data.members}
-                readState={{ readSet, getMessageKey: toMessageKey }}
-                allCollapsed={messagesCollapsed}
-                expandOverrides={expandedSet}
-                onToggleExpandOverride={toggleExpandOverride}
-                onMemberClick={setSelectedMember}
-                onCreateTaskFromMessage={(subject, description) => {
-                  openCreateTaskDialog(subject, description);
-                }}
-                onReplyToMessage={(message) => {
-                  setSendDialogRecipient(message.from);
-                  setSendDialogDefaultText(undefined);
-                  setSendDialogDefaultChip(undefined);
-                  setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
-                  setSendDialogOpen(true);
-                }}
-                onMessageVisible={handleMessageVisible}
-                onRestartTeam={() => setLaunchDialogOpen(true)}
-                onTaskIdClick={(taskId) => {
-                  const task =
-                    taskMap.get(taskId) ??
-                    data.tasks.find((candidate) => candidate.displayId === taskId);
-                  if (task) setSelectedTask(task);
-                }}
-              />
-            )}
+            <ActivityTimeline
+              messages={filteredMessages}
+              teamName={teamName}
+              members={data.members}
+              readState={{ readSet, getMessageKey: toMessageKey }}
+              allCollapsed={messagesCollapsed}
+              expandOverrides={expandedSet}
+              onToggleExpandOverride={toggleExpandOverride}
+              onMemberClick={setSelectedMember}
+              onCreateTaskFromMessage={(subject, description) => {
+                openCreateTaskDialog(subject, description);
+              }}
+              onReplyToMessage={(message) => {
+                setSendDialogRecipient(message.from);
+                setSendDialogDefaultText(undefined);
+                setSendDialogDefaultChip(undefined);
+                setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
+                setSendDialogOpen(true);
+              }}
+              onMessageVisible={handleMessageVisible}
+              onRestartTeam={() => setLaunchDialogOpen(true)}
+              onTaskIdClick={(taskId) => {
+                const task =
+                  taskMap.get(taskId) ??
+                  data.tasks.find((candidate) => candidate.displayId === taskId);
+                if (task) setSelectedTask(task);
+              }}
+            />
           </CollapsibleTeamSection>
 
           <ReviewDialog

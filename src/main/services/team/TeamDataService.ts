@@ -53,7 +53,6 @@ import type {
   TeamConfig,
   TeamCreateConfigRequest,
   TeamData,
-  TeamGetDataOptions,
   TeamMember,
   TeamProcess,
   TeamSummary,
@@ -248,9 +247,8 @@ export class TeamDataService {
     await fs.promises.rm(tasksDir, { recursive: true, force: true });
   }
 
-  async getTeamData(teamName: string, options?: TeamGetDataOptions): Promise<TeamData> {
+  async getTeamData(teamName: string): Promise<TeamData> {
     const startedAt = Date.now();
-    const includeMessages = options?.includeMessages !== false;
     const marks: Record<string, number> = {};
     const mark = (label: string): void => {
       marks[label] = Date.now();
@@ -285,38 +283,32 @@ export class TeamDataService {
     mark('inboxNames');
 
     let messages: InboxMessage[] = [];
-    if (includeMessages) {
-      try {
-        messages = await this.inboxReader.getMessages(teamName);
-      } catch {
-        warnings.push('Messages failed to load');
-      }
+    try {
+      messages = await this.inboxReader.getMessages(teamName);
+    } catch {
+      warnings.push('Messages failed to load');
     }
     mark('messages');
 
     let leadTexts: InboxMessage[] = [];
-    if (includeMessages) {
-      try {
-        leadTexts = await this.extractLeadSessionTexts(config);
-        if (leadTexts.length > 0) {
-          messages = [...messages, ...leadTexts];
-        }
-      } catch {
-        warnings.push('Lead session texts failed to load');
+    try {
+      leadTexts = await this.extractLeadSessionTexts(config);
+      if (leadTexts.length > 0) {
+        messages = [...messages, ...leadTexts];
       }
+    } catch {
+      warnings.push('Lead session texts failed to load');
     }
     mark('leadTexts');
 
     let sentMessages: InboxMessage[] = [];
-    if (includeMessages) {
-      try {
-        sentMessages = await this.sentMessagesStore.readMessages(teamName);
-        if (sentMessages.length > 0) {
-          messages = [...messages, ...sentMessages];
-        }
-      } catch {
-        warnings.push('Sent messages failed to load');
+    try {
+      sentMessages = await this.sentMessagesStore.readMessages(teamName);
+      if (sentMessages.length > 0) {
+        messages = [...messages, ...sentMessages];
       }
+    } catch {
+      warnings.push('Sent messages failed to load');
     }
     mark('sentMessages');
 
@@ -339,56 +331,54 @@ export class TeamDataService {
       });
     }
 
-    if (includeMessages) {
-      // Enrich inbox messages without leadSessionId by assigning the nearest neighbor's
-      // session ID (by timestamp). This avoids the old forward-only propagation bug.
-      if (config.leadSessionId || messages.some((m) => m.leadSessionId)) {
-        messages.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+    // Enrich inbox messages without leadSessionId by assigning the nearest neighbor's
+    // session ID (by timestamp). This avoids the old forward-only propagation bug.
+    if (config.leadSessionId || messages.some((m) => m.leadSessionId)) {
+      messages.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
 
-        const anchors: { index: number; time: number; sessionId: string }[] = [];
-        for (let i = 0; i < messages.length; i++) {
-          if (messages[i].leadSessionId) {
-            anchors.push({
-              index: i,
-              time: Date.parse(messages[i].timestamp),
-              sessionId: messages[i].leadSessionId!,
-            });
-          }
-        }
-
-        if (anchors.length > 0) {
-          let anchorIdx = 0;
-          for (let i = 0; i < messages.length; i++) {
-            if (messages[i].leadSessionId) {
-              while (anchorIdx < anchors.length - 1 && anchors[anchorIdx].index < i) {
-                anchorIdx++;
-              }
-              continue;
-            }
-
-            const msgTime = Date.parse(messages[i].timestamp);
-            let bestAnchor = anchors[0];
-            let bestDist = Math.abs(msgTime - bestAnchor.time);
-            for (const anchor of anchors) {
-              const dist = Math.abs(msgTime - anchor.time);
-              if (dist < bestDist) {
-                bestDist = dist;
-                bestAnchor = anchor;
-              } else if (dist > bestDist && anchor.time > msgTime) {
-                break;
-              }
-            }
-            messages[i].leadSessionId = bestAnchor.sessionId;
-          }
-        } else if (config.leadSessionId) {
-          for (const msg of messages) {
-            msg.leadSessionId = config.leadSessionId;
-          }
+      const anchors: { index: number; time: number; sessionId: string }[] = [];
+      for (let i = 0; i < messages.length; i++) {
+        if (messages[i].leadSessionId) {
+          anchors.push({
+            index: i,
+            time: Date.parse(messages[i].timestamp),
+            sessionId: messages[i].leadSessionId!,
+          });
         }
       }
 
-      messages.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+      if (anchors.length > 0) {
+        let anchorIdx = 0;
+        for (let i = 0; i < messages.length; i++) {
+          if (messages[i].leadSessionId) {
+            while (anchorIdx < anchors.length - 1 && anchors[anchorIdx].index < i) {
+              anchorIdx++;
+            }
+            continue;
+          }
+
+          const msgTime = Date.parse(messages[i].timestamp);
+          let bestAnchor = anchors[0];
+          let bestDist = Math.abs(msgTime - bestAnchor.time);
+          for (const anchor of anchors) {
+            const dist = Math.abs(msgTime - anchor.time);
+            if (dist < bestDist) {
+              bestDist = dist;
+              bestAnchor = anchor;
+            } else if (dist > bestDist && anchor.time > msgTime) {
+              break;
+            }
+          }
+          messages[i].leadSessionId = bestAnchor.sessionId;
+        }
+      } else if (config.leadSessionId) {
+        for (const msg of messages) {
+          msg.leadSessionId = config.leadSessionId;
+        }
+      }
     }
+
+    messages.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 
     let metaMembers: TeamConfig['members'] = [];
     try {

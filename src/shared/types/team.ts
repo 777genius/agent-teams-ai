@@ -301,10 +301,6 @@ export interface TeamData {
   isAlive?: boolean;
 }
 
-export interface TeamGetDataOptions {
-  includeMessages?: boolean;
-}
-
 export type EffortLevel = 'low' | 'medium' | 'high';
 
 export interface TeamLaunchRequest {
