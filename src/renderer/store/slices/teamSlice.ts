@@ -82,8 +82,10 @@ import type {
   TeamTask,
   TeamTaskStatus,
   ToolApprovalRequest,
+  ToolApprovalSettings,
   UpdateKanbanPatch,
 } from '@shared/types';
+import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import type { StateCreator } from 'zustand';
 
 // --- Clarification notification tracking ---
@@ -367,6 +369,8 @@ export interface TeamSlice {
   subscribeProvisioningProgress: () => void;
   unsubscribeProvisioningProgress: () => void;
   pendingApprovals: ToolApprovalRequest[];
+  toolApprovalSettings: ToolApprovalSettings;
+  updateToolApprovalSettings: (patch: Partial<ToolApprovalSettings>) => Promise<void>;
   respondToToolApproval: (
     teamName: string,
     runId: string,
@@ -374,6 +378,39 @@ export interface TeamSlice {
     allow: boolean,
     message?: string
   ) => Promise<void>;
+}
+
+function loadToolApprovalSettings(): ToolApprovalSettings {
+  try {
+    const raw = localStorage.getItem('team:toolApprovalSettings');
+    if (!raw) return DEFAULT_TOOL_APPROVAL_SETTINGS;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const d = DEFAULT_TOOL_APPROVAL_SETTINGS;
+    return {
+      autoAllowFileEdits:
+        typeof parsed.autoAllowFileEdits === 'boolean'
+          ? parsed.autoAllowFileEdits
+          : d.autoAllowFileEdits,
+      autoAllowSafeBash:
+        typeof parsed.autoAllowSafeBash === 'boolean'
+          ? parsed.autoAllowSafeBash
+          : d.autoAllowSafeBash,
+      timeoutAction:
+        typeof parsed.timeoutAction === 'string' &&
+        ['allow', 'deny', 'wait'].includes(parsed.timeoutAction)
+          ? (parsed.timeoutAction as ToolApprovalSettings['timeoutAction'])
+          : d.timeoutAction,
+      timeoutSeconds:
+        typeof parsed.timeoutSeconds === 'number' &&
+        Number.isFinite(parsed.timeoutSeconds) &&
+        parsed.timeoutSeconds >= 5 &&
+        parsed.timeoutSeconds <= 300
+          ? parsed.timeoutSeconds
+          : d.timeoutSeconds,
+    };
+  } catch {
+    return DEFAULT_TOOL_APPROVAL_SETTINGS;
+  }
 }
 
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
@@ -416,6 +453,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   deletedTasks: [],
   deletedTasksLoading: false,
   pendingApprovals: [],
+  toolApprovalSettings: loadToolApprovalSettings(),
 
   fetchBranches: async (paths: string[]) => {
     const results: Record<string, string | null> = {};
@@ -1178,6 +1216,18 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       get().onProvisioningProgress(progress);
     });
     set({ provisioningProgressUnsubscribe: unsubscribe });
+  },
+
+  updateToolApprovalSettings: async (patch) => {
+    const current = get().toolApprovalSettings;
+    const merged = { ...current, ...patch };
+    set({ toolApprovalSettings: merged });
+    localStorage.setItem('team:toolApprovalSettings', JSON.stringify(merged));
+    try {
+      await api.teams.updateToolApprovalSettings(merged);
+    } catch (err) {
+      logger.warn('Failed to sync tool approval settings to main:', err);
+    }
   },
 
   respondToToolApproval: async (teamName, runId, requestId, allow, message) => {

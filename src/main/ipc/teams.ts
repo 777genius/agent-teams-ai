@@ -47,6 +47,7 @@ import {
   TEAM_START_TASK,
   TEAM_STOP,
   TEAM_TOOL_APPROVAL_RESPOND,
+  TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
@@ -117,6 +118,7 @@ import type {
   TeamTask,
   TeamTaskStatus,
   TeamUpdateConfigRequest,
+  ToolApprovalSettings,
   UpdateKanbanPatch,
 } from '@shared/types';
 
@@ -250,6 +252,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_TASK_ATTACHMENT, handleGetTaskAttachment);
   ipcMain.handle(TEAM_DELETE_TASK_ATTACHMENT, handleDeleteTaskAttachment);
   ipcMain.handle(TEAM_TOOL_APPROVAL_RESPOND, handleToolApprovalRespond);
+  ipcMain.handle(TEAM_TOOL_APPROVAL_SETTINGS, handleToolApprovalSettings);
   logger.info('Team handlers registered');
 }
 
@@ -305,6 +308,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_GET_TASK_ATTACHMENT);
   ipcMain.removeHandler(TEAM_DELETE_TASK_ATTACHMENT);
   ipcMain.removeHandler(TEAM_TOOL_APPROVAL_RESPOND);
+  ipcMain.removeHandler(TEAM_TOOL_APPROVAL_SETTINGS);
 }
 
 function getTeamDataService(): TeamDataService {
@@ -2306,4 +2310,41 @@ async function handleToolApprovalRespond(
       typeof message === 'string' ? message : undefined
     )
   );
+}
+
+async function handleToolApprovalSettings(
+  _event: IpcMainInvokeEvent,
+  settings: unknown
+): Promise<IpcResult<void>> {
+  if (typeof settings !== 'object' || settings === null) {
+    return { success: false, error: 'Settings must be an object' };
+  }
+  const s = settings as Record<string, unknown>;
+  if (typeof s.autoAllowFileEdits !== 'boolean') {
+    return { success: false, error: 'autoAllowFileEdits must be a boolean' };
+  }
+  if (typeof s.autoAllowSafeBash !== 'boolean') {
+    return { success: false, error: 'autoAllowSafeBash must be a boolean' };
+  }
+  if (typeof s.timeoutAction !== 'string' || !['allow', 'deny', 'wait'].includes(s.timeoutAction)) {
+    return { success: false, error: 'timeoutAction must be "allow", "deny", or "wait"' };
+  }
+  if (
+    typeof s.timeoutSeconds !== 'number' ||
+    !Number.isFinite(s.timeoutSeconds) ||
+    s.timeoutSeconds < 5 ||
+    s.timeoutSeconds > 300
+  ) {
+    return { success: false, error: 'timeoutSeconds must be a number between 5 and 300' };
+  }
+
+  try {
+    getTeamProvisioningService().updateToolApprovalSettings(s as unknown as ToolApprovalSettings);
+  } catch (err) {
+    return {
+      success: false,
+      error: `Failed to update tool approval settings: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+  return { success: true, data: undefined };
 }

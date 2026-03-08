@@ -568,5 +568,43 @@ export interface ToolApprovalDismiss {
   runId: string;
 }
 
+// ---------------------------------------------------------------------------
+// Tool Approval Settings
+// ---------------------------------------------------------------------------
+
+/** Timeout behavior for unanswered tool approval requests. */
+export type ToolApprovalTimeoutAction = 'allow' | 'deny' | 'wait';
+
+/** User-configurable auto-allow settings for tool approval. */
+export interface ToolApprovalSettings {
+  /** Auto-allow file edit tools (Edit, Write, NotebookEdit). */
+  autoAllowFileEdits: boolean;
+  /** Auto-allow safe bash commands (git, pnpm, npm, ls, cat, echo, etc.). */
+  autoAllowSafeBash: boolean;
+  /** Timeout behavior when user doesn't respond. */
+  timeoutAction: ToolApprovalTimeoutAction;
+  /** Timeout seconds (used when timeoutAction !== 'wait'). */
+  timeoutSeconds: number;
+}
+
+export const DEFAULT_TOOL_APPROVAL_SETTINGS: ToolApprovalSettings = {
+  autoAllowFileEdits: false,
+  autoAllowSafeBash: false,
+  timeoutAction: 'wait',
+  timeoutSeconds: 30,
+};
+
+/** Event pushed when a pending approval was auto-resolved (timeout or auto-allow). */
+export interface ToolApprovalAutoResolved {
+  autoResolved: true;
+  requestId: string;
+  runId: string;
+  teamName: string;
+  reason: 'auto_allow_category' | 'timeout_allow' | 'timeout_deny';
+}
+
 /** Union of approval events pushed from main to renderer. */
-export type ToolApprovalEvent = ToolApprovalRequest | ToolApprovalDismiss;
+export type ToolApprovalEvent =
+  | ToolApprovalRequest
+  | ToolApprovalDismiss
+  | ToolApprovalAutoResolved;

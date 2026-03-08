@@ -364,6 +364,9 @@ export const TEAM_TOOL_APPROVAL_EVENT = 'team:toolApprovalEvent';
 /** Invoke: respond to a tool approval request (renderer → main) */
 export const TEAM_TOOL_APPROVAL_RESPOND = 'team:toolApprovalRespond';
 
+/** Invoke: update tool approval settings (renderer → main) */
+export const TEAM_TOOL_APPROVAL_SETTINGS = 'team:toolApprovalSettings';
+
 // =============================================================================
 // CLI Installer API Channels
 // =============================================================================

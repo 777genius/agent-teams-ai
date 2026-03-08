@@ -7,6 +7,8 @@ import { FileText, Search, Terminal } from 'lucide-react';
 
 import type { ToolApprovalRequest } from '@shared/types';
 
+import { ToolApprovalSettingsPanel } from './dialogs/ToolApprovalSettingsPanel';
+
 // ---------------------------------------------------------------------------
 // Tool icon mapping
 // ---------------------------------------------------------------------------
@@ -101,6 +103,8 @@ export const ToolApprovalSheet: React.FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if (e.key === 'Enter') {
         e.preventDefault();
         handleRespond(true);
@@ -222,6 +226,50 @@ export const ToolApprovalSheet: React.FC = () => {
           </span>
         )}
       </div>
+
+      {/* Settings panel (full-width, outside flex row) */}
+      <ToolApprovalSettingsPanel />
+
+      {/* Timeout progress bar */}
+      <TimeoutProgress receivedAt={current.receivedAt} />
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Timeout progress bar sub-component
+// ---------------------------------------------------------------------------
+
+const TimeoutProgress = ({ receivedAt }: { receivedAt: string }): React.JSX.Element | null => {
+  const settings = useStore((s) => s.toolApprovalSettings);
+  const elapsed = useElapsed(receivedAt);
+
+  if (settings.timeoutAction === 'wait') return null;
+
+  const progress = Math.min(1, elapsed / settings.timeoutSeconds);
+  const remaining = Math.max(0, settings.timeoutSeconds - elapsed);
+  const color = settings.timeoutAction === 'allow' ? 'rgb(5, 150, 105)' : 'rgb(239, 68, 68)';
+
+  return (
+    <div
+      className="flex items-center gap-2 border-t px-4 py-1.5"
+      style={{ borderColor: 'var(--color-border)' }}
+    >
+      <div
+        className="h-1 flex-1 overflow-hidden rounded-full"
+        style={{ backgroundColor: 'var(--color-surface)' }}
+      >
+        <div
+          className="h-full rounded-full transition-all duration-1000 ease-linear"
+          style={{
+            width: `${progress * 100}%`,
+            backgroundColor: color,
+          }}
+        />
+      </div>
+      <span className="text-[10px] tabular-nums" style={{ color: 'var(--color-text-muted)' }}>
+        Auto-{settings.timeoutAction} in {remaining}s
+      </span>
     </div>
   );
 };

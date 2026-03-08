@@ -450,7 +450,14 @@ export function initializeNotificationListeners(): () => void {
   if (api.teams?.onToolApprovalEvent) {
     const cleanup = api.teams.onToolApprovalEvent((_event: unknown, data: unknown) => {
       const event = data as ToolApprovalEvent;
-      if ('dismissed' in event && event.dismissed) {
+      if ('autoResolved' in event && event.autoResolved) {
+        // Timeout or auto-allow resolved in main — remove from UI
+        useStore.setState((s) => ({
+          pendingApprovals: s.pendingApprovals.filter(
+            (a) => !(a.runId === event.runId && a.requestId === event.requestId)
+          ),
+        }));
+      } else if ('dismissed' in event && event.dismissed) {
         const dismiss = event;
         useStore.setState((s) => ({
           pendingApprovals: s.pendingApprovals.filter(
@@ -467,6 +474,12 @@ export function initializeNotificationListeners(): () => void {
     if (typeof cleanup === 'function') {
       cleanupFns.push(cleanup);
     }
+
+    // Sync saved tool approval settings to main process on startup
+    const savedSettings = useStore.getState().toolApprovalSettings;
+    api.teams.updateToolApprovalSettings?.(savedSettings).catch(() => {
+      // Silently ignore — settings will use defaults until next update
+    });
   }
 
   // Listen for editor file change events (chokidar watcher → renderer)

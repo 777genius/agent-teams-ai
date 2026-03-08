@@ -1,6 +1,7 @@
 /* eslint-disable no-param-reassign -- ProvisioningRun object is intentionally mutated as a state tracker throughout the provisioning lifecycle */
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { killProcessTree, spawnCli } from '@main/utils/childProcess';
+import { shouldAutoAllow } from '@main/utils/toolApprovalRules';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import {
   encodePath,
@@ -18,6 +19,7 @@ import {
   stripAgentBlocks,
 } from '@shared/constants/agentBlocks';
 import { getMemberColor } from '@shared/constants/memberColors';
+import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
 import { createLogger } from '@shared/utils/logger';
@@ -51,8 +53,10 @@ import type {
   TeamProvisioningProgress,
   TeamProvisioningState,
   TeamTask,
+  ToolApprovalAutoResolved,
   ToolApprovalEvent,
   ToolApprovalRequest,
+  ToolApprovalSettings,
   ToolCallMeta,
 } from '@shared/types';
 
@@ -1066,6 +1070,9 @@ export class TeamProvisioningService {
   private readonly relayedLeadInboxFallbackKeys = new Map<string, Set<string>>();
   private readonly liveLeadProcessMessages = new Map<string, InboxMessage[]>();
   private teamChangeEmitter: ((event: TeamChangeEvent) => void) | null = null;
+  private toolApprovalSettings: ToolApprovalSettings = DEFAULT_TOOL_APPROVAL_SETTINGS;
+  private pendingTimeouts = new Map<string, NodeJS.Timeout>();
+  private inFlightResponses = new Set<string>();
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -1189,6 +1196,11 @@ export class TeamProvisioningService {
 
   setToolApprovalEventEmitter(emitter: (event: ToolApprovalEvent) => void): void {
     this.toolApprovalEventEmitter = emitter;
+  }
+
+  updateToolApprovalSettings(settings: ToolApprovalSettings): void {
+    this.toolApprovalSettings = settings;
+    this.reEvaluatePendingApprovals();
   }
 
   private emitToolApprovalEvent(event: ToolApprovalEvent): void {
@@ -1827,7 +1839,11 @@ export class TeamProvisioningService {
         mcpConfigPath,
         '--disallowedTools',
         'TeamDelete,TodoWrite',
-        ...(request.skipPermissions !== false ? ['--dangerously-skip-permissions'] : []),
+        // Explicit --permission-mode overrides user's defaultMode in ~/.claude/settings.json
+        // (e.g. "acceptEdits") which otherwise takes precedence over CLI flags
+        ...(request.skipPermissions !== false
+          ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
+          : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
         ...(request.model ? ['--model', request.model] : []),
         ...(request.effort ? ['--effort', request.effort] : []),
       ];
@@ -2159,7 +2175,11 @@ export class TeamProvisioningService {
         mcpConfigPath,
         '--disallowedTools',
         'TeamDelete,TodoWrite',
-        ...(request.skipPermissions !== false ? ['--dangerously-skip-permissions'] : []),
+        // Explicit --permission-mode overrides user's defaultMode in ~/.claude/settings.json
+        // (e.g. "acceptEdits") which otherwise takes precedence over CLI flags
+        ...(request.skipPermissions !== false
+          ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
+          : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
       ];
       if (previousSessionId) {
         launchArgs.push('--resume', previousSessionId);
@@ -3505,8 +3525,24 @@ export class TeamProvisioningService {
       receivedAt: new Date().toISOString(),
     };
 
+    // Check auto-allow rules before prompting user
+    const autoResult = shouldAutoAllow(this.toolApprovalSettings, toolName, toolInput);
+    if (autoResult.autoAllow) {
+      logger.info(`[${run.teamName}] Auto-allowing ${toolName} (${autoResult.reason})`);
+      this.autoAllowControlRequest(run, requestId);
+      this.emitToolApprovalEvent({
+        autoResolved: true,
+        requestId,
+        runId: run.runId,
+        teamName: run.teamName,
+        reason: 'auto_allow_category',
+      } as ToolApprovalAutoResolved);
+      return;
+    }
+
     run.pendingApprovals.set(requestId, approval);
     this.emitToolApprovalEvent(approval);
+    this.startApprovalTimeout(run, requestId);
   }
 
   /**
@@ -3537,6 +3573,124 @@ export class TeamProvisioningService {
     });
   }
 
+  private tryClaimResponse(requestId: string): boolean {
+    if (this.inFlightResponses.has(requestId)) return false;
+    this.inFlightResponses.add(requestId);
+    return true;
+  }
+
+  private startApprovalTimeout(run: ProvisioningRun, requestId: string): void {
+    const { timeoutAction, timeoutSeconds } = this.toolApprovalSettings;
+    if (timeoutAction === 'wait') return;
+
+    const timeoutMs = timeoutSeconds * 1000;
+    const timer = setTimeout(() => {
+      this.pendingTimeouts.delete(requestId);
+      if (!run.pendingApprovals.has(requestId)) return;
+      if (!this.tryClaimResponse(requestId)) return;
+
+      // Read CURRENT settings (not captured closure) in case user changed action
+      const currentAction = this.toolApprovalSettings.timeoutAction;
+      if (currentAction === 'wait') {
+        // Settings changed to 'wait' but timer fired before reEvaluatePendingApprovals cleared it
+        this.inFlightResponses.delete(requestId);
+        return;
+      }
+      const allow = currentAction === 'allow';
+      logger.info(`[${run.teamName}] Timeout ${allow ? 'allowing' : 'denying'} ${requestId}`);
+
+      if (allow) {
+        this.autoAllowControlRequest(run, requestId);
+      } else {
+        this.autoDenyControlRequest(run, requestId);
+      }
+      run.pendingApprovals.delete(requestId);
+      this.inFlightResponses.delete(requestId);
+
+      this.emitToolApprovalEvent({
+        autoResolved: true,
+        requestId,
+        runId: run.runId,
+        teamName: run.teamName,
+        reason: allow ? 'timeout_allow' : 'timeout_deny',
+      } as ToolApprovalAutoResolved);
+    }, timeoutMs);
+
+    this.pendingTimeouts.set(requestId, timer);
+  }
+
+  private clearApprovalTimeout(requestId: string): void {
+    const timer = this.pendingTimeouts.get(requestId);
+    if (timer) {
+      clearTimeout(timer);
+      this.pendingTimeouts.delete(requestId);
+    }
+  }
+
+  private autoDenyControlRequest(run: ProvisioningRun, requestId: string): void {
+    if (!run.child?.stdin?.writable) {
+      logger.warn(`[${run.teamName}] Cannot auto-deny control_request: stdin not writable`);
+      return;
+    }
+
+    const response = {
+      type: 'control_response',
+      response: {
+        subtype: 'success',
+        request_id: requestId,
+        response: { behavior: 'deny', message: 'Timed out — auto-denied by settings' },
+      },
+    };
+
+    run.child.stdin.write(JSON.stringify(response) + '\n', (err) => {
+      if (err) {
+        logger.error(
+          `[${run.teamName}] Failed to auto-deny control_request ${requestId}: ${err.message}`
+        );
+      }
+    });
+  }
+
+  private reEvaluatePendingApprovals(): void {
+    for (const [, run] of this.runs) {
+      const toRemove: string[] = [];
+      for (const [requestId, approval] of run.pendingApprovals) {
+        const result = shouldAutoAllow(
+          this.toolApprovalSettings,
+          approval.toolName,
+          approval.toolInput
+        );
+        if (result.autoAllow) {
+          this.clearApprovalTimeout(requestId);
+          this.autoAllowControlRequest(run, requestId);
+          toRemove.push(requestId);
+          this.emitToolApprovalEvent({
+            autoResolved: true,
+            requestId,
+            runId: run.runId,
+            teamName: run.teamName,
+            reason: 'auto_allow_category',
+          } as ToolApprovalAutoResolved);
+        } else if (
+          this.toolApprovalSettings.timeoutAction !== 'wait' &&
+          !this.pendingTimeouts.has(requestId)
+        ) {
+          // Settings changed from 'wait' to allow/deny — start timer for already pending items
+          this.startApprovalTimeout(run, requestId);
+        } else if (
+          this.toolApprovalSettings.timeoutAction === 'wait' &&
+          this.pendingTimeouts.has(requestId)
+        ) {
+          // Settings changed TO 'wait' — clear existing timers
+          this.clearApprovalTimeout(requestId);
+        }
+      }
+      for (const requestId of toRemove) {
+        run.pendingApprovals.delete(requestId);
+      }
+    }
+  }
+
   /**
    * Respond to a pending tool approval — sends control_response to CLI stdin.
    * Validates runId match and requestId existence before writing.
@@ -3557,8 +3711,19 @@ export class TeamProvisioningService {
       throw new Error(`Stale approval: runId mismatch (expected ${run.runId}, got ${runId})`);
     }
 
+    // Clear timeout and claim response FIRST (before pendingApprovals check)
+    // to handle the race where timeout already responded and deleted the approval
+    this.clearApprovalTimeout(requestId);
+    if (!this.tryClaimResponse(requestId)) {
+      // Timeout already responded — silently exit, UI cleanup via autoResolved event
+      run.pendingApprovals.delete(requestId);
+      return;
+    }
+
     if (!run.pendingApprovals.has(requestId)) {
-      throw new Error(`No pending approval with requestId "${requestId}"`);
+      // Approval was removed (e.g. by reEvaluatePendingApprovals) — clean up claim and exit
+      this.inFlightResponses.delete(requestId);
+      return;
     }
 
     if (!run.child?.stdin?.writable) {
@@ -3586,19 +3751,21 @@ export class TeamProvisioningService {
         };
 
     const stdin = run.child.stdin;
-    await new Promise<void>((resolve, reject) => {
-      stdin.write(JSON.stringify(response) + '\n', (err) => {
-        if (err) {
-          logger.error(`[${teamName}] Failed to write control_response: ${err.message}`);
-          reject(err);
-        } else {
-          resolve();
-        }
+    try {
+      await new Promise<void>((resolve, reject) => {
+        stdin.write(JSON.stringify(response) + '\n', (err) => {
+          if (err) {
+            logger.error(`[${teamName}] Failed to write control_response: ${err.message}`);
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
       });
-    });
-
-    // Only delete AFTER successful write
-    run.pendingApprovals.delete(requestId);
+    } finally {
+      run.pendingApprovals.delete(requestId);
+      this.inFlightResponses.delete(requestId);
+    }
   }
 
   /**
@@ -3809,6 +3976,10 @@ export class TeamProvisioningService {
     this.liveLeadProcessMessages.delete(run.teamName);
     // Dismiss any pending tool approvals for this run
     if (run.pendingApprovals.size > 0) {
+      for (const requestId of run.pendingApprovals.keys()) {
+        this.clearApprovalTimeout(requestId);
+        this.inFlightResponses.delete(requestId);
+      }
       this.emitToolApprovalEvent({ dismissed: true, teamName: run.teamName, runId: run.runId });
       run.pendingApprovals.clear();
     }

@@ -105,6 +105,7 @@ import {
   TEAM_STOP,
   TEAM_TOOL_APPROVAL_EVENT,
   TEAM_TOOL_APPROVAL_RESPOND,
+  TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
@@ -217,6 +218,7 @@ import type {
   TeamTaskStatus,
   TeamUpdateConfigRequest,
   ToolApprovalEvent,
+  ToolApprovalSettings,
   TriggerTestResult,
   UpdateKanbanPatch,
   WslClaudeRootCandidate,
@@ -1008,9 +1010,10 @@ const electronAPI: ElectronAPI = {
         );
       };
     },
+    updateToolApprovalSettings: async (settings: ToolApprovalSettings) => {
+      return invokeIpcWithResult<void>(TEAM_TOOL_APPROVAL_SETTINGS, settings);
+    },
   },
-
-  // ===== Review API =====
   review: {
     getAgentChanges: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<AgentChangeSet>(REVIEW_GET_AGENT_CHANGES, teamName, memberName);
