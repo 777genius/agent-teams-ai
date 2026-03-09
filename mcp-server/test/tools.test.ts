@@ -30,6 +30,9 @@ function parseJsonToolResult(result: unknown) {
 describe('agent-teams-mcp tools', () => {
   const tools = collectTools();
   const expectedToolNames = [
+    'cross_team_get_outbox',
+    'cross_team_list_targets',
+    'cross_team_send',
     'kanban_add_reviewer',
     'kanban_clear',
     'kanban_get',

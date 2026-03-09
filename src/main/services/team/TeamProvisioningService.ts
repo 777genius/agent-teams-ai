@@ -37,6 +37,7 @@ import * as path from 'path';
 
 import { atomicWriteAsync } from './atomicWrite';
 import { ClaudeBinaryResolver } from './ClaudeBinaryResolver';
+import { withFileLock } from './fileLock';
 import { withInboxLock } from './inboxLock';
 import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
@@ -2858,40 +2859,42 @@ export class TeamProvisioningService {
   ): Promise<void> {
     const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${member}.json`);
 
-    await withInboxLock(inboxPath, async () => {
-      const raw = await tryReadRegularFileUtf8(inboxPath, {
-        timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-        maxBytes: TEAM_INBOX_MAX_BYTES,
-      });
-      if (!raw) {
-        return;
-      }
-
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(raw) as unknown;
-      } catch {
-        return;
-      }
-      if (!Array.isArray(parsed)) return;
-
-      const ids = new Set(messages.map((m) => m.messageId).filter((id) => id.trim().length > 0));
-
-      let changed = false;
-      for (const item of parsed) {
-        if (!item || typeof item !== 'object') continue;
-        const row = item as Record<string, unknown>;
-        const msgId = typeof row.messageId === 'string' ? row.messageId : null;
-        if (!msgId || !ids.has(msgId)) continue;
-
-        if (row.read !== true) {
-          row.read = true;
-          changed = true;
+    await withFileLock(inboxPath, async () => {
+      await withInboxLock(inboxPath, async () => {
+        const raw = await tryReadRegularFileUtf8(inboxPath, {
+          timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+          maxBytes: TEAM_INBOX_MAX_BYTES,
+        });
+        if (!raw) {
+          return;
         }
-      }
 
-      if (!changed) return;
-      await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw) as unknown;
+        } catch {
+          return;
+        }
+        if (!Array.isArray(parsed)) return;
+
+        const ids = new Set(messages.map((m) => m.messageId).filter((id) => id.trim().length > 0));
+
+        let changed = false;
+        for (const item of parsed) {
+          if (!item || typeof item !== 'object') continue;
+          const row = item as Record<string, unknown>;
+          const msgId = typeof row.messageId === 'string' ? row.messageId : null;
+          if (!msgId || !ids.has(msgId)) continue;
+
+          if (row.read !== true) {
+            row.read = true;
+            changed = true;
+          }
+        }
+
+        if (!changed) return;
+        await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
+      });
     });
   }
 

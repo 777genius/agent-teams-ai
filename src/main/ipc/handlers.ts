@@ -28,6 +28,11 @@ import {
   registerContextHandlers,
   removeContextHandlers,
 } from './context';
+import {
+  initializeCrossTeamHandlers,
+  registerCrossTeamHandlers,
+  removeCrossTeamHandlers,
+} from './crossTeam';
 import { initializeEditorHandlers, registerEditorHandlers, removeEditorHandlers } from './editor';
 import {
   initializeExtensionHandlers,
@@ -98,6 +103,7 @@ import type {
   UpdaterService,
 } from '../services';
 import type { HttpServer } from '../services/infrastructure/HttpServer';
+import type { CrossTeamService } from '../services/team/CrossTeamService';
 import type { ExtensionFacadeService } from '../services/extensions/ExtensionFacadeService';
 import type { McpInstallService } from '../services/extensions/install/McpInstallService';
 import type { PluginInstallService } from '../services/extensions/install/PluginInstallService';
@@ -132,7 +138,8 @@ export function initializeIpcHandlers(
   schedulerService?: SchedulerService,
   extensionFacade?: ExtensionFacadeService,
   pluginInstaller?: PluginInstallService,
-  mcpInstaller?: McpInstallService
+  mcpInstaller?: McpInstallService,
+  crossTeamService?: CrossTeamService
 ): void {
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -169,6 +176,9 @@ export function initializeIpcHandlers(
   }
   if (extensionFacade) {
     initializeExtensionHandlers(extensionFacade, pluginInstaller, mcpInstaller);
+  }
+  if (crossTeamService) {
+    initializeCrossTeamHandlers(crossTeamService);
   }
 
   if (changeExtractor) {
@@ -210,6 +220,9 @@ export function initializeIpcHandlers(
   if (extensionFacade) {
     registerExtensionHandlers(ipcMain);
   }
+  if (crossTeamService) {
+    registerCrossTeamHandlers(ipcMain);
+  }
 
   logger.info('All handlers registered');
 }
@@ -240,6 +253,7 @@ export function removeIpcHandlers(): void {
   removeTerminalHandlers(ipcMain);
   removeHttpServerHandlers(ipcMain);
   removeExtensionHandlers(ipcMain);
+  removeCrossTeamHandlers(ipcMain);
 
   logger.info('All handlers removed');
 }

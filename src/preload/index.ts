@@ -10,6 +10,9 @@ import {
   CONTEXT_GET_ACTIVE,
   CONTEXT_LIST,
   CONTEXT_SWITCH,
+  CROSS_TEAM_GET_OUTBOX,
+  CROSS_TEAM_LIST_TARGETS,
+  CROSS_TEAM_SEND,
   EDITOR_CHANGE,
   EDITOR_CLOSE,
   EDITOR_CREATE_DIR,
@@ -198,6 +201,9 @@ import type {
   ContextInfo,
   CreateScheduleInput,
   CreateTaskRequest,
+  CrossTeamMessage,
+  CrossTeamSendRequest,
+  CrossTeamSendResult,
   ElectronAPI,
   FileChangeWithContent,
   GlobalTask,
@@ -1052,6 +1058,20 @@ const electronAPI: ElectronAPI = {
     },
     updateToolApprovalSettings: async (settings: ToolApprovalSettings) => {
       return invokeIpcWithResult<void>(TEAM_TOOL_APPROVAL_SETTINGS, settings);
+    },
+  },
+  crossTeam: {
+    send: async (request: CrossTeamSendRequest) => {
+      return invokeIpcWithResult<CrossTeamSendResult>(CROSS_TEAM_SEND, request);
+    },
+    listTargets: async (excludeTeam?: string) => {
+      return invokeIpcWithResult<{ teamName: string; displayName: string; description?: string }[]>(
+        CROSS_TEAM_LIST_TARGETS,
+        excludeTeam
+      );
+    },
+    getOutbox: async (teamName: string) => {
+      return invokeIpcWithResult<CrossTeamMessage[]>(CROSS_TEAM_GET_OUTBOX, teamName);
     },
   },
   review: {

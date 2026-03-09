@@ -16,6 +16,9 @@
 // On Windows this saturates all threads, blocking the event loop.
 process.env.UV_THREADPOOL_SIZE ??= '16';
 
+import { CrossTeamService } from '@main/services/team/CrossTeamService';
+import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import { FileContentResolver } from '@main/services/team/FileContentResolver';
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
@@ -663,6 +666,17 @@ function initializeServices(): void {
   ptyTerminalService = new PtyTerminalService();
   teamDataService = new TeamDataService();
   teamProvisioningService = new TeamProvisioningService();
+
+  // Cross-team communication service
+  const crossTeamConfigReader = new TeamConfigReader();
+  const crossTeamInboxWriter = new TeamInboxWriter();
+  const crossTeamService = new CrossTeamService(
+    crossTeamConfigReader,
+    teamDataService,
+    crossTeamInboxWriter,
+    teamProvisioningService
+  );
+
   const teamMemberLogsFinder = new TeamMemberLogsFinder();
   const memberStatsComputer = new MemberStatsComputer(teamMemberLogsFinder);
   const taskBoundaryParser = new TaskBoundaryParser();
@@ -760,7 +774,8 @@ function initializeServices(): void {
     schedulerService,
     extensionFacadeService,
     pluginInstallService,
-    mcpInstallService
+    mcpInstallService,
+    crossTeamService
   );
 
   // Forward SSH state changes to renderer and HTTP SSE clients

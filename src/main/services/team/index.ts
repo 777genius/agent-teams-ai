@@ -1,5 +1,8 @@
+export { CascadeGuard } from './CascadeGuard';
 export { ChangeExtractorService } from './ChangeExtractorService';
 export { ClaudeBinaryResolver } from './ClaudeBinaryResolver';
+export { CrossTeamOutbox } from './CrossTeamOutbox';
+export { CrossTeamService } from './CrossTeamService';
 export { FileContentResolver } from './FileContentResolver';
 export { GitDiffFallback } from './GitDiffFallback';
 export { HunkSnippetMatcher } from './HunkSnippetMatcher';

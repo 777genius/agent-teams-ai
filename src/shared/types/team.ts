@@ -245,7 +245,13 @@ export interface InboxMessage {
   summary?: string;
   color?: string;
   messageId?: string;
-  source?: 'inbox' | 'lead_session' | 'lead_process' | 'user_sent' | 'system_notification';
+  source?:
+    | 'inbox'
+    | 'lead_session'
+    | 'lead_process'
+    | 'user_sent'
+    | 'system_notification'
+    | 'cross_team';
   attachments?: AttachmentMeta[];
   /** Lead session ID that produced this message (for session boundary detection). */
   leadSessionId?: string;
@@ -588,6 +594,35 @@ export interface TeamMessageNotificationData {
    * but the user opted out of OS interruptions for this event type.
    */
   suppressToast?: boolean;
+}
+
+// =============================================================================
+// Cross-Team Communication
+// =============================================================================
+
+export interface CrossTeamMessage {
+  messageId: string;
+  fromTeam: string;
+  fromMember: string;
+  toTeam: string;
+  text: string;
+  summary?: string;
+  chainDepth: number;
+  timestamp: string;
+}
+
+export interface CrossTeamSendRequest {
+  fromTeam: string;
+  fromMember: string;
+  toTeam: string;
+  text: string;
+  summary?: string;
+  chainDepth?: number;
+}
+
+export interface CrossTeamSendResult {
+  messageId: string;
+  deliveredToInbox: boolean;
 }
 
 // =============================================================================

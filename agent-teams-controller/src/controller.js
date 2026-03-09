@@ -5,6 +5,7 @@ const review = require('./internal/review.js');
 const messages = require('./internal/messages.js');
 const processes = require('./internal/processes.js');
 const maintenance = require('./internal/maintenance.js');
+const crossTeam = require('./internal/crossTeam.js');
 
 function bindModule(context, moduleApi) {
   return Object.fromEntries(
@@ -26,6 +27,7 @@ function createController(options) {
     messages: bindModule(context, messages),
     processes: bindModule(context, processes),
     maintenance: bindModule(context, maintenance),
+    crossTeam: bindModule(context, crossTeam),
   };
 }
 
@@ -38,4 +40,5 @@ module.exports = {
   messages,
   processes,
   maintenance,
+  crossTeam,
 };

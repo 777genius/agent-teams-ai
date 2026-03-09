@@ -371,6 +371,19 @@ export const TEAM_VALIDATE_CLI_ARGS = 'team:validateCliArgs';
 export const TEAM_TOOL_APPROVAL_SETTINGS = 'team:toolApprovalSettings';
 
 // =============================================================================
+// Cross-Team Communication Channels
+// =============================================================================
+
+/** Send cross-team message */
+export const CROSS_TEAM_SEND = 'crossTeam:send';
+
+/** List available cross-team targets */
+export const CROSS_TEAM_LIST_TARGETS = 'crossTeam:listTargets';
+
+/** Get cross-team outbox for a team */
+export const CROSS_TEAM_GET_OUTBOX = 'crossTeam:getOutbox';
+
+// =============================================================================
 // CLI Installer API Channels
 // =============================================================================
 

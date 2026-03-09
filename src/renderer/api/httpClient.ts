@@ -17,6 +17,7 @@ import type {
   ContextInfo,
   ConversationGroup,
   CreateTaskRequest,
+  CrossTeamAPI,
   ElectronAPI,
   FileChangeEvent,
   GlobalTask,
@@ -907,6 +908,21 @@ export class HttpAPIClient implements ElectronAPI {
     },
     updateToolApprovalSettings: async (): Promise<void> => {
       console.warn('[HttpAPIClient] updateToolApprovalSettings is not available in browser mode');
+    },
+  };
+
+  // Cross-team communication API stubs
+  crossTeam: CrossTeamAPI = {
+    send: async () => {
+      throw new Error('Cross-team communication is not available in browser mode');
+    },
+    listTargets: async () => {
+      console.warn('[HttpAPIClient] crossTeam.listTargets is not available in browser mode');
+      return [];
+    },
+    getOutbox: async () => {
+      console.warn('[HttpAPIClient] crossTeam.getOutbox is not available in browser mode');
+      return [];
     },
   };
 

@@ -1,5 +1,6 @@
 import type { FastMCP } from 'fastmcp';
 
+import { registerCrossTeamTools } from './crossTeamTools';
 import { registerKanbanTools } from './kanbanTools';
 import { registerMessageTools } from './messageTools';
 import { registerProcessTools } from './processTools';
@@ -12,4 +13,5 @@ export function registerTools(server: FastMCP) {
   registerReviewTools(server);
   registerMessageTools(server);
   registerProcessTools(server);
+  registerCrossTeamTools(server);
 }

@@ -41,6 +41,9 @@ import type {
   AttachmentFileData,
   CommentAttachmentPayload,
   CreateTaskRequest,
+  CrossTeamMessage,
+  CrossTeamSendRequest,
+  CrossTeamSendResult,
   GlobalTask,
   KanbanColumnId,
   LeadActivityState,
@@ -534,6 +537,18 @@ export interface TeamsAPI {
 }
 
 // =============================================================================
+// Cross-Team Communication API
+// =============================================================================
+
+export interface CrossTeamAPI {
+  send: (request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>;
+  listTargets: (
+    excludeTeam?: string
+  ) => Promise<{ teamName: string; displayName: string; description?: string }[]>;
+  getOutbox: (teamName: string) => Promise<CrossTeamMessage[]>;
+}
+
+// =============================================================================
 // Schedule API
 // =============================================================================
 
@@ -760,6 +775,9 @@ export interface ElectronAPI {
 
   // Team management API
   teams: TeamsAPI;
+
+  // Cross-Team Communication API
+  crossTeam: CrossTeamAPI;
 
   // Review API
   review: ReviewAPI;
