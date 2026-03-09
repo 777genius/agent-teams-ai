@@ -1,61 +1,40 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { markAsRead } from '@renderer/services/commentReadStorage';
 
 import type { TaskComment } from '@shared/types';
 
+/**
+ * Marks task comments as read when the component is mounted and
+ * whenever the comments list changes while mounted.
+ *
+ * Previously used IntersectionObserver, but since the component
+ * is only rendered inside a CollapsibleTeamSection (conditional
+ * mount/unmount controls visibility), a simple effect is both
+ * simpler and more reliable — especially inside Dialog portals
+ * where IntersectionObserver can miss the initial intersection.
+ *
+ * Returns a ref callback for the comments container (kept for
+ * API compatibility with TaskCommentsSection).
+ */
 export function useMarkCommentsRead(
   teamName: string,
   taskId: string,
   comments: TaskComment[]
 ): (node: HTMLElement | null) => void {
-  const isVisibleRef = useRef(false);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  const nodeRef = useRef<HTMLElement | null>(null);
 
-  // Mark comments as read if section is visible
-  const markIfVisible = useCallback(() => {
-    if (!isVisibleRef.current || comments.length === 0) return;
+  // Mark as read on mount and whenever comments change
+  useEffect(() => {
+    if (comments.length === 0) return;
     const latest = Math.max(...comments.map((c) => new Date(c.createdAt).getTime()));
     if (latest > 0) markAsRead(teamName, taskId, latest);
   }, [teamName, taskId, comments]);
 
-  // Re-mark when new comments arrive while section is visible
-  useEffect(() => {
-    markIfVisible();
-  }, [markIfVisible]);
-
-  // IntersectionObserver ref callback
-  const refCallback = useCallback(
-    (node: HTMLElement | null) => {
-      // Cleanup previous
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-        observerRef.current = null;
-      }
-
-      if (!node) {
-        isVisibleRef.current = false;
-        return;
-      }
-
-      observerRef.current = new IntersectionObserver(
-        ([entry]) => {
-          isVisibleRef.current = entry.isIntersecting;
-          if (entry.isIntersecting) markIfVisible();
-        },
-        { threshold: 0.1 }
-      );
-      observerRef.current.observe(node);
-    },
-    [markIfVisible]
-  );
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      observerRef.current?.disconnect();
-    };
-  }, []);
+  // Stable ref callback (no dependencies — just stores the node)
+  const refCallback = useRef((node: HTMLElement | null) => {
+    nodeRef.current = node;
+  }).current;
 
   return refCallback;
 }

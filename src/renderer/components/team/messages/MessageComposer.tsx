@@ -189,6 +189,7 @@ export const MessageComposer = ({
     trimmed.length > 0 &&
     trimmed.length <= MAX_TEXT_LENGTH &&
     !sending &&
+    !isProvisioning &&
     !attachmentsBlocked &&
     (!isCrossTeam || onCrossTeamSend !== undefined);
 
@@ -621,7 +622,7 @@ export const MessageComposer = ({
         minRows={2}
         maxRows={6}
         maxLength={MAX_TEXT_LENGTH}
-        disabled={sending}
+        disabled={sending || isProvisioning}
         cornerAction={
           <div className="flex items-center gap-2">
             {/* NOTE: ContextRing disabled — usage formula is inaccurate */}
