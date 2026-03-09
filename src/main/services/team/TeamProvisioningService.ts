@@ -19,7 +19,7 @@ import {
   AGENT_BLOCK_OPEN,
   stripAgentBlocks,
 } from '@shared/constants/agentBlocks';
-import { getMemberColor } from '@shared/constants/memberColors';
+import { getMemberColorByName } from '@shared/constants/memberColors';
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
@@ -566,6 +566,7 @@ Communication protocol (CRITICAL — you are running headless, no one sees your 
 - Example: if you receive <teammate-message teammate_id="alice">...</teammate-message>, respond with SendMessage(type: "message", recipient: "alice", content: "your reply").
 
 Message formatting:
+- When mentioning teammates by name in messages and text output, always use @ prefix (e.g. @alice, @bob) for UI highlighting. Do NOT use @ in tool parameters (recipient, owner, etc.) — those require plain names.
 ${agentBlockPolicy}
 
 ${membersFooter}`;
@@ -1152,6 +1153,30 @@ export class TeamProvisioningService {
       });
     } catch (error) {
       logger.warn(`[${teamName}] sent-message persist failed: ${String(error)}`);
+    }
+  }
+
+  private persistInboxMessage(teamName: string, recipient: string, message: InboxMessage): void {
+    try {
+      createController({
+        teamName,
+        claudeDir: getClaudeBasePath(),
+      }).messages.sendMessage({
+        member: recipient,
+        from: message.from,
+        text: message.text,
+        timestamp: message.timestamp,
+        summary: message.summary,
+        messageId: message.messageId,
+        source: message.source,
+        leadSessionId: message.leadSessionId,
+        attachments: message.attachments,
+        color: message.color,
+        toolSummary: message.toolSummary,
+        toolCalls: message.toolCalls,
+      });
+    } catch (error) {
+      logger.warn(`[${teamName}] inbox-message persist for ${recipient} failed: ${String(error)}`);
     }
   }
 
@@ -2923,12 +2948,24 @@ export class TeamProvisioningService {
       };
 
       this.pushLiveLeadProcessMessage(run.teamName, msg);
-      this.persistSentMessage(run.teamName, msg);
-      this.teamChangeEmitter?.({
-        type: 'inbox',
-        teamName: run.teamName,
-        detail: 'sentMessages.json',
-      });
+
+      if (recipient === 'user') {
+        // User-directed messages go to sentMessages.json (canonical outbound store)
+        this.persistSentMessage(run.teamName, msg);
+        this.teamChangeEmitter?.({
+          type: 'inbox',
+          teamName: run.teamName,
+          detail: 'sentMessages.json',
+        });
+      } else {
+        // Non-user messages go to canonical recipient inbox for relay delivery
+        this.persistInboxMessage(run.teamName, recipient, msg);
+        this.teamChangeEmitter?.({
+          type: 'inbox',
+          teamName: run.teamName,
+          detail: `inboxes/${recipient}.json`,
+        });
+      }
 
       logger.debug(
         `[${run.teamName}] Captured SendMessage→${recipient} from stdout: ${cleanContent.slice(0, 100)}`
@@ -5183,12 +5220,12 @@ export class TeamProvisioningService {
     try {
       await this.membersMetaStore.writeMembers(
         teamName,
-        teammateMembers.map((member, index) => ({
+        teammateMembers.map((member) => ({
           name: member.name.trim(),
           role: member.role?.trim() || undefined,
           workflow: member.workflow?.trim() || undefined,
           agentType: 'general-purpose',
-          color: getMemberColor(index),
+          color: getMemberColorByName(member.name.trim()),
           joinedAt,
         }))
       );

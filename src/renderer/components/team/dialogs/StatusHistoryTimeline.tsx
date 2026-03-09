@@ -1,3 +1,4 @@
+import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
 import {
@@ -5,15 +6,17 @@ import {
   TASK_STATUS_LABELS,
   TASK_STATUS_STYLES,
 } from '@renderer/utils/memberHelpers';
-import { ArrowRight, Eye, MessageSquareX, Play, Plus, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Eye, MessageSquareX, Plus, ShieldCheck } from 'lucide-react';
 
 import type { TaskHistoryEvent, TeamReviewState, TeamTaskStatus } from '@shared/types';
 
 interface WorkflowTimelineProps {
   events: TaskHistoryEvent[];
+  /** Map of member name → color name for colored badges. */
+  memberColorMap?: Map<string, string>;
 }
 
-export const WorkflowTimeline = ({ events }: WorkflowTimelineProps) => {
+export const WorkflowTimeline = ({ events, memberColorMap }: WorkflowTimelineProps) => {
   if (events.length === 0) {
     return (
       <div className="px-3 py-2 text-xs text-[var(--color-text-muted)]">
@@ -43,10 +46,14 @@ export const WorkflowTimeline = ({ events }: WorkflowTimelineProps) => {
                   <span className="shrink-0 font-mono text-[10px] text-[var(--color-text-muted)]">
                     {time}
                   </span>
-                  <EventContent event={event} />
+                  <EventContent event={event} memberColorMap={memberColorMap} />
                   {event.actor ? (
-                    <span className="ml-auto shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                      by {event.actor}
+                    <span className="ml-auto shrink-0">
+                      <MemberBadge
+                        name={event.actor}
+                        color={memberColorMap?.get(event.actor)}
+                        size="sm"
+                      />
                     </span>
                   ) : null}
                 </div>
@@ -65,7 +72,13 @@ export const WorkflowTimeline = ({ events }: WorkflowTimelineProps) => {
 /** Keep old name as re-export for backwards compatibility during migration. */
 export const StatusHistoryTimeline = WorkflowTimeline;
 
-const EventContent = ({ event }: { event: TaskHistoryEvent }) => {
+const EventContent = ({
+  event,
+  memberColorMap,
+}: {
+  event: TaskHistoryEvent;
+  memberColorMap?: Map<string, string>;
+}) => {
   switch (event.type) {
     case 'task_created':
       return (
@@ -89,7 +102,12 @@ const EventContent = ({ event }: { event: TaskHistoryEvent }) => {
           <Eye size={10} className="text-purple-400" />
           Review requested
           {event.reviewer ? (
-            <span className="text-[10px] text-[var(--color-text-muted)]">({event.reviewer})</span>
+            <MemberBadge
+              name={event.reviewer}
+              color={memberColorMap?.get(event.reviewer)}
+              size="sm"
+              hideAvatar
+            />
           ) : null}
         </span>
       );

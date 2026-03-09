@@ -532,4 +532,32 @@ describe('agent-teams-controller API', () => {
     controller.processes.unregisterProcess({ id: 'stale-entry' });
     expect(controller.processes.listProcesses()).toEqual([]);
   });
+
+  it('task_add_comment succeeds even when owner notification write fails', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.tasks.createTask({
+      subject: 'Comment resilience',
+      owner: 'bob',
+      notifyOwner: false,
+    });
+
+    // Make inboxes directory read-only to force notification write failure
+    const inboxDir = path.join(claudeDir, 'teams', 'my-team', 'inboxes');
+    fs.mkdirSync(inboxDir, { recursive: true });
+    // Write a broken file that will cause JSON parse failure on append
+    fs.writeFileSync(path.join(inboxDir, 'bob.json'), 'NOT VALID JSON');
+
+    // Comment should still succeed despite notification failure
+    const commented = controller.tasks.addTaskComment(task.id, {
+      from: 'alice',
+      text: 'This should persist despite notification failure.',
+    });
+
+    expect(commented.commentId).toBeTruthy();
+    expect(commented.task.comments).toHaveLength(1);
+    expect(commented.task.comments[0].text).toBe(
+      'This should persist despite notification failure.'
+    );
+  });
 });

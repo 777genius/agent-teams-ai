@@ -385,6 +385,12 @@ const AIChatGroupInner = ({
   // Determine if there's content to toggle
   const hasToggleContent = enhanced.displayItems.length > 0;
 
+  // Last thinking text for collapsed preview
+  const lastThought = useMemo(() => {
+    const thinkingItems = enhanced.displayItems.filter((d) => d.type === 'thinking');
+    return thinkingItems.at(-1)?.content?.slice(0, 200) ?? null;
+  }, [enhanced.displayItems]);
+
   // Handle item click - toggle inline expansion using store action
   const handleItemClick = (itemId: string): void => {
     toggleDisplayItemExpansion(aiGroup.id, itemId);
@@ -499,6 +505,11 @@ const AIChatGroupInner = ({
             )}
           </div>
         </div>
+      )}
+
+      {/* Last thought preview in collapsed state */}
+      {hasToggleContent && !isExpanded && lastThought && (
+        <div className="truncate px-6 pb-1 text-xs text-text-muted">{lastThought}</div>
       )}
 
       {/* Expandable Content */}

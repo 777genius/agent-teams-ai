@@ -50,6 +50,22 @@ const hoisted = vi.hoisted(() => {
       files.set(sentMessagesPath, JSON.stringify(rows));
       return message;
     }),
+    sendInboxMessage: vi.fn(
+      (teamName: string, message: Record<string, unknown>) => {
+        const member =
+          typeof message.member === 'string'
+            ? message.member
+            : typeof message.to === 'string'
+              ? message.to
+              : 'unknown';
+        const p = `/mock/teams/${teamName}/inboxes/${member}.json`;
+        const current = files.get(p);
+        const rows = current ? (JSON.parse(current) as unknown[]) : [];
+        rows.push(message);
+        files.set(p, JSON.stringify(rows));
+        return { deliveredToInbox: true, messageId: 'mock-id', message };
+      }
+    ),
     setAtomicWriteShouldFail: (next: boolean) => {
       atomicWriteShouldFail = next;
     },
@@ -85,6 +101,8 @@ vi.mock('agent-teams-controller', () => ({
     messages: {
       appendSentMessage: (message: Record<string, unknown>) =>
         hoisted.appendSentMessage(teamName, message),
+      sendMessage: (message: Record<string, unknown>) =>
+        hoisted.sendInboxMessage(teamName, message),
     },
   }),
 }));

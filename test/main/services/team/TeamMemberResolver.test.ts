@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
 
-import type { InboxMessage, TeamConfig, TeamTask } from '../../../../src/shared/types/team';
+import type {
+  InboxMessage,
+  TeamConfig,
+  TeamTask,
+  TeamTaskWithKanban,
+} from '../../../../src/shared/types/team';
 
 describe('TeamMemberResolver', () => {
   it('builds roster from config + meta + inbox only', () => {
@@ -64,5 +69,75 @@ describe('TeamMemberResolver', () => {
     expect(names).not.toContain('user');
     expect(names).toContain('team-lead');
     expect(names).toContain('alice');
+  });
+
+  it('sets currentTaskId for in_progress task', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'bob', agentType: 'general-purpose' }],
+    };
+    const tasks: TeamTaskWithKanban[] = [
+      { id: 't1', subject: 'Work', status: 'in_progress', owner: 'bob' },
+    ];
+    const members = resolver.resolveMembers(config, [], [], tasks, []);
+    const bob = members.find((m) => m.name === 'bob');
+    expect(bob?.currentTaskId).toBe('t1');
+  });
+
+  it('clears currentTaskId when task is approved via kanbanColumn', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'bob', agentType: 'general-purpose' }],
+    };
+    const tasks: TeamTaskWithKanban[] = [
+      {
+        id: 't1',
+        subject: 'Work',
+        status: 'in_progress',
+        owner: 'bob',
+        reviewState: 'approved',
+        kanbanColumn: 'approved',
+      },
+    ];
+    const members = resolver.resolveMembers(config, [], [], tasks, []);
+    const bob = members.find((m) => m.name === 'bob');
+    expect(bob?.currentTaskId).toBeNull();
+  });
+
+  it('clears currentTaskId when task reviewState is approved even without kanbanColumn', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'bob', agentType: 'general-purpose' }],
+    };
+    const tasks: TeamTaskWithKanban[] = [
+      {
+        id: 't1',
+        subject: 'Work',
+        status: 'in_progress',
+        owner: 'bob',
+        reviewState: 'approved',
+        // kanbanColumn not set — stale data scenario
+      },
+    ];
+    const members = resolver.resolveMembers(config, [], [], tasks, []);
+    const bob = members.find((m) => m.name === 'bob');
+    expect(bob?.currentTaskId).toBeNull();
+  });
+
+  it('clears currentTaskId when task status is completed', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'bob', agentType: 'general-purpose' }],
+    };
+    const tasks: TeamTaskWithKanban[] = [
+      { id: 't1', subject: 'Work', status: 'completed', owner: 'bob' },
+    ];
+    const members = resolver.resolveMembers(config, [], [], tasks, []);
+    const bob = members.find((m) => m.name === 'bob');
+    expect(bob?.currentTaskId).toBeNull();
   });
 });

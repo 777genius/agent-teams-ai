@@ -79,7 +79,7 @@ export const CollapsibleTeamSection = ({
       >
         <button
           type="button"
-          className={`absolute inset-0 z-0 cursor-pointer transition-colors ${isOpen ? 'rounded-t-md bg-white/[0.07] hover:bg-white/[0.1]' : 'rounded-md bg-white/[0.04] hover:bg-white/[0.08]'}`}
+          className={`absolute inset-0 z-0 cursor-pointer transition-colors ${isOpen ? 'rounded-t-md bg-[var(--color-section-bg-open)] hover:bg-[var(--color-section-hover-open)]' : 'rounded-md bg-[var(--color-section-bg)] hover:bg-[var(--color-section-hover)]'}`}
           onClick={() => setOpen((prev) => !prev)}
           aria-label={isOpen ? 'Collapse section' : 'Expand section'}
         />

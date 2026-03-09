@@ -23,7 +23,13 @@ export const ActiveTasksBlock = ({
   const { isLight } = useTheme();
   const colorMap = buildMemberColorMap(members);
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
-  const working = members.filter((m) => m.currentTaskId != null);
+  const working = members.filter((m) => {
+    if (!m.currentTaskId) return false;
+    const task = taskMap.get(m.currentTaskId);
+    // Defense-in-depth: hide banner for approved/completed tasks even if currentTaskId is stale
+    if (task && (task.reviewState === 'approved' || task.status === 'completed')) return false;
+    return true;
+  });
   if (working.length === 0) return null;
 
   return (

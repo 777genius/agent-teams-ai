@@ -42,6 +42,22 @@ const hoisted = vi.hoisted(() => {
       files.set(p, JSON.stringify(rows));
       return message;
     }),
+    sendInboxMessage: vi.fn(
+      (teamName: string, message: Record<string, unknown>) => {
+        const member =
+          typeof message.member === 'string'
+            ? message.member
+            : typeof message.to === 'string'
+              ? message.to
+              : 'unknown';
+        const p = `/mock/teams/${teamName}/inboxes/${member}.json`;
+        const current = files.get(p);
+        const rows = current ? (JSON.parse(current) as unknown[]) : [];
+        rows.push(message);
+        files.set(p, JSON.stringify(rows));
+        return { deliveredToInbox: true, messageId: 'mock-id', message };
+      }
+    ),
   };
 });
 
@@ -67,6 +83,8 @@ vi.mock('agent-teams-controller', () => ({
     messages: {
       appendSentMessage: (message: Record<string, unknown>) =>
         hoisted.appendSentMessage(teamName, message),
+      sendMessage: (message: Record<string, unknown>) =>
+        hoisted.sendInboxMessage(teamName, message),
     },
   }),
 }));
@@ -146,6 +164,7 @@ describe('TeamProvisioningService pre-ready live messages', () => {
   beforeEach(() => {
     hoisted.files.clear();
     hoisted.appendSentMessage.mockClear();
+    hoisted.sendInboxMessage.mockClear();
   });
 
   it('pre-ready assistant text is added to liveLeadProcessMessages', () => {
@@ -301,7 +320,9 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     expect(live[0].to).toBe('team-lead');
     expect(live[0].text).toBe('Need clarification on #abcd1234');
     expect(live[0].source).toBe('lead_process');
-    expect(hoisted.appendSentMessage).toHaveBeenCalledTimes(1);
+    // Non-user recipient → delivered to inbox, not sentMessages
+    expect(hoisted.sendInboxMessage).toHaveBeenCalledTimes(1);
+    expect(hoisted.appendSentMessage).not.toHaveBeenCalled();
   });
 
   it('post-ready path also uses the unified helper', () => {
@@ -323,6 +344,82 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     // Post-ready also emits lead-message
     expect(emitter).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'lead-message', teamName: 'my-team' })
+    );
+  });
+
+  it('SendMessage(to:teammate) creates inbox row and emits inbox detail for recipient', () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const emitter = vi.fn<(event: TeamChangeEvent) => void>();
+    service.setTeamChangeEmitter(emitter);
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          name: 'SendMessage',
+          input: {
+            type: 'message',
+            recipient: 'alice',
+            content: 'Please check the migration.',
+            summary: 'Migration check',
+          },
+        },
+      ],
+    });
+
+    // Delivered to recipient inbox, not sentMessages
+    expect(hoisted.sendInboxMessage).toHaveBeenCalledTimes(1);
+    expect(hoisted.sendInboxMessage).toHaveBeenCalledWith(
+      'my-team',
+      expect.objectContaining({ member: 'alice' })
+    );
+    expect(hoisted.appendSentMessage).not.toHaveBeenCalled();
+
+    // Emits inbox event for the specific recipient
+    expect(emitter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'inbox',
+        teamName: 'my-team',
+        detail: 'inboxes/alice.json',
+      })
+    );
+  });
+
+  it('SendMessage(to:user) still persists to sentMessages.json', () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const emitter = vi.fn<(event: TeamChangeEvent) => void>();
+    service.setTeamChangeEmitter(emitter);
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          name: 'SendMessage',
+          input: {
+            type: 'message',
+            recipient: 'user',
+            content: 'Task completed!',
+            summary: 'Done',
+          },
+        },
+      ],
+    });
+
+    expect(hoisted.appendSentMessage).toHaveBeenCalledTimes(1);
+    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
+
+    expect(emitter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'inbox',
+        teamName: 'my-team',
+        detail: 'sentMessages.json',
+      })
     );
   });
 });

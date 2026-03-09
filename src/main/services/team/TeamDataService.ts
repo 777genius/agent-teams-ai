@@ -13,7 +13,7 @@ import {
   AGENT_BLOCK_OPEN,
   stripAgentBlocks,
 } from '@shared/constants/agentBlocks';
-import { getMemberColor } from '@shared/constants/memberColors';
+import { getMemberColorByName } from '@shared/constants/memberColors';
 import { createLogger } from '@shared/utils/logger';
 import { getKanbanColumnFromReviewState, normalizeReviewState } from '@shared/utils/reviewState';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
@@ -622,7 +622,7 @@ export class TeamDataService {
       role: request.role?.trim() || undefined,
       workflow: request.workflow?.trim() || undefined,
       agentType: 'general-purpose',
-      color: getMemberColor(members.filter((m) => !m.removedAt).length),
+      color: getMemberColorByName(name),
       joinedAt: Date.now(),
     };
 
@@ -662,7 +662,7 @@ export class TeamDataService {
     const joinedAt = Date.now();
     const nextByName = new Set<string>();
 
-    const nextActive: TeamMember[] = request.members.map((member, index) => {
+    const nextActive: TeamMember[] = request.members.map((member) => {
       const name = member.name.trim();
       if (!name) throw new Error('Member name cannot be empty');
       if (name.toLowerCase() === 'team-lead') {
@@ -681,7 +681,7 @@ export class TeamDataService {
         role: member.role?.trim() || undefined,
         workflow: member.workflow?.trim() || undefined,
         agentType: prev?.agentType ?? 'general-purpose',
-        color: prev?.color ?? getMemberColor(index),
+        color: prev?.color ?? getMemberColorByName(name),
         joinedAt: prev?.joinedAt ?? joinedAt,
         removedAt: undefined,
       };
@@ -1113,7 +1113,7 @@ export class TeamDataService {
     await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
     await this.membersMetaStore.writeMembers(
       request.teamName,
-      request.members.map((member, index) => ({
+      request.members.map((member) => ({
         name: (() => {
           const name = member.name.trim();
           if (!name) throw new Error('Member name cannot be empty');
@@ -1129,7 +1129,7 @@ export class TeamDataService {
         })(),
         role: member.role?.trim() || undefined,
         agentType: 'general-purpose',
-        color: getMemberColor(index),
+        color: getMemberColorByName(member.name.trim()),
         joinedAt,
       }))
     );

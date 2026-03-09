@@ -9,7 +9,7 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { reconcileChips, removeChipTokenFromText } from '@renderer/utils/chipUtils';
-import { getMemberColor } from '@shared/constants/memberColors';
+import { getMemberColorByName } from '@shared/constants/memberColors';
 import { ChevronDown, ChevronRight, Info } from 'lucide-react';
 
 import type { MemberDraft } from './membersEditorTypes';
@@ -47,7 +47,9 @@ export const MemberDraftRow = ({
   projectPath,
   mentionSuggestions = [],
 }: MemberDraftRowProps): React.JSX.Element => {
-  const memberColorSet = getTeamColorSet(getMemberColor(index));
+  const memberColorSet = getTeamColorSet(
+    getMemberColorByName(member.name.trim() || `member-${index}`)
+  );
   const [workflowExpanded, setWorkflowExpanded] = useState(false);
   const [modelExpanded, setModelExpanded] = useState(false);
 

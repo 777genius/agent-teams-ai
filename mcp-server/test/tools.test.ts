@@ -260,9 +260,11 @@ describe('agent-teams-mcp tools', () => {
       })
     );
     expect(approved.reviewState).toBe('approved');
-    const ownerInboxPath = path.join(claudeDir, 'teams', teamName, 'inboxes', 'alice.json');
-    const ownerInbox = JSON.parse(fs.readFileSync(ownerInboxPath, 'utf8'));
-    expect(ownerInbox.at(-1).leadSessionId).toBe('session-review-1');
+    {
+      const approvedInboxPath = path.join(claudeDir, 'teams', teamName, 'inboxes', 'alice.json');
+      const approvedInbox = JSON.parse(fs.readFileSync(approvedInboxPath, 'utf8'));
+      expect(approvedInbox.at(-1).leadSessionId).toBe('session-review-1');
+    }
 
     const kanbanState = parseJsonToolResult(
       await getTool('kanban_get').execute({
@@ -548,5 +550,49 @@ describe('agent-teams-mcp tools', () => {
         label: '',
       }).success
     ).toBe(false);
+  });
+
+  it('task_add_comment succeeds even when owner inbox write fails', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'resilience';
+
+    const task = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Comment resilience test',
+        owner: 'alice',
+        notifyOwner: false,
+      })
+    );
+
+    // Corrupt the inbox file to force notification failure
+    const inboxDir = path.join(claudeDir, 'teams', teamName, 'inboxes');
+    fs.mkdirSync(inboxDir, { recursive: true });
+    fs.writeFileSync(path.join(inboxDir, 'alice.json'), 'BROKEN JSON');
+
+    const commented = parseJsonToolResult(
+      await getTool('task_add_comment').execute({
+        claudeDir,
+        teamName,
+        taskId: task.id,
+        text: 'Comment should persist despite broken inbox',
+        from: 'bob',
+      })
+    );
+
+    expect(commented.commentId).toBeTruthy();
+
+    // Verify the comment is actually persisted on the task
+    const reloaded = parseJsonToolResult(
+      await getTool('task_get').execute({
+        claudeDir,
+        teamName,
+        taskId: task.id,
+      })
+    );
+
+    expect(reloaded.comments).toHaveLength(1);
+    expect(reloaded.comments[0].text).toBe('Comment should persist despite broken inbox');
   });
 });

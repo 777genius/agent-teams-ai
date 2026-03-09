@@ -1,7 +1,7 @@
 import 'yet-another-react-lightbox/styles.css';
 import 'yet-another-react-lightbox/plugins/counter.css';
 
-import { useMemo } from 'react';
+import { createContext, useContext, useEffect, useRef, useMemo } from 'react';
 
 import Lightbox from 'yet-another-react-lightbox';
 import Counter from 'yet-another-react-lightbox/plugins/counter';
@@ -9,6 +9,21 @@ import Fullscreen from 'yet-another-react-lightbox/plugins/fullscreen';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 
 import type { Plugin, Slide } from 'yet-another-react-lightbox';
+
+// ---------------------------------------------------------------------------
+// LightboxLock context — allows a parent (e.g. Dialog) to know when a
+// lightbox is open so it can block dismiss events.
+// ---------------------------------------------------------------------------
+
+type LightboxLockCallback = (open: boolean) => void;
+
+const LightboxLockContext = createContext<LightboxLockCallback | null>(null);
+
+/**
+ * Wrap a Dialog (or any dismissable container) with this provider and pass a
+ * callback that receives `true` when a lightbox opens and `false` when it closes.
+ */
+export const LightboxLockProvider = LightboxLockContext.Provider;
 
 export interface ImageLightboxSlide {
   src: string;
@@ -30,6 +45,8 @@ interface ImageLightboxProps {
   enableZoom?: boolean;
   enableFullscreen?: boolean;
   showCounter?: boolean;
+  /** Called when lightbox open state changes (useful for parent components to block dismiss). */
+  onOpenChange?: (open: boolean) => void;
 }
 
 export const ImageLightbox = ({
@@ -42,6 +59,7 @@ export const ImageLightbox = ({
   enableZoom = true,
   enableFullscreen = true,
   showCounter,
+  onOpenChange,
 }: ImageLightboxProps): React.JSX.Element | null => {
   const slides = useMemo<Slide[]>(() => {
     if (slidesProp && slidesProp.length > 0) {
@@ -62,6 +80,29 @@ export const ImageLightbox = ({
     if (shouldShowCounter) list.push(Counter);
     return list;
   }, [enableZoom, enableFullscreen, showCounter, slides.length]);
+
+  // Resolve the lightbox lock callback: explicit prop takes priority, then context.
+  const contextLock = useContext(LightboxLockContext);
+  const lockCallback = onOpenChange ?? contextLock;
+  const lockCallbackRef = useRef(lockCallback);
+  lockCallbackRef.current = lockCallback;
+
+  // Track our notified state to avoid double-calling.
+  const notifiedOpenRef = useRef(false);
+
+  // Notify parent on mount when open=true and on unmount.
+  useEffect(() => {
+    if (open && !notifiedOpenRef.current) {
+      notifiedOpenRef.current = true;
+      lockCallbackRef.current?.(true);
+    }
+    return () => {
+      if (notifiedOpenRef.current) {
+        notifiedOpenRef.current = false;
+        lockCallbackRef.current?.(false);
+      }
+    };
+  }, [open]);
 
   if (!open || slides.length === 0) return null;
 

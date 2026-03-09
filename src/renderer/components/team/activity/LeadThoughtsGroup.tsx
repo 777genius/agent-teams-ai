@@ -342,24 +342,10 @@ const LeadThoughtItem = ({
     <div ref={wrapperRef}>
       <div ref={contentRef}>
         {showDivider && (
-          <div className="mx-auto flex w-2/5 items-center justify-center gap-[5px] py-px">
-            <hr
-              className="flex-1 border-0"
-              style={{
-                height: '1px',
-                backgroundColor: 'var(--color-border-emphasis)',
-              }}
-            />
-            <span className="shrink-0 font-mono text-[9px]" style={{ color: CARD_ICON_MUTED }}>
+          <div className="py-px text-center">
+            <span className="font-mono text-[9px]" style={{ color: CARD_ICON_MUTED }}>
               {formatTimeWithSec(thought.timestamp)}
             </span>
-            <hr
-              className="flex-1 border-0"
-              style={{
-                height: '1px',
-                backgroundColor: 'var(--color-border-emphasis)',
-              }}
-            />
           </div>
         )}
         <div className="group/thought relative flex text-[11px]">
@@ -745,6 +731,20 @@ export const LeadThoughtsGroupRow = ({
             </Tooltip>
           )}
         </div>
+
+        {/* Last thought preview when body is collapsed */}
+        {!isBodyVisible && newest.text && (
+          <div
+            className="truncate border-t px-3 py-1 text-[11px]"
+            style={{
+              borderColor: 'var(--color-border-subtle)',
+              color: CARD_TEXT_LIGHT,
+              opacity: 0.7,
+            }}
+          >
+            {newest.text.slice(0, 200)}
+          </div>
+        )}
 
         {/* Scrollable body — live thoughts follow bottom unless user scrolls up */}
         {isBodyVisible ? (

@@ -28,7 +28,7 @@ import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { normalizePath } from '@renderer/utils/pathNormalize';
-import { getMemberColor } from '@shared/constants/memberColors';
+import { getMemberColorByName } from '@shared/constants/memberColors';
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
@@ -254,7 +254,8 @@ export const CreateTeamDialog = ({
 
   // Re-read localStorage when advancedKey changes
   useEffect(() => {
-    const storedEnabled = localStorage.getItem(`team:lastWorktreeEnabled:${advancedKey}`) === 'true';
+    const storedEnabled =
+      localStorage.getItem(`team:lastWorktreeEnabled:${advancedKey}`) === 'true';
     const storedName = localStorage.getItem(`team:lastWorktreeName:${advancedKey}`) ?? '';
     setWorktreeEnabledRaw(storedEnabled && Boolean(storedName));
     setWorktreeNameRaw(storedName);
@@ -497,7 +498,7 @@ export const CreateTeamDialog = ({
         ? [{ id: 'team-lead', name: 'team-lead', subtitle: 'Team Lead', color: 'blue' }]
         : members
             .filter((m) => m.name.trim())
-            .map((m, index) => ({
+            .map((m) => ({
               id: m.id,
               name: m.name.trim(),
               subtitle:
@@ -506,7 +507,7 @@ export const CreateTeamDialog = ({
                   : m.roleSelection && m.roleSelection !== NO_ROLE
                     ? m.roleSelection
                     : undefined,
-              color: getMemberColor(index),
+              color: getMemberColorByName(m.name.trim()),
             })),
     [members, soloTeam]
   );

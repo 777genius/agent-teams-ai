@@ -1,4 +1,4 @@
-import { getMemberColor, MEMBER_COLOR_PALETTE } from '@shared/constants/memberColors';
+import { getMemberColorByName, MEMBER_COLOR_PALETTE } from '@shared/constants/memberColors';
 
 import type {
   LeadActivityState,
@@ -95,29 +95,31 @@ export function buildMemberColorMap(members: MemberColorInput[]): Map<string, st
   const usedColors = new Set<string>();
 
   const paletteSize = MEMBER_COLOR_PALETTE.length;
-  let nextFallback = 0;
   for (const member of active) {
     let color = member.color;
     if (!color || usedColors.has(color)) {
-      // Search for an unused palette color, but cap iterations to avoid
-      // an infinite loop when there are more members than palette colors.
-      const searchStart = nextFallback;
-      while (usedColors.has(getMemberColor(nextFallback))) {
-        nextFallback++;
-        if (nextFallback - searchStart >= paletteSize) {
-          // All palette colors exhausted — reuse by cycling
-          break;
+      // Deterministic fallback: hash the member name to a palette color.
+      // If that color is already taken, linear-probe for the next free one.
+      color = getMemberColorByName(member.name);
+      if (usedColors.has(color)) {
+        const startIdx = MEMBER_COLOR_PALETTE.indexOf(
+          color as (typeof MEMBER_COLOR_PALETTE)[number]
+        );
+        for (let offset = 1; offset < paletteSize; offset++) {
+          const candidate = MEMBER_COLOR_PALETTE[(startIdx + offset) % paletteSize];
+          if (!usedColors.has(candidate)) {
+            color = candidate;
+            break;
+          }
         }
       }
-      color = getMemberColor(nextFallback);
-      nextFallback++;
     }
     map.set(member.name, color);
     usedColors.add(color);
   }
 
   for (let i = 0; i < removed.length; i++) {
-    map.set(removed[i].name, removed[i].color ?? getMemberColor(active.length + i));
+    map.set(removed[i].name, removed[i].color ?? getMemberColorByName(removed[i].name));
   }
 
   map.set('user', 'user');

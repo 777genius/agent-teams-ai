@@ -53,6 +53,8 @@ interface TaskCommentsSectionProps {
   onTaskIdClick?: (taskId: string) => void;
   /** Extra className on the outer comments container (e.g. negative margins for edge-to-edge). */
   containerClassName?: string;
+  /** Snapshot of unread comment IDs captured when the dialog opened. Blue dot is shown for these. */
+  unreadCommentIds?: Set<string>;
 }
 
 /** Convert `#<task-display-id>` in plain text to markdown links with task:// protocol. */
@@ -83,6 +85,7 @@ export const TaskCommentsSection = ({
   onReply,
   onTaskIdClick,
   containerClassName,
+  unreadCommentIds,
 }: TaskCommentsSectionProps): React.JSX.Element => {
   const addTaskComment = useStore((s) => s.addTaskComment);
   const addingComment = useStore((s) => s.addingComment);
@@ -207,6 +210,9 @@ export const TaskCommentsSection = ({
                   }
                 >
                   <div className="mb-1 flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
+                    {unreadCommentIds?.has(comment.id) ? (
+                      <span className="size-2 shrink-0 rounded-full bg-blue-500" />
+                    ) : null}
                     <MemberBadge
                       name={comment.author}
                       color={colorMap.get(comment.author)}

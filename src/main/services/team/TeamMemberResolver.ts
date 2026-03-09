@@ -93,7 +93,10 @@ export class TeamMemberResolver {
       const ownedTasks = tasks.filter((task) => task.owner === name);
       const currentTask =
         ownedTasks.find(
-          (task) => task.status === 'in_progress' && task.kanbanColumn !== 'approved'
+          (task) =>
+            task.status === 'in_progress' &&
+            task.reviewState !== 'approved' &&
+            task.kanbanColumn !== 'approved'
         ) ?? null;
       const memberMessages = messages.filter((message) => message.from === name);
       const latestMessage = memberMessages[0] ?? null;

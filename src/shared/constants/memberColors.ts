@@ -90,3 +90,24 @@ export type MemberColorName = (typeof MEMBER_COLOR_PALETTE)[number];
 export function getMemberColor(index: number): string {
   return MEMBER_COLOR_PALETTE[index % MEMBER_COLOR_PALETTE.length];
 }
+
+/**
+ * Simple deterministic hash for a string → non-negative integer.
+ * Uses djb2 algorithm for good distribution across the palette.
+ */
+function hashStringToIndex(str: string): number {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+/**
+ * Get a stable color for a member name.
+ * The color is deterministic — same name always maps to the same palette entry,
+ * regardless of member order or team size.
+ */
+export function getMemberColorByName(name: string): string {
+  return MEMBER_COLOR_PALETTE[hashStringToIndex(name) % MEMBER_COLOR_PALETTE.length];
+}

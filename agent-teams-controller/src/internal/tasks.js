@@ -164,7 +164,19 @@ function setTaskStatus(context, taskId, status, actor) {
 }
 
 function startTask(context, taskId, actor) {
-  return setTaskStatus(context, taskId, 'in_progress', actor);
+  const task = setTaskStatus(context, taskId, 'in_progress', actor);
+  // Clear stale kanban entry (e.g. 'approved' or 'review') when task is reopened
+  try {
+    const kanbanStore = require('./kanbanStore.js');
+    const state = kanbanStore.readKanbanState(context.paths, context.teamName);
+    if (state.tasks[task.id]) {
+      delete state.tasks[task.id];
+      kanbanStore.writeKanbanState(context.paths, context.teamName, state);
+    }
+  } catch {
+    // Best-effort: task status already updated, kanban cleanup failure is non-fatal
+  }
+  return task;
 }
 
 function completeTask(context, taskId, actor) {
@@ -212,10 +224,19 @@ function addTaskComment(context, taskId, flags) {
     ...(Array.isArray(flags.attachments) ? { attachments: flags.attachments } : {}),
   });
 
-  maybeNotifyTaskOwnerOnComment(context, result.task, result.comment, {
-    inserted: result.inserted,
-    notifyOwner: flags.notifyOwner,
-  });
+  try {
+    maybeNotifyTaskOwnerOnComment(context, result.task, result.comment, {
+      inserted: result.inserted,
+      notifyOwner: flags.notifyOwner,
+    });
+  } catch (notifyError) {
+    // Best-effort: comment is already persisted, notification failure must not fail the call
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn(
+        `[tasks] owner notification failed for task ${taskId}: ${String(notifyError)}`
+      );
+    }
+  }
 
   return {
     commentId: result.comment.id,

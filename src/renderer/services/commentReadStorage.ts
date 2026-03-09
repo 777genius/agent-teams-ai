@@ -7,8 +7,32 @@ const STALE_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 type ReadState = Record<string, number>; // key = "teamName/taskId", value = timestamp
 
-let cache: ReadState = {};
-let loaded = false;
+// --- localStorage fallback ---
+function lsLoad(): ReadState | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as ReadState)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function lsSave(state: ReadState): void {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+  } catch {
+    // localStorage full or unavailable — silently ignore
+  }
+}
+
+// Synchronous init from localStorage — guarantees first render sees read state
+const lsInitial = lsLoad();
+let cache: ReadState = lsInitial ?? {};
+let loaded = lsInitial !== null && Object.keys(lsInitial).length > 0;
 let idbAvailable = true; // flips to false on first IndexedDB failure
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 const listeners = new Set<() => void>();
@@ -48,26 +72,10 @@ export function getUnreadCount(
   return comments.filter((c) => new Date(c.createdAt).getTime() > lastRead).length;
 }
 
-// --- localStorage fallback ---
-function lsLoad(): ReadState | null {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? (parsed as ReadState)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function lsSave(state: ReadState): void {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(state));
-  } catch {
-    // localStorage full or unavailable — silently ignore
-  }
+/** Return the last-read timestamp for a team/task pair (0 if never read). */
+export function getLastReadTimestamp(teamName: string, taskId: string): number {
+  const key = `${teamName}/${taskId}`;
+  return cache[key] ?? 0;
 }
 
 // --- Internal ---
@@ -90,41 +98,38 @@ function scheduleSave(): void {
 async function load(): Promise<void> {
   if (loaded) return;
 
-  // Try IndexedDB first
+  // IDB may have fresher data — merge with max timestamp per key
   if (hasIndexedDB() && idbAvailable) {
     try {
       const stored = await get<ReadState>(IDB_KEY);
       if (stored && typeof stored === 'object') {
-        cache = { ...stored, ...cache };
+        const merged = { ...cache };
+        for (const [k, v] of Object.entries(stored)) {
+          merged[k] = Math.max(merged[k] ?? 0, v);
+        }
+        cache = merged;
         notify();
       }
-      loaded = true;
-      return;
     } catch {
-      // IndexedDB broken — fall back to localStorage silently
       idbAvailable = false;
     }
   }
 
-  // Fallback: localStorage
-  const stored = lsLoad();
-  if (stored) {
-    cache = { ...stored, ...cache };
-    notify();
-  }
   loaded = true;
 }
 
 async function save(): Promise<void> {
+  // Always write to localStorage (sync, reliable)
+  lsSave(cache);
+
+  // Also write to IndexedDB (async, primary)
   if (idbAvailable && hasIndexedDB()) {
     try {
       await set(IDB_KEY, cache);
-      return;
     } catch {
       idbAvailable = false;
     }
   }
-  lsSave(cache);
 }
 
 export async function cleanupStale(): Promise<void> {
@@ -142,20 +147,20 @@ export async function cleanupStale(): Promise<void> {
     return { cleaned: result, changed };
   };
 
+  const { cleaned, changed } = clean(cache);
+  if (!changed) return;
+
+  // Update in-memory cache
+  cache = cleaned;
+  notify();
+
+  // Persist to both storages
+  lsSave(cleaned);
   if (idbAvailable && hasIndexedDB()) {
     try {
-      const stored = await get<ReadState>(IDB_KEY);
-      if (!stored) return;
-      const { cleaned, changed } = clean(stored);
-      if (changed) await set(IDB_KEY, cleaned);
-      return;
+      await set(IDB_KEY, cleaned);
     } catch {
       idbAvailable = false;
     }
   }
-
-  const stored = lsLoad();
-  if (!stored) return;
-  const { cleaned, changed } = clean(stored);
-  if (changed) lsSave(cleaned);
 }
