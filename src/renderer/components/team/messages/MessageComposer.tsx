@@ -179,17 +179,6 @@ export const MessageComposer = ({
     }
   }, [sending, sendError, draft]);
 
-  const handleKeyDownCapture = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleSend();
-      }
-    },
-    [handleSend]
-  );
-
   const { addFiles: draftAddFiles } = draft;
   const handleFileInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -280,7 +269,6 @@ export const MessageComposer = ({
     <div
       className="relative mb-3 p-3"
       role="group"
-      onKeyDownCapture={handleKeyDownCapture}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}

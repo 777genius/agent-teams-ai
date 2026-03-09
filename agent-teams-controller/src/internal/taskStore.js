@@ -111,7 +111,7 @@ function listTasks(paths, options = {}) {
 }
 
 function resolveTaskRef(paths, taskRef, options = {}) {
-  const normalizedRef = String(taskRef || '').trim();
+  const normalizedRef = String(taskRef || '').trim().replace(/^#/, '');
   if (!normalizedRef) {
     throw new Error('Missing taskId');
   }
@@ -168,7 +168,8 @@ function computeInitialStatus(paths, input, owner, blockedByIds) {
   const explicit = normalizeStatus(input.status);
   if (explicit) return explicit;
   if (blockedByIds.length > 0) return 'pending';
-  return owner ? 'in_progress' : 'pending';
+  if (owner && input.startImmediately === true) return 'in_progress';
+  return 'pending';
 }
 
 function pickTaskId(input) {
@@ -577,6 +578,45 @@ function buildTaskReference(task) {
   return `#${task.displayId || deriveDisplayId(task.id)} (taskId: ${task.id})`;
 }
 
+function compareTasksForBriefing(a, b) {
+  const order = {
+    in_progress: 0,
+    pending: 1,
+    completed: 2,
+    deleted: 3,
+  };
+  const byStatus = (order[a.status] ?? 99) - (order[b.status] ?? 99);
+  if (byStatus !== 0) return byStatus;
+  const byDisplay = String(a.displayId || a.id).localeCompare(String(b.displayId || b.id), undefined, {
+    numeric: true,
+    sensitivity: 'base',
+  });
+  if (byDisplay !== 0) return byDisplay;
+  return String(a.id).localeCompare(String(b.id), undefined, {
+    numeric: true,
+    sensitivity: 'base',
+  });
+}
+
+function getEffectiveReviewState(kanbanEntry, task) {
+  if (normalizeTaskReviewState(task.reviewState) !== 'none') {
+    return normalizeTaskReviewState(task.reviewState);
+  }
+  return kanbanEntry && kanbanEntry.column ? String(kanbanEntry.column) : 'none';
+}
+
+function formatBriefTaskLine(task, reviewState) {
+  const reviewSuffix = reviewState !== 'none' ? `, review=${reviewState}` : '';
+  return `- #${task.displayId || deriveDisplayId(task.id)} [status=${task.status}${reviewSuffix}] ${task.subject}`;
+}
+
+function formatCommentLine(comment) {
+  const author =
+    typeof comment.author === 'string' && comment.author.trim() ? comment.author.trim() : 'unknown';
+  const text = typeof comment.text === 'string' ? comment.text.trim() : '';
+  return `  - ${author}: ${text || '(empty comment)'}`;
+}
+
 function formatTaskBriefing(paths, teamName, memberName) {
   const kanbanState = readJson(path.join(paths.teamDir, 'kanban-state.json'), {
     teamName,
@@ -585,57 +625,51 @@ function formatTaskBriefing(paths, teamName, memberName) {
   });
   const activeTasks = listTasks(paths)
     .filter((task) => task.owner === memberName && task.status !== 'deleted')
-    .sort((a, b) => String(a.displayId || a.id).localeCompare(String(b.displayId || b.id), undefined, {
-      numeric: true,
-      sensitivity: 'base',
-    }));
+    .sort(compareTasksForBriefing);
 
   if (activeTasks.length === 0) {
-    return `No pending tasks for ${memberName}.`;
+    return `No assigned tasks for ${memberName}.`;
   }
 
-  const lines = [];
-  for (const task of activeTasks) {
-    const kanbanEntry = kanbanState.tasks ? kanbanState.tasks[task.id] : undefined;
-    const reviewState = kanbanEntry && kanbanEntry.column ? `, review=${kanbanEntry.column}` : '';
-    const effectiveReviewState =
-      normalizeTaskReviewState(task.reviewState) !== 'none'
-        ? normalizeTaskReviewState(task.reviewState)
-        : reviewState
-            ? String(kanbanEntry.column)
-            : 'none';
-    lines.push(
-      `${buildTaskReference(task)} [status=${task.status}${effectiveReviewState !== 'none' ? `, review=${effectiveReviewState}` : ''}] ${task.subject}`
-    );
-    if (task.description) lines.push(`  Description: ${task.description}`);
-    if (task.blockedBy && task.blockedBy.length > 0) {
-      const blockedLabels = task.blockedBy
-        .map((depId) => {
-          try {
-            return buildTaskReference(readTask(paths, depId, { includeDeleted: true }));
-          } catch {
-            return depId;
-          }
-        })
-        .join(', ');
-      lines.push(`  Blocked by: ${blockedLabels}`);
-    }
-    if (task.related && task.related.length > 0) {
-      const relatedLabels = task.related
-        .map((relatedId) => {
-          try {
-            return buildTaskReference(readTask(paths, relatedId, { includeDeleted: true }));
-          } catch {
-            return relatedId;
-          }
-        })
-        .join(', ');
-      lines.push(`  Related: ${relatedLabels}`);
-    }
-    if (Array.isArray(task.comments) && task.comments.length > 0) {
-      for (const comment of task.comments.slice(-3)) {
-        lines.push(`  Comment by ${comment.author}: ${comment.text}`);
+  const groups = {
+    in_progress: activeTasks.filter((task) => task.status === 'in_progress'),
+    pending: activeTasks.filter((task) => task.status === 'pending'),
+    completed: activeTasks.filter((task) => task.status === 'completed'),
+  };
+
+  const lines = [`Task briefing for ${memberName}:`];
+
+  if (groups.in_progress.length > 0) {
+    lines.push('', 'In progress:');
+    for (const task of groups.in_progress) {
+      const kanbanEntry = kanbanState.tasks ? kanbanState.tasks[task.id] : undefined;
+      const reviewState = getEffectiveReviewState(kanbanEntry, task);
+      lines.push(formatBriefTaskLine(task, reviewState));
+      if (task.description) {
+        lines.push(`  Description: ${task.description}`);
       }
+      if (Array.isArray(task.comments) && task.comments.length > 0) {
+        lines.push('  Comments:');
+        for (const comment of task.comments) {
+          lines.push(formatCommentLine(comment));
+        }
+      }
+    }
+  }
+
+  if (groups.pending.length > 0) {
+    lines.push('', 'Pending:');
+    for (const task of groups.pending) {
+      const kanbanEntry = kanbanState.tasks ? kanbanState.tasks[task.id] : undefined;
+      lines.push(formatBriefTaskLine(task, getEffectiveReviewState(kanbanEntry, task)));
+    }
+  }
+
+  if (groups.completed.length > 0) {
+    lines.push('', 'Completed:');
+    for (const task of groups.completed) {
+      const kanbanEntry = kanbanState.tasks ? kanbanState.tasks[task.id] : undefined;
+      lines.push(formatBriefTaskLine(task, getEffectiveReviewState(kanbanEntry, task)));
     }
   }
 

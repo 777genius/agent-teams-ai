@@ -742,7 +742,7 @@ export class TeamDataService {
       /* best-effort */
     }
 
-    const shouldStart = request.owner && request.startImmediately !== false;
+    const shouldStart = request.owner && request.startImmediately === true;
     const task = controller.tasks.createTask({
       subject: request.subject,
       ...(request.description?.trim() ? { description: request.description.trim() } : {}),
@@ -751,47 +751,9 @@ export class TeamDataService {
       ...(related.length > 0 ? { related } : {}),
       ...(projectPath ? { projectPath } : {}),
       createdBy: 'user',
-      ...(shouldStart ? { status: 'in_progress' } : { status: 'pending' }),
+      ...(request.prompt?.trim() ? { prompt: request.prompt.trim() } : {}),
+      ...(shouldStart ? { startImmediately: true } : {}),
     }) as TeamTask;
-
-    if (shouldStart && request.owner) {
-      try {
-        const leadName = await this.resolveLeadName(teamName);
-
-        // Skip inbox notification when lead assigns a task to themselves (solo teams)
-        if (!this.isLeadOwner(request.owner, leadName)) {
-          // Build notification with full context — inbox is the primary delivery
-          // channel to agents (Claude Code monitors inbox via fs.watch)
-          const parts = [`New task assigned to you: ${this.getTaskLabel(task)} "${task.subject}".`];
-
-          if (request.description?.trim()) {
-            parts.push(`\nDescription:\n${request.description.trim()}`);
-          }
-
-          if (request.prompt?.trim()) {
-            parts.push(`\nInstructions:\n${request.prompt.trim()}`);
-          }
-
-          parts.push(
-            `\n${AGENT_BLOCK_OPEN}`,
-            `Update task status using the board MCP tools:`,
-            `task_start { teamName: "${teamName}", taskId: "${task.id}" }`,
-            `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
-            AGENT_BLOCK_CLOSE
-          );
-
-          await this.sendMessage(teamName, {
-            member: request.owner,
-            from: leadName,
-            text: parts.join('\n'),
-            summary: `New task ${this.getTaskLabel(task)} assigned`,
-            source: 'system_notification',
-          });
-        }
-      } catch {
-        // Best-effort notification — don't fail task creation if message fails
-      }
-    }
 
     return task;
   }

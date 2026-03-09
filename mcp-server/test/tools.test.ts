@@ -96,6 +96,7 @@ describe('agent-teams-mcp tools', () => {
         owner: 'alice',
       })
     );
+    expect(createdTask.status).toBe('pending');
 
     const listedTasks = parseJsonToolResult(
       await getTool('task_list').execute({
@@ -274,6 +275,108 @@ describe('agent-teams-mcp tools', () => {
     expect((briefing as { content: Array<{ text: string }> }).content[0]?.text).toContain(
       'Review MCP adapter'
     );
+  });
+
+  it('keeps owner-backed MCP tasks pending by default, supports explicit startImmediately, sends owner notifications, and returns compact task_briefing output', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'gamma';
+
+    const queuedTask = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Queued work',
+        description: 'Pending description should stay out of briefing details',
+        owner: 'alice',
+        prompt: 'Read the plan before starting.',
+      })
+    );
+    expect(queuedTask.status).toBe('pending');
+
+    const activeTask = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Active work',
+        description: 'This one is already in progress',
+        owner: 'alice',
+        startImmediately: true,
+      })
+    );
+    expect(activeTask.status).toBe('in_progress');
+
+    await getTool('task_add_comment').execute({
+      claudeDir,
+      teamName,
+      taskId: activeTask.id,
+      text: 'Investigating the active task now.',
+      from: 'alice',
+    });
+
+    const completedTask = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Done work',
+        description: 'Completed description should also stay compact',
+        owner: 'alice',
+      })
+    );
+    await getTool('task_complete').execute({
+      claudeDir,
+      teamName,
+      taskId: completedTask.id,
+      actor: 'alice',
+    });
+
+    const unassignedTask = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Assign later',
+      })
+    );
+    await getTool('task_set_owner').execute({
+      claudeDir,
+      teamName,
+      taskId: unassignedTask.id,
+      owner: 'alice',
+    });
+
+    const queuedByHashRef = parseJsonToolResult(
+      await getTool('task_get').execute({
+        claudeDir,
+        teamName,
+        taskId: `#${queuedTask.displayId}`,
+      })
+    );
+    expect(queuedByHashRef.id).toBe(queuedTask.id);
+
+    const ownerInboxPath = path.join(claudeDir, 'teams', teamName, 'inboxes', 'alice.json');
+    const ownerInbox = JSON.parse(fs.readFileSync(ownerInboxPath, 'utf8'));
+    expect(ownerInbox).toHaveLength(4);
+    expect(ownerInbox[0].summary).toContain(`#${queuedTask.displayId}`);
+    expect(ownerInbox[0].text).toContain('task_get');
+    expect(ownerInbox[0].text).toContain('task_start');
+    expect(ownerInbox[0].text).toContain('Read the plan before starting.');
+    expect(ownerInbox[3].summary).toContain(`#${unassignedTask.displayId}`);
+
+    const briefing = (await getTool('task_briefing').execute({
+      claudeDir,
+      teamName,
+      memberName: 'alice',
+    })) as { content: Array<{ text: string }> };
+    const briefingText = briefing.content[0]?.text ?? '';
+    expect(briefingText).toContain('In progress:');
+    expect(briefingText).toContain(`#${activeTask.displayId}`);
+    expect(briefingText).toContain('Description: This one is already in progress');
+    expect(briefingText).toContain('Investigating the active task now.');
+    expect(briefingText).toContain('Pending:');
+    expect(briefingText).toContain(`#${queuedTask.displayId}`);
+    expect(briefingText).not.toContain('Pending description should stay out of briefing details');
+    expect(briefingText).toContain('Completed:');
+    expect(briefingText).toContain(`#${completedTask.displayId}`);
+    expect(briefingText).not.toContain('Completed description should also stay compact');
   });
 
   it('covers review_request_changes and full process lifecycle tools', async () => {

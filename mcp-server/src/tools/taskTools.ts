@@ -36,7 +36,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
           ...(blockedBy?.length ? { 'blocked-by': blockedBy.join(',') } : {}),
           ...(related?.length ? { related: related.join(',') } : {}),
           ...(prompt ? { prompt } : {}),
-          ...(startImmediately === false && owner ? { status: 'pending' } : {}),
+          ...(startImmediately !== undefined ? { startImmediately } : {}),
           })
         )
       );

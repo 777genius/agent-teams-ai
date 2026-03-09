@@ -229,7 +229,7 @@ describe('TeamDataService', () => {
   });
 
   it('creates task with status pending when startImmediately is false', async () => {
-    const createTaskMock = vi.fn((task) => task);
+    const createTaskMock = vi.fn((task) => ({ ...task, status: 'pending' }));
     const service = new TeamDataService(
       {
         listTeams: vi.fn(),
@@ -274,8 +274,66 @@ describe('TeamDataService', () => {
 
     expect(result.status).toBe('pending');
     expect(createTaskMock).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'pending', owner: 'alice', createdBy: 'user' })
+      expect.objectContaining({ owner: 'alice', createdBy: 'user' })
     );
+    expect(createTaskMock).not.toHaveBeenCalledWith(expect.objectContaining({ startImmediately: true }));
+  });
+
+  it('creates task with explicit immediate start only when startImmediately is true', async () => {
+    const createTaskMock = vi.fn((task) => ({ ...task, status: 'in_progress' }));
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [] })),
+      } as never,
+      {
+        getNextTaskId: vi.fn(async () => '2'),
+        getTasks: vi.fn(async () => []),
+      } as never,
+      {
+        listInboxNames: vi.fn(async () => []),
+        getMessages: vi.fn(async () => []),
+      } as never,
+      {} as never,
+      {
+        createTask: createTaskMock,
+        addBlocksEntry: vi.fn(async () => undefined),
+      } as never,
+      {
+        resolveMembers: vi.fn(() => []),
+      } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
+        garbageCollect: vi.fn(async () => undefined),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      (_teamName: string) =>
+        ({
+          tasks: {
+            createTask: createTaskMock,
+          },
+        }) as never
+    );
+
+    const result = await service.createTask('my-team', {
+      subject: 'Start now',
+      owner: 'alice',
+      startImmediately: true,
+      prompt: 'Begin immediately.',
+    });
+
+    expect(result.status).toBe('in_progress');
+    expect(createTaskMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        owner: 'alice',
+        createdBy: 'user',
+        startImmediately: true,
+        prompt: 'Begin immediately.',
+      })
+    );
+    expect(createTaskMock).not.toHaveBeenCalledWith(expect.objectContaining({ status: 'in_progress' }));
   });
 
   it('persists explicit related task links when creating a task', async () => {

@@ -216,6 +216,9 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain(`  ${AGENT_BLOCK_OPEN}`);
     expect(prompt).toContain(`  ${AGENT_BLOCK_CLOSE}`);
     expect(prompt).toContain('NEVER use agent-only blocks in messages to "user".');
+    expect(prompt).toContain('use task_briefing as your compact queue view');
+    expect(prompt).toContain('then call task_get for the specific task you are about to resume or start');
+    expect(prompt).toContain('Use task_briefing as a compact queue view of your assigned tasks.');
 
     await svc.cancelProvisioning(runId);
   });
@@ -273,6 +276,9 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain(`  ${AGENT_BLOCK_OPEN}`);
     expect(prompt).toContain(`  ${AGENT_BLOCK_CLOSE}`);
     expect(prompt).toContain('NEVER use agent-only blocks in messages to "user".');
+    expect(prompt).toContain('Your FIRST action: call MCP tool task_briefing');
+    expect(prompt).toContain('call task_get for each in_progress task first');
+    expect(prompt).toContain('call task_get for the specific pending task you choose');
 
     await svc.cancelProvisioning(runId);
   });

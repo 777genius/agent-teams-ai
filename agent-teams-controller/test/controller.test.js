@@ -118,6 +118,60 @@ describe('agent-teams-controller API', () => {
     expect(rows[1].id).toBe(registered.id);
   });
 
+  it('keeps assigned tasks pending by default, supports explicit immediate start, notifies owners, and keeps briefing compact', async () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    const pendingTask = controller.tasks.createTask({
+      subject: 'Queued task',
+      description: 'Do this later',
+      owner: 'bob',
+      prompt: 'Check the migration plan first.',
+    });
+    const activeTask = controller.tasks.createTask({
+      subject: 'Active task',
+      description: 'Resume immediately',
+      owner: 'bob',
+      startImmediately: true,
+    });
+    const completedTask = controller.tasks.createTask({
+      subject: 'Already done',
+      description: 'Completed task description should stay out of compact rows',
+      owner: 'bob',
+    });
+    controller.tasks.completeTask(completedTask.id, 'bob');
+    controller.tasks.addTaskComment(activeTask.id, { from: 'bob', text: 'Resumed work with latest context.' });
+
+    const reassignedTask = controller.tasks.createTask({ subject: 'Reassigned later' });
+    controller.tasks.setTaskOwner(reassignedTask.id, 'bob');
+
+    expect(pendingTask.status).toBe('pending');
+    expect(activeTask.status).toBe('in_progress');
+
+    const ownerInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'bob.json');
+    const ownerInbox = JSON.parse(fs.readFileSync(ownerInboxPath, 'utf8'));
+    expect(ownerInbox).toHaveLength(4);
+    expect(ownerInbox[0].summary).toContain(`#${pendingTask.displayId}`);
+    expect(ownerInbox[0].text).toContain('task_get');
+    expect(ownerInbox[0].text).toContain('task_start');
+    expect(ownerInbox[0].leadSessionId).toBe('lead-session-1');
+    expect(ownerInbox[3].summary).toContain(`#${reassignedTask.displayId}`);
+
+    const briefing = await controller.tasks.taskBriefing('bob');
+    expect(briefing).toContain('In progress:');
+    expect(briefing).toContain(`#${activeTask.displayId}`);
+    expect(briefing).toContain('Description: Resume immediately');
+    expect(briefing).toContain('Resumed work with latest context.');
+    expect(briefing).toContain('Pending:');
+    expect(briefing).toContain(`#${pendingTask.displayId}`);
+    expect(briefing).not.toContain('Description: Do this later');
+    expect(briefing).toContain('Completed:');
+    expect(briefing).toContain(`#${completedTask.displayId}`);
+    expect(briefing).not.toContain(
+      'Completed task description should stay out of compact rows'
+    );
+  });
+
   it('reconciles stale kanban rows and linked inbox comments idempotently', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });

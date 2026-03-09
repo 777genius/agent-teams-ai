@@ -86,7 +86,7 @@ function getPaths(flags, teamName) {
 }
 
 function inferLeadName(paths) {
-  const config = readJson(path.join(paths.teamDir, 'config.json'), null);
+  const config = readTeamConfig(paths);
   if (!config || !Array.isArray(config.members)) {
     return 'team-lead';
   }
@@ -97,6 +97,17 @@ function inferLeadName(paths) {
     return String(lead.name);
   }
   return config.members[0] ? String(config.members[0].name) : 'team-lead';
+}
+
+function readTeamConfig(paths) {
+  return readJson(path.join(paths.teamDir, 'config.json'), null);
+}
+
+function resolveLeadSessionId(paths) {
+  const config = readTeamConfig(paths);
+  return config && typeof config.leadSessionId === 'string' && config.leadSessionId.trim()
+    ? config.leadSessionId.trim()
+    : undefined;
 }
 
 function isProcessAlive(pid) {
@@ -291,5 +302,7 @@ module.exports = {
   getPaths,
   inferLeadName,
   isProcessAlive,
+  readTeamConfig,
+  resolveLeadSessionId,
   saveTaskAttachmentFile,
 };

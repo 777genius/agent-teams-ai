@@ -1,8 +1,84 @@
 const taskStore = require('./taskStore.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
+const messages = require('./messages.js');
+const { wrapAgentBlock } = require('./agentBlocks.js');
+
+function normalizeActorName(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : '';
+}
+
+function isSameMember(left, right) {
+  return normalizeActorName(left).toLowerCase() === normalizeActorName(right).toLowerCase();
+}
+
+function buildAssignmentMessage(context, task, options = {}) {
+  const description =
+    typeof options.description === 'string' && options.description.trim()
+      ? options.description.trim()
+      : typeof task.description === 'string' && task.description.trim()
+        ? task.description.trim()
+        : '';
+  const prompt =
+    typeof options.prompt === 'string' && options.prompt.trim() ? options.prompt.trim() : '';
+  const taskLabel = `#${task.displayId || task.id}`;
+  const lines = [`New task assigned to you: ${taskLabel} "${task.subject}".`];
+
+  if (description) {
+    lines.push(``, `Description:`, description);
+  }
+
+  if (prompt) {
+    lines.push(``, `Instructions:`, prompt);
+  }
+
+  lines.push(
+    ``,
+    wrapAgentBlock(`Use the board MCP tools to work this task correctly:
+1. Check the latest full context before starting:
+   task_get { teamName: "${context.teamName}", taskId: "${task.id}" }
+2. When you actually begin work, mark it started:
+   task_start { teamName: "${context.teamName}", taskId: "${task.id}" }
+3. When the work is done, mark it completed:
+   task_complete { teamName: "${context.teamName}", taskId: "${task.id}" }`)
+  );
+
+  return lines.join('\n');
+}
+
+function maybeNotifyAssignedOwner(context, task, options = {}) {
+  const owner = normalizeActorName(task.owner);
+  if (!owner || task.status === 'deleted') {
+    return;
+  }
+
+  const leadName = runtimeHelpers.inferLeadName(context.paths);
+  const sender = normalizeActorName(options.from) || leadName;
+  const leadSessionId = runtimeHelpers.resolveLeadSessionId(context.paths);
+  if (isSameMember(owner, leadName) || isSameMember(owner, sender)) {
+    return;
+  }
+
+  const summary = options.summary || `New task #${task.displayId || task.id} assigned`;
+  messages.sendMessage(context, {
+    member: owner,
+    from: sender,
+    text: buildAssignmentMessage(context, task, options),
+    summary,
+    source: 'system_notification',
+    ...(leadSessionId ? { leadSessionId } : {}),
+  });
+}
 
 function createTask(context, input) {
-  return taskStore.createTask(context.paths, input);
+  const task = taskStore.createTask(context.paths, input);
+  if (input && input.notifyOwner !== false) {
+    maybeNotifyAssignedOwner(context, task, {
+      description: input.description,
+      prompt: input.prompt,
+      from: input.from,
+    });
+  }
+  return task;
 }
 
 function getTask(context, taskId) {
@@ -44,7 +120,20 @@ function restoreTask(context, taskId, actor) {
 }
 
 function setTaskOwner(context, taskId, owner) {
-  return taskStore.setTaskOwner(context.paths, taskId, owner);
+  const previousTask = taskStore.readTask(context.paths, taskId, { includeDeleted: true });
+  const updatedTask = taskStore.setTaskOwner(context.paths, taskId, owner);
+
+  if (
+    owner != null &&
+    normalizeActorName(updatedTask.owner) &&
+    !isSameMember(previousTask.owner, updatedTask.owner)
+  ) {
+    maybeNotifyAssignedOwner(context, updatedTask, {
+      summary: `Task #${updatedTask.displayId || updatedTask.id} assigned`,
+    });
+  }
+
+  return updatedTask;
 }
 
 function updateTaskFields(context, taskId, fields) {

@@ -352,6 +352,7 @@ function buildMemberSpawnPrompt(
 ${getAgentLanguageInstruction()}
 Introduce yourself briefly (name and role) and confirm you are ready.
 Then wait for task assignments.
+When you later receive work or reconnect after a restart, use task_briefing as your compact queue view, then call task_get for the specific task you are about to resume or start.
 ${buildTeammateAgentBlockReminder()}
 Include the following agent-only instructions verbatim in the prompt:
 
@@ -363,8 +364,9 @@ ${processRegistration}`;
 function buildTaskStatusProtocol(teamName: string): string {
   return wrapInAgentBlock(`MANDATORY TASK STATUS PROTOCOL — you MUST follow this for EVERY task:
 0. IMPORTANT ID RULE:
-   - In MCP tool calls, ALWAYS use the exact canonical taskId value shown in the board/task snapshot.
-   - Human-facing summaries may use the short display label like #abcd1234 for readability.
+   - If a board/task snapshot shows a canonical taskId, prefer using that exact value in MCP tool calls.
+   - task_briefing may show short display labels like #abcd1234; MCP task tools also accept that short task ref.
+   - Human-facing summaries should use the short display label like #abcd1234 for readability.
 1. Use MCP tool task_start to mark task started:
    { teamName: "${teamName}", taskId: "<taskId>" }
    - Start the task ONLY when you are actually beginning work on it.
@@ -404,6 +406,11 @@ function buildTaskStatusProtocol(teamName: string): string {
 12. DEPENDENCY AWARENESS:
     When your task has blockedBy dependencies, check if they are completed before starting.
     When you complete a task that blocks others, mention this in your completion message so blocked teammates can proceed.
+13. TASK QUEUE DISCIPLINE:
+    - Use task_briefing as a compact queue view of your assigned tasks.
+    - task_briefing may include full description/comments only for in_progress tasks; pending/completed entries may be minimal on purpose.
+    - Before resuming any in_progress task, call task_get for that task to refresh full context.
+    - When you become free, call task_briefing again, inspect pending tasks, then call task_get for the specific pending task you are about to start before task_start.
 Failure to follow this protocol means the task board will show incorrect status.`);
 }
 
@@ -627,7 +634,7 @@ function buildMemberTaskSnapshot(memberName: string, tasks: TeamTask[]): string 
       : '';
     return `  - ${formatTaskDisplayLabel(t)} (taskId: ${t.id}) [${t.status}] ${t.subject}${deps}${desc}`;
   });
-  return `\nYour pending tasks from last session (RESUME these immediately):\n${lines.join('\n')}\n`;
+  return `\nYour active tasks from last session (resume in_progress first, then pending):\n${lines.join('\n')}\n`;
 }
 
 /** Build a full task board snapshot for the lead. */
@@ -649,7 +656,7 @@ function buildTaskBoardSnapshot(tasks: TeamTask[]): string {
       : '';
     return `  - ${formatTaskDisplayLabel(t)} (taskId: ${t.id}) [${t.status}]${owner} ${t.subject}${deps}${desc}`;
   });
-  return `\nCurrent task board (pending/in_progress):\n${lines.join('\n')}\n`;
+  return `\nCurrent task board (in_progress/pending):\n${lines.join('\n')}\n`;
 }
 
 function buildProvisioningPrompt(request: TeamCreateRequest): string {
@@ -803,13 +810,15 @@ function buildLaunchPrompt(
 
      ${languageInstruction}
      The team has been reconnected after a restart.
-     ${hasTasks ? `You have pending tasks from the previous session.` : 'You have no pending tasks currently.'}
+     ${hasTasks ? `You may have in_progress or pending tasks from the previous session.` : 'You have no assigned tasks currently.'}
      ${buildTeammateAgentBlockReminder()}
 
      Your FIRST action: call MCP tool task_briefing with:
      { teamName: "${request.teamName}", memberName: "${m.name}" }
-     Then resume in_progress tasks first, then pending tasks.
-     If you have no tasks, wait for new assignments.`;
+     Then:
+     - If task_briefing shows any in_progress task, call task_get for each in_progress task first and resume/finish those before touching pending tasks.
+     - Only after there are no active in_progress tasks, inspect pending tasks from task_briefing, call task_get for the specific pending task you choose, and only then run task_start when you truly begin.
+     - If you have no tasks, wait for new assignments.`;
       })
       .join('\n\n');
 
