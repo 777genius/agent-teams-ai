@@ -1606,6 +1606,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               expandOverrides={expandedSet}
               onToggleExpandOverride={toggleExpandOverride}
               teamSessionIds={teamSessionIds}
+              currentLeadSessionId={data?.config.leadSessionId}
               onMemberClick={setSelectedMember}
               onCreateTaskFromMessage={(subject, description) => {
                 openCreateTaskDialog(subject, description);

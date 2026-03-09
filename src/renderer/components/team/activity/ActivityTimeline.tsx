@@ -44,10 +44,12 @@ interface ActivityTimelineProps {
   onToggleExpandOverride?: (key: string) => void;
   /**
    * All session IDs belonging to this team (current + history).
-   * When two adjacent messages have different leadSessionId but both are in this set,
-   * the "New session" separator is suppressed (it's a reconnect, not a new session).
+   * Used together with currentLeadSessionId to suppress only the reconnect boundary
+   * from the current live session back into the team's previous session history.
    */
   teamSessionIds?: Set<string>;
+  /** Current lead session ID for the active team, if known. */
+  currentLeadSessionId?: string;
 }
 
 const VIEWPORT_THRESHOLD = 0.15;
@@ -155,6 +157,7 @@ export const ActivityTimeline = ({
   expandOverrides,
   onToggleExpandOverride,
   teamSessionIds,
+  currentLeadSessionId,
 }: ActivityTimelineProps): React.JSX.Element => {
   const [visibleCount, setVisibleCount] = useState(MESSAGES_PAGE_SIZE);
 
@@ -361,13 +364,15 @@ export const ActivityTimeline = ({
           const prevSessionId = getItemSessionId(timelineItems[realIndex - 1]);
           const currSessionId = getItemSessionId(item);
           if (prevSessionId && currSessionId && prevSessionId !== currSessionId) {
-            // Suppress separator when both sessions belong to the same team
-            // (reconnects produce new session IDs but are not "new sessions" from user's perspective)
-            const isSameTeam =
+            // Suppress only the boundary between the current live session and the team's
+            // older session history. Older historical session boundaries should still render.
+            const isReconnectBoundary =
+              !!currentLeadSessionId &&
               teamSessionIds &&
               teamSessionIds.has(prevSessionId) &&
-              teamSessionIds.has(currSessionId);
-            if (!isSameTeam) {
+              teamSessionIds.has(currSessionId) &&
+              (prevSessionId === currentLeadSessionId || currSessionId === currentLeadSessionId);
+            if (!isReconnectBoundary) {
               sessionSeparator = (
                 <div
                   className="flex items-center gap-3"

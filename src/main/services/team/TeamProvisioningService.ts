@@ -3154,9 +3154,14 @@ export class TeamProvisioningService {
             }
           }
         } else {
-          // Pre-ready: provisioning narration is shown in the ProvisioningProgressBlock banner
-          // (via provisioningOutputParts). Do NOT push to live cache to avoid duplicate display
-          // and leaking internal provisioning monologue into the Activity timeline.
+          // Pre-ready: keep showing provisioning narration in the banner, but also mirror it
+          // into the live cache so Messages/Activity can show the earliest assistant output.
+          if (!run.silentUserDmForward && !hasCapturedSendMessage) {
+            const cleanText = stripAgentBlocks(text).trim();
+            if (cleanText.length > 0) {
+              this.pushLiveLeadTextMessage(run, cleanText);
+            }
+          }
         }
       }
 

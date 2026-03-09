@@ -158,7 +158,6 @@ export const MessageComposer = ({
     trimmed.length > 0 &&
     trimmed.length <= MAX_TEXT_LENGTH &&
     !sending &&
-    !isProvisioning &&
     !attachmentsBlocked;
 
   // Track whether we initiated a send — clear draft only on confirmed success
@@ -345,7 +344,7 @@ export const MessageComposer = ({
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {isProvisioning ? (
             <span className="text-[10px]" style={{ color: 'var(--warning-text)' }}>
-              Launching...
+              Launching... inbox delivery only
             </span>
           ) : !isTeamAlive ? (
             <span className="text-[10px]" style={{ color: 'var(--warning-text)' }}>
@@ -462,7 +461,7 @@ export const MessageComposer = ({
         id={`compose-${teamName}`}
         placeholder={
           isProvisioning
-            ? 'Team is launching... Please wait.'
+            ? 'Team is launching... message will be queued for inbox delivery.'
             : 'Write a message... (Enter to send, Shift+Enter for new line)'
         }
         value={draft.text}
@@ -476,7 +475,7 @@ export const MessageComposer = ({
         minRows={2}
         maxRows={6}
         maxLength={MAX_TEXT_LENGTH}
-        disabled={sending || isProvisioning}
+        disabled={sending}
         cornerAction={
           <div className="flex items-center gap-2">
             {/* NOTE: ContextRing disabled — usage formula is inaccurate */}
