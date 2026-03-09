@@ -52,6 +52,9 @@ export class CrossTeamService {
     if (fromTeam === toTeam) {
       throw new Error('Cannot send cross-team message to the same team');
     }
+    if (!fromMember || typeof fromMember !== 'string' || fromMember.trim().length === 0) {
+      throw new Error('fromMember is required');
+    }
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
       throw new Error('Message text is required');
     }
