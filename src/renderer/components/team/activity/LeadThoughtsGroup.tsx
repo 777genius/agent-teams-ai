@@ -725,11 +725,6 @@ export const LeadThoughtsGroupRow = ({
           <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
             {thoughts.length} thoughts
           </span>
-          <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-            {formatTime(oldest.timestamp) === formatTime(newest.timestamp)
-              ? formatTime(oldest.timestamp)
-              : `${formatTime(oldest.timestamp)}–${formatTime(newest.timestamp)}`}
-          </span>
           {!isBodyVisible && headerTextPreview ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -764,6 +759,11 @@ export const LeadThoughtsGroupRow = ({
               </TooltipContent>
             </Tooltip>
           ) : null}
+          <span className="ml-auto shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
+            {formatTime(oldest.timestamp) === formatTime(newest.timestamp)
+              ? formatTime(oldest.timestamp)
+              : `${formatTime(oldest.timestamp)}–${formatTime(newest.timestamp)}`}
+          </span>
         </div>
 
         {/* Scrollable body — live thoughts follow bottom unless user scrolls up */}

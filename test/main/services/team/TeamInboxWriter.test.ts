@@ -49,11 +49,16 @@ vi.mock('crypto', async (importOriginal) => {
   };
 });
 
-vi.mock('fs', () => ({
-  promises: {
-    readFile: hoisted.readFile,
-  },
-}));
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  return {
+    ...actual,
+    promises: {
+      ...actual.promises,
+      readFile: hoisted.readFile,
+    },
+  };
+});
 
 vi.mock('../../../../src/main/utils/pathDecoder', () => ({
   getTeamsBasePath: () => '/mock/teams',
@@ -61,6 +66,14 @@ vi.mock('../../../../src/main/utils/pathDecoder', () => ({
 
 vi.mock('../../../../src/main/services/team/atomicWrite', () => ({
   atomicWriteAsync: hoisted.atomicWrite,
+}));
+
+vi.mock('../../../../src/main/services/team/fileLock', () => ({
+  withFileLock: async (_path: string, fn: () => Promise<unknown>) => await fn(),
+}));
+
+vi.mock('../../../../src/main/services/team/inboxLock', () => ({
+  withInboxLock: async (_path: string, fn: () => Promise<unknown>) => await fn(),
 }));
 
 import { TeamInboxWriter } from '../../../../src/main/services/team/TeamInboxWriter';
@@ -142,6 +155,37 @@ describe('TeamInboxWriter', () => {
     const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
     expect(persisted).toHaveLength(1);
     expect(persisted[0].source).toBe('system_notification');
+  });
+
+  it('preserves provided message identity fields for dedup across live and persisted rows', async () => {
+    const result = await writer.sendMessage('my-team', {
+      member: 'alice',
+      from: 'team-lead',
+      to: 'team-best.user',
+      text: 'Hello cross-team',
+      summary: 'Cross-team reply',
+      messageId: 'lead-sendmsg-run-1-123',
+      timestamp: '2026-03-10T00:33:55.000Z',
+      source: 'lead_process',
+      color: 'purple',
+      toolSummary: '1 tool',
+      toolCalls: [{ name: 'SendMessage', preview: 'team-best.user' }],
+    });
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(result.messageId).toBe('lead-sendmsg-run-1-123');
+    expect(persisted[0]).toMatchObject({
+      from: 'team-lead',
+      to: 'team-best.user',
+      text: 'Hello cross-team',
+      summary: 'Cross-team reply',
+      messageId: 'lead-sendmsg-run-1-123',
+      timestamp: '2026-03-10T00:33:55.000Z',
+      source: 'lead_process',
+      color: 'purple',
+      toolSummary: '1 tool',
+      toolCalls: [{ name: 'SendMessage', preview: 'team-best.user' }],
+    });
   });
 
   it('omits source field from payload when not provided in request', async () => {

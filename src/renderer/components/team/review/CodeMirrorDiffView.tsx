@@ -466,12 +466,17 @@ export const CodeMirrorDiffView = ({
 
     // Merge toolbar: always visible for nearest chunk, follows cursor when hovering on chunk
     if (showMergeControls) {
-      // Helper: pin chunkButtons to right edge of visible viewport, accounting for horizontal scroll
+      // Helper: pin chunkButtons to right edge of visible viewport, accounting for horizontal scroll.
+      // Uses getBoundingClientRect() so the offset from gutters / CM content padding is handled exactly.
       const pinToViewportRight = (btnContainer: HTMLElement, scroller: Element): void => {
-        const scrollerEl = scroller as HTMLElement;
+        const scrollerRect = scroller.getBoundingClientRect();
+        const chunkEl = btnContainer.parentElement;
+        if (!chunkEl) return;
+        const chunkRect = chunkEl.getBoundingClientRect();
         const btnWidth = btnContainer.offsetWidth || 200;
-        // Position at: scrollLeft + visible width - button width - margin
-        btnContainer.style.left = `${scrollerEl.scrollLeft + scrollerEl.clientWidth - btnWidth - 8}px`;
+        const margin = 12;
+        // left is relative to .cm-deletedChunk — so we compute from scroller's right edge
+        btnContainer.style.left = `${scrollerRect.right - chunkRect.left - btnWidth - margin}px`;
         btnContainer.style.right = 'auto';
       };
 

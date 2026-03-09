@@ -12,7 +12,7 @@ import type { InboxMessage, SendMessageRequest, SendMessageResult } from '@share
 export class TeamInboxWriter {
   async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
     const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${request.member}.json`);
-    const messageId = randomUUID();
+    const messageId = request.messageId?.trim() || randomUUID();
 
     const attachmentMeta = request.attachments?.map((a) => ({
       id: a.id,
@@ -25,17 +25,20 @@ export class TeamInboxWriter {
       from: request.from ?? 'user',
       to: request.to ?? request.member,
       text: request.text,
-      timestamp: new Date().toISOString(),
+      timestamp: request.timestamp ?? new Date().toISOString(),
       read: false,
       summary: request.summary,
       messageId,
       attachments: attachmentMeta?.length ? attachmentMeta : undefined,
       ...(request.source && { source: request.source }),
       ...(request.leadSessionId && { leadSessionId: request.leadSessionId }),
+      ...(request.color && { color: request.color }),
       ...(request.conversationId && { conversationId: request.conversationId }),
       ...(request.replyToConversationId && {
         replyToConversationId: request.replyToConversationId,
       }),
+      ...(request.toolSummary && { toolSummary: request.toolSummary }),
+      ...(request.toolCalls && { toolCalls: request.toolCalls }),
     };
 
     await withFileLock(inboxPath, async () => {

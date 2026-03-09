@@ -394,11 +394,17 @@ const portionCollapseField = StateField.define<PortionCollapseState>({
 // the visible viewport width, making `position: sticky; left: 0` actually constrain them.
 
 function syncCollapseWidths(view: EditorView): void {
-  const w = view.scrollDOM.clientWidth;
-  if (!w) return;
+  const scrollerRect = view.scrollDOM.getBoundingClientRect();
+  if (!scrollerRect.width) return;
   const els = view.dom.querySelectorAll<HTMLElement>('.cm-portion-collapse');
   for (const el of els) {
-    el.style.width = `${w}px`;
+    // The widget lives inside .cm-content which may have a left offset (gutters).
+    // Compute available width from scroller's right edge minus the element's left position.
+    const elRect = el.getBoundingClientRect();
+    const w = scrollerRect.right - elRect.left;
+    if (w > 0) {
+      el.style.width = `${w}px`;
+    }
   }
 }
 

@@ -31,6 +31,11 @@ interface CacheEntry {
   expiresAt: number;
 }
 
+interface TaskChangeCacheEntry {
+  data: TaskChangeSetV2;
+  expiresAt: number;
+}
+
 /** Ссылка на JSONL файл с привязкой к memberName */
 interface LogFileRef {
   filePath: string;
@@ -39,7 +44,9 @@ interface LogFileRef {
 
 export class ChangeExtractorService {
   private cache = new Map<string, CacheEntry>();
+  private taskChangeCache = new Map<string, TaskChangeCacheEntry>();
   private readonly cacheTtl = 30 * 1000; // 30 сек — shorter TTL to reduce stale data risk
+  private readonly taskChangeCacheTtl = 20 * 1000; // 20 сек для task changes
 
   constructor(
     private readonly logsFinder: TeamMemberLogsFinder,
@@ -115,6 +122,12 @@ export class ChangeExtractorService {
       since?: string;
     }
   ): Promise<TaskChangeSetV2> {
+    const cacheKey = `task:${teamName}:${taskId}`;
+    const cached = this.taskChangeCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+
     const taskMeta = await this.readTaskMeta(teamName, taskId);
     const logs = await this.logsFinder.findLogsForTask(teamName, taskId, {
       owner: options?.owner ?? taskMeta?.owner,
@@ -124,7 +137,12 @@ export class ChangeExtractorService {
     });
     const logRefs = await this.resolveLogFileRefs(teamName, logs);
     if (logRefs.length === 0) {
-      return this.emptyTaskChangeSet(teamName, taskId);
+      const empty = this.emptyTaskChangeSet(teamName, taskId);
+      this.taskChangeCache.set(cacheKey, {
+        data: empty,
+        expiresAt: Date.now() + this.taskChangeCacheTtl,
+      });
+      return empty;
     }
 
     const projectPath = await this.resolveProjectPath(teamName);
@@ -162,7 +180,7 @@ export class ChangeExtractorService {
           },
         };
 
-        return {
+        const intervalResult: TaskChangeSetV2 = {
           teamName,
           taskId,
           files,
@@ -177,9 +195,24 @@ export class ChangeExtractorService {
               ? ['No file edits found within persisted workIntervals.']
               : ['Task boundaries missing — scoped by workIntervals timestamps.'],
         };
+        this.taskChangeCache.set(cacheKey, {
+          data: intervalResult,
+          expiresAt: Date.now() + this.taskChangeCacheTtl,
+        });
+        return intervalResult;
       }
 
-      return this.fallbackSingleTaskScope(teamName, taskId, logRefs, projectPath);
+      const fallbackResult = await this.fallbackSingleTaskScope(
+        teamName,
+        taskId,
+        logRefs,
+        projectPath
+      );
+      this.taskChangeCache.set(cacheKey, {
+        data: fallbackResult,
+        expiresAt: Date.now() + this.taskChangeCacheTtl,
+      });
+      return fallbackResult;
     }
 
     // Фильтруем snippets по tool_use IDs из scope
@@ -192,7 +225,7 @@ export class ChangeExtractorService {
       warnings.push('Some task boundaries could not be precisely determined.');
     }
 
-    return {
+    const result: TaskChangeSetV2 = {
       teamName,
       taskId,
       files,
@@ -204,6 +237,11 @@ export class ChangeExtractorService {
       scope: allScopes[0],
       warnings,
     };
+    this.taskChangeCache.set(cacheKey, {
+      data: result,
+      expiresAt: Date.now() + this.taskChangeCacheTtl,
+    });
+    return result;
   }
 
   /** Получить краткую статистику */
@@ -684,14 +722,27 @@ export class ChangeExtractorService {
     return false;
   }
 
-  /** Конвертировать MemberLogSummary[] в LogFileRef[] через findMemberLogPaths */
+  /** Конвертировать MemberLogSummary[] в LogFileRef[] */
   private async resolveLogFileRefs(
     teamName: string,
     logs: MemberLogSummary[]
   ): Promise<LogFileRef[]> {
     const refs: LogFileRef[] = [];
-    const byMember = new Map<string, MemberLogSummary[]>();
+    const logsNeedingResolve: MemberLogSummary[] = [];
+
     for (const log of logs) {
+      const memberName = log.memberName ?? 'unknown';
+      if (log.filePath) {
+        refs.push({ filePath: log.filePath, memberName });
+      } else {
+        logsNeedingResolve.push(log);
+      }
+    }
+
+    if (logsNeedingResolve.length === 0) return refs;
+
+    const byMember = new Map<string, MemberLogSummary[]>();
+    for (const log of logsNeedingResolve) {
       const name = log.memberName ?? 'unknown';
       if (!byMember.has(name)) byMember.set(name, []);
       byMember.get(name)!.push(log);

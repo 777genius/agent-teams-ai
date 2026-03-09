@@ -271,14 +271,19 @@ export interface SendMessageRequest {
   text: string;
   summary?: string;
   from?: string;
+  timestamp?: string;
+  messageId?: string;
   /** Override the `to` field in the stored message (defaults to `member`). */
   to?: string;
+  color?: string;
   attachments?: AttachmentPayload[];
   source?: InboxMessage['source'];
   /** Lead session ID for session boundary detection. */
   leadSessionId?: string;
   conversationId?: string;
   replyToConversationId?: string;
+  toolSummary?: string;
+  toolCalls?: ToolCallMeta[];
 }
 
 export interface SendMessageResult {
@@ -525,6 +530,8 @@ export interface MemberLogSummaryBase {
   durationMs: number;
   messageCount: number;
   isOngoing: boolean;
+  /** Absolute path to JSONL file when known (avoids redundant findMemberLogPaths scan). */
+  filePath?: string;
 }
 
 export interface MemberSubagentLogSummary extends MemberLogSummaryBase {

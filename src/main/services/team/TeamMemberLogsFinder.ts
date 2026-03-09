@@ -767,6 +767,7 @@ export class TeamMemberLogsFinder {
       durationMs: Math.max(0, durationMs),
       messageCount: metadata.messageCount,
       isOngoing,
+      filePath,
     };
   }
 
@@ -990,6 +991,7 @@ export class TeamMemberLogsFinder {
       durationMs: Math.max(0, durationMs),
       messageCount: metadata.messageCount,
       isOngoing,
+      filePath: jsonlPath,
     };
   }
 
