@@ -533,6 +533,64 @@ export const TaskDetailDialog = ({
             </div>
           ) : null}
 
+          {/* Related tasks (explicit) */}
+          {relatedIds.length > 0 || relatedByIds.length > 0 ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)]">
+                <Link2 size={12} />
+                Related tasks
+              </div>
+
+              {relatedIds.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-[var(--color-text-muted)]">Links</span>
+                  {relatedIds.map((id) => {
+                    const depTask = taskMap.get(id);
+                    return (
+                      <button
+                        key={`related:${currentTask.id}:${id}`}
+                        type="button"
+                        className="inline-flex items-center rounded bg-purple-500/15 px-1.5 py-0.5 text-[10px] font-medium text-purple-300 transition-colors hover:bg-purple-500/25"
+                        title={
+                          depTask
+                            ? `${formatTaskDisplayLabel(depTask)}: ${depTask.subject}`
+                            : `#${deriveTaskDisplayId(id)}`
+                        }
+                        onClick={() => handleDependencyClick(id)}
+                      >
+                        {depTask ? formatTaskDisplayLabel(depTask) : `#${deriveTaskDisplayId(id)}`}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+
+              {relatedByIds.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-[var(--color-text-muted)]">Linked from</span>
+                  {relatedByIds.map((id) => {
+                    const depTask = taskMap.get(id);
+                    return (
+                      <button
+                        key={`related-by:${currentTask.id}:${id}`}
+                        type="button"
+                        className="inline-flex items-center rounded bg-fuchsia-500/15 px-1.5 py-0.5 text-[10px] font-medium text-fuchsia-300 transition-colors hover:bg-fuchsia-500/25"
+                        title={
+                          depTask
+                            ? `${formatTaskDisplayLabel(depTask)}: ${depTask.subject}`
+                            : `#${deriveTaskDisplayId(id)}`
+                        }
+                        onClick={() => handleDependencyClick(id)}
+                      >
+                        {depTask ? formatTaskDisplayLabel(depTask) : `#${deriveTaskDisplayId(id)}`}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           {/* Description */}
           <CollapsibleTeamSection
             title="Description"
@@ -879,68 +937,6 @@ export const TaskDetailDialog = ({
                       </button>
                     );
                   })}
-                </div>
-              ) : null}
-
-              {/* Related tasks (explicit) */}
-              {relatedIds.length > 0 || relatedByIds.length > 0 ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)]">
-                    <Link2 size={12} />
-                    Related tasks
-                  </div>
-
-                  {relatedIds.length > 0 ? (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-xs text-[var(--color-text-muted)]">Links</span>
-                      {relatedIds.map((id) => {
-                        const depTask = taskMap.get(id);
-                        return (
-                          <button
-                            key={`related:${currentTask.id}:${id}`}
-                            type="button"
-                            className="inline-flex items-center rounded bg-purple-500/15 px-1.5 py-0.5 text-[10px] font-medium text-purple-300 transition-colors hover:bg-purple-500/25"
-                            title={
-                              depTask
-                                ? `${formatTaskDisplayLabel(depTask)}: ${depTask.subject}`
-                                : `#${deriveTaskDisplayId(id)}`
-                            }
-                            onClick={() => handleDependencyClick(id)}
-                          >
-                            {depTask
-                              ? formatTaskDisplayLabel(depTask)
-                              : `#${deriveTaskDisplayId(id)}`}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-
-                  {relatedByIds.length > 0 ? (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-xs text-[var(--color-text-muted)]">Linked from</span>
-                      {relatedByIds.map((id) => {
-                        const depTask = taskMap.get(id);
-                        return (
-                          <button
-                            key={`related-by:${currentTask.id}:${id}`}
-                            type="button"
-                            className="inline-flex items-center rounded bg-fuchsia-500/15 px-1.5 py-0.5 text-[10px] font-medium text-fuchsia-300 transition-colors hover:bg-fuchsia-500/25"
-                            title={
-                              depTask
-                                ? `${formatTaskDisplayLabel(depTask)}: ${depTask.subject}`
-                                : `#${deriveTaskDisplayId(id)}`
-                            }
-                            onClick={() => handleDependencyClick(id)}
-                          >
-                            {depTask
-                              ? formatTaskDisplayLabel(depTask)
-                              : `#${deriveTaskDisplayId(id)}`}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : null}
                 </div>
               ) : null}
 

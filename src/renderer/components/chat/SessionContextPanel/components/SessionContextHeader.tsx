@@ -100,10 +100,10 @@ export const SessionContextHeader = ({
               ~{formatTokens(totalTokens)}
             </span>
           </div>
-          {/* Total Session tokens (if provided) */}
+          {/* Total Input tokens (if provided) */}
           {totalSessionTokens !== undefined && totalSessionTokens > 0 && (
             <div>
-              <span style={{ color: COLOR_TEXT_MUTED }}>Total: </span>
+              <span style={{ color: COLOR_TEXT_MUTED }}>Input: </span>
               <span className="font-medium tabular-nums" style={{ color: COLOR_TEXT_SECONDARY }}>
                 {formatTokens(totalSessionTokens)}
               </span>

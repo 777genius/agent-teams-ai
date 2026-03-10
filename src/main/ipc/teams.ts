@@ -26,6 +26,7 @@ import {
   TEAM_LAUNCH,
   TEAM_LEAD_ACTIVITY,
   TEAM_LEAD_CONTEXT,
+  TEAM_MEMBER_SPAWN_STATUSES,
   TEAM_LIST,
   TEAM_PERMANENTLY_DELETE,
   TEAM_PREPARE_PROVISIONING,
@@ -109,6 +110,7 @@ import type {
   LeadContextUsage,
   MemberFullStats,
   MemberLogSummary,
+  MemberSpawnStatusEntry,
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
@@ -253,6 +255,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_KILL_PROCESS, handleKillProcess);
   ipcMain.handle(TEAM_LEAD_ACTIVITY, handleLeadActivity);
   ipcMain.handle(TEAM_LEAD_CONTEXT, handleLeadContext);
+  ipcMain.handle(TEAM_MEMBER_SPAWN_STATUSES, handleMemberSpawnStatuses);
   ipcMain.handle(TEAM_SOFT_DELETE_TASK, handleSoftDeleteTask);
   ipcMain.handle(TEAM_RESTORE_TASK, handleRestoreTask);
   ipcMain.handle(TEAM_GET_DELETED_TASKS, handleGetDeletedTasks);
@@ -310,6 +313,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_KILL_PROCESS);
   ipcMain.removeHandler(TEAM_LEAD_ACTIVITY);
   ipcMain.removeHandler(TEAM_LEAD_CONTEXT);
+  ipcMain.removeHandler(TEAM_MEMBER_SPAWN_STATUSES);
   ipcMain.removeHandler(TEAM_SOFT_DELETE_TASK);
   ipcMain.removeHandler(TEAM_RESTORE_TASK);
   ipcMain.removeHandler(TEAM_GET_DELETED_TASKS);
@@ -1774,6 +1778,19 @@ async function handleLeadContext(
   }
   return wrapTeamHandler('leadContext', async () =>
     getTeamProvisioningService().getLeadContextUsage(validated.value!)
+  );
+}
+
+async function handleMemberSpawnStatuses(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown
+): Promise<IpcResult<Record<string, MemberSpawnStatusEntry>>> {
+  const validated = validateTeamName(teamName);
+  if (!validated.valid) {
+    return { success: false, error: validated.error ?? 'Invalid teamName' };
+  }
+  return wrapTeamHandler('memberSpawnStatuses', async () =>
+    getTeamProvisioningService().getMemberSpawnStatuses(validated.value!)
   );
 }
 

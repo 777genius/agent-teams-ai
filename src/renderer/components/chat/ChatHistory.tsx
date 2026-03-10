@@ -168,7 +168,8 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     const stats = sessionContextStats.get(targetAiGroupId);
     const injections = stats?.accumulatedInjections ?? [];
 
-    // Get total tokens from the target AI group
+    // Get total INPUT tokens from the target AI group (excluding output tokens,
+    // since visible context is part of input only)
     let totalTokens: number | undefined;
     const targetItem = conversation.items.find(
       (item) => item.type === 'ai' && item.group.id === targetAiGroupId
@@ -181,7 +182,6 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
           const usage = msg.usage;
           totalTokens =
             (usage.input_tokens ?? 0) +
-            (usage.output_tokens ?? 0) +
             (usage.cache_read_input_tokens ?? 0) +
             (usage.cache_creation_input_tokens ?? 0);
           break;

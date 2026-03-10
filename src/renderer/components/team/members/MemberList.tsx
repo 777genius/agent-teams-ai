@@ -4,13 +4,24 @@ import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { MemberCard } from './MemberCard';
 
 import type { TaskStatusCounts } from '@renderer/utils/pathNormalize';
-import type { LeadActivityState, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
+import type {
+  LeadActivityState,
+  MemberSpawnStatus,
+  ResolvedTeamMember,
+  TeamTaskWithKanban,
+} from '@shared/types';
+
+export interface MemberSpawnEntry {
+  status: MemberSpawnStatus;
+  error?: string;
+}
 
 interface MemberListProps {
   members: ResolvedTeamMember[];
   memberTaskCounts?: Map<string, TaskStatusCounts>;
   taskMap?: Map<string, TeamTaskWithKanban>;
   pendingRepliesByMember?: Record<string, number>;
+  memberSpawnStatuses?: Map<string, MemberSpawnEntry>;
   isTeamAlive?: boolean;
   isTeamProvisioning?: boolean;
   leadActivity?: LeadActivityState;
@@ -25,6 +36,7 @@ export const MemberList = ({
   memberTaskCounts,
   taskMap,
   pendingRepliesByMember,
+  memberSpawnStatuses,
   isTeamAlive,
   isTeamProvisioning,
   leadActivity,
@@ -65,6 +77,7 @@ export const MemberList = ({
           ) ?? null)
         : null;
     const awaitingReply = Boolean(pendingRepliesByMember?.[member.name]);
+    const spawnEntry = memberSpawnStatuses?.get(member.name);
     return (
       <MemberCard
         key={member.name}
@@ -78,6 +91,8 @@ export const MemberList = ({
         reviewTask={isRemoved ? null : reviewTask}
         isAwaitingReply={isRemoved ? false : awaitingReply}
         isRemoved={isRemoved}
+        spawnStatus={isRemoved ? undefined : spawnEntry?.status}
+        spawnError={isRemoved ? undefined : spawnEntry?.error}
         onOpenTask={
           !isRemoved && (currentTask ?? reviewTask)
             ? () => onOpenTask?.((currentTask ?? reviewTask)!)

@@ -331,6 +331,9 @@ export const TEAM_LEAD_ACTIVITY = 'team:leadActivity';
 /** Get lead process context window usage */
 export const TEAM_LEAD_CONTEXT = 'team:leadContext';
 
+/** Get per-member spawn statuses for a team */
+export const TEAM_MEMBER_SPAWN_STATUSES = 'team:memberSpawnStatuses';
+
 /** Soft-delete a task (set status to 'deleted' with deletedAt timestamp) */
 export const TEAM_SOFT_DELETE_TASK = 'team:softDeleteTask';
 

@@ -826,6 +826,9 @@ export class HttpAPIClient implements ElectronAPI {
     getLeadContext: async () => {
       return null;
     },
+    getMemberSpawnStatuses: async () => {
+      return {};
+    },
     softDeleteTask: async (_teamName: string, _taskId: string): Promise<void> => {
       // Not available via HTTP client — no-op
     },

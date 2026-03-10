@@ -338,8 +338,7 @@ export const CliLogsRichView = ({
   }, []);
 
   if (entries.length === 0) {
-    // cliLogsTail has data but no parseable assistant messages — show raw text fallback
-    const hasContent = cliLogsTail.trim().length > 0;
+    // No parseable assistant messages yet — show waiting state
     return (
       <div
         ref={(el) => {
@@ -360,15 +359,15 @@ export const CliLogsRichView = ({
           });
         }}
       >
-        {hasContent ? (
-          <pre className="p-2 font-mono text-[11px] leading-relaxed text-[var(--color-text-secondary)]">
-            {cliLogsTail}
-          </pre>
-        ) : (
-          <p className="p-3 text-center text-[11px] italic text-[var(--color-text-muted)]">
-            Waiting for CLI output...
-          </p>
-        )}
+        <div className="flex items-center gap-2 p-3">
+          <span className="relative flex size-2">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--color-text-muted)] opacity-40" />
+            <span className="relative inline-flex size-2 rounded-full bg-[var(--color-text-muted)]" />
+          </span>
+          <span className="text-[11px] text-[var(--color-text-muted)]">
+            Waiting for response...
+          </span>
+        </div>
         {footer}
       </div>
     );

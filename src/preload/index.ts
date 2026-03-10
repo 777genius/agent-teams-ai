@@ -97,6 +97,7 @@ import {
   TEAM_LAUNCH,
   TEAM_LEAD_ACTIVITY,
   TEAM_LEAD_CONTEXT,
+  TEAM_MEMBER_SPAWN_STATUSES,
   TEAM_LIST,
   TEAM_PERMANENTLY_DELETE,
   TEAM_PREPARE_PROVISIONING,
@@ -214,6 +215,7 @@ import type {
   LeadContextUsage,
   MemberFullStats,
   MemberLogSummary,
+  MemberSpawnStatusEntry,
   NotificationTrigger,
   RejectResult,
   ReplaceMembersRequest,
@@ -903,6 +905,12 @@ const electronAPI: ElectronAPI = {
     },
     getLeadContext: async (teamName: string) => {
       return invokeIpcWithResult<LeadContextUsage | null>(TEAM_LEAD_CONTEXT, teamName);
+    },
+    getMemberSpawnStatuses: async (teamName: string) => {
+      return invokeIpcWithResult<Record<string, MemberSpawnStatusEntry>>(
+        TEAM_MEMBER_SPAWN_STATUSES,
+        teamName
+      );
     },
     softDeleteTask: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<void>(TEAM_SOFT_DELETE_TASK, teamName, taskId);

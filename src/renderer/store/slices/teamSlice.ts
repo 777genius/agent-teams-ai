@@ -74,6 +74,7 @@ import type {
   KanbanColumnId,
   LeadActivityState,
   LeadContextUsage,
+  MemberSpawnStatusEntry,
   SendMessageRequest,
   SendMessageResult,
   TaskComment,
@@ -286,6 +287,9 @@ export interface TeamSlice {
   provisioningStartedAtFloorByTeam: Record<string, string>;
   leadActivityByTeam: Record<string, LeadActivityState>;
   leadContextByTeam: Record<string, LeadContextUsage>;
+  /** Per-team per-member spawn statuses during team provisioning/launch. */
+  memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
+  fetchMemberSpawnStatuses: (teamName: string) => Promise<void>;
   activeProvisioningRunId: string | null;
   provisioningError: string | null;
   clearProvisioningError: () => void;
@@ -461,9 +465,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   provisioningStartedAtFloorByTeam: {},
   leadActivityByTeam: {},
   leadContextByTeam: {},
+  memberSpawnStatusesByTeam: {},
   activeProvisioningRunId: null,
   provisioningError: null,
   clearProvisioningError: () => set({ provisioningError: null }),
+  fetchMemberSpawnStatuses: async (teamName: string) => {
+    if (!api.teams?.getMemberSpawnStatuses) return;
+    try {
+      const statuses = await api.teams.getMemberSpawnStatuses(teamName);
+      set((prev) => ({
+        memberSpawnStatusesByTeam: {
+          ...prev.memberSpawnStatusesByTeam,
+          [teamName]: statuses,
+        },
+      }));
+    } catch {
+      // ignore — spawn statuses are best-effort
+    }
+  },
   kanbanFilterQuery: null,
   globalTaskDetail: null,
   pendingMemberProfile: null,
@@ -1277,6 +1296,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     });
 
     if (progress.state === 'ready' || progress.state === 'disconnected') {
+      // Clear spawn statuses — provisioning is complete, members now tracked via normal status
+      set((prev) => {
+        const next = { ...prev.memberSpawnStatusesByTeam };
+        delete next[progress.teamName];
+        return { memberSpawnStatusesByTeam: next };
+      });
       void get().fetchTeams();
       // If the user already opened the team tab, reload team data now that
       // config.json is guaranteed to exist.

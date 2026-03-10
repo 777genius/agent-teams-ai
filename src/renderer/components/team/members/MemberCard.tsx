@@ -3,14 +3,24 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
-import { agentAvatarUrl, getMemberDotClass, getPresenceLabel } from '@renderer/utils/memberHelpers';
+import {
+  agentAvatarUrl,
+  getSpawnAwareDotClass,
+  getSpawnAwarePresenceLabel,
+  getSpawnCardClass,
+} from '@renderer/utils/memberHelpers';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
-import { GitBranch, Loader2, MessageSquare, Plus } from 'lucide-react';
+import { AlertTriangle, GitBranch, Loader2, MessageSquare, Plus } from 'lucide-react';
 
 import { CurrentTaskIndicator } from './CurrentTaskIndicator';
 
 import type { TaskStatusCounts } from '@renderer/utils/pathNormalize';
-import type { LeadActivityState, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
+import type {
+  LeadActivityState,
+  MemberSpawnStatus,
+  ResolvedTeamMember,
+  TeamTaskWithKanban,
+} from '@shared/types';
 
 interface MemberCardProps {
   member: ResolvedTeamMember;
@@ -23,6 +33,8 @@ interface MemberCardProps {
   reviewTask?: TeamTaskWithKanban | null;
   isAwaitingReply?: boolean;
   isRemoved?: boolean;
+  spawnStatus?: MemberSpawnStatus;
+  spawnError?: string;
   onOpenTask?: () => void;
   onClick?: () => void;
   onSendMessage?: () => void;
@@ -40,6 +52,8 @@ export const MemberCard = ({
   reviewTask,
   isAwaitingReply,
   isRemoved,
+  spawnStatus,
+  spawnError,
   onOpenTask,
   onClick,
   onSendMessage,
@@ -50,8 +64,21 @@ export const MemberCard = ({
   // const leadContext = useStore((s) =>
   //   member.agentType === 'team-lead' && teamName ? s.leadContextByTeam[teamName] : undefined
   // );
-  const dotClass = getMemberDotClass(member, isTeamAlive, isTeamProvisioning, leadActivity);
-  const presenceLabel = getPresenceLabel(member, isTeamAlive, isTeamProvisioning, leadActivity);
+  const dotClass = getSpawnAwareDotClass(
+    member,
+    spawnStatus,
+    isTeamAlive,
+    isTeamProvisioning,
+    leadActivity
+  );
+  const presenceLabel = getSpawnAwarePresenceLabel(
+    member,
+    spawnStatus,
+    isTeamAlive,
+    isTeamProvisioning,
+    leadActivity
+  );
+  const spawnCardClass = isTeamProvisioning ? getSpawnCardClass(spawnStatus) : '';
   const colors = getTeamColorSet(memberColor);
   const { isLight } = useTheme();
   const pending = taskCounts?.pending ?? 0;
@@ -68,7 +95,9 @@ export const MemberCard = ({
       : undefined;
 
   return (
-    <div className={isRemoved ? 'rounded opacity-50' : 'rounded'}>
+    <div
+      className={`rounded transition-opacity duration-300 ${isRemoved ? 'opacity-50' : ''} ${spawnCardClass}`}
+    >
       <div
         className="group relative cursor-pointer rounded px-2 py-1.5"
         style={{
@@ -136,11 +165,28 @@ export const MemberCard = ({
               </span>
             ) : null;
           })()}
-          {presenceLabel === 'connecting' && !isRemoved ? (
-            <Loader2
-              className="size-3.5 shrink-0 animate-spin text-[var(--color-text-muted)]"
-              aria-label="connecting"
-            />
+          {presenceLabel === 'connecting' || spawnStatus === 'spawning' ? (
+            !isRemoved ? (
+              <Loader2
+                className="size-3.5 shrink-0 animate-spin text-[var(--color-text-muted)]"
+                aria-label="connecting"
+              />
+            ) : null
+          ) : spawnStatus === 'error' ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex shrink-0 items-center gap-1">
+                  <AlertTriangle className="size-3.5 shrink-0 text-red-400" />
+                  <Badge
+                    variant="secondary"
+                    className="shrink-0 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-normal leading-none text-red-400"
+                  >
+                    {presenceLabel}
+                  </Badge>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{spawnError ?? 'Spawn failed'}</TooltipContent>
+            </Tooltip>
           ) : (
             <Badge
               variant="secondary"

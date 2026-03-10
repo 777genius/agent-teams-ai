@@ -28,7 +28,6 @@ import {
   CROSS_TEAM_SENT_SOURCE,
   CROSS_TEAM_SOURCE,
   parseCrossTeamPrefix,
-  parseCrossTeamReplyPrefix,
   stripCrossTeamPrefix,
 } from '@shared/constants/crossTeam';
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
@@ -325,10 +324,6 @@ export const ActivityItem = ({
   const isExpanded = isManaged ? !collapseState.isCollapsed : true;
 
   const parsedCrossTeamPrefix = useMemo(() => parseCrossTeamPrefix(message.text), [message.text]);
-  const parsedCrossTeamReplyPrefix = useMemo(
-    () => parseCrossTeamReplyPrefix(message.text),
-    [message.text]
-  );
   const qualifiedRecipient = useMemo(() => parseQualifiedRecipient(message.to), [message.to]);
   const crossTeamSentTarget = useMemo(
     () => getCrossTeamSentTarget(message.to, teamName, localMemberNames),
@@ -339,10 +334,7 @@ export const ActivityItem = ({
     [message.to]
   );
   const isCrossTeam = message.source === CROSS_TEAM_SOURCE || parsedCrossTeamPrefix !== null;
-  const isCrossTeamSent =
-    message.source === CROSS_TEAM_SENT_SOURCE ||
-    parsedCrossTeamReplyPrefix !== null ||
-    crossTeamSentTarget !== null;
+  const isCrossTeamSent = message.source === CROSS_TEAM_SENT_SOURCE || crossTeamSentTarget !== null;
   const isCrossTeamAny = isCrossTeam || isCrossTeamSent;
   const crossTeamOrigin = useMemo(() => {
     if (!isCrossTeam) return null;

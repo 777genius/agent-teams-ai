@@ -117,6 +117,7 @@ interface RunLike {
   cancelRequested: boolean;
   provisioningOutputParts: string[];
   request: { members: { name: string; role?: string }[] };
+  activeCrossTeamReplyHints?: Array<{ toTeam: string; conversationId: string }>;
 }
 
 /**
@@ -143,6 +144,7 @@ function attachRun(
     cancelRequested: false,
     provisioningOutputParts: [],
     request: { members: [{ name: 'team-lead', role: 'Team Lead' }] },
+    activeCrossTeamReplyHints: [],
   };
 
   (service as unknown as { activeByTeam: Map<string, string> }).activeByTeam.set(teamName, runId);
@@ -431,6 +433,7 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     service.setTeamChangeEmitter(emitter);
     service.setCrossTeamSender(crossTeamSender);
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
+    run.activeCrossTeamReplyHints = [{ toTeam: 'team-best', conversationId: 'conv-123' }];
 
     callHandleStreamJsonMessage(service, run, {
       type: 'assistant',
@@ -441,7 +444,7 @@ describe('TeamProvisioningService pre-ready live messages', () => {
           input: {
             type: 'message',
             recipient: 'team-best.user',
-            content: '[Cross-team reply | conversation:conv-123] Привет!',
+            content: 'Привет!',
             summary: 'Ответ',
           },
         },

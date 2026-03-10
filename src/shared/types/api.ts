@@ -50,6 +50,7 @@ import type {
   LeadContextUsage,
   MemberFullStats,
   MemberLogSummary,
+  MemberSpawnStatusEntry,
   ReplaceMembersRequest,
   SendMessageRequest,
   SendMessageResult,
@@ -484,6 +485,7 @@ export interface TeamsAPI {
   killProcess: (teamName: string, pid: number) => Promise<void>;
   getLeadActivity: (teamName: string) => Promise<LeadActivityState>;
   getLeadContext: (teamName: string) => Promise<LeadContextUsage | null>;
+  getMemberSpawnStatuses: (teamName: string) => Promise<Record<string, MemberSpawnStatusEntry>>;
   softDeleteTask: (teamName: string, taskId: string) => Promise<void>;
   restoreTask: (teamName: string, taskId: string) => Promise<void>;
   getDeletedTasks: (teamName: string) => Promise<TeamTask[]>;
@@ -542,9 +544,7 @@ export interface TeamsAPI {
 
 export interface CrossTeamAPI {
   send: (request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>;
-  listTargets: (
-    excludeTeam?: string
-  ) => Promise<
+  listTargets: (excludeTeam?: string) => Promise<
     {
       teamName: string;
       displayName: string;

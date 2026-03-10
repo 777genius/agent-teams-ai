@@ -93,7 +93,12 @@ import type { MessagesFilterState } from './messages/MessagesFilterPopover';
 import type { ContextInjection } from '@renderer/types/contextInjection';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
-import type { InboxMessage, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
+import type {
+  InboxMessage,
+  MemberSpawnStatusEntry,
+  ResolvedTeamMember,
+  TeamTaskWithKanban,
+} from '@shared/types';
 import type { EditorSelectionAction } from '@shared/types/editor';
 
 interface TeamDetailViewProps {
@@ -234,6 +239,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     clearProvisioningError,
     isTeamProvisioning,
     leadActivityByTeam,
+    memberSpawnStatuses,
+    fetchMemberSpawnStatuses,
     refreshTeamData,
     kanbanFilterQuery,
     clearKanbanFilter,
@@ -277,6 +284,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         (run) => run.teamName === teamName && ACTIVE_PROVISIONING_STATES.has(run.state)
       ),
       leadActivityByTeam: s.leadActivityByTeam,
+      memberSpawnStatuses: teamName ? s.memberSpawnStatusesByTeam[teamName] : undefined,
+      fetchMemberSpawnStatuses: s.fetchMemberSpawnStatuses,
       refreshTeamData: s.refreshTeamData,
       kanbanFilterQuery: s.kanbanFilterQuery,
       clearKanbanFilter: s.clearKanbanFilter,
@@ -310,6 +319,23 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       provisioningBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [isTeamProvisioning]);
+
+  // Fetch initial spawn statuses when provisioning starts
+  useEffect(() => {
+    if (isTeamProvisioning && teamName) {
+      void fetchMemberSpawnStatuses(teamName);
+    }
+  }, [isTeamProvisioning, teamName, fetchMemberSpawnStatuses]);
+
+  // Convert Record<string, MemberSpawnStatusEntry> → Map<string, MemberSpawnEntry>
+  const memberSpawnStatusMap = useMemo(() => {
+    if (!memberSpawnStatuses) return undefined;
+    const map = new Map<string, { status: MemberSpawnStatusEntry['status']; error?: string }>();
+    for (const [name, entry] of Object.entries(memberSpawnStatuses)) {
+      map.set(name, { status: entry.status, error: entry.error });
+    }
+    return map.size > 0 ? map : undefined;
+  }, [memberSpawnStatuses]);
 
   const [kanbanSearch, setKanbanSearch] = useState('');
   const [messagesSearchQuery, setMessagesSearchQuery] = useState('');
@@ -1189,6 +1215,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               memberTaskCounts={memberTaskCounts}
               taskMap={taskMap}
               pendingRepliesByMember={pendingRepliesByMember}
+              memberSpawnStatuses={memberSpawnStatusMap}
               isTeamAlive={data.isAlive}
               isTeamProvisioning={isTeamProvisioning}
               leadActivity={leadActivityByTeam[teamName]}

@@ -51,9 +51,6 @@ export function formatCrossTeamText(
 export const CROSS_TEAM_PREFIX_RE =
   /^\[Cross-team from (?<from>[^\]|]+?) \| depth:(?<depth>\d+)(?: \| conversation:(?<conversationId>[^\]|]+))?(?: \| replyTo:(?<replyToConversationId>[^\]|]+))?\]\n?/;
 
-export const CROSS_TEAM_REPLY_PREFIX_RE =
-  /^\[Cross-team reply(?: \| conversation:(?<conversationId>[^\]|]+))?(?: \| replyTo:(?<replyToConversationId>[^\]|]+))?\]\n?/;
-
 /** Parse metadata from a cross-team prefix line. */
 export function parseCrossTeamPrefix(text: string): ParsedCrossTeamPrefix | null {
   const match = text.match(CROSS_TEAM_PREFIX_RE);
@@ -71,19 +68,9 @@ export function parseCrossTeamPrefix(text: string): ParsedCrossTeamPrefix | null
   };
 }
 
-export function parseCrossTeamReplyPrefix(text: string): CrossTeamPrefixMeta | null {
-  const match = text.match(CROSS_TEAM_REPLY_PREFIX_RE);
-  if (!match?.groups) return null;
-
-  return {
-    conversationId: match.groups.conversationId?.trim() || undefined,
-    replyToConversationId: match.groups.replyToConversationId?.trim() || undefined,
-  };
-}
-
 /** Strip the cross-team prefix from message text (for UI display). */
 export function stripCrossTeamPrefix(text: string): string {
-  return text.replace(CROSS_TEAM_PREFIX_RE, '').replace(CROSS_TEAM_REPLY_PREFIX_RE, '');
+  return text.replace(CROSS_TEAM_PREFIX_RE, '');
 }
 
 // ── Source discriminators ────────────────────────────────────────────────────

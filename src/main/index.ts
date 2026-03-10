@@ -463,6 +463,10 @@ function wireFileWatcherEvents(context: ServiceContext): void {
           const match = /^inboxes\/(.+)\.json$/.exec(detail);
           if (match && teamDataService) {
             const inboxName = match[1];
+
+            // Mark member as online when their first inbox message arrives (spawn tracking).
+            teamProvisioningService.markMemberOnlineFromInbox(teamName, inboxName);
+
             void teamDataService
               .getLeadMemberName(teamName)
               .then((leadName) => {

@@ -400,6 +400,12 @@ export function initializeNotificationListeners(): () => void {
         return;
       }
 
+      // Member spawn status change: fetch updated spawn statuses for the team.
+      if (event.type === 'member-spawn') {
+        void useStore.getState().fetchMemberSpawnStatuses(event.teamName);
+        return;
+      }
+
       // Live lead-message events: only refresh the visible team detail, not team/task lists.
       // This keeps the refresh lightweight and prevents one noisy team from starving another.
       if (event.type === 'lead-message') {

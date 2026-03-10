@@ -544,8 +544,8 @@ export const TokenUsageDisplay = ({
                       incl. CLAUDE.md ×{claudeMdStats.accumulatedCount}
                     </span>
                     <span className="tabular-nums">
-                      {totalTokens > 0
-                        ? ((claudeMdStats.totalEstimatedTokens / totalTokens) * 100).toFixed(1)
+                      {totalInputTokens > 0
+                        ? ((claudeMdStats.totalEstimatedTokens / totalInputTokens) * 100).toFixed(1)
                         : '0.0'}
                       %
                     </span>

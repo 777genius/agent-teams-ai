@@ -2,6 +2,7 @@ import { getMemberColorByName, MEMBER_COLOR_PALETTE } from '@shared/constants/me
 
 import type {
   LeadActivityState,
+  MemberSpawnStatus,
   MemberStatus,
   ResolvedTeamMember,
   TeamReviewState,
@@ -58,6 +59,76 @@ export function getPresenceLabel(
   }
   if (member.status === 'unknown') return 'idle';
   return member.currentTaskId ? 'working' : 'idle';
+}
+
+/* ------------------------------------------------------------------ */
+/*  Spawn-status-aware helpers for progressive member card appearance  */
+/* ------------------------------------------------------------------ */
+
+export const SPAWN_DOT_COLORS: Record<MemberSpawnStatus, string> = {
+  offline: 'bg-zinc-600',
+  spawning: 'bg-amber-400 animate-pulse',
+  online: 'bg-emerald-400',
+  error: 'bg-red-400',
+};
+
+export const SPAWN_PRESENCE_LABELS: Record<MemberSpawnStatus, string> = {
+  offline: 'offline',
+  spawning: 'spawning',
+  online: 'online',
+  error: 'spawn failed',
+};
+
+/**
+ * Returns dot class for a member during provisioning, respecting spawn status.
+ * Falls back to the existing `getMemberDotClass` when no spawn status is available.
+ */
+export function getSpawnAwareDotClass(
+  member: ResolvedTeamMember,
+  spawnStatus: MemberSpawnStatus | undefined,
+  isTeamAlive?: boolean,
+  isTeamProvisioning?: boolean,
+  leadActivity?: LeadActivityState
+): string {
+  if (spawnStatus && isTeamProvisioning) {
+    return SPAWN_DOT_COLORS[spawnStatus];
+  }
+  return getMemberDotClass(member, isTeamAlive, isTeamProvisioning, leadActivity);
+}
+
+/**
+ * Returns presence label for a member during provisioning, respecting spawn status.
+ */
+export function getSpawnAwarePresenceLabel(
+  member: ResolvedTeamMember,
+  spawnStatus: MemberSpawnStatus | undefined,
+  isTeamAlive?: boolean,
+  isTeamProvisioning?: boolean,
+  leadActivity?: LeadActivityState
+): string {
+  if (spawnStatus && isTeamProvisioning) {
+    return SPAWN_PRESENCE_LABELS[spawnStatus];
+  }
+  return getPresenceLabel(member, isTeamAlive, isTeamProvisioning, leadActivity);
+}
+
+/**
+ * Card container CSS classes based on spawn status (opacity + animation).
+ * Used by MemberCard wrapper for fade-in transitions.
+ */
+export function getSpawnCardClass(spawnStatus: MemberSpawnStatus | undefined): string {
+  switch (spawnStatus) {
+    case 'offline':
+      return 'opacity-40';
+    case 'spawning':
+      return 'opacity-70 animate-[member-spawn-pulse_2s_ease-in-out_infinite]';
+    case 'online':
+      return 'animate-[member-fade-in_0.4s_ease-out]';
+    case 'error':
+      return 'opacity-80';
+    default:
+      return '';
+  }
 }
 
 export const TASK_STATUS_STYLES: Record<TeamTaskStatus, { bg: string; text: string }> = {

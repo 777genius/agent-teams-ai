@@ -26,6 +26,26 @@ describe('TeamProvisioningService (launch roster discovery)', () => {
     expect(result.members.map((m: { name: string }) => m.name)).toEqual(['dev', 'dev-1']);
   });
 
+  it('inbox fallback ignores cross-team pseudo and qualified external names', async () => {
+    const svc = new TeamProvisioningService(
+      {} as never,
+      {
+        listInboxNames: vi.fn(async () => [
+          'dev',
+          'cross-team:team-alpha-super',
+          'cross-team-team-alpha-super',
+          'team-alpha-super.user',
+        ]),
+      } as never,
+      { getMembers: vi.fn(async () => []) } as never,
+      {} as never
+    );
+
+    const result = await (svc as unknown as any).resolveLaunchExpectedMembers('t', '{}');
+    expect(result.source).toBe('inboxes');
+    expect(result.members.map((m: { name: string }) => m.name)).toEqual(['dev']);
+  });
+
   it('inbox fallback keeps suffixed name if base is absent', async () => {
     const svc = new TeamProvisioningService(
       {} as never,

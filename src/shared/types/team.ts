@@ -300,6 +300,15 @@ export interface SendMessageResult {
 
 export type MemberStatus = 'active' | 'idle' | 'terminated' | 'unknown';
 
+/**
+ * Spawn lifecycle status for a team member during team launch/reconnect.
+ * - offline: not yet spawned (no Agent tool_use seen)
+ * - spawning: Agent tool_use sent, awaiting tool_result
+ * - online: tool_result received, agent is active
+ * - error: spawn failed (tool_result with error)
+ */
+export type MemberSpawnStatus = 'offline' | 'spawning' | 'online' | 'error';
+
 export type KanbanColumnId = 'todo' | 'in_progress' | 'done' | 'review' | 'approved';
 
 export interface KanbanTaskState {
@@ -410,9 +419,26 @@ export interface LeadContextUsage {
 }
 
 export interface TeamChangeEvent {
-  type: 'config' | 'inbox' | 'task' | 'lead-activity' | 'lead-context' | 'lead-message' | 'process';
+  type:
+    | 'config'
+    | 'inbox'
+    | 'task'
+    | 'lead-activity'
+    | 'lead-context'
+    | 'lead-message'
+    | 'process'
+    | 'member-spawn';
   teamName: string;
   detail?: string;
+}
+
+/** Per-member spawn status entry, exposed to renderer via IPC. */
+export interface MemberSpawnStatusEntry {
+  status: MemberSpawnStatus;
+  /** Error message when status === 'error'. */
+  error?: string;
+  /** ISO timestamp of the last status change. */
+  updatedAt: string;
 }
 
 export interface TeamClaudeLogsQuery {

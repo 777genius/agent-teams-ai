@@ -24,7 +24,6 @@ import {
   CROSS_TEAM_SOURCE,
   CROSS_TEAM_SENT_SOURCE,
   parseCrossTeamPrefix,
-  parseCrossTeamReplyPrefix,
   stripCrossTeamPrefix,
 } from '@shared/constants/crossTeam';
 import { getMemberColorByName } from '@shared/constants/memberColors';
@@ -59,6 +58,8 @@ import type {
   CrossTeamSendResult,
   InboxMessage,
   LeadContextUsage,
+  MemberSpawnStatus,
+  MemberSpawnStatusEntry,
   TeamChangeEvent,
   TeamCreateRequest,
   TeamCreateResponse,
@@ -240,6 +241,11 @@ interface ProvisioningRun {
   pendingPostCompactReminder: boolean;
   postCompactReminderInFlight: boolean;
   suppressPostCompactReminderOutput: boolean;
+  /** Per-member spawn lifecycle statuses tracked from stream-json output. */
+  memberSpawnStatuses: Map<
+    string,
+    { status: MemberSpawnStatus; error?: string; updatedAt: string }
+  >;
 }
 
 type LeadActivityState = 'active' | 'idle' | 'offline';
@@ -1269,6 +1275,15 @@ export class TeamProvisioningService {
     return false;
   }
 
+  private looksLikeQualifiedExternalRecipientName(name: string): boolean {
+    const trimmed = name.trim();
+    const dot = trimmed.indexOf('.');
+    if (dot <= 0 || dot === trimmed.length - 1) return false;
+    const teamName = trimmed.slice(0, dot).trim();
+    const memberName = trimmed.slice(dot + 1).trim();
+    return TEAM_NAME_PATTERN.test(teamName) && memberName.length > 0;
+  }
+
   private persistSentMessage(teamName: string, message: InboxMessage): void {
     try {
       createController({
@@ -1384,6 +1399,45 @@ export class TeamProvisioningService {
       teamName: run.teamName,
       detail: state,
     });
+  }
+
+  /**
+   * Update spawn status for a specific team member and emit a change event.
+   */
+  private setMemberSpawnStatus(
+    run: ProvisioningRun,
+    memberName: string,
+    status: MemberSpawnStatus,
+    error?: string
+  ): void {
+    const prev = run.memberSpawnStatuses.get(memberName);
+    if (prev?.status === status) return;
+    run.memberSpawnStatuses.set(memberName, {
+      status,
+      error,
+      updatedAt: nowIso(),
+    });
+    this.teamChangeEmitter?.({
+      type: 'member-spawn',
+      teamName: run.teamName,
+      detail: memberName,
+    });
+  }
+
+  /**
+   * Get current member spawn statuses for a team.
+   * Returns a map of memberName → MemberSpawnStatusEntry.
+   */
+  getMemberSpawnStatuses(teamName: string): Record<string, MemberSpawnStatusEntry> {
+    const runId = this.activeByTeam.get(teamName);
+    if (!runId) return {};
+    const run = this.runs.get(runId);
+    if (!run) return {};
+    const result: Record<string, MemberSpawnStatusEntry> = {};
+    for (const [name, entry] of run.memberSpawnStatuses) {
+      result[name] = { status: entry.status, error: entry.error, updatedAt: entry.updatedAt };
+    }
+    return result;
   }
 
   private static readonly CONTEXT_EMIT_THROTTLE_MS = 2000;
@@ -1961,6 +2015,7 @@ export class TeamProvisioningService {
         pendingPostCompactReminder: false,
         postCompactReminderInFlight: false,
         suppressPostCompactReminderOutput: false,
+        memberSpawnStatuses: new Map(),
         progress: {
           runId,
           teamName: request.teamName,
@@ -2284,6 +2339,7 @@ export class TeamProvisioningService {
         pendingPostCompactReminder: false,
         postCompactReminderInFlight: false,
         suppressPostCompactReminderOutput: false,
+        memberSpawnStatuses: new Map(),
         progress: {
           runId,
           teamName: request.teamName,
@@ -3117,6 +3173,41 @@ export class TeamProvisioningService {
    * calls directly from stdout, we persist a durable message row under the correct team name so
    * Messages stays accurate even if Claude's own routing is flaky.
    */
+  /**
+   * Intercept Task tool_use blocks that spawn team members.
+   * Sets member spawn status to 'spawning' when the lead issues a Task call with team_name + name.
+   */
+  private captureTeamSpawnEvents(run: ProvisioningRun, content: Record<string, unknown>[]): void {
+    for (const part of content) {
+      if (part.type !== 'tool_use' || part.name !== 'Task') continue;
+      const input = part.input;
+      if (!input || typeof input !== 'object') continue;
+      const inp = input as Record<string, unknown>;
+      const teamName = typeof inp.team_name === 'string' ? inp.team_name.trim() : '';
+      const memberName = typeof inp.name === 'string' ? inp.name.trim() : '';
+      if (!teamName || !memberName) continue;
+      // Only track spawns for this team
+      if (teamName !== run.teamName) continue;
+      this.setMemberSpawnStatus(run, memberName, 'spawning');
+    }
+  }
+
+  /**
+   * Mark a member as online when their first inbox message arrives.
+   * Called from the inbox change handler.
+   */
+  markMemberOnlineFromInbox(teamName: string, memberName: string): void {
+    const runId = this.activeByTeam.get(teamName);
+    if (!runId) return;
+    const run = this.runs.get(runId);
+    if (!run) return;
+    const entry = run.memberSpawnStatuses.get(memberName);
+    // Only transition spawning → online (not offline → online, to avoid false positives)
+    if (entry?.status === 'spawning') {
+      this.setMemberSpawnStatus(run, memberName, 'online');
+    }
+  }
+
   private captureSendMessages(run: ProvisioningRun, content: Record<string, unknown>[]): void {
     for (const part of content) {
       if (part.type !== 'tool_use' || part.name !== 'SendMessage') continue;
@@ -3153,13 +3244,12 @@ export class TeamProvisioningService {
         localRecipientNames
       );
       if (crossTeamRecipient && this.crossTeamSender) {
-        const explicitReplyMeta = parseCrossTeamReplyPrefix(cleanContent);
         const inferredReplyMeta = this.resolveCrossTeamReplyMetadata(
           run.teamName,
           crossTeamRecipient.teamName
         );
         const crossTeamMeta = parseCrossTeamPrefix(cleanContent);
-        const replyMeta = explicitReplyMeta ?? inferredReplyMeta;
+        const replyMeta = inferredReplyMeta;
         const timestamp = nowIso();
         const messageId = `lead-sendmsg-${run.runId}-${Date.now()}`;
 
@@ -3171,14 +3261,9 @@ export class TeamProvisioningService {
           summary,
           messageId,
           timestamp,
-          conversationId:
-            explicitReplyMeta?.conversationId ??
-            crossTeamMeta?.conversationId ??
-            replyMeta?.conversationId,
+          conversationId: crossTeamMeta?.conversationId ?? replyMeta?.conversationId,
           replyToConversationId:
-            explicitReplyMeta?.replyToConversationId ??
             replyMeta?.replyToConversationId ??
-            explicitReplyMeta?.conversationId ??
             crossTeamMeta?.conversationId ??
             replyMeta?.conversationId,
         })
@@ -3200,14 +3285,9 @@ export class TeamProvisioningService {
                   : summary || strippedCrossTeamContent,
               messageId: result.messageId,
               source: 'cross_team_sent',
-              conversationId:
-                explicitReplyMeta?.conversationId ??
-                crossTeamMeta?.conversationId ??
-                replyMeta?.conversationId,
+              conversationId: crossTeamMeta?.conversationId ?? replyMeta?.conversationId,
               replyToConversationId:
-                explicitReplyMeta?.replyToConversationId ??
                 replyMeta?.replyToConversationId ??
-                explicitReplyMeta?.conversationId ??
                 crossTeamMeta?.conversationId ??
                 replyMeta?.conversationId,
             };
@@ -3482,6 +3562,10 @@ export class TeamProvisioningService {
           });
         }
       }
+
+      // Track member spawn events from Task tool_use blocks with team_name.
+      // When the lead calls Task(team_name=X, name=Y), it means member Y is being spawned.
+      this.captureTeamSpawnEvents(run, content ?? []);
 
       // Capture SendMessage tool_use blocks from assistant output.
       // Works in both pre-ready and post-ready phases so outbound runtime messages
@@ -5607,6 +5691,8 @@ export class TeamProvisioningService {
       const inboxNameSetLower = new Set(allInboxNames.map((n) => n.toLowerCase()));
       const inboxNames = allInboxNames
         .filter((name) => name !== 'team-lead' && name !== 'user')
+        .filter((name) => !this.isCrossTeamPseudoRecipientName(name))
+        .filter((name) => !this.looksLikeQualifiedExternalRecipientName(name))
         .filter((name) => {
           const match = /^(.+)-(\d+)$/.exec(name);
           if (!match?.[1] || !match[2]) return true;

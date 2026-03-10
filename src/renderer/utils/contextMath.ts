@@ -23,6 +23,5 @@ export function formatPercentOfTotal(
 ): string | null {
   const pct = computePercentOfTotal(visibleTokens, totalSessionTokens);
   if (pct === null) return null;
-  return `${pct.toFixed(1)}% of total`;
+  return `${pct.toFixed(1)}% of input`;
 }
-
