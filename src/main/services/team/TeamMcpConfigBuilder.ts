@@ -72,19 +72,21 @@ async function resolveNodePath(): Promise<string> {
 }
 
 async function resolveMcpLaunchSpec(): Promise<McpLaunchSpec> {
+  const sourceEntry = getSourceServerEntry();
+  if (await pathExists(sourceEntry)) {
+    // Prefer source in workspace/dev runs so newly added MCP tools are available
+    // immediately and we do not accidentally serve a stale built dist bundle.
+    return {
+      command: 'pnpm',
+      args: ['--dir', getMcpServerDir(), 'exec', 'tsx', sourceEntry],
+    };
+  }
+
   const builtEntry = getBuiltServerEntry();
   if (await pathExists(builtEntry)) {
     return {
       command: await resolveNodePath(),
       args: [builtEntry],
-    };
-  }
-
-  const sourceEntry = getSourceServerEntry();
-  if (await pathExists(sourceEntry)) {
-    return {
-      command: 'pnpm',
-      args: ['--dir', getMcpServerDir(), 'exec', 'tsx', sourceEntry],
     };
   }
 

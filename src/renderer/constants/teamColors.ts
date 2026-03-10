@@ -125,6 +125,9 @@ export function getSubagentTypeColorSet(
   return TEAMMATE_COLORS[COLOR_NAMES[index]];
 }
 
+/** Assignable visual colors (excludes reserved 'user'). */
+const ASSIGNABLE_COLORS = COLOR_NAMES.filter((c) => c !== 'user');
+
 export function getTeamColorSet(colorName: string): TeamColorSet {
   if (!colorName) return DEFAULT_COLOR;
 
@@ -141,7 +144,10 @@ export function getTeamColorSet(colorName: string): TeamColorSet {
     };
   }
 
-  return DEFAULT_COLOR;
+  // Hash unknown palette names (e.g. "coral", "sapphire") to one of the
+  // available visual colors instead of always falling back to blue.
+  const index = hashString(colorName.toLowerCase()) % ASSIGNABLE_COLORS.length;
+  return TEAMMATE_COLORS[ASSIGNABLE_COLORS[index]];
 }
 
 /**

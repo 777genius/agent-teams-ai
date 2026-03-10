@@ -9,6 +9,11 @@ import type {
 } from '@shared/types';
 
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
+const CROSS_TEAM_TOOL_RECIPIENT_NAMES = new Set([
+  'cross_team_send',
+  'cross_team_list_targets',
+  'cross_team_get_outbox',
+]);
 
 function looksLikeQualifiedExternalRecipient(name: string): boolean {
   const trimmed = name.trim();
@@ -21,15 +26,26 @@ function looksLikeQualifiedExternalRecipient(name: string): boolean {
 
 function looksLikeCrossTeamPseudoRecipient(name: string): boolean {
   const trimmed = name.trim();
-  if (trimmed.startsWith('cross-team:')) {
-    const teamName = trimmed.slice('cross-team:'.length).trim();
-    return TEAM_NAME_PATTERN.test(teamName);
-  }
-  if (trimmed.startsWith('cross-team-')) {
-    const teamName = trimmed.slice('cross-team-'.length).trim();
-    return TEAM_NAME_PATTERN.test(teamName);
+  const prefixes = [
+    'cross_team::',
+    'cross_team--',
+    'cross-team:',
+    'cross-team-',
+    'cross_team:',
+    'cross_team-',
+  ];
+  for (const prefix of prefixes) {
+    if (!trimmed.startsWith(prefix)) continue;
+    const teamName = trimmed.slice(prefix.length).trim();
+    if (TEAM_NAME_PATTERN.test(teamName)) {
+      return true;
+    }
   }
   return false;
+}
+
+function looksLikeCrossTeamToolRecipient(name: string): boolean {
+  return CROSS_TEAM_TOOL_RECIPIENT_NAMES.has(name.trim());
 }
 
 export class TeamMemberResolver {
@@ -75,7 +91,10 @@ export class TeamMemberResolver {
     for (const inboxName of inboxNames) {
       if (typeof inboxName === 'string' && inboxName.trim() !== '') {
         const trimmed = inboxName.trim();
-        if (looksLikeCrossTeamPseudoRecipient(trimmed)) {
+        if (
+          looksLikeCrossTeamPseudoRecipient(trimmed) ||
+          looksLikeCrossTeamToolRecipient(trimmed)
+        ) {
           continue;
         }
         if (

@@ -912,7 +912,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     );
   }
 
-  if (loading && !data) {
+  if ((loading && !data) || (data && data.teamName !== teamName)) {
     return (
       <div className="size-full overflow-auto p-4">
         <div className="mb-4 h-10 animate-pulse rounded-md bg-[var(--color-surface-raised)]" />

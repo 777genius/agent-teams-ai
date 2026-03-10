@@ -468,6 +468,7 @@ describe('TeamProvisioningService pre-ready live messages', () => {
 
     const live = service.getLiveLeadProcessMessages('my-team');
     expect(live).toHaveLength(1);
+    expect(live[0].from).toBe('team-lead');
     expect(live[0].source).toBe('cross_team_sent');
     expect(live[0].to).toBe('team-best.user');
     expect(live[0].text).toBe('Привет!');
@@ -513,8 +514,148 @@ describe('TeamProvisioningService pre-ready live messages', () => {
 
     const live = service.getLiveLeadProcessMessages('my-team');
     expect(live).toHaveLength(1);
+    expect(live[0].from).toBe('team-lead');
     expect(live[0].source).toBe('cross_team_sent');
     expect(live[0].to).toBe('cross-team:team-best');
+    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
+  });
+
+  it('upgrades MCP message_send pseudo recipients into cross-team sends', async () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const crossTeamSender = vi.fn(async () => ({ deliveredToInbox: true, messageId: 'cross-mcp-1' }));
+    service.setCrossTeamSender(crossTeamSender);
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+    run.activeCrossTeamReplyHints = [{ toTeam: 'team-best', conversationId: 'conv-mcp-1' }];
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          name: 'mcp__agent-teams__message_send',
+          input: {
+            teamName: 'my-team',
+            to: 'cross-team:team-best',
+            text: 'Ответ через MCP.',
+            from: 'team-lead',
+            summary: 'MCP reply',
+          },
+        },
+      ],
+    });
+
+    await vi.waitFor(() => {
+      expect(crossTeamSender).toHaveBeenCalledTimes(1);
+    });
+
+    expect(crossTeamSender).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fromTeam: 'my-team',
+        fromMember: 'team-lead',
+        toTeam: 'team-best',
+        text: 'Ответ через MCP.',
+        conversationId: 'conv-mcp-1',
+        replyToConversationId: 'conv-mcp-1',
+      })
+    );
+
+    const live = service.getLiveLeadProcessMessages('my-team');
+    expect(live).toHaveLength(1);
+    expect(live[0].from).toBe('team-lead');
+    expect(live[0].source).toBe('cross_team_sent');
+    expect(live[0].to).toBe('cross-team:team-best');
+    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
+  });
+
+  it('rescues mistaken cross_team_send recipients into actual cross-team replies', async () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const crossTeamSender = vi.fn(async () => ({ deliveredToInbox: true, messageId: 'cross-mcp-tool-1' }));
+    service.setCrossTeamSender(crossTeamSender);
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+    run.activeCrossTeamReplyHints = [{ toTeam: 'team-best', conversationId: 'conv-tool-1' }];
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          name: 'mcp__agent-teams__message_send',
+          input: {
+            teamName: 'my-team',
+            to: 'cross_team_send',
+            text: 'Исправленный ответ.',
+            from: 'team-lead',
+            summary: 'Ответ через tool recipient mistake',
+          },
+        },
+      ],
+    });
+
+    await vi.waitFor(() => {
+      expect(crossTeamSender).toHaveBeenCalledTimes(1);
+    });
+
+    expect(crossTeamSender).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fromTeam: 'my-team',
+        fromMember: 'team-lead',
+        toTeam: 'team-best',
+        text: 'Исправленный ответ.',
+        conversationId: 'conv-tool-1',
+        replyToConversationId: 'conv-tool-1',
+      })
+    );
+
+    const live = service.getLiveLeadProcessMessages('my-team');
+    expect(live).toHaveLength(1);
+    expect(live[0].from).toBe('team-lead');
+    expect(live[0].source).toBe('cross_team_sent');
+    expect(live[0].to).toBe('team-best.team-lead');
+    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
+  });
+
+  it('rescues cross_team::team pseudo recipients into actual cross-team replies', async () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const crossTeamSender = vi.fn(async () => ({ deliveredToInbox: true, messageId: 'cross-colon-1' }));
+    service.setCrossTeamSender(crossTeamSender);
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          name: 'mcp__agent-teams__message_send',
+          input: {
+            teamName: 'my-team',
+            to: 'cross_team::team-best',
+            text: 'Ответ через fallback pseudo recipient.',
+            summary: 'Fallback pseudo reply',
+          },
+        },
+      ],
+    });
+
+    await vi.waitFor(() => {
+      expect(crossTeamSender).toHaveBeenCalledTimes(1);
+    });
+
+    expect(crossTeamSender).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fromTeam: 'my-team',
+        fromMember: 'team-lead',
+        toTeam: 'team-best',
+        text: 'Ответ через fallback pseudo recipient.',
+      })
+    );
+
+    const live = service.getLiveLeadProcessMessages('my-team');
+    expect(live).toHaveLength(1);
+    expect(live[0].source).toBe('cross_team_sent');
+    expect(live[0].to).toBe('team-best.team-lead');
     expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
   });
 

@@ -20,9 +20,21 @@ export function registerCrossTeamTools(server: Pick<FastMCP, 'addTool'>) {
       text: z.string().min(1),
       fromMember: z.string().optional(),
       summary: z.string().optional(),
+      conversationId: z.string().optional(),
+      replyToConversationId: z.string().optional(),
       chainDepth: z.number().int().nonnegative().optional(),
     }),
-    execute: async ({ teamName, claudeDir, toTeam, text, fromMember, summary, chainDepth }) =>
+    execute: async ({
+      teamName,
+      claudeDir,
+      toTeam,
+      text,
+      fromMember,
+      summary,
+      conversationId,
+      replyToConversationId,
+      chainDepth,
+    }) =>
       await Promise.resolve(
         jsonTextContent(
           getController(teamName, claudeDir).crossTeam.sendCrossTeamMessage({
@@ -30,6 +42,8 @@ export function registerCrossTeamTools(server: Pick<FastMCP, 'addTool'>) {
             text,
             ...(fromMember ? { fromMember } : {}),
             ...(summary ? { summary } : {}),
+            ...(conversationId ? { conversationId } : {}),
+            ...(replyToConversationId ? { replyToConversationId } : {}),
             ...(chainDepth !== undefined ? { chainDepth } : {}),
           })
         )

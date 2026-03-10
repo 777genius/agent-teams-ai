@@ -95,6 +95,11 @@ const TASK_WAIT_FALLBACK_MS = 15_000;
 const TEAM_JSON_READ_TIMEOUT_MS = 5_000;
 const TEAM_CONFIG_MAX_BYTES = 10 * 1024 * 1024;
 const TEAM_INBOX_MAX_BYTES = 2 * 1024 * 1024;
+const CROSS_TEAM_TOOL_RECIPIENT_NAMES = new Set([
+  'cross_team_send',
+  'cross_team_list_targets',
+  'cross_team_get_outbox',
+]);
 const PREFLIGHT_PING_PROMPT = 'Output only the single word PONG.';
 const PREFLIGHT_PING_ARGS = [
   '-p',
@@ -592,7 +597,7 @@ Communication protocol (CRITICAL — you are running headless, no one sees your 
 - When you receive a <teammate-message> from a teammate, ALWAYS reply using the SendMessage tool with the sender's name as recipient.
 - Your plain text output is invisible to teammates — they are separate processes and can only read their inbox.
 - Example: if you receive <teammate-message teammate_id="alice">...</teammate-message>, respond with SendMessage(type: "message", recipient: "alice", content: "your reply").
-- Cross-team communication: when work needs expertise, coordination, review, or a decision from ANOTHER team, use MCP tool "cross_team_send" with teamName: "${teamName}" and a focused actionable message.
+- Cross-team communication: when work needs expertise, coordination, review, or a decision from ANOTHER team, CALL the MCP tool named "cross_team_send" with teamName: "${teamName}" and a focused actionable message.
 - Before sending cross-team, use MCP tool "cross_team_list_targets" with teamName: "${teamName}" to discover valid target teams.
 - To review messages your team already sent to other teams, use MCP tool "cross_team_get_outbox" with teamName: "${teamName}".
 - Cross-team delivery goes to the target team's lead inbox and may be relayed to that live lead automatically.
@@ -600,9 +605,12 @@ Communication protocol (CRITICAL — you are running headless, no one sees your 
 - Prefer concise messages that state: what you need, why that team is relevant, the expected response, and any task or file references they need.
 - Keep cross-team requests high-signal: one focused request per topic, with clear next action and desired outcome.
 - Before sending a follow-up on the same topic, check "cross_team_get_outbox" so you do not resend the same request unnecessarily.
-- If you receive a message that is clearly from another team (for example prefixed with "<${CROSS_TEAM_PREFIX_TAG} ... />"), treat it as an actionable cross-team request and respond to the originating team with "cross_team_send" when a reply, decision, or status update is needed.
+- If you receive a message that is clearly from another team (for example prefixed with "<${CROSS_TEAM_PREFIX_TAG} ... />"), treat it as an actionable cross-team request and respond to the originating team by CALLING the MCP tool "cross_team_send" when a reply, decision, or status update is needed.
 - Cross-team requests may include a stable conversationId in their metadata. When you reply to that thread, preserve the same conversationId and pass replyToConversationId with that same value so the system can correlate the reply reliably.
 - If the relay prompt shows explicit cross-team reply metadata/instructions for a message, follow that metadata exactly when calling "cross_team_send".
+- NEVER put "cross_team_send" into a SendMessage recipient or message_send "to" field. "cross_team_send" is a TOOL NAME, not a teammate or inbox name.
+- Correct example:
+  cross_team_send({ teamName: "${teamName}", toTeam: "other-team", text: "your reply", conversationId: "<same-id>", replyToConversationId: "<same-id>" })
 - Never write protocol markup yourself in message text. Do NOT include "<${CROSS_TEAM_PREFIX_TAG} ... />" or any other metadata wrapper in the visible reply body; send plain user-visible text only.
 - When a cross-team request arrives, do NOT appear silent: first emit a brief plain-text status update visible in your own team's Messages/Activity (for example: "Accepted cross-team request from @other-team. Investigating and delegating now."), then do the research, task creation, or delegation work.
 - For cross-team work, your canonical progress trail should be team-visible first. Use plain text updates, task comments, and task state changes so your own team can see what is happening.
@@ -1249,12 +1257,12 @@ export class TeamProvisioningService {
   ): { teamName: string; memberName: string } | null {
     const trimmed = recipient.trim();
     if (localRecipientNames.has(trimmed)) return null;
-    if (trimmed.startsWith('cross-team:')) {
-      const teamName = trimmed.slice('cross-team:'.length).trim();
-      if (!TEAM_NAME_PATTERN.test(teamName) || teamName === currentTeam) {
+    const pseudoTeamName = this.extractCrossTeamPseudoTargetTeam(trimmed);
+    if (pseudoTeamName) {
+      if (pseudoTeamName === currentTeam) {
         return null;
       }
-      return { teamName, memberName: 'team-lead' };
+      return { teamName: pseudoTeamName, memberName: 'team-lead' };
     }
     const dot = trimmed.indexOf('.');
     if (dot <= 0 || dot === trimmed.length - 1) return null;
@@ -1266,17 +1274,46 @@ export class TeamProvisioningService {
     return { teamName, memberName };
   }
 
+  private extractCrossTeamPseudoTargetTeam(value: string): string | null {
+    const trimmed = value.trim();
+    const prefixes = [
+      'cross_team::',
+      'cross_team--',
+      'cross-team:',
+      'cross-team-',
+      'cross_team:',
+      'cross_team-',
+    ];
+    for (const prefix of prefixes) {
+      if (!trimmed.startsWith(prefix)) continue;
+      const teamName = trimmed.slice(prefix.length).trim();
+      if (TEAM_NAME_PATTERN.test(teamName)) {
+        return teamName;
+      }
+    }
+    return null;
+  }
+
+  private isCrossTeamToolRecipientName(name: string): boolean {
+    return CROSS_TEAM_TOOL_RECIPIENT_NAMES.has(name.trim());
+  }
+
   private isCrossTeamPseudoRecipientName(name: string): boolean {
-    const trimmed = name.trim();
-    if (trimmed.startsWith('cross-team:')) {
-      const teamName = trimmed.slice('cross-team:'.length).trim();
-      return TEAM_NAME_PATTERN.test(teamName);
+    return this.extractCrossTeamPseudoTargetTeam(name) !== null;
+  }
+
+  private resolveSingleActiveCrossTeamReplyHint(
+    run: ProvisioningRun
+  ): { toTeam: string; conversationId: string } | null {
+    const uniqueHints = new Map<string, { toTeam: string; conversationId: string }>();
+    for (const hint of run.activeCrossTeamReplyHints ?? []) {
+      const toTeam = typeof hint?.toTeam === 'string' ? hint.toTeam.trim() : '';
+      const conversationId =
+        typeof hint?.conversationId === 'string' ? hint.conversationId.trim() : '';
+      if (!toTeam || !conversationId) continue;
+      uniqueHints.set(`${toTeam}\0${conversationId}`, { toTeam, conversationId });
     }
-    if (trimmed.startsWith('cross-team-')) {
-      const teamName = trimmed.slice('cross-team-'.length).trim();
-      return TEAM_NAME_PATTERN.test(teamName);
-    }
-    return false;
+    return uniqueHints.size === 1 ? (Array.from(uniqueHints.values())[0] ?? null) : null;
   }
 
   private looksLikeQualifiedExternalRecipientName(name: string): boolean {
@@ -2725,7 +2762,10 @@ export class TeamProvisioningService {
   }
 
   async relayMemberInboxMessages(teamName: string, memberName: string): Promise<number> {
-    if (this.isCrossTeamPseudoRecipientName(memberName)) {
+    if (
+      this.isCrossTeamPseudoRecipientName(memberName) ||
+      this.isCrossTeamToolRecipientName(memberName)
+    ) {
       return 0;
     }
     const relayKey = this.getMemberRelayKey(teamName, memberName);
@@ -2806,7 +2846,7 @@ export class TeamProvisioningService {
             crossTeamMeta?.sourceTeam && conversationId
               ? [
                   `   Cross-team conversationId: ${conversationId}`,
-                  `   If replying with cross_team_send to ${crossTeamMeta.sourceTeam}, set conversationId="${conversationId}" and replyToConversationId="${conversationId}".`,
+                  `   Call the MCP tool named cross_team_send with toTeam="${crossTeamMeta.sourceTeam}", conversationId="${conversationId}", and replyToConversationId="${conversationId}". Do NOT put "cross_team_send" into a SendMessage recipient or message_send "to" field.`,
                 ]
               : [];
           return [
@@ -3021,15 +3061,39 @@ export class TeamProvisioningService {
         `IMPORTANT: Your text response here is shown to the user. Always include a brief human-readable summary (e.g. "Delegated to carol." or "No action needed."). Do NOT respond with only an agent-only block.`,
         AGENT_BLOCK_OPEN,
         `Internal note: for task assignments, prefer task_create and rely on the board/runtime notification path instead of sending a separate SendMessage for the same assignment.`,
+        `If a message below is marked Source: cross_team, CALL the MCP tool named cross_team_send. Do NOT use SendMessage or message_send for cross-team replies.`,
+        `NEVER set recipient="cross_team_send" or to="cross_team_send". "cross_team_send" is a tool name, not a teammate.`,
         AGENT_BLOCK_CLOSE,
         ``,
         `Messages:`,
         ...batch.flatMap((m, idx) => {
           const summaryLine = m.summary?.trim() ? `Summary: ${m.summary.trim()}` : null;
+          const crossTeamMeta =
+            m.source === 'cross_team'
+              ? {
+                  origin: parseCrossTeamPrefix(m.text),
+                  sourceTeam: m.from.includes('.') ? m.from.split('.', 1)[0] : null,
+                }
+              : null;
+          const conversationId =
+            m.replyToConversationId?.trim() ??
+            m.conversationId ??
+            crossTeamMeta?.origin?.conversationId;
+          const replyInstructions =
+            crossTeamMeta?.sourceTeam && conversationId
+              ? [
+                  `   Cross-team conversationId: ${conversationId}`,
+                  `   Call the MCP tool named cross_team_send with toTeam="${crossTeamMeta.sourceTeam}", conversationId="${conversationId}", and replyToConversationId="${conversationId}". Do NOT use SendMessage or message_send. NEVER set recipient/to to "cross_team_send".`,
+                ]
+              : [];
           return [
             `${idx + 1}) From: ${m.from || 'unknown'}`,
             `   Timestamp: ${m.timestamp}`,
             ...(summaryLine ? [`   ${summaryLine}`] : []),
+            ...(typeof m.source === 'string' && m.source.trim()
+              ? [`   Source: ${m.source.trim()}`]
+              : []),
+            ...replyInstructions,
             `   Text:`,
             ...m.text.split('\n').map((line) => `   ${line}`),
             ``,
@@ -3334,15 +3398,30 @@ export class TeamProvisioningService {
 
   private captureSendMessages(run: ProvisioningRun, content: Record<string, unknown>[]): void {
     for (const part of content) {
-      if (part.type !== 'tool_use' || part.name !== 'SendMessage') continue;
+      if (part.type !== 'tool_use' || typeof part.name !== 'string') continue;
+      const isNativeSendMessage = part.name === 'SendMessage';
+      const isTeamMessageSendTool = part.name === 'mcp__agent-teams__message_send';
+      if (!isNativeSendMessage && !isTeamMessageSendTool) continue;
       const input = part.input;
       if (!input || typeof input !== 'object') continue;
       const inp = input as Record<string, unknown>;
 
-      const recipient = typeof inp.recipient === 'string' ? inp.recipient : '';
+      const recipient = isNativeSendMessage
+        ? typeof inp.recipient === 'string'
+          ? inp.recipient
+          : ''
+        : typeof inp.to === 'string'
+          ? inp.to
+          : '';
       if (!recipient.trim()) continue;
 
-      const msgContent = typeof inp.content === 'string' ? inp.content : '';
+      const msgContent = isNativeSendMessage
+        ? typeof inp.content === 'string'
+          ? inp.content
+          : ''
+        : typeof inp.text === 'string'
+          ? inp.text
+          : '';
       if (msgContent.trim().length === 0) continue;
 
       const summary = typeof inp.summary === 'string' ? inp.summary : '';
@@ -3362,16 +3441,20 @@ export class TeamProvisioningService {
       localRecipientNames.add('user');
       localRecipientNames.add('team-lead');
 
-      const crossTeamRecipient = this.parseCrossTeamRecipient(
-        run.teamName,
-        recipient,
-        localRecipientNames
-      );
+      const mistakenToolHint = this.isCrossTeamToolRecipientName(recipient)
+        ? this.resolveSingleActiveCrossTeamReplyHint(run)
+        : null;
+      const crossTeamRecipient =
+        this.parseCrossTeamRecipient(run.teamName, recipient, localRecipientNames) ??
+        (mistakenToolHint ? { teamName: mistakenToolHint.toTeam, memberName: 'team-lead' } : null);
       if (crossTeamRecipient && this.crossTeamSender) {
-        const inferredReplyMeta = this.resolveCrossTeamReplyMetadata(
-          run.teamName,
-          crossTeamRecipient.teamName
-        );
+        const inferredReplyMeta =
+          mistakenToolHint && mistakenToolHint.toTeam === crossTeamRecipient.teamName
+            ? {
+                conversationId: mistakenToolHint.conversationId,
+                replyToConversationId: mistakenToolHint.conversationId,
+              }
+            : this.resolveCrossTeamReplyMetadata(run.teamName, crossTeamRecipient.teamName);
         const crossTeamMeta = parseCrossTeamPrefix(cleanContent);
         const replyMeta = inferredReplyMeta;
         const timestamp = nowIso();
@@ -3396,10 +3479,12 @@ export class TeamProvisioningService {
               return;
             }
             const msg: InboxMessage = {
-              from: 'user',
+              from: leadName,
               to: recipient.startsWith('cross-team:')
                 ? recipient
-                : `${crossTeamRecipient.teamName}.${crossTeamRecipient.memberName}`,
+                : this.isCrossTeamToolRecipientName(recipient)
+                  ? `${crossTeamRecipient.teamName}.${crossTeamRecipient.memberName}`
+                  : `${crossTeamRecipient.teamName}.${crossTeamRecipient.memberName}`,
               text: strippedCrossTeamContent,
               timestamp,
               read: true,
@@ -3429,6 +3514,14 @@ export class TeamProvisioningService {
               }`
             );
           });
+        continue;
+      }
+
+      if (this.isCrossTeamToolRecipientName(recipient)) {
+        continue;
+      }
+
+      if (!isNativeSendMessage) {
         continue;
       }
 
@@ -4453,7 +4546,12 @@ export class TeamProvisioningService {
     this.stopFilesystemMonitor(run);
 
     if (run.isLaunch) {
-      await this.updateConfigPostLaunch(run.teamName, run.request.cwd, run.detectedSessionId);
+      await this.updateConfigPostLaunch(
+        run.teamName,
+        run.request.cwd,
+        run.detectedSessionId,
+        run.request.color
+      );
       await this.cleanupPrelaunchBackup(run.teamName);
 
       // Defense in depth: if the CLI (or a stale config) produced auto-suffixed members (alice-2),
@@ -4570,7 +4668,12 @@ export class TeamProvisioningService {
 
     // Persist teammates metadata separately from config.json.
     await this.persistMembersMeta(run.teamName, run.request);
-    await this.updateConfigPostLaunch(run.teamName, run.request.cwd, run.detectedSessionId);
+    await this.updateConfigPostLaunch(
+      run.teamName,
+      run.request.cwd,
+      run.detectedSessionId,
+      run.request.color
+    );
 
     const progress = updateProgress(run, 'ready', 'Team provisioned — process alive and ready', {
       cliLogsTail: extractCliLogsFromRun(run),
@@ -5015,6 +5118,13 @@ export class TeamProvisioningService {
     if (!run.isLaunch) {
       await this.persistMembersMeta(run.teamName, run.request);
     }
+    // Persist team color even on timeout path
+    await this.updateConfigPostLaunch(
+      run.teamName,
+      run.request.cwd,
+      run.detectedSessionId,
+      run.request.color
+    );
     // Process was killed by timeout — mark as disconnected, not ready
     const progress = updateProgress(run, 'disconnected', 'Team provisioned but process timed out', {
       warnings,
@@ -5159,7 +5269,8 @@ export class TeamProvisioningService {
   private async updateConfigPostLaunch(
     teamName: string,
     projectPath: string,
-    detectedSessionId: string | null
+    detectedSessionId: string | null,
+    color?: string
   ): Promise<void> {
     const MAX_SESSION_HISTORY = 5000;
     const MAX_PROJECT_PATH_HISTORY = 500;
@@ -5215,6 +5326,11 @@ export class TeamProvisioningService {
       // Save current language setting
       const langCode = ConfigManager.getInstance().getConfig().general.agentLanguage || 'system';
       config.language = langCode;
+
+      // Persist team color chosen by the user during creation
+      if (color && color.trim().length > 0) {
+        config.color = color.trim();
+      }
 
       // Ensure projectPath
       if (projectPath.trim()) {
@@ -5817,6 +5933,7 @@ export class TeamProvisioningService {
       const inboxNames = allInboxNames
         .filter((name) => name !== 'team-lead' && name !== 'user')
         .filter((name) => !this.isCrossTeamPseudoRecipientName(name))
+        .filter((name) => !this.isCrossTeamToolRecipientName(name))
         .filter((name) => !this.looksLikeQualifiedExternalRecipientName(name))
         .filter((name) => {
           const match = /^(.+)-(\d+)$/.exec(name);

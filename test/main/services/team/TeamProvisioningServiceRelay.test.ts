@@ -339,6 +339,44 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(service.resolveCrossTeamReplyMetadata(teamName, 'other-team')).toBeNull();
   });
 
+  it('includes explicit cross-team reply instructions in lead relay prompts', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedLeadInbox(teamName, [
+      {
+        from: 'other-team.team-lead',
+        to: 'team-lead',
+        text: '<cross-team from="other-team.team-lead" depth="0" conversationId="conv-explicit" />\nNeed your answer.',
+        timestamp: '2026-02-23T10:00:00.000Z',
+        read: false,
+        source: 'cross_team',
+        messageId: 'm-cross-team-explicit',
+        conversationId: 'conv-explicit',
+      },
+    ]);
+
+    const { writeSpy } = attachAliveRun(service, teamName);
+    const relayPromise = service.relayLeadInboxMessages(teamName);
+    const run = await waitForCapture(service);
+    expect(run?.leadRelayCapture).toBeTruthy();
+
+    const payload = String(writeSpy.mock.calls[0]?.[0] ?? '');
+    expect(payload).toContain('Source: cross_team');
+    expect(payload).toContain('Cross-team conversationId: conv-explicit');
+    expect(payload).toContain('Call the MCP tool named cross_team_send with toTeam=\\"other-team\\"');
+    expect(payload).toContain('replyToConversationId=\\"conv-explicit\\"');
+    expect(payload).toContain('NEVER set recipient/to to \\"cross_team_send\\"');
+
+    (service as any).handleStreamJsonMessage(run, {
+      type: 'assistant',
+      content: [{ type: 'text', text: 'Replying properly.' }],
+    });
+    (service as any).handleStreamJsonMessage(run, { type: 'result', subtype: 'success' });
+
+    await relayPromise;
+  });
+
   it('does not relay cross-team sender copies back into the live lead', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
@@ -534,6 +572,48 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
 
     const { writeSpy } = attachAliveRun(service, teamName);
     const relayed = await service.relayMemberInboxMessages(teamName, 'cross-team:team-alpha-super');
+
+    expect(relayed).toBe(0);
+    expect(writeSpy).toHaveBeenCalledTimes(0);
+  });
+
+  it('does not relay tool-like cross-team inbox names as teammates', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedMemberInbox(teamName, 'cross_team_send', [
+      {
+        from: 'team-lead',
+        text: 'Wrongly routed tool recipient inbox',
+        timestamp: '2026-02-23T10:00:00.000Z',
+        read: false,
+        messageId: 'm-tool-recipient-1',
+      },
+    ]);
+
+    const { writeSpy } = attachAliveRun(service, teamName);
+    const relayed = await service.relayMemberInboxMessages(teamName, 'cross_team_send');
+
+    expect(relayed).toBe(0);
+    expect(writeSpy).toHaveBeenCalledTimes(0);
+  });
+
+  it('does not relay malformed underscore-style pseudo cross-team inbox names as teammates', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedMemberInbox(teamName, 'cross_team::team-best', [
+      {
+        from: 'team-lead',
+        text: 'Wrongly routed underscore pseudo inbox',
+        timestamp: '2026-02-23T10:00:00.000Z',
+        read: false,
+        messageId: 'm-underscore-pseudo-1',
+      },
+    ]);
+
+    const { writeSpy } = attachAliveRun(service, teamName);
+    const relayed = await service.relayMemberInboxMessages(teamName, 'cross_team::team-best');
 
     expect(relayed).toBe(0);
     expect(writeSpy).toHaveBeenCalledTimes(0);

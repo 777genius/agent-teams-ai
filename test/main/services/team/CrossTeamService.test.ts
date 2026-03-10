@@ -16,6 +16,7 @@ import type { CrossTeamSendRequest, TeamConfig } from '@shared/types';
 
 vi.mock('@main/utils/pathDecoder', () => ({
   getTeamsBasePath: () => '/tmp/cross-team-test-nonexistent-dir-' + process.pid,
+  getClaudeBasePath: () => '/tmp/cross-team-test-nonexistent-dir-' + process.pid,
 }));
 
 const MOCK_TEAMS_BASE_PATH = '/tmp/cross-team-test-nonexistent-dir-' + process.pid;
@@ -99,7 +100,7 @@ describe('CrossTeamService', () => {
       expect(result.deliveredToInbox).toBe(true);
       expect(result.messageId).toBeDefined();
 
-      // First call: target team inbox, second call: sender copy (best-effort)
+      // Target team delivery goes through inboxWriter.
       const [teamName, req] = inboxWriter.sendMessage.mock.calls[0];
       expect(teamName).toBe('team-b');
       expect(req.member).toBe('team-lead');
@@ -118,33 +119,24 @@ describe('CrossTeamService', () => {
       const [, req] = inboxWriter.sendMessage.mock.calls[0];
       expect(req.text).toContain('TURN ACTION MODE: ASK');
       expect(req.text).toContain('STRICTLY read-only conversation mode');
-
-      await vi.waitFor(() => {
-        expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(2);
-      });
-      const [, senderReq] = inboxWriter.sendMessage.mock.calls[1];
-      expect(senderReq.text).toBe('Can you inspect this?');
     });
 
-    it('writes sender copy to fromTeam inbox as user_sent', async () => {
+    it('writes sender copy to sentMessages.json without touching the lead inbox', async () => {
       await service.send(makeRequest());
 
-      // Wait for the best-effort sender copy (void promise)
-      await vi.waitFor(() => {
-        expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(2);
-      });
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
 
-      const [senderTeam, senderReq] = inboxWriter.sendMessage.mock.calls[1];
-      expect(senderTeam).toBe('team-a');
-      expect(senderReq.from).toBe('user');
-      expect(senderReq.source).toBe(CROSS_TEAM_SENT_SOURCE);
-      expect(senderReq.to).toBe('team-b.team-lead');
-      expect(senderReq.text).toBe('Hello from team-a');
-      expect(senderReq.messageId).toBeDefined();
-      expect(senderReq.timestamp).toBeDefined();
-      expect(senderReq.messageId).toBe(inboxWriter.sendMessage.mock.calls[0][1].messageId);
-      expect(senderReq.timestamp).toBe(inboxWriter.sendMessage.mock.calls[0][1].timestamp);
-      expect(senderReq.conversationId).toBeTruthy();
+      const sentMessagesPath = `${MOCK_TEAMS_BASE_PATH}/teams/team-a/sentMessages.json`;
+      const raw = fs.readFileSync(sentMessagesPath, 'utf8');
+      const sentRows = JSON.parse(raw) as Array<Record<string, unknown>>;
+      expect(sentRows).toHaveLength(1);
+      expect(sentRows[0]?.from).toBe('lead');
+      expect(sentRows[0]?.source).toBe(CROSS_TEAM_SENT_SOURCE);
+      expect(sentRows[0]?.to).toBe('team-b.team-lead');
+      expect(sentRows[0]?.text).toBe('Hello from team-a');
+      expect(sentRows[0]?.messageId).toBe(inboxWriter.sendMessage.mock.calls[0][1].messageId);
+      expect(sentRows[0]?.timestamp).toBe(inboxWriter.sendMessage.mock.calls[0][1].timestamp);
+      expect(sentRows[0]?.conversationId).toBeTruthy();
     });
 
     it('reuses replyToConversationId as the conversationId for replies', async () => {
@@ -216,10 +208,11 @@ describe('CrossTeamService', () => {
       expect(order).toEqual([
         'register:team-a->team-b',
         'write:team-b',
-        'write:team-a',
         'clear:team-a->team-b',
         'relay:team-b',
       ]);
+      const sentMessagesPath = `${MOCK_TEAMS_BASE_PATH}/teams/team-a/sentMessages.json`;
+      expect(fs.existsSync(sentMessagesPath)).toBe(true);
     });
 
     it('does not relay when team is offline', async () => {
@@ -325,7 +318,7 @@ describe('CrossTeamService', () => {
 
       expect(second.deduplicated).toBe(true);
       expect(second.messageId).toBe(first.messageId);
-      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(2);
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
     });
   });
 

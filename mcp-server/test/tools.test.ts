@@ -77,6 +77,18 @@ describe('agent-teams-mcp tools', () => {
     expect([...tools.keys()].sort()).toEqual([...expectedToolNames]);
   });
 
+  it('accepts explicit conversation threading fields for cross_team_send', () => {
+    const parsed = getTool('cross_team_send').parameters?.safeParse({
+      teamName: 'alpha',
+      toTeam: 'beta',
+      text: 'Reply',
+      conversationId: 'conv-1',
+      replyToConversationId: 'conv-1',
+    });
+
+    expect(parsed?.success).toBe(true);
+  });
+
   it('covers task lifecycle, attachments, relationships, kanban, and review flows', async () => {
     const claudeDir = makeClaudeDir();
     const teamName = 'alpha';

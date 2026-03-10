@@ -1,6 +1,7 @@
 import { CROSS_TEAM_SENT_SOURCE, CROSS_TEAM_SOURCE, formatCrossTeamText } from '@shared/constants';
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 
@@ -20,6 +21,7 @@ import type {
 } from '@shared/types';
 
 const logger = createLogger('CrossTeamService');
+const { createController } = agentTeamsControllerModule;
 
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 
@@ -132,16 +134,18 @@ export class CrossTeamService {
       return { messageId: duplicate.messageId, deliveredToInbox: true, deduplicated: true };
     }
 
-    // 6. Write "sent" copy to SENDER's inbox so the message appears in their activity
-    const senderLeadName = (await this.dataService.getLeadMemberName(fromTeam)) ?? 'team-lead';
+    // 6. Write a non-actionable sender copy so the message appears in activity without
+    // waking the local lead through their inbox controller.
     try {
-      await this.inboxWriter.sendMessage(fromTeam, {
-        member: senderLeadName,
+      createController({
+        teamName: fromTeam,
+        claudeDir: getClaudeBasePath(),
+      }).messages.appendSentMessage({
+        from: fromMember,
+        to: `${toTeam}.${leadName}`,
         text,
-        from: 'user',
         timestamp,
         messageId,
-        to: `${toTeam}.${leadName}`,
         summary: summary ?? `Cross-team message to ${toTeam}`,
         source: CROSS_TEAM_SENT_SOURCE,
         conversationId,
