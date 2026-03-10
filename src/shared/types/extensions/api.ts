@@ -16,6 +16,7 @@ import type {
   McpCatalogItem,
   McpCustomInstallRequest,
   McpInstallRequest,
+  McpServerDiagnostic,
   McpSearchResult,
 } from './mcp';
 
@@ -42,6 +43,7 @@ export interface McpCatalogAPI {
   ) => Promise<{ servers: McpCatalogItem[]; nextCursor?: string }>;
   getById: (registryId: string) => Promise<McpCatalogItem | null>;
   getInstalled: (projectPath?: string) => Promise<InstalledMcpEntry[]>;
+  diagnose: () => Promise<McpServerDiagnostic[]>;
   install: (request: McpInstallRequest) => Promise<OperationResult>;
   installCustom: (request: McpCustomInstallRequest) => Promise<OperationResult>;
   uninstall: (name: string, scope?: string, projectPath?: string) => Promise<OperationResult>;

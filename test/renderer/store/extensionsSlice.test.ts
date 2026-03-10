@@ -20,6 +20,7 @@ vi.mock('../../../src/renderer/api', () => ({
       browse: vi.fn(),
       getById: vi.fn(),
       getInstalled: vi.fn(),
+      diagnose: vi.fn(),
       install: vi.fn(),
       uninstall: vi.fn(),
     },
@@ -241,6 +242,7 @@ describe('extensionsSlice', () => {
     it('sets progress to pending then success', async () => {
       (api.mcpRegistry!.install as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'success' });
       (api.mcpRegistry!.getInstalled as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.mcpRegistry!.diagnose as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       const promise = store.getState().installMcpServer({
         registryId: 'test-id',
@@ -261,13 +263,14 @@ describe('extensionsSlice', () => {
     it('sets progress to pending then success', async () => {
       (api.mcpRegistry!.uninstall as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'success' });
       (api.mcpRegistry!.getInstalled as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.mcpRegistry!.diagnose as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
-      const promise = store.getState().uninstallMcpServer('test-server', 'user');
+      const promise = store.getState().uninstallMcpServer('test-id', 'test-server', 'user');
 
-      expect(store.getState().mcpInstallProgress['test-server']).toBe('pending');
+      expect(store.getState().mcpInstallProgress['test-id']).toBe('pending');
 
       await promise;
-      expect(store.getState().mcpInstallProgress['test-server']).toBe('success');
+      expect(store.getState().mcpInstallProgress['test-id']).toBe('success');
     });
   });
 });

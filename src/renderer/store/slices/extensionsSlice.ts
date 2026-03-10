@@ -17,6 +17,7 @@ import type {
   McpCatalogItem,
   McpCustomInstallRequest,
   McpInstallRequest,
+  McpServerDiagnostic,
   PluginInstallRequest,
 } from '@shared/types/extensions';
 import type { StateCreator } from 'zustand';
@@ -41,6 +42,10 @@ export interface ExtensionsSlice {
   mcpBrowseError: string | null;
   mcpInstalledServers: InstalledMcpEntry[];
   mcpInstalledProjectPath: string | null;
+  mcpDiagnostics: Record<string, McpServerDiagnostic>;
+  mcpDiagnosticsLoading: boolean;
+  mcpDiagnosticsError: string | null;
+  mcpDiagnosticsLastCheckedAt: number | null;
 
   // ── Install progress ──
   pluginInstallProgress: Record<string, ExtensionOperationState>;
@@ -62,6 +67,7 @@ export interface ExtensionsSlice {
   fetchPluginReadme: (pluginId: string) => void;
   mcpBrowse: (cursor?: string) => Promise<void>;
   mcpFetchInstalled: (projectPath?: string) => Promise<void>;
+  runMcpDiagnostics: () => Promise<void>;
 
   // ── Mutation actions ──
   installPlugin: (request: PluginInstallRequest) => Promise<void>;
@@ -93,6 +99,7 @@ export interface ExtensionsSlice {
 // =============================================================================
 
 let pluginFetchInFlight: Promise<void> | null = null;
+let mcpDiagnosticsInFlight: Promise<void> | null = null;
 
 /** Duration to show "success" state before returning to idle */
 const SUCCESS_DISPLAY_MS = 2_000;
@@ -115,6 +122,10 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   mcpBrowseError: null,
   mcpInstalledServers: [],
   mcpInstalledProjectPath: null,
+  mcpDiagnostics: {},
+  mcpDiagnosticsLoading: false,
+  mcpDiagnosticsError: null,
+  mcpDiagnosticsLastCheckedAt: null,
 
   pluginInstallProgress: {},
   mcpInstallProgress: {},
@@ -235,6 +246,42 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
     }
   },
 
+  runMcpDiagnostics: async () => {
+    const mcpRegistry = api.mcpRegistry;
+    if (!mcpRegistry) return;
+
+    if (mcpDiagnosticsInFlight) {
+      await mcpDiagnosticsInFlight;
+      return;
+    }
+
+    set({ mcpDiagnosticsLoading: true, mcpDiagnosticsError: null });
+
+    const promise = (async () => {
+      try {
+        const diagnostics = await mcpRegistry.diagnose();
+        set({
+          mcpDiagnostics: Object.fromEntries(
+            diagnostics.map((entry) => [entry.name, entry] as const)
+          ),
+          mcpDiagnosticsLoading: false,
+          mcpDiagnosticsLastCheckedAt: Date.now(),
+        });
+      } catch (err) {
+        set({
+          mcpDiagnosticsLoading: false,
+          mcpDiagnosticsError:
+            err instanceof Error ? err.message : 'Failed to check MCP server health',
+        });
+      } finally {
+        mcpDiagnosticsInFlight = null;
+      }
+    })();
+
+    mcpDiagnosticsInFlight = promise;
+    await promise;
+  },
+
   // ── Plugin install ──
   installPlugin: async (request: PluginInstallRequest) => {
     if (!api.plugins) return;
@@ -347,12 +394,14 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
         return;
       }
 
+      await Promise.all([
+        get().mcpFetchInstalled(get().mcpInstalledProjectPath ?? undefined),
+        get().runMcpDiagnostics(),
+      ]);
+
       set((prev) => ({
         mcpInstallProgress: { ...prev.mcpInstallProgress, [request.registryId]: 'success' },
       }));
-
-      // Refresh installed list
-      void get().mcpFetchInstalled(get().mcpInstalledProjectPath ?? undefined);
 
       setTimeout(() => {
         set((prev) => ({
@@ -394,12 +443,14 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
         return;
       }
 
+      await Promise.all([
+        get().mcpFetchInstalled(get().mcpInstalledProjectPath ?? undefined),
+        get().runMcpDiagnostics(),
+      ]);
+
       set((prev) => ({
         mcpInstallProgress: { ...prev.mcpInstallProgress, [progressKey]: 'success' },
       }));
-
-      // Refresh installed list
-      void get().mcpFetchInstalled(get().mcpInstalledProjectPath ?? undefined);
 
       setTimeout(() => {
         set((prev) => ({
@@ -447,11 +498,14 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
         return;
       }
 
+      await Promise.all([
+        get().mcpFetchInstalled(get().mcpInstalledProjectPath ?? undefined),
+        get().runMcpDiagnostics(),
+      ]);
+
       set((prev) => ({
         mcpInstallProgress: { ...prev.mcpInstallProgress, [registryId]: 'success' },
       }));
-
-      void get().mcpFetchInstalled(get().mcpInstalledProjectPath ?? undefined);
 
       setTimeout(() => {
         set((prev) => ({

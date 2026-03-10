@@ -77,6 +77,7 @@ import {
   ExtensionFacadeService,
   GlamaMcpEnrichmentService,
   McpCatalogAggregator,
+  McpHealthDiagnosticsService,
   McpInstallationStateService,
   McpInstallService,
   OfficialMcpRegistryService,
@@ -711,6 +712,7 @@ function initializeServices(): void {
   const glamaMcpService = new GlamaMcpEnrichmentService();
   const mcpAggregator = new McpCatalogAggregator(officialMcpRegistry, glamaMcpService);
   const mcpStateService = new McpInstallationStateService();
+  const mcpHealthDiagnosticsService = new McpHealthDiagnosticsService(null);
   const extensionFacadeService = new ExtensionFacadeService(
     pluginCatalogService,
     pluginStateService,
@@ -783,6 +785,7 @@ function initializeServices(): void {
     pluginInstallService,
     mcpInstallService,
     apiKeyService,
+    mcpHealthDiagnosticsService,
     crossTeamService
   );
 

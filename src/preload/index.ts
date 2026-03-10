@@ -151,6 +151,7 @@ import {
   PLUGIN_UNINSTALL,
   MCP_REGISTRY_SEARCH,
   MCP_REGISTRY_BROWSE,
+  MCP_REGISTRY_DIAGNOSE,
   MCP_REGISTRY_GET_BY_ID,
   MCP_REGISTRY_GET_INSTALLED,
   MCP_REGISTRY_INSTALL,
@@ -275,6 +276,7 @@ import type {
   McpCatalogItem,
   McpCustomInstallRequest,
   McpInstallRequest,
+  McpServerDiagnostic,
   McpSearchResult,
   OperationResult,
   PluginInstallRequest,
@@ -1395,6 +1397,7 @@ const electronAPI: ElectronAPI = {
       invokeIpcWithResult<McpCatalogItem | null>(MCP_REGISTRY_GET_BY_ID, registryId),
     getInstalled: (projectPath?: string) =>
       invokeIpcWithResult<InstalledMcpEntry[]>(MCP_REGISTRY_GET_INSTALLED, projectPath),
+    diagnose: () => invokeIpcWithResult<McpServerDiagnostic[]>(MCP_REGISTRY_DIAGNOSE),
     install: (request: McpInstallRequest) =>
       invokeIpcWithResult<OperationResult>(MCP_REGISTRY_INSTALL, request),
     installCustom: (request: McpCustomInstallRequest) =>

@@ -19,7 +19,7 @@ import { Github as GithubIcon } from 'lucide-react';
 import { InstallButton } from '../common/InstallButton';
 import { sanitizeMcpServerName } from '@shared/utils/extensionNormalizers';
 
-import type { McpCatalogItem } from '@shared/types/extensions';
+import type { McpCatalogItem, McpServerDiagnostic } from '@shared/types/extensions';
 
 /** Ribbon colors by source */
 const RIBBON_STYLES: Record<string, string> = {
@@ -30,12 +30,16 @@ const RIBBON_STYLES: Record<string, string> = {
 interface McpServerCardProps {
   server: McpCatalogItem;
   isInstalled: boolean;
+  diagnostic?: McpServerDiagnostic | null;
+  diagnosticsLoading?: boolean;
   onClick: (serverId: string) => void;
 }
 
 export const McpServerCard = ({
   server,
   isInstalled,
+  diagnostic,
+  diagnosticsLoading,
   onClick,
 }: McpServerCardProps): React.JSX.Element => {
   const installProgress = useStore((s) => s.mcpInstallProgress[server.id] ?? 'idle');
@@ -53,6 +57,14 @@ export const McpServerCard = ({
     (server.authHeaders?.length ?? 0) > 0;
   const [imgError, setImgError] = useState(false);
   const hasIcon = !!server.iconUrl && !imgError;
+  const diagnosticBadgeClass =
+    diagnostic?.status === 'connected'
+      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+      : diagnostic?.status === 'needs-authentication'
+        ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+        : diagnostic?.status === 'failed'
+          ? 'border-red-500/30 bg-red-500/10 text-red-400'
+          : 'border-border bg-surface-raised text-text-muted';
 
   return (
     <div
@@ -103,6 +115,19 @@ export const McpServerCard = ({
                   Installed
                 </Badge>
               )}
+              {isInstalled && diagnosticsLoading && !diagnostic && (
+                <Badge
+                  className="border-border bg-surface-raised text-text-muted"
+                  variant="outline"
+                >
+                  Checking...
+                </Badge>
+              )}
+              {diagnostic && (
+                <Badge className={diagnosticBadgeClass} variant="outline">
+                  {diagnostic.statusLabel}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -110,6 +135,11 @@ export const McpServerCard = ({
 
       {/* Description */}
       <p className="line-clamp-2 text-xs text-text-secondary">{server.description}</p>
+      {diagnostic?.target && (
+        <p className="truncate font-mono text-[10px] text-text-muted" title={diagnostic.target}>
+          {diagnostic.target}
+        </p>
+      )}
 
       {/* Footer indicators + install button */}
       <div className="flex items-center justify-between gap-2">

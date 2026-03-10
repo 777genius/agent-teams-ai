@@ -20,6 +20,8 @@ export type {
   McpAuthHeaderDef,
   McpCatalogItem,
   McpCustomInstallRequest,
+  McpServerDiagnostic,
+  McpServerHealthStatus,
   McpEnvVarDef,
   McpHeaderDef,
   McpHostingType,

@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
@@ -15,14 +16,19 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
-import { AlertTriangle, Search, Server } from 'lucide-react';
+import { formatRelativeTime } from '@renderer/utils/formatters';
+import { AlertTriangle, RefreshCw, Search, Server } from 'lucide-react';
 
 import { SearchInput } from '../common/SearchInput';
 
 import { McpServerCard } from './McpServerCard';
 import { McpServerDetailDialog } from './McpServerDetailDialog';
 
-import type { McpCatalogItem } from '@shared/types/extensions';
+import type {
+  InstalledMcpEntry,
+  McpCatalogItem,
+  McpServerDiagnostic,
+} from '@shared/types/extensions';
 import { sanitizeMcpServerName } from '@shared/utils/extensionNormalizers';
 
 type McpSortValue = 'name-asc' | 'name-desc' | 'tools-desc';
@@ -74,6 +80,11 @@ export const McpServersPanel = ({
   const mcpBrowse = useStore((s) => s.mcpBrowse);
   const installedServers = useStore((s) => s.mcpInstalledServers);
   const fetchMcpGitHubStars = useStore((s) => s.fetchMcpGitHubStars);
+  const mcpDiagnostics = useStore((s) => s.mcpDiagnostics);
+  const mcpDiagnosticsLoading = useStore((s) => s.mcpDiagnosticsLoading);
+  const mcpDiagnosticsError = useStore((s) => s.mcpDiagnosticsError);
+  const mcpDiagnosticsLastCheckedAt = useStore((s) => s.mcpDiagnosticsLastCheckedAt);
+  const runMcpDiagnostics = useStore((s) => s.runMcpDiagnostics);
 
   const [mcpSort, setMcpSort] = useState<McpSortValue>('name-asc');
   const [mcpInstalledOnly, setMcpInstalledOnly] = useState(false);
@@ -84,6 +95,10 @@ export const McpServersPanel = ({
       void mcpBrowse();
     }
   }, [browseCatalog.length, browseLoading, mcpBrowse]);
+
+  useEffect(() => {
+    void runMcpDiagnostics();
+  }, [runMcpDiagnostics]);
 
   // Fetch GitHub stars after catalog loads (fire-and-forget)
   useEffect(() => {
@@ -105,9 +120,40 @@ export const McpServersPanel = ({
     [installedServers]
   );
 
+  const installedEntriesByName = useMemo(
+    () => new Map(installedServers.map((entry) => [entry.name.toLowerCase(), entry] as const)),
+    [installedServers]
+  );
+
   /** Check if a catalog server is installed by comparing sanitized names */
   const isServerInstalled = (server: McpCatalogItem): boolean =>
     installedNames.has(sanitizeMcpServerName(server.name));
+
+  const getInstalledEntry = (server: McpCatalogItem): InstalledMcpEntry | null =>
+    installedEntriesByName.get(sanitizeMcpServerName(server.name)) ?? null;
+
+  const getDiagnostic = (server: McpCatalogItem): McpServerDiagnostic | null => {
+    const installedEntry = getInstalledEntry(server);
+    return installedEntry ? (mcpDiagnostics[installedEntry.name] ?? null) : null;
+  };
+
+  const allDiagnostics = useMemo(
+    () => Object.values(mcpDiagnostics).sort((a, b) => a.name.localeCompare(b.name)),
+    [mcpDiagnostics]
+  );
+
+  const getDiagnosticBadgeClass = (status: McpServerDiagnostic['status']): string => {
+    switch (status) {
+      case 'connected':
+        return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400';
+      case 'needs-authentication':
+        return 'border-amber-500/30 bg-amber-500/10 text-amber-400';
+      case 'failed':
+        return 'border-red-500/30 bg-red-500/10 text-red-400';
+      default:
+        return 'border-border bg-surface-raised text-text-muted';
+    }
+  };
 
   // Sort + filter
   const displayServers = useMemo(() => {
@@ -131,6 +177,76 @@ export const McpServersPanel = ({
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="rounded-md border border-black/10 bg-surface-raised px-4 py-3 dark:border-white/10">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-text">MCP Health Status</p>
+            <p className="text-xs text-text-muted">
+              {mcpDiagnosticsLoading ? (
+                <>
+                  Checking installed MCP servers via Claude CLI (<code>claude mcp list</code>) ...
+                </>
+              ) : mcpDiagnosticsLastCheckedAt ? (
+                `Last checked ${formatRelativeTime(new Date(mcpDiagnosticsLastCheckedAt).toISOString())}`
+              ) : (
+                <>
+                  Run diagnostics (<code>claude mcp list</code>) to verify installed MCP
+                  connectivity.
+                </>
+              )}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void runMcpDiagnostics()}
+            disabled={mcpDiagnosticsLoading}
+            className="whitespace-nowrap"
+          >
+            <RefreshCw
+              className={`mr-1.5 size-3.5 ${mcpDiagnosticsLoading ? 'animate-spin' : ''}`}
+            />
+            {mcpDiagnosticsLoading ? 'Checking...' : 'Check Status'}
+          </Button>
+        </div>
+
+        {(mcpDiagnosticsLoading || allDiagnostics.length > 0) && (
+          <div className="mt-4 border-t border-black/10 pt-4 dark:border-white/10">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-text">Claude MCP List Results</p>
+              {allDiagnostics.length > 0 && (
+                <span className="text-xs text-text-muted">{allDiagnostics.length} servers</span>
+              )}
+            </div>
+            {allDiagnostics.length > 0 ? (
+              <div className="max-h-[18.5rem] space-y-2 overflow-y-auto pr-1">
+                {allDiagnostics.map((diagnostic) => (
+                  <div
+                    key={diagnostic.name}
+                    className="flex items-start justify-between gap-3 rounded-md border border-black/10 px-3 py-2 dark:border-white/10"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-text">{diagnostic.name}</p>
+                      <p
+                        className="truncate font-mono text-[11px] text-text-muted"
+                        title={diagnostic.target}
+                      >
+                        {diagnostic.target}
+                      </p>
+                    </div>
+                    <Badge className={getDiagnosticBadgeClass(diagnostic.status)} variant="outline">
+                      {diagnostic.statusLabel}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-text-muted">Waiting for `claude mcp list` results...</p>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Search + Sort + Installed only row */}
       <div className="flex items-center gap-3">
         <div className="flex-1">
@@ -217,6 +333,12 @@ export const McpServersPanel = ({
         </div>
       )}
 
+      {mcpDiagnosticsError && (
+        <div className="rounded-md border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-400">
+          {mcpDiagnosticsError}
+        </div>
+      )}
+
       {/* Empty state */}
       {!isLoading && displayServers.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-sm border border-dashed border-border px-8 py-16">
@@ -251,6 +373,8 @@ export const McpServersPanel = ({
               key={server.id}
               server={server}
               isInstalled={isServerInstalled(server)}
+              diagnostic={getDiagnostic(server)}
+              diagnosticsLoading={mcpDiagnosticsLoading}
               onClick={setSelectedMcpServerId}
             />
           ))}
@@ -275,6 +399,8 @@ export const McpServersPanel = ({
       <McpServerDetailDialog
         server={selectedServer}
         isInstalled={selectedServer ? isServerInstalled(selectedServer) : false}
+        diagnostic={selectedServer ? getDiagnostic(selectedServer) : null}
+        diagnosticsLoading={mcpDiagnosticsLoading}
         open={selectedMcpServerId !== null}
         onClose={() => setSelectedMcpServerId(null)}
       />

@@ -594,6 +594,9 @@ export const MCP_REGISTRY_GET_BY_ID = 'mcpRegistry:getById';
 /** Get installed MCP servers */
 export const MCP_REGISTRY_GET_INSTALLED = 'mcpRegistry:getInstalled';
 
+/** Run Claude CLI MCP health diagnostics */
+export const MCP_REGISTRY_DIAGNOSE = 'mcpRegistry:diagnose';
+
 /** Install a plugin */
 export const PLUGIN_INSTALL = 'plugin:install';
 

@@ -87,6 +87,17 @@ export interface InstalledMcpEntry {
   transport?: string;
 }
 
+export type McpServerHealthStatus = 'connected' | 'needs-authentication' | 'failed' | 'unknown';
+
+export interface McpServerDiagnostic {
+  name: string;
+  target: string;
+  status: McpServerHealthStatus;
+  statusLabel: string;
+  rawLine: string;
+  checkedAt: number;
+}
+
 // ── Install request (renderer → main, minimal trusted data) ────────────────
 
 export interface McpInstallRequest {

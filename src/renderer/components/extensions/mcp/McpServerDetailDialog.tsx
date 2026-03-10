@@ -31,11 +31,13 @@ import { InstallButton } from '../common/InstallButton';
 import { SourceBadge } from '../common/SourceBadge';
 import { sanitizeMcpServerName } from '@shared/utils/extensionNormalizers';
 
-import type { McpCatalogItem, McpHeaderDef } from '@shared/types/extensions';
+import type { McpCatalogItem, McpHeaderDef, McpServerDiagnostic } from '@shared/types/extensions';
 
 interface McpServerDetailDialogProps {
   server: McpCatalogItem | null;
   isInstalled: boolean;
+  diagnostic?: McpServerDiagnostic | null;
+  diagnosticsLoading?: boolean;
   open: boolean;
   onClose: () => void;
 }
@@ -50,6 +52,8 @@ const SCOPE_OPTIONS: { value: Scope; label: string }[] = [
 export const McpServerDetailDialog = ({
   server,
   isInstalled,
+  diagnostic,
+  diagnosticsLoading,
   open,
   onClose,
 }: McpServerDetailDialogProps): React.JSX.Element => {
@@ -166,6 +170,14 @@ export const McpServerDetailDialog = ({
     (header) => header.isRequired && !header.value.trim()
   );
   const installDisabled = !serverName.trim() || missingRequiredEnvVars || missingRequiredHeaders;
+  const diagnosticBadgeClass =
+    diagnostic?.status === 'connected'
+      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+      : diagnostic?.status === 'needs-authentication'
+        ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+        : diagnostic?.status === 'failed'
+          ? 'border-red-500/30 bg-red-500/10 text-red-400'
+          : 'border-border bg-surface-raised text-text-muted';
 
   const handleInstall = () => {
     installMcpServer({
@@ -313,6 +325,40 @@ export const McpServerDetailDialog = ({
           <div className="rounded-md border border-blue-500/30 bg-blue-500/5 px-3 py-2 text-sm text-blue-400">
             Remote MCP servers may still require custom headers or API keys even when the registry
             does not describe them. If connection fails after install, check the provider docs.
+          </div>
+        )}
+        {(isInstalled || diagnosticsLoading) && (
+          <div className="space-y-2 rounded-md border border-border bg-surface-raised px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-text">Claude Status</span>
+              {diagnosticsLoading && !diagnostic ? (
+                <Badge
+                  className="border-border bg-surface-raised text-text-muted"
+                  variant="outline"
+                >
+                  Checking...
+                </Badge>
+              ) : diagnostic ? (
+                <Badge className={diagnosticBadgeClass} variant="outline">
+                  {diagnostic.statusLabel}
+                </Badge>
+              ) : (
+                <Badge
+                  className="border-border bg-surface-raised text-text-muted"
+                  variant="outline"
+                >
+                  Not checked
+                </Badge>
+              )}
+            </div>
+            {diagnostic?.target && (
+              <div>
+                <p className="mb-1 text-xs text-text-muted">Launch Target</p>
+                <code className="block overflow-x-auto rounded bg-surface px-2 py-1 text-xs text-text">
+                  {diagnostic.target}
+                </code>
+              </div>
+            )}
           </div>
         )}
 

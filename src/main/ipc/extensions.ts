@@ -17,6 +17,7 @@ import type {
   McpCatalogItem,
   McpCustomInstallRequest,
   McpInstallRequest,
+  McpServerDiagnostic,
   McpSearchResult,
   OperationResult,
   PluginInstallRequest,
@@ -27,6 +28,7 @@ import type { ExtensionFacadeService } from '../services/extensions/ExtensionFac
 import type { PluginInstallService } from '../services/extensions/install/PluginInstallService';
 import type { McpInstallService } from '../services/extensions/install/McpInstallService';
 import type { ApiKeyService } from '../services/extensions/apikeys/ApiKeyService';
+import type { McpHealthDiagnosticsService } from '../services/extensions/state/McpHealthDiagnosticsService';
 
 import {
   API_KEYS_DELETE,
@@ -36,6 +38,7 @@ import {
   API_KEYS_STORAGE_STATUS,
   MCP_GITHUB_STARS,
   MCP_REGISTRY_BROWSE,
+  MCP_REGISTRY_DIAGNOSE,
   MCP_REGISTRY_GET_BY_ID,
   MCP_REGISTRY_GET_INSTALLED,
   MCP_REGISTRY_INSTALL,
@@ -63,6 +66,7 @@ let extensionFacade: ExtensionFacadeService | null = null;
 let pluginInstaller: PluginInstallService | null = null;
 let mcpInstaller: McpInstallService | null = null;
 let apiKeyService: ApiKeyService | null = null;
+let mcpHealthDiagnostics: McpHealthDiagnosticsService | null = null;
 
 // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -70,12 +74,14 @@ export function initializeExtensionHandlers(
   facade: ExtensionFacadeService,
   pluginInstall?: PluginInstallService,
   mcpInstall?: McpInstallService,
-  apiKeys?: ApiKeyService
+  apiKeys?: ApiKeyService,
+  mcpDiagnostics?: McpHealthDiagnosticsService
 ): void {
   extensionFacade = facade;
   pluginInstaller = pluginInstall ?? null;
   mcpInstaller = mcpInstall ?? null;
   apiKeyService = apiKeys ?? null;
+  mcpHealthDiagnostics = mcpDiagnostics ?? null;
 }
 
 export function registerExtensionHandlers(ipcMain: IpcMain): void {
@@ -87,6 +93,7 @@ export function registerExtensionHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(MCP_REGISTRY_BROWSE, handleMcpBrowse);
   ipcMain.handle(MCP_REGISTRY_GET_BY_ID, handleMcpGetById);
   ipcMain.handle(MCP_REGISTRY_GET_INSTALLED, handleMcpGetInstalled);
+  ipcMain.handle(MCP_REGISTRY_DIAGNOSE, handleMcpDiagnose);
   ipcMain.handle(MCP_REGISTRY_INSTALL, handleMcpInstall);
   ipcMain.handle(MCP_REGISTRY_INSTALL_CUSTOM, handleMcpInstallCustom);
   ipcMain.handle(MCP_REGISTRY_UNINSTALL, handleMcpUninstall);
@@ -107,6 +114,7 @@ export function removeExtensionHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(MCP_REGISTRY_BROWSE);
   ipcMain.removeHandler(MCP_REGISTRY_GET_BY_ID);
   ipcMain.removeHandler(MCP_REGISTRY_GET_INSTALLED);
+  ipcMain.removeHandler(MCP_REGISTRY_DIAGNOSE);
   ipcMain.removeHandler(MCP_REGISTRY_INSTALL);
   ipcMain.removeHandler(MCP_REGISTRY_INSTALL_CUSTOM);
   ipcMain.removeHandler(MCP_REGISTRY_UNINSTALL);
@@ -220,6 +228,17 @@ async function handleMcpGetInstalled(
   return wrapHandler('mcpGetInstalled', () =>
     getFacade().getInstalledMcp(typeof projectPath === 'string' ? projectPath : undefined)
   );
+}
+
+function getMcpHealthDiagnostics(): McpHealthDiagnosticsService {
+  if (!mcpHealthDiagnostics) {
+    throw new Error('MCP health diagnostics not initialized');
+  }
+  return mcpHealthDiagnostics;
+}
+
+async function handleMcpDiagnose(): Promise<IpcResult<McpServerDiagnostic[]>> {
+  return wrapHandler('mcpDiagnose', () => getMcpHealthDiagnostics().diagnose());
 }
 
 // ── Install/Uninstall Handlers ────────────────────────────────────────────

@@ -8,6 +8,7 @@ export { GlamaMcpEnrichmentService } from './catalog/GlamaMcpEnrichmentService';
 export { McpCatalogAggregator } from './catalog/McpCatalogAggregator';
 export { PluginInstallationStateService } from './state/PluginInstallationStateService';
 export { McpInstallationStateService } from './state/McpInstallationStateService';
+export { McpHealthDiagnosticsService } from './state/McpHealthDiagnosticsService';
 export { ExtensionFacadeService } from './ExtensionFacadeService';
 export { PluginInstallService } from './install/PluginInstallService';
 export { McpInstallService } from './install/McpInstallService';
