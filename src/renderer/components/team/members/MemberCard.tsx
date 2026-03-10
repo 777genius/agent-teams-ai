@@ -20,6 +20,7 @@ interface MemberCardProps {
   isTeamProvisioning?: boolean;
   leadActivity?: LeadActivityState;
   currentTask?: TeamTaskWithKanban | null;
+  reviewTask?: TeamTaskWithKanban | null;
   isAwaitingReply?: boolean;
   isRemoved?: boolean;
   onOpenTask?: () => void;
@@ -36,6 +37,7 @@ export const MemberCard = ({
   isTeamProvisioning,
   leadActivity,
   currentTask,
+  reviewTask,
   isAwaitingReply,
   isRemoved,
   onOpenTask,
@@ -57,6 +59,13 @@ export const MemberCard = ({
   const completed = taskCounts?.completed ?? 0;
   const totalTasks = pending + inProgress + completed;
   const progressPercent = totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 0;
+  const activityTask = currentTask ?? reviewTask ?? null;
+  const activityLabel = currentTask ? 'working on' : reviewTask ? 'reviewing' : null;
+  const activityTitle = currentTask
+    ? `Current task: #${deriveTaskDisplayId(currentTask.id)}`
+    : reviewTask
+      ? `Reviewing task: #${deriveTaskDisplayId(reviewTask.id)}`
+      : undefined;
 
   return (
     <div className={isRemoved ? 'rounded opacity-50' : 'rounded'}>
@@ -66,11 +75,7 @@ export const MemberCard = ({
           borderLeft: `3px solid ${colors.border}`,
           background: `linear-gradient(to right, ${getThemedBadge(colors, isLight)}, transparent)`,
         }}
-        title={
-          member.currentTaskId
-            ? `Current task: #${deriveTaskDisplayId(member.currentTaskId)}`
-            : undefined
-        }
+        title={activityTitle}
         role="button"
         tabIndex={0}
         onClick={onClick}
@@ -103,14 +108,15 @@ export const MemberCard = ({
                 {member.gitBranch}
               </span>
             ) : null}
-            {currentTask ? (
+            {activityTask && activityLabel ? (
               <CurrentTaskIndicator
-                task={currentTask}
+                task={activityTask}
                 borderColor={colors.border}
+                activityLabel={activityLabel}
                 onOpenTask={onOpenTask}
               />
             ) : null}
-            {!currentTask && isAwaitingReply ? (
+            {!activityTask && isAwaitingReply ? (
               <>
                 <Loader2
                   className="size-3 shrink-0 animate-spin"
@@ -139,13 +145,7 @@ export const MemberCard = ({
             <Badge
               variant="secondary"
               className={`shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none ${isRemoved ? 'bg-zinc-600 text-zinc-300' : 'text-[var(--color-text-muted)]'}`}
-              title={
-                isRemoved
-                  ? 'This member has been removed'
-                  : member.currentTaskId
-                    ? `Current task: #${deriveTaskDisplayId(member.currentTaskId)}`
-                    : undefined
-              }
+              title={isRemoved ? 'This member has been removed' : activityTitle}
             >
               {isRemoved ? 'removed' : presenceLabel}
             </Badge>

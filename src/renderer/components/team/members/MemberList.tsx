@@ -56,6 +56,14 @@ export const MemberList = ({
   const renderCard = (member: ResolvedTeamMember, isRemoved: boolean): React.JSX.Element => {
     const currentTask =
       member.currentTaskId && taskMap ? (taskMap.get(member.currentTaskId) ?? null) : null;
+    const reviewTask =
+      !currentTask && taskMap
+        ? (Array.from(taskMap.values()).find(
+            (task) =>
+              task.reviewer === member.name &&
+              (task.reviewState === 'review' || task.kanbanColumn === 'review')
+          ) ?? null)
+        : null;
     const awaitingReply = Boolean(pendingRepliesByMember?.[member.name]);
     return (
       <MemberCard
@@ -67,9 +75,14 @@ export const MemberList = ({
         isTeamProvisioning={isTeamProvisioning}
         leadActivity={member.agentType === 'team-lead' ? leadActivity : undefined}
         currentTask={isRemoved ? null : currentTask}
+        reviewTask={isRemoved ? null : reviewTask}
         isAwaitingReply={isRemoved ? false : awaitingReply}
         isRemoved={isRemoved}
-        onOpenTask={currentTask && !isRemoved ? () => onOpenTask?.(currentTask) : undefined}
+        onOpenTask={
+          !isRemoved && (currentTask ?? reviewTask)
+            ? () => onOpenTask?.((currentTask ?? reviewTask)!)
+            : undefined
+        }
         onClick={() => onMemberClick?.(member)}
         onSendMessage={() => onSendMessage?.(member)}
         onAssignTask={() => onAssignTask?.(member)}

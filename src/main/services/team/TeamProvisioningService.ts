@@ -902,11 +902,13 @@ ${persistentContext}
 
 Steps (execute in this exact order):
 
-1) Read team config at ~/.claude/teams/${request.teamName}/config.json — understand current team state.
+1) Restore/start the existing teammates first. Do NOT delay this reconnect turn by reading internal config files before teammates are back online.
 
 ${step2And3Block}
 
-4) After all steps, output a short summary of reconnected members and what happens next.
+4) If something about team state looks unclear or inconsistent, you MAY inspect ~/.claude/teams/${request.teamName}/config.json after teammates are restored (or immediately in solo mode). Treat it as a diagnostic cross-check, not as the first reconnect action.
+
+5) After all steps, output a short summary of reconnected members and what happens next.
 `;
 }
 
@@ -1229,6 +1231,13 @@ export class TeamProvisioningService {
   ): { teamName: string; memberName: string } | null {
     const trimmed = recipient.trim();
     if (localRecipientNames.has(trimmed)) return null;
+    if (trimmed.startsWith('cross-team:')) {
+      const teamName = trimmed.slice('cross-team:'.length).trim();
+      if (!TEAM_NAME_PATTERN.test(teamName) || teamName === currentTeam) {
+        return null;
+      }
+      return { teamName, memberName: 'team-lead' };
+    }
     const dot = trimmed.indexOf('.');
     if (dot <= 0 || dot === trimmed.length - 1) return null;
     const teamName = trimmed.slice(0, dot).trim();
@@ -1237,6 +1246,19 @@ export class TeamProvisioningService {
       return null;
     }
     return { teamName, memberName };
+  }
+
+  private isCrossTeamPseudoRecipientName(name: string): boolean {
+    const trimmed = name.trim();
+    if (trimmed.startsWith('cross-team:')) {
+      const teamName = trimmed.slice('cross-team:'.length).trim();
+      return TEAM_NAME_PATTERN.test(teamName);
+    }
+    if (trimmed.startsWith('cross-team-')) {
+      const teamName = trimmed.slice('cross-team-'.length).trim();
+      return TEAM_NAME_PATTERN.test(teamName);
+    }
+    return false;
   }
 
   private persistSentMessage(teamName: string, message: InboxMessage): void {
@@ -2561,6 +2583,9 @@ export class TeamProvisioningService {
   }
 
   async relayMemberInboxMessages(teamName: string, memberName: string): Promise<number> {
+    if (this.isCrossTeamPseudoRecipientName(memberName)) {
+      return 0;
+    }
     const relayKey = this.getMemberRelayKey(teamName, memberName);
     const existing = this.memberInboxRelayInFlight.get(relayKey);
     if (existing) {
@@ -3155,7 +3180,9 @@ export class TeamProvisioningService {
             }
             const msg: InboxMessage = {
               from: 'user',
-              to: `${crossTeamRecipient.teamName}.${crossTeamRecipient.memberName}`,
+              to: recipient.startsWith('cross-team:')
+                ? recipient
+                : `${crossTeamRecipient.teamName}.${crossTeamRecipient.memberName}`,
               text: strippedCrossTeamContent,
               timestamp,
               read: true,

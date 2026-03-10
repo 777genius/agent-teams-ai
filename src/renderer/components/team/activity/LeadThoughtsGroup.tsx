@@ -37,11 +37,20 @@ export interface LeadThoughtGroup {
 }
 
 /**
+ * Check if a message is a context compaction boundary (system event from lead process).
+ */
+export function isCompactionMessage(msg: InboxMessage): boolean {
+  return msg.from === 'system' && !!msg.messageId?.startsWith('compact-');
+}
+
+/**
  * Check if a message is an intermediate lead "thought" (assistant text) rather than
  * an official message (SendMessage, direct reply, inbox, etc.).
  */
 export function isLeadThought(msg: InboxMessage): boolean {
   if (typeof msg.to === 'string' && msg.to.trim().length > 0) return false;
+  // Compaction boundary events are system messages, not lead thoughts
+  if (isCompactionMessage(msg)) return false;
   if (msg.source === 'lead_session') return true;
   if (msg.source === 'lead_process') return true;
   return false;

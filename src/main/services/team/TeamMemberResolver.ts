@@ -19,6 +19,19 @@ function looksLikeQualifiedExternalRecipient(name: string): boolean {
   return TEAM_NAME_PATTERN.test(teamName) && memberName.length > 0;
 }
 
+function looksLikeCrossTeamPseudoRecipient(name: string): boolean {
+  const trimmed = name.trim();
+  if (trimmed.startsWith('cross-team:')) {
+    const teamName = trimmed.slice('cross-team:'.length).trim();
+    return TEAM_NAME_PATTERN.test(teamName);
+  }
+  if (trimmed.startsWith('cross-team-')) {
+    const teamName = trimmed.slice('cross-team-'.length).trim();
+    return TEAM_NAME_PATTERN.test(teamName);
+  }
+  return false;
+}
+
 export class TeamMemberResolver {
   resolveMembers(
     config: TeamConfig,
@@ -62,6 +75,9 @@ export class TeamMemberResolver {
     for (const inboxName of inboxNames) {
       if (typeof inboxName === 'string' && inboxName.trim() !== '') {
         const trimmed = inboxName.trim();
+        if (looksLikeCrossTeamPseudoRecipient(trimmed)) {
+          continue;
+        }
         if (
           !explicitNames.has(trimmed.toLowerCase()) &&
           looksLikeQualifiedExternalRecipient(trimmed)

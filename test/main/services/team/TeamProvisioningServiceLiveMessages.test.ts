@@ -472,6 +472,49 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     expect(hoisted.appendSentMessage).not.toHaveBeenCalled();
   });
 
+  it('upgrades pseudo cross-team recipients into cross-team sends', async () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const crossTeamSender = vi.fn(async () => ({ deliveredToInbox: true, messageId: 'cross-2' }));
+    service.setCrossTeamSender(crossTeamSender);
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          name: 'SendMessage',
+          input: {
+            type: 'message',
+            recipient: 'cross-team:team-best',
+            content: 'Привет команде!',
+            summary: 'Приветствие',
+          },
+        },
+      ],
+    });
+
+    await vi.waitFor(() => {
+      expect(crossTeamSender).toHaveBeenCalledTimes(1);
+    });
+
+    expect(crossTeamSender).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fromTeam: 'my-team',
+        fromMember: 'team-lead',
+        toTeam: 'team-best',
+        text: 'Привет команде!',
+      })
+    );
+
+    const live = service.getLiveLeadProcessMessages('my-team');
+    expect(live).toHaveLength(1);
+    expect(live[0].source).toBe('cross_team_sent');
+    expect(live[0].to).toBe('cross-team:team-best');
+    expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
+  });
+
   it('does not push a duplicate live row when cross-team fallback deduplicates', async () => {
     const service = new TeamProvisioningService();
     seedConfig('my-team');

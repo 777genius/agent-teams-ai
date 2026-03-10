@@ -434,4 +434,25 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(payload).toContain('recipient=\\"alice\\"');
     expect(payload).toContain('Please retry with logging enabled.');
   });
+
+  it('does not relay pseudo cross-team member inboxes as teammates', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedMemberInbox(teamName, 'cross-team:team-alpha-super', [
+      {
+        from: 'team-lead',
+        text: 'Stale pseudo recipient inbox',
+        timestamp: '2026-02-23T10:00:00.000Z',
+        read: false,
+        messageId: 'm-pseudo-1',
+      },
+    ]);
+
+    const { writeSpy } = attachAliveRun(service, teamName);
+    const relayed = await service.relayMemberInboxMessages(teamName, 'cross-team:team-alpha-super');
+
+    expect(relayed).toBe(0);
+    expect(writeSpy).toHaveBeenCalledTimes(0);
+  });
 });

@@ -111,12 +111,16 @@ export class TeamDataService {
     return normalizeReviewState(task.reviewState);
   }
 
-  private attachKanbanCompatibility(task: TeamTask): TeamTaskWithKanban {
+  private attachKanbanCompatibility(
+    task: TeamTask,
+    kanbanTaskState?: KanbanState['tasks'][string]
+  ): TeamTaskWithKanban {
     const reviewState = this.resolveTaskReviewState(task);
     return {
       ...task,
       reviewState,
       kanbanColumn: getKanbanColumnFromReviewState(reviewState),
+      reviewer: kanbanTaskState?.reviewer ?? null,
     };
   }
 
@@ -403,7 +407,7 @@ export class TeamDataService {
     mark('kanbanGc');
 
     const tasksWithKanban: TeamTaskWithKanban[] = tasks.map((task) =>
-      this.attachKanbanCompatibility(task)
+      this.attachKanbanCompatibility(task, kanbanState.tasks[task.id])
     );
 
     const members = this.memberResolver.resolveMembers(
@@ -422,7 +426,7 @@ export class TeamDataService {
     mark('syncComments');
 
     const tasksToReturn: TeamTaskWithKanban[] = tasks.map((task) =>
-      this.attachKanbanCompatibility(task)
+      this.attachKanbanCompatibility(task, kanbanState.tasks[task.id])
     );
 
     let processes: TeamProcess[] = [];

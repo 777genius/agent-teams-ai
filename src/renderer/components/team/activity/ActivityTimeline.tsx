@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
+import { Layers } from 'lucide-react';
 
 import { ActivityItem, isNoiseMessage } from './ActivityItem';
 import { AnimatedHeightReveal } from './AnimatedHeightReveal';
@@ -9,6 +10,7 @@ import { findNewestMessageIndex, resolveTimelineCollapseState } from './collapse
 import {
   getThoughtGroupKey,
   groupTimelineItems,
+  isCompactionMessage,
   isLeadThought,
   LeadThoughtsGroupRow,
 } from './LeadThoughtsGroup';
@@ -54,6 +56,29 @@ interface ActivityTimelineProps {
 
 const VIEWPORT_THRESHOLD = 0.15;
 const MESSAGES_PAGE_SIZE = 30;
+
+/** Inline compaction boundary divider — styled like session separators but with amber accent. */
+const CompactionDivider = ({ message }: { message: InboxMessage }): React.JSX.Element => (
+  <div className="flex items-center gap-3" style={{ paddingTop: 16, paddingBottom: 16 }}>
+    <div
+      className="h-px flex-1"
+      style={{ backgroundColor: 'var(--tool-call-text)', opacity: 0.3 }}
+    />
+    <div className="flex shrink-0 items-center gap-2 px-3">
+      <Layers size={12} style={{ color: 'var(--tool-call-text)' }} />
+      <span
+        className="whitespace-nowrap text-[11px] font-medium"
+        style={{ color: 'var(--tool-call-text)' }}
+      >
+        {message.text}
+      </span>
+    </div>
+    <div
+      className="h-px flex-1"
+      style={{ backgroundColor: 'var(--tool-call-text)', opacity: 0.3 }}
+    />
+  </div>
+);
 
 const MessageRowWithObserver = ({
   message,
@@ -239,6 +264,7 @@ export const ActivityTimeline = ({
         cardCount++;
       } else {
         if (isNoiseMessage(item.message.text)) continue;
+        if (isCompactionMessage(item.message)) continue;
         if (cardCount % 2 === 1) result.add(i);
         cardCount++;
       }
@@ -420,6 +446,18 @@ export const ActivityTimeline = ({
         }
 
         const { message } = item;
+
+        // Compaction boundary — render as a divider instead of a regular message card
+        if (isCompactionMessage(message)) {
+          const messageKey = toMessageKey(message);
+          return (
+            <React.Fragment key={messageKey}>
+              {sessionSeparator}
+              <CompactionDivider message={message} />
+            </React.Fragment>
+          );
+        }
+
         const info = memberInfo.get(message.from);
         const recipientInfo = message.to ? memberInfo.get(message.to) : undefined;
         const recipientColor =

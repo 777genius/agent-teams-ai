@@ -197,6 +197,8 @@ interface MentionableTextareaProps extends Omit<
   footerRight?: React.ReactNode;
   /** Content rendered in the bottom-right corner inside the textarea (e.g. send button) */
   cornerAction?: React.ReactNode;
+  /** Content rendered in the bottom-left corner inside the textarea (e.g. mode selector) */
+  cornerActionLeft?: React.ReactNode;
   /** Inline code chips to display as badges */
   chips?: InlineChip[];
   /** Called when a chip is removed (by X button, backspace, or reconciliation) */
@@ -219,6 +221,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       showHint = true,
       footerRight,
       cornerAction,
+      cornerActionLeft,
       chips = [],
       onChipRemove,
       projectPath,
@@ -654,7 +657,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
               ref={backdropRef}
               className={cn(
                 'pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-md border border-transparent px-3 py-2 text-sm text-[var(--color-text)]',
-                cornerAction && 'pb-12 pr-[4.25rem]'
+                (cornerAction || cornerActionLeft) && 'pb-12'
               )}
               style={{
                 whiteSpace: 'pre-wrap',
@@ -700,7 +703,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
             onKeyDown={composedHandleKeyDown}
             onSelect={composedHandleSelect}
             {...textareaProps}
-            className={cn(className, cornerAction && 'pb-12 pr-[4.25rem]')}
+            className={cn(className, (cornerAction || cornerActionLeft) && 'pb-12')}
             onScroll={handleScroll}
             style={textareaStyle}
           />
@@ -718,6 +721,12 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           {cornerAction ? (
             <div className="pointer-events-none absolute bottom-2 right-2 z-20 flex items-end justify-end">
               <div className="pointer-events-auto">{cornerAction}</div>
+            </div>
+          ) : null}
+
+          {cornerActionLeft ? (
+            <div className="pointer-events-none absolute bottom-2 left-2 z-20 flex items-end justify-start">
+              <div className="pointer-events-auto">{cornerActionLeft}</div>
             </div>
           ) : null}
         </div>

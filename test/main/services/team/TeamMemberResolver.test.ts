@@ -107,6 +107,28 @@ describe('TeamMemberResolver', () => {
     expect(names).toContain('ops.bot');
   });
 
+  it('ignores pseudo cross-team inbox names', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'team-lead', agentType: 'team-lead', role: 'lead' }],
+    };
+
+    const members = resolver.resolveMembers(
+      config,
+      [],
+      ['cross-team:team-alpha-super', 'cross-team-team-alpha-super', 'alice'],
+      [],
+      []
+    );
+    const names = members.map((m) => m.name);
+
+    expect(names).toContain('alice');
+    expect(names).toContain('team-lead');
+    expect(names).not.toContain('cross-team:team-alpha-super');
+    expect(names).not.toContain('cross-team-team-alpha-super');
+  });
+
   it('keeps dotted names when config casing differs from inbox casing', () => {
     const resolver = new TeamMemberResolver();
     const config: TeamConfig = {

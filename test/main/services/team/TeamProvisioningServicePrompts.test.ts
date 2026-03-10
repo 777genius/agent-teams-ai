@@ -175,6 +175,8 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain('SOLO MODE: This team CURRENTLY has ZERO teammates.');
     expect(prompt).toContain('Execute tasks sequentially and keep the board + user updated');
     expect(prompt).toContain('Do NOT start the next task until the current task is completed');
+    expect(prompt).toContain('Do NOT delay this reconnect turn by reading internal config files');
+    expect(prompt).toContain('Treat it as a diagnostic cross-check, not as the first reconnect action.');
     expect(prompt).toContain('task_start');
     expect(prompt).toContain(`AGENT_BLOCK_OPEN is exactly: ${AGENT_BLOCK_OPEN}`);
     expect(prompt).toContain(`AGENT_BLOCK_CLOSE is exactly: ${AGENT_BLOCK_CLOSE}`);
@@ -277,6 +279,8 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     const prompt = extractPromptFromWrite(writeSpy);
     expect(prompt).toContain('The team has been reconnected after a restart.');
+    expect(prompt).toContain('Restore/start the existing teammates first.');
+    expect(prompt).toContain('Treat it as a diagnostic cross-check, not as the first reconnect action.');
     expect(prompt).toContain('Hidden internal instructions rule (IMPORTANT):');
     expect(prompt).toContain(`  ${AGENT_BLOCK_OPEN}`);
     expect(prompt).toContain(`  ${AGENT_BLOCK_CLOSE}`);

@@ -175,6 +175,8 @@ export interface TeamTask {
 export interface TeamTaskWithKanban extends TeamTask {
   /** Set when task is in team kanban (review or approved column). */
   kanbanColumn?: 'review' | 'approved';
+  /** Reviewer assigned in kanban state, when applicable. */
+  reviewer?: string | null;
 }
 
 /** Metadata for an attachment associated with a task or comment. */

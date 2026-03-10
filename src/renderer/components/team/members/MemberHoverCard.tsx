@@ -69,6 +69,16 @@ export const MemberHoverCard = ({
     member.currentTaskId && tasks
       ? (tasks.find((t) => t.id === member.currentTaskId) ?? null)
       : null;
+  const reviewTask: TeamTaskWithKanban | null =
+    !currentTask && tasks
+      ? (tasks.find(
+          (task) =>
+            task.reviewer === member.name &&
+            (task.reviewState === 'review' || task.kanbanColumn === 'review')
+        ) ?? null)
+      : null;
+  const activityTask = currentTask ?? reviewTask;
+  const activityLabel = currentTask ? 'working on' : reviewTask ? 'reviewing' : 'working on';
 
   return (
     <HoverCard openDelay={300} closeDelay={200}>
@@ -116,13 +126,14 @@ export const MemberHoverCard = ({
           </div>
 
           {/* Current task */}
-          {currentTask && (
+          {activityTask && (
             <div className="flex items-center gap-1 overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
               <CurrentTaskIndicator
-                task={currentTask}
+                task={activityTask}
                 borderColor={colors.border}
                 maxSubjectLength={28}
-                onOpenTask={onOpenTask ? () => onOpenTask(currentTask) : undefined}
+                activityLabel={activityLabel}
+                onOpenTask={onOpenTask ? () => onOpenTask(activityTask) : undefined}
               />
             </div>
           )}
