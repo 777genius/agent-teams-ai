@@ -1216,6 +1216,7 @@ async function handleSendMessage(
       text: memberDeliveryText,
       summary: payload.summary,
       from: payload.from,
+      source: 'user_sent',
     });
 
     // Best-effort live relay so active processes see the inbox row promptly.

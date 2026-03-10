@@ -120,6 +120,10 @@ export const ImageLightbox = ({
         scrollToZoom: true,
       }}
       styles={{
+        // Radix Dialog's DismissableLayer sets body.style.pointerEvents = "none"
+        // when modal is open. The lightbox portal renders into body, inheriting
+        // pointer-events: none — making all buttons unclickable. Override here.
+        root: { pointerEvents: 'auto' },
         container: { backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)' },
         button: { padding: 16 },
       }}

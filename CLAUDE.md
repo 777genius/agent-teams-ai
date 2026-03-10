@@ -1,6 +1,24 @@
 # Claude Agent Teams UI
 
-Electron app that visualizes Claude Code session execution
+A new approach to task management with AI agent teams. Assemble agent teams with different roles that work autonomously in parallel, communicate with each other, create and manage their own tasks, review code, and collaborate across teams. You manage everything through a kanban board — like a CTO with an AI engineering team.
+
+Key capabilities:
+- **Agent Teams** — create teams with roles, agents work autonomously in parallel
+- **Cross-team communication** — agents message each other within and across teams
+- **Kanban board** — tasks change status in real-time as agents work
+- **Code review** — diff view per task (accept/reject/comment), similar to Cursor
+- **Solo mode** — single agent with self-managed tasks, expandable to full team
+- **Live process section** — see running agents, open URLs in browser
+- **Direct messaging** — send messages to any agent, comment on tasks, add quick actions on kanban cards
+- **Deep session analysis** — bash commands, reasoning, subprocesses breakdown
+- **Context monitoring** — token usage by category (CLAUDE.md, tool outputs, thinking, team coordination)
+- **Built-in code editor** — edit files with Git support without leaving the app
+- **MCP integration** — built-in mcp-server for external tools and agent plugins
+- **Post-compact context recovery** — restores team-management instructions after context compaction
+- **Notification system** — alerts on task completion, agent attention needed, errors
+- **Zero-setup onboarding** — built-in Claude Code installation and authentication
+
+100% free, open source. No API keys. No configuration. Runs entirely locally.
 
 ## Tech Stack
 Electron 28.x, React 18.x, TypeScript 5.x, Tailwind CSS 3.x, Zustand 4.x
@@ -24,6 +42,9 @@ When running build/typecheck/test commands, pipe through `tail -20` to avoid flo
 - `pnpm test:semantic` - Semantic step extraction tests
 - `pnpm test:noise` - Noise filtering tests
 - `pnpm test:task-filtering` - Task tool filtering tests
+- `pnpm check` - Full quality gate (types + lint + test + build)
+- `pnpm fix` - Lint fix + format
+- `pnpm quality` - Full check + format check + knip
 
 ## Path Aliases
 Use path aliases for imports:

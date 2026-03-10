@@ -246,6 +246,28 @@ function createViewerMarkdownComponents(
         }
         return badge;
       }
+      if (href?.startsWith('team://')) {
+        const colorSet = getTeamColorSet('blue');
+        const bg = getThemedBadge(colorSet, isLight);
+        return (
+          <span
+            style={{
+              backgroundColor: bg,
+              color: colorSet.text,
+              borderRadius: '3px',
+              boxShadow: `0 0 0 1.5px ${bg}`,
+              fontSize: 'inherit',
+              cursor: 'default',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '2px',
+            }}
+          >
+            <UsersRound size={11} style={{ flexShrink: 0 }} />
+            {children}
+          </span>
+        );
+      }
       if (href?.startsWith('task://')) {
         const taskId = href.slice('task://'.length);
         return (

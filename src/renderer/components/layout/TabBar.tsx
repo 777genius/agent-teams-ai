@@ -12,13 +12,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortable';
 import { isElectronMode } from '@renderer/api';
-import { HEADER_ROW1_HEIGHT } from '@renderer/constants/layout';
 import { useStore } from '@renderer/store';
 import { formatShortcut } from '@renderer/utils/stringUtils';
-import { Bell, Calendar, PanelLeft, Plus, Puzzle, RefreshCw, Settings, Users } from 'lucide-react';
+import { PanelLeft, RefreshCw } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { MoreMenu } from './MoreMenu';
 import { SortableTab } from './SortableTab';
 import { TabContextMenu } from './TabContextMenu';
 
@@ -38,15 +36,8 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
     closeTabs,
     setSelectedTabIds,
     clearTabSelection,
-    openDashboard,
     fetchSessionDetail,
     fetchSessions,
-    unreadCount,
-    openNotificationsTab,
-    openTeamsTab,
-    openExtensionsTab,
-    openSchedulesTab,
-    openSettingsTab,
     sidebarCollapsed,
     toggleSidebar,
     splitPane,
@@ -54,7 +45,6 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
     pinnedSessionIds,
     toggleHideSession,
     hiddenSessionIds,
-    tabSessionData,
   } = useStore(
     useShallow((s) => ({
       pane: s.paneLayout.panes.find((p) => p.id === paneId),
@@ -67,15 +57,8 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
       closeTabs: s.closeTabs,
       setSelectedTabIds: s.setSelectedTabIds,
       clearTabSelection: s.clearTabSelection,
-      openDashboard: s.openDashboard,
       fetchSessionDetail: s.fetchSessionDetail,
       fetchSessions: s.fetchSessions,
-      unreadCount: s.unreadCount,
-      openNotificationsTab: s.openNotificationsTab,
-      openTeamsTab: s.openTeamsTab,
-      openExtensionsTab: s.openExtensionsTab,
-      openSchedulesTab: s.openSchedulesTab,
-      openSettingsTab: s.openSettingsTab,
       sidebarCollapsed: s.sidebarCollapsed,
       toggleSidebar: s.toggleSidebar,
       splitPane: s.splitPane,
@@ -83,7 +66,6 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
       pinnedSessionIds: s.pinnedSessionIds,
       toggleHideSession: s.toggleHideSession,
       hiddenSessionIds: s.hiddenSessionIds,
-      tabSessionData: s.tabSessionData,
     }))
   );
 
@@ -97,21 +79,9 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
   // Derive stable tab IDs array for SortableContext
   const tabIds = useMemo(() => openTabs.map((t) => t.id), [openTabs]);
 
-  // Derive session detail for the active tab (used by export dropdown)
-  const activeTabSessionDetail = activeTabId
-    ? (tabSessionData[activeTabId]?.sessionDetail ?? null)
-    : null;
-
   // Hover states for buttons
   const [expandHover, setExpandHover] = useState(false);
   const [refreshHover, setRefreshHover] = useState(false);
-  const [newTabHover, setNewTabHover] = useState(false);
-  const [notificationsHover, setNotificationsHover] = useState(false);
-  const [teamsHover, setTeamsHover] = useState(false);
-  const [schedulesHover, setSchedulesHover] = useState(false);
-  const [extensionsHover, setExtensionsHover] = useState(false);
-  const [githubHover, setGithubHover] = useState(false);
-  const [settingsHover, setSettingsHover] = useState(false);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tabId: string } | null>(
@@ -121,7 +91,7 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
   // Track last clicked tab for Shift range selection
   const lastClickedTabIdRef = useRef<string | null>(null);
 
-  // Get the active tab
+  // Get the active tab for refresh button
   const activeTab = openTabs.find((tab) => tab.id === activeTabId);
 
   // Refs for auto-scrolling to active tab
@@ -260,6 +230,10 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
       ? hiddenSessionIds.includes(contextMenuTab.sessionId)
       : false;
 
+  // Detect macOS Electron for traffic lights padding
+  const isMacElectron =
+    isElectronMode() && window.navigator.userAgent.toLowerCase().includes('mac');
+
   // Show sidebar expand button only in the leftmost pane
   const isLeftmostPane = useStore(
     (s) => s.paneLayout.panes.length === 0 || s.paneLayout.panes[0]?.id === paneId
@@ -267,17 +241,14 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
 
   return (
     <div
-      className="flex items-center justify-between pr-2"
+      className="flex h-full items-center pr-2"
       style={
         {
-          height: `${HEADER_ROW1_HEIGHT}px`,
           paddingLeft:
-            sidebarCollapsed && isLeftmostPane
+            isMacElectron && isLeftmostPane
               ? 'var(--macos-traffic-light-padding-left, 72px)'
               : '8px',
-          WebkitAppRegion: isElectronMode() && isLeftmostPane ? 'drag' : undefined,
-          backgroundColor: 'var(--color-surface)',
-          borderBottom: '1px solid var(--color-border)',
+          WebkitAppRegion: 'no-drag',
           opacity: isFocused || paneCount === 1 ? 1 : 0.7,
         } as React.CSSProperties
       }
@@ -289,13 +260,10 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
           onMouseEnter={() => setExpandHover(true)}
           onMouseLeave={() => setExpandHover(false)}
           className="mr-2 shrink-0 rounded-md p-1.5 transition-colors"
-          style={
-            {
-              WebkitAppRegion: 'no-drag',
-              color: expandHover ? 'var(--color-text)' : 'var(--color-text-muted)',
-              backgroundColor: expandHover ? 'var(--color-surface-raised)' : 'transparent',
-            } as React.CSSProperties
-          }
+          style={{
+            color: expandHover ? 'var(--color-text)' : 'var(--color-text-muted)',
+            backgroundColor: expandHover ? 'var(--color-surface-raised)' : 'transparent',
+          }}
           title="Expand sidebar"
         >
           <PanelLeft className="size-4" />
@@ -310,15 +278,12 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
           setDroppableRef(el);
         }}
         className="scrollbar-none flex min-w-0 flex-1 items-center gap-1"
-        style={
-          {
-            WebkitAppRegion: 'no-drag',
-            outline: isDroppableOver ? '1px dashed var(--color-accent, #6366f1)' : 'none',
-            outlineOffset: '-1px',
-            overflowX: 'auto',
-            overflowY: 'hidden',
-          } as React.CSSProperties
-        }
+        style={{
+          outline: isDroppableOver ? '1px dashed var(--color-accent, #6366f1)' : 'none',
+          outlineOffset: '-1px',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+        }}
       >
         <SortableContext items={tabIds} strategy={horizontalListSortingStrategy}>
           {openTabs.map((tab) => (
@@ -353,147 +318,6 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
             <RefreshCw className="size-4" />
           </button>
         )}
-      </div>
-
-      {/* Drag spacer — fills empty space between tab list and action buttons.
-          Gives users a reliable window-drag target regardless of how many tabs are open.
-          Only applied on the leftmost pane in Electron to match the TabBar drag region logic. */}
-      <div
-        className="min-w-[48px] shrink-0 self-stretch"
-        style={
-          {
-            WebkitAppRegion: isElectronMode() && isLeftmostPane ? 'drag' : undefined,
-          } as React.CSSProperties
-        }
-      />
-
-      {/* Right side actions */}
-      <div
-        className="ml-2 flex shrink-0 items-center gap-1"
-        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-      >
-        {/* New tab button */}
-        <button
-          onClick={openDashboard}
-          onMouseEnter={() => setNewTabHover(true)}
-          onMouseLeave={() => setNewTabHover(false)}
-          className="rounded-md p-2 transition-colors"
-          style={{
-            color: newTabHover ? 'var(--color-text)' : 'var(--color-text-muted)',
-            backgroundColor: newTabHover ? 'var(--color-surface-raised)' : 'transparent',
-          }}
-          title="New tab (Dashboard)"
-        >
-          <Plus className="size-4" />
-        </button>
-
-        {/* Notifications bell icon */}
-        <button
-          onClick={openNotificationsTab}
-          onMouseEnter={() => setNotificationsHover(true)}
-          onMouseLeave={() => setNotificationsHover(false)}
-          className="relative rounded-md p-2 transition-colors"
-          style={{
-            color: notificationsHover ? 'var(--color-text)' : 'var(--color-text-muted)',
-            backgroundColor: notificationsHover ? 'var(--color-surface-raised)' : 'transparent',
-          }}
-          title="Notifications"
-        >
-          <Bell className="size-4" />
-          {unreadCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-medium text-white">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-        </button>
-
-        {/* Teams icon */}
-        <button
-          onClick={openTeamsTab}
-          onMouseEnter={() => setTeamsHover(true)}
-          onMouseLeave={() => setTeamsHover(false)}
-          className="rounded-md p-2 transition-colors"
-          style={{
-            color: teamsHover ? 'var(--color-text)' : 'var(--color-text-muted)',
-            backgroundColor: teamsHover ? 'var(--color-surface-raised)' : 'transparent',
-          }}
-          title="Teams"
-        >
-          <Users className="size-4" />
-        </button>
-
-        {/* Schedules icon */}
-        <button
-          onClick={openSchedulesTab}
-          onMouseEnter={() => setSchedulesHover(true)}
-          onMouseLeave={() => setSchedulesHover(false)}
-          className="rounded-md p-2 transition-colors"
-          style={{
-            color: schedulesHover ? 'var(--color-text)' : 'var(--color-text-muted)',
-            backgroundColor: schedulesHover ? 'var(--color-surface-raised)' : 'transparent',
-          }}
-          title="Schedules"
-        >
-          <Calendar className="size-4" />
-        </button>
-
-        {/* Extensions icon */}
-        <button
-          onClick={openExtensionsTab}
-          onMouseEnter={() => setExtensionsHover(true)}
-          onMouseLeave={() => setExtensionsHover(false)}
-          className="rounded-md p-2 transition-colors"
-          style={{
-            color: extensionsHover ? 'var(--color-text)' : 'var(--color-text-muted)',
-            backgroundColor: extensionsHover ? 'var(--color-surface-raised)' : 'transparent',
-          }}
-          title="Extensions"
-        >
-          <Puzzle className="size-4" />
-        </button>
-
-        {/* GitHub link */}
-        <button
-          onClick={() =>
-            void window.electronAPI.openExternal(
-              'https://github.com/777genius/claude_agent_teams_ui'
-            )
-          }
-          onMouseEnter={() => setGithubHover(true)}
-          onMouseLeave={() => setGithubHover(false)}
-          className="rounded-md p-2 transition-colors"
-          style={{
-            color: githubHover ? 'var(--color-text)' : 'var(--color-text-muted)',
-            backgroundColor: githubHover ? 'var(--color-surface-raised)' : 'transparent',
-          }}
-          title="GitHub"
-        >
-          <svg className="size-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z" />
-          </svg>
-        </button>
-
-        {/* Settings gear icon */}
-        <button
-          onClick={() => openSettingsTab()}
-          onMouseEnter={() => setSettingsHover(true)}
-          onMouseLeave={() => setSettingsHover(false)}
-          className="rounded-md p-2 transition-colors"
-          style={{
-            color: settingsHover ? 'var(--color-text)' : 'var(--color-text-muted)',
-            backgroundColor: settingsHover ? 'var(--color-surface-raised)' : 'transparent',
-          }}
-          title="Settings"
-        >
-          <Settings className="size-4" />
-        </button>
-
-        {/* More menu (Search, Export, Analyze, Settings) */}
-        <MoreMenu
-          activeTab={activeTab}
-          activeTabSessionDetail={activeTabSessionDetail}
-          activeTabId={activeTabId}
-        />
       </div>
 
       {/* Context menu */}

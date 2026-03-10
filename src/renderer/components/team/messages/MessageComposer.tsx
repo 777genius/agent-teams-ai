@@ -391,15 +391,11 @@ export const MessageComposer = ({
         )}
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          {isProvisioning ? (
-            <span className="text-[10px]" style={{ color: 'var(--warning-text)' }}>
-              Launching... inbox delivery only
-            </span>
-          ) : !isTeamAlive ? (
+          {!isTeamAlive && !isProvisioning && (
             <span className="text-[10px]" style={{ color: 'var(--warning-text)' }}>
               Team offline
             </span>
-          ) : null}
+          )}
 
           {/* Combined team + member selector */}
           {crossTeamTargets.length > 0 ? (

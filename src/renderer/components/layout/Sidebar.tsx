@@ -1,9 +1,8 @@
 /**
- * Sidebar - Breadcrumb-style navigation with project/worktree hierarchy.
+ * Sidebar - Navigation with task list and session list.
  *
  * Structure:
- * - Fixed Header: Project selector (Row 1) + Worktree selector (Row 2, conditional)
- * - Tab bar: Tasks | Sessions
+ * - Tab bar: Collapse button + Tasks | Sessions
  * - Scrollable Body: Task list or date-grouped session list
  * - Resizable: Drag right edge to resize
  * - Collapsible: Cmd+B to toggle (Notion-style)
@@ -12,13 +11,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useStore } from '@renderer/store';
+import { formatShortcut } from '@renderer/utils/stringUtils';
+import { PanelLeft } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { DateGroupedSessions } from '../sidebar/DateGroupedSessions';
 import { GlobalTaskList } from '../sidebar/GlobalTaskList';
 import { defaultTaskFiltersState } from '../sidebar/taskFiltersState';
-
-import { SidebarHeader } from './SidebarHeader';
 
 import type { TaskFiltersState } from '../sidebar/taskFiltersState';
 
@@ -29,9 +28,10 @@ const MAX_WIDTH = 500;
 const DEFAULT_WIDTH = 280;
 
 export const Sidebar = (): React.JSX.Element => {
-  const { sidebarCollapsed } = useStore(
+  const { sidebarCollapsed, toggleSidebar } = useStore(
     useShallow((s) => ({
       sidebarCollapsed: s.sidebarCollapsed,
+      toggleSidebar: s.toggleSidebar,
     }))
   );
   const [width, setWidth] = useState(DEFAULT_WIDTH);
@@ -39,6 +39,7 @@ export const Sidebar = (): React.JSX.Element => {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('tasks');
   const [taskFilters, setTaskFilters] = useState<TaskFiltersState>(defaultTaskFiltersState);
   const [taskFiltersPopoverOpen, setTaskFiltersPopoverOpen] = useState(false);
+  const [isCollapseHovered, setIsCollapseHovered] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Handle mouse move during resize
@@ -101,14 +102,27 @@ export const Sidebar = (): React.JSX.Element => {
           minWidth: sidebarCollapsed ? 0 : width,
         }}
       >
-        <SidebarHeader />
-
-        {/* Tab bar: Tasks | Sessions — tab strip style, filters on the right */}
+        {/* Tab bar: Collapse button + Tasks | Sessions */}
         <div
           className="flex shrink-0 items-end gap-2 border-b px-3 pt-1"
           style={{ borderColor: 'var(--color-border)' }}
         >
-          <div className="flex flex-1" />
+          {/* Collapse sidebar button */}
+          <button
+            onClick={toggleSidebar}
+            onMouseEnter={() => setIsCollapseHovered(true)}
+            onMouseLeave={() => setIsCollapseHovered(false)}
+            className="mb-1 shrink-0 rounded-md p-1 transition-colors"
+            style={{
+              color: isCollapseHovered ? 'var(--color-text-secondary)' : 'var(--color-text-muted)',
+              backgroundColor: isCollapseHovered ? 'var(--color-surface-raised)' : 'transparent',
+            }}
+            title={`Collapse sidebar (${formatShortcut('B')})`}
+          >
+            <PanelLeft className="size-3.5" />
+          </button>
+
+          <div className="flex-1" />
           <div className="flex" role="tablist" aria-label="Sidebar view">
             <button
               type="button"

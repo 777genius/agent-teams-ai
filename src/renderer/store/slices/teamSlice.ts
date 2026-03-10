@@ -70,6 +70,7 @@ import type {
   CommentAttachmentPayload,
   CreateTaskRequest,
   CrossTeamSendRequest,
+  EffortLevel,
   GlobalTask,
   KanbanColumnId,
   LeadActivityState,
@@ -247,6 +248,13 @@ export interface GlobalTaskDetailState {
   taskId: string;
 }
 
+/** Per-team launch parameters shown in the header badge. */
+export interface TeamLaunchParams {
+  model?: string; // 'opus' | 'sonnet' | 'haiku'
+  effort?: EffortLevel;
+  extendedContext?: boolean;
+}
+
 export interface TeamSlice {
   teams: TeamSummary[];
   /** O(1) lookup to avoid array scans in render-hot paths */
@@ -293,6 +301,8 @@ export interface TeamSlice {
   activeProvisioningRunId: string | null;
   provisioningError: string | null;
   clearProvisioningError: () => void;
+  /** Per-team launch parameters (model, effort, extended context) — persisted in localStorage. */
+  launchParamsByTeam: Record<string, TeamLaunchParams>;
   kanbanFilterQuery: string | null;
   provisioningProgressUnsubscribe: (() => void) | null;
   fetchBranches: (paths: string[]) => Promise<void>;
@@ -407,6 +417,56 @@ export interface TeamSlice {
   ) => Promise<void>;
 }
 
+// --- Per-team launch params persistence ---
+const LAUNCH_PARAMS_PREFIX = 'team:launchParams:';
+
+function loadAllLaunchParams(): Record<string, TeamLaunchParams> {
+  const result: Record<string, TeamLaunchParams> = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(LAUNCH_PARAMS_PREFIX)) {
+        const teamName = key.slice(LAUNCH_PARAMS_PREFIX.length);
+        const parsed = JSON.parse(localStorage.getItem(key)!) as TeamLaunchParams;
+        if (parsed && typeof parsed === 'object') {
+          result[teamName] = parsed;
+        }
+      }
+    }
+  } catch {
+    // ignore — best-effort restore
+  }
+  return result;
+}
+
+function saveLaunchParams(teamName: string, params: TeamLaunchParams): void {
+  try {
+    localStorage.setItem(LAUNCH_PARAMS_PREFIX + teamName, JSON.stringify(params));
+  } catch {
+    // ignore — best-effort persist
+  }
+}
+
+function removeLaunchParams(teamName: string): void {
+  try {
+    localStorage.removeItem(LAUNCH_PARAMS_PREFIX + teamName);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Parse raw model string from TeamLaunchRequest back into base model + extended context flag.
+ * E.g. 'opus[1m]' → { model: 'opus', extendedContext: true }
+ *      'sonnet' → { model: 'sonnet', extendedContext: false }
+ */
+function parseModelString(raw?: string): { model?: string; extendedContext: boolean } {
+  if (!raw) return { extendedContext: false };
+  const match = raw.match(/^(\w+)\[1m\]$/);
+  if (match) return { model: match[1], extendedContext: true };
+  return { model: raw, extendedContext: false };
+}
+
 function loadToolApprovalSettings(): ToolApprovalSettings {
   try {
     const raw = localStorage.getItem('team:toolApprovalSettings');
@@ -469,6 +529,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   activeProvisioningRunId: null,
   provisioningError: null,
   clearProvisioningError: () => set({ provisioningError: null }),
+  launchParamsByTeam: loadAllLaunchParams(),
   fetchMemberSpawnStatuses: async (teamName: string) => {
     if (!api.teams?.getMemberSpawnStatuses) return;
     try {
@@ -1167,6 +1228,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         );
       }
       const response = await unwrapIpc('team:create', () => api.teams.createTeam(request));
+
+      // Persist per-team launch params (model, effort, extended context)
+      const { model: baseModel, extendedContext } = parseModelString(request.model);
+      if (baseModel) {
+        const params: TeamLaunchParams = {
+          model: baseModel,
+          effort: request.effort,
+          extendedContext,
+        };
+        saveLaunchParams(request.teamName, params);
+        set((state) => ({
+          launchParamsByTeam: {
+            ...state.launchParamsByTeam,
+            [request.teamName]: params,
+          },
+        }));
+      }
+
       set({
         activeProvisioningRunId: response.runId,
         provisioningError: null,
@@ -1233,6 +1312,32 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }));
     try {
       const response = await unwrapIpc('team:launch', () => api.teams.launchTeam(request));
+
+      // Persist per-team launch params (model, effort, extended context)
+      const { model: baseModel, extendedContext } = parseModelString(request.model);
+      if (baseModel) {
+        const params: TeamLaunchParams = {
+          model: baseModel,
+          effort: request.effort,
+          extendedContext,
+        };
+        saveLaunchParams(request.teamName, params);
+        set((state) => ({
+          launchParamsByTeam: {
+            ...state.launchParamsByTeam,
+            [request.teamName]: params,
+          },
+        }));
+      } else {
+        // No model selected — clear stored params
+        removeLaunchParams(request.teamName);
+        set((state) => {
+          const updated = { ...state.launchParamsByTeam };
+          delete updated[request.teamName];
+          return { launchParamsByTeam: updated };
+        });
+      }
+
       set({
         activeProvisioningRunId: response.runId,
         provisioningError: null,

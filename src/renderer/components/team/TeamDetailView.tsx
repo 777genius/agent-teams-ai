@@ -249,6 +249,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     restoreTask,
     fetchDeletedTasks,
     deletedTasks,
+    launchParams,
   } = useStore(
     useShallow((s) => ({
       data: s.selectedTeamData,
@@ -295,6 +296,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       restoreTask: s.restoreTask,
       fetchDeletedTasks: s.fetchDeletedTasks,
       deletedTasks: s.deletedTasks,
+      launchParams: teamName ? s.launchParamsByTeam[teamName] : undefined,
     }))
   );
 
@@ -1124,6 +1126,26 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                     Running
                   </span>
                 )}
+                {data.isAlive &&
+                  launchParams?.model &&
+                  (() => {
+                    const MODEL_LABELS: Record<string, string> = {
+                      opus: 'Opus 4.6',
+                      sonnet: 'Sonnet 4.5',
+                      haiku: 'Haiku 4.5',
+                    };
+                    const modelLabel = MODEL_LABELS[launchParams.model] ?? launchParams.model;
+                    const effortLabel = launchParams.effort
+                      ? launchParams.effort.charAt(0).toUpperCase() + launchParams.effort.slice(1)
+                      : '';
+                    const extLabel = launchParams.extendedContext ? '1M' : '';
+                    const parts = [modelLabel, effortLabel, extLabel].filter(Boolean).join(' ');
+                    return (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-text-secondary)]">
+                        {parts}
+                      </span>
+                    );
+                  })()}
                 {!data.isAlive && isTeamProvisioning && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-medium text-yellow-400">
                     <span className="size-1.5 animate-pulse rounded-full bg-yellow-400" />
