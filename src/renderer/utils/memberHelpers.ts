@@ -1,9 +1,11 @@
-import { getMemberColor, MEMBER_COLOR_PALETTE } from '@shared/constants/memberColors';
+import { getMemberColorByName, MEMBER_COLOR_PALETTE } from '@shared/constants/memberColors';
 
 import type {
   LeadActivityState,
+  MemberSpawnStatus,
   MemberStatus,
   ResolvedTeamMember,
+  TeamReviewState,
   TeamTaskStatus,
 } from '@shared/types';
 
@@ -59,6 +61,76 @@ export function getPresenceLabel(
   return member.currentTaskId ? 'working' : 'idle';
 }
 
+/* ------------------------------------------------------------------ */
+/*  Spawn-status-aware helpers for progressive member card appearance  */
+/* ------------------------------------------------------------------ */
+
+export const SPAWN_DOT_COLORS: Record<MemberSpawnStatus, string> = {
+  offline: 'bg-zinc-600',
+  spawning: 'bg-amber-400 animate-pulse',
+  online: 'bg-emerald-400',
+  error: 'bg-red-400',
+};
+
+export const SPAWN_PRESENCE_LABELS: Record<MemberSpawnStatus, string> = {
+  offline: 'offline',
+  spawning: 'spawning',
+  online: 'online',
+  error: 'spawn failed',
+};
+
+/**
+ * Returns dot class for a member during provisioning, respecting spawn status.
+ * Falls back to the existing `getMemberDotClass` when no spawn status is available.
+ */
+export function getSpawnAwareDotClass(
+  member: ResolvedTeamMember,
+  spawnStatus: MemberSpawnStatus | undefined,
+  isTeamAlive?: boolean,
+  isTeamProvisioning?: boolean,
+  leadActivity?: LeadActivityState
+): string {
+  if (spawnStatus && isTeamProvisioning) {
+    return SPAWN_DOT_COLORS[spawnStatus];
+  }
+  return getMemberDotClass(member, isTeamAlive, isTeamProvisioning, leadActivity);
+}
+
+/**
+ * Returns presence label for a member during provisioning, respecting spawn status.
+ */
+export function getSpawnAwarePresenceLabel(
+  member: ResolvedTeamMember,
+  spawnStatus: MemberSpawnStatus | undefined,
+  isTeamAlive?: boolean,
+  isTeamProvisioning?: boolean,
+  leadActivity?: LeadActivityState
+): string {
+  if (spawnStatus && isTeamProvisioning) {
+    return SPAWN_PRESENCE_LABELS[spawnStatus];
+  }
+  return getPresenceLabel(member, isTeamAlive, isTeamProvisioning, leadActivity);
+}
+
+/**
+ * Card container CSS classes based on spawn status (opacity + animation).
+ * Used by MemberCard wrapper for fade-in transitions.
+ */
+export function getSpawnCardClass(spawnStatus: MemberSpawnStatus | undefined): string {
+  switch (spawnStatus) {
+    case 'offline':
+      return 'opacity-40';
+    case 'spawning':
+      return 'opacity-70 animate-[member-spawn-pulse_2s_ease-in-out_infinite]';
+    case 'online':
+      return 'animate-[member-fade-in_0.4s_ease-out]';
+    case 'error':
+      return 'opacity-80';
+    default:
+      return '';
+  }
+}
+
 export const TASK_STATUS_STYLES: Record<TeamTaskStatus, { bg: string; text: string }> = {
   pending: { bg: 'bg-zinc-500/15', text: 'text-zinc-400' },
   in_progress: { bg: 'bg-blue-500/15', text: 'text-blue-400' },
@@ -94,29 +166,31 @@ export function buildMemberColorMap(members: MemberColorInput[]): Map<string, st
   const usedColors = new Set<string>();
 
   const paletteSize = MEMBER_COLOR_PALETTE.length;
-  let nextFallback = 0;
   for (const member of active) {
     let color = member.color;
     if (!color || usedColors.has(color)) {
-      // Search for an unused palette color, but cap iterations to avoid
-      // an infinite loop when there are more members than palette colors.
-      const searchStart = nextFallback;
-      while (usedColors.has(getMemberColor(nextFallback))) {
-        nextFallback++;
-        if (nextFallback - searchStart >= paletteSize) {
-          // All palette colors exhausted — reuse by cycling
-          break;
+      // Deterministic fallback: hash the member name to a palette color.
+      // If that color is already taken, linear-probe for the next free one.
+      color = getMemberColorByName(member.name);
+      if (usedColors.has(color)) {
+        const startIdx = MEMBER_COLOR_PALETTE.indexOf(
+          color as (typeof MEMBER_COLOR_PALETTE)[number]
+        );
+        for (let offset = 1; offset < paletteSize; offset++) {
+          const candidate = MEMBER_COLOR_PALETTE[(startIdx + offset) % paletteSize];
+          if (!usedColors.has(candidate)) {
+            color = candidate;
+            break;
+          }
         }
       }
-      color = getMemberColor(nextFallback);
-      nextFallback++;
     }
     map.set(member.name, color);
     usedColors.add(color);
   }
 
   for (let i = 0; i < removed.length; i++) {
-    map.set(removed[i].name, removed[i].color ?? getMemberColor(active.length + i));
+    map.set(removed[i].name, removed[i].color ?? getMemberColorByName(removed[i].name));
   }
 
   map.set('user', 'user');
@@ -129,5 +203,14 @@ export const KANBAN_COLUMN_DISPLAY: Record<
   { label: string; bg: string; text: string }
 > = {
   review: { label: 'In Review', bg: 'bg-amber-500/15', text: 'text-amber-400' },
+  approved: { label: 'Approved', bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
+};
+
+export const REVIEW_STATE_DISPLAY: Record<
+  Exclude<TeamReviewState, 'none'>,
+  { label: string; bg: string; text: string }
+> = {
+  review: { label: 'In Review', bg: 'bg-amber-500/15', text: 'text-amber-400' },
+  needsFix: { label: 'Needs Fixes', bg: 'bg-rose-500/15', text: 'text-rose-400' },
   approved: { label: 'Approved', bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
 };

@@ -12,6 +12,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
+import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { formatDistanceToNow } from 'date-fns';
 import { RotateCcw, Trash2 } from 'lucide-react';
 
@@ -63,7 +64,9 @@ export const TrashDialog = ({
                       key={task.id}
                       className="border-b border-[var(--color-border-subtle)] last:border-0"
                     >
-                      <td className="py-2 pr-3 text-[var(--color-text-muted)]">{task.id}</td>
+                      <td className="py-2 pr-3 text-[var(--color-text-muted)]">
+                        {formatTaskDisplayLabel(task)}
+                      </td>
                       <td className="py-2 pr-3 text-[var(--color-text)]">{task.subject}</td>
                       <td className="py-2 pr-3 text-[var(--color-text-secondary)]">
                         {task.owner ?? 'Unassigned'}

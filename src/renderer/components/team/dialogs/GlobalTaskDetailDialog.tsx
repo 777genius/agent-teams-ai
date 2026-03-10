@@ -65,8 +65,12 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
   ]);
 
   const isFullTeamLoaded = selectedTeamName === teamName && !!selectedTeamData;
+  // Team data is still loading when:
+  // - selectTeam() hasn't updated selectedTeamName yet (team switch pending)
+  // - selectedTeamName matches but IPC fetch is still in flight
   const isThisTeamLoading =
-    selectedTeamName === teamName && selectedTeamLoading && !selectedTeamData;
+    selectedTeamName !== teamName ||
+    (selectedTeamName === teamName && selectedTeamLoading && !selectedTeamData);
 
   const taskMap = useMemo(() => {
     const map = new Map<string, TeamTaskWithKanban>();

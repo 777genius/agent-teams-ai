@@ -25,6 +25,7 @@ import { computeSubagentPhaseBreakdown } from '@renderer/utils/aiGroupHelpers';
 import { formatDuration, formatTokensCompact } from '@renderer/utils/formatters';
 import { getHighlightProps, type TriggerColor } from '@shared/constants/triggerColors';
 import { getModelColorClass, parseModelString } from '@shared/utils/modelParser';
+import { format } from 'date-fns';
 import {
   ArrowUpRight,
   Bot,
@@ -368,6 +369,14 @@ export const SubagentItem: React.FC<SubagentItemProps> = ({
           style={{ color: CARD_ICON_MUTED }}
         >
           {formatDuration(subagent.durationMs)}
+        </span>
+
+        {/* Timestamp — rightmost info element */}
+        <span
+          className="shrink-0 font-mono text-[11px] tabular-nums"
+          style={{ color: CARD_ICON_MUTED }}
+        >
+          {format(subagent.startTime, 'HH:mm:ss')}
         </span>
       </div>
 

@@ -156,8 +156,8 @@ describe('TeamTaskWriter', () => {
     );
   });
 
-  describe('statusHistory', () => {
-    it('createTask records initial statusHistory entry', async () => {
+  describe('historyEvents', () => {
+    it('createTask records initial task_created event', async () => {
       await writer.createTask('my-team', {
         id: '10',
         subject: 'New task',
@@ -167,16 +167,17 @@ describe('TeamTaskWriter', () => {
 
       const writtenPath = '/mock/tasks/my-team/10.json';
       const persisted = JSON.parse(hoisted.files.get(writtenPath) ?? '{}');
-      expect(persisted.statusHistory).toHaveLength(1);
-      expect(persisted.statusHistory[0]).toMatchObject({
-        from: null,
-        to: 'pending',
+      expect(persisted.historyEvents).toHaveLength(1);
+      expect(persisted.historyEvents[0]).toMatchObject({
+        type: 'task_created',
+        status: 'pending',
         actor: 'alice',
       });
-      expect(typeof persisted.statusHistory[0].timestamp).toBe('string');
+      expect(typeof persisted.historyEvents[0].id).toBe('string');
+      expect(typeof persisted.historyEvents[0].timestamp).toBe('string');
     });
 
-    it('createTask with in_progress records initial transition', async () => {
+    it('createTask with in_progress records initial task_created event', async () => {
       await writer.createTask('my-team', {
         id: '11',
         subject: 'Start immediately',
@@ -186,10 +187,10 @@ describe('TeamTaskWriter', () => {
 
       const writtenPath = '/mock/tasks/my-team/11.json';
       const persisted = JSON.parse(hoisted.files.get(writtenPath) ?? '{}');
-      expect(persisted.statusHistory).toHaveLength(1);
-      expect(persisted.statusHistory[0]).toMatchObject({
-        from: null,
-        to: 'in_progress',
+      expect(persisted.historyEvents).toHaveLength(1);
+      expect(persisted.historyEvents[0]).toMatchObject({
+        type: 'task_created',
+        status: 'in_progress',
         actor: 'bob',
       });
     });
@@ -203,19 +204,20 @@ describe('TeamTaskWriter', () => {
 
       const writtenPath = '/mock/tasks/my-team/13.json';
       const persisted = JSON.parse(hoisted.files.get(writtenPath) ?? '{}');
-      expect(persisted.statusHistory).toHaveLength(1);
-      expect(persisted.statusHistory[0].actor).toBeUndefined();
+      expect(persisted.historyEvents).toHaveLength(1);
+      expect(persisted.historyEvents[0].type).toBe('task_created');
+      expect(persisted.historyEvents[0].actor).toBeUndefined();
     });
 
-    it('updateStatus appends transition to statusHistory', async () => {
+    it('updateStatus appends status_changed event', async () => {
       hoisted.files.set(
         taskPath,
         JSON.stringify({
           id: '12',
           subject: 'task',
           status: 'pending',
-          statusHistory: [
-            { from: null, to: 'pending', timestamp: '2024-01-01T00:00:00.000Z', actor: 'user' },
+          historyEvents: [
+            { type: 'task_created', id: 'ev1', status: 'pending', timestamp: '2024-01-01T00:00:00.000Z', actor: 'user' },
           ],
         })
       );
@@ -223,15 +225,16 @@ describe('TeamTaskWriter', () => {
       await writer.updateStatus('my-team', '12', 'in_progress', 'alice');
 
       const persisted = JSON.parse(hoisted.files.get(taskPath) ?? '{}');
-      expect(persisted.statusHistory).toHaveLength(2);
-      expect(persisted.statusHistory[1]).toMatchObject({
+      expect(persisted.historyEvents).toHaveLength(2);
+      expect(persisted.historyEvents[1]).toMatchObject({
+        type: 'status_changed',
         from: 'pending',
         to: 'in_progress',
         actor: 'alice',
       });
     });
 
-    it('updateStatus works on legacy task without statusHistory', async () => {
+    it('updateStatus works on task without historyEvents', async () => {
       hoisted.files.set(
         taskPath,
         JSON.stringify({
@@ -244,24 +247,25 @@ describe('TeamTaskWriter', () => {
       await writer.updateStatus('my-team', '12', 'in_progress');
 
       const persisted = JSON.parse(hoisted.files.get(taskPath) ?? '{}');
-      expect(persisted.statusHistory).toHaveLength(1);
-      expect(persisted.statusHistory[0]).toMatchObject({
+      expect(persisted.historyEvents).toHaveLength(1);
+      expect(persisted.historyEvents[0]).toMatchObject({
+        type: 'status_changed',
         from: 'pending',
         to: 'in_progress',
       });
-      expect(persisted.statusHistory[0].actor).toBeUndefined();
+      expect(persisted.historyEvents[0].actor).toBeUndefined();
     });
 
-    it('softDelete appends deleted transition', async () => {
+    it('softDelete appends status_changed to deleted', async () => {
       hoisted.files.set(
         taskPath,
         JSON.stringify({
           id: '12',
           subject: 'task',
           status: 'in_progress',
-          statusHistory: [
-            { from: null, to: 'pending', timestamp: '2024-01-01T00:00:00.000Z' },
-            { from: 'pending', to: 'in_progress', timestamp: '2024-01-01T00:01:00.000Z' },
+          historyEvents: [
+            { type: 'task_created', id: 'ev1', status: 'pending', timestamp: '2024-01-01T00:00:00.000Z' },
+            { type: 'status_changed', id: 'ev2', from: 'pending', to: 'in_progress', timestamp: '2024-01-01T00:01:00.000Z' },
           ],
         })
       );
@@ -269,15 +273,16 @@ describe('TeamTaskWriter', () => {
       await writer.softDelete('my-team', '12', 'user');
 
       const persisted = JSON.parse(hoisted.files.get(taskPath) ?? '{}');
-      expect(persisted.statusHistory).toHaveLength(3);
-      expect(persisted.statusHistory[2]).toMatchObject({
+      expect(persisted.historyEvents).toHaveLength(3);
+      expect(persisted.historyEvents[2]).toMatchObject({
+        type: 'status_changed',
         from: 'in_progress',
         to: 'deleted',
         actor: 'user',
       });
     });
 
-    it('restoreTask appends pending transition', async () => {
+    it('restoreTask appends status_changed to pending', async () => {
       hoisted.files.set(
         taskPath,
         JSON.stringify({
@@ -285,9 +290,9 @@ describe('TeamTaskWriter', () => {
           subject: 'task',
           status: 'deleted',
           deletedAt: '2024-01-01T00:02:00.000Z',
-          statusHistory: [
-            { from: null, to: 'pending', timestamp: '2024-01-01T00:00:00.000Z' },
-            { from: 'pending', to: 'deleted', timestamp: '2024-01-01T00:02:00.000Z' },
+          historyEvents: [
+            { type: 'task_created', id: 'ev1', status: 'pending', timestamp: '2024-01-01T00:00:00.000Z' },
+            { type: 'status_changed', id: 'ev2', from: 'pending', to: 'deleted', timestamp: '2024-01-01T00:02:00.000Z' },
           ],
         })
       );
@@ -296,8 +301,9 @@ describe('TeamTaskWriter', () => {
 
       const persisted = JSON.parse(hoisted.files.get(taskPath) ?? '{}');
       expect(persisted.status).toBe('pending');
-      expect(persisted.statusHistory).toHaveLength(3);
-      expect(persisted.statusHistory[2]).toMatchObject({
+      expect(persisted.historyEvents).toHaveLength(3);
+      expect(persisted.historyEvents[2]).toMatchObject({
+        type: 'status_changed',
         from: 'deleted',
         to: 'pending',
         actor: 'user',
@@ -318,8 +324,9 @@ describe('TeamTaskWriter', () => {
       await writer.restoreTask('my-team', '12');
 
       const persisted = JSON.parse(hoisted.files.get(taskPath) ?? '{}');
-      expect(persisted.statusHistory).toHaveLength(1);
-      expect(persisted.statusHistory[0]).toMatchObject({
+      expect(persisted.historyEvents).toHaveLength(1);
+      expect(persisted.historyEvents[0]).toMatchObject({
+        type: 'status_changed',
         from: 'deleted',
         to: 'pending',
         actor: 'user',

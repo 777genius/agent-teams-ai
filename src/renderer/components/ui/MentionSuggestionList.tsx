@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react';
 
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { Loader2 } from 'lucide-react';
+import { nameColorSet } from '@renderer/utils/projectColor';
+import { Folder, Loader2, UsersRound } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 
@@ -68,33 +69,55 @@ export const MentionSuggestionList = ({
   if (suggestions.length === 0) {
     return (
       <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
-        {hasFileSearch ? 'No matching members or files' : 'No matching members'}
+        {hasFileSearch ? 'No matching members, teams, or files' : 'No matching members'}
       </div>
     );
   }
 
-  // Determine if we need grouped sections
-  const hasMemberItems = suggestions.some((s) => s.type !== 'file');
-  const hasFileItems = suggestions.some((s) => s.type === 'file');
-  const showSections = hasMemberItems && hasFileItems;
+  // Categorize suggestions (folders are grouped with files)
+  type Section = 'member' | 'team' | 'file';
+  const getSuggestionSection = (s: MentionSuggestion): Section => {
+    if (s.type === 'file' || s.type === 'folder') return 'file';
+    if (s.type === 'team') return 'team';
+    return 'member';
+  };
+
+  const sectionLabel: Record<Section, string> = {
+    member: 'Members',
+    team: 'Teams',
+    file: 'Files',
+  };
+
+  // Determine which sections are present
+  const presentSections = new Set(suggestions.map(getSuggestionSection));
+  const showSections = presentSections.size > 1;
 
   // Build items with section headers inserted
   const items: React.JSX.Element[] = [];
-  let currentSection: 'member' | 'file' | null = null;
+  let currentSection: Section | null = null;
   let optionIndex = 0;
 
   for (const s of suggestions) {
+    const section = getSuggestionSection(s);
     const isFile = s.type === 'file';
-    const section = isFile ? 'file' : 'member';
+    const isFolder = s.type === 'folder';
+    const isFileOrFolder = isFile || isFolder;
+    const isTeam = section === 'team';
 
     // Insert section header on transition
     if (showSections && section !== currentSection) {
-      items.push(<SectionHeader key={`section-${section}`} label={isFile ? 'Files' : 'Members'} />);
+      items.push(<SectionHeader key={`section-${section}`} label={sectionLabel[section]} />);
       currentSection = section;
     }
 
     const isSelected = optionIndex === selectedIndex;
-    const colorSet = !isFile && s.color ? getTeamColorSet(s.color) : null;
+    const colorSet = isFileOrFolder
+      ? null
+      : s.color
+        ? getTeamColorSet(s.color)
+        : isTeam
+          ? nameColorSet(s.name)
+          : null;
     const idx = optionIndex;
     optionIndex++;
 
@@ -114,8 +137,16 @@ export const MentionSuggestionList = ({
           onSelect(s);
         }}
       >
-        {isFile ? (
+        {isFolder ? (
+          <Folder size={14} className="shrink-0 text-[var(--color-text-muted)]" />
+        ) : isFile ? (
           <FileIcon fileName={s.name} className="size-3.5" />
+        ) : isTeam ? (
+          <UsersRound
+            size={13}
+            className="shrink-0"
+            style={{ color: colorSet?.text ?? 'var(--color-text-muted)' }}
+          />
         ) : (
           <span
             className="inline-block size-2.5 shrink-0 rounded-full"
@@ -123,11 +154,18 @@ export const MentionSuggestionList = ({
           />
         )}
         <span
-          className={isFile ? 'truncate' : 'font-medium'}
+          className={isFileOrFolder ? 'truncate' : 'font-medium'}
           style={colorSet ? { color: colorSet.text } : undefined}
         >
           <HighlightedName name={s.name} query={query} />
         </span>
+        {isTeam && s.isOnline !== undefined ? (
+          <span
+            className="inline-block size-1.5 shrink-0 rounded-full"
+            style={{ backgroundColor: s.isOnline ? '#22c55e' : '#71717a' }}
+            title={s.isOnline ? 'Online' : 'Offline'}
+          />
+        ) : null}
         {s.subtitle ? (
           <span className="truncate text-[var(--color-text-muted)]">{s.subtitle}</span>
         ) : null}

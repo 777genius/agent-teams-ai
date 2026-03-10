@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
+import { ActionModeSelector } from '@renderer/components/team/messages/ActionModeSelector';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { useAttachments } from '@renderer/hooks/useAttachments';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useStore } from '@renderer/store';
 import { chipToken, serializeChipsWithText } from '@renderer/types/inlineChip';
 import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
@@ -28,6 +30,7 @@ import { AlertCircle, ImagePlus, Send, X } from 'lucide-react';
 
 import { MemberBadge } from '../MemberBadge';
 
+import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { AttachmentPayload, ResolvedTeamMember, SendMessageResult } from '@shared/types';
@@ -55,10 +58,14 @@ interface SendMessageDialogProps {
     member: string,
     text: string,
     summary?: string,
-    attachments?: AttachmentPayload[]
+    attachments?: AttachmentPayload[],
+    actionMode?: ActionMode
   ) => void;
   onClose: () => void;
 }
+
+// Sticky action mode — survives dialog close/reopen (component remount)
+let stickyActionMode: ActionMode = 'do';
 
 export const SendMessageDialog = ({
   open,
@@ -88,6 +95,15 @@ export const SendMessageDialog = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounterRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageRestrictionError, setImageRestrictionError] = useState<string | null>(null);
+  const imageRestrictionTimerRef = useRef(0);
+  const [actionMode, setActionModeState] = useState<ActionMode>(stickyActionMode);
+  const actionModeRef = useRef<ActionMode>(stickyActionMode);
+  const setActionMode = useCallback((mode: ActionMode) => {
+    actionModeRef.current = mode;
+    stickyActionMode = mode;
+    setActionModeState(mode);
+  }, []);
 
   const {
     attachments,
@@ -102,8 +118,31 @@ export const SendMessageDialog = ({
 
   const selectedMember = members.find((m) => m.name === member);
   const isLeadRecipient = selectedMember?.role === 'lead' || selectedMember?.name === 'team-lead';
+  const hasTeammates = members.length > 1;
+  const canDelegate = hasTeammates && isLeadRecipient;
+  const shouldAutoDelegate = canDelegate;
   const supportsAttachments = isLeadRecipient && !!isTeamAlive;
   const canAttach = supportsAttachments && canAddMore;
+
+  // Auto-switch to delegate when lead recipient is selected, but don't
+  // override user's explicit choice on dialog open.
+  const prevShouldAutoDelegateRef = useRef(shouldAutoDelegate);
+  useEffect(() => {
+    if (!canDelegate && actionMode === 'delegate') {
+      setActionMode('do');
+      return;
+    }
+
+    // Skip the initial mount — honour the sticky mode
+    if (prevShouldAutoDelegateRef.current === shouldAutoDelegate) return;
+    prevShouldAutoDelegateRef.current = shouldAutoDelegate;
+
+    if (shouldAutoDelegate) {
+      setActionMode('delegate');
+    } else {
+      setActionModeState((prev) => (prev === 'delegate' ? 'do' : prev));
+    }
+  }, [actionMode, canDelegate, setActionMode, shouldAutoDelegate]);
 
   const [pendingAutoClose, setPendingAutoClose] = useState(false);
   // Reset form on open transition (avoid setState in render)
@@ -169,6 +208,8 @@ export const SendMessageDialog = ({
     [members, colorMap]
   );
 
+  const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName);
+
   const attachmentsBlocked = attachments.length > 0 && !supportsAttachments;
 
   const trimmedText = textDraft.value.trim();
@@ -193,7 +234,13 @@ export const SendMessageDialog = ({
 
   const handleSubmit = (): void => {
     if (!canSend) return;
-    onSend(member.trim(), finalText, trimmedText, attachments.length > 0 ? attachments : undefined);
+    onSend(
+      member.trim(),
+      finalText,
+      trimmedText,
+      attachments.length > 0 ? attachments : undefined,
+      actionMode
+    );
     textDraft.clearDraft();
     chipDraft.clearChipDraft();
     clearAttachments();
@@ -216,6 +263,20 @@ export const SendMessageDialog = ({
     [addFiles]
   );
 
+  const showImageRestrictionError = useCallback(() => {
+    setImageRestrictionError('Images can only be sent to the team lead');
+    window.clearTimeout(imageRestrictionTimerRef.current);
+    imageRestrictionTimerRef.current = window.setTimeout(() => {
+      setImageRestrictionError(null);
+    }, 4000);
+  }, []);
+
+  // Cleanup restriction error timer on unmount
+  useEffect(() => {
+    const ref = imageRestrictionTimerRef;
+    return () => window.clearTimeout(ref.current);
+  }, []);
+
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     dragCounterRef.current += 1;
@@ -237,31 +298,52 @@ export const SendMessageDialog = ({
 
   const handleDropWrapper = useCallback(
     (e: React.DragEvent) => {
+      e.preventDefault();
       dragCounterRef.current = 0;
       setIsDragOver(false);
+      if (!isLeadRecipient) {
+        const files = e.dataTransfer?.files;
+        if (files?.length) {
+          const hasImages = Array.from(files).some((f) => f.type.startsWith('image/'));
+          if (hasImages) {
+            showImageRestrictionError();
+          }
+        }
+        return;
+      }
       if (canAttach) handleDrop(e);
     },
-    [canAttach, handleDrop]
+    [isLeadRecipient, canAttach, handleDrop, showImageRestrictionError]
   );
 
   const handlePasteWrapper = useCallback(
     (e: React.ClipboardEvent) => {
+      if (!isLeadRecipient) {
+        const hasImages = Array.from(e.clipboardData.items).some((item) =>
+          item.type.startsWith('image/')
+        );
+        if (hasImages) {
+          e.preventDefault();
+          showImageRestrictionError();
+        }
+        return;
+      }
       if (canAttach) handlePaste(e);
     },
-    [canAttach, handlePaste]
+    [isLeadRecipient, canAttach, handlePaste, showImageRestrictionError]
   );
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="min-w-0 max-w-3xl"
-        onDragEnter={canAttach ? handleDragEnter : undefined}
-        onDragLeave={canAttach ? handleDragLeave : undefined}
-        onDragOver={canAttach ? handleDragOver : undefined}
-        onDrop={canAttach ? handleDropWrapper : undefined}
-        onPaste={canAttach ? handlePasteWrapper : undefined}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDropWrapper}
+        onPaste={handlePasteWrapper}
       >
-        <DropZoneOverlay active={isDragOver && !!canAttach} />
+        <DropZoneOverlay active={isDragOver} rejected={!isLeadRecipient} />
 
         <DialogHeader>
           <DialogTitle>Send Message</DialogTitle>
@@ -323,7 +405,7 @@ export const SendMessageDialog = ({
             <AttachmentPreviewList
               attachments={attachments}
               onRemove={removeAttachment}
-              error={attachmentError}
+              error={attachmentError ?? imageRestrictionError}
               disabled={attachmentsBlocked}
               disabledHint="Image attachments are only supported when sending to the team lead while the team is online. Remove attachments or switch recipient."
             />
@@ -382,6 +464,7 @@ export const SendMessageDialog = ({
                 value={textDraft.value}
                 onValueChange={textDraft.setValue}
                 suggestions={mentionSuggestions}
+                teamSuggestions={teamMentionSuggestions}
                 chips={chipDraft.chips}
                 onChipRemove={handleChipRemove}
                 projectPath={projectPath}
@@ -391,6 +474,13 @@ export const SendMessageDialog = ({
                 maxRows={12}
                 maxLength={MAX_TEXT_LENGTH}
                 disabled={sending}
+                cornerActionLeft={
+                  <ActionModeSelector
+                    value={actionMode}
+                    onChange={setActionMode}
+                    showDelegate={canDelegate}
+                  />
+                }
                 cornerAction={
                   <button
                     type="button"

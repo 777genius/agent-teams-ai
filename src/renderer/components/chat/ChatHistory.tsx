@@ -16,7 +16,11 @@ const SCROLL_THRESHOLD = 300;
 /** Must match the `w-80` (320px) context panel width used in the layout below. */
 const CONTEXT_PANEL_WIDTH_PX = 320;
 
-import { formatPercentOfTotal, sumContextInjectionTokens } from '@renderer/utils/contextMath';
+import {
+  computeRemainingContext,
+  formatPercentOfTotal,
+  sumContextInjectionTokens,
+} from '@renderer/utils/contextMath';
 
 import { ChatHistoryEmptyState } from './ChatHistoryEmptyState';
 import { ChatHistoryItem } from './ChatHistoryItem';
@@ -168,7 +172,8 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     const stats = sessionContextStats.get(targetAiGroupId);
     const injections = stats?.accumulatedInjections ?? [];
 
-    // Get total tokens from the target AI group
+    // Get total INPUT tokens from the target AI group (excluding output tokens,
+    // since visible context is part of input only)
     let totalTokens: number | undefined;
     const targetItem = conversation.items.find(
       (item) => item.type === 'ai' && item.group.id === targetAiGroupId
@@ -181,7 +186,6 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
           const usage = msg.usage;
           totalTokens =
             (usage.input_tokens ?? 0) +
-            (usage.output_tokens ?? 0) +
             (usage.cache_read_input_tokens ?? 0) +
             (usage.cache_creation_input_tokens ?? 0);
           break;
@@ -196,6 +200,11 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     const visibleTokens = sumContextInjectionTokens(allContextInjections);
     return formatPercentOfTotal(visibleTokens, lastAiGroupTotalTokens);
   }, [allContextInjections, lastAiGroupTotalTokens]);
+
+  const remainingContext = useMemo(
+    () => computeRemainingContext(lastAiGroupTotalTokens),
+    [lastAiGroupTotalTokens]
+  );
 
   // State for navigation highlight (blue, used for Turn navigation from CLAUDE.md panel)
   const [isNavigationHighlight, setIsNavigationHighlight] = useState(false);
@@ -233,6 +242,7 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
 
   // --- New-item animation tracking ---
   const knownGroupIdsRef = useRef<Set<string>>(new Set());
+  const animatedGroupIdsRef = useRef<Set<string>>(new Set());
   const isInitialRenderRef = useRef(true);
   const prevTabIdRef = useRef(effectiveTabId);
 
@@ -240,6 +250,7 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
   if (prevTabIdRef.current !== effectiveTabId) {
     prevTabIdRef.current = effectiveTabId;
     knownGroupIdsRef.current.clear();
+    animatedGroupIdsRef.current.clear();
     isInitialRenderRef.current = true;
   }
 
@@ -247,6 +258,7 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     const items = conversation?.items;
     if (!items || items.length === 0) {
       knownGroupIdsRef.current.clear();
+      animatedGroupIdsRef.current.clear();
       isInitialRenderRef.current = true;
       return new Set<string>();
     }
@@ -270,6 +282,18 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
     }
     return newIds;
   }, [conversation]);
+
+  // Expire animation flags after the CSS animation completes (350ms + buffer).
+  // This prevents replay when the virtualizer remounts off-screen elements.
+  useEffect(() => {
+    if (newGroupIds.size === 0) return;
+    const timer = setTimeout(() => {
+      for (const id of newGroupIds) {
+        animatedGroupIdsRef.current.add(id);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [newGroupIds]);
 
   const rowVirtualizer = useVirtualizer({
     count: shouldVirtualize ? (conversation?.items.length ?? 0) : 0,
@@ -835,7 +859,23 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
                     : 'var(--color-text-secondary)',
                 }}
               >
-                {visibleContextPercentLabel ?? `Context (${allContextInjections.length})`}
+                {visibleContextPercentLabel ? (
+                  <>
+                    {visibleContextPercentLabel}
+                    {remainingContext && remainingContext.urgency !== 'normal' && (
+                      <span
+                        style={{
+                          color: remainingContext.urgency === 'critical' ? '#ef4444' : '#f59e0b',
+                        }}
+                      >
+                        {' '}
+                        ({remainingContext.remainingPct.toFixed(0)}% left)
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  `Context (${allContextInjections.length})`
+                )}
               </button>
             </div>
           )}
@@ -896,7 +936,10 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
                           isSearchHighlight={isSearchHighlight}
                           isNavigationHighlight={isNavigationHighlight}
                           highlightColor={effectiveHighlightColor}
-                          isNew={newGroupIds.has(item.group.id)}
+                          isNew={
+                            newGroupIds.has(item.group.id) &&
+                            !animatedGroupIdsRef.current.has(item.group.id)
+                          }
                           registerChatItemRef={registerChatItemRef}
                           registerAIGroupRef={registerAIGroupRefCombined}
                           registerToolRef={registerToolRef}
@@ -915,7 +958,10 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
                     isSearchHighlight={isSearchHighlight}
                     isNavigationHighlight={isNavigationHighlight}
                     highlightColor={effectiveHighlightColor}
-                    isNew={newGroupIds.has(item.group.id)}
+                    isNew={
+                      newGroupIds.has(item.group.id) &&
+                      !animatedGroupIdsRef.current.has(item.group.id)
+                    }
                     registerChatItemRef={registerChatItemRef}
                     registerAIGroupRef={registerAIGroupRefCombined}
                     registerToolRef={registerToolRef}

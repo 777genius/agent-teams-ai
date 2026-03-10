@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
 
-import type { InboxMessage, TeamConfig, TeamTask } from '../../../../src/shared/types/team';
+import type {
+  InboxMessage,
+  TeamConfig,
+  TeamTask,
+  TeamTaskWithKanban,
+} from '../../../../src/shared/types/team';
 
 describe('TeamMemberResolver', () => {
   it('builds roster from config + meta + inbox only', () => {
@@ -64,5 +69,194 @@ describe('TeamMemberResolver', () => {
     expect(names).not.toContain('user');
     expect(names).toContain('team-lead');
     expect(names).toContain('alice');
+  });
+
+  it('ignores qualified external inbox names unless explicitly configured', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'team-lead', agentType: 'team-lead', role: 'lead' }],
+    };
+    const metaMembers: TeamConfig['members'] = [{ name: 'alice', agentType: 'general-purpose' }];
+    const inboxNames = ['alice', 'team-best.user', 'dream-team.team-lead'];
+    const tasks: TeamTask[] = [];
+    const messages: InboxMessage[] = [];
+
+    const members = resolver.resolveMembers(config, metaMembers, inboxNames, tasks, messages);
+    const names = members.map((m) => m.name);
+
+    expect(names).toContain('alice');
+    expect(names).toContain('team-lead');
+    expect(names).not.toContain('team-best.user');
+    expect(names).not.toContain('dream-team.team-lead');
+  });
+
+  it('keeps dotted names when they are explicitly configured members', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [
+        { name: 'team-lead', agentType: 'team-lead', role: 'lead' },
+        { name: 'ops.bot', agentType: 'general-purpose' },
+      ],
+    };
+
+    const members = resolver.resolveMembers(config, [], ['ops.bot'], [], []);
+    const names = members.map((m) => m.name);
+
+    expect(names).toContain('ops.bot');
+  });
+
+  it('ignores pseudo cross-team inbox names', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'team-lead', agentType: 'team-lead', role: 'lead' }],
+    };
+
+    const members = resolver.resolveMembers(
+      config,
+      [],
+      ['cross-team:team-alpha-super', 'cross-team-team-alpha-super', 'alice'],
+      [],
+      []
+    );
+    const names = members.map((m) => m.name);
+
+    expect(names).toContain('alice');
+    expect(names).toContain('team-lead');
+    expect(names).not.toContain('cross-team:team-alpha-super');
+    expect(names).not.toContain('cross-team-team-alpha-super');
+  });
+
+  it('ignores tool-like cross-team inbox names', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'team-lead', agentType: 'team-lead', role: 'lead' }],
+    };
+
+    const members = resolver.resolveMembers(
+      config,
+      [],
+      ['cross_team_send', 'cross_team_list_targets', 'alice'],
+      [],
+      []
+    );
+    const names = members.map((m) => m.name);
+
+    expect(names).toContain('alice');
+    expect(names).toContain('team-lead');
+    expect(names).not.toContain('cross_team_send');
+    expect(names).not.toContain('cross_team_list_targets');
+  });
+
+  it('ignores malformed underscore-style pseudo cross-team inbox names', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'team-lead', agentType: 'team-lead', role: 'lead' }],
+    };
+
+    const members = resolver.resolveMembers(
+      config,
+      [],
+      ['cross_team::team-alpha-super', 'cross_team--team-alpha-super', 'alice'],
+      [],
+      []
+    );
+    const names = members.map((m) => m.name);
+
+    expect(names).toContain('alice');
+    expect(names).toContain('team-lead');
+    expect(names).not.toContain('cross_team::team-alpha-super');
+    expect(names).not.toContain('cross_team--team-alpha-super');
+  });
+
+  it('keeps dotted names when config casing differs from inbox casing', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [
+        { name: 'team-lead', agentType: 'team-lead', role: 'lead' },
+        { name: 'Ops.Bot', agentType: 'general-purpose' },
+      ],
+    };
+
+    const members = resolver.resolveMembers(config, [], ['ops.bot'], [], []);
+    const names = members.map((m) => m.name);
+
+    expect(names).toContain('Ops.Bot');
+    expect(names).not.toContain('ops.bot');
+  });
+
+  it('sets currentTaskId for in_progress task', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'bob', agentType: 'general-purpose' }],
+    };
+    const tasks: TeamTaskWithKanban[] = [
+      { id: 't1', subject: 'Work', status: 'in_progress', owner: 'bob' },
+    ];
+    const members = resolver.resolveMembers(config, [], [], tasks, []);
+    const bob = members.find((m) => m.name === 'bob');
+    expect(bob?.currentTaskId).toBe('t1');
+  });
+
+  it('clears currentTaskId when task is approved via kanbanColumn', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'bob', agentType: 'general-purpose' }],
+    };
+    const tasks: TeamTaskWithKanban[] = [
+      {
+        id: 't1',
+        subject: 'Work',
+        status: 'in_progress',
+        owner: 'bob',
+        reviewState: 'approved',
+        kanbanColumn: 'approved',
+      },
+    ];
+    const members = resolver.resolveMembers(config, [], [], tasks, []);
+    const bob = members.find((m) => m.name === 'bob');
+    expect(bob?.currentTaskId).toBeNull();
+  });
+
+  it('clears currentTaskId when task reviewState is approved even without kanbanColumn', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'bob', agentType: 'general-purpose' }],
+    };
+    const tasks: TeamTaskWithKanban[] = [
+      {
+        id: 't1',
+        subject: 'Work',
+        status: 'in_progress',
+        owner: 'bob',
+        reviewState: 'approved',
+        // kanbanColumn not set — stale data scenario
+      },
+    ];
+    const members = resolver.resolveMembers(config, [], [], tasks, []);
+    const bob = members.find((m) => m.name === 'bob');
+    expect(bob?.currentTaskId).toBeNull();
+  });
+
+  it('clears currentTaskId when task status is completed', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'bob', agentType: 'general-purpose' }],
+    };
+    const tasks: TeamTaskWithKanban[] = [
+      { id: 't1', subject: 'Work', status: 'completed', owner: 'bob' },
+    ];
+    const members = resolver.resolveMembers(config, [], [], tasks, []);
+    const bob = members.find((m) => m.name === 'bob');
+    expect(bob?.currentTaskId).toBeNull();
   });
 });

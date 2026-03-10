@@ -16,12 +16,19 @@
 // On Windows this saturates all threads, blocking the event loop.
 process.env.UV_THREADPOOL_SIZE ??= '16';
 
+import { CrossTeamService } from '@main/services/team/CrossTeamService';
+import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import { FileContentResolver } from '@main/services/team/FileContentResolver';
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
+import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
+import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
+import { SchedulerService } from '@main/services/schedule/SchedulerService';
 import {
   CONTEXT_CHANGED,
+  SCHEDULE_CHANGE,
   SSH_STATUS,
   TEAM_CHANGE,
   TEAM_TOOL_APPROVAL_EVENT,
@@ -60,12 +67,23 @@ import {
   ServiceContextRegistry,
   SshConnectionManager,
   TaskBoundaryParser,
-  TeamAgentToolsInstaller,
   TeamDataService,
   TeamMemberLogsFinder,
   TeamProvisioningService,
   UpdaterService,
 } from './services';
+import {
+  ApiKeyService,
+  ExtensionFacadeService,
+  GlamaMcpEnrichmentService,
+  McpCatalogAggregator,
+  McpInstallationStateService,
+  McpInstallService,
+  OfficialMcpRegistryService,
+  PluginCatalogService,
+  PluginInstallationStateService,
+  PluginInstallService,
+} from './services/extensions';
 
 import type { FileChangeEvent } from '@main/types';
 import type { TeamChangeEvent } from '@shared/types';
@@ -267,6 +285,7 @@ async function notifyNewSentMessages(teamName: string): Promise<void> {
 
     for (let i = 0; i < newMessages.length; i++) {
       const msg = newMessages[i];
+      if ((msg.to ?? '').trim() !== 'user') continue;
       // Skip messages sent from our own UI
       if (msg.source && suppressedSources.has(msg.source)) continue;
       // Skip internal coordination noise
@@ -318,6 +337,7 @@ let teamProvisioningService: TeamProvisioningService;
 let cliInstallerService: CliInstallerService;
 let ptyTerminalService: PtyTerminalService;
 let httpServer: HttpServer;
+let schedulerService: SchedulerService;
 
 // File watcher event cleanup functions
 let fileChangeCleanup: (() => void) | null = null;
@@ -431,17 +451,31 @@ function wireFileWatcherEvents(context: ServiceContext): void {
 
       // --- Inbox change events: relay to lead + native OS notifications ---
       if (row.type === 'inbox') {
-        // Auto-relay ONLY lead-inbox changes into the live lead process.
-        // (Relaying on *any* inbox change causes the lead to process irrelevant status noise.)
+        if (teamDataService) {
+          void teamDataService
+            .reconcileTeamArtifacts(teamName)
+            .catch((e: unknown) =>
+              logger.warn(`[FileWatcher] reconcile failed for ${teamName}: ${String(e)}`)
+            );
+        }
+
+        // Relay inbox changes into active runtime recipients.
         if (teamProvisioningService.isTeamAlive(teamName) && detail.startsWith('inboxes/')) {
           const match = /^inboxes\/(.+)\.json$/.exec(detail);
           if (match && teamDataService) {
             const inboxName = match[1];
+
+            // Mark member as online when their first inbox message arrives (spawn tracking).
+            teamProvisioningService.markMemberOnlineFromInbox(teamName, inboxName);
+
             void teamDataService
               .getLeadMemberName(teamName)
               .then((leadName) => {
-                if (!leadName || inboxName !== leadName) return;
-                return teamProvisioningService.relayLeadInboxMessages(teamName);
+                if (!leadName) return;
+                if (inboxName === leadName) {
+                  return teamProvisioningService.relayLeadInboxMessages(teamName);
+                }
+                return teamProvisioningService.relayMemberInboxMessages(teamName, inboxName);
               })
               .catch((e: unknown) =>
                 logger.warn(`[FileWatcher] relay failed for ${teamName}: ${String(e)}`)
@@ -480,6 +514,12 @@ function wireFileWatcherEvents(context: ServiceContext): void {
 
       // --- Task change events: notify lead when teammate starts a task via CLI ---
       if (row.type === 'task' && detail.endsWith('.json') && teamDataService) {
+        void teamDataService
+          .reconcileTeamArtifacts(teamName)
+          .catch((e: unknown) =>
+            logger.warn(`[FileWatcher] task reconcile failed for ${teamName}: ${String(e)}`)
+          );
+
         const taskId = detail.replace('.json', '');
         void teamDataService
           .notifyLeadOnTeammateTaskStart(teamName, taskId)
@@ -631,6 +671,18 @@ function initializeServices(): void {
   ptyTerminalService = new PtyTerminalService();
   teamDataService = new TeamDataService();
   teamProvisioningService = new TeamProvisioningService();
+
+  // Cross-team communication service
+  const crossTeamConfigReader = new TeamConfigReader();
+  const crossTeamInboxWriter = new TeamInboxWriter();
+  const crossTeamService = new CrossTeamService(
+    crossTeamConfigReader,
+    teamDataService,
+    crossTeamInboxWriter,
+    teamProvisioningService
+  );
+  teamProvisioningService.setCrossTeamSender((request) => crossTeamService.send(request));
+
   const teamMemberLogsFinder = new TeamMemberLogsFinder();
   const memberStatsComputer = new MemberStatsComputer(teamMemberLogsFinder);
   const taskBoundaryParser = new TaskBoundaryParser();
@@ -639,6 +691,37 @@ function initializeServices(): void {
   const fileContentResolver = new FileContentResolver(teamMemberLogsFinder, gitDiffFallback);
   const reviewApplier = new ReviewApplierService();
 
+  // Create SchedulerService for cron-based task execution
+  const scheduleRepository = new JsonScheduleRepository();
+  const scheduledTaskExecutor = new ScheduledTaskExecutor();
+  schedulerService = new SchedulerService(
+    scheduleRepository,
+    scheduledTaskExecutor,
+    async (cwd: string) => {
+      const result = await teamProvisioningService.prepareForProvisioning(cwd, {
+        forceFresh: true,
+      });
+      return { ready: result.ready, message: result.message };
+    }
+  );
+  // Extension Store services
+  const pluginCatalogService = new PluginCatalogService();
+  const pluginStateService = new PluginInstallationStateService();
+  const officialMcpRegistry = new OfficialMcpRegistryService();
+  const glamaMcpService = new GlamaMcpEnrichmentService();
+  const mcpAggregator = new McpCatalogAggregator(officialMcpRegistry, glamaMcpService);
+  const mcpStateService = new McpInstallationStateService();
+  const extensionFacadeService = new ExtensionFacadeService(
+    pluginCatalogService,
+    pluginStateService,
+    mcpAggregator,
+    mcpStateService
+  );
+
+  // Install services — pass null for binary (uses PATH lookup via execCli fallback)
+  const pluginInstallService = new PluginInstallService(null, pluginCatalogService);
+  const mcpInstallService = new McpInstallService(null, mcpAggregator);
+  const apiKeyService = new ApiKeyService();
   // warmup() and ensureInstalled() are deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.
   httpServer = new HttpServer();
@@ -651,6 +734,13 @@ function initializeServices(): void {
     httpServer?.broadcast('team-change', event);
   };
   teamProvisioningService.setTeamChangeEmitter(teamChangeEmitter);
+
+  // Allow SchedulerService to push schedule events to renderer
+  schedulerService.setChangeEmitter((event) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(SCHEDULE_CHANGE, event);
+    }
+  });
 
   teamProvisioningService.setToolApprovalEventEmitter((event) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -675,6 +765,7 @@ function initializeServices(): void {
       full: onContextSwitched,
       onClaudeRootPathUpdated: (_claudeRootPath: string | null) => {
         reconfigureLocalContextForClaudeRoot();
+        void schedulerService?.reloadForClaudeRootChange();
       },
     },
     {
@@ -686,7 +777,13 @@ function initializeServices(): void {
     reviewApplier,
     gitDiffFallback,
     cliInstallerService,
-    ptyTerminalService
+    ptyTerminalService,
+    schedulerService,
+    extensionFacadeService,
+    pluginInstallService,
+    mcpInstallService,
+    apiKeyService,
+    crossTeamService
   );
 
   // Forward SSH state changes to renderer and HTTP SSE clients
@@ -793,6 +890,11 @@ function shutdownServices(): void {
   // Stop background polling timers (prevents hanging shutdown).
   if (teamDataService) {
     teamDataService.stopProcessHealthPolling();
+  }
+
+  // Stop scheduled task execution and croner jobs
+  if (schedulerService) {
+    void schedulerService.stop();
   }
 
   // Kill all PTY processes
@@ -941,8 +1043,8 @@ function createWindow(): void {
       // The window is now visible and responsive; these run in the background.
       setTimeout(() => {
         void teamProvisioningService.warmup();
-        void new TeamAgentToolsInstaller().ensureInstalled();
         teamDataService.startProcessHealthPolling();
+        void schedulerService?.start();
       }, 5000);
     }
   });

@@ -58,17 +58,33 @@ const MAX_PREVIEW_LINES = 12;
 const ChipFilePreview = ({
   chip,
   onOpenInEditor,
+  onRevealFolder,
 }: {
   chip: InlineChip;
   onOpenInEditor?: (filePath: string) => void;
+  onRevealFolder?: (folderPath: string) => void;
 }): React.JSX.Element => {
   const displayPath = chip.displayPath ?? chip.filePath;
+  const isFolder = chip.isFolder === true;
   return (
     <div className="max-w-md overflow-hidden rounded-md">
       <div className="flex items-center gap-2 bg-[var(--code-bg,#1e1e2e)] px-2.5 py-2">
         <span className="text-[11px] font-medium text-[var(--color-text)]">{chip.fileName}</span>
         <span className="flex-1 text-[10px] text-[var(--color-text-muted)]">{displayPath}</span>
-        {onOpenInEditor ? (
+        {isFolder && onRevealFolder ? (
+          <button
+            type="button"
+            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRevealFolder(chip.filePath);
+            }}
+          >
+            <ExternalLink size={10} />
+            Reveal
+          </button>
+        ) : !isFolder && onOpenInEditor ? (
           <button
             type="button"
             className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
@@ -161,6 +177,7 @@ export const ChipInteractionLayer = ({
 }: ChipInteractionLayerProps): React.JSX.Element | null => {
   const [positions, setPositions] = React.useState<ChipPosition[]>([]);
   const revealFileInEditor = useStore((s) => s.revealFileInEditor);
+  const revealFolderInEditor = useStore((s) => s.revealFolderInEditor);
 
   React.useLayoutEffect(() => {
     if (chips.length === 0) {
@@ -179,6 +196,7 @@ export const ChipInteractionLayer = ({
       <div style={{ transform: `translateY(-${scrollTop}px)` }}>
         {positions.map((pos) => {
           const isFileChip = pos.chip.fromLine == null;
+          const isFolderChip = pos.chip.isFolder === true;
           return (
             <Tooltip key={pos.chip.id}>
               <TooltipTrigger asChild>
@@ -195,7 +213,11 @@ export const ChipInteractionLayer = ({
                       ? (e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          revealFileInEditor(pos.chip.filePath);
+                          if (isFolderChip) {
+                            revealFolderInEditor(pos.chip.filePath);
+                          } else {
+                            revealFileInEditor(pos.chip.filePath);
+                          }
                         }
                       : undefined
                   }
@@ -215,7 +237,11 @@ export const ChipInteractionLayer = ({
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-md p-0">
                 {isFileChip ? (
-                  <ChipFilePreview chip={pos.chip} onOpenInEditor={revealFileInEditor} />
+                  <ChipFilePreview
+                    chip={pos.chip}
+                    onOpenInEditor={revealFileInEditor}
+                    onRevealFolder={revealFolderInEditor}
+                  />
                 ) : (
                   <ChipCodePreview chip={pos.chip} />
                 )}

@@ -96,8 +96,8 @@ From `MarkdownViewer.tsx` (lines 561-571):
 
 ### Identified scenarios
 
-1. **Task descriptions from CLI tooling (teamctl.js / Claude agents)**
-   Task descriptions are set via `node teamctl.js task create` or `TaskCreate` tool calls. Agents typically write plain text descriptions, not markdown. The description content itself lacks formatting — MarkdownViewer renders it correctly, but there's nothing to format.
+1. **Task descriptions from task tooling / Claude agents**
+   Historically this included `teamctl.js`; the current architecture uses controller/MCP-based task operations. In both cases, agents typically write plain text descriptions, not markdown. The description content itself lacks formatting — MarkdownViewer renders it correctly, but there's nothing to format.
 
 2. **Task comments from agents**
    Same issue — `task comment --text "..."` passes plain text. However, TaskCommentsSection.tsx (line 246) correctly uses `<MarkdownViewer content={displayText} bare />`.
@@ -125,7 +125,7 @@ From `MarkdownViewer.tsx` (lines 561-571):
 The pipeline is correct. All text display surfaces that show long-form content already use MarkdownViewer.
 
 ### Fix 2: If specific content appears unformatted, the fix is upstream
-Ensure that agents/tooling that create tasks or comments use markdown formatting in their text. For example, the `teamctl.js` task create command could document that `--description` supports markdown.
+Ensure that agents/tooling that create tasks or comments use markdown formatting in their text. In the current architecture, this guidance applies to controller/MCP-backed task creation rather than the removed `teamctl.js` CLI.
 
 ### Fix 3 (Optional): ReplyQuoteBlock markdown support
 `ReplyQuoteBlock` renders the reply body. If it currently shows plain text, wrap body content in `<MarkdownViewer bare />` for consistency. (Needs verification — separate from this research scope.)

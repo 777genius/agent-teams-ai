@@ -10,13 +10,6 @@ const logger = createLogger('Service:TeamTaskAttachmentStore');
 const TASK_ATTACHMENTS_DIR = 'task-attachments';
 const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20 MB
 
-const KNOWN_IMAGE_MIME_TYPES: ReadonlySet<string> = new Set<string>([
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-]);
-
 export class TeamTaskAttachmentStore {
   private assertSafePathSegment(label: string, value: string): void {
     if (
@@ -42,7 +35,7 @@ export class TeamTaskAttachmentStore {
 
   private sanitizeStoredFilename(original: string): string {
     const raw = String(original ?? '').trim();
-    const base = raw ? raw.split(/[\\/]/).pop() ?? raw : '';
+    const base = raw ? (raw.split(/[\\/]/).pop() ?? raw) : '';
     const cleaned = base
       .replace(/\0/g, '')
       .replace(/[\r\n\t]/g, ' ')
@@ -65,55 +58,21 @@ export class TeamTaskAttachmentStore {
     return path.join(this.getTaskDir(teamName, taskId), `${attachmentId}--${safeName}`);
   }
 
-  /** Map known MIME types to file extension (legacy storage format). */
-  private mimeToExt(mimeType: string): string {
-    switch (mimeType) {
-      case 'image/png':
-        return '.png';
-      case 'image/jpeg':
-        return '.jpg';
-      case 'image/gif':
-        return '.gif';
-      case 'image/webp':
-        return '.webp';
-      default:
-        return '.bin';
-    }
-  }
-
   private async findAttachmentFilePath(
     teamName: string,
     taskId: string,
     attachmentId: string,
-    mimeType?: string
+    _mimeType?: string
   ): Promise<string | null> {
     const dir = this.getTaskDir(teamName, taskId);
 
-    // 1) Prefer legacy path for known image types (older storage format).
-    if (mimeType && KNOWN_IMAGE_MIME_TYPES.has(mimeType)) {
-      const legacy = path.join(dir, `${attachmentId}${this.mimeToExt(mimeType)}`);
-      try {
-        const stat = await fs.promises.stat(legacy);
-        if (stat.isFile()) return legacy;
-      } catch {
-        // ignore
-      }
-    }
-
-    // 2) New format: "<id>--<filename>"
+    // Canonical format: "<id>--<filename>"
     try {
       const entries = await fs.promises.readdir(dir);
       const prefix = `${attachmentId}--`;
       const matches = entries.filter((e) => e.startsWith(prefix));
       if (matches.length > 0) {
         return path.join(dir, matches[0]);
-      }
-
-      // 3) Fallback: any file starting with "<id>." (covers legacy when mimeType missing/wrong).
-      const dotPrefix = `${attachmentId}.`;
-      const dotMatches = entries.filter((e) => e.startsWith(dotPrefix));
-      if (dotMatches.length > 0) {
-        return path.join(dir, dotMatches[0]);
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;

@@ -127,85 +127,94 @@ export const MessagesFilterPopover = ({
         </TooltipTrigger>
         <TooltipContent side="bottom">Filter messages</TooltipContent>
       </Tooltip>
-      <PopoverContent align="end" className="w-72 p-0">
-        <div className="border-b border-[var(--color-border)] p-3">
-          <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-            From
-          </p>
-          <div className="max-h-40 space-y-1 overflow-y-auto">
-            {fromOptions.length === 0 ? (
-              <p className="text-xs italic text-[var(--color-text-muted)]">No data</p>
-            ) : (
-              fromOptions.map((name) => (
-                // eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox which renders native input internally
-                <label
-                  key={name}
-                  className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
-                >
-                  <Checkbox
-                    checked={draft.from.has(name)}
-                    onCheckedChange={() => toggleFrom(name)}
-                  />
-                  <MemberBadge
-                    name={name}
-                    color={colorMap.get(name)}
-                    size="sm"
-                    hideAvatar={name === 'user'}
-                  />
-                </label>
-              ))
-            )}
+      <PopoverContent align="end" className="flex max-h-[70vh] w-72 flex-col p-0">
+        {/* Scrollable filter sections */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="border-b border-[var(--color-border)] p-3">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+              From
+            </p>
+            <div className="space-y-1">
+              {fromOptions.length === 0 ? (
+                <p className="text-xs italic text-[var(--color-text-muted)]">No data</p>
+              ) : (
+                fromOptions.map((name) => (
+                  // eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox which renders native input internally
+                  <label
+                    key={name}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
+                  >
+                    <Checkbox
+                      checked={draft.from.has(name)}
+                      onCheckedChange={() => toggleFrom(name)}
+                    />
+                    <MemberBadge
+                      name={name}
+                      color={colorMap.get(name)}
+                      size="sm"
+                      hideAvatar={name === 'user'}
+                    />
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
+          <div className="border-b border-[var(--color-border)] p-3">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+              To
+            </p>
+            <div className="space-y-1">
+              {toOptions.length === 0 ? (
+                <p className="text-xs italic text-[var(--color-text-muted)]">No data</p>
+              ) : (
+                toOptions.map((name) => (
+                  // eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox which renders native input internally
+                  <label
+                    key={name}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
+                  >
+                    <Checkbox checked={draft.to.has(name)} onCheckedChange={() => toggleTo(name)} />
+                    <MemberBadge
+                      name={name}
+                      color={colorMap.get(name)}
+                      size="sm"
+                      hideAvatar={name === 'user'}
+                    />
+                  </label>
+                ))
+              )}
+            </div>
           </div>
         </div>
-        <div className="border-b border-[var(--color-border)] p-3">
-          <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-            To
-          </p>
-          <div className="max-h-40 space-y-1 overflow-y-auto">
-            {toOptions.length === 0 ? (
-              <p className="text-xs italic text-[var(--color-text-muted)]">No data</p>
-            ) : (
-              toOptions.map((name) => (
-                // eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox which renders native input internally
-                <label
-                  key={name}
-                  className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]"
-                >
-                  <Checkbox checked={draft.to.has(name)} onCheckedChange={() => toggleTo(name)} />
-                  <MemberBadge
-                    name={name}
-                    color={colorMap.get(name)}
-                    size="sm"
-                    hideAvatar={name === 'user'}
-                  />
-                </label>
-              ))
-            )}
+
+        {/* Fixed bottom section */}
+        <div className="shrink-0 border-t border-[var(--color-border)]">
+          <div className="border-b border-[var(--color-border)] p-3">
+            {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox */}
+            <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
+              <Checkbox
+                checked={draft.showNoise}
+                onCheckedChange={() =>
+                  setDraft((prev) => ({ ...prev, showNoise: !prev.showNoise }))
+                }
+              />
+              <span>Show status updates (idle/shutdown)</span>
+            </label>
           </div>
-        </div>
-        <div className="border-b border-[var(--color-border)] p-3">
-          {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- wraps Radix Checkbox */}
-          <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
-            <Checkbox
-              checked={draft.showNoise}
-              onCheckedChange={() => setDraft((prev) => ({ ...prev, showNoise: !prev.showNoise }))}
-            />
-            <span>Show status updates (idle/shutdown)</span>
-          </label>
-        </div>
-        <div className="flex justify-between gap-2 p-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-            disabled={draftCount === 0 && !draft.showNoise}
-            onClick={handleReset}
-          >
-            Reset
-          </Button>
-          <Button size="sm" className="h-7 px-3 text-[11px]" onClick={handleSave}>
-            Save
-          </Button>
+          <div className="flex justify-between gap-2 p-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              disabled={draftCount === 0 && !draft.showNoise}
+              onClick={handleReset}
+            >
+              Reset
+            </Button>
+            <Button size="sm" className="h-7 px-3 text-[11px]" onClick={handleSave}>
+              Save
+            </Button>
+          </div>
         </div>
       </PopoverContent>
     </Popover>

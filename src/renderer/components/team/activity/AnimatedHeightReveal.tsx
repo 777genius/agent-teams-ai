@@ -38,6 +38,11 @@ export const AnimatedHeightReveal = ({
   const [isExpanded, setIsExpanded] = useState(
     () => !animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
+  // Overflow must stay hidden during the height transition so the grid clip
+  // actually works. Switch to visible only after the animation completes.
+  const [overflowVisible, setOverflowVisible] = useState(
+    () => !animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
 
   const setWrapperRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -66,8 +71,15 @@ export const AnimatedHeightReveal = ({
       });
     });
 
+    // Switch overflow to visible after the height transition finishes
+    // so popovers/tooltips inside can render outside bounds.
+    const overflowTimer = setTimeout(() => {
+      setOverflowVisible(true);
+    }, ENTRY_REVEAL_ANIMATION_MS + 50);
+
     return () => {
       clearPendingAnimation();
+      clearTimeout(overflowTimer);
     };
   }, [clearPendingAnimation, shouldAnimateOnMount, prefersReducedMotion]);
 
@@ -97,7 +109,9 @@ export const AnimatedHeightReveal = ({
         ...style,
       }}
     >
-      <div style={{ minHeight: 0, overflow: 'hidden' }}>{children}</div>
+      <div style={{ minHeight: 0, minWidth: 0, overflow: overflowVisible ? 'visible' : 'hidden' }}>
+        {children}
+      </div>
     </div>
   );
 };

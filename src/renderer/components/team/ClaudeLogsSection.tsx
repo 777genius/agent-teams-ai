@@ -4,7 +4,7 @@ import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
-import { Search, Terminal, X } from 'lucide-react';
+import { Brain, MessageSquare, Search, Terminal, Wrench, X } from 'lucide-react';
 
 import { ClaudeLogsFilterPopover, DEFAULT_CLAUDE_LOGS_FILTER } from './ClaudeLogsFilterPopover';
 import { CliLogsRichView } from './CliLogsRichView';
@@ -31,6 +31,140 @@ function isRecent(updatedAt: string | undefined): boolean {
   return Date.now() - t <= ONLINE_WINDOW_MS;
 }
 
+/**
+ * System JSON subtypes that carry no user-facing value in the logs UI.
+ * These appear at session start before any assistant messages arrive.
+ */
+const SYSTEM_NOISE_SUBTYPES = new Set(['hook_started', 'hook_response', 'init']);
+
+/**
+ * Returns true if the raw JSON string represents a system message
+ * that should be filtered from the logs view.
+ */
+function isSystemNoiseLine(jsonStr: string): boolean {
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (!parsed || typeof parsed !== 'object') return false;
+    const obj = parsed as Record<string, unknown>;
+    if (obj.type !== 'system') return false;
+    // Filter known noise subtypes; if no subtype, still filter generic system lines
+    if (typeof obj.subtype === 'string') {
+      return SYSTEM_NOISE_SUBTYPES.has(obj.subtype);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Info about the most recent log item for the header preview. */
+interface LastLogPreview {
+  type: 'output' | 'thinking' | 'tool';
+  label: string;
+  summary: string;
+}
+
+/**
+ * Extracts the preview of the most recent log item from newest-first lines.
+ * Lightweight: only parses until the first usable assistant message is found.
+ */
+function extractLastLogPreview(linesNewestFirst: string[]): LastLogPreview | null {
+  for (const rawLine of linesNewestFirst) {
+    const line = rawLine?.trim();
+    if (!line) continue;
+    // Skip markers
+    if (line === '[stdout]' || line === '[stderr]') continue;
+
+    // Strip stream prefix
+    let content = line;
+    if (line.startsWith('[stdout] ')) content = line.slice('[stdout] '.length);
+    else if (line.startsWith('[stderr] ')) content = line.slice('[stderr] '.length);
+
+    // Skip system noise
+    if (content.trimStart().startsWith('{') && isSystemNoiseLine(content)) continue;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      continue;
+    }
+
+    if (!parsed || typeof parsed !== 'object') continue;
+    const obj = parsed as Record<string, unknown>;
+    if (obj.type !== 'assistant') continue;
+
+    // Extract content blocks
+    type ContentBlock = { type: string; text?: string; thinking?: string; name?: string };
+    let blocks: ContentBlock[] | null = null;
+    if (Array.isArray(obj.content)) {
+      blocks = obj.content as ContentBlock[];
+    } else if (obj.message && typeof obj.message === 'object') {
+      const msg = obj.message as Record<string, unknown>;
+      if (Array.isArray(msg.content)) blocks = msg.content as ContentBlock[];
+    }
+
+    if (!blocks || blocks.length === 0) continue;
+
+    // Take the last non-empty block
+    for (let i = blocks.length - 1; i >= 0; i--) {
+      const b = blocks[i];
+      if (b.type === 'text' && typeof b.text === 'string' && b.text.trim()) {
+        return { type: 'output', label: 'Output', summary: b.text.trim().replace(/\n+/g, ' ') };
+      }
+      if (b.type === 'thinking' && typeof b.thinking === 'string' && b.thinking.trim()) {
+        return {
+          type: 'thinking',
+          label: 'Thinking',
+          summary: b.thinking.trim().replace(/\n+/g, ' '),
+        };
+      }
+      if (b.type === 'tool_use' && typeof b.name === 'string') {
+        return { type: 'tool', label: b.name, summary: '' };
+      }
+    }
+  }
+  return null;
+}
+
+const PREVIEW_ICONS = {
+  output: <MessageSquare size={12} className="shrink-0" />,
+  thinking: <Brain size={12} className="shrink-0" />,
+  tool: <Wrench size={12} className="shrink-0" />,
+} as const;
+
+/**
+ * Compact inline preview of the most recent log item, shown in the section header.
+ */
+const LogPreviewInline = ({ preview }: { preview: LastLogPreview }): React.JSX.Element => {
+  const summaryText =
+    preview.summary.length > 60 ? preview.summary.slice(0, 60) + '...' : preview.summary;
+
+  return (
+    <span className="flex min-w-0 items-center gap-1.5 opacity-70">
+      <span className="shrink-0" style={{ color: 'var(--tool-item-muted)' }}>
+        {PREVIEW_ICONS[preview.type]}
+      </span>
+      <span className="shrink-0 text-[11px] font-medium" style={{ color: 'var(--tool-item-name)' }}>
+        {preview.label}
+      </span>
+      {summaryText && (
+        <>
+          <span className="text-[11px]" style={{ color: 'var(--tool-item-muted)' }}>
+            -
+          </span>
+          <span
+            className="min-w-0 truncate text-[11px]"
+            style={{ color: 'var(--tool-item-summary)' }}
+          >
+            {summaryText}
+          </span>
+        </>
+      )}
+    </span>
+  );
+};
+
 function normalizeToStreamJsonText(linesNewestFirst: string[]): string {
   // We want to feed CliLogsRichView the exact format it expects:
   // - marker lines: "[stdout]" / "[stderr]"
@@ -54,18 +188,26 @@ function normalizeToStreamJsonText(linesNewestFirst: string[]): string {
       continue;
     }
 
+    let content = line;
     if (line.startsWith('[stdout] ')) {
       pushMarker('stdout');
-      out.push(line.slice('[stdout] '.length));
-      continue;
-    }
-    if (line.startsWith('[stderr] ')) {
+      content = line.slice('[stdout] '.length);
+    } else if (line.startsWith('[stderr] ')) {
       pushMarker('stderr');
-      out.push(line.slice('[stderr] '.length));
+      content = line.slice('[stderr] '.length);
+    }
+
+    // Skip system noise lines (hook_started, hook_response, init)
+    if (content.trimStart().startsWith('{') && isSystemNoiseLine(content)) {
       continue;
     }
 
-    out.push(line);
+    if (content !== line) {
+      // Already stripped prefix above
+      out.push(content);
+    } else {
+      out.push(line);
+    }
   }
 
   return out.join('\n');
@@ -377,12 +519,10 @@ export const ClaudeLogsSection = ({ teamName }: ClaudeLogsSectionProps): React.J
   const badge = data.total > 0 ? data.total : undefined;
   const showMoreVisible = data.hasMore || loadingMore;
 
-  const headerExtra = online ? (
-    <span className="pointer-events-none relative inline-flex size-2 shrink-0" title="Updating">
-      <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
-      <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
-    </span>
-  ) : null;
+  const lastLogPreview = useMemo(
+    () => (data.lines.length > 0 ? extractLastLogPreview(data.lines) : null),
+    [data.lines]
+  );
 
   const filteredText = useMemo(() => {
     if (data.lines.length === 0) return '';
@@ -433,8 +573,21 @@ export const ClaudeLogsSection = ({ teamName }: ClaudeLogsSectionProps): React.J
       title="Claude logs"
       icon={<Terminal size={14} />}
       badge={badge}
-      headerExtra={headerExtra}
-      defaultOpen
+      headerExtra={
+        <>
+          {online ? (
+            <span
+              className="pointer-events-none relative inline-flex size-2 shrink-0"
+              title="Updating"
+            >
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
+              <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
+            </span>
+          ) : null}
+          {lastLogPreview ? <LogPreviewInline preview={lastLogPreview} /> : null}
+        </>
+      }
+      defaultOpen={false}
       // Prevent scroll anchoring from "pulling" the parent container when logs update.
       contentClassName="pt-0 [overflow-anchor:none]"
     >

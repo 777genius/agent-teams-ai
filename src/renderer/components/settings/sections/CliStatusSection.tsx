@@ -10,7 +10,15 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { isElectronMode } from '@renderer/api';
 import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
 import { formatBytes } from '@renderer/utils/formatters';
-import { AlertTriangle, CheckCircle, Download, Loader2, RefreshCw, Terminal } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle,
+  Download,
+  Loader2,
+  Puzzle,
+  RefreshCw,
+  Terminal,
+} from 'lucide-react';
 
 import { SettingsSectionHeader } from '../components';
 
@@ -66,15 +74,61 @@ export const CliStatusSection = (): React.JSX.Element | null => {
           <div className="space-y-2">
             {cliStatus.installed ? (
               <div className="space-y-1">
-                <div
-                  className="flex items-center gap-2 text-sm"
-                  style={{ color: 'var(--color-text)' }}
-                >
+                <div className="flex items-center gap-2 text-sm">
                   <Terminal
                     className="size-4 shrink-0"
                     style={{ color: 'var(--color-text-muted)' }}
                   />
-                  <span>Claude CLI v{cliStatus.installedVersion ?? 'unknown'}</span>
+                  <span style={{ color: 'var(--color-text)' }}>
+                    Claude CLI v{cliStatus.installedVersion ?? 'unknown'}
+                  </span>
+                  {/* Inline action buttons */}
+                  {cliStatus.updateAvailable ? (
+                    <button
+                      onClick={handleInstall}
+                      disabled={isBusy}
+                      className="flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium text-white transition-colors disabled:opacity-50"
+                      style={{ backgroundColor: '#3b82f6' }}
+                    >
+                      <Download className="size-3.5" />
+                      Update
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleRefresh}
+                      disabled={cliStatusLoading}
+                      className="flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
+                      style={{
+                        borderColor: 'var(--color-border)',
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      {cliStatusLoading ? (
+                        <>
+                          <Loader2 className="size-3.5 animate-spin" />
+                          Checking...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="size-3.5" />
+                          Check for Updates
+                        </>
+                      )}
+                    </button>
+                  )}
+                  {/* Extensions button — right-aligned */}
+                  <button
+                    type="button"
+                    onClick={() => {}}
+                    className="ml-auto flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-white/5"
+                    style={{
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-text-secondary)',
+                    }}
+                  >
+                    <Puzzle className="size-3.5" />
+                    Extensions
+                  </button>
                 </div>
                 {cliStatus.binaryPath && (
                   <p
@@ -103,54 +157,18 @@ export const CliStatusSection = (): React.JSX.Element | null => {
               </div>
             )}
 
-            {/* Action buttons */}
-            <div className="flex gap-2">
-              {!cliStatus.installed && (
-                <button
-                  onClick={handleInstall}
-                  disabled={isBusy}
-                  className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
-                  style={{ backgroundColor: '#3b82f6' }}
-                >
-                  <Download className="size-3.5" />
-                  Install Claude CLI
-                </button>
-              )}
-              {cliStatus.installed && cliStatus.updateAvailable && (
-                <button
-                  onClick={handleInstall}
-                  disabled={isBusy}
-                  className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
-                  style={{ backgroundColor: '#3b82f6' }}
-                >
-                  <Download className="size-3.5" />
-                  Update
-                </button>
-              )}
-              {cliStatus.installed && !cliStatus.updateAvailable && (
-                <button
-                  onClick={handleRefresh}
-                  disabled={cliStatusLoading}
-                  className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
-                  style={{
-                    borderColor: 'var(--color-border)',
-                    color: 'var(--color-text-secondary)',
-                  }}
-                >
-                  {cliStatusLoading ? (
-                    <>
-                      <Loader2 className="size-3.5 animate-spin" />
-                      Checking...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="size-3.5" />
-                      Check for Updates
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
+            {/* Install button (CLI not installed) */}
+            {!cliStatus.installed && (
+              <button
+                onClick={handleInstall}
+                disabled={isBusy}
+                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
+                style={{ backgroundColor: '#3b82f6' }}
+              >
+                <Download className="size-3.5" />
+                Install Claude CLI
+              </button>
+            )}
           </div>
         )}
 

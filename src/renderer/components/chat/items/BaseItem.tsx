@@ -2,6 +2,7 @@ import React from 'react';
 
 import { TOOL_ITEM_MUTED } from '@renderer/constants/cssVariables';
 import { getTriggerColorDef, type TriggerColor } from '@shared/constants/triggerColors';
+import { format } from 'date-fns';
 import { ChevronRight } from 'lucide-react';
 
 import { formatDuration, formatTokens, getStatusDotColor } from './baseItemHelpers';
@@ -27,6 +28,8 @@ interface BaseItemProps {
   status?: ItemStatus;
   /** Duration in milliseconds */
   durationMs?: number;
+  /** Timestamp to display (compact HH:mm:ss) */
+  timestamp?: Date;
   /** Click handler for toggling */
   onClick: () => void;
   /** Whether the item is expanded */
@@ -80,6 +83,7 @@ export const BaseItem: React.FC<BaseItemProps> = ({
   tokenLabel = 'tokens',
   status,
   durationMs,
+  timestamp,
   onClick,
   isExpanded,
   hasExpandableContent = true,
@@ -166,6 +170,13 @@ export const BaseItem: React.FC<BaseItemProps> = ({
         {durationMs !== undefined && (
           <span className="shrink-0 text-xs" style={{ color: TOOL_ITEM_MUTED }}>
             {formatDuration(durationMs)}
+          </span>
+        )}
+
+        {/* Timestamp — rightmost info element */}
+        {timestamp && (
+          <span className="shrink-0 text-[11px] tabular-nums" style={{ color: TOOL_ITEM_MUTED }}>
+            {format(timestamp, 'HH:mm:ss')}
           </span>
         )}
 

@@ -298,8 +298,10 @@ export function useMentionDetection({
           );
           break;
         case 'Enter':
-          e.preventDefault();
-          selectSuggestion(filteredSuggestions[selectedIndex]);
+          if (!e.shiftKey) {
+            e.preventDefault();
+            selectSuggestion(filteredSuggestions[selectedIndex]);
+          }
           break;
         case 'Escape':
           e.preventDefault();

@@ -12,7 +12,7 @@ const prodDeps = Object.keys(pkg.dependencies || {})
 
 // node-pty is a native addon that cannot be bundled by Rollup.
 // It must remain external and be loaded at runtime via require().
-const bundledDeps = prodDeps.filter(d => d !== 'node-pty')
+const bundledDeps = prodDeps.filter(d => d !== 'node-pty' && d !== 'agent-teams-controller')
 
 // Rollup plugin: stub out native .node addon imports with empty modules.
 // ssh2 and cpu-features use optional native bindings that can't be bundled,

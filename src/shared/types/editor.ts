@@ -254,4 +254,6 @@ export interface EditorSelectionAction {
   formattedContext: string;
   /** Relative display path for file-level mentions */
   displayPath?: string;
+  /** Whether this action represents a folder (not a file) */
+  isFolder?: boolean;
 }

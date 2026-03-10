@@ -6,10 +6,10 @@ import * as path from 'path';
 import { atomicWriteAsync } from './atomicWrite';
 
 import type {
-  StatusTransition,
   TaskAttachmentMeta,
   TaskComment,
   TaskCommentType,
+  TaskHistoryEvent,
   TeamTask,
   TeamTaskStatus,
 } from '@shared/types';
@@ -34,16 +34,17 @@ async function withTaskLock<T>(taskPath: string, fn: () => Promise<T>): Promise<
   }
 }
 
-function appendTransition(
-  history: StatusTransition[] | undefined,
-  from: TeamTaskStatus | null,
-  to: TeamTaskStatus,
-  timestamp: string,
-  actor?: string
-): StatusTransition[] {
-  const entry: StatusTransition = { from, to, timestamp };
-  if (actor) entry.actor = actor;
-  return [...(history ?? []), entry];
+function appendHistoryEvent(
+  events: TaskHistoryEvent[] | undefined,
+  event: Omit<TaskHistoryEvent, 'id' | 'timestamp'>
+): TaskHistoryEvent[] {
+  const list = Array.isArray(events) ? [...events] : [];
+  list.push({
+    id: randomUUID(),
+    timestamp: new Date().toISOString(),
+    ...event,
+  } as TaskHistoryEvent);
+  return list;
 }
 
 export class TeamTaskWriter {
@@ -82,13 +83,11 @@ export class TeamTaskWriter {
                   : [{ startedAt: createdAt }]),
               ]
             : task.workIntervals,
-        statusHistory: appendTransition(
-          task.statusHistory,
-          null,
-          task.status,
-          createdAt,
-          task.createdBy
-        ),
+        historyEvents: appendHistoryEvent(task.historyEvents, {
+          type: 'task_created',
+          status: task.status,
+          ...(task.createdBy ? { actor: task.createdBy } : {}),
+        } as Omit<TaskHistoryEvent, 'id' | 'timestamp'>),
       };
 
       await atomicWriteAsync(taskPath, JSON.stringify(cliCompatibleTask, null, 2));
@@ -344,12 +343,14 @@ export class TeamTaskWriter {
       }
 
       task.workIntervals = intervals.length > 0 ? intervals : undefined;
-      task.statusHistory = appendTransition(
-        Array.isArray(task.statusHistory) ? task.statusHistory : undefined,
-        prevStatus,
-        status,
-        nowIso,
-        actor
+      task.historyEvents = appendHistoryEvent(
+        Array.isArray(task.historyEvents) ? task.historyEvents : undefined,
+        {
+          type: 'status_changed',
+          from: prevStatus,
+          to: status,
+          ...(actor ? { actor } : {}),
+        } as Omit<TaskHistoryEvent, 'id' | 'timestamp'>
       );
       task.status = status;
       await atomicWriteAsync(taskPath, JSON.stringify(task, null, 2));
@@ -416,12 +417,14 @@ export class TeamTaskWriter {
 
       task.status = 'deleted';
       task.deletedAt = nowIso;
-      task.statusHistory = appendTransition(
-        Array.isArray(task.statusHistory) ? task.statusHistory : undefined,
-        prevStatus,
-        'deleted',
-        nowIso,
-        actor
+      task.historyEvents = appendHistoryEvent(
+        Array.isArray(task.historyEvents) ? task.historyEvents : undefined,
+        {
+          type: 'status_changed',
+          from: prevStatus,
+          to: 'deleted',
+          ...(actor ? { actor } : {}),
+        } as Omit<TaskHistoryEvent, 'id' | 'timestamp'>
       );
       await atomicWriteAsync(taskPath, JSON.stringify(task, null, 2));
 
@@ -449,13 +452,14 @@ export class TeamTaskWriter {
 
       const task = JSON.parse(raw) as TeamTask;
       const prevStatus = task.status;
-      const nowIso = new Date().toISOString();
-      task.statusHistory = appendTransition(
-        Array.isArray(task.statusHistory) ? task.statusHistory : undefined,
-        prevStatus,
-        'pending',
-        nowIso,
-        actor ?? 'user'
+      task.historyEvents = appendHistoryEvent(
+        Array.isArray(task.historyEvents) ? task.historyEvents : undefined,
+        {
+          type: 'status_changed',
+          from: prevStatus,
+          to: 'pending',
+          actor: actor ?? 'user',
+        } as Omit<TaskHistoryEvent, 'id' | 'timestamp'>
       );
       task.status = 'pending';
       delete task.deletedAt;

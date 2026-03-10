@@ -29,10 +29,11 @@ function findProgressForTeam(
 export const TeamProvisioningBanner = ({
   teamName,
 }: TeamProvisioningBannerProps): React.JSX.Element | null => {
-  const { provisioningRuns, cancelProvisioning } = useStore(
+  const { provisioningRuns, cancelProvisioning, teamMembers } = useStore(
     useShallow((s) => ({
       provisioningRuns: s.provisioningRuns,
       cancelProvisioning: s.cancelProvisioning,
+      teamMembers: s.selectedTeamData?.members,
     }))
   );
 
@@ -42,9 +43,7 @@ export const TeamProvisioningBanner = ({
 
   if (prevRunIdRef.current !== progress?.runId) {
     prevRunIdRef.current = progress?.runId;
-    if (dismissed) {
-      setDismissed(false);
-    }
+    setDismissed(false);
   }
 
   // NOTE: we intentionally do NOT auto-dismiss "ready" banners.
@@ -105,12 +104,21 @@ export const TeamProvisioningBanner = ({
     );
   }
 
+  const allTeammatesOnline =
+    teamMembers != null &&
+    teamMembers.length > 0 &&
+    teamMembers.every((m) => m.status === 'active' || m.status === 'idle');
+
   if (isReady) {
+    const readyMessage = allTeammatesOnline
+      ? `Team launched — all ${teamMembers!.length} teammates online`
+      : 'Team launched — teammates may still be starting';
+
     return (
       <div className="mb-3">
-        <div className="mb-2 flex items-center gap-2 rounded-md border border-[var(--step-done-border)] bg-[var(--step-done-bg)] px-3 py-2">
+        <div className="flex items-center gap-2 rounded-md border border-[var(--step-done-border)] bg-[var(--step-done-bg)] px-3 py-2">
           <CheckCircle2 size={14} className="shrink-0 text-[var(--step-done-text)]" />
-          <p className="flex-1 text-xs text-[var(--step-success-text)]">Team launched — process alive</p>
+          <p className="flex-1 text-xs text-[var(--step-success-text)]">{readyMessage}</p>
           <Button
             variant="outline"
             size="sm"

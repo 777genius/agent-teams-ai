@@ -76,7 +76,16 @@ export interface Tab {
   id: string;
 
   /** Type of content displayed in this tab */
-  type: 'session' | 'dashboard' | 'notifications' | 'settings' | 'teams' | 'team' | 'report';
+  type:
+    | 'session'
+    | 'dashboard'
+    | 'notifications'
+    | 'settings'
+    | 'teams'
+    | 'team'
+    | 'report'
+    | 'extensions'
+    | 'schedules';
 
   /** Session ID (required when type === 'session') */
   sessionId?: string;

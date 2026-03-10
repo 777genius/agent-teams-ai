@@ -9,10 +9,14 @@ import {
 } from '@renderer/constants/cssVariables';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
+import { useStore } from '@renderer/store';
 import { detectOperationalNoise } from '@renderer/utils/agentMessageFormatting';
 import { formatTokensCompact } from '@renderer/utils/formatters';
+import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
+import { format } from 'date-fns';
 import { ChevronRight, CornerDownLeft, MessageSquare, RefreshCw } from 'lucide-react';
 
 import { MarkdownViewer } from '../viewers/MarkdownViewer';
@@ -80,6 +84,20 @@ export const TeammateMessageItem: React.FC<TeammateMessageItemProps> = ({
   const colors = getTeamColorSet(teammateMessage.color);
   const { isLight } = useTheme();
 
+  // Get team members for @mention highlighting
+  const members = useStore((s) => s.selectedTeamData?.members);
+  const memberColorMap = useMemo(
+    () => (members ? buildMemberColorMap(members) : new Map<string, string>()),
+    [members]
+  );
+
+  // Get team names for @team linkification
+  const teams = useStore((s) => s.teams);
+  const teamNames = useMemo(
+    () => teams.filter((t) => !t.deletedAt).map((t) => t.teamName),
+    [teams]
+  );
+
   // Detect operational noise
   const noiseLabel = useMemo(
     () => detectOperationalNoise(teammateMessage.content, teammateMessage.teammateId),
@@ -101,10 +119,10 @@ export const TeammateMessageItem: React.FC<TeammateMessageItemProps> = ({
     [teammateMessage.replyToSummary]
   );
 
-  const displayContent = useMemo(
-    () => stripAgentBlocks(teammateMessage.content),
-    [teammateMessage.content]
-  );
+  const displayContent = useMemo(() => {
+    const stripped = stripAgentBlocks(teammateMessage.content);
+    return linkifyAllMentionsInMarkdown(stripped, memberColorMap, teamNames);
+  }, [teammateMessage.content, memberColorMap, teamNames]);
 
   // Noise: minimal inline row (no card, no expand)
   if (noiseLabel) {
@@ -218,6 +236,14 @@ export const TeammateMessageItem: React.FC<TeammateMessageItemProps> = ({
             ~{formatTokensCompact(teammateMessage.tokenCount)} tokens
           </span>
         )}
+
+        {/* Timestamp — rightmost info element */}
+        <span
+          className="shrink-0 font-mono text-[11px] tabular-nums"
+          style={{ color: CARD_ICON_MUTED }}
+        >
+          {format(teammateMessage.timestamp, 'HH:mm:ss')}
+        </span>
       </div>
 
       {/* Expanded content */}

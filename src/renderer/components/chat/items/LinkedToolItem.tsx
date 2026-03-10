@@ -48,6 +48,8 @@ interface LinkedToolItemProps {
   linkedTool: LinkedToolItemType;
   onClick: () => void;
   isExpanded: boolean;
+  /** Timestamp for display */
+  timestamp?: Date;
   /** Optional local search query override for inline highlighting */
   searchQueryOverride?: string;
   /** Whether this item should be highlighted for error deep linking */
@@ -64,6 +66,7 @@ export const LinkedToolItem: React.FC<LinkedToolItemProps> = ({
   linkedTool,
   onClick,
   isExpanded,
+  timestamp,
   searchQueryOverride,
   isHighlighted,
   highlightColor,
@@ -177,6 +180,7 @@ export const LinkedToolItem: React.FC<LinkedToolItemProps> = ({
         tokenCount={getToolContextTokens(linkedTool)}
         status={status}
         durationMs={linkedTool.durationMs}
+        timestamp={timestamp}
         onClick={onClick}
         isExpanded={isExpanded}
         highlightClasses={highlightClasses}

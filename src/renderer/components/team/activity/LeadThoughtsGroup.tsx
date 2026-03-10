@@ -14,10 +14,13 @@ import {
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
+import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
+import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { formatToolSummary, parseToolSummary } from '@shared/utils/toolSummary';
+import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
 import { ChevronDown, ChevronRight, ChevronUp, Reply } from 'lucide-react';
 
-import { linkifyMentionsInMarkdown, linkifyTaskIdsInMarkdown } from './ActivityItem';
+import { linkifyTaskIdsInMarkdown } from './ActivityItem';
 import {
   AnimatedHeightReveal,
   ENTRY_REVEAL_ANIMATION_MS,
@@ -34,18 +37,37 @@ export interface LeadThoughtGroup {
 }
 
 /**
+ * Check if a message is a context compaction boundary (system event from lead process).
+ */
+export function isCompactionMessage(msg: InboxMessage): boolean {
+  return msg.from === 'system' && !!msg.messageId?.startsWith('compact-');
+}
+
+/**
  * Check if a message is an intermediate lead "thought" (assistant text) rather than
  * an official message (SendMessage, direct reply, inbox, etc.).
  */
 export function isLeadThought(msg: InboxMessage): boolean {
+  if (typeof msg.to === 'string' && msg.to.trim().length > 0) return false;
+  // Compaction boundary events are system messages, not lead thoughts
+  if (isCompactionMessage(msg)) return false;
   if (msg.source === 'lead_session') return true;
   if (msg.source === 'lead_process') return true;
   return false;
 }
 
 export type TimelineItem =
-  | { type: 'message'; message: InboxMessage; originalIndex: number }
-  | { type: 'lead-thoughts'; group: LeadThoughtGroup; originalIndices: number[] };
+  | { type: 'message'; message: InboxMessage }
+  | { type: 'lead-thoughts'; group: LeadThoughtGroup };
+
+/**
+ * Use the oldest thought as the group's stable identity so live thoughts can prepend
+ * without remounting the whole group on every update.
+ */
+export function getThoughtGroupKey(group: LeadThoughtGroup): string {
+  const oldestThought = group.thoughts[group.thoughts.length - 1];
+  return `thoughts-${toMessageKey(oldestThought)}`;
+}
 
 /**
  * Group consecutive lead thoughts into compact blocks.
@@ -54,7 +76,6 @@ export type TimelineItem =
 export function groupTimelineItems(messages: InboxMessage[]): TimelineItem[] {
   const result: TimelineItem[] = [];
   let pendingThoughts: InboxMessage[] = [];
-  let pendingIndices: number[] = [];
   const hasSameLeadSession = (a: InboxMessage, b: InboxMessage): boolean =>
     (a.leadSessionId ?? null) === (b.leadSessionId ?? null);
 
@@ -63,24 +84,20 @@ export function groupTimelineItems(messages: InboxMessage[]): TimelineItem[] {
     result.push({
       type: 'lead-thoughts',
       group: { type: 'lead-thoughts', thoughts: pendingThoughts },
-      originalIndices: pendingIndices,
     });
     pendingThoughts = [];
-    pendingIndices = [];
   };
 
-  for (let i = 0; i < messages.length; i++) {
-    const msg = messages[i];
+  for (const msg of messages) {
     if (isLeadThought(msg)) {
       const previousThought = pendingThoughts[pendingThoughts.length - 1];
       if (previousThought && !hasSameLeadSession(previousThought, msg)) {
         flushThoughts();
       }
       pendingThoughts.push(msg);
-      pendingIndices.push(i);
     } else {
       flushThoughts();
-      result.push({ type: 'message', message: msg, originalIndex: i });
+      result.push({ type: 'message', message: msg });
     }
   }
   flushThoughts();
@@ -210,15 +227,23 @@ const LeadThoughtItem = ({
   const previousHeightRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const cleanupTimerRef = useRef<number | null>(null);
+  const initialAnimationCompletedRef = useRef(!shouldAnimate);
+  const [shouldAnimateOnMount] = useState(() => shouldAnimate);
+
+  const teams = useStore((s) => s.teams);
+  const teamNames = useMemo(
+    () => teams.filter((t) => !t.deletedAt).map((t) => t.teamName),
+    [teams]
+  );
 
   const displayContent = useMemo(() => {
     let text = thought.text.replace(/\n/g, '  \n');
     text = linkifyTaskIdsInMarkdown(text);
-    if (memberColorMap && memberColorMap.size > 0) {
-      text = linkifyMentionsInMarkdown(text, memberColorMap);
+    if ((memberColorMap && memberColorMap.size > 0) || teamNames.length > 0) {
+      text = linkifyAllMentionsInMarkdown(text, memberColorMap ?? new Map(), teamNames);
     }
     return text;
-  }, [thought.text, memberColorMap]);
+  }, [thought.text, memberColorMap, teamNames]);
 
   const clearPendingAnimation = useCallback(() => {
     if (animationFrameRef.current !== null) {
@@ -266,6 +291,7 @@ const LeadThoughtItem = ({
       startHeight: number,
       startOpacity: number
     ): void => {
+      initialAnimationCompletedRef.current = false;
       clearPendingAnimation();
       wrapper.style.transition = 'none';
       wrapper.style.overflow = 'hidden';
@@ -282,6 +308,7 @@ const LeadThoughtItem = ({
 
       cleanupTimerRef.current = window.setTimeout(() => {
         resetWrapperStyles();
+        initialAnimationCompletedRef.current = true;
         cleanupTimerRef.current = null;
       }, THOUGHT_HEIGHT_ANIMATION_MS + 40);
     };
@@ -290,7 +317,8 @@ const LeadThoughtItem = ({
       const previousHeight = previousHeightRef.current;
       previousHeightRef.current = nextHeight;
 
-      if (!shouldAnimate) {
+      if (!shouldAnimateOnMount) {
+        initialAnimationCompletedRef.current = true;
         resetWrapperStyles();
         return;
       }
@@ -299,12 +327,20 @@ const LeadThoughtItem = ({
         if (nextHeight > 0 && animateFromZero) {
           animateHeight(nextHeight, 0, 0);
         } else {
+          initialAnimationCompletedRef.current = true;
           resetWrapperStyles();
         }
         return;
       }
 
       if (Math.abs(nextHeight - previousHeight) < 1) return;
+
+      // Only the first reveal should animate. Late content growth (for example when
+      // tool summary metadata appears after the text) should resize naturally.
+      if (initialAnimationCompletedRef.current) {
+        resetWrapperStyles();
+        return;
+      }
 
       const renderedHeight = wrapper.getBoundingClientRect().height;
       animateHeight(nextHeight, renderedHeight > 0 ? renderedHeight : previousHeight, 1);
@@ -321,9 +357,10 @@ const LeadThoughtItem = ({
     return () => {
       observer.disconnect();
       clearPendingAnimation();
+      initialAnimationCompletedRef.current = true;
       resetWrapperStyles();
     };
-  }, [clearPendingAnimation, resetWrapperStyles, shouldAnimate]);
+  }, [clearPendingAnimation, resetWrapperStyles, shouldAnimateOnMount]);
 
   useEffect(
     () => () => {
@@ -336,28 +373,17 @@ const LeadThoughtItem = ({
     <div ref={wrapperRef}>
       <div ref={contentRef}>
         {showDivider && (
-          <div className="mx-auto flex w-2/5 items-center justify-center gap-[5px] py-px">
-            <hr
-              className="flex-1 border-0"
-              style={{
-                height: '1px',
-                backgroundColor: 'var(--color-border-emphasis)',
-              }}
-            />
-            <span className="shrink-0 font-mono text-[9px]" style={{ color: CARD_ICON_MUTED }}>
+          <div className="py-px text-center">
+            <span className="font-mono text-[9px]" style={{ color: CARD_ICON_MUTED }}>
               {formatTimeWithSec(thought.timestamp)}
             </span>
-            <hr
-              className="flex-1 border-0"
-              style={{
-                height: '1px',
-                backgroundColor: 'var(--color-border-emphasis)',
-              }}
-            />
           </div>
         )}
         <div className="group/thought relative flex text-[11px]">
-          <div className="min-w-0 flex-1 [&_>div>div]:p-0" style={{ color: CARD_TEXT_LIGHT }}>
+          <div
+            className="min-w-0 flex-1 [&>span>div>div>div]:py-2"
+            style={{ color: CARD_TEXT_LIGHT }}
+          >
             <span
               onClickCapture={
                 onTaskIdClick
@@ -487,6 +513,19 @@ export const LeadThoughtsGroupRow = ({
       if (t.toolCalls) calls.push(...t.toolCalls);
     }
     return calls.length > 0 ? calls : undefined;
+  }, [thoughts]);
+
+  // Extract text preview for header: use newest thought's text, fallback through group
+  const headerTextPreview = useMemo(() => {
+    // Try newest first (most relevant), then scan for any text
+    for (const t of thoughts) {
+      if (t.text && t.text.trim()) {
+        const plain = extractMarkdownPlainText(t.text);
+        const firstLine = plain.split('\n').find((l) => l.trim().length > 0) ?? '';
+        return firstLine.trim();
+      }
+    }
+    return null;
   }, [thoughts]);
 
   // Live = process alive AND (lead is in active turn OR context recently updated OR fresh thought)
@@ -715,12 +754,26 @@ export const LeadThoughtsGroupRow = ({
           <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
             {thoughts.length} thoughts
           </span>
-          <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-            {formatTime(oldest.timestamp) === formatTime(newest.timestamp)
-              ? formatTime(oldest.timestamp)
-              : `${formatTime(oldest.timestamp)}–${formatTime(newest.timestamp)}`}
-          </span>
-          {totalToolSummary && (
+          {!isBodyVisible && headerTextPreview ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className="min-w-0 flex-1 cursor-default truncate text-[10px]"
+                  style={{ color: CARD_TEXT_LIGHT }}
+                >
+                  {headerTextPreview}
+                </span>
+              </TooltipTrigger>
+              {totalToolSummary ? (
+                <TooltipContent side="bottom" className="max-w-[420px] font-mono text-[11px]">
+                  <ToolSummaryTooltipContent
+                    toolCalls={allToolCalls}
+                    toolSummary={totalToolSummary}
+                  />
+                </TooltipContent>
+              ) : null}
+            </Tooltip>
+          ) : totalToolSummary ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="cursor-default text-[10px]" style={{ color: CARD_ICON_MUTED }}>
@@ -734,7 +787,12 @@ export const LeadThoughtsGroupRow = ({
                 />
               </TooltipContent>
             </Tooltip>
-          )}
+          ) : null}
+          <span className="ml-auto shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
+            {formatTime(oldest.timestamp) === formatTime(newest.timestamp)
+              ? formatTime(oldest.timestamp)
+              : `${formatTime(oldest.timestamp)}–${formatTime(newest.timestamp)}`}
+          </span>
         </div>
 
         {/* Scrollable body — live thoughts follow bottom unless user scrolls up */}
@@ -756,7 +814,7 @@ export const LeadThoughtsGroupRow = ({
             <div ref={contentRef}>
               {chronologicalThoughts.map((thought, idx) => (
                 <LeadThoughtItem
-                  key={thought.messageId ?? idx}
+                  key={toMessageKey(thought)}
                   thought={thought}
                   showDivider={idx > 0}
                   shouldAnimate={isLive && idx === chronologicalThoughts.length - 1}

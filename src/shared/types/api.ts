@@ -7,14 +7,23 @@
  * Shared between preload and renderer processes.
  */
 
+import type { CliArgsValidationResult } from '../utils/cliArgsParser';
 import type { CliInstallerAPI } from './cliInstaller';
 import type { EditorAPI, ProjectAPI } from './editor';
+import type { McpCatalogAPI, PluginCatalogAPI, ApiKeysAPI } from './extensions';
 import type {
   AppConfig,
   DetectedError,
   NotificationTrigger,
   TriggerTestResult,
 } from './notifications';
+import type {
+  CreateScheduleInput,
+  Schedule,
+  ScheduleChangeEvent,
+  ScheduleRun,
+  UpdateSchedulePatch,
+} from './schedule';
 import type {
   AgentChangeSet,
   ApplyReviewRequest,
@@ -32,12 +41,16 @@ import type {
   AttachmentFileData,
   CommentAttachmentPayload,
   CreateTaskRequest,
+  CrossTeamMessage,
+  CrossTeamSendRequest,
+  CrossTeamSendResult,
   GlobalTask,
   KanbanColumnId,
   LeadActivityState,
   LeadContextUsage,
   MemberFullStats,
   MemberLogSummary,
+  MemberSpawnStatusEntry,
   ReplaceMembersRequest,
   SendMessageRequest,
   SendMessageResult,
@@ -61,6 +74,7 @@ import type {
   TeamTaskStatus,
   TeamUpdateConfigRequest,
   ToolApprovalEvent,
+  ToolApprovalSettings,
   UpdateKanbanPatch,
 } from './team';
 import type { TerminalAPI } from './terminal';
@@ -471,6 +485,7 @@ export interface TeamsAPI {
   killProcess: (teamName: string, pid: number) => Promise<void>;
   getLeadActivity: (teamName: string) => Promise<LeadActivityState>;
   getLeadContext: (teamName: string) => Promise<LeadContextUsage | null>;
+  getMemberSpawnStatuses: (teamName: string) => Promise<Record<string, MemberSpawnStatusEntry>>;
   softDeleteTask: (teamName: string, taskId: string) => Promise<void>;
   restoreTask: (teamName: string, taskId: string) => Promise<void>;
   getDeletedTasks: (teamName: string) => Promise<TeamTask[]>;
@@ -518,7 +533,49 @@ export interface TeamsAPI {
     allow: boolean,
     message?: string
   ) => Promise<void>;
+  validateCliArgs: (rawArgs: string) => Promise<CliArgsValidationResult>;
   onToolApprovalEvent: (callback: (event: unknown, data: ToolApprovalEvent) => void) => () => void;
+  updateToolApprovalSettings: (settings: ToolApprovalSettings) => Promise<void>;
+}
+
+// =============================================================================
+// Cross-Team Communication API
+// =============================================================================
+
+export interface CrossTeamAPI {
+  send: (request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>;
+  listTargets: (excludeTeam?: string) => Promise<
+    {
+      teamName: string;
+      displayName: string;
+      description?: string;
+      color?: string;
+      leadName?: string;
+      leadColor?: string;
+    }[]
+  >;
+  getOutbox: (teamName: string) => Promise<CrossTeamMessage[]>;
+}
+
+// =============================================================================
+// Schedule API
+// =============================================================================
+
+export interface ScheduleAPI {
+  list: () => Promise<Schedule[]>;
+  get: (id: string) => Promise<Schedule | null>;
+  create: (input: CreateScheduleInput) => Promise<Schedule>;
+  update: (id: string, patch: UpdateSchedulePatch) => Promise<Schedule>;
+  delete: (id: string) => Promise<void>;
+  pause: (id: string) => Promise<void>;
+  resume: (id: string) => Promise<void>;
+  triggerNow: (id: string) => Promise<ScheduleRun>;
+  getRuns: (
+    scheduleId: string,
+    opts?: { limit?: number; offset?: number }
+  ) => Promise<ScheduleRun[]>;
+  getRunLogs: (scheduleId: string, runId: string) => Promise<{ stdout: string; stderr: string }>;
+  onScheduleChange: (callback: (event: unknown, data: ScheduleChangeEvent) => void) => () => void;
 }
 
 // =============================================================================
@@ -538,6 +595,8 @@ export interface ReviewAPI {
       intervals?: { startedAt: string; completedAt?: string }[];
       /** Back-compat: single since timestamp (deprecated). */
       since?: string;
+      /** Lightweight response for summary UIs; skips snippets/timeline details. */
+      summaryOnly?: boolean;
     }
   ) => Promise<TaskChangeSetV2>;
   getChangeStats: (teamName: string, memberName: string) => Promise<ChangeStats>;
@@ -728,6 +787,9 @@ export interface ElectronAPI {
   // Team management API
   teams: TeamsAPI;
 
+  // Cross-Team Communication API
+  crossTeam: CrossTeamAPI;
+
   // Review API
   review: ReviewAPI;
 
@@ -742,6 +804,18 @@ export interface ElectronAPI {
 
   // Project Editor API (file browser + CodeMirror)
   editor: EditorAPI;
+
+  // Schedule API (cron-based task execution)
+  schedules: ScheduleAPI;
+
+  // Extension Store — Plugin Catalog API (Electron-only, optional)
+  plugins?: PluginCatalogAPI;
+
+  // Extension Store — MCP Registry API (Electron-only, optional)
+  mcpRegistry?: McpCatalogAPI;
+
+  // Extension Store — API Keys Management (Electron-only, optional)
+  apiKeys?: ApiKeysAPI;
 }
 
 // =============================================================================

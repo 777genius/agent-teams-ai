@@ -29,6 +29,8 @@ import { chipToken, serializeChipsWithText } from '@renderer/types/inlineChip';
 import { removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { getTaskKanbanColumn } from '@shared/utils/reviewState';
+import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { AlertTriangle, Search } from 'lucide-react';
 
 import type { InlineChip } from '@renderer/types/inlineChip';
@@ -145,7 +147,7 @@ export const CreateTaskDialog = ({
 
   // Only show non-internal, non-deleted tasks as candidates for blocking
   const availableTasks = tasks.filter(
-    (t) => t.status !== 'deleted' && t.kanbanColumn !== 'approved'
+    (t) => t.status !== 'deleted' && getTaskKanbanColumn(t) !== 'approved'
   );
 
   const toggleBlockedBy = (taskId: string): void => {
@@ -373,7 +375,8 @@ export const CreateTaskDialog = ({
                       (t) =>
                         !blockedBySearch ||
                         t.subject.toLowerCase().includes(blockedBySearch.toLowerCase()) ||
-                        t.id.includes(blockedBySearch)
+                        t.id.includes(blockedBySearch) ||
+                        t.displayId?.includes(blockedBySearch)
                     )
                     .map((t) => {
                       const isSelected = blockedBy.includes(t.id);
@@ -401,7 +404,7 @@ export const CreateTaskDialog = ({
                             variant="secondary"
                             className="shrink-0 px-1 py-0 text-[10px] font-normal"
                           >
-                            #{t.id}
+                            {formatTaskDisplayLabel(t)}
                           </Badge>
                           <span className="truncate">{t.subject}</span>
                         </button>
@@ -411,7 +414,8 @@ export const CreateTaskDialog = ({
               </div>
               {blockedBy.length > 0 ? (
                 <p className="text-[11px] text-yellow-300">
-                  Task will be blocked by: {blockedBy.map((id) => `#${id}`).join(', ')}
+                  Task will be blocked by:{' '}
+                  {blockedBy.map((id) => `#${deriveTaskDisplayId(id)}`).join(', ')}
                 </p>
               ) : null}
             </div>
@@ -442,7 +446,8 @@ export const CreateTaskDialog = ({
                       (t) =>
                         !relatedSearch ||
                         t.subject.toLowerCase().includes(relatedSearch.toLowerCase()) ||
-                        t.id.includes(relatedSearch)
+                        t.id.includes(relatedSearch) ||
+                        t.displayId?.includes(relatedSearch)
                     )
                     .map((t) => {
                       const isSelected = related.includes(t.id);
@@ -470,7 +475,7 @@ export const CreateTaskDialog = ({
                             variant="secondary"
                             className="shrink-0 px-1 py-0 text-[10px] font-normal"
                           >
-                            #{t.id}
+                            {formatTaskDisplayLabel(t)}
                           </Badge>
                           <span className="truncate">{t.subject}</span>
                         </button>
@@ -480,7 +485,7 @@ export const CreateTaskDialog = ({
               </div>
               {related.length > 0 ? (
                 <p className="text-[11px] text-purple-300">
-                  Related: {related.map((id) => `#${id}`).join(', ')}
+                  Related: {related.map((id) => `#${deriveTaskDisplayId(id)}`).join(', ')}
                 </p>
               ) : null}
             </div>

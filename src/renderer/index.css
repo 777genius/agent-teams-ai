@@ -81,6 +81,26 @@
   --diff-removed-bg: rgba(239, 68, 68, 0.15);
   --diff-removed-text: #f87171;
   --diff-removed-border: #ef4444;
+  /* CodeMirror diff backgrounds */
+  --diff-cm-changed-bg: #1a3a1a;
+  --diff-cm-deleted-bg: #241517;
+  /* CodeMirror merge buttons */
+  --diff-merge-undo-color: var(--color-text);
+  --diff-merge-undo-bg: var(--color-surface-raised);
+  --diff-merge-undo-border: var(--color-border);
+  --diff-merge-undo-hover-bg: rgba(255, 255, 255, 0.1);
+  --diff-merge-keep-color: #3fb950;
+  --diff-merge-keep-bg: rgba(46, 160, 67, 0.25);
+  --diff-merge-keep-border: rgba(46, 160, 67, 0.4);
+  --diff-merge-keep-hover-bg: rgba(46, 160, 67, 0.4);
+  --diff-merge-keep-kbd: rgba(63, 185, 80, 0.7);
+  /* CodeMirror merge nav button hover */
+  --diff-merge-nav-hover-bg: rgba(255, 255, 255, 0.08);
+  /* Portion collapse expand buttons */
+  --diff-expand-hover-bg: rgba(255, 255, 255, 0.06);
+  --diff-expand-active-bg: rgba(255, 255, 255, 0.1);
+  --diff-expand-all-hover-bg: rgba(255, 255, 255, 0.04);
+  --diff-expand-all-active-bg: rgba(255, 255, 255, 0.08);
 
   /* Markdown prose */
   --prose-heading: #f8fafc;
@@ -188,6 +208,11 @@
   --system-activity-border: rgba(59, 130, 246, 0.12);
   --system-activity-accent: rgba(96, 165, 250, 0.5);
 
+  /* Cross-team communication */
+  --cross-team-bg: rgba(168, 85, 247, 0.06);
+  --cross-team-border: rgba(168, 85, 247, 0.12);
+  --cross-team-accent: rgba(192, 132, 252, 0.5);
+
   /* Info style — banners, status indicators */
   --info-bg: rgba(59, 130, 246, 0.08);
   --info-border: rgba(59, 130, 246, 0.25);
@@ -223,6 +248,16 @@
   --step-warning-text: #fde68a;
   --step-warning-border: rgba(245, 158, 11, 0.4);
   --step-warning-bg: rgba(245, 158, 11, 0.1);
+
+  /* Collapsible section backgrounds (sidebar) */
+  --color-section-bg: rgba(255, 255, 255, 0.04);
+  --color-section-bg-open: rgba(255, 255, 255, 0.07);
+  --color-section-hover: rgba(255, 255, 255, 0.08);
+  --color-section-hover-open: rgba(255, 255, 255, 0.1);
+
+  /* Compact boundary — phase badge */
+  --compact-phase-bg: rgba(99, 102, 241, 0.15);
+  --compact-phase-text: #818cf8;
 }
 
 /* File icon glow — halo so dark icons stay visible on dark backgrounds */
@@ -233,7 +268,7 @@
 /* Light theme overrides - Warm neutral palette for eye comfort */
 :root.light {
   --color-surface: #f9f9f7; /* Warm off-white (not pure white) */
-  --color-surface-raised: #f0efed; /* Warm raised surface, clearly distinct */
+  --color-surface-raised: #e8e6e3; /* Warm raised surface — stronger contrast for visible hover */
   --color-surface-overlay: #e8e7e4; /* Warm overlay */
   --color-surface-sidebar: #f1f0ee; /* Warm sidebar, distinct from main */
   --color-border: #d5d3cf; /* Warm neutral border */
@@ -308,12 +343,32 @@
   --inline-code-text: #3a3935;
 
   /* Diff viewer - Light mode */
-  --diff-added-bg: rgba(34, 197, 94, 0.1);
-  --diff-added-text: #166534;
-  --diff-added-border: #22c55e;
-  --diff-removed-bg: rgba(239, 68, 68, 0.1);
-  --diff-removed-text: #991b1b;
-  --diff-removed-border: #ef4444;
+  --diff-added-bg: rgba(34, 197, 94, 0.18);
+  --diff-added-text: #14532d;
+  --diff-added-border: #16a34a;
+  --diff-removed-bg: rgba(239, 68, 68, 0.09);
+  --diff-removed-text: #7f1d1d;
+  --diff-removed-border: #dc2626;
+  /* CodeMirror diff backgrounds - Light mode */
+  --diff-cm-changed-bg: rgba(34, 197, 94, 0.14);
+  --diff-cm-deleted-bg: rgba(239, 68, 68, 0.07);
+  /* CodeMirror merge buttons - Light mode */
+  --diff-merge-undo-color: #991b1b;
+  --diff-merge-undo-bg: rgba(239, 68, 68, 0.08);
+  --diff-merge-undo-border: rgba(239, 68, 68, 0.3);
+  --diff-merge-undo-hover-bg: rgba(239, 68, 68, 0.15);
+  --diff-merge-keep-color: #15803d;
+  --diff-merge-keep-bg: rgba(34, 197, 94, 0.15);
+  --diff-merge-keep-border: rgba(34, 197, 94, 0.4);
+  --diff-merge-keep-hover-bg: rgba(34, 197, 94, 0.25);
+  --diff-merge-keep-kbd: rgba(21, 128, 61, 0.6);
+  /* CodeMirror merge nav button hover - Light mode */
+  --diff-merge-nav-hover-bg: rgba(0, 0, 0, 0.06);
+  /* Portion collapse expand buttons - Light mode */
+  --diff-expand-hover-bg: rgba(0, 0, 0, 0.05);
+  --diff-expand-active-bg: rgba(0, 0, 0, 0.08);
+  --diff-expand-all-hover-bg: rgba(0, 0, 0, 0.03);
+  --diff-expand-all-active-bg: rgba(0, 0, 0, 0.06);
 
   /* Markdown prose - Warm tones */
   --prose-heading: #1c1b19;
@@ -421,6 +476,11 @@
   --system-activity-border: rgba(59, 130, 246, 0.25);
   --system-activity-accent: rgba(37, 99, 235, 0.7);
 
+  /* Cross-team communication */
+  --cross-team-bg: rgba(168, 85, 247, 0.08);
+  --cross-team-border: rgba(168, 85, 247, 0.25);
+  --cross-team-accent: rgba(124, 58, 237, 0.7);
+
   /* Info style — banners, status indicators */
   --info-bg: rgba(59, 130, 246, 0.1);
   --info-border: rgba(37, 99, 235, 0.3);
@@ -450,6 +510,16 @@
   --step-warning-text: #b45309;
   --step-warning-border: rgba(180, 83, 9, 0.4);
   --step-warning-bg: rgba(245, 158, 11, 0.1);
+
+  /* Collapsible section backgrounds (sidebar) */
+  --color-section-bg: rgba(0, 0, 0, 0.04);
+  --color-section-bg-open: rgba(0, 0, 0, 0.07);
+  --color-section-hover: rgba(0, 0, 0, 0.08);
+  --color-section-hover-open: rgba(0, 0, 0, 0.1);
+
+  /* Compact boundary — phase badge */
+  --compact-phase-bg: rgba(67, 56, 202, 0.12);
+  --compact-phase-text: #4338ca;
 }
 
 /* rehype-highlight (highlight.js) — map hljs classes to app theme variables */
@@ -655,6 +725,22 @@ body {
   animation: thought-expand 350ms ease-out both;
 }
 
+@keyframes activity-card-enter {
+  from {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+  to {
+    max-height: 80px;
+    opacity: 1;
+  }
+}
+
+.activity-card-enter-animate {
+  animation: activity-card-enter 300ms ease-out both;
+}
+
 @keyframes att-scale-in {
   from {
     transform: scale(0);
@@ -690,6 +776,28 @@ body {
 
 :root.light .file-icon-glow {
   filter: none;
+}
+
+/* Member spawn animations */
+@keyframes member-spawn-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes member-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 :root.light .skeleton-card::after {

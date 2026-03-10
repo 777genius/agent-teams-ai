@@ -6,8 +6,6 @@ import {
   CODE_BORDER,
   COLOR_TEXT_MUTED,
   COLOR_TEXT_SECONDARY,
-  TOOL_CALL_BG,
-  TOOL_CALL_BORDER,
   TOOL_CALL_TEXT,
 } from '@renderer/constants/cssVariables';
 import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
@@ -27,14 +25,8 @@ interface CompactBoundaryProps {
 }
 
 /**
- * CompactBoundary displays an interactive, collapsible marker indicating where
- * the conversation was compacted.
- *
- * Features:
- * - Minimalist design with subtle border and hover states
- * - Click to expand/collapse compacted content
- * - Scrollable content area with enforced max-height
- * - Linear/Notion-inspired aesthetics
+ * CompactBoundary displays a horizontal divider indicating where
+ * the conversation was compacted. Click to expand the compacted summary.
  */
 export const CompactBoundary = ({
   compactGroup,
@@ -64,70 +56,71 @@ export const CompactBoundary = ({
   const compactContent = getCompactContent();
 
   return (
-    <div className="my-6">
-      {/* Collapsible Header - Amber/orange accent for distinction */}
+    <div className="my-4">
+      {/* Divider with centered label */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="group flex w-full cursor-pointer items-center gap-3 overflow-hidden rounded-lg px-4 py-2.5 transition-all duration-200"
-        style={{
-          backgroundColor: TOOL_CALL_BG,
-          border: `1px solid ${TOOL_CALL_BORDER}`,
-        }}
+        className="group flex w-full cursor-pointer items-center transition-opacity hover:opacity-90"
         aria-expanded={isExpanded}
         aria-label="Toggle compacted content"
       >
-        {/* Icon Stack */}
-        <div
-          className="flex shrink-0 items-center gap-2 transition-colors"
-          style={{ color: TOOL_CALL_TEXT }}
-        >
+        {/* Left line */}
+        <div className="h-px flex-1" style={{ backgroundColor: TOOL_CALL_TEXT, opacity: 0.3 }} />
+
+        {/* Center content */}
+        <div className="flex shrink-0 items-center gap-2 px-3">
           <ChevronRight
-            size={16}
-            className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+            size={12}
+            className="transition-transform duration-200"
+            style={{
+              color: TOOL_CALL_TEXT,
+              transform: isExpanded ? 'rotate(90deg)' : undefined,
+            }}
           />
-          <Layers size={16} />
+          <Layers size={12} style={{ color: TOOL_CALL_TEXT }} />
+          <span
+            className="whitespace-nowrap text-[11px] font-medium"
+            style={{ color: TOOL_CALL_TEXT }}
+          >
+            Context compacted
+          </span>
+
+          {/* Token delta */}
+          {compactGroup.tokenDelta && (
+            <span
+              className="whitespace-nowrap text-[10px] tabular-nums"
+              style={{ color: COLOR_TEXT_MUTED }}
+            >
+              {formatTokens(compactGroup.tokenDelta.preCompactionTokens)} →{' '}
+              {formatTokens(compactGroup.tokenDelta.postCompactionTokens)}
+              <span style={{ color: 'var(--diff-added-text)' }}>
+                {' '}
+                ({formatTokens(Math.abs(compactGroup.tokenDelta.delta))} freed)
+              </span>
+            </span>
+          )}
+
+          {/* Phase badge */}
+          {compactGroup.startingPhaseNumber && (
+            <span
+              className="whitespace-nowrap rounded px-1.5 py-0.5 text-[10px]"
+              style={{
+                backgroundColor: 'var(--compact-phase-bg)',
+                color: 'var(--compact-phase-text)',
+              }}
+            >
+              Phase {compactGroup.startingPhaseNumber}
+            </span>
+          )}
+
+          {/* Timestamp */}
+          <span className="whitespace-nowrap text-[10px]" style={{ color: COLOR_TEXT_MUTED }}>
+            {format(timestamp, 'h:mm:ss a')}
+          </span>
         </div>
 
-        {/* Label */}
-        <span
-          className="shrink-0 whitespace-nowrap text-sm font-medium transition-colors"
-          style={{ color: TOOL_CALL_TEXT }}
-        >
-          Compacted
-        </span>
-
-        {/* Token delta info */}
-        {compactGroup.tokenDelta && (
-          <span
-            className="ml-2 min-w-0 truncate text-xs tabular-nums"
-            style={{ color: COLOR_TEXT_MUTED }}
-          >
-            {formatTokens(compactGroup.tokenDelta.preCompactionTokens)} →{' '}
-            {formatTokens(compactGroup.tokenDelta.postCompactionTokens)}
-            <span style={{ color: '#4ade80' }}>
-              {' '}
-              ({formatTokens(Math.abs(compactGroup.tokenDelta.delta))} freed)
-            </span>
-          </span>
-        )}
-
-        {/* Phase badge */}
-        {compactGroup.startingPhaseNumber && (
-          <span
-            className="shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px]"
-            style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#818cf8' }}
-          >
-            Phase {compactGroup.startingPhaseNumber}
-          </span>
-        )}
-
-        {/* Timestamp */}
-        <span
-          className="ml-auto shrink-0 whitespace-nowrap text-xs transition-colors"
-          style={{ color: COLOR_TEXT_MUTED }}
-        >
-          {format(timestamp, 'h:mm:ss a')}
-        </span>
+        {/* Right line */}
+        <div className="h-px flex-1" style={{ backgroundColor: TOOL_CALL_TEXT, opacity: 0.3 }} />
       </button>
 
       {/* Expanded Content */}
@@ -144,7 +137,7 @@ export const CompactBoundary = ({
           {/* Content - scrollable with left accent bar */}
           <div
             className="max-h-96 overflow-y-auto border-l-2 px-4 py-3"
-            style={{ borderColor: 'var(--chat-ai-border)' }}
+            style={{ borderColor: TOOL_CALL_TEXT }}
           >
             {compactContent ? (
               <ReactMarkdown

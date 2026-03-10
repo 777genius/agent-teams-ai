@@ -6,8 +6,10 @@
 import { TabUIProvider } from '@renderer/contexts/TabUIContext';
 
 import { DashboardView } from '../dashboard/DashboardView';
+import { ExtensionStoreView } from '../extensions/ExtensionStoreView';
 import { NotificationsView } from '../notifications/NotificationsView';
 import { SessionReportTab } from '../report/SessionReportTab';
+import { SchedulesView } from '../schedules/SchedulesView';
 import { SettingsView } from '../settings/SettingsView';
 import { TeamDetailView } from '../team/TeamDetailView';
 import { TeamListView } from '../team/TeamListView';
@@ -57,6 +59,12 @@ export const PaneContent = ({ pane }: PaneContentProps): React.JSX.Element => {
               </TabUIProvider>
             )}
             {tab.type === 'report' && <SessionReportTab tab={tab} />}
+            {tab.type === 'extensions' && (
+              <TabUIProvider tabId={tab.id}>
+                <ExtensionStoreView />
+              </TabUIProvider>
+            )}
+            {tab.type === 'schedules' && <SchedulesView />}
           </div>
         );
       })}

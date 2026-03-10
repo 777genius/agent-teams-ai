@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { Edit2, Loader2, Plus, Save, Server, Trash2, X } from 'lucide-react';
 
@@ -383,22 +384,34 @@ export const WorkspaceSection = (): React.JSX.Element => {
                 >
                   {profile.authMethod}
                 </span>
-                <button
-                  onClick={() => setEditingId(profile.id)}
-                  className="shrink-0 rounded p-1 transition-colors hover:bg-surface-raised"
-                  style={{ color: 'var(--color-text-muted)' }}
-                  title="Edit profile"
-                >
-                  <Edit2 className="size-3.5" />
-                </button>
-                <button
-                  onClick={() => void handleDelete(profile.id)}
-                  className="shrink-0 rounded p-1 transition-colors hover:bg-surface-raised"
-                  style={{ color: 'var(--color-text-muted)' }}
-                  title="Delete profile"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setEditingId(profile.id)}
+                      className="shrink-0 rounded p-1 transition-colors hover:bg-surface-raised"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
+                      <Edit2 className="size-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Edit profile
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => void handleDelete(profile.id)}
+                      className="shrink-0 rounded p-1 transition-colors hover:bg-surface-raised"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Delete profile
+                  </TooltipContent>
+                </Tooltip>
               </div>
             )
           )}

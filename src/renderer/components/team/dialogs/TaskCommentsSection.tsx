@@ -10,13 +10,17 @@ import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useMarkCommentsRead } from '@renderer/hooks/useMarkCommentsRead';
+import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useStore } from '@renderer/store';
+import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { buildReplyBlock, parseMessageReply } from '@renderer/utils/agentMessageFormatting';
 import { isImageMimeType } from '@renderer/utils/attachmentUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { formatDistanceToNow } from 'date-fns';
@@ -27,8 +31,8 @@ import type { ResolvedTeamMember, TaskAttachmentMeta, TaskComment } from '@share
 
 /**
  * Convert literal backslash-n sequences to real newlines.
- * CLI tools (teamctl.js) may store `\n` as literal text when
- * shell double-quotes don't interpret escape sequences.
+ * Historical CLI-produced comments may store `\n` as literal text
+ * when shell double-quotes don't interpret escape sequences.
  */
 function normalizeLiteralNewlines(text: string): string {
   return text.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
@@ -53,24 +57,13 @@ interface TaskCommentsSectionProps {
   onTaskIdClick?: (taskId: string) => void;
   /** Extra className on the outer comments container (e.g. negative margins for edge-to-edge). */
   containerClassName?: string;
+  /** Snapshot of unread comment IDs captured when the dialog opened. Blue dot is shown for these. */
+  unreadCommentIds?: Set<string>;
 }
 
-/** Convert `#<digits>` in plain text to markdown links with task:// protocol. */
+/** Convert `#<task-display-id>` in plain text to markdown links with task:// protocol. */
 function linkifyTaskIdsInMarkdown(text: string): string {
-  return text.replace(/#(\d+)\b/g, '[#$1](task://$1)');
-}
-
-/** Convert `@memberName` to markdown links with mention:// protocol for colored badge rendering. */
-function linkifyMentionsInMarkdown(text: string, memberColorMap: Map<string, string>): string {
-  if (memberColorMap.size === 0) return text;
-  const names = [...memberColorMap.keys()].sort((a, b) => b.length - a.length);
-  const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const pattern = new RegExp(`(^|\\s)@(${escaped.join('|')})(?=[\\s,.:;!?)\\]}-]|$)`, 'gi');
-  return text.replace(pattern, (_match, prefix: string, name: string) => {
-    const canonical = names.find((n) => n.toLowerCase() === name.toLowerCase()) ?? name;
-    const color = memberColorMap.get(canonical) ?? '';
-    return `${prefix}[@${canonical}](mention://${encodeURIComponent(color)}/${encodeURIComponent(canonical)})`;
-  });
+  return text.replace(/#([A-Za-z0-9-]+)\b/g, '[#$1](task://$1)');
 }
 
 export const TaskCommentsSection = ({
@@ -83,9 +76,11 @@ export const TaskCommentsSection = ({
   onReply,
   onTaskIdClick,
   containerClassName,
+  unreadCommentIds,
 }: TaskCommentsSectionProps): React.JSX.Element => {
   const addTaskComment = useStore((s) => s.addTaskComment);
   const addingComment = useStore((s) => s.addingComment);
+  const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
   const commentsRef = useMarkCommentsRead(teamName, taskId, comments);
 
   const [replyTo, setReplyTo] = useState<{ author: string; text: string } | null>(null);
@@ -105,7 +100,13 @@ export const TaskCommentsSection = ({
   }
 
   const draft = useDraftPersistence({ key: `taskComment:${teamName}:${taskId}` });
+  const chipDraft = useChipDraftPersistence(`taskCommentChips:${teamName}:${taskId}`);
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
+  const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName);
+  const teamNamesForLinkify = useMemo(
+    () => teamMentionSuggestions.map((t) => t.name),
+    [teamMentionSuggestions]
+  );
 
   const cappedComments = useMemo(() => {
     if (comments.length <= MAX_COMMENTS_TO_RENDER) return comments;
@@ -148,19 +149,24 @@ export const TaskCommentsSection = ({
 
   const trimmed = draft.value.trim();
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
-  const canSubmit = trimmed.length > 0 && trimmed.length <= MAX_TEXT_LENGTH && !addingComment;
+  const canSubmit =
+    (trimmed.length > 0 || chipDraft.chips.length > 0) &&
+    trimmed.length <= MAX_TEXT_LENGTH &&
+    !addingComment;
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
     try {
-      const text = replyTo ? buildReplyBlock(replyTo.author, replyTo.text, trimmed) : trimmed;
+      const serialized = serializeChipsWithText(trimmed, chipDraft.chips);
+      const text = replyTo ? buildReplyBlock(replyTo.author, replyTo.text, serialized) : serialized;
       await addTaskComment(teamName, taskId, text);
       draft.clearDraft();
+      chipDraft.clearChipDraft();
       setReplyTo(null);
     } catch {
       // Error is stored in addCommentError via store
     }
-  }, [canSubmit, addTaskComment, teamName, taskId, trimmed, draft, replyTo]);
+  }, [canSubmit, addTaskComment, teamName, taskId, trimmed, draft, chipDraft, replyTo]);
 
   return (
     <div ref={commentsRef}>
@@ -207,6 +213,9 @@ export const TaskCommentsSection = ({
                   }
                 >
                   <div className="mb-1 flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
+                    {unreadCommentIds?.has(comment.id) ? (
+                      <span className="size-2 shrink-0 rounded-full bg-blue-500" />
+                    ) : null}
                     <MemberBadge
                       name={comment.author}
                       color={colorMap.get(comment.author)}
@@ -294,7 +303,12 @@ export const TaskCommentsSection = ({
                             <MarkdownViewer
                               content={(() => {
                                 let t = linkifyTaskIdsInMarkdown(displayText);
-                                if (colorMap.size > 0) t = linkifyMentionsInMarkdown(t, colorMap);
+                                if (colorMap.size > 0 || teamNamesForLinkify.length > 0)
+                                  t = linkifyAllMentionsInMarkdown(
+                                    t,
+                                    colorMap,
+                                    teamNamesForLinkify
+                                  );
                                 return t;
                               })()}
                               maxHeight="max-h-none"
@@ -379,6 +393,11 @@ export const TaskCommentsSection = ({
               value={draft.value}
               onValueChange={draft.setValue}
               suggestions={mentionSuggestions}
+              teamSuggestions={teamMentionSuggestions}
+              projectPath={projectPath}
+              chips={chipDraft.chips}
+              onFileChipInsert={chipDraft.addChip}
+              onChipRemove={chipDraft.removeChip}
               onModEnter={() => void handleSubmit()}
               minRows={2}
               maxRows={8}

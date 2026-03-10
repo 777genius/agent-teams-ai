@@ -3,16 +3,39 @@ import React, { useEffect, useRef } from 'react';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { json } from '@codemirror/lang-json';
-import { bracketMatching, defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import {
+  bracketMatching,
+  foldGutter,
+  indentOnInput,
+  syntaxHighlighting,
+} from '@codemirror/language';
+import { lintGutter } from '@codemirror/lint';
 import { EditorState } from '@codemirror/state';
-import { oneDark } from '@codemirror/theme-one-dark';
-import { EditorView, keymap, lineNumbers } from '@codemirror/view';
+import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
+import {
+  EditorView,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  keymap,
+  lineNumbers,
+} from '@codemirror/view';
+import { baseEditorTheme, jsonLinter } from '@renderer/utils/codemirrorTheme';
 
 interface MembersJsonEditorProps {
   value: string;
   onChange: (json: string) => void;
   error: string | null;
 }
+
+const membersEditorTheme = EditorView.theme({
+  '&': {
+    fontSize: '12px',
+    maxHeight: '300px',
+  },
+  '.cm-scroller': {
+    overflow: 'auto',
+  },
+});
 
 export const MembersJsonEditor = ({
   value,
@@ -31,29 +54,24 @@ export const MembersJsonEditor = ({
       doc: value,
       extensions: [
         json(),
-        oneDark,
         lineNumbers(),
+        highlightActiveLineGutter(),
+        highlightActiveLine(),
         history(),
+        foldGutter(),
+        indentOnInput(),
         bracketMatching(),
         closeBrackets(),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        syntaxHighlighting(oneDarkHighlightStyle),
+        jsonLinter,
+        lintGutter(),
         keymap.of([...defaultKeymap, ...historyKeymap, ...closeBracketsKeymap]),
+        baseEditorTheme,
+        membersEditorTheme,
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             onChangeRef.current(update.state.doc.toString());
           }
-        }),
-        EditorView.theme({
-          '&': {
-            fontSize: '12px',
-            maxHeight: '300px',
-          },
-          '.cm-scroller': {
-            overflow: 'auto',
-          },
-          '.cm-content': {
-            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
-          },
         }),
       ],
     });

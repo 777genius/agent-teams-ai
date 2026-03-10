@@ -13,6 +13,7 @@ import { api, isElectronMode } from '@renderer/api';
 import { TerminalLogPanel } from '@renderer/components/terminal/TerminalLogPanel';
 import { TerminalModal } from '@renderer/components/terminal/TerminalModal';
 import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
+import { useStore } from '@renderer/store';
 import { formatBytes } from '@renderer/utils/formatters';
 import {
   AlertTriangle,
@@ -20,6 +21,7 @@ import {
   Download,
   Loader2,
   LogIn,
+  Puzzle,
   RefreshCw,
   Terminal,
 } from 'lucide-react';
@@ -103,6 +105,109 @@ const ErrorDisplay = ({
           Retry
         </button>
       </div>
+    </div>
+  );
+};
+
+// =============================================================================
+// Installed banner (extracted sub-component)
+// =============================================================================
+
+interface InstalledBannerProps {
+  cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>;
+  cliStatusLoading: boolean;
+  cliStatusError: string | null;
+  isBusy: boolean;
+  onInstall: () => void;
+  onRefresh: () => void;
+  variant: BannerVariant;
+}
+
+const InstalledBanner = ({
+  cliStatus,
+  cliStatusLoading,
+  cliStatusError,
+  isBusy,
+  onInstall,
+  onRefresh,
+  variant,
+}: InstalledBannerProps): React.JSX.Element => {
+  const openExtensionsTab = useStore((s) => s.openExtensionsTab);
+  const styles = VARIANT_STYLES[variant];
+
+  return (
+    <div
+      className={`mb-6 rounded-lg border-l-4 px-4 py-3 ${BANNER_MIN_H}`}
+      style={{ borderColor: styles.border, backgroundColor: styles.bg }}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Terminal className="size-4 shrink-0" style={{ color: 'var(--color-text-muted)' }} />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm" style={{ color: 'var(--color-text)' }}>
+                Claude CLI v{cliStatus.installedVersion ?? 'unknown'}
+              </span>
+
+              {/* Update / Check for Updates — inline next to version */}
+              {cliStatus.updateAvailable ? (
+                <button
+                  onClick={onInstall}
+                  disabled={isBusy}
+                  className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
+                  style={{ backgroundColor: '#3b82f6' }}
+                >
+                  <Download className="size-3" />
+                  Update to v{cliStatus.latestVersion}
+                </button>
+              ) : (
+                <button
+                  onClick={onRefresh}
+                  disabled={cliStatusLoading}
+                  className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors hover:bg-white/5 disabled:opacity-50"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  <RefreshCw className={cliStatusLoading ? 'size-3 animate-spin' : 'size-3'} />
+                  {cliStatusLoading ? 'Checking...' : 'Check for Updates'}
+                </button>
+              )}
+
+              {cliStatus.authLoggedIn && (
+                <span className="text-xs" style={{ color: '#4ade80' }}>
+                  Authenticated
+                </span>
+              )}
+            </div>
+            {cliStatus.binaryPath && (
+              <button
+                className="truncate font-mono text-xs hover:underline"
+                style={{ color: 'var(--color-text-muted)' }}
+                title={`Reveal in file manager: ${cliStatus.binaryPath}`}
+                onClick={() => void api.showInFolder(cliStatus.binaryPath!)}
+              >
+                {cliStatus.binaryPath}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Extensions button — only when installed + authenticated */}
+        {cliStatus.authLoggedIn && (
+          <button
+            onClick={openExtensionsTab}
+            className="flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
+            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+          >
+            <Puzzle className="size-3.5" />
+            Extensions
+          </button>
+        )}
+      </div>
+      {cliStatusError && !cliStatusLoading && (
+        <p className="mt-2 text-xs" style={{ color: '#f87171' }}>
+          Failed to check for updates. Check your network connection and try again.
+        </p>
+      )}
     </div>
   );
 };
@@ -448,70 +553,14 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
 
   // Installed — show version, path, update info
   return (
-    <div
-      className={`mb-6 rounded-lg border-l-4 px-4 py-3 ${BANNER_MIN_H}`}
-      style={{ borderColor: styles.border, backgroundColor: styles.bg }}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Terminal className="size-4 shrink-0" style={{ color: 'var(--color-text-muted)' }} />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm" style={{ color: 'var(--color-text)' }}>
-                Claude CLI v{cliStatus.installedVersion ?? 'unknown'}
-              </span>
-              {cliStatus.authLoggedIn && (
-                <span className="text-xs" style={{ color: '#4ade80' }}>
-                  Authenticated
-                </span>
-              )}
-              {cliStatus.updateAvailable && cliStatus.latestVersion && (
-                <span className="text-xs" style={{ color: '#60a5fa' }}>
-                  &rarr; v{cliStatus.latestVersion}
-                </span>
-              )}
-            </div>
-            {cliStatus.binaryPath && (
-              <button
-                className="truncate font-mono text-xs hover:underline"
-                style={{ color: 'var(--color-text-muted)' }}
-                title={`Reveal in file manager: ${cliStatus.binaryPath}`}
-                onClick={() => void api.showInFolder(cliStatus.binaryPath!)}
-              >
-                {cliStatus.binaryPath}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Action button */}
-        {cliStatus.updateAvailable ? (
-          <button
-            onClick={handleInstall}
-            disabled={isBusy}
-            className="flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
-            style={{ backgroundColor: '#3b82f6' }}
-          >
-            <Download className="size-3.5" />
-            Update
-          </button>
-        ) : (
-          <button
-            onClick={handleRefresh}
-            disabled={cliStatusLoading}
-            className="flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
-            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
-          >
-            <RefreshCw className={cliStatusLoading ? 'size-3.5 animate-spin' : 'size-3.5'} />
-            {cliStatusLoading ? 'Checking...' : 'Check for Updates'}
-          </button>
-        )}
-      </div>
-      {cliStatusError && !cliStatusLoading && (
-        <p className="mt-2 text-xs" style={{ color: '#f87171' }}>
-          Failed to check for updates. Check your network connection and try again.
-        </p>
-      )}
-    </div>
+    <InstalledBanner
+      cliStatus={cliStatus}
+      cliStatusLoading={cliStatusLoading}
+      cliStatusError={cliStatusError ?? null}
+      isBusy={isBusy}
+      onInstall={handleInstall}
+      onRefresh={handleRefresh}
+      variant={variant}
+    />
   );
 };

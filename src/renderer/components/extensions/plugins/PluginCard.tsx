@@ -1,0 +1,109 @@
+/**
+ * PluginCard — grid card for a single plugin in the catalog.
+ */
+
+import { Badge } from '@renderer/components/ui/badge';
+import { useStore } from '@renderer/store';
+import {
+  getCapabilityLabel,
+  inferCapabilities,
+  normalizeCategory,
+} from '@shared/utils/extensionNormalizers';
+import { Tag } from 'lucide-react';
+
+import { InstallButton } from '../common/InstallButton';
+import { InstallCountBadge } from '../common/InstallCountBadge';
+
+import type { EnrichedPlugin } from '@shared/types/extensions';
+
+interface PluginCardProps {
+  plugin: EnrichedPlugin;
+  onClick: (pluginId: string) => void;
+}
+
+export const PluginCard = ({ plugin, onClick }: PluginCardProps): React.JSX.Element => {
+  const capabilities = inferCapabilities(plugin);
+  const category = normalizeCategory(plugin.category);
+  const installProgress = useStore((s) => s.pluginInstallProgress[plugin.pluginId] ?? 'idle');
+  const installPlugin = useStore((s) => s.installPlugin);
+  const uninstallPlugin = useStore((s) => s.uninstallPlugin);
+  const installError = useStore((s) => s.installErrors[plugin.pluginId]);
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onClick(plugin.pluginId)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick(plugin.pluginId);
+        }
+      }}
+      className={`hover:bg-surface-raised/45 flex w-full cursor-pointer flex-col gap-3 rounded-xl border bg-transparent p-4 text-left transition-all duration-200 hover:border-border-emphasis hover:shadow-[0_0_12px_rgba(255,255,255,0.02)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] ${
+        plugin.isInstalled ? 'border-l-2 border-border border-l-emerald-500/35' : 'border-border'
+      }`}
+    >
+      {/* Header: name + status/meta */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 space-y-1">
+          <h3 className="truncate text-sm font-semibold text-text">{plugin.name}</h3>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge variant="secondary" className="text-[11px]">
+              {category}
+            </Badge>
+            {capabilities.map((cap) => (
+              <Badge
+                key={cap}
+                variant="outline"
+                className="bg-surface-raised/60 border-border text-[11px] text-text-secondary"
+              >
+                {getCapabilityLabel(cap)}
+              </Badge>
+            ))}
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <InstallCountBadge count={plugin.installCount} />
+          {plugin.isInstalled && (
+            <Badge
+              className="shrink-0 border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+              variant="outline"
+            >
+              Installed
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Description */}
+      <p className="line-clamp-3 min-h-[3.75rem] text-xs leading-5 text-text-secondary">
+        {plugin.description}
+      </p>
+
+      {/* Footer: author + version + install button */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-3 text-xs text-text-muted">
+          <span className="truncate">{plugin.author?.name ?? 'Unknown author'}</span>
+          {plugin.version && (
+            <span className="inline-flex shrink-0 items-center gap-1">
+              <Tag className="size-3" />
+              {plugin.version}
+            </span>
+          )}
+        </div>
+        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+        <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+          <InstallButton
+            state={installProgress}
+            isInstalled={plugin.isInstalled}
+            onInstall={() => installPlugin({ pluginId: plugin.pluginId, scope: 'user' })}
+            onUninstall={() => uninstallPlugin(plugin.pluginId)}
+            size="sm"
+            errorMessage={installError}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};

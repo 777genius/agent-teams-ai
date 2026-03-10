@@ -3,13 +3,18 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useStore } from '@renderer/store';
 import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { ImagePlus, Mic, Send, Trash2, X } from 'lucide-react';
+
+import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightbox';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CommentAttachmentPayload, ResolvedTeamMember } from '@shared/types';
@@ -47,9 +52,12 @@ export const TaskCommentInput = ({
   const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
 
   const draft = useDraftPersistence({ key: `taskComment:${teamName}:${taskId}` });
+  const chipDraft = useChipDraftPersistence(`taskCommentChips:${teamName}:${taskId}`);
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
+  const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const mentionSuggestions = useMemo<MentionSuggestion[]>(
@@ -117,9 +125,10 @@ export const TaskCommentInput = ({
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
     try {
+      const serialized = serializeChipsWithText(trimmed, chipDraft.chips);
       const text = replyTo
-        ? buildReplyBlock(replyTo.author, replyTo.text, trimmed || '(image)')
-        : trimmed || '(image)';
+        ? buildReplyBlock(replyTo.author, replyTo.text, serialized || '(image)')
+        : serialized || '(image)';
       const attachments: CommentAttachmentPayload[] | undefined =
         pendingAttachments.length > 0
           ? pendingAttachments.map((a) => ({
@@ -131,6 +140,7 @@ export const TaskCommentInput = ({
           : undefined;
       await addTaskComment(teamName, taskId, text, attachments);
       draft.clearDraft();
+      chipDraft.clearChipDraft();
       setPendingAttachments([]);
       setAttachError(null);
       onClearReply();
@@ -144,6 +154,7 @@ export const TaskCommentInput = ({
     taskId,
     trimmed,
     draft,
+    chipDraft,
     replyTo,
     onClearReply,
     pendingAttachments,
@@ -210,22 +221,40 @@ export const TaskCommentInput = ({
       {/* Pending attachment previews */}
       {pendingAttachments.length > 0 ? (
         <div className="mb-2 flex flex-wrap gap-1.5">
-          {pendingAttachments.map((att) => (
+          {pendingAttachments.map((att, idx) => (
             <div
               key={att.id}
-              className="group relative size-14 overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)]"
+              className="group relative size-14 cursor-pointer overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] transition-colors hover:border-[var(--color-border-emphasis)]"
+              onClick={() => setLightboxIndex(idx)}
             >
               <img src={att.previewUrl} alt={att.filename} className="size-full object-cover" />
               <button
                 type="button"
                 className="absolute right-0.5 top-0.5 rounded bg-black/60 p-0.5 text-white opacity-0 transition-opacity hover:bg-red-600 group-hover:opacity-100"
-                onClick={() => removeAttachment(att.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeAttachment(att.id);
+                }}
               >
                 <Trash2 size={8} />
               </button>
             </div>
           ))}
         </div>
+      ) : null}
+
+      {lightboxIndex !== null && pendingAttachments.length > 0 ? (
+        <ImageLightbox
+          open
+          onClose={() => setLightboxIndex(null)}
+          slides={pendingAttachments.map((att) => ({
+            src: att.previewUrl,
+            alt: att.filename,
+            title: att.filename,
+          }))}
+          index={lightboxIndex}
+          showCounter={pendingAttachments.length > 1}
+        />
       ) : null}
 
       {attachError ? <p className="mb-1 text-[10px] text-red-400">{attachError}</p> : null}
@@ -249,7 +278,11 @@ export const TaskCommentInput = ({
           value={draft.value}
           onValueChange={draft.setValue}
           suggestions={mentionSuggestions}
+          teamSuggestions={teamMentionSuggestions}
           projectPath={projectPath}
+          chips={chipDraft.chips}
+          onFileChipInsert={chipDraft.addChip}
+          onChipRemove={chipDraft.removeChip}
           onModEnter={() => void handleSubmit()}
           minRows={2}
           maxRows={8}

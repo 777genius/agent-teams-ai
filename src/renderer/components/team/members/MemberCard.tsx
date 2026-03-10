@@ -3,11 +3,24 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
-import { agentAvatarUrl, getMemberDotClass, getPresenceLabel } from '@renderer/utils/memberHelpers';
-import { GitBranch, Loader2, MessageSquare, Plus } from 'lucide-react';
+import {
+  agentAvatarUrl,
+  getSpawnAwareDotClass,
+  getSpawnAwarePresenceLabel,
+  getSpawnCardClass,
+} from '@renderer/utils/memberHelpers';
+import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
+import { AlertTriangle, GitBranch, Loader2, MessageSquare, Plus } from 'lucide-react';
+
+import { CurrentTaskIndicator } from './CurrentTaskIndicator';
 
 import type { TaskStatusCounts } from '@renderer/utils/pathNormalize';
-import type { LeadActivityState, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
+import type {
+  LeadActivityState,
+  MemberSpawnStatus,
+  ResolvedTeamMember,
+  TeamTaskWithKanban,
+} from '@shared/types';
 
 interface MemberCardProps {
   member: ResolvedTeamMember;
@@ -17,8 +30,11 @@ interface MemberCardProps {
   isTeamProvisioning?: boolean;
   leadActivity?: LeadActivityState;
   currentTask?: TeamTaskWithKanban | null;
+  reviewTask?: TeamTaskWithKanban | null;
   isAwaitingReply?: boolean;
   isRemoved?: boolean;
+  spawnStatus?: MemberSpawnStatus;
+  spawnError?: string;
   onOpenTask?: () => void;
   onClick?: () => void;
   onSendMessage?: () => void;
@@ -33,8 +49,11 @@ export const MemberCard = ({
   isTeamProvisioning,
   leadActivity,
   currentTask,
+  reviewTask,
   isAwaitingReply,
   isRemoved,
+  spawnStatus,
+  spawnError,
   onOpenTask,
   onClick,
   onSendMessage,
@@ -45,8 +64,21 @@ export const MemberCard = ({
   // const leadContext = useStore((s) =>
   //   member.agentType === 'team-lead' && teamName ? s.leadContextByTeam[teamName] : undefined
   // );
-  const dotClass = getMemberDotClass(member, isTeamAlive, isTeamProvisioning, leadActivity);
-  const presenceLabel = getPresenceLabel(member, isTeamAlive, isTeamProvisioning, leadActivity);
+  const dotClass = getSpawnAwareDotClass(
+    member,
+    spawnStatus,
+    isTeamAlive,
+    isTeamProvisioning,
+    leadActivity
+  );
+  const presenceLabel = getSpawnAwarePresenceLabel(
+    member,
+    spawnStatus,
+    isTeamAlive,
+    isTeamProvisioning,
+    leadActivity
+  );
+  const spawnCardClass = isTeamProvisioning ? getSpawnCardClass(spawnStatus) : '';
   const colors = getTeamColorSet(memberColor);
   const { isLight } = useTheme();
   const pending = taskCounts?.pending ?? 0;
@@ -54,16 +86,25 @@ export const MemberCard = ({
   const completed = taskCounts?.completed ?? 0;
   const totalTasks = pending + inProgress + completed;
   const progressPercent = totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 0;
+  const activityTask = currentTask ?? reviewTask ?? null;
+  const activityLabel = currentTask ? 'working on' : reviewTask ? 'reviewing' : null;
+  const activityTitle = currentTask
+    ? `Current task: #${deriveTaskDisplayId(currentTask.id)}`
+    : reviewTask
+      ? `Reviewing task: #${deriveTaskDisplayId(reviewTask.id)}`
+      : undefined;
 
   return (
-    <div className={isRemoved ? 'rounded opacity-50' : 'rounded'}>
+    <div
+      className={`rounded transition-opacity duration-300 ${isRemoved ? 'opacity-50' : ''} ${spawnCardClass}`}
+    >
       <div
         className="group relative cursor-pointer rounded px-2 py-1.5"
         style={{
           borderLeft: `3px solid ${colors.border}`,
           background: `linear-gradient(to right, ${getThemedBadge(colors, isLight)}, transparent)`,
         }}
-        title={member.currentTaskId ? `Current task: ${member.currentTaskId}` : undefined}
+        title={activityTitle}
         role="button"
         tabIndex={0}
         onClick={onClick}
@@ -96,38 +137,15 @@ export const MemberCard = ({
                 {member.gitBranch}
               </span>
             ) : null}
-            {currentTask ? (
-              <>
-                <Loader2
-                  className="size-3 shrink-0 animate-spin"
-                  style={{ color: colors.border }}
-                />
-                <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                  working on
-                </span>
-                <button
-                  type="button"
-                  className="min-w-0 shrink truncate rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-text)] transition-opacity hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-[var(--color-border)]"
-                  style={{ border: `1px solid ${colors.border}40` }}
-                  title="Open task"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTask?.();
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onOpenTask?.();
-                    }
-                  }}
-                >
-                  #{currentTask.id} {currentTask.subject.slice(0, 36)}
-                  {currentTask.subject.length > 36 ? '…' : ''}
-                </button>
-              </>
+            {activityTask && activityLabel ? (
+              <CurrentTaskIndicator
+                task={activityTask}
+                borderColor={colors.border}
+                activityLabel={activityLabel}
+                onOpenTask={onOpenTask}
+              />
             ) : null}
-            {!currentTask && isAwaitingReply ? (
+            {!activityTask && isAwaitingReply ? (
               <>
                 <Loader2
                   className="size-3 shrink-0 animate-spin"
@@ -147,22 +165,33 @@ export const MemberCard = ({
               </span>
             ) : null;
           })()}
-          {presenceLabel === 'connecting' && !isRemoved ? (
-            <Loader2
-              className="size-3.5 shrink-0 animate-spin text-[var(--color-text-muted)]"
-              aria-label="connecting"
-            />
+          {presenceLabel === 'connecting' || spawnStatus === 'spawning' ? (
+            !isRemoved ? (
+              <Loader2
+                className="size-3.5 shrink-0 animate-spin text-[var(--color-text-muted)]"
+                aria-label="connecting"
+              />
+            ) : null
+          ) : spawnStatus === 'error' ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex shrink-0 items-center gap-1">
+                  <AlertTriangle className="size-3.5 shrink-0 text-red-400" />
+                  <Badge
+                    variant="secondary"
+                    className="shrink-0 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-normal leading-none text-red-400"
+                  >
+                    {presenceLabel}
+                  </Badge>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{spawnError ?? 'Spawn failed'}</TooltipContent>
+            </Tooltip>
           ) : (
             <Badge
               variant="secondary"
               className={`shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none ${isRemoved ? 'bg-zinc-600 text-zinc-300' : 'text-[var(--color-text-muted)]'}`}
-              title={
-                isRemoved
-                  ? 'This member has been removed'
-                  : member.currentTaskId
-                    ? `Current task: ${member.currentTaskId}`
-                    : undefined
-              }
+              title={isRemoved ? 'This member has been removed' : activityTitle}
             >
               {isRemoved ? 'removed' : presenceLabel}
             </Badge>

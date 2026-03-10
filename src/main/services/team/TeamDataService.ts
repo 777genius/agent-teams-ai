@@ -1,23 +1,25 @@
 import { yieldToEventLoop } from '@main/utils/asyncYield';
-import { readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import {
   encodePath,
   extractBaseDir,
+  getClaudeBasePath,
   getProjectsBasePath,
   getTasksBasePath,
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
-import { isProcessAlive } from '@main/utils/processHealth';
 import { killProcessByPid } from '@main/utils/processKill';
 import {
   AGENT_BLOCK_CLOSE,
   AGENT_BLOCK_OPEN,
   stripAgentBlocks,
 } from '@shared/constants/agentBlocks';
-import { getMemberColor } from '@shared/constants/memberColors';
+import { getMemberColorByName } from '@shared/constants/memberColors';
 import { createLogger } from '@shared/utils/logger';
+import { getKanbanColumnFromReviewState, normalizeReviewState } from '@shared/utils/reviewState';
+import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
+import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -25,7 +27,6 @@ import * as path from 'path';
 import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 
 import { atomicWriteAsync } from './atomicWrite';
-import { TeamAgentToolsInstaller } from './TeamAgentToolsInstaller';
 import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
@@ -44,7 +45,6 @@ import type {
   InboxMessage,
   KanbanColumnId,
   KanbanState,
-  KanbanTaskState,
   ResolvedTeamMember,
   SendMessageRequest,
   SendMessageResult,
@@ -62,13 +62,15 @@ import type {
   ToolCallMeta,
   UpdateKanbanPatch,
 } from '@shared/types';
+import type { AgentTeamsController } from 'agent-teams-controller';
+
+const { createController } = agentTeamsControllerModule;
 
 const logger = createLogger('Service:TeamDataService');
 
 const MIN_TEXT_LENGTH = 30;
 const MAX_LEAD_TEXTS = 150;
 const PROCESS_HEALTH_INTERVAL_MS = 2_000;
-const MAX_PROCESSES_FILE_BYTES = 2 * 1024 * 1024;
 const TASK_MAP_YIELD_EVERY = 250;
 
 export class TeamDataService {
@@ -81,14 +83,46 @@ export class TeamDataService {
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
     private readonly taskReader: TeamTaskReader = new TeamTaskReader(),
     private readonly inboxReader: TeamInboxReader = new TeamInboxReader(),
-    private readonly inboxWriter: TeamInboxWriter = new TeamInboxWriter(),
-    private readonly taskWriter: TeamTaskWriter = new TeamTaskWriter(),
+    _inboxWriter: TeamInboxWriter = new TeamInboxWriter(),
+    _taskWriter: TeamTaskWriter = new TeamTaskWriter(),
     private readonly memberResolver: TeamMemberResolver = new TeamMemberResolver(),
     private readonly kanbanManager: TeamKanbanManager = new TeamKanbanManager(),
-    private readonly toolsInstaller: TeamAgentToolsInstaller = new TeamAgentToolsInstaller(),
+    _legacyToolsInstaller: unknown = null,
     private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore(),
-    private readonly sentMessagesStore: TeamSentMessagesStore = new TeamSentMessagesStore()
+    private readonly sentMessagesStore: TeamSentMessagesStore = new TeamSentMessagesStore(),
+    private readonly controllerFactory: (teamName: string) => AgentTeamsController = (teamName) =>
+      createController({
+        teamName,
+        claudeDir: getClaudeBasePath(),
+      })
   ) {}
+
+  private getController(teamName: string): AgentTeamsController {
+    return this.controllerFactory(teamName);
+  }
+
+  private getTaskLabel(task: Pick<TeamTask, 'id' | 'displayId'>): string {
+    return formatTaskDisplayLabel(task);
+  }
+
+  private resolveTaskReviewState(
+    task: Pick<TeamTask, 'reviewState'>
+  ): 'none' | 'review' | 'needsFix' | 'approved' {
+    return normalizeReviewState(task.reviewState);
+  }
+
+  private attachKanbanCompatibility(
+    task: TeamTask,
+    kanbanTaskState?: KanbanState['tasks'][string]
+  ): TeamTaskWithKanban {
+    const reviewState = this.resolveTaskReviewState(task);
+    return {
+      ...task,
+      reviewState,
+      kanbanColumn: getKanbanColumnFromReviewState(reviewState),
+      reviewer: kanbanTaskState?.reviewer ?? null,
+    };
+  }
 
   async listTeams(): Promise<TeamSummary[]> {
     return this.configReader.listTeams();
@@ -134,12 +168,8 @@ export class TeamDataService {
         continue;
       }
       const info = teamInfoMap.get(task.teamName)!;
-      const kanban = kanbanByTeam.get(task.teamName);
-      const kanbanEntry = kanban?.tasks[task.id];
-      const kanbanColumn =
-        kanbanEntry?.column === 'review' || kanbanEntry?.column === 'approved'
-          ? kanbanEntry.column
-          : undefined;
+      const reviewState = this.resolveTaskReviewState(task);
+      const kanbanColumn = getKanbanColumnFromReviewState(reviewState);
 
       // IPC payload safety: GlobalTask lists can be enormous (especially comments and large nested fields).
       // Return a "light" task object and defer heavy details to team/task detail views.
@@ -158,6 +188,7 @@ export class TeamDataService {
         projectPath,
         needsClarification: task.needsClarification,
         deletedAt: task.deletedAt,
+        reviewState,
         // Intentionally omit description/comments/activeForm/workIntervals/links to keep payload small
         kanbanColumn,
         teamName: task.teamName,
@@ -240,12 +271,10 @@ export class TeamDataService {
     const warnings: string[] = [];
 
     let tasks: TeamTask[] = [];
-    let tasksLoaded = true;
     try {
       tasks = await this.taskReader.getTasks(teamName);
     } catch {
       warnings.push('Tasks failed to load');
-      tasksLoaded = false;
     }
     mark('tasks');
 
@@ -290,31 +319,30 @@ export class TeamDataService {
     // Dedup: if a lead_process message text is also present in lead_session, prefer lead_session.
     // This avoids double-rendering when we persist lead process messages and later load the lead JSONL.
     // Exception: lead_process messages with `to` field are captured SendMessage — never dedup those.
-    if (leadTexts.length > 0 && sentMessages.length > 0) {
+    if (leadTexts.length > 0) {
       const normalizeText = (text: string): string => text.trim().replace(/\r\n/g, '\n');
+      const getLeadThoughtFingerprint = (
+        msg: Pick<InboxMessage, 'from' | 'text' | 'leadSessionId'>
+      ) => `${msg.leadSessionId ?? ''}\0${msg.from}\0${normalizeText(msg.text ?? '')}`;
       const leadSessionFingerprints = new Set<string>();
       for (const msg of leadTexts) {
         if (msg.source !== 'lead_session') continue;
-        leadSessionFingerprints.add(`${msg.from}\0${normalizeText(msg.text)}`);
+        leadSessionFingerprints.add(getLeadThoughtFingerprint(msg));
       }
       messages = messages.filter((m) => {
         if (m.source !== 'lead_process') return true;
         // Captured SendMessage messages (with recipient) are real messages — never dedup
         if (m.to) return true;
-        const fp = `${m.from}\0${normalizeText(m.text ?? '')}`;
+        const fp = getLeadThoughtFingerprint(m);
         return !leadSessionFingerprints.has(fp);
       });
     }
 
     // Enrich inbox messages without leadSessionId by assigning the nearest neighbor's
-    // session ID (by timestamp).  This avoids the old forward-only propagation bug where
-    // messages between two sessions always inherited the *earlier* session, causing a
-    // spurious "New session" divider even when the message is chronologically closer to
-    // the later session.
+    // session ID (by timestamp). This avoids the old forward-only propagation bug.
     if (config.leadSessionId || messages.some((m) => m.leadSessionId)) {
       messages.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
 
-      // Collect indices of messages that already have a leadSessionId (anchors).
       const anchors: { index: number; time: number; sessionId: string }[] = [];
       for (let i = 0; i < messages.length; i++) {
         if (messages[i].leadSessionId) {
@@ -327,12 +355,9 @@ export class TeamDataService {
       }
 
       if (anchors.length > 0) {
-        // For each message without leadSessionId, find the closest anchor by timestamp
-        // and inherit its sessionId.
         let anchorIdx = 0;
         for (let i = 0; i < messages.length; i++) {
           if (messages[i].leadSessionId) {
-            // Advance anchorIdx to track current position for efficient lookup
             while (anchorIdx < anchors.length - 1 && anchors[anchorIdx].index < i) {
               anchorIdx++;
             }
@@ -340,8 +365,6 @@ export class TeamDataService {
           }
 
           const msgTime = Date.parse(messages[i].timestamp);
-
-          // Find closest anchor by timestamp (binary-search-like scan from current position)
           let bestAnchor = anchors[0];
           let bestDist = Math.abs(msgTime - bestAnchor.time);
           for (const anchor of anchors) {
@@ -350,15 +373,12 @@ export class TeamDataService {
               bestDist = dist;
               bestAnchor = anchor;
             } else if (dist > bestDist && anchor.time > msgTime) {
-              // Anchors are sorted by index (asc time) — once distance grows past the
-              // message time, further anchors will only be farther.
               break;
             }
           }
           messages[i].leadSessionId = bestAnchor.sessionId;
         }
       } else if (config.leadSessionId) {
-        // No anchors at all — fall back to config.leadSessionId for everything.
         for (const msg of messages) {
           msg.leadSessionId = config.leadSessionId;
         }
@@ -380,30 +400,18 @@ export class TeamDataService {
       reviewers: [],
       tasks: {},
     };
-    let canRunKanbanGc = true;
     try {
       kanbanState = await this.kanbanManager.getState(teamName);
     } catch {
       warnings.push('Kanban state failed to load');
-      canRunKanbanGc = false;
     }
     mark('kanbanState');
 
-    if (canRunKanbanGc && tasksLoaded) {
-      try {
-        await this.kanbanManager.garbageCollect(teamName, new Set(tasks.map((task) => task.id)));
-        kanbanState = await this.kanbanManager.getState(teamName);
-      } catch {
-        warnings.push('Kanban state cleanup failed');
-      }
-    }
     mark('kanbanGc');
 
-    const tasksWithKanban: TeamTaskWithKanban[] = tasks.map((task) => {
-      const col = kanbanState.tasks[task.id]?.column;
-      const kanbanColumn = col === 'review' || col === 'approved' ? col : undefined;
-      return { ...task, kanbanColumn };
-    });
+    const tasksWithKanban: TeamTaskWithKanban[] = tasks.map((task) =>
+      this.attachKanbanCompatibility(task, kanbanState.tasks[task.id])
+    );
 
     const members = this.memberResolver.resolveMembers(
       config,
@@ -418,25 +426,11 @@ export class TeamDataService {
     await this.enrichMemberBranches(members, config);
     mark('enrichBranches');
 
-    // Auto-sync: create comments from task-related inbox messages
-    if (tasksLoaded && messages.length > 0) {
-      try {
-        const didSync = await this.syncLinkedComments(teamName, tasks, messages);
-        if (didSync) {
-          // Re-read tasks only if new comments were actually written
-          tasks = await this.taskReader.getTasks(teamName);
-        }
-      } catch {
-        warnings.push('Comment sync from messages failed');
-      }
-    }
     mark('syncComments');
 
-    const tasksToReturn: TeamTaskWithKanban[] = tasks.map((task) => {
-      const col = kanbanState.tasks[task.id]?.column;
-      const kanbanColumn = col === 'review' || col === 'approved' ? col : undefined;
-      return { ...task, kanbanColumn };
-    });
+    const tasksToReturn: TeamTaskWithKanban[] = tasks.map((task) =>
+      this.attachKanbanCompatibility(task, kanbanState.tasks[task.id])
+    );
 
     let processes: TeamProcess[] = [];
     try {
@@ -509,42 +503,7 @@ export class TeamDataService {
   private async processHealthTick(): Promise<void> {
     for (const teamName of this.processHealthTeams) {
       try {
-        const processesPath = path.join(getTeamsBasePath(), teamName, 'processes.json');
-        let raw: unknown[];
-        try {
-          const stat = await fs.promises.stat(processesPath);
-          if (!stat.isFile() || stat.size > MAX_PROCESSES_FILE_BYTES) {
-            continue;
-          }
-          const content = await readFileUtf8WithTimeout(processesPath, 5_000);
-          const parsed: unknown = JSON.parse(content);
-          raw = Array.isArray(parsed) ? (parsed as unknown[]) : [];
-        } catch {
-          continue;
-        }
-
-        const processes = raw.filter(
-          (p): p is TeamProcess =>
-            !!p &&
-            typeof p === 'object' &&
-            'pid' in p &&
-            typeof (p as TeamProcess).pid === 'number' &&
-            (p as TeamProcess).pid > 0
-        );
-
-        let dirty = false;
-        for (const proc of processes) {
-          if (!proc.stoppedAt && !isProcessAlive(proc.pid)) {
-            proc.stoppedAt = new Date().toISOString();
-            dirty = true;
-          }
-        }
-
-        if (dirty) {
-          await atomicWriteAsync(processesPath, JSON.stringify(processes, null, 2));
-          // atomicWrite triggers FileWatcher → team-change 'process' → UI refresh
-          // No need to emit manually — FileWatcher handles it.
-        }
+        this.getController(teamName).processes.listProcesses();
       } catch {
         // best-effort per team
       }
@@ -552,54 +511,13 @@ export class TeamDataService {
   }
 
   private async readProcesses(teamName: string): Promise<TeamProcess[]> {
-    const processesPath = path.join(getTeamsBasePath(), teamName, 'processes.json');
-    let raw: unknown[];
-    try {
-      const stat = await fs.promises.stat(processesPath);
-      if (!stat.isFile() || stat.size > MAX_PROCESSES_FILE_BYTES) {
-        return [];
-      }
-      const content = await readFileUtf8WithTimeout(processesPath, 5_000);
-      const parsed: unknown = JSON.parse(content);
-      raw = Array.isArray(parsed) ? (parsed as unknown[]) : [];
-    } catch {
-      return [];
-    }
-
-    const processes = raw.filter(
-      (p): p is TeamProcess =>
-        !!p &&
-        typeof p === 'object' &&
-        'pid' in p &&
-        typeof (p as TeamProcess).pid === 'number' &&
-        (p as TeamProcess).pid > 0
-    );
-
-    let dirty = false;
-    for (const proc of processes) {
-      if (!proc.stoppedAt && !isProcessAlive(proc.pid)) {
-        proc.stoppedAt = new Date().toISOString();
-        dirty = true;
-      }
-    }
-
-    if (dirty) {
-      try {
-        await atomicWriteAsync(processesPath, JSON.stringify(processes, null, 2));
-      } catch {
-        // best-effort write-back
-      }
-    }
-
-    return processes;
+    return this.getController(teamName).processes.listProcesses() as TeamProcess[];
   }
 
   /**
    * Kill a registered CLI process by PID (SIGTERM) and mark it as stopped in processes.json.
    */
   async killProcess(teamName: string, pid: number): Promise<void> {
-    const processesPath = path.join(getTeamsBasePath(), teamName, 'processes.json');
-
     // Try to kill the process (cross-platform: SIGTERM on Unix, taskkill on Windows)
     try {
       killProcessByPid(pid);
@@ -614,32 +532,10 @@ export class TeamDataService {
       }
     }
 
-    // Update processes.json to set stoppedAt
-    let raw: unknown[];
     try {
-      const content = await readFileUtf8WithTimeout(processesPath, 5_000);
-      const parsed: unknown = JSON.parse(content);
-      raw = Array.isArray(parsed) ? (parsed as unknown[]) : [];
+      this.getController(teamName).processes.stopProcess({ pid });
     } catch {
-      return; // No processes file — nothing to update
-    }
-
-    let dirty = false;
-    for (const entry of raw) {
-      if (
-        entry &&
-        typeof entry === 'object' &&
-        'pid' in entry &&
-        (entry as TeamProcess).pid === pid &&
-        !(entry as TeamProcess).stoppedAt
-      ) {
-        (entry as TeamProcess).stoppedAt = new Date().toISOString();
-        dirty = true;
-      }
-    }
-
-    if (dirty) {
-      await atomicWriteAsync(processesPath, JSON.stringify(raw, null, 2));
+      // Ignore missing persisted registry rows after OS-level stop.
     }
   }
 
@@ -706,6 +602,62 @@ export class TeamDataService {
     }
   }
 
+  /**
+   * Ensures a member exists in members.meta.json.
+   * Members can appear in the UI from three sources (see TeamMemberResolver):
+   *   1. members.meta.json
+   *   2. config.json members array (CLI-created)
+   *   3. inbox file presence (CLI-spawned teammates)
+   * If the member exists in source 2 or 3 but not in meta, migrates it so
+   * that edit/delete operations work.
+   */
+  private async ensureMemberInMeta(
+    teamName: string,
+    memberName: string
+  ): Promise<{ members: TeamMember[]; member: TeamMember }> {
+    const members = await this.membersMetaStore.getMembers(teamName);
+    let member = members.find((m) => m.name === memberName);
+
+    if (!member) {
+      // Try config.json first — it may have role/workflow info.
+      const config = await this.configReader.getConfig(teamName);
+      const configMember = config?.members?.find(
+        (m) => typeof m?.name === 'string' && m.name.trim() === memberName
+      );
+
+      if (configMember) {
+        member = {
+          name: configMember.name.trim(),
+          role: configMember.role,
+          workflow: configMember.workflow,
+          agentType: configMember.agentType ?? 'general-purpose',
+          color: configMember.color ?? getMemberColorByName(configMember.name.trim()),
+          joinedAt: configMember.joinedAt ?? Date.now(),
+          cwd: configMember.cwd,
+        };
+      } else {
+        // Member may exist only via inbox file (CLI-spawned teammate).
+        // Check if an inbox file exists for this name.
+        const inboxNames = await this.inboxReader.listInboxNames(teamName);
+        if (!inboxNames.includes(memberName)) {
+          throw new Error(`Member "${memberName}" not found`);
+        }
+
+        member = {
+          name: memberName,
+          agentType: 'general-purpose',
+          color: getMemberColorByName(memberName),
+          joinedAt: Date.now(),
+        };
+      }
+
+      members.push(member);
+      await this.membersMetaStore.writeMembers(teamName, members);
+    }
+
+    return { members, member };
+  }
+
   async addMember(teamName: string, request: AddMemberRequest): Promise<void> {
     const name = request.name.trim();
     if (!name) {
@@ -733,7 +685,7 @@ export class TeamDataService {
       role: request.role?.trim() || undefined,
       workflow: request.workflow?.trim() || undefined,
       agentType: 'general-purpose',
-      color: getMemberColor(members.filter((m) => !m.removedAt).length),
+      color: getMemberColorByName(name),
       joinedAt: Date.now(),
     };
 
@@ -746,9 +698,7 @@ export class TeamDataService {
     memberName: string,
     newRole: string | undefined
   ): Promise<{ oldRole: string | undefined; changed: boolean }> {
-    const members = await this.membersMetaStore.getMembers(teamName);
-    const member = members.find((m) => m.name === memberName);
-    if (!member) throw new Error(`Member "${memberName}" not found`);
+    const { members, member } = await this.ensureMemberInMeta(teamName, memberName);
     if (member.removedAt) throw new Error(`Member "${memberName}" is removed`);
     if (member.agentType === 'team-lead') throw new Error('Cannot change team lead role');
 
@@ -773,7 +723,7 @@ export class TeamDataService {
     const joinedAt = Date.now();
     const nextByName = new Set<string>();
 
-    const nextActive: TeamMember[] = request.members.map((member, index) => {
+    const nextActive: TeamMember[] = request.members.map((member) => {
       const name = member.name.trim();
       if (!name) throw new Error('Member name cannot be empty');
       if (name.toLowerCase() === 'team-lead') {
@@ -792,7 +742,7 @@ export class TeamDataService {
         role: member.role?.trim() || undefined,
         workflow: member.workflow?.trim() || undefined,
         agentType: prev?.agentType ?? 'general-purpose',
-        color: prev?.color ?? getMemberColor(index),
+        color: prev?.color ?? getMemberColorByName(name),
         joinedAt: prev?.joinedAt ?? joinedAt,
         removedAt: undefined,
       };
@@ -823,12 +773,8 @@ export class TeamDataService {
   }
 
   async removeMember(teamName: string, memberName: string): Promise<void> {
-    const members = await this.membersMetaStore.getMembers(teamName);
-    const member = members.find((m) => m.name === memberName);
+    const { members, member } = await this.ensureMemberInMeta(teamName, memberName);
 
-    if (!member) {
-      throw new Error(`Member "${memberName}" not found`);
-    }
     if (member.removedAt) {
       throw new Error(`Member "${memberName}" is already removed`);
     }
@@ -841,20 +787,9 @@ export class TeamDataService {
   }
 
   async createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask> {
-    const nextId = await this.taskReader.getNextTaskId(teamName);
-
+    const controller = this.getController(teamName);
     const blockedBy = request.blockedBy?.filter((id) => id.length > 0) ?? [];
-    const related = request.related?.filter((id) => id.length > 0 && id !== nextId) ?? [];
-
-    let description = request.description
-      ? `${request.subject}\n\n${request.description}`
-      : request.subject;
-
-    if (request.prompt?.trim()) {
-      description = description
-        ? `${description}\n\n---\nPrompt: ${request.prompt.trim()}`
-        : `Prompt: ${request.prompt.trim()}`;
-    }
+    const related = request.related?.filter((id) => id.length > 0) ?? [];
 
     let projectPath: string | undefined;
     try {
@@ -864,68 +799,18 @@ export class TeamDataService {
       /* best-effort */
     }
 
-    const shouldStart = request.owner && request.startImmediately !== false;
-
-    const task: TeamTask = {
-      id: nextId,
+    const shouldStart = request.owner && request.startImmediately === true;
+    const task = controller.tasks.createTask({
       subject: request.subject,
-      description,
-      owner: request.owner,
+      ...(request.description?.trim() ? { description: request.description.trim() } : {}),
+      ...(request.owner ? { owner: request.owner } : {}),
+      ...(blockedBy.length > 0 ? { blockedBy } : {}),
+      ...(related.length > 0 ? { related } : {}),
+      ...(projectPath ? { projectPath } : {}),
       createdBy: 'user',
-      status: shouldStart ? 'in_progress' : 'pending',
-      blocks: [],
-      blockedBy,
-      related: related.length > 0 ? related : undefined,
-      projectPath,
-    };
-
-    await this.taskWriter.createTask(teamName, task);
-
-    // Update blocks[] on each referenced task so the reverse link exists
-    for (const depId of blockedBy) {
-      await this.taskWriter.addBlocksEntry(teamName, depId, nextId);
-    }
-
-    if (shouldStart && request.owner) {
-      try {
-        const leadName = await this.resolveLeadName(teamName);
-
-        // Skip inbox notification when lead assigns a task to themselves (solo teams)
-        if (!this.isLeadOwner(request.owner, leadName)) {
-          const toolPath = await this.toolsInstaller.ensureInstalled();
-
-          // Build notification with full context — inbox is the primary delivery
-          // channel to agents (Claude Code monitors inbox via fs.watch)
-          const parts = [`New task assigned to you: #${task.id} "${task.subject}".`];
-
-          if (request.description?.trim()) {
-            parts.push(`\nDescription:\n${request.description.trim()}`);
-          }
-
-          if (request.prompt?.trim()) {
-            parts.push(`\nInstructions:\n${request.prompt.trim()}`);
-          }
-
-          parts.push(
-            `\n${AGENT_BLOCK_OPEN}`,
-            `Update task status using:`,
-            `node "${toolPath}" --team ${teamName} task start ${task.id}`,
-            `node "${toolPath}" --team ${teamName} task complete ${task.id}`,
-            AGENT_BLOCK_CLOSE
-          );
-
-          await this.sendMessage(teamName, {
-            member: request.owner,
-            from: leadName,
-            text: parts.join('\n'),
-            summary: `New task #${task.id} assigned`,
-            source: 'system_notification',
-          });
-        }
-      } catch {
-        // Best-effort notification — don't fail task creation if message fails
-      }
-    }
+      ...(request.prompt?.trim() ? { prompt: request.prompt.trim() } : {}),
+      ...(shouldStart ? { startImmediately: true } : {}),
+    }) as TeamTask;
 
     return task;
   }
@@ -940,7 +825,7 @@ export class TeamDataService {
       throw new Error(`Task #${taskId} is not pending (current: ${task.status})`);
     }
 
-    await this.taskWriter.updateStatus(teamName, taskId, 'in_progress', 'user');
+    this.getController(teamName).tasks.startTask(taskId, 'user');
 
     if (task.owner) {
       try {
@@ -948,22 +833,21 @@ export class TeamDataService {
 
         // Skip inbox notification when lead starts their own task (solo teams)
         if (!this.isLeadOwner(task.owner, leadName)) {
-          const toolPath = await this.toolsInstaller.ensureInstalled();
-          const parts = [`Task #${task.id} "${task.subject}" has been started.`];
+          const parts = [`Task ${this.getTaskLabel(task)} "${task.subject}" has been started.`];
           if (task.description?.trim()) {
             parts.push(`\nDetails:\n${task.description.trim()}`);
           }
           parts.push(
             `\n${AGENT_BLOCK_OPEN}`,
-            `Update task status using:`,
-            `node "${toolPath}" --team ${teamName} task complete ${task.id}`,
+            `Update task status using the board MCP tools:`,
+            `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
             AGENT_BLOCK_CLOSE
           );
           await this.sendMessage(teamName, {
             member: task.owner,
             from: leadName,
             text: parts.join('\n'),
-            summary: `Task #${task.id} started`,
+            summary: `Task ${this.getTaskLabel(task)} started`,
             source: 'system_notification',
           });
         }
@@ -981,12 +865,12 @@ export class TeamDataService {
     status: TeamTaskStatus,
     actor?: string
   ): Promise<void> {
-    await this.taskWriter.updateStatus(teamName, taskId, status, actor);
+    this.getController(teamName).tasks.setTaskStatus(taskId, status, actor);
   }
 
   /**
    * Called when a task file changes on disk (e.g. teammate CLI wrote it).
-   * If the latest statusHistory entry shows a non-user actor started the task,
+   * If the latest historyEvents entry shows a non-user actor started the task,
    * sends an inbox notification to the team lead.
    */
   async notifyLeadOnTeammateTaskStart(teamName: string, taskId: string): Promise<void> {
@@ -995,11 +879,11 @@ export class TeamDataService {
       const task = tasks.find((t) => t.id === taskId);
       if (!task) return;
 
-      const history = task.statusHistory;
-      if (!Array.isArray(history) || history.length === 0) return;
+      const events = task.historyEvents;
+      if (!Array.isArray(events) || events.length === 0) return;
 
-      const last = history[history.length - 1];
-      if (last.to !== 'in_progress') return;
+      const last = events[events.length - 1];
+      if (last.type !== 'status_changed' || last.to !== 'in_progress') return;
       if (!last.actor || last.actor === 'user') return;
 
       // Dedup: only notify once per unique transition (keyed by team+task+timestamp).
@@ -1018,8 +902,8 @@ export class TeamDataService {
       await this.sendMessage(teamName, {
         member: leadName,
         from: last.actor,
-        text: `Task #${task.id} "${task.subject}" has been started by ${last.actor}.`,
-        summary: `Task #${task.id} started`,
+        text: `Task ${this.getTaskLabel(task)} "${task.subject}" has been started by ${last.actor}.`,
+        summary: `Task ${this.getTaskLabel(task)} started`,
         source: 'system_notification',
       });
     } catch (error) {
@@ -1028,11 +912,11 @@ export class TeamDataService {
   }
 
   async softDeleteTask(teamName: string, taskId: string): Promise<void> {
-    await this.taskWriter.softDelete(teamName, taskId, 'user');
+    this.getController(teamName).tasks.softDeleteTask(taskId, 'user');
   }
 
   async restoreTask(teamName: string, taskId: string): Promise<void> {
-    await this.taskWriter.restoreTask(teamName, taskId, 'user');
+    this.getController(teamName).tasks.restoreTask(taskId, 'user');
   }
 
   async getDeletedTasks(teamName: string): Promise<TeamTask[]> {
@@ -1040,7 +924,7 @@ export class TeamDataService {
   }
 
   async updateTaskOwner(teamName: string, taskId: string, owner: string | null): Promise<void> {
-    await this.taskWriter.updateOwner(teamName, taskId, owner);
+    this.getController(teamName).tasks.setTaskOwner(taskId, owner);
   }
 
   async updateTaskFields(
@@ -1048,7 +932,7 @@ export class TeamDataService {
     taskId: string,
     fields: { subject?: string; description?: string }
   ): Promise<void> {
-    await this.taskWriter.updateFields(teamName, taskId, fields);
+    this.getController(teamName).tasks.updateTaskFields(taskId, fields);
   }
 
   async addTaskAttachment(
@@ -1056,7 +940,10 @@ export class TeamDataService {
     taskId: string,
     meta: TaskAttachmentMeta
   ): Promise<void> {
-    await this.taskWriter.addAttachment(teamName, taskId, meta);
+    this.getController(teamName).tasks.addTaskAttachmentMeta(
+      taskId,
+      meta as unknown as Record<string, unknown>
+    );
   }
 
   async removeTaskAttachment(
@@ -1064,7 +951,7 @@ export class TeamDataService {
     taskId: string,
     attachmentId: string
   ): Promise<void> {
-    await this.taskWriter.removeAttachment(teamName, taskId, attachmentId);
+    this.getController(teamName).tasks.removeTaskAttachment(taskId, attachmentId);
   }
 
   async setTaskNeedsClarification(
@@ -1072,7 +959,7 @@ export class TeamDataService {
     taskId: string,
     value: 'lead' | 'user' | null
   ): Promise<void> {
-    await this.taskWriter.setNeedsClarification(teamName, taskId, value);
+    this.getController(teamName).tasks.setNeedsClarification(taskId, value);
   }
 
   async addTaskRelationship(
@@ -1081,7 +968,11 @@ export class TeamDataService {
     targetId: string,
     type: 'blockedBy' | 'blocks' | 'related'
   ): Promise<void> {
-    await this.taskWriter.addRelationship(teamName, taskId, targetId, type);
+    this.getController(teamName).tasks.linkTask(
+      taskId,
+      targetId,
+      type === 'blockedBy' ? 'blocked-by' : type
+    );
   }
 
   async removeTaskRelationship(
@@ -1090,7 +981,11 @@ export class TeamDataService {
     targetId: string,
     type: 'blockedBy' | 'blocks' | 'related'
   ): Promise<void> {
-    await this.taskWriter.removeRelationship(teamName, taskId, targetId, type);
+    this.getController(teamName).tasks.unlinkTask(
+      taskId,
+      targetId,
+      type === 'blockedBy' ? 'blocked-by' : type
+    );
   }
 
   async addTaskComment(
@@ -1099,62 +994,22 @@ export class TeamDataService {
     text: string,
     attachments?: TaskAttachmentMeta[]
   ): Promise<TaskComment> {
-    const comment = await this.taskWriter.addComment(teamName, taskId, text, {
+    const controller = this.getController(teamName);
+    const addResult = controller.tasks.addTaskComment(taskId, {
+      from: 'user',
+      text,
       attachments,
-    });
-
-    try {
-      const [tasks, toolPath, config] = await Promise.all([
-        this.taskReader.getTasks(teamName),
-        this.toolsInstaller.ensureInstalled(),
-        this.configReader.getConfig(teamName).catch(() => null),
-      ]);
-      const task = tasks.find((t) => t.id === taskId);
-      const leadName = this.resolveLeadNameFromConfig(config);
-      const owner = task?.owner?.trim() || null;
-      // Auto-clear needsClarification: "user" on UI comment
-      // UI comments always have author "user" (TeamTaskWriter default)
-      if (task?.needsClarification === 'user') {
-        await this.taskWriter.setNeedsClarification(teamName, taskId, null);
-      }
-
-      if (task && owner && !this.isLeadOwner(owner, leadName)) {
-        // Notify non-lead task owner via inbox (lead → member message)
-        const parts = [
-          `Comment on task #${taskId} "${task.subject}":\n\n${text}`,
-          `\n${AGENT_BLOCK_OPEN}`,
-          `Reply to this comment using:`,
-          `node "${toolPath}" --team ${teamName} task comment ${taskId} --text "<your reply>" --from "<your-name>"`,
-          AGENT_BLOCK_CLOSE,
-        ];
-        await this.sendMessage(teamName, {
-          member: owner,
-          from: leadName,
-          text: parts.join('\n'),
-          summary: `Comment on #${taskId}`,
-          source: 'system_notification',
-        });
-      } else if (task && owner && this.isLeadOwner(owner, leadName)) {
-        // Notify lead about user's comment on their own task.
-        // Write to lead's inbox — relay delivers to stdin when process is alive.
-        const parts = [
-          `New comment from user on your task #${taskId} "${task.subject}":\n\n${text}`,
-          `\n${AGENT_BLOCK_OPEN}`,
-          `Reply to this comment using:`,
-          `node "${toolPath}" --team ${teamName} task comment ${taskId} --text "<your reply>" --from "${leadName}"`,
-          AGENT_BLOCK_CLOSE,
-        ];
-        await this.sendMessage(teamName, {
-          member: leadName,
-          from: 'user',
-          text: parts.join('\n'),
-          summary: `Comment on #${taskId}`,
-          source: 'system_notification',
-        });
-      }
-    } catch {
-      // Notification is best-effort — don't fail comment save
-    }
+    }) as { task?: TeamTask; comment?: TaskComment };
+    const comment =
+      addResult.comment ??
+      ({
+        id: randomUUID(),
+        author: 'user',
+        text,
+        createdAt: new Date().toISOString(),
+        type: 'regular',
+        ...(attachments && attachments.length > 0 ? { attachments } : {}),
+      } as TaskComment);
 
     return comment;
   }
@@ -1172,7 +1027,15 @@ export class TeamDataService {
         // non-critical
       }
     }
-    return this.inboxWriter.sendMessage(teamName, enrichedRequest);
+    return this.getController(teamName).messages.sendMessage({
+      member: enrichedRequest.member,
+      from: enrichedRequest.from,
+      text: enrichedRequest.text,
+      summary: enrichedRequest.summary,
+      source: enrichedRequest.source,
+      leadSessionId: enrichedRequest.leadSessionId,
+      attachments: enrichedRequest.attachments,
+    }) as SendMessageResult;
   }
 
   private resolveLeadNameFromConfig(config: TeamConfig | null): string {
@@ -1190,6 +1053,20 @@ export class TeamDataService {
     }
   }
 
+  private async resolveLeadRuntimeContext(
+    teamName: string
+  ): Promise<{ leadName: string; leadSessionId?: string }> {
+    try {
+      const config = await this.configReader.getConfig(teamName);
+      return {
+        leadName: this.resolveLeadNameFromConfig(config),
+        leadSessionId: config?.leadSessionId,
+      };
+    } catch {
+      return { leadName: 'team-lead' };
+    }
+  }
+
   private isLeadOwner(owner: string, leadName: string): boolean {
     const normalized = owner.trim().toLowerCase();
     if (!normalized) return false;
@@ -1203,8 +1080,6 @@ export class TeamDataService {
     summary?: string,
     attachments?: AttachmentMeta[]
   ): Promise<SendMessageResult> {
-    const messageId = randomUUID();
-
     let leadSessionId: string | undefined;
     try {
       const config = await this.configReader.getConfig(teamName);
@@ -1213,20 +1088,20 @@ export class TeamDataService {
       // non-critical — proceed without sessionId
     }
 
-    const msg: InboxMessage = {
+    const msg = this.getController(teamName).messages.appendSentMessage({
       from: 'user',
       to: leadName,
       text,
-      timestamp: new Date().toISOString(),
-      read: true,
       summary,
-      messageId,
       source: 'user_sent',
       attachments: attachments?.length ? attachments : undefined,
       leadSessionId,
+    }) as InboxMessage;
+    return {
+      deliveredToInbox: false,
+      deliveredViaStdin: true,
+      messageId: msg.messageId ?? randomUUID(),
     };
-    await this.sentMessagesStore.appendMessage(teamName, msg);
-    return { deliveredToInbox: false, deliveredViaStdin: true, messageId };
   }
 
   async getLeadMemberName(teamName: string): Promise<string | null> {
@@ -1257,39 +1132,11 @@ export class TeamDataService {
   }
 
   async requestReview(teamName: string, taskId: string): Promise<void> {
-    await this.kanbanManager.updateTask(teamName, taskId, { op: 'set_column', column: 'review' });
-
-    const state = await this.kanbanManager.getState(teamName);
-    const reviewer = state.reviewers[0];
-    if (!reviewer) {
-      return;
-    }
-
-    try {
-      const [toolPath, leadName] = await Promise.all([
-        this.toolsInstaller.ensureInstalled(),
-        this.resolveLeadName(teamName),
-      ]);
-      await this.sendMessage(teamName, {
-        member: reviewer,
-        from: leadName,
-        text:
-          `Please review task #${taskId}.\n\n` +
-          `${AGENT_BLOCK_OPEN}\n` +
-          `When approved, move it to APPROVED:\n` +
-          `node "${toolPath}" --team ${teamName} review approve ${taskId}\n\n` +
-          `If changes are needed:\n` +
-          `node "${toolPath}" --team ${teamName} review request-changes ${taskId} --comment "..."\n` +
-          AGENT_BLOCK_CLOSE,
-        summary: `Review request for #${taskId}`,
-        source: 'system_notification',
-      });
-    } catch (error) {
-      await this.kanbanManager
-        .updateTask(teamName, taskId, { op: 'remove' })
-        .catch(() => undefined);
-      throw error;
-    }
+    const { leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
+    this.getController(teamName).review.requestReview(taskId, {
+      from: 'user',
+      ...(leadSessionId ? { leadSessionId } : {}),
+    });
   }
 
   async createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
@@ -1323,7 +1170,7 @@ export class TeamDataService {
     await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
     await this.membersMetaStore.writeMembers(
       request.teamName,
-      request.members.map((member, index) => ({
+      request.members.map((member) => ({
         name: (() => {
           const name = member.name.trim();
           if (!name) throw new Error('Member name cannot be empty');
@@ -1339,119 +1186,82 @@ export class TeamDataService {
         })(),
         role: member.role?.trim() || undefined,
         agentType: 'general-purpose',
-        color: getMemberColor(index),
+        color: getMemberColorByName(member.name.trim()),
         joinedAt,
       }))
     );
   }
 
-  /**
-   * Scans inbox messages for task-related discussions and auto-creates
-   * linked comments on disk. Uses deterministic comment ID for dedup.
-   * Returns true if any new comments were synced (caller should re-read tasks).
-   */
-  private async syncLinkedComments(
-    teamName: string,
-    tasks: TeamTask[],
-    messages: InboxMessage[]
-  ): Promise<boolean> {
-    const TASK_ID_PATTERN = /#(\d+)/g;
-    let synced = false;
-
-    const tasksById = new Map<string, TeamTask>();
-    for (const t of tasks) {
-      tasksById.set(t.id, t);
-    }
-
-    // Dedup broadcasts: same sender + same text → process only once
-    const processedTexts = new Set<string>();
-
-    function isAutomatedCommentNotification(msg: InboxMessage): boolean {
-      const summary = typeof msg.summary === 'string' ? msg.summary : '';
-      if (!/^Comment on #\d+/.test(summary)) return false;
-      const text = typeof msg.text === 'string' ? msg.text : '';
-      if (!text) return false;
-      // These are system-generated inbox messages that already correspond to a real task comment.
-      // Syncing them into task.comments causes an immediate "duplicate" (lead echo) in the UI.
-      if (text.includes('Reply to this comment using:')) return true;
-      if (text.startsWith('Comment on task #')) return true;
-      if (text.startsWith('New comment from user on your task #')) return true;
-      return false;
-    }
-
-    for (const msg of messages) {
-      if (!msg.messageId || !msg.summary || msg.from === 'user') continue;
-      if (msg.source === 'lead_session' || msg.source === 'lead_process') continue;
-      if (msg.source === 'system_notification') continue;
-      if (isAutomatedCommentNotification(msg)) continue;
-
-      const textKey = `${msg.from}\0${msg.text}`;
-      if (processedTexts.has(textKey)) continue;
-      processedTexts.add(textKey);
-
-      const matches = msg.summary.matchAll(TASK_ID_PATTERN);
-      const taskIds = new Set<string>();
-      for (const match of matches) {
-        taskIds.add(match[1]);
-      }
-
-      for (const taskId of taskIds) {
-        const task = tasksById.get(taskId);
-        if (!task) continue;
-
-        const commentId = `msg-${msg.messageId}`;
-        const existing = task.comments ?? [];
-        if (existing.some((c) => c.id === commentId)) continue;
-
-        try {
-          await this.taskWriter.addComment(teamName, taskId, msg.text, {
-            id: commentId,
-            author: msg.from,
-            createdAt: msg.timestamp,
-          });
-          synced = true;
-        } catch {
-          // Best-effort — don't fail getTeamData() on sync errors
-        }
-      }
-    }
-
-    return synced;
+  async reconcileTeamArtifacts(teamName: string): Promise<void> {
+    this.getController(teamName).maintenance.reconcileArtifacts({
+      reason: 'file-watch',
+    });
   }
 
-  private async extractLeadSessionTexts(config: TeamConfig): Promise<InboxMessage[]> {
-    if (!config.leadSessionId || !config.projectPath) {
-      return [];
-    }
-
-    const projectId = encodePath(config.projectPath);
+  private getLeadProjectDirCandidates(projectPath: string): string[] {
+    const projectId = encodePath(projectPath);
     const baseDir = extractBaseDir(projectId);
-    let jsonlPath = path.join(getProjectsBasePath(), baseDir, `${config.leadSessionId}.jsonl`);
-
-    try {
-      await fs.promises.access(jsonlPath, fs.constants.F_OK);
-    } catch {
+    const candidateDirs = [
+      path.join(getProjectsBasePath(), baseDir),
       // Claude Code encodes underscores as hyphens in project directory names;
       // our encodePath only handles slashes. Try the underscore-to-hyphen variant.
-      const altBaseDir = baseDir.replace(/_/g, '-');
-      if (altBaseDir !== baseDir) {
-        const altPath = path.join(
-          getProjectsBasePath(),
-          altBaseDir,
-          `${config.leadSessionId}.jsonl`
-        );
-        try {
-          await fs.promises.access(altPath, fs.constants.F_OK);
-          jsonlPath = altPath;
-        } catch {
-          return [];
-        }
-      } else {
-        return [];
+      ...(baseDir.includes('_')
+        ? [path.join(getProjectsBasePath(), baseDir.replace(/_/g, '-'))]
+        : []),
+    ];
+
+    return [...new Set(candidateDirs)];
+  }
+
+  private async getLeadSessionJsonlPaths(projectPath: string): Promise<Map<string, string>> {
+    const jsonlPaths = new Map<string, string>();
+    for (const dirPath of this.getLeadProjectDirCandidates(projectPath)) {
+      let entries: fs.Dirent[];
+      try {
+        entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+      } catch {
+        continue;
+      }
+
+      for (const entry of entries) {
+        if (!entry.isFile() || !entry.name.endsWith('.jsonl')) continue;
+        const sessionId = entry.name.slice(0, -'.jsonl'.length).trim();
+        if (!sessionId || jsonlPaths.has(sessionId)) continue;
+        jsonlPaths.set(sessionId, path.join(dirPath, entry.name));
       }
     }
 
-    const leadName = config.members?.find((m) => m.agentType === 'team-lead')?.name ?? 'team-lead';
+    return jsonlPaths;
+  }
+
+  private getRecentLeadSessionIds(config: TeamConfig): string[] {
+    const sessionIds: string[] = [];
+    const seen = new Set<string>();
+    const pushSessionId = (value: unknown): void => {
+      if (typeof value !== 'string') return;
+      const sessionId = value.trim();
+      if (!sessionId || seen.has(sessionId)) return;
+      seen.add(sessionId);
+      sessionIds.push(sessionId);
+    };
+
+    pushSessionId(config.leadSessionId);
+    if (Array.isArray(config.sessionHistory)) {
+      for (let i = config.sessionHistory.length - 1; i >= 0; i--) {
+        pushSessionId(config.sessionHistory[i]);
+      }
+    }
+
+    return sessionIds;
+  }
+
+  private async extractLeadSessionTextsFromJsonl(
+    jsonlPath: string,
+    leadName: string,
+    leadSessionId: string,
+    maxTexts: number
+  ): Promise<InboxMessage[]> {
+    if (maxTexts <= 0) return [];
 
     // Optimization: read from the end of the JSONL file (we only need the last N texts).
     // The full file can be huge; scanning from the start causes long stalls on Windows.
@@ -1466,7 +1276,7 @@ export class TeamDataService {
       const fileSize = stat.size;
 
       let scanBytes = Math.min(INITIAL_SCAN_BYTES, fileSize);
-      while (textsReversed.length < MAX_LEAD_TEXTS && scanBytes <= MAX_SCAN_BYTES) {
+      while (textsReversed.length < maxTexts && scanBytes <= MAX_SCAN_BYTES) {
         const start = Math.max(0, fileSize - scanBytes);
         const buffer = Buffer.alloc(scanBytes);
         await handle.read(buffer, 0, scanBytes, start);
@@ -1538,13 +1348,22 @@ export class TeamDataService {
           const toolCalls = toolCallsList.length > 0 ? toolCallsList : undefined;
           const toolSummary = toolCalls ? formatToolSummaryFromCalls(toolCalls) : undefined;
 
-          // Stable messageId: timestamp + text prefix (survives tail-scan range changes)
+          const entryUuid = typeof msg.uuid === 'string' ? msg.uuid.trim() : '';
+          const assistantMessageId = typeof message.id === 'string' ? message.id.trim() : '';
+          const stableMessageId = entryUuid
+            ? `lead-thought-${entryUuid}`
+            : assistantMessageId
+              ? `lead-thought-msg-${assistantMessageId}`
+              : null;
+
+          // Fallback messageId: timestamp + text prefix (survives tail-scan range changes)
           const textPrefix = combined
             .slice(0, 50)
             .replace(/[^\p{L}\p{N}]/gu, '')
             .slice(0, 20);
 
-          const messageId = `lead-session-${timestamp}-${textPrefix}`;
+          const messageId =
+            stableMessageId ?? `lead-session-${leadSessionId}-${timestamp}-${textPrefix}`;
           if (seenMessageIds.has(messageId)) continue;
           seenMessageIds.add(messageId);
 
@@ -1554,15 +1373,15 @@ export class TeamDataService {
             timestamp,
             read: true,
             source: 'lead_session',
-            leadSessionId: config.leadSessionId,
+            leadSessionId,
             messageId,
             toolSummary,
             toolCalls,
           });
-          if (textsReversed.length >= MAX_LEAD_TEXTS) break;
+          if (textsReversed.length >= maxTexts) break;
         }
 
-        if (textsReversed.length >= MAX_LEAD_TEXTS) break;
+        if (textsReversed.length >= maxTexts) break;
         if (scanBytes === fileSize) break;
         scanBytes = Math.min(fileSize, scanBytes * 2);
       }
@@ -1573,78 +1392,78 @@ export class TeamDataService {
     // Convert back to chronological order (old behavior) and keep the last N texts.
     textsReversed.reverse();
     const texts = textsReversed;
+    return texts.length > maxTexts ? texts.slice(-maxTexts) : texts;
+  }
+
+  private async extractLeadSessionTexts(config: TeamConfig): Promise<InboxMessage[]> {
+    if (!config.projectPath) {
+      return [];
+    }
+
+    const leadName = config.members?.find((m) => m.agentType === 'team-lead')?.name ?? 'team-lead';
+    const sessionIds = this.getRecentLeadSessionIds(config);
+    if (sessionIds.length === 0) {
+      return [];
+    }
+    const availableJsonlPaths = await this.getLeadSessionJsonlPaths(config.projectPath);
+    if (availableJsonlPaths.size === 0) {
+      return [];
+    }
+
+    const texts: InboxMessage[] = [];
+    for (const sessionId of sessionIds) {
+      if (texts.length >= MAX_LEAD_TEXTS) break;
+      const jsonlPath = availableJsonlPaths.get(sessionId);
+      if (!jsonlPath) continue;
+      const remaining = MAX_LEAD_TEXTS - texts.length;
+      const sessionTexts = await this.extractLeadSessionTextsFromJsonl(
+        jsonlPath,
+        leadName,
+        sessionId,
+        remaining
+      );
+      if (sessionTexts.length > 0) {
+        texts.push(...sessionTexts);
+      }
+    }
+
+    texts.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
     return texts.length > MAX_LEAD_TEXTS ? texts.slice(-MAX_LEAD_TEXTS) : texts;
   }
 
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
-    if (patch.op !== 'request_changes') {
-      // Keep kanban + task.status consistent:
-      // - moving a task into kanban review/approved implies the work is complete
-      // - request_changes already moves it back to in_progress and clears kanban entry
-      if (patch.op !== 'set_column') {
-        await this.kanbanManager.updateTask(teamName, taskId, patch);
-        return;
-      }
+    const controller = this.getController(teamName);
 
-      const previousState = await this.kanbanManager.getState(teamName);
-      const previousKanbanEntry: KanbanTaskState | undefined = previousState.tasks[taskId];
+    if (patch.op === 'remove') {
+      controller.kanban.clearKanban(taskId);
+      return;
+    }
 
-      await this.kanbanManager.updateTask(teamName, taskId, patch);
-
-      try {
-        await this.taskWriter.updateStatus(teamName, taskId, 'completed', 'user');
-      } catch (error) {
-        // Best-effort rollback of kanban move if task status update failed.
-        if (previousKanbanEntry) {
-          await this.kanbanManager
-            .updateTask(teamName, taskId, { op: 'set_column', column: previousKanbanEntry.column })
-            .catch(() => undefined);
-        } else {
-          await this.kanbanManager
-            .updateTask(teamName, taskId, { op: 'remove' })
-            .catch(() => undefined);
-        }
-        throw error;
+    if (patch.op === 'set_column') {
+      if (patch.column === 'review') {
+        const { leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
+        controller.review.requestReview(taskId, {
+          from: 'user',
+          ...(leadSessionId ? { leadSessionId } : {}),
+        });
+      } else {
+        const { leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
+        controller.review.approveReview(taskId, {
+          from: 'user',
+          note: 'Approved from kanban',
+          'notify-owner': true,
+          ...(leadSessionId ? { leadSessionId } : {}),
+        });
       }
       return;
     }
 
-    const tasks = await this.taskReader.getTasks(teamName);
-    const task = tasks.find((candidate) => candidate.id === taskId);
-    if (!task?.owner) {
-      throw new Error(`No owner found for task ${taskId}`);
-    }
-
-    const previousStatus: TeamTaskStatus = task.status;
-    const previousState = await this.kanbanManager.getState(teamName);
-    const previousKanbanEntry: KanbanTaskState | undefined = previousState.tasks[taskId];
-
-    await this.kanbanManager.updateTask(teamName, taskId, { op: 'remove' });
-
-    try {
-      await this.taskWriter.updateStatus(teamName, taskId, 'in_progress', 'reviewer');
-      const leadName = await this.resolveLeadName(teamName);
-      await this.sendMessage(teamName, {
-        member: task.owner,
-        from: leadName,
-        text:
-          `Task #${taskId} needs fixes.\n\n` +
-          `${patch.comment?.trim() || 'Reviewer requested changes.'}\n\n` +
-          `Please fix and mark it as completed when ready.`,
-        summary: `Fix request for #${taskId}`,
-        source: 'system_notification',
-      });
-    } catch (error) {
-      await this.taskWriter
-        .updateStatus(teamName, taskId, previousStatus, 'system')
-        .catch(() => undefined);
-      if (previousKanbanEntry) {
-        await this.kanbanManager
-          .updateTask(teamName, taskId, { op: 'set_column', column: previousKanbanEntry.column })
-          .catch(() => undefined);
-      }
-      throw error;
-    }
+    const { leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
+    controller.review.requestChanges(taskId, {
+      from: 'user',
+      comment: patch.comment?.trim() || 'Reviewer requested changes.',
+      ...(leadSessionId ? { leadSessionId } : {}),
+    });
   }
 
   async updateKanbanColumnOrder(
@@ -1652,6 +1471,6 @@ export class TeamDataService {
     columnId: KanbanColumnId,
     orderedTaskIds: string[]
   ): Promise<void> {
-    await this.kanbanManager.updateColumnOrder(teamName, columnId, orderedTaskIds);
+    this.getController(teamName).kanban.updateColumnOrder(columnId, orderedTaskIds);
   }
 }

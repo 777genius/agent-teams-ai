@@ -105,8 +105,11 @@ describe('ipc teams handlers', () => {
       kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
       processes: [],
     })),
+    reconcileTeamArtifacts: vi.fn(async () => undefined),
     deleteTeam: vi.fn(async () => undefined),
+    getLeadMemberName: vi.fn(async () => 'team-lead'),
     sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'm1' })),
+    sendDirectToLead: vi.fn(async () => ({ deliveredToInbox: false, messageId: 'direct-1' })),
     createTask: vi.fn(async () => ({ id: '1', subject: 'Test', status: 'pending' })),
     requestReview: vi.fn(async () => undefined),
     updateKanban: vi.fn(async () => undefined),
@@ -152,7 +155,9 @@ describe('ipc teams handlers', () => {
     launchTeam: vi.fn(async () => ({ runId: 'run-2' })),
     sendMessageToTeam: vi.fn(async () => undefined),
     isTeamAlive: vi.fn(() => true),
+    pushLiveLeadProcessMessage: vi.fn(),
     relayLeadInboxMessages: vi.fn(async () => 0),
+    relayMemberInboxMessages: vi.fn(async () => 0),
     getLiveLeadProcessMessages: vi.fn(() => [] as InboxMessage[]),
     getAliveTeams: vi.fn(() => ['my-team']),
     getLeadActivityState: vi.fn(() => 'idle'),
@@ -226,6 +231,45 @@ describe('ipc teams handlers', () => {
       text: 'hi',
     })) as { success: boolean };
     expect(result.success).toBe(false);
+  });
+
+  it('passes hidden ask-mode instructions to a live lead without exposing them in stored text', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'team-lead',
+      text: 'Can you review the approach?',
+      actionMode: 'ask',
+    })) as { success: boolean };
+
+    expect(result.success).toBe(true);
+    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+      'my-team',
+      expect.stringContaining('TURN ACTION MODE: ASK'),
+      undefined
+    );
+    expect(service.sendDirectToLead).toHaveBeenCalledWith(
+      'my-team',
+      'team-lead',
+      'Can you review the approach?',
+      undefined,
+      undefined
+    );
+  });
+
+  it('rejects delegate mode when recipient is not the team lead', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'alice',
+      text: 'Take this on',
+      actionMode: 'delegate',
+    })) as { success: boolean; error?: string };
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Delegate mode is only supported when messaging the team lead');
   });
 
   it('calls service and returns success on happy paths', async () => {
@@ -315,6 +359,66 @@ describe('ipc teams handlers', () => {
     const sources = result.data.messages.map((m) => m.source);
     expect(sources.filter((s) => s === 'lead_process')).toHaveLength(0);
     expect(sources.filter((s) => s === 'lead_session')).toHaveLength(1);
+  });
+
+  it('merges early live messages before durable lead_session backfill exists', async () => {
+    // Simulate: team just became readable but lead_session JSONL hasn't been written yet.
+    // Only live in-memory messages exist from the provisioning process.
+    service.getTeamData.mockResolvedValueOnce({
+      teamName: 'my-team',
+      config: { name: 'My Team' },
+      tasks: [],
+      members: [],
+      messages: [], // No durable messages yet
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
+    });
+    provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([
+      {
+        from: 'team-lead',
+        text: 'Команда создана. Запускаю тиммейтов.',
+        timestamp: '2026-02-23T10:00:00.000Z',
+        read: true,
+        source: 'lead_process' as const,
+        messageId: 'lead-turn-run-1-1',
+      },
+      {
+        from: 'team-lead',
+        text: 'All teammates online!',
+        timestamp: '2026-02-23T10:00:01.000Z',
+        read: true,
+        source: 'lead_process' as const,
+        messageId: 'lead-turn-run-1-2',
+        to: 'user',
+      },
+    ]);
+
+    const getDataHandler = handlers.get(TEAM_GET_DATA)!;
+    const result = (await getDataHandler({} as never, 'my-team')) as {
+      success: boolean;
+      data: { messages: { source?: string; text: string }[] };
+    };
+    expect(result.success).toBe(true);
+    // Both live messages should appear since there's no durable backfill yet
+    // Sorted by timestamp descending (newest first)
+    expect(result.data.messages).toHaveLength(2);
+    expect(result.data.messages[0].source).toBe('lead_process');
+    expect(result.data.messages[0].text).toBe('All teammates online!');
+    expect(result.data.messages[1].source).toBe('lead_process');
+    expect(result.data.messages[1].text).toBe('Команда создана. Запускаю тиммейтов.');
+  });
+
+  it('keeps TEAM_GET_DATA read-only and never triggers reconcile side effects', async () => {
+    const getDataHandler = handlers.get(TEAM_GET_DATA)!;
+    const result = (await getDataHandler({} as never, 'my-team')) as {
+      success: boolean;
+      data: { teamName: string };
+    };
+
+    expect(result.success).toBe(true);
+    expect(result.data.teamName).toBe('my-team');
+    expect(service.getTeamData).toHaveBeenCalledWith('my-team');
+    expect(service.reconcileTeamArtifacts).not.toHaveBeenCalled();
   });
 
   describe('createTask prompt validation', () => {
@@ -566,7 +670,7 @@ describe('ipc teams handlers', () => {
 
     it('rejects invalid task id', async () => {
       const handler = handlers.get(TEAM_ADD_TASK_RELATIONSHIP)!;
-      const result = (await handler({} as never, 'my-team', 'abc', '2', 'blockedBy')) as {
+      const result = (await handler({} as never, 'my-team', 'bad/id', '2', 'blockedBy')) as {
         success: boolean;
       };
       expect(result.success).toBe(false);

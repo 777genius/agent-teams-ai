@@ -6,6 +6,7 @@
  * - Configuring SSH connection (host, port, username, auth)
  * - SSH config host alias combobox with auto-fill
  * - Testing and connecting to remote hosts
+ * - Workspace profiles (via embedded WorkspaceSection)
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -17,6 +18,8 @@ import { Loader2, Monitor, Server, Wifi, WifiOff } from 'lucide-react';
 import { SettingRow } from '../components/SettingRow';
 import { SettingsSectionHeader } from '../components/SettingsSectionHeader';
 import { SettingsSelect } from '../components/SettingsSelect';
+
+import { WorkspaceSection } from './WorkspaceSection';
 
 import type {
   ClaudeRootInfo,
@@ -515,6 +518,11 @@ export const ConnectionSection = (): React.JSX.Element => {
           </div>
         </div>
       )}
+
+      {/* Workspace Profiles */}
+      <div className="border-t pt-6" style={{ borderColor: 'var(--color-border)' }}>
+        <WorkspaceSection />
+      </div>
     </div>
   );
 };

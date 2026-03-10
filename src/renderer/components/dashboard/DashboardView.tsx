@@ -10,6 +10,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
+import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';
 import { getWorktreeNavigationState } from '@renderer/store/utils/stateResetHelpers';
 import { formatProjectPath } from '@renderer/utils/pathDisplay';
@@ -482,9 +483,12 @@ interface ProjectsGridProps {
   maxProjects?: number;
 }
 
+const INITIAL_RECENT_PROJECTS = 11;
+const LOAD_MORE_STEP = 8;
+
 const ProjectsGrid = ({
   searchQuery,
-  maxProjects = 12,
+  maxProjects = INITIAL_RECENT_PROJECTS,
 }: Readonly<ProjectsGridProps>): React.JSX.Element => {
   const {
     repositoryGroups,
@@ -511,6 +515,7 @@ const ProjectsGrid = ({
   );
 
   const hasFetchedTasksRef = React.useRef(false);
+  const [visibleProjects, setVisibleProjects] = useState(maxProjects);
 
   useEffect(() => {
     if (repositoryGroups.length === 0 && !repositoryGroupsLoading) {
@@ -525,26 +530,36 @@ const ProjectsGrid = ({
     }
   }, [repositoryGroups.length, repositoryGroupsLoading, fetchAllTasks]);
 
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setVisibleProjects(maxProjects);
+    }
+  }, [searchQuery, maxProjects]);
+
   const taskCountsMap = useMemo(() => buildTaskCountsByProject(globalTasks), [globalTasks]);
 
   // Filter projects based on search query
   const filteredRepos = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return repositoryGroups.slice(0, maxProjects);
-    }
-
     const query = searchQuery.toLowerCase().trim();
-    return repositoryGroups
-      .filter((repo) => {
-        // Match by name
-        if (repo.name.toLowerCase().includes(query)) return true;
-        // Match by path
-        const path = repo.worktrees[0]?.path || '';
-        if (path.toLowerCase().includes(query)) return true;
-        return false;
-      })
-      .slice(0, maxProjects);
-  }, [repositoryGroups, searchQuery, maxProjects]);
+    return repositoryGroups.filter((repo) => {
+      if (!query) return true;
+      // Match by name
+      if (repo.name.toLowerCase().includes(query)) return true;
+      // Match by path
+      const path = repo.worktrees[0]?.path || '';
+      if (path.toLowerCase().includes(query)) return true;
+      return false;
+    });
+  }, [repositoryGroups, searchQuery]);
+
+  const displayedRepos = useMemo(() => {
+    if (searchQuery.trim()) {
+      return filteredRepos;
+    }
+    return filteredRepos.slice(0, visibleProjects);
+  }, [filteredRepos, searchQuery, visibleProjects]);
+
+  const canLoadMore = !searchQuery.trim() && filteredRepos.length > visibleProjects;
 
   if (repositoryGroupsLoading) {
     // Organic widths per card — no repeating stamp
@@ -645,35 +660,49 @@ const ProjectsGrid = ({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
-      {filteredRepos.map((repo) => {
-        const counts = repo.worktrees.reduce(
-          (acc, wt) => {
-            const c = taskCountsMap.get(normalizePath(wt.path));
-            if (c) {
-              acc.pending += c.pending;
-              acc.inProgress += c.inProgress;
-              acc.completed += c.completed;
-            }
-            return acc;
-          },
-          { pending: 0, inProgress: 0, completed: 0 }
-        );
-        return (
-          <RepositoryCard
-            key={repo.id}
-            repo={repo}
-            onClick={() => {
-              selectRepository(repo.id);
-              openTeamsTab();
-            }}
-            isHighlighted={!!searchQuery.trim()}
-            taskCounts={globalTasksLoading ? undefined : counts}
-            tasksLoading={globalTasksLoading}
-          />
-        );
-      })}
-      {!searchQuery.trim() && <NewProjectCard />}
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
+        {!searchQuery.trim() && <NewProjectCard />}
+        {displayedRepos.map((repo) => {
+          const counts = repo.worktrees.reduce(
+            (acc, wt) => {
+              const c = taskCountsMap.get(normalizePath(wt.path));
+              if (c) {
+                acc.pending += c.pending;
+                acc.inProgress += c.inProgress;
+                acc.completed += c.completed;
+              }
+              return acc;
+            },
+            { pending: 0, inProgress: 0, completed: 0 }
+          );
+          return (
+            <RepositoryCard
+              key={repo.id}
+              repo={repo}
+              onClick={() => {
+                selectRepository(repo.id);
+                openTeamsTab();
+              }}
+              isHighlighted={!!searchQuery.trim()}
+              taskCounts={globalTasksLoading ? undefined : counts}
+              tasksLoading={globalTasksLoading}
+            />
+          );
+        })}
+      </div>
+
+      {canLoadMore && (
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setVisibleProjects((prev) => prev + LOAD_MORE_STEP)}
+          >
+            Load more
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

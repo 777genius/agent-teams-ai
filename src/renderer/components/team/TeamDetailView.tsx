@@ -23,19 +23,23 @@ import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
 import { formatPercentOfTotal, sumContextInjectionTokens } from '@renderer/utils/contextMath';
+import { computePendingCrossTeamReplies } from '@renderer/utils/crossTeamPendingReplies';
 import { formatProjectPath } from '@renderer/utils/pathDisplay';
 import { buildTaskCountsByOwner, normalizePath } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { resolveProjectIdByPath } from '@renderer/utils/projectLookup';
+import { filterTeamMessages } from '@renderer/utils/teamMessageFiltering';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
-import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
+import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   AlertTriangle,
   Bell,
   CheckCheck,
   ChevronsDownUp,
   ChevronsUpDown,
+  ChevronRight,
+  Clock,
   Code,
   Columns3,
   FolderOpen,
@@ -80,6 +84,7 @@ import { ChangeReviewDialog } from './review/ChangeReviewDialog';
 import { ClaudeLogsSection } from './ClaudeLogsSection';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 import { ProcessesSection } from './ProcessesSection';
+import { ScheduleSection } from './schedule/ScheduleSection';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { TeamSessionsSection } from './TeamSessionsSection';
 
@@ -88,7 +93,12 @@ import type { MessagesFilterState } from './messages/MessagesFilterPopover';
 import type { ContextInjection } from '@renderer/types/contextInjection';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
-import type { InboxMessage, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
+import type {
+  InboxMessage,
+  MemberSpawnStatusEntry,
+  ResolvedTeamMember,
+  TeamTaskWithKanban,
+} from '@shared/types';
 import type { EditorSelectionAction } from '@shared/types/editor';
 
 interface TeamDetailViewProps {
@@ -114,12 +124,13 @@ interface TimeWindow {
 function filterKanbanTasks(tasks: TeamTaskWithKanban[], query: string): TeamTaskWithKanban[] {
   if (query.startsWith('#')) {
     const id = query.slice(1);
-    return tasks.filter((t) => t.id === id);
+    return tasks.filter((t) => t.id === id || t.displayId === id);
   }
   const lower = query.toLowerCase();
   return tasks.filter(
     (t) =>
       t.id.toLowerCase().includes(lower) ||
+      (t.displayId?.toLowerCase().includes(lower) ?? false) ||
       t.subject.toLowerCase().includes(lower) ||
       (t.owner?.toLowerCase().includes(lower) ?? false)
   );
@@ -210,11 +221,13 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     updateTaskStatus,
     updateTaskOwner,
     sendTeamMessage,
+    sendCrossTeamMessage,
     requestReview,
     createTeamTask,
     startTask,
     deleteTeam,
     openTeamsTab,
+    closeTab,
     sendingMessage,
     sendMessageError,
     lastSendMessageResult,
@@ -227,6 +240,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     clearProvisioningError,
     isTeamProvisioning,
     leadActivityByTeam,
+    memberSpawnStatuses,
+    fetchMemberSpawnStatuses,
     refreshTeamData,
     kanbanFilterQuery,
     clearKanbanFilter,
@@ -250,11 +265,13 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       updateTaskStatus: s.updateTaskStatus,
       updateTaskOwner: s.updateTaskOwner,
       sendTeamMessage: s.sendTeamMessage,
+      sendCrossTeamMessage: s.sendCrossTeamMessage,
       requestReview: s.requestReview,
       createTeamTask: s.createTeamTask,
       startTask: s.startTask,
       deleteTeam: s.deleteTeam,
       openTeamsTab: s.openTeamsTab,
+      closeTab: s.closeTab,
       sendingMessage: s.sendingMessage,
       sendMessageError: s.sendMessageError,
       lastSendMessageResult: s.lastSendMessageResult,
@@ -269,6 +286,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         (run) => run.teamName === teamName && ACTIVE_PROVISIONING_STATES.has(run.state)
       ),
       leadActivityByTeam: s.leadActivityByTeam,
+      memberSpawnStatuses: teamName ? s.memberSpawnStatusesByTeam[teamName] : undefined,
+      fetchMemberSpawnStatuses: s.fetchMemberSpawnStatuses,
       refreshTeamData: s.refreshTeamData,
       kanbanFilterQuery: s.kanbanFilterQuery,
       clearKanbanFilter: s.clearKanbanFilter,
@@ -303,6 +322,23 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     }
   }, [isTeamProvisioning]);
 
+  // Fetch initial spawn statuses when provisioning starts
+  useEffect(() => {
+    if (isTeamProvisioning && teamName) {
+      void fetchMemberSpawnStatuses(teamName);
+    }
+  }, [isTeamProvisioning, teamName, fetchMemberSpawnStatuses]);
+
+  // Convert Record<string, MemberSpawnStatusEntry> → Map<string, MemberSpawnEntry>
+  const memberSpawnStatusMap = useMemo(() => {
+    if (!memberSpawnStatuses) return undefined;
+    const map = new Map<string, { status: MemberSpawnStatusEntry['status']; error?: string }>();
+    for (const [name, entry] of Object.entries(memberSpawnStatuses)) {
+      map.set(name, { status: entry.status, error: entry.error });
+    }
+    return map.size > 0 ? map : undefined;
+  }, [memberSpawnStatuses]);
+
   const [kanbanSearch, setKanbanSearch] = useState('');
   const [messagesSearchQuery, setMessagesSearchQuery] = useState('');
   const [messagesFilter, setMessagesFilter] = useState<MessagesFilterState>({
@@ -312,6 +348,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   });
   const [messagesFilterOpen, setMessagesFilterOpen] = useState(false);
   const [messagesCollapsed, setMessagesCollapsed] = useState(true);
+  const [statusBlockCollapsed, setStatusBlockCollapsed] = useState(false);
 
   // Open editor overlay when a file reveal is requested (e.g. from chip click)
   const pendingRevealFile = useStore((s) => s.editorPendingRevealFile);
@@ -519,7 +556,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   );
 
   // Filter sessions to team-only using sessionHistory + leadSessionId
-  const teamSessions = useMemo(() => {
+  const teamSessionIds = useMemo(() => {
     const sessionIds = new Set<string>();
     if (data?.config.leadSessionId) {
       sessionIds.add(data.config.leadSessionId);
@@ -529,10 +566,14 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         sessionIds.add(id);
       }
     }
+    return sessionIds;
+  }, [data?.config.leadSessionId, data?.config.sessionHistory]);
+
+  const teamSessions = useMemo(() => {
     // If no session IDs known (backward compat), show all sessions
-    if (sessionIds.size === 0) return sessions;
-    return sessions.filter((s) => sessionIds.has(s.id));
-  }, [sessions, data?.config.leadSessionId, data?.config.sessionHistory]);
+    if (teamSessionIds.size === 0) return sessions;
+    return sessions.filter((s) => teamSessionIds.has(s.id));
+  }, [sessions, teamSessionIds]);
 
   // Auto-reset session filter if the selected session is no longer in teamSessions
   useEffect(() => {
@@ -588,46 +629,14 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     [data?.members]
   );
 
-  const leadMemberName = useMemo(
-    () => activeMembers.find((m) => m.agentType === 'team-lead')?.name,
-    [activeMembers]
-  );
-
   const filteredMessages = useMemo(() => {
     if (!data) return [];
-    let list = data.messages;
-    // Temporarily hide lead→user messages from the UI
-    // (notifications and other processing still receive them via data.messages)
-    if (leadMemberName) {
-      list = list.filter((m) => !(m.to?.trim() === 'user' && m.from?.trim() === leadMemberName));
-    }
-    if (timeWindow) {
-      list = list.filter((m) => {
-        const ts = new Date(m.timestamp).getTime();
-        return ts >= timeWindow.start && ts < timeWindow.end;
-      });
-    }
-    if (!messagesFilter.showNoise) {
-      list = list.filter((m) => !isInboxNoiseMessage(typeof m.text === 'string' ? m.text : ''));
-    }
-    if (messagesFilter.from.size > 0) {
-      list = list.filter((m) => m.from?.trim() && messagesFilter.from.has(m.from.trim()));
-    }
-    if (messagesFilter.to.size > 0) {
-      list = list.filter((m) => m.to?.trim() && messagesFilter.to.has(m.to.trim()));
-    }
-    const q = messagesSearchQuery.trim().toLowerCase();
-    if (q) {
-      list = list.filter((m) => {
-        const text = (m.text ?? '').toLowerCase();
-        const summary = (m.summary ?? '').toLowerCase();
-        const from = (m.from ?? '').toLowerCase();
-        const to = (m.to ?? '').toLowerCase();
-        return text.includes(q) || summary.includes(q) || from.includes(q) || to.includes(q);
-      });
-    }
-    return list;
-  }, [data, timeWindow, messagesFilter, messagesSearchQuery, leadMemberName]);
+    return filterTeamMessages(data.messages, {
+      timeWindow,
+      filter: messagesFilter,
+      searchQuery: messagesSearchQuery,
+    });
+  }, [data, timeWindow, messagesFilter, messagesSearchQuery]);
 
   const { readSet, markRead, markAllRead } = useTeamMessagesRead(teamName ?? '');
   const { expandedSet, toggle: toggleExpandOverride } = useTeamMessagesExpanded(teamName ?? '');
@@ -660,6 +669,32 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   const taskMap = useMemo(() => new Map((data?.tasks ?? []).map((t) => [t.id, t])), [data?.tasks]);
 
   const memberTaskCounts = useMemo(() => buildTaskCountsByOwner(data?.tasks ?? []), [data?.tasks]);
+  const pendingCrossTeamReplies = useMemo(
+    () => computePendingCrossTeamReplies(data?.messages ?? []),
+    [data?.messages]
+  );
+
+  /** Whether the Status block has any visible items (pending replies or active tasks). */
+  const hasStatusItems = useMemo(() => {
+    const members = data?.members ?? [];
+    const tasks = data?.tasks ?? [];
+
+    // Check pending replies (mirrors PendingRepliesBlock logic)
+    const hasPendingReplies = Object.keys(pendingRepliesByMember).some((name) =>
+      members.some((m) => m.name === name)
+    );
+    if (hasPendingReplies) return true;
+    if (pendingCrossTeamReplies.length > 0) return true;
+
+    // Check active tasks (mirrors ActiveTasksBlock logic)
+    const tMap = new Map(tasks.map((t) => [t.id, t]));
+    return members.some((m) => {
+      if (!m.currentTaskId) return false;
+      const task = tMap.get(m.currentTaskId);
+      if (task && (task.reviewState === 'approved' || task.status === 'completed')) return false;
+      return true;
+    });
+  }, [data?.members, data?.tasks, pendingRepliesByMember, pendingCrossTeamReplies.length]);
 
   useEffect(() => {
     if (!data || Object.keys(pendingRepliesByMember).length === 0) return;
@@ -765,12 +800,23 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     setPendingReviewRequest(null);
   }, [pendingReviewRequest, selectReviewFile, setPendingReviewRequest]);
 
+  // Pick up pending member profile request from MemberHoverCard
+  const pendingMemberProfile = useStore((s) => s.pendingMemberProfile);
+  useEffect(() => {
+    if (!pendingMemberProfile || !data) return;
+    const member = data.members.find((m) => m.name === pendingMemberProfile);
+    if (member) {
+      setSelectedMember(member);
+    }
+    useStore.getState().closeMemberProfile();
+  }, [pendingMemberProfile, data]);
+
   const handleDeleteTask = useCallback(
     (taskId: string) => {
       void (async () => {
         const confirmed = await confirm({
           title: 'Delete task',
-          message: `Move task #${taskId} to trash?`,
+          message: `Move task #${deriveTaskDisplayId(taskId)} to trash?`,
           confirmLabel: 'Delete',
           cancelLabel: 'Cancel',
           variant: 'danger',
@@ -810,12 +856,13 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     void (async () => {
       try {
         await deleteTeam(teamName);
+        if (tabId) closeTab(tabId);
         openTeamsTab();
       } catch {
         // error is shown via store
       }
     })();
-  }, [teamName, deleteTeam, openTeamsTab]);
+  }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId]);
 
   const handleCreateTask = (
     subject: string,
@@ -865,7 +912,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     );
   }
 
-  if (loading && !data) {
+  if ((loading && !data) || (data && data.teamName !== teamName)) {
     return (
       <div className="size-full overflow-auto p-4">
         <div className="mb-4 h-10 animate-pulse rounded-md bg-[var(--color-surface-raised)]" />
@@ -953,7 +1000,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           )}
 
           <div
-            className="relative mb-3 overflow-hidden rounded-lg border border-[var(--color-border)] px-4 py-3"
+            className="relative -mx-4 -mt-4 mb-3 overflow-hidden border-b border-[var(--color-border)] px-4 py-3"
             style={
               headerColorSet
                 ? { borderLeftWidth: '3px', borderLeftColor: headerColorSet.border }
@@ -962,7 +1009,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           >
             {headerColorSet ? (
               <div
-                className="pointer-events-none absolute inset-0 z-0 rounded-lg"
+                className="pointer-events-none absolute inset-0 z-0"
                 style={{ backgroundColor: getThemedBadge(headerColorSet, isLight) }}
               />
             ) : null}
@@ -1171,6 +1218,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               memberTaskCounts={memberTaskCounts}
               taskMap={taskMap}
               pendingRepliesByMember={pendingRepliesByMember}
+              memberSpawnStatuses={memberSpawnStatusMap}
               isTeamAlive={data.isAlive}
               isTeamProvisioning={isTeamProvisioning}
               leadActivity={leadActivityByTeam[teamName]}
@@ -1307,7 +1355,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                         if (result.notifiedOwner && task?.owner) {
                           await api.teams.processSend(
                             teamName,
-                            `Task #${taskId} "${task.subject}" has started. Please begin working on it.`
+                            `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has started. Please begin working on it.`
                           );
                         } else if (!result.notifiedOwner) {
                           const desc = task?.description?.trim()
@@ -1315,7 +1363,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                             : '';
                           await api.teams.processSend(
                             teamName,
-                            `Task #${taskId} "${task?.subject ?? ''}" has been moved to IN PROGRESS but has no assignee.${desc}\nPlease assign it to an available team member, or take it yourself if everyone is busy.`
+                            `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been moved to IN PROGRESS but has no assignee.${desc}\nPlease assign it to an available team member, or take it yourself if everyone is busy.`
                           );
                         }
                       } catch {
@@ -1347,8 +1395,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                       try {
                         await api.teams.sendMessage(teamName, {
                           member: task.owner,
-                          text: `Task #${taskId} "${task.subject}" has been CANCELLED by the user and moved back to TODO. Stop working on it immediately.`,
-                          summary: `Task #${taskId} cancelled`,
+                          text: `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has been CANCELLED by the user and moved back to TODO. Stop working on it immediately.`,
+                          summary: `Task ${formatTaskDisplayLabel(task)} cancelled`,
                         });
                       } catch {
                         // best-effort
@@ -1363,7 +1411,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                           : '';
                         await api.teams.processSend(
                           teamName,
-                          `Task #${taskId} "${task?.subject ?? ''}" has been cancelled and moved back to TODO.${ownerSuffix}`
+                          `Task #${deriveTaskDisplayId(taskId)} "${task?.subject ?? ''}" has been cancelled and moved back to TODO.${ownerSuffix}`
                         );
                       } catch {
                         // best-effort
@@ -1398,6 +1446,15 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               deletedTaskCount={deletedTasks.length}
               onOpenTrash={() => setTrashOpen(true)}
             />
+          </CollapsibleTeamSection>
+
+          <CollapsibleTeamSection
+            sectionId="schedules"
+            title="Schedules"
+            icon={<Clock size={14} />}
+            defaultOpen={false}
+          >
+            <ScheduleSection teamName={teamName} />
           </CollapsibleTeamSection>
 
           {(data.processes?.length ?? 0) > 0 && (
@@ -1536,10 +1593,17 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               isTeamAlive={data.isAlive}
               sending={sendingMessage}
               sendError={sendMessageError}
-              onSend={(member, text, summary, attachments) => {
+              lastResult={lastSendMessageResult}
+              onSend={(member, text, summary, attachments, actionMode) => {
                 const sentAtMs = Date.now();
                 setPendingRepliesByMember((prev) => ({ ...prev, [member]: sentAtMs }));
-                void sendTeamMessage(teamName, { member, text, summary, attachments }).catch(() => {
+                void sendTeamMessage(teamName, {
+                  member,
+                  text,
+                  summary,
+                  attachments,
+                  actionMode,
+                }).catch(() => {
                   setPendingRepliesByMember((prev) => {
                     if (prev[member] !== sentAtMs) return prev;
                     const next = { ...prev };
@@ -1548,18 +1612,53 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                   });
                 });
               }}
+              onCrossTeamSend={(toTeam, text, summary, actionMode) => {
+                void sendCrossTeamMessage({
+                  fromTeam: teamName,
+                  fromMember: 'user',
+                  toTeam,
+                  text,
+                  actionMode,
+                  summary,
+                });
+              }}
             />
-            <PendingRepliesBlock
-              members={data.members}
-              pendingRepliesByMember={pendingRepliesByMember}
-              onMemberClick={setSelectedMember}
-            />
-            <ActiveTasksBlock
-              members={data.members}
-              tasks={data.tasks}
-              onMemberClick={setSelectedMember}
-              onTaskClick={setSelectedTask}
-            />
+            {/* Status block: button floats right (absolute, no layout impact);
+                expanded content renders full-width in normal flow. */}
+            {hasStatusItems && (
+              <>
+                <div className="relative h-0">
+                  <button
+                    type="button"
+                    className="absolute -top-[19px] right-0 z-10 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
+                    onClick={() => setStatusBlockCollapsed((prev) => !prev)}
+                    aria-label={statusBlockCollapsed ? 'Expand status' : 'Collapse status'}
+                  >
+                    <ChevronRight
+                      size={12}
+                      className={`shrink-0 transition-transform duration-150 ${statusBlockCollapsed ? '' : 'rotate-90'}`}
+                    />
+                    Status
+                  </button>
+                </div>
+                {!statusBlockCollapsed && (
+                  <div className="mt-5">
+                    <PendingRepliesBlock
+                      members={data.members}
+                      pendingRepliesByMember={pendingRepliesByMember}
+                      pendingCrossTeamReplies={pendingCrossTeamReplies}
+                      onMemberClick={setSelectedMember}
+                    />
+                    <ActiveTasksBlock
+                      members={data.members}
+                      tasks={data.tasks}
+                      onMemberClick={setSelectedMember}
+                      onTaskClick={setSelectedTask}
+                    />
+                  </div>
+                )}
+              </>
+            )}
             <ActivityTimeline
               messages={filteredMessages}
               teamName={teamName}
@@ -1568,6 +1667,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               allCollapsed={messagesCollapsed}
               expandOverrides={expandedSet}
               onToggleExpandOverride={toggleExpandOverride}
+              teamSessionIds={teamSessionIds}
+              currentLeadSessionId={data?.config.leadSessionId}
               onMemberClick={setSelectedMember}
               onCreateTaskFromMessage={(subject, description) => {
                 openCreateTaskDialog(subject, description);
@@ -1582,7 +1683,9 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               onMessageVisible={handleMessageVisible}
               onRestartTeam={() => setLaunchDialogOpen(true)}
               onTaskIdClick={(taskId) => {
-                const task = taskMap.get(taskId);
+                const task =
+                  taskMap.get(taskId) ??
+                  data.tasks.find((candidate) => candidate.displayId === taskId);
                 if (task) setSelectedTask(task);
               }}
             />
@@ -1778,6 +1881,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           </Dialog>
 
           <LaunchTeamDialog
+            mode="launch"
             open={launchDialogOpen}
             teamName={teamName}
             members={data?.members ?? []}
@@ -1803,12 +1907,18 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             sending={sendingMessage}
             sendError={sendMessageError}
             lastResult={lastSendMessageResult}
-            onSend={(member, text, summary, attachments) => {
+            onSend={(member, text, summary, attachments, actionMode) => {
               void (async () => {
                 const sentAtMs = Date.now();
                 setPendingRepliesByMember((prev) => ({ ...prev, [member]: sentAtMs }));
                 try {
-                  await sendTeamMessage(teamName, { member, text, summary, attachments });
+                  await sendTeamMessage(teamName, {
+                    member,
+                    text,
+                    summary,
+                    attachments,
+                    actionMode,
+                  });
                 } catch {
                   setPendingRepliesByMember((prev) => {
                     if (prev[member] !== sentAtMs) return prev;

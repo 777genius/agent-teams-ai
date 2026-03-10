@@ -7,7 +7,7 @@ import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { enhanceAIGroup } from '@renderer/utils/aiGroupEnhancer';
 import { transformChunksToConversation } from '@renderer/utils/groupTransformer';
-import { createAgentBlockRegex, stripAgentBlocks } from '@shared/constants/agentBlocks';
+import { extractAgentBlockContents, stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { format } from 'date-fns';
 import { Bot, ChevronDown, ChevronRight } from 'lucide-react';
 
@@ -92,16 +92,7 @@ export const MemberExecutionLog = ({
 
 /** Extract agent-only instruction blocks and human-visible text from a message. */
 function splitAgentBlocks(raw: string): { humanText: string; agentInfo: string[] } {
-  const agentInfo: string[] = [];
-  const regex = createAgentBlockRegex();
-  let m: RegExpExecArray | null;
-  while ((m = regex.exec(raw)) !== null) {
-    const content = m[0]
-      .replace(/^```info_for_agent\n?/, '')
-      .replace(/\n?```$/, '')
-      .trim();
-    if (content) agentInfo.push(content);
-  }
+  const agentInfo = extractAgentBlockContents(raw);
   const humanText = stripAgentBlocks(raw);
   return { humanText, agentInfo };
 }

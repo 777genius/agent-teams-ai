@@ -1,0 +1,19 @@
+{
+  "name": "agent-teams-controller",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Controller package for Claude agent teams operations",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "test": "vitest run --config vitest.config.js",
+    "test:watch": "vitest --config vitest.config.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

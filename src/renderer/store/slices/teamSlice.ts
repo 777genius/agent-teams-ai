@@ -2,6 +2,8 @@ import { api } from '@renderer/api';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { createLogger } from '@shared/utils/logger';
+import { getTaskKanbanColumn } from '@shared/utils/reviewState';
+import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 
 import { getWorktreeNavigationState } from '../utils/stateResetHelpers';
 
@@ -67,10 +69,12 @@ import type {
   AddMemberRequest,
   CommentAttachmentPayload,
   CreateTaskRequest,
+  CrossTeamSendRequest,
   GlobalTask,
   KanbanColumnId,
   LeadActivityState,
   LeadContextUsage,
+  MemberSpawnStatusEntry,
   SendMessageRequest,
   SendMessageResult,
   TaskComment,
@@ -82,8 +86,10 @@ import type {
   TeamTask,
   TeamTaskStatus,
   ToolApprovalRequest,
+  ToolApprovalSettings,
   UpdateKanbanPatch,
 } from '@shared/types';
+import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import type { StateCreator } from 'zustand';
 
 // --- Clarification notification tracking ---
@@ -118,7 +124,8 @@ function detectClarificationNotifications(
 function fireClarificationNotification(task: GlobalTask, suppressToast: boolean): void {
   // Delegate to main process for native OS notification (cross-platform, no permission needed)
   const latestComment = task.comments?.length ? task.comments[task.comments.length - 1] : undefined;
-  const body = latestComment?.text || task.description || `Task #${task.id}: ${task.subject}`;
+  const body =
+    latestComment?.text || task.description || `${formatTaskDisplayLabel(task)}: ${task.subject}`;
 
   void api.teams
     ?.showMessageNotification({
@@ -126,7 +133,7 @@ function fireClarificationNotification(task: GlobalTask, suppressToast: boolean)
       teamDisplayName: task.teamDisplayName,
       from: latestComment?.author || 'team-lead',
       to: 'user',
-      summary: `Clarification needed — Task #${task.id}`,
+      summary: `Clarification needed — Task ${formatTaskDisplayLabel(task)}`,
       body,
       teamEventType: 'task_clarification',
       dedupeKey: `clarification:${task.teamName}:${task.id}:${task.updatedAt ?? Date.now()}`,
@@ -153,10 +160,13 @@ function detectStatusChangeNotifications(
     if (!oldTask) continue;
 
     // Detect kanbanColumn change to 'approved' (status stays 'completed', column changes)
-    const becameApproved = task.kanbanColumn === 'approved' && oldTask.kanbanColumn !== 'approved';
+    const taskKanbanColumn = getTaskKanbanColumn(task);
+    const oldTaskKanbanColumn = getTaskKanbanColumn(oldTask);
+    const becameApproved = taskKanbanColumn === 'approved' && oldTaskKanbanColumn !== 'approved';
+    const becameNeedsFix = task.reviewState === 'needsFix' && oldTask.reviewState !== 'needsFix';
 
     const statusChanged = oldTask.status !== task.status;
-    if (!statusChanged && !becameApproved) continue;
+    if (!statusChanged && !becameApproved && !becameNeedsFix) continue;
 
     if (onlySolo) {
       const team = teamByName[task.teamName];
@@ -164,7 +174,7 @@ function detectStatusChangeNotifications(
     }
 
     // Resolve the effective status for notification matching
-    const effectiveStatus = becameApproved ? 'approved' : task.status;
+    const effectiveStatus = becameApproved ? 'approved' : becameNeedsFix ? 'needsFix' : task.status;
     if (!statuses.includes(effectiveStatus)) continue;
 
     const key = `${task.teamName}:${task.id}:${effectiveStatus}`;
@@ -175,7 +185,7 @@ function detectStatusChangeNotifications(
     fireStatusChangeNotification(
       task,
       fromLabel,
-      becameApproved ? 'approved' : undefined,
+      becameApproved ? 'approved' : becameNeedsFix ? 'needsFix' : undefined,
       !statusChangeEnabled
     );
   }
@@ -192,6 +202,7 @@ function fireStatusChangeNotification(
     in_progress: 'In Progress',
     completed: 'Completed',
     deleted: 'Deleted',
+    needsFix: 'Needs Fixes',
     approved: 'Approved',
   };
   const from = statusLabels[fromStatus] ?? fromStatus;
@@ -204,7 +215,7 @@ function fireStatusChangeNotification(
       teamDisplayName: task.teamDisplayName,
       from: task.owner ?? 'system',
       to: 'user',
-      summary: `Task #${task.id}: ${from} → ${to}`,
+      summary: `Task ${formatTaskDisplayLabel(task)}: ${from} → ${to}`,
       body: task.subject,
       teamEventType: 'task_status_change',
       dedupeKey: `status:${task.teamName}:${task.id}:${fromStatus}:${toStatus}:${task.updatedAt ?? Date.now()}`,
@@ -253,6 +264,10 @@ export interface TeamSlice {
   globalTaskDetail: GlobalTaskDetailState | null;
   openGlobalTaskDetail: (teamName: string, taskId: string) => void;
   closeGlobalTaskDetail: () => void;
+  /** Set by MemberHoverCard to signal TeamDetailView to open MemberDetailDialog */
+  pendingMemberProfile: string | null;
+  openMemberProfile: (memberName: string) => void;
+  closeMemberProfile: () => void;
   /** Set by GlobalTaskDetailDialog to signal TeamDetailView to open ChangeReviewDialog */
   pendingReviewRequest: { taskId: string; filePath?: string } | null;
   setPendingReviewRequest: (req: { taskId: string; filePath?: string } | null) => void;
@@ -272,6 +287,9 @@ export interface TeamSlice {
   provisioningStartedAtFloorByTeam: Record<string, string>;
   leadActivityByTeam: Record<string, LeadActivityState>;
   leadContextByTeam: Record<string, LeadContextUsage>;
+  /** Per-team per-member spawn statuses during team provisioning/launch. */
+  memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
+  fetchMemberSpawnStatuses: (teamName: string) => Promise<void>;
   activeProvisioningRunId: string | null;
   provisioningError: string | null;
   clearProvisioningError: () => void;
@@ -286,6 +304,17 @@ export interface TeamSlice {
   selectTeam: (teamName: string, opts?: { skipProjectAutoSelect?: boolean }) => Promise<void>;
   refreshTeamData: (teamName: string) => Promise<void>;
   sendTeamMessage: (teamName: string, request: SendMessageRequest) => Promise<void>;
+  crossTeamTargets: {
+    teamName: string;
+    displayName: string;
+    description?: string;
+    color?: string;
+    leadName?: string;
+    leadColor?: string;
+  }[];
+  crossTeamTargetsLoading: boolean;
+  fetchCrossTeamTargets: () => Promise<void>;
+  sendCrossTeamMessage: (request: CrossTeamSendRequest) => Promise<void>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
   updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;
   updateKanbanColumnOrder: (
@@ -367,6 +396,8 @@ export interface TeamSlice {
   subscribeProvisioningProgress: () => void;
   unsubscribeProvisioningProgress: () => void;
   pendingApprovals: ToolApprovalRequest[];
+  toolApprovalSettings: ToolApprovalSettings;
+  updateToolApprovalSettings: (patch: Partial<ToolApprovalSettings>) => Promise<void>;
   respondToToolApproval: (
     teamName: string,
     runId: string,
@@ -374,6 +405,39 @@ export interface TeamSlice {
     allow: boolean,
     message?: string
   ) => Promise<void>;
+}
+
+function loadToolApprovalSettings(): ToolApprovalSettings {
+  try {
+    const raw = localStorage.getItem('team:toolApprovalSettings');
+    if (!raw) return DEFAULT_TOOL_APPROVAL_SETTINGS;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const d = DEFAULT_TOOL_APPROVAL_SETTINGS;
+    return {
+      autoAllowFileEdits:
+        typeof parsed.autoAllowFileEdits === 'boolean'
+          ? parsed.autoAllowFileEdits
+          : d.autoAllowFileEdits,
+      autoAllowSafeBash:
+        typeof parsed.autoAllowSafeBash === 'boolean'
+          ? parsed.autoAllowSafeBash
+          : d.autoAllowSafeBash,
+      timeoutAction:
+        typeof parsed.timeoutAction === 'string' &&
+        ['allow', 'deny', 'wait'].includes(parsed.timeoutAction)
+          ? (parsed.timeoutAction as ToolApprovalSettings['timeoutAction'])
+          : d.timeoutAction,
+      timeoutSeconds:
+        typeof parsed.timeoutSeconds === 'number' &&
+        Number.isFinite(parsed.timeoutSeconds) &&
+        parsed.timeoutSeconds >= 5 &&
+        parsed.timeoutSeconds <= 300
+          ? parsed.timeoutSeconds
+          : d.timeoutSeconds,
+    };
+  } catch {
+    return DEFAULT_TOOL_APPROVAL_SETTINGS;
+  }
 }
 
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
@@ -394,16 +458,36 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   sendingMessage: false,
   sendMessageError: null,
   lastSendMessageResult: null,
+  crossTeamTargets: [],
+  crossTeamTargetsLoading: false,
   reviewActionError: null,
   provisioningRuns: {},
   provisioningStartedAtFloorByTeam: {},
   leadActivityByTeam: {},
   leadContextByTeam: {},
+  memberSpawnStatusesByTeam: {},
   activeProvisioningRunId: null,
   provisioningError: null,
   clearProvisioningError: () => set({ provisioningError: null }),
+  fetchMemberSpawnStatuses: async (teamName: string) => {
+    if (!api.teams?.getMemberSpawnStatuses) return;
+    try {
+      const statuses = await api.teams.getMemberSpawnStatuses(teamName);
+      set((prev) => ({
+        memberSpawnStatusesByTeam: {
+          ...prev.memberSpawnStatusesByTeam,
+          [teamName]: statuses,
+        },
+      }));
+    } catch {
+      // ignore — spawn statuses are best-effort
+    }
+  },
   kanbanFilterQuery: null,
   globalTaskDetail: null,
+  pendingMemberProfile: null,
+  openMemberProfile: (memberName: string) => set({ pendingMemberProfile: memberName }),
+  closeMemberProfile: () => set({ pendingMemberProfile: null }),
   pendingReviewRequest: null,
   setPendingReviewRequest: (req) => set({ pendingReviewRequest: req }),
   openGlobalTaskDetail: (teamName: string, taskId: string) => {
@@ -416,6 +500,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   deletedTasks: [],
   deletedTasksLoading: false,
   pendingApprovals: [],
+  toolApprovalSettings: loadToolApprovalSettings(),
 
   fetchBranches: async (paths: string[]) => {
     const results: Record<string, string | null> = {};
@@ -509,7 +594,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             notifiedClarificationTaskKeys.add(`${task.teamName}:${task.id}`);
           }
           notifiedStatusChangeKeys.add(`${task.teamName}:${task.id}:${task.status}`);
-          if (task.kanbanColumn === 'approved') {
+          if (task.reviewState === 'needsFix') {
+            notifiedStatusChangeKeys.add(`${task.teamName}:${task.id}:needsFix`);
+          }
+          if (getTaskKanbanColumn(task) === 'approved') {
             notifiedStatusChangeKeys.add(`${task.teamName}:${task.id}:approved`);
           }
         }
@@ -604,11 +692,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       return;
     }
 
-    // Clear stale data immediately to prevent flash of previous team's content
-    const prev = get().selectedTeamName;
+    // Stale-while-revalidate: keep previous data visible while loading new team.
+    // Skeleton only shows on first load (when data is null).
+    // Data is atomically replaced when the new team's data arrives.
     set({
       selectedTeamName: teamName,
-      selectedTeamData: prev !== teamName ? null : get().selectedTeamData,
       selectedTeamLoading: true,
       selectedTeamError: null,
       reviewActionError: null,
@@ -758,7 +846,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           : error instanceof Error
             ? error.message
             : 'Failed to refresh team data';
+
+      // During provisioning, team:getData may not be readable yet.
+      // Preserve existing data instead of showing a fatal error.
+      if (msg === 'TEAM_PROVISIONING' || msg.includes('TEAM_PROVISIONING')) {
+        logger.debug(`refreshTeamData(${teamName}) skipped: team is still provisioning`);
+        set({ selectedTeamError: null });
+        return;
+      }
+
       logger.warn(`refreshTeamData(${teamName}) failed: ${msg}`);
+
+      // Non-destructive: if we already have data, keep it visible.
+      // Only set error when there's nothing to show.
+      if (get().selectedTeamData) {
+        logger.debug(`refreshTeamData(${teamName}) preserving existing data after transient error`);
+        set({ selectedTeamError: null });
+        return;
+      }
       set({ selectedTeamError: msg });
     }
   },
@@ -799,6 +904,40 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         lastSendMessageResult: result,
       });
       await get().refreshTeamData(teamName);
+    } catch (error) {
+      set({
+        sendingMessage: false,
+        lastSendMessageResult: null,
+        sendMessageError: mapSendMessageError(error),
+      });
+    }
+  },
+
+  fetchCrossTeamTargets: async () => {
+    set({ crossTeamTargetsLoading: true });
+    try {
+      const targets = await api.crossTeam.listTargets();
+      set({ crossTeamTargets: targets, crossTeamTargetsLoading: false });
+    } catch (error) {
+      logger.error('fetchCrossTeamTargets failed', error);
+      set({ crossTeamTargets: [], crossTeamTargetsLoading: false });
+    }
+  },
+
+  sendCrossTeamMessage: async (request: CrossTeamSendRequest) => {
+    set({ sendingMessage: true, sendMessageError: null, lastSendMessageResult: null });
+    try {
+      const result = await api.crossTeam.send(request);
+      set({
+        sendingMessage: false,
+        sendMessageError: null,
+        lastSendMessageResult: {
+          messageId: result.messageId,
+          deliveredToInbox: result.deliveredToInbox,
+          deduplicated: result.deduplicated,
+        },
+      });
+      await get().refreshTeamData(request.fromTeam);
     } catch (error) {
       set({
         sendingMessage: false,
@@ -1157,6 +1296,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     });
 
     if (progress.state === 'ready' || progress.state === 'disconnected') {
+      // Clear spawn statuses — provisioning is complete, members now tracked via normal status
+      set((prev) => {
+        const next = { ...prev.memberSpawnStatusesByTeam };
+        delete next[progress.teamName];
+        return { memberSpawnStatusesByTeam: next };
+      });
       void get().fetchTeams();
       // If the user already opened the team tab, reload team data now that
       // config.json is guaranteed to exist.
@@ -1178,6 +1323,18 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       get().onProvisioningProgress(progress);
     });
     set({ provisioningProgressUnsubscribe: unsubscribe });
+  },
+
+  updateToolApprovalSettings: async (patch) => {
+    const current = get().toolApprovalSettings;
+    const merged = { ...current, ...patch };
+    set({ toolApprovalSettings: merged });
+    localStorage.setItem('team:toolApprovalSettings', JSON.stringify(merged));
+    try {
+      await api.teams.updateToolApprovalSettings(merged);
+    } catch (err) {
+      logger.warn('Failed to sync tool approval settings to main:', err);
+    }
   },
 
   respondToToolApproval: async (teamName, runId, requestId, allow, message) => {

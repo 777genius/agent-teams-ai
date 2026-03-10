@@ -2,8 +2,8 @@ import { CARD_BG, CARD_BORDER_STYLE, CARD_ICON_MUTED } from '@renderer/constants
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { Loader2 } from 'lucide-react';
+import { agentAvatarUrl, buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 
 import type { ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
@@ -23,7 +23,13 @@ export const ActiveTasksBlock = ({
   const { isLight } = useTheme();
   const colorMap = buildMemberColorMap(members);
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
-  const working = members.filter((m) => m.currentTaskId != null);
+  const working = members.filter((m) => {
+    if (!m.currentTaskId) return false;
+    const task = taskMap.get(m.currentTaskId);
+    // Defense-in-depth: hide banner for approved/completed tasks even if currentTaskId is stale
+    if (task && (task.reviewState === 'approved' || task.status === 'completed')) return false;
+    return true;
+  });
   if (working.length === 0) return null;
 
   return (
@@ -42,7 +48,7 @@ export const ActiveTasksBlock = ({
         return (
           <article
             key={`${member.name}-${taskId}`}
-            className="overflow-hidden rounded-md"
+            className="activity-card-enter-animate overflow-hidden rounded-md"
             style={{
               backgroundColor: CARD_BG,
               border: CARD_BORDER_STYLE,
@@ -50,14 +56,18 @@ export const ActiveTasksBlock = ({
             }}
           >
             <div className="flex items-center gap-2 px-3 py-2">
-              <span className="relative flex size-2 shrink-0">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-                <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+              <span className="relative inline-flex shrink-0">
+                <img
+                  src={agentAvatarUrl(member.name, 24)}
+                  alt=""
+                  className="size-5 rounded-full bg-[var(--color-surface-raised)]"
+                  loading="lazy"
+                />
+                <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+                  <span className="relative inline-flex size-full rounded-full bg-emerald-500" />
+                </span>
               </span>
-              <Loader2
-                className="size-3.5 shrink-0 animate-spin"
-                style={{ color: colors.border }}
-              />
               {onMemberClick ? (
                 <button
                   type="button"
@@ -100,7 +110,7 @@ export const ActiveTasksBlock = ({
                     onClick={() => onTaskClick(task)}
                     title={task.subject}
                   >
-                    #{task.id} {task.subject}
+                    {formatTaskDisplayLabel(task)} {task.subject}
                   </button>
                 ) : (
                   <span
@@ -108,7 +118,7 @@ export const ActiveTasksBlock = ({
                     style={{ border: `1px solid ${colors.border}40` }}
                     title={task.subject}
                   >
-                    #{task.id} {task.subject}
+                    {formatTaskDisplayLabel(task)} {task.subject}
                   </span>
                 ))}
             </div>

@@ -1,20 +1,20 @@
 import { useMemo } from 'react';
 
-import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
-import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useStore } from '@renderer/store';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { MAX_TEXT_LENGTH } from '@shared/constants';
+import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
+import { Send } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { ResolvedTeamMember } from '@shared/types';
@@ -54,14 +54,13 @@ export const ReviewDialog = ({
     [members, colorMap]
   );
 
-  const handleCancel = (): void => {
-    onCancel();
-  };
+  const trimmed = draft.value.trim();
+  const remaining = MAX_TEXT_LENGTH - trimmed.length;
 
   const handleSubmit = (): void => {
-    const trimmed = draft.value.trim() || undefined;
+    const comment = trimmed || undefined;
     draft.clearDraft();
-    onSubmit(trimmed);
+    onSubmit(comment);
   };
 
   return (
@@ -69,44 +68,54 @@ export const ReviewDialog = ({
       open={open && taskId !== null}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) {
-          handleCancel();
+          onCancel();
         }
       }}
     >
-      <DialogContent className="sm:max-w-[420px]">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Request Changes</DialogTitle>
-          <DialogDescription>Task #{taskId}</DialogDescription>
+          <DialogDescription>Task #{taskId ? deriveTaskDisplayId(taskId) : ''}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-2 py-2">
-          <Label htmlFor="review-comment" className="label-optional">
-            Comment (optional)
-          </Label>
           <MentionableTextarea
             id="review-comment"
-            className="min-h-[110px] text-xs"
             value={draft.value}
             onValueChange={draft.setValue}
-            placeholder="Describe what needs to change..."
+            placeholder="Describe what needs to change... (Enter to submit)"
             suggestions={mentionSuggestions}
             projectPath={projectPath}
+            onModEnter={handleSubmit}
+            minRows={4}
+            maxRows={12}
+            maxLength={MAX_TEXT_LENGTH}
+            cornerAction={
+              <button
+                type="button"
+                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleSubmit}
+              >
+                <Send size={12} />
+                Submit
+              </button>
+            }
             footerRight={
-              draft.isSaved ? (
-                <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-              ) : undefined
+              <div className="flex items-center gap-2">
+                {remaining < 200 ? (
+                  <span
+                    className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
+                  >
+                    {remaining} chars left
+                  </span>
+                ) : null}
+                {draft.isSaved ? (
+                  <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                ) : null}
+              </div>
             }
           />
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" size="sm" onClick={handleCancel}>
-            Cancel
-          </Button>
-          <Button variant="destructive" size="sm" onClick={handleSubmit}>
-            Submit
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

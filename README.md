@@ -15,22 +15,24 @@
 </p>
 
 <p align="center">
-  <sub>100% free, open source. No API keys. No configuration. Runs entirely locally.</sub>
+  <sub>100% free, open source. No API keys. No configuration. Runs entirely locally. Not just coding agents.</sub>
 </p>
 
 <br />
 
 ## What is this
 
-A new approach to task management with AI agents.
+A new approach to task management with AI agent teams.
 
 - **Assemble your team** — create agent teams with different roles that work autonomously in parallel
-- **Agents talk to each other** — they communicate, create and manage their own tasks, and leave comments
+- **Agents talk to each other** — they communicate, create and manage their own tasks, review, leave comments
+- **Cross-team communication** — agents can fully communicate across different teams; you can configure or prompt them to collaborate and message each other between teams
 - **Sit back and watch** — tasks change status on the kanban board while agents handle everything on their own
 - **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment
 - **Full tool visibility** — inspect exactly which tools an agent used to complete each task
 - **Live process section** — see which agents are running processes and open URLs directly in the browser
 - **Stay in control** — send a direct message to any agent, drop a comment on a task, or pick a quick action right on the kanban card whenever you want to clarify something or add new work
+- **Solo mode** — one-member team: a single agent that creates its own tasks and shows live progress. Saves tokens; can expand to a full team anytime
 
 <details>
 <summary><strong>More features</strong></summary>
@@ -38,7 +40,6 @@ A new approach to task management with AI agents.
 <br />
 
 - **Deep session analysis** — detailed breakdown of what happened in each Claude session: bash commands, reasoning, subprocesses
-- **Solo mode** — one-member team: a single agent that creates its own tasks and shows live progress. Saves tokens; can expand to a full team anytime
 - **Smart task-to-log/changes matching** — automatically links Claude session logs/changes to specific tasks
 - **Advanced context monitoring system** — comprehensive breakdown of what consumes tokens at every step: user messages, Claude.md instructions, tool outputs, thinking text, and team coordination. Token usage, percentage of context window, and session cost are displayed for each category, with detailed views by category or size.
 - **Recent tasks across projects** — browse the latest completed tasks from all your projects in one place

@@ -276,6 +276,25 @@ describe('TeamProvisioningService post-compact lifecycle', () => {
     // Should contain persistent context
     expect(text).toContain('Constraints:');
     expect(text).toContain('Do NOT call TeamDelete');
+    expect(text).toContain('TURN ACTION MODE PROTOCOL (HIGHEST PRIORITY FOR EACH USER TURN):');
+    expect(text).toContain('ASK: Strict read-only conversation mode.');
+    expect(text).toContain('DELEGATE: Strict orchestration mode for leads.');
+    expect(text).toContain('cross_team_send');
+    expect(text).toContain('cross_team_list_targets');
+    expect(text).toContain('cross_team_get_outbox');
+    expect(text).toContain('blocked by another team');
+    expect(text).toContain('one focused request per topic');
+    expect(text).toContain('If you receive a message that is clearly from another team');
+    expect(text).toContain('preserve the same conversationId');
+    expect(text).toContain('replyToConversationId');
+    expect(text).toContain('Do not wait silently on another team');
+    expect(text).toContain('Golden format for cross-team requests');
+    expect(text).toContain('Golden format for cross-team replies');
+    expect(text).toContain('Do NOT use cross-team messaging when your own team can answer');
+    expect(text).toContain('resolve it through your own task board and teammates first');
+    expect(text).toContain('do NOT appear silent');
+    expect(text).toContain("canonical progress trail should be team-visible first");
+    expect(text).toContain('Do NOT default to messaging "user" for cross-team coordination');
 
     await svc.cancelProvisioning(runId);
   });

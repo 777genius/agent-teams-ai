@@ -14,7 +14,6 @@ import {
   ConnectionSection,
   GeneralSection,
   NotificationsSection,
-  WorkspaceSection,
 } from './sections';
 import { type SettingsSection, SettingsTabs } from './SettingsTabs';
 
@@ -132,8 +131,6 @@ export const SettingsView = (): React.JSX.Element | null => {
           )}
 
           {activeSection === 'connection' && <ConnectionSection />}
-
-          {activeSection === 'workspace' && <WorkspaceSection />}
 
           {activeSection === 'notifications' && (
             <NotificationsSection

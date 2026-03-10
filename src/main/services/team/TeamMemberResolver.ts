@@ -8,6 +8,46 @@ import type {
   TeamTaskWithKanban,
 } from '@shared/types';
 
+const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
+const CROSS_TEAM_TOOL_RECIPIENT_NAMES = new Set([
+  'cross_team_send',
+  'cross_team_list_targets',
+  'cross_team_get_outbox',
+]);
+
+function looksLikeQualifiedExternalRecipient(name: string): boolean {
+  const trimmed = name.trim();
+  const dot = trimmed.indexOf('.');
+  if (dot <= 0 || dot === trimmed.length - 1) return false;
+  const teamName = trimmed.slice(0, dot).trim();
+  const memberName = trimmed.slice(dot + 1).trim();
+  return TEAM_NAME_PATTERN.test(teamName) && memberName.length > 0;
+}
+
+function looksLikeCrossTeamPseudoRecipient(name: string): boolean {
+  const trimmed = name.trim();
+  const prefixes = [
+    'cross_team::',
+    'cross_team--',
+    'cross-team:',
+    'cross-team-',
+    'cross_team:',
+    'cross_team-',
+  ];
+  for (const prefix of prefixes) {
+    if (!trimmed.startsWith(prefix)) continue;
+    const teamName = trimmed.slice(prefix.length).trim();
+    if (TEAM_NAME_PATTERN.test(teamName)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function looksLikeCrossTeamToolRecipient(name: string): boolean {
+  return CROSS_TEAM_TOOL_RECIPIENT_NAMES.has(name.trim());
+}
+
 export class TeamMemberResolver {
   resolveMembers(
     config: TeamConfig,
@@ -17,11 +57,23 @@ export class TeamMemberResolver {
     messages: InboxMessage[]
   ): ResolvedTeamMember[] {
     const names = new Set<string>();
+    const explicitNames = new Set<string>();
+    const seenNames = new Set<string>();
+    const addName = (name: string): void => {
+      const normalized = name.toLowerCase();
+      if (seenNames.has(normalized)) {
+        return;
+      }
+      seenNames.add(normalized);
+      names.add(name);
+    };
 
     if (Array.isArray(config.members)) {
       for (const member of config.members) {
         if (typeof member?.name === 'string' && member.name.trim() !== '') {
-          names.add(member.name.trim());
+          const trimmed = member.name.trim();
+          addName(trimmed);
+          explicitNames.add(trimmed.toLowerCase());
         }
       }
     }
@@ -29,14 +81,29 @@ export class TeamMemberResolver {
     if (Array.isArray(metaMembers)) {
       for (const member of metaMembers) {
         if (typeof member?.name === 'string' && member.name.trim() !== '') {
-          names.add(member.name.trim());
+          const trimmed = member.name.trim();
+          addName(trimmed);
+          explicitNames.add(trimmed.toLowerCase());
         }
       }
     }
 
     for (const inboxName of inboxNames) {
       if (typeof inboxName === 'string' && inboxName.trim() !== '') {
-        names.add(inboxName.trim());
+        const trimmed = inboxName.trim();
+        if (
+          looksLikeCrossTeamPseudoRecipient(trimmed) ||
+          looksLikeCrossTeamToolRecipient(trimmed)
+        ) {
+          continue;
+        }
+        if (
+          !explicitNames.has(trimmed.toLowerCase()) &&
+          looksLikeQualifiedExternalRecipient(trimmed)
+        ) {
+          continue;
+        }
+        addName(trimmed);
       }
     }
 
@@ -93,7 +160,10 @@ export class TeamMemberResolver {
       const ownedTasks = tasks.filter((task) => task.owner === name);
       const currentTask =
         ownedTasks.find(
-          (task) => task.status === 'in_progress' && task.kanbanColumn !== 'approved'
+          (task) =>
+            task.status === 'in_progress' &&
+            task.reviewState !== 'approved' &&
+            task.kanbanColumn !== 'approved'
         ) ?? null;
       const memberMessages = messages.filter((message) => message.from === name);
       const latestMessage = memberMessages[0] ?? null;

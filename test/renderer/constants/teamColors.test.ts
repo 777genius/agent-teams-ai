@@ -34,9 +34,19 @@ describe('getTeamColorSet', () => {
     expect(result.text).toBe('#ff5500');
   });
 
-  it('falls back to blue for unknown non-hex strings', () => {
+  it('hashes unknown non-hex strings to a valid named color (not always blue)', () => {
     const result = getTeamColorSet('nonexistent');
-    expect(result.border).toBe('#3b82f6');
+    // Should be a valid color set from the named palette, not necessarily blue
+    expect(isValidColorSet(result)).toBe(true);
+    // Should be deterministic
+    expect(getTeamColorSet('nonexistent')).toEqual(result);
+    // Different unknown strings should potentially yield different colors
+    const colors = new Set(
+      ['coral', 'sapphire', 'honey', 'arctic', 'chartreuse'].map(
+        (name) => getTeamColorSet(name).border
+      )
+    );
+    expect(colors.size).toBeGreaterThan(1);
   });
 });
 

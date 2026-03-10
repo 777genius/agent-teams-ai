@@ -174,6 +174,7 @@ async function handleGetTaskChanges(
                     typeof (i as Record<string, unknown>).completedAt === 'string')
               ) as { startedAt: string; completedAt?: string }[])
             : undefined,
+          summaryOnly: (options as Record<string, unknown>).summaryOnly === true,
         }
       : undefined;
 

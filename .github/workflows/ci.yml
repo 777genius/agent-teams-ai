@@ -5,7 +5,11 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'agent-teams-controller/**'
+      - 'mcp-server/**'
       - 'test/**'
+      - '.github/workflows/**'
+      - 'pnpm-workspace.yaml'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'tsconfig*.json'
@@ -17,7 +21,11 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'agent-teams-controller/**'
+      - 'mcp-server/**'
       - 'test/**'
+      - '.github/workflows/**'
+      - 'pnpm-workspace.yaml'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'tsconfig*.json'
@@ -54,14 +62,8 @@ jobs:
           restore-keys: |
             eslint-${{ runner.os }}-
 
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Build
-        run: pnpm build
+      - name: Validate workspace truth gate
+        run: pnpm check
 
   test:
     strategy:
@@ -87,4 +89,4 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Test
-        run: pnpm test
+        run: pnpm test:workspace

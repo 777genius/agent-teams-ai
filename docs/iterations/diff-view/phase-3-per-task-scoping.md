@@ -22,7 +22,7 @@ export interface TaskBoundary {
   /** ISO timestamp из JSONL entry */
   timestamp: string;
   /** Каким механизмом обнаружено */
-  mechanism: 'TaskUpdate' | 'teamctl';
+  mechanism: 'TaskUpdate' | 'teamctl'; // historical legacy mechanism
   /** tool_use id (для link к конкретному блоку) */
   toolUseId?: string;
 }
@@ -61,7 +61,7 @@ export interface TaskBoundariesResult {
   /** True если сессия работала только с одной задачей */
   isSingleTaskSession: boolean;
   /** Механизм обнаружения (один на сессию — никогда не смешиваются!) */
-  detectedMechanism: 'TaskUpdate' | 'teamctl' | 'none';
+  detectedMechanism: 'TaskUpdate' | 'teamctl' | 'none'; // historical legacy mechanism in this design note
 }
 
 /** Расширенный TaskChangeSet с confidence деталями.
@@ -77,7 +77,7 @@ export interface TaskChangeSetV2 extends TaskChangeSet {
 
 ### 2. Сервис: `src/main/services/team/TaskBoundaryParser.ts` (NEW)
 
-**Задача**: Парсить JSONL файлы субагентов для извлечения `TaskUpdate` и `teamctl` маркеров задач.
+**Задача**: Парсить JSONL файлы субагентов для извлечения `TaskUpdate` и исторических `teamctl` маркеров задач.
 
 **Ключевой факт**: Механизмы НИКОГДА не смешиваются в одной сессии (0 из 351 проверенных). Это означает один pass по JSONL для определения механизма + extraction.
 
@@ -90,7 +90,7 @@ export class TaskBoundaryParser {
   private readonly CACHE_TTL = 60 * 1000; // 1 мин (не 3 — JSONL файлы меняются часто при активной работе)
 
   /**
-   * Парсит JSONL файл и извлекает все TaskUpdate/teamctl маркеры.
+   * Парсит JSONL файл и извлекает все TaskUpdate/исторические teamctl маркеры.
    *
    * Один проход по файлу, O(n) по количеству строк.
    */
@@ -101,8 +101,8 @@ export class TaskBoundaryParser {
    *
    * Алгоритм:
    * 1. Найти все TaskBoundary для taskId
-   * 2. Start boundary = TaskUpdate(in_progress) или teamctl(start)
-   * 3. End boundary = TaskUpdate(completed) или teamctl(complete)
+   * 2. Start boundary = TaskUpdate(in_progress) или historical teamctl(start)
+   * 3. End boundary = TaskUpdate(completed) или historical teamctl(complete)
    * 4. Scope = все tool_use между start.lineNumber и end.lineNumber
    * 5. Если single-task session: scope = весь файл
    */

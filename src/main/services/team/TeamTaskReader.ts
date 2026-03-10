@@ -2,15 +2,17 @@ import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTasksBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import { getReviewStateFromTask } from '@shared/utils/reviewState';
+import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { getTeamFsWorkerClient } from './TeamFsWorkerClient';
 
 import type {
-  StatusTransition,
   TaskAttachmentMeta,
   TaskComment,
+  TaskHistoryEvent,
   TaskWorkInterval,
   TeamTask,
   TeamTaskStatus,
@@ -101,24 +103,10 @@ export class TeamTaskReader {
         if (metadata?._internal === true) {
           continue;
         }
-        // CLI sometimes writes "title" instead of "subject" — normalize
-        const subject =
-          typeof parsed.subject === 'string'
-            ? parsed.subject
-            : typeof parsed.title === 'string'
-              ? parsed.title
-              : '';
-        // Resolve createdAt: prefer JSON field, fallback to fs.stat (reuse fileStat from above)
-        let createdAt: string | undefined;
+        const subject = typeof parsed.subject === 'string' ? parsed.subject : '';
+        const createdAt = typeof parsed.createdAt === 'string' ? parsed.createdAt : undefined;
         let updatedAt: string | undefined;
-        if (typeof parsed.createdAt === 'string') {
-          createdAt = parsed.createdAt;
-        }
         try {
-          if (!createdAt) {
-            const bt = fileStat.birthtime.getTime();
-            createdAt = (bt > 0 ? fileStat.birthtime : fileStat.mtime).toISOString();
-          }
           updatedAt = fileStat.mtime.toISOString();
         } catch {
           /* leave undefined */
@@ -127,25 +115,17 @@ export class TeamTaskReader {
         // `satisfies Record<keyof TeamTask, unknown>` ensures compile-time
         // safety: if a field is added to TeamTask but not mapped here,
         // TypeScript will error. This prevents silently dropping new fields.
-        const statusHistory: StatusTransition[] | undefined = Array.isArray(parsed.statusHistory)
-          ? (parsed.statusHistory as unknown[])
+        const historyEvents: TaskHistoryEvent[] | undefined = Array.isArray(parsed.historyEvents)
+          ? (parsed.historyEvents as unknown[])
               .filter(
-                (e): e is { from: string | null; to: string; timestamp: string; actor?: string } =>
+                (e): e is Record<string, unknown> =>
                   Boolean(e) &&
                   typeof e === 'object' &&
-                  ((e as Record<string, unknown>).from === null ||
-                    typeof (e as Record<string, unknown>).from === 'string') &&
-                  typeof (e as Record<string, unknown>).to === 'string' &&
+                  typeof (e as Record<string, unknown>).id === 'string' &&
                   typeof (e as Record<string, unknown>).timestamp === 'string' &&
-                  ((e as Record<string, unknown>).actor === undefined ||
-                    typeof (e as Record<string, unknown>).actor === 'string')
+                  typeof (e as Record<string, unknown>).type === 'string'
               )
-              .map((e) => ({
-                from: e.from as TeamTaskStatus | null,
-                to: e.to as TeamTaskStatus,
-                timestamp: e.timestamp,
-                ...(e.actor ? { actor: e.actor } : {}),
-              }))
+              .map((e) => e as unknown as TaskHistoryEvent)
           : undefined;
         const workIntervals: TaskWorkInterval[] | undefined = Array.isArray(parsed.workIntervals)
           ? (parsed.workIntervals as unknown[])
@@ -165,6 +145,14 @@ export class TeamTaskReader {
         const task: TeamTask = {
           id:
             typeof parsed.id === 'string' || typeof parsed.id === 'number' ? String(parsed.id) : '',
+          displayId:
+            typeof parsed.displayId === 'string' && parsed.displayId.trim().length > 0
+              ? parsed.displayId.trim()
+              : deriveTaskDisplayId(
+                  typeof parsed.id === 'string' || typeof parsed.id === 'number'
+                    ? String(parsed.id)
+                    : ''
+                ),
           subject,
           description: typeof parsed.description === 'string' ? parsed.description : undefined,
           activeForm: typeof parsed.activeForm === 'string' ? parsed.activeForm : undefined,
@@ -176,7 +164,7 @@ export class TeamTaskReader {
             ? (parsed.status as TeamTask['status'])
             : 'pending',
           workIntervals,
-          statusHistory,
+          historyEvents,
           blocks: Array.isArray(parsed.blocks)
             ? (parsed.blocks as unknown[]).filter((id): id is string => typeof id === 'string')
             : undefined,
@@ -266,6 +254,10 @@ export class TeamTaskReader {
                   addedAt: a.addedAt,
                 }))
             : undefined,
+          reviewState: getReviewStateFromTask({
+            historyEvents,
+            reviewState: parsed.reviewState as TeamTask['reviewState'],
+          }),
         } satisfies Record<keyof TeamTask, unknown>;
         if (task.status === 'deleted') {
           continue;
@@ -280,14 +272,20 @@ export class TeamTaskReader {
       }
     }
 
-    // Sort by numeric ID so kanban default order is deterministic (#1, #2, ..., #10, #11).
-    // Fall back to stable lexicographic ordering for unexpected non-numeric IDs.
+    // Sort by display ID first for stable human-facing ordering, then canonical id.
     tasks.sort((a, b) => {
-      const aIsNumeric = /^\d+$/.test(a.id);
-      const bIsNumeric = /^\d+$/.test(b.id);
-      if (aIsNumeric && bIsNumeric) return Number(a.id) - Number(b.id);
+      const aLabel = a.displayId ?? a.id;
+      const bLabel = b.displayId ?? b.id;
+      const aIsNumeric = /^\d+$/.test(aLabel);
+      const bIsNumeric = /^\d+$/.test(bLabel);
+      if (aIsNumeric && bIsNumeric) return Number(aLabel) - Number(bLabel);
       if (aIsNumeric) return -1;
       if (bIsNumeric) return 1;
+      const byDisplay = aLabel.localeCompare(bLabel, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      });
+      if (byDisplay !== 0) return byDisplay;
       return a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' });
     });
 
@@ -337,22 +335,28 @@ export class TeamTaskReader {
           continue;
         }
 
-        const subject =
-          typeof parsed.subject === 'string'
-            ? parsed.subject
-            : typeof parsed.title === 'string'
-              ? parsed.title
-              : '';
+        const subject = typeof parsed.subject === 'string' ? parsed.subject : '';
 
         const task: TeamTask = {
           id:
             typeof parsed.id === 'string' || typeof parsed.id === 'number' ? String(parsed.id) : '',
+          displayId:
+            typeof parsed.displayId === 'string' && parsed.displayId.trim().length > 0
+              ? parsed.displayId.trim()
+              : deriveTaskDisplayId(
+                  typeof parsed.id === 'string' || typeof parsed.id === 'number'
+                    ? String(parsed.id)
+                    : ''
+                ),
           subject,
           description: typeof parsed.description === 'string' ? parsed.description : undefined,
           owner: typeof parsed.owner === 'string' ? parsed.owner : undefined,
           status: 'deleted',
           deletedAt: typeof parsed.deletedAt === 'string' ? parsed.deletedAt : undefined,
           createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : undefined,
+          reviewState: getReviewStateFromTask({
+            reviewState: parsed.reviewState as TeamTask['reviewState'],
+          }),
         };
 
         tasks.push(task);

@@ -7,7 +7,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useUnreadCommentCount } from '@renderer/hooks/useUnreadCommentCount';
 import { useStore } from '@renderer/store';
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { REVIEW_STATE_DISPLAY, buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   ArrowLeftFromLine,
   ArrowRightFromLine,
@@ -65,13 +66,17 @@ const DependencyBadge = ({
           ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
           : 'bg-yellow-500/15 text-yellow-300 hover:bg-yellow-500/25'
       } ${onScrollToTask ? 'cursor-pointer' : ''}`}
-      title={depTask ? `#${taskId}: ${depTask.subject}` : `#${taskId}`}
+      title={
+        depTask
+          ? `${formatTaskDisplayLabel(depTask)}: ${depTask.subject}`
+          : `#${deriveTaskDisplayId(taskId)}`
+      }
       onClick={(e) => {
         e.stopPropagation();
         onScrollToTask?.(taskId);
       }}
     >
-      #{taskId}
+      {depTask ? formatTaskDisplayLabel(depTask) : `#${deriveTaskDisplayId(taskId)}`}
     </button>
   );
 };
@@ -264,7 +269,7 @@ export const KanbanTaskCard = ({
       }}
     >
       <span className="absolute left-[3px] top-[2px] text-[9px] leading-none text-[var(--color-text-muted)]">
-        #{task.id}
+        {formatTaskDisplayLabel(task)}
       </span>
       <div className="mb-2 pt-2">
         <div className="flex items-center gap-1">
@@ -281,6 +286,13 @@ export const KanbanTaskCard = ({
           >
             <HelpCircle size={10} />
             {task.needsClarification === 'user' ? 'Awaiting user' : 'Awaiting lead'}
+          </span>
+        ) : null}
+        {task.reviewState === 'needsFix' ? (
+          <span
+            className={`mt-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
+          >
+            {REVIEW_STATE_DISPLAY.needsFix.label}
           </span>
         ) : null}
         {compact && <TruncatedTitle text={task.subject} className="mt-1" />}
@@ -340,7 +352,7 @@ export const KanbanTaskCard = ({
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1"
+                className="gap-1 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
                 aria-label={`Complete task ${task.id}`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -358,7 +370,7 @@ export const KanbanTaskCard = ({
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1"
+                className="gap-1 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
                 aria-label={`Complete task ${task.id}`}
                 onClick={(e) => {
                   e.stopPropagation();

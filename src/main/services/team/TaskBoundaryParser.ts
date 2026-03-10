@@ -12,6 +12,8 @@ import type {
 
 const logger = createLogger('Service:TaskBoundaryParser');
 
+type TaskBoundaryEvent = 'start' | 'complete' | null;
+
 /** Файл-модифицирующие инструменты, которые включаем в scope.toolUseIds */
 const FILE_MODIFYING_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 
@@ -29,8 +31,21 @@ interface ToolUseInfo {
   filePath?: string;
 }
 
-/** Regex для teamctl task команд */
-const TEAMCTL_TASK_REGEX = /task\s+(start|complete|set-status)\s+(\d+)/;
+const MCP_TASK_BOUNDARY_TOOLS = new Set(['task_start', 'task_complete', 'task_set_status']);
+
+type DetectedMechanism = 'TaskUpdate' | 'mcp' | 'none';
+
+function pickDetectedMechanism(
+  current: DetectedMechanism,
+  next: Exclude<DetectedMechanism, 'none'>
+): DetectedMechanism {
+  const priority = {
+    none: 0,
+    TaskUpdate: 1,
+    mcp: 2,
+  } as const;
+  return priority[next] > priority[current] ? next : current;
+}
 
 export class TaskBoundaryParser {
   private cache = new Map<string, BoundaryCacheEntry>();
@@ -56,7 +71,7 @@ export class TaskBoundaryParser {
     const boundaries: TaskBoundary[] = [];
     const allToolUsesByLine = new Map<number, ToolUseInfo[]>();
     let lineNumber = 0;
-    let detectedMechanism: 'TaskUpdate' | 'teamctl' | 'none' = 'none';
+    let detectedMechanism: DetectedMechanism = 'none';
 
     try {
       const stream = createReadStream(filePath, { encoding: 'utf8' });
@@ -88,19 +103,19 @@ export class TaskBoundaryParser {
             allToolUsesByLine.get(lineNumber)!.push({ toolUseId, toolName, filePath: fp });
           }
 
-          // Пробуем TaskUpdate
+          // Prefer structured task markers for modern runtime sessions.
           const taskUpdateBounds = this.extractTaskUpdateBoundaries(content, lineNumber, timestamp);
           if (taskUpdateBounds.length > 0) {
-            detectedMechanism = 'TaskUpdate';
+            detectedMechanism = pickDetectedMechanism(detectedMechanism, 'TaskUpdate');
             boundaries.push(...taskUpdateBounds);
             continue;
           }
 
-          // Пробуем teamctl
-          const teamctlBounds = this.extractTeamctlBoundaries(content, lineNumber, timestamp);
-          if (teamctlBounds.length > 0) {
-            detectedMechanism = 'teamctl';
-            boundaries.push(...teamctlBounds);
+          const mcpBounds = this.extractMcpTaskBoundaries(content, lineNumber, timestamp);
+          if (mcpBounds.length > 0) {
+            detectedMechanism = pickDetectedMechanism(detectedMechanism, 'mcp');
+            boundaries.push(...mcpBounds);
+            continue;
           }
         } catch {
           // Пропускаем невалидные строки
@@ -186,7 +201,7 @@ export class TaskBoundaryParser {
       if (!taskId) continue;
 
       const status = typeof input.status === 'string' ? input.status : '';
-      let event: 'start' | 'complete' | null = null;
+      let event: TaskBoundaryEvent = null;
       if (status === 'in_progress') event = 'start';
       else if (status === 'completed') event = 'complete';
 
@@ -207,10 +222,9 @@ export class TaskBoundaryParser {
   }
 
   /**
-   * Найти teamctl task start/complete/set-status команды в Bash tool_use блоках.
-   * Regex: /task\s+(start|complete|set-status)\s+(\d+)/
+   * Find MCP task tools that mark task boundaries.
    */
-  private extractTeamctlBoundaries(
+  private extractMcpTaskBoundaries(
     content: unknown[],
     lineNumber: number,
     timestamp: string
@@ -224,27 +238,27 @@ export class TaskBoundaryParser {
 
       const rawName = typeof b.name === 'string' ? b.name : '';
       const toolName = rawName.replace(/^proxy_/, '');
-      if (toolName !== 'Bash') continue;
+      if (!MCP_TASK_BOUNDARY_TOOLS.has(toolName)) continue;
 
       const input = b.input as Record<string, unknown> | undefined;
       if (!input) continue;
 
-      const command = typeof input.command === 'string' ? input.command : '';
-      if (!command.includes('teamctl')) continue;
+      const rawTaskId = input.taskId;
+      const taskId =
+        typeof rawTaskId === 'string'
+          ? rawTaskId
+          : typeof rawTaskId === 'number'
+            ? String(rawTaskId)
+            : '';
+      if (!taskId) continue;
 
-      const match = TEAMCTL_TASK_REGEX.exec(command);
-      if (!match) continue;
-
-      const action = match[1]; // start | complete | set-status
-      const taskId = match[2];
-
-      let event: 'start' | 'complete' | null = null;
-      if (action === 'start') event = 'start';
-      else if (action === 'complete') event = 'complete';
-      else if (action === 'set-status') {
-        // set-status может быть start или complete — определяем по аргументам
-        if (command.includes('in_progress') || command.includes('in-progress')) event = 'start';
-        else if (command.includes('completed') || command.includes('done')) event = 'complete';
+      let event: TaskBoundaryEvent = null;
+      if (toolName === 'task_start') event = 'start';
+      else if (toolName === 'task_complete') event = 'complete';
+      else {
+        const status = typeof input.status === 'string' ? input.status : '';
+        if (status === 'in_progress') event = 'start';
+        else if (status === 'completed') event = 'complete';
       }
 
       if (event) {
@@ -254,7 +268,7 @@ export class TaskBoundaryParser {
           event,
           lineNumber,
           timestamp,
-          mechanism: 'teamctl',
+          mechanism: 'mcp',
           toolUseId,
         });
       }

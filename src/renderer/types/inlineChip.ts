@@ -27,6 +27,8 @@ export interface InlineChip {
   language: string;
   /** Relative display path for file-level mentions */
   displayPath?: string;
+  /** Whether this chip represents a folder (not a file) */
+  isFolder?: boolean;
 }
 
 // =============================================================================
@@ -35,6 +37,8 @@ export interface InlineChip {
 
 /** Unicode marker character used as chip prefix in textarea text */
 export const CHIP_MARKER = '\u{1F4C4}'; // 📄
+/** Unicode marker for folder chips */
+export const FOLDER_CHIP_MARKER = '\u{1F4C1}'; // 📁
 
 // =============================================================================
 // Pure functions
@@ -42,9 +46,12 @@ export const CHIP_MARKER = '\u{1F4C4}'; // 📄
 
 /**
  * Display label for a chip: "auth.ts:10-15", "auth.ts:42" for single-line,
- * or just "auth.ts" for file-level mentions.
+ * "auth.ts" for file-level mentions, or "docker/" for folder mentions.
  */
 export function chipDisplayLabel(chip: InlineChip): string {
+  if (chip.isFolder) {
+    return chip.displayPath ?? chip.fileName;
+  }
   if (chip.fromLine == null || chip.toLine == null) {
     return chip.fileName;
   }
@@ -59,13 +66,19 @@ export function chipDisplayLabel(chip: InlineChip): string {
  * Must match EXACTLY in textarea and overlay for pixel-perfect alignment.
  */
 export function chipToken(chip: InlineChip): string {
-  return `${CHIP_MARKER}${chipDisplayLabel(chip)}`;
+  const marker = chip.isFolder ? FOLDER_CHIP_MARKER : CHIP_MARKER;
+  return `${marker}${chipDisplayLabel(chip)}`;
 }
 
 /**
- * Converts a chip to markdown: code fence for code chips, file reference for file mentions.
+ * Converts a chip to markdown: code fence for code chips, file/folder reference for mentions.
  */
 export function chipToMarkdown(chip: InlineChip): string {
+  // Folder mention
+  if (chip.isFolder) {
+    const path = chip.displayPath ?? chip.filePath;
+    return `**${path}** (folder)`;
+  }
   // File-level mention — no code fence
   if (chip.fromLine == null || chip.toLine == null) {
     const path = chip.displayPath ?? chip.filePath;

@@ -1,35 +1,41 @@
+import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
-import { TASK_STATUS_LABELS, TASK_STATUS_STYLES } from '@renderer/utils/memberHelpers';
-import { ArrowRight, Plus } from 'lucide-react';
+import {
+  REVIEW_STATE_DISPLAY,
+  TASK_STATUS_LABELS,
+  TASK_STATUS_STYLES,
+} from '@renderer/utils/memberHelpers';
+import { ArrowRight, Eye, MessageSquareX, Plus, ShieldCheck } from 'lucide-react';
 
-import type { StatusTransition, TeamTaskStatus } from '@shared/types';
+import type { TaskHistoryEvent, TeamReviewState, TeamTaskStatus } from '@shared/types';
 
-interface StatusHistoryTimelineProps {
-  history: StatusTransition[];
+interface WorkflowTimelineProps {
+  events: TaskHistoryEvent[];
+  /** Map of member name → color name for colored badges. */
+  memberColorMap?: Map<string, string>;
 }
 
-export const StatusHistoryTimeline = ({ history }: StatusHistoryTimelineProps) => {
-  if (history.length === 0) {
+export const WorkflowTimeline = ({ events, memberColorMap }: WorkflowTimelineProps) => {
+  if (events.length === 0) {
     return (
       <div className="px-3 py-2 text-xs text-[var(--color-text-muted)]">
-        No status history recorded
+        No workflow history recorded
       </div>
     );
   }
 
   return (
     <div className="space-y-0 px-3 py-2">
-      {history.map((transition, idx) => {
-        const isLast = idx === history.length - 1;
-        const time = formatTime(transition.timestamp);
-        const isCreation = transition.from === null;
+      {events.map((event, idx) => {
+        const isLast = idx === events.length - 1;
+        const time = formatTime(event.timestamp);
 
         return (
-          <div key={`${transition.timestamp}-${idx}`} className="flex">
+          <div key={event.id} className="flex">
             {/* Timeline line + dot */}
             <div className="flex w-5 shrink-0 flex-col items-center">
-              <div className={cn('mt-1.5 size-2 shrink-0 rounded-full', dotColor(transition.to))} />
+              <div className={cn('mt-1.5 size-2 shrink-0 rounded-full', dotColor(event))} />
               {!isLast && <div className="w-px flex-1 bg-zinc-700" />}
             </div>
 
@@ -40,28 +46,20 @@ export const StatusHistoryTimeline = ({ history }: StatusHistoryTimelineProps) =
                   <span className="shrink-0 font-mono text-[10px] text-[var(--color-text-muted)]">
                     {time}
                   </span>
-                  {isCreation ? (
-                    <span className="flex items-center gap-1">
-                      <Plus size={10} />
-                      Created as
-                      <StatusBadge status={transition.to} />
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1">
-                      <StatusBadge status={transition.from!} />
-                      <ArrowRight size={10} className="text-[var(--color-text-muted)]" />
-                      <StatusBadge status={transition.to} />
-                    </span>
-                  )}
-                  {transition.actor ? (
-                    <span className="ml-auto shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                      by {transition.actor}
+                  <EventContent event={event} memberColorMap={memberColorMap} />
+                  {event.actor ? (
+                    <span className="ml-auto shrink-0">
+                      <MemberBadge
+                        name={event.actor}
+                        color={memberColorMap?.get(event.actor)}
+                        size="sm"
+                      />
                     </span>
                   ) : null}
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                {new Date(transition.timestamp).toLocaleString()}
+                {new Date(event.timestamp).toLocaleString()}
               </TooltipContent>
             </Tooltip>
           </div>
@@ -69,6 +67,69 @@ export const StatusHistoryTimeline = ({ history }: StatusHistoryTimelineProps) =
       })}
     </div>
   );
+};
+
+/** Keep old name as re-export for backwards compatibility during migration. */
+export const StatusHistoryTimeline = WorkflowTimeline;
+
+const EventContent = ({
+  event,
+  memberColorMap,
+}: {
+  event: TaskHistoryEvent;
+  memberColorMap?: Map<string, string>;
+}) => {
+  switch (event.type) {
+    case 'task_created':
+      return (
+        <span className="flex items-center gap-1">
+          <Plus size={10} />
+          Created as
+          <StatusBadge status={event.status} />
+        </span>
+      );
+    case 'status_changed':
+      return (
+        <span className="flex items-center gap-1">
+          <StatusBadge status={event.from} />
+          <ArrowRight size={10} className="text-[var(--color-text-muted)]" />
+          <StatusBadge status={event.to} />
+        </span>
+      );
+    case 'review_requested':
+      return (
+        <span className="flex items-center gap-1">
+          <Eye size={10} className="text-purple-400" />
+          Review requested
+          {event.reviewer ? (
+            <MemberBadge
+              name={event.reviewer}
+              color={memberColorMap?.get(event.reviewer)}
+              size="sm"
+              hideAvatar
+            />
+          ) : null}
+        </span>
+      );
+    case 'review_changes_requested':
+      return (
+        <span className="flex items-center gap-1">
+          <MessageSquareX size={10} className="text-amber-400" />
+          Changes requested
+          <ReviewStateBadge state="needsFix" />
+        </span>
+      );
+    case 'review_approved':
+      return (
+        <span className="flex items-center gap-1">
+          <ShieldCheck size={10} className="text-emerald-400" />
+          Approved
+          <ReviewStateBadge state="approved" />
+        </span>
+      );
+    default:
+      return <span>Unknown event</span>;
+  }
 };
 
 const StatusBadge = ({ status }: { status: TeamTaskStatus }) => {
@@ -83,7 +144,37 @@ const StatusBadge = ({ status }: { status: TeamTaskStatus }) => {
   );
 };
 
-function dotColor(status: TeamTaskStatus): string {
+const ReviewStateBadge = ({ state }: { state: TeamReviewState }) => {
+  if (state === 'none') return null;
+  const display = REVIEW_STATE_DISPLAY[state];
+  if (!display) return null;
+  return (
+    <span
+      className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-medium', display.bg, display.text)}
+    >
+      {display.label}
+    </span>
+  );
+};
+
+function dotColor(event: TaskHistoryEvent): string {
+  switch (event.type) {
+    case 'task_created':
+      return dotColorForStatus(event.status);
+    case 'status_changed':
+      return dotColorForStatus(event.to);
+    case 'review_requested':
+      return 'bg-purple-400';
+    case 'review_changes_requested':
+      return 'bg-amber-400';
+    case 'review_approved':
+      return 'bg-emerald-400';
+    default:
+      return 'bg-zinc-500';
+  }
+}
+
+function dotColorForStatus(status: TeamTaskStatus): string {
   switch (status) {
     case 'pending':
       return 'bg-zinc-500';

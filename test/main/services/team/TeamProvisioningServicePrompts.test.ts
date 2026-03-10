@@ -5,6 +5,8 @@ import * as path from 'path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
+
 let tempClaudeRoot = '';
 let tempTeamsBase = '';
 let tempTasksBase = '';
@@ -110,6 +112,22 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain('PROGRESS REPORTING (MANDATORY)');
     expect(prompt).toContain('Never bulk-move many tasks at the end');
     expect(prompt).toContain('Default to working ONE task at a time');
+    expect(prompt).toContain(
+      'review_request already notifies the reviewer, so do NOT send a second manual SendMessage for the same review request'
+    );
+    expect(prompt).toContain('task_start');
+    expect(prompt).toContain('task_complete');
+    expect(prompt).toContain('TURN ACTION MODE PROTOCOL (HIGHEST PRIORITY FOR EACH USER TURN):');
+    expect(prompt).toContain('ASK: Strict read-only conversation mode.');
+    expect(prompt).toContain('DELEGATE: Strict orchestration mode for leads.');
+    expect(prompt).toContain(`AGENT_BLOCK_OPEN is exactly: ${AGENT_BLOCK_OPEN}`);
+    expect(prompt).toContain(`AGENT_BLOCK_CLOSE is exactly: ${AGENT_BLOCK_CLOSE}`);
+    expect(prompt).not.toContain('teamctl.js');
+    expect(prompt).not.toContain('.claude/tools');
+
+    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+    expect(launchArgs).toContain('--mcp-config');
+    expect(launchArgs).not.toContain('--strict-mcp-config');
 
     await svc.cancelProvisioning(runId);
   });
@@ -163,6 +181,127 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain('SOLO MODE: This team CURRENTLY has ZERO teammates.');
     expect(prompt).toContain('Execute tasks sequentially and keep the board + user updated');
     expect(prompt).toContain('Do NOT start the next task until the current task is completed');
+    expect(prompt).toContain('Do NOT delay this reconnect turn by reading internal config files');
+    expect(prompt).toContain('Treat it as a diagnostic cross-check, not as the first reconnect action.');
+    expect(prompt).toContain(
+      'review_request already notifies the reviewer, so do NOT send a second manual SendMessage for the same review request'
+    );
+    expect(prompt).toContain('task_start');
+    expect(prompt).toContain(`AGENT_BLOCK_OPEN is exactly: ${AGENT_BLOCK_OPEN}`);
+    expect(prompt).toContain(`AGENT_BLOCK_CLOSE is exactly: ${AGENT_BLOCK_CLOSE}`);
+    expect(prompt).not.toContain('teamctl.js');
+    expect(prompt).not.toContain('.claude/tools');
+
+    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+    expect(launchArgs).toContain('--mcp-config');
+    expect(launchArgs).not.toContain('--strict-mcp-config');
+
+    await svc.cancelProvisioning(runId);
+  });
+
+  it('createTeam prompt for teammates includes explicit hidden-instruction block rules', async () => {
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
+    const { child, writeSpy } = createFakeChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService();
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).pathExists = vi.fn(async () => false);
+
+    const { runId } = await svc.createTeam(
+      {
+        teamName: 'multi-team',
+        cwd: process.cwd(),
+        members: [{ name: 'alice', role: 'developer' }],
+        description: 'Multi team prompt test',
+      },
+      () => {}
+    );
+
+    const prompt = extractPromptFromWrite(writeSpy);
+    expect(prompt).toContain('Hidden internal instructions rule (IMPORTANT):');
+    expect(prompt).toContain(`  ${AGENT_BLOCK_OPEN}`);
+    expect(prompt).toContain(`  ${AGENT_BLOCK_CLOSE}`);
+    expect(prompt).toContain('NEVER use agent-only blocks in messages to "user".');
+    expect(prompt).toContain('TURN ACTION MODE PROTOCOL (HIGHEST PRIORITY FOR EACH USER TURN):');
+    expect(prompt).toContain('DO: Full execution mode.');
+    expect(prompt).toContain('DELEGATE: Strict orchestration mode for leads.');
+    expect(prompt).toContain('you MUST do ALL steps below');
+    expect(prompt).toContain('STEP 2 — THEN, add a task comment describing exactly what you need');
+    expect(prompt).toContain('STEP 3 — THEN, send a message to your team lead via SendMessage');
+    expect(prompt).toContain('use task_briefing as your compact queue view');
+    expect(prompt).toContain('Use task_get when you need the full task context before starting a pending/needsFix task');
+    expect(prompt).toContain('Use task_briefing as a compact queue view of your assigned tasks.');
+    expect(prompt).toContain('you MAY call task_get');
+    expect(prompt).toContain('Before starting a needsFix or pending task, call task_get');
+
+    await svc.cancelProvisioning(runId);
+  });
+
+  it('launchTeam reconnect prompt for teammates includes explicit hidden-instruction block rules', async () => {
+    const teamName = 'multi-team-launch';
+    const teamDir = path.join(tempTeamsBase, teamName);
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        description: 'Multi team prompt test',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'alice', agentType: 'teammate', role: 'developer' },
+        ],
+      }),
+      'utf8'
+    );
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
+    const { child, writeSpy } = createFakeChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService();
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
+    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+      members: [{ name: 'alice', role: 'developer' }],
+      source: 'config-fallback',
+      warning: undefined,
+    }));
+    (svc as any).pathExists = vi.fn(async () => false);
+    (svc as any).startFilesystemMonitor = vi.fn();
+
+    const { runId } = await svc.launchTeam(
+      {
+        teamName,
+        cwd: process.cwd(),
+        clearContext: true,
+      } as any,
+      () => {}
+    );
+
+    const prompt = extractPromptFromWrite(writeSpy);
+    expect(prompt).toContain('The team has been reconnected after a restart.');
+    expect(prompt).toContain('Restore/start the existing teammates first.');
+    expect(prompt).toContain('Treat it as a diagnostic cross-check, not as the first reconnect action.');
+    expect(prompt).toContain('Hidden internal instructions rule (IMPORTANT):');
+    expect(prompt).toContain(`  ${AGENT_BLOCK_OPEN}`);
+    expect(prompt).toContain(`  ${AGENT_BLOCK_CLOSE}`);
+    expect(prompt).toContain('NEVER use agent-only blocks in messages to "user".');
+    expect(prompt).toContain('reply via task comment (preferred — auto-clears the flag and wakes the owner) or SendMessage');
+    expect(prompt).toContain('Your FIRST action: call MCP tool task_briefing');
+    expect(prompt).toContain('resume/finish those first');
+    expect(prompt).toContain('Call task_get only if you need more context than task_briefing already gave you');
+    expect(prompt).toContain('Before you start any needsFix or pending task, call task_get');
 
     await svc.cancelProvisioning(runId);
   });

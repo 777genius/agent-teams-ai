@@ -32,10 +32,6 @@ interface TokenUsageDisplayProps {
   cacheReadTokens: number;
   /** Cache creation/write tokens count */
   cacheCreationTokens: number;
-  /** Thinking tokens (extended thinking content) - estimated from content */
-  thinkingTokens?: number;
-  /** Text output tokens (Claude's text responses) - estimated from content */
-  textOutputTokens?: number;
   /** Optional model name for display */
   modelName?: string;
   /** Optional model family for color styling */
@@ -60,24 +56,22 @@ interface TokenUsageDisplayProps {
  */
 const SessionContextSection = ({
   contextStats,
-  totalTokens,
-  thinkingTokens = 0,
-  textOutputTokens = 0,
+  totalInputTokens,
 }: Readonly<{
   contextStats: ContextStats;
-  totalTokens: number;
-  thinkingTokens?: number;
-  textOutputTokens?: number;
+  totalInputTokens: number;
 }>): React.JSX.Element => {
   const [expanded, setExpanded] = useState(false);
 
   const { tokensByCategory } = contextStats;
 
-  // Calculate combined thinking+text tokens and include in context total
-  const thinkingTextTokens = thinkingTokens + textOutputTokens;
-  const adjustedContextTotal = contextStats.totalEstimatedTokens + thinkingTextTokens;
+  // contextStats.totalEstimatedTokens already includes all categories (CLAUDE.md, @files,
+  // tool outputs, thinking+text, task coordination, user messages) — no manual adjustment needed.
+  // Denominator is total input tokens only (not output), since visible context is part of input.
   const contextPercent =
-    totalTokens > 0 ? Math.min((adjustedContextTotal / totalTokens) * 100, 100).toFixed(1) : '0.0';
+    totalInputTokens > 0
+      ? Math.min((contextStats.totalEstimatedTokens / totalInputTokens) * 100, 100).toFixed(1)
+      : '0.0';
 
   // Count accumulated injections by category
   const claudeMdCount = contextStats.accumulatedInjections.filter(
@@ -96,28 +90,30 @@ const SessionContextSection = ({
     (inj) => inj.category === 'user-message'
   ).length;
 
-  // Calculate percentages for each category
+  // Calculate percentages for each category (relative to total input tokens)
   const claudeMdPercent =
-    totalTokens > 0
-      ? Math.min((tokensByCategory.claudeMd / totalTokens) * 100, 100).toFixed(1)
+    totalInputTokens > 0
+      ? Math.min((tokensByCategory.claudeMd / totalInputTokens) * 100, 100).toFixed(1)
       : '0.0';
   const mentionedFilesPercent =
-    totalTokens > 0
-      ? Math.min((tokensByCategory.mentionedFiles / totalTokens) * 100, 100).toFixed(1)
+    totalInputTokens > 0
+      ? Math.min((tokensByCategory.mentionedFiles / totalInputTokens) * 100, 100).toFixed(1)
       : '0.0';
   const toolOutputsPercent =
-    totalTokens > 0
-      ? Math.min((tokensByCategory.toolOutputs / totalTokens) * 100, 100).toFixed(1)
+    totalInputTokens > 0
+      ? Math.min((tokensByCategory.toolOutputs / totalInputTokens) * 100, 100).toFixed(1)
       : '0.0';
   const thinkingTextPercent =
-    totalTokens > 0 ? Math.min((thinkingTextTokens / totalTokens) * 100, 100).toFixed(1) : '0.0';
+    totalInputTokens > 0
+      ? Math.min((tokensByCategory.thinkingText / totalInputTokens) * 100, 100).toFixed(1)
+      : '0.0';
   const taskCoordinationPercent =
-    totalTokens > 0
-      ? Math.min((tokensByCategory.taskCoordination / totalTokens) * 100, 100).toFixed(1)
+    totalInputTokens > 0
+      ? Math.min((tokensByCategory.taskCoordination / totalInputTokens) * 100, 100).toFixed(1)
       : '0.0';
   const userMessagesPercent =
-    totalTokens > 0
-      ? Math.min((tokensByCategory.userMessages / totalTokens) * 100, 100).toFixed(1)
+    totalInputTokens > 0
+      ? Math.min((tokensByCategory.userMessages / totalInputTokens) * 100, 100).toFixed(1)
       : '0.0';
 
   return (
@@ -148,7 +144,7 @@ const SessionContextSection = ({
           className="whitespace-nowrap text-[10px] tabular-nums"
           style={{ color: COLOR_TEXT_MUTED }}
         >
-          {formatTokens(adjustedContextTotal)} ({contextPercent}%)
+          {formatTokens(contextStats.totalEstimatedTokens)} ({contextPercent}%)
         </span>
       </div>
 
@@ -221,11 +217,11 @@ const SessionContextSection = ({
           )}
 
           {/* Thinking + Text */}
-          {thinkingTextTokens > 0 && (
+          {tokensByCategory.thinkingText > 0 && (
             <div className="flex items-center justify-between text-[10px]">
               <span style={{ color: COLOR_TEXT_MUTED }}>Thinking + Text</span>
               <span className="tabular-nums" style={{ color: COLOR_TEXT_SECONDARY }}>
-                {formatTokens(thinkingTextTokens)}{' '}
+                {formatTokens(tokensByCategory.thinkingText)}{' '}
                 <span className="opacity-60">({thinkingTextPercent}%)</span>
               </span>
             </div>
@@ -249,8 +245,6 @@ export const TokenUsageDisplay = ({
   outputTokens,
   cacheReadTokens,
   cacheCreationTokens,
-  thinkingTokens = 0,
-  textOutputTokens = 0,
   modelName,
   modelFamily,
   size = 'sm',
@@ -261,6 +255,8 @@ export const TokenUsageDisplay = ({
   costUsd,
 }: Readonly<TokenUsageDisplayProps>): React.JSX.Element => {
   const totalTokens = inputTokens + cacheReadTokens + cacheCreationTokens + outputTokens;
+  // Total input tokens only (without output) — used as denominator for visible context %
+  const totalInputTokens = inputTokens + cacheReadTokens + cacheCreationTokens;
   const formattedTotal = formatTokens(totalTokens);
 
   // Size-based classes
@@ -531,17 +527,12 @@ export const TokenUsageDisplay = ({
                 )}
 
                 {/* Visible Context Breakdown - expandable section */}
-                {contextStats &&
-                  (contextStats.totalEstimatedTokens > 0 ||
-                    thinkingTokens > 0 ||
-                    textOutputTokens > 0) && (
-                    <SessionContextSection
-                      contextStats={contextStats}
-                      totalTokens={totalTokens}
-                      thinkingTokens={thinkingTokens}
-                      textOutputTokens={textOutputTokens}
-                    />
-                  )}
+                {contextStats && contextStats.totalEstimatedTokens > 0 && (
+                  <SessionContextSection
+                    contextStats={contextStats}
+                    totalInputTokens={totalInputTokens}
+                  />
+                )}
 
                 {/* CLAUDE.md Breakdown - fallback when contextStats not provided (deprecated) */}
                 {!contextStats && claudeMdStats && (
@@ -553,8 +544,8 @@ export const TokenUsageDisplay = ({
                       incl. CLAUDE.md ×{claudeMdStats.accumulatedCount}
                     </span>
                     <span className="tabular-nums">
-                      {totalTokens > 0
-                        ? ((claudeMdStats.totalEstimatedTokens / totalTokens) * 100).toFixed(1)
+                      {totalInputTokens > 0
+                        ? ((claudeMdStats.totalEstimatedTokens / totalInputTokens) * 100).toFixed(1)
                         : '0.0'}
                       %
                     </span>

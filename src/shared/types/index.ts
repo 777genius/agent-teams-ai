@@ -27,6 +27,9 @@ export type * from './ipc';
 // Re-export Team Management types
 export type * from './team';
 
+// Re-export Schedule types
+export type * from './schedule';
+
 // Re-export Review types (Phase 1)
 export type * from './review';
 
@@ -38,3 +41,6 @@ export type * from './terminal';
 
 // Re-export Editor types
 export type * from './editor';
+
+// Re-export Extension Store types (inferCapabilities is re-exported from extensionNormalizers)
+export type * from './extensions';

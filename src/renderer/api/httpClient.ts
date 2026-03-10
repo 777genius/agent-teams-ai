@@ -17,6 +17,7 @@ import type {
   ContextInfo,
   ConversationGroup,
   CreateTaskRequest,
+  CrossTeamAPI,
   ElectronAPI,
   FileChangeEvent,
   GlobalTask,
@@ -28,6 +29,8 @@ import type {
   PaginatedSessionsResult,
   Project,
   RepositoryGroup,
+  Schedule,
+  ScheduleRun,
   SearchSessionsResult,
   SendMessageRequest,
   SendMessageResult,
@@ -823,6 +826,9 @@ export class HttpAPIClient implements ElectronAPI {
     getLeadContext: async () => {
       return null;
     },
+    getMemberSpawnStatuses: async () => {
+      return {};
+    },
     softDeleteTask: async (_teamName: string, _taskId: string): Promise<void> => {
       // Not available via HTTP client — no-op
     },
@@ -897,8 +903,29 @@ export class HttpAPIClient implements ElectronAPI {
     respondToToolApproval: async (): Promise<void> => {
       throw new Error('Tool approval not available in browser mode');
     },
+    validateCliArgs: async (): Promise<never> => {
+      throw new Error('CLI args validation not available in browser mode');
+    },
     onToolApprovalEvent: (): (() => void) => {
       return () => {};
+    },
+    updateToolApprovalSettings: async (): Promise<void> => {
+      console.warn('[HttpAPIClient] updateToolApprovalSettings is not available in browser mode');
+    },
+  };
+
+  // Cross-team communication API stubs
+  crossTeam: CrossTeamAPI = {
+    send: async () => {
+      throw new Error('Cross-team communication is not available in browser mode');
+    },
+    listTargets: async () => {
+      console.warn('[HttpAPIClient] crossTeam.listTargets is not available in browser mode');
+      return [];
+    },
+    getOutbox: async () => {
+      console.warn('[HttpAPIClient] crossTeam.getOutbox is not available in browser mode');
+      return [];
     },
   };
 
@@ -907,7 +934,17 @@ export class HttpAPIClient implements ElectronAPI {
     getAgentChanges: async (_teamName: string, _memberName: string): Promise<never> => {
       throw new Error('Review is not available in browser mode');
     },
-    getTaskChanges: async (_teamName: string, _taskId: string): Promise<never> => {
+    getTaskChanges: async (
+      _teamName: string,
+      _taskId: string,
+      _options?: {
+        owner?: string;
+        status?: string;
+        intervals?: { startedAt: string; completedAt?: string }[];
+        since?: string;
+        summaryOnly?: boolean;
+      }
+    ): Promise<never> => {
       throw new Error('Review is not available in browser mode');
     },
     getChangeStats: async (_teamName: string, _memberName: string): Promise<never> => {
@@ -1067,6 +1104,46 @@ export class HttpAPIClient implements ElectronAPI {
       throw new Error('Editor not available in browser mode');
     },
     onEditorChange: () => {
+      return () => {};
+    },
+  };
+
+  schedules = {
+    list: async () => {
+      console.warn('Schedules not available in browser mode');
+      return [] as Schedule[];
+    },
+    get: async () => {
+      console.warn('Schedules not available in browser mode');
+      return null;
+    },
+    create: async () => {
+      throw new Error('Schedules not available in browser mode');
+    },
+    update: async () => {
+      throw new Error('Schedules not available in browser mode');
+    },
+    delete: async () => {
+      throw new Error('Schedules not available in browser mode');
+    },
+    pause: async () => {
+      throw new Error('Schedules not available in browser mode');
+    },
+    resume: async () => {
+      throw new Error('Schedules not available in browser mode');
+    },
+    triggerNow: async () => {
+      throw new Error('Schedules not available in browser mode');
+    },
+    getRuns: async () => {
+      console.warn('Schedules not available in browser mode');
+      return [] as ScheduleRun[];
+    },
+    getRunLogs: async () => {
+      console.warn('Schedules not available in browser mode');
+      return { stdout: '', stderr: '' };
+    },
+    onScheduleChange: () => {
       return () => {};
     },
   };

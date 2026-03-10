@@ -26,13 +26,13 @@ export function createChipFromSelection(
   const isFileMention = !action.selectedText || action.fromLine == null || action.toLine == null;
 
   if (isFileMention) {
-    // File-level mention: deduplicate by filePath + null lines
+    // File/folder-level mention: deduplicate by filePath + null lines
     const isDuplicate = existingChips.some(
       (c) => c.filePath === action.filePath && c.fromLine == null
     );
     if (isDuplicate) return null;
 
-    const fileName = getBasename(action.filePath) || 'file';
+    const fileName = getBasename(action.filePath) || (action.isFolder ? 'folder' : 'file');
     return {
       id: `chip-${++chipCounter}-${Date.now()}`,
       filePath: action.filePath,
@@ -40,8 +40,9 @@ export function createChipFromSelection(
       fromLine: null,
       toLine: null,
       codeText: '',
-      language: getCodeFenceLanguage(fileName),
+      language: action.isFolder ? '' : getCodeFenceLanguage(fileName),
       displayPath: action.displayPath,
+      isFolder: action.isFolder,
     };
   }
 

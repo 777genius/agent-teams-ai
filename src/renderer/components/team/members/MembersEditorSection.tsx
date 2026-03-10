@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@renderer/components/ui/button';
 import { Label } from '@renderer/components/ui/label';
 import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
-import { getMemberColor } from '@shared/constants/memberColors';
+import { getMemberColorByName } from '@shared/constants/memberColors';
 
 import { MembersJsonEditor } from '../dialogs/MembersJsonEditor';
 
@@ -154,7 +154,7 @@ export const MembersEditorSection = ({
     () =>
       members
         .filter((m) => m.name.trim())
-        .map((m, i) => ({
+        .map((m) => ({
           id: m.id,
           name: m.name.trim(),
           subtitle:
@@ -163,7 +163,7 @@ export const MembersEditorSection = ({
               : m.roleSelection && m.roleSelection !== NO_ROLE
                 ? m.roleSelection
                 : undefined,
-          color: getMemberColor(i),
+          color: getMemberColorByName(m.name.trim()),
         })),
     [members]
   );

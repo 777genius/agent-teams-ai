@@ -7,6 +7,8 @@ import {
 import { useTheme } from '@renderer/hooks/useTheme';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
 
+import { MemberHoverCard } from './members/MemberHoverCard';
+
 interface MemberBadgeProps {
   name: string;
   color?: string;
@@ -15,12 +17,15 @@ interface MemberBadgeProps {
   /** Hide the avatar icon, show only the name badge */
   hideAvatar?: boolean;
   onClick?: (name: string) => void;
+  /** Disable the hover card (e.g. inside MemberHoverCard itself to avoid nesting) */
+  disableHoverCard?: boolean;
 }
 
 /**
  * Reusable member avatar + colored name badge.
  * Avatar is rendered OUTSIDE the badge, to the left.
  * When onClick is provided, both avatar and badge are clickable as one unit.
+ * Wrapped in MemberHoverCard to show member info on hover.
  */
 export const MemberBadge = ({
   name,
@@ -28,6 +33,7 @@ export const MemberBadge = ({
   size = 'sm',
   hideAvatar,
   onClick,
+  disableHoverCard,
 }: MemberBadgeProps): React.JSX.Element => {
   const colors = getTeamColorSet(color ?? '');
   const { isLight } = useTheme();
@@ -59,26 +65,35 @@ export const MemberBadge = ({
     </span>
   );
 
-  if (onClick) {
-    return (
-      <button
-        type="button"
-        className="inline-flex items-center gap-1 rounded transition-opacity hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-[var(--color-border)]"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick(name);
-        }}
-      >
-        {!hideAvatar && avatar}
-        {badge}
-      </button>
-    );
-  }
+  // Skip hover card for "user" and "system" pseudo-members
+  const skipHoverCard = disableHoverCard || name === 'user' || name === 'system';
 
-  return (
+  const content = onClick ? (
+    <button
+      type="button"
+      className="inline-flex items-center gap-1 rounded transition-opacity hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-[var(--color-border)]"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick(name);
+      }}
+    >
+      {!hideAvatar && avatar}
+      {badge}
+    </button>
+  ) : (
     <span className="inline-flex items-center gap-1">
       {!hideAvatar && avatar}
       {badge}
     </span>
+  );
+
+  if (skipHoverCard) {
+    return content;
+  }
+
+  return (
+    <MemberHoverCard name={name} color={color}>
+      {content}
+    </MemberHoverCard>
   );
 };

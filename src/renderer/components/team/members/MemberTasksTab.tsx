@@ -3,9 +3,12 @@ import { useMemo } from 'react';
 import { Badge } from '@renderer/components/ui/badge';
 import {
   KANBAN_COLUMN_DISPLAY,
+  REVIEW_STATE_DISPLAY,
   TASK_STATUS_LABELS,
   TASK_STATUS_STYLES,
 } from '@renderer/utils/memberHelpers';
+import { getTaskKanbanColumn } from '@shared/utils/reviewState';
+import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 
 import type { TeamTaskWithKanban } from '@shared/types';
 
@@ -41,7 +44,7 @@ export const MemberTasksTab = ({ tasks, onTaskClick }: MemberTasksTabProps): Rea
     <div className="max-h-[320px] overflow-y-auto">
       <div className="flex flex-col gap-1">
         {visibleTasks.map((task) => {
-          const col = task.kanbanColumn;
+          const col = getTaskKanbanColumn(task);
           const style =
             col && KANBAN_COLUMN_DISPLAY[col]
               ? { bg: KANBAN_COLUMN_DISPLAY[col].bg, text: KANBAN_COLUMN_DISPLAY[col].text }
@@ -58,7 +61,7 @@ export const MemberTasksTab = ({ tasks, onTaskClick }: MemberTasksTabProps): Rea
               onClick={() => onTaskClick?.(task)}
             >
               <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px] font-normal">
-                #{task.id}
+                {formatTaskDisplayLabel(task)}
               </Badge>
               <span className="min-w-0 flex-1 truncate text-sm text-[var(--color-text)]">
                 {task.subject}
@@ -68,6 +71,13 @@ export const MemberTasksTab = ({ tasks, onTaskClick }: MemberTasksTabProps): Rea
               >
                 {label}
               </span>
+              {task.reviewState === 'needsFix' ? (
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
+                >
+                  {REVIEW_STATE_DISPLAY.needsFix.label}
+                </span>
+              ) : null}
             </button>
           );
         })}

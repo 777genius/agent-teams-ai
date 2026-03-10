@@ -45,3 +45,17 @@ export function formatDuration(ms: number): string {
   const remainingSeconds = Math.round(seconds % 60);
   return `${minutes}m ${remainingSeconds}s`;
 }
+
+/**
+ * Formats a number in compact notation for UI display.
+ * 42 → "42", 1200 → "1.2k", 45300 → "45.3k", 120000 → "120k", 1500000 → "1.5M"
+ */
+export function formatCompactNumber(n: number): string {
+  if (n < 1_000) return String(n);
+  if (n < 1_000_000) {
+    const k = n / 1_000;
+    return k < 10 ? `${k.toFixed(1)}k` : `${Math.round(k)}k`;
+  }
+  const m = n / 1_000_000;
+  return m < 10 ? `${m.toFixed(1)}M` : `${Math.round(m)}M`;
+}

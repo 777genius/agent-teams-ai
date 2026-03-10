@@ -1,22 +1,28 @@
 /**
- * Fenced code block marker for agent-only content.
+ * XML-like marker for agent-only content.
  * Content wrapped in these markers is intended for the agent (Claude Code)
  * and should be hidden from the human user in the UI.
  *
- * Format:
- * ```info_for_agent
+ * Canonical format:
+ * <info_for_agent>
  * ... agent-only instructions ...
- * ```
+ * </info_for_agent>
+ *
+ * Backward compatibility:
+ * - legacy fenced blocks: ```info_for_agent ... ```
+ * - legacy xml-like blocks: <agent-block> ... </agent-block>
  */
 export const AGENT_BLOCK_TAG = 'info_for_agent';
-export const AGENT_BLOCK_OPEN = '```' + AGENT_BLOCK_TAG;
-export const AGENT_BLOCK_CLOSE = '```';
+export const AGENT_BLOCK_OPEN = `<${AGENT_BLOCK_TAG}>`;
+export const AGENT_BLOCK_CLOSE = `</${AGENT_BLOCK_TAG}>`;
 
 /**
- * Regex pattern string for matching ``` info_for_agent ... ``` blocks (including fences).
- * Supports optional leading/trailing whitespace and newlines around the block.
+ * Regex pattern string for matching current and legacy agent-only blocks.
  */
-const AGENT_BLOCK_PATTERN = '\\n?```' + AGENT_BLOCK_TAG + '\\n[\\s\\S]*?\\n```\\n?';
+const CURRENT_AGENT_BLOCK_PATTERN = '\\n?<info_for_agent>\\n?[\\s\\S]*?\\n?<\\/info_for_agent>\\n?';
+const LEGACY_FENCED_AGENT_BLOCK_PATTERN = '\\n?```' + AGENT_BLOCK_TAG + '\\n[\\s\\S]*?\\n```\\n?';
+const LEGACY_XML_AGENT_BLOCK_PATTERN = '\\n?<agent-block>\\n?[\\s\\S]*?\\n?<\\/agent-block>\\n?';
+const AGENT_BLOCK_PATTERN = `(?:${CURRENT_AGENT_BLOCK_PATTERN}|${LEGACY_FENCED_AGENT_BLOCK_PATTERN}|${LEGACY_XML_AGENT_BLOCK_PATTERN})`;
 
 /**
  * Creates a new RegExp for matching agent blocks.
@@ -27,10 +33,46 @@ export function createAgentBlockRegex(): RegExp {
 }
 
 /**
- * Removes ```info_for_agent ... ``` blocks from text for UI display.
+ * Removes the current and legacy agent-only blocks from text for UI display.
  */
 export function stripAgentBlocks(text: string): string {
-  return text.replace(createAgentBlockRegex(), '').trim();
+  return text
+    .replace(createAgentBlockRegex(), '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
+ * Removes only the wrapper markers from a single agent block.
+ */
+export function unwrapAgentBlock(block: string): string {
+  const trimmed = block.trim();
+
+  if (trimmed.startsWith(AGENT_BLOCK_OPEN) && trimmed.endsWith(AGENT_BLOCK_CLOSE)) {
+    return trimmed.slice(AGENT_BLOCK_OPEN.length, -AGENT_BLOCK_CLOSE.length).trim();
+  }
+
+  const legacyFencedOpen = '```' + AGENT_BLOCK_TAG;
+  if (trimmed.startsWith(legacyFencedOpen) && trimmed.endsWith('```')) {
+    return trimmed.slice(legacyFencedOpen.length, -'```'.length).trim();
+  }
+
+  const legacyXmlOpen = '<agent-block>';
+  const legacyXmlClose = '</agent-block>';
+  if (trimmed.startsWith(legacyXmlOpen) && trimmed.endsWith(legacyXmlClose)) {
+    return trimmed.slice(legacyXmlOpen.length, -legacyXmlClose.length).trim();
+  }
+
+  return trimmed;
+}
+
+/**
+ * Extracts agent-only block contents without the wrapper markers.
+ */
+export function extractAgentBlockContents(text: string): string[] {
+  return Array.from(text.matchAll(createAgentBlockRegex()))
+    .map((match) => unwrapAgentBlock(match[0]))
+    .filter((content) => content.length > 0);
 }
 
 /**

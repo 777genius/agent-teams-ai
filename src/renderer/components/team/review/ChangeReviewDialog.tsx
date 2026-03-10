@@ -33,6 +33,12 @@ import type {
 } from '@shared/types';
 import type { EditorSelectionAction, EditorSelectionInfo } from '@shared/types/editor';
 
+type RecentHunkUndoAction = {
+  filePath: string;
+  originalIndex: number;
+  at: number;
+};
+
 interface ChangeReviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -145,6 +151,8 @@ export const ChangeReviewDialog = ({
   // Track recent per-hunk actions so Ctrl/Cmd+Z can clear persisted decisions (reopen-safe)
   const lastHunkActionAtRef = useRef<Record<string, number>>({});
   const hunkDecisionUndoStackRef = useRef<Record<string, number[]>>({});
+  const recentHunkUndoActionsRef = useRef<RecentHunkUndoAction[]>([]);
+  const lastEditorInteractionAtRef = useRef<Record<string, number>>({});
   const newFileApplyInFlightRef = useRef(new Set<string>());
   const lastFileActionAtRef = useRef<number>(0);
   const removedNewFileUndoStackRef = useRef<
@@ -155,6 +163,16 @@ export const ChangeReviewDialog = ({
   // Proxy ref for useDiffNavigation (points to active file's editor)
   const activeEditorViewRef = useRef<EditorView | null>(null);
   const activeFilePathRef = useRef<string | null>(null);
+
+  const getEditorFilePathForTarget = useCallback((target: Element | null): string | null => {
+    if (!target) return null;
+    for (const [filePath, view] of editorViewMapRef.current.entries()) {
+      if (view.dom.contains(target)) {
+        return filePath;
+      }
+    }
+    return null;
+  }, []);
 
   // Keep refs in sync with activeFilePath
   useEffect(() => {
@@ -435,6 +453,11 @@ export const ChangeReviewDialog = ({
         hunkDecisionUndoStackRef.current[filePath] = [];
       }
       hunkDecisionUndoStackRef.current[filePath].push(originalIndex);
+      recentHunkUndoActionsRef.current.push({
+        filePath,
+        originalIndex,
+        at: Date.now(),
+      });
     },
     [setHunkDecision]
   );
@@ -447,6 +470,11 @@ export const ChangeReviewDialog = ({
         hunkDecisionUndoStackRef.current[filePath] = [];
       }
       hunkDecisionUndoStackRef.current[filePath].push(originalIndex);
+      recentHunkUndoActionsRef.current.push({
+        filePath,
+        originalIndex,
+        at: Date.now(),
+      });
       if (REVIEW_INSTANT_APPLY) {
         void applySingleFileDecision(teamName, filePath, taskId, memberName).then((result) => {
           const hasErrorForFile = !!result?.errors.some((e) => e.filePath === filePath);
@@ -757,11 +785,12 @@ export const ChangeReviewDialog = ({
       const target = e.target as Element | null;
       if (!target?.closest?.('.cm-editor')) return;
 
-      for (const view of editorViewMapRef.current.values()) {
-        if (view.dom.contains(target)) {
-          lastFocusedEditorRef.current = view;
-          return;
-        }
+      const filePath = getEditorFilePathForTarget(target);
+      if (!filePath) return;
+
+      const view = editorViewMapRef.current.get(filePath);
+      if (view) {
+        lastFocusedEditorRef.current = view;
       }
     };
 
@@ -770,7 +799,34 @@ export const ChangeReviewDialog = ({
       document.removeEventListener('focusin', handleFocusIn);
       lastFocusedEditorRef.current = null;
     };
-  }, [open]);
+  }, [open, getEditorFilePathForTarget]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const markEditorInteraction = (target: EventTarget | null): void => {
+      const element = target instanceof Element ? target : null;
+      if (!element?.closest?.('.cm-editor')) return;
+      const filePath = getEditorFilePathForTarget(element);
+      if (!filePath) return;
+      lastEditorInteractionAtRef.current[filePath] = Date.now();
+    };
+
+    const handleMouseDown = (e: MouseEvent): void => {
+      markEditorInteraction(e.target);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      markEditorInteraction(e.target);
+    };
+
+    document.addEventListener('mousedown', handleMouseDown, true);
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [open, getEditorFilePathForTarget]);
 
   // Cmd+Z: undo in last focused editor, or fall back to bulk review undo
   useEffect(() => {
@@ -827,6 +883,35 @@ export const ChangeReviewDialog = ({
           return;
         }
 
+        const recentHunkAction =
+          recentHunkUndoActionsRef.current[recentHunkUndoActionsRef.current.length - 1];
+        const hunkOutsideEditor =
+          recentHunkAction &&
+          !isInEditor &&
+          now - recentHunkAction.at < 5_000 &&
+          (lastEditorInteractionAtRef.current[recentHunkAction.filePath] ?? 0) <=
+            recentHunkAction.at &&
+          !!editorViewMapRef.current.get(recentHunkAction.filePath)?.dom.isConnected;
+        if (hunkOutsideEditor) {
+          const action = recentHunkUndoActionsRef.current.pop()!;
+          const view = editorViewMapRef.current.get(action.filePath)!;
+          const fileStack = hunkDecisionUndoStackRef.current[action.filePath];
+          if (fileStack) {
+            const stackIndex = fileStack.lastIndexOf(action.originalIndex);
+            if (stackIndex !== -1) {
+              fileStack.splice(stackIndex, 1);
+            }
+            if (fileStack.length === 0) {
+              delete hunkDecisionUndoStackRef.current[action.filePath];
+            }
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          undo(view);
+          clearHunkDecisionByOriginalIndex(action.filePath, action.originalIndex);
+          return;
+        }
+
         // If the last action was a hunk keep/undo (accept/reject) and we're undoing immediately,
         // we must also clear the persisted decision. Otherwise reopening the dialog will replay it.
         if (document.activeElement?.closest('.cm-editor')) {
@@ -841,6 +926,13 @@ export const ChangeReviewDialog = ({
             e.stopPropagation();
             undo(lastView);
             const originalIndex = stack.pop()!;
+            for (let i = recentHunkUndoActionsRef.current.length - 1; i >= 0; i--) {
+              const action = recentHunkUndoActionsRef.current[i];
+              if (action.filePath === fp && action.originalIndex === originalIndex) {
+                recentHunkUndoActionsRef.current.splice(i, 1);
+                break;
+              }
+            }
             clearHunkDecisionByOriginalIndex(fp, originalIndex);
             return;
           }

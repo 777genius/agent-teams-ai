@@ -1,0 +1,157 @@
+import { Badge } from '@renderer/components/ui/badge';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@renderer/components/ui/hover-card';
+import {
+  getTeamColorSet,
+  getThemedBadge,
+  getThemedBorder,
+  getThemedText,
+} from '@renderer/constants/teamColors';
+import { useTheme } from '@renderer/hooks/useTheme';
+import { useStore } from '@renderer/store';
+import { formatAgentRole } from '@renderer/utils/formatAgentRole';
+import { agentAvatarUrl, getMemberDotClass, getPresenceLabel } from '@renderer/utils/memberHelpers';
+import { ExternalLink } from 'lucide-react';
+
+import { CurrentTaskIndicator } from './CurrentTaskIndicator';
+
+import type { LeadActivityState, TeamTaskWithKanban } from '@shared/types';
+
+interface MemberHoverCardProps {
+  /** The member name to look up */
+  name: string;
+  /** Color key for the member */
+  color?: string;
+  /** Called when user clicks on the current task */
+  onOpenTask?: (task: TeamTaskWithKanban) => void;
+  children: React.ReactNode;
+}
+
+/**
+ * Wraps children in a HoverCard that shows member info on hover.
+ * Reads member data from the store (selectedTeamData.members).
+ * Falls back to a simple wrapper when member data is unavailable.
+ */
+export const MemberHoverCard = ({
+  name,
+  color,
+  onOpenTask,
+  children,
+}: MemberHoverCardProps): React.JSX.Element => {
+  const { isLight } = useTheme();
+  const member = useStore((s) => s.selectedTeamData?.members.find((m) => m.name === name) ?? null);
+  const isTeamAlive = useStore((s) => s.selectedTeamData?.isAlive);
+  const teamName = useStore((s) => s.selectedTeamName);
+  const leadActivity: LeadActivityState | undefined = useStore((s) =>
+    teamName ? s.leadActivityByTeam[teamName] : undefined
+  );
+  const openMemberProfile = useStore((s) => s.openMemberProfile);
+  const tasks = useStore((s) => s.selectedTeamData?.tasks);
+
+  if (!member) {
+    return <>{children}</>;
+  }
+
+  const colors = getTeamColorSet(color ?? member.color ?? '');
+  const roleLabel = formatAgentRole(member.role) ?? formatAgentRole(member.agentType);
+  const presenceLabel = getPresenceLabel(
+    member,
+    isTeamAlive,
+    false,
+    member.agentType === 'team-lead' ? leadActivity : undefined
+  );
+  const dotClass = getMemberDotClass(
+    member,
+    isTeamAlive,
+    false,
+    member.agentType === 'team-lead' ? leadActivity : undefined
+  );
+  const currentTask: TeamTaskWithKanban | null =
+    member.currentTaskId && tasks
+      ? (tasks.find((t) => t.id === member.currentTaskId) ?? null)
+      : null;
+  const reviewTask: TeamTaskWithKanban | null =
+    !currentTask && tasks
+      ? (tasks.find(
+          (task) =>
+            task.reviewer === member.name &&
+            (task.reviewState === 'review' || task.kanbanColumn === 'review')
+        ) ?? null)
+      : null;
+  const activityTask = currentTask ?? reviewTask;
+  const activityLabel = currentTask ? 'working on' : reviewTask ? 'reviewing' : 'working on';
+
+  return (
+    <HoverCard openDelay={300} closeDelay={200}>
+      <HoverCardTrigger asChild>{children}</HoverCardTrigger>
+      <HoverCardContent side="top" align="start" sideOffset={8}>
+        <div className="flex flex-col gap-2.5">
+          {/* Header: avatar + name + presence */}
+          <div className="flex items-center gap-3">
+            <div className="relative shrink-0">
+              <img
+                src={agentAvatarUrl(member.name, 64)}
+                alt={member.name}
+                className="size-10 rounded-full bg-[var(--color-surface-raised)]"
+                loading="lazy"
+              />
+              <span
+                className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-[var(--color-surface)] ${dotClass}`}
+                aria-label={presenceLabel}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="truncate text-sm font-semibold"
+                  style={{ color: getThemedText(colors, isLight) }}
+                >
+                  {member.name}
+                </span>
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 px-1.5 py-0 text-[10px] font-normal leading-tight"
+                  style={{
+                    backgroundColor: getThemedBadge(colors, isLight),
+                    color: getThemedText(colors, isLight),
+                    border: `1px solid ${getThemedBorder(colors, isLight)}40`,
+                  }}
+                >
+                  {presenceLabel}
+                </Badge>
+              </div>
+              {roleLabel && (
+                <span className="text-xs text-[var(--color-text-muted)]">{roleLabel}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Current task */}
+          {activityTask && (
+            <div className="flex items-center gap-1 overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
+              <CurrentTaskIndicator
+                task={activityTask}
+                borderColor={colors.border}
+                maxSubjectLength={28}
+                activityLabel={activityLabel}
+                onOpenTask={onOpenTask ? () => onOpenTask(activityTask) : undefined}
+              />
+            </div>
+          )}
+
+          {/* Open profile button */}
+          <button
+            type="button"
+            className="flex w-full items-center justify-center gap-1.5 rounded border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+            onClick={(e) => {
+              e.stopPropagation();
+              openMemberProfile(member.name);
+            }}
+          >
+            <ExternalLink size={12} />
+            Open profile
+          </button>
+        </div>
+      </HoverCardContent>
+    </HoverCard>
+  );
+};

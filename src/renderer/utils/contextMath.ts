@@ -1,3 +1,5 @@
+import { DEFAULT_CONTEXT_WINDOW } from '@shared/utils/modelParser';
+
 import type { ContextInjection } from '@renderer/types/contextInjection';
 
 export function sumContextInjectionTokens(injections: readonly ContextInjection[]): number {
@@ -23,6 +25,27 @@ export function formatPercentOfTotal(
 ): string | null {
   const pct = computePercentOfTotal(visibleTokens, totalSessionTokens);
   if (pct === null) return null;
-  return `${pct.toFixed(1)}% of total`;
+  return `${pct.toFixed(1)}% of input`;
 }
 
+export type ContextUrgency = 'normal' | 'warning' | 'critical';
+
+export interface RemainingContext {
+  remainingPct: number;
+  urgency: ContextUrgency;
+}
+
+/**
+ * Compute how much context window remains before compaction.
+ * Returns null if input data is unavailable.
+ */
+export function computeRemainingContext(
+  totalInputTokens: number | undefined,
+  contextWindow: number = DEFAULT_CONTEXT_WINDOW
+): RemainingContext | null {
+  if (totalInputTokens === undefined || totalInputTokens <= 0) return null;
+  const remainingPct = Math.max(((contextWindow - totalInputTokens) / contextWindow) * 100, 0);
+  const urgency: ContextUrgency =
+    remainingPct < 20 ? 'critical' : remainingPct < 40 ? 'warning' : 'normal';
+  return { remainingPct, urgency };
+}

@@ -9,7 +9,7 @@
 import { del, get, set } from 'idb-keyval';
 
 import type { InlineChip } from '@renderer/types/inlineChip';
-import type { AttachmentPayload } from '@shared/types';
+import type { AttachmentPayload, AgentActionMode } from '@shared/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,6 +24,7 @@ export interface ComposerDraftSnapshot {
   text: string;
   chips: InlineChip[];
   attachments: AttachmentPayload[];
+  actionMode?: AgentActionMode;
   updatedAt: number;
 }
 

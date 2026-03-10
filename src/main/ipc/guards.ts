@@ -13,7 +13,7 @@ const SUBAGENT_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const NOTIFICATION_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const TRIGGER_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
-const TASK_ID_PATTERN = /^\d{1,10}$/;
+const TASK_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/;
 const MEMBER_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const FROM_FIELD_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
@@ -130,13 +130,13 @@ export function validateTeamName(teamName: unknown): ValidationResult<string> {
 }
 
 export function validateTaskId(taskId: unknown): ValidationResult<string> {
-  const basic = validateString(taskId, 'taskId', 16);
+  const basic = validateString(taskId, 'taskId', 64);
   if (!basic.valid) {
     return basic;
   }
 
   if (!TASK_ID_PATTERN.test(basic.value!)) {
-    return { valid: false, error: 'taskId must contain only digits' };
+    return { valid: false, error: 'taskId contains invalid characters' };
   }
 
   return { valid: true, value: basic.value };

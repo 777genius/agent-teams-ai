@@ -1,6 +1,12 @@
 import { updateOriginalDoc } from '@codemirror/merge';
 import { type Extension, Facet, RangeSetBuilder, StateEffect, StateField } from '@codemirror/state';
-import { Decoration, type DecorationSet, EditorView, WidgetType } from '@codemirror/view';
+import {
+  Decoration,
+  type DecorationSet,
+  EditorView,
+  ViewPlugin,
+  WidgetType,
+} from '@codemirror/view';
 
 import { getChunks } from './CodeMirrorDiffUtils';
 
@@ -219,6 +225,9 @@ const portionCollapseTheme = EditorView.theme({
     minHeight: '28px',
     cursor: 'default',
     userSelect: 'none',
+    position: 'sticky',
+    left: '0',
+    boxSizing: 'border-box',
   },
 
   '.cm-portion-collapse-text': {
@@ -246,11 +255,11 @@ const portionCollapseTheme = EditorView.theme({
     transition: 'all 0.15s ease',
     '&:hover': {
       color: 'var(--color-text)',
-      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      backgroundColor: 'var(--diff-expand-hover-bg)',
       borderColor: 'var(--color-border-emphasis)',
     },
     '&:active': {
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      backgroundColor: 'var(--diff-expand-active-bg)',
     },
   },
 
@@ -267,11 +276,11 @@ const portionCollapseTheme = EditorView.theme({
     transition: 'all 0.15s ease',
     '&:hover': {
       color: 'var(--color-text-secondary)',
-      backgroundColor: 'rgba(255, 255, 255, 0.04)',
+      backgroundColor: 'var(--diff-expand-all-hover-bg)',
       borderColor: 'var(--color-border)',
     },
     '&:active': {
-      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      backgroundColor: 'var(--diff-expand-all-active-bg)',
     },
   },
 });
@@ -379,6 +388,43 @@ const portionCollapseField = StateField.define<PortionCollapseState>({
   },
 });
 
+// ─── Viewport-pinning plugin ───
+// Block widgets span the full content width (can be thousands of px for wide files).
+// This plugin sets an explicit width on .cm-portion-collapse elements so they match
+// the visible viewport width, making `position: sticky; left: 0` actually constrain them.
+
+function syncCollapseWidths(view: EditorView): void {
+  const scrollerRect = view.scrollDOM.getBoundingClientRect();
+  if (!scrollerRect.width) return;
+  const els = view.dom.querySelectorAll<HTMLElement>('.cm-portion-collapse');
+  for (const el of els) {
+    // The widget lives inside .cm-content which may have a left offset (gutters).
+    // Compute available width from scroller's right edge minus the element's left position.
+    const elRect = el.getBoundingClientRect();
+    const w = scrollerRect.right - elRect.left;
+    if (w > 0) {
+      el.style.width = `${w}px`;
+    }
+  }
+}
+
+const portionCollapsePinPlugin = ViewPlugin.define((view) => {
+  // Initial sync after first render
+  requestAnimationFrame(() => syncCollapseWidths(view));
+  return {
+    update() {
+      requestAnimationFrame(() => syncCollapseWidths(view));
+    },
+  };
+});
+
+const portionCollapseScrollHandler = EditorView.domEventHandlers({
+  scroll(_event, view) {
+    syncCollapseWidths(view);
+    return false;
+  },
+});
+
 // ─── Extension ───
 
 export function portionCollapseExtension(config?: PortionCollapseConfig): Extension {
@@ -393,5 +439,7 @@ export function portionCollapseExtension(config?: PortionCollapseConfig): Extens
     portionCollapseConfigFacet.of({ margin, minSize, portionSize }),
     portionCollapseField,
     portionCollapseTheme,
+    portionCollapsePinPlugin,
+    portionCollapseScrollHandler,
   ];
 }

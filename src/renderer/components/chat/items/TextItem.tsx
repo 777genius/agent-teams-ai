@@ -16,6 +16,8 @@ interface TextItemProps {
   preview: string;
   onClick: () => void;
   isExpanded: boolean;
+  /** Timestamp for display */
+  timestamp?: Date;
   /** Optional local search query for inline highlighting */
   searchQueryOverride?: string;
   /** Optional stable item id for search highlighting */
@@ -33,6 +35,7 @@ export const TextItem: React.FC<TextItemProps> = ({
   preview,
   onClick,
   isExpanded,
+  timestamp,
   searchQueryOverride,
   markdownItemId,
   highlightClasses,
@@ -61,6 +64,7 @@ export const TextItem: React.FC<TextItemProps> = ({
       label="Output"
       summary={summary}
       tokenCount={tokenCount}
+      timestamp={timestamp}
       onClick={onClick}
       isExpanded={isExpanded}
       highlightClasses={highlightClasses}

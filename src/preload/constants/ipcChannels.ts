@@ -331,6 +331,9 @@ export const TEAM_LEAD_ACTIVITY = 'team:leadActivity';
 /** Get lead process context window usage */
 export const TEAM_LEAD_CONTEXT = 'team:leadContext';
 
+/** Get per-member spawn statuses for a team */
+export const TEAM_MEMBER_SPAWN_STATUSES = 'team:memberSpawnStatuses';
+
 /** Soft-delete a task (set status to 'deleted' with deletedAt timestamp) */
 export const TEAM_SOFT_DELETE_TASK = 'team:softDeleteTask';
 
@@ -363,6 +366,25 @@ export const TEAM_TOOL_APPROVAL_EVENT = 'team:toolApprovalEvent';
 
 /** Invoke: respond to a tool approval request (renderer → main) */
 export const TEAM_TOOL_APPROVAL_RESPOND = 'team:toolApprovalRespond';
+
+/** Validate custom CLI args against `claude --help` output */
+export const TEAM_VALIDATE_CLI_ARGS = 'team:validateCliArgs';
+
+/** Invoke: update tool approval settings (renderer → main) */
+export const TEAM_TOOL_APPROVAL_SETTINGS = 'team:toolApprovalSettings';
+
+// =============================================================================
+// Cross-Team Communication Channels
+// =============================================================================
+
+/** Send cross-team message */
+export const CROSS_TEAM_SEND = 'crossTeam:send';
+
+/** List available cross-team targets */
+export const CROSS_TEAM_LIST_TARGETS = 'crossTeam:listTargets';
+
+/** Get cross-team outbox for a team */
+export const CROSS_TEAM_GET_OUTBOX = 'crossTeam:getOutbox';
 
 // =============================================================================
 // CLI Installer API Channels
@@ -509,3 +531,102 @@ export const EDITOR_CHANGE = 'editor:change';
 
 /** List project files by path (for @file mentions, independent of editor state) */
 export const PROJECT_LIST_FILES = 'project:listFiles';
+
+// =============================================================================
+// Schedule Channels
+// =============================================================================
+
+/** List all schedules */
+export const SCHEDULE_LIST = 'schedule:list';
+
+/** Get a schedule by ID */
+export const SCHEDULE_GET = 'schedule:get';
+
+/** Create a new schedule */
+export const SCHEDULE_CREATE = 'schedule:create';
+
+/** Update an existing schedule */
+export const SCHEDULE_UPDATE = 'schedule:update';
+
+/** Delete a schedule */
+export const SCHEDULE_DELETE = 'schedule:delete';
+
+/** Pause a schedule */
+export const SCHEDULE_PAUSE = 'schedule:pause';
+
+/** Resume a paused schedule */
+export const SCHEDULE_RESUME = 'schedule:resume';
+
+/** Trigger immediate run of a schedule */
+export const SCHEDULE_TRIGGER_NOW = 'schedule:triggerNow';
+
+/** Get run history for a schedule */
+export const SCHEDULE_GET_RUNS = 'schedule:getRuns';
+
+/** Get full stdout/stderr logs for a specific run */
+export const SCHEDULE_GET_RUN_LOGS = 'schedule:getRunLogs';
+
+/** Schedule change events (main -> renderer) */
+export const SCHEDULE_CHANGE = 'schedule:change';
+
+// Extensions / Plugin Catalog Channels
+// =============================================================================
+
+/** Get all enriched plugins (catalog + installed state + counts) */
+export const PLUGIN_GET_ALL = 'plugin:getAll';
+
+/** Get README content for a plugin by pluginId */
+export const PLUGIN_GET_README = 'plugin:getReadme';
+
+// =============================================================================
+// Extensions / MCP Registry Channels
+// =============================================================================
+
+/** Search MCP servers across registries */
+export const MCP_REGISTRY_SEARCH = 'mcpRegistry:search';
+
+/** Browse MCP catalog with pagination */
+export const MCP_REGISTRY_BROWSE = 'mcpRegistry:browse';
+
+/** Get a single MCP server by registry ID */
+export const MCP_REGISTRY_GET_BY_ID = 'mcpRegistry:getById';
+
+/** Get installed MCP servers */
+export const MCP_REGISTRY_GET_INSTALLED = 'mcpRegistry:getInstalled';
+
+/** Install a plugin */
+export const PLUGIN_INSTALL = 'plugin:install';
+
+/** Uninstall a plugin */
+export const PLUGIN_UNINSTALL = 'plugin:uninstall';
+
+/** Install an MCP server */
+export const MCP_REGISTRY_INSTALL = 'mcpRegistry:install';
+
+/** Uninstall an MCP server */
+export const MCP_REGISTRY_UNINSTALL = 'mcpRegistry:uninstall';
+
+/** Install a custom MCP server (bypasses registry) */
+export const MCP_REGISTRY_INSTALL_CUSTOM = 'mcpRegistry:installCustom';
+
+/** Fetch GitHub stars for MCP server repositories */
+export const MCP_GITHUB_STARS = 'mcpRegistry:githubStars';
+
+// =============================================================================
+// API Keys Management Channels
+// =============================================================================
+
+/** List all saved API keys (masked values) */
+export const API_KEYS_LIST = 'apiKeys:list';
+
+/** Save (create or update) an API key */
+export const API_KEYS_SAVE = 'apiKeys:save';
+
+/** Delete an API key by ID */
+export const API_KEYS_DELETE = 'apiKeys:delete';
+
+/** Lookup decrypted values by env var names (for auto-fill) */
+export const API_KEYS_LOOKUP = 'apiKeys:lookup';
+
+/** Get storage encryption status (for UI display) */
+export const API_KEYS_STORAGE_STATUS = 'apiKeys:storageStatus';

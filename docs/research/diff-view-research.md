@@ -559,7 +559,7 @@ EditorView.theme({
 - 100% парсируемо — `input.taskId` + `input.status`
 - Tool result: `"Updated task #1 status"` (текст)
 
-**Механизм B: Bash `teamctl.js`** (44 сессии)
+**Механизм B: исторический Bash `teamctl.js`** (44 сессии, legacy)
 ```bash
 node "$HOME/.claude/tools/teamctl.js" --team "<team>" task start|complete|set-status <id>
 ```
@@ -600,7 +600,7 @@ parseTaskBoundaries(sessionJsonl) → Map<taskId, tool_use_ids[]>
    - status == "in_progress" → TASK_START(taskId, line)
    - status == "completed"   → TASK_END(taskId, line)
 
-2. Детектировать Bash teamctl:
+2. Детектировать исторические Bash teamctl вызовы:
    - "task start <id>"      → TASK_START(taskId, line)
    - "task complete <id>"   → TASK_END(taskId, line)
 
@@ -625,7 +625,7 @@ parseTaskBoundaries(sessionJsonl) → Map<taskId, tool_use_ids[]>
 
 ### Как достичь 95%+
 1. **Добавить парсинг `TaskUpdate` tool_use** (name == "TaskUpdate", input.taskId, input.status)
-2. **Сохранить Bash teamctl regex** для остальных 12.5%
+2. **Сохранить regex для исторических Bash teamctl логов** для остальных 12.5%
 3. Для single-task сессий (86%): вся сессия = задача (100%)
 4. Для multi-task: маркеры start/end как границы сегментов
 
@@ -644,7 +644,7 @@ parseTaskBoundaries(sessionJsonl) → Map<taskId, tool_use_ids[]>
 - Решает проблему subagent'ов без `toolUseResult`
 
 ### Per-Task Scoping: Структурные маркеры = 95%+
-- `TaskUpdate` tool_use + Bash teamctl = 100% парсируемые маркеры
+- `TaskUpdate` tool_use + исторические Bash teamctl логи = 100% парсируемые маркеры
 - 86% сессий = 1 задача → 100% надёжность
 - Улучшение с ~85% (text search) до 95%+ (структурный парсинг)
 

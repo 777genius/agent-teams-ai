@@ -14,10 +14,10 @@ import { NotificationTriggerSettings } from '../NotificationTriggerSettings';
 
 import type { RepositoryDropdownItem, SafeConfig } from '../hooks/useSettingsConfig';
 import type { NotificationTrigger } from '@renderer/types/data';
-import type { TeamTaskStatus } from '@shared/types';
+import type { TeamReviewState, TeamTaskStatus } from '@shared/types';
 
-/** Statuses available for notification filtering — real status values + kanban-only 'approved'. */
-type NotifiableStatus = TeamTaskStatus | 'approved';
+/** Notification targets span workflow status plus the explicit review axis. */
+type NotifiableStatus = TeamTaskStatus | Extract<TeamReviewState, 'needsFix' | 'approved'>;
 
 // Snooze duration options
 const SNOOZE_OPTIONS = [
@@ -310,6 +310,7 @@ export const NotificationsSection = ({
 const STATUS_OPTIONS: { value: NotifiableStatus; label: string }[] = [
   { value: 'in_progress', label: 'Started' },
   { value: 'completed', label: 'Completed' },
+  { value: 'needsFix', label: 'Needs Fixes' },
   { value: 'approved', label: 'Approved' },
   { value: 'pending', label: 'Pending' },
   { value: 'deleted', label: 'Deleted' },

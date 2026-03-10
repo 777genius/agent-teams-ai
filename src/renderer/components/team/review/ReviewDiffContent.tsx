@@ -140,7 +140,7 @@ export const ReviewDiffContent = ({ file }: ReviewDiffContentProps) => {
     <div className="space-y-4 p-4">
       {nonErrorSnippets.map((snippet, index) => (
         <SnippetDiffView
-          key={snippet.toolUseId}
+          key={`${snippet.toolUseId}-${index}`}
           snippet={snippet}
           index={index}
           fileName={file.relativePath}

@@ -13,7 +13,9 @@ import { createConnectionSlice } from './slices/connectionSlice';
 import { createContextSlice } from './slices/contextSlice';
 import { createConversationSlice } from './slices/conversationSlice';
 import { createEditorSlice } from './slices/editorSlice';
+import { createExtensionsSlice } from './slices/extensionsSlice';
 import { createNotificationSlice } from './slices/notificationSlice';
+import { createScheduleSlice } from './slices/scheduleSlice';
 import { createPaneSlice } from './slices/paneSlice';
 import { createProjectSlice } from './slices/projectSlice';
 import { createRepositorySlice } from './slices/repositorySlice';
@@ -31,6 +33,7 @@ import type { AppState } from './types';
 import type {
   CliInstallerProgress,
   LeadContextUsage,
+  ScheduleChangeEvent,
   TeamChangeEvent,
   ToolApprovalEvent,
   ToolApprovalRequest,
@@ -61,6 +64,8 @@ export const useStore = create<AppState>()((...args) => ({
   ...createChangeReviewSlice(...args),
   ...createCliInstallerSlice(...args),
   ...createEditorSlice(...args),
+  ...createScheduleSlice(...args),
+  ...createExtensionsSlice(...args),
 }));
 
 // =============================================================================
@@ -98,6 +103,7 @@ export function initializeNotificationListeners(): () => void {
       useStore.getState().fetchAllTasks(),
       useStore.getState().fetchTeams(),
       useStore.getState().fetchNotifications(),
+      useStore.getState().fetchSchedules(),
     ]);
   })();
 
@@ -126,7 +132,7 @@ export function initializeNotificationListeners(): () => void {
   });
   const pendingSessionRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const pendingProjectRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  let teamRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+  let teamRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   let teamListRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   let globalTasksRefreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -394,6 +400,30 @@ export function initializeNotificationListeners(): () => void {
         return;
       }
 
+      // Member spawn status change: fetch updated spawn statuses for the team.
+      if (event.type === 'member-spawn') {
+        void useStore.getState().fetchMemberSpawnStatuses(event.teamName);
+        return;
+      }
+
+      // Live lead-message events: only refresh the visible team detail, not team/task lists.
+      // This keeps the refresh lightweight and prevents one noisy team from starving another.
+      if (event.type === 'lead-message') {
+        if (!event?.teamName || !isTeamVisibleInAnyPane(event.teamName)) {
+          return;
+        }
+        if (teamRefreshTimers.has(event.teamName)) {
+          return;
+        }
+        const timer = setTimeout(() => {
+          teamRefreshTimers.delete(event.teamName);
+          const current = useStore.getState();
+          void current.refreshTeamData(event.teamName);
+        }, TEAM_REFRESH_THROTTLE_MS);
+        teamRefreshTimers.set(event.teamName, timer);
+        return;
+      }
+
       // Throttled refresh of summary list (keeps TeamListView current without flooding).
       if (!teamListRefreshTimer) {
         teamListRefreshTimer = setTimeout(() => {
@@ -414,26 +444,25 @@ export function initializeNotificationListeners(): () => void {
         return;
       }
 
-      // Throttle (not debounce): keep at most one pending detail refresh.
+      // Per-team throttle (not debounce): keep at most one pending detail refresh per team.
       // Debounce would delay indefinitely while inbox messages keep arriving.
-      if (teamRefreshTimer) {
+      if (teamRefreshTimers.has(event.teamName)) {
         return;
       }
 
-      teamRefreshTimer = setTimeout(() => {
-        teamRefreshTimer = null;
+      const timer = setTimeout(() => {
+        teamRefreshTimers.delete(event.teamName);
         const current = useStore.getState();
         void current.refreshTeamData(event.teamName);
       }, TEAM_REFRESH_THROTTLE_MS);
+      teamRefreshTimers.set(event.teamName, timer);
     });
 
     if (typeof cleanup === 'function') {
       cleanupFns.push(() => {
         cleanup();
-        if (teamRefreshTimer) {
-          clearTimeout(teamRefreshTimer);
-          teamRefreshTimer = null;
-        }
+        for (const t of teamRefreshTimers.values()) clearTimeout(t);
+        teamRefreshTimers = new Map();
         if (teamListRefreshTimer) {
           clearTimeout(teamListRefreshTimer);
           teamListRefreshTimer = null;
@@ -450,7 +479,14 @@ export function initializeNotificationListeners(): () => void {
   if (api.teams?.onToolApprovalEvent) {
     const cleanup = api.teams.onToolApprovalEvent((_event: unknown, data: unknown) => {
       const event = data as ToolApprovalEvent;
-      if ('dismissed' in event && event.dismissed) {
+      if ('autoResolved' in event && event.autoResolved) {
+        // Timeout or auto-allow resolved in main — remove from UI
+        useStore.setState((s) => ({
+          pendingApprovals: s.pendingApprovals.filter(
+            (a) => !(a.runId === event.runId && a.requestId === event.requestId)
+          ),
+        }));
+      } else if ('dismissed' in event && event.dismissed) {
         const dismiss = event;
         useStore.setState((s) => ({
           pendingApprovals: s.pendingApprovals.filter(
@@ -467,6 +503,12 @@ export function initializeNotificationListeners(): () => void {
     if (typeof cleanup === 'function') {
       cleanupFns.push(cleanup);
     }
+
+    // Sync saved tool approval settings to main process on startup
+    const savedSettings = useStore.getState().toolApprovalSettings;
+    api.teams.updateToolApprovalSettings?.(savedSettings).catch(() => {
+      // Silently ignore — settings will use defaults until next update
+    });
   }
 
   // Listen for editor file change events (chokidar watcher → renderer)
@@ -475,6 +517,19 @@ export function initializeNotificationListeners(): () => void {
       const state = useStore.getState();
       if (state.editorProjectPath) {
         state.handleExternalFileChange(event);
+      }
+    });
+    if (typeof cleanup === 'function') {
+      cleanupFns.push(cleanup);
+    }
+  }
+
+  // Listen for schedule change events from main process
+  if (api.schedules?.onScheduleChange) {
+    const cleanup = api.schedules.onScheduleChange((_event: unknown, data: unknown) => {
+      const event = data as ScheduleChangeEvent;
+      if (event?.scheduleId) {
+        void useStore.getState().applyScheduleChange(event.scheduleId);
       }
     });
     if (typeof cleanup === 'function') {

@@ -8,6 +8,7 @@ import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useResizableColumns } from '@renderer/hooks/useResizableColumns';
 import { cn } from '@renderer/lib/utils';
+
 import {
   CheckCircle2,
   ClipboardList,
@@ -105,9 +106,12 @@ const COLUMNS: { id: KanbanColumnId; title: string }[] = [
 ];
 
 function getTaskColumn(task: TeamTask, kanbanState: KanbanState): KanbanColumnId | null {
-  const explicit = kanbanState.tasks[task.id];
-  if (explicit?.column) {
-    return explicit.column;
+  // Kanban state is authoritative for review/approved placement.
+  // When clearKanban removes a task, the entry is deleted — so we must NOT
+  // fall back to task.reviewState, otherwise the task reappears in approved/review.
+  const kanbanEntry = kanbanState.tasks[task.id];
+  if (kanbanEntry?.column) {
+    return kanbanEntry.column;
   }
 
   if (task.status === 'pending') {

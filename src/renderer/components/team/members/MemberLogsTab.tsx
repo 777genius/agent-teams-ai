@@ -33,6 +33,8 @@ interface MemberLogsTabProps {
   taskStatus?: string;
   /** Persisted work intervals for filtering owner sessions (avoid unrelated tasks) */
   taskWorkIntervals?: { startedAt: string; completedAt?: string }[];
+  /** Lower bound for log search (skip files modified before this). Derived from task creation. */
+  taskSince?: string;
   /** Notifies parent when a background refresh starts/ends. */
   onRefreshingChange?: (isRefreshing: boolean) => void;
   /** Show last few subagent messages as a quick "where are we?" preview (task view only). */
@@ -55,6 +57,7 @@ export const MemberLogsTab = ({
   taskOwner,
   taskStatus,
   taskWorkIntervals,
+  taskSince,
   onRefreshingChange,
   showSubagentPreview = false,
   showLeadPreview = false,
@@ -269,6 +272,7 @@ export const MemberLogsTab = ({
                 owner: taskOwner,
                 status: taskStatus,
                 intervals: taskWorkIntervals,
+                since: taskSince,
               })
             : await api.teams.getMemberLogs(teamName, memberName!);
         const nextLogs = Array.isArray(result) ? [...result] : [];
@@ -297,8 +301,8 @@ export const MemberLogsTab = ({
       cancelled = true;
       if (interval) clearInterval(interval);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intervalsKey drives refresh; deps intentionally minimal to avoid refetch loops
-  }, [teamName, memberName, taskId, taskOwner, taskStatus, intervalsKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intervalsKey + taskSince drive refresh; deps intentionally minimal to avoid refetch loops
+  }, [teamName, memberName, taskId, taskOwner, taskStatus, intervalsKey, taskSince]);
 
   const fetchDetailForLog = useCallback(
     async (

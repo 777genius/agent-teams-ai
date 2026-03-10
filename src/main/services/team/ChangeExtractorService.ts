@@ -31,6 +31,17 @@ interface CacheEntry {
   expiresAt: number;
 }
 
+interface TaskChangeCacheEntry {
+  data: TaskChangeSetV2;
+  expiresAt: number;
+}
+
+interface ParsedSnippetsCacheEntry {
+  data: SnippetDiff[];
+  mtime: number;
+  expiresAt: number;
+}
+
 /** Ссылка на JSONL файл с привязкой к memberName */
 interface LogFileRef {
   filePath: string;
@@ -39,7 +50,11 @@ interface LogFileRef {
 
 export class ChangeExtractorService {
   private cache = new Map<string, CacheEntry>();
+  private taskChangeCache = new Map<string, TaskChangeCacheEntry>();
+  private parsedSnippetsCache = new Map<string, ParsedSnippetsCacheEntry>();
   private readonly cacheTtl = 30 * 1000; // 30 сек — shorter TTL to reduce stale data risk
+  private readonly taskChangeCacheTtl = 20 * 1000; // 20 сек для task changes
+  private readonly parsedSnippetsCacheTtl = 20 * 1000; // 20 сек для parsed JSONL snippets
 
   constructor(
     private readonly logsFinder: TeamMemberLogsFinder,
@@ -113,8 +128,16 @@ export class ChangeExtractorService {
       status?: string;
       intervals?: { startedAt: string; completedAt?: string }[];
       since?: string;
+      summaryOnly?: boolean;
     }
   ): Promise<TaskChangeSetV2> {
+    const includeDetails = options?.summaryOnly !== true;
+    const cacheKey = `task:${teamName}:${taskId}`;
+    const cached = includeDetails ? this.taskChangeCache.get(cacheKey) : undefined;
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+
     const taskMeta = await this.readTaskMeta(teamName, taskId);
     const logs = await this.logsFinder.findLogsForTask(teamName, taskId, {
       owner: options?.owner ?? taskMeta?.owner,
@@ -124,7 +147,14 @@ export class ChangeExtractorService {
     });
     const logRefs = await this.resolveLogFileRefs(teamName, logs);
     if (logRefs.length === 0) {
-      return this.emptyTaskChangeSet(teamName, taskId);
+      const empty = this.emptyTaskChangeSet(teamName, taskId);
+      if (includeDetails) {
+        this.taskChangeCache.set(cacheKey, {
+          data: empty,
+          expiresAt: Date.now() + this.taskChangeCacheTtl,
+        });
+      }
+      return empty;
     }
 
     const projectPath = await this.resolveProjectPath(teamName);
@@ -144,7 +174,7 @@ export class ChangeExtractorService {
       const intervals = options?.intervals ?? taskMeta?.intervals;
       if (Array.isArray(intervals) && intervals.length > 0) {
         const { files, toolUseIds, startTimestamp, endTimestamp } =
-          await this.extractIntervalScopedChanges(logRefs, intervals, projectPath);
+          await this.extractIntervalScopedChanges(logRefs, intervals, projectPath, includeDetails);
 
         const intervalScope: TaskChangeScope = {
           taskId,
@@ -162,7 +192,7 @@ export class ChangeExtractorService {
           },
         };
 
-        return {
+        const intervalResult: TaskChangeSetV2 = {
           teamName,
           taskId,
           files,
@@ -177,14 +207,39 @@ export class ChangeExtractorService {
               ? ['No file edits found within persisted workIntervals.']
               : ['Task boundaries missing — scoped by workIntervals timestamps.'],
         };
+        if (includeDetails) {
+          this.taskChangeCache.set(cacheKey, {
+            data: intervalResult,
+            expiresAt: Date.now() + this.taskChangeCacheTtl,
+          });
+        }
+        return intervalResult;
       }
 
-      return this.fallbackSingleTaskScope(teamName, taskId, logRefs, projectPath);
+      const fallbackResult = await this.fallbackSingleTaskScope(
+        teamName,
+        taskId,
+        logRefs,
+        projectPath,
+        includeDetails
+      );
+      if (includeDetails) {
+        this.taskChangeCache.set(cacheKey, {
+          data: fallbackResult,
+          expiresAt: Date.now() + this.taskChangeCacheTtl,
+        });
+      }
+      return fallbackResult;
     }
 
     // Фильтруем snippets по tool_use IDs из scope
     const allowedToolUseIds = new Set(allScopes.flatMap((s) => s.toolUseIds));
-    const files = await this.extractFilteredChanges(logRefs, allowedToolUseIds, projectPath);
+    const files = await this.extractFilteredChanges(
+      logRefs,
+      allowedToolUseIds,
+      projectPath,
+      includeDetails
+    );
 
     const worstTier = Math.max(...allScopes.map((s) => s.confidence.tier));
     const warnings: string[] = [];
@@ -192,7 +247,7 @@ export class ChangeExtractorService {
       warnings.push('Some task boundaries could not be precisely determined.');
     }
 
-    return {
+    const result: TaskChangeSetV2 = {
       teamName,
       taskId,
       files,
@@ -204,6 +259,13 @@ export class ChangeExtractorService {
       scope: allScopes[0],
       warnings,
     };
+    if (includeDetails) {
+      this.taskChangeCache.set(cacheKey, {
+        data: result,
+        expiresAt: Date.now() + this.taskChangeCacheTtl,
+      });
+    }
+    return result;
   }
 
   /** Получить краткую статистику */
@@ -244,12 +306,13 @@ export class ChangeExtractorService {
 
       const derivedIntervals = (() => {
         if (Array.isArray(intervals) && intervals.length > 0) return intervals;
-        const rawHistory = parsed.statusHistory;
+        const rawHistory = parsed.historyEvents;
         if (!Array.isArray(rawHistory)) return undefined;
 
         const transitions = rawHistory
           .map((h) => (h && typeof h === 'object' ? (h as Record<string, unknown>) : null))
           .filter((h): h is Record<string, unknown> => h !== null)
+          .filter((h) => h.type === 'status_changed')
           .map((h) => ({
             to: typeof h.to === 'string' ? h.to : null,
             timestamp: typeof h.timestamp === 'string' ? h.timestamp : null,
@@ -300,7 +363,8 @@ export class ChangeExtractorService {
   private async extractIntervalScopedChanges(
     logRefs: LogFileRef[],
     intervals: { startedAt: string; completedAt?: string }[],
-    projectPath?: string
+    projectPath?: string,
+    includeDetails = true
   ): Promise<{
     files: FileChangeSummary[];
     toolUseIds: string[];
@@ -356,7 +420,7 @@ export class ChangeExtractorService {
       }
     }
 
-    const files = this.aggregateByFile(allowedSnippets, projectPath);
+    const files = this.aggregateByFile(allowedSnippets, projectPath, includeDetails);
     return {
       files,
       toolUseIds: [...toolUseIdsSet],
@@ -387,6 +451,19 @@ export class ChangeExtractorService {
 
   /** Парсить один JSONL файл и извлечь все snippets (двухпроходный подход) */
   private async parseJSONLFile(filePath: string): Promise<SnippetDiff[]> {
+    let fileMtime = 0;
+    try {
+      const fileStat = await stat(filePath);
+      fileMtime = fileStat.mtimeMs;
+      const cached = this.parsedSnippetsCache.get(filePath);
+      if (cached?.mtime === fileMtime && cached.expiresAt > Date.now()) {
+        return cached.data;
+      }
+    } catch (err) {
+      logger.debug(`Не удалось stat файла ${filePath}: ${String(err)}`);
+      return [];
+    }
+
     // Сначала считываем все записи в память для двух проходов
     const entries: Record<string, unknown>[] = [];
 
@@ -519,6 +596,12 @@ export class ChangeExtractorService {
       }
     }
 
+    this.parsedSnippetsCache.set(filePath, {
+      data: snippets,
+      mtime: fileMtime,
+      expiresAt: Date.now() + this.parsedSnippetsCacheTtl,
+    });
+
     return snippets;
   }
 
@@ -580,7 +663,11 @@ export class ChangeExtractorService {
   }
 
   /** Агрегировать snippets в FileChangeSummary[] */
-  private aggregateByFile(snippets: SnippetDiff[], projectPath?: string): FileChangeSummary[] {
+  private aggregateByFile(
+    snippets: SnippetDiff[],
+    projectPath?: string,
+    includeDetails = true
+  ): FileChangeSummary[] {
     const fileMap = new Map<string, { snippets: SnippetDiff[]; isNewFile: boolean }>();
 
     for (const snippet of snippets) {
@@ -620,11 +707,11 @@ export class ChangeExtractorService {
       return {
         filePath: fp,
         relativePath: relative,
-        snippets: data.snippets,
+        snippets: includeDetails ? data.snippets : [],
         linesAdded: totalAdded,
         linesRemoved: totalRemoved,
         isNewFile: data.isNewFile,
-        timeline: this.buildTimeline(fp, data.snippets),
+        timeline: includeDetails ? this.buildTimeline(fp, data.snippets) : undefined,
       };
     });
   }
@@ -683,14 +770,27 @@ export class ChangeExtractorService {
     return false;
   }
 
-  /** Конвертировать MemberLogSummary[] в LogFileRef[] через findMemberLogPaths */
+  /** Конвертировать MemberLogSummary[] в LogFileRef[] */
   private async resolveLogFileRefs(
     teamName: string,
     logs: MemberLogSummary[]
   ): Promise<LogFileRef[]> {
     const refs: LogFileRef[] = [];
-    const byMember = new Map<string, MemberLogSummary[]>();
+    const logsNeedingResolve: MemberLogSummary[] = [];
+
     for (const log of logs) {
+      const memberName = log.memberName ?? 'unknown';
+      if (log.filePath) {
+        refs.push({ filePath: log.filePath, memberName });
+      } else {
+        logsNeedingResolve.push(log);
+      }
+    }
+
+    if (logsNeedingResolve.length === 0) return refs;
+
+    const byMember = new Map<string, MemberLogSummary[]>();
+    for (const log of logsNeedingResolve) {
       const name = log.memberName ?? 'unknown';
       if (!byMember.has(name)) byMember.set(name, []);
       byMember.get(name)!.push(log);
@@ -715,7 +815,8 @@ export class ChangeExtractorService {
   private async extractFilteredChanges(
     logRefs: LogFileRef[],
     allowedToolUseIds: Set<string>,
-    projectPath?: string
+    projectPath?: string,
+    includeDetails = true
   ): Promise<FileChangeSummary[]> {
     const allSnippets: SnippetDiff[] = [];
     for (const ref of logRefs) {
@@ -731,17 +832,18 @@ export class ChangeExtractorService {
         allSnippets.push(...snippets);
       }
     }
-    return this.aggregateByFile(allSnippets, projectPath);
+    return this.aggregateByFile(allSnippets, projectPath, includeDetails);
   }
 
   /** Извлечь все изменения из одного файла */
   private async extractAllChanges(
     filePath: string,
     _memberName: string,
-    projectPath?: string
+    projectPath?: string,
+    includeDetails = true
   ): Promise<FileChangeSummary[]> {
     const snippets = await this.parseJSONLFile(filePath);
-    return this.aggregateByFile(snippets, projectPath);
+    return this.aggregateByFile(snippets, projectPath, includeDetails);
   }
 
   /** Fallback: вернуть все изменения из лог-файлов как Tier 4 */
@@ -749,11 +851,17 @@ export class ChangeExtractorService {
     teamName: string,
     taskId: string,
     logRefs: LogFileRef[],
-    projectPath?: string
+    projectPath?: string,
+    includeDetails = true
   ): Promise<TaskChangeSetV2> {
     const allFiles: FileChangeSummary[] = [];
     for (const ref of logRefs) {
-      const files = await this.extractAllChanges(ref.filePath, ref.memberName, projectPath);
+      const files = await this.extractAllChanges(
+        ref.filePath,
+        ref.memberName,
+        projectPath,
+        includeDetails
+      );
       allFiles.push(...files);
     }
 

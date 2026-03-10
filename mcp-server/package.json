@@ -1,7 +1,7 @@
 {
   "name": "agent-teams-mcp",
   "version": "1.0.0",
-  "description": "MCP server for managing Claude Agent Teams kanban board and tasks via teamctl CLI",
+  "description": "MCP server for managing Claude Agent Teams through the agent-teams-controller API",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -27,12 +27,16 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsx src/index.ts",
+    "lint": "eslint \"src/**/*.ts\"",
     "test": "vitest run",
+    "test:e2e": "pnpm build && vitest run test/stdio.e2e.test.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "typecheck:test": "tsc --noEmit -p tsconfig.test.json",
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
+    "agent-teams-controller": "workspace:*",
     "fastmcp": "^3.34.0",
     "zod": "^4.3.6"
   },

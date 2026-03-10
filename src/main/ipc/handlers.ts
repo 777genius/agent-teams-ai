@@ -28,7 +28,17 @@ import {
   registerContextHandlers,
   removeContextHandlers,
 } from './context';
+import {
+  initializeCrossTeamHandlers,
+  registerCrossTeamHandlers,
+  removeCrossTeamHandlers,
+} from './crossTeam';
 import { initializeEditorHandlers, registerEditorHandlers, removeEditorHandlers } from './editor';
+import {
+  initializeExtensionHandlers,
+  registerExtensionHandlers,
+  removeExtensionHandlers,
+} from './extensions';
 import {
   initializeHttpServerHandlers,
   registerHttpServerHandlers,
@@ -44,6 +54,11 @@ import {
 } from './projects';
 import { registerRendererLogHandlers, removeRendererLogHandlers } from './rendererLogs';
 import { initializeReviewHandlers, registerReviewHandlers, removeReviewHandlers } from './review';
+import {
+  initializeScheduleHandlers,
+  registerScheduleHandlers,
+  removeScheduleHandlers,
+} from './schedule';
 import { initializeSearchHandlers, registerSearchHandlers, removeSearchHandlers } from './search';
 import {
   initializeSessionHandlers,
@@ -88,6 +103,12 @@ import type {
   UpdaterService,
 } from '../services';
 import type { HttpServer } from '../services/infrastructure/HttpServer';
+import type { CrossTeamService } from '../services/team/CrossTeamService';
+import type { ExtensionFacadeService } from '../services/extensions/ExtensionFacadeService';
+import type { McpInstallService } from '../services/extensions/install/McpInstallService';
+import type { PluginInstallService } from '../services/extensions/install/PluginInstallService';
+import type { ApiKeyService } from '../services/extensions/apikeys/ApiKeyService';
+import type { SchedulerService } from '../services/schedule/SchedulerService';
 
 /**
  * Initializes IPC handlers with service registry.
@@ -114,7 +135,13 @@ export function initializeIpcHandlers(
   reviewApplier?: ReviewApplierService,
   gitDiffFallback?: GitDiffFallback,
   cliInstaller?: CliInstallerService,
-  ptyTerminal?: PtyTerminalService
+  ptyTerminal?: PtyTerminalService,
+  schedulerService?: SchedulerService,
+  extensionFacade?: ExtensionFacadeService,
+  pluginInstaller?: PluginInstallService,
+  mcpInstaller?: McpInstallService,
+  apiKeyService?: ApiKeyService,
+  crossTeamService?: CrossTeamService
 ): void {
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -146,6 +173,15 @@ export function initializeIpcHandlers(
     initializeTerminalHandlers(ptyTerminal);
   }
   initializeEditorHandlers();
+  if (schedulerService) {
+    initializeScheduleHandlers(schedulerService);
+  }
+  if (extensionFacade) {
+    initializeExtensionHandlers(extensionFacade, pluginInstaller, mcpInstaller, apiKeyService);
+  }
+  if (crossTeamService) {
+    initializeCrossTeamHandlers(crossTeamService);
+  }
 
   if (changeExtractor) {
     initializeReviewHandlers({
@@ -173,6 +209,7 @@ export function initializeIpcHandlers(
   registerEditorHandlers(ipcMain);
   registerWindowHandlers(ipcMain);
   registerRendererLogHandlers(ipcMain);
+  registerScheduleHandlers(ipcMain);
   if (cliInstaller) {
     registerCliInstallerHandlers(ipcMain);
   }
@@ -181,6 +218,12 @@ export function initializeIpcHandlers(
   }
   if (httpServerDeps) {
     registerHttpServerHandlers(ipcMain);
+  }
+  if (extensionFacade) {
+    registerExtensionHandlers(ipcMain);
+  }
+  if (crossTeamService) {
+    registerCrossTeamHandlers(ipcMain);
   }
 
   logger.info('All handlers registered');
@@ -207,9 +250,12 @@ export function removeIpcHandlers(): void {
   removeEditorHandlers(ipcMain);
   removeWindowHandlers(ipcMain);
   removeRendererLogHandlers(ipcMain);
+  removeScheduleHandlers(ipcMain);
   removeCliInstallerHandlers(ipcMain);
   removeTerminalHandlers(ipcMain);
   removeHttpServerHandlers(ipcMain);
+  removeExtensionHandlers(ipcMain);
+  removeCrossTeamHandlers(ipcMain);
 
   logger.info('All handlers removed');
 }

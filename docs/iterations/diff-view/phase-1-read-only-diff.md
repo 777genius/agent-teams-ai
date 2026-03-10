@@ -135,7 +135,7 @@ export class ChangeExtractorService {
 2. Парсить файлы, ища маркеры `TaskUpdate` tool_use:
    - `input.taskId === taskId && input.status === 'in_progress'` → начало
    - `input.taskId === taskId && input.status === 'completed'` → конец
-3. Альтернативно: Bash teamctl `task start|complete <id>` (regex)
+3. Альтернативно: исторические Bash teamctl логи `task start|complete <id>` (regex)
 4. Все tool_use Edit/Write между start и end маркерами = изменения задачи
 5. Если 86% кейс (1 задача в сессии): вся сессия = задача
 

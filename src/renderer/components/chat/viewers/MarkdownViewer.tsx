@@ -3,6 +3,7 @@ import ReactMarkdown, { type Components, defaultUrlTransform } from 'react-markd
 
 import { api } from '@renderer/api';
 import { CopyButton } from '@renderer/components/common/CopyButton';
+import { MemberHoverCard } from '@renderer/components/team/members/MemberHoverCard';
 import { TaskTooltip } from '@renderer/components/team/TaskTooltip';
 import {
   CODE_BG,
@@ -27,7 +28,7 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { REHYPE_PLUGINS, REHYPE_PLUGINS_NO_HIGHLIGHT } from '@renderer/utils/markdownPlugins';
-import { FileText } from 'lucide-react';
+import { FileText, UsersRound } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -66,11 +67,12 @@ interface MarkdownViewerProps {
 // =============================================================================
 
 /**
- * Custom URL transform that preserves task:// and mention:// protocols.
+ * Custom URL transform that preserves task://, mention://, and team:// protocols.
  * react-markdown v10 strips non-standard protocols by default.
  */
 function allowCustomProtocols(url: string): string {
-  if (url.startsWith('task://') || url.startsWith('mention://')) return url;
+  if (url.startsWith('task://') || url.startsWith('mention://') || url.startsWith('team://'))
+    return url;
   return defaultUrlTransform(url);
 }
 
@@ -212,14 +214,16 @@ function createViewerMarkdownComponents(
         const path = href.slice('mention://'.length);
         const slashIdx = path.indexOf('/');
         let color = '';
+        let memberName = '';
         try {
           color = slashIdx >= 0 ? decodeURIComponent(path.slice(0, slashIdx)) : '';
+          memberName = slashIdx >= 0 ? decodeURIComponent(path.slice(slashIdx + 1)) : '';
         } catch {
-          // malformed percent-encoding — use empty color
+          // malformed percent-encoding — use empty color/name
         }
         const colorSet = getTeamColorSet(color);
         const bg = getThemedBadge(colorSet, isLight);
-        return (
+        const badge = (
           <span
             style={{
               backgroundColor: bg,
@@ -227,11 +231,20 @@ function createViewerMarkdownComponents(
               borderRadius: '3px',
               boxShadow: `0 0 0 1.5px ${bg}`,
               fontSize: 'inherit',
+              cursor: 'default',
             }}
           >
             {children}
           </span>
         );
+        if (memberName) {
+          return (
+            <MemberHoverCard name={memberName} color={color}>
+              {badge}
+            </MemberHoverCard>
+          );
+        }
+        return badge;
       }
       if (href?.startsWith('task://')) {
         const taskId = href.slice('task://'.length);

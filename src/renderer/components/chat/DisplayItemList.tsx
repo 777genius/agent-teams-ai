@@ -104,9 +104,7 @@ export const DisplayItemList = ({
   return (
     <div
       className={
-        order === 'newest-first'
-          ? 'min-w-0 flex flex-col-reverse gap-2'
-          : 'min-w-0 space-y-2'
+        order === 'newest-first' ? 'flex min-w-0 flex-col-reverse gap-2' : 'min-w-0 space-y-2'
       }
     >
       {items.map((item, index) => {
@@ -132,6 +130,7 @@ export const DisplayItemList = ({
                 preview={truncateText(item.content, 150)}
                 onClick={() => onItemClick(itemKey)}
                 isExpanded={expandedItemIds.has(itemKey)}
+                timestamp={item.timestamp}
                 markdownItemId={searchQueryOverride ? `${aiGroupId}:${itemKey}` : undefined}
                 searchQueryOverride={searchQueryOverride}
               />
@@ -157,6 +156,7 @@ export const DisplayItemList = ({
                 preview={truncateText(item.content, 150)}
                 onClick={() => onItemClick(itemKey)}
                 isExpanded={expandedItemIds.has(itemKey)}
+                timestamp={item.timestamp}
                 markdownItemId={searchQueryOverride ? `${aiGroupId}:${itemKey}` : undefined}
                 searchQueryOverride={searchQueryOverride}
               />
@@ -171,6 +171,7 @@ export const DisplayItemList = ({
                 linkedTool={item.tool}
                 onClick={() => onItemClick(itemKey)}
                 isExpanded={expandedItemIds.has(itemKey)}
+                timestamp={item.tool.startTime}
                 searchQueryOverride={searchQueryOverride}
                 isHighlighted={highlightToolUseId === item.tool.id}
                 highlightColor={highlightColor}
@@ -221,6 +222,7 @@ export const DisplayItemList = ({
                 slash={item.slash}
                 onClick={() => onItemClick(itemKey)}
                 isExpanded={expandedItemIds.has(itemKey)}
+                timestamp={item.slash.timestamp}
               />
             );
             break;
@@ -249,6 +251,7 @@ export const DisplayItemList = ({
                 label="Input"
                 summary={truncateText(inputContent, 80)}
                 tokenCount={inputTokenCount}
+                timestamp={item.timestamp}
                 onClick={() => onItemClick(itemKey)}
                 isExpanded={expandedItemIds.has(itemKey)}
               >

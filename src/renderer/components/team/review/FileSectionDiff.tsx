@@ -116,9 +116,12 @@ export const FileSectionDiff = ({
   return (
     <div className="overflow-auto">
       {isMissingOnDisk && (
-        <div className="border-b border-border bg-red-500/10 px-4 py-2 text-xs text-red-200">
+        <div
+          className="border-b border-border bg-red-500/10 px-4 py-2 text-xs"
+          style={{ color: 'var(--diff-removed-text)' }}
+        >
           File is missing on disk. This diff may be only a preview from agent logs. Use{' '}
-          <span className="font-medium text-red-100">Restore</span> to create the file on disk.
+          <span className="font-medium">Restore</span> to create the file on disk.
         </div>
       )}
       <DiffErrorBoundary

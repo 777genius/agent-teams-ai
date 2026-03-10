@@ -97,6 +97,7 @@ export const ExecutionTrace: React.FC<ExecutionTraceProps> = ({
                 preview={preview}
                 onClick={() => handleItemClick(itemId)}
                 isExpanded={isExpanded}
+                timestamp={item.timestamp}
               />
             );
           }
@@ -122,6 +123,7 @@ export const ExecutionTrace: React.FC<ExecutionTraceProps> = ({
                 preview={preview}
                 onClick={() => handleItemClick(itemId)}
                 isExpanded={isExpanded}
+                timestamp={item.timestamp}
               />
             );
           }
@@ -136,6 +138,7 @@ export const ExecutionTrace: React.FC<ExecutionTraceProps> = ({
                 linkedTool={item.tool}
                 onClick={() => handleItemClick(itemId)}
                 isExpanded={isExpanded}
+                timestamp={item.tool.startTime}
                 isHighlighted={isHighlighted}
                 highlightColor={highlightColor}
                 notificationDotColor={notificationColorMap?.get(item.tool.id)}
@@ -167,6 +170,7 @@ export const ExecutionTrace: React.FC<ExecutionTraceProps> = ({
                 label="Input"
                 summary={truncateText(item.content, 80)}
                 tokenCount={item.tokenCount}
+                timestamp={item.timestamp}
                 onClick={() => handleItemClick(itemId)}
                 isExpanded={isExpanded}
               >

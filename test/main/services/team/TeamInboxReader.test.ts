@@ -96,6 +96,7 @@ describe('TeamInboxReader', () => {
           text: 'older',
           timestamp: '2026-01-01T00:00:00.000Z',
           read: false,
+          messageId: 'm-1',
         },
       ])
     );
@@ -107,6 +108,7 @@ describe('TeamInboxReader', () => {
           text: 'newer',
           timestamp: '2026-01-02T00:00:00.000Z',
           read: false,
+          messageId: 'm-2',
         },
       ])
     );
@@ -115,5 +117,31 @@ describe('TeamInboxReader', () => {
     expect(merged).toHaveLength(2);
     expect(merged[0].text).toBe('newer');
     expect(merged[1].text).toBe('older');
+  });
+
+  it('ignores legacy inbox rows without messageId', async () => {
+    hoisted.files.set(
+      '/mock/teams/my-team/inboxes/alice.json',
+      JSON.stringify([
+        {
+          from: 'alice',
+          text: 'legacy',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          read: false,
+        },
+        {
+          from: 'alice',
+          text: 'supported',
+          timestamp: '2026-01-01T01:00:00.000Z',
+          read: false,
+          messageId: 'm-1',
+        },
+      ])
+    );
+
+    const messages = await reader.getMessagesFor('my-team', 'alice');
+    expect(messages).toHaveLength(1);
+    expect(messages[0].text).toBe('supported');
+    expect(messages[0].messageId).toBe('m-1');
   });
 });

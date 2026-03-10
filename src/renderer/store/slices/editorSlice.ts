@@ -248,6 +248,8 @@ export interface EditorSlice {
   editorPendingRevealFile: string | null;
   /** Request to reveal a file in the editor. Opens editor overlay if needed. */
   revealFileInEditor: (filePath: string) => void;
+  /** Request to reveal a folder in the editor tree. Expands parent dirs + the folder itself. */
+  revealFolderInEditor: (folderPath: string) => void;
   /** Process the pending reveal: expand parent dirs and open the file tab. */
   revealAndOpenFile: (filePath: string) => Promise<void>;
   clearPendingRevealFile: () => void;
@@ -311,6 +313,39 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
 
   revealFileInEditor: (filePath: string) => {
     set({ editorPendingRevealFile: filePath });
+  },
+
+  revealFolderInEditor: (folderPath: string) => {
+    // Set pending reveal so EditorFileTree scrolls to the folder
+    set({ editorPendingRevealFile: folderPath });
+
+    // Expand parent dirs + the folder itself
+    const { editorProjectPath, editorFileTree, expandDirectory } = get();
+    if (!editorProjectPath || !editorFileTree) return;
+
+    const root = stripTrailingSeparators(editorProjectPath);
+    const rootParts = splitPath(root);
+    const folderParts = splitPath(folderPath);
+    const win = isWindowsishPath(root);
+    const eq = (a: string, b: string): boolean =>
+      win ? a.toLowerCase() === b.toLowerCase() : a === b;
+    const hasPrefix =
+      folderParts.length >= rootParts.length &&
+      rootParts.every((seg, i) => eq(seg, folderParts[i]));
+
+    if (hasPrefix) {
+      const segments = folderParts.slice(rootParts.length);
+      let currentDir = root;
+      // Expand each segment including the folder itself
+      const doExpand = async (): Promise<void> => {
+        for (const seg of segments) {
+          currentDir = joinPath(currentDir, seg);
+          await expandDirectory(currentDir);
+        }
+        set({ editorPendingRevealFile: null });
+      };
+      void doExpand();
+    }
   },
 
   clearPendingRevealFile: () => {

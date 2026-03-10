@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 
 import { isElectronMode } from '@renderer/api';
-import { Bell, HardDrive, Server, Settings, Wrench } from 'lucide-react';
+import { Bell, Server, Settings, Wrench } from 'lucide-react';
 
-export type SettingsSection = 'general' | 'connection' | 'workspace' | 'notifications' | 'advanced';
+export type SettingsSection = 'general' | 'connection' | 'notifications' | 'advanced';
 
 interface SettingsTabsProps {
   activeSection: SettingsSection;
@@ -19,8 +19,7 @@ interface TabConfig {
 
 const tabs: TabConfig[] = [
   { id: 'general', label: 'General', icon: Settings },
-  { id: 'connection', label: 'Connection', icon: Server, electronOnly: true },
-  { id: 'workspace', label: 'Workspaces', icon: HardDrive, electronOnly: true },
+  // { id: 'connection', label: 'Connection', icon: Server, electronOnly: true },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'advanced', label: 'Advanced', icon: Wrench },
 ];
@@ -37,7 +36,7 @@ export const SettingsTabs = ({
   );
 
   return (
-    <div className="inline-flex gap-1 border-b" style={{ borderColor: 'var(--color-border)' }}>
+    <div className="flex gap-1 border-b" style={{ borderColor: 'var(--color-border)' }}>
       {visibleTabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeSection === tab.id;

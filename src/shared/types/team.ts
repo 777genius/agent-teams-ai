@@ -56,6 +56,7 @@ export interface TeamSummary {
 }
 
 export type TeamTaskStatus = 'pending' | 'in_progress' | 'completed' | 'deleted';
+export type TeamReviewState = 'none' | 'review' | 'needsFix' | 'approved';
 
 export interface TaskWorkInterval {
   /** ISO timestamp when task entered in_progress */
@@ -64,17 +65,55 @@ export interface TaskWorkInterval {
   completedAt?: string;
 }
 
-/** Records a single status transition for audit/timeline display. */
-export interface StatusTransition {
-  /** Previous status (null for initial creation). */
-  from: TeamTaskStatus | null;
-  /** New status after the transition. */
-  to: TeamTaskStatus;
-  /** ISO timestamp when the transition occurred. */
+// ---------------------------------------------------------------------------
+// Task History Events — unified workflow event log
+// ---------------------------------------------------------------------------
+
+interface TaskHistoryEventBase {
+  id: string;
   timestamp: string;
-  /** Who triggered the change: member name, 'user', or undefined if unknown. */
   actor?: string;
 }
+
+export interface TaskCreatedEvent extends TaskHistoryEventBase {
+  type: 'task_created';
+  status: TeamTaskStatus;
+}
+
+export interface TaskStatusChangedEvent extends TaskHistoryEventBase {
+  type: 'status_changed';
+  from: TeamTaskStatus;
+  to: TeamTaskStatus;
+}
+
+export interface TaskReviewRequestedEvent extends TaskHistoryEventBase {
+  type: 'review_requested';
+  from: TeamReviewState;
+  to: 'review';
+  reviewer?: string;
+  note?: string;
+}
+
+export interface TaskReviewChangesRequestedEvent extends TaskHistoryEventBase {
+  type: 'review_changes_requested';
+  from: TeamReviewState;
+  to: 'needsFix';
+  note?: string;
+}
+
+export interface TaskReviewApprovedEvent extends TaskHistoryEventBase {
+  type: 'review_approved';
+  from: TeamReviewState;
+  to: 'approved';
+  note?: string;
+}
+
+export type TaskHistoryEvent =
+  | TaskCreatedEvent
+  | TaskStatusChangedEvent
+  | TaskReviewRequestedEvent
+  | TaskReviewChangesRequestedEvent
+  | TaskReviewApprovedEvent;
 
 export type TaskCommentType = 'regular' | 'review_request' | 'review_approved';
 
@@ -92,6 +131,8 @@ export interface TaskComment {
 // Adding a field here without mapping it there will cause a compile error.
 export interface TeamTask {
   id: string;
+  /** Human-friendly short task label shown in UI. Canonical identity remains `id`. */
+  displayId?: string;
   subject: string;
   description?: string;
   activeForm?: string;
@@ -104,11 +145,10 @@ export interface TeamTask {
    */
   workIntervals?: TaskWorkInterval[];
   /**
-   * Chronological record of every status change.
-   * Append-only — each transition records from, to, timestamp, actor.
-   * Optional for backwards compatibility with pre-existing tasks.
+   * Unified workflow event log.
+   * Append-only — records task creation, status changes, and review transitions.
    */
-  statusHistory?: StatusTransition[];
+  historyEvents?: TaskHistoryEvent[];
   blocks?: string[];
   blockedBy?: string[];
   /**
@@ -127,12 +167,16 @@ export interface TeamTask {
   deletedAt?: string;
   /** Attachments associated with this task. Metadata only — actual files stored on disk. */
   attachments?: TaskAttachmentMeta[];
+  /** Derived review state — computed from historyEvents, not persisted as authority. */
+  reviewState?: TeamReviewState;
 }
 
 /** Task enriched for UI/DTO use (overlay from kanban-state.json). */
 export interface TeamTaskWithKanban extends TeamTask {
   /** Set when task is in team kanban (review or approved column). */
   kanbanColumn?: 'review' | 'approved';
+  /** Reviewer assigned in kanban state, when applicable. */
+  reviewer?: string | null;
 }
 
 /** Metadata for an attachment associated with a task or comment. */
@@ -203,34 +247,67 @@ export interface InboxMessage {
   summary?: string;
   color?: string;
   messageId?: string;
-  source?: 'inbox' | 'lead_session' | 'lead_process' | 'user_sent' | 'system_notification';
+  source?:
+    | 'inbox'
+    | 'lead_session'
+    | 'lead_process'
+    | 'user_sent'
+    | 'system_notification'
+    | 'cross_team'
+    | 'cross_team_sent';
   attachments?: AttachmentMeta[];
   /** Lead session ID that produced this message (for session boundary detection). */
   leadSessionId?: string;
+  /** Stable cross-team thread ID shared across request/reply turns. */
+  conversationId?: string;
+  /** Explicit parent conversation/message reference for replies. */
+  replyToConversationId?: string;
   /** Tool usage summary from assistant message, e.g. "3 tools (2 Read, Bash)" */
   toolSummary?: string;
   /** Structured tool call details for tooltip display. */
   toolCalls?: ToolCallMeta[];
 }
 
+export type AgentActionMode = 'do' | 'ask' | 'delegate';
+
 export interface SendMessageRequest {
   member: string;
   text: string;
+  actionMode?: AgentActionMode;
   summary?: string;
   from?: string;
+  timestamp?: string;
+  messageId?: string;
+  /** Override the `to` field in the stored message (defaults to `member`). */
+  to?: string;
+  color?: string;
   attachments?: AttachmentPayload[];
   source?: InboxMessage['source'];
   /** Lead session ID for session boundary detection. */
   leadSessionId?: string;
+  conversationId?: string;
+  replyToConversationId?: string;
+  toolSummary?: string;
+  toolCalls?: ToolCallMeta[];
 }
 
 export interface SendMessageResult {
   deliveredToInbox: boolean;
   deliveredViaStdin?: boolean;
   messageId: string;
+  deduplicated?: boolean;
 }
 
 export type MemberStatus = 'active' | 'idle' | 'terminated' | 'unknown';
+
+/**
+ * Spawn lifecycle status for a team member during team launch/reconnect.
+ * - offline: not yet spawned (no Agent tool_use seen)
+ * - spawning: Agent tool_use sent, awaiting tool_result
+ * - online: tool_result received, agent is active
+ * - error: spawn failed (tool_result with error)
+ */
+export type MemberSpawnStatus = 'offline' | 'spawning' | 'online' | 'error';
 
 export type KanbanColumnId = 'todo' | 'in_progress' | 'done' | 'review' | 'approved';
 
@@ -308,6 +385,10 @@ export interface TeamLaunchRequest {
   clearContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
   skipPermissions?: boolean;
+  /** Worktree name — CLI: --worktree <name>. */
+  worktree?: string;
+  /** Raw custom CLI args string, shell-split and appended to CLI command. */
+  extraCliArgs?: string;
 }
 
 export interface TeamLaunchResponse {
@@ -338,9 +419,26 @@ export interface LeadContextUsage {
 }
 
 export interface TeamChangeEvent {
-  type: 'config' | 'inbox' | 'task' | 'lead-activity' | 'lead-context' | 'process';
+  type:
+    | 'config'
+    | 'inbox'
+    | 'task'
+    | 'lead-activity'
+    | 'lead-context'
+    | 'lead-message'
+    | 'process'
+    | 'member-spawn';
   teamName: string;
   detail?: string;
+}
+
+/** Per-member spawn status entry, exposed to renderer via IPC. */
+export interface MemberSpawnStatusEntry {
+  status: MemberSpawnStatus;
+  /** Error message when status === 'error'. */
+  error?: string;
+  /** ISO timestamp of the last status change. */
+  updatedAt: string;
 }
 
 export interface TeamClaudeLogsQuery {
@@ -391,6 +489,10 @@ export interface TeamCreateRequest {
   effort?: EffortLevel;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
   skipPermissions?: boolean;
+  /** Worktree name — CLI: --worktree <name>. */
+  worktree?: string;
+  /** Raw custom CLI args string, shell-split and appended to CLI command. */
+  extraCliArgs?: string;
 }
 
 export interface TeamCreateConfigRequest {
@@ -459,6 +561,8 @@ export interface MemberLogSummaryBase {
   durationMs: number;
   messageCount: number;
   isOngoing: boolean;
+  /** Absolute path to JSONL file when known (avoids redundant findMemberLogPaths scan). */
+  filePath?: string;
 }
 
 export interface MemberSubagentLogSummary extends MemberLogSummaryBase {
@@ -541,6 +645,43 @@ export interface TeamMessageNotificationData {
 }
 
 // =============================================================================
+// Cross-Team Communication
+// =============================================================================
+
+export interface CrossTeamMessage {
+  messageId: string;
+  fromTeam: string;
+  fromMember: string;
+  toTeam: string;
+  conversationId?: string;
+  replyToConversationId?: string;
+  text: string;
+  summary?: string;
+  chainDepth: number;
+  timestamp: string;
+}
+
+export interface CrossTeamSendRequest {
+  fromTeam: string;
+  fromMember: string;
+  toTeam: string;
+  timestamp?: string;
+  messageId?: string;
+  conversationId?: string;
+  replyToConversationId?: string;
+  text: string;
+  actionMode?: AgentActionMode;
+  summary?: string;
+  chainDepth?: number;
+}
+
+export interface CrossTeamSendResult {
+  messageId: string;
+  deliveredToInbox: boolean;
+  deduplicated?: boolean;
+}
+
+// =============================================================================
 // Tool Approval (control_request / control_response protocol)
 // =============================================================================
 
@@ -568,5 +709,43 @@ export interface ToolApprovalDismiss {
   runId: string;
 }
 
+// ---------------------------------------------------------------------------
+// Tool Approval Settings
+// ---------------------------------------------------------------------------
+
+/** Timeout behavior for unanswered tool approval requests. */
+export type ToolApprovalTimeoutAction = 'allow' | 'deny' | 'wait';
+
+/** User-configurable auto-allow settings for tool approval. */
+export interface ToolApprovalSettings {
+  /** Auto-allow file edit tools (Edit, Write, NotebookEdit). */
+  autoAllowFileEdits: boolean;
+  /** Auto-allow safe bash commands (git, pnpm, npm, ls, cat, echo, etc.). */
+  autoAllowSafeBash: boolean;
+  /** Timeout behavior when user doesn't respond. */
+  timeoutAction: ToolApprovalTimeoutAction;
+  /** Timeout seconds (used when timeoutAction !== 'wait'). */
+  timeoutSeconds: number;
+}
+
+export const DEFAULT_TOOL_APPROVAL_SETTINGS: ToolApprovalSettings = {
+  autoAllowFileEdits: false,
+  autoAllowSafeBash: false,
+  timeoutAction: 'wait',
+  timeoutSeconds: 30,
+};
+
+/** Event pushed when a pending approval was auto-resolved (timeout or auto-allow). */
+export interface ToolApprovalAutoResolved {
+  autoResolved: true;
+  requestId: string;
+  runId: string;
+  teamName: string;
+  reason: 'auto_allow_category' | 'timeout_allow' | 'timeout_deny';
+}
+
 /** Union of approval events pushed from main to renderer. */
-export type ToolApprovalEvent = ToolApprovalRequest | ToolApprovalDismiss;
+export type ToolApprovalEvent =
+  | ToolApprovalRequest
+  | ToolApprovalDismiss
+  | ToolApprovalAutoResolved;

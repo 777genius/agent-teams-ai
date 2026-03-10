@@ -15,7 +15,7 @@ import { isElectronMode } from '@renderer/api';
 import { HEADER_ROW1_HEIGHT } from '@renderer/constants/layout';
 import { useStore } from '@renderer/store';
 import { formatShortcut } from '@renderer/utils/stringUtils';
-import { Bell, PanelLeft, Plus, RefreshCw, Settings, Users } from 'lucide-react';
+import { Bell, Calendar, PanelLeft, Plus, Puzzle, RefreshCw, Settings, Users } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { MoreMenu } from './MoreMenu';
@@ -44,6 +44,8 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
     unreadCount,
     openNotificationsTab,
     openTeamsTab,
+    openExtensionsTab,
+    openSchedulesTab,
     openSettingsTab,
     sidebarCollapsed,
     toggleSidebar,
@@ -71,6 +73,8 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
       unreadCount: s.unreadCount,
       openNotificationsTab: s.openNotificationsTab,
       openTeamsTab: s.openTeamsTab,
+      openExtensionsTab: s.openExtensionsTab,
+      openSchedulesTab: s.openSchedulesTab,
       openSettingsTab: s.openSettingsTab,
       sidebarCollapsed: s.sidebarCollapsed,
       toggleSidebar: s.toggleSidebar,
@@ -104,6 +108,8 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
   const [newTabHover, setNewTabHover] = useState(false);
   const [notificationsHover, setNotificationsHover] = useState(false);
   const [teamsHover, setTeamsHover] = useState(false);
+  const [schedulesHover, setSchedulesHover] = useState(false);
+  const [extensionsHover, setExtensionsHover] = useState(false);
   const [githubHover, setGithubHover] = useState(false);
   const [settingsHover, setSettingsHover] = useState(false);
 
@@ -414,6 +420,36 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
           title="Teams"
         >
           <Users className="size-4" />
+        </button>
+
+        {/* Schedules icon */}
+        <button
+          onClick={openSchedulesTab}
+          onMouseEnter={() => setSchedulesHover(true)}
+          onMouseLeave={() => setSchedulesHover(false)}
+          className="rounded-md p-2 transition-colors"
+          style={{
+            color: schedulesHover ? 'var(--color-text)' : 'var(--color-text-muted)',
+            backgroundColor: schedulesHover ? 'var(--color-surface-raised)' : 'transparent',
+          }}
+          title="Schedules"
+        >
+          <Calendar className="size-4" />
+        </button>
+
+        {/* Extensions icon */}
+        <button
+          onClick={openExtensionsTab}
+          onMouseEnter={() => setExtensionsHover(true)}
+          onMouseLeave={() => setExtensionsHover(false)}
+          className="rounded-md p-2 transition-colors"
+          style={{
+            color: extensionsHover ? 'var(--color-text)' : 'var(--color-text-muted)',
+            backgroundColor: extensionsHover ? 'var(--color-surface-raised)' : 'transparent',
+          }}
+          title="Extensions"
+        >
+          <Puzzle className="size-4" />
         </button>
 
         {/* GitHub link */}

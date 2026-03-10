@@ -588,4 +588,65 @@ describe('TeamMemberLogsFinder', () => {
       logsForA.some((l) => l.kind === 'subagent' && l.memberName?.toLowerCase() === 'bob')
     ).toBe(false);
   });
+
+  it('detects structured task markers and ignores legacy teamctl command lines', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-marker-logs-'));
+
+    const structuredPath = path.join(tmpDir, 'structured.jsonl');
+    await fs.writeFile(
+      structuredPath,
+      JSON.stringify({
+        timestamp: '2026-01-01T00:00:00.000Z',
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              name: 'task_start',
+              input: { teamName: 'demo', taskId: 'task-42' },
+            },
+          ],
+        },
+      }) + '\n',
+      'utf8'
+    );
+
+    const legacyPath = path.join(tmpDir, 'legacy.jsonl');
+    await fs.writeFile(
+      legacyPath,
+      JSON.stringify({
+        timestamp: '2026-01-01T00:00:01.000Z',
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              name: 'Bash',
+              input: { command: 'node \"teamctl.js\" --team demo task start task-42' },
+            },
+          ],
+        },
+      }) + '\n',
+      'utf8'
+    );
+
+    const noisePath = path.join(tmpDir, 'noise.jsonl');
+    await fs.writeFile(
+      noisePath,
+      JSON.stringify({
+        timestamp: '2026-01-01T00:00:02.000Z',
+        type: 'assistant',
+        message: { role: 'assistant', content: [{ type: 'text', text: 'No task markers here' }] },
+      }) + '\n',
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+
+    await expect(finder.hasTaskUpdateMarker(structuredPath, 'task-42')).resolves.toBe(true);
+    await expect(finder.hasTaskUpdateMarker(legacyPath, 'task-42')).resolves.toBe(false);
+    await expect(finder.hasTaskUpdateMarker(noisePath, 'task-42')).resolves.toBe(false);
+  });
 });

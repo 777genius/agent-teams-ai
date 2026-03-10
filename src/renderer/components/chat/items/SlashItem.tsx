@@ -13,6 +13,8 @@ interface SlashItemProps {
   slash: SlashItemType;
   onClick: () => void;
   isExpanded: boolean;
+  /** Timestamp for display */
+  timestamp?: Date;
   /** Additional classes for highlighting (e.g., error deep linking) */
   highlightClasses?: string;
   /** Inline styles for highlighting (used by custom hex colors) */
@@ -34,6 +36,7 @@ export const SlashItem: React.FC<SlashItemProps> = ({
   slash,
   onClick,
   isExpanded,
+  timestamp,
   highlightClasses,
   highlightStyle,
   notificationDotColor,
@@ -51,6 +54,7 @@ export const SlashItem: React.FC<SlashItemProps> = ({
       tokenCount={slash.instructionsTokenCount}
       tokenLabel="tokens"
       status={hasInstructions ? 'ok' : undefined}
+      timestamp={timestamp}
       onClick={onClick}
       isExpanded={isExpanded}
       hasExpandableContent={hasInstructions}

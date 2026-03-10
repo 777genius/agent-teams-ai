@@ -82,15 +82,18 @@ function computeHunkIndexAtPos(state: EditorState, pos: number): number {
 
 /** Diff-specific theme — merge toolbar, changed/deleted line backgrounds, collapse markers */
 const diffSpecificTheme = EditorView.theme({
-  '.cm-changedLine': { backgroundColor: '#1a3a1a !important' },
-  '.cm-deletedChunk': { backgroundColor: '#241517', position: 'relative', overflow: 'visible' },
-  '.cm-insertedLine': { backgroundColor: '#1a3a1a !important' },
-  '.cm-deletedLine': { backgroundColor: '#241517 !important' },
-  // Merge toolbar — absolute, Y set dynamically by mousemove handler
+  '.cm-changedLine': { backgroundColor: 'var(--diff-cm-changed-bg) !important' },
+  '.cm-deletedChunk': {
+    backgroundColor: 'var(--diff-cm-deleted-bg)',
+    position: 'relative',
+    overflow: 'visible',
+  },
+  '.cm-insertedLine': { backgroundColor: 'var(--diff-cm-changed-bg) !important' },
+  '.cm-deletedLine': { backgroundColor: 'var(--diff-cm-deleted-bg) !important' },
+  // Merge toolbar — absolute, Y and left set dynamically by JS handlers
   '.cm-deletedChunk .cm-chunkButtons': {
     position: 'absolute',
     top: '0',
-    insetInlineEnd: '8px',
     zIndex: 10,
     display: 'flex',
     justifyContent: 'flex-end',
@@ -121,7 +124,7 @@ const diffSpecificTheme = EditorView.theme({
     padding: '3px 8px',
     fontSize: '13px',
     lineHeight: '20px',
-    '&:hover': { background: 'rgba(255,255,255,0.08)' },
+    '&:hover': { background: 'var(--diff-merge-nav-hover-bg)' },
   },
   '.cm-merge-nav-counter': {
     fontSize: '12px',
@@ -136,10 +139,10 @@ const diffSpecificTheme = EditorView.theme({
     fontSize: '12px',
     fontWeight: '500',
     lineHeight: '20px',
-    color: 'var(--color-text)',
-    backgroundColor: 'var(--color-surface-raised)',
-    border: '1px solid var(--color-border)',
-    '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' },
+    color: 'var(--diff-merge-undo-color)',
+    backgroundColor: 'var(--diff-merge-undo-bg)',
+    border: '1px solid var(--diff-merge-undo-border)',
+    '&:hover': { backgroundColor: 'var(--diff-merge-undo-hover-bg)' },
     '& kbd': { fontSize: '10px', color: 'var(--color-text-muted)', marginLeft: '4px' },
   },
   '.cm-merge-keep': {
@@ -149,11 +152,11 @@ const diffSpecificTheme = EditorView.theme({
     fontSize: '12px',
     fontWeight: '500',
     lineHeight: '20px',
-    color: '#3fb950',
-    backgroundColor: 'rgba(46, 160, 67, 0.25)',
-    border: '1px solid rgba(46, 160, 67, 0.4)',
-    '&:hover': { backgroundColor: 'rgba(46, 160, 67, 0.4)' },
-    '& kbd': { fontSize: '10px', color: 'rgba(63, 185, 80, 0.7)', marginLeft: '4px' },
+    color: 'var(--diff-merge-keep-color)',
+    backgroundColor: 'var(--diff-merge-keep-bg)',
+    border: '1px solid var(--diff-merge-keep-border)',
+    '&:hover': { backgroundColor: 'var(--diff-merge-keep-hover-bg)' },
+    '& kbd': { fontSize: '10px', color: 'var(--diff-merge-keep-kbd)', marginLeft: '4px' },
   },
   // Collapse unchanged region marker
   '.cm-collapsedLines': {
@@ -463,6 +466,20 @@ export const CodeMirrorDiffView = ({
 
     // Merge toolbar: always visible for nearest chunk, follows cursor when hovering on chunk
     if (showMergeControls) {
+      // Helper: pin chunkButtons to right edge of visible viewport, accounting for horizontal scroll.
+      // Uses getBoundingClientRect() so the offset from gutters / CM content padding is handled exactly.
+      const pinToViewportRight = (btnContainer: HTMLElement, scroller: Element): void => {
+        const scrollerRect = scroller.getBoundingClientRect();
+        const chunkEl = btnContainer.parentElement;
+        if (!chunkEl) return;
+        const chunkRect = chunkEl.getBoundingClientRect();
+        const btnWidth = btnContainer.offsetWidth || 200;
+        const margin = 12;
+        // left is relative to .cm-deletedChunk — so we compute from scroller's right edge
+        btnContainer.style.left = `${scrollerRect.right - chunkRect.left - btnWidth - margin}px`;
+        btnContainer.style.right = 'auto';
+      };
+
       // Helper: position a chunkButtons container so it's below the change block,
       // but clamped to the visible viewport if that would be off-screen.
       const positionAtBottom = (chunkEl: Element, scroller: Element): void => {
@@ -478,6 +495,7 @@ export const CodeMirrorDiffView = ({
           targetY = scrollerRect.bottom - tbHeight;
         }
         btnContainer.style.top = `${targetY - parentRect.top}px`;
+        pinToViewportRight(btnContainer, scroller);
       };
 
       const positionAtCursor = (chunkEl: Element, clientY: number, scroller: Element): void => {
@@ -495,6 +513,7 @@ export const CodeMirrorDiffView = ({
           targetY = scrollerRect.top;
         }
         btnContainer.style.top = `${targetY - parentRect.top}px`;
+        pinToViewportRight(btnContainer, scroller);
       };
 
       // Find which chunk index the mouse is directly over (deleted or inserted area)
@@ -574,6 +593,20 @@ export const CodeMirrorDiffView = ({
             if (activeToolbar) {
               const chunkEl = activeToolbar.closest('.cm-deletedChunk');
               if (chunkEl) positionAtBottom(chunkEl, view.scrollDOM);
+            }
+            return false;
+          },
+          scroll(_event, view) {
+            // Reposition active toolbar on horizontal scroll so buttons stay at viewport edge
+            const activeToolbar = view.dom.querySelector('.cm-merge-toolbar-active');
+            if (activeToolbar) {
+              const chunkEl = activeToolbar.closest('.cm-deletedChunk');
+              if (chunkEl) {
+                const btnContainer = chunkEl.querySelector<HTMLElement>('.cm-chunkButtons');
+                if (btnContainer) {
+                  pinToViewportRight(btnContainer, view.scrollDOM);
+                }
+              }
             }
             return false;
           },

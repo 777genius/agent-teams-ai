@@ -130,4 +130,126 @@ describe('teamSlice actions', () => {
       'Failed to update task status (possible agent conflict).'
     );
   });
+
+  describe('refreshTeamData provisioning safety', () => {
+    it('does not set fatal error on TEAM_PROVISIONING', async () => {
+      const store = createSliceStore();
+      // First, select a team so selectedTeamName is set
+      store.setState({
+        selectedTeamName: 'my-team',
+        selectedTeamData: {
+          teamName: 'my-team',
+          config: { name: 'My Team' },
+          tasks: [],
+          members: [],
+          messages: [],
+          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        },
+        selectedTeamError: null,
+      });
+
+      hoisted.getData.mockRejectedValue(new Error('TEAM_PROVISIONING'));
+
+      await store.getState().refreshTeamData('my-team');
+
+      // Should NOT set error — team is still provisioning
+      expect(store.getState().selectedTeamError).toBeNull();
+      // Should preserve existing data
+      expect(store.getState().selectedTeamData).not.toBeNull();
+      expect(store.getState().selectedTeamData?.teamName).toBe('my-team');
+    });
+
+    it('preserves existing data on transient refresh error', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const store = createSliceStore();
+      const existingData = {
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [],
+        messages: [{ from: 'lead', text: 'Hello', timestamp: '2026-01-01T00:00:00Z' }],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      };
+      store.setState({
+        selectedTeamName: 'my-team',
+        selectedTeamData: existingData,
+        selectedTeamError: null,
+      });
+
+      hoisted.getData.mockRejectedValue(new Error('Network timeout'));
+
+      await store.getState().refreshTeamData('my-team');
+
+      // Should NOT replace data with error — preserve existing data
+      expect(store.getState().selectedTeamError).toBeNull();
+      expect(store.getState().selectedTeamData).toEqual(existingData);
+    });
+
+    it('clears stale selectedTeamError when TEAM_PROVISIONING with existing data', async () => {
+      const store = createSliceStore();
+      store.setState({
+        selectedTeamName: 'my-team',
+        selectedTeamData: {
+          teamName: 'my-team',
+          config: { name: 'My Team' },
+          tasks: [],
+          members: [],
+          messages: [],
+          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        },
+        selectedTeamError: 'Previous failure',
+      });
+
+      hoisted.getData.mockRejectedValue(new Error('TEAM_PROVISIONING'));
+
+      await store.getState().refreshTeamData('my-team');
+
+      // Stale error should be cleared even though provisioning prevents new data
+      expect(store.getState().selectedTeamError).toBeNull();
+      expect(store.getState().selectedTeamData).not.toBeNull();
+    });
+
+    it('clears stale selectedTeamError on transient error when data exists', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const store = createSliceStore();
+      const existingData = {
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [],
+        messages: [],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      };
+      store.setState({
+        selectedTeamName: 'my-team',
+        selectedTeamData: existingData,
+        selectedTeamError: 'Old stale error',
+      });
+
+      hoisted.getData.mockRejectedValue(new Error('Network timeout'));
+
+      await store.getState().refreshTeamData('my-team');
+
+      // Stale error should be cleared because we still have usable data
+      expect(store.getState().selectedTeamError).toBeNull();
+      expect(store.getState().selectedTeamData).toEqual(existingData);
+    });
+
+    it('sets error when no previous data exists', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const store = createSliceStore();
+      store.setState({
+        selectedTeamName: 'my-team',
+        selectedTeamData: null,
+        selectedTeamError: null,
+      });
+
+      hoisted.getData.mockRejectedValue(new Error('Team not found'));
+
+      await store.getState().refreshTeamData('my-team');
+
+      // No previous data — error should be shown
+      expect(store.getState().selectedTeamError).toBe('Team not found');
+    });
+  });
 });

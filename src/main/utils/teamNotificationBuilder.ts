@@ -19,7 +19,9 @@ export type TeamEventType =
   | 'lead_inbox'
   | 'user_inbox'
   | 'task_clarification'
-  | 'task_status_change';
+  | 'task_status_change'
+  | 'schedule_completed'
+  | 'schedule_failed';
 
 /**
  * Domain payload for team notifications.
@@ -59,6 +61,8 @@ const TEAM_NOTIFICATION_CONFIG: Record<TeamEventType, TeamNotificationConfig> = 
   user_inbox: { triggerName: 'User Inbox', triggerColor: 'green' },
   task_clarification: { triggerName: 'Clarification', triggerColor: 'orange' },
   task_status_change: { triggerName: 'Status Change', triggerColor: 'purple' },
+  schedule_completed: { triggerName: 'Schedule Done', triggerColor: 'green' },
+  schedule_failed: { triggerName: 'Schedule Failed', triggerColor: 'red' },
 };
 
 // =============================================================================

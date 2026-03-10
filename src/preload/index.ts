@@ -10,6 +10,9 @@ import {
   CONTEXT_GET_ACTIVE,
   CONTEXT_LIST,
   CONTEXT_SWITCH,
+  CROSS_TEAM_GET_OUTBOX,
+  CROSS_TEAM_LIST_TARGETS,
+  CROSS_TEAM_SEND,
   EDITOR_CHANGE,
   EDITOR_CLOSE,
   EDITOR_CREATE_DIR,
@@ -35,6 +38,17 @@ import {
   RENDERER_BOOT,
   RENDERER_HEARTBEAT,
   RENDERER_LOG,
+  SCHEDULE_CHANGE,
+  SCHEDULE_CREATE,
+  SCHEDULE_DELETE,
+  SCHEDULE_GET,
+  SCHEDULE_GET_RUN_LOGS,
+  SCHEDULE_GET_RUNS,
+  SCHEDULE_LIST,
+  SCHEDULE_PAUSE,
+  SCHEDULE_RESUME,
+  SCHEDULE_TRIGGER_NOW,
+  SCHEDULE_UPDATE,
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
   REVIEW_CLEAR_DECISIONS,
@@ -83,6 +97,7 @@ import {
   TEAM_LAUNCH,
   TEAM_LEAD_ACTIVITY,
   TEAM_LEAD_CONTEXT,
+  TEAM_MEMBER_SPAWN_STATUSES,
   TEAM_LIST,
   TEAM_PERMANENTLY_DELETE,
   TEAM_PREPARE_PROVISIONING,
@@ -105,6 +120,7 @@ import {
   TEAM_STOP,
   TEAM_TOOL_APPROVAL_EVENT,
   TEAM_TOOL_APPROVAL_RESPOND,
+  TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
@@ -112,6 +128,7 @@ import {
   TEAM_UPDATE_TASK_FIELDS,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
+  TEAM_VALIDATE_CLI_ARGS,
   TERMINAL_DATA,
   TERMINAL_EXIT,
   TERMINAL_KILL,
@@ -128,6 +145,23 @@ import {
   WINDOW_IS_MAXIMIZED,
   WINDOW_MAXIMIZE,
   WINDOW_MINIMIZE,
+  PLUGIN_GET_ALL,
+  PLUGIN_GET_README,
+  PLUGIN_INSTALL,
+  PLUGIN_UNINSTALL,
+  MCP_REGISTRY_SEARCH,
+  MCP_REGISTRY_BROWSE,
+  MCP_REGISTRY_GET_BY_ID,
+  MCP_REGISTRY_GET_INSTALLED,
+  MCP_REGISTRY_INSTALL,
+  MCP_REGISTRY_INSTALL_CUSTOM,
+  MCP_REGISTRY_UNINSTALL,
+  MCP_GITHUB_STARS,
+  API_KEYS_LIST,
+  API_KEYS_SAVE,
+  API_KEYS_DELETE,
+  API_KEYS_LOOKUP,
+  API_KEYS_STORAGE_STATUS,
 } from './constants/ipcChannels';
 import {
   CONFIG_ADD_CUSTOM_PROJECT_PATH,
@@ -173,7 +207,11 @@ import type {
   CommentAttachmentPayload,
   ConflictCheckResult,
   ContextInfo,
+  CreateScheduleInput,
   CreateTaskRequest,
+  CrossTeamMessage,
+  CrossTeamSendRequest,
+  CrossTeamSendResult,
   ElectronAPI,
   FileChangeWithContent,
   GlobalTask,
@@ -184,9 +222,13 @@ import type {
   LeadContextUsage,
   MemberFullStats,
   MemberLogSummary,
+  MemberSpawnStatusEntry,
   NotificationTrigger,
   RejectResult,
   ReplaceMembersRequest,
+  Schedule,
+  ScheduleChangeEvent,
+  ScheduleRun,
   SendMessageRequest,
   SendMessageResult,
   SessionsByIdsOptions,
@@ -217,10 +259,26 @@ import type {
   TeamTaskStatus,
   TeamUpdateConfigRequest,
   ToolApprovalEvent,
+  ToolApprovalSettings,
   TriggerTestResult,
   UpdateKanbanPatch,
+  UpdateSchedulePatch,
   WslClaudeRootCandidate,
 } from '@shared/types';
+import type {
+  ApiKeyEntry,
+  ApiKeyLookupResult,
+  ApiKeySaveRequest,
+  ApiKeyStorageStatus,
+  EnrichedPlugin,
+  InstalledMcpEntry,
+  McpCatalogItem,
+  McpCustomInstallRequest,
+  McpInstallRequest,
+  McpSearchResult,
+  OperationResult,
+  PluginInstallRequest,
+} from '@shared/types/extensions';
 import type {
   BinaryPreviewResult,
   CreateDirResponse,
@@ -237,6 +295,7 @@ import type {
   WriteFileResponse,
 } from '@shared/types/editor';
 import type { PtySpawnOptions } from '@shared/types/terminal';
+import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
 
 // =============================================================================
 // IPC Result Types and Helpers
@@ -859,6 +918,12 @@ const electronAPI: ElectronAPI = {
     getLeadContext: async (teamName: string) => {
       return invokeIpcWithResult<LeadContextUsage | null>(TEAM_LEAD_CONTEXT, teamName);
     },
+    getMemberSpawnStatuses: async (teamName: string) => {
+      return invokeIpcWithResult<Record<string, MemberSpawnStatusEntry>>(
+        TEAM_MEMBER_SPAWN_STATUSES,
+        teamName
+      );
+    },
     softDeleteTask: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<void>(TEAM_SOFT_DELETE_TASK, teamName, taskId);
     },
@@ -994,6 +1059,9 @@ const electronAPI: ElectronAPI = {
         message
       );
     },
+    validateCliArgs: async (rawArgs: string) => {
+      return invokeIpcWithResult<CliArgsValidationResult>(TEAM_VALIDATE_CLI_ARGS, rawArgs);
+    },
     onToolApprovalEvent: (
       callback: (event: unknown, data: ToolApprovalEvent) => void
     ): (() => void) => {
@@ -1008,9 +1076,30 @@ const electronAPI: ElectronAPI = {
         );
       };
     },
+    updateToolApprovalSettings: async (settings: ToolApprovalSettings) => {
+      return invokeIpcWithResult<void>(TEAM_TOOL_APPROVAL_SETTINGS, settings);
+    },
   },
-
-  // ===== Review API =====
+  crossTeam: {
+    send: async (request: CrossTeamSendRequest) => {
+      return invokeIpcWithResult<CrossTeamSendResult>(CROSS_TEAM_SEND, request);
+    },
+    listTargets: async (excludeTeam?: string) => {
+      return invokeIpcWithResult<
+        {
+          teamName: string;
+          displayName: string;
+          description?: string;
+          color?: string;
+          leadName?: string;
+          leadColor?: string;
+        }[]
+      >(CROSS_TEAM_LIST_TARGETS, excludeTeam);
+    },
+    getOutbox: async (teamName: string) => {
+      return invokeIpcWithResult<CrossTeamMessage[]>(CROSS_TEAM_GET_OUTBOX, teamName);
+    },
+  },
   review: {
     getAgentChanges: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<AgentChangeSet>(REVIEW_GET_AGENT_CHANGES, teamName, memberName);
@@ -1023,6 +1112,7 @@ const electronAPI: ElectronAPI = {
         status?: string;
         intervals?: { startedAt: string; completedAt?: string }[];
         since?: string;
+        summaryOnly?: boolean;
       }
     ) => {
       return invokeIpcWithResult<TaskChangeSetV2>(
@@ -1247,6 +1337,82 @@ const electronAPI: ElectronAPI = {
         ipcRenderer.removeListener(EDITOR_CHANGE, listener);
       };
     },
+  },
+
+  schedules: {
+    list: () => invokeIpcWithResult<Schedule[]>(SCHEDULE_LIST),
+    get: (id: string) => invokeIpcWithResult<Schedule | null>(SCHEDULE_GET, id),
+    create: (input: CreateScheduleInput) => invokeIpcWithResult<Schedule>(SCHEDULE_CREATE, input),
+    update: (id: string, patch: UpdateSchedulePatch) =>
+      invokeIpcWithResult<Schedule>(SCHEDULE_UPDATE, id, patch),
+    delete: (id: string) => invokeIpcWithResult<void>(SCHEDULE_DELETE, id),
+    pause: (id: string) => invokeIpcWithResult<void>(SCHEDULE_PAUSE, id),
+    resume: (id: string) => invokeIpcWithResult<void>(SCHEDULE_RESUME, id),
+    triggerNow: (id: string) => invokeIpcWithResult<ScheduleRun>(SCHEDULE_TRIGGER_NOW, id),
+    getRuns: (scheduleId: string, opts?: { limit?: number; offset?: number }) =>
+      invokeIpcWithResult<ScheduleRun[]>(SCHEDULE_GET_RUNS, scheduleId, opts),
+    getRunLogs: (scheduleId: string, runId: string) =>
+      invokeIpcWithResult<{ stdout: string; stderr: string }>(
+        SCHEDULE_GET_RUN_LOGS,
+        scheduleId,
+        runId
+      ),
+    onScheduleChange: (
+      callback: (event: unknown, data: ScheduleChangeEvent) => void
+    ): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: ScheduleChangeEvent): void =>
+        callback(null, data);
+      ipcRenderer.on(SCHEDULE_CHANGE, listener);
+      return (): void => {
+        ipcRenderer.removeListener(SCHEDULE_CHANGE, listener);
+      };
+    },
+  },
+
+  // ===== Plugin Catalog API (Electron-only) =====
+  plugins: {
+    getAll: (projectPath?: string, forceRefresh?: boolean) =>
+      invokeIpcWithResult<EnrichedPlugin[]>(PLUGIN_GET_ALL, projectPath, forceRefresh),
+    getReadme: (pluginId: string) =>
+      invokeIpcWithResult<string | null>(PLUGIN_GET_README, pluginId),
+    install: (request: PluginInstallRequest) =>
+      invokeIpcWithResult<OperationResult>(PLUGIN_INSTALL, request),
+    uninstall: (pluginId: string, scope?: string, projectPath?: string) =>
+      invokeIpcWithResult<OperationResult>(PLUGIN_UNINSTALL, pluginId, scope, projectPath),
+  },
+
+  // ===== MCP Registry API (Electron-only) =====
+  mcpRegistry: {
+    search: (query: string, limit?: number) =>
+      invokeIpcWithResult<McpSearchResult>(MCP_REGISTRY_SEARCH, query, limit),
+    browse: (cursor?: string, limit?: number) =>
+      invokeIpcWithResult<{ servers: McpCatalogItem[]; nextCursor?: string }>(
+        MCP_REGISTRY_BROWSE,
+        cursor,
+        limit
+      ),
+    getById: (registryId: string) =>
+      invokeIpcWithResult<McpCatalogItem | null>(MCP_REGISTRY_GET_BY_ID, registryId),
+    getInstalled: (projectPath?: string) =>
+      invokeIpcWithResult<InstalledMcpEntry[]>(MCP_REGISTRY_GET_INSTALLED, projectPath),
+    install: (request: McpInstallRequest) =>
+      invokeIpcWithResult<OperationResult>(MCP_REGISTRY_INSTALL, request),
+    installCustom: (request: McpCustomInstallRequest) =>
+      invokeIpcWithResult<OperationResult>(MCP_REGISTRY_INSTALL_CUSTOM, request),
+    uninstall: (name: string, scope?: string, projectPath?: string) =>
+      invokeIpcWithResult<OperationResult>(MCP_REGISTRY_UNINSTALL, name, scope, projectPath),
+    githubStars: (repositoryUrls: string[]) =>
+      invokeIpcWithResult<Record<string, number>>(MCP_GITHUB_STARS, repositoryUrls),
+  },
+
+  // ===== API Keys API (Electron-only) =====
+  apiKeys: {
+    list: () => invokeIpcWithResult<ApiKeyEntry[]>(API_KEYS_LIST),
+    save: (request: ApiKeySaveRequest) => invokeIpcWithResult<ApiKeyEntry>(API_KEYS_SAVE, request),
+    delete: (id: string) => invokeIpcWithResult<void>(API_KEYS_DELETE, id),
+    lookup: (envVarNames: string[]) =>
+      invokeIpcWithResult<ApiKeyLookupResult[]>(API_KEYS_LOOKUP, envVarNames),
+    getStorageStatus: () => invokeIpcWithResult<ApiKeyStorageStatus>(API_KEYS_STORAGE_STATUS),
   },
 };
 

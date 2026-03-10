@@ -26,6 +26,7 @@ import {
   TEAM_LAUNCH,
   TEAM_LEAD_ACTIVITY,
   TEAM_LEAD_CONTEXT,
+  TEAM_MEMBER_SPAWN_STATUSES,
   TEAM_LIST,
   TEAM_PERMANENTLY_DELETE,
   TEAM_PREPARE_PROVISIONING,
@@ -47,6 +48,7 @@ import {
   TEAM_START_TASK,
   TEAM_STOP,
   TEAM_TOOL_APPROVAL_RESPOND,
+  TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
@@ -54,11 +56,17 @@ import {
   TEAM_UPDATE_TASK_FIELDS,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
+  TEAM_VALIDATE_CLI_ARGS,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
 import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
+import {
+  extractFlagsFromHelp,
+  extractUserFlags,
+  PROTECTED_CLI_FLAGS,
+} from '@shared/utils/cliArgsParser';
 import { createLogger } from '@shared/utils/logger';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
 import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
@@ -67,6 +75,10 @@ import * as path from 'path';
 
 import { ConfigManager } from '../services/infrastructure/ConfigManager';
 import { NotificationManager } from '../services/infrastructure/NotificationManager';
+import {
+  buildActionModeAgentBlock,
+  isAgentActionMode,
+} from '../services/team/actionModeInstructions';
 import { gitIdentityResolver } from '../services/parsing/GitIdentityResolver';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
@@ -86,6 +98,7 @@ import type {
   TeamProvisioningService,
 } from '../services';
 import type {
+  AgentActionMode,
   AttachmentFileData,
   AttachmentMeta,
   AttachmentPayload,
@@ -97,6 +110,7 @@ import type {
   LeadContextUsage,
   MemberFullStats,
   MemberLogSummary,
+  MemberSpawnStatusEntry,
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
@@ -117,8 +131,10 @@ import type {
   TeamTask,
   TeamTaskStatus,
   TeamUpdateConfigRequest,
+  ToolApprovalSettings,
   UpdateKanbanPatch,
 } from '@shared/types';
+import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
 
 const logger = createLogger('IPC:teams');
 
@@ -239,6 +255,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_KILL_PROCESS, handleKillProcess);
   ipcMain.handle(TEAM_LEAD_ACTIVITY, handleLeadActivity);
   ipcMain.handle(TEAM_LEAD_CONTEXT, handleLeadContext);
+  ipcMain.handle(TEAM_MEMBER_SPAWN_STATUSES, handleMemberSpawnStatuses);
   ipcMain.handle(TEAM_SOFT_DELETE_TASK, handleSoftDeleteTask);
   ipcMain.handle(TEAM_RESTORE_TASK, handleRestoreTask);
   ipcMain.handle(TEAM_GET_DELETED_TASKS, handleGetDeletedTasks);
@@ -250,6 +267,8 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_TASK_ATTACHMENT, handleGetTaskAttachment);
   ipcMain.handle(TEAM_DELETE_TASK_ATTACHMENT, handleDeleteTaskAttachment);
   ipcMain.handle(TEAM_TOOL_APPROVAL_RESPOND, handleToolApprovalRespond);
+  ipcMain.handle(TEAM_VALIDATE_CLI_ARGS, handleValidateCliArgs);
+  ipcMain.handle(TEAM_TOOL_APPROVAL_SETTINGS, handleToolApprovalSettings);
   logger.info('Team handlers registered');
 }
 
@@ -294,6 +313,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_KILL_PROCESS);
   ipcMain.removeHandler(TEAM_LEAD_ACTIVITY);
   ipcMain.removeHandler(TEAM_LEAD_CONTEXT);
+  ipcMain.removeHandler(TEAM_MEMBER_SPAWN_STATUSES);
   ipcMain.removeHandler(TEAM_SOFT_DELETE_TASK);
   ipcMain.removeHandler(TEAM_RESTORE_TASK);
   ipcMain.removeHandler(TEAM_GET_DELETED_TASKS);
@@ -305,6 +325,8 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_GET_TASK_ATTACHMENT);
   ipcMain.removeHandler(TEAM_DELETE_TASK_ATTACHMENT);
   ipcMain.removeHandler(TEAM_TOOL_APPROVAL_RESPOND);
+  ipcMain.removeHandler(TEAM_VALIDATE_CLI_ARGS);
+  ipcMain.removeHandler(TEAM_TOOL_APPROVAL_SETTINGS);
 }
 
 function getTeamDataService(): TeamDataService {
@@ -407,13 +429,21 @@ async function handleGetData(
   }
 
   const normalizeText = (text: string): string => text.trim().replace(/\r\n/g, '\n');
+  const isLeadThoughtLike = (msg: { source?: unknown; to?: string }): boolean =>
+    !msg.to && (msg.source === 'lead_process' || msg.source === 'lead_session');
+  const getLeadThoughtFingerprint = (msg: {
+    from: string;
+    text: string;
+    leadSessionId?: string;
+  }): string => `${msg.leadSessionId ?? ''}\0${msg.from}\0${normalizeText(msg.text)}`;
 
-  // Collect text fingerprints from ALL non-live messages (inbox, lead_session, sentMessages)
-  // so we can dedup lead_process live messages against them.
+  // Collect fingerprints only for thought-like lead messages. Include leadSessionId so a
+  // repeated thought in a new session does not get collapsed into an old session's history.
   const existingTextFingerprints = new Set<string>();
   for (const msg of data.messages) {
     if (typeof msg.from !== 'string' || typeof msg.text !== 'string') continue;
-    existingTextFingerprints.add(`${msg.from}\0${normalizeText(msg.text)}`);
+    if (!isLeadThoughtLike(msg)) continue;
+    existingTextFingerprints.add(getLeadThoughtFingerprint(msg));
   }
 
   const keyFor = (m: {
@@ -428,20 +458,20 @@ async function handleGetData(
     return `${m.timestamp}\0${m.from}\0${(m.text ?? '').slice(0, 80)}`;
   };
 
-  // Text-based fingerprints for lead_process messages to catch duplicates
-  // with different messageIds (e.g. lead-turn-* vs lead-sendmsg-* with same text)
+  // Text-based fingerprints for live lead thoughts to catch duplicates with different
+  // messageIds inside the same session (e.g. lead-turn-* re-emits).
   const leadProcessTextFingerprints = new Set<string>();
 
   const merged: typeof data.messages = [];
   const seen = new Set<string>();
   for (const msg of [...data.messages, ...live]) {
     if ((msg as { source?: unknown }).source === 'lead_process' && !msg.to) {
-      const fp = `${msg.from}\0${normalizeText(msg.text ?? '')}`;
-      // Skip if same text already exists from any source (inbox, lead_session, etc.)
+      const fp = getLeadThoughtFingerprint(msg);
+      // Skip if the same thought already exists in persisted history for the same session.
       if (existingTextFingerprints.has(fp)) {
         continue;
       }
-      // Dedup lead_process messages with same text but different messageIds
+      // Dedup live lead_process thoughts with the same text in the same session.
       if (leadProcessTextFingerprints.has(fp)) {
         continue;
       }
@@ -466,7 +496,10 @@ async function handleDeleteTeam(
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
-  return wrapTeamHandler('deleteTeam', () => getTeamDataService().deleteTeam(validated.value!));
+  return wrapTeamHandler('deleteTeam', async () => {
+    getTeamProvisioningService().stopTeam(validated.value!);
+    await getTeamDataService().deleteTeam(validated.value!);
+  });
 }
 
 async function handleRestoreTeam(
@@ -641,6 +674,30 @@ async function validateProvisioningRequest(
     return { valid: false, error: 'cwd must be a directory' };
   }
 
+  if (payload.worktree !== undefined) {
+    if (typeof payload.worktree !== 'string') {
+      return { valid: false, error: 'worktree must be a string' };
+    }
+    const wt = payload.worktree.trim();
+    if (wt.length > 128) {
+      return { valid: false, error: 'worktree name too long (max 128)' };
+    }
+    if (wt && !/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(wt)) {
+      return {
+        valid: false,
+        error: 'worktree name: start with alphanumeric, use [a-zA-Z0-9._-]',
+      };
+    }
+  }
+  if (payload.extraCliArgs !== undefined) {
+    if (typeof payload.extraCliArgs !== 'string') {
+      return { valid: false, error: 'extraCliArgs must be a string' };
+    }
+    if (payload.extraCliArgs.length > 1024) {
+      return { valid: false, error: 'extraCliArgs too long (max 1024)' };
+    }
+  }
+
   return {
     valid: true,
     value: {
@@ -655,6 +712,14 @@ async function validateProvisioningRequest(
       effort: isValidEffort(payload.effort) ? payload.effort : undefined,
       skipPermissions:
         typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
+      worktree:
+        typeof payload.worktree === 'string' && payload.worktree.trim()
+          ? payload.worktree.trim()
+          : undefined,
+      extraCliArgs:
+        typeof payload.extraCliArgs === 'string' && payload.extraCliArgs.trim()
+          ? payload.extraCliArgs.trim()
+          : undefined,
     },
   };
 }
@@ -763,6 +828,12 @@ async function handleLaunchTeam(
         clearContext: payload.clearContext === true ? true : undefined,
         skipPermissions:
           typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
+        worktree:
+          typeof payload.worktree === 'string' ? payload.worktree.trim() || undefined : undefined,
+        extraCliArgs:
+          typeof payload.extraCliArgs === 'string'
+            ? payload.extraCliArgs.trim() || undefined
+            : undefined,
       },
       (progress) => {
         try {
@@ -774,6 +845,32 @@ async function handleLaunchTeam(
       }
     )
   );
+}
+
+async function handleValidateCliArgs(
+  _event: IpcMainInvokeEvent,
+  rawArgs: unknown
+): Promise<IpcResult<CliArgsValidationResult>> {
+  if (typeof rawArgs !== 'string') {
+    return { success: false, error: 'rawArgs must be a string' };
+  }
+  if (rawArgs.length > 2048) {
+    return { success: false, error: 'rawArgs too long (max 2048)' };
+  }
+  return wrapTeamHandler('validateCliArgs', async () => {
+    const helpOutput = await getTeamProvisioningService().getCliHelpOutput();
+    const knownFlags = extractFlagsFromHelp(helpOutput);
+    const userFlags = extractUserFlags(rawArgs);
+
+    const invalidFlags = userFlags.filter((f) => !knownFlags.has(f));
+    const protectedFlags = userFlags.filter((f) => PROTECTED_CLI_FLAGS.has(f));
+    const allBad = [...new Set([...invalidFlags, ...protectedFlags])];
+
+    return {
+      valid: allBad.length === 0,
+      invalidFlags: allBad.length > 0 ? allBad : undefined,
+    };
+  });
 }
 
 async function handlePrepareProvisioning(
@@ -906,6 +1003,37 @@ function validateAttachments(
   return { valid: true, value: result };
 }
 
+function buildMessageDeliveryText(
+  baseText: string,
+  opts: {
+    actionMode?: AgentActionMode;
+    isLeadRecipient: boolean;
+  }
+): string {
+  const hiddenBlocks: string[] = [];
+  const actionModeBlock = buildActionModeAgentBlock(opts.actionMode);
+  if (actionModeBlock) {
+    hiddenBlocks.push(actionModeBlock);
+  }
+  if (!opts.isLeadRecipient) {
+    hiddenBlocks.push(
+      [
+        AGENT_BLOCK_OPEN,
+        'You received a direct message from the human user via the UI.',
+        'Please reply back to recipient "user" with a short, human-readable answer.',
+        'If you cannot respond now, reply with a brief status (e.g. "Busy, will reply later").',
+        AGENT_BLOCK_CLOSE,
+      ].join('\n')
+    );
+  }
+
+  if (hiddenBlocks.length === 0) {
+    return baseText;
+  }
+
+  return [...hiddenBlocks, baseText].join('\n\n');
+}
+
 async function handleSendMessage(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
@@ -937,6 +1065,9 @@ async function handleSendMessage(
       return { success: false, error: validatedFrom.error ?? 'Invalid from' };
     }
   }
+  if (payload.actionMode !== undefined && !isAgentActionMode(payload.actionMode)) {
+    return { success: false, error: 'actionMode must be one of: do, ask, delegate' };
+  }
 
   let validatedAttachments: AttachmentPayload[] | undefined;
   if (
@@ -951,14 +1082,41 @@ async function handleSendMessage(
     validatedAttachments = attResult.value;
   }
 
+  const tn = validatedTeamName.value!;
+  const memberName = validatedMember.value!;
+  let prevalidatedLeadName: string | null | undefined;
+  let prevalidatedIsLeadRecipient: boolean | undefined;
+  if (payload.actionMode === 'delegate') {
+    try {
+      prevalidatedLeadName = await getTeamDataService().getLeadMemberName(tn);
+    } catch (error) {
+      return wrapTeamHandler('sendMessage', async () => {
+        throw error;
+      });
+    }
+    prevalidatedIsLeadRecipient =
+      prevalidatedLeadName !== null && memberName === prevalidatedLeadName;
+    if (!prevalidatedIsLeadRecipient) {
+      return {
+        success: false,
+        error: 'Delegate mode is only supported when messaging the team lead',
+      };
+    }
+  }
+
   return wrapTeamHandler('sendMessage', async () => {
-    const tn = validatedTeamName.value!;
     const provisioning = getTeamProvisioningService();
     const isAlive = provisioning.isTeamAlive(tn);
 
-    const leadName = await getTeamDataService().getLeadMemberName(tn);
-    const memberName = validatedMember.value!;
-    const isLeadRecipient = leadName !== null && memberName === leadName;
+    const leadName =
+      prevalidatedLeadName !== undefined
+        ? prevalidatedLeadName
+        : await getTeamDataService().getLeadMemberName(tn);
+    const isLeadRecipient =
+      prevalidatedIsLeadRecipient !== undefined
+        ? prevalidatedIsLeadRecipient
+        : leadName !== null && memberName === leadName;
+    const actionMode = payload.actionMode;
 
     // Attachments only supported for live lead (stdin content blocks)
     if (validatedAttachments?.length && (!isLeadRecipient || !isAlive)) {
@@ -969,6 +1127,7 @@ async function handleSendMessage(
 
     // Smart routing: lead + alive → stdin direct, else → inbox
     if (isLeadRecipient && isAlive) {
+      const resolvedLeadName = leadName ?? memberName;
       // Separate try blocks: stdin delivery vs persistence
       // If stdin succeeds but persistence fails, do NOT fallback to inbox (would duplicate)
       // Wrap with instructions so lead responds with visible text (not just agent-only blocks)
@@ -977,7 +1136,10 @@ async function handleSendMessage(
         `IMPORTANT: Your text response here is shown to the user in the Messages panel. Always include a brief human-readable reply. Do NOT respond with only an agent-only block.`,
         ``,
         `Message from user:`,
-        payload.text!,
+        buildMessageDeliveryText(payload.text!, {
+          actionMode,
+          isLeadRecipient: true,
+        }),
       ].join('\n');
 
       let stdinSent = false;
@@ -1010,7 +1172,7 @@ async function handleSendMessage(
         try {
           result = await getTeamDataService().sendDirectToLead(
             tn,
-            leadName,
+            resolvedLeadName,
             payload.text!,
             payload.summary,
             attachmentMeta
@@ -1029,7 +1191,7 @@ async function handleSendMessage(
 
         provisioning.pushLiveLeadProcessMessage(tn, {
           from: 'user',
-          to: leadName,
+          to: resolvedLeadName,
           text: payload.text!,
           timestamp: new Date().toISOString(),
           read: true,
@@ -1045,17 +1207,10 @@ async function handleSendMessage(
 
     // Inbox path: offline lead or regular members (no attachment support)
     const baseText = payload.text!.trim();
-    const memberDeliveryText = isLeadRecipient
-      ? baseText
-      : [
-          baseText,
-          '',
-          AGENT_BLOCK_OPEN,
-          'You received a direct message from the human user via the UI.',
-          'Please reply back to recipient "user" with a short, human-readable answer.',
-          'If you cannot respond now, reply with a brief status (e.g. "Busy, will reply later").',
-          AGENT_BLOCK_CLOSE,
-        ].join('\n');
+    const memberDeliveryText = buildMessageDeliveryText(baseText, {
+      actionMode,
+      isLeadRecipient,
+    });
     const result = await getTeamDataService().sendMessage(tn, {
       member: memberName,
       text: memberDeliveryText,
@@ -1063,13 +1218,12 @@ async function handleSendMessage(
       from: payload.from,
     });
 
-    // Best-effort: if team is alive and recipient is a teammate (not lead),
-    // also forward via the live lead process so in-process teammates receive it.
+    // Best-effort live relay so active processes see the inbox row promptly.
     if (!isLeadRecipient && isAlive) {
       try {
-        await provisioning.forwardUserDmToTeammate(tn, memberName, baseText, payload.summary);
+        await provisioning.relayMemberInboxMessages(tn, memberName);
       } catch (e: unknown) {
-        logger.warn(`Failed to forward user DM to teammate "${memberName}" via lead: ${String(e)}`);
+        logger.warn(`Relay after sendMessage failed for teammate "${memberName}": ${String(e)}`);
       }
     }
 
@@ -1635,6 +1789,19 @@ async function handleLeadContext(
   );
 }
 
+async function handleMemberSpawnStatuses(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown
+): Promise<IpcResult<Record<string, MemberSpawnStatusEntry>>> {
+  const validated = validateTeamName(teamName);
+  if (!validated.valid) {
+    return { success: false, error: validated.error ?? 'Invalid teamName' };
+  }
+  return wrapTeamHandler('memberSpawnStatuses', async () =>
+    getTeamProvisioningService().getMemberSpawnStatuses(validated.value!)
+  );
+}
+
 async function handleStopTeam(
   _event: IpcMainInvokeEvent,
   teamName: unknown
@@ -1691,11 +1858,18 @@ async function handleAddMember(
   if (!payload || typeof payload !== 'object') {
     return { success: false, error: 'Invalid payload' };
   }
-  const { name, role } = payload as { name?: unknown; role?: unknown };
+  const { name, role, workflow } = payload as {
+    name?: unknown;
+    role?: unknown;
+    workflow?: unknown;
+  };
   const vName = validateTeammateName(name);
   if (!vName.valid) return { success: false, error: vName.error ?? 'Invalid member name' };
   if (role !== undefined && typeof role !== 'string') {
     return { success: false, error: 'role must be a string' };
+  }
+  if (workflow !== undefined && typeof workflow !== 'string') {
+    return { success: false, error: 'workflow must be a string' };
   }
 
   return wrapTeamHandler('addMember', async () => {
@@ -1704,15 +1878,20 @@ async function handleAddMember(
     await getTeamDataService().addMember(tn, {
       name: memberName,
       role: role,
+      workflow: typeof workflow === 'string' ? workflow.trim() || undefined : undefined,
     });
 
     // If team is alive, notify the lead to spawn the new teammate
     const provisioning = getTeamProvisioningService();
     if (provisioning.isTeamAlive(tn)) {
       const roleHint = typeof role === 'string' && role.trim() ? ` with role "${role.trim()}"` : '';
+      const workflowHint =
+        typeof workflow === 'string' && workflow.trim()
+          ? ` Their workflow: ${workflow.trim()}`
+          : '';
       const spawnMessage =
         `A new teammate "${memberName}"${roleHint} has been added to the team. ` +
-        `Please spawn them immediately using the Task tool with team_name="${tn}" and name="${memberName}".`;
+        `Please spawn them immediately using the Task tool with team_name="${tn}" and name="${memberName}".${workflowHint}`;
       try {
         await provisioning.sendMessageToTeam(tn, spawnMessage);
       } catch {
@@ -2306,4 +2485,41 @@ async function handleToolApprovalRespond(
       typeof message === 'string' ? message : undefined
     )
   );
+}
+
+async function handleToolApprovalSettings(
+  _event: IpcMainInvokeEvent,
+  settings: unknown
+): Promise<IpcResult<void>> {
+  if (typeof settings !== 'object' || settings === null) {
+    return { success: false, error: 'Settings must be an object' };
+  }
+  const s = settings as Record<string, unknown>;
+  if (typeof s.autoAllowFileEdits !== 'boolean') {
+    return { success: false, error: 'autoAllowFileEdits must be a boolean' };
+  }
+  if (typeof s.autoAllowSafeBash !== 'boolean') {
+    return { success: false, error: 'autoAllowSafeBash must be a boolean' };
+  }
+  if (typeof s.timeoutAction !== 'string' || !['allow', 'deny', 'wait'].includes(s.timeoutAction)) {
+    return { success: false, error: 'timeoutAction must be "allow", "deny", or "wait"' };
+  }
+  if (
+    typeof s.timeoutSeconds !== 'number' ||
+    !Number.isFinite(s.timeoutSeconds) ||
+    s.timeoutSeconds < 5 ||
+    s.timeoutSeconds > 300
+  ) {
+    return { success: false, error: 'timeoutSeconds must be a number between 5 and 300' };
+  }
+
+  try {
+    getTeamProvisioningService().updateToolApprovalSettings(s as unknown as ToolApprovalSettings);
+  } catch (err) {
+    return {
+      success: false,
+      error: `Failed to update tool approval settings: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+  return { success: true, data: undefined };
 }

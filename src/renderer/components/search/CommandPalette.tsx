@@ -183,10 +183,16 @@ export const CommandPalette = (): React.JSX.Element | null => {
   const [totalMatches, setTotalMatches] = useState(0);
   const [searchIsPartial, setSearchIsPartial] = useState(false);
   const [globalSearchEnabled, setGlobalSearchEnabled] = useState(false);
+  const [browsingProjects, setBrowsingProjects] = useState(false);
   const latestSearchRequestRef = useRef(0);
 
   // Determine search mode based on whether a project is selected OR global search is enabled
-  const searchMode: SearchMode = selectedProjectId || globalSearchEnabled ? 'sessions' : 'projects';
+  // browsingProjects overrides back to project selection
+  const searchMode: SearchMode = browsingProjects
+    ? 'projects'
+    : selectedProjectId || globalSearchEnabled
+      ? 'sessions'
+      : 'projects';
 
   // Filter projects for project search mode
   const filteredProjects = useMemo(() => {
@@ -235,6 +241,7 @@ export const CommandPalette = (): React.JSX.Element | null => {
       setTotalMatches(0);
       setSearchIsPartial(false);
       setGlobalSearchEnabled(false);
+      setBrowsingProjects(false);
     }
   }, [commandPaletteOpen]);
 
@@ -291,14 +298,31 @@ export const CommandPalette = (): React.JSX.Element | null => {
     setSelectedIndex(0);
   }, [filteredProjects, sessionResults]);
 
-  // Handle project click
+  // Handle project click — select project without closing palette
   const handleProjectClick = useCallback(
     (repo: RepositoryGroup) => {
-      closeCommandPalette();
       selectRepository(repo.id);
+      setBrowsingProjects(false);
+      setQuery('');
+      setSessionResults([]);
+      setSelectedIndex(0);
+      setTotalMatches(0);
+      setSearchIsPartial(false);
+      inputRef.current?.focus();
     },
-    [closeCommandPalette, selectRepository]
+    [selectRepository]
   );
+
+  // Handle clearing project filter — go back to project browsing
+  const handleClearProject = useCallback(() => {
+    setBrowsingProjects(true);
+    setQuery('');
+    setSessionResults([]);
+    setSelectedIndex(0);
+    setTotalMatches(0);
+    setSearchIsPartial(false);
+    inputRef.current?.focus();
+  }, []);
 
   // Handle session result click
   const handleSessionResultClick = useCallback(
@@ -438,14 +462,20 @@ export const CommandPalette = (): React.JSX.Element | null => {
                   <span className="text-xs text-text-muted">
                     {globalSearchEnabled ? 'Search across all projects' : 'Search in project'}
                   </span>
-                  {!globalSearchEnabled && (
+                  {!globalSearchEnabled && selectedProjectId && (
                     <>
                       <span className="text-text-muted/50 mx-1 text-xs">·</span>
-                      <span className="truncate text-xs text-text-secondary">
-                        {repositoryGroups.find((r) =>
-                          r.worktrees.some((w) => w.id === selectedProjectId)
-                        )?.name ?? 'Current project'}
-                      </span>
+                      <button
+                        onClick={handleClearProject}
+                        className="flex items-center gap-1.5 rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text"
+                      >
+                        <span className="max-w-[200px] truncate">
+                          {repositoryGroups.find((r) =>
+                            r.worktrees.some((w) => w.id === selectedProjectId)
+                          )?.name ?? 'Current project'}
+                        </span>
+                        <X className="size-3 shrink-0" />
+                      </button>
                     </>
                   )}
                 </>
