@@ -544,7 +544,6 @@ export const KanbanBoard = ({
 
       {viewMode === 'grid' ? (
         <KanbanGridLayout
-          teamName={teamName}
           allColumnIds={COLUMNS.map((column) => column.id)}
           columns={visibleColumns.map((column) => {
             const columnTasks = groupedOrdered.get(column.id) ?? [];

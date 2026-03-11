@@ -1,5 +1,5 @@
 /* eslint-disable tailwindcss/no-custom-classname -- this adapter needs stable non-Tailwind class hooks for react-grid-layout handles. */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import ReactGridLayout, { WidthProvider } from 'react-grid-layout/legacy';
 
 import { usePersistedGridLayout } from '@renderer/hooks/usePersistedGridLayout';
@@ -24,7 +24,7 @@ const DEFAULT_ITEM_HEIGHT = Math.max(
 );
 const DEFAULT_MIN_HEIGHT = 10;
 const DEFAULT_MIN_WIDTH = 3;
-const GRID_SCOPE_PREFIX = 'kanban-grid-layout:v2';
+const GRID_SCOPE_KEY = 'kanban-grid-layout:global';
 const RESIZE_HANDLES: ResizeHandleAxis[] = ['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne'];
 const WidthAwareGridLayout = WidthProvider(ReactGridLayout);
 
@@ -39,9 +39,14 @@ export interface KanbanGridColumn {
 }
 
 interface KanbanGridLayoutProps {
-  teamName: string;
   columns: KanbanGridColumn[];
   allColumnIds: KanbanColumnId[];
+}
+
+interface LoadedKanbanGridLayoutProps {
+  readonly columns: KanbanGridColumn[];
+  readonly visibleItems: PersistedGridLayoutItem[];
+  readonly onPersistLayout: (layout: Layout, options?: { persist?: boolean }) => void;
 }
 
 function buildDefaultItems(itemIds: string[]): PersistedGridLayoutItem[] {
@@ -94,49 +99,31 @@ function renderResizeHandle(axis: ResizeHandleAxis, ref: Ref<HTMLElement>): Reac
   );
 }
 
-export const KanbanGridLayout = ({
-  teamName,
+const LoadedKanbanGridLayout = ({
   columns,
-  allColumnIds,
-}: KanbanGridLayoutProps): React.JSX.Element => {
+  visibleItems,
+  onPersistLayout,
+}: Readonly<LoadedKanbanGridLayoutProps>): ReactElement => {
   const columnMap = useMemo(() => new Map(columns.map((column) => [column.id, column])), [columns]);
-  const visibleColumnIds = useMemo(() => columns.map((column) => column.id), [columns]);
-  const { visibleItems, applyVisibleItems, isLoaded } = usePersistedGridLayout({
-    scopeKey: `${GRID_SCOPE_PREFIX}:${teamName}`,
-    allItemIds: allColumnIds,
-    visibleItemIds: visibleColumnIds,
-    cols: GRID_COLS,
-    repository: browserGridLayoutRepository,
-    buildDefaultItems,
-  });
-
   const [renderLayout, setRenderLayout] = useState<Layout>(() =>
     visibleItems.map(toReactGridLayoutItem)
   );
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    setRenderLayout(visibleItems.map(toReactGridLayoutItem));
-  }, [isLoaded, visibleItems]);
 
   const applyReactGridLayout = useCallback(
     (layout: Layout, options?: { persist?: boolean }) => {
       setRenderLayout(layout);
       if (options?.persist) {
-        applyVisibleItems(fromReactGridLayout(layout), options);
+        onPersistLayout(layout, options);
       }
     },
-    [applyVisibleItems]
+    [onPersistLayout]
   );
-
-  if (!isLoaded) {
-    return <div className="min-h-[640px] p-1.5" />;
-  }
 
   return (
     <div className="p-1.5">
       <WidthAwareGridLayout
         className="kanban-grid-layout"
+        measureBeforeMount
         layout={renderLayout}
         cols={GRID_COLS}
         rowHeight={GRID_ROW_HEIGHT}
@@ -185,6 +172,47 @@ export const KanbanGridLayout = ({
         })}
       </WidthAwareGridLayout>
     </div>
+  );
+};
+
+export const KanbanGridLayout = ({
+  columns,
+  allColumnIds,
+}: KanbanGridLayoutProps): React.JSX.Element => {
+  const visibleColumnIds = useMemo(() => columns.map((column) => column.id), [columns]);
+  const { visibleItems, applyVisibleItems, isLoaded } = usePersistedGridLayout({
+    scopeKey: GRID_SCOPE_KEY,
+    allItemIds: allColumnIds,
+    visibleItemIds: visibleColumnIds,
+    cols: GRID_COLS,
+    repository: browserGridLayoutRepository,
+    buildDefaultItems,
+  });
+
+  const applyReactGridLayout = useCallback(
+    (layout: Layout, options?: { persist?: boolean }) => {
+      if (options?.persist) {
+        applyVisibleItems(fromReactGridLayout(layout), options);
+      }
+    },
+    [applyVisibleItems]
+  );
+
+  if (!isLoaded) {
+    return <div className="min-h-[640px] p-1.5" />;
+  }
+
+  const gridKey = visibleItems
+    .map((item) => `${item.id}:${item.x}:${item.y}:${item.w}:${item.h}`)
+    .join('|');
+
+  return (
+    <LoadedKanbanGridLayout
+      key={gridKey}
+      columns={columns}
+      visibleItems={visibleItems}
+      onPersistLayout={applyReactGridLayout}
+    />
   );
 };
 /* eslint-enable tailwindcss/no-custom-classname -- stable class hooks remain scoped to this file. */

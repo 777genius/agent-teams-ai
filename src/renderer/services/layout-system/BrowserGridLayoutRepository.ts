@@ -38,7 +38,7 @@ function removeLocalStorage(key: string): void {
 }
 
 function pickNewestState(
-  ...states: Array<PersistedGridLayoutState | null | undefined>
+  ...states: (PersistedGridLayoutState | null | undefined)[]
 ): PersistedGridLayoutState | null {
   return states.reduce<PersistedGridLayoutState | null>((latest, current) => {
     if (!current) return latest;
