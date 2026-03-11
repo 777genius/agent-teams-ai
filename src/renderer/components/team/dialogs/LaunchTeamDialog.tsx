@@ -39,6 +39,7 @@ import {
 
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { EffortLevelSelector } from './EffortLevelSelector';
+import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { ProjectPathSelector } from './ProjectPathSelector';
 import { computeEffectiveTeamModel, TeamModelSelector } from './TeamModelSelector';
 import { CronScheduleInput } from '../schedule/CronScheduleInput';
@@ -506,6 +507,32 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return args;
   }, [isLaunch, skipPermissions, selectedModel, extendedContext, selectedEffort, clearContext]);
 
+  const launchOptionalSummary = useMemo(() => {
+    if (!isLaunch) return [];
+
+    const summary: string[] = [];
+    if (promptDraft.value.trim()) summary.push('Lead prompt');
+    if (selectedModel) summary.push(`Model: ${selectedModel}`);
+    if (selectedEffort) summary.push(`Effort: ${selectedEffort}`);
+    if (extendedContext) summary.push('Extended context');
+    if (skipPermissions) summary.push('Auto-approve tools');
+    if (clearContext) summary.push('Fresh session');
+    if (worktreeEnabled && worktreeName.trim()) summary.push(`Worktree: ${worktreeName.trim()}`);
+    if (customArgs.trim()) summary.push('Custom CLI args');
+    return summary;
+  }, [
+    isLaunch,
+    promptDraft.value,
+    selectedModel,
+    selectedEffort,
+    extendedContext,
+    skipPermissions,
+    clearContext,
+    worktreeEnabled,
+    worktreeName,
+    customArgs,
+  ]);
+
   // ---------------------------------------------------------------------------
   // Validation
   // ---------------------------------------------------------------------------
@@ -794,7 +821,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               Schedule-only: Schedule configuration section
               ═══════════════════════════════════════════════════════════════════ */}
           {isSchedule ? (
-            <div className="bg-[var(--color-surface)]/50 rounded-lg border border-[var(--color-border-emphasis)]">
+            <div className="rounded-lg border border-[var(--color-border-emphasis)] bg-[var(--color-surface-overlay)] shadow-sm">
               <button
                 type="button"
                 className="flex w-full items-center gap-1.5 px-3 py-2 text-left"
@@ -861,126 +888,165 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           />
 
           {/* ═══════════════════════════════════════════════════════════════════
-              Shared: Prompt (MentionableTextarea for both modes)
-              ═══════════════════════════════════════════════════════════════════ */}
-          <div className="space-y-1.5">
-            <Label htmlFor="dialog-prompt" className={isSchedule ? undefined : 'label-optional'}>
-              {isSchedule ? <>Prompt</> : 'Prompt for team lead (optional)'}
-            </Label>
-            <MentionableTextarea
-              id="dialog-prompt"
-              className="min-h-[100px] text-xs"
-              minRows={4}
-              maxRows={12}
-              value={promptDraft.value}
-              onValueChange={promptDraft.setValue}
-              suggestions={mentionSuggestions}
-              projectPath={effectiveCwd || null}
-              chips={chipDraft.chips}
-              onChipRemove={chipDraft.removeChip}
-              onFileChipInsert={chipDraft.addChip}
-              placeholder={
-                isSchedule
-                  ? 'Instructions for Claude to execute on schedule...'
-                  : 'Instructions for team lead...'
-              }
-              footerRight={
-                promptDraft.isSaved ? (
-                  <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-                ) : null
-              }
-            />
-            {isSchedule ? (
-              <p className="text-[11px] text-[var(--color-text-muted)]">
-                This prompt will be passed to <code className="font-mono">claude -p</code> for
-                one-shot execution
-              </p>
-            ) : null}
-          </div>
-
-          {/* ═══════════════════════════════════════════════════════════════════
-              Shared: Model + Effort + Permissions
-              ═══════════════════════════════════════════════════════════════════ */}
-          <div>
-            <TeamModelSelector
-              value={selectedModel}
-              onValueChange={setSelectedModel}
-              id="dialog-model"
-            />
-            <EffortLevelSelector
-              value={selectedEffort}
-              onValueChange={setSelectedEffort}
-              id="dialog-effort"
-            />
-            {/* Extended context — launch only */}
-            {isLaunch ? (
-              <ExtendedContextCheckbox
-                id="launch-extended-context"
-                checked={extendedContext}
-                onCheckedChange={setExtendedContext}
-                disabled={selectedModel === 'haiku'}
-              />
-            ) : null}
-            <SkipPermissionsCheckbox
-              id="dialog-skip-permissions"
-              checked={skipPermissions}
-              onCheckedChange={setSkipPermissions}
-            />
-          </div>
-
-          {/* ═══════════════════════════════════════════════════════════════════
-              Launch-only: Clear context + Advanced CLI
+              Launch: optional settings
+              Schedule: prompt + execution defaults
               ═══════════════════════════════════════════════════════════════════ */}
           {isLaunch ? (
-            <>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="clear-context"
-                    checked={clearContext}
-                    onCheckedChange={(checked) => setClearContext(checked === true)}
-                  />
-                  <Label
-                    htmlFor="clear-context"
-                    className="flex cursor-pointer items-center gap-1.5 text-xs font-normal text-text-secondary"
-                  >
-                    <RotateCcw className="size-3 shrink-0" />
-                    Clear context (fresh session)
+            <OptionalSettingsSection
+              title="Optional launch settings"
+              description="Keep the launch flow focused on the project path and only expand this when you want extra control."
+              summary={launchOptionalSummary}
+            >
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="dialog-prompt" className="label-optional">
+                    Prompt for team lead (optional)
                   </Label>
+                  <MentionableTextarea
+                    id="dialog-prompt"
+                    className="min-h-[100px] text-xs"
+                    minRows={4}
+                    maxRows={12}
+                    value={promptDraft.value}
+                    onValueChange={promptDraft.setValue}
+                    suggestions={mentionSuggestions}
+                    projectPath={effectiveCwd || null}
+                    chips={chipDraft.chips}
+                    onChipRemove={chipDraft.removeChip}
+                    onFileChipInsert={chipDraft.addChip}
+                    placeholder="Instructions for team lead..."
+                    footerRight={
+                      promptDraft.isSaved ? (
+                        <span className="text-[10px] text-[var(--color-text-muted)]">
+                          Draft saved
+                        </span>
+                      ) : null
+                    }
+                  />
                 </div>
-                {clearContext && (
-                  <div
-                    className="rounded-md border px-3 py-2 text-xs"
-                    style={{
-                      backgroundColor: 'var(--warning-bg)',
-                      borderColor: 'var(--warning-border)',
-                      color: 'var(--warning-text)',
-                    }}
-                  >
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                      <p>
-                        The team lead will start a new session without resuming previous context.
-                        All accumulated session memory and conversation history will not be
-                        available.
-                      </p>
-                    </div>
+
+                <div>
+                  <TeamModelSelector
+                    value={selectedModel}
+                    onValueChange={setSelectedModel}
+                    id="dialog-model"
+                  />
+                  <EffortLevelSelector
+                    value={selectedEffort}
+                    onValueChange={setSelectedEffort}
+                    id="dialog-effort"
+                  />
+                  <ExtendedContextCheckbox
+                    id="launch-extended-context"
+                    checked={extendedContext}
+                    onCheckedChange={setExtendedContext}
+                    disabled={selectedModel === 'haiku'}
+                  />
+                  <SkipPermissionsCheckbox
+                    id="dialog-skip-permissions"
+                    checked={skipPermissions}
+                    onCheckedChange={setSkipPermissions}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="clear-context"
+                      checked={clearContext}
+                      onCheckedChange={(checked) => setClearContext(checked === true)}
+                    />
+                    <Label
+                      htmlFor="clear-context"
+                      className="flex cursor-pointer items-center gap-1.5 text-xs font-normal text-text-secondary"
+                    >
+                      <RotateCcw className="size-3 shrink-0" />
+                      Clear context (fresh session)
+                    </Label>
                   </div>
-                )}
+                  {clearContext && (
+                    <div
+                      className="rounded-md border px-3 py-2 text-xs"
+                      style={{
+                        backgroundColor: 'var(--warning-bg)',
+                        borderColor: 'var(--warning-border)',
+                        color: 'var(--warning-text)',
+                      }}
+                    >
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                        <p>
+                          The team lead will start a new session without resuming previous context.
+                          All accumulated session memory and conversation history will not be
+                          available.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <AdvancedCliSection
+                  teamName={effectiveTeamName}
+                  internalArgs={internalArgs}
+                  worktreeEnabled={worktreeEnabled}
+                  onWorktreeEnabledChange={setWorktreeEnabled}
+                  worktreeName={worktreeName}
+                  onWorktreeNameChange={setWorktreeName}
+                  customArgs={customArgs}
+                  onCustomArgsChange={setCustomArgs}
+                />
+              </div>
+            </OptionalSettingsSection>
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="dialog-prompt">Prompt</Label>
+                <MentionableTextarea
+                  id="dialog-prompt"
+                  className="min-h-[100px] text-xs"
+                  minRows={4}
+                  maxRows={12}
+                  value={promptDraft.value}
+                  onValueChange={promptDraft.setValue}
+                  suggestions={mentionSuggestions}
+                  projectPath={effectiveCwd || null}
+                  chips={chipDraft.chips}
+                  onChipRemove={chipDraft.removeChip}
+                  onFileChipInsert={chipDraft.addChip}
+                  placeholder="Instructions for Claude to execute on schedule..."
+                  footerRight={
+                    promptDraft.isSaved ? (
+                      <span className="text-[10px] text-[var(--color-text-muted)]">
+                        Draft saved
+                      </span>
+                    ) : null
+                  }
+                />
+                <p className="text-[11px] text-[var(--color-text-muted)]">
+                  This prompt will be passed to <code className="font-mono">claude -p</code> for
+                  one-shot execution
+                </p>
               </div>
 
-              <AdvancedCliSection
-                teamName={effectiveTeamName}
-                internalArgs={internalArgs}
-                worktreeEnabled={worktreeEnabled}
-                onWorktreeEnabledChange={setWorktreeEnabled}
-                worktreeName={worktreeName}
-                onWorktreeNameChange={setWorktreeName}
-                customArgs={customArgs}
-                onCustomArgsChange={setCustomArgs}
-              />
+              <div>
+                <TeamModelSelector
+                  value={selectedModel}
+                  onValueChange={setSelectedModel}
+                  id="dialog-model"
+                />
+                <EffortLevelSelector
+                  value={selectedEffort}
+                  onValueChange={setSelectedEffort}
+                  id="dialog-effort"
+                />
+                <SkipPermissionsCheckbox
+                  id="dialog-skip-permissions"
+                  checked={skipPermissions}
+                  onCheckedChange={setSkipPermissions}
+                />
+              </div>
             </>
-          ) : null}
+          )}
 
           {/* ═══════════════════════════════════════════════════════════════════
               Schedule-only: Execution limits

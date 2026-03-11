@@ -50,6 +50,8 @@ function getStatusLabel(column: string): string {
 interface TaskTooltipProps {
   /** Canonical task id or short display id reference. */
   taskId: string;
+  /** Optional owning team for cross-team task references. */
+  teamName?: string;
   /** Rendered trigger element. */
   children: React.ReactElement;
   /** Tooltip placement. */
@@ -62,11 +64,34 @@ interface TaskTooltipProps {
  */
 export const TaskTooltip = ({
   taskId,
+  teamName,
   children,
   side = 'top',
 }: TaskTooltipProps): React.JSX.Element => {
-  const tasks = useStore((s) => s.selectedTeamData?.tasks);
-  const members = useStore((s) => s.selectedTeamData?.members);
+  const selectedTeamName = useStore((s) => s.selectedTeamName);
+  const selectedTeamData = useStore((s) => s.selectedTeamData);
+  const globalTasks = useStore((s) => s.globalTasks);
+  const teamByName = useStore((s) => s.teamByName);
+
+  const tasks = useMemo(() => {
+    if (teamName && selectedTeamName === teamName) {
+      return selectedTeamData?.tasks ?? [];
+    }
+    if (teamName) {
+      return globalTasks.filter((task) => task.teamName === teamName);
+    }
+    const currentTasks = selectedTeamData?.tasks ?? [];
+    const currentMatch = currentTasks.find((task) => taskMatchesRef(task, taskId));
+    if (currentMatch) return currentTasks;
+    return globalTasks;
+  }, [globalTasks, selectedTeamData, selectedTeamName, teamName, taskId]);
+
+  const members = useMemo(() => {
+    if (teamName && selectedTeamName === teamName) {
+      return selectedTeamData?.members ?? [];
+    }
+    return [];
+  }, [selectedTeamData, selectedTeamName, teamName]);
 
   const task = useMemo(() => tasks?.find((t) => taskMatchesRef(t, taskId)), [tasks, taskId]);
 
@@ -81,11 +106,24 @@ export const TaskTooltip = ({
   const column = getEffectiveColumn(task);
   const statusColor = STATUS_COLORS[column] ?? STATUS_COLORS.pending;
   const label = getStatusLabel(column);
+  const taskTeamName =
+    typeof (task as unknown as { teamName?: unknown }).teamName === 'string'
+      ? (task as unknown as { teamName: string }).teamName
+      : undefined;
+  const resolvedTeamName = teamName ?? taskTeamName;
+  const resolvedTeamDisplayName = resolvedTeamName
+    ? teamByName[resolvedTeamName]?.displayName
+    : null;
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
       <TooltipContent side={side} className="max-w-xs space-y-1.5 p-2.5">
+        {resolvedTeamName ? (
+          <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
+            {resolvedTeamDisplayName || resolvedTeamName}
+          </div>
+        ) : null}
         {/* Subject */}
         <div className="text-xs font-medium text-[var(--color-text)]">
           <span className="text-[var(--color-text-muted)]">{formatTaskDisplayLabel(task)}</span>{' '}
@@ -109,8 +147,10 @@ export const TaskTooltip = ({
           ) : null}
 
           {/* Owner */}
-          {task.owner ? (
+          {task.owner && members.length > 0 ? (
             <MemberBadge name={task.owner} color={colorMap.get(task.owner)} />
+          ) : task.owner ? (
+            <span className="text-[10px] text-[var(--color-text-secondary)]">{task.owner}</span>
           ) : (
             <span className="text-[10px] text-[var(--color-text-muted)]">Unassigned</span>
           )}

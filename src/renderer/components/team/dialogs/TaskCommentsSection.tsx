@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useMarkCommentsRead } from '@renderer/hooks/useMarkCommentsRead';
+import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useStore } from '@renderer/store';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
@@ -21,6 +22,7 @@ import { isImageMimeType } from '@renderer/utils/attachmentUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
+import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { formatDistanceToNow } from 'date-fns';
@@ -61,11 +63,6 @@ interface TaskCommentsSectionProps {
   unreadCommentIds?: Set<string>;
 }
 
-/** Convert `#<task-display-id>` in plain text to markdown links with task:// protocol. */
-function linkifyTaskIdsInMarkdown(text: string): string {
-  return text.replace(/#([A-Za-z0-9-]+)\b/g, '[#$1](task://$1)');
-}
-
 export const TaskCommentsSection = ({
   teamName,
   taskId,
@@ -103,6 +100,7 @@ export const TaskCommentsSection = ({
   const chipDraft = useChipDraftPersistence(`taskCommentChips:${teamName}:${taskId}`);
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName);
+  const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
   const teamNamesForLinkify = useMemo(
     () => teamMentionSuggestions.map((t) => t.name),
     [teamMentionSuggestions]
@@ -394,6 +392,7 @@ export const TaskCommentsSection = ({
               onValueChange={draft.setValue}
               suggestions={mentionSuggestions}
               teamSuggestions={teamMentionSuggestions}
+              taskSuggestions={taskSuggestions}
               projectPath={projectPath}
               chips={chipDraft.chips}
               onFileChipInsert={chipDraft.addChip}

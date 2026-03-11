@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { useAttachments } from '@renderer/hooks/useAttachments';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useStore } from '@renderer/store';
 import { chipToken, serializeChipsWithText } from '@renderer/types/inlineChip';
@@ -209,6 +210,7 @@ export const SendMessageDialog = ({
   );
 
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName);
+  const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
 
   const attachmentsBlocked = attachments.length > 0 && !supportsAttachments;
 
@@ -465,6 +467,7 @@ export const SendMessageDialog = ({
                 onValueChange={textDraft.setValue}
                 suggestions={mentionSuggestions}
                 teamSuggestions={teamMentionSuggestions}
+                taskSuggestions={taskSuggestions}
                 chips={chipDraft.chips}
                 onChipRemove={handleChipRemove}
                 projectPath={projectPath}

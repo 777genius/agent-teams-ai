@@ -24,6 +24,7 @@ import {
 } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
+import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import {
   CROSS_TEAM_SENT_SOURCE,
@@ -257,11 +258,6 @@ const AUTH_ERROR_PATTERNS = [
 // Full message card — left colored border, name badge, collapsible content
 // ---------------------------------------------------------------------------
 
-/** Convert `#<task-display-id>` in plain text to markdown links with task:// protocol. */
-export function linkifyTaskIdsInMarkdown(text: string): string {
-  return text.replace(/#([A-Za-z0-9-]+)\b/g, '[#$1](task://$1)');
-}
-
 /** Render `#<task-display-id>` in plain text as clickable inline elements with TaskTooltip. */
 function linkifyTaskIds(text: string, onClick: (taskId: string) => void): React.ReactNode[] {
   return text.split(/(#[A-Za-z0-9-]+\b)/g).map((part, i) => {
@@ -304,7 +300,9 @@ export const ActivityItem = ({
 }: ActivityItemProps): React.JSX.Element => {
   const colors = getTeamColorSet(memberColor ?? message.color ?? '');
   const { isLight } = useTheme();
-  const formattedRole = formatAgentRole(memberRole);
+  // Hide role when it matches the sender name (avoids "lead" badge + "Team Lead" text duplication)
+  const formattedRole =
+    memberRole && memberRole !== message.from ? formatAgentRole(memberRole) : null;
 
   const teams = useStore((s) => s.teams);
   const teamNames = useMemo(
@@ -312,9 +310,18 @@ export const ActivityItem = ({
     [teams]
   );
 
-  const timestamp = Number.isNaN(Date.parse(message.timestamp))
-    ? message.timestamp
-    : new Date(message.timestamp).toLocaleString();
+  const timestamp = useMemo(() => {
+    if (Number.isNaN(Date.parse(message.timestamp))) return message.timestamp;
+    const date = new Date(message.timestamp);
+    const now = new Date();
+    const isToday =
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate();
+    return isToday
+      ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : date.toLocaleString();
+  }, [message.timestamp]);
 
   const structured = parseStructuredAgentMessage(message.text);
   // Only flag agent messages as rate-limited, not user's own quotes

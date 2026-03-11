@@ -15,12 +15,11 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
+import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { formatToolSummary, parseToolSummary } from '@shared/utils/toolSummary';
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
 import { ChevronDown, ChevronRight, ChevronUp, Reply } from 'lucide-react';
-
-import { linkifyTaskIdsInMarkdown } from './ActivityItem';
 import {
   AnimatedHeightReveal,
   ENTRY_REVEAL_ANIMATION_MS,

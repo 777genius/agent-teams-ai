@@ -9,6 +9,7 @@ import {
 } from '@renderer/components/ui/dialog';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useStore } from '@renderer/store';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
@@ -37,6 +38,7 @@ export const ReviewDialog = ({
   onSubmit,
 }: ReviewDialogProps): React.JSX.Element => {
   const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
+  const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
   const draft = useDraftPersistence({
     key: `requestChanges:${teamName}:${taskId ?? ''}`,
     enabled: Boolean(teamName && taskId),
@@ -85,6 +87,7 @@ export const ReviewDialog = ({
             onValueChange={draft.setValue}
             placeholder="Describe what needs to change... (Enter to submit)"
             suggestions={mentionSuggestions}
+            taskSuggestions={taskSuggestions}
             projectPath={projectPath}
             onModEnter={handleSubmit}
             minRows={4}

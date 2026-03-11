@@ -541,7 +541,10 @@ export const KanbanBoard = ({
       </div>
 
       {viewMode === 'grid' ? (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+        <div
+          className="grid gap-3"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}
+        >
           {visibleColumns.map((column) => {
             const columnTasks = groupedOrdered.get(column.id) ?? [];
             const accent = COLUMN_ACCENTS[column.id];

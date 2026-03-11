@@ -1,12 +1,18 @@
 import * as React from 'react';
 
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
+import { PROSE_LINK } from '@renderer/constants/cssVariables';
 import { useFileSuggestions } from '@renderer/hooks/useFileSuggestions';
 import { useMentionDetection } from '@renderer/hooks/useMentionDetection';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { chipToken } from '@renderer/types/inlineChip';
+import {
+  doesSuggestionMatchQuery,
+  getSuggestionInsertionText,
+} from '@renderer/utils/mentionSuggestions';
 import { nameColorSet } from '@renderer/utils/projectColor';
+import { findTaskReferenceMatches } from '@renderer/utils/taskReferenceUtils';
 import {
   createChipFromSelection,
   findChipBoundary,
@@ -18,6 +24,7 @@ import { AutoResizeTextarea } from './auto-resize-textarea';
 import { ChipInteractionLayer } from './ChipInteractionLayer';
 import { CodeChipBadge } from './CodeChipBadge';
 import { MentionSuggestionList } from './MentionSuggestionList';
+import { TaskReferenceInteractionLayer } from './TaskReferenceInteractionLayer';
 
 import type { AutoResizeTextareaProps } from './auto-resize-textarea';
 import type { InlineChip } from '@renderer/types/inlineChip';
@@ -38,13 +45,19 @@ interface MentionSegment {
   suggestion: MentionSuggestion;
 }
 
+interface TaskSegment {
+  type: 'task';
+  value: string;
+  suggestion: MentionSuggestion;
+}
+
 interface ChipSegment {
   type: 'chip';
   value: string;
   chip: InlineChip;
 }
 
-type Segment = TextSegment | MentionSegment | ChipSegment;
+type Segment = TextSegment | MentionSegment | TaskSegment | ChipSegment;
 
 // ---------------------------------------------------------------------------
 // Mention segment parsing (splits text into plain text + @mention segments)
@@ -63,7 +76,9 @@ function parseMentionSegments(text: string, suggestions: MentionSuggestion[]): S
   if (!text || suggestions.length === 0) return [{ type: 'text', value: text }];
 
   // Sort by name length descending for greedy matching
-  const sorted = [...suggestions].sort((a, b) => b.name.length - a.name.length);
+  const sorted = [...suggestions]
+    .filter((suggestion) => suggestion.type !== 'task')
+    .sort((a, b) => b.name.length - a.name.length);
 
   const segments: Segment[] = [];
   let i = 0;
@@ -86,9 +101,10 @@ function parseMentionSegments(text: string, suggestions: MentionSuggestion[]): S
 
     let matched = false;
     for (const suggestion of sorted) {
-      const end = i + 1 + suggestion.name.length;
+      const insertionText = getSuggestionInsertionText(suggestion);
+      const end = i + 1 + insertionText.length;
       if (end > text.length) continue;
-      if (text.slice(i + 1, end).toLowerCase() !== suggestion.name.toLowerCase()) continue;
+      if (text.slice(i + 1, end).toLowerCase() !== insertionText.toLowerCase()) continue;
 
       // Character after name must be boundary
       if (end < text.length) {
@@ -119,6 +135,40 @@ function parseMentionSegments(text: string, suggestions: MentionSuggestion[]): S
   return segments;
 }
 
+function parseSuggestionSegments(
+  text: string,
+  mentionSuggestions: MentionSuggestion[],
+  taskSuggestions: MentionSuggestion[]
+): Segment[] {
+  if (!text) return [{ type: 'text', value: text }];
+
+  const taskMatches = findTaskReferenceMatches(text, taskSuggestions);
+  if (taskMatches.length === 0) {
+    return parseMentionSegments(text, mentionSuggestions);
+  }
+
+  const segments: Segment[] = [];
+  let lastEnd = 0;
+
+  for (const match of taskMatches) {
+    if (match.start > lastEnd) {
+      segments.push(...parseMentionSegments(text.slice(lastEnd, match.start), mentionSuggestions));
+    }
+    segments.push({
+      type: 'task',
+      value: match.raw,
+      suggestion: match.suggestion,
+    });
+    lastEnd = match.end;
+  }
+
+  if (lastEnd < text.length) {
+    segments.push(...parseMentionSegments(text.slice(lastEnd), mentionSuggestions));
+  }
+
+  return segments;
+}
+
 // ---------------------------------------------------------------------------
 // Extended segment parser: chips + mentions
 // ---------------------------------------------------------------------------
@@ -129,11 +179,12 @@ function parseMentionSegments(text: string, suggestions: MentionSuggestion[]): S
  */
 function parseSegments(
   text: string,
-  suggestions: MentionSuggestion[],
+  mentionSuggestions: MentionSuggestion[],
+  taskSuggestions: MentionSuggestion[],
   chips: InlineChip[]
 ): Segment[] {
   if (!text) return [{ type: 'text', value: text }];
-  if (chips.length === 0) return parseMentionSegments(text, suggestions);
+  if (chips.length === 0) return parseSuggestionSegments(text, mentionSuggestions, taskSuggestions);
 
   // Build a map of chip tokens for fast lookup
   const chipTokenMap = new Map<string, InlineChip>();
@@ -154,7 +205,9 @@ function parseSegments(
   }
   chipPositions.sort((a, b) => a.start - b.start);
 
-  if (chipPositions.length === 0) return parseMentionSegments(text, suggestions);
+  if (chipPositions.length === 0) {
+    return parseSuggestionSegments(text, mentionSuggestions, taskSuggestions);
+  }
 
   const segments: Segment[] = [];
   let lastEnd = 0;
@@ -163,7 +216,7 @@ function parseSegments(
     // Text before this chip → parse for mentions
     if (pos.start > lastEnd) {
       const fragment = text.slice(lastEnd, pos.start);
-      segments.push(...parseMentionSegments(fragment, suggestions));
+      segments.push(...parseSuggestionSegments(fragment, mentionSuggestions, taskSuggestions));
     }
     segments.push({ type: 'chip', value: pos.token, chip: pos.chip });
     lastEnd = pos.end;
@@ -171,7 +224,9 @@ function parseSegments(
 
   // Remaining text after last chip → parse for mentions
   if (lastEnd < text.length) {
-    segments.push(...parseMentionSegments(text.slice(lastEnd), suggestions));
+    segments.push(
+      ...parseSuggestionSegments(text.slice(lastEnd), mentionSuggestions, taskSuggestions)
+    );
   }
 
   return segments;
@@ -210,6 +265,8 @@ interface MentionableTextareaProps extends Omit<
   onFileChipInsert?: (chip: InlineChip) => void;
   /** Team suggestions for cross-team @mentions */
   teamSuggestions?: MentionSuggestion[];
+  /** Task suggestions for #task references */
+  taskSuggestions?: MentionSuggestion[];
   /** Called when Enter (without Shift) is pressed. */
   onModEnter?: () => void;
 }
@@ -230,6 +287,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       projectPath,
       onFileChipInsert,
       teamSuggestions = [],
+      taskSuggestions = [],
       onModEnter,
       style,
       className,
@@ -244,6 +302,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
 
     // --- File search activation ---
     const enableFiles = !!projectPath;
+    const enableTaskSearch = taskSuggestions.length > 0;
 
     const setRefs = React.useCallback(
       (node: HTMLTextAreaElement | null) => {
@@ -260,9 +319,10 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
 
     const {
       isOpen,
+      activeTriggerChar,
       query,
-      filteredSuggestions: memberSuggestions,
       selectedIndex,
+      setSelectedIndex,
       dropdownPosition,
       selectSuggestion,
       dismiss,
@@ -271,30 +331,46 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       handleChange: mentionHandleChange,
       handleSelect: mentionHandleSelect,
     } = useMentionDetection({
-      suggestions,
       value,
       onValueChange,
       textareaRef: internalRef,
-      enableTriggerAlways: enableFiles || teamSuggestions.length > 0,
+      triggerChars: enableTaskSearch ? ['@', '#'] : ['@'],
+      isTriggerEnabled: (triggerChar) => {
+        if (triggerChar === '#') return enableTaskSearch;
+        return suggestions.length > 0 || enableFiles || teamSuggestions.length > 0;
+      },
     });
 
     // --- File suggestions ---
     const { suggestions: fileSuggestions, loading: filesLoading } = useFileSuggestions(
       enableFiles ? projectPath : null,
-      query,
-      isOpen && enableFiles
+      activeTriggerChar === '@' ? query : '',
+      isOpen && enableFiles && activeTriggerChar === '@'
     );
+
+    const isAtTrigger = activeTriggerChar !== '#';
+
+    const memberSuggestions = React.useMemo(() => {
+      if (!isOpen || !isAtTrigger) return [];
+      if (!query) return suggestions;
+      return suggestions.filter((member) => doesSuggestionMatchQuery(member, query));
+    }, [isAtTrigger, isOpen, query, suggestions]);
 
     // --- Team suggestions filtered by query ---
     const filteredTeamSuggestions = React.useMemo(() => {
-      if (teamSuggestions.length === 0 || !isOpen) return [];
+      if (teamSuggestions.length === 0 || !isOpen || !isAtTrigger) return [];
       if (!query) return teamSuggestions;
-      const lower = query.toLowerCase();
-      return teamSuggestions.filter((t) => t.name.toLowerCase().includes(lower));
-    }, [teamSuggestions, isOpen, query]);
+      return teamSuggestions.filter((team) => doesSuggestionMatchQuery(team, query));
+    }, [teamSuggestions, isAtTrigger, isOpen, query]);
+
+    const filteredTaskSuggestions = React.useMemo(() => {
+      if (taskSuggestions.length === 0 || !isOpen || activeTriggerChar !== '#') return [];
+      if (!query) return taskSuggestions;
+      return taskSuggestions.filter((task) => doesSuggestionMatchQuery(task, query));
+    }, [taskSuggestions, activeTriggerChar, isOpen, query]);
 
     // Merged suggestion list: members → online teams → offline teams → files
-    const allSuggestions = React.useMemo(() => {
+    const atSuggestions = React.useMemo(() => {
       const onlineTeams = filteredTeamSuggestions.filter((t) => t.isOnline);
       const offlineTeams = filteredTeamSuggestions.filter((t) => !t.isOnline);
       const merged = [...memberSuggestions, ...onlineTeams, ...offlineTeams];
@@ -302,21 +378,19 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       if (fileSuggestions.length === 0) return merged;
       return [...merged, ...fileSuggestions];
     }, [memberSuggestions, filteredTeamSuggestions, enableFiles, fileSuggestions]);
+    const effectiveSuggestions =
+      activeTriggerChar === '#' ? filteredTaskSuggestions : atSuggestions;
 
-    // When files are enabled, manage our own selectedIndex for the merged list
-    const [mergedIndex, setMergedIndex] = React.useState(0);
-
-    // Reset merged index when suggestions change or query changes
     React.useEffect(() => {
-      setMergedIndex(0);
-    }, [query, allSuggestions.length]);
-
-    // Use merged index when we have extra suggestion types (teams or files)
-    const hasMergedSuggestions = enableFiles || teamSuggestions.length > 0;
-
-    // Effective index: use merged when extra types present, hook's index otherwise
-    const effectiveIndex = hasMergedSuggestions ? mergedIndex : selectedIndex;
-    const effectiveSuggestions = hasMergedSuggestions ? allSuggestions : memberSuggestions;
+      if (!isOpen) return;
+      if (effectiveSuggestions.length === 0) {
+        setSelectedIndex(0);
+        return;
+      }
+      if (selectedIndex >= effectiveSuggestions.length) {
+        setSelectedIndex(0);
+      }
+    }, [effectiveSuggestions.length, isOpen, selectedIndex, setSelectedIndex]);
 
     // --- File selection handler ---
     const handleFileSelect = React.useCallback(
@@ -436,8 +510,8 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       [getTriggerIndex, query, value, chips, onValueChange, onFileChipInsert, onChipRemove, dismiss]
     );
 
-    // --- Merged selection handler ---
-    const handleMergedSelect = React.useCallback(
+    // --- Active selection handler ---
+    const handleActiveSelect = React.useCallback(
       (s: MentionSuggestion) => {
         if (s.type === 'file') {
           handleFileSelect(s);
@@ -465,17 +539,22 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
     }, [value]);
 
     // --- Overlay activation ---
-    const hasOverlay = suggestions.length > 0 || teamSuggestions.length > 0 || chips.length > 0;
+    const hasOverlay =
+      suggestions.length > 0 ||
+      teamSuggestions.length > 0 ||
+      taskSuggestions.length > 0 ||
+      chips.length > 0;
 
     // Combine member + team suggestions for overlay parsing
-    const allOverlaySuggestions = React.useMemo(
+    const mentionOverlaySuggestions = React.useMemo(
       () => (teamSuggestions.length > 0 ? [...suggestions, ...teamSuggestions] : suggestions),
       [suggestions, teamSuggestions]
     );
 
     const segments = React.useMemo(
-      () => (hasOverlay ? parseSegments(value, allOverlaySuggestions, chips) : []),
-      [hasOverlay, value, allOverlaySuggestions, chips]
+      () =>
+        hasOverlay ? parseSegments(value, mentionOverlaySuggestions, taskSuggestions, chips) : [],
+      [hasOverlay, value, mentionOverlaySuggestions, taskSuggestions, chips]
     );
 
     // Sync backdrop scroll with textarea scroll + track scrollTop for interaction layer
@@ -561,47 +640,15 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       [chips, onChipRemove, value, onValueChange]
     );
 
-    // --- File-aware keyboard handler (replaces mention handler when files enabled) ---
-    const fileMentionHandleKeyDown = React.useCallback(
-      (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (!isOpen || allSuggestions.length === 0) return;
-
-        switch (e.key) {
-          case 'ArrowDown':
-            e.preventDefault();
-            setMergedIndex((prev) => (prev + 1) % allSuggestions.length);
-            break;
-          case 'ArrowUp':
-            e.preventDefault();
-            setMergedIndex((prev) => (prev - 1 + allSuggestions.length) % allSuggestions.length);
-            break;
-          case 'Enter':
-            if (!e.shiftKey) {
-              e.preventDefault();
-              if (allSuggestions[mergedIndex]) {
-                handleMergedSelect(allSuggestions[mergedIndex]);
-              }
-            }
-            break;
-          case 'Escape':
-            e.preventDefault();
-            dismiss();
-            break;
-        }
-      },
-      [isOpen, allSuggestions, mergedIndex, handleMergedSelect, dismiss]
-    );
-
-    // Composed key handler: mention logic first (when open) → Mod+Enter submit → chip logic → mention fallback
+    // Composed key handler: suggestion logic first (when open) → Mod+Enter submit → chip logic
     const composedHandleKeyDown = React.useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        // When mention dropdown is open, let mention handler consume Enter/Arrow keys first
+        // When the suggestion dropdown is open, let it consume Enter/Arrow keys first
         if (isOpen && effectiveSuggestions.length > 0) {
-          if (hasMergedSuggestions) {
-            fileMentionHandleKeyDown(e);
-          } else {
-            mentionHandleKeyDown(e);
-          }
+          mentionHandleKeyDown(e, effectiveSuggestions.length, (index) => {
+            const next = effectiveSuggestions[index];
+            if (next) handleActiveSelect(next);
+          });
           if (e.defaultPrevented) return;
         }
         // Enter (without Shift) → submit; Shift+Enter → newline
@@ -611,22 +658,15 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           return;
         }
         handleChipKeyDown(e);
-        if (!e.defaultPrevented && !isOpen) {
-          if (hasMergedSuggestions) {
-            fileMentionHandleKeyDown(e);
-          } else {
-            mentionHandleKeyDown(e);
-          }
-        }
       },
       [
         onModEnter,
         handleChipKeyDown,
-        hasMergedSuggestions,
-        fileMentionHandleKeyDown,
         mentionHandleKeyDown,
         isOpen,
         effectiveSuggestions.length,
+        effectiveSuggestions,
+        handleActiveSelect,
       ]
     );
 
@@ -707,7 +747,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
     // --- Rotating tips ---
     const rotatingTips = React.useMemo(
       () => [
-        'Tip: Use @ to mention team members or search files',
+        'Tip: Use @ for members/files and # for tasks',
         'Tip: Mention "create a task" to add it to the kanban',
         "Tip: Don't overload the team lead with tasks — ask them to delegate to teammates",
       ],
@@ -731,7 +771,8 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
 
     const resolvedHintText = hintText ?? rotatingTips[tipIndex];
     const showHintRow =
-      showHint && (suggestions.length > 0 || enableFiles || teamSuggestions.length > 0);
+      showHint &&
+      (suggestions.length > 0 || enableFiles || teamSuggestions.length > 0 || enableTaskSearch);
     const showFooter = showHintRow || footerRight;
 
     return (
@@ -759,6 +800,17 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
                 if (seg.type === 'chip') {
                   return <CodeChipBadge key={idx} chip={seg.chip} tokenText={seg.value} />;
                 }
+                if (seg.type === 'task') {
+                  return (
+                    <span
+                      key={idx}
+                      className="font-medium underline decoration-transparent"
+                      style={{ color: PROSE_LINK }}
+                    >
+                      {seg.value}
+                    </span>
+                  );
+                }
                 // mention (member or team)
                 const isTeamMention = seg.suggestion.type === 'team';
                 const colorSet = seg.suggestion.color
@@ -783,6 +835,15 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
                 );
               })}{' '}
             </div>
+          ) : null}
+
+          {taskSuggestions.length > 0 ? (
+            <TaskReferenceInteractionLayer
+              taskSuggestions={taskSuggestions}
+              value={value}
+              textareaRef={internalRef}
+              scrollTop={scrollTop}
+            />
           ) : null}
 
           <AutoResizeTextarea
@@ -839,11 +900,11 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           <div className="absolute left-0 z-50 w-full" style={{ top: `${dropdownPosition.top}px` }}>
             <MentionSuggestionList
               suggestions={effectiveSuggestions}
-              selectedIndex={effectiveIndex}
-              onSelect={hasMergedSuggestions ? handleMergedSelect : selectSuggestion}
+              selectedIndex={selectedIndex}
+              onSelect={handleActiveSelect}
               query={query}
               hasFileSearch={enableFiles}
-              filesLoading={enableFiles && filesLoading}
+              filesLoading={enableFiles && filesLoading && activeTriggerChar === '@'}
             />
           </div>
         ) : null}

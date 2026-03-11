@@ -34,6 +34,7 @@ import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { EffortLevelSelector } from './EffortLevelSelector';
 import { ExtendedContextCheckbox } from './ExtendedContextCheckbox';
+import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { ProjectPathSelector } from './ProjectPathSelector';
 import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
 import { computeEffectiveTeamModel, TeamModelSelector } from './TeamModelSelector';
@@ -561,6 +562,34 @@ export const CreateTeamDialog = ({
     return args;
   }, [skipPermissions, effectiveModel, selectedEffort]);
 
+  const launchOptionalSummary = useMemo(() => {
+    const summary: string[] = [];
+    if (prompt.trim()) summary.push('Lead prompt');
+    if (selectedModel) summary.push(`Model: ${selectedModel}`);
+    if (selectedEffort) summary.push(`Effort: ${selectedEffort}`);
+    if (extendedContext) summary.push('Extended context');
+    if (skipPermissions) summary.push('Auto-approve tools');
+    if (worktreeEnabled && worktreeName.trim()) summary.push(`Worktree: ${worktreeName.trim()}`);
+    if (customArgs.trim()) summary.push('Custom CLI args');
+    return summary;
+  }, [
+    prompt,
+    selectedModel,
+    selectedEffort,
+    extendedContext,
+    skipPermissions,
+    worktreeEnabled,
+    worktreeName,
+    customArgs,
+  ]);
+
+  const teamDetailsSummary = useMemo(() => {
+    const summary: string[] = [];
+    if (description.trim()) summary.push('Description');
+    if (teamColor) summary.push(`Color: ${teamColor}`);
+    return summary;
+  }, [description, teamColor]);
+
   const activeError = localError ?? provisioningError;
   const canOpenExistingTeam =
     activeError?.includes('Team already exists') === true && request.teamName.length > 0;
@@ -810,16 +839,21 @@ export const CreateTeamDialog = ({
             />
           </div>
 
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 md:col-span-2">
-            <div className="flex items-center gap-2">
+          <div className="rounded-lg border border-[var(--color-border-emphasis)] bg-[var(--color-surface-overlay)] p-4 shadow-sm md:col-span-2">
+            <div className="flex items-start gap-3">
               <Checkbox
                 id="launch-team"
                 checked={launchTeam}
                 onCheckedChange={(checked) => setLaunchTeam(checked === true)}
               />
-              <Label htmlFor="launch-team" className="cursor-pointer">
-                Launch team
-              </Label>
+              <div className="space-y-1">
+                <Label htmlFor="launch-team" className="cursor-pointer text-sm font-medium">
+                  Run command after create
+                </Label>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  Start the team immediately via local Claude CLI.
+                </p>
+              </div>
             </div>
 
             {launchTeam ? (
@@ -837,119 +871,136 @@ export const CreateTeamDialog = ({
                   fieldError={fieldErrors.cwd}
                 />
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="team-prompt" className="label-optional">
-                    Prompt for team lead (optional)
-                  </Label>
-                  <MentionableTextarea
-                    id="team-prompt"
-                    className="text-xs"
-                    minRows={3}
-                    maxRows={12}
-                    value={prompt}
-                    onValueChange={promptDraft.setValue}
-                    suggestions={soloTeam ? [] : mentionSuggestions}
-                    projectPath={effectiveCwd || null}
-                    chips={promptChipDraft.chips}
-                    onChipRemove={promptChipDraft.removeChip}
-                    onFileChipInsert={promptChipDraft.addChip}
-                    placeholder="Instructions for the team lead during provisioning..."
-                    footerRight={
-                      promptDraft.isSaved ? (
-                        <span className="text-[10px] text-[var(--color-text-muted)]">
-                          Draft saved
-                        </span>
-                      ) : null
-                    }
-                  />
-                </div>
+                <OptionalSettingsSection
+                  title="Optional launch settings"
+                  description="Prompt, model, safety, and CLI overrides live here when you need them."
+                  summary={launchOptionalSummary}
+                >
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="team-prompt" className="label-optional">
+                        Prompt for team lead (optional)
+                      </Label>
+                      <MentionableTextarea
+                        id="team-prompt"
+                        className="text-xs"
+                        minRows={3}
+                        maxRows={12}
+                        value={prompt}
+                        onValueChange={promptDraft.setValue}
+                        suggestions={soloTeam ? [] : mentionSuggestions}
+                        projectPath={effectiveCwd || null}
+                        chips={promptChipDraft.chips}
+                        onChipRemove={promptChipDraft.removeChip}
+                        onFileChipInsert={promptChipDraft.addChip}
+                        placeholder="Instructions for the team lead during provisioning..."
+                        footerRight={
+                          promptDraft.isSaved ? (
+                            <span className="text-[10px] text-[var(--color-text-muted)]">
+                              Draft saved
+                            </span>
+                          ) : null
+                        }
+                      />
+                    </div>
 
-                <div>
-                  <TeamModelSelector
-                    value={selectedModel}
-                    onValueChange={setSelectedModel}
-                    id="create-model"
-                  />
-                  <EffortLevelSelector
-                    value={selectedEffort}
-                    onValueChange={setSelectedEffort}
-                    id="create-effort"
-                  />
-                  <ExtendedContextCheckbox
-                    id="create-extended-context"
-                    checked={extendedContext}
-                    onCheckedChange={setExtendedContext}
-                    disabled={selectedModel === 'haiku'}
-                  />
-                  {launchTeam && (
-                    <SkipPermissionsCheckbox
-                      id="create-skip-permissions"
-                      checked={skipPermissions}
-                      onCheckedChange={setSkipPermissions}
+                    <div>
+                      <TeamModelSelector
+                        value={selectedModel}
+                        onValueChange={setSelectedModel}
+                        id="create-model"
+                      />
+                      <EffortLevelSelector
+                        value={selectedEffort}
+                        onValueChange={setSelectedEffort}
+                        id="create-effort"
+                      />
+                      <ExtendedContextCheckbox
+                        id="create-extended-context"
+                        checked={extendedContext}
+                        onCheckedChange={setExtendedContext}
+                        disabled={selectedModel === 'haiku'}
+                      />
+                      <SkipPermissionsCheckbox
+                        id="create-skip-permissions"
+                        checked={skipPermissions}
+                        onCheckedChange={setSkipPermissions}
+                      />
+                    </div>
+
+                    <AdvancedCliSection
+                      teamName={advancedKey}
+                      internalArgs={internalArgs}
+                      worktreeEnabled={worktreeEnabled}
+                      onWorktreeEnabledChange={setWorktreeEnabled}
+                      worktreeName={worktreeName}
+                      onWorktreeNameChange={setWorktreeName}
+                      customArgs={customArgs}
+                      onCustomArgsChange={setCustomArgs}
                     />
-                  )}
-                </div>
-                <AdvancedCliSection
-                  teamName={advancedKey}
-                  internalArgs={internalArgs}
-                  worktreeEnabled={worktreeEnabled}
-                  onWorktreeEnabledChange={setWorktreeEnabled}
-                  worktreeName={worktreeName}
-                  onWorktreeNameChange={setWorktreeName}
-                  customArgs={customArgs}
-                  onCustomArgsChange={setCustomArgs}
-                />
+                  </div>
+                </OptionalSettingsSection>
               </div>
             ) : null}
           </div>
 
-          <div className="space-y-1.5 md:col-span-2">
-            <Label htmlFor="team-description" className="label-optional">
-              Description (optional)
-            </Label>
-            <AutoResizeTextarea
-              id="team-description"
-              className="text-xs"
-              minRows={2}
-              maxRows={8}
-              value={description}
-              onChange={(event) => descriptionDraft.setValue(event.target.value)}
-              placeholder="Brief description of the team purpose"
-            />
-            {descriptionDraft.isSaved ? (
-              <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-            ) : null}
-          </div>
+          <div className="md:col-span-2">
+            <OptionalSettingsSection
+              title="Optional team details"
+              description="Keep the default flow compact and only open this when you want extra context or a custom color."
+              summary={teamDetailsSummary}
+            >
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="team-description" className="label-optional">
+                    Description (optional)
+                  </Label>
+                  <AutoResizeTextarea
+                    id="team-description"
+                    className="text-xs"
+                    minRows={2}
+                    maxRows={8}
+                    value={description}
+                    onChange={(event) => descriptionDraft.setValue(event.target.value)}
+                    placeholder="Brief description of the team purpose"
+                  />
+                  {descriptionDraft.isSaved ? (
+                    <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                  ) : null}
+                </div>
 
-          <div className="space-y-1.5 md:col-span-2">
-            <Label className="label-optional">Color (optional)</Label>
-            <div className="flex flex-wrap gap-2">
-              {TEAM_COLOR_NAMES.map((colorName) => {
-                const colorSet = getTeamColorSet(colorName);
-                const isSelected = teamColor === colorName;
-                return (
-                  <button
-                    key={colorName}
-                    type="button"
-                    className={cn(
-                      'flex size-7 items-center justify-center rounded-full border-2 transition-all',
-                      isSelected ? 'scale-110' : 'opacity-70 hover:opacity-100'
-                    )}
-                    style={{
-                      backgroundColor: getThemedBadge(colorSet, isLight),
-                      borderColor: isSelected ? colorSet.border : 'transparent',
-                    }}
-                    title={colorName}
-                    onClick={() => setTeamColor(isSelected ? '' : colorName)}
-                  >
-                    <span
-                      className="size-3.5 rounded-full"
-                      style={{ backgroundColor: colorSet.border }}
-                    />
-                  </button>
-                );
-              })}
-            </div>
+                <div className="space-y-1.5">
+                  <Label className="label-optional">Color (optional)</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {TEAM_COLOR_NAMES.map((colorName) => {
+                      const colorSet = getTeamColorSet(colorName);
+                      const isSelected = teamColor === colorName;
+                      return (
+                        <button
+                          key={colorName}
+                          type="button"
+                          className={cn(
+                            'flex size-7 items-center justify-center rounded-full border-2 transition-all',
+                            isSelected ? 'scale-110' : 'opacity-70 hover:opacity-100'
+                          )}
+                          style={{
+                            backgroundColor: getThemedBadge(colorSet, isLight),
+                            borderColor: isSelected ? colorSet.border : 'transparent',
+                          }}
+                          title={colorName}
+                          onClick={() => setTeamColor(isSelected ? '' : colorName)}
+                        >
+                          <span
+                            className="size-3.5 rounded-full"
+                            style={{ backgroundColor: colorSet.border }}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </OptionalSettingsSection>
           </div>
         </div>
 

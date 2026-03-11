@@ -415,6 +415,12 @@ export interface TeamSlice {
     allow: boolean,
     message?: string
   ) => Promise<void>;
+
+  // Messages panel UI state
+  messagesPanelMode: 'sidebar' | 'inline';
+  messagesPanelWidth: number;
+  setMessagesPanelMode: (mode: 'sidebar' | 'inline') => void;
+  setMessagesPanelWidth: (width: number) => void;
 }
 
 // --- Per-team launch params persistence ---
@@ -562,6 +568,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   deletedTasksLoading: false,
   pendingApprovals: [],
   toolApprovalSettings: loadToolApprovalSettings(),
+
+  // Messages panel UI state
+  messagesPanelMode: 'sidebar' as const,
+  messagesPanelWidth: 340,
+  setMessagesPanelMode: (mode: 'sidebar' | 'inline') => set({ messagesPanelMode: mode }),
+  setMessagesPanelWidth: (width: number) => set({ messagesPanelWidth: width }),
 
   fetchBranches: async (paths: string[]) => {
     const results: Record<string, string | null> = {};

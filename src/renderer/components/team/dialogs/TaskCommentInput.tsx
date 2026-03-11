@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useStore } from '@renderer/store';
 import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
@@ -55,6 +56,7 @@ export const TaskCommentInput = ({
   const chipDraft = useChipDraftPersistence(`taskCommentChips:${teamName}:${taskId}`);
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName);
+  const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -279,6 +281,7 @@ export const TaskCommentInput = ({
           onValueChange={draft.setValue}
           suggestions={mentionSuggestions}
           teamSuggestions={teamMentionSuggestions}
+          taskSuggestions={taskSuggestions}
           projectPath={projectPath}
           chips={chipDraft.chips}
           onFileChipInsert={chipDraft.addChip}
