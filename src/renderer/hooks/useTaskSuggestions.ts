@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { useStore } from '@renderer/store';
+import { createEncodedTaskReference } from '@renderer/utils/taskReferenceUtils';
 import { getTaskDisplayId } from '@shared/utils/taskIdentity';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
@@ -36,7 +37,7 @@ function buildTaskSuggestion({
   return {
     id: `task:${teamName}:${task.id}`,
     name: displayId,
-    insertText: displayId,
+    insertText: createEncodedTaskReference(displayId, task.id, teamName),
     subtitle: task.subject,
     color: teamColor,
     type: 'task',

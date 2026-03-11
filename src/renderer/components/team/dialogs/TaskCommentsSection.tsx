@@ -22,7 +22,10 @@ import { isImageMimeType } from '@renderer/utils/attachmentUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
-import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
+import {
+  linkifyTaskIdsInMarkdown,
+  stripEncodedTaskReferenceMetadata,
+} from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { formatDistanceToNow } from 'date-fns';
@@ -145,7 +148,7 @@ export const TaskCommentsSection = ({
     [members, colorMap]
   );
 
-  const trimmed = draft.value.trim();
+  const trimmed = stripEncodedTaskReferenceMetadata(draft.value).trim();
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const canSubmit =
     (trimmed.length > 0 || chipDraft.chips.length > 0) &&

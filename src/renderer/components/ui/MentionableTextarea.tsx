@@ -19,6 +19,7 @@ import {
   reconcileChips,
   removeChipTokenFromText,
 } from '@renderer/utils/chipUtils';
+import { Link2 } from 'lucide-react';
 
 import { AutoResizeTextarea } from './auto-resize-textarea';
 import { ChipInteractionLayer } from './ChipInteractionLayer';
@@ -49,6 +50,12 @@ interface TaskSegment {
   type: 'task';
   value: string;
   suggestion: MentionSuggestion;
+  encoded: boolean;
+}
+
+interface UrlSegment {
+  type: 'url';
+  value: string;
 }
 
 interface ChipSegment {
@@ -57,7 +64,41 @@ interface ChipSegment {
   chip: InlineChip;
 }
 
-type Segment = TextSegment | MentionSegment | TaskSegment | ChipSegment;
+type Segment = TextSegment | MentionSegment | TaskSegment | UrlSegment | ChipSegment;
+
+interface TextMatch {
+  start: number;
+  end: number;
+  value: string;
+}
+
+const URL_REGEX = /https?:\/\/[^\s]+/g;
+
+function trimUrlMatch(rawUrl: string): string {
+  return rawUrl.replace(/[),.!?;:]+$/g, '');
+}
+
+function findUrlMatches(text: string): TextMatch[] {
+  if (!text) return [];
+
+  const matches: TextMatch[] = [];
+  for (const match of text.matchAll(URL_REGEX)) {
+    const rawValue = match[0];
+    const start = match.index ?? -1;
+    if (start < 0) continue;
+
+    const trimmedValue = trimUrlMatch(rawValue);
+    if (!trimmedValue) continue;
+
+    matches.push({
+      start,
+      end: start + trimmedValue.length,
+      value: trimmedValue,
+    });
+  }
+
+  return matches;
+}
 
 // ---------------------------------------------------------------------------
 // Mention segment parsing (splits text into plain text + @mention segments)
@@ -142,6 +183,37 @@ function parseSuggestionSegments(
 ): Segment[] {
   if (!text) return [{ type: 'text', value: text }];
 
+  const urlMatches = findUrlMatches(text);
+  if (urlMatches.length > 0) {
+    const segments: Segment[] = [];
+    let lastEnd = 0;
+
+    for (const match of urlMatches) {
+      if (match.start > lastEnd) {
+        segments.push(
+          ...parseSuggestionSegments(
+            text.slice(lastEnd, match.start),
+            mentionSuggestions,
+            taskSuggestions
+          )
+        );
+      }
+      segments.push({
+        type: 'url',
+        value: match.value,
+      });
+      lastEnd = match.end;
+    }
+
+    if (lastEnd < text.length) {
+      segments.push(
+        ...parseSuggestionSegments(text.slice(lastEnd), mentionSuggestions, taskSuggestions)
+      );
+    }
+
+    return segments;
+  }
+
   const taskMatches = findTaskReferenceMatches(text, taskSuggestions);
   if (taskMatches.length === 0) {
     return parseMentionSegments(text, mentionSuggestions);
@@ -158,6 +230,7 @@ function parseSuggestionSegments(
       type: 'task',
       value: match.raw,
       suggestion: match.suggestion,
+      encoded: match.encoded,
     });
     lastEnd = match.end;
   }
@@ -235,6 +308,9 @@ function parseSegments(
 // Default fallback color for mentions without a team color
 const DEFAULT_MENTION_BG = 'rgba(59, 130, 246, 0.15)';
 const DEFAULT_MENTION_TEXT = '#60a5fa';
+const URL_BADGE_BG = 'rgba(30, 58, 138, 0.32)';
+const URL_BADGE_BORDER = 'rgba(96, 165, 250, 0.28)';
+const URL_BADGE_TEXT = '#f8fafc';
 
 // ---------------------------------------------------------------------------
 // Component
@@ -540,6 +616,8 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
 
     // --- Overlay activation ---
     const hasOverlay =
+      value.includes('http://') ||
+      value.includes('https://') ||
       suggestions.length > 0 ||
       teamSuggestions.length > 0 ||
       taskSuggestions.length > 0 ||
@@ -570,10 +648,18 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
     }, []);
 
     // --- Chip keyboard handling (atomic cursor / backspace / delete) ---
+    const findEncodedTaskBoundary = React.useCallback(
+      (cursorPos: number) => {
+        const boundary = findTaskReferenceMatches(value, taskSuggestions).find(
+          (match) => match.encoded && cursorPos >= match.start && cursorPos <= match.end
+        );
+        return boundary ? { start: boundary.start, end: boundary.end } : null;
+      },
+      [taskSuggestions, value]
+    );
+
     const handleChipKeyDown = React.useCallback(
       (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (chips.length === 0 || !onChipRemove) return;
-
         const textarea = internalRef.current;
         if (!textarea) return;
 
@@ -584,6 +670,17 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
         const cursorPos = selectionStart;
 
         if (e.key === 'Backspace') {
+          const taskBoundary = findEncodedTaskBoundary(cursorPos);
+          if (taskBoundary && cursorPos === taskBoundary.end) {
+            e.preventDefault();
+            const newText = value.slice(0, taskBoundary.start) + value.slice(taskBoundary.end);
+            onValueChange(newText);
+            requestAnimationFrame(() => {
+              textarea.setSelectionRange(taskBoundary.start, taskBoundary.start);
+            });
+            return;
+          }
+          if (chips.length === 0 || !onChipRemove) return;
           // If cursor is at chip end → delete entire chip
           const boundary = findChipBoundary(value, chips, cursorPos);
           if (cursorPos === boundary?.end) {
@@ -597,6 +694,17 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
             });
           }
         } else if (e.key === 'Delete') {
+          const taskBoundary = findEncodedTaskBoundary(cursorPos);
+          if (taskBoundary && cursorPos === taskBoundary.start) {
+            e.preventDefault();
+            const newText = value.slice(0, taskBoundary.start) + value.slice(taskBoundary.end);
+            onValueChange(newText);
+            requestAnimationFrame(() => {
+              textarea.setSelectionRange(taskBoundary.start, taskBoundary.start);
+            });
+            return;
+          }
+          if (chips.length === 0 || !onChipRemove) return;
           // If cursor is at chip start → delete entire chip
           const boundary = findChipBoundary(value, chips, cursorPos);
           if (cursorPos === boundary?.start) {
@@ -609,6 +717,13 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
             });
           }
         } else if (e.key === 'ArrowLeft' && !e.shiftKey) {
+          const taskBoundary = findEncodedTaskBoundary(cursorPos);
+          if (taskBoundary && cursorPos === taskBoundary.end) {
+            e.preventDefault();
+            textarea.setSelectionRange(taskBoundary.start, taskBoundary.start);
+            return;
+          }
+          if (chips.length === 0 || !onChipRemove) return;
           // If cursor is at chip end → jump to chip start
           const boundary = findChipBoundary(value, chips, cursorPos);
           if (cursorPos === boundary?.end) {
@@ -616,6 +731,13 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
             textarea.setSelectionRange(boundary.start, boundary.start);
           }
         } else if (e.key === 'ArrowRight' && !e.shiftKey) {
+          const taskBoundary = findEncodedTaskBoundary(cursorPos);
+          if (taskBoundary && cursorPos === taskBoundary.start) {
+            e.preventDefault();
+            textarea.setSelectionRange(taskBoundary.end, taskBoundary.end);
+            return;
+          }
+          if (chips.length === 0 || !onChipRemove) return;
           // If cursor is at chip start → jump to chip end
           const boundary = findChipBoundary(value, chips, cursorPos);
           if (cursorPos === boundary?.start) {
@@ -623,6 +745,13 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
             textarea.setSelectionRange(boundary.end, boundary.end);
           }
         } else if (e.key === 'ArrowLeft' && e.shiftKey) {
+          const taskBoundary = findEncodedTaskBoundary(cursorPos);
+          if (taskBoundary && cursorPos === taskBoundary.end) {
+            e.preventDefault();
+            textarea.setSelectionRange(taskBoundary.start, selectionEnd);
+            return;
+          }
+          if (chips.length === 0 || !onChipRemove) return;
           // Extend selection past chip atomically
           const boundary = findChipBoundary(value, chips, cursorPos);
           if (cursorPos === boundary?.end) {
@@ -630,6 +759,13 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
             textarea.setSelectionRange(boundary.start, selectionEnd);
           }
         } else if (e.key === 'ArrowRight' && e.shiftKey) {
+          const taskBoundary = findEncodedTaskBoundary(cursorPos);
+          if (taskBoundary && cursorPos === taskBoundary.start) {
+            e.preventDefault();
+            textarea.setSelectionRange(selectionStart, taskBoundary.end);
+            return;
+          }
+          if (chips.length === 0 || !onChipRemove) return;
           const boundary = findChipBoundary(value, chips, cursorPos);
           if (cursorPos === boundary?.start) {
             e.preventDefault();
@@ -637,7 +773,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           }
         }
       },
-      [chips, onChipRemove, value, onValueChange]
+      [chips, findEncodedTaskBoundary, onChipRemove, value, onValueChange]
     );
 
     // Composed key handler: suggestion logic first (when open) → Mod+Enter submit → chip logic
@@ -715,8 +851,26 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
             });
           }
         }
+
+        const textarea = internalRef.current;
+        if (!textarea) return;
+        const { selectionStart, selectionEnd } = textarea;
+        if (selectionStart !== selectionEnd) return;
+        const taskBoundary = findEncodedTaskBoundary(selectionStart);
+        if (
+          taskBoundary &&
+          selectionStart > taskBoundary.start &&
+          selectionStart < taskBoundary.end
+        ) {
+          const distToStart = selectionStart - taskBoundary.start;
+          const distToEnd = taskBoundary.end - selectionStart;
+          const snapTo = distToStart <= distToEnd ? taskBoundary.start : taskBoundary.end;
+          requestAnimationFrame(() => {
+            textarea.setSelectionRange(snapTo, snapTo);
+          });
+        }
       },
-      [mentionHandleSelect, chips, value]
+      [mentionHandleSelect, chips, value, findEncodedTaskBoundary]
     );
 
     // --- Chip remove handler (from X button in interaction layer) ---
@@ -804,10 +958,38 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
                   return (
                     <span
                       key={idx}
-                      className="font-medium underline decoration-transparent"
-                      style={{ color: PROSE_LINK }}
+                      className={
+                        seg.encoded
+                          ? 'rounded px-1.5 py-0.5 font-medium'
+                          : 'font-medium underline decoration-transparent'
+                      }
+                      style={
+                        seg.encoded
+                          ? {
+                              backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                              color: PROSE_LINK,
+                              boxShadow: '0 0 0 1.5px rgba(59, 130, 246, 0.15)',
+                            }
+                          : { color: PROSE_LINK }
+                      }
                     >
                       {seg.value}
+                    </span>
+                  );
+                }
+                if (seg.type === 'url') {
+                  return (
+                    <span
+                      key={idx}
+                      className="inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 align-baseline"
+                      style={{
+                        backgroundColor: URL_BADGE_BG,
+                        color: URL_BADGE_TEXT,
+                        boxShadow: `inset 0 0 0 1px ${URL_BADGE_BORDER}`,
+                      }}
+                    >
+                      <Link2 size={11} className="shrink-0 opacity-80" />
+                      <span className="truncate">{seg.value}</span>
                     </span>
                   );
                 }

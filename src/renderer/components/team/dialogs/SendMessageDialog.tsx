@@ -26,6 +26,7 @@ import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { AlertCircle, ImagePlus, Send, X } from 'lucide-react';
 
@@ -214,7 +215,7 @@ export const SendMessageDialog = ({
 
   const attachmentsBlocked = attachments.length > 0 && !supportsAttachments;
 
-  const trimmedText = textDraft.value.trim();
+  const trimmedText = stripEncodedTaskReferenceMetadata(textDraft.value).trim();
   const serialized = serializeChipsWithText(trimmedText, chipDraft.chips);
   const finalText = quote ? buildReplyBlock(quote.from, quote.text, serialized) : serialized;
   const remaining = MAX_TEXT_LENGTH - finalText.length;

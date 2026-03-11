@@ -30,6 +30,7 @@ import { chipToken, serializeChipsWithText } from '@renderer/types/inlineChip';
 import { removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
 import { getTaskKanbanColumn } from '@shared/utils/reviewState';
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { AlertTriangle, Search } from 'lucide-react';
@@ -184,7 +185,7 @@ export const CreateTaskDialog = ({
       owner || undefined,
       blockedBy.length > 0 ? blockedBy : undefined,
       related.length > 0 ? related : undefined,
-      promptDraft.value.trim() || undefined,
+      stripEncodedTaskReferenceMetadata(promptDraft.value.trim()) || undefined,
       startImmediately
     );
     descriptionDraft.clearDraft();

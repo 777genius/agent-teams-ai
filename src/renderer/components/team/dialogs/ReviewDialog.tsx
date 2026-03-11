@@ -13,6 +13,7 @@ import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useStore } from '@renderer/store';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 import { Send } from 'lucide-react';
@@ -56,11 +57,11 @@ export const ReviewDialog = ({
     [members, colorMap]
   );
 
-  const trimmed = draft.value.trim();
+  const trimmed = stripEncodedTaskReferenceMetadata(draft.value).trim();
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
 
   const handleSubmit = (): void => {
-    const comment = trimmed || undefined;
+    const comment = stripEncodedTaskReferenceMetadata(trimmed) || undefined;
     draft.clearDraft();
     onSubmit(comment);
   };

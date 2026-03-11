@@ -19,12 +19,15 @@ import {
   keymap,
   lineNumbers,
 } from '@codemirror/view';
+import { Button } from '@renderer/components/ui/button';
 import { baseEditorTheme, jsonLinter } from '@renderer/utils/codemirrorTheme';
+import { X } from 'lucide-react';
 
 interface MembersJsonEditorProps {
   value: string;
   onChange: (json: string) => void;
   error: string | null;
+  onClose: () => void;
 }
 
 const membersEditorTheme = EditorView.theme({
@@ -41,6 +44,7 @@ export const MembersJsonEditor = ({
   value,
   onChange,
   error,
+  onClose,
 }: MembersJsonEditorProps): React.JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -104,10 +108,15 @@ export const MembersJsonEditor = ({
 
   return (
     <div className="space-y-1">
-      <div
-        ref={containerRef}
-        className="overflow-hidden rounded border border-[var(--color-border)]"
-      />
+      <div className="overflow-hidden rounded border border-[var(--color-border)]">
+        <div className="flex items-center justify-end border-b border-[var(--color-border)] px-2 py-1.5">
+          <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={onClose}>
+            <X className="size-3.5" />
+            Hide JSON
+          </Button>
+        </div>
+        <div ref={containerRef} />
+      </div>
       {error ? <p className="text-[11px] text-red-300">{error}</p> : null}
     </div>
   );

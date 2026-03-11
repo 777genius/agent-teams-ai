@@ -447,7 +447,7 @@ export const ActivityItem = ({
 
   return (
     <article
-      className="group rounded-md"
+      className="group overflow-hidden rounded-md"
       style={{
         marginLeft: isUserSent ? 15 : undefined,
         backgroundColor:
@@ -484,7 +484,7 @@ export const ActivityItem = ({
         role={isHeaderClickable ? 'button' : undefined}
         tabIndex={isHeaderClickable ? 0 : undefined}
         className={[
-          'flex items-center gap-2 px-3 py-2',
+          'flex min-w-0 items-center gap-2 px-3 py-2',
           isHeaderClickable ? 'cursor-pointer select-none' : '',
         ].join(' ')}
         onClick={handleHeaderToggle}
@@ -641,7 +641,7 @@ export const ActivityItem = ({
 
       {/* Content — collapsed for system messages, expanded for others */}
       {isExpanded ? (
-        <div className="px-3 pb-3">
+        <div className="min-w-0 overflow-hidden px-3 pb-3">
           {structured ? (
             <div className="space-y-2">
               {autoSummary && autoSummary !== messageType ? (

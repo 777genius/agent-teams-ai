@@ -17,6 +17,7 @@ import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { nameColorSet } from '@renderer/utils/projectColor';
+import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { AlertCircle, Check, ChevronDown, ImagePlus, Mic, Search, Send } from 'lucide-react';
 
@@ -136,7 +137,7 @@ export const MessageComposer = ({
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName);
   const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
 
-  const trimmed = draft.text.trim();
+  const trimmed = stripEncodedTaskReferenceMetadata(draft.text).trim();
 
   const selectedMember = members.find((m) => m.name === recipient);
   const selectedResolvedColor = selectedMember ? colorMap.get(selectedMember.name) : undefined;

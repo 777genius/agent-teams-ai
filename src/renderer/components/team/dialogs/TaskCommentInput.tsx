@@ -12,6 +12,7 @@ import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
+import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { ImagePlus, Mic, Send, Trash2, X } from 'lucide-react';
 
@@ -73,7 +74,7 @@ export const TaskCommentInput = ({
     [members, colorMap]
   );
 
-  const trimmed = draft.value.trim();
+  const trimmed = stripEncodedTaskReferenceMetadata(draft.value).trim();
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const canSubmit =
     (trimmed.length > 0 || pendingAttachments.length > 0) &&

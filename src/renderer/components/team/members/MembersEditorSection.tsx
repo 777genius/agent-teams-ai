@@ -4,6 +4,7 @@ import { Button } from '@renderer/components/ui/button';
 import { Label } from '@renderer/components/ui/label';
 import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 import { getMemberColorByName } from '@shared/constants/memberColors';
+import { Plus } from 'lucide-react';
 
 import { MembersJsonEditor } from '../dialogs/MembersJsonEditor';
 
@@ -174,12 +175,13 @@ export const MembersEditorSection = ({
         <Label>Members</Label>
         {!hideContent && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={addMember}>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={addMember}>
+              <Plus className="size-3.5" />
               Add member
             </Button>
-            {showJsonEditor ? (
+            {showJsonEditor && !jsonEditorOpen ? (
               <Button variant="ghost" size="sm" onClick={toggleJsonEditor}>
-                {jsonEditorOpen ? 'Hide JSON' : 'Edit as JSON'}
+                Edit as JSON
               </Button>
             ) : null}
           </div>
@@ -208,7 +210,12 @@ export const MembersEditorSection = ({
               />
             ))}
             {jsonEditorOpen && showJsonEditor ? (
-              <MembersJsonEditor value={jsonText} onChange={handleJsonChange} error={jsonError} />
+              <MembersJsonEditor
+                value={jsonText}
+                onChange={handleJsonChange}
+                error={jsonError}
+                onClose={toggleJsonEditor}
+              />
             ) : null}
           </div>
           {hasDuplicates ? (
