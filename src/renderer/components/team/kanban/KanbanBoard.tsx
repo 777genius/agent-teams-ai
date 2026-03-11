@@ -8,7 +8,6 @@ import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useResizableColumns } from '@renderer/hooks/useResizableColumns';
 import { cn } from '@renderer/lib/utils';
-
 import {
   CheckCircle2,
   ClipboardList,
@@ -23,6 +22,7 @@ import {
 
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanFilterPopover } from './KanbanFilterPopover';
+import { KanbanGridLayout } from './KanbanGridLayout';
 import { KanbanSortPopover } from './KanbanSortPopover';
 import { KanbanTaskCard } from './KanbanTaskCard';
 
@@ -303,6 +303,8 @@ export const KanbanBoard = ({
   onOpenTrash,
 }: KanbanBoardProps): React.JSX.Element => {
   const [viewMode, setViewMode] = useState<KanbanViewMode>('grid');
+  const enableTaskSorting =
+    viewMode === 'columns' && !!onColumnOrderChange && sort.field === 'manual';
 
   const taskMap = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
   const grouped = useMemo(() => {
@@ -390,7 +392,7 @@ export const KanbanBoard = ({
         )
       );
     }
-    if (onColumnOrderChange && sort.field === 'manual') {
+    if (enableTaskSorting) {
       const itemIds = columnTasks.map((t) => t.id);
       return (
         <>
@@ -541,33 +543,31 @@ export const KanbanBoard = ({
       </div>
 
       {viewMode === 'grid' ? (
-        <div
-          className="grid gap-3"
-          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}
-        >
-          {visibleColumns.map((column) => {
+        <KanbanGridLayout
+          teamName={teamName}
+          allColumnIds={COLUMNS.map((column) => column.id)}
+          columns={visibleColumns.map((column) => {
             const columnTasks = groupedOrdered.get(column.id) ?? [];
             const accent = COLUMN_ACCENTS[column.id];
-            return (
-              <KanbanColumn
-                key={column.id}
-                title={column.title}
-                count={columnTasks.length}
-                icon={accent.icon}
-                headerBg={accent.headerBg}
-                bodyBg={accent.bodyBg}
-              >
-                {renderCards(column.id, columnTasks)}
-              </KanbanColumn>
-            );
+
+            return {
+              id: column.id,
+              title: column.title,
+              count: columnTasks.length,
+              icon: accent.icon,
+              headerBg: accent.headerBg,
+              bodyBg: accent.bodyBg,
+              content: renderCards(column.id, columnTasks),
+            };
           })}
-        </div>
+        />
       ) : (
         <div className="flex overflow-x-auto pb-2">
           {visibleColumns.map((column, index) => {
             const columnTasks = groupedOrdered.get(column.id) ?? [];
             const accent = COLUMN_ACCENTS[column.id];
             const width = columnWidths.get(column.id) ?? 256;
+            const handleProps = getHandleProps(column.id);
             return (
               <div key={column.id} className="flex shrink-0">
                 <div style={{ width }}>
@@ -584,7 +584,9 @@ export const KanbanBoard = ({
                 {index < visibleColumns.length - 1 ? (
                   <div
                     className="group relative mx-0.5 flex items-center"
-                    {...getHandleProps(column.id)}
+                    onPointerDown={handleProps.onPointerDown}
+                    style={handleProps.style}
+                    aria-label={handleProps['aria-label']}
                   >
                     <div className="h-full w-px bg-[var(--color-border)] transition-colors group-hover:bg-blue-500/50 group-active:bg-blue-500" />
                   </div>
@@ -597,7 +599,7 @@ export const KanbanBoard = ({
     </>
   );
 
-  if (onColumnOrderChange && sort.field === 'manual') {
+  if (enableTaskSorting) {
     return (
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         {boardContent}

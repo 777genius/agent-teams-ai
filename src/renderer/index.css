@@ -260,6 +260,118 @@
   --compact-phase-text: #818cf8;
 }
 
+.kanban-grid-layout {
+  min-height: 640px;
+  overflow: visible;
+}
+
+.kanban-grid-layout .react-grid-item {
+  transition-property: transform, width, height;
+  overflow: visible;
+}
+
+.kanban-grid-item-wrapper {
+  height: 100%;
+}
+
+.kanban-grid-resize-handle {
+  position: absolute;
+  z-index: 20;
+}
+
+.kanban-grid-resize-handle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: rgba(129, 140, 248, 0.55);
+  opacity: 0;
+}
+
+.kanban-grid-layout .react-grid-item:hover .kanban-grid-resize-handle::after,
+.kanban-grid-layout
+  .react-grid-item.react-grid-placeholder
+  + .react-grid-item
+  .kanban-grid-resize-handle::after {
+  animation: kanban-grid-handle-fade-in 120ms ease forwards;
+  animation-delay: 1s;
+}
+
+.kanban-grid-layout .react-grid-item.resizing .kanban-grid-resize-handle::after {
+  animation: none;
+  opacity: 1;
+}
+
+@keyframes kanban-grid-handle-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.kanban-grid-resize-handle-n,
+.kanban-grid-resize-handle-s {
+  left: 50%;
+  width: 36px;
+  height: 6px;
+  transform: translateX(-50%);
+}
+
+.kanban-grid-resize-handle-n {
+  top: -3px;
+}
+
+.kanban-grid-resize-handle-s {
+  bottom: -3px;
+}
+
+.kanban-grid-resize-handle-e,
+.kanban-grid-resize-handle-w {
+  top: 50%;
+  width: 6px;
+  height: 36px;
+  transform: translateY(-50%);
+}
+
+.kanban-grid-resize-handle-e {
+  right: -3px;
+}
+
+.kanban-grid-resize-handle-w {
+  left: -3px;
+}
+
+.kanban-grid-resize-handle-ne,
+.kanban-grid-resize-handle-nw,
+.kanban-grid-resize-handle-se,
+.kanban-grid-resize-handle-sw {
+  width: 9px;
+  height: 9px;
+}
+
+.kanban-grid-resize-handle-ne {
+  top: -4px;
+  right: -4px;
+}
+
+.kanban-grid-resize-handle-nw {
+  top: -4px;
+  left: -4px;
+}
+
+.kanban-grid-resize-handle-se {
+  right: -4px;
+  bottom: -4px;
+}
+
+.kanban-grid-resize-handle-sw {
+  left: -4px;
+  bottom: -4px;
+}
+
 /* File icon glow — halo so dark icons stay visible on dark backgrounds */
 .file-icon-glow {
   filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.45));

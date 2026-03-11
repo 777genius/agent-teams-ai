@@ -187,3 +187,9 @@ Note: renderer utils/hooks/types do NOT have barrel exports — import directly 
 1. External packages
 2. Path aliases (@main, @renderer, @shared)
 3. Relative imports
+
+### Storage And Persistence
+- New persistence flows should depend on small repository/storage abstractions, not directly on `localStorage`, `IndexedDB`, Electron APIs, or JSON files from UI components/hooks.
+- Keep persistence concerns split by responsibility: schema/normalization, repository interface, concrete storage implementation, and UI adapter logic should live in separate modules.
+- Prefer designs where the high-level feature code can swap local browser/Electron storage for a server-backed implementation without rewriting the rendering layer.
+- Reuse generic persistence/layout infrastructure when adding new draggable/resizable surfaces instead of copying feature-specific storage code.

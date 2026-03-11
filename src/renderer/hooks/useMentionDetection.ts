@@ -1,6 +1,9 @@
 import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
-import { getSuggestionInsertionText } from '@renderer/utils/mentionSuggestions';
+import {
+  getSuggestionInsertionText,
+  getSuggestionTriggerChar,
+} from '@renderer/utils/mentionSuggestions';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 
@@ -217,7 +220,13 @@ export function useMentionDetection({
 
       const before = value.slice(0, triggerIndexRef.current);
       const after = value.slice(triggerIndexRef.current + 1 + queryRef.current.length);
-      const insertion = `${triggerChar}${getSuggestionInsertionText(s)} `;
+      const suggestionText = getSuggestionInsertionText(s);
+      const expectedTriggerChar = getSuggestionTriggerChar(s);
+      const insertionBody =
+        triggerChar === expectedTriggerChar && suggestionText.startsWith(triggerChar)
+          ? suggestionText
+          : `${triggerChar}${suggestionText}`;
+      const insertion = `${insertionBody} `;
       const newValue = before + insertion + after;
       const newCursorPos = before.length + insertion.length;
 
@@ -226,8 +235,8 @@ export function useMentionDetection({
 
       // Set cursor position after React re-render
       requestAnimationFrame(() => {
-        textarea.selectionStart = newCursorPos;
-        textarea.selectionEnd = newCursorPos;
+        textarea.focus();
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
       });
     },
     [value, onValueChange, textareaRef, dismiss]
