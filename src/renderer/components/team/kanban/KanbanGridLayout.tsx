@@ -116,7 +116,7 @@ const LoadingKanbanGridLayout = ({
       : buildDefaultItems(columns.length > 0 ? columns.map((column) => column.id) : ['todo']);
 
   return (
-    <div className="p-1.5">
+    <div>
       <div
         className="grid gap-3"
         style={{
@@ -178,7 +178,7 @@ const LoadedKanbanGridLayout = ({
   );
 
   return (
-    <div className="p-1.5">
+    <div>
       <WidthAwareGridLayout
         className="kanban-grid-layout"
         measureBeforeMount

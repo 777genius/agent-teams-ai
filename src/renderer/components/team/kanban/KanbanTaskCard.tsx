@@ -470,13 +470,13 @@ export const KanbanTaskCard = ({
             <Button
               variant="outline"
               size="sm"
-              aria-label={`Move task ${task.id} back to done`}
+              aria-label={`Disapprove task ${task.id}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onMoveBackToDone(task.id);
               }}
             >
-              Move back to DONE
+              Disapprove
             </Button>
           ) : null}
         </div>
