@@ -13,13 +13,16 @@ import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useStore } from '@renderer/store';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
+import {
+  extractTaskRefsFromText,
+  stripEncodedTaskReferenceMetadata,
+} from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 import { Send } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { ResolvedTeamMember } from '@shared/types';
+import type { ResolvedTeamMember, TaskRef } from '@shared/types';
 
 interface ReviewDialogProps {
   open: boolean;
@@ -27,7 +30,7 @@ interface ReviewDialogProps {
   taskId: string | null;
   members: ResolvedTeamMember[];
   onCancel: () => void;
-  onSubmit: (comment?: string) => void;
+  onSubmit: (comment?: string, taskRefs?: TaskRef[]) => void;
 }
 
 export const ReviewDialog = ({
@@ -62,8 +65,9 @@ export const ReviewDialog = ({
 
   const handleSubmit = (): void => {
     const comment = stripEncodedTaskReferenceMetadata(trimmed) || undefined;
+    const taskRefs = trimmed ? extractTaskRefsFromText(draft.value, taskSuggestions) : [];
     draft.clearDraft();
-    onSubmit(comment);
+    onSubmit(comment, taskRefs);
   };
 
   return (
@@ -114,7 +118,7 @@ export const ReviewDialog = ({
                   </span>
                 ) : null}
                 {draft.isSaved ? (
-                  <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                  <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
                 ) : null}
               </div>
             }

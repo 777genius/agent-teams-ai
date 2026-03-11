@@ -17,13 +17,21 @@ import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { nameColorSet } from '@renderer/utils/projectColor';
-import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
+import {
+  extractTaskRefsFromText,
+  stripEncodedTaskReferenceMetadata,
+} from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { AlertCircle, Check, ChevronDown, ImagePlus, Mic, Search, Send } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
-import type { AttachmentPayload, ResolvedTeamMember, SendMessageResult } from '@shared/types';
+import type {
+  AttachmentPayload,
+  ResolvedTeamMember,
+  SendMessageResult,
+  TaskRef,
+} from '@shared/types';
 
 interface MessageComposerProps {
   teamName: string;
@@ -37,13 +45,15 @@ interface MessageComposerProps {
     text: string,
     summary?: string,
     attachments?: AttachmentPayload[],
-    actionMode?: ActionMode
+    actionMode?: ActionMode,
+    taskRefs?: TaskRef[]
   ) => void;
   onCrossTeamSend?: (
     toTeam: string,
     text: string,
     summary?: string,
-    actionMode?: ActionMode
+    actionMode?: ActionMode,
+    taskRefs?: TaskRef[]
   ) => void;
 }
 
@@ -202,9 +212,10 @@ export const MessageComposer = ({
   const handleSend = useCallback(() => {
     if (!canSend) return;
     pendingSendRef.current = true;
+    const taskRefs = extractTaskRefsFromText(draft.text, taskSuggestions);
     const serialized = serializeChipsWithText(trimmed, draft.chips);
     if (isCrossTeam && selectedTeam && onCrossTeamSend) {
-      onCrossTeamSend(selectedTeam, serialized, trimmed, actionMode);
+      onCrossTeamSend(selectedTeam, serialized, trimmed, actionMode, taskRefs);
     } else {
       // Summary should stay compact (no expanded chip markdown)
       onSend(
@@ -212,7 +223,8 @@ export const MessageComposer = ({
         serialized,
         trimmed,
         draft.attachments.length > 0 ? draft.attachments : undefined,
-        actionMode
+        actionMode,
+        taskRefs
       );
     }
   }, [
@@ -226,6 +238,7 @@ export const MessageComposer = ({
     selectedTeam,
     draft.attachments,
     draft.chips,
+    taskSuggestions,
   ]);
 
   // Clear draft only after send completes successfully (sending: true → false, no error)
@@ -323,10 +336,12 @@ export const MessageComposer = ({
   );
 
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
+  const hasAttachmentPreviewContent =
+    draft.attachments.length > 0 || Boolean(draft.attachmentError ?? imageRestrictionError);
 
   return (
     <div
-      className="relative mb-3 p-3"
+      className="relative mb-3 pb-3"
       role="group"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -336,208 +351,296 @@ export const MessageComposer = ({
     >
       <DropZoneOverlay active={isDragOver} rejected={!isLeadRecipient} />
 
-      <div className="mb-1 flex items-center gap-2">
-        {isLeadRecipient ? (
-          <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/gif,image/webp"
-              multiple
-              className="hidden"
-              onChange={handleFileInputChange}
-            />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    'inline-flex shrink-0 items-center gap-1 rounded p-1 transition-colors',
-                    canAttach
-                      ? 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
-                      : 'text-[var(--color-text-muted)] opacity-40'
-                  )}
-                  disabled={!canAttach}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <ImagePlus size={14} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                {!isTeamAlive
-                  ? 'Team must be online to attach images'
-                  : !draft.canAddMore
-                    ? 'Maximum attachments reached'
-                    : 'Attach images (paste or drag & drop)'}
-              </TooltipContent>
-            </Tooltip>
-            <div className="min-w-0 flex-1">
-              <AttachmentPreviewList
-                attachments={draft.attachments}
-                onRemove={draft.removeAttachment}
-                error={draft.attachmentError ?? imageRestrictionError}
-                onDismissError={draft.clearAttachmentError}
-                disabled={attachmentsBlocked}
-                disabledHint="Image attachments are only supported when sending to the team lead while the team is online. Remove attachments or switch recipient."
+      <div className="mb-1 space-y-2">
+        <div className="flex items-center gap-2">
+          {isLeadRecipient ? (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                multiple
+                className="hidden"
+                onChange={handleFileInputChange}
               />
-            </div>
-          </>
-        ) : (
-          <AttachmentPreviewList
-            attachments={draft.attachments}
-            onRemove={draft.removeAttachment}
-            error={draft.attachmentError ?? imageRestrictionError}
-            onDismissError={draft.clearAttachmentError}
-            disabled={attachmentsBlocked}
-            disabledHint="Image attachments are only supported when sending to the team lead while the team is online. Remove attachments or switch recipient."
-          />
-        )}
-
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          {!isTeamAlive && !isProvisioning && (
-            <span className="text-[10px]" style={{ color: 'var(--warning-text)' }}>
-              Team offline
-            </span>
-          )}
-
-          {/* Combined team + member selector */}
-          {crossTeamTargets.length > 0 ? (
-            <div
-              className={cn(
-                'inline-flex items-center rounded-full border text-xs transition-colors',
-                isCrossTeam ? 'border-[var(--cross-team-border)]' : 'border-[var(--color-border)]'
-              )}
-            >
-              <Popover open={teamSelectorOpen} onOpenChange={setTeamSelectorOpen}>
-                <PopoverTrigger asChild>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-l-full border-r border-r-[var(--color-border)] px-2.5 py-1 text-xs transition-colors',
-                      isCrossTeam
-                        ? 'hover:bg-[var(--cross-team-bg)]/80 bg-[var(--cross-team-bg)] text-purple-400'
-                        : 'hover:bg-[var(--color-surface-raised)]'
+                      'inline-flex shrink-0 items-center gap-1 rounded p-1 transition-colors',
+                      canAttach
+                        ? 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+                        : 'text-[var(--color-text-muted)] opacity-40'
                     )}
+                    disabled={!canAttach}
+                    onClick={() => fileInputRef.current?.click()}
                   >
-                    {isCrossTeam ? (
-                      <>
-                        <span
-                          className="inline-block size-2 shrink-0 rounded-full"
-                          style={{
-                            backgroundColor: selectedTarget
-                              ? selectedTarget.color
-                                ? getTeamColorSet(selectedTarget.color).border
-                                : nameColorSet(selectedTarget.displayName).border
-                              : undefined,
-                          }}
-                        />
-                        <span className="max-w-[100px] truncate">{targetDisplayName}</span>
-                      </>
-                    ) : (
-                      <>
+                    <ImagePlus size={14} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {!isTeamAlive
+                    ? 'Team must be online to attach images'
+                    : !draft.canAddMore
+                      ? 'Maximum attachments reached'
+                      : 'Attach images (paste or drag & drop)'}
+                </TooltipContent>
+              </Tooltip>
+            </>
+          ) : null}
+
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            {!isTeamAlive && !isProvisioning && (
+              <span className="text-[10px]" style={{ color: 'var(--warning-text)' }}>
+                Team offline
+              </span>
+            )}
+
+            {/* Combined team + member selector */}
+            {crossTeamTargets.length > 0 ? (
+              <div
+                className={cn(
+                  'inline-flex items-center rounded-full border text-xs transition-colors',
+                  isCrossTeam ? 'border-[var(--cross-team-border)]' : 'border-[var(--color-border)]'
+                )}
+              >
+                <Popover open={teamSelectorOpen} onOpenChange={setTeamSelectorOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-l-full border-r border-r-[var(--color-border)] px-2.5 py-1 text-xs transition-colors',
+                        isCrossTeam
+                          ? 'hover:bg-[var(--cross-team-bg)]/80 bg-[var(--cross-team-bg)] text-purple-400'
+                          : 'hover:bg-[var(--color-surface-raised)]'
+                      )}
+                    >
+                      {isCrossTeam ? (
+                        <>
+                          <span
+                            className="inline-block size-2 shrink-0 rounded-full"
+                            style={{
+                              backgroundColor: selectedTarget
+                                ? selectedTarget.color
+                                  ? getTeamColorSet(selectedTarget.color).border
+                                  : nameColorSet(selectedTarget.displayName).border
+                                : undefined,
+                            }}
+                          />
+                          <span className="max-w-[100px] truncate">{targetDisplayName}</span>
+                        </>
+                      ) : (
+                        <>
+                          {currentTeamColor ? (
+                            <span
+                              className="inline-block size-2 shrink-0 rounded-full"
+                              style={{ backgroundColor: currentTeamColor }}
+                            />
+                          ) : null}
+                          <span className="text-[var(--color-text-secondary)]">This team</span>
+                        </>
+                      )}
+                      <ChevronDown size={12} className="shrink-0 text-[var(--color-text-muted)]" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-56 p-1.5">
+                    <div className="max-h-48 space-y-0.5 overflow-y-auto">
+                      {/* Current team option */}
+                      <button
+                        type="button"
+                        className={cn(
+                          'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
+                          !isCrossTeam && 'bg-[var(--color-surface-raised)]'
+                        )}
+                        onClick={() => {
+                          setSelectedTeam(null);
+                          setTeamSelectorOpen(false);
+                        }}
+                      >
                         {currentTeamColor ? (
                           <span
                             className="inline-block size-2 shrink-0 rounded-full"
                             style={{ backgroundColor: currentTeamColor }}
                           />
                         ) : null}
-                        <span className="text-[var(--color-text-secondary)]">This team</span>
-                      </>
-                    )}
-                    <ChevronDown size={12} className="shrink-0 text-[var(--color-text-muted)]" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-56 p-1.5">
-                  <div className="max-h-48 space-y-0.5 overflow-y-auto">
-                    {/* Current team option */}
+                        <span className="truncate text-[var(--color-text)]">This team</span>
+                        <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
+                          current
+                        </span>
+                        {!isCrossTeam ? (
+                          <Check size={12} className="ml-auto shrink-0 text-blue-400" />
+                        ) : null}
+                      </button>
+
+                      {/* Separator */}
+                      <div className="my-1 h-px bg-[var(--color-border)]" />
+
+                      {/* Other teams */}
+                      {crossTeamTargets.map((target) => {
+                        const isSelected = selectedTeam === target.teamName;
+                        return (
+                          <button
+                            key={target.teamName}
+                            type="button"
+                            className={cn(
+                              'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
+                              isSelected && 'bg-[var(--cross-team-bg)]'
+                            )}
+                            onClick={() => {
+                              setSelectedTeam(target.teamName);
+                              setRecipient('team-lead');
+                              setTeamSelectorOpen(false);
+                            }}
+                          >
+                            <span
+                              className="inline-block size-2 shrink-0 rounded-full"
+                              style={{
+                                backgroundColor: target.color
+                                  ? getTeamColorSet(target.color).border
+                                  : nameColorSet(target.displayName).border,
+                              }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-[var(--color-text)]">
+                                {target.displayName}
+                              </div>
+                              {target.description ? (
+                                <div className="truncate text-[10px] text-[var(--color-text-muted)]">
+                                  {target.description}
+                                </div>
+                              ) : null}
+                            </div>
+                            {isSelected ? (
+                              <Check size={12} className="ml-auto shrink-0 text-purple-400" />
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Popover
+                  open={isCrossTeam ? false : recipientOpen}
+                  onOpenChange={isCrossTeam ? undefined : setRecipientOpen}
+                >
+                  <PopoverTrigger asChild>
                     <button
                       type="button"
                       className={cn(
-                        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
-                        !isCrossTeam && 'bg-[var(--color-surface-raised)]'
+                        'inline-flex items-center gap-1.5 rounded-r-full px-2.5 py-1 text-xs transition-colors',
+                        isCrossTeam
+                          ? 'cursor-default bg-[var(--cross-team-bg)] opacity-60'
+                          : 'hover:bg-[var(--color-surface-raised)]'
                       )}
-                      onClick={() => {
-                        setSelectedTeam(null);
-                        setTeamSelectorOpen(false);
-                      }}
+                      disabled={isCrossTeam}
                     >
-                      {currentTeamColor ? (
-                        <span
-                          className="inline-block size-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: currentTeamColor }}
+                      {recipient ? (
+                        <MemberBadge
+                          name={recipient}
+                          color={selectedResolvedColor}
+                          size="sm"
+                          hideAvatar={recipient === 'user'}
+                          disableHoverCard
                         />
-                      ) : null}
-                      <span className="truncate text-[var(--color-text)]">This team</span>
-                      <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                        current
-                      </span>
-                      {!isCrossTeam ? (
-                        <Check size={12} className="ml-auto shrink-0 text-blue-400" />
-                      ) : null}
+                      ) : (
+                        <span className="text-[var(--color-text-muted)]">Select...</span>
+                      )}
+                      <ChevronDown size={12} className="shrink-0 text-[var(--color-text-muted)]" />
                     </button>
-
-                    {/* Separator */}
-                    <div className="my-1 h-px bg-[var(--color-border)]" />
-
-                    {/* Other teams */}
-                    {crossTeamTargets.map((target) => {
-                      const isSelected = selectedTeam === target.teamName;
-                      return (
-                        <button
-                          key={target.teamName}
-                          type="button"
-                          className={cn(
-                            'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
-                            isSelected && 'bg-[var(--cross-team-bg)]'
-                          )}
-                          onClick={() => {
-                            setSelectedTeam(target.teamName);
-                            setRecipient('team-lead');
-                            setTeamSelectorOpen(false);
-                          }}
-                        >
-                          <span
-                            className="inline-block size-2 shrink-0 rounded-full"
-                            style={{
-                              backgroundColor: target.color
-                                ? getTeamColorSet(target.color).border
-                                : nameColorSet(target.displayName).border,
-                            }}
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-[var(--color-text)]">
-                              {target.displayName}
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="end"
+                    className="w-56 p-1.5"
+                    onOpenAutoFocus={(e) => {
+                      e.preventDefault();
+                      setRecipientSearch('');
+                      setTimeout(() => recipientSearchRef.current?.focus(), 0);
+                    }}
+                  >
+                    {members.length > 5 && (
+                      <div className="relative mb-1">
+                        <Search
+                          size={12}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
+                        />
+                        <input
+                          ref={recipientSearchRef}
+                          type="text"
+                          className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] py-1 pl-6 pr-2 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
+                          placeholder="Search..."
+                          value={recipientSearch}
+                          onChange={(e) => setRecipientSearch(e.target.value)}
+                        />
+                      </div>
+                    )}
+                    <div className="max-h-48 space-y-0.5 overflow-y-auto">
+                      {/* eslint-disable-next-line sonarjs/function-return-type -- IIFE rendering mixed elements/null */}
+                      {(() => {
+                        const query = recipientSearch.toLowerCase().trim();
+                        const filtered = query
+                          ? members.filter((m) => m.name.toLowerCase().includes(query))
+                          : members;
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="px-2 py-3 text-center text-xs text-[var(--color-text-muted)]">
+                              No results
                             </div>
-                            {target.description ? (
-                              <div className="truncate text-[10px] text-[var(--color-text-muted)]">
-                                {target.description}
-                              </div>
-                            ) : null}
-                          </div>
-                          {isSelected ? (
-                            <Check size={12} className="ml-auto shrink-0 text-purple-400" />
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <Popover
-                open={isCrossTeam ? false : recipientOpen}
-                onOpenChange={isCrossTeam ? undefined : setRecipientOpen}
-              >
+                          );
+                        }
+                        const sorted = [...filtered].sort((a, b) => {
+                          const aIsLead = a.role === 'lead' || a.name === 'team-lead' ? 1 : 0;
+                          const bIsLead = b.role === 'lead' || b.name === 'team-lead' ? 1 : 0;
+                          return bIsLead - aIsLead;
+                        });
+                        return sorted.map((m) => {
+                          const resolvedColor = colorMap.get(m.name);
+                          const role = formatAgentRole(m.role) ?? formatAgentRole(m.agentType);
+                          const isSelected = m.name === recipient;
+                          return (
+                            <button
+                              key={m.name}
+                              type="button"
+                              className={cn(
+                                'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
+                                isSelected && 'bg-[var(--color-surface-raised)]'
+                              )}
+                              onClick={() => {
+                                setRecipient(m.name);
+                                setRecipientOpen(false);
+                                setRecipientSearch('');
+                              }}
+                            >
+                              <MemberBadge
+                                name={m.name}
+                                color={resolvedColor}
+                                size="sm"
+                                hideAvatar={m.name === 'user'}
+                                disableHoverCard
+                              />
+                              {role ? (
+                                <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
+                                  {role}
+                                </span>
+                              ) : null}
+                              {isSelected ? (
+                                <Check size={12} className="ml-auto shrink-0 text-blue-400" />
+                              ) : null}
+                            </button>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            ) : (
+              <Popover open={recipientOpen} onOpenChange={setRecipientOpen}>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className={cn(
-                      'inline-flex items-center gap-1.5 rounded-r-full px-2.5 py-1 text-xs transition-colors',
-                      isCrossTeam
-                        ? 'cursor-default bg-[var(--cross-team-bg)] opacity-60'
-                        : 'hover:bg-[var(--color-surface-raised)]'
-                    )}
-                    disabled={isCrossTeam}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs transition-colors hover:border-[var(--color-border-emphasis)] hover:bg-[var(--color-surface-raised)]"
                   >
                     {recipient ? (
                       <MemberBadge
@@ -637,114 +740,20 @@ export const MessageComposer = ({
                   </div>
                 </PopoverContent>
               </Popover>
-            </div>
-          ) : (
-            <Popover open={recipientOpen} onOpenChange={setRecipientOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs transition-colors hover:border-[var(--color-border-emphasis)] hover:bg-[var(--color-surface-raised)]"
-                >
-                  {recipient ? (
-                    <MemberBadge
-                      name={recipient}
-                      color={selectedResolvedColor}
-                      size="sm"
-                      hideAvatar={recipient === 'user'}
-                      disableHoverCard
-                    />
-                  ) : (
-                    <span className="text-[var(--color-text-muted)]">Select...</span>
-                  )}
-                  <ChevronDown size={12} className="shrink-0 text-[var(--color-text-muted)]" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                align="end"
-                className="w-56 p-1.5"
-                onOpenAutoFocus={(e) => {
-                  e.preventDefault();
-                  setRecipientSearch('');
-                  setTimeout(() => recipientSearchRef.current?.focus(), 0);
-                }}
-              >
-                {members.length > 5 && (
-                  <div className="relative mb-1">
-                    <Search
-                      size={12}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-                    />
-                    <input
-                      ref={recipientSearchRef}
-                      type="text"
-                      className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] py-1 pl-6 pr-2 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
-                      placeholder="Search..."
-                      value={recipientSearch}
-                      onChange={(e) => setRecipientSearch(e.target.value)}
-                    />
-                  </div>
-                )}
-                <div className="max-h-48 space-y-0.5 overflow-y-auto">
-                  {/* eslint-disable-next-line sonarjs/function-return-type -- IIFE rendering mixed elements/null */}
-                  {(() => {
-                    const query = recipientSearch.toLowerCase().trim();
-                    const filtered = query
-                      ? members.filter((m) => m.name.toLowerCase().includes(query))
-                      : members;
-                    if (filtered.length === 0) {
-                      return (
-                        <div className="px-2 py-3 text-center text-xs text-[var(--color-text-muted)]">
-                          No results
-                        </div>
-                      );
-                    }
-                    const sorted = [...filtered].sort((a, b) => {
-                      const aIsLead = a.role === 'lead' || a.name === 'team-lead' ? 1 : 0;
-                      const bIsLead = b.role === 'lead' || b.name === 'team-lead' ? 1 : 0;
-                      return bIsLead - aIsLead;
-                    });
-                    return sorted.map((m) => {
-                      const resolvedColor = colorMap.get(m.name);
-                      const role = formatAgentRole(m.role) ?? formatAgentRole(m.agentType);
-                      const isSelected = m.name === recipient;
-                      return (
-                        <button
-                          key={m.name}
-                          type="button"
-                          className={cn(
-                            'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
-                            isSelected && 'bg-[var(--color-surface-raised)]'
-                          )}
-                          onClick={() => {
-                            setRecipient(m.name);
-                            setRecipientOpen(false);
-                            setRecipientSearch('');
-                          }}
-                        >
-                          <MemberBadge
-                            name={m.name}
-                            color={resolvedColor}
-                            size="sm"
-                            hideAvatar={m.name === 'user'}
-                            disableHoverCard
-                          />
-                          {role ? (
-                            <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                              {role}
-                            </span>
-                          ) : null}
-                          {isSelected ? (
-                            <Check size={12} className="ml-auto shrink-0 text-blue-400" />
-                          ) : null}
-                        </button>
-                      );
-                    });
-                  })()}
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
+            )}
+          </div>
         </div>
+
+        {hasAttachmentPreviewContent ? (
+          <AttachmentPreviewList
+            attachments={draft.attachments}
+            onRemove={draft.removeAttachment}
+            error={draft.attachmentError ?? imageRestrictionError}
+            onDismissError={draft.clearAttachmentError}
+            disabled={attachmentsBlocked}
+            disabledHint="Image attachments are only supported when sending to the team lead while the team is online. Remove attachments or switch recipient."
+          />
+        ) : null}
       </div>
 
       <MentionableTextarea
@@ -836,7 +845,7 @@ export const MessageComposer = ({
               </span>
             ) : null}
             {draft.isSaved ? (
-              <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+              <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
             ) : null}
           </div>
         }

@@ -2,8 +2,10 @@ import { useState } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
+import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
 
 import type { ParsedMessageReply } from '@renderer/utils/agentMessageFormatting';
+import type { TaskRef } from '@shared/types';
 
 interface ReplyQuoteBlockProps {
   reply: ParsedMessageReply;
@@ -11,6 +13,8 @@ interface ReplyQuoteBlockProps {
   memberColor?: string;
   /** When set, limits height of the reply body (e.g. "max-h-56"). Omit to show full content. */
   bodyMaxHeight?: string;
+  /** Structured task refs for the reply body, when available. */
+  replyTaskRefs?: TaskRef[];
 }
 
 /** Threshold (characters) above which the "more/less" toggle is shown. */
@@ -20,6 +24,7 @@ export const ReplyQuoteBlock = ({
   reply,
   memberColor,
   bodyMaxHeight = 'max-h-56',
+  replyTaskRefs,
 }: ReplyQuoteBlockProps): React.JSX.Element => {
   const isLong = reply.originalText.length > LONG_QUOTE_THRESHOLD;
   const [expanded, setExpanded] = useState(false);
@@ -43,7 +48,11 @@ export const ReplyQuoteBlock = ({
 
         {/* Quote text */}
         <div className={`pr-5 opacity-50 ${expanded ? '' : 'max-h-[3.75rem] overflow-hidden'}`}>
-          <MarkdownViewer content={reply.originalText} bare maxHeight={quoteMaxHeight} />
+          <MarkdownViewer
+            content={linkifyTaskIdsInMarkdown(reply.originalText)}
+            bare
+            maxHeight={quoteMaxHeight}
+          />
         </div>
 
         {/* More/less toggle */}
@@ -59,7 +68,12 @@ export const ReplyQuoteBlock = ({
       </div>
 
       {/* Reply text */}
-      <MarkdownViewer content={reply.replyText} maxHeight={bodyMaxHeight} copyable bare />
+      <MarkdownViewer
+        content={linkifyTaskIdsInMarkdown(reply.replyText, replyTaskRefs)}
+        maxHeight={bodyMaxHeight}
+        copyable
+        bare
+      />
     </div>
   );
 };

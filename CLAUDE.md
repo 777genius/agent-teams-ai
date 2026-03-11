@@ -86,6 +86,14 @@ Claude Code's "Orchestrate Teams" feature: multiple sessions coordinate as a tea
 - **Display summary** counts distinct teammates (by name) separately from regular subagents
 - **Team tools**: TeamCreate, TaskCreate, TaskUpdate, TaskList, TaskGet, SendMessage, TeamDelete — have readable summaries in `toolSummaryHelpers.ts`
 
+### Structured Task References
+- **TaskRef**: `{ taskId, displayId, teamName }` — shared typed reference used to persist task mentions across UI and storage
+- **Persisted optional fields**: `InboxMessage.taskRefs`, `TaskComment.taskRefs`, `TeamTask.descriptionTaskRefs`, `TeamTask.promptTaskRefs`
+- **Request surfaces**: `SendMessageRequest.taskRefs`, `AddTaskCommentRequest.taskRefs`, `CreateTaskRequest.descriptionTaskRefs`, `CreateTaskRequest.promptTaskRefs`, `UpdateKanbanPatch` `request_changes.taskRefs`
+- **Renderer flow**: task-aware inputs use `useTaskSuggestions()` with `taskReferenceUtils.ts` to extract refs from text; encoded zero-width metadata preserves exact task identity while keeping visible text readable
+- **Main/IPC flow**: `src/main/ipc/teams.ts` and `src/main/ipc/crossTeam.ts` validate structured refs before `TeamDataService`, inbox stores, task stores, and readers persist/rehydrate them
+- **Rendering/navigation**: `linkifyTaskIdsInMarkdown()` and `parseTaskLinkHref()` turn persisted refs into stable `task://` links across messages, comments, task descriptions, and activity items
+
 ### Visible Context Tracking
 Tracks what consumes tokens in Claude's context window across 6 categories (discriminated union on `category` field):
 
@@ -139,7 +147,7 @@ Check for changes in message parsing or chunk building logic.
 | Services/Components | PascalCase | `ProjectScanner.ts` |
 | Utilities | camelCase | `pathDecoder.ts` |
 | Constants | UPPER_SNAKE_CASE | `PARALLEL_WINDOW_MS` |
-| Type Guards | isXxx | `isRealUserMessage()` |
+| Type Guards | isXxx | `isParsedRealUserMessage()` |
 | Builders | buildXxx | `buildChunks()` |
 | Getters | getXxx | `getResponses()` |
 

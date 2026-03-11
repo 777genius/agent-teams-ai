@@ -98,6 +98,7 @@ import type {
   TeamProvisioningService,
 } from '../services';
 import type {
+  AddTaskCommentRequest,
   AgentActionMode,
   AttachmentFileData,
   AttachmentMeta,
@@ -115,6 +116,7 @@ import type {
   SendMessageResult,
   TaskAttachmentMeta,
   TaskComment,
+  TaskRef,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
   TeamConfig,
@@ -927,10 +929,53 @@ function isUpdateKanbanPatch(value: unknown): value is UpdateKanbanPatch {
   }
 
   if (patch.op === 'request_changes') {
-    return patch.comment === undefined || typeof patch.comment === 'string';
+    return (
+      (patch.comment === undefined || typeof patch.comment === 'string') &&
+      validateTaskRefs((patch as { taskRefs?: unknown }).taskRefs).valid
+    );
   }
 
   return patch.op === 'set_column' && (patch.column === 'review' || patch.column === 'approved');
+}
+
+function validateTaskRefs(
+  value: unknown
+): { valid: true; value: TaskRef[] | undefined } | { valid: false; error: string } {
+  if (value === undefined) {
+    return { valid: true, value: undefined };
+  }
+  if (!Array.isArray(value)) {
+    return { valid: false, error: 'taskRefs must be an array' };
+  }
+
+  const taskRefs: TaskRef[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') {
+      return { valid: false, error: 'taskRefs entries must be objects' };
+    }
+    const row = entry as Partial<TaskRef>;
+    const taskId = typeof row.taskId === 'string' ? row.taskId.trim() : '';
+    const displayId = typeof row.displayId === 'string' ? row.displayId.trim() : '';
+    const teamName = typeof row.teamName === 'string' ? row.teamName.trim() : '';
+    if (!taskId || !displayId || !teamName) {
+      return { valid: false, error: 'Each taskRef must include taskId, displayId, and teamName' };
+    }
+    const validatedTaskId = validateTaskId(taskId);
+    if (!validatedTaskId.valid) {
+      return { valid: false, error: validatedTaskId.error ?? 'Invalid taskRef taskId' };
+    }
+    const validatedTeamName = validateTeamName(teamName);
+    if (!validatedTeamName.valid) {
+      return { valid: false, error: validatedTeamName.error ?? 'Invalid taskRef teamName' };
+    }
+    taskRefs.push({
+      taskId: validatedTaskId.value!,
+      displayId,
+      teamName: validatedTeamName.value!,
+    });
+  }
+
+  return { valid: true, value: taskRefs };
 }
 
 async function handleGetAttachments(
@@ -1068,6 +1113,10 @@ async function handleSendMessage(
   if (payload.actionMode !== undefined && !isAgentActionMode(payload.actionMode)) {
     return { success: false, error: 'actionMode must be one of: do, ask, delegate' };
   }
+  const validatedTaskRefs = validateTaskRefs(payload.taskRefs);
+  if (!validatedTaskRefs.valid) {
+    return { success: false, error: validatedTaskRefs.error };
+  }
 
   let validatedAttachments: AttachmentPayload[] | undefined;
   if (
@@ -1175,7 +1224,8 @@ async function handleSendMessage(
             resolvedLeadName,
             payload.text!,
             payload.summary,
-            attachmentMeta
+            attachmentMeta,
+            validatedTaskRefs.value
           );
         } catch (persistError) {
           logger.warn(`Persistence failed after stdin delivery for ${tn}: ${String(persistError)}`);
@@ -1199,6 +1249,7 @@ async function handleSendMessage(
           messageId: result.messageId,
           source: 'user_sent',
           attachments: attachmentMeta,
+          taskRefs: validatedTaskRefs.value,
         });
 
         return result;
@@ -1217,6 +1268,7 @@ async function handleSendMessage(
       summary: payload.summary,
       from: payload.from,
       source: 'user_sent',
+      taskRefs: validatedTaskRefs.value,
     });
 
     // Best-effort live relay so active processes see the inbox row promptly.
@@ -1265,6 +1317,10 @@ async function handleCreateTask(
   if (payload.description !== undefined && typeof payload.description !== 'string') {
     return { success: false, error: 'description must be string' };
   }
+  const validatedDescriptionTaskRefs = validateTaskRefs(payload.descriptionTaskRefs);
+  if (!validatedDescriptionTaskRefs.valid) {
+    return { success: false, error: validatedDescriptionTaskRefs.error };
+  }
   if (payload.owner !== undefined) {
     const validatedOwner = validateMemberName(payload.owner);
     if (!validatedOwner.valid) {
@@ -1298,6 +1354,10 @@ async function handleCreateTask(
       return { success: false, error: 'prompt exceeds max length (5000)' };
     }
   }
+  const validatedPromptTaskRefs = validateTaskRefs(payload.promptTaskRefs);
+  if (!validatedPromptTaskRefs.valid) {
+    return { success: false, error: validatedPromptTaskRefs.error };
+  }
   if (payload.startImmediately !== undefined && typeof payload.startImmediately !== 'boolean') {
     return { success: false, error: 'startImmediately must be a boolean' };
   }
@@ -1309,7 +1369,9 @@ async function handleCreateTask(
       owner: payload.owner?.trim() || undefined,
       blockedBy: payload.blockedBy,
       related: payload.related,
+      descriptionTaskRefs: validatedDescriptionTaskRefs.value,
       prompt: payload.prompt?.trim() || undefined,
+      promptTaskRefs: validatedPromptTaskRefs.value,
       startImmediately: payload.startImmediately,
     })
   );
@@ -2222,19 +2284,27 @@ async function handleAddTaskComment(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
   taskId: unknown,
-  text: unknown,
-  attachments?: unknown
+  request: unknown
 ): Promise<IpcResult<TaskComment>> {
   const vTeam = validateTeamName(teamName);
   if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
   const vTask = validateTaskId(taskId);
   if (!vTask.valid) return { success: false, error: vTask.error ?? 'Invalid taskId' };
+  if (!request || typeof request !== 'object') {
+    return { success: false, error: 'Invalid add task comment request' };
+  }
+  const payload = request as Partial<AddTaskCommentRequest>;
+  const text = payload.text;
   if (typeof text !== 'string' || text.trim().length === 0)
     return { success: false, error: 'Comment text must be non-empty' };
   if (text.trim().length > MAX_TEXT_LENGTH)
     return { success: false, error: `Comment exceeds ${MAX_TEXT_LENGTH} characters` };
+  const validatedTaskRefs = validateTaskRefs(payload.taskRefs);
+  if (!validatedTaskRefs.valid) {
+    return { success: false, error: validatedTaskRefs.error };
+  }
 
-  const rawAttachments = Array.isArray(attachments) ? attachments : [];
+  const rawAttachments = Array.isArray(payload.attachments) ? payload.attachments : [];
   if (rawAttachments.length > MAX_ATTACHMENTS) {
     return { success: false, error: `Maximum ${MAX_ATTACHMENTS} attachments per comment` };
   }
@@ -2248,7 +2318,7 @@ async function handleAddTaskComment(
         if (!att || typeof att !== 'object') {
           throw new Error('Invalid attachment data');
         }
-        const a = att as Record<string, unknown>;
+        const a = att as unknown as Record<string, unknown>;
         if (
           typeof a.id !== 'string' ||
           typeof a.filename !== 'string' ||
@@ -2279,7 +2349,8 @@ async function handleAddTaskComment(
       vTeam.value!,
       vTask.value!,
       text.trim(),
-      savedAttachments
+      savedAttachments,
+      validatedTaskRefs.value
     );
   });
 }

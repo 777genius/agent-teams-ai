@@ -5,6 +5,7 @@ import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { REVIEW_STATE_DISPLAY, buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
 import { getTaskKanbanColumn } from '@shared/utils/reviewState';
 import { formatTaskDisplayLabel, taskMatchesRef } from '@shared/utils/taskIdentity';
 
@@ -171,7 +172,11 @@ export const TaskTooltip = ({
         {/* Description — full markdown with scroll */}
         {task.description ? (
           <div className="max-h-[200px] overflow-y-auto text-[10px]">
-            <MarkdownViewer content={task.description} maxHeight="max-h-none" bare />
+            <MarkdownViewer
+              content={linkifyTaskIdsInMarkdown(task.description, task.descriptionTaskRefs)}
+              maxHeight="max-h-none"
+              bare
+            />
           </div>
         ) : null}
       </TooltipContent>

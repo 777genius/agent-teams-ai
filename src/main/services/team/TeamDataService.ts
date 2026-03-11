@@ -50,6 +50,7 @@ import type {
   SendMessageResult,
   TaskAttachmentMeta,
   TaskComment,
+  TaskRef,
   TeamConfig,
   TeamCreateConfigRequest,
   TeamData,
@@ -803,12 +804,16 @@ export class TeamDataService {
     const task = controller.tasks.createTask({
       subject: request.subject,
       ...(request.description?.trim() ? { description: request.description.trim() } : {}),
+      ...(request.descriptionTaskRefs?.length
+        ? { descriptionTaskRefs: request.descriptionTaskRefs }
+        : {}),
       ...(request.owner ? { owner: request.owner } : {}),
       ...(blockedBy.length > 0 ? { blockedBy } : {}),
       ...(related.length > 0 ? { related } : {}),
       ...(projectPath ? { projectPath } : {}),
       createdBy: 'user',
       ...(request.prompt?.trim() ? { prompt: request.prompt.trim() } : {}),
+      ...(request.promptTaskRefs?.length ? { promptTaskRefs: request.promptTaskRefs } : {}),
       ...(shouldStart ? { startImmediately: true } : {}),
     }) as TeamTask;
 
@@ -847,6 +852,7 @@ export class TeamDataService {
             member: task.owner,
             from: leadName,
             text: parts.join('\n'),
+            taskRefs: task.descriptionTaskRefs,
             summary: `Task ${this.getTaskLabel(task)} started`,
             source: 'system_notification',
           });
@@ -992,13 +998,15 @@ export class TeamDataService {
     teamName: string,
     taskId: string,
     text: string,
-    attachments?: TaskAttachmentMeta[]
+    attachments?: TaskAttachmentMeta[],
+    taskRefs?: TaskRef[]
   ): Promise<TaskComment> {
     const controller = this.getController(teamName);
     const addResult = controller.tasks.addTaskComment(taskId, {
       from: 'user',
       text,
       attachments,
+      taskRefs,
     }) as { task?: TeamTask; comment?: TaskComment };
     const comment =
       addResult.comment ??
@@ -1008,6 +1016,7 @@ export class TeamDataService {
         text,
         createdAt: new Date().toISOString(),
         type: 'regular',
+        ...(taskRefs && taskRefs.length > 0 ? { taskRefs } : {}),
         ...(attachments && attachments.length > 0 ? { attachments } : {}),
       } as TaskComment);
 
@@ -1031,6 +1040,15 @@ export class TeamDataService {
       member: enrichedRequest.member,
       from: enrichedRequest.from,
       text: enrichedRequest.text,
+      timestamp: enrichedRequest.timestamp,
+      messageId: enrichedRequest.messageId,
+      to: enrichedRequest.to,
+      color: enrichedRequest.color,
+      conversationId: enrichedRequest.conversationId,
+      replyToConversationId: enrichedRequest.replyToConversationId,
+      toolSummary: enrichedRequest.toolSummary,
+      toolCalls: enrichedRequest.toolCalls,
+      taskRefs: enrichedRequest.taskRefs,
       summary: enrichedRequest.summary,
       source: enrichedRequest.source,
       leadSessionId: enrichedRequest.leadSessionId,
@@ -1078,7 +1096,8 @@ export class TeamDataService {
     leadName: string,
     text: string,
     summary?: string,
-    attachments?: AttachmentMeta[]
+    attachments?: AttachmentMeta[],
+    taskRefs?: TaskRef[]
   ): Promise<SendMessageResult> {
     let leadSessionId: string | undefined;
     try {
@@ -1092,6 +1111,7 @@ export class TeamDataService {
       from: 'user',
       to: leadName,
       text,
+      taskRefs,
       summary,
       source: 'user_sent',
       attachments: attachments?.length ? attachments : undefined,
@@ -1462,6 +1482,9 @@ export class TeamDataService {
     controller.review.requestChanges(taskId, {
       from: 'user',
       comment: patch.comment?.trim() || 'Reviewer requested changes.',
+      ...(patch.op === 'request_changes' && patch.taskRefs?.length
+        ? { taskRefs: patch.taskRefs }
+        : {}),
       ...(leadSessionId ? { leadSessionId } : {}),
     });
   }

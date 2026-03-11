@@ -32,7 +32,7 @@ import { MessagesFilterPopover } from './MessagesFilterPopover';
 
 import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { ActionMode } from './ActionModeSelector';
-import type { InboxMessage, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
+import type { InboxMessage, ResolvedTeamMember, TaskRef, TeamTaskWithKanban } from '@shared/types';
 
 interface TimeWindow {
   start: number;
@@ -188,7 +188,8 @@ export const MessagesPanel = ({
       attachments?: Parameters<typeof sendTeamMessage>[1] extends { attachments?: infer A }
         ? A
         : never,
-      actionMode?: ActionMode
+      actionMode?: ActionMode,
+      taskRefs?: TaskRef[]
     ) => {
       const sentAtMs = Date.now();
       onPendingReplyChange((prev) => ({ ...prev, [member]: sentAtMs }));
@@ -198,6 +199,7 @@ export const MessagesPanel = ({
         summary,
         attachments,
         actionMode,
+        taskRefs,
       }).catch(() => {
         onPendingReplyChange((prev) => {
           if (prev[member] !== sentAtMs) return prev;
@@ -211,12 +213,19 @@ export const MessagesPanel = ({
   );
 
   const handleCrossTeamSend = useCallback(
-    (toTeam: string, text: string, summary?: string, actionMode?: ActionMode) => {
+    (
+      toTeam: string,
+      text: string,
+      summary?: string,
+      actionMode?: ActionMode,
+      taskRefs?: TaskRef[]
+    ) => {
       void sendCrossTeamMessage({
         fromTeam: teamName,
         fromMember: 'user',
         toTeam,
         text,
+        taskRefs,
         actionMode,
         summary,
       });

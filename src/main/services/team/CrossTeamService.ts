@@ -46,7 +46,7 @@ export class CrossTeamService {
   ) {}
 
   async send(request: CrossTeamSendRequest): Promise<CrossTeamSendResult> {
-    const { fromTeam, fromMember, toTeam, text, summary, actionMode } = request;
+    const { fromTeam, fromMember, toTeam, text, taskRefs, summary, actionMode } = request;
     const chainDepth = request.chainDepth ?? 0;
     const messageId = request.messageId?.trim() || randomUUID();
     const timestamp = request.timestamp ?? new Date().toISOString();
@@ -105,6 +105,7 @@ export class CrossTeamService {
       conversationId,
       replyToConversationId,
       text,
+      taskRefs,
       summary,
       chainDepth,
       timestamp,
@@ -127,6 +128,7 @@ export class CrossTeamService {
         source: CROSS_TEAM_SOURCE,
         conversationId,
         replyToConversationId,
+        taskRefs,
       });
     });
 
@@ -144,6 +146,7 @@ export class CrossTeamService {
         from: fromMember,
         to: `${toTeam}.${leadName}`,
         text,
+        taskRefs,
         timestamp,
         messageId,
         summary: summary ?? `Cross-team message to ${toTeam}`,

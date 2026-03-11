@@ -12,7 +12,10 @@ import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
-import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
+import {
+  extractTaskRefsFromText,
+  stripEncodedTaskReferenceMetadata,
+} from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { ImagePlus, Mic, Send, Trash2, X } from 'lucide-react';
 
@@ -132,6 +135,7 @@ export const TaskCommentInput = ({
       const text = replyTo
         ? buildReplyBlock(replyTo.author, replyTo.text, serialized || '(image)')
         : serialized || '(image)';
+      const taskRefs = extractTaskRefsFromText(draft.value, taskSuggestions);
       const attachments: CommentAttachmentPayload[] | undefined =
         pendingAttachments.length > 0
           ? pendingAttachments.map((a) => ({
@@ -141,7 +145,11 @@ export const TaskCommentInput = ({
               base64Data: a.base64Data,
             }))
           : undefined;
-      await addTaskComment(teamName, taskId, text, attachments);
+      await addTaskComment(teamName, taskId, {
+        text,
+        attachments,
+        taskRefs,
+      });
       draft.clearDraft();
       chipDraft.clearChipDraft();
       setPendingAttachments([]);
@@ -161,6 +169,7 @@ export const TaskCommentInput = ({
     replyTo,
     onClearReply,
     pendingAttachments,
+    taskSuggestions,
   ]);
 
   // Handle paste from MentionableTextarea area
@@ -340,7 +349,7 @@ export const TaskCommentInput = ({
                 </span>
               ) : null}
               {draft.isSaved ? (
-                <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
               ) : null}
             </div>
           }

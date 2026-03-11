@@ -185,6 +185,7 @@ function requestChanges(context, taskId, flags = {}) {
     text: comment,
     from,
     type: 'review_request',
+    ...(Array.isArray(flags.taskRefs) ? { taskRefs: flags.taskRefs } : {}),
     notifyOwner: false,
   });
   messages.sendMessage(context, {
@@ -193,6 +194,7 @@ function requestChanges(context, taskId, flags = {}) {
     text:
       `Task #${task.displayId || task.id} needs fixes.\n\n${comment}\n\n` +
       'The task has been moved back to pending. When you are ready to resume, review the task context, start it explicitly, implement the fixes, mark it completed, and request review again.',
+    ...(Array.isArray(flags.taskRefs) ? { taskRefs: flags.taskRefs } : {}),
     summary: `Fix request for #${task.displayId || task.id}`,
     source: 'system_notification',
     ...(leadSessionId ? { leadSessionId } : {}),

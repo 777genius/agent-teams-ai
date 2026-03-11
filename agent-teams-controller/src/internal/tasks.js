@@ -91,6 +91,7 @@ function maybeNotifyAssignedOwner(context, task, options = {}) {
     member: owner,
     from: sender,
     text: buildAssignmentMessage(context, task, options),
+    taskRefs: Array.isArray(options.taskRefs) && options.taskRefs.length > 0 ? options.taskRefs : undefined,
     summary,
     source: 'system_notification',
     ...(leadSessionId ? { leadSessionId } : {}),
@@ -123,6 +124,7 @@ function maybeNotifyTaskOwnerOnComment(context, task, comment, options = {}) {
     member: owner,
     from: normalizeActorName(comment.author) || leadName,
     text: buildCommentNotificationMessage(context, task, comment),
+    taskRefs: Array.isArray(comment.taskRefs) ? comment.taskRefs : undefined,
     summary: `Comment on #${task.displayId || task.id}`,
     source: 'system_notification',
     ...(leadSessionId ? { leadSessionId } : {}),
@@ -135,6 +137,10 @@ function createTask(context, input) {
     maybeNotifyAssignedOwner(context, task, {
       description: input.description,
       prompt: input.prompt,
+      taskRefs: [
+        ...(Array.isArray(input.descriptionTaskRefs) ? input.descriptionTaskRefs : []),
+        ...(Array.isArray(input.promptTaskRefs) ? input.promptTaskRefs : []),
+      ],
       from: input.from,
     });
   }
@@ -221,6 +227,7 @@ function addTaskComment(context, taskId, flags) {
     ...(flags.id ? { id: flags.id } : {}),
     ...(flags.createdAt ? { createdAt: flags.createdAt } : {}),
     ...(flags.type ? { type: flags.type } : {}),
+    ...(Array.isArray(flags.taskRefs) ? { taskRefs: flags.taskRefs } : {}),
     ...(Array.isArray(flags.attachments) ? { attachments: flags.attachments } : {}),
   });
 

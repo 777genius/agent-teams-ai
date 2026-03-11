@@ -1,6 +1,7 @@
 import { Fragment, useMemo } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
+import { CopyButton } from '@renderer/components/common/CopyButton';
 import { AttachmentDisplay } from '@renderer/components/team/attachments/AttachmentDisplay';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { TaskTooltip } from '@renderer/components/team/TaskTooltip';
@@ -24,7 +25,7 @@ import {
 } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
-import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
+import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import {
   CROSS_TEAM_SENT_SOURCE,
@@ -129,6 +130,8 @@ interface ActivityItemProps {
   zebraShade?: boolean;
   /** Explicit collapse state for timeline-controlled collapsed mode. */
   collapseState?: ActivityCollapseState;
+  /** Compact header mode for narrow message lists. */
+  compactHeader?: boolean;
 }
 
 function getStringField(obj: StructuredMessage, key: string): string | null {
@@ -297,6 +300,7 @@ export const ActivityItem = ({
   onRestartTeam,
   zebraShade,
   collapseState,
+  compactHeader = false,
 }: ActivityItemProps): React.JSX.Element => {
   const colors = getTeamColorSet(memberColor ?? message.color ?? '');
   const { isLight } = useTheme();
@@ -399,7 +403,7 @@ export const ActivityItem = ({
   const displayText = useMemo(() => {
     if (!strippedText) return null;
     let result = highlightSystemLabels(strippedText, !!systemLabel);
-    result = linkifyTaskIdsInMarkdown(result);
+    result = linkifyTaskIdsInMarkdown(result, message.taskRefs);
     if ((memberColorMap && memberColorMap.size > 0) || teamNames.length > 0)
       result = linkifyAllMentionsInMarkdown(result, memberColorMap ?? new Map(), teamNames);
     return result;
@@ -435,7 +439,7 @@ export const ActivityItem = ({
   };
 
   const isHeaderClickable = isManaged ? collapseState.canToggle : false;
-  const showChevron = isHeaderClickable;
+  const showChevron = isHeaderClickable && !compactHeader;
   const isUserSent = message.source === 'user_sent' || isCrossTeamSent;
   const isSystemMessage = message.from === 'system';
   const onManagedToggle = isManaged ? collapseState.onToggle : undefined;
@@ -518,13 +522,13 @@ export const ActivityItem = ({
         <MemberBadge
           name={senderName}
           color={senderColor}
-          hideAvatar={senderHideAvatar}
+          hideAvatar={senderHideAvatar || compactHeader}
           onClick={onMemberNameClick}
           disableHoverCard={crossTeamOrigin != null}
         />
 
         {/* Role */}
-        {formattedRole ? (
+        {!compactHeader && formattedRole ? (
           <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
             {formattedRole}
           </span>
@@ -580,8 +584,9 @@ export const ActivityItem = ({
                 name={crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to}
                 color={crossTeamTarget ? undefined : recipientColor}
                 hideAvatar={
+                  compactHeader ||
                   (crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to) ===
-                  'user'
+                    'user'
                 }
                 onClick={onMemberNameClick}
                 disableHoverCard={crossTeamTarget != null}
@@ -595,44 +600,8 @@ export const ActivityItem = ({
           {onTaskIdClick ? linkifyTaskIds(summaryText, onTaskIdClick) : summaryText}
         </span>
 
-        {/* Timestamp + reply + create task */}
+        {/* Timestamp */}
         <div className="flex shrink-0 items-center gap-1.5">
-          {onReply && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="rounded p-0.5 opacity-0 transition-opacity hover:bg-[var(--color-surface-raised)] group-hover:opacity-100"
-                  style={{ color: CARD_ICON_MUTED }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onReply(message);
-                  }}
-                >
-                  <Reply size={14} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Reply to message</TooltipContent>
-            </Tooltip>
-          )}
-          {onCreateTask && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="rounded p-0.5 opacity-0 transition-opacity hover:bg-[var(--color-surface-raised)] group-hover:opacity-100"
-                  style={{ color: CARD_ICON_MUTED }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCreateTask();
-                  }}
-                >
-                  <ListPlus size={14} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Create task from message</TooltipContent>
-            </Tooltip>
-          )}
           <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
             {timestamp}
           </span>
@@ -660,29 +629,72 @@ export const ActivityItem = ({
             <ReplyQuoteBlock
               reply={parsedReply}
               memberColor={memberColorMap?.get(parsedReply.agentName)}
+              replyTaskRefs={message.taskRefs}
             />
           ) : displayText ? (
-            <ExpandableContent>
-              <span
-                onClickCapture={
-                  onTaskIdClick
-                    ? (e) => {
-                        const link = (e.target as HTMLElement).closest<HTMLAnchorElement>(
-                          'a[href^="task://"]'
-                        );
-                        if (link) {
-                          e.preventDefault();
+            <div className="group/message-body relative">
+              <div className="absolute right-1 top-1 z-10 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/message-body:opacity-100">
+                {onReply ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="rounded p-1 transition-colors hover:bg-[var(--color-surface-raised)]"
+                        style={{ color: CARD_ICON_MUTED }}
+                        onClick={(e) => {
                           e.stopPropagation();
-                          const taskId = link.getAttribute('href')?.replace('task://', '');
-                          if (taskId) onTaskIdClick(taskId);
+                          onReply(message);
+                        }}
+                      >
+                        <Reply size={14} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Reply to message</TooltipContent>
+                  </Tooltip>
+                ) : null}
+                {onCreateTask ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="rounded p-1 transition-colors hover:bg-[var(--color-surface-raised)]"
+                        style={{ color: CARD_ICON_MUTED }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCreateTask();
+                        }}
+                      >
+                        <ListPlus size={14} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Create task from message</TooltipContent>
+                  </Tooltip>
+                ) : null}
+                <CopyButton text={displayText} inline />
+              </div>
+              <ExpandableContent>
+                <span
+                  onClickCapture={
+                    onTaskIdClick
+                      ? (e) => {
+                          const link = (e.target as HTMLElement).closest<HTMLAnchorElement>(
+                            'a[href^="task://"]'
+                          );
+                          if (link) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const href = link.getAttribute('href');
+                            const parsedTaskLink = href ? parseTaskLinkHref(href) : null;
+                            if (parsedTaskLink?.taskId) onTaskIdClick(parsedTaskLink.taskId);
+                          }
                         }
-                      }
-                    : undefined
-                }
-              >
-                <MarkdownViewer content={displayText} maxHeight="max-h-none" copyable bare />
-              </span>
-            </ExpandableContent>
+                      : undefined
+                  }
+                >
+                  <MarkdownViewer content={displayText} maxHeight="max-h-none" bare />
+                </span>
+              </ExpandableContent>
+            </div>
           ) : summaryText ? (
             <p className="text-xs italic" style={{ color: CARD_TEXT_LIGHT }}>
               {summaryText}

@@ -117,12 +117,19 @@ export type TaskHistoryEvent =
 
 export type TaskCommentType = 'regular' | 'review_request' | 'review_approved';
 
+export interface TaskRef {
+  taskId: string;
+  displayId: string;
+  teamName: string;
+}
+
 export interface TaskComment {
   id: string;
   author: string;
   text: string;
   createdAt: string;
   type: TaskCommentType;
+  taskRefs?: TaskRef[];
   /** Attachments on this comment. Metadata only — files stored on disk. */
   attachments?: TaskAttachmentMeta[];
 }
@@ -135,7 +142,10 @@ export interface TeamTask {
   displayId?: string;
   subject: string;
   description?: string;
+  descriptionTaskRefs?: TaskRef[];
   activeForm?: string;
+  prompt?: string;
+  promptTaskRefs?: TaskRef[];
   owner?: string;
   createdBy?: string;
   status: TeamTaskStatus;
@@ -244,6 +254,7 @@ export interface InboxMessage {
   text: string;
   timestamp: string;
   read: boolean;
+  taskRefs?: TaskRef[];
   summary?: string;
   color?: string;
   messageId?: string;
@@ -273,6 +284,7 @@ export type AgentActionMode = 'do' | 'ask' | 'delegate';
 export interface SendMessageRequest {
   member: string;
   text: string;
+  taskRefs?: TaskRef[];
   actionMode?: AgentActionMode;
   summary?: string;
   from?: string;
@@ -296,6 +308,12 @@ export interface SendMessageResult {
   deliveredViaStdin?: boolean;
   messageId: string;
   deduplicated?: boolean;
+}
+
+export interface AddTaskCommentRequest {
+  text: string;
+  attachments?: CommentAttachmentPayload[];
+  taskRefs?: TaskRef[];
 }
 
 export type MemberStatus = 'active' | 'idle' | 'terminated' | 'unknown';
@@ -329,7 +347,7 @@ export interface KanbanState {
 export type UpdateKanbanPatch =
   | { op: 'set_column'; column: Extract<KanbanColumnId, 'review' | 'approved'> }
   | { op: 'remove' }
-  | { op: 'request_changes'; comment?: string };
+  | { op: 'request_changes'; comment?: string; taskRefs?: TaskRef[] };
 
 export interface ResolvedTeamMember {
   name: string;
@@ -398,10 +416,12 @@ export interface TeamLaunchResponse {
 export interface CreateTaskRequest {
   subject: string;
   description?: string;
+  descriptionTaskRefs?: TaskRef[];
   owner?: string;
   blockedBy?: string[];
   related?: string[];
   prompt?: string;
+  promptTaskRefs?: TaskRef[];
   startImmediately?: boolean;
 }
 
@@ -656,6 +676,7 @@ export interface CrossTeamMessage {
   conversationId?: string;
   replyToConversationId?: string;
   text: string;
+  taskRefs?: TaskRef[];
   summary?: string;
   chainDepth: number;
   timestamp: string;
@@ -670,6 +691,7 @@ export interface CrossTeamSendRequest {
   conversationId?: string;
   replyToConversationId?: string;
   text: string;
+  taskRefs?: TaskRef[];
   actionMode?: AgentActionMode;
   summary?: string;
   chainDepth?: number;

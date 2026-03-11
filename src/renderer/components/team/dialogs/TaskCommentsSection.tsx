@@ -23,7 +23,9 @@ import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
 import {
+  extractTaskRefsFromText,
   linkifyTaskIdsInMarkdown,
+  parseTaskLinkHref,
   stripEncodedTaskReferenceMetadata,
 } from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
@@ -160,14 +162,25 @@ export const TaskCommentsSection = ({
     try {
       const serialized = serializeChipsWithText(trimmed, chipDraft.chips);
       const text = replyTo ? buildReplyBlock(replyTo.author, replyTo.text, serialized) : serialized;
-      await addTaskComment(teamName, taskId, text);
+      const taskRefs = extractTaskRefsFromText(draft.value, taskSuggestions);
+      await addTaskComment(teamName, taskId, { text, taskRefs });
       draft.clearDraft();
       chipDraft.clearChipDraft();
       setReplyTo(null);
     } catch {
       // Error is stored in addCommentError via store
     }
-  }, [canSubmit, addTaskComment, teamName, taskId, trimmed, draft, chipDraft, replyTo]);
+  }, [
+    canSubmit,
+    addTaskComment,
+    teamName,
+    taskId,
+    trimmed,
+    draft,
+    chipDraft,
+    replyTo,
+    taskSuggestions,
+  ]);
 
   return (
     <div ref={commentsRef}>
@@ -281,6 +294,7 @@ export const TaskCommentsSection = ({
                               replyText: stripAgentBlocks(reply.replyText),
                             }}
                             memberColor={colorMap.get(reply.agentName)}
+                            replyTaskRefs={comment.taskRefs}
                             bodyMaxHeight="max-h-none"
                           />
                         ) : (
@@ -294,8 +308,9 @@ export const TaskCommentsSection = ({
                                     if (link) {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      const id = link.getAttribute('href')?.replace('task://', '');
-                                      if (id) onTaskIdClick(id);
+                                      const href = link.getAttribute('href');
+                                      const parsed = href ? parseTaskLinkHref(href) : null;
+                                      if (parsed?.taskId) onTaskIdClick(parsed.taskId);
                                     }
                                   }
                                 : undefined
@@ -303,7 +318,7 @@ export const TaskCommentsSection = ({
                           >
                             <MarkdownViewer
                               content={(() => {
-                                let t = linkifyTaskIdsInMarkdown(displayText);
+                                let t = linkifyTaskIdsInMarkdown(displayText, comment.taskRefs);
                                 if (colorMap.size > 0 || teamNamesForLinkify.length > 0)
                                   t = linkifyAllMentionsInMarkdown(
                                     t,
@@ -426,7 +441,7 @@ export const TaskCommentsSection = ({
                     </span>
                   ) : null}
                   {draft.isSaved ? (
-                    <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
                   ) : null}
                 </div>
               }

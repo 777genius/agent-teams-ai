@@ -56,6 +56,7 @@ interface ActivityTimelineProps {
 
 const VIEWPORT_THRESHOLD = 0.15;
 const MESSAGES_PAGE_SIZE = 30;
+const COMPACT_MESSAGES_WIDTH_PX = 400;
 
 /** Inline compaction boundary divider — styled like session separators but with amber accent. */
 const CompactionDivider = ({ message }: { message: InboxMessage }): React.JSX.Element => (
@@ -98,6 +99,7 @@ const MessageRowWithObserver = ({
   onTaskIdClick,
   onRestartTeam,
   collapseState,
+  compactHeader,
 }: {
   message: InboxMessage;
   teamName: string;
@@ -116,6 +118,7 @@ const MessageRowWithObserver = ({
   onTaskIdClick?: (taskId: string) => void;
   onRestartTeam?: () => void;
   collapseState?: ActivityCollapseState;
+  compactHeader?: boolean;
 }): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
   const reportedRef = useRef(false);
@@ -165,6 +168,7 @@ const MessageRowWithObserver = ({
         onTaskIdClick={onTaskIdClick}
         onRestartTeam={onRestartTeam}
         collapseState={collapseState}
+        compactHeader={compactHeader}
       />
     </AnimatedHeightReveal>
   );
@@ -188,6 +192,31 @@ export const ActivityTimeline = ({
   currentLeadSessionId,
 }: ActivityTimelineProps): React.JSX.Element => {
   const [visibleCount, setVisibleCount] = useState(MESSAGES_PAGE_SIZE);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [compactHeader, setCompactHeader] = useState(false);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+
+    const updateCompactMode = (width: number): void => {
+      setCompactHeader((prev) => {
+        const next = width < COMPACT_MESSAGES_WIDTH_PX;
+        return prev === next ? prev : next;
+      });
+    };
+
+    updateCompactMode(el.getBoundingClientRect().width);
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      updateCompactMode(entry.contentRect.width);
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const colorMap = members ? buildMemberColorMap(members) : new Map<string, string>();
   const localMemberNames = new Set((members ?? []).map((member) => member.name.trim()));
@@ -357,7 +386,7 @@ export const ActivityTimeline = ({
   }
 
   return (
-    <div className="space-y-1">
+    <div ref={rootRef} className="space-y-1">
       {/* Pinned (newest) thought group — always at top */}
       {pinnedThoughtGroup &&
         (() => {
@@ -380,6 +409,7 @@ export const ActivityTimeline = ({
               onTaskIdClick={onTaskIdClick}
               memberColorMap={colorMap}
               onReply={onReplyToMessage}
+              compactHeader={compactHeader}
             />
           );
         })()}
@@ -440,6 +470,7 @@ export const ActivityTimeline = ({
                 onTaskIdClick={onTaskIdClick}
                 memberColorMap={colorMap}
                 onReply={onReplyToMessage}
+                compactHeader={compactHeader}
               />
             </React.Fragment>
           );
@@ -489,6 +520,7 @@ export const ActivityTimeline = ({
               onTaskIdClick={onTaskIdClick}
               onRestartTeam={onRestartTeam}
               collapseState={collapseState}
+              compactHeader={compactHeader}
             />
           </React.Fragment>
         );

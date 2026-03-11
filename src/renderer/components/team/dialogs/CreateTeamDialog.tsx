@@ -912,7 +912,7 @@ export const CreateTeamDialog = ({
                         footerRight={
                           promptDraft.isSaved ? (
                             <span className="text-[10px] text-[var(--color-text-muted)]">
-                              Draft saved
+                              Saved
                             </span>
                           ) : null
                         }
@@ -980,7 +980,7 @@ export const CreateTeamDialog = ({
                     placeholder="Brief description of the team purpose"
                   />
                   {descriptionDraft.isSaved ? (
-                    <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
                   ) : null}
                 </div>
 

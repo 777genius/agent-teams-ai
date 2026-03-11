@@ -28,6 +28,7 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { REHYPE_PLUGINS, REHYPE_PLUGINS_NO_HIGHLIGHT } from '@renderer/utils/markdownPlugins';
+import { parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
 import { FileText, UsersRound } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 import { useShallow } from 'zustand/react/shallow';
@@ -269,9 +270,13 @@ function createViewerMarkdownComponents(
         );
       }
       if (href?.startsWith('task://')) {
-        const taskId = href.slice('task://'.length);
+        const parsedTaskLink = parseTaskLinkHref(href);
+        const taskId = parsedTaskLink?.taskId;
+        if (!taskId) {
+          return <>{children}</>;
+        }
         return (
-          <TaskTooltip taskId={taskId}>
+          <TaskTooltip taskId={taskId} teamName={parsedTaskLink?.teamName}>
             <a
               href={href}
               className="cursor-pointer font-medium no-underline hover:underline"

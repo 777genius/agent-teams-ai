@@ -180,7 +180,7 @@ export const AddMemberDialog = ({
                 placeholder="How this agent should behave, what tasks it handles..."
                 footerRight={
                   workflowDraft.isSaved ? (
-                    <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
                   ) : null
                 }
               />

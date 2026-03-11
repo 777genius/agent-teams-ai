@@ -195,6 +195,7 @@ import {
 
 import type {
   AddMemberRequest,
+  AddTaskCommentRequest,
   AgentChangeSet,
   AppConfig,
   ApplyReviewRequest,
@@ -205,7 +206,6 @@ import type {
   ClaudeRootInfo,
   CliInstallationStatus,
   CliInstallerProgress,
-  CommentAttachmentPayload,
   ConflictCheckResult,
   ContextInfo,
   CreateScheduleInput,
@@ -878,19 +878,8 @@ const electronAPI: ElectronAPI = {
     updateConfig: async (teamName: string, updates: TeamUpdateConfigRequest) => {
       return invokeIpcWithResult<TeamConfig>(TEAM_UPDATE_CONFIG, teamName, updates);
     },
-    addTaskComment: async (
-      teamName: string,
-      taskId: string,
-      text: string,
-      attachments?: CommentAttachmentPayload[]
-    ) => {
-      return invokeIpcWithResult<TaskComment>(
-        TEAM_ADD_TASK_COMMENT,
-        teamName,
-        taskId,
-        text,
-        attachments
-      );
+    addTaskComment: async (teamName: string, taskId: string, request: AddTaskCommentRequest) => {
+      return invokeIpcWithResult<TaskComment>(TEAM_ADD_TASK_COMMENT, teamName, taskId, request);
     },
     addMember: async (teamName: string, request: AddMemberRequest) => {
       return invokeIpcWithResult<void>(TEAM_ADD_MEMBER, teamName, request);

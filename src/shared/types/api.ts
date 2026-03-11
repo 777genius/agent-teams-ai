@@ -38,6 +38,7 @@ import type {
 } from './review';
 import type {
   AddMemberRequest,
+  AddTaskCommentRequest,
   AttachmentFileData,
   CommentAttachmentPayload,
   CreateTaskRequest,
@@ -472,8 +473,7 @@ export interface TeamsAPI {
   addTaskComment: (
     teamName: string,
     taskId: string,
-    text: string,
-    attachments?: CommentAttachmentPayload[]
+    request: AddTaskCommentRequest
   ) => Promise<TaskComment>;
   setTaskClarification: (
     teamName: string,

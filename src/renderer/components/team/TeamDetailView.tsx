@@ -79,7 +79,12 @@ import type { KanbanSortState } from './kanban/KanbanSortPopover';
 import type { ContextInjection } from '@renderer/types/contextInjection';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
-import type { MemberSpawnStatusEntry, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
+import type {
+  MemberSpawnStatusEntry,
+  ResolvedTeamMember,
+  TaskRef,
+  TeamTaskWithKanban,
+} from '@shared/types';
 import type { EditorSelectionAction } from '@shared/types/editor';
 
 interface TeamDetailViewProps {
@@ -796,7 +801,9 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     blockedBy?: string[],
     related?: string[],
     prompt?: string,
-    startImmediately?: boolean
+    startImmediately?: boolean,
+    descriptionTaskRefs?: TaskRef[],
+    promptTaskRefs?: TaskRef[]
   ): void => {
     setCreatingTask(true);
     void (async () => {
@@ -808,6 +815,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           blockedBy,
           related,
           prompt,
+          descriptionTaskRefs,
+          promptTaskRefs,
           startImmediately,
         });
 
@@ -1567,7 +1576,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             taskId={requestChangesTaskId}
             members={data?.members ?? []}
             onCancel={() => setRequestChangesTaskId(null)}
-            onSubmit={(comment) => {
+            onSubmit={(comment, taskRefs) => {
               if (!requestChangesTaskId) {
                 return;
               }
@@ -1576,6 +1585,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                   await updateKanban(teamName, requestChangesTaskId, {
                     op: 'request_changes',
                     comment,
+                    taskRefs,
                   });
                   setRequestChangesTaskId(null);
                 } catch {
@@ -1777,7 +1787,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             sending={sendingMessage}
             sendError={sendMessageError}
             lastResult={lastSendMessageResult}
-            onSend={(member, text, summary, attachments, actionMode) => {
+            onSend={(member, text, summary, attachments, actionMode, taskRefs) => {
               void (async () => {
                 const sentAtMs = Date.now();
                 setPendingRepliesByMember((prev) => ({ ...prev, [member]: sentAtMs }));
@@ -1788,6 +1798,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                     summary,
                     attachments,
                     actionMode,
+                    taskRefs,
                   });
                 } catch {
                   setPendingRepliesByMember((prev) => {

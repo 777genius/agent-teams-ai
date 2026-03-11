@@ -26,7 +26,10 @@ import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
+import {
+  extractTaskRefsFromText,
+  stripEncodedTaskReferenceMetadata,
+} from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { AlertCircle, ImagePlus, Send, X } from 'lucide-react';
 
@@ -35,7 +38,12 @@ import { MemberBadge } from '../MemberBadge';
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { AttachmentPayload, ResolvedTeamMember, SendMessageResult } from '@shared/types';
+import type {
+  AttachmentPayload,
+  ResolvedTeamMember,
+  SendMessageResult,
+  TaskRef,
+} from '@shared/types';
 
 interface QuotedMessage {
   from: string;
@@ -61,7 +69,8 @@ interface SendMessageDialogProps {
     text: string,
     summary?: string,
     attachments?: AttachmentPayload[],
-    actionMode?: ActionMode
+    actionMode?: ActionMode,
+    taskRefs?: TaskRef[]
   ) => void;
   onClose: () => void;
 }
@@ -237,12 +246,14 @@ export const SendMessageDialog = ({
 
   const handleSubmit = (): void => {
     if (!canSend) return;
+    const taskRefs = extractTaskRefsFromText(textDraft.value, taskSuggestions);
     onSend(
       member.trim(),
       finalText,
       trimmedText,
       attachments.length > 0 ? attachments : undefined,
-      actionMode
+      actionMode,
+      taskRefs
     );
     textDraft.clearDraft();
     chipDraft.clearChipDraft();
@@ -512,9 +523,7 @@ export const SendMessageDialog = ({
                       </span>
                     ) : null}
                     {textDraft.isSaved ? (
-                      <span className="text-[10px] text-[var(--color-text-muted)]">
-                        Draft saved
-                      </span>
+                      <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
                     ) : null}
                   </div>
                 }

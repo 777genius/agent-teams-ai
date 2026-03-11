@@ -236,7 +236,7 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
 
   return (
     <div
-      className="flex h-full items-center pr-2"
+      className="flex h-full items-end pr-2"
       style={
         {
           paddingLeft:

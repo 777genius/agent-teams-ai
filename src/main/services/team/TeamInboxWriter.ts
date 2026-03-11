@@ -27,6 +27,7 @@ export class TeamInboxWriter {
       text: request.text,
       timestamp: request.timestamp ?? new Date().toISOString(),
       read: false,
+      taskRefs: request.taskRefs?.length ? request.taskRefs : undefined,
       summary: request.summary,
       messageId,
       attachments: attachmentMeta?.length ? attachmentMeta : undefined,

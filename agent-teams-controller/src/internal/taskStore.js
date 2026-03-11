@@ -166,6 +166,23 @@ function parseRelationshipList(paths, value) {
   return rawValues.map((entry) => resolveTaskRef(paths, entry));
 }
 
+function normalizeTaskRefs(taskRefs) {
+  if (!Array.isArray(taskRefs) || taskRefs.length === 0) {
+    return undefined;
+  }
+
+  const normalized = taskRefs
+    .filter((item) => item && typeof item === 'object')
+    .map((item) => ({
+      taskId: String(item.taskId || '').trim(),
+      displayId: String(item.displayId || '').trim(),
+      teamName: String(item.teamName || '').trim(),
+    }))
+    .filter((item) => item.taskId && item.displayId && item.teamName);
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
 function computeInitialStatus(paths, input, owner, blockedByIds) {
   const explicit = normalizeStatus(input.status);
   if (explicit) return explicit;
@@ -270,6 +287,7 @@ function createTask(paths, input = {}) {
       typeof input.description === 'string' && input.description.length > 0
         ? input.description
         : String(input.subject || '').trim(),
+    descriptionTaskRefs: normalizeTaskRefs(input.descriptionTaskRefs),
     activeForm:
       typeof input.activeForm === 'string'
         ? input.activeForm
@@ -301,6 +319,9 @@ function createTask(paths, input = {}) {
         ? input.projectPath.trim()
         : undefined,
     comments: Array.isArray(input.comments) ? input.comments : undefined,
+    prompt:
+      typeof input.prompt === 'string' && input.prompt.trim() ? input.prompt.trim() : undefined,
+    promptTaskRefs: normalizeTaskRefs(input.promptTaskRefs),
     needsClarification:
       input.needsClarification === 'lead' || input.needsClarification === 'user'
         ? input.needsClarification
@@ -434,6 +455,7 @@ function addTaskComment(paths, taskRef, text, options = {}) {
         ? options.createdAt.trim()
         : nowIso(),
     type: options.type || 'regular',
+    ...(normalizeTaskRefs(options.taskRefs) ? { taskRefs: normalizeTaskRefs(options.taskRefs) } : {}),
     ...(Array.isArray(options.attachments) && options.attachments.length > 0
       ? { attachments: options.attachments }
       : {}),

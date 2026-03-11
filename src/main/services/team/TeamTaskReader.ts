@@ -13,6 +13,7 @@ import type {
   TaskAttachmentMeta,
   TaskComment,
   TaskHistoryEvent,
+  TaskRef,
   TaskWorkInterval,
   TeamTask,
   TeamTaskStatus,
@@ -32,6 +33,21 @@ function isValidMimeTypeString(value: unknown): value is string {
   const slash = v.indexOf('/');
   if (slash <= 0 || slash === v.length - 1) return false;
   return true;
+}
+
+function normalizeTaskRefs(value: unknown): TaskRef[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const taskRefs = (value as unknown[])
+    .filter(
+      (entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object'
+    )
+    .map((entry) => ({
+      taskId: typeof entry.taskId === 'string' ? entry.taskId : '',
+      displayId: typeof entry.displayId === 'string' ? entry.displayId : '',
+      teamName: typeof entry.teamName === 'string' ? entry.teamName : '',
+    }))
+    .filter((entry) => entry.taskId && entry.displayId && entry.teamName);
+  return taskRefs.length > 0 ? taskRefs : undefined;
 }
 
 export class TeamTaskReader {
@@ -155,7 +171,10 @@ export class TeamTaskReader {
                 ),
           subject,
           description: typeof parsed.description === 'string' ? parsed.description : undefined,
+          descriptionTaskRefs: normalizeTaskRefs(parsed.descriptionTaskRefs),
           activeForm: typeof parsed.activeForm === 'string' ? parsed.activeForm : undefined,
+          prompt: typeof parsed.prompt === 'string' ? parsed.prompt : undefined,
+          promptTaskRefs: normalizeTaskRefs(parsed.promptTaskRefs),
           owner: typeof parsed.owner === 'string' ? parsed.owner : undefined,
           createdBy: typeof parsed.createdBy === 'string' ? parsed.createdBy : undefined,
           status: (['pending', 'in_progress', 'completed', 'deleted'] as const).includes(
@@ -193,6 +212,7 @@ export class TeamTaskReader {
                   type: (['regular', 'review_request', 'review_approved'] as const).includes(c.type)
                     ? c.type
                     : ('regular' as const),
+                  taskRefs: normalizeTaskRefs((c as unknown as Record<string, unknown>).taskRefs),
                   attachments: Array.isArray(c.attachments)
                     ? (() => {
                         const filtered = (c.attachments as unknown[])

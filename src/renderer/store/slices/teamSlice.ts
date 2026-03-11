@@ -67,7 +67,7 @@ import type { AppState } from '../types';
 import type { AppConfig } from '@renderer/types/data';
 import type {
   AddMemberRequest,
-  CommentAttachmentPayload,
+  AddTaskCommentRequest,
   CreateTaskRequest,
   CrossTeamSendRequest,
   EffortLevel,
@@ -346,8 +346,7 @@ export interface TeamSlice {
   addTaskComment: (
     teamName: string,
     taskId: string,
-    text: string,
-    attachments?: CommentAttachmentPayload[]
+    request: AddTaskCommentRequest
   ) => Promise<TaskComment>;
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
   removeMember: (teamName: string, memberName: string) => Promise<void>;
@@ -1113,11 +1112,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     );
   },
 
-  addTaskComment: async (teamName, taskId, text, attachments) => {
+  addTaskComment: async (teamName, taskId, request) => {
     set({ addingComment: true, addCommentError: null });
     try {
       const comment = await unwrapIpc('team:addTaskComment', () =>
-        api.teams.addTaskComment(teamName, taskId, text, attachments)
+        api.teams.addTaskComment(teamName, taskId, request)
       );
       set({ addingComment: false });
       await get().refreshTeamData(teamName);

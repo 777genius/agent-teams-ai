@@ -106,7 +106,10 @@ interface ParsedTask {
   subject?: unknown;
   title?: unknown;
   description?: unknown;
+  descriptionTaskRefs?: unknown;
   activeForm?: unknown;
+  prompt?: unknown;
+  promptTaskRefs?: unknown;
   owner?: unknown;
   createdBy?: unknown;
   status?: unknown;
@@ -143,6 +146,7 @@ interface RawComment {
   text?: unknown;
   createdAt?: unknown;
   type?: unknown;
+  taskRefs?: unknown;
 }
 
 // ---------------------------------------------------------------------------
@@ -526,6 +530,7 @@ function normalizeComments(parsed: ParsedTask): unknown[] | undefined {
       author: c.author as string,
       text: c.text as string,
       createdAt: c.createdAt as string,
+      taskRefs: Array.isArray(c.taskRefs) ? c.taskRefs : undefined,
       type:
         c.type === 'regular' || c.type === 'review_request' || c.type === 'review_approved'
           ? (c.type as string)
@@ -626,7 +631,14 @@ async function readTasksDirForTeam(
               ),
         subject,
         description: typeof parsed.description === 'string' ? parsed.description : undefined,
+        descriptionTaskRefs: Array.isArray(parsed.descriptionTaskRefs)
+          ? (parsed.descriptionTaskRefs as unknown[])
+          : undefined,
         activeForm: typeof parsed.activeForm === 'string' ? parsed.activeForm : undefined,
+        prompt: typeof parsed.prompt === 'string' ? parsed.prompt : undefined,
+        promptTaskRefs: Array.isArray(parsed.promptTaskRefs)
+          ? (parsed.promptTaskRefs as unknown[])
+          : undefined,
         owner: typeof parsed.owner === 'string' ? parsed.owner : undefined,
         createdBy: typeof parsed.createdBy === 'string' ? parsed.createdBy : undefined,
         status:

@@ -926,9 +926,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                     placeholder="Instructions for team lead..."
                     footerRight={
                       promptDraft.isSaved ? (
-                        <span className="text-[10px] text-[var(--color-text-muted)]">
-                          Draft saved
-                        </span>
+                        <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
                       ) : null
                     }
                   />
@@ -1025,9 +1023,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   placeholder="Instructions for Claude to execute on schedule..."
                   footerRight={
                     promptDraft.isSaved ? (
-                      <span className="text-[10px] text-[var(--color-text-muted)]">
-                        Draft saved
-                      </span>
+                      <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
                     ) : null
                   }
                 />

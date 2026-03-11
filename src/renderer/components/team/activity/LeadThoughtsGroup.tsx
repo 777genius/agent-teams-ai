@@ -15,7 +15,7 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
-import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
+import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { formatToolSummary, parseToolSummary } from '@shared/utils/toolSummary';
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
@@ -126,6 +126,8 @@ interface LeadThoughtsGroupRowProps {
   memberColorMap?: Map<string, string>;
   /** Called when user clicks the reply button on a thought. */
   onReply?: (message: InboxMessage) => void;
+  /** Compact header mode for narrow message lists. */
+  compactHeader?: boolean;
 }
 
 function formatTime(timestamp: string): string {
@@ -237,7 +239,7 @@ const LeadThoughtItem = ({
 
   const displayContent = useMemo(() => {
     let text = thought.text.replace(/\n/g, '  \n');
-    text = linkifyTaskIdsInMarkdown(text);
+    text = linkifyTaskIdsInMarkdown(text, thought.taskRefs);
     if ((memberColorMap && memberColorMap.size > 0) || teamNames.length > 0) {
       text = linkifyAllMentionsInMarkdown(text, memberColorMap ?? new Map(), teamNames);
     }
@@ -393,8 +395,9 @@ const LeadThoughtItem = ({
                       if (link) {
                         e.preventDefault();
                         e.stopPropagation();
-                        const taskId = link.getAttribute('href')?.replace('task://', '');
-                        if (taskId) onTaskIdClick(taskId);
+                        const href = link.getAttribute('href');
+                        const parsedTaskLink = href ? parseTaskLinkHref(href) : null;
+                        if (parsedTaskLink?.taskId) onTaskIdClick(parsedTaskLink.taskId);
                       }
                     }
                   : undefined
@@ -462,6 +465,7 @@ export const LeadThoughtsGroupRow = ({
   onTaskIdClick,
   memberColorMap,
   onReply,
+  compactHeader = false,
 }: LeadThoughtsGroupRowProps): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -725,7 +729,7 @@ export const LeadThoughtsGroupRow = ({
           }
         >
           {/* Chevron for collapse mode */}
-          {canToggleBodyVisibility ? (
+          {canToggleBodyVisibility && !compactHeader ? (
             <ChevronRight
               className="size-3 shrink-0 transition-transform duration-150"
               style={{
@@ -735,20 +739,22 @@ export const LeadThoughtsGroupRow = ({
             />
           ) : null}
           {/* Lead avatar with optional live indicator */}
-          <div className="relative shrink-0">
-            <img
-              src={agentAvatarUrl(leadName, 24)}
-              alt=""
-              className="size-5 rounded-full bg-[var(--color-surface-raised)]"
-              loading="lazy"
-            />
-            {isLive ? (
-              <span className="absolute -bottom-0.5 -right-0.5 flex size-2.5">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
-                <span className="relative inline-flex size-full rounded-full border-2 border-[var(--color-surface)] bg-emerald-400" />
-              </span>
-            ) : null}
-          </div>
+          {!compactHeader ? (
+            <div className="relative shrink-0">
+              <img
+                src={agentAvatarUrl(leadName, 24)}
+                alt=""
+                className="size-5 rounded-full bg-[var(--color-surface-raised)]"
+                loading="lazy"
+              />
+              {isLive ? (
+                <span className="absolute -bottom-0.5 -right-0.5 flex size-2.5">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
+                  <span className="relative inline-flex size-full rounded-full border-2 border-[var(--color-surface)] bg-emerald-400" />
+                </span>
+              ) : null}
+            </div>
+          ) : null}
           <MemberBadge name={leadName} color={memberColor} hideAvatar />
           <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
             {thoughts.length} thoughts
