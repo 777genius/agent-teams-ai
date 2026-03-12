@@ -222,6 +222,50 @@ describe('agent-teams-mcp tools', () => {
     }
   });
 
+  it('discovers the control endpoint from the published state file', async () => {
+    const claudeDir = makeClaudeDir();
+    const statePath = path.join(claudeDir, 'team-control-api.json');
+
+    const server = await startControlServer(async ({ method, url }) => {
+      if (method === 'POST' && url === '/api/teams/alpha/launch') {
+        return { body: { runId: 'run-state-file' } };
+      }
+      if (method === 'GET' && url === '/api/teams/provisioning/run-state-file') {
+        return {
+          body: {
+            runId: 'run-state-file',
+            teamName: 'alpha',
+            state: 'ready',
+            message: 'Ready',
+            startedAt: '2026-03-12T00:00:00.000Z',
+            updatedAt: '2026-03-12T00:00:02.000Z',
+          },
+        };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+
+    try {
+      fs.writeFileSync(
+        statePath,
+        JSON.stringify({ baseUrl: server.baseUrl, updatedAt: new Date().toISOString() }, null, 2)
+      );
+
+      const launched = parseJsonToolResult(
+        await getTool('team_launch').execute({
+          teamName: 'alpha',
+          claudeDir,
+          cwd: '/tmp/project',
+        })
+      );
+
+      expect(launched.runId).toBe('run-state-file');
+      expect(launched.progress.state).toBe('ready');
+    } finally {
+      await server.close();
+    }
+  });
+
   it('covers task lifecycle, attachments, relationships, kanban, and review flows', async () => {
     const claudeDir = makeClaudeDir();
     const teamName = 'alpha';

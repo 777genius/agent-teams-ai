@@ -812,6 +812,9 @@ function initializeServices(): void {
       onClaudeRootPathUpdated: (_claudeRootPath: string | null) => {
         reconfigureLocalContextForClaudeRoot();
         void schedulerService?.reloadForClaudeRootChange();
+        if (httpServer?.isRunning()) {
+          void syncTeamControlApiState().catch(() => undefined);
+        }
       },
     },
     {
@@ -858,7 +861,7 @@ function initializeServices(): void {
   // Start HTTP server if enabled in config
   const appConfig = configManager.getConfig();
   if (appConfig.httpServer?.enabled) {
-    void startHttpServer(handleModeSwitch);
+    void startHttpServer(handleModeSwitch).catch(() => undefined);
   }
 
   logger.info('Services initialized successfully');
@@ -897,6 +900,7 @@ async function startHttpServer(
   } catch (error) {
     await clearTeamControlApiState().catch(() => undefined);
     logger.error('Failed to start HTTP server:', error);
+    throw error;
   }
 }
 

@@ -7,6 +7,7 @@ const MIN_WAIT_TIMEOUT_MS = 1000;
 const MAX_WAIT_TIMEOUT_MS = 10 * 60 * 1000;
 const POLL_INTERVAL_MS = 1000;
 const TEAM_CONTROL_API_STATE_FILE = 'team-control-api.json';
+const RETRYABLE_CONTROL_ERROR = 'retryableControlError';
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -41,21 +42,46 @@ function readControlApiState(context) {
   }
 }
 
-function resolveControlBaseUrl(context, flags = {}) {
+function uniqueNonEmpty(items) {
+  return [...new Set(items.filter((item) => typeof item === 'string' && item.trim()))];
+}
+
+function resolveControlBaseUrls(context, flags = {}) {
   const explicit =
     (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
     (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
+    '';
+  const stateFileUrl = readControlApiState(context) || '';
+  const envUrl =
     (typeof process.env.CLAUDE_TEAM_CONTROL_URL === 'string' &&
       process.env.CLAUDE_TEAM_CONTROL_URL.trim()) ||
-    readControlApiState(context);
+    '';
+  const candidates = uniqueNonEmpty([explicit, stateFileUrl, envUrl]);
 
-  if (!explicit) {
+  if (candidates.length === 0) {
     throw new Error(
       'Team control API is unavailable. Start the desktop app team runtime first so it can publish CLAUDE_TEAM_CONTROL_URL.'
     );
   }
 
-  return explicit;
+  return candidates;
+}
+
+function makeRetryableControlError(message, cause) {
+  const error = new Error(message);
+  error[RETRYABLE_CONTROL_ERROR] = true;
+  if (cause) {
+    error.cause = cause;
+  }
+  return error;
+}
+
+function isRetryableControlError(error) {
+  return Boolean(error && error[RETRYABLE_CONTROL_ERROR] === true);
+}
+
+function isRetryableStatusCode(statusCode) {
+  return statusCode === 404 || statusCode === 408 || statusCode === 429 || statusCode >= 500;
 }
 
 async function requestJson(baseUrl, pathname, options = {}) {
@@ -86,18 +112,51 @@ async function requestJson(baseUrl, pathname, options = {}) {
         payload && typeof payload.error === 'string' && payload.error.trim()
           ? payload.error.trim()
           : `${response.status} ${response.statusText}`.trim();
+      if (isRetryableStatusCode(response.status)) {
+        throw makeRetryableControlError(
+          `Team control API ${response.status} at ${baseUrl}${pathname}: ${detail || 'request failed'}`
+        );
+      }
       throw new Error(detail || 'Team control API request failed');
+    }
+
+    if (payload == null) {
+      throw makeRetryableControlError(`Team control API returned empty or non-JSON response at ${baseUrl}${pathname}`);
     }
 
     return payload;
   } catch (error) {
     if (error && error.name === 'AbortError') {
-      throw new Error(`Timed out calling team control API: ${pathname}`);
+      throw makeRetryableControlError(`Timed out calling team control API: ${pathname}`, error);
+    }
+    if (error && error.name === 'TypeError') {
+      throw makeRetryableControlError(
+        `Failed to reach team control API at ${baseUrl}: ${error.message || 'fetch failed'}`,
+        error
+      );
     }
     throw error;
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function requestJsonWithFallback(baseUrls, pathname, options = {}) {
+  let lastError = null;
+
+  for (let index = 0; index < baseUrls.length; index += 1) {
+    const baseUrl = baseUrls[index];
+    try {
+      return await requestJson(baseUrl, pathname, options);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableControlError(error) || index === baseUrls.length - 1) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError || new Error('Team control API request failed');
 }
 
 function buildLaunchRequest(flags = {}) {
@@ -159,14 +218,18 @@ function shouldWaitForStop(flags = {}) {
   return true;
 }
 
-async function waitForProvisioningState(baseUrl, teamName, runId, timeoutMs) {
+async function waitForProvisioningState(baseUrls, teamName, runId, timeoutMs) {
   const startedAt = Date.now();
   let lastProgress = null;
 
   while (Date.now() - startedAt <= timeoutMs) {
-    const progress = await requestJson(baseUrl, `/api/teams/provisioning/${encodeURIComponent(runId)}`, {
-      timeoutMs: Math.min(timeoutMs, 10000),
-    });
+    const progress = await requestJsonWithFallback(
+      baseUrls,
+      `/api/teams/provisioning/${encodeURIComponent(runId)}`,
+      {
+        timeoutMs: Math.min(timeoutMs, 10000),
+      }
+    );
     lastProgress = progress;
 
     if (progress && READY_STATES.has(progress.state)) {
@@ -194,12 +257,12 @@ async function waitForProvisioningState(baseUrl, teamName, runId, timeoutMs) {
   throw new Error(`Timed out waiting for team ${teamName} to become ready${stateLabel}`);
 }
 
-async function waitForStopped(baseUrl, teamName, timeoutMs) {
+async function waitForStopped(baseUrls, teamName, timeoutMs) {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt <= timeoutMs) {
-    const runtime = await requestJson(
-      baseUrl,
+    const runtime = await requestJsonWithFallback(
+      baseUrls,
       `/api/teams/${encodeURIComponent(teamName)}/runtime`,
       { timeoutMs: Math.min(timeoutMs, 10000) }
     );
@@ -215,12 +278,16 @@ async function waitForStopped(baseUrl, teamName, timeoutMs) {
 }
 
 async function launchTeam(context, flags = {}) {
-  const baseUrl = resolveControlBaseUrl(context, flags);
+  const baseUrls = resolveControlBaseUrls(context, flags);
   const request = buildLaunchRequest(flags);
-  const launch = await requestJson(baseUrl, `/api/teams/${encodeURIComponent(context.teamName)}/launch`, {
-    method: 'POST',
-    body: request,
-  });
+  const launch = await requestJsonWithFallback(
+    baseUrls,
+    `/api/teams/${encodeURIComponent(context.teamName)}/launch`,
+    {
+      method: 'POST',
+      body: request,
+    }
+  );
 
   if (!shouldWaitForReady(flags)) {
     return {
@@ -231,7 +298,7 @@ async function launchTeam(context, flags = {}) {
   }
 
   return waitForProvisioningState(
-    baseUrl,
+    baseUrls,
     context.teamName,
     launch.runId,
     normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'])
@@ -239,25 +306,29 @@ async function launchTeam(context, flags = {}) {
 }
 
 async function stopTeam(context, flags = {}) {
-  const baseUrl = resolveControlBaseUrl(context, flags);
-  const stopped = await requestJson(baseUrl, `/api/teams/${encodeURIComponent(context.teamName)}/stop`, {
-    method: 'POST',
-  });
+  const baseUrls = resolveControlBaseUrls(context, flags);
+  const stopped = await requestJsonWithFallback(
+    baseUrls,
+    `/api/teams/${encodeURIComponent(context.teamName)}/stop`,
+    {
+      method: 'POST',
+    }
+  );
 
   if (!shouldWaitForStop(flags)) {
     return stopped;
   }
 
   return waitForStopped(
-    baseUrl,
+    baseUrls,
     context.teamName,
     normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'])
   );
 }
 
 async function getRuntimeState(context, flags = {}) {
-  const baseUrl = resolveControlBaseUrl(context, flags);
-  return requestJson(baseUrl, `/api/teams/${encodeURIComponent(context.teamName)}/runtime`);
+  const baseUrls = resolveControlBaseUrls(context, flags);
+  return requestJsonWithFallback(baseUrls, `/api/teams/${encodeURIComponent(context.teamName)}/runtime`);
 }
 
 module.exports = {

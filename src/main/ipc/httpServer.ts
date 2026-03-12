@@ -63,9 +63,6 @@ async function handleStart(): Promise<{
   error?: string;
 }> {
   try {
-    if (httpServer.isRunning()) {
-      return { success: true, data: { running: true, port: httpServer.getPort() } };
-    }
     await startServer();
     configManager.updateConfig('httpServer', { enabled: true, port: httpServer.getPort() });
     return { success: true, data: { running: true, port: httpServer.getPort() } };

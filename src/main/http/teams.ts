@@ -14,12 +14,27 @@ type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;
 const EFFORT_LEVELS = new Set<EffortLevel>(['low', 'medium', 'high']);
 
 class HttpBadRequestError extends Error {}
+class HttpFeatureUnavailableError extends Error {}
 
 function getTeamProvisioningService(services: HttpServices) {
   if (!services.teamProvisioningService) {
-    throw new Error('Team runtime control is not available in this mode');
+    throw new HttpFeatureUnavailableError('Team runtime control is not available in this mode');
   }
   return services.teamProvisioningService;
+}
+
+function getStatusCode(error: unknown, fallback: number = 500): number {
+  if (error instanceof HttpBadRequestError) {
+    return 400;
+  }
+  if (error instanceof HttpFeatureUnavailableError) {
+    return 501;
+  }
+  return fallback;
+}
+
+function shouldLogError(error: unknown): boolean {
+  return !(error instanceof HttpBadRequestError) && !(error instanceof HttpFeatureUnavailableError);
 }
 
 function assertAbsoluteCwd(cwd: unknown): string {
@@ -126,8 +141,8 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         );
         return reply.send(response);
       } catch (error) {
-        const statusCode = error instanceof HttpBadRequestError ? 400 : 500;
-        if (!(error instanceof HttpBadRequestError)) {
+        const statusCode = getStatusCode(error);
+        if (shouldLogError(error)) {
           logger.error(
             `Error in POST /api/teams/${request.params.teamName}/launch:`,
             getErrorMessage(error)
@@ -151,11 +166,13 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         teamProvisioningService.stopTeam(validatedTeamName.value!);
         return reply.send(teamProvisioningService.getRuntimeState(validatedTeamName.value!));
       } catch (error) {
-        logger.error(
-          `Error in POST /api/teams/${request.params.teamName}/stop:`,
-          getErrorMessage(error)
-        );
-        return reply.status(500).send({ error: getErrorMessage(error) });
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in POST /api/teams/${request.params.teamName}/stop:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
       }
     }
   );
@@ -173,11 +190,13 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           getTeamProvisioningService(services).getRuntimeState(validatedTeamName.value!)
         );
       } catch (error) {
-        logger.error(
-          `Error in GET /api/teams/${request.params.teamName}/runtime:`,
-          getErrorMessage(error)
-        );
-        return reply.status(500).send({ error: getErrorMessage(error) });
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in GET /api/teams/${request.params.teamName}/runtime:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
       }
     }
   );
@@ -194,8 +213,10 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         return reply.send(await getTeamProvisioningService(services).getProvisioningStatus(runId));
       } catch (error) {
         const message = getErrorMessage(error);
-        const statusCode = message === 'Unknown runId' ? 404 : 500;
-        logger.error(`Error in GET /api/teams/provisioning/${request.params.runId}:`, message);
+        const statusCode = message === 'Unknown runId' ? 404 : getStatusCode(error);
+        if (shouldLogError(error) && statusCode !== 404) {
+          logger.error(`Error in GET /api/teams/provisioning/${request.params.runId}:`, message);
+        }
         return reply.status(statusCode).send({ error: message });
       }
     }
@@ -209,8 +230,10 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         .map((teamName) => teamProvisioningService.getRuntimeState(teamName));
       return reply.send(runtimeStates);
     } catch (error) {
-      logger.error('Error in GET /api/teams/runtime/alive:', getErrorMessage(error));
-      return reply.status(500).send({ error: getErrorMessage(error) });
+      if (shouldLogError(error)) {
+        logger.error('Error in GET /api/teams/runtime/alive:', getErrorMessage(error));
+      }
+      return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
     }
   });
 }

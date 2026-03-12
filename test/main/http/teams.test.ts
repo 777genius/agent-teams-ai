@@ -205,4 +205,33 @@ describe('HTTP team runtime routes', () => {
       await app.close();
     }
   });
+
+  it('returns 501 when team runtime routes are registered without a runtime service', async () => {
+    const app = Fastify();
+    registerTeamRoutes(
+      app,
+      {
+        projectScanner: {} as HttpServices['projectScanner'],
+        sessionParser: {} as HttpServices['sessionParser'],
+        subagentResolver: {} as HttpServices['subagentResolver'],
+        chunkBuilder: {} as HttpServices['chunkBuilder'],
+        dataCache: {} as HttpServices['dataCache'],
+        updaterService: {} as HttpServices['updaterService'],
+        sshConnectionManager: {} as HttpServices['sshConnectionManager'],
+      } satisfies HttpServices
+    );
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/runtime/alive',
+      });
+
+      expect(response.statusCode).toBe(501);
+      expect(response.json()).toEqual({ error: 'Team runtime control is not available in this mode' });
+    } finally {
+      await app.close();
+    }
+  });
 });

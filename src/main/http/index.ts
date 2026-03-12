@@ -54,7 +54,9 @@ export function registerHttpRoutes(
   registerSessionRoutes(app, services);
   registerSearchRoutes(app, services);
   registerSubagentRoutes(app, services);
-  registerTeamRoutes(app, services);
+  if (services.teamProvisioningService) {
+    registerTeamRoutes(app, services);
+  }
   registerNotificationRoutes(app);
   registerConfigRoutes(app);
   registerValidationRoutes(app);

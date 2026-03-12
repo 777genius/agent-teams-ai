@@ -9,6 +9,7 @@ import { Plus } from 'lucide-react';
 import { MembersJsonEditor } from '../dialogs/MembersJsonEditor';
 
 import { MemberDraftRow } from './MemberDraftRow';
+import { getNextSuggestedMemberName } from './memberNameSets';
 import { createMemberDraft, getWorkflowForExport } from './membersEditorUtils';
 
 import type { MemberDraft } from './membersEditorTypes';
@@ -145,7 +146,8 @@ export const MembersEditorSection = ({
   };
 
   const addMember = (): void => {
-    onChange([...members, createMemberDraft()]);
+    const suggestedName = getNextSuggestedMemberName(members.map((member) => member.name));
+    onChange([...members, createMemberDraft({ name: suggestedName })]);
   };
 
   const names = members.map((m) => m.name.trim().toLowerCase()).filter(Boolean);

@@ -58,6 +58,13 @@ describe('agent-teams-controller API', () => {
     };
   }
 
+  function writeControlApiState(claudeDir, baseUrl) {
+    fs.writeFileSync(
+      path.join(claudeDir, 'team-control-api.json'),
+      JSON.stringify({ baseUrl, updatedAt: new Date().toISOString() }, null, 2)
+    );
+  }
+
   it('creates tasks and exposes grouped controller modules', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
@@ -678,6 +685,142 @@ describe('agent-teams-controller API', () => {
       ]);
     } finally {
       await server.close();
+    }
+  });
+
+  it('prefers the published control endpoint over a stale env URL', async () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const previousUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
+
+    const server = await startControlServer(async ({ method, url }) => {
+      if (method === 'POST' && url === '/api/teams/my-team/launch') {
+        return { body: { runId: 'run-fresh' } };
+      }
+      if (method === 'GET' && url === '/api/teams/provisioning/run-fresh') {
+        return {
+          body: {
+            runId: 'run-fresh',
+            teamName: 'my-team',
+            state: 'ready',
+            message: 'Ready',
+            startedAt: '2026-03-12T00:00:00.000Z',
+            updatedAt: '2026-03-12T00:00:01.000Z',
+          },
+        };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+
+    try {
+      process.env.CLAUDE_TEAM_CONTROL_URL = 'http://127.0.0.1:1';
+      writeControlApiState(claudeDir, server.baseUrl);
+
+      const launched = await controller.runtime.launchTeam({
+        cwd: '/tmp/project',
+      });
+
+      expect(launched.runId).toBe('run-fresh');
+      expect(launched.progress.state).toBe('ready');
+    } finally {
+      if (previousUrl === undefined) {
+        delete process.env.CLAUDE_TEAM_CONTROL_URL;
+      } else {
+        process.env.CLAUDE_TEAM_CONTROL_URL = previousUrl;
+      }
+      await server.close();
+    }
+  });
+
+  it('falls back to the env endpoint when the published control file is stale', async () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const previousUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
+
+    const server = await startControlServer(async ({ method, url }) => {
+      if (method === 'POST' && url === '/api/teams/my-team/launch') {
+        return { body: { runId: 'run-env' } };
+      }
+      if (method === 'GET' && url === '/api/teams/provisioning/run-env') {
+        return {
+          body: {
+            runId: 'run-env',
+            teamName: 'my-team',
+            state: 'ready',
+            message: 'Ready',
+            startedAt: '2026-03-12T00:00:00.000Z',
+            updatedAt: '2026-03-12T00:00:01.000Z',
+          },
+        };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+
+    try {
+      process.env.CLAUDE_TEAM_CONTROL_URL = server.baseUrl;
+      writeControlApiState(claudeDir, 'http://127.0.0.1:1');
+
+      const launched = await controller.runtime.launchTeam({
+        cwd: '/tmp/project',
+      });
+
+      expect(launched.runId).toBe('run-env');
+      expect(launched.progress.state).toBe('ready');
+    } finally {
+      if (previousUrl === undefined) {
+        delete process.env.CLAUDE_TEAM_CONTROL_URL;
+      } else {
+        process.env.CLAUDE_TEAM_CONTROL_URL = previousUrl;
+      }
+      await server.close();
+    }
+  });
+
+  it('falls back to the next control endpoint when the first one responds with 404', async () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const previousUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
+
+    const staleServer = await startControlServer(async () => {
+      return { statusCode: 404, body: { error: 'Not found' } };
+    });
+    const liveServer = await startControlServer(async ({ method, url }) => {
+      if (method === 'POST' && url === '/api/teams/my-team/launch') {
+        return { body: { runId: 'run-live' } };
+      }
+      if (method === 'GET' && url === '/api/teams/provisioning/run-live') {
+        return {
+          body: {
+            runId: 'run-live',
+            teamName: 'my-team',
+            state: 'ready',
+            message: 'Ready',
+            startedAt: '2026-03-12T00:00:00.000Z',
+            updatedAt: '2026-03-12T00:00:01.000Z',
+          },
+        };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+
+    try {
+      writeControlApiState(claudeDir, staleServer.baseUrl);
+      process.env.CLAUDE_TEAM_CONTROL_URL = liveServer.baseUrl;
+
+      const launched = await controller.runtime.launchTeam({
+        cwd: '/tmp/project',
+      });
+
+      expect(launched.runId).toBe('run-live');
+      expect(launched.progress.state).toBe('ready');
+    } finally {
+      if (previousUrl === undefined) {
+        delete process.env.CLAUDE_TEAM_CONTROL_URL;
+      } else {
+        process.env.CLAUDE_TEAM_CONTROL_URL = previousUrl;
+      }
+      await staleServer.close();
+      await liveServer.close();
     }
   });
 });
