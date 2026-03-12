@@ -516,7 +516,7 @@ export const CodeMirrorDiffView = ({
         pinToViewportRight(btnContainer, scroller);
       };
 
-      // Find which chunk index the mouse is directly over (deleted or inserted area)
+      // Find which chunk index the mouse is directly over, including inline deleted text.
       const findHoveredChunkIndex = (event: MouseEvent, view: EditorView): number => {
         const el = document.elementFromPoint(event.clientX, event.clientY);
         if (!el) return -1;
@@ -525,7 +525,11 @@ export const CodeMirrorDiffView = ({
           const all = view.dom.querySelectorAll('.cm-deletedChunk');
           return [...all].indexOf(deletedChunk);
         }
-        if (el.closest('.cm-changedLine, .cm-insertedLine')) {
+        if (
+          el.closest(
+            '.cm-changedLine, .cm-insertedLine, .cm-inlineChangedLine, .cm-changedText, .cm-deletedText'
+          )
+        ) {
           const allChunks = getChunks(view.state);
           if (!allChunks) return -1;
           const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });

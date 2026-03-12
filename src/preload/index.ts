@@ -1099,6 +1099,7 @@ const electronAPI: ElectronAPI = {
           color?: string;
           leadName?: string;
           leadColor?: string;
+          isOnline?: boolean;
         }[]
       >(CROSS_TEAM_LIST_TARGETS, excludeTeam);
     },

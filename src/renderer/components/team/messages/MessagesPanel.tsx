@@ -110,6 +110,14 @@ export const MessagesPanel = ({
   const [messagesFilterOpen, setMessagesFilterOpen] = useState(false);
   const [messagesCollapsed, setMessagesCollapsed] = useState(true);
   const [statusBlockCollapsed, setStatusBlockCollapsed] = useState(false);
+  const [pendingRepliesNowMs, setPendingRepliesNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setPendingRepliesNowMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const filteredMessages = useMemo(() => {
     return filterTeamMessages(messages, {
@@ -140,8 +148,8 @@ export const MessagesPanel = ({
   }, [filteredMessages, readSet, markAllRead]);
 
   const pendingCrossTeamReplies = useMemo(
-    () => computePendingCrossTeamReplies(messages),
-    [messages]
+    () => computePendingCrossTeamReplies(messages, pendingRepliesNowMs),
+    [messages, pendingRepliesNowMs]
   );
 
   /** Whether the Status block has any visible items (pending replies or active tasks). */

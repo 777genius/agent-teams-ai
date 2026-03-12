@@ -1,7 +1,6 @@
 /**
- * Default color palette for team members — 64 contrasting colors.
- * Designed for high contrast on dark backgrounds.
- * Colors cycle by index: member[i] gets MEMBER_COLOR_PALETTE[i % length].
+ * Default color palette for team members.
+ * Intentionally excludes purple-family tones for member UI.
  */
 export const MEMBER_COLOR_PALETTE = [
   // ── Primary & classic ──
@@ -9,7 +8,6 @@ export const MEMBER_COLOR_PALETTE = [
   'green',
   'yellow',
   'cyan',
-  'purple',
   'red',
   'orange',
   'pink',
@@ -73,8 +71,12 @@ export const MEMBER_COLOR_PALETTE = [
   'steel',
   'royal',
   'cornflower',
+] as const;
 
-  // ── Purple / pink family ──
+export type MemberColorName = (typeof MEMBER_COLOR_PALETTE)[number];
+
+const DISALLOWED_MEMBER_COLORS = new Set([
+  'purple',
   'violet',
   'plum',
   'amethyst',
@@ -83,9 +85,7 @@ export const MEMBER_COLOR_PALETTE = [
   'magenta',
   'fuchsia',
   'berry',
-] as const;
-
-export type MemberColorName = (typeof MEMBER_COLOR_PALETTE)[number];
+]);
 
 export function getMemberColor(index: number): string {
   return MEMBER_COLOR_PALETTE[index % MEMBER_COLOR_PALETTE.length];
@@ -101,6 +101,13 @@ function hashStringToIndex(str: string): number {
     hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0;
   }
   return Math.abs(hash);
+}
+
+export function normalizeMemberColorName(colorName: string): string {
+  const normalized = colorName.trim().toLowerCase();
+  if (!normalized) return MEMBER_COLOR_PALETTE[0];
+  if (!DISALLOWED_MEMBER_COLORS.has(normalized)) return normalized;
+  return MEMBER_COLOR_PALETTE[hashStringToIndex(normalized) % MEMBER_COLOR_PALETTE.length];
 }
 
 /**

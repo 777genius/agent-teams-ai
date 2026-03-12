@@ -28,6 +28,7 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { REHYPE_PLUGINS, REHYPE_PLUGINS_NO_HIGHLIGHT } from '@renderer/utils/markdownPlugins';
+import { nameColorSet } from '@renderer/utils/projectColor';
 import { parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
 import { FileText, UsersRound } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
@@ -159,7 +160,8 @@ function hastToText(node: HastNode): string {
 
 function createViewerMarkdownComponents(
   searchCtx: SearchContext | null,
-  isLight = false
+  isLight = false,
+  teamColorByName: ReadonlyMap<string, string> = new Map()
 ): Components {
   const hl = (children: React.ReactNode): React.ReactNode =>
     searchCtx ? highlightSearchInChildren(children, searchCtx) : children;
@@ -248,7 +250,14 @@ function createViewerMarkdownComponents(
         return badge;
       }
       if (href?.startsWith('team://')) {
-        const colorSet = getTeamColorSet('blue');
+        let teamLabel = '';
+        try {
+          teamLabel = decodeURIComponent(href.slice('team://'.length));
+        } catch {
+          // malformed percent-encoding — fall back to deterministic name color
+        }
+        const teamColor = teamColorByName.get(teamLabel);
+        const colorSet = teamColor ? getTeamColorSet(teamColor) : nameColorSet(teamLabel, isLight);
         const bg = getThemedBadge(colorSet, isLight);
         return (
           <span
@@ -495,6 +504,20 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   const [showRaw, setShowRaw] = React.useState(false);
   const [rawLimit, setRawLimit] = React.useState(LARGE_PREVIEW_CHARS);
   const { isLight } = useTheme();
+  const teams = useStore((s) => s.teams);
+
+  const teamColorByName = React.useMemo(() => {
+    const result = new Map<string, string>();
+    for (const team of teams) {
+      if (team.teamName) {
+        result.set(team.teamName, team.color ?? '');
+      }
+      if (team.displayName) {
+        result.set(team.displayName, team.color ?? '');
+      }
+    }
+    return result;
+  }, [teams]);
 
   const isTooLarge = content.length > MAX_MARKDOWN_CHARS;
   const disableHighlight = content.length > DISABLE_HIGHLIGHT_CHARS;
@@ -647,10 +670,10 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   // When search is active, create fresh each render (match counter is stateful and must start at 0)
   // useMemo would cache stale closures when parent re-renders without search deps changing
   const baseComponents = searchCtx
-    ? createViewerMarkdownComponents(searchCtx, isLight)
+    ? createViewerMarkdownComponents(searchCtx, isLight, teamColorByName)
     : isLight
-      ? createViewerMarkdownComponents(null, true)
-      : defaultComponents;
+      ? createViewerMarkdownComponents(null, true, teamColorByName)
+      : createViewerMarkdownComponents(null, false, teamColorByName);
 
   // When baseDir is set (editor preview), override img to load local files via IPC
   const components = baseDir

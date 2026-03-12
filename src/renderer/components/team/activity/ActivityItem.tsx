@@ -409,7 +409,15 @@ export const ActivityItem = ({
     return result;
   }, [strippedText, memberColorMap, teamNames, systemLabel]);
 
+  const crossTeamPreview = useMemo(() => {
+    if (!isCrossTeamAny || !strippedText) return '';
+    const oneLine = strippedText.replace(/\n+/g, ' ').trim();
+    if (!oneLine) return '';
+    return oneLine.length > 80 ? oneLine.slice(0, 80) + '…' : oneLine;
+  }, [isCrossTeamAny, strippedText]);
+
   const rawSummary = useMemo(() => {
+    if (crossTeamPreview) return crossTeamPreview;
     const s = message.summary || (structured ? getStructuredMessageSummary(structured) : '') || '';
     if (s) return s;
     // Fallback: use the beginning of message text as preview for plain-text messages
@@ -417,7 +425,7 @@ export const ActivityItem = ({
     if (!plain) return '';
     const oneLine = plain.replace(/\n+/g, ' ');
     return oneLine.length > 80 ? oneLine.slice(0, 80) + '…' : oneLine;
-  }, [message.summary, structured, message.text]);
+  }, [crossTeamPreview, message.summary, structured, message.text]);
   const summaryText = useMemo(() => extractMarkdownPlainText(rawSummary), [rawSummary]);
 
   // Noise messages: minimal inline row

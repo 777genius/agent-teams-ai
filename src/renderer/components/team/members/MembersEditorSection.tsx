@@ -219,9 +219,13 @@ export const MembersEditorSection = ({
             ) : null}
           </div>
           {hasDuplicates ? (
-            <p className="text-[11px] text-red-300">Member names must be unique</p>
+            <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+              Member names must be unique
+            </p>
           ) : fieldError ? (
-            <p className="text-[11px] text-red-300">{fieldError}</p>
+            <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+              {fieldError}
+            </p>
           ) : null}
         </>
       )}

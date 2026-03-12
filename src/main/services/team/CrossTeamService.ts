@@ -32,6 +32,7 @@ export interface CrossTeamTarget {
   color?: string;
   leadName?: string;
   leadColor?: string;
+  isOnline?: boolean;
 }
 
 export class CrossTeamService {
@@ -202,10 +203,15 @@ export class CrossTeamService {
         color: config.color,
         leadName: lead?.name,
         leadColor: lead?.color,
+        isOnline: this.provisioning?.isTeamAlive(entry) ?? false,
       });
     }
 
-    return targets;
+    return targets.sort((a, b) => {
+      if (a.isOnline && !b.isOnline) return -1;
+      if (!a.isOnline && b.isOnline) return 1;
+      return a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' });
+    });
   }
 
   async getOutbox(teamName: string): Promise<CrossTeamMessage[]> {

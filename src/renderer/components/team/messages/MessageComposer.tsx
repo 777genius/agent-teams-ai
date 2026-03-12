@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { api } from '@renderer/api';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
 import { ActionModeSelector } from '@renderer/components/team/messages/ActionModeSelector';
@@ -84,6 +85,7 @@ export const MessageComposer = ({
   // Cross-team state
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [teamSelectorOpen, setTeamSelectorOpen] = useState(false);
+  const [aliveTeams, setAliveTeams] = useState<Set<string>>(new Set());
   const allCrossTeamTargets = useStore((s) => s.crossTeamTargets);
   const fetchCrossTeamTargets = useStore((s) => s.fetchCrossTeamTargets);
 
@@ -91,14 +93,52 @@ export const MessageComposer = ({
     void fetchCrossTeamTargets();
   }, [fetchCrossTeamTargets]);
 
+  const refreshAliveTeams = useCallback(async () => {
+    try {
+      const list = await api.teams.aliveList();
+      setAliveTeams(new Set(list));
+    } catch {
+      // best-effort
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshAliveTeams();
+  }, [refreshAliveTeams]);
+
+  useEffect(() => {
+    if (!teamSelectorOpen) return;
+    void refreshAliveTeams();
+  }, [teamSelectorOpen, refreshAliveTeams]);
+
   // Always filter out current team on the UI side (store is global, shared across tabs)
   const crossTeamTargets = useMemo(
     () => allCrossTeamTargets.filter((t) => t.teamName !== teamName),
     [allCrossTeamTargets, teamName]
   );
+  const sortedCrossTeamTargets = useMemo(
+    () =>
+      crossTeamTargets
+        .map((target) => ({
+          ...target,
+          isOnline: aliveTeams.has(target.teamName),
+        }))
+        .sort((a, b) => {
+          if (a.isOnline && !b.isOnline) return -1;
+          if (!a.isOnline && b.isOnline) return 1;
+          return (a.displayName || a.teamName).localeCompare(
+            b.displayName || b.teamName,
+            undefined,
+            {
+              sensitivity: 'base',
+            }
+          );
+        }),
+    [aliveTeams, crossTeamTargets]
+  );
 
   const isCrossTeam = selectedTeam !== null;
-  const selectedTarget = crossTeamTargets.find((t) => t.teamName === selectedTeam);
+  const selectedTarget = sortedCrossTeamTargets.find((t) => t.teamName === selectedTeam);
   const targetDisplayName = selectedTarget?.displayName ?? selectedTeam;
   const crossTeamHintText = isCrossTeam
     ? 'Tip: Cross-team messages go to the target team lead. If you want the reply to come back to your team lead instead of you, say that explicitly in the message.'
@@ -393,7 +433,7 @@ export const MessageComposer = ({
             )}
 
             {/* Combined team + member selector */}
-            {crossTeamTargets.length > 0 ? (
+            {sortedCrossTeamTargets.length > 0 ? (
               <div
                 className={cn(
                   'inline-flex items-center rounded-full border text-xs transition-colors',
@@ -414,13 +454,18 @@ export const MessageComposer = ({
                       {isCrossTeam ? (
                         <>
                           <span
-                            className="inline-block size-2 shrink-0 rounded-full"
+                            className={cn(
+                              'inline-block size-2 shrink-0 rounded-full',
+                              selectedTarget?.isOnline && 'animate-pulse'
+                            )}
                             style={{
-                              backgroundColor: selectedTarget
-                                ? selectedTarget.color
-                                  ? getTeamColorSet(selectedTarget.color).border
-                                  : nameColorSet(selectedTarget.displayName).border
-                                : undefined,
+                              backgroundColor: selectedTarget?.isOnline
+                                ? '#22c55e'
+                                : selectedTarget
+                                  ? selectedTarget.color
+                                    ? getTeamColorSet(selectedTarget.color).border
+                                    : nameColorSet(selectedTarget.displayName).border
+                                  : undefined,
                             }}
                           />
                           <span className="max-w-[100px] truncate">{targetDisplayName}</span>
@@ -472,7 +517,7 @@ export const MessageComposer = ({
                       <div className="my-1 h-px bg-[var(--color-border)]" />
 
                       {/* Other teams */}
-                      {crossTeamTargets.map((target) => {
+                      {sortedCrossTeamTargets.map((target) => {
                         const isSelected = selectedTeam === target.teamName;
                         return (
                           <button
@@ -489,16 +534,34 @@ export const MessageComposer = ({
                             }}
                           >
                             <span
-                              className="inline-block size-2 shrink-0 rounded-full"
+                              className={cn(
+                                'inline-block size-2 shrink-0 rounded-full',
+                                target.isOnline && 'animate-pulse'
+                              )}
                               style={{
-                                backgroundColor: target.color
-                                  ? getTeamColorSet(target.color).border
-                                  : nameColorSet(target.displayName).border,
+                                backgroundColor: target.isOnline
+                                  ? '#22c55e'
+                                  : target.color
+                                    ? getTeamColorSet(target.color).border
+                                    : nameColorSet(target.displayName).border,
                               }}
+                              title={target.isOnline ? 'Online' : 'Offline'}
                             />
                             <div className="min-w-0 flex-1">
-                              <div className="truncate text-[var(--color-text)]">
-                                {target.displayName}
+                              <div className="flex items-center gap-1.5">
+                                <div className="truncate text-[var(--color-text)]">
+                                  {target.displayName}
+                                </div>
+                                <span
+                                  className={cn(
+                                    'shrink-0 text-[10px]',
+                                    target.isOnline
+                                      ? 'text-green-400'
+                                      : 'text-[var(--color-text-muted)]'
+                                  )}
+                                >
+                                  {target.isOnline ? 'online' : 'offline'}
+                                </span>
                               </div>
                               {target.description ? (
                                 <div className="truncate text-[10px] text-[var(--color-text-muted)]">

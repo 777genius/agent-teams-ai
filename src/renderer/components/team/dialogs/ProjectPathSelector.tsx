@@ -190,6 +190,10 @@ export const ProjectPathSelector = ({
         </div>
       </div>
     </div>
-    {fieldError ? <p className="text-[11px] text-red-300">{fieldError}</p> : null}
+    {fieldError ? (
+      <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+        {fieldError}
+      </p>
+    ) : null}
   </div>
 );

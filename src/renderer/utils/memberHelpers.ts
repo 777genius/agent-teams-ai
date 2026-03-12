@@ -1,4 +1,8 @@
-import { getMemberColorByName, MEMBER_COLOR_PALETTE } from '@shared/constants/memberColors';
+import {
+  getMemberColorByName,
+  MEMBER_COLOR_PALETTE,
+  normalizeMemberColorName,
+} from '@shared/constants/memberColors';
 
 import type {
   LeadActivityState,
@@ -167,7 +171,7 @@ export function buildMemberColorMap(members: MemberColorInput[]): Map<string, st
 
   const paletteSize = MEMBER_COLOR_PALETTE.length;
   for (const member of active) {
-    let color = member.color;
+    let color = member.color ? normalizeMemberColorName(member.color) : undefined;
     if (!color || usedColors.has(color)) {
       // Deterministic fallback: hash the member name to a palette color.
       // If that color is already taken, linear-probe for the next free one.
@@ -190,7 +194,12 @@ export function buildMemberColorMap(members: MemberColorInput[]): Map<string, st
   }
 
   for (let i = 0; i < removed.length; i++) {
-    map.set(removed[i].name, removed[i].color ?? getMemberColorByName(removed[i].name));
+    map.set(
+      removed[i].name,
+      removed[i].color
+        ? normalizeMemberColorName(removed[i].color)
+        : getMemberColorByName(removed[i].name)
+    );
   }
 
   map.set('user', 'user');

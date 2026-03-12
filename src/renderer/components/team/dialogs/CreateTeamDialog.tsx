@@ -620,13 +620,15 @@ export const CreateTeamDialog = ({
   const handleSubmit = (): void => {
     if (existingTeamNames.includes(sanitizedTeamName)) {
       setFieldErrors({ teamName: 'Team name already exists' });
-      setLocalError('Check form fields');
+      setLocalError('Team name already exists');
       return;
     }
     const validation = validateRequest(request, { requireCwd: launchTeam });
     if (!validation.valid) {
-      setFieldErrors(validation.errors ?? {});
-      setLocalError('Check form fields');
+      const errors = validation.errors ?? {};
+      setFieldErrors(errors);
+      const messages = Object.values(errors).filter(Boolean) as string[];
+      setLocalError(messages.join(' · ') || 'Check form fields');
       return;
     }
     setFieldErrors({});
@@ -676,8 +678,11 @@ export const CreateTeamDialog = ({
       if (!prev.teamName) return prev;
       // eslint-disable-next-line sonarjs/no-unused-vars -- destructured to omit teamName from rest
       const { teamName: _teamName, ...rest } = prev;
-      if (!rest.members && !rest.cwd && localError === 'Check form fields') {
+      const remaining = Object.values(rest).filter(Boolean) as string[];
+      if (remaining.length === 0) {
         setLocalError(null);
+      } else {
+        setLocalError(remaining.join(' · '));
       }
       return rest;
     });
@@ -789,17 +794,27 @@ export const CreateTeamDialog = ({
             <Label htmlFor="team-name">Team name</Label>
             <Input
               id="team-name"
-              className="h-8 text-xs"
+              className={cn(
+                'h-8 text-xs',
+                (fieldErrors.teamName || existingTeamNames.includes(sanitizedTeamName)) &&
+                  'border-[var(--field-error-border)] bg-[var(--field-error-bg)] focus-visible:ring-[var(--field-error-border)]'
+              )}
               value={teamName}
               onChange={(event) => handleTeamNameChange(event.target.value)}
               placeholder="team-alpha"
             />
             {existingTeamNames.includes(sanitizedTeamName) ? (
-              <p className="text-[11px] text-red-300">Team name already exists</p>
+              <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                Team name already exists
+              </p>
             ) : validateTeamNameInline(teamName) ? (
-              <p className="text-[11px] text-red-300">{validateTeamNameInline(teamName)}</p>
+              <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                {validateTeamNameInline(teamName)}
+              </p>
             ) : fieldErrors.teamName ? (
-              <p className="text-[11px] text-red-300">{fieldErrors.teamName}</p>
+              <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                {fieldErrors.teamName}
+              </p>
             ) : null}
             {sanitizedTeamName && sanitizedTeamName !== teamName.trim() ? (
               <p className="text-[11px] text-[var(--color-text-muted)]">
@@ -1031,7 +1046,14 @@ export const CreateTeamDialog = ({
         </div>
 
         {activeError ? (
-          <p className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
+          <p
+            className="rounded border p-2 text-xs"
+            style={{
+              color: 'var(--field-error-text)',
+              borderColor: 'var(--field-error-border)',
+              backgroundColor: 'var(--field-error-bg)',
+            }}
+          >
             {activeError}
           </p>
         ) : null}

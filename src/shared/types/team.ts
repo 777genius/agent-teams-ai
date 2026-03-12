@@ -560,6 +560,7 @@ export interface TeamProvisioningProgress {
   pid?: number;
   error?: string;
   warnings?: string[];
+  /** Provisioning CLI logs shown in the launch progress UI. */
   cliLogsTail?: string;
   /** Accumulated assistant text output during provisioning (for live preview). */
   assistantOutput?: string;

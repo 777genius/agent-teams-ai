@@ -552,6 +552,7 @@ export interface CrossTeamAPI {
       color?: string;
       leadName?: string;
       leadColor?: string;
+      isOnline?: boolean;
     }[]
   >;
   getOutbox: (teamName: string) => Promise<CrossTeamMessage[]>;

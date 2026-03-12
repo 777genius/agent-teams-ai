@@ -31,7 +31,7 @@ export interface ProvisioningProgressBlockProps {
   startedAt?: string;
   /** PID of the CLI process */
   pid?: number;
-  /** Tail of CLI logs */
+  /** CLI logs captured during launch */
   cliLogsTail?: string;
   /** Accumulated assistant text output for live preview */
   assistantOutput?: string;
@@ -262,7 +262,9 @@ export const ProvisioningProgressBlock = ({
             {logsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             CLI logs
           </button>
-          {logsOpen ? <CliLogsRichView cliLogsTail={cliLogsTail} className="mt-1" /> : null}
+          {logsOpen ? (
+            <CliLogsRichView cliLogsTail={cliLogsTail} order="newest-first" className="mt-1" />
+          ) : null}
         </div>
       ) : null}
     </div>

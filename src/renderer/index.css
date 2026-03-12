@@ -139,6 +139,10 @@
   /* Badges */
   --badge-error-bg: #dc2626;
   --badge-error-text: #ffffff;
+  /* Field-level validation */
+  --field-error-text: #fca5a5;
+  --field-error-border: rgba(239, 68, 68, 0.5);
+  --field-error-bg: rgba(127, 29, 29, 0.15);
   --badge-warning-bg: #ca8a04;
   --badge-warning-text: #ffffff;
   --badge-success-bg: #16a34a;
@@ -503,6 +507,10 @@
   /* Badges - High contrast */
   --badge-error-bg: #dc2626;
   --badge-error-text: #ffffff;
+  /* Field-level validation */
+  --field-error-text: #b91c1c;
+  --field-error-border: rgba(220, 38, 38, 0.6);
+  --field-error-bg: rgba(254, 202, 202, 0.3);
   --badge-warning-bg: #d97706;
   --badge-warning-text: #ffffff;
   --badge-success-bg: #16a34a;

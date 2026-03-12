@@ -1036,16 +1036,17 @@ function extractLogsTail(stdoutBuffer: string, stderrBuffer: string): string | u
 }
 
 /**
- * Builds cliLogsTail from the line-buffered claudeLogLines array instead of the
- * byte-capped stdoutBuffer/stderrBuffer ring buffers.
+ * Builds provisioning CLI logs from the line-buffered claudeLogLines array
+ * instead of the byte-capped stdoutBuffer/stderrBuffer ring buffers.
  *
  * claudeLogLines already contains [stdout]/[stderr] markers and individual lines
  * in chronological order (up to CLAUDE_LOG_LINES_LIMIT = 50 000 lines), so it
  * does not suffer from the 64 KB ring-buffer truncation that causes the raw
  * stdoutBuffer to lose older assistant messages.
  *
- * Falls back to the legacy extractLogsTail when claudeLogLines is empty (e.g.
- * early in provisioning before any output has been line-split).
+ * Returns the full launch log history preserved in claudeLogLines. Falls back
+ * to the legacy tail extraction only when claudeLogLines is empty (e.g. early
+ * in provisioning before any output has been line-split).
  */
 function extractCliLogsFromRun(run: ProvisioningRun): string | undefined {
   if (run.claudeLogLines.length > 0) {
@@ -1053,7 +1054,7 @@ function extractCliLogsFromRun(run: ProvisioningRun): string | undefined {
     if (joined.length === 0) {
       return undefined;
     }
-    return joined.slice(-UI_LOGS_TAIL_LIMIT);
+    return joined;
   }
   return extractLogsTail(run.stdoutBuffer, run.stderrBuffer);
 }
