@@ -827,22 +827,26 @@ ${buildMemberSpawnPrompt(m, displayName, request.teamName, taskProtocol, process
     members: request.members,
   });
 
-  return `Team Start [Agent Team: “${request.teamName}” | Project: “${projectName}” | Lead: “${leadName}”]
+  return `agent_teams_ui [Agent Team: “${request.teamName}” | Project: “${projectName}” | Lead: “${leadName}”] — team does NOT exist yet. You must create it.
 
 You are running in a non-interactive CLI session. Do not ask questions. Do everything in a single turn.
+CRITICAL: Execute ALL steps directly yourself. Do NOT use the Agent tool to delegate provisioning to a sub-agent. The ONLY valid use of the Agent tool is spawning individual teammates in step 2.
 You are “${leadName}”, the team lead.
 
-Goal: Provision a Claude Code agent team${request.members.length === 0 ? ' (solo — lead only)' : ' with live teammates'}.
+Goal: Create and provision a NEW Claude Code agent team${request.members.length === 0 ? ' (solo — lead only)' : ' with live teammates'}.
+The team does NOT exist yet — no config, no state, nothing. Step 1 is MANDATORY.
 ${userPromptBlock}
 ${persistentContext}
 
-Steps (execute in this exact order):
+Steps (execute in this exact order — do NOT skip any step):
+
+1) MANDATORY FIRST STEP: Call the TeamCreate tool with team_name=”${request.teamName}”. This creates the team config and in-memory state. Without this step, teammate spawns will FAIL. Do NOT assume the team already exists based on this prompt header.
 
 ${step2Block}
 
 ${step3Block}
 
-3) After all steps, output a short summary.
+${isSolo ? '3' : '4'}) After all steps, output a short summary.
 `;
 }
 
@@ -955,6 +959,7 @@ ${memberSpawnInstructions}
   return `${startLabel} [Agent Team: "${request.teamName}" | Project: "${projectName}" | Lead: "${leadName}"]
 
 You are running in a non-interactive CLI session. Do not ask questions. Do everything in a single turn.
+CRITICAL: Execute ALL steps directly yourself. Do NOT use the Agent tool to delegate work to a sub-agent. The ONLY valid use of the Agent tool is spawning individual teammates in step 2.
 You are "${leadName}", the team lead.
 
 Goal: Reconnect with existing team "${request.teamName}" and resume pending work.
@@ -2178,7 +2183,9 @@ export class TeamProvisioningService {
 
     run.processKilled = true;
     run.cancelRequested = true;
-    run.child?.stdin?.end();
+    // Note: do NOT call stdin.end() before kill — EOF triggers CLI's graceful
+    // shutdown which deletes team files (config.json, inboxes/, tasks/).
+    // SIGTERM alone kills the process before cleanup runs, preserving files.
     killProcessTree(run.child);
     this.cleanupRun(run);
   }
@@ -2327,7 +2334,6 @@ export class TeamProvisioningService {
         run.finalizingByTimeout = true;
         void (async () => {
           const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
-          run.child?.stdin?.end();
           killProcessTree(run.child);
           if (readyOnTimeout) return;
 
@@ -2566,7 +2572,7 @@ export class TeamProvisioningService {
         '--mcp-config',
         mcpConfigPath,
         '--disallowedTools',
-        'TeamDelete,TodoWrite',
+        'TeamDelete,TodoWrite,mcp__agent-teams__team_launch,mcp__agent-teams__team_stop',
         // Explicit --permission-mode overrides user's defaultMode in ~/.claude/settings.json
         // (e.g. "acceptEdits") which otherwise takes precedence over CLI flags
         ...(request.skipPermissions !== false
@@ -2629,7 +2635,6 @@ export class TeamProvisioningService {
           run.finalizingByTimeout = true;
           void (async () => {
             const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
-            run.child?.stdin?.end();
             killProcessTree(run.child);
             if (readyOnTimeout) {
               return; // cleanupRun already called inside tryCompleteAfterTimeout
@@ -2953,7 +2958,7 @@ export class TeamProvisioningService {
         '--mcp-config',
         mcpConfigPath,
         '--disallowedTools',
-        'TeamDelete,TodoWrite',
+        'TeamDelete,TodoWrite,mcp__agent-teams__team_launch,mcp__agent-teams__team_stop',
         // Explicit --permission-mode overrides user's defaultMode in ~/.claude/settings.json
         // (e.g. "acceptEdits") which otherwise takes precedence over CLI flags
         ...(request.skipPermissions !== false
@@ -2976,8 +2981,8 @@ export class TeamProvisioningService {
         launchArgs.push('--worktree', request.worktree);
       }
       launchArgs.push(...parseCliArgs(request.extraCliArgs));
-      // New sessions: CLI creates its own ID. No --resume with synthetic name — docs say
-      // --resume is for existing sessions and may show an interactive picker if not found.
+      // --resume is added above when a valid previous session JSONL exists.
+      // Without it, CLI creates a fresh session ID automatically.
 
       try {
         child = spawnCli(claudePath, launchArgs, {
@@ -3035,7 +3040,6 @@ export class TeamProvisioningService {
           run.finalizingByTimeout = true;
           void (async () => {
             const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
-            run.child?.stdin?.end();
             killProcessTree(run.child);
             if (readyOnTimeout) {
               return;
@@ -3093,7 +3097,9 @@ export class TeamProvisioningService {
 
     run.cancelRequested = true;
     run.processKilled = true;
-    run.child?.stdin?.end();
+    // Note: do NOT call stdin.end() before kill — EOF triggers CLI's graceful
+    // shutdown which deletes team files (config.json, inboxes/, tasks/).
+    // SIGTERM alone kills the process before cleanup runs, preserving files.
     killProcessTree(run.child);
     const progress = updateProgress(run, 'cancelled', 'Provisioning cancelled by user');
     run.onProgress(progress);
@@ -4166,7 +4172,9 @@ export class TeamProvisioningService {
     }
     run.processKilled = true;
     run.cancelRequested = true;
-    run.child?.stdin?.end();
+    // Note: do NOT call stdin.end() before kill — EOF triggers CLI's graceful
+    // shutdown which deletes team files (config.json, inboxes/, tasks/).
+    // SIGTERM alone kills the process before cleanup runs, preserving files.
     killProcessTree(run.child);
     const progress = updateProgress(run, 'disconnected', 'Team stopped by user');
     run.onProgress(progress);
@@ -4504,7 +4512,6 @@ export class TeamProvisioningService {
           run.onProgress(progress);
           // Kill the process on provisioning error
           run.processKilled = true;
-          run.child?.stdin?.end();
           killProcessTree(run.child);
           this.cleanupRun(run);
         } else if (run.provisioningComplete) {
@@ -4690,6 +4697,7 @@ export class TeamProvisioningService {
       ``,
       `You are "${leadName}", the team lead of team "${run.teamName}".`,
       `You are running in a non-interactive CLI session. Do not ask questions.`,
+      `CRITICAL: Execute ALL steps directly yourself. Do NOT use the Agent tool to delegate work to a sub-agent. The ONLY valid use of the Agent tool is spawning individual teammates.`,
       ``,
       persistentContext,
       taskBoardBlock.trim() ? `\n${taskBoardBlock}` : '',
@@ -5169,7 +5177,6 @@ export class TeamProvisioningService {
       });
       run.onProgress(progress);
       run.processKilled = true;
-      run.child?.stdin?.end();
       killProcessTree(run.child);
       this.cleanupRun(run);
       return;

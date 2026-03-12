@@ -127,6 +127,16 @@ export const ProvisioningProgressBlock = ({
   const outputScrollRef = useRef<HTMLDivElement>(null);
   const isError = tone === 'error';
   const displayAssistantOutput = sanitizeAssistantOutput(assistantOutput, isError);
+  const spawningStepIndex = STEP_ORDER.indexOf('spawning');
+  const isCliLaunchMessage =
+    message?.toLowerCase().includes('starting claude cli process') ?? false;
+  const isCliStarting =
+    !isError &&
+    Boolean(cliLogsTail) &&
+    loading &&
+    (currentStepIndex <= spawningStepIndex || isCliLaunchMessage);
+  const wasCliStartingRef = useRef(false);
+  const hadCliStartingPhaseRef = useRef(false);
 
   // Auto-scroll assistant output
   useEffect(() => {
@@ -147,6 +157,29 @@ export const ProvisioningProgressBlock = ({
       setLiveOutputOpen(false);
     }
   }, [isError, cliLogsTail]);
+
+  // Keep CLI logs visible while the launch command is still starting,
+  // then collapse them once the spawned process is actually running.
+  useEffect(() => {
+    if (isError || !cliLogsTail) {
+      wasCliStartingRef.current = false;
+      hadCliStartingPhaseRef.current = false;
+      return;
+    }
+
+    if (isCliStarting && !wasCliStartingRef.current) {
+      setLogsOpen(true);
+    }
+
+    if (!isCliStarting && wasCliStartingRef.current && hadCliStartingPhaseRef.current) {
+      setLogsOpen(false);
+    }
+
+    wasCliStartingRef.current = isCliStarting;
+    if (isCliStarting) {
+      hadCliStartingPhaseRef.current = true;
+    }
+  }, [cliLogsTail, isCliStarting, isError]);
 
   return (
     <div

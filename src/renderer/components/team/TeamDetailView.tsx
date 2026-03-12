@@ -962,39 +962,46 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             className="relative shrink-0 overflow-hidden border-r border-[var(--color-border)]"
             style={{ width: messagesPanelWidth }}
           >
-            <MessagesPanel
-              teamName={teamName}
-              position="sidebar"
-              onTogglePosition={toggleMessagesPanelMode}
-              members={activeMembers}
-              tasks={data.tasks}
-              messages={data.messages}
-              isTeamAlive={data.isAlive}
-              timeWindow={timeWindow}
-              teamSessionIds={teamSessionIds}
-              currentLeadSessionId={data?.config.leadSessionId}
-              pendingRepliesByMember={pendingRepliesByMember}
-              onPendingReplyChange={setPendingRepliesByMember}
-              onMemberClick={setSelectedMember}
-              onTaskClick={setSelectedTask}
-              onCreateTaskFromMessage={(subject, description) => {
-                openCreateTaskDialog(subject, description);
-              }}
-              onReplyToMessage={(message) => {
-                setSendDialogRecipient(message.from);
-                setSendDialogDefaultText(undefined);
-                setSendDialogDefaultChip(undefined);
-                setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
-                setSendDialogOpen(true);
-              }}
-              onRestartTeam={() => setLaunchDialogOpen(true)}
-              onTaskIdClick={(taskId) => {
-                const task =
-                  taskMap.get(taskId) ??
-                  data.tasks.find((candidate) => candidate.displayId === taskId);
-                if (task) setSelectedTask(task);
-              }}
-            />
+            <div className="flex size-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface)]">
+              <div className="shrink-0 overflow-hidden px-3">
+                <ClaudeLogsSection teamName={teamName} />
+              </div>
+              <div className="min-h-0 flex-1 border-t border-[var(--color-border)]">
+                <MessagesPanel
+                  teamName={teamName}
+                  position="sidebar"
+                  onTogglePosition={toggleMessagesPanelMode}
+                  members={activeMembers}
+                  tasks={data.tasks}
+                  messages={data.messages}
+                  isTeamAlive={data.isAlive}
+                  timeWindow={timeWindow}
+                  teamSessionIds={teamSessionIds}
+                  currentLeadSessionId={data?.config.leadSessionId}
+                  pendingRepliesByMember={pendingRepliesByMember}
+                  onPendingReplyChange={setPendingRepliesByMember}
+                  onMemberClick={setSelectedMember}
+                  onTaskClick={setSelectedTask}
+                  onCreateTaskFromMessage={(subject, description) => {
+                    openCreateTaskDialog(subject, description);
+                  }}
+                  onReplyToMessage={(message) => {
+                    setSendDialogRecipient(message.from);
+                    setSendDialogDefaultText(undefined);
+                    setSendDialogDefaultChip(undefined);
+                    setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
+                    setSendDialogOpen(true);
+                  }}
+                  onRestartTeam={() => setLaunchDialogOpen(true)}
+                  onTaskIdClick={(taskId) => {
+                    const task =
+                      taskMap.get(taskId) ??
+                      data.tasks.find((candidate) => candidate.displayId === taskId);
+                    if (task) setSelectedTask(task);
+                  }}
+                />
+              </div>
+            </div>
             {/* Resize handle */}
             <div
               className={`absolute inset-y-0 right-0 z-20 w-1 cursor-col-resize transition-colors hover:bg-blue-500/30 ${isMessagesPanelResizing ? 'bg-blue-500/40' : ''}`}
@@ -1551,7 +1558,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             </CollapsibleTeamSection>
           )}
 
-          <ClaudeLogsSection teamName={teamName} />
+          {messagesPanelMode !== 'sidebar' && <ClaudeLogsSection teamName={teamName} />}
 
           {messagesPanelMode === 'inline' && (
             <MessagesPanel
