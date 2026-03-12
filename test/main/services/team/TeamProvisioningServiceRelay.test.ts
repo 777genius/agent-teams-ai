@@ -155,7 +155,10 @@ function attachAliveRun(
   });
   const writable = opts?.writable ?? true;
 
-  (service as unknown as { activeByTeam: Map<string, string> }).activeByTeam.set(teamName, runId);
+  (service as unknown as { aliveRunByTeam: Map<string, string> }).aliveRunByTeam.set(
+    teamName,
+    runId
+  );
   (service as unknown as { runs: Map<string, unknown> }).runs.set(runId, {
     runId,
     teamName,

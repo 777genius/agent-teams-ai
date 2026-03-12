@@ -231,10 +231,11 @@ import type {
   HunkDecision,
   IpcResult,
   KanbanColumnId,
-  LeadContextUsage,
+  LeadActivitySnapshot,
+  LeadContextUsageSnapshot,
+  MemberSpawnStatusesSnapshot,
   MemberFullStats,
   MemberLogSummary,
-  MemberSpawnStatusEntry,
   NotificationTrigger,
   RejectResult,
   ReplaceMembersRequest,
@@ -921,17 +922,13 @@ const electronAPI: ElectronAPI = {
       return invokeIpcWithResult<void>(TEAM_KILL_PROCESS, teamName, pid);
     },
     getLeadActivity: async (teamName: string) => {
-      const result = await invokeIpcWithResult<string>(TEAM_LEAD_ACTIVITY, teamName);
-      return result as 'active' | 'idle' | 'offline';
+      return invokeIpcWithResult<LeadActivitySnapshot>(TEAM_LEAD_ACTIVITY, teamName);
     },
     getLeadContext: async (teamName: string) => {
-      return invokeIpcWithResult<LeadContextUsage | null>(TEAM_LEAD_CONTEXT, teamName);
+      return invokeIpcWithResult<LeadContextUsageSnapshot>(TEAM_LEAD_CONTEXT, teamName);
     },
     getMemberSpawnStatuses: async (teamName: string) => {
-      return invokeIpcWithResult<Record<string, MemberSpawnStatusEntry>>(
-        TEAM_MEMBER_SPAWN_STATUSES,
-        teamName
-      );
+      return invokeIpcWithResult<MemberSpawnStatusesSnapshot>(TEAM_MEMBER_SPAWN_STATUSES, teamName);
     },
     softDeleteTask: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<void>(TEAM_SOFT_DELETE_TASK, teamName, taskId);

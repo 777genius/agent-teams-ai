@@ -355,8 +355,39 @@ export function initializeNotificationListeners(): () => void {
 
   if (api.teams?.onTeamChange) {
     const cleanup = api.teams.onTeamChange((_event: unknown, event: TeamChangeEvent) => {
+      const isIgnoredRuntimeRun = (() => {
+        if (!event.runId) return false;
+        return useStore.getState().ignoredProvisioningRunIds[event.runId] === event.teamName;
+      })();
+      if (isIgnoredRuntimeRun) {
+        return;
+      }
+
+      const isStaleRuntimeEvent = (() => {
+        if (!event.runId) return false;
+        const currentRunId = useStore.getState().currentRuntimeRunIdByTeam[event.teamName];
+        return currentRunId != null && currentRunId !== event.runId;
+      })();
+
+      const seedCurrentRunIdIfMissing = (): void => {
+        if (!event.runId) return;
+        const currentRunId = useStore.getState().currentRuntimeRunIdByTeam[event.teamName];
+        if (currentRunId == null) {
+          useStore.setState((prev) => ({
+            currentRuntimeRunIdByTeam: {
+              ...prev.currentRuntimeRunIdByTeam,
+              [event.teamName]: event.runId ?? null,
+            },
+          }));
+        }
+      };
+
       // Immediate in-memory update for lead activity — no filesystem refresh needed
       if (event.type === 'lead-activity' && event.detail) {
+        if (isStaleRuntimeEvent) {
+          return;
+        }
+        seedCurrentRunIdIfMissing();
         const nextActivity = event.detail as 'active' | 'idle' | 'offline';
         useStore.setState((prev) => {
           const nextState: Partial<typeof prev> = {
@@ -379,6 +410,8 @@ export function initializeNotificationListeners(): () => void {
           if (nextActivity === 'offline') {
             nextState.leadContextByTeam = { ...prev.leadContextByTeam };
             delete nextState.leadContextByTeam[event.teamName];
+            nextState.currentRuntimeRunIdByTeam = { ...prev.currentRuntimeRunIdByTeam };
+            delete nextState.currentRuntimeRunIdByTeam[event.teamName];
           }
 
           return nextState as typeof prev;
@@ -388,6 +421,10 @@ export function initializeNotificationListeners(): () => void {
 
       // Immediate in-memory update for lead context usage — no filesystem refresh needed
       if (event.type === 'lead-context' && event.detail) {
+        if (isStaleRuntimeEvent) {
+          return;
+        }
+        seedCurrentRunIdIfMissing();
         try {
           const ctx = JSON.parse(event.detail) as LeadContextUsage;
           useStore.setState((prev) => ({
@@ -402,6 +439,10 @@ export function initializeNotificationListeners(): () => void {
 
       // Member spawn status change: fetch updated spawn statuses for the team.
       if (event.type === 'member-spawn') {
+        if (isStaleRuntimeEvent) {
+          return;
+        }
+        seedCurrentRunIdIfMissing();
         void useStore.getState().fetchMemberSpawnStatuses(event.teamName);
         return;
       }
@@ -409,6 +450,10 @@ export function initializeNotificationListeners(): () => void {
       // Live lead-message events: only refresh the visible team detail, not team/task lists.
       // This keeps the refresh lightweight and prevents one noisy team from starving another.
       if (event.type === 'lead-message') {
+        if (isStaleRuntimeEvent) {
+          return;
+        }
+        seedCurrentRunIdIfMissing();
         if (!event?.teamName || !isTeamVisibleInAnyPane(event.teamName)) {
           return;
         }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 import {
@@ -77,8 +77,8 @@ export interface ActiveTeamRef {
 interface CreateTeamDialogProps {
   open: boolean;
   canCreate: boolean;
-  provisioningError: string | null;
-  clearProvisioningError?: () => void;
+  provisioningErrorsByTeam: Record<string, string | null>;
+  clearProvisioningError?: (teamName?: string) => void;
   existingTeamNames: string[];
   activeTeams?: ActiveTeamRef[];
   initialData?: TeamCopyData;
@@ -195,7 +195,7 @@ function validateRequest(
 export const CreateTeamDialog = ({
   open,
   canCreate,
-  provisioningError,
+  provisioningErrorsByTeam,
   clearProvisioningError,
   existingTeamNames,
   activeTeams,
@@ -223,6 +223,7 @@ export const CreateTeamDialog = ({
   const [prepareState, setPrepareState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle');
   const [prepareMessage, setPrepareMessage] = useState<string | null>(null);
   const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
+  const prepareRequestSeqRef = useRef(0);
   const [fieldErrors, setFieldErrors] = useState<{
     teamName?: string;
     members?: string;
@@ -325,12 +326,15 @@ export const CreateTeamDialog = ({
     resetUIState();
   };
 
+  const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
+  const dialogTeamNameKey = sanitizeTeamName(teamName.trim());
+
   // Clear stale provisioning error when dialog opens
   useEffect(() => {
-    if (open) {
-      clearProvisioningError?.();
+    if (open && dialogTeamNameKey) {
+      clearProvisioningError?.(dialogTeamNameKey);
     }
-  }, [open, clearProvisioningError]);
+  }, [open, clearProvisioningError, dialogTeamNameKey]);
 
   useEffect(() => {
     if (!open || !canCreate || !launchTeam) {
@@ -346,7 +350,15 @@ export const CreateTeamDialog = ({
       return;
     }
 
+    if (!effectiveCwd) {
+      setPrepareState('idle');
+      setPrepareWarnings([]);
+      setPrepareMessage('Select a working directory to validate the launch environment.');
+      return;
+    }
+
     let cancelled = false;
+    const requestSeq = ++prepareRequestSeqRef.current;
     setPrepareState('loading');
     setPrepareMessage('Warming up CLI environment...');
     setPrepareWarnings([]);
@@ -355,13 +367,14 @@ export const CreateTeamDialog = ({
     const timer = setTimeout(() => {
       void (async () => {
         try {
-          const prepResult: TeamProvisioningPrepareResult = await api.teams.prepareProvisioning();
-          if (cancelled) return;
+          const prepResult: TeamProvisioningPrepareResult =
+            await api.teams.prepareProvisioning(effectiveCwd);
+          if (cancelled || prepareRequestSeqRef.current !== requestSeq) return;
           setPrepareState(prepResult.ready ? 'ready' : 'failed');
           setPrepareMessage(prepResult.message);
           setPrepareWarnings(prepResult.warnings ?? []);
         } catch (error) {
-          if (cancelled) return;
+          if (cancelled || prepareRequestSeqRef.current !== requestSeq) return;
           setPrepareState('failed');
           setPrepareWarnings([]);
           setPrepareMessage(
@@ -375,7 +388,7 @@ export const CreateTeamDialog = ({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [open, canCreate, launchTeam]);
+  }, [open, canCreate, launchTeam, effectiveCwd]);
 
   useEffect(() => {
     if (!open) {
@@ -486,8 +499,6 @@ export const CreateTeamDialog = ({
     setSelectedProjectPath(projects[0].path);
   }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath]);
 
-  const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
-
   useFileListCacheWarmer(effectiveCwd || null);
 
   const description = descriptionDraft.value;
@@ -590,7 +601,7 @@ export const CreateTeamDialog = ({
     return summary;
   }, [description, teamColor]);
 
-  const activeError = localError ?? provisioningError;
+  const activeError = localError ?? provisioningErrorsByTeam[request.teamName] ?? null;
   const canOpenExistingTeam =
     activeError?.includes('Team already exists') === true && request.teamName.length > 0;
 

@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
 
-import { createTeamSlice } from '../../../src/renderer/store/slices/teamSlice';
+import {
+  createTeamSlice,
+  getCurrentProvisioningProgressForTeam,
+} from '../../../src/renderer/store/slices/teamSlice';
 
 const hoisted = vi.hoisted(() => ({
   list: vi.fn(),
   getData: vi.fn(),
   createTeam: vi.fn(),
   getProvisioningStatus: vi.fn(),
+  getMemberSpawnStatuses: vi.fn(),
   cancelProvisioning: vi.fn(),
   sendMessage: vi.fn(),
   requestReview: vi.fn(),
@@ -23,6 +27,7 @@ vi.mock('@renderer/api', () => ({
       getData: hoisted.getData,
       createTeam: hoisted.createTeam,
       getProvisioningStatus: hoisted.getProvisioningStatus,
+      getMemberSpawnStatuses: hoisted.getMemberSpawnStatuses,
       cancelProvisioning: hoisted.cancelProvisioning,
       sendMessage: hoisted.sendMessage,
       requestReview: hoisted.requestReview,
@@ -97,6 +102,7 @@ describe('teamSlice actions', () => {
       startedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+    hoisted.getMemberSpawnStatuses.mockResolvedValue({ statuses: {}, runId: null });
     hoisted.cancelProvisioning.mockResolvedValue(undefined);
   });
 
@@ -364,6 +370,247 @@ describe('teamSlice actions', () => {
       expect(warmTaskChangeSummaries).toHaveBeenCalledWith([
         expect.objectContaining({ teamName: 'my-team', taskId: 'task-2' }),
       ]);
+    });
+  });
+
+  describe('provisioning run scoping', () => {
+    it('rolls back optimistic pending run on early createTeam failure', async () => {
+      const store = createSliceStore();
+      hoisted.createTeam.mockRejectedValue(new Error('create failed'));
+
+      await expect(
+        store.getState().createTeam({
+          teamName: 'my-team',
+          cwd: '/tmp/project',
+          members: [],
+        })
+      ).rejects.toThrow('create failed');
+
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
+      expect(Object.values(store.getState().provisioningRuns)).toHaveLength(0);
+      expect(store.getState().provisioningErrorByTeam['my-team']).toBe('create failed');
+    });
+
+    it('keeps the current run pinned when stale progress from another run arrives', () => {
+      const store = createSliceStore();
+      const startedAt = '2026-03-12T10:00:00.000Z';
+
+      store.getState().onProvisioningProgress({
+        runId: 'run-current',
+        teamName: 'my-team',
+        state: 'spawning',
+        message: 'Current run',
+        startedAt,
+        updatedAt: startedAt,
+      });
+
+      store.getState().onProvisioningProgress({
+        runId: 'run-stale',
+        teamName: 'my-team',
+        state: 'failed',
+        message: 'Stale failure',
+        error: 'stale',
+        startedAt: '2026-03-12T10:00:01.000Z',
+        updatedAt: '2026-03-12T10:00:01.000Z',
+      });
+
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-current');
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-current');
+      expect(store.getState().provisioningErrorByTeam['my-team']).toBeUndefined();
+      expect(store.getState().provisioningRuns['run-stale']).toBeUndefined();
+    });
+
+    it('clears orphaned runs when polling reports Unknown runId', () => {
+      const store = createSliceStore();
+      store.setState({
+        provisioningRuns: {
+          'pending:my-team:1': {
+            runId: 'pending:my-team:1',
+            teamName: 'my-team',
+            state: 'spawning',
+            message: 'Launching',
+            startedAt: '2026-03-12T10:00:00.000Z',
+            updatedAt: '2026-03-12T10:00:00.000Z',
+          },
+        },
+        currentProvisioningRunIdByTeam: {
+          'my-team': 'pending:my-team:1',
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': {
+            alice: { status: 'spawning', updatedAt: '2026-03-12T10:00:00.000Z' },
+          },
+        },
+      });
+
+      store.getState().clearMissingProvisioningRun('pending:my-team:1');
+
+      expect(store.getState().provisioningRuns['pending:my-team:1']).toBeUndefined();
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBeUndefined();
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toBeUndefined();
+      expect(store.getState().ignoredProvisioningRunIds['pending:my-team:1']).toBe('my-team');
+    });
+
+    it('does not resurrect a cleared missing run when late progress arrives', () => {
+      const store = createSliceStore();
+      store.setState({
+        provisioningRuns: {
+          'pending:my-team:1': {
+            runId: 'pending:my-team:1',
+            teamName: 'my-team',
+            state: 'spawning',
+            message: 'Launching',
+            startedAt: '2026-03-12T10:00:00.000Z',
+            updatedAt: '2026-03-12T10:00:00.000Z',
+          },
+        },
+        currentProvisioningRunIdByTeam: {
+          'my-team': 'pending:my-team:1',
+        },
+      });
+
+      store.getState().clearMissingProvisioningRun('pending:my-team:1');
+      store.getState().onProvisioningProgress({
+        runId: 'pending:my-team:1',
+        teamName: 'my-team',
+        state: 'monitoring',
+        message: 'Late zombie progress',
+        startedAt: '2026-03-12T10:00:00.000Z',
+        updatedAt: '2026-03-12T10:00:02.000Z',
+      });
+
+      expect(store.getState().provisioningRuns['pending:my-team:1']).toBeUndefined();
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
+    });
+
+    it('keeps runtime run id separate from provisioning run id when fetching spawn statuses', async () => {
+      const store = createSliceStore();
+      store.setState({
+        currentProvisioningRunIdByTeam: {
+          'my-team': 'provisioning-run',
+        },
+      });
+      hoisted.getMemberSpawnStatuses.mockResolvedValue({
+        runId: 'runtime-run',
+        statuses: {
+          alice: { status: 'spawning', updatedAt: '2026-03-12T10:00:00.000Z' },
+        },
+      });
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('provisioning-run');
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('runtime-run');
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toEqual({
+        alice: { status: 'spawning', updatedAt: '2026-03-12T10:00:00.000Z' },
+      });
+    });
+
+    it('preserves current spawn statuses when clearing a non-canonical missing run', () => {
+      const store = createSliceStore();
+      store.setState({
+        provisioningRuns: {
+          'run-current': {
+            runId: 'run-current',
+            teamName: 'my-team',
+            state: 'monitoring',
+            message: 'Current run',
+            startedAt: '2026-03-12T10:00:00.000Z',
+            updatedAt: '2026-03-12T10:00:00.000Z',
+          },
+          'run-stale': {
+            runId: 'run-stale',
+            teamName: 'my-team',
+            state: 'failed',
+            message: 'Stale run',
+            startedAt: '2026-03-12T10:00:01.000Z',
+            updatedAt: '2026-03-12T10:00:01.000Z',
+          },
+        },
+        currentProvisioningRunIdByTeam: {
+          'my-team': 'run-current',
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': {
+            alice: { status: 'spawning', updatedAt: '2026-03-12T10:00:00.000Z' },
+          },
+        },
+      });
+
+      store.getState().clearMissingProvisioningRun('run-stale');
+
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-current');
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toEqual({
+        alice: { status: 'spawning', updatedAt: '2026-03-12T10:00:00.000Z' },
+      });
+    });
+
+    it('keeps the terminal canonical run pinned and does not fall back to other team runs', () => {
+      const store = createSliceStore();
+      const startedAt = '2026-03-12T10:00:00.000Z';
+
+      store.getState().onProvisioningProgress({
+        runId: 'run-current',
+        teamName: 'my-team',
+        state: 'monitoring',
+        message: 'Current run',
+        startedAt,
+        updatedAt: startedAt,
+      });
+
+      store.getState().onProvisioningProgress({
+        runId: 'run-current',
+        teamName: 'my-team',
+        state: 'disconnected',
+        message: 'Disconnected',
+        startedAt,
+        updatedAt: '2026-03-12T10:00:01.000Z',
+      });
+
+      store.setState((state: ReturnType<typeof store.getState>) => ({
+        provisioningRuns: {
+          ...state.provisioningRuns,
+          'run-stale': {
+            runId: 'run-stale',
+            teamName: 'my-team',
+            state: 'failed',
+            message: 'Stale run',
+            startedAt: '2026-03-12T10:00:02.000Z',
+            updatedAt: '2026-03-12T10:00:02.000Z',
+          },
+        },
+      }));
+
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-current');
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toBeUndefined();
+      expect(getCurrentProvisioningProgressForTeam(store.getState(), 'my-team')).toEqual(
+        expect.objectContaining({
+          runId: 'run-current',
+          state: 'disconnected',
+        })
+      );
+    });
+
+    it('does not fall back to a team-wide latest run when no current run is pinned', () => {
+      expect(
+        getCurrentProvisioningProgressForTeam(
+          {
+            currentProvisioningRunIdByTeam: {},
+            provisioningRuns: {
+              'run-stale': {
+                runId: 'run-stale',
+                teamName: 'my-team',
+                state: 'failed',
+                message: 'Stale run',
+                startedAt: '2026-03-12T10:00:00.000Z',
+                updatedAt: '2026-03-12T10:00:00.000Z',
+              },
+            },
+          },
+          'my-team'
+        )
+      ).toBeNull();
     });
   });
 });

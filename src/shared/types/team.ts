@@ -427,6 +427,11 @@ export interface CreateTaskRequest {
 
 export type LeadActivityState = 'active' | 'idle' | 'offline';
 
+export interface LeadActivitySnapshot {
+  state: LeadActivityState;
+  runId: string | null;
+}
+
 export interface LeadContextUsage {
   /** Total tokens currently in context (input + cache_creation + cache_read) */
   currentTokens: number;
@@ -436,6 +441,16 @@ export interface LeadContextUsage {
   percent: number;
   /** ISO timestamp of last update */
   updatedAt: string;
+}
+
+export interface LeadContextUsageSnapshot {
+  usage: LeadContextUsage | null;
+  runId: string | null;
+}
+
+export interface MemberSpawnStatusesSnapshot {
+  statuses: Record<string, MemberSpawnStatusEntry>;
+  runId: string | null;
 }
 
 export interface TeamChangeEvent {
@@ -449,6 +464,7 @@ export interface TeamChangeEvent {
     | 'process'
     | 'member-spawn';
   teamName: string;
+  runId?: string;
   detail?: string;
 }
 

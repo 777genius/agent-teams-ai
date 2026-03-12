@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { ExtendedContextCheckbox } from '@renderer/components/team/dialogs/ExtendedContextCheckbox';
@@ -74,7 +74,7 @@ interface LaunchDialogLaunchMode extends LaunchDialogBase {
   members: ResolvedTeamMember[];
   defaultProjectPath?: string;
   provisioningError: string | null;
-  clearProvisioningError?: () => void;
+  clearProvisioningError?: (teamName?: string) => void;
   activeTeams?: ActiveTeamRef[];
   onLaunch: (request: TeamLaunchRequest) => Promise<void>;
 }
@@ -178,6 +178,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [prepareState, setPrepareState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle');
   const [prepareMessage, setPrepareMessage] = useState<string | null>(null);
   const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
+  const prepareRequestSeqRef = useRef(0);
 
   // Advanced CLI section state (with localStorage persistence)
   const [worktreeEnabled, setWorktreeEnabledRaw] = useState(
@@ -332,14 +333,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Launch-only effects
   // ---------------------------------------------------------------------------
 
+  const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
+
   // Clear stale provisioning error when dialog opens
   useEffect(() => {
     if (!open || !isLaunch) return;
-    (props as LaunchDialogLaunchMode).clearProvisioningError?.();
+    (props as LaunchDialogLaunchMode).clearProvisioningError?.(effectiveTeamName);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, isLaunch]);
+  }, [open, isLaunch, effectiveTeamName]);
 
-  // Warm up CLI on open (launch mode only)
+  // Warm up CLI for the currently selected working directory (launch mode only).
   useEffect(() => {
     if (!open || !isLaunch) return;
 
@@ -352,20 +355,29 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
 
+    if (!effectiveCwd) {
+      setPrepareState('idle');
+      setPrepareWarnings([]);
+      setPrepareMessage('Select a working directory to validate the launch environment.');
+      return;
+    }
+
     let cancelled = false;
+    const requestSeq = ++prepareRequestSeqRef.current;
     setPrepareState('loading');
     setPrepareMessage('Warming up CLI environment...');
     setPrepareWarnings([]);
 
     void (async () => {
       try {
-        const prepResult: TeamProvisioningPrepareResult = await api.teams.prepareProvisioning();
-        if (cancelled) return;
+        const prepResult: TeamProvisioningPrepareResult =
+          await api.teams.prepareProvisioning(effectiveCwd);
+        if (cancelled || prepareRequestSeqRef.current !== requestSeq) return;
         setPrepareState(prepResult.ready ? 'ready' : 'failed');
         setPrepareMessage(prepResult.message);
         setPrepareWarnings(prepResult.warnings ?? []);
       } catch (error) {
-        if (cancelled) return;
+        if (cancelled || prepareRequestSeqRef.current !== requestSeq) return;
         setPrepareState('failed');
         setPrepareWarnings([]);
         setPrepareMessage(
@@ -377,7 +389,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return () => {
       cancelled = true;
     };
-  }, [open, isLaunch]);
+  }, [open, isLaunch, effectiveCwd]);
 
   // ---------------------------------------------------------------------------
   // Shared effects: projects
@@ -446,8 +458,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     }
     setSelectedProjectPath(projects[0].path);
   }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath]);
-
-  const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
 
   // Pre-warm file list cache so @-mention file search is instant
   useFileListCacheWarmer(effectiveCwd || null);

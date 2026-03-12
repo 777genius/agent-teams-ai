@@ -20,6 +20,7 @@ import { useTabUI } from '@renderer/hooks/useTabUI';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
 import { formatPercentOfTotal, sumContextInjectionTokens } from '@renderer/utils/contextMath';
 import { formatProjectPath } from '@renderer/utils/pathDisplay';
@@ -94,8 +95,6 @@ import type { EditorSelectionAction } from '@shared/types/editor';
 interface TeamDetailViewProps {
   teamName: string;
 }
-
-const ACTIVE_PROVISIONING_STATES = new Set(['validating', 'spawning', 'monitoring', 'verifying']);
 
 interface CreateTaskDialogState {
   open: boolean;
@@ -275,11 +274,9 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       removeMember: s.removeMember,
       updateMemberRole: s.updateMemberRole,
       launchTeam: s.launchTeam,
-      provisioningError: s.provisioningError,
+      provisioningError: teamName ? (s.provisioningErrorByTeam[teamName] ?? null) : null,
       clearProvisioningError: s.clearProvisioningError,
-      isTeamProvisioning: Object.values(s.provisioningRuns).some(
-        (run) => run.teamName === teamName && ACTIVE_PROVISIONING_STATES.has(run.state)
-      ),
+      isTeamProvisioning: teamName ? isTeamProvisioningActive(s, teamName) : false,
       leadActivityByTeam: s.leadActivityByTeam,
       memberSpawnStatuses: teamName ? s.memberSpawnStatusesByTeam[teamName] : undefined,
       fetchMemberSpawnStatuses: s.fetchMemberSpawnStatuses,

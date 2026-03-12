@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';
+import { getCurrentProvisioningProgressForTeam } from '@renderer/store/slices/teamSlice';
 import { CheckCircle2, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -9,35 +10,20 @@ import { ProvisioningProgressBlock } from './ProvisioningProgressBlock';
 import { STEP_ORDER } from './provisioningSteps';
 
 import type { ProvisioningStep } from './provisioningSteps';
-import type { TeamProvisioningProgress } from '@shared/types';
-
 interface TeamProvisioningBannerProps {
   teamName: string;
-}
-
-function findProgressForTeam(
-  runs: Record<string, TeamProvisioningProgress>,
-  teamName: string
-): TeamProvisioningProgress | null {
-  const entries = Object.values(runs);
-  const matching = entries
-    .filter((r) => r.teamName === teamName)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  return matching[0] ?? null;
 }
 
 export const TeamProvisioningBanner = ({
   teamName,
 }: TeamProvisioningBannerProps): React.JSX.Element | null => {
-  const { provisioningRuns, cancelProvisioning, teamMembers } = useStore(
+  const { progress, cancelProvisioning, teamMembers } = useStore(
     useShallow((s) => ({
-      provisioningRuns: s.provisioningRuns,
+      progress: getCurrentProvisioningProgressForTeam(s, teamName),
       cancelProvisioning: s.cancelProvisioning,
       teamMembers: s.selectedTeamData?.members,
     }))
   );
-
-  const progress = findProgressForTeam(provisioningRuns, teamName);
   const [dismissed, setDismissed] = useState(false);
   const prevRunIdRef = useRef(progress?.runId);
 

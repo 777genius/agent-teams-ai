@@ -25,10 +25,16 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const ACTIVE_PROVISIONING_STATES = new Set(['validating', 'spawning', 'monitoring', 'verifying']);
 const TERMINAL_PROVISIONING_STATES = new Set(['ready', 'failed', 'disconnected', 'cancelled']);
 
 function isPendingProvisioningRunId(runId: string): boolean {
   return runId.startsWith('pending:');
+}
+
+function isUnknownProvisioningRunError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('Unknown runId');
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -61,7 +67,11 @@ async function pollProvisioningStatus(
       if (TERMINAL_PROVISIONING_STATES.has(progress.state)) {
         return;
       }
-    } catch {
+    } catch (error) {
+      if (isUnknownProvisioningRunError(error)) {
+        state.clearMissingProvisioningRun(runId);
+        return;
+      }
       // best-effort polling; don't fail launch because status fetch is flaky
     }
     await sleep(delayMs);
@@ -342,6 +352,10 @@ export interface TeamSlice {
   lastSendMessageResult: SendMessageResult | null;
   reviewActionError: string | null;
   provisioningRuns: Record<string, TeamProvisioningProgress>;
+  currentProvisioningRunIdByTeam: Record<string, string | null>;
+  currentRuntimeRunIdByTeam: Record<string, string | null>;
+  /** Runs explicitly cleared after Unknown runId polling; late events/progress for them are ignored. */
+  ignoredProvisioningRunIds: Record<string, string>;
   /**
    * Per-team lower bound for provisioning progress timestamps.
    * Used to ignore late progress events from a previous run after stop→launch.
@@ -352,9 +366,8 @@ export interface TeamSlice {
   /** Per-team per-member spawn statuses during team provisioning/launch. */
   memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
   fetchMemberSpawnStatuses: (teamName: string) => Promise<void>;
-  activeProvisioningRunId: string | null;
-  provisioningError: string | null;
-  clearProvisioningError: () => void;
+  provisioningErrorByTeam: Record<string, string | null>;
+  clearProvisioningError: (teamName?: string) => void;
   /** Per-team launch parameters (model, effort, extended context) — persisted in localStorage. */
   launchParamsByTeam: Record<string, TeamLaunchParams>;
   kanbanFilterQuery: string | null;
@@ -455,6 +468,7 @@ export interface TeamSlice {
   launchTeam: (request: TeamLaunchRequest) => Promise<string>;
   cancelProvisioning: (runId: string) => Promise<void>;
   getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;
+  clearMissingProvisioningRun: (runId: string) => void;
   onProvisioningProgress: (progress: TeamProvisioningProgress) => void;
   subscribeProvisioningProgress: () => void;
   unsubscribeProvisioningProgress: () => void;
@@ -478,6 +492,22 @@ export interface TeamSlice {
 
 // --- Per-team launch params persistence ---
 const LAUNCH_PARAMS_PREFIX = 'team:launchParams:';
+
+export function getCurrentProvisioningProgressForTeam(
+  state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
+  teamName: string
+): TeamProvisioningProgress | null {
+  const currentRunId = state.currentProvisioningRunIdByTeam[teamName];
+  return currentRunId ? (state.provisioningRuns[currentRunId] ?? null) : null;
+}
+
+export function isTeamProvisioningActive(
+  state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
+  teamName: string
+): boolean {
+  const current = getCurrentProvisioningProgressForTeam(state, teamName);
+  return current != null && ACTIVE_PROVISIONING_STATES.has(current.state);
+}
 
 function loadAllLaunchParams(): Record<string, TeamLaunchParams> {
   const result: Record<string, TeamLaunchParams> = {};
@@ -581,23 +611,51 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   crossTeamTargetsLoading: false,
   reviewActionError: null,
   provisioningRuns: {},
+  currentProvisioningRunIdByTeam: {},
+  currentRuntimeRunIdByTeam: {},
+  ignoredProvisioningRunIds: {},
   provisioningStartedAtFloorByTeam: {},
   leadActivityByTeam: {},
   leadContextByTeam: {},
   memberSpawnStatusesByTeam: {},
-  activeProvisioningRunId: null,
-  provisioningError: null,
-  clearProvisioningError: () => set({ provisioningError: null }),
+  provisioningErrorByTeam: {},
+  clearProvisioningError: (teamName?: string) =>
+    set((state) => {
+      if (!teamName) {
+        return { provisioningErrorByTeam: {} };
+      }
+
+      if (!(teamName in state.provisioningErrorByTeam)) {
+        return {};
+      }
+
+      const nextErrors = { ...state.provisioningErrorByTeam };
+      delete nextErrors[teamName];
+      return { provisioningErrorByTeam: nextErrors };
+    }),
   launchParamsByTeam: loadAllLaunchParams(),
   fetchMemberSpawnStatuses: async (teamName: string) => {
     if (!api.teams?.getMemberSpawnStatuses) return;
     try {
-      const statuses = await api.teams.getMemberSpawnStatuses(teamName);
+      const snapshot = await api.teams.getMemberSpawnStatuses(teamName);
       set((prev) => ({
-        memberSpawnStatusesByTeam: {
-          ...prev.memberSpawnStatusesByTeam,
-          [teamName]: statuses,
-        },
+        ...(snapshot.runId != null &&
+        prev.currentRuntimeRunIdByTeam[teamName] != null &&
+        prev.currentRuntimeRunIdByTeam[teamName] !== snapshot.runId
+          ? {}
+          : {
+              currentRuntimeRunIdByTeam:
+                snapshot.runId == null
+                  ? prev.currentRuntimeRunIdByTeam
+                  : {
+                      ...prev.currentRuntimeRunIdByTeam,
+                      [teamName]: prev.currentRuntimeRunIdByTeam[teamName] ?? snapshot.runId,
+                    },
+              memberSpawnStatusesByTeam: {
+                ...prev.memberSpawnStatusesByTeam,
+                [teamName]: snapshot.statuses,
+              },
+            }),
       }));
     } catch {
       // ignore — spawn statuses are best-effort
@@ -925,11 +983,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     } catch (error) {
       // If provisioning is in progress for this team, stay in loading state;
       // file watcher / progress callback will refresh once config is written.
-      const isProvisioning = Object.values(get().provisioningRuns).some(
-        (run) =>
-          run.teamName === teamName &&
-          !['ready', 'disconnected', 'failed', 'cancelled'].includes(run.state)
-      );
+      const isProvisioning = isTeamProvisioningActive(get(), teamName);
 
       const msg = error instanceof Error ? error.message : String(error);
       // IPC can report provisioning state explicitly.
@@ -1296,7 +1350,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           delete cleaned[runId];
         }
       }
-      return { provisioningError: null, provisioningRuns: cleaned };
+      const nextErrors = { ...state.provisioningErrorByTeam };
+      delete nextErrors[request.teamName];
+      const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
+      delete nextSpawnStatuses[request.teamName];
+      const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
+      delete nextRuntimeRunIdByTeam[request.teamName];
+      const nextIgnoredRunIds = Object.fromEntries(
+        Object.entries(state.ignoredProvisioningRunIds).filter(
+          ([, teamName]) => teamName !== request.teamName
+        )
+      );
+      return {
+        provisioningRuns: cleaned,
+        provisioningErrorByTeam: nextErrors,
+        memberSpawnStatusesByTeam: nextSpawnStatuses,
+        currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
+        ignoredProvisioningRunIds: nextIgnoredRunIds,
+      };
     });
 
     // Optimistic progress entry: ensures banner shows even if IPC progress is delayed/missed.
@@ -1313,7 +1384,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           updatedAt: floor,
         },
       },
-      activeProvisioningRunId: pendingRunId,
+      currentProvisioningRunIdByTeam: {
+        ...state.currentProvisioningRunIdByTeam,
+        [request.teamName]: pendingRunId,
+      },
     }));
     try {
       if (typeof api.teams.createTeam !== 'function') {
@@ -1340,9 +1414,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         }));
       }
 
-      set({
-        activeProvisioningRunId: response.runId,
-        provisioningError: null,
+      set((state) => {
+        const nextRuns = { ...state.provisioningRuns };
+        const pendingRun = nextRuns[pendingRunId];
+        if (pendingRun) {
+          delete nextRuns[pendingRunId];
+          nextRuns[response.runId] = { ...pendingRun, runId: response.runId };
+        }
+        return {
+          provisioningRuns: nextRuns,
+          currentProvisioningRunIdByTeam: {
+            ...state.currentProvisioningRunIdByTeam,
+            [request.teamName]: response.runId,
+          },
+          currentRuntimeRunIdByTeam: {
+            ...state.currentRuntimeRunIdByTeam,
+            [request.teamName]: response.runId,
+          },
+        };
       });
       try {
         await get().getProvisioningStatus(response.runId);
@@ -1352,13 +1441,27 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       void pollProvisioningStatus(get, response.runId);
       return response.runId;
     } catch (error) {
-      set({
-        provisioningError:
-          error instanceof IpcError
+      const message =
+        error instanceof IpcError
+          ? error.message
+          : error instanceof Error
             ? error.message
-            : error instanceof Error
-              ? error.message
-              : 'Failed to create team',
+            : 'Failed to create team';
+      set((state) => {
+        const nextRuns = { ...state.provisioningRuns };
+        delete nextRuns[pendingRunId];
+        const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
+        if (nextCurrentRunIdByTeam[request.teamName] === pendingRunId) {
+          delete nextCurrentRunIdByTeam[request.teamName];
+        }
+        return {
+          provisioningRuns: nextRuns,
+          currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
+          provisioningErrorByTeam: {
+            ...state.provisioningErrorByTeam,
+            [request.teamName]: message,
+          },
+        };
       });
       throw error;
     }
@@ -1385,7 +1488,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           delete cleaned[runId];
         }
       }
-      return { provisioningError: null, provisioningRuns: cleaned };
+      const nextErrors = { ...state.provisioningErrorByTeam };
+      delete nextErrors[request.teamName];
+      const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
+      delete nextSpawnStatuses[request.teamName];
+      const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
+      delete nextRuntimeRunIdByTeam[request.teamName];
+      const nextIgnoredRunIds = Object.fromEntries(
+        Object.entries(state.ignoredProvisioningRunIds).filter(
+          ([, teamName]) => teamName !== request.teamName
+        )
+      );
+      return {
+        provisioningRuns: cleaned,
+        provisioningErrorByTeam: nextErrors,
+        memberSpawnStatusesByTeam: nextSpawnStatuses,
+        currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
+        ignoredProvisioningRunIds: nextIgnoredRunIds,
+      };
     });
 
     // Optimistic progress entry: ensures banner shows even if IPC progress is delayed/missed.
@@ -1402,7 +1522,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           updatedAt: floor,
         },
       },
-      activeProvisioningRunId: pendingRunId,
+      currentProvisioningRunIdByTeam: {
+        ...state.currentProvisioningRunIdByTeam,
+        [request.teamName]: pendingRunId,
+      },
     }));
     try {
       const response = await unwrapIpc('team:launch', () => api.teams.launchTeam(request));
@@ -1432,9 +1555,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         });
       }
 
-      set({
-        activeProvisioningRunId: response.runId,
-        provisioningError: null,
+      set((state) => {
+        const nextRuns = { ...state.provisioningRuns };
+        const pendingRun = nextRuns[pendingRunId];
+        if (pendingRun) {
+          delete nextRuns[pendingRunId];
+          nextRuns[response.runId] = { ...pendingRun, runId: response.runId };
+        }
+        return {
+          provisioningRuns: nextRuns,
+          currentProvisioningRunIdByTeam: {
+            ...state.currentProvisioningRunIdByTeam,
+            [request.teamName]: response.runId,
+          },
+          currentRuntimeRunIdByTeam: {
+            ...state.currentRuntimeRunIdByTeam,
+            [request.teamName]: response.runId,
+          },
+        };
       });
       try {
         await get().getProvisioningStatus(response.runId);
@@ -1444,13 +1582,27 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       void pollProvisioningStatus(get, response.runId);
       return response.runId;
     } catch (error) {
-      set({
-        provisioningError:
-          error instanceof IpcError
+      const message =
+        error instanceof IpcError
+          ? error.message
+          : error instanceof Error
             ? error.message
-            : error instanceof Error
-              ? error.message
-              : 'Failed to launch team',
+            : 'Failed to launch team';
+      set((state) => {
+        const nextRuns = { ...state.provisioningRuns };
+        delete nextRuns[pendingRunId];
+        const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
+        if (nextCurrentRunIdByTeam[request.teamName] === pendingRunId) {
+          delete nextCurrentRunIdByTeam[request.teamName];
+        }
+        return {
+          provisioningRuns: nextRuns,
+          currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
+          provisioningErrorByTeam: {
+            ...state.provisioningErrorByTeam,
+            [request.teamName]: message,
+          },
+        };
       });
       throw error;
     }
@@ -1464,43 +1616,139 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     return progress;
   },
 
+  clearMissingProvisioningRun: (runId: string) => {
+    set((state) => {
+      const existing = state.provisioningRuns[runId];
+      if (!existing) {
+        return {};
+      }
+
+      const nextRuns = { ...state.provisioningRuns };
+      delete nextRuns[runId];
+
+      const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
+      const isCanonicalRun = nextCurrentRunIdByTeam[existing.teamName] === runId;
+      if (isCanonicalRun) {
+        delete nextCurrentRunIdByTeam[existing.teamName];
+      }
+      const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
+      if (nextRuntimeRunIdByTeam[existing.teamName] === runId) {
+        delete nextRuntimeRunIdByTeam[existing.teamName];
+      }
+      const nextIgnoredRunIds = {
+        ...state.ignoredProvisioningRunIds,
+        [runId]: existing.teamName,
+      };
+
+      const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
+      if (isCanonicalRun) {
+        delete nextSpawnStatuses[existing.teamName];
+      }
+
+      return {
+        provisioningRuns: nextRuns,
+        currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
+        currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
+        memberSpawnStatusesByTeam: nextSpawnStatuses,
+        ignoredProvisioningRunIds: nextIgnoredRunIds,
+      };
+    });
+  },
+
   cancelProvisioning: async (runId: string) => {
     await unwrapIpc('team:cancelProvisioning', () => api.teams.cancelProvisioning(runId));
   },
 
   onProvisioningProgress: (progress: TeamProvisioningProgress) => {
+    if (get().ignoredProvisioningRunIds[progress.runId] === progress.teamName) {
+      return;
+    }
+
     const floor = get().provisioningStartedAtFloorByTeam[progress.teamName];
     if (floor && progress.startedAt < floor) {
       // Ignore late progress from a previous run (common after stop→launch).
       return;
     }
+
+    const currentRunId = get().currentProvisioningRunIdByTeam[progress.teamName];
+    const existingProgress = get().provisioningRuns[progress.runId];
+    const isDuplicateProgress =
+      existingProgress?.updatedAt === progress.updatedAt &&
+      existingProgress?.state === progress.state &&
+      existingProgress?.message === progress.message &&
+      existingProgress?.error === progress.error &&
+      existingProgress?.pid === progress.pid;
+    if (isDuplicateProgress && currentRunId === progress.runId) {
+      return;
+    }
+
     set((state) => {
+      const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
+      const previousCurrentRunId = nextCurrentRunIdByTeam[progress.teamName];
+      let isCanonicalRun = false;
+      if (!previousCurrentRunId || previousCurrentRunId === progress.runId) {
+        nextCurrentRunIdByTeam[progress.teamName] = progress.runId;
+        isCanonicalRun = true;
+      } else if (
+        isPendingProvisioningRunId(previousCurrentRunId) &&
+        !isPendingProvisioningRunId(progress.runId)
+      ) {
+        delete nextRuns[previousCurrentRunId];
+        nextCurrentRunIdByTeam[progress.teamName] = progress.runId;
+        isCanonicalRun = true;
+      }
+      if (!previousCurrentRunId) {
+        isCanonicalRun = true;
+      }
+      if (!isCanonicalRun) {
+        if (!(progress.runId in state.provisioningRuns)) {
+          return {};
+        }
+        const nextRuns = { ...state.provisioningRuns };
+        delete nextRuns[progress.runId];
+        return { provisioningRuns: nextRuns };
+      }
+
       const nextRuns: Record<string, TeamProvisioningProgress> = {
         ...state.provisioningRuns,
         [progress.runId]: progress,
       };
-      // When real progress arrives, drop any pending placeholder runs for this team.
-      if (!isPendingProvisioningRunId(progress.runId)) {
-        for (const [runId, run] of Object.entries(nextRuns)) {
-          if (isPendingProvisioningRunId(runId) && run.teamName === progress.teamName) {
-            delete nextRuns[runId];
-          }
+      for (const [runId, run] of Object.entries(nextRuns)) {
+        if (runId !== progress.runId && run.teamName === progress.teamName) {
+          delete nextRuns[runId];
         }
+      }
+
+      const nextErrors = { ...state.provisioningErrorByTeam };
+      if (progress.state === 'failed') {
+        nextErrors[progress.teamName] = progress.error ?? progress.message;
+      } else {
+        delete nextErrors[progress.teamName];
       }
       return {
         provisioningRuns: nextRuns,
-        activeProvisioningRunId: progress.runId,
-        provisioningError: progress.state === 'failed' ? (progress.error ?? null) : null,
+        currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
+        currentRuntimeRunIdByTeam: {
+          ...state.currentRuntimeRunIdByTeam,
+          [progress.teamName]: progress.runId,
+        },
+        provisioningErrorByTeam: nextErrors,
       };
     });
 
-    if (progress.state === 'ready' || progress.state === 'disconnected') {
+    const isCanonicalRun =
+      get().currentProvisioningRunIdByTeam[progress.teamName] === progress.runId;
+
+    if (isCanonicalRun && TERMINAL_PROVISIONING_STATES.has(progress.state)) {
       // Clear spawn statuses — provisioning is complete, members now tracked via normal status
       set((prev) => {
         const next = { ...prev.memberSpawnStatusesByTeam };
         delete next[progress.teamName];
         return { memberSpawnStatusesByTeam: next };
       });
+    }
+
+    if (isCanonicalRun && (progress.state === 'ready' || progress.state === 'disconnected')) {
       void get().fetchTeams();
       // If the user already opened the team tab, reload team data now that
       // config.json is guaranteed to exist.

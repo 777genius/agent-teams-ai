@@ -12,6 +12,7 @@ import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
@@ -122,13 +123,7 @@ export const MessageComposer = ({
     const displayName = s.selectedTeamData?.config.name ?? teamName;
     return nameColorSet(displayName).border;
   });
-  const isProvisioning = useStore((s) =>
-    Object.values(s.provisioningRuns).some(
-      (run) =>
-        run.teamName === teamName &&
-        !['ready', 'disconnected', 'failed', 'cancelled'].includes(run.state)
-    )
-  );
+  const isProvisioning = useStore((s) => isTeamProvisioningActive(s, teamName));
   const draft = useComposerDraft(teamName);
 
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);

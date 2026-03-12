@@ -109,7 +109,10 @@ import type {
   IpcResult,
   KanbanColumnId,
   LeadContextUsage,
+  LeadActivitySnapshot,
+  LeadContextUsageSnapshot,
   MemberFullStats,
+  MemberSpawnStatusesSnapshot,
   MemberLogSummary,
   MemberSpawnStatusEntry,
   SendMessageRequest,
@@ -1829,7 +1832,7 @@ async function handleAliveList(_event: IpcMainInvokeEvent): Promise<IpcResult<st
 async function handleLeadActivity(
   _event: IpcMainInvokeEvent,
   teamName: unknown
-): Promise<IpcResult<string>> {
+): Promise<IpcResult<LeadActivitySnapshot>> {
   const validated = validateTeamName(teamName);
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };
@@ -1842,7 +1845,7 @@ async function handleLeadActivity(
 async function handleLeadContext(
   _event: IpcMainInvokeEvent,
   teamName: unknown
-): Promise<IpcResult<LeadContextUsage | null>> {
+): Promise<IpcResult<LeadContextUsageSnapshot>> {
   const validated = validateTeamName(teamName);
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };
@@ -1855,7 +1858,7 @@ async function handleLeadContext(
 async function handleMemberSpawnStatuses(
   _event: IpcMainInvokeEvent,
   teamName: unknown
-): Promise<IpcResult<Record<string, MemberSpawnStatusEntry>>> {
+): Promise<IpcResult<MemberSpawnStatusesSnapshot>> {
   const validated = validateTeamName(teamName);
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };

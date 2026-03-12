@@ -15,6 +15,7 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import { getCurrentProvisioningProgressForTeam } from '@renderer/store/slices/teamSlice';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { buildTaskCountsByTeam, normalizePath } from '@renderer/utils/pathNormalize';
 import { getBaseName } from '@renderer/utils/pathUtils';
@@ -39,12 +40,7 @@ import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopove
 
 import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
 import type { TeamListFilterState } from './TeamListFilterPopover';
-import type {
-  TeamCreateRequest,
-  TeamProvisioningProgress,
-  TeamSummary,
-  TeamSummaryMember,
-} from '@shared/types';
+import type { TeamCreateRequest, TeamSummary, TeamSummaryMember } from '@shared/types';
 
 function generateUniqueName(sourceName: string, existingNames: string[]): string {
   const base = sourceName.replace(/-\d+$/, '');
@@ -129,17 +125,17 @@ function renderTeamRecentPaths(team: TeamSummary, status: TeamStatus): React.JSX
 function resolveTeamStatus(
   teamName: string,
   aliveTeams: string[],
-  provisioningRuns: Record<string, TeamProvisioningProgress>,
+  currentProgress: ReturnType<typeof getCurrentProvisioningProgressForTeam>,
   leadActivityByTeam: Record<string, string>
 ): TeamStatus {
   if (aliveTeams.includes(teamName)) {
     return leadActivityByTeam[teamName] === 'active' ? 'active' : 'idle';
   }
-  const activeStates = new Set(['validating', 'spawning', 'monitoring', 'verifying']);
-  for (const run of Object.values(provisioningRuns)) {
-    if (run.teamName === teamName && activeStates.has(run.state)) {
-      return 'provisioning';
-    }
+  if (
+    currentProgress &&
+    ['validating', 'spawning', 'monitoring', 'verifying'].includes(currentProgress.state)
+  ) {
+    return 'provisioning';
   }
   return 'offline';
 }
@@ -223,21 +219,27 @@ export const TeamListView = (): React.JSX.Element => {
   const {
     connectionMode,
     createTeam,
-    provisioningError,
+    provisioningErrorByTeam,
     clearProvisioningError,
     provisioningRuns,
+    currentProvisioningRunIdByTeam,
     leadActivityByTeam,
   } = useStore(
     useShallow((s) => ({
       connectionMode: s.connectionMode,
       createTeam: s.createTeam,
-      provisioningError: s.provisioningError,
+      provisioningErrorByTeam: s.provisioningErrorByTeam,
       clearProvisioningError: s.clearProvisioningError,
       provisioningRuns: s.provisioningRuns,
+      currentProvisioningRunIdByTeam: s.currentProvisioningRunIdByTeam,
       leadActivityByTeam: s.leadActivityByTeam,
     }))
   );
   const canCreate = electronMode && connectionMode === 'local';
+  const provisioningState = useMemo(
+    () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
+    [currentProvisioningRunIdByTeam, provisioningRuns]
+  );
 
   // Fetch alive teams on mount and when teams list changes
   useEffect(() => {
@@ -308,7 +310,7 @@ export const TeamListView = (): React.JSX.Element => {
         const status = resolveTeamStatus(
           t.teamName,
           aliveTeams,
-          provisioningRuns,
+          getCurrentProvisioningProgressForTeam(provisioningState, t.teamName),
           leadActivityByTeam
         );
         const isRunning = status !== 'offline';
@@ -357,6 +359,7 @@ export const TeamListView = (): React.JSX.Element => {
     currentProjectPath,
     aliveTeams,
     filter,
+    currentProvisioningRunIdByTeam,
     provisioningRuns,
     leadActivityByTeam,
   ]);
@@ -530,7 +533,7 @@ export const TeamListView = (): React.JSX.Element => {
     <CreateTeamDialog
       open={showCreateDialog}
       canCreate={canCreate}
-      provisioningError={provisioningError}
+      provisioningErrorsByTeam={provisioningErrorByTeam}
       clearProvisioningError={clearProvisioningError}
       existingTeamNames={teams.map((t) => t.teamName)}
       activeTeams={activeTeams}
@@ -642,7 +645,7 @@ export const TeamListView = (): React.JSX.Element => {
             const status = resolveTeamStatus(
               team.teamName,
               aliveTeams,
-              provisioningRuns,
+              getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
               leadActivityByTeam
             );
             const teamColorSet = team.color

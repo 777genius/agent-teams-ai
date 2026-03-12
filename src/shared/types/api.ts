@@ -47,11 +47,11 @@ import type {
   CrossTeamSendResult,
   GlobalTask,
   KanbanColumnId,
-  LeadActivityState,
-  LeadContextUsage,
+  LeadActivitySnapshot,
+  LeadContextUsageSnapshot,
   MemberFullStats,
   MemberLogSummary,
-  MemberSpawnStatusEntry,
+  MemberSpawnStatusesSnapshot,
   ReplaceMembersRequest,
   SendMessageRequest,
   SendMessageResult,
@@ -483,9 +483,9 @@ export interface TeamsAPI {
   getProjectBranch: (projectPath: string) => Promise<string | null>;
   getAttachments: (teamName: string, messageId: string) => Promise<AttachmentFileData[]>;
   killProcess: (teamName: string, pid: number) => Promise<void>;
-  getLeadActivity: (teamName: string) => Promise<LeadActivityState>;
-  getLeadContext: (teamName: string) => Promise<LeadContextUsage | null>;
-  getMemberSpawnStatuses: (teamName: string) => Promise<Record<string, MemberSpawnStatusEntry>>;
+  getLeadActivity: (teamName: string) => Promise<LeadActivitySnapshot>;
+  getLeadContext: (teamName: string) => Promise<LeadContextUsageSnapshot>;
+  getMemberSpawnStatuses: (teamName: string) => Promise<MemberSpawnStatusesSnapshot>;
   softDeleteTask: (teamName: string, taskId: string) => Promise<void>;
   restoreTask: (teamName: string, taskId: string) => Promise<void>;
   getDeletedTasks: (teamName: string) => Promise<TeamTask[]>;

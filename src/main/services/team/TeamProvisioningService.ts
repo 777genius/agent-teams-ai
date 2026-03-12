@@ -150,6 +150,20 @@ function logsSuggestShutdownOrCleanup(logs: string): boolean {
   );
 }
 
+function looksLikeClaudeStdoutJsonFragment(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+    return false;
+  }
+  return (
+    /"type"\s*:/.test(trimmed) ||
+    /"message"\s*:/.test(trimmed) ||
+    /"content"\s*:/.test(trimmed) ||
+    /"subtype"\s*:/.test(trimmed) ||
+    /"session_id"\s*:/.test(trimmed)
+  );
+}
+
 interface ProvisioningRun {
   runId: string;
   teamName: string;
@@ -165,6 +179,12 @@ interface ProvisioningRun {
   stdoutLogLineBuf: string;
   /** Carry buffer for stderr line splitting (CLI output). */
   stderrLogLineBuf: string;
+  /** Raw stdout parser carry that has not been newline-delimited yet. */
+  stdoutParserCarry: string;
+  /** Whether the current stdout parser carry is a complete JSON fragment. */
+  stdoutParserCarryIsCompleteJson: boolean;
+  /** Whether the current stdout parser carry looks like Claude stream-json structure. */
+  stdoutParserCarryLooksLikeClaudeJson: boolean;
   /** ISO timestamp when the last CLI line was recorded. */
   claudeLogsUpdatedAt?: string;
   processKilled: boolean;
@@ -1076,18 +1096,27 @@ function buildCliExitError(code: number | null, stdoutText: string, stderrText: 
 }
 
 interface CachedProbeResult {
+  cacheKey: string;
   claudePath: string;
   authSource: ProvisioningAuthSource;
   warning?: string;
   cachedAtMs: number;
 }
 
-let cachedProbeResult: CachedProbeResult | null = null;
-let probeInFlight: Promise<{
+type ProbeResult = {
   claudePath: string;
   authSource: ProvisioningAuthSource;
   warning?: string;
-} | null> | null = null;
+};
+
+type AuthWarningSource = 'probe' | 'stdout' | 'stderr' | 'assistant' | 'pre-complete';
+
+const cachedProbeResults = new Map<string, CachedProbeResult>();
+const probeInFlightByKey = new Map<string, Promise<ProbeResult | null>>();
+
+function createProbeCacheKey(cwd: string): string {
+  return `${path.resolve(cwd)}::${getClaudeBasePath()}`;
+}
 
 function isTransientProbeWarning(warning: string): boolean {
   const lower = warning.toLowerCase();
@@ -1106,7 +1135,8 @@ export class TeamProvisioningService {
   private static readonly RECENT_CROSS_TEAM_DELIVERY_TTL_MS = 10 * 60 * 1000;
 
   private readonly runs = new Map<string, ProvisioningRun>();
-  private readonly activeByTeam = new Map<string, string>();
+  private readonly provisioningRunByTeam = new Map<string, string>();
+  private readonly aliveRunByTeam = new Map<string, string>();
   private readonly teamOpLocks = new Map<string, Promise<void>>();
   private readonly leadInboxRelayInFlight = new Map<string, Promise<number>>();
   private readonly relayedLeadInboxMessageIds = new Map<string, Set<string>>();
@@ -1166,7 +1196,7 @@ export class TeamProvisioningService {
     teamName: string,
     query?: { offset?: number; limit?: number }
   ): { lines: string[]; total: number; hasMore: boolean; updatedAt?: string } {
-    const runId = this.activeByTeam.get(teamName);
+    const runId = this.getTrackedRunId(teamName);
     if (!runId) {
       return { lines: [], total: 0, hasMore: false };
     }
@@ -1208,6 +1238,18 @@ export class TeamProvisioningService {
       hasMore: oldestInclusive > 0,
       updatedAt: run.claudeLogsUpdatedAt,
     };
+  }
+
+  private getProvisioningRunId(teamName: string): string | null {
+    return this.provisioningRunByTeam.get(teamName) ?? null;
+  }
+
+  private getAliveRunId(teamName: string): string | null {
+    return this.aliveRunByTeam.get(teamName) ?? null;
+  }
+
+  private getTrackedRunId(teamName: string): string | null {
+    return this.getProvisioningRunId(teamName) ?? this.getAliveRunId(teamName);
   }
 
   private appendCliLogs(run: ProvisioningRun, stream: 'stdout' | 'stderr', text: string): void {
@@ -1722,31 +1764,78 @@ export class TeamProvisioningService {
     return [...(this.liveLeadProcessMessages.get(teamName) ?? [])];
   }
 
-  getLeadActivityState(teamName: string): 'active' | 'idle' | 'offline' {
-    const runId = this.activeByTeam.get(teamName);
-    if (!runId) return 'offline';
+  getLeadActivityState(teamName: string): {
+    state: 'active' | 'idle' | 'offline';
+    runId: string | null;
+  } {
+    const runId = this.getTrackedRunId(teamName);
+    if (!runId) return { state: 'offline', runId: null };
     const run = this.runs.get(runId);
-    if (!run || run.processKilled || run.cancelRequested) return 'offline';
-    return run.leadActivityState;
+    if (!run || run.processKilled || run.cancelRequested) return { state: 'offline', runId: null };
+    return { state: run.leadActivityState, runId };
   }
 
-  getLeadContextUsage(teamName: string): LeadContextUsage | null {
-    const runId = this.activeByTeam.get(teamName);
-    if (!runId) return null;
+  getLeadContextUsage(teamName: string): { usage: LeadContextUsage | null; runId: string | null } {
+    const runId = this.getTrackedRunId(teamName);
+    if (!runId) return { usage: null, runId: null };
     const run = this.runs.get(runId);
-    if (!run?.leadContextUsage || run.processKilled || run.cancelRequested) return null;
+    if (!run?.leadContextUsage || run.processKilled || run.cancelRequested) {
+      return { usage: null, runId: null };
+    }
     const { currentTokens, contextWindow } = run.leadContextUsage;
     const percentRaw = contextWindow > 0 ? Math.round((currentTokens / contextWindow) * 100) : 0;
     const percent = Math.max(0, Math.min(100, percentRaw));
-    return { currentTokens, contextWindow, percent, updatedAt: new Date().toISOString() };
+    return {
+      usage: { currentTokens, contextWindow, percent, updatedAt: new Date().toISOString() },
+      runId,
+    };
+  }
+
+  private isCurrentTrackedRun(run: ProvisioningRun): boolean {
+    return this.getTrackedRunId(run.teamName) === run.runId;
+  }
+
+  private getRunTrackedCwd(run: ProvisioningRun | null | undefined): string | null {
+    const requestCwd = typeof run?.request?.cwd === 'string' ? run.request.cwd.trim() : '';
+    if (requestCwd) return path.resolve(requestCwd);
+
+    const spawnCwd = typeof run?.spawnContext?.cwd === 'string' ? run.spawnContext.cwd.trim() : '';
+    if (spawnCwd) return path.resolve(spawnCwd);
+
+    return null;
+  }
+
+  private getPreCompleteCliErrorText(run: ProvisioningRun): string {
+    const parts: string[] = [];
+    const stderrText = run.stderrBuffer.trim();
+    if (stderrText) {
+      parts.push(stderrText);
+    }
+
+    // Re-check only the parser-owned stdout carry that never became a newline-delimited message.
+    // If it is complete JSON or clearly looks like Claude stream-json structure, ignore it here.
+    // Otherwise treat it as trailing plaintext CLI output that should still participate in the
+    // final auth/API failure guard.
+    const trailingStdout = run.stdoutParserCarry.trim();
+    if (
+      trailingStdout &&
+      !run.stdoutParserCarryIsCompleteJson &&
+      !run.stdoutParserCarryLooksLikeClaudeJson
+    ) {
+      parts.push(trailingStdout);
+    }
+
+    return parts.join('\n').trim();
   }
 
   private setLeadActivity(run: ProvisioningRun, state: 'active' | 'idle' | 'offline'): void {
     if (run.leadActivityState === state) return;
     run.leadActivityState = state;
+    if (!this.isCurrentTrackedRun(run)) return;
     this.teamChangeEmitter?.({
       type: 'lead-activity',
       teamName: run.teamName,
+      runId: run.runId,
       detail: state,
     });
   }
@@ -1767,9 +1856,11 @@ export class TeamProvisioningService {
       error,
       updatedAt: nowIso(),
     });
+    if (!this.isCurrentTrackedRun(run)) return;
     this.teamChangeEmitter?.({
       type: 'member-spawn',
       teamName: run.teamName,
+      runId: run.runId,
       detail: memberName,
     });
   }
@@ -1778,16 +1869,19 @@ export class TeamProvisioningService {
    * Get current member spawn statuses for a team.
    * Returns a map of memberName → MemberSpawnStatusEntry.
    */
-  getMemberSpawnStatuses(teamName: string): Record<string, MemberSpawnStatusEntry> {
-    const runId = this.activeByTeam.get(teamName);
-    if (!runId) return {};
+  getMemberSpawnStatuses(teamName: string): {
+    statuses: Record<string, MemberSpawnStatusEntry>;
+    runId: string | null;
+  } {
+    const runId = this.getTrackedRunId(teamName);
+    if (!runId) return { statuses: {}, runId: null };
     const run = this.runs.get(runId);
-    if (!run) return {};
+    if (!run) return { statuses: {}, runId: null };
     const result: Record<string, MemberSpawnStatusEntry> = {};
     for (const [name, entry] of run.memberSpawnStatuses) {
       result[name] = { status: entry.status, error: entry.error, updatedAt: entry.updatedAt };
     }
-    return result;
+    return { statuses: result, runId };
   }
 
   private static readonly CONTEXT_EMIT_THROTTLE_MS = 2000;
@@ -1795,6 +1889,7 @@ export class TeamProvisioningService {
 
   private emitLeadContextUsage(run: ProvisioningRun): void {
     if (!run.leadContextUsage || !run.provisioningComplete) return;
+    if (!this.isCurrentTrackedRun(run)) return;
     const now = Date.now();
     if (
       now - run.leadContextUsage.lastEmittedAt <
@@ -1815,15 +1910,16 @@ export class TeamProvisioningService {
     this.teamChangeEmitter?.({
       type: 'lead-context',
       teamName: run.teamName,
+      runId: run.runId,
       detail: JSON.stringify(payload),
     });
   }
 
   async warmup(): Promise<void> {
     try {
-      if (cachedProbeResult && Date.now() - cachedProbeResult.cachedAtMs < PROBE_CACHE_TTL_MS)
-        return;
-      const result = await this.getCachedOrProbeResult(process.cwd());
+      const cwd = process.cwd();
+      if (this.getFreshCachedProbeResult(cwd)) return;
+      const result = await this.getCachedOrProbeResult(cwd);
       if (!result) return;
       logger.info('CLI warmup completed');
     } catch (error) {
@@ -1835,23 +1931,20 @@ export class TeamProvisioningService {
     cwd?: string,
     opts?: { forceFresh?: boolean }
   ): Promise<TeamProvisioningPrepareResult> {
-    // Always validate cwd even when cache is available
     const targetCwdForValidation = cwd?.trim() || process.cwd();
-    if (targetCwdForValidation && path.isAbsolute(targetCwdForValidation)) {
-      await ensureCwdExists(targetCwdForValidation);
-    }
+    await this.validatePrepareCwd(targetCwdForValidation);
 
     // Allow callers (e.g. scheduler warm-up) to bypass the 36h probe cache
     if (opts?.forceFresh) {
-      cachedProbeResult = null;
+      this.clearProbeCache(targetCwdForValidation);
     }
 
-    const cached = this.getFreshCachedProbeResult();
+    const cached = this.getFreshCachedProbeResult(targetCwdForValidation);
     if (cached) {
       const { warning, authSource } = cached;
       const warnings: string[] = [];
       if (warning) warnings.push(warning);
-      const isAuthFailure = warning ? this.isAuthFailureWarning(warning) : false;
+      const isAuthFailure = warning ? this.isAuthFailureWarning(warning, 'probe') : false;
       const ready = !warning || authSource !== 'none' || !isAuthFailure;
       return {
         ready,
@@ -1868,7 +1961,6 @@ export class TeamProvisioningService {
     if (!path.isAbsolute(targetCwd)) {
       throw new Error('cwd must be an absolute path');
     }
-    await ensureCwdExists(targetCwd);
 
     const warnings: string[] = [];
 
@@ -1885,7 +1977,7 @@ export class TeamProvisioningService {
     }
 
     if (probeResult.warning) {
-      const isAuthFailure = this.isAuthFailureWarning(probeResult.warning);
+      const isAuthFailure = this.isAuthFailureWarning(probeResult.warning, 'probe');
       if (authSource === 'none' && isAuthFailure) {
         // No auth source + preflight indicates auth failure — block to avoid a confusing hang later.
         return {
@@ -1908,20 +2000,43 @@ export class TeamProvisioningService {
     };
   }
 
-  private getFreshCachedProbeResult(): CachedProbeResult | null {
-    if (!cachedProbeResult) return null;
-    const ageMs = Date.now() - cachedProbeResult.cachedAtMs;
+  private getFreshCachedProbeResult(cwd: string): CachedProbeResult | null {
+    const cacheKey = createProbeCacheKey(cwd);
+    const cached = cachedProbeResults.get(cacheKey);
+    if (!cached) return null;
+    const ageMs = Date.now() - cached.cachedAtMs;
     if (ageMs >= PROBE_CACHE_TTL_MS) {
-      cachedProbeResult = null;
+      cachedProbeResults.delete(cacheKey);
       return null;
     }
-    return cachedProbeResult;
+    return cached;
   }
 
-  private async getCachedOrProbeResult(
-    cwd: string
-  ): Promise<{ claudePath: string; authSource: ProvisioningAuthSource; warning?: string } | null> {
-    const cached = this.getFreshCachedProbeResult();
+  private clearProbeCache(cwd: string): void {
+    cachedProbeResults.delete(createProbeCacheKey(cwd));
+  }
+
+  private async validatePrepareCwd(cwd: string): Promise<void> {
+    if (!path.isAbsolute(cwd)) {
+      throw new Error('cwd must be an absolute path');
+    }
+
+    try {
+      const stat = await fs.promises.stat(cwd);
+      if (!stat.isDirectory()) {
+        throw new Error('cwd must be a directory');
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return;
+      }
+      throw error;
+    }
+  }
+
+  private async getCachedOrProbeResult(cwd: string): Promise<ProbeResult | null> {
+    const cacheKey = createProbeCacheKey(cwd);
+    const cached = this.getFreshCachedProbeResult(cwd);
     if (cached) {
       return {
         claudePath: cached.claudePath,
@@ -1930,11 +2045,12 @@ export class TeamProvisioningService {
       };
     }
 
-    if (probeInFlight) {
-      return await probeInFlight;
+    const existingProbe = probeInFlightByKey.get(cacheKey);
+    if (existingProbe) {
+      return await existingProbe;
     }
 
-    probeInFlight = (async () => {
+    const probePromise = (async () => {
       const claudePath = await ClaudeBinaryResolver.resolve();
       if (!claudePath) return null;
 
@@ -1948,36 +2064,57 @@ export class TeamProvisioningService {
 
       const shouldCache =
         !probe.warning ||
-        (!this.isAuthFailureWarning(probe.warning) && !isTransientProbeWarning(probe.warning));
+        (!this.isAuthFailureWarning(probe.warning, 'probe') &&
+          !isTransientProbeWarning(probe.warning));
 
       if (shouldCache) {
-        cachedProbeResult = { ...result, cachedAtMs: Date.now() };
+        cachedProbeResults.set(cacheKey, { cacheKey, ...result, cachedAtMs: Date.now() });
       } else {
         // Don't pin auth failures / transient failures in cache — user may fix and retry.
-        cachedProbeResult = null;
+        cachedProbeResults.delete(cacheKey);
       }
 
       return result;
     })();
+    probeInFlightByKey.set(cacheKey, probePromise);
 
     try {
-      return await probeInFlight;
+      return await probePromise;
     } finally {
-      probeInFlight = null;
+      probeInFlightByKey.delete(cacheKey);
     }
   }
 
-  private isAuthFailureWarning(text: string): boolean {
+  private isAuthFailureWarning(text: string, source: AuthWarningSource): boolean {
     const lower = text.toLowerCase();
-    const has401 = /(^|\D)401(\D|$)/.test(lower);
-    return (
+    const hasExplicitCliAuthSignal =
       lower.includes('not authenticated') ||
       lower.includes('not logged in') ||
       lower.includes('please run /login') ||
       lower.includes('missing api key') ||
       lower.includes('invalid api key') ||
-      lower.includes('unauthorized') ||
-      has401
+      lower.includes('authentication failed') ||
+      lower.includes('run `claude auth login`') ||
+      lower.includes('claude auth login');
+
+    if (hasExplicitCliAuthSignal) {
+      return true;
+    }
+
+    if (source === 'assistant' || source === 'stdout') {
+      return false;
+    }
+
+    const hasAuthStatus401 =
+      /api error:\s*401\b/i.test(text) ||
+      /\b401 unauthorized\b/i.test(lower) ||
+      (/(^|\D)401(\D|$)/.test(lower) &&
+        (lower.includes('auth') || lower.includes('api') || lower.includes('login')));
+
+    return (
+      hasAuthStatus401 ||
+      (lower.includes('unauthorized') &&
+        (lower.includes('api') || lower.includes('auth') || lower.includes('login')))
     );
   }
 
@@ -2048,9 +2185,13 @@ export class TeamProvisioningService {
    * On first detection: kills process, waits, and respawns automatically.
    * On second detection (after retry): fails fast with a clear error.
    */
-  private handleAuthFailureInOutput(run: ProvisioningRun, text: string, source: string): void {
+  private handleAuthFailureInOutput(
+    run: ProvisioningRun,
+    text: string,
+    source: AuthWarningSource
+  ): void {
     if (run.provisioningComplete || run.processKilled || run.authRetryInProgress) return;
-    if (!this.isAuthFailureWarning(text)) return;
+    if (!this.isAuthFailureWarning(text, source)) return;
 
     if (!run.authFailureRetried) {
       logger.warn(
@@ -2231,6 +2372,20 @@ export class TeamProvisioningService {
       stdoutLineBuf += text;
       const lines = stdoutLineBuf.split('\n');
       stdoutLineBuf = lines.pop() ?? '';
+      run.stdoutParserCarry = stdoutLineBuf;
+      const trimmedCarry = stdoutLineBuf.trim();
+      if (!trimmedCarry) {
+        run.stdoutParserCarryIsCompleteJson = false;
+        run.stdoutParserCarryLooksLikeClaudeJson = false;
+      } else {
+        try {
+          JSON.parse(trimmedCarry);
+          run.stdoutParserCarryIsCompleteJson = true;
+        } catch {
+          run.stdoutParserCarryIsCompleteJson = false;
+        }
+        run.stdoutParserCarryLooksLikeClaudeJson = looksLikeClaudeStdoutJsonFragment(trimmedCarry);
+      }
       for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;
@@ -2240,7 +2395,7 @@ export class TeamProvisioningService {
         } catch {
           // Not valid JSON — check for auth failure in raw text output
           this.handleAuthFailureInOutput(run, trimmed, 'stdout');
-          if (this.hasApiError(trimmed) && !this.isAuthFailureWarning(trimmed)) {
+          if (this.hasApiError(trimmed) && !this.isAuthFailureWarning(trimmed, 'stdout')) {
             this.failProvisioningWithApiError(run, trimmed);
           }
         }
@@ -2269,7 +2424,7 @@ export class TeamProvisioningService {
 
       // Detect auth failure early instead of waiting for 5-minute timeout
       this.handleAuthFailureInOutput(run, text, 'stderr');
-      if (this.hasApiError(text) && !this.isAuthFailureWarning(text)) {
+      if (this.hasApiError(text) && !this.isAuthFailureWarning(text, 'stderr')) {
         this.failProvisioningWithApiError(run, text);
       }
 
@@ -2294,13 +2449,14 @@ export class TeamProvisioningService {
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamCreateResponse> {
-    if (this.activeByTeam.has(request.teamName)) {
-      throw new Error('Provisioning already running');
+    const existingProvisioningRunId = this.getProvisioningRunId(request.teamName);
+    if (existingProvisioningRunId) {
+      return { runId: existingProvisioningRunId };
     }
 
     // Set immediately to prevent TOCTOU (defense in depth alongside withTeamLock)
     const pendingKey = `pending-${randomUUID()}`;
-    this.activeByTeam.set(request.teamName, pendingKey);
+    this.provisioningRunByTeam.set(request.teamName, pendingKey);
 
     try {
       const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
@@ -2331,6 +2487,9 @@ export class TeamProvisioningService {
         lastClaudeLogStream: null,
         stdoutLogLineBuf: '',
         stderrLogLineBuf: '',
+        stdoutParserCarry: '',
+        stdoutParserCarryIsCompleteJson: false,
+        stdoutParserCarryLooksLikeClaudeJson: false,
         claudeLogsUpdatedAt: undefined,
         processKilled: false,
         finalizingByTimeout: false,
@@ -2379,7 +2538,7 @@ export class TeamProvisioningService {
       };
 
       this.runs.set(runId, run);
-      this.activeByTeam.set(request.teamName, runId);
+      this.provisioningRunByTeam.set(request.teamName, runId);
       run.onProgress(run.progress);
 
       const prompt = buildProvisioningPrompt(request);
@@ -2390,7 +2549,7 @@ export class TeamProvisioningService {
         mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(request.cwd);
       } catch (error) {
         this.runs.delete(runId);
-        this.activeByTeam.delete(request.teamName);
+        this.provisioningRunByTeam.delete(request.teamName);
         throw error;
       }
       const spawnArgs = [
@@ -2423,7 +2582,7 @@ export class TeamProvisioningService {
         });
       } catch (error) {
         this.runs.delete(runId);
-        this.activeByTeam.delete(request.teamName);
+        this.provisioningRunByTeam.delete(request.teamName);
         throw error;
       }
 
@@ -2500,8 +2659,8 @@ export class TeamProvisioningService {
       return { runId };
     } catch (error) {
       // Ensure the per-team lock doesn't get stuck on failures.
-      if (this.activeByTeam.get(request.teamName) === pendingKey) {
-        this.activeByTeam.delete(request.teamName);
+      if (this.provisioningRunByTeam.get(request.teamName) === pendingKey) {
+        this.provisioningRunByTeam.delete(request.teamName);
       }
       throw error;
     }
@@ -2520,13 +2679,14 @@ export class TeamProvisioningService {
     request: TeamLaunchRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamLaunchResponse> {
-    if (this.activeByTeam.has(request.teamName)) {
-      throw new Error('Team is already running');
+    const existingProvisioningRunId = this.getProvisioningRunId(request.teamName);
+    if (existingProvisioningRunId) {
+      return { runId: existingProvisioningRunId };
     }
 
     // Set immediately to prevent TOCTOU (defense in depth alongside withTeamLock)
     const pendingKey = `pending-${randomUUID()}`;
-    this.activeByTeam.set(request.teamName, pendingKey);
+    this.provisioningRunByTeam.set(request.teamName, pendingKey);
 
     try {
       // Verify config.json exists — team must already be provisioned
@@ -2537,6 +2697,41 @@ export class TeamProvisioningService {
       });
       if (!configRaw) {
         throw new Error(`Team "${request.teamName}" not found — config.json does not exist`);
+      }
+      let configProjectPath: string | null = null;
+      try {
+        const parsedConfig = JSON.parse(configRaw) as { projectPath?: unknown };
+        configProjectPath =
+          typeof parsedConfig.projectPath === 'string' && parsedConfig.projectPath.trim().length > 0
+            ? path.resolve(parsedConfig.projectPath.trim())
+            : null;
+      } catch {
+        configProjectPath = null;
+      }
+
+      const existingAliveRunId = this.getAliveRunId(request.teamName);
+      if (existingAliveRunId) {
+        const existingRun = this.runs.get(existingAliveRunId);
+        const requestedCwd = path.resolve(request.cwd);
+        const existingRunCwd = this.getRunTrackedCwd(existingRun) ?? configProjectPath;
+        if (existingRun?.child && !existingRun.processKilled && !existingRun.cancelRequested) {
+          if (!existingRunCwd) {
+            this.provisioningRunByTeam.delete(request.teamName);
+            throw new Error(
+              `Team "${request.teamName}" is already running, but its cwd could not be determined. ` +
+                'Stop it before launching again.'
+            );
+          }
+          if (existingRunCwd && existingRunCwd !== requestedCwd) {
+            this.provisioningRunByTeam.delete(request.teamName);
+            throw new Error(
+              `Team "${request.teamName}" is already running in "${existingRunCwd}". ` +
+                `Stop it before launching with cwd "${request.cwd}".`
+            );
+          }
+          this.provisioningRunByTeam.delete(request.teamName);
+          return { runId: existingAliveRunId };
+        }
       }
 
       const {
@@ -2656,6 +2851,9 @@ export class TeamProvisioningService {
         lastClaudeLogStream: null,
         stdoutLogLineBuf: '',
         stderrLogLineBuf: '',
+        stdoutParserCarry: '',
+        stdoutParserCarryIsCompleteJson: false,
+        stdoutParserCarryLooksLikeClaudeJson: false,
         claudeLogsUpdatedAt: undefined,
         processKilled: false,
         finalizingByTimeout: false,
@@ -2710,7 +2908,7 @@ export class TeamProvisioningService {
       };
 
       this.runs.set(runId, run);
-      this.activeByTeam.set(request.teamName, runId);
+      this.provisioningRunByTeam.set(request.teamName, runId);
       run.onProgress(run.progress);
 
       // Read existing tasks to include in teammate prompts for work resumption
@@ -2737,7 +2935,7 @@ export class TeamProvisioningService {
         mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(request.cwd);
       } catch (error) {
         this.runs.delete(runId);
-        this.activeByTeam.delete(request.teamName);
+        this.provisioningRunByTeam.delete(request.teamName);
         await this.restorePrelaunchConfig(request.teamName);
         throw error;
       }
@@ -2788,7 +2986,7 @@ export class TeamProvisioningService {
         });
       } catch (error) {
         this.runs.delete(runId);
-        this.activeByTeam.delete(request.teamName);
+        this.provisioningRunByTeam.delete(request.teamName);
         await this.restorePrelaunchConfig(request.teamName);
         throw error;
       }
@@ -2866,8 +3064,8 @@ export class TeamProvisioningService {
       return { runId };
     } catch (error) {
       // Clean up pending key if failure occurred before runId was set
-      if (this.activeByTeam.get(request.teamName) === pendingKey) {
-        this.activeByTeam.delete(request.teamName);
+      if (this.provisioningRunByTeam.get(request.teamName) === pendingKey) {
+        this.provisioningRunByTeam.delete(request.teamName);
       }
       throw error;
     }
@@ -2908,7 +3106,7 @@ export class TeamProvisioningService {
     message: string,
     attachments?: { data: string; mimeType: string }[]
   ): Promise<void> {
-    const runId = this.activeByTeam.get(teamName);
+    const runId = this.getAliveRunId(teamName);
     if (!runId) {
       throw new Error(`No active process for team "${teamName}"`);
     }
@@ -2962,7 +3160,7 @@ export class TeamProvisioningService {
     userText: string,
     userSummary?: string
   ): Promise<void> {
-    const runId = this.activeByTeam.get(teamName);
+    const runId = this.getAliveRunId(teamName);
     if (!runId) {
       throw new Error(`No active process for team "${teamName}"`);
     }
@@ -3012,7 +3210,7 @@ export class TeamProvisioningService {
     }
 
     const work = (async (): Promise<number> => {
-      const runId = this.activeByTeam.get(teamName);
+      const runId = this.getAliveRunId(teamName);
       if (!runId) return 0;
       const run = this.runs.get(runId);
       if (!run?.child || run.processKilled || run.cancelRequested) return 0;
@@ -3153,7 +3351,7 @@ export class TeamProvisioningService {
     }
 
     const work = (async (): Promise<number> => {
-      const runId = this.activeByTeam.get(teamName);
+      const runId = this.getAliveRunId(teamName);
       if (!runId) return 0;
       const run = this.runs.get(runId);
       if (!run?.child || run.processKilled || run.cancelRequested) return 0;
@@ -3469,14 +3667,14 @@ export class TeamProvisioningService {
    * Check if a team has an active provisioning run (started but not yet finished).
    */
   hasProvisioningRun(teamName: string): boolean {
-    return this.activeByTeam.has(teamName);
+    return this.provisioningRunByTeam.has(teamName);
   }
 
   /**
    * Check if a team has a live process.
    */
   isTeamAlive(teamName: string): boolean {
-    const runId = this.activeByTeam.get(teamName);
+    const runId = this.getAliveRunId(teamName);
     if (!runId) return false;
     const run = this.runs.get(runId);
     return run?.child != null && !run.processKilled && !run.cancelRequested;
@@ -3486,7 +3684,7 @@ export class TeamProvisioningService {
    * Get list of teams with active processes.
    */
   getAliveTeams(): string[] {
-    return Array.from(this.activeByTeam.keys()).filter((name) => this.isTeamAlive(name));
+    return Array.from(this.aliveRunByTeam.keys()).filter((name) => this.isTeamAlive(name));
   }
 
   private languageChangeInFlight: Promise<void> = Promise.resolve();
@@ -3635,7 +3833,7 @@ export class TeamProvisioningService {
    * Called from the inbox change handler.
    */
   markMemberOnlineFromInbox(teamName: string, memberName: string): void {
-    const runId = this.activeByTeam.get(teamName);
+    const runId = this.getTrackedRunId(teamName);
     if (!runId) return;
     const run = this.runs.get(runId);
     if (!run) return;
@@ -3765,6 +3963,7 @@ export class TeamProvisioningService {
             this.teamChangeEmitter?.({
               type: 'lead-message',
               teamName: run.teamName,
+              runId: run.runId,
               detail: 'cross-team-send',
             });
           })
@@ -3829,7 +4028,7 @@ export class TeamProvisioningService {
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void {
     // Enrich with leadSessionId if missing — needed for session boundary separators
     if (!message.leadSessionId) {
-      const runId = this.activeByTeam.get(teamName);
+      const runId = this.getTrackedRunId(teamName);
       if (runId) {
         const run = this.runs.get(runId);
         if (run?.detectedSessionId) {
@@ -3860,7 +4059,7 @@ export class TeamProvisioningService {
     teamName: string,
     toTeam: string
   ): { conversationId: string; replyToConversationId: string } | null {
-    const runId = this.activeByTeam.get(teamName);
+    const runId = this.getAliveRunId(teamName);
     if (!runId) return null;
     const run = this.runs.get(runId);
     const hints = run?.activeCrossTeamReplyHints ?? [];
@@ -3927,6 +4126,7 @@ export class TeamProvisioningService {
       this.teamChangeEmitter?.({
         type: 'lead-message',
         teamName: run.teamName,
+        runId: run.runId,
         detail: 'lead-text',
       });
     }
@@ -3936,13 +4136,14 @@ export class TeamProvisioningService {
    * Stop the running process for a team. No-op if team is not running.
    */
   stopTeam(teamName: string): void {
-    const runId = this.activeByTeam.get(teamName);
+    const runId = this.getTrackedRunId(teamName);
     if (!runId) {
       return;
     }
     const run = this.runs.get(runId);
     if (!run) {
-      this.activeByTeam.delete(teamName);
+      this.provisioningRunByTeam.delete(teamName);
+      this.aliveRunByTeam.delete(teamName);
       return;
     }
     if (run.processKilled || run.cancelRequested) {
@@ -3997,7 +4198,7 @@ export class TeamProvisioningService {
         // Auth failures sometimes show up as assistant text (e.g. "401", "Please run /login")
         // rather than stderr or a result.subtype=error. Detect early to avoid false "ready".
         this.handleAuthFailureInOutput(run, text, 'assistant');
-        if (this.hasApiError(text) && !this.isAuthFailureWarning(text)) {
+        if (this.hasApiError(text) && !this.isAuthFailureWarning(text, 'assistant')) {
           this.failProvisioningWithApiError(run, text);
           return;
         }
@@ -4731,7 +4932,7 @@ export class TeamProvisioningService {
     allow: boolean,
     message?: string
   ): Promise<void> {
-    const currentRunId = this.activeByTeam.get(teamName);
+    const currentRunId = this.getAliveRunId(teamName);
     if (!currentRunId) throw new Error(`No active process for team "${teamName}"`);
     const run = this.runs.get(currentRunId);
     if (!run) throw new Error(`Run not found for team "${teamName}"`);
@@ -4813,24 +5014,19 @@ export class TeamProvisioningService {
     )
       return;
 
-    // Prevent false "ready" when auth failure was printed as assistant text or logs
-    // but the filesystem monitor observed files on disk.
-    const preCompleteText = [
-      buildCombinedLogs(run.stdoutBuffer, run.stderrBuffer),
-      run.provisioningOutputParts.length > 0 ? run.provisioningOutputParts.join('\n') : '',
-    ]
-      .filter(Boolean)
-      .join('\n')
-      .trim();
+    // Prevent false "ready" when auth failure was printed in CLI output but the filesystem monitor
+    // already observed files on disk. We only re-check stderr plus a trailing non-JSON stdout
+    // fragment here to avoid late false positives from assistant/result stream-json payloads.
+    const preCompleteText = this.getPreCompleteCliErrorText(run);
     if (
       preCompleteText &&
       this.hasApiError(preCompleteText) &&
-      !this.isAuthFailureWarning(preCompleteText)
+      !this.isAuthFailureWarning(preCompleteText, 'pre-complete')
     ) {
       this.failProvisioningWithApiError(run, preCompleteText);
       return;
     }
-    if (preCompleteText && this.isAuthFailureWarning(preCompleteText)) {
+    if (preCompleteText && this.isAuthFailureWarning(preCompleteText, 'pre-complete')) {
       this.handleAuthFailureInOutput(run, preCompleteText, 'pre-complete');
       return;
     }
@@ -4853,10 +5049,6 @@ export class TeamProvisioningService {
         run.request.color
       );
       await this.cleanupPrelaunchBackup(run.teamName);
-
-      // Defense in depth: if the CLI (or a stale config) produced auto-suffixed members (alice-2),
-      // clean them up so they don't persist and reappear in the UI.
-      await this.cleanupCliAutoSuffixedMembers(run.teamName);
 
       // Best-effort: detect CLI-suffixed member names (alice-2, bob-2) that indicate
       // a stale config.json was present during launch (double-launch race).
@@ -4890,6 +5082,8 @@ export class TeamProvisioningService {
         cliLogsTail: extractCliLogsFromRun(run),
       });
       run.onProgress(progress);
+      this.provisioningRunByTeam.delete(run.teamName);
+      this.aliveRunByTeam.set(run.teamName, run.runId);
       logger.info(`[${run.teamName}] Launch complete. Process alive for subsequent tasks.`);
 
       // Pick up any direct messages that arrived before/while reconnecting.
@@ -4979,7 +5173,8 @@ export class TeamProvisioningService {
       cliLogsTail: extractCliLogsFromRun(run),
     });
     run.onProgress(progress);
-    // NOTE: do NOT remove from activeByTeam — process stays alive
+    this.provisioningRunByTeam.delete(run.teamName);
+    this.aliveRunByTeam.set(run.teamName, run.runId);
     logger.info(`[${run.teamName}] Provisioning complete. Process alive for subsequent tasks.`);
 
     // Pick up any direct messages that arrived during provisioning.
@@ -5009,7 +5204,12 @@ export class TeamProvisioningService {
       run.child.stdout?.removeAllListeners('data');
       run.child.stderr?.removeAllListeners('data');
     }
-    this.activeByTeam.delete(run.teamName);
+    if (this.provisioningRunByTeam.get(run.teamName) === run.runId) {
+      this.provisioningRunByTeam.delete(run.teamName);
+    }
+    if (this.aliveRunByTeam.get(run.teamName) === run.runId) {
+      this.aliveRunByTeam.delete(run.teamName);
+    }
     this.leadInboxRelayInFlight.delete(run.teamName);
     this.relayedLeadInboxMessageIds.delete(run.teamName);
     this.pendingCrossTeamFirstReplies.delete(run.teamName);
