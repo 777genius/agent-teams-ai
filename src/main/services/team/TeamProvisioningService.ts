@@ -616,15 +616,14 @@ function buildTaskStatusProtocol(teamName: string): string {
    Do NOT comment on trivial coordination messages. Only comment when the information is valuable context for the task.
 9. When sending a message about a specific task, include its short display label like #<displayId> in your SendMessage summary field for traceability.
 10. In ALL human-facing or teammate-facing message text, when you mention a task reference, ALWAYS write it with a leading # (for example: #abcd1234, not abcd1234 or "task abcd1234").
-11. In ALL human-facing or teammate-facing message text, when you mention a teammate, ALWAYS write their name with a leading @ (for example: @alice, not alice). When you mention another team, also use @ (for example: @signal-ops, not signal-ops).
-12. Review workflow clarity (IMPORTANT):
+11. Review workflow clarity (IMPORTANT):
    - The work task (e.g. #1) is the thing that must end up APPROVED after review.
    - If you are reviewing work for task #X, run review_approve/review_request_changes on #X (the work task).
    - Do NOT approve a separate "review task" (e.g. #2 created just to ask for a review) — that will put the wrong task into APPROVED.
    - Typical flow:
      a) Owner finishes work on #X -> task_complete #X
      b) Reviewer accepts -> review_approve #X
-13. CLARIFICATION PROTOCOL (CRITICAL — MANDATORY):
+12. CLARIFICATION PROTOCOL (CRITICAL — MANDATORY):
    When you are blocked and need information to continue a task, you MUST do ALL steps below — skipping the board update or comment breaks traceability:
    a) STEP 1 — FIRST, set the clarification flag with MCP tool task_set_clarification:
       { teamName: "${teamName}", taskId: "<taskId>", value: "lead" }
@@ -636,10 +635,10 @@ function buildTaskStatusProtocol(teamName: string): string {
       If the lead replies via SendMessage instead, clear the flag yourself once you have the answer:
       { teamName: "${teamName}", taskId: "<taskId>", value: "clear" }
    e) Do NOT set clarification to "user" yourself — only the team lead escalates to the user.
-14. DEPENDENCY AWARENESS:
+13. DEPENDENCY AWARENESS:
     When your task has blockedBy dependencies, check if they are completed before starting.
     When you complete a task that blocks others, mention this in your completion message so blocked teammates can proceed.
-15. TASK QUEUE DISCIPLINE:
+14. TASK QUEUE DISCIPLINE:
     - Use task_briefing as a compact queue view of your assigned tasks.
     - task_briefing may include full description/comments only for in_progress tasks; needsFix/pending/review/completed entries may be minimal on purpose.
     - Finish existing in_progress tasks first.
@@ -835,7 +834,7 @@ Communication protocol (CRITICAL — you are running headless, no one sees your 
 - Do NOT spam other teams, and do NOT use cross-team messaging for trivial FYIs that do not require action, coordination, or domain knowledge.
 
 Message formatting:
-- When mentioning teammates by name in messages and text output, always use @ prefix (e.g. @alice, @bob) for UI highlighting. Do NOT use @ in tool parameters (recipient, owner, etc.) — those require plain names.
+- When mentioning teammates by name in messages and text output, always use @ prefix (e.g. @alice, @bob) for UI highlighting. When mentioning another team, also use @ (e.g. @signal-ops). Do NOT use @ in tool parameters (recipient, owner, etc.) — those require plain names.
 ${agentBlockPolicy}
 
 ${membersFooter}`;

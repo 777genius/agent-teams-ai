@@ -24,6 +24,8 @@ interface FileSectionDiffProps {
   autoViewed: boolean;
   isViewed: boolean;
   onSelectionChange?: (info: EditorSelectionInfo | null) => void;
+  globalHunkOffset?: number;
+  totalReviewHunks?: number;
 }
 
 export const FileSectionDiff = ({
@@ -40,6 +42,8 @@ export const FileSectionDiff = ({
   autoViewed,
   isViewed,
   onSelectionChange,
+  globalHunkOffset = 0,
+  totalReviewHunks,
 }: FileSectionDiffProps): React.ReactElement => {
   const localEditorViewRef = useRef<EditorView | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -148,6 +152,8 @@ export const FileSectionDiff = ({
               ? (info) => onSelectionChange(info ? { ...info, filePath: file.filePath } : null)
               : undefined
           }
+          globalHunkOffset={globalHunkOffset}
+          totalReviewHunks={totalReviewHunks}
         />
       </DiffErrorBoundary>
       <div ref={sentinelRef} className="h-1 shrink-0" />

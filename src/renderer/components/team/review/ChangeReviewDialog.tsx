@@ -10,10 +10,10 @@ import { useViewedFiles } from '@renderer/hooks/useViewedFiles';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { getFileHunkCount, REVIEW_INSTANT_APPLY } from '@renderer/store/slices/changeReviewSlice';
-import { type TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import { buildSelectionAction } from '@renderer/utils/buildSelectionAction';
 import { buildSelectionInfo, SELECTION_DEBOUNCE_MS } from '@renderer/utils/codemirrorSelectionInfo';
 import { sortItemsAsTree } from '@renderer/utils/fileTreeBuilder';
+import { type TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import { ChevronDown, Clock, X } from 'lucide-react';
 
 import { acceptAllChunks, computeChunkIndexAtPos, rejectAllChunks } from './CodeMirrorDiffUtils';
@@ -34,11 +34,11 @@ import type {
 } from '@shared/types';
 import type { EditorSelectionAction, EditorSelectionInfo } from '@shared/types/editor';
 
-type RecentHunkUndoAction = {
+interface RecentHunkUndoAction {
   filePath: string;
   originalIndex: number;
   at: number;
-};
+}
 
 interface ChangeReviewDialogProps {
   open: boolean;
@@ -648,6 +648,16 @@ export const ChangeReviewDialog = ({
       getFileHunkCount(filePath, fallbackSnippetsLength, fileChunkCounts)
   );
 
+  const reviewHunkOrder = useMemo(() => {
+    const offsets: Record<string, number> = {};
+    let total = 0;
+    for (const file of sortedFiles) {
+      offsets[file.filePath] = total;
+      total += getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
+    }
+    return { offsets, total };
+  }, [sortedFiles, fileChunkCounts]);
+
   const toggleCollapsedFile = useCallback((filePath: string) => {
     setCollapsedFiles((prev) => {
       const next = new Set(prev);
@@ -1234,6 +1244,8 @@ export const ChangeReviewDialog = ({
                 memberName={memberName}
                 fetchFileContent={fetchFileContent}
                 onSelectionChange={onEditorAction ? handleSelectionChange : undefined}
+                globalHunkOffsets={reviewHunkOrder.offsets}
+                totalReviewHunks={reviewHunkOrder.total}
               />
               {selectionInfo && onEditorAction && (
                 <EditorSelectionMenu

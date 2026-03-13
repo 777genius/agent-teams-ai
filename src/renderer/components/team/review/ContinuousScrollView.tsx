@@ -60,6 +60,8 @@ interface ContinuousScrollViewProps {
     filePath: string
   ) => Promise<void>;
   onSelectionChange?: (info: EditorSelectionInfo | null) => void;
+  globalHunkOffsets?: Record<string, number>;
+  totalReviewHunks?: number;
 }
 
 export const ContinuousScrollView = ({
@@ -95,6 +97,8 @@ export const ContinuousScrollView = ({
   memberName,
   fetchFileContent,
   onSelectionChange,
+  globalHunkOffsets,
+  totalReviewHunks,
 }: ContinuousScrollViewProps): React.ReactElement => {
   const setFileChunkCount = useStore((s) => s.setFileChunkCount);
   const [localCollapsedFiles, setLocalCollapsedFiles] = useState<Set<string>>(() => new Set());
@@ -268,6 +272,8 @@ export const ContinuousScrollView = ({
                   autoViewed={autoViewed}
                   isViewed={isViewed}
                   onSelectionChange={onSelectionChange}
+                  globalHunkOffset={globalHunkOffsets?.[filePath] ?? 0}
+                  totalReviewHunks={totalReviewHunks}
                 />
               ) : (
                 <FileSectionPlaceholder fileName={file.relativePath} />
