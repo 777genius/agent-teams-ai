@@ -22,6 +22,7 @@ type StreamType = 'stdout' | 'stderr';
 
 interface ClaudeLogsSectionProps {
   teamName: string;
+  position?: 'sidebar' | 'inline';
 }
 
 function isRecent(updatedAt: string | undefined): boolean {
@@ -367,7 +368,10 @@ function filterStreamJsonText(
   return out.join('\n');
 }
 
-export const ClaudeLogsSection = ({ teamName }: ClaudeLogsSectionProps): React.JSX.Element => {
+export const ClaudeLogsSection = ({
+  teamName,
+  position = 'inline',
+}: ClaudeLogsSectionProps): React.JSX.Element => {
   const isAlive = useStore((s) => s.selectedTeamData?.isAlive ?? false);
   const [loadedCount, setLoadedCount] = useState(PAGE_SIZE);
   const [data, setData] = useState<TeamClaudeLogsResponse>({ lines: [], total: 0, hasMore: false });
@@ -390,6 +394,7 @@ export const ClaudeLogsSection = ({ teamName }: ClaudeLogsSectionProps): React.J
     kinds: new Set(DEFAULT_CLAUDE_LOGS_FILTER.kinds),
   }));
   const [filterOpen, setFilterOpen] = useState(false);
+  const isSidebar = position === 'sidebar';
   const isNearBottom = useCallback(
     (scrollTop: number, scrollHeight: number, clientHeight: number) => {
       return scrollHeight - scrollTop - clientHeight <= LOAD_MORE_THRESHOLD_PX;
@@ -571,10 +576,15 @@ export const ClaudeLogsSection = ({ teamName }: ClaudeLogsSectionProps): React.J
     <CollapsibleTeamSection
       sectionId="claude-logs"
       title="Claude logs"
-      icon={<Terminal size={14} />}
+      icon={
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] shadow-sm">
+          <Terminal size={12} />
+        </span>
+      }
       badge={badge}
+      headerContentClassName={isSidebar ? 'flex-wrap items-center gap-y-1 py-1' : undefined}
       headerExtra={
-        <>
+        <span className={cn('flex min-w-0 items-center gap-2', isSidebar && 'basis-full pt-0.5')}>
           {online ? (
             <span
               className="pointer-events-none relative inline-flex size-2 shrink-0"
@@ -585,7 +595,7 @@ export const ClaudeLogsSection = ({ teamName }: ClaudeLogsSectionProps): React.J
             </span>
           ) : null}
           {lastLogPreview ? <LogPreviewInline preview={lastLogPreview} /> : null}
-        </>
+        </span>
       }
       defaultOpen={false}
       // Prevent scroll anchoring from "pulling" the parent container when logs update.

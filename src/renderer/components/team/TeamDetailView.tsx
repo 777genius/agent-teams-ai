@@ -964,9 +964,10 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           >
             <div className="flex size-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface)]">
               <div className="shrink-0 overflow-hidden px-3">
-                <ClaudeLogsSection teamName={teamName} />
+                <ClaudeLogsSection teamName={teamName} position="sidebar" />
               </div>
-              <div className="min-h-0 flex-1 border-t border-[var(--color-border)]">
+              <div className="bg-[var(--color-text-muted)]/35 mx-3 h-px shrink-0" />
+              <div className="min-h-0 flex-1">
                 <MessagesPanel
                   teamName={teamName}
                   position="sidebar"
