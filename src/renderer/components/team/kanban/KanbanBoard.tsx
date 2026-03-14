@@ -104,8 +104,8 @@ type KanbanViewMode = 'grid' | 'columns';
 const COLUMNS: { id: KanbanColumnId; title: string }[] = [
   { id: 'todo', title: 'TODO' },
   { id: 'in_progress', title: 'IN PROGRESS' },
-  { id: 'done', title: 'DONE' },
   { id: 'review', title: 'REVIEW' },
+  { id: 'done', title: 'DONE' },
   { id: 'approved', title: 'APPROVED' },
 ];
 

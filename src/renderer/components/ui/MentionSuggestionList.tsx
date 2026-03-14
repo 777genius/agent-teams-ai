@@ -188,6 +188,9 @@ export const MentionSuggestionList = ({
             >
               <HighlightedName name={isTask ? `#${s.name}` : s.name} query={query} />
             </span>
+            {!isTask && !isFileOrFolder && s.subtitle ? (
+              <span className="truncate text-[var(--color-text-muted)]">{s.subtitle}</span>
+            ) : null}
             {isTask && s.ownerName ? (
               <MemberBadge name={s.ownerName} color={s.ownerColor} size="xs" disableHoverCard />
             ) : null}
@@ -213,12 +216,12 @@ export const MentionSuggestionList = ({
             title={s.isOnline ? 'Online' : 'Offline'}
           />
         ) : null}
-        {s.subtitle && !isTask ? (
+        {s.subtitle && isFileOrFolder ? (
           <span
             className="truncate text-[var(--color-text-muted)]"
-            style={isFileOrFolder ? { direction: 'rtl', textAlign: 'left' } : undefined}
+            style={{ direction: 'rtl', textAlign: 'left' }}
           >
-            {isFileOrFolder ? '\u200E' + s.subtitle : s.subtitle}
+            {'\u200E' + s.subtitle}
           </span>
         ) : null}
       </li>

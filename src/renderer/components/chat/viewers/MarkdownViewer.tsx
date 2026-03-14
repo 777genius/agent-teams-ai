@@ -812,6 +812,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
             components={components}
             urlTransform={allowCustomProtocols}
             allowElement={isAllowedElement}
+            unwrapDisallowed
           >
             {content}
           </ReactMarkdown>

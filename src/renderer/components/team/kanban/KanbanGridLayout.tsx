@@ -23,7 +23,7 @@ const DEFAULT_ITEM_HEIGHT = Math.max(
 );
 const DEFAULT_MIN_HEIGHT = 10;
 const DEFAULT_MIN_WIDTH = 3;
-const GRID_SCOPE_KEY = 'kanban-grid-layout:global';
+const GRID_SCOPE_KEY = 'kanban-grid-layout:global:v2';
 const SKELETON_HIDE_DELAY_MS = 500;
 const RESIZE_HANDLES: ResizeHandleAxis[] = ['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne'];
 const WidthAwareGridLayout = WidthProvider(ReactGridLayout);
@@ -54,16 +54,19 @@ interface LoadingKanbanGridLayoutProps {
   readonly visibleItems: PersistedGridLayoutItem[];
 }
 
+const ITEMS_PER_FIRST_ROW = 3;
+const SECOND_ROW_ITEM_WIDTH = 6;
+
 function buildDefaultItems(itemIds: string[]): PersistedGridLayoutItem[] {
-  return itemIds.map((id, index) => ({
-    id,
-    x: (index % 3) * DEFAULT_ITEM_WIDTH,
-    y: Math.floor(index / 3) * DEFAULT_ITEM_HEIGHT,
-    w: DEFAULT_ITEM_WIDTH,
-    h: DEFAULT_ITEM_HEIGHT,
-    minW: DEFAULT_MIN_WIDTH,
-    minH: DEFAULT_MIN_HEIGHT,
-  }));
+  return itemIds.map((id, index) => {
+    const isSecondRow = index >= ITEMS_PER_FIRST_ROW;
+    const w = isSecondRow ? SECOND_ROW_ITEM_WIDTH : DEFAULT_ITEM_WIDTH;
+    const x = isSecondRow
+      ? (index - ITEMS_PER_FIRST_ROW) * SECOND_ROW_ITEM_WIDTH
+      : index * DEFAULT_ITEM_WIDTH;
+    const y = isSecondRow ? DEFAULT_ITEM_HEIGHT : 0;
+    return { id, x, y, w, h: DEFAULT_ITEM_HEIGHT, minW: DEFAULT_MIN_WIDTH, minH: DEFAULT_MIN_HEIGHT };
+  });
 }
 
 function toReactGridLayoutItem(item: PersistedGridLayoutItem): LayoutItem {

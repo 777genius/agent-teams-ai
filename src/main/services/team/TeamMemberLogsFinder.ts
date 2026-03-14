@@ -259,6 +259,7 @@ export class TeamMemberLogsFinder {
       if (s) results.push(s);
     }
     const totalFiles = candidates.length;
+    const step2Count = results.length; // count before step 3 (owner fallback)
     const tScan = performance.now();
 
     const normalizedOwner =
@@ -350,13 +351,11 @@ export class TeamMemberLogsFinder {
     const tTotal = performance.now();
 
     console.log(
-      `[perf] findLogsForTask(${taskId}@${teamName}) ` +
-        `total=${(tTotal - t0).toFixed(0)}ms | ` +
-        `discovery=${(tDiscovery - t0).toFixed(0)}ms | ` +
-        `lead=${(tLead - tDiscovery).toFixed(0)}ms | ` +
-        `scan=${(tScan - tLead).toFixed(0)}ms (${totalFiles} files, ${mentionHits} hits) | ` +
-        `owner=${(tOwner - tScan).toFixed(0)}ms | ` +
-        `sessions=${sessionIds.length} | results=${sorted.length}`
+      `[findLogsForTask] task=${taskId}@${teamName} | ` +
+        `step2=${step2Count} (scan ${mentionHits}/${totalFiles} files) | ` +
+        `step3=${sorted.length - step2Count} (owner=${normalizedOwner ?? 'none'}, includeOwner=${includeOwnerSessions}) | ` +
+        `total=${sorted.length} | ` +
+        `${(tTotal - t0).toFixed(0)}ms`
     );
 
     return sorted;
@@ -974,6 +973,12 @@ export class TeamMemberLogsFinder {
             if (!block || typeof block !== 'object') continue;
             const b = block as Record<string, unknown>;
             if (b.type !== 'tool_use') continue;
+
+            // Skip read-only task tools — they reference taskId but don't indicate
+            // that this session actually WORKED on the task. Agents commonly call
+            // task_get to check dependencies from other tasks, producing false matches.
+            const toolName = typeof b.name === 'string' ? b.name : '';
+            if (toolName === 'task_get' || toolName === 'mcp__agent-teams__task_get') continue;
 
             const input = b.input as Record<string, unknown> | undefined;
             if (!input) continue;

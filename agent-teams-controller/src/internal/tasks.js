@@ -65,7 +65,8 @@ function buildAssignmentMessage(context, task, options = {}) {
 function buildCommentNotificationMessage(context, task, comment) {
   const taskLabel = `#${task.displayId || task.id}`;
   return [
-    `Comment on task ${taskLabel} "${task.subject}":`,
+    `**Comment on task ${taskLabel}**`,
+    `> ${task.subject}`,
     ``,
     comment.text,
     ``,
