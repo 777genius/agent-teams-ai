@@ -86,7 +86,15 @@ export const CollapsibleTeamSection = ({
         <button
           type="button"
           className={`absolute inset-0 z-0 cursor-pointer transition-colors ${isOpen ? 'rounded-t-md bg-[var(--color-section-bg-open)] hover:bg-[var(--color-section-hover-open)]' : 'rounded-md bg-[var(--color-section-bg)] hover:bg-[var(--color-section-hover)]'}`}
-          onClick={() => setOpen((prev) => !prev)}
+          onClick={() =>
+            setOpen((prev) => {
+              const next = !prev;
+              if (next && sectionRef.current) {
+                scrollAfterExpand(sectionRef.current);
+              }
+              return next;
+            })
+          }
           aria-label={isOpen ? 'Collapse section' : 'Expand section'}
         />
         <div
