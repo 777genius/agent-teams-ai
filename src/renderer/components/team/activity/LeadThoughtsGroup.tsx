@@ -1,7 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
-import { CopyButton } from '@renderer/components/common/CopyButton';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
@@ -18,17 +16,17 @@ import {
   areStringMapsEqual,
   areThoughtMessagesEquivalentForRender,
 } from '@renderer/utils/messageRenderEquality';
-import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
-import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { formatToolSummary, parseToolSummary } from '@shared/utils/toolSummary';
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
-import { ChevronDown, ChevronRight, ChevronUp, Reply } from 'lucide-react';
+import { cn } from '@renderer/lib/utils';
+import { ChevronDown, ChevronRight, ChevronUp, Maximize2 } from 'lucide-react';
 import {
   AnimatedHeightReveal,
   ENTRY_REVEAL_ANIMATION_MS,
   ENTRY_REVEAL_EASING,
 } from './AnimatedHeightReveal';
+import { ThoughtBodyContent } from './ThoughtBodyContent';
 
 import type { InboxMessage, ToolCallMeta } from '@shared/types';
 
@@ -146,6 +144,10 @@ interface LeadThoughtsGroupRowProps {
   onReply?: (message: InboxMessage) => void;
   /** Compact header mode for narrow message lists. */
   compactHeader?: boolean;
+  /** Callback to expand this item into a fullscreen dialog. */
+  onExpand?: (key: string) => void;
+  /** Stable key for expand identification. */
+  expandItemKey?: string;
 }
 
 function formatTime(timestamp: string): string {
@@ -154,7 +156,7 @@ function formatTime(timestamp: string): string {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function formatTimeWithSec(timestamp: string): string {
+export function formatTimeWithSec(timestamp: string): string {
   const d = new Date(timestamp);
   if (Number.isNaN(d.getTime())) return timestamp;
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -166,7 +168,7 @@ function isRecentTimestamp(timestamp: string): boolean {
   return Date.now() - t <= LIVE_WINDOW_MS;
 }
 
-const ToolSummaryTooltipContent = ({
+export const ToolSummaryTooltipContent = ({
   toolCalls,
   toolSummary,
 }: Readonly<{
@@ -282,15 +284,6 @@ const LeadThoughtItem = memo(
     const cleanupTimerRef = useRef<number | null>(null);
     const initialAnimationCompletedRef = useRef(!shouldAnimate);
     const [shouldAnimateOnMount] = useState(() => shouldAnimate);
-
-    const displayContent = useMemo(() => {
-      let text = thought.text.replace(/\n/g, '  \n');
-      text = linkifyTaskIdsInMarkdown(text, thought.taskRefs);
-      if ((memberColorMap && memberColorMap.size > 0) || teamNames.length > 0) {
-        text = linkifyAllMentionsInMarkdown(text, memberColorMap ?? new Map(), teamNames);
-      }
-      return text;
-    }, [thought.text, memberColorMap, teamNames]);
 
     const clearPendingAnimation = useCallback(() => {
       if (animationFrameRef.current !== null) {
@@ -419,88 +412,16 @@ const LeadThoughtItem = memo(
     return (
       <div ref={wrapperRef}>
         <div ref={contentRef}>
-          {showDivider && (
-            <div className="py-px text-center">
-              <span className="font-mono text-[9px]" style={{ color: CARD_ICON_MUTED }}>
-                {formatTimeWithSec(thought.timestamp)}
-              </span>
-            </div>
-          )}
-          <div className="group/thought relative flex text-[11px]">
-            <div
-              className="min-w-0 flex-1 [&>span>div>div>div]:py-2"
-              style={{ color: CARD_TEXT_LIGHT }}
-            >
-              <span
-                onClickCapture={
-                  onTaskIdClick
-                    ? (e) => {
-                        const link = (e.target as HTMLElement).closest<HTMLAnchorElement>(
-                          'a[href^="task://"]'
-                        );
-                        if (link) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const href = link.getAttribute('href');
-                          const parsedTaskLink = href ? parseTaskLinkHref(href) : null;
-                          if (parsedTaskLink?.taskId) onTaskIdClick(parsedTaskLink.taskId);
-                        }
-                      }
-                    : undefined
-                }
-              >
-                <MarkdownViewer
-                  content={displayContent}
-                  maxHeight="max-h-none"
-                  bare
-                  teamColorByName={teamColorByName}
-                  onTeamClick={onTeamClick}
-                />
-              </span>
-            </div>
-            <div className="absolute right-1 top-0.5 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/thought:opacity-100">
-              {onReply ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onReply(thought);
-                      }}
-                    >
-                      <Reply size={13} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Reply</TooltipContent>
-                </Tooltip>
-              ) : null}
-              <CopyButton text={thought.text} inline />
-            </div>
-          </div>
-          {thought.toolSummary && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className="mb-[7px] cursor-default pb-0.5 pl-3 pr-1 font-mono text-[9px]"
-                  style={{ color: CARD_ICON_MUTED }}
-                >
-                  🔧 {thought.toolSummary}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent
-                side="top"
-                align="start"
-                className="max-w-[420px] font-mono text-[11px]"
-              >
-                <ToolSummaryTooltipContent
-                  toolCalls={thought.toolCalls}
-                  toolSummary={thought.toolSummary}
-                />
-              </TooltipContent>
-            </Tooltip>
-          )}
+          <ThoughtBodyContent
+            thought={thought}
+            showDivider={showDivider}
+            onTaskIdClick={onTaskIdClick}
+            onReply={onReply}
+            memberColorMap={memberColorMap}
+            teamNames={teamNames}
+            teamColorByName={teamColorByName}
+            onTeamClick={onTeamClick}
+          />
         </div>
       </div>
     );
@@ -581,6 +502,8 @@ const LeadThoughtsGroupRowComponent = ({
   onTeamClick,
   onReply,
   compactHeader = false,
+  onExpand,
+  expandItemKey,
 }: LeadThoughtsGroupRowProps): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -887,11 +810,34 @@ const LeadThoughtsGroupRowComponent = ({
               </TooltipContent>
             </Tooltip>
           ) : null}
-          <span className="ml-auto shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-            {formatTime(oldest.timestamp) === formatTime(newest.timestamp)
-              ? formatTime(oldest.timestamp)
-              : `${formatTime(oldest.timestamp)}–${formatTime(newest.timestamp)}`}
-          </span>
+          <div className="relative ml-auto flex shrink-0 items-center gap-1.5">
+            <span
+              className={cn(
+                'text-[10px] transition-opacity',
+                onExpand && expandItemKey && 'group-hover:opacity-0'
+              )}
+              style={{ color: CARD_ICON_MUTED }}
+            >
+              {formatTime(oldest.timestamp) === formatTime(newest.timestamp)
+                ? formatTime(oldest.timestamp)
+                : `${formatTime(oldest.timestamp)}–${formatTime(newest.timestamp)}`}
+            </span>
+            {onExpand && expandItemKey && (
+              <button
+                type="button"
+                aria-label="Expand thoughts"
+                className="absolute inset-0 flex items-center justify-center rounded opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
+                style={{ color: CARD_ICON_MUTED }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onExpand(expandItemKey);
+                }}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <Maximize2 size={12} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Scrollable body — live thoughts follow bottom unless user scrolls up */}
@@ -988,5 +934,7 @@ export const LeadThoughtsGroupRow = memo(
     prev.onTeamClick === next.onTeamClick &&
     prev.onReply === next.onReply &&
     prev.compactHeader === next.compactHeader &&
+    prev.onExpand === next.onExpand &&
+    prev.expandItemKey === next.expandItemKey &&
     areThoughtGroupsEquivalent(prev.group, next.group)
 );

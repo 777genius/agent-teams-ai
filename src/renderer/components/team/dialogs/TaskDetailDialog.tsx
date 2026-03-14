@@ -566,24 +566,14 @@ export const TaskDetailDialog = ({
                 <span className="text-xs italic text-[var(--color-text-muted)]">Unassigned</span>
               )}
             </div>
-            {currentTask.reviewer ||
-            (currentTask.reviewState && currentTask.reviewState !== 'none') ? (
+            {currentTask.reviewer ? (
               <div className="flex items-center gap-1.5">
                 <Eye size={12} className="text-[var(--color-text-muted)]" />
-                {currentTask.reviewer ? (
-                  <MemberBadge
-                    name={currentTask.reviewer}
-                    color={colorMap.get(currentTask.reviewer)}
-                    size="sm"
-                  />
-                ) : null}
-                {currentTask.reviewState && currentTask.reviewState !== 'none' ? (
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${REVIEW_STATE_DISPLAY[currentTask.reviewState].bg} ${REVIEW_STATE_DISPLAY[currentTask.reviewState].text}`}
-                  >
-                    {REVIEW_STATE_DISPLAY[currentTask.reviewState].label}
-                  </span>
-                ) : null}
+                <MemberBadge
+                  name={currentTask.reviewer}
+                  color={colorMap.get(currentTask.reviewer)}
+                  size="sm"
+                />
               </div>
             ) : null}
             {currentTask.createdBy ? (

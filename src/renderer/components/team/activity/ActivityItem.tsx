@@ -24,6 +24,7 @@ import {
 } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
+import { cn } from '@renderer/lib/utils';
 import {
   areInboxMessagesEquivalentForRender,
   areStringArraysEqual,
@@ -41,7 +42,7 @@ import {
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
-import { AlertTriangle, ChevronRight, ListPlus, RefreshCw, Reply } from 'lucide-react';
+import { AlertTriangle, ChevronRight, ListPlus, Maximize2, RefreshCw, Reply } from 'lucide-react';
 
 import { ReplyQuoteBlock } from './ReplyQuoteBlock';
 
@@ -171,6 +172,10 @@ interface ActivityItemProps {
   onToggleCollapse?: (key: string) => void;
   /** Compact header mode for narrow message lists. */
   compactHeader?: boolean;
+  /** Callback to expand this item into a fullscreen dialog. */
+  onExpand?: (key: string) => void;
+  /** Stable key for expand identification. */
+  expandItemKey?: string;
 }
 
 function areMessagesEquivalentForActivityItem(prev: InboxMessage, next: InboxMessage): boolean {
@@ -352,6 +357,8 @@ export const ActivityItem = memo(
     collapseToggleKey,
     onToggleCollapse,
     compactHeader = false,
+    onExpand,
+    expandItemKey,
   }: ActivityItemProps): React.JSX.Element {
     const colors = getTeamColorSet(memberColor ?? message.color ?? '');
     const { isLight } = useTheme();
@@ -683,10 +690,31 @@ export const ActivityItem = memo(
           </span>
 
           {/* Timestamp */}
-          <div className="flex shrink-0 items-center gap-1.5">
-            <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
+          <div className="relative flex shrink-0 items-center gap-1.5">
+            <span
+              className={cn(
+                'text-[10px] transition-opacity',
+                onExpand && expandItemKey && 'group-hover:opacity-0'
+              )}
+              style={{ color: CARD_ICON_MUTED }}
+            >
               {timestamp}
             </span>
+            {onExpand && expandItemKey && (
+              <button
+                type="button"
+                aria-label="Expand message"
+                className="absolute inset-0 flex items-center justify-center rounded opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
+                style={{ color: CARD_ICON_MUTED }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onExpand(expandItemKey);
+                }}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <Maximize2 size={12} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -847,5 +875,7 @@ export const ActivityItem = memo(
     prev.collapseToggleKey === next.collapseToggleKey &&
     prev.onToggleCollapse === next.onToggleCollapse &&
     prev.compactHeader === next.compactHeader &&
+    prev.onExpand === next.onExpand &&
+    prev.expandItemKey === next.expandItemKey &&
     areMessagesEquivalentForActivityItem(prev.message, next.message)
 );

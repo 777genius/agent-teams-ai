@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import {
   areInboxMessagesEquivalentForRender,
   areStringArraysEqual,
@@ -8,6 +7,8 @@ import {
 } from '@renderer/utils/messageRenderEquality';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { Layers } from 'lucide-react';
+
+import { buildMessageContext, resolveMessageRenderProps } from './activityMessageContext';
 
 import { ActivityItem, isNoiseMessage } from './ActivityItem';
 import { AnimatedHeightReveal } from './AnimatedHeightReveal';
@@ -68,13 +69,13 @@ interface ActivityTimelineProps {
   teamColorByName?: ReadonlyMap<string, string>;
   /** Opens a team tab from cross-team badges or team:// links. */
   onTeamClick?: (teamName: string) => void;
+  /** Callback to expand a message/thought item into a fullscreen dialog. */
+  onExpandItem?: (key: string) => void;
 }
 
 const VIEWPORT_THRESHOLD = 0.15;
 const MESSAGES_PAGE_SIZE = 30;
 const COMPACT_MESSAGES_WIDTH_PX = 400;
-const EMPTY_MEMBER_COLOR_MAP = new Map<string, string>();
-const EMPTY_LOCAL_MEMBER_NAMES = new Set<string>();
 const EMPTY_TEAM_NAMES: string[] = [];
 const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
 const DEFAULT_COLLAPSE_MODE = 'default' as const;
@@ -135,6 +136,8 @@ const MessageRowWithObserver = ({
   teamNames,
   teamColorByName,
   onTeamClick,
+  onExpand,
+  expandItemKey,
 }: {
   message: InboxMessage;
   teamName: string;
@@ -161,6 +164,8 @@ const MessageRowWithObserver = ({
   teamNames?: string[];
   teamColorByName?: ReadonlyMap<string, string>;
   onTeamClick?: (teamName: string) => void;
+  onExpand?: (key: string) => void;
+  expandItemKey?: string;
 }): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
   const reportedRef = useRef(false);
@@ -218,6 +223,8 @@ const MessageRowWithObserver = ({
         teamNames={teamNames}
         teamColorByName={teamColorByName}
         onTeamClick={onTeamClick}
+        onExpand={onExpand}
+        expandItemKey={expandItemKey}
       />
     </AnimatedHeightReveal>
   );
@@ -250,6 +257,8 @@ const MemoizedMessageRowWithObserver = React.memo(
     areStringArraysEqual(prev.teamNames, next.teamNames) &&
     areStringMapsEqual(prev.teamColorByName, next.teamColorByName) &&
     prev.onTeamClick === next.onTeamClick &&
+    prev.onExpand === next.onExpand &&
+    prev.expandItemKey === next.expandItemKey &&
     areInboxMessagesEquivalentForRender(prev.message, next.message)
 );
 
@@ -275,6 +284,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   teamNames = EMPTY_TEAM_NAMES,
   teamColorByName = EMPTY_TEAM_COLOR_MAP,
   onTeamClick,
+  onExpandItem,
 }: ActivityTimelineProps): React.JSX.Element {
   const [visibleCount, setVisibleCount] = useState(MESSAGES_PAGE_SIZE);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -303,43 +313,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     return () => observer.disconnect();
   }, []);
 
-  const colorMap = useMemo(
-    () => (members ? buildMemberColorMap(members) : EMPTY_MEMBER_COLOR_MAP),
-    [members]
-  );
-  const localMemberNames = useMemo(
-    () =>
-      members ? new Set(members.map((member) => member.name.trim())) : EMPTY_LOCAL_MEMBER_NAMES,
-    [members]
-  );
-  const memberInfo = useMemo(() => {
-    const infoMap = new Map<string, { role?: string; color?: string }>();
-    if (!members) return infoMap;
-
-    for (const member of members) {
-      const info = {
-        role:
-          member.role ?? (member.agentType !== 'general-purpose' ? member.agentType : undefined),
-        color: colorMap.get(member.name),
-      };
-      infoMap.set(member.name, info);
-      if (member.agentType && member.agentType !== member.name) {
-        infoMap.set(member.agentType, info);
-      }
-    }
-
-    const leadMember = members.find(
-      (member) => member.agentType === 'team-lead' || member.role?.toLowerCase().includes('lead')
-    );
-    if (leadMember) {
-      const leadInfo = infoMap.get(leadMember.name);
-      if (leadInfo) {
-        infoMap.set('user', { role: undefined, color: colorMap.get('user') });
-      }
-    }
-
-    return infoMap;
-  }, [members, colorMap]);
+  const ctx = useMemo(() => buildMessageContext(members), [members]);
+  const { colorMap, localMemberNames, memberInfo } = ctx;
 
   const handleMemberNameClick = useCallback(
     (name: string) => {
@@ -541,6 +516,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
               teamNames={teamNames}
               teamColorByName={teamColorByName}
               onTeamClick={onTeamClick}
+              onExpand={compactHeader ? onExpandItem : undefined}
+              expandItemKey={compactHeader ? itemKey : undefined}
             />
           );
         })()}
@@ -609,6 +586,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
                 teamNames={teamNames}
                 teamColorByName={teamColorByName}
                 onTeamClick={onTeamClick}
+                onExpand={compactHeader ? onExpandItem : undefined}
+                expandItemKey={compactHeader ? itemKey : undefined}
               />
             </React.Fragment>
           );
@@ -627,10 +606,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
           );
         }
 
-        const info = memberInfo.get(message.from);
-        const recipientInfo = message.to ? memberInfo.get(message.to) : undefined;
-        const recipientColor =
-          recipientInfo?.color ?? (message.to ? colorMap.get(message.to) : undefined);
+        const renderProps = resolveMessageRenderProps(message, ctx);
         const messageKey = toMessageKey(message);
         const stableKey = messageKey;
         const collapseProps = getItemCollapseProps(stableKey, realIndex);
@@ -643,9 +619,9 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             <MemoizedMessageRowWithObserver
               message={message}
               teamName={teamName}
-              memberRole={info?.role}
-              memberColor={info?.color}
-              recipientColor={recipientColor}
+              memberRole={renderProps.memberRole}
+              memberColor={renderProps.memberColor}
+              recipientColor={renderProps.recipientColor}
               isUnread={isUnread}
               isNew={newItemKeys.has(messageKey)}
               zebraShade={zebraShadeSet.has(realIndex)}
@@ -666,6 +642,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
               teamNames={teamNames}
               teamColorByName={teamColorByName}
               onTeamClick={onTeamClick}
+              onExpand={compactHeader ? onExpandItem : undefined}
+              expandItemKey={compactHeader ? messageKey : undefined}
             />
           </React.Fragment>
         );

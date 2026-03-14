@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 
 import { ActivityTimeline } from '../activity/ActivityTimeline';
+import { getThoughtGroupKey, groupTimelineItems } from '../activity/LeadThoughtsGroup';
+import { MessageExpandDialog } from '../activity/MessageExpandDialog';
 import { CollapsibleTeamSection } from '../CollapsibleTeamSection';
 import { MessageComposer } from './MessageComposer';
 import { MessagesFilterPopover } from './MessagesFilterPopover';
@@ -30,6 +32,7 @@ import { StatusBlock } from './StatusBlock';
 
 import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { ActionMode } from './ActionModeSelector';
+import type { TimelineItem } from '../activity/LeadThoughtsGroup';
 import type { InboxMessage, ResolvedTeamMember, TaskRef, TeamTaskWithKanban } from '@shared/types';
 
 interface TimeWindow {
@@ -116,6 +119,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   const [messagesFilterOpen, setMessagesFilterOpen] = useState(false);
   const [messagesCollapsed, setMessagesCollapsed] = useState(true);
   const [sidebarSearchVisible, setSidebarSearchVisible] = useState(false);
+  const [expandedItemKey, setExpandedItemKey] = useState<string | null>(null);
 
   const filteredMessages = useMemo(() => {
     return filterTeamMessages(messages, {
@@ -124,6 +128,37 @@ export const MessagesPanel = memo(function MessagesPanel({
       searchQuery: messagesSearchQuery,
     });
   }, [messages, timeWindow, messagesFilter, messagesSearchQuery]);
+
+  // Resolve the expanded item from filtered messages
+  const expandedItem = useMemo<TimelineItem | null>(() => {
+    if (!expandedItemKey) return null;
+    if (!expandedItemKey.startsWith('thoughts-')) {
+      const msg = filteredMessages.find((m) => toMessageKey(m) === expandedItemKey);
+      return msg ? { type: 'message', message: msg } : null;
+    }
+    const allItems = groupTimelineItems(filteredMessages);
+    return (
+      allItems.find(
+        (item) =>
+          item.type === 'lead-thoughts' && getThoughtGroupKey(item.group) === expandedItemKey
+      ) ?? null
+    );
+  }, [expandedItemKey, filteredMessages]);
+
+  // Auto-clear stale expanded key
+  useEffect(() => {
+    if (expandedItemKey && expandedItem === null) {
+      setExpandedItemKey(null);
+    }
+  }, [expandedItemKey, expandedItem]);
+
+  const handleExpandItem = useCallback((key: string) => {
+    setExpandedItemKey(key);
+  }, []);
+
+  const handleExpandDialogChange = useCallback((open: boolean) => {
+    if (!open) setExpandedItemKey(null);
+  }, []);
 
   const { readSet, markRead, markAllRead } = useTeamMessagesRead(teamName);
   const { expandedSet, toggle: toggleExpandOverride } = useTeamMessagesExpanded(teamName);
@@ -321,6 +356,22 @@ export const MessagesPanel = memo(function MessagesPanel({
         onMessageVisible={handleMessageVisible}
         onRestartTeam={onRestartTeam}
         onTaskIdClick={onTaskIdClick}
+        onExpandItem={handleExpandItem}
+      />
+      <MessageExpandDialog
+        expandedItem={expandedItem}
+        open={expandedItemKey !== null}
+        onOpenChange={handleExpandDialogChange}
+        teamName={teamName}
+        members={members}
+        onCreateTaskFromMessage={onCreateTaskFromMessage}
+        onReplyToMessage={onReplyToMessage}
+        onMemberClick={onMemberClick}
+        onTaskIdClick={onTaskIdClick}
+        onRestartTeam={onRestartTeam}
+        teamNames={teamNames}
+        teamColorByName={teamColorByName}
+        onTeamClick={openTeamTab}
       />
     </>
   );
