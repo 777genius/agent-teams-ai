@@ -27,6 +27,7 @@ import {
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import type { SearchMatch } from '@renderer/store/types';
 import { REHYPE_PLUGINS, REHYPE_PLUGINS_NO_HIGHLIGHT } from '@renderer/utils/markdownPlugins';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
@@ -62,7 +63,16 @@ interface MarkdownViewerProps {
   bare?: boolean;
   /** Base directory for resolving relative URLs (images, links) via local-resource:// protocol */
   baseDir?: string;
+  /** Optional precomputed team color map to avoid subscribing to the full team list. */
+  teamColorByName?: ReadonlyMap<string, string>;
+  /** Optional team click handler to avoid subscribing to store in leaf renderers. */
+  onTeamClick?: (teamName: string) => void;
 }
+
+const EMPTY_TEAMS: Array<{ teamName?: string; displayName?: string; color?: string }> = [];
+const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
+const EMPTY_SEARCH_MATCHES: SearchMatch[] = [];
+const NOOP_TEAM_CLICK = (): void => undefined;
 
 // =============================================================================
 // Helpers
@@ -517,15 +527,16 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   copyable = false,
   bare = false,
   baseDir,
+  teamColorByName: providedTeamColorByName,
+  onTeamClick: providedOnTeamClick,
 }) => {
   const [showRaw, setShowRaw] = React.useState(false);
   const [rawLimit, setRawLimit] = React.useState(LARGE_PREVIEW_CHARS);
   const { isLight } = useTheme();
-  const teams = useStore((s) => s.teams);
+  const teams = useStore((s) => (providedTeamColorByName ? EMPTY_TEAMS : s.teams));
+  const openTeamTab = useStore((s) => (providedOnTeamClick ? NOOP_TEAM_CLICK : s.openTeamTab));
 
-  const openTeamTab = useStore((s) => s.openTeamTab);
-
-  const teamColorByName = React.useMemo(() => {
+  const fallbackTeamColorByName = React.useMemo(() => {
     const result = new Map<string, string>();
     for (const team of teams) {
       if (team.teamName) {
@@ -537,6 +548,9 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
     }
     return result;
   }, [teams]);
+  const teamColorByName =
+    providedTeamColorByName ?? fallbackTeamColorByName ?? EMPTY_TEAM_COLOR_MAP;
+  const onTeamClick = providedOnTeamClick ?? openTeamTab;
 
   const isTooLarge = content.length > MAX_MARKDOWN_CHARS;
   const disableHighlight = content.length > DISABLE_HIGHLIGHT_CHARS;
@@ -545,7 +559,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   const { searchQuery, searchMatches, currentSearchIndex } = useStore(
     useShallow((s) => ({
       searchQuery: itemId ? s.searchQuery : '',
-      searchMatches: itemId ? s.searchMatches : [],
+      searchMatches: itemId ? s.searchMatches : EMPTY_SEARCH_MATCHES,
       currentSearchIndex: itemId ? s.currentSearchIndex : -1,
     }))
   );
@@ -689,10 +703,10 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   // When search is active, create fresh each render (match counter is stateful and must start at 0)
   // useMemo would cache stale closures when parent re-renders without search deps changing
   const baseComponents = searchCtx
-    ? createViewerMarkdownComponents(searchCtx, isLight, teamColorByName, openTeamTab)
+    ? createViewerMarkdownComponents(searchCtx, isLight, teamColorByName, onTeamClick)
     : isLight
-      ? createViewerMarkdownComponents(null, true, teamColorByName, openTeamTab)
-      : createViewerMarkdownComponents(null, false, teamColorByName, openTeamTab);
+      ? createViewerMarkdownComponents(null, true, teamColorByName, onTeamClick)
+      : createViewerMarkdownComponents(null, false, teamColorByName, onTeamClick);
 
   // When baseDir is set (editor preview), override img to load local files via IPC
   const components = baseDir

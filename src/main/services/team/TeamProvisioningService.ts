@@ -442,7 +442,7 @@ After member_briefing succeeds:
 - Introduce yourself briefly (name and role) and confirm you are ready.
 - Then wait for task assignments.
 - When you later receive work or reconnect after a restart, use task_briefing as your compact queue view. Use task_get when you need the full task context before starting a pending/needsFix task or when the in_progress briefing details are not enough.
-- CRITICAL: If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on that same task, FIRST move it to in_progress with task_start, THEN do the work, and when finished move it to done with task_complete. Never skip this reopen -> work -> done cycle.
+- CRITICAL: If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on that same task, FIRST leave a short task comment saying what you are about to do, THEN move it to in_progress with task_start, THEN do the work, and when finished leave a short result comment and move it to done with task_complete. Never skip this comment -> reopen -> work -> comment -> done cycle.
 ${buildTeammateAgentBlockReminder()}
 ${actionModeProtocol}`;
 }
@@ -475,7 +475,7 @@ ${actionModeProtocol}
      - Before you start any needsFix or pending task, call task_get for that specific task.
      - If you are the one about to do the implementation/fixes and the owner is missing or someone else, run task_set_owner to yourself immediately before task_start.
      - Only then run task_start when you truly begin.
-     - If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on it, FIRST run task_start, then do the work, and when finished run task_complete again. Never skip this reopen -> work -> done cycle.
+     - If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on it, FIRST leave a short task comment saying what you are about to do, THEN run task_start, then do the work, and when finished leave a short result comment and run task_complete again. Never skip this comment -> reopen -> work -> comment -> done cycle.
      - If you have no tasks, wait for new assignments.`;
 }
 
@@ -515,7 +515,7 @@ ${actionModeProtocol}
      - Before you start any needsFix or pending task, call task_get for that specific task.
      - If you are the one about to do the implementation/fixes and the owner is missing or someone else, run task_set_owner to yourself immediately before task_start.
      - Only then run task_start when you truly begin.
-     - If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on it, FIRST run task_start, then do the work, and when finished run task_complete again. Never skip this reopen -> work -> done cycle.
+     - If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on it, FIRST leave a short task comment saying what you are about to do, THEN run task_start, then do the work, and when finished leave a short result comment and run task_complete again. Never skip this comment -> reopen -> work -> comment -> done cycle.
      - If you have no tasks, wait for new assignments.`;
 }
 
@@ -606,8 +606,9 @@ function buildTaskStatusProtocol(teamName: string): string {
    - Do NOT start multiple tasks at once unless the team lead explicitly directs parallel work.
 3. Use MCP tool task_complete BEFORE sending your final reply:
    { teamName: "${teamName}", taskId: "<taskId>" }
-   - If a new task comment means you must do more real work on that same task, FIRST run task_start again before doing the follow-up work.
-   - After that follow-up work is finished, run task_complete again before your reply.
+   - If a new task comment means you must do more real work on that same task, FIRST add a short task comment saying what you are going to do, THEN run task_start again before doing the follow-up work.
+   - After that follow-up work finishes, add a short task comment with the result, what changed, or what you verified.
+   - After that, run task_complete again before your reply.
    - Never do comment-driven implementation/fix work while the task is still shown as pending, review, completed, or approved.
 4. If you are asked to review and the task is accepted, move it to APPROVED (not DONE) with MCP tool review_approve:
    { teamName: "${teamName}", taskId: "<taskId>", note?: "<optional note>", notifyOwner: true }

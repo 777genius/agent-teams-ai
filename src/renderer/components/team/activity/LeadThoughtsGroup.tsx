@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { CopyButton } from '@renderer/components/common/CopyButton';
@@ -12,8 +12,12 @@ import {
   CARD_TEXT_LIGHT,
 } from '@renderer/constants/cssVariables';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { useStore } from '@renderer/store';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
+import {
+  areStringArraysEqual,
+  areStringMapsEqual,
+  areThoughtMessagesEquivalentForRender,
+} from '@renderer/utils/messageRenderEquality';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
 import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
@@ -25,9 +29,7 @@ import {
   ENTRY_REVEAL_ANIMATION_MS,
   ENTRY_REVEAL_EASING,
 } from './AnimatedHeightReveal';
-import { isManagedCollapseState } from './collapseState';
 
-import type { ActivityCollapseState } from './collapseState';
 import type { InboxMessage, ToolCallMeta } from '@shared/types';
 
 export interface LeadThoughtGroup {
@@ -116,14 +118,30 @@ interface LeadThoughtsGroupRowProps {
   onVisible?: (message: InboxMessage) => void;
   /** When false, the live indicator is always off (for historical thought groups). */
   canBeLive?: boolean;
+  /** Whether the owning team is currently alive. */
+  isTeamAlive?: boolean;
+  /** Current lead activity status for the owning team. */
+  leadActivity?: string;
+  /** Latest lead context timestamp for the owning team. */
+  leadContextUpdatedAt?: string;
   /** When true, apply a subtle lighter background for zebra-striped lists. */
   zebraShade?: boolean;
-  /** Explicit collapse state for timeline-controlled collapsed mode. */
-  collapseState?: ActivityCollapseState;
+  /** Collapsed-mode primitives stabilized by ActivityTimeline. */
+  collapseMode: 'default' | 'managed';
+  isCollapsed: boolean;
+  canToggleCollapse: boolean;
+  collapseToggleKey?: string;
+  onToggleCollapse?: (key: string) => void;
   /** Called when a task ID link (e.g. #10) is clicked in thought text. */
   onTaskIdClick?: (taskId: string) => void;
   /** Map of member name → color name for @mention badge rendering. */
   memberColorMap?: Map<string, string>;
+  /** Team names used for mention/team-link rendering. */
+  teamNames?: string[];
+  /** Team color mapping used by markdown viewers. */
+  teamColorByName?: ReadonlyMap<string, string>;
+  /** Opens a team tab from cross-team badges or team:// links. */
+  onTeamClick?: (teamName: string) => void;
   /** Called when user clicks the reply button on a thought. */
   onReply?: (message: InboxMessage) => void;
   /** Compact header mode for narrow message lists. */
@@ -212,258 +230,355 @@ interface LeadThoughtItemProps {
   shouldAnimate: boolean;
   onTaskIdClick?: (taskId: string) => void;
   memberColorMap?: Map<string, string>;
+  teamNames?: string[];
+  teamColorByName?: ReadonlyMap<string, string>;
+  onTeamClick?: (teamName: string) => void;
   onReply?: (message: InboxMessage) => void;
 }
 
-const LeadThoughtItem = ({
-  thought,
-  showDivider,
-  shouldAnimate,
-  onTaskIdClick,
-  memberColorMap,
-  onReply,
-}: LeadThoughtItemProps): JSX.Element => {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const previousHeightRef = useRef<number | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const cleanupTimerRef = useRef<number | null>(null);
-  const initialAnimationCompletedRef = useRef(!shouldAnimate);
-  const [shouldAnimateOnMount] = useState(() => shouldAnimate);
+function hasSelectionWithin(container: HTMLElement | null): boolean {
+  if (!container) return false;
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+    return false;
+  }
 
-  const teams = useStore((s) => s.teams);
-  const teamNames = useMemo(
-    () => teams.filter((t) => !t.deletedAt).map((t) => t.teamName),
-    [teams]
+  const anchorNode = selection.anchorNode;
+  const focusNode = selection.focusNode;
+  return (
+    (!!anchorNode && container.contains(anchorNode)) ||
+    (!!focusNode && container.contains(focusNode))
   );
+}
 
-  const displayContent = useMemo(() => {
-    let text = thought.text.replace(/\n/g, '  \n');
-    text = linkifyTaskIdsInMarkdown(text, thought.taskRefs);
-    if ((memberColorMap && memberColorMap.size > 0) || teamNames.length > 0) {
-      text = linkifyAllMentionsInMarkdown(text, memberColorMap ?? new Map(), teamNames);
+function areThoughtGroupsEquivalent(prev: LeadThoughtGroup, next: LeadThoughtGroup): boolean {
+  if (prev === next) return true;
+  if (getThoughtGroupKey(prev) !== getThoughtGroupKey(next)) return false;
+  if (prev.thoughts.length !== next.thoughts.length) return false;
+  for (let i = 0; i < prev.thoughts.length; i++) {
+    if (!areThoughtMessagesEquivalentForRender(prev.thoughts[i], next.thoughts[i])) {
+      return false;
     }
-    return text;
-  }, [thought.text, memberColorMap, teamNames]);
+  }
+  return true;
+}
 
-  const clearPendingAnimation = useCallback(() => {
-    if (animationFrameRef.current !== null) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-    if (cleanupTimerRef.current !== null) {
-      window.clearTimeout(cleanupTimerRef.current);
-      cleanupTimerRef.current = null;
-    }
-  }, []);
+const LeadThoughtItem = memo(
+  function LeadThoughtItem({
+    thought,
+    showDivider,
+    shouldAnimate,
+    onTaskIdClick,
+    memberColorMap,
+    teamNames = [],
+    teamColorByName,
+    onTeamClick,
+    onReply,
+  }: LeadThoughtItemProps): JSX.Element {
+    const wrapperRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const previousHeightRef = useRef<number | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
+    const cleanupTimerRef = useRef<number | null>(null);
+    const initialAnimationCompletedRef = useRef(!shouldAnimate);
+    const [shouldAnimateOnMount] = useState(() => shouldAnimate);
 
-  const resetWrapperStyles = useCallback(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    wrapper.style.height = 'auto';
-    wrapper.style.opacity = '1';
-    wrapper.style.overflow = 'visible';
-    wrapper.style.transition = '';
-    wrapper.style.willChange = '';
-  }, []);
-
-  useLayoutEffect(() => {
-    const wrapper = wrapperRef.current;
-    const content = contentRef.current;
-    if (!wrapper || !content) return;
-
-    const applyTransition = (targetHeight: number): void => {
-      wrapper.style.transition = [
-        `height ${THOUGHT_HEIGHT_ANIMATION_MS}ms ${ENTRY_REVEAL_EASING}`,
-        `opacity ${THOUGHT_HEIGHT_ANIMATION_MS}ms ease`,
-      ].join(', ');
-      wrapper.style.height = `${Math.max(targetHeight, 0)}px`;
-      wrapper.style.opacity = '1';
-    };
-
-    const scheduleTransition = (targetHeight: number): void => {
-      animationFrameRef.current = requestAnimationFrame(() => {
-        applyTransition(targetHeight);
-      });
-    };
-
-    const animateHeight = (
-      targetHeight: number,
-      startHeight: number,
-      startOpacity: number
-    ): void => {
-      initialAnimationCompletedRef.current = false;
-      clearPendingAnimation();
-      wrapper.style.transition = 'none';
-      wrapper.style.overflow = 'hidden';
-      wrapper.style.height = `${Math.max(startHeight, 0)}px`;
-      wrapper.style.opacity = `${startOpacity}`;
-      wrapper.style.willChange = 'height, opacity';
-      // Force layout reflow so the browser registers the starting values
-      const _reflow = wrapper.offsetHeight;
-      if (_reflow < -1) return; // unreachable — prevents unused-variable lint
-
-      animationFrameRef.current = requestAnimationFrame(() => {
-        scheduleTransition(targetHeight);
-      });
-
-      cleanupTimerRef.current = window.setTimeout(() => {
-        resetWrapperStyles();
-        initialAnimationCompletedRef.current = true;
-        cleanupTimerRef.current = null;
-      }, THOUGHT_HEIGHT_ANIMATION_MS + 40);
-    };
-
-    const syncHeight = (nextHeight: number, animateFromZero: boolean): void => {
-      const previousHeight = previousHeightRef.current;
-      previousHeightRef.current = nextHeight;
-
-      if (!shouldAnimateOnMount) {
-        initialAnimationCompletedRef.current = true;
-        resetWrapperStyles();
-        return;
+    const displayContent = useMemo(() => {
+      let text = thought.text.replace(/\n/g, '  \n');
+      text = linkifyTaskIdsInMarkdown(text, thought.taskRefs);
+      if ((memberColorMap && memberColorMap.size > 0) || teamNames.length > 0) {
+        text = linkifyAllMentionsInMarkdown(text, memberColorMap ?? new Map(), teamNames);
       }
+      return text;
+    }, [thought.text, memberColorMap, teamNames]);
 
-      if (previousHeight === null) {
-        if (nextHeight > 0 && animateFromZero) {
-          animateHeight(nextHeight, 0, 0);
-        } else {
+    const clearPendingAnimation = useCallback(() => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      if (cleanupTimerRef.current !== null) {
+        window.clearTimeout(cleanupTimerRef.current);
+        cleanupTimerRef.current = null;
+      }
+    }, []);
+
+    const resetWrapperStyles = useCallback(() => {
+      const wrapper = wrapperRef.current;
+      if (!wrapper) return;
+      wrapper.style.height = 'auto';
+      wrapper.style.opacity = '1';
+      wrapper.style.overflow = 'visible';
+      wrapper.style.transition = '';
+      wrapper.style.willChange = '';
+    }, []);
+
+    useLayoutEffect(() => {
+      const wrapper = wrapperRef.current;
+      const content = contentRef.current;
+      if (!wrapper || !content) return;
+
+      const applyTransition = (targetHeight: number): void => {
+        wrapper.style.transition = [
+          `height ${THOUGHT_HEIGHT_ANIMATION_MS}ms ${ENTRY_REVEAL_EASING}`,
+          `opacity ${THOUGHT_HEIGHT_ANIMATION_MS}ms ease`,
+        ].join(', ');
+        wrapper.style.height = `${Math.max(targetHeight, 0)}px`;
+        wrapper.style.opacity = '1';
+      };
+
+      const scheduleTransition = (targetHeight: number): void => {
+        animationFrameRef.current = requestAnimationFrame(() => {
+          applyTransition(targetHeight);
+        });
+      };
+
+      const animateHeight = (
+        targetHeight: number,
+        startHeight: number,
+        startOpacity: number
+      ): void => {
+        initialAnimationCompletedRef.current = false;
+        clearPendingAnimation();
+        wrapper.style.transition = 'none';
+        wrapper.style.overflow = 'hidden';
+        wrapper.style.height = `${Math.max(startHeight, 0)}px`;
+        wrapper.style.opacity = `${startOpacity}`;
+        wrapper.style.willChange = 'height, opacity';
+        // Force layout reflow so the browser registers the starting values
+        const _reflow = wrapper.offsetHeight;
+        if (_reflow < -1) return; // unreachable — prevents unused-variable lint
+
+        animationFrameRef.current = requestAnimationFrame(() => {
+          scheduleTransition(targetHeight);
+        });
+
+        cleanupTimerRef.current = window.setTimeout(() => {
+          resetWrapperStyles();
+          initialAnimationCompletedRef.current = true;
+          cleanupTimerRef.current = null;
+        }, THOUGHT_HEIGHT_ANIMATION_MS + 40);
+      };
+
+      const syncHeight = (nextHeight: number, animateFromZero: boolean): void => {
+        const previousHeight = previousHeightRef.current;
+        previousHeightRef.current = nextHeight;
+
+        if (!shouldAnimateOnMount) {
           initialAnimationCompletedRef.current = true;
           resetWrapperStyles();
+          return;
         }
-        return;
-      }
 
-      if (Math.abs(nextHeight - previousHeight) < 1) return;
+        if (previousHeight === null) {
+          if (nextHeight > 0 && animateFromZero) {
+            animateHeight(nextHeight, 0, 0);
+          } else {
+            initialAnimationCompletedRef.current = true;
+            resetWrapperStyles();
+          }
+          return;
+        }
 
-      // Only the first reveal should animate. Late content growth (for example when
-      // tool summary metadata appears after the text) should resize naturally.
-      if (initialAnimationCompletedRef.current) {
+        if (Math.abs(nextHeight - previousHeight) < 1) return;
+
+        // Only the first reveal should animate. Late content growth (for example when
+        // tool summary metadata appears after the text) should resize naturally.
+        if (initialAnimationCompletedRef.current) {
+          resetWrapperStyles();
+          return;
+        }
+
+        const renderedHeight = wrapper.getBoundingClientRect().height;
+        animateHeight(nextHeight, renderedHeight > 0 ? renderedHeight : previousHeight, 1);
+      };
+
+      syncHeight(content.getBoundingClientRect().height, true);
+
+      const observer = new ResizeObserver((entries) => {
+        const nextHeight = entries[0]?.contentRect.height ?? content.getBoundingClientRect().height;
+        syncHeight(nextHeight, false);
+      });
+      observer.observe(content);
+
+      return () => {
+        observer.disconnect();
+        clearPendingAnimation();
+        initialAnimationCompletedRef.current = true;
         resetWrapperStyles();
-        return;
-      }
+      };
+    }, [clearPendingAnimation, resetWrapperStyles, shouldAnimateOnMount]);
 
-      const renderedHeight = wrapper.getBoundingClientRect().height;
-      animateHeight(nextHeight, renderedHeight > 0 ? renderedHeight : previousHeight, 1);
-    };
+    useEffect(
+      () => () => {
+        clearPendingAnimation();
+      },
+      [clearPendingAnimation]
+    );
 
-    syncHeight(content.getBoundingClientRect().height, true);
+    return (
+      <div ref={wrapperRef}>
+        <div ref={contentRef}>
+          {showDivider && (
+            <div className="py-px text-center">
+              <span className="font-mono text-[9px]" style={{ color: CARD_ICON_MUTED }}>
+                {formatTimeWithSec(thought.timestamp)}
+              </span>
+            </div>
+          )}
+          <div className="group/thought relative flex text-[11px]">
+            <div
+              className="min-w-0 flex-1 [&>span>div>div>div]:py-2"
+              style={{ color: CARD_TEXT_LIGHT }}
+            >
+              <span
+                onClickCapture={
+                  onTaskIdClick
+                    ? (e) => {
+                        const link = (e.target as HTMLElement).closest<HTMLAnchorElement>(
+                          'a[href^="task://"]'
+                        );
+                        if (link) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const href = link.getAttribute('href');
+                          const parsedTaskLink = href ? parseTaskLinkHref(href) : null;
+                          if (parsedTaskLink?.taskId) onTaskIdClick(parsedTaskLink.taskId);
+                        }
+                      }
+                    : undefined
+                }
+              >
+                <MarkdownViewer
+                  content={displayContent}
+                  maxHeight="max-h-none"
+                  bare
+                  teamColorByName={teamColorByName}
+                  onTeamClick={onTeamClick}
+                />
+              </span>
+            </div>
+            <div className="absolute right-1 top-0.5 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/thought:opacity-100">
+              {onReply ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onReply(thought);
+                      }}
+                    >
+                      <Reply size={13} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Reply</TooltipContent>
+                </Tooltip>
+              ) : null}
+              <CopyButton text={thought.text} inline />
+            </div>
+          </div>
+          {thought.toolSummary && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className="mb-[7px] cursor-default pb-0.5 pl-3 pr-1 font-mono text-[9px]"
+                  style={{ color: CARD_ICON_MUTED }}
+                >
+                  🔧 {thought.toolSummary}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                align="start"
+                className="max-w-[420px] font-mono text-[11px]"
+              >
+                <ToolSummaryTooltipContent
+                  toolCalls={thought.toolCalls}
+                  toolSummary={thought.toolSummary}
+                />
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </div>
+    );
+  },
+  (prev, next) =>
+    prev.showDivider === next.showDivider &&
+    prev.shouldAnimate === next.shouldAnimate &&
+    prev.onTaskIdClick === next.onTaskIdClick &&
+    prev.memberColorMap === next.memberColorMap &&
+    areStringArraysEqual(prev.teamNames, next.teamNames) &&
+    areStringMapsEqual(prev.teamColorByName, next.teamColorByName) &&
+    prev.onTeamClick === next.onTeamClick &&
+    prev.onReply === next.onReply &&
+    areThoughtMessagesEquivalentForRender(prev.thought, next.thought)
+);
 
-    const observer = new ResizeObserver((entries) => {
-      const nextHeight = entries[0]?.contentRect.height ?? content.getBoundingClientRect().height;
-      syncHeight(nextHeight, false);
-    });
-    observer.observe(content);
-
-    return () => {
-      observer.disconnect();
-      clearPendingAnimation();
-      initialAnimationCompletedRef.current = true;
-      resetWrapperStyles();
-    };
-  }, [clearPendingAnimation, resetWrapperStyles, shouldAnimateOnMount]);
-
-  useEffect(
-    () => () => {
-      clearPendingAnimation();
-    },
-    [clearPendingAnimation]
+const LiveThoughtStatusBadge = ({
+  canBeLive,
+  isTeamAlive,
+  leadActivity,
+  leadContextUpdatedAt,
+  newestTimestamp,
+}: {
+  canBeLive?: boolean;
+  isTeamAlive?: boolean;
+  leadActivity?: string;
+  leadContextUpdatedAt?: string;
+  newestTimestamp: string;
+}): JSX.Element | null => {
+  const computeIsLive = useCallback(
+    () =>
+      canBeLive !== false &&
+      !!isTeamAlive &&
+      (leadActivity === 'active' ||
+        (leadContextUpdatedAt ? isRecentTimestamp(leadContextUpdatedAt) : false) ||
+        isRecentTimestamp(newestTimestamp)),
+    [canBeLive, isTeamAlive, leadActivity, leadContextUpdatedAt, newestTimestamp]
   );
 
+  const [isLive, setIsLive] = useState(computeIsLive);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional immediate sync to avoid 1s stale gap
+    setIsLive(computeIsLive());
+    const id = window.setInterval(() => setIsLive(computeIsLive()), 1000);
+    return () => window.clearInterval(id);
+  }, [computeIsLive]);
+
+  if (!isLive) return null;
+
   return (
-    <div ref={wrapperRef}>
-      <div ref={contentRef}>
-        {showDivider && (
-          <div className="py-px text-center">
-            <span className="font-mono text-[9px]" style={{ color: CARD_ICON_MUTED }}>
-              {formatTimeWithSec(thought.timestamp)}
-            </span>
-          </div>
-        )}
-        <div className="group/thought relative flex text-[11px]">
-          <div
-            className="min-w-0 flex-1 [&>span>div>div>div]:py-2"
-            style={{ color: CARD_TEXT_LIGHT }}
-          >
-            <span
-              onClickCapture={
-                onTaskIdClick
-                  ? (e) => {
-                      const link = (e.target as HTMLElement).closest<HTMLAnchorElement>(
-                        'a[href^="task://"]'
-                      );
-                      if (link) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const href = link.getAttribute('href');
-                        const parsedTaskLink = href ? parseTaskLinkHref(href) : null;
-                        if (parsedTaskLink?.taskId) onTaskIdClick(parsedTaskLink.taskId);
-                      }
-                    }
-                  : undefined
-              }
-            >
-              <MarkdownViewer content={displayContent} maxHeight="max-h-none" bare />
-            </span>
-          </div>
-          <div className="absolute right-1 top-0.5 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/thought:opacity-100">
-            {onReply ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onReply(thought);
-                    }}
-                  >
-                    <Reply size={13} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top">Reply</TooltipContent>
-              </Tooltip>
-            ) : null}
-            <CopyButton text={thought.text} inline />
-          </div>
-        </div>
-        {thought.toolSummary && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className="mb-[7px] cursor-default pb-0.5 pl-3 pr-1 font-mono text-[9px]"
-                style={{ color: CARD_ICON_MUTED }}
-              >
-                🔧 {thought.toolSummary}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent
-              side="top"
-              align="start"
-              className="max-w-[420px] font-mono text-[11px]"
-            >
-              <ToolSummaryTooltipContent
-                toolCalls={thought.toolCalls}
-                toolSummary={thought.toolSummary}
-              />
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-    </div>
+    <span className="absolute -bottom-0.5 -right-0.5 flex size-2.5">
+      <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
+      <span className="relative inline-flex size-full rounded-full border-2 border-[var(--color-surface)] bg-emerald-400" />
+    </span>
   );
 };
 
-export const LeadThoughtsGroupRow = ({
+const LeadThoughtsGroupRowComponent = ({
   group,
   memberColor,
   isNew,
   onVisible,
   canBeLive,
+  isTeamAlive,
+  leadActivity,
+  leadContextUpdatedAt,
   zebraShade,
-  collapseState,
+  collapseMode,
+  isCollapsed,
+  canToggleCollapse,
+  collapseToggleKey,
+  onToggleCollapse,
   onTaskIdClick,
   memberColorMap,
+  teamNames = [],
+  teamColorByName,
+  onTeamClick,
   onReply,
   compactHeader = false,
 }: LeadThoughtsGroupRowProps): React.JSX.Element => {
@@ -473,15 +588,6 @@ export const LeadThoughtsGroupRow = ({
   const isUserScrolledUpRef = useRef(false);
   const distanceFromBottomRef = useRef(0);
   const scrollSyncFrameRef = useRef<number | null>(null);
-  const isTeamAlive = useStore((s) => s.selectedTeamData?.isAlive ?? false);
-  const leadActivity = useStore((s) => {
-    const teamName = s.selectedTeamName;
-    return teamName ? s.leadActivityByTeam[teamName] : undefined;
-  });
-  const leadContextUpdatedAt = useStore((s) => {
-    const teamName = s.selectedTeamName;
-    return teamName ? s.leadContextByTeam[teamName]?.updatedAt : undefined;
-  });
 
   const colors = getTeamColorSet(memberColor ?? '');
   const { thoughts } = group;
@@ -531,34 +637,17 @@ export const LeadThoughtsGroupRow = ({
     return null;
   }, [thoughts]);
 
-  // Live = process alive AND (lead is in active turn OR context recently updated OR fresh thought)
-  const computeIsLive = useCallback(
-    () =>
-      canBeLive !== false &&
-      isTeamAlive &&
-      (leadActivity === 'active' ||
-        (leadContextUpdatedAt ? isRecentTimestamp(leadContextUpdatedAt) : false) ||
-        isRecentTimestamp(newest.timestamp)),
-    [canBeLive, isTeamAlive, leadActivity, leadContextUpdatedAt, newest.timestamp]
-  );
-  const [isLive, setIsLive] = useState(computeIsLive);
   const [expanded, setExpanded] = useState(false);
   const [needsTruncation, setNeedsTruncation] = useState(false);
-  const isManaged = isManagedCollapseState(collapseState);
-  const isBodyVisible = isManaged ? !collapseState.isCollapsed : true;
-  const canToggleBodyVisibility = isManaged && collapseState.canToggle;
-  const handleBodyToggle = canToggleBodyVisibility
-    ? (): void => {
-        collapseState.onToggle?.();
-      }
-    : undefined;
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional immediate sync to avoid 1s stale gap
-    setIsLive(computeIsLive());
-    const id = window.setInterval(() => setIsLive(computeIsLive()), 1000);
-    return () => window.clearInterval(id);
-  }, [computeIsLive]);
+  const isManaged = collapseMode === 'managed';
+  const isBodyVisible = isManaged ? !isCollapsed : true;
+  const canToggleBodyVisibility = isManaged && canToggleCollapse;
+  const handleBodyToggle = useCallback(() => {
+    if (canToggleBodyVisibility && collapseToggleKey) {
+      onToggleCollapse?.(collapseToggleKey);
+    }
+  }, [canToggleBodyVisibility, collapseToggleKey, onToggleCollapse]);
+  const shouldAnimateLatestThought = canBeLive !== false && isRecentTimestamp(newest.timestamp);
 
   // Track how many thoughts have been reported as visible so far.
   const reportedCountRef = useRef(0);
@@ -597,6 +686,10 @@ export const LeadThoughtsGroupRow = ({
         scrollSyncFrameRef.current = requestAnimationFrame(() => {
           const scrollEl = scrollRef.current;
           if (!scrollEl || expanded || !isBodyVisible) {
+            scrollSyncFrameRef.current = null;
+            return;
+          }
+          if (hasSelectionWithin(scrollEl)) {
             scrollSyncFrameRef.current = null;
             return;
           }
@@ -689,7 +782,7 @@ export const LeadThoughtsGroupRow = ({
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const scrollEl = scrollRef.current;
-        if (scrollEl) {
+        if (scrollEl && !hasSelectionWithin(scrollEl)) {
           scrollEl.scrollTop = scrollEl.scrollHeight;
         }
         ref.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -747,12 +840,13 @@ export const LeadThoughtsGroupRow = ({
                 className="size-5 rounded-full bg-[var(--color-surface-raised)]"
                 loading="lazy"
               />
-              {isLive ? (
-                <span className="absolute -bottom-0.5 -right-0.5 flex size-2.5">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
-                  <span className="relative inline-flex size-full rounded-full border-2 border-[var(--color-surface)] bg-emerald-400" />
-                </span>
-              ) : null}
+              <LiveThoughtStatusBadge
+                canBeLive={canBeLive}
+                isTeamAlive={isTeamAlive}
+                leadActivity={leadActivity}
+                leadContextUpdatedAt={leadContextUpdatedAt}
+                newestTimestamp={newest.timestamp}
+              />
             </div>
           ) : null}
           <MemberBadge name={leadName} color={memberColor} hideAvatar />
@@ -822,9 +916,14 @@ export const LeadThoughtsGroupRow = ({
                   key={toMessageKey(thought)}
                   thought={thought}
                   showDivider={idx > 0}
-                  shouldAnimate={isLive && idx === chronologicalThoughts.length - 1}
+                  shouldAnimate={
+                    shouldAnimateLatestThought && idx === chronologicalThoughts.length - 1
+                  }
                   onTaskIdClick={onTaskIdClick}
                   memberColorMap={memberColorMap}
+                  teamNames={teamNames}
+                  teamColorByName={teamColorByName}
+                  onTeamClick={onTeamClick}
                   onReply={onReply}
                 />
               ))}
@@ -871,3 +970,29 @@ export const LeadThoughtsGroupRow = ({
     </AnimatedHeightReveal>
   );
 };
+
+export const LeadThoughtsGroupRow = memo(
+  LeadThoughtsGroupRowComponent,
+  (prev, next) =>
+    prev.memberColor === next.memberColor &&
+    prev.isNew === next.isNew &&
+    prev.onVisible === next.onVisible &&
+    prev.canBeLive === next.canBeLive &&
+    prev.isTeamAlive === next.isTeamAlive &&
+    prev.leadActivity === next.leadActivity &&
+    prev.leadContextUpdatedAt === next.leadContextUpdatedAt &&
+    prev.zebraShade === next.zebraShade &&
+    prev.collapseMode === next.collapseMode &&
+    prev.isCollapsed === next.isCollapsed &&
+    prev.canToggleCollapse === next.canToggleCollapse &&
+    prev.collapseToggleKey === next.collapseToggleKey &&
+    prev.onToggleCollapse === next.onToggleCollapse &&
+    prev.onTaskIdClick === next.onTaskIdClick &&
+    prev.memberColorMap === next.memberColorMap &&
+    areStringArraysEqual(prev.teamNames, next.teamNames) &&
+    areStringMapsEqual(prev.teamColorByName, next.teamColorByName) &&
+    prev.onTeamClick === next.onTeamClick &&
+    prev.onReply === next.onReply &&
+    prev.compactHeader === next.compactHeader &&
+    areThoughtGroupsEquivalent(prev.group, next.group)
+);

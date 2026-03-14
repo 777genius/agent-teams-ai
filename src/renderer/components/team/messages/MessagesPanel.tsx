@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useTeamMessagesExpanded } from '@renderer/hooks/useTeamMessagesExpanded';
 import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
+import { useStableTeamMentionMeta } from '@renderer/hooks/useStableTeamMentionMeta';
 import { useStore } from '@renderer/store';
 import { filterTeamMessages } from '@renderer/utils/teamMessageFiltering';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
@@ -48,6 +49,10 @@ interface MessagesPanelProps {
   messages: InboxMessage[];
   /** Whether the team is alive. */
   isTeamAlive?: boolean;
+  /** Live lead activity status for the current team. */
+  leadActivity?: string;
+  /** Latest lead context timestamp for the current team. */
+  leadContextUpdatedAt?: string;
   /** Time window for filtering. */
   timeWindow: TimeWindow | null;
   /** Team session IDs for timeline. */
@@ -72,7 +77,7 @@ interface MessagesPanelProps {
   onTaskIdClick?: (taskId: string) => void;
 }
 
-export const MessagesPanel = ({
+export const MessagesPanel = memo(function MessagesPanel({
   teamName,
   position,
   onTogglePosition,
@@ -80,6 +85,8 @@ export const MessagesPanel = ({
   tasks,
   messages,
   isTeamAlive,
+  leadActivity,
+  leadContextUpdatedAt,
   timeWindow,
   teamSessionIds,
   currentLeadSessionId,
@@ -91,12 +98,14 @@ export const MessagesPanel = ({
   onReplyToMessage,
   onRestartTeam,
   onTaskIdClick,
-}: MessagesPanelProps): React.JSX.Element => {
+}: MessagesPanelProps): React.JSX.Element {
   const sendTeamMessage = useStore((s) => s.sendTeamMessage);
   const sendCrossTeamMessage = useStore((s) => s.sendCrossTeamMessage);
   const sendingMessage = useStore((s) => s.sendingMessage);
   const sendMessageError = useStore((s) => s.sendMessageError);
   const lastSendMessageResult = useStore((s) => s.lastSendMessageResult);
+  const teams = useStore((s) => s.teams);
+  const openTeamTab = useStore((s) => s.openTeamTab);
 
   const [messagesSearchQuery, setMessagesSearchQuery] = useState('');
   const [messagesFilter, setMessagesFilter] = useState<MessagesFilterState>({
@@ -128,6 +137,10 @@ export const MessagesPanel = ({
     (message: InboxMessage) => markRead(toMessageKey(message)),
     [markRead]
   );
+
+  const readState = useMemo(() => ({ readSet, getMessageKey: toMessageKey }), [readSet]);
+
+  const { teamNames, teamColorByName } = useStableTeamMentionMeta(teams);
 
   const handleMarkAllRead = useCallback(() => {
     const keys = filteredMessages
@@ -290,12 +303,18 @@ export const MessagesPanel = ({
         messages={filteredMessages}
         teamName={teamName}
         members={members}
-        readState={{ readSet, getMessageKey: toMessageKey }}
+        readState={readState}
         allCollapsed={messagesCollapsed}
         expandOverrides={expandedSet}
         onToggleExpandOverride={toggleExpandOverride}
         teamSessionIds={teamSessionIds}
         currentLeadSessionId={currentLeadSessionId}
+        isTeamAlive={isTeamAlive}
+        leadActivity={leadActivity}
+        leadContextUpdatedAt={leadContextUpdatedAt}
+        teamNames={teamNames}
+        teamColorByName={teamColorByName}
+        onTeamClick={openTeamTab}
         onMemberClick={onMemberClick}
         onCreateTaskFromMessage={onCreateTaskFromMessage}
         onReplyToMessage={onReplyToMessage}
@@ -499,4 +518,4 @@ export const MessagesPanel = ({
       {messagesContent}
     </CollapsibleTeamSection>
   );
-};
+});

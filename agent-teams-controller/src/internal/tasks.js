@@ -369,8 +369,9 @@ function buildMemberTaskProtocol(teamName) {
    - Do NOT start multiple tasks at once unless the team lead explicitly directs parallel work.
 3. Use MCP tool task_complete BEFORE sending your final reply:
    { teamName: "${teamName}", taskId: "<taskId>" }
-   - If a new task comment means you must do more real work on that same task, FIRST run task_start again before doing the follow-up work.
-   - After that follow-up work is finished, run task_complete again before your reply.
+   - If a new task comment means you must do more real work on that same task, FIRST add a short task comment saying what you are going to do, THEN run task_start again before doing the follow-up work.
+   - After that follow-up work finishes, add a short task comment with the result, what changed, or what you verified.
+   - After that, run task_complete again before your reply.
    - Never do comment-driven implementation/fix work while the task is still shown as pending, review, completed, or approved.
 4. If you are asked to review and the task is accepted, move it to APPROVED (not DONE) with MCP tool review_approve:
    { teamName: "${teamName}", taskId: "<taskId>", note?: "<optional note>", notifyOwner: true }
@@ -498,7 +499,7 @@ async function memberBriefing(context, memberName) {
   const lines = [
     `Member briefing for ${requestedMemberName} on team "${context.teamName}" (${context.teamName}).`,
     `Role: ${role}.`,
-    `CRITICAL: If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on that same task, FIRST move it to in_progress with task_start, THEN do the work, and when finished move it to done with task_complete. Never skip this reopen -> work -> done cycle.`,
+    `CRITICAL: If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on that same task, FIRST leave a short task comment saying what you are about to do, THEN move it to in_progress with task_start, THEN do the work, and when finished leave a short result comment and move it to done with task_complete. Never skip this comment -> reopen -> work -> comment -> done cycle.`,
     `Team lead: ${leadName}.`,
     buildMemberLanguageInstruction(config),
     `You must NOT start work, claim tasks, or improvise task/process protocol before reading and following this briefing.`,

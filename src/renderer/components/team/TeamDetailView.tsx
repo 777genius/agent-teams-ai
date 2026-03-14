@@ -105,6 +105,51 @@ interface CreateTaskDialogState {
   defaultChip?: InlineChip;
 }
 
+function areResolvedMembersEqual(
+  prev: readonly ResolvedTeamMember[],
+  next: readonly ResolvedTeamMember[]
+): boolean {
+  if (prev === next) return true;
+  if (prev.length !== next.length) return false;
+
+  for (let i = 0; i < prev.length; i++) {
+    const prevMember = prev[i];
+    const nextMember = next[i];
+    if (
+      prevMember.name !== nextMember.name ||
+      prevMember.status !== nextMember.status ||
+      prevMember.currentTaskId !== nextMember.currentTaskId ||
+      prevMember.color !== nextMember.color ||
+      prevMember.agentType !== nextMember.agentType ||
+      prevMember.role !== nextMember.role ||
+      prevMember.workflow !== nextMember.workflow ||
+      prevMember.cwd !== nextMember.cwd ||
+      prevMember.gitBranch !== nextMember.gitBranch ||
+      prevMember.removedAt !== nextMember.removedAt
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function useStableActiveMembers(
+  members: readonly ResolvedTeamMember[] | undefined
+): ResolvedTeamMember[] {
+  const filteredMembers = useMemo(
+    () => (members ?? []).filter((member) => !member.removedAt),
+    [members]
+  );
+  const stableMembersRef = useRef(filteredMembers);
+
+  if (!areResolvedMembersEqual(stableMembersRef.current, filteredMembers)) {
+    stableMembersRef.current = filteredMembers;
+  }
+
+  return stableMembersRef.current;
+}
+
 interface TimeWindow {
   start: number;
   end: number;
@@ -230,6 +275,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     clearProvisioningError,
     isTeamProvisioning,
     leadActivityByTeam,
+    leadContextUpdatedAt,
     memberSpawnStatuses,
     fetchMemberSpawnStatuses,
     refreshTeamData,
@@ -278,6 +324,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       clearProvisioningError: s.clearProvisioningError,
       isTeamProvisioning: teamName ? isTeamProvisioningActive(s, teamName) : false,
       leadActivityByTeam: s.leadActivityByTeam,
+      leadContextUpdatedAt: teamName ? s.leadContextByTeam[teamName]?.updatedAt : undefined,
       memberSpawnStatuses: teamName ? s.memberSpawnStatusesByTeam[teamName] : undefined,
       fetchMemberSpawnStatuses: s.fetchMemberSpawnStatuses,
       refreshTeamData: s.refreshTeamData,
@@ -637,10 +684,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     return result;
   }, [data, timeWindow, kanbanFilter.selectedOwners]);
 
-  const activeMembers = useMemo(
-    () => (data?.members ?? []).filter((m) => !m.removedAt),
-    [data?.members]
-  );
+  const activeMembers = useStableActiveMembers(data?.members);
 
   const kanbanDisplayTasks = useMemo(() => {
     const query = kanbanSearch.trim();
@@ -681,6 +725,31 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       defaultStartImmediately: undefined,
     });
   };
+
+  const handleCreateTaskFromMessage = useCallback((subject: string, description: string) => {
+    openCreateTaskDialog(subject, description);
+  }, []);
+
+  const handleReplyToMessage = useCallback((message: { from: string; text: string }) => {
+    setSendDialogRecipient(message.from);
+    setSendDialogDefaultText(undefined);
+    setSendDialogDefaultChip(undefined);
+    setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
+    setSendDialogOpen(true);
+  }, []);
+
+  const handleRestartTeam = useCallback(() => {
+    setLaunchDialogOpen(true);
+  }, []);
+
+  const handleTaskIdClick = useCallback(
+    (taskId: string) => {
+      const task =
+        taskMap.get(taskId) ?? data?.tasks.find((candidate) => candidate.displayId === taskId);
+      if (task) setSelectedTask(task);
+    },
+    [taskMap, data?.tasks]
+  );
 
   const handleEditorAction = useCallback(
     (action: EditorSelectionAction) => {
@@ -987,6 +1056,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                   tasks={data.tasks}
                   messages={data.messages}
                   isTeamAlive={data.isAlive}
+                  leadActivity={leadActivityByTeam[teamName]}
+                  leadContextUpdatedAt={leadContextUpdatedAt}
                   timeWindow={timeWindow}
                   teamSessionIds={teamSessionIds}
                   currentLeadSessionId={data?.config.leadSessionId}
@@ -994,23 +1065,10 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                   onPendingReplyChange={setPendingRepliesByMember}
                   onMemberClick={setSelectedMember}
                   onTaskClick={setSelectedTask}
-                  onCreateTaskFromMessage={(subject, description) => {
-                    openCreateTaskDialog(subject, description);
-                  }}
-                  onReplyToMessage={(message) => {
-                    setSendDialogRecipient(message.from);
-                    setSendDialogDefaultText(undefined);
-                    setSendDialogDefaultChip(undefined);
-                    setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
-                    setSendDialogOpen(true);
-                  }}
-                  onRestartTeam={() => setLaunchDialogOpen(true)}
-                  onTaskIdClick={(taskId) => {
-                    const task =
-                      taskMap.get(taskId) ??
-                      data.tasks.find((candidate) => candidate.displayId === taskId);
-                    if (task) setSelectedTask(task);
-                  }}
+                  onCreateTaskFromMessage={handleCreateTaskFromMessage}
+                  onReplyToMessage={handleReplyToMessage}
+                  onRestartTeam={handleRestartTeam}
+                  onTaskIdClick={handleTaskIdClick}
                 />
               </div>
             </div>
@@ -1584,6 +1642,8 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               tasks={data.tasks}
               messages={data.messages}
               isTeamAlive={data.isAlive}
+              leadActivity={leadActivityByTeam[teamName]}
+              leadContextUpdatedAt={leadContextUpdatedAt}
               timeWindow={timeWindow}
               teamSessionIds={teamSessionIds}
               currentLeadSessionId={data?.config.leadSessionId}
@@ -1591,23 +1651,10 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               onPendingReplyChange={setPendingRepliesByMember}
               onMemberClick={setSelectedMember}
               onTaskClick={setSelectedTask}
-              onCreateTaskFromMessage={(subject, description) => {
-                openCreateTaskDialog(subject, description);
-              }}
-              onReplyToMessage={(message) => {
-                setSendDialogRecipient(message.from);
-                setSendDialogDefaultText(undefined);
-                setSendDialogDefaultChip(undefined);
-                setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
-                setSendDialogOpen(true);
-              }}
-              onRestartTeam={() => setLaunchDialogOpen(true)}
-              onTaskIdClick={(taskId) => {
-                const task =
-                  taskMap.get(taskId) ??
-                  data.tasks.find((candidate) => candidate.displayId === taskId);
-                if (task) setSelectedTask(task);
-              }}
+              onCreateTaskFromMessage={handleCreateTaskFromMessage}
+              onReplyToMessage={handleReplyToMessage}
+              onRestartTeam={handleRestartTeam}
+              onTaskIdClick={handleTaskIdClick}
             />
           )}
 
