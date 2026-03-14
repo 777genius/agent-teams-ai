@@ -22,7 +22,7 @@ import {
 import { ExpandableContent } from '@renderer/components/ui/ExpandableContent';
 import { Input } from '@renderer/components/ui/input';
 import { MemberSelect } from '@renderer/components/ui/MemberSelect';
-import { Textarea } from '@renderer/components/ui/textarea';
+import { TiptapEditor } from '@renderer/components/ui/tiptap';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getLastReadTimestamp } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
@@ -132,7 +132,6 @@ export const TaskDetailDialog = ({
   // Inline editing: description
   const [editingDescription, setEditingDescription] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState('');
-  const [descriptionPreview, setDescriptionPreview] = useState(false);
   const [savingDescription, setSavingDescription] = useState(false);
 
   const startEditSubject = useCallback(() => {
@@ -160,7 +159,6 @@ export const TaskDetailDialog = ({
   const startEditDescription = useCallback(() => {
     if (!currentTask) return;
     setDescriptionDraft(currentTask.description ?? '');
-    setDescriptionPreview(false);
     setEditingDescription(true);
   }, [currentTask]);
 
@@ -715,51 +713,16 @@ export const TaskDetailDialog = ({
             >
               {editingDescription ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${
-                        !descriptionPreview
-                          ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
-                          : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
-                      }`}
-                      onClick={() => setDescriptionPreview(false)}
-                    >
-                      <Pencil size={12} />
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${
-                        descriptionPreview
-                          ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
-                          : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
-                      }`}
-                      onClick={() => setDescriptionPreview(true)}
-                    >
-                      <Eye size={12} />
-                      Preview
-                    </button>
-                  </div>
-                  {descriptionPreview ? (
-                    <div className="max-h-[200px] overflow-y-auto rounded border border-[var(--color-border)] p-2">
-                      {descriptionDraft.trim() ? (
-                        <MarkdownViewer content={descriptionDraft} maxHeight="max-h-[180px]" />
-                      ) : (
-                        <p className="text-xs text-[var(--color-text-muted)]">Nothing to preview</p>
-                      )}
-                    </div>
-                  ) : (
-                    <Textarea
-                      autoFocus
-                      value={descriptionDraft}
-                      onChange={(e) => setDescriptionDraft(e.target.value)}
-                      disabled={savingDescription}
-                      rows={6}
-                      className="text-xs"
-                      placeholder="Task description (supports markdown)"
-                    />
-                  )}
+                  <TiptapEditor
+                    content={descriptionDraft}
+                    onChange={setDescriptionDraft}
+                    placeholder="Task description (supports markdown)"
+                    autoFocus
+                    minHeight="120px"
+                    maxHeight="200px"
+                    toolbar
+                    disabled={savingDescription}
+                  />
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
