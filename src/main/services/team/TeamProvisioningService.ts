@@ -37,7 +37,7 @@ import { parseAllTeammateMessages } from '@shared/utils/teammateMessageParser';
 import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
 import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
-import { spawn } from 'child_process';
+import { spawn, type ChildProcess } from 'child_process';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -55,6 +55,19 @@ import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { isTaskCommentForwardingLive } from './TeamTaskCommentForwarding';
 import { TeamTaskReader } from './TeamTaskReader';
+
+/**
+ * Kill a team CLI process using SIGKILL (uncatchable).
+ *
+ * Newer Claude CLI versions (≥2.1.x) handle SIGTERM gracefully and run cleanup
+ * that deletes team files (config.json, inboxes/, tasks/). SIGKILL prevents this.
+ *
+ * ALWAYS use this instead of killProcessTree() for team processes.
+ * stdin.end() is also forbidden — EOF triggers the same cleanup.
+ */
+function killTeamProcess(child: ChildProcess | null | undefined): void {
+  killProcessTree(child, 'SIGKILL');
+}
 
 import type {
   CrossTeamSendResult,
@@ -2376,10 +2389,9 @@ export class TeamProvisioningService {
 
     run.processKilled = true;
     run.cancelRequested = true;
-    // Note: do NOT call stdin.end() before kill — EOF triggers CLI's graceful
-    // shutdown which deletes team files (config.json, inboxes/, tasks/).
-    // SIGTERM alone kills the process before cleanup runs, preserving files.
-    killProcessTree(run.child);
+    // SIGKILL: newer Claude CLI versions handle SIGTERM gracefully and delete
+    // team files during cleanup. SIGKILL is uncatchable — files are preserved.
+    killTeamProcess(run.child);
     this.cleanupRun(run);
   }
 
@@ -2406,7 +2418,7 @@ export class TeamProvisioningService {
     } else {
       logger.error(`[${run.teamName}] Auth failure detected in ${source} after retry — giving up`);
       run.processKilled = true;
-      killProcessTree(run.child);
+      killTeamProcess(run.child);
       const progress = updateProgress(run, 'failed', 'Authentication failed — CLI requires login', {
         error:
           'Claude CLI is not authenticated. Run `claude auth login` (or start `claude` and run `/login`) ' +
@@ -2441,7 +2453,7 @@ export class TeamProvisioningService {
       run.child.stderr?.removeAllListeners('data');
       run.child.removeAllListeners('error');
       run.child.removeAllListeners('exit');
-      killProcessTree(run.child);
+      killTeamProcess(run.child);
       run.child = null;
     }
 
@@ -2527,7 +2539,7 @@ export class TeamProvisioningService {
         run.finalizingByTimeout = true;
         void (async () => {
           const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
-          killProcessTree(run.child);
+          killTeamProcess(run.child);
           if (readyOnTimeout) return;
 
           const hint = run.isLaunch ? ' (launch)' : '';
@@ -2828,7 +2840,7 @@ export class TeamProvisioningService {
           run.finalizingByTimeout = true;
           void (async () => {
             const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
-            killProcessTree(run.child);
+            killTeamProcess(run.child);
             if (readyOnTimeout) {
               return; // cleanupRun already called inside tryCompleteAfterTimeout
             }
@@ -3231,7 +3243,7 @@ export class TeamProvisioningService {
           run.finalizingByTimeout = true;
           void (async () => {
             const readyOnTimeout = await this.tryCompleteAfterTimeout(run);
-            killProcessTree(run.child);
+            killTeamProcess(run.child);
             if (readyOnTimeout) {
               return;
             }
@@ -3288,10 +3300,9 @@ export class TeamProvisioningService {
 
     run.cancelRequested = true;
     run.processKilled = true;
-    // Note: do NOT call stdin.end() before kill — EOF triggers CLI's graceful
-    // shutdown which deletes team files (config.json, inboxes/, tasks/).
-    // SIGTERM alone kills the process before cleanup runs, preserving files.
-    killProcessTree(run.child);
+    // SIGKILL: newer Claude CLI versions handle SIGTERM gracefully and delete
+    // team files during cleanup. SIGKILL is uncatchable — files are preserved.
+    killTeamProcess(run.child);
     const progress = updateProgress(run, 'cancelled', 'Provisioning cancelled by user');
     run.onProgress(progress);
     this.cleanupRun(run);
@@ -4347,8 +4358,9 @@ export class TeamProvisioningService {
 
   /**
    * Stop the running process for a team. No-op if team is not running.
+   * Always uses SIGKILL via killTeamProcess() to prevent CLI cleanup.
    */
-  stopTeam(teamName: string, signal?: NodeJS.Signals): void {
+  stopTeam(teamName: string): void {
     const runId = this.getTrackedRunId(teamName);
     if (!runId) {
       return;
@@ -4364,27 +4376,24 @@ export class TeamProvisioningService {
     }
     run.processKilled = true;
     run.cancelRequested = true;
-    // Note: do NOT call stdin.end() before kill — EOF triggers CLI's graceful
-    // shutdown which deletes team files (config.json, inboxes/, tasks/).
-    // SIGTERM/SIGKILL kills the process before cleanup runs, preserving files.
-    killProcessTree(run.child, signal);
+    killTeamProcess(run.child);
     const progress = updateProgress(run, 'disconnected', 'Team stopped by user');
     run.onProgress(progress);
     this.cleanupRun(run);
-    logger.info(`[${teamName}] Process stopped (signal=${signal ?? 'SIGTERM'})`);
+    logger.info(`[${teamName}] Process stopped (SIGKILL)`);
   }
 
   /**
    * Stop all running team processes. Called during app shutdown.
-   * Uses SIGKILL (uncatchable) to guarantee the process dies instantly
-   * without any cleanup — prevents CLI from deleting team files on exit.
+   * Uses killTeamProcess() (SIGKILL) to guarantee instant death
+   * without CLI cleanup that would delete team files.
    */
   stopAllTeams(): void {
     const alive = this.getAliveTeams();
     if (alive.length === 0) return;
     logger.info(`Killing all team processes on shutdown (SIGKILL): ${alive.join(', ')}`);
     for (const teamName of alive) {
-      this.stopTeam(teamName, 'SIGKILL');
+      this.stopTeam(teamName);
     }
   }
 
@@ -4724,7 +4733,7 @@ export class TeamProvisioningService {
           run.onProgress(progress);
           // Kill the process on provisioning error
           run.processKilled = true;
-          killProcessTree(run.child);
+          killTeamProcess(run.child);
           this.cleanupRun(run);
         } else if (run.provisioningComplete) {
           // Post-provisioning error: process alive, waiting for input.
@@ -5389,7 +5398,7 @@ export class TeamProvisioningService {
       });
       run.onProgress(progress);
       run.processKilled = true;
-      killProcessTree(run.child);
+      killTeamProcess(run.child);
       this.cleanupRun(run);
       return;
     }

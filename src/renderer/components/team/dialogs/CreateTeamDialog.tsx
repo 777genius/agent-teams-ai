@@ -83,6 +83,8 @@ interface CreateTeamDialogProps {
   provisioningErrorsByTeam: Record<string, string | null>;
   clearProvisioningError?: (teamName?: string) => void;
   existingTeamNames: string[];
+  /** Team names currently in active provisioning (launching) — used to prevent name conflicts. */
+  provisioningTeamNames?: string[];
   activeTeams?: ActiveTeamRef[];
   initialData?: TeamCopyData;
   defaultProjectPath?: string | null;
@@ -207,6 +209,7 @@ export const CreateTeamDialog = ({
   provisioningErrorsByTeam,
   clearProvisioningError,
   existingTeamNames,
+  provisioningTeamNames = [],
   activeTeams,
   initialData,
   defaultProjectPath,
@@ -339,7 +342,12 @@ export const CreateTeamDialog = ({
 
   const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
   const dialogTeamNameKey = sanitizeTeamName(teamName.trim());
-  const suggestedTeamName = getNextSuggestedTeamName(existingTeamNames);
+  /** All taken names: existing teams + teams currently being provisioned. */
+  const allTakenTeamNames = useMemo(
+    () => [...new Set([...existingTeamNames, ...provisioningTeamNames])],
+    [existingTeamNames, provisioningTeamNames]
+  );
+  const suggestedTeamName = getNextSuggestedTeamName(allTakenTeamNames);
 
   // Clear stale provisioning error when dialog opens
   useEffect(() => {
@@ -552,6 +560,9 @@ export const CreateTeamDialog = ({
   );
 
   const sanitizedTeamName = sanitizeTeamName(teamName.trim());
+  const isNameProvisioning =
+    provisioningTeamNames.includes(sanitizedTeamName) &&
+    !existingTeamNames.includes(sanitizedTeamName);
 
   const request = useMemo<TeamCreateRequest>(
     () => ({
@@ -640,9 +651,10 @@ export const CreateTeamDialog = ({
   }, [conflictingTeam?.teamName, effectiveCwd]);
 
   const handleSubmit = (): void => {
-    if (existingTeamNames.includes(sanitizedTeamName)) {
-      setFieldErrors({ teamName: 'Team name already exists' });
-      setLocalError('Team name already exists');
+    if (allTakenTeamNames.includes(sanitizedTeamName)) {
+      const msg = isNameProvisioning ? 'Team is currently launching' : 'Team name already exists';
+      setFieldErrors({ teamName: msg });
+      setLocalError(msg);
       return;
     }
     const validation = validateRequest(request, { requireCwd: launchTeam });
@@ -818,16 +830,16 @@ export const CreateTeamDialog = ({
               id="team-name"
               className={cn(
                 'h-8 text-xs',
-                (fieldErrors.teamName || existingTeamNames.includes(sanitizedTeamName)) &&
+                (fieldErrors.teamName || allTakenTeamNames.includes(sanitizedTeamName)) &&
                   'border-[var(--field-error-border)] bg-[var(--field-error-bg)] focus-visible:ring-[var(--field-error-border)]'
               )}
               value={teamName}
               onChange={(event) => handleTeamNameChange(event.target.value)}
               placeholder={suggestedTeamName}
             />
-            {existingTeamNames.includes(sanitizedTeamName) ? (
+            {allTakenTeamNames.includes(sanitizedTeamName) ? (
               <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
-                Team name already exists
+                {isNameProvisioning ? 'Team is currently launching' : 'Team name already exists'}
               </p>
             ) : validateTeamNameInline(teamName) ? (
               <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>

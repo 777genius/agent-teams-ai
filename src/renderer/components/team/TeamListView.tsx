@@ -15,7 +15,10 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
-import { getCurrentProvisioningProgressForTeam } from '@renderer/store/slices/teamSlice';
+import {
+  getCurrentProvisioningProgressForTeam,
+  isTeamProvisioningActive,
+} from '@renderer/store/slices/teamSlice';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { buildTaskCountsByTeam, normalizePath } from '@renderer/utils/pathNormalize';
 import { getBaseName } from '@renderer/utils/pathUtils';
@@ -240,6 +243,13 @@ export const TeamListView = (): React.JSX.Element => {
     () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
     [currentProvisioningRunIdByTeam, provisioningRuns]
   );
+
+  /** Team names currently in active provisioning — prevents name conflicts in create dialog. */
+  const provisioningTeamNames = useMemo(() => {
+    return Object.keys(currentProvisioningRunIdByTeam).filter((teamName) =>
+      isTeamProvisioningActive(provisioningState, teamName)
+    );
+  }, [currentProvisioningRunIdByTeam, provisioningState]);
 
   // Fetch alive teams on mount and when teams list changes
   useEffect(() => {
@@ -536,6 +546,7 @@ export const TeamListView = (): React.JSX.Element => {
       provisioningErrorsByTeam={provisioningErrorByTeam}
       clearProvisioningError={clearProvisioningError}
       existingTeamNames={teams.map((t) => t.teamName)}
+      provisioningTeamNames={provisioningTeamNames}
       activeTeams={activeTeams}
       initialData={copyData ?? undefined}
       defaultProjectPath={currentProjectPath}
