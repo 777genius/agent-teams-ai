@@ -205,6 +205,12 @@ const taskAttachmentStore = new TeamTaskAttachmentStore();
 
 const ALLOWED_ATTACHMENT_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB per file
+
+/**
+ * Prevents GC from collecting Notification objects in the deprecated showTeamNativeNotification.
+ * @see https://blog.bloomca.me/2025/02/22/electron-mac-notifications.html
+ */
+const activeTeamNotifications = new Set<Notification>();
 const MAX_ATTACHMENTS = 5;
 const MAX_TOTAL_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20MB total
 
@@ -2274,6 +2280,12 @@ export function showTeamNativeNotification(opts: {
     ...(iconPath ? { icon: iconPath } : {}),
   });
 
+  // Hold a strong reference to prevent GC from collecting the notification
+  activeTeamNotifications.add(notification);
+  const cleanup = (): void => {
+    activeTeamNotifications.delete(notification);
+  };
+
   notification.on('click', () => {
     const windows = BrowserWindow.getAllWindows();
     const mainWin = windows[0];
@@ -2281,7 +2293,9 @@ export function showTeamNativeNotification(opts: {
       mainWin.show();
       mainWin.focus();
     }
+    cleanup();
   });
+  notification.on('close', cleanup);
 
   notification.on('show', () => {
     logger.debug(`[native-notification] shown: "${opts.title}" — ${opts.subtitle ?? ''}`);
@@ -2289,6 +2303,7 @@ export function showTeamNativeNotification(opts: {
 
   notification.on('failed', (_, error) => {
     logger.warn(`[native-notification] failed: ${error}`);
+    cleanup();
   });
 
   notification.show();

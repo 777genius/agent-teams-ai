@@ -204,7 +204,7 @@
     "vitest": "^3.1.4"
   },
   "build": {
-    "appId": "com.claudecode.context",
+    "appId": "com.agent-teams.app",
     "productName": "Claude Agent Teams UI",
     "directories": {
       "output": "release"

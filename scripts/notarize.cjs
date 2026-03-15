@@ -13,7 +13,7 @@ exports.default = async function notarizing(context) {
 
   return await notarize({
     tool: 'notarytool',
-    appBundleId: 'com.claudecode.context',
+    appBundleId: 'com.agent-teams.app',
     appPath: `${appOutDir}/${appName}.app`,
     appleId: process.env.APPLE_ID,
     appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD,

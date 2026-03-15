@@ -54,7 +54,6 @@ import {
   ArrowRightFromLine,
   Check,
   Clock,
-  Eye,
   FileDiff,
   GitCompareArrows,
   HelpCircle,
@@ -74,6 +73,7 @@ import {
 
 import { WorkflowTimeline } from './StatusHistoryTimeline';
 import { TaskAttachments } from './TaskAttachments';
+import { TaskCommentAwaitingReply } from './TaskCommentAwaitingReply';
 import { TaskCommentInput } from './TaskCommentInput';
 import { TaskCommentsSection } from './TaskCommentsSection';
 
@@ -509,7 +509,8 @@ export const TaskDetailDialog = ({
               <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
                 {formatTaskDisplayLabel(currentTask)}
               </Badge>
-              {currentTask.reviewState === 'approved' && currentTask.reviewer ? (
+              {(currentTask.reviewState === 'approved' || currentTask.reviewState === 'review') &&
+              currentTask.reviewer ? (
                 (() => {
                   const reviewerColor = colorMap.get(currentTask.reviewer);
                   const colors = getTeamColorSet(reviewerColor ?? '');
@@ -613,16 +614,6 @@ export const TaskDetailDialog = ({
                 <span className="text-xs italic text-[var(--color-text-muted)]">Unassigned</span>
               )}
             </div>
-            {currentTask.reviewer ? (
-              <div className="flex items-center gap-1.5">
-                <Eye size={12} className="text-[var(--color-text-muted)]" />
-                <MemberBadge
-                  name={currentTask.reviewer}
-                  color={colorMap.get(currentTask.reviewer)}
-                  size="sm"
-                />
-              </div>
-            ) : null}
             {currentTask.createdBy ? (
               <div className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
                 <PenLine size={12} />
@@ -1163,6 +1154,12 @@ export const TaskDetailDialog = ({
                   onClearReply={clearReply}
                 />
               </div>
+              <TaskCommentAwaitingReply
+                comments={currentTask.comments}
+                taskOwner={currentTask.owner}
+                taskCreatedBy={currentTask.createdBy}
+                members={members}
+              />
               <TaskCommentsSection
                 teamName={teamName}
                 taskId={currentTask.id}

@@ -481,6 +481,11 @@ const electronAPI: ElectronAPI = {
     delete: (id: string) => ipcRenderer.invoke('notifications:delete', id),
     clear: () => ipcRenderer.invoke('notifications:clear'),
     getUnreadCount: () => ipcRenderer.invoke('notifications:getUnreadCount'),
+    testNotification: () =>
+      ipcRenderer.invoke('notifications:testNotification') as Promise<{
+        success: boolean;
+        error?: string;
+      }>,
     onNew: (callback: (event: unknown, error: unknown) => void): (() => void) => {
       ipcRenderer.on(
         'notification:new',

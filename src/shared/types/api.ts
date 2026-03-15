@@ -155,6 +155,7 @@ export interface NotificationsAPI {
   delete: (id: string) => Promise<boolean>;
   clear: () => Promise<boolean>;
   getUnreadCount: () => Promise<number>;
+  testNotification: () => Promise<{ success: boolean; error?: string }>;
   onNew: (callback: (event: unknown, error: unknown) => void) => () => void;
   onUpdated: (
     callback: (event: unknown, payload: { total: number; unreadCount: number }) => void

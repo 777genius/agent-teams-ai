@@ -30,7 +30,6 @@ import {
   areStringMapsEqual,
 } from '@renderer/utils/messageRenderEquality';
 import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
-import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import {
   CROSS_TEAM_SENT_SOURCE,
@@ -257,7 +256,7 @@ const NoiseRow = ({
 // ---------------------------------------------------------------------------
 
 const SYSTEM_MESSAGE_PATTERNS: { pattern: RegExp; label: string }[] = [
-  { pattern: /^New task assigned to you:/, label: 'Task assignment' },
+  { pattern: /^New task assigned to you:/, label: 'Task' },
   { pattern: /^Task #[A-Za-z0-9-]+\s+approved/, label: 'Task approved' },
   { pattern: /^Task #[A-Za-z0-9-]+\s+needs fixes/, label: 'Review changes requested' },
 ];

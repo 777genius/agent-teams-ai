@@ -102,6 +102,13 @@ export class NotificationManager extends EventEmitter {
   private mainWindow: BrowserWindow | null = null;
   private throttleMap = new Map<string, number>();
   private isInitialized: boolean = false;
+  /**
+   * Prevents GC from collecting Notification objects before they are dismissed.
+   * On macOS, if the reference is lost, the notification may silently fail
+   * and click handlers stop working after ~1-2 minutes.
+   * @see https://blog.bloomca.me/2025/02/22/electron-mac-notifications.html
+   */
+  private activeNotifications = new Set<Notification>();
   /** Promise that resolves when async initialization is complete.
    *  Used by addError() to wait for notifications to be loaded from disk
    *  before writing, preventing a race where save overwrites unloaded data. */
@@ -383,8 +390,24 @@ export class NotificationManager extends EventEmitter {
       ...(iconPath ? { icon: iconPath } : {}),
     });
 
+    // Hold a strong reference to prevent GC from collecting the notification
+    this.activeNotifications.add(notification);
+    const cleanup = (): void => {
+      this.activeNotifications.delete(notification);
+    };
+
     notification.on('click', () => {
       this.handleNativeNotificationClick(stored);
+      cleanup();
+    });
+    notification.on('close', cleanup);
+
+    notification.on('show', () => {
+      logger.debug(`[notification] shown: "Claude Code Error" — ${stored.context.projectName}`);
+    });
+    notification.on('failed', (_, error) => {
+      logger.warn(`[notification] failed: ${error}`);
+      cleanup();
     });
 
     notification.show();
@@ -412,8 +435,24 @@ export class NotificationManager extends EventEmitter {
       ...(iconPath ? { icon: iconPath } : {}),
     });
 
+    // Hold a strong reference to prevent GC from collecting the notification
+    this.activeNotifications.add(notification);
+    const cleanup = (): void => {
+      this.activeNotifications.delete(notification);
+    };
+
     notification.on('click', () => {
       this.handleNativeNotificationClick(stored);
+      cleanup();
+    });
+    notification.on('close', cleanup);
+
+    notification.on('show', () => {
+      logger.debug(`[notification] shown: "${payload.teamDisplayName}" — ${payload.summary ?? ''}`);
+    });
+    notification.on('failed', (_, error) => {
+      logger.warn(`[notification] failed: ${error}`);
+      cleanup();
     });
 
     notification.show();
@@ -444,6 +483,51 @@ export class NotificationManager extends EventEmitter {
       return false;
     }
     return true;
+  }
+
+  // ===========================================================================
+  // Test Notification
+  // ===========================================================================
+
+  /**
+   * Sends a test notification to verify that native notifications work.
+   * Returns a result object indicating success or failure reason.
+   */
+  sendTestNotification(): { success: boolean; error?: string } {
+    if (!this.isNativeNotificationSupported()) {
+      return { success: false, error: 'Native notifications are not supported on this platform' };
+    }
+
+    const isMac = process.platform === 'darwin';
+    const iconPath = isMac ? undefined : getAppIconPath();
+    const notification = new Notification({
+      title: 'Test Notification',
+      ...(isMac ? { subtitle: 'Claude Agent Teams UI' } : {}),
+      body: isMac
+        ? 'Notifications are working correctly!'
+        : 'Claude Agent Teams UI\nNotifications are working correctly!',
+      ...(iconPath ? { icon: iconPath } : {}),
+    });
+
+    // Hold a strong reference to prevent GC
+    this.activeNotifications.add(notification);
+    const cleanup = (): void => {
+      this.activeNotifications.delete(notification);
+    };
+
+    notification.on('click', cleanup);
+    notification.on('close', cleanup);
+
+    notification.on('show', () => {
+      logger.debug('[notification] test notification shown successfully');
+    });
+    notification.on('failed', (_, error) => {
+      logger.warn(`[notification] test notification failed: ${error}`);
+      cleanup();
+    });
+
+    notification.show();
+    return { success: true };
   }
 
   // ===========================================================================

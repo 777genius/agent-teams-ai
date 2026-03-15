@@ -381,6 +381,10 @@ export class HttpAPIClient implements ElectronAPI {
     delete: (id) => this.del(`/api/notifications/${encodeURIComponent(id)}`),
     clear: () => this.del('/api/notifications'),
     getUnreadCount: () => this.get('/api/notifications/unread-count'),
+    testNotification: async () => ({
+      success: false,
+      error: 'Test notifications require Electron (not available in browser mode)',
+    }),
     // IPC signature: (event: unknown, error: unknown) => void
     onNew: (callback) =>
       this.addEventListener('notification:new', (data: unknown) => callback(null, data)),
