@@ -338,10 +338,12 @@ export const MemberLogsTab = ({
     // Show only AI outputs — the actual work results.
     // If no outputs found, fall back to summary previews.
     if (showLeadPreview) {
+      // Prefer recentPreviews (task-scoped thinking + output) over chunk extraction
+      // because chunks don't capture thinking blocks.
+      const fromPreviews = buildLeadPreviewMessages();
+      if (fromPreviews.length > 0) return fromPreviews;
       const outputs = raw.filter((m) => m.kind !== 'user');
       if (outputs.length > 0) return outputs;
-      const fallback = buildLeadPreviewMessages();
-      if (fallback.length > 0) return fallback;
       return raw; // ultimate fallback: show everything including user messages
     }
     return raw;

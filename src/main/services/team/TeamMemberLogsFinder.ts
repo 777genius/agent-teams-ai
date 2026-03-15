@@ -1508,25 +1508,29 @@ export class TeamMemberLogsFinder {
    * Looks for the first text block content via regex (avoids full JSON parse).
    */
   private static extractAssistantPreview(line: string): string | null {
-    // Match {"type":"text","text":"..."} blocks
-    const textMatch = /"type"\s*:\s*"text"[^}]*"text"\s*:\s*"([^"]{1,200})/.exec(line);
+    // Match {"type":"text","text":"..."} blocks — allow escaped sequences
+    const textMatch = /"type"\s*:\s*"text"[^}]*"text"\s*:\s*"((?:[^"\\]|\\.){1,400})/.exec(line);
     if (textMatch?.[1]) {
       const raw = textMatch[1]
+        .replace(/\\"/g, '"')
         .replace(/\\n/g, ' ')
         .replace(/\\t/g, ' ')
+        .replace(/\\\\/g, '\\')
         .replace(/\s+/g, ' ')
         .trim();
-      return raw.length > 120 ? raw.slice(0, 120) + '...' : raw;
+      return raw.length > 1500 ? raw.slice(0, 1500) + '...' : raw;
     }
     // Fallback: top-level string content
-    const contentMatch = /"content"\s*:\s*"([^"]{1,200})/.exec(line);
+    const contentMatch = /"content"\s*:\s*"((?:[^"\\]|\\.){1,400})/.exec(line);
     if (contentMatch?.[1]) {
       const raw = contentMatch[1]
+        .replace(/\\"/g, '"')
         .replace(/\\n/g, ' ')
         .replace(/\\t/g, ' ')
+        .replace(/\\\\/g, '\\')
         .replace(/\s+/g, ' ')
         .trim();
-      return raw.length > 120 ? raw.slice(0, 120) + '...' : raw;
+      return raw.length > 1500 ? raw.slice(0, 1500) + '...' : raw;
     }
     return null;
   }
@@ -1536,14 +1540,17 @@ export class TeamMemberLogsFinder {
    * Thinking blocks use {"type":"thinking","thinking":"..."}.
    */
   private static extractThinkingPreview(line: string): string | null {
-    const match = /"thinking"\s*:\s*"([^"]{1,200})/.exec(line);
+    // Allow escaped sequences (e.g. \" \n \\) inside the captured string value
+    const match = /"thinking"\s*:\s*"((?:[^"\\]|\\.){1,400})/.exec(line);
     if (match?.[1]) {
       const raw = match[1]
+        .replace(/\\"/g, '"')
         .replace(/\\n/g, ' ')
         .replace(/\\t/g, ' ')
+        .replace(/\\\\/g, '\\')
         .replace(/\s+/g, ' ')
         .trim();
-      return raw.length > 120 ? raw.slice(0, 120) + '...' : raw;
+      return raw.length > 1500 ? raw.slice(0, 1500) + '...' : raw;
     }
     return null;
   }
