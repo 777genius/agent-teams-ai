@@ -266,9 +266,43 @@ export const MemberLogsTab = ({
   }, [shouldShowPreview, showLeadPreview, showSubagentPreview, sortedLogs, taskOwner]);
 
   const allPreviewMessages = useMemo((): SubagentPreviewMessage[] => {
-    if (!previewChunks || previewChunks.length === 0) return [];
-    return extractSubagentPreviewMessages(previewChunks);
-  }, [previewChunks]);
+    if (!previewChunks || previewChunks.length === 0) {
+      // For lead preview without chunks, fall back to lastOutputPreview from the log summary.
+      if (showLeadPreview && previewLog?.lastOutputPreview) {
+        return [
+          {
+            id: `${previewLog.sessionId}:lastOutput`,
+            timestamp: new Date(previewLog.startTime),
+            kind: 'output',
+            label: 'Output',
+            content: previewLog.lastOutputPreview,
+          },
+        ];
+      }
+      return [];
+    }
+    const raw = extractSubagentPreviewMessages(previewChunks);
+    // For lead preview, user messages are system-generated prompts (not useful).
+    // Show only AI outputs — the actual work results.
+    // If no outputs found, fall back to lastOutputPreview from the log summary.
+    if (showLeadPreview) {
+      const outputs = raw.filter((m) => m.kind !== 'user');
+      if (outputs.length > 0) return outputs;
+      if (previewLog?.lastOutputPreview) {
+        return [
+          {
+            id: `${previewLog.sessionId}:lastOutput`,
+            timestamp: new Date(previewLog.startTime),
+            kind: 'output',
+            label: 'Output',
+            content: previewLog.lastOutputPreview,
+          },
+        ];
+      }
+      return raw; // ultimate fallback: show everything including user messages
+    }
+    return raw;
+  }, [previewChunks, showLeadPreview, previewLog]);
 
   const previewMessages = useMemo((): SubagentPreviewMessage[] => {
     return allPreviewMessages.slice(0, previewVisibleCount);
