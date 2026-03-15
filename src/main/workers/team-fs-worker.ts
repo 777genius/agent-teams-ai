@@ -2,6 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parentPort } from 'node:worker_threads';
 
+import { isLeadMember } from '@shared/utils/leadDetection';
+
 interface ListTeamsPayload {
   teamsDir: string;
   largeConfigBytes: number;
@@ -263,7 +265,7 @@ function mergeMember(
 ): void {
   const name = typeof m.name === 'string' ? m.name.trim() : '';
   if (!name) return;
-  if (name === 'team-lead' || name === 'user' || m.agentType === 'team-lead') return;
+  if (name === 'user' || isLeadMember(m)) return;
   const key = name.toLowerCase();
   if (removedKeys.has(key)) return;
   const existing = memberMap.get(key);
@@ -433,7 +435,7 @@ async function listTeams(
           if (!isRawMember(member)) continue;
           const name = typeof member.name === 'string' ? member.name.trim() : '';
           if (!name) continue;
-          if (name === 'team-lead' || member.agentType === 'team-lead') continue;
+          if (isLeadMember(member)) continue;
           const key = name.toLowerCase();
           if (member.removedAt) {
             removedKeys.add(key);

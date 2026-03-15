@@ -4,6 +4,7 @@ import { Button } from '@renderer/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader } from '@renderer/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import { useMemberStats } from '@renderer/hooks/useMemberStats';
+import { isLeadAgentType } from '@shared/utils/leadDetection';
 import { BarChart3, FileText, ListPlus, MessageSquare, UserMinus } from 'lucide-react';
 
 import { MemberDetailHeader } from './MemberDetailHeader';
@@ -98,7 +99,7 @@ export const MemberDetailDialog = ({
               member={member}
               isTeamAlive={isTeamAlive}
               isTeamProvisioning={isTeamProvisioning}
-              leadActivity={member.agentType === 'team-lead' ? leadActivity : undefined}
+              leadActivity={isLeadAgentType(member.agentType) ? leadActivity : undefined}
               onUpdateRole={
                 onUpdateRole ? (newRole) => onUpdateRole(member.name, newRole) : undefined
               }
@@ -186,7 +187,7 @@ export const MemberDetailDialog = ({
                 <ListPlus size={14} />
                 Assign Task
               </Button>
-              {onRemoveMember && member.agentType !== 'team-lead' && (
+              {onRemoveMember && !isLeadAgentType(member.agentType) && (
                 <Button
                   variant="outline"
                   size="sm"

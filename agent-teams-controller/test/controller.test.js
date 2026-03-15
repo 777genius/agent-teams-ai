@@ -427,7 +427,7 @@ describe('agent-teams-controller API', () => {
             timestamp: '2026-02-23T11:00:00.000Z',
             read: false,
             text:
-              `**Comment on task #${task.displayId}**\n> Ship migration\n\nHeads up\n\n` +
+              `**Comment on task #${task.displayId}**\n> Ship migration\n\n> Heads up\n\n` +
               '<agent-block>\nReply to this comment using:\nnode "tool.js" --team my-team task comment 1 --text "..." --from "bob"\n</agent-block>',
           },
         ],

@@ -15,6 +15,7 @@ import {
   getMemberDotClass,
   getPresenceLabel,
 } from '@renderer/utils/memberHelpers';
+import { isLeadAgentType } from '@shared/utils/leadDetection';
 import { ExternalLink } from 'lucide-react';
 
 import { CurrentTaskIndicator } from './CurrentTaskIndicator';
@@ -62,28 +63,26 @@ export const MemberHoverCard = ({
     member,
     isTeamAlive,
     false,
-    member.agentType === 'team-lead' ? leadActivity : undefined
+    isLeadAgentType(member.agentType) ? leadActivity : undefined
   );
   const dotClass = getMemberDotClass(
     member,
     isTeamAlive,
     false,
-    member.agentType === 'team-lead' ? leadActivity : undefined
+    isLeadAgentType(member.agentType) ? leadActivity : undefined
   );
   const currentTask: TeamTaskWithKanban | null =
     member.currentTaskId && tasks
       ? (tasks.find((t) => t.id === member.currentTaskId) ?? null)
       : null;
-  const reviewTask: TeamTaskWithKanban | null =
-    !currentTask && tasks
-      ? (tasks.find(
-          (task) =>
-            task.reviewer === member.name &&
-            (task.reviewState === 'review' || task.kanbanColumn === 'review')
-        ) ?? null)
-      : null;
-  const activityTask = currentTask ?? reviewTask;
-  const activityLabel = currentTask ? 'working on' : reviewTask ? 'reviewing' : 'working on';
+  const reviewTask: TeamTaskWithKanban | null = tasks
+    ? (tasks.find(
+        (task) =>
+          task.reviewer === member.name &&
+          task.id !== member.currentTaskId &&
+          (task.reviewState === 'review' || task.kanbanColumn === 'review')
+      ) ?? null)
+    : null;
 
   return (
     <HoverCard openDelay={300} closeDelay={200}>
@@ -131,14 +130,27 @@ export const MemberHoverCard = ({
           </div>
 
           {/* Current task */}
-          {activityTask && (
+          {currentTask && (
             <div className="flex items-center gap-1 overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
               <CurrentTaskIndicator
-                task={activityTask}
+                task={currentTask}
                 borderColor={colors.border}
                 maxSubjectLength={28}
-                activityLabel={activityLabel}
-                onOpenTask={onOpenTask ? () => onOpenTask(activityTask) : undefined}
+                activityLabel="working on"
+                onOpenTask={onOpenTask ? () => onOpenTask(currentTask) : undefined}
+              />
+            </div>
+          )}
+
+          {/* Review task */}
+          {reviewTask && (
+            <div className="flex items-center gap-1 overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
+              <CurrentTaskIndicator
+                task={reviewTask}
+                borderColor={colors.border}
+                maxSubjectLength={28}
+                activityLabel="reviewing"
+                onOpenTask={onOpenTask ? () => onOpenTask(reviewTask) : undefined}
               />
             </div>
           )}

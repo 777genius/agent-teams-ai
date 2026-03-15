@@ -28,6 +28,13 @@ function isSameTaskMember(left, right, leadName) {
   );
 }
 
+function quoteMarkdown(text) {
+  return String(text)
+    .split('\n')
+    .map((line) => `> ${line}`)
+    .join('\n');
+}
+
 function buildAssignmentMessage(context, task, options = {}) {
   const description =
     typeof options.description === 'string' && options.description.trim()
@@ -74,7 +81,7 @@ function buildCommentNotificationMessage(context, task, comment) {
     `**Comment on task ${taskLabel}**`,
     `> ${task.subject}`,
     ``,
-    comment.text,
+    quoteMarkdown(comment.text),
     ``,
     wrapAgentBlock(`Reply to this comment using MCP tool task_add_comment:
 { teamName: "${context.teamName}", taskId: "${task.id}", text: "<your reply>", from: "<your-name>" }`),

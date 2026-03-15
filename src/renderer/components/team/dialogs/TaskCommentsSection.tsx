@@ -70,7 +70,7 @@ interface TaskCommentsSectionProps {
    * Ref callback factory from useViewportCommentRead.
    * When provided, each comment element is registered for viewport-based read tracking.
    */
-  registerCommentForViewport?: (timestampMs: number) => (el: HTMLElement | null) => void;
+  registerCommentForViewport?: (commentId: string) => (el: HTMLElement | null) => void;
 }
 
 export const TaskCommentsSection = ({
@@ -216,9 +216,7 @@ export const TaskCommentsSection = ({
               <AnimatedHeightReveal key={comment.id} animate={newCommentIds.has(comment.id)}>
                 <div
                   ref={
-                    registerCommentForViewport
-                      ? registerCommentForViewport(new Date(comment.createdAt).getTime())
-                      : undefined
+                    registerCommentForViewport ? registerCommentForViewport(comment.id) : undefined
                   }
                   className={[
                     'group min-w-0 overflow-hidden px-4 py-2.5',

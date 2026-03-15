@@ -37,6 +37,7 @@ interface MemberCardProps {
   spawnStatus?: MemberSpawnStatus;
   spawnError?: string;
   onOpenTask?: () => void;
+  onOpenReviewTask?: () => void;
   onClick?: () => void;
   onSendMessage?: () => void;
   onAssignTask?: () => void;
@@ -56,6 +57,7 @@ export const MemberCard = ({
   spawnStatus,
   spawnError,
   onOpenTask,
+  onOpenReviewTask,
   onClick,
   onSendMessage,
   onAssignTask,
@@ -88,7 +90,6 @@ export const MemberCard = ({
   const totalTasks = pending + inProgress + completed;
   const progressPercent = totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 0;
   const activityTask = currentTask ?? reviewTask ?? null;
-  const activityLabel = currentTask ? 'working on' : reviewTask ? 'reviewing' : null;
   const activityTitle = currentTask
     ? `Current task: #${deriveTaskDisplayId(currentTask.id)}`
     : reviewTask
@@ -131,19 +132,29 @@ export const MemberCard = ({
             />
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm">
-            <span className="shrink-0 font-medium text-[var(--color-text)]">{displayMemberName(member.name)}</span>
+            <span className="shrink-0 font-medium text-[var(--color-text)]">
+              {displayMemberName(member.name)}
+            </span>
             {member.gitBranch ? (
               <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-[var(--color-text-muted)]">
                 <GitBranch size={10} />
                 {member.gitBranch}
               </span>
             ) : null}
-            {activityTask && activityLabel ? (
+            {currentTask ? (
               <CurrentTaskIndicator
-                task={activityTask}
+                task={currentTask}
                 borderColor={colors.border}
-                activityLabel={activityLabel}
+                activityLabel="working on"
                 onOpenTask={onOpenTask}
+              />
+            ) : null}
+            {reviewTask ? (
+              <CurrentTaskIndicator
+                task={reviewTask}
+                borderColor={colors.border}
+                activityLabel="reviewing"
+                onOpenTask={onOpenReviewTask}
               />
             ) : null}
             {!activityTask && isAwaitingReply ? (

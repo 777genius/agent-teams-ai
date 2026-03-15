@@ -1,5 +1,6 @@
 import { CROSS_TEAM_SENT_SOURCE, CROSS_TEAM_SOURCE, formatCrossTeamText } from '@shared/constants';
 import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { randomUUID } from 'crypto';
@@ -194,7 +195,7 @@ export class CrossTeamService {
       }
       if (!config || config.deletedAt) continue;
 
-      const lead = config.members?.find((m) => m.role === 'lead' || m.name === 'team-lead');
+      const lead = config.members?.find((m) => isLeadMember(m));
 
       targets.push({
         teamName: entry,

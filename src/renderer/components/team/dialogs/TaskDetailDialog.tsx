@@ -30,7 +30,7 @@ import { Input } from '@renderer/components/ui/input';
 import { MemberSelect } from '@renderer/components/ui/MemberSelect';
 import { TiptapEditor } from '@renderer/components/ui/tiptap';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { getLastReadTimestamp } from '@renderer/services/commentReadStorage';
+import { getLegacyCutoff, getReadCommentIds } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useViewportCommentRead } from '@renderer/hooks/useViewportCommentRead';
@@ -46,6 +46,7 @@ import {
 } from '@renderer/utils/memberHelpers';
 import { buildTaskChangeRequestOptions, deriveTaskSince } from '@renderer/utils/taskChangeRequest';
 import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { getTaskKanbanColumn } from '@shared/utils/reviewState';
 import { isTaskChangeSummaryCacheable } from '@shared/utils/taskChangeState';
 import {
@@ -252,12 +253,14 @@ export const TaskDetailDialog = ({
       unreadSnapshotRef.current = new Set();
       return;
     }
-    const lastRead = getLastReadTimestamp(teamName, currentTask.id);
+    const readIds = getReadCommentIds(teamName, currentTask.id);
+    const cutoff = getLegacyCutoff(teamName, currentTask.id);
     const unread = new Set<string>();
     for (const c of comments) {
-      if (new Date(c.createdAt).getTime() > lastRead) {
-        unread.add(c.id);
-      }
+      if (readIds.has(c.id)) continue;
+      const ts = new Date(c.createdAt).getTime();
+      if (cutoff > 0 && ts <= cutoff) continue;
+      unread.add(c.id);
     }
     unreadSnapshotRef.current = unread;
   }, [open, teamName, currentTask?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -507,8 +510,7 @@ export const TaskDetailDialog = ({
     .map((t) => t.id);
   const isTodo = status === 'pending' && !kanbanColumn;
   const canReassign = isTodo && onOwnerChange;
-  const leadName =
-    members.find((m) => m.agentType === 'team-lead' || m.name === 'team-lead')?.name ?? 'team-lead';
+  const leadName = members.find((m) => isLeadMember(m))?.name ?? 'team-lead';
   const isLeadOwnedTask =
     (currentTask.owner ?? '').trim().toLowerCase() === leadName.trim().toLowerCase() ||
     (currentTask.owner ?? '').trim().toLowerCase() === 'team-lead';

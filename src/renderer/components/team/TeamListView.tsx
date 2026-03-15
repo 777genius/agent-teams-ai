@@ -23,6 +23,7 @@ import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { buildTaskCountsByTeam, normalizePath } from '@renderer/utils/pathNormalize';
 import { getBaseName } from '@renderer/utils/pathUtils';
 import { nameColorSet } from '@renderer/utils/projectColor';
+import { isLeadAgentType } from '@shared/utils/leadDetection';
 import {
   CheckCircle,
   Clock,
@@ -38,12 +39,19 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 
 import { CreateTeamDialog } from './dialogs/CreateTeamDialog';
+import { LaunchTeamDialog } from './dialogs/LaunchTeamDialog';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
 
 import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
 import type { TeamListFilterState } from './TeamListFilterPopover';
-import type { TeamCreateRequest, TeamSummary, TeamSummaryMember } from '@shared/types';
+import type {
+  ResolvedTeamMember,
+  TeamCreateRequest,
+  TeamLaunchRequest,
+  TeamSummary,
+  TeamSummaryMember,
+} from '@shared/types';
 
 function generateUniqueName(sourceName: string, existingNames: string[]): string {
   const base = sourceName.replace(/-\d+$/, '');
@@ -467,7 +475,7 @@ export const TeamListView = (): React.JSX.Element => {
           const existingNames = teams.map((t) => t.teamName);
           const uniqueName = generateUniqueName(teamName, existingNames);
           const members = (data.members ?? [])
-            .filter((m) => !m.removedAt && m.agentType !== 'team-lead')
+            .filter((m) => !m.removedAt && !isLeadAgentType(m.agentType))
             .map((m) => {
               let role = m.role;
               if (!role && m.agentType && m.agentType !== 'general-purpose') {
@@ -505,14 +513,39 @@ export const TeamListView = (): React.JSX.Element => {
   }, []);
 
   const [launchingTeamName, setLaunchingTeamName] = useState<string | null>(null);
+  const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
+  const [launchDialogTeamName, setLaunchDialogTeamName] = useState('');
+  const [launchDialogMembers, setLaunchDialogMembers] = useState<ResolvedTeamMember[]>([]);
+  const [launchDialogDefaultPath, setLaunchDialogDefaultPath] = useState<string | undefined>();
+
   const handleLaunchTeam = useCallback(
     async (teamName: string, projectPath: string | undefined, e: React.MouseEvent) => {
       e.stopPropagation();
       if (!projectPath) return;
-      setLaunchingTeamName(teamName);
       try {
-        await launchTeam({ teamName, cwd: projectPath });
-        openTeamTab(teamName, projectPath);
+        const data = await api.teams.getData(teamName);
+        setLaunchDialogTeamName(teamName);
+        setLaunchDialogMembers(data.members ?? []);
+        setLaunchDialogDefaultPath(data.config.projectPath ?? projectPath);
+        setLaunchDialogOpen(true);
+      } catch (err) {
+        console.error('Failed to load team data for launch dialog:', err);
+        // Fallback: open dialog with minimal data
+        setLaunchDialogTeamName(teamName);
+        setLaunchDialogMembers([]);
+        setLaunchDialogDefaultPath(projectPath);
+        setLaunchDialogOpen(true);
+      }
+    },
+    []
+  );
+
+  const handleLaunchSubmit = useCallback(
+    async (request: TeamLaunchRequest) => {
+      setLaunchingTeamName(request.teamName);
+      try {
+        await launchTeam(request);
+        openTeamTab(request.teamName, request.cwd);
       } catch (err) {
         console.error('Failed to launch team:', err);
       } finally {
@@ -584,6 +617,21 @@ export const TeamListView = (): React.JSX.Element => {
       onClose={handleCreateDialogClose}
       onCreate={handleCreateSubmit}
       onOpenTeam={openTeamTab}
+    />
+  );
+
+  const launchDialogElement = (
+    <LaunchTeamDialog
+      mode="launch"
+      open={launchDialogOpen}
+      teamName={launchDialogTeamName}
+      members={launchDialogMembers}
+      defaultProjectPath={launchDialogDefaultPath}
+      provisioningError={provisioningErrorByTeam[launchDialogTeamName] ?? null}
+      clearProvisioningError={clearProvisioningError}
+      activeTeams={activeTeams}
+      onClose={() => setLaunchDialogOpen(false)}
+      onLaunch={handleLaunchSubmit}
     />
   );
 
@@ -979,6 +1027,7 @@ export const TeamListView = (): React.JSX.Element => {
         {renderHeader()}
         {renderContent()}
         {createDialogElement}
+        {launchDialogElement}
       </div>
     </TooltipProvider>
   );

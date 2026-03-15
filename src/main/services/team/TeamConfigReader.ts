@@ -1,5 +1,6 @@
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import {
   createCliAutoSuffixNameGuard,
@@ -207,7 +208,7 @@ export class TeamConfigReader {
         const name = m.name?.trim();
         if (!name) return;
         // Summary/memberCount should represent teammates (exclude the lead process).
-        if (name === 'team-lead' || name === 'user' || m.agentType === 'team-lead') return;
+        if (name === 'user' || isLeadMember(m)) return;
         const key = name.toLowerCase();
         // If meta marks this name removed, do not surface it in summaries
         if (removedKeys.has(key)) return;
@@ -227,7 +228,7 @@ export class TeamConfigReader {
           const name = member.name?.trim();
           if (!name) continue;
           // Summary/memberCount should represent teammates (exclude the lead process).
-          if (name === 'team-lead' || name === 'user' || member.agentType === 'team-lead') continue;
+          if (name === 'user' || isLeadMember(member)) continue;
           const key = name.toLowerCase();
           if (member.removedAt) {
             removedKeys.add(key);

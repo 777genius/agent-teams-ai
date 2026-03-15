@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-import { markAsRead } from '@renderer/services/commentReadStorage';
+import { markCommentsRead } from '@renderer/services/commentReadStorage';
 
 import { useViewportObserver } from './useViewportObserver';
 
@@ -20,31 +20,31 @@ interface UseViewportCommentReadOptions {
 /**
  * Marks task comments as read based on viewport visibility.
  *
- * Instead of marking all comments read on mount, this hook uses
- * IntersectionObserver (via useViewportObserver) to detect which
- * comment elements are visible in the scroll container and updates
- * the per-task read timestamp to the newest visible comment.
+ * Uses IntersectionObserver (via useViewportObserver) to detect which
+ * comment elements are visible in the scroll container and records
+ * their individual IDs as read via per-comment ID tracking.
  *
  * Each comment element should be registered via the returned
- * `registerComment(commentTimestampMs)` ref callback.
+ * `registerComment(commentId)` ref callback.
  *
- * Compatible with the existing per-task timestamp storage format
- * in commentReadStorage — no storage schema changes needed.
+ * Only comments that have actually been scrolled into view are marked
+ * as read — fixes the bug where DESC-sorted comments caused all
+ * comments to be marked read when the newest was visible at the top.
  */
 export function useViewportCommentRead({
   teamName,
   taskId,
   scrollContainerRef,
 }: UseViewportCommentReadOptions): {
-  /** Ref callback factory. Call with the comment's createdAt timestamp (ms). */
-  registerComment: (timestampMs: number) => (el: HTMLElement | null) => void;
+  /** Ref callback factory. Call with the comment's unique ID. */
+  registerComment: (commentId: string) => (el: HTMLElement | null) => void;
   /**
-   * Flush the highest observed timestamp now. Call on dialog close
+   * Flush all observed comment IDs now. Call on dialog close
    * as a safety fallback (e.g. if IO did not fire for portal reasons).
    */
   flush: () => void;
 } {
-  const highestSeenRef = useRef(0);
+  const seenIdsRef = useRef<Set<string>>(new Set());
   const teamNameRef = useRef(teamName);
   const taskIdRef = useRef(taskId);
   teamNameRef.current = teamName;
@@ -52,22 +52,30 @@ export function useViewportCommentRead({
 
   // Reset tracked state when team/task changes
   useEffect(() => {
-    highestSeenRef.current = 0;
+    seenIdsRef.current = new Set();
   }, [teamName, taskId]);
 
-  const handleVisibleChange = useCallback((visibleValues: string[]) => {
-    let maxTs = 0;
-    for (const v of visibleValues) {
-      const ts = Number(v);
-      if (Number.isFinite(ts) && ts > maxTs) {
-        maxTs = ts;
-      }
-    }
-    if (maxTs > 0 && maxTs > highestSeenRef.current) {
-      highestSeenRef.current = maxTs;
-      markAsRead(teamNameRef.current, taskIdRef.current, maxTs);
+  const persistSeen = useCallback(() => {
+    if (seenIdsRef.current.size > 0) {
+      markCommentsRead(teamNameRef.current, taskIdRef.current, Array.from(seenIdsRef.current));
     }
   }, []);
+
+  const handleVisibleChange = useCallback(
+    (visibleValues: string[]) => {
+      let changed = false;
+      for (const id of visibleValues) {
+        if (id && !seenIdsRef.current.has(id)) {
+          seenIdsRef.current.add(id);
+          changed = true;
+        }
+      }
+      if (changed) {
+        persistSeen();
+      }
+    },
+    [persistSeen]
+  );
 
   const { registerElement } = useViewportObserver({
     rootRef: scrollContainerRef,
@@ -76,15 +84,13 @@ export function useViewportCommentRead({
   });
 
   const registerComment = useCallback(
-    (timestampMs: number) => registerElement(String(timestampMs)),
+    (commentId: string) => registerElement(commentId),
     [registerElement]
   );
 
   const flush = useCallback(() => {
-    if (highestSeenRef.current > 0) {
-      markAsRead(teamNameRef.current, taskIdRef.current, highestSeenRef.current);
-    }
-  }, []);
+    persistSeen();
+  }, [persistSeen]);
 
   return { registerComment, flush };
 }

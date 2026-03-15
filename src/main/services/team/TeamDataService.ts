@@ -14,6 +14,7 @@ import {
   stripAgentBlocks,
 } from '@shared/constants/agentBlocks';
 import { getMemberColorByName } from '@shared/constants/memberColors';
+import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { getKanbanColumnFromReviewState, normalizeReviewState } from '@shared/utils/reviewState';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
@@ -585,7 +586,7 @@ export class TeamDataService {
     config: TeamConfig
   ): Promise<void> {
     // Determine lead's cwd — prefer explicit member entry, fall back to config.projectPath
-    const leadEntry = config.members?.find((m) => m.name === 'team-lead');
+    const leadEntry = config.members?.find((m) => isLeadMember(m));
     const leadCwd = leadEntry?.cwd ?? config.projectPath;
     if (!leadCwd) return;
 
@@ -737,7 +738,7 @@ export class TeamDataService {
   ): Promise<{ oldRole: string | undefined; changed: boolean }> {
     const { members, member } = await this.ensureMemberInMeta(teamName, memberName);
     if (member.removedAt) throw new Error(`Member "${memberName}" is removed`);
-    if (member.agentType === 'team-lead') throw new Error('Cannot change team lead role');
+    if (isLeadAgentType(member.agentType)) throw new Error('Cannot change team lead role');
 
     const oldRole = member.role;
     const normalized = typeof newRole === 'string' && newRole.trim() ? newRole.trim() : undefined;
@@ -753,9 +754,7 @@ export class TeamDataService {
     request: { members: { name: string; role?: string; workflow?: string }[] }
   ): Promise<void> {
     const existing = await this.membersMetaStore.getMembers(teamName);
-    const isTeamLead = (m: TeamMember): boolean =>
-      m.agentType === 'team-lead' || m.name.trim().toLowerCase() === 'team-lead';
-    const existingLead = existing.find(isTeamLead) ?? null;
+    const existingLead = existing.find(isLeadMember) ?? null;
     const existingByName = new Map(existing.map((m) => [m.name.toLowerCase(), m]));
     const joinedAt = Date.now();
     const nextByName = new Set<string>();
@@ -788,7 +787,7 @@ export class TeamDataService {
     // Preserve/mark removed members so stale inbox files don't resurrect them in the UI.
     const nextRemoved: TeamMember[] = [];
     for (const prev of existing) {
-      if (isTeamLead(prev)) continue;
+      if (isLeadMember(prev)) continue;
       const prevName = prev.name.trim();
       if (!prevName) continue;
       const key = prevName.toLowerCase();
@@ -815,7 +814,7 @@ export class TeamDataService {
     if (member.removedAt) {
       throw new Error(`Member "${memberName}" is already removed`);
     }
-    if (member.agentType === 'team-lead') {
+    if (isLeadAgentType(member.agentType)) {
       throw new Error('Cannot remove team lead');
     }
 
@@ -1544,16 +1543,14 @@ export class TeamDataService {
 
       // Check config.json members first (Claude Code-created teams)
       if (config?.members?.length) {
-        const lead = config.members.find(
-          (m) => m.agentType === 'team-lead' || m.name === 'team-lead'
-        );
+        const lead = config.members.find((m) => isLeadMember(m));
         if (lead?.name) return lead.name;
       }
 
       // Fallback: check members.meta.json (UI-created teams)
       const metaMembers = await this.membersMetaStore.getMembers(teamName);
       if (metaMembers.length > 0) {
-        const lead = metaMembers.find((m) => m.agentType === 'team-lead' || m.name === 'team-lead');
+        const lead = metaMembers.find((m) => isLeadMember(m));
         if (lead?.name) return lead.name;
         return metaMembers[0]?.name ?? null;
       }
@@ -1844,7 +1841,7 @@ export class TeamDataService {
       return [];
     }
 
-    const leadName = config.members?.find((m) => m.agentType === 'team-lead')?.name ?? 'team-lead';
+    const leadName = config.members?.find((m) => isLeadAgentType(m.agentType))?.name ?? 'team-lead';
     const sessionIds = this.getRecentLeadSessionIds(config);
     if (sessionIds.length === 0) {
       return [];

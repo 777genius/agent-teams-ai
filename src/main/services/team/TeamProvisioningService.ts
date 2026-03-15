@@ -31,6 +31,7 @@ import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
+import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { parseAllTeammateMessages } from '@shared/utils/teammateMessageParser';
@@ -3582,7 +3583,7 @@ export class TeamProvisioningService {
       if (!config) return 0;
 
       const leadName =
-        config.members?.find((m) => m?.agentType === 'team-lead')?.name?.trim() || 'team-lead';
+        config.members?.find((m) => isLeadAgentType(m?.agentType))?.name?.trim() || 'team-lead';
 
       let leadInboxMessages: Awaited<ReturnType<TeamInboxReader['getMessagesFor']>> = [];
       try {
@@ -4855,11 +4856,11 @@ export class TeamProvisioningService {
     try {
       const config = await this.configReader.getConfig(run.teamName);
       if (config?.members) {
-        const configLead = config.members.find((m) => m?.agentType === 'team-lead');
+        const configLead = config.members.find((m) => isLeadAgentType(m?.agentType));
         leadName = configLead?.name?.trim() || 'team-lead';
         // Convert config members (excluding lead) to TeamCreateRequest member format.
         currentMembers = config.members
-          .filter((m) => m?.agentType !== 'team-lead' && m?.name)
+          .filter((m) => !isLeadAgentType(m?.agentType) && m?.name)
           .map((m) => ({
             name: m.name,
             role: m.role ?? undefined,
@@ -5310,7 +5311,8 @@ export class TeamProvisioningService {
             members?: { name?: string; agentType?: string }[];
           };
           const suffixed = (config.members ?? []).filter(
-            (m) => typeof m.name === 'string' && /-\d+$/.test(m.name) && m.agentType !== 'team-lead'
+            (m) =>
+              typeof m.name === 'string' && /-\d+$/.test(m.name) && !isLeadAgentType(m.agentType)
           );
           if (suffixed.length > 0) {
             logger.warn(
@@ -6155,7 +6157,7 @@ export class TeamProvisioningService {
             const name = typeof m.name === 'string' ? m.name.trim() : '';
             const agentType = typeof m.agentType === 'string' ? m.agentType : '';
             if (!name) continue;
-            if (agentType === 'team-lead' || name === 'team-lead' || name === 'user') {
+            if (isLeadMember(m) || name === 'user') {
               nextMembers.push(m);
               continue;
             }
@@ -6196,7 +6198,7 @@ export class TeamProvisioningService {
           const name = m.name?.trim() ?? '';
           if (!name) return false;
           const lower = name.toLowerCase();
-          if (lower === 'team-lead' || lower === 'user' || m.agentType === 'team-lead') return true;
+          if (lower === 'user' || isLeadMember(m)) return true;
           if (!m.removedAt && !keepName(name)) {
             removedFromMeta.push(name);
             return false;
@@ -6299,9 +6301,8 @@ export class TeamProvisioningService {
       const name = typeof member.name === 'string' ? member.name.trim() : '';
       if (!name) continue;
       const lower = name.toLowerCase();
-      const agentType = typeof member.agentType === 'string' ? member.agentType : '';
 
-      if (agentType === 'team-lead' || lower === 'team-lead' || lower === 'user') continue;
+      if (isLeadMember(member) || lower === 'user') continue;
 
       const leadAgentId = config.leadAgentId;
       if (
@@ -6343,7 +6344,7 @@ export class TeamProvisioningService {
     // Keep only the lead entry.
     const leadMembers = members.filter((member) => {
       const agentType = member.agentType;
-      if (typeof agentType === 'string' && agentType === 'team-lead') {
+      if (typeof agentType === 'string' && isLeadAgentType(agentType)) {
         return true;
       }
       const leadAgentId = config.leadAgentId;
@@ -6381,7 +6382,7 @@ export class TeamProvisioningService {
         if (
           name &&
           agentType &&
-          agentType !== 'team-lead' &&
+          !isLeadAgentType(agentType) &&
           name !== 'team-lead' &&
           name !== 'user'
         ) {
@@ -6652,7 +6653,7 @@ export class TeamProvisioningService {
       for (const member of metaMembers) {
         const rawName = member.name?.trim() ?? '';
         const lower = rawName.toLowerCase();
-        if (member.agentType === 'team-lead' || lower === 'team-lead' || lower === 'user') {
+        if (isLeadMember(member) || lower === 'user') {
           continue;
         }
         const name = rawName;
@@ -6771,13 +6772,7 @@ export class TeamProvisioningService {
       for (const member of parsed.members) {
         const rawName = typeof member?.name === 'string' ? member.name.trim() : '';
         const lower = rawName.toLowerCase();
-        if (
-          !member ||
-          member.agentType === 'team-lead' ||
-          lower === 'team-lead' ||
-          lower === 'user'
-        )
-          continue;
+        if (!member || isLeadMember(member) || lower === 'user') continue;
         const name = rawName;
         if (!name) continue;
         byName.set(name, { name });

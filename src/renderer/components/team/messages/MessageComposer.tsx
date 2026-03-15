@@ -24,6 +24,7 @@ import {
   stripEncodedTaskReferenceMetadata,
 } from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { AlertCircle, Check, ChevronDown, ImagePlus, Mic, Search, Send } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
@@ -86,7 +87,7 @@ export const MessageComposer = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalTextareaRef]);
   const [recipient, setRecipient] = useState<string>(() => {
-    const lead = members.find((m) => m.role === 'lead' || m.name === 'team-lead');
+    const lead = members.find((m) => isLeadMember(m));
     return lead?.name ?? members[0]?.name ?? '';
   });
   const [recipientOpen, setRecipientOpen] = useState(false);
@@ -166,7 +167,7 @@ export const MessageComposer = ({
     if (recipient && members.some((m) => m.name === recipient)) {
       return;
     }
-    const lead = members.find((m) => m.role === 'lead' || m.name === 'team-lead');
+    const lead = members.find((m) => isLeadMember(m));
     const next = lead?.name ?? members[0]?.name ?? '';
     if (next && next !== recipient) {
       queueMicrotask(() => setRecipient(next));
@@ -203,7 +204,7 @@ export const MessageComposer = ({
 
   const selectedMember = members.find((m) => m.name === recipient);
   const selectedResolvedColor = selectedMember ? colorMap.get(selectedMember.name) : undefined;
-  const isLeadRecipient = selectedMember?.role === 'lead' || selectedMember?.name === 'team-lead';
+  const isLeadRecipient = selectedMember ? isLeadMember(selectedMember) : false;
   const hasTeammates = members.length > 1;
   const canDelegate = hasTeammates && (isCrossTeam || isLeadRecipient);
   const shouldAutoDelegate = isLeadRecipient && canDelegate;
@@ -681,8 +682,8 @@ export const MessageComposer = ({
                           );
                         }
                         const sorted = [...filtered].sort((a, b) => {
-                          const aIsLead = a.role === 'lead' || a.name === 'team-lead' ? 1 : 0;
-                          const bIsLead = b.role === 'lead' || b.name === 'team-lead' ? 1 : 0;
+                          const aIsLead = isLeadMember(a) ? 1 : 0;
+                          const bIsLead = isLeadMember(b) ? 1 : 0;
                           return bIsLead - aIsLead;
                         });
                         return sorted.map((m) => {
@@ -787,8 +788,8 @@ export const MessageComposer = ({
                         );
                       }
                       const sorted = [...filtered].sort((a, b) => {
-                        const aIsLead = a.role === 'lead' || a.name === 'team-lead' ? 1 : 0;
-                        const bIsLead = b.role === 'lead' || b.name === 'team-lead' ? 1 : 0;
+                        const aIsLead = isLeadMember(a) ? 1 : 0;
+                        const bIsLead = isLeadMember(b) ? 1 : 0;
                         return bIsLead - aIsLead;
                       });
                       return sorted.map((m) => {

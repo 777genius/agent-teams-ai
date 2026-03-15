@@ -50,6 +50,7 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
+import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { useShallow } from 'zustand/react/shallow';
 
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
@@ -693,7 +694,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   }, [filteredTasks, kanbanSearch]);
 
   const activeTeammateCount = useMemo(
-    () => activeMembers.filter((m) => m.agentType !== 'team-lead' && m.name !== 'team-lead').length,
+    () => activeMembers.filter((m) => !isLeadMember(m)).length,
     [activeMembers]
   );
 
@@ -1744,7 +1745,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             currentName={data.config.name}
             currentDescription={data.config.description ?? ''}
             currentColor={data.config.color ?? ''}
-            currentMembers={data.members.filter((m) => m.agentType !== 'team-lead')}
+            currentMembers={data.members.filter((m) => !isLeadAgentType(m.agentType))}
             projectPath={data.config.projectPath}
             onClose={() => setEditDialogOpen(false)}
             onSaved={() => void selectTeam(teamName)}

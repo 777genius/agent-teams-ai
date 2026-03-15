@@ -3,6 +3,7 @@ import {
   MEMBER_COLOR_PALETTE,
   normalizeMemberColorName,
 } from '@shared/constants/memberColors';
+import { isLeadAgentType } from '@shared/utils/leadDetection';
 
 import type {
   LeadActivityState,
@@ -42,7 +43,7 @@ export function getMemberDotClass(
   if (member.status === 'terminated') return STATUS_DOT_COLORS.terminated;
   if (isTeamProvisioning) return STATUS_DOT_COLORS.unknown;
   if (isTeamAlive === false) return STATUS_DOT_COLORS.terminated;
-  if (leadActivity && member.agentType === 'team-lead') {
+  if (leadActivity && isLeadAgentType(member.agentType)) {
     return leadActivity === 'active'
       ? `${STATUS_DOT_COLORS.active} animate-pulse`
       : STATUS_DOT_COLORS.active;
@@ -62,7 +63,7 @@ export function getPresenceLabel(
   if (member.status === 'terminated') return 'terminated';
   if (isTeamProvisioning) return 'connecting';
   if (isTeamAlive === false) return 'offline';
-  if (leadActivity && member.agentType === 'team-lead') {
+  if (leadActivity && isLeadAgentType(member.agentType)) {
     if (leadActivity === 'active') {
       return leadContextPercent != null && leadContextPercent > 0
         ? `processing (${Math.round(leadContextPercent)}%)`

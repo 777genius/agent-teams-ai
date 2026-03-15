@@ -31,6 +31,7 @@ import {
   stripEncodedTaskReferenceMetadata,
 } from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { AlertCircle, ImagePlus, Send, X } from 'lucide-react';
 
 import { MemberBadge } from '../MemberBadge';
@@ -128,7 +129,7 @@ export const SendMessageDialog = ({
   } = useAttachments({ persistenceKey: `sendMessage:${teamName}:attachments` });
 
   const selectedMember = members.find((m) => m.name === member);
-  const isLeadRecipient = selectedMember?.role === 'lead' || selectedMember?.name === 'team-lead';
+  const isLeadRecipient = selectedMember ? isLeadMember(selectedMember) : false;
   const hasTeammates = members.length > 1;
   const canDelegate = hasTeammates && isLeadRecipient;
   const shouldAutoDelegate = canDelegate;

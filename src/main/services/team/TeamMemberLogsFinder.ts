@@ -1,4 +1,5 @@
 import { encodePath, extractBaseDir, getProjectsBasePath } from '@main/utils/pathDecoder';
+import { isLeadAgentType } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { parseAllTeammateMessages } from '@shared/utils/teammateMessageParser';
 import { createReadStream } from 'fs';
@@ -109,7 +110,7 @@ export class TeamMemberLogsFinder {
     const results: MemberLogSummary[] = [];
 
     const leadMemberName =
-      config.members?.find((m) => m?.agentType === 'team-lead')?.name?.trim() || 'team-lead';
+      config.members?.find((m) => isLeadAgentType(m?.agentType))?.name?.trim() || 'team-lead';
     if (isLeadMember && config.leadSessionId) {
       const leadJsonl = path.join(projectDir, `${config.leadSessionId}.jsonl`);
       const leadSummary = await this.parseLeadSessionSummary(
@@ -200,7 +201,7 @@ export class TeamMemberLogsFinder {
     const { projectDir, projectId, config, sessionIds, knownMembers } = discovery;
     const results: MemberLogSummary[] = [];
     const leadMemberName =
-      config.members?.find((m) => m?.agentType === 'team-lead')?.name?.trim() || 'team-lead';
+      config.members?.find((m) => isLeadAgentType(m?.agentType))?.name?.trim() || 'team-lead';
 
     if (config.leadSessionId) {
       const leadJsonl = path.join(projectDir, `${config.leadSessionId}.jsonl`);
@@ -422,7 +423,7 @@ export class TeamMemberLogsFinder {
     const refs: { filePath: string; memberName: string; sortTime: number }[] = [];
     const seen = new Set<string>();
     const leadMemberName =
-      config.members?.find((m) => m?.agentType === 'team-lead')?.name?.trim() || 'team-lead';
+      config.members?.find((m) => isLeadAgentType(m?.agentType))?.name?.trim() || 'team-lead';
 
     const pushRef = (filePath: string, memberName: string, sortTime = 0): void => {
       const key = `${memberName.toLowerCase()}:${filePath}`;
@@ -817,7 +818,7 @@ export class TeamMemberLogsFinder {
     if (!discovery) return null;
     const { config } = discovery;
     const leadMemberName =
-      config.members?.find((m) => m?.agentType === 'team-lead')?.name?.trim() || 'team-lead';
+      config.members?.find((m) => isLeadAgentType(m?.agentType))?.name?.trim() || 'team-lead';
     const isLeadMember = leadMemberName.toLowerCase() === memberName.trim().toLowerCase();
     return { ...discovery, isLeadMember };
   }
