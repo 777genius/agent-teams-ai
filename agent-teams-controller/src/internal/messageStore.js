@@ -91,6 +91,9 @@ function buildMessage(flags, defaults) {
     ...(typeof flags.summary === 'string' && flags.summary.trim()
       ? { summary: flags.summary.trim() }
       : {}),
+    ...(typeof flags.relayOfMessageId === 'string' && flags.relayOfMessageId.trim()
+      ? { relayOfMessageId: flags.relayOfMessageId.trim() }
+      : {}),
     ...(typeof flags.source === 'string' && flags.source.trim() ? { source: flags.source.trim() } : {}),
     ...(typeof flags.leadSessionId === 'string' && flags.leadSessionId.trim()
       ? { leadSessionId: flags.leadSessionId.trim() }

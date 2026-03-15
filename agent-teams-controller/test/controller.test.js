@@ -539,6 +539,7 @@ describe('agent-teams-controller API', () => {
       from: 'team-lead',
       text: 'Need your review',
       summary: 'Review request',
+      relayOfMessageId: 'm-original-1',
       source: 'system_notification',
       leadSessionId: 'session-42',
       attachments: [{ id: 'a1', filename: 'note.txt', mimeType: 'text/plain', size: 7 }],
@@ -551,6 +552,7 @@ describe('agent-teams-controller API', () => {
     const rows = JSON.parse(fs.readFileSync(inboxPath, 'utf8'));
     expect(rows).toHaveLength(1);
     expect(rows[0].source).toBe('system_notification');
+    expect(rows[0].relayOfMessageId).toBe('m-original-1');
     expect(rows[0].leadSessionId).toBe('session-42');
     expect(rows[0].attachments[0].filename).toBe('note.txt');
   });

@@ -258,6 +258,8 @@ export interface InboxMessage {
   summary?: string;
   color?: string;
   messageId?: string;
+  /** Original inbox messageId when this row is only a relay/delivery bridge copy. */
+  relayOfMessageId?: string;
   source?:
     | 'inbox'
     | 'lead_session'
@@ -290,6 +292,7 @@ export interface SendMessageRequest {
   from?: string;
   timestamp?: string;
   messageId?: string;
+  relayOfMessageId?: string;
   /** Override the `to` field in the stored message (defaults to `member`). */
   to?: string;
   color?: string;

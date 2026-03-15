@@ -103,6 +103,7 @@ export function areInboxMessagesEquivalentForRender(
   if (prev.summary !== next.summary) return false;
   if (prev.color !== next.color) return false;
   if (prev.read !== next.read) return false;
+  if (prev.relayOfMessageId !== next.relayOfMessageId) return false;
   if (prev.source !== next.source) return false;
   if (prev.leadSessionId !== next.leadSessionId) return false;
   if (prev.toolSummary !== next.toolSummary) return false;

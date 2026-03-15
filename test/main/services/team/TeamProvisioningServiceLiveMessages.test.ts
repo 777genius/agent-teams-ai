@@ -131,7 +131,9 @@ interface RunLike {
   pendingDirectCrossTeamSendRefresh: boolean;
   lastLeadTextEmitMs: number;
   leadRelayCapture: null;
-  silentUserDmForward: null;
+  silentUserDmForward:
+    | null
+    | { target: string; startedAt: string; mode: 'user_dm' | 'member_inbox_relay' };
   suppressPostCompactReminderOutput?: boolean;
   child: Record<string, unknown> | null;
   processKilled: boolean;
@@ -139,6 +141,7 @@ interface RunLike {
   provisioningOutputParts: string[];
   request: { members: { name: string; role?: string }[] };
   activeCrossTeamReplyHints?: Array<{ toTeam: string; conversationId: string }>;
+  pendingInboxRelayCandidates?: unknown[];
 }
 
 /**
@@ -161,6 +164,7 @@ function attachRun(
     lastLeadTextEmitMs: 0,
     leadRelayCapture: null,
     silentUserDmForward: null,
+    pendingInboxRelayCandidates: [],
     child: { stdin: { writable: true, write: vi.fn(), end: vi.fn() } },
     processKilled: false,
     cancelRequested: false,

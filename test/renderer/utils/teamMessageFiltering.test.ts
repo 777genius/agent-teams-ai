@@ -37,6 +37,54 @@ describe('filterTeamMessages', () => {
     expect(result[0].source).toBe('lead_process');
   });
 
+  it('hides relay bridge copies when the original message is visible', () => {
+    const messages = [
+      makeMessage({
+        messageId: 'orig-1',
+        to: 'alice',
+        source: 'system_notification',
+        text: 'Original inbox notification',
+      }),
+      makeMessage({
+        messageId: 'relay-1',
+        to: 'alice',
+        source: 'lead_process',
+        text: 'Original inbox notification',
+        relayOfMessageId: 'orig-1',
+      }),
+    ];
+
+    const result = filterTeamMessages(messages, {
+      timeWindow: null,
+      filter: { from: new Set(), to: new Set(), showNoise: true },
+      searchQuery: '',
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].messageId).toBe('orig-1');
+  });
+
+  it('keeps relay bridge copies when the original message is not visible', () => {
+    const messages = [
+      makeMessage({
+        messageId: 'relay-1',
+        to: 'alice',
+        source: 'lead_process',
+        text: 'Original inbox notification',
+        relayOfMessageId: 'orig-1',
+      }),
+    ];
+
+    const result = filterTeamMessages(messages, {
+      timeWindow: null,
+      filter: { from: new Set(), to: new Set(), showNoise: true },
+      searchQuery: '',
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].messageId).toBe('relay-1');
+  });
+
   it('still filters noise messages when showNoise is false', () => {
     const messages = [
       makeMessage({

@@ -250,9 +250,15 @@ interface ProvisioningRun {
    * When set, the current stdin-injected turn is an internal "forward user DM to teammate"
    * request triggered by the UI. We suppress any lead→user echo for that turn.
    */
-  silentUserDmForward: { target: string; startedAt: string } | null;
+  silentUserDmForward: {
+    target: string;
+    startedAt: string;
+    mode: 'user_dm' | 'member_inbox_relay';
+  } | null;
   /** Safety valve: clears silentUserDmForward if turn never completes. */
   silentUserDmForwardClearHandle: NodeJS.Timeout | null;
+  /** Exact inbox rows currently being bridged into the live teammate process. */
+  pendingInboxRelayCandidates: PendingInboxRelayCandidate[];
   /** Accumulates assistant text during provisioning phase for live UI preview. */
   provisioningOutputParts: string[];
   /** Session ID detected from stream-json output (result.session_id or message.session_id). */
@@ -1343,9 +1349,18 @@ function isTransientProbeWarning(warning: string): boolean {
   );
 }
 
+interface PendingInboxRelayCandidate {
+  recipient: string;
+  sourceMessageId: string;
+  normalizedText: string;
+  normalizedSummary: string;
+  queuedAtMs: number;
+}
+
 export class TeamProvisioningService {
   private static readonly CLAUDE_LOG_LINES_LIMIT = 50_000;
   private static readonly RECENT_CROSS_TEAM_DELIVERY_TTL_MS = 10 * 60 * 1000;
+  private static readonly PENDING_INBOX_RELAY_TTL_MS = 2 * 60 * 1000;
 
   private readonly runs = new Map<string, ProvisioningRun>();
   private readonly provisioningRunByTeam = new Map<string, string>();
@@ -1904,6 +1919,7 @@ export class TeamProvisioningService {
         timestamp: message.timestamp,
         summary: message.summary,
         messageId: message.messageId,
+        relayOfMessageId: message.relayOfMessageId,
         source: message.source,
         leadSessionId: message.leadSessionId,
         conversationId: message.conversationId,
@@ -1931,6 +1947,7 @@ export class TeamProvisioningService {
         timestamp: message.timestamp,
         summary: message.summary,
         messageId: message.messageId,
+        relayOfMessageId: message.relayOfMessageId,
         source: message.source,
         leadSessionId: message.leadSessionId,
         conversationId: message.conversationId,
@@ -1950,8 +1967,100 @@ export class TeamProvisioningService {
     return `${teamName}:${memberName.trim()}`;
   }
 
-  private armSilentTeammateForward(run: ProvisioningRun, teammateName: string): void {
-    run.silentUserDmForward = { target: teammateName, startedAt: nowIso() };
+  private normalizeRelayCandidateText(text: string): string {
+    return stripAgentBlocks(String(text)).trim().replace(/\r\n/g, '\n');
+  }
+
+  private normalizeRelayCandidateSummary(summary?: string): string {
+    return typeof summary === 'string' ? summary.trim() : '';
+  }
+
+  private prunePendingInboxRelayCandidates(run: ProvisioningRun): PendingInboxRelayCandidate[] {
+    const cutoff = Date.now() - TeamProvisioningService.PENDING_INBOX_RELAY_TTL_MS;
+    run.pendingInboxRelayCandidates = (run.pendingInboxRelayCandidates ?? []).filter(
+      (candidate) => candidate.queuedAtMs >= cutoff
+    );
+    return run.pendingInboxRelayCandidates;
+  }
+
+  private rememberPendingInboxRelayCandidates(
+    run: ProvisioningRun,
+    recipient: string,
+    messages: Array<Pick<InboxMessage, 'messageId' | 'text' | 'summary'>>
+  ): string[] {
+    const candidates = this.prunePendingInboxRelayCandidates(run);
+    const queuedAtMs = Date.now();
+    const rememberedIds: string[] = [];
+    for (const message of messages) {
+      const sourceMessageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
+      const normalizedText = this.normalizeRelayCandidateText(message.text);
+      if (!sourceMessageId || !normalizedText) {
+        continue;
+      }
+      candidates.push({
+        recipient,
+        sourceMessageId,
+        normalizedText,
+        normalizedSummary: this.normalizeRelayCandidateSummary(message.summary),
+        queuedAtMs,
+      });
+      rememberedIds.push(sourceMessageId);
+    }
+    return rememberedIds;
+  }
+
+  private forgetPendingInboxRelayCandidates(
+    run: ProvisioningRun,
+    recipient: string,
+    sourceMessageIds: readonly string[]
+  ): void {
+    if (sourceMessageIds.length === 0) {
+      return;
+    }
+    const idSet = new Set(sourceMessageIds);
+    run.pendingInboxRelayCandidates = this.prunePendingInboxRelayCandidates(run).filter(
+      (candidate) => !(candidate.recipient === recipient && idSet.has(candidate.sourceMessageId))
+    );
+  }
+
+  private consumePendingInboxRelayCandidate(
+    run: ProvisioningRun,
+    recipient: string,
+    text: string,
+    summary?: string
+  ): string | undefined {
+    const normalizedText = this.normalizeRelayCandidateText(text);
+    if (!normalizedText) {
+      return undefined;
+    }
+    const normalizedSummary = this.normalizeRelayCandidateSummary(summary);
+    const candidates = this.prunePendingInboxRelayCandidates(run);
+    const exactSummaryIdx = candidates.findIndex(
+      (candidate) =>
+        candidate.recipient === recipient &&
+        candidate.normalizedText === normalizedText &&
+        candidate.normalizedSummary === normalizedSummary
+    );
+    const fallbackIdx =
+      exactSummaryIdx >= 0
+        ? exactSummaryIdx
+        : candidates.findIndex(
+            (candidate) =>
+              candidate.recipient === recipient && candidate.normalizedText === normalizedText
+          );
+    if (fallbackIdx < 0) {
+      return undefined;
+    }
+    const [matched] = candidates.splice(fallbackIdx, 1);
+    return matched?.sourceMessageId;
+  }
+
+  private armSilentTeammateForward(
+    run: ProvisioningRun,
+    teammateName: string,
+    mode: 'user_dm' | 'member_inbox_relay'
+  ): void {
+    run.silentUserDmForward = { target: teammateName, startedAt: nowIso(), mode };
     if (run.silentUserDmForwardClearHandle) {
       clearTimeout(run.silentUserDmForwardClearHandle);
       run.silentUserDmForwardClearHandle = null;
@@ -2732,6 +2841,7 @@ export class TeamProvisioningService {
         lastLeadTextEmitMs: 0,
         silentUserDmForward: null,
         silentUserDmForwardClearHandle: null,
+        pendingInboxRelayCandidates: [],
         provisioningOutputParts: [],
         detectedSessionId: null,
         leadActivityState: 'active',
@@ -3095,6 +3205,7 @@ export class TeamProvisioningService {
         lastLeadTextEmitMs: 0,
         silentUserDmForward: null,
         silentUserDmForwardClearHandle: null,
+        pendingInboxRelayCandidates: [],
         provisioningOutputParts: [],
         detectedSessionId: null,
         leadActivityState: 'active',
@@ -3388,7 +3499,7 @@ export class TeamProvisioningService {
       return;
     }
 
-    this.armSilentTeammateForward(run, teammateName);
+    this.armSilentTeammateForward(run, teammateName, 'user_dm');
 
     const summaryLine = userSummary?.trim() ? `Summary: ${userSummary.trim()}` : null;
     const internal = wrapInAgentBlock(
@@ -3466,7 +3577,8 @@ export class TeamProvisioningService {
       const MAX_RELAY = 10;
       const batch = actionableUnread.slice(0, MAX_RELAY);
 
-      this.armSilentTeammateForward(run, memberName);
+      this.armSilentTeammateForward(run, memberName, 'member_inbox_relay');
+      const rememberedRelayIds = this.rememberPendingInboxRelayCandidates(run, memberName, batch);
 
       const message = [
         `Relay inbox messages to teammate "${memberName}".`,
@@ -3517,6 +3629,7 @@ export class TeamProvisioningService {
       try {
         await this.sendMessageToTeam(teamName, message);
       } catch {
+        this.forgetPendingInboxRelayCandidates(run, memberName, rememberedRelayIds);
         return 0;
       }
 
@@ -4213,6 +4326,16 @@ export class TeamProvisioningService {
         continue;
       }
 
+      const relayOfMessageId =
+        recipient !== 'user'
+          ? this.consumePendingInboxRelayCandidate(
+              run,
+              recipient,
+              strippedCrossTeamContent,
+              summary
+            )
+          : undefined;
+
       const msg: InboxMessage = {
         from: leadName,
         to: recipient,
@@ -4224,6 +4347,7 @@ export class TeamProvisioningService {
             ? (summary || strippedCrossTeamContent).slice(0, 57) + '...'
             : summary || strippedCrossTeamContent,
         messageId: `lead-sendmsg-${run.runId}-${Date.now()}`,
+        ...(relayOfMessageId ? { relayOfMessageId } : {}),
         source: 'lead_process',
       };
 
@@ -4521,7 +4645,7 @@ export class TeamProvisioningService {
       // Capture SendMessage tool_use blocks from assistant output.
       // Works in both pre-ready and post-ready phases so outbound runtime messages
       // are visible in our team message artifacts even if Claude's own routing drifts.
-      if (!run.silentUserDmForward) {
+      if (!run.silentUserDmForward || run.silentUserDmForward.mode === 'member_inbox_relay') {
         this.captureSendMessages(run, content ?? []);
       }
 
@@ -4683,6 +4807,7 @@ export class TeamProvisioningService {
         }
         // Clear silent relay flag after any successful turn.
         run.activeCrossTeamReplyHints = [];
+        run.pendingInboxRelayCandidates = [];
         run.silentUserDmForward = null;
         if (run.silentUserDmForwardClearHandle) {
           clearTimeout(run.silentUserDmForwardClearHandle);
@@ -4719,6 +4844,7 @@ export class TeamProvisioningService {
         // Clear silent relay flag after any errored turn.
         run.pendingDirectCrossTeamSendRefresh = false;
         run.activeCrossTeamReplyHints = [];
+        run.pendingInboxRelayCandidates = [];
         run.silentUserDmForward = null;
         if (run.silentUserDmForwardClearHandle) {
           clearTimeout(run.silentUserDmForwardClearHandle);
@@ -5463,6 +5589,7 @@ export class TeamProvisioningService {
     this.pendingCrossTeamFirstReplies.delete(run.teamName);
     this.recentCrossTeamLeadDeliveryMessageIds.delete(run.teamName);
     run.activeCrossTeamReplyHints = [];
+    run.pendingInboxRelayCandidates = [];
     for (const key of Array.from(this.memberInboxRelayInFlight.keys())) {
       if (key.startsWith(`${run.teamName}:`)) {
         this.memberInboxRelayInFlight.delete(key);

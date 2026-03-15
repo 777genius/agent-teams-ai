@@ -162,6 +162,18 @@ function attachAliveRun(
   (service as unknown as { runs: Map<string, unknown> }).runs.set(runId, {
     runId,
     teamName,
+    request: {
+      teamName,
+      members: [{ name: 'team-lead', role: 'team-lead' }],
+    },
+    leadMsgSeq: 0,
+    pendingToolCalls: [],
+    pendingDirectCrossTeamSendRefresh: false,
+    lastLeadTextEmitMs: 0,
+    activeCrossTeamReplyHints: [],
+    pendingInboxRelayCandidates: [],
+    silentUserDmForward: null,
+    silentUserDmForwardClearHandle: null,
     child: {
       stdin: {
         writable,
@@ -198,6 +210,7 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     hoisted.readFile.mockClear();
     hoisted.atomicWrite.mockClear();
     hoisted.appendSentMessage.mockClear();
+    hoisted.sendInboxMessage.mockClear();
     hoisted.setAtomicWriteShouldFail(false);
   });
 
@@ -608,6 +621,94 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(payload).toContain('Source: system_notification');
     expect(payload).toContain('Forward that automated notification exactly once;');
     expect(payload).toContain('Please retry with logging enabled.');
+  });
+
+  it('marks exact teammate relay copies with relayOfMessageId', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedMemberInbox(teamName, 'alice', [
+      {
+        from: 'team-lead',
+        text:
+          `**Comment on task #abcd1234**\n> Investigate\n\n> Please retry with logging enabled.\n\n` +
+          '<agent-block>\nReply using task_add_comment\n</agent-block>',
+        timestamp: '2026-02-23T10:00:00.000Z',
+        read: false,
+        summary: 'Comment on #abcd1234',
+        messageId: 'm-alice-1',
+        source: 'system_notification',
+      },
+    ]);
+
+    attachAliveRun(service, teamName);
+    const relayed = await service.relayMemberInboxMessages(teamName, 'alice');
+    expect(relayed).toBe(1);
+
+    const run = (service as unknown as { runs: Map<string, unknown> }).runs.get('run-1') as unknown;
+    expect(run).toBeTruthy();
+
+    (service as any).handleStreamJsonMessage(run, {
+      type: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          name: 'SendMessage',
+          input: {
+            recipient: 'alice',
+            summary: 'Comment on #abcd1234',
+            content:
+              `**Comment on task #abcd1234**\n> Investigate\n\n> Please retry with logging enabled.\n\n` +
+              '<agent-block>\nHidden internal instructions\n</agent-block>',
+          },
+        },
+      ],
+    });
+
+    const inbox = JSON.parse(
+      hoisted.files.get(`/mock/teams/${teamName}/inboxes/alice.json`) ?? '[]'
+    ) as Array<{ messageId?: string; relayOfMessageId?: string; source?: string }>;
+    const relayedCopy = inbox.find((row) => row.messageId?.startsWith('lead-sendmsg-run-1-'));
+    expect(relayedCopy).toMatchObject({
+      source: 'lead_process',
+      relayOfMessageId: 'm-alice-1',
+    });
+  });
+
+  it('does not capture user-dm silent forwards as extra lead_process messages', () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    attachAliveRun(service, teamName);
+
+    const run = (service as unknown as { runs: Map<string, unknown> }).runs.get('run-1') as {
+      silentUserDmForward: { target: string; startedAt: string; mode: 'user_dm' | 'member_inbox_relay' } | null;
+    };
+    run.silentUserDmForward = {
+      target: 'alice',
+      startedAt: new Date().toISOString(),
+      mode: 'user_dm',
+    };
+
+    (service as any).handleStreamJsonMessage(run, {
+      type: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          name: 'SendMessage',
+          input: {
+            recipient: 'alice',
+            summary: 'Forwarded DM',
+            content: 'User DM payload',
+          },
+        },
+      ],
+    });
+
+    const inbox = JSON.parse(
+      hoisted.files.get(`/mock/teams/${teamName}/inboxes/alice.json`) ?? '[]'
+    ) as Array<{ messageId?: string; source?: string }>;
+    expect(inbox).toHaveLength(0);
   });
 
   it('does not relay pseudo cross-team member inboxes as teammates', async () => {

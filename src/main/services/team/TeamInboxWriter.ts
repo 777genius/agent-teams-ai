@@ -30,6 +30,7 @@ export class TeamInboxWriter {
       taskRefs: request.taskRefs?.length ? request.taskRefs : undefined,
       summary: request.summary,
       messageId,
+      ...(request.relayOfMessageId && { relayOfMessageId: request.relayOfMessageId }),
       attachments: attachmentMeta?.length ? attachmentMeta : undefined,
       ...(request.source && { source: request.source }),
       ...(request.leadSessionId && { leadSessionId: request.leadSessionId }),
