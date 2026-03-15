@@ -224,7 +224,7 @@ export const ChipInteractionLayer = ({
                 >
                   <button
                     type="button"
-                    className="absolute -right-1 -top-1.5 z-30 flex size-3.5 items-center justify-center rounded-full border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] opacity-0 transition-opacity group-hover:opacity-100"
+                    className="pointer-events-none absolute -right-1 -top-1.5 z-30 flex size-3.5 items-center justify-center rounded-full border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();

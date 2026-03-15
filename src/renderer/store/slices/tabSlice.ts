@@ -408,6 +408,21 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
 
     const existing = getAllTabs(paneLayout).find((t) => t.type === 'dashboard');
     if (existing) {
+      // Move existing dashboard tab to the rightmost position in its pane
+      const pane = findPaneByTabId(paneLayout, existing.id);
+      if (pane) {
+        const fromIndex = pane.tabs.findIndex((t) => t.id === existing.id);
+        const lastIndex = pane.tabs.length - 1;
+        if (fromIndex !== -1 && fromIndex !== lastIndex) {
+          const reordered = [...pane.tabs];
+          const [moved] = reordered.splice(fromIndex, 1);
+          reordered.push(moved);
+          const updatedPane = { ...pane, tabs: reordered, activeTabId: existing.id };
+          const newLayout = updatePane(paneLayout, updatedPane);
+          set(syncFromLayout(newLayout));
+          return;
+        }
+      }
       state.setActiveTab(existing.id);
       return;
     }

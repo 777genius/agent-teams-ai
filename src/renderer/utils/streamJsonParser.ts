@@ -51,6 +51,20 @@ interface ContentBlock {
 }
 
 /**
+ * Content-based hash for deterministic fallback IDs that survive
+ * line reordering and pagination changes.
+ * Caps input length to avoid hashing huge payloads.
+ */
+function stableHash(s: string): string {
+  let h = 0;
+  const len = Math.min(s.length, 500);
+  for (let i = 0; i < len; i++) {
+    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  }
+  return (h >>> 0).toString(36);
+}
+
+/**
  * Attempts to extract the content array from a parsed stream-json line.
  * Handles both `{ type: "assistant", content: [...] }` (direct) and
  * `{ type: "assistant", message: { type: "message", content: [...] } }` (wrapped) formats.
@@ -201,8 +215,9 @@ export function parseStreamJsonToGroups(cliLogsTail: string): StreamJsonGroup[] 
   let currentTimestamp: Date | null = null;
   let currentGroupId: string | null = null;
   let currentAgentId: string | undefined = undefined;
-  // Track how many times each messageId has been seen to disambiguate duplicates
+  // Track how many times each messageId / hash has been seen to disambiguate duplicates
   const msgIdOccurrences = new Map<string, number>();
+  const hashOccurrences = new Map<string, number>();
 
   const flushGroup = (): void => {
     if (currentItems.length > 0 && currentTimestamp) {
@@ -277,7 +292,11 @@ export function parseStreamJsonToGroups(cliLogsTail: string): StreamJsonGroup[] 
         currentGroupId =
           occurrence === 0 ? `stream-group-${msgId}` : `stream-group-${msgId}-${occurrence}`;
       } else {
-        currentGroupId = `stream-group-L${lineIndex}`;
+        // Content-hash fallback: deterministic and survives line reordering
+        const h = stableHash(trimmed);
+        const occ = hashOccurrences.get(h) ?? 0;
+        hashOccurrences.set(h, occ + 1);
+        currentGroupId = occ === 0 ? `stream-group-H${h}` : `stream-group-H${h}-${occ}`;
       }
     }
 
@@ -300,7 +319,6 @@ export function groupBySubagent(groups: StreamJsonGroup[]): StreamJsonEntry[] {
   const result: StreamJsonEntry[] = [];
   const pendingDescriptions: string[] = [];
   const agentDescMap = new Map<string, string>();
-  const sectionCountByAgent = new Map<string, number>();
   let currentRun: { agentId: string; groups: StreamJsonGroup[] } | null = null;
 
   const flushRun = (): void => {
@@ -312,13 +330,13 @@ export function groupBySubagent(groups: StreamJsonGroup[]): StreamJsonEntry[] {
         if (item.type === 'tool') toolCount++;
       }
     }
-    const count = sectionCountByAgent.get(currentRun.agentId) ?? 0;
-    sectionCountByAgent.set(currentRun.agentId, count + 1);
-    const idSuffix = count > 0 ? `-${count}` : '';
+    // Anchor section ID on first group's stable ID instead of occurrence count
+    const firstGroupId = currentRun.groups[0]?.id ?? '';
+    const sectionId = `subagent-${currentRun.agentId}-${stableHash(firstGroupId)}`;
     result.push({
       type: 'subagent-section',
       section: {
-        id: `subagent-section-${currentRun.agentId}${idSuffix}`,
+        id: sectionId,
         agentId: currentRun.agentId,
         description: desc,
         groups: currentRun.groups,

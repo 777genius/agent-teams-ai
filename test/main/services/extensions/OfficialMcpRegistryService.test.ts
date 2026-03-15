@@ -143,6 +143,12 @@ describe('OfficialMcpRegistryService', () => {
       const adAdvisor = result.servers.find((s) => s.id === 'ai.adadvisor/mcp-server');
 
       expect(adAdvisor?.requiresAuth).toBe(true);
+      expect(adAdvisor?.authHeaders).toHaveLength(1);
+      expect(adAdvisor?.authHeaders?.[0]).toMatchObject({
+        key: 'Authorization',
+        isRequired: true,
+        isSecret: true,
+      });
     });
 
     it('collects environment variables', async () => {

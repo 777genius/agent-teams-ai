@@ -55,14 +55,18 @@ import {
   REVIEW_GET_AGENT_CHANGES,
   REVIEW_GET_CHANGE_STATS,
   REVIEW_GET_FILE_CONTENT,
+  REVIEW_FILE_CHANGE,
   REVIEW_GET_GIT_FILE_LOG,
   REVIEW_GET_TASK_CHANGES,
+  REVIEW_INVALIDATE_TASK_CHANGE_SUMMARIES,
   REVIEW_LOAD_DECISIONS,
   REVIEW_PREVIEW_REJECT,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
   REVIEW_SAVE_DECISIONS,
   REVIEW_SAVE_EDITED_FILE,
+  REVIEW_UNWATCH_FILES,
+  REVIEW_WATCH_FILES,
   SSH_CONNECT,
   SSH_DISCONNECT,
   SSH_GET_CONFIG_HOSTS,
@@ -151,12 +155,23 @@ import {
   PLUGIN_UNINSTALL,
   MCP_REGISTRY_SEARCH,
   MCP_REGISTRY_BROWSE,
+  MCP_REGISTRY_DIAGNOSE,
   MCP_REGISTRY_GET_BY_ID,
   MCP_REGISTRY_GET_INSTALLED,
   MCP_REGISTRY_INSTALL,
   MCP_REGISTRY_INSTALL_CUSTOM,
   MCP_REGISTRY_UNINSTALL,
   MCP_GITHUB_STARS,
+  SKILLS_APPLY_IMPORT,
+  SKILLS_APPLY_UPSERT,
+  SKILLS_CHANGED,
+  SKILLS_DELETE,
+  SKILLS_GET_DETAIL,
+  SKILLS_LIST,
+  SKILLS_PREVIEW_IMPORT,
+  SKILLS_PREVIEW_UPSERT,
+  SKILLS_START_WATCHING,
+  SKILLS_STOP_WATCHING,
   API_KEYS_LIST,
   API_KEYS_SAVE,
   API_KEYS_DELETE,
@@ -194,6 +209,7 @@ import {
 
 import type {
   AddMemberRequest,
+  AddTaskCommentRequest,
   AgentChangeSet,
   AppConfig,
   ApplyReviewRequest,
@@ -204,7 +220,6 @@ import type {
   ClaudeRootInfo,
   CliInstallationStatus,
   CliInstallerProgress,
-  CommentAttachmentPayload,
   ConflictCheckResult,
   ContextInfo,
   CreateScheduleInput,
@@ -219,10 +234,11 @@ import type {
   HunkDecision,
   IpcResult,
   KanbanColumnId,
-  LeadContextUsage,
+  LeadActivitySnapshot,
+  LeadContextUsageSnapshot,
+  MemberSpawnStatusesSnapshot,
   MemberFullStats,
   MemberLogSummary,
-  MemberSpawnStatusEntry,
   NotificationTrigger,
   RejectResult,
   ReplaceMembersRequest,
@@ -275,9 +291,17 @@ import type {
   McpCatalogItem,
   McpCustomInstallRequest,
   McpInstallRequest,
+  McpServerDiagnostic,
   McpSearchResult,
   OperationResult,
   PluginInstallRequest,
+  SkillCatalogItem,
+  SkillDeleteRequest,
+  SkillDetail,
+  SkillImportRequest,
+  SkillReviewPreview,
+  SkillUpsertRequest,
+  SkillWatcherEvent,
 } from '@shared/types/extensions';
 import type {
   BinaryPreviewResult,
@@ -457,6 +481,11 @@ const electronAPI: ElectronAPI = {
     delete: (id: string) => ipcRenderer.invoke('notifications:delete', id),
     clear: () => ipcRenderer.invoke('notifications:clear'),
     getUnreadCount: () => ipcRenderer.invoke('notifications:getUnreadCount'),
+    testNotification: () =>
+      ipcRenderer.invoke('notifications:testNotification') as Promise<{
+        success: boolean;
+        error?: string;
+      }>,
     onNew: (callback: (event: unknown, error: unknown) => void): (() => void) => {
       ipcRenderer.on(
         'notification:new',
@@ -876,19 +905,8 @@ const electronAPI: ElectronAPI = {
     updateConfig: async (teamName: string, updates: TeamUpdateConfigRequest) => {
       return invokeIpcWithResult<TeamConfig>(TEAM_UPDATE_CONFIG, teamName, updates);
     },
-    addTaskComment: async (
-      teamName: string,
-      taskId: string,
-      text: string,
-      attachments?: CommentAttachmentPayload[]
-    ) => {
-      return invokeIpcWithResult<TaskComment>(
-        TEAM_ADD_TASK_COMMENT,
-        teamName,
-        taskId,
-        text,
-        attachments
-      );
+    addTaskComment: async (teamName: string, taskId: string, request: AddTaskCommentRequest) => {
+      return invokeIpcWithResult<TaskComment>(TEAM_ADD_TASK_COMMENT, teamName, taskId, request);
     },
     addMember: async (teamName: string, request: AddMemberRequest) => {
       return invokeIpcWithResult<void>(TEAM_ADD_MEMBER, teamName, request);
@@ -912,17 +930,13 @@ const electronAPI: ElectronAPI = {
       return invokeIpcWithResult<void>(TEAM_KILL_PROCESS, teamName, pid);
     },
     getLeadActivity: async (teamName: string) => {
-      const result = await invokeIpcWithResult<string>(TEAM_LEAD_ACTIVITY, teamName);
-      return result as 'active' | 'idle' | 'offline';
+      return invokeIpcWithResult<LeadActivitySnapshot>(TEAM_LEAD_ACTIVITY, teamName);
     },
     getLeadContext: async (teamName: string) => {
-      return invokeIpcWithResult<LeadContextUsage | null>(TEAM_LEAD_CONTEXT, teamName);
+      return invokeIpcWithResult<LeadContextUsageSnapshot>(TEAM_LEAD_CONTEXT, teamName);
     },
     getMemberSpawnStatuses: async (teamName: string) => {
-      return invokeIpcWithResult<Record<string, MemberSpawnStatusEntry>>(
-        TEAM_MEMBER_SPAWN_STATUSES,
-        teamName
-      );
+      return invokeIpcWithResult<MemberSpawnStatusesSnapshot>(TEAM_MEMBER_SPAWN_STATUSES, teamName);
     },
     softDeleteTask: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<void>(TEAM_SOFT_DELETE_TASK, teamName, taskId);
@@ -1093,6 +1107,7 @@ const electronAPI: ElectronAPI = {
           color?: string;
           leadName?: string;
           leadColor?: string;
+          isOnline?: boolean;
         }[]
       >(CROSS_TEAM_LIST_TARGETS, excludeTeam);
     },
@@ -1112,7 +1127,9 @@ const electronAPI: ElectronAPI = {
         status?: string;
         intervals?: { startedAt: string; completedAt?: string }[];
         since?: string;
+        stateBucket?: 'approved' | 'review' | 'completed' | 'active';
         summaryOnly?: boolean;
+        forceFresh?: boolean;
       }
     ) => {
       return invokeIpcWithResult<TaskChangeSetV2>(
@@ -1121,6 +1138,9 @@ const electronAPI: ElectronAPI = {
         taskId,
         options
       );
+    },
+    invalidateTaskChangeSummaries: async (teamName: string, taskIds: string[]) => {
+      return invokeIpcWithResult<void>(REVIEW_INVALIDATE_TASK_CHANGE_SUMMARIES, teamName, taskIds);
     },
     getChangeStats: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<ChangeStats>(REVIEW_GET_CHANGE_STATS, teamName, memberName);
@@ -1193,6 +1213,20 @@ const electronAPI: ElectronAPI = {
         content,
         projectPath
       );
+    },
+    watchFiles: async (projectPath: string, filePaths: string[]) => {
+      return invokeIpcWithResult<void>(REVIEW_WATCH_FILES, projectPath, filePaths);
+    },
+    unwatchFiles: async () => {
+      return invokeIpcWithResult<void>(REVIEW_UNWATCH_FILES);
+    },
+    onExternalFileChange: (callback: (event: EditorFileChangeEvent) => void): (() => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: EditorFileChangeEvent): void =>
+        callback(data);
+      ipcRenderer.on(REVIEW_FILE_CHANGE, handler);
+      return (): void => {
+        ipcRenderer.removeListener(REVIEW_FILE_CHANGE, handler);
+      };
     },
     // Decision persistence
     loadDecisions: async (teamName: string, scopeKey: string) => {
@@ -1395,6 +1429,7 @@ const electronAPI: ElectronAPI = {
       invokeIpcWithResult<McpCatalogItem | null>(MCP_REGISTRY_GET_BY_ID, registryId),
     getInstalled: (projectPath?: string) =>
       invokeIpcWithResult<InstalledMcpEntry[]>(MCP_REGISTRY_GET_INSTALLED, projectPath),
+    diagnose: () => invokeIpcWithResult<McpServerDiagnostic[]>(MCP_REGISTRY_DIAGNOSE),
     install: (request: McpInstallRequest) =>
       invokeIpcWithResult<OperationResult>(MCP_REGISTRY_INSTALL, request),
     installCustom: (request: McpCustomInstallRequest) =>
@@ -1403,6 +1438,34 @@ const electronAPI: ElectronAPI = {
       invokeIpcWithResult<OperationResult>(MCP_REGISTRY_UNINSTALL, name, scope, projectPath),
     githubStars: (repositoryUrls: string[]) =>
       invokeIpcWithResult<Record<string, number>>(MCP_GITHUB_STARS, repositoryUrls),
+  },
+
+  // ===== Skills Catalog API (Electron-only) =====
+  skills: {
+    list: (projectPath?: string) =>
+      invokeIpcWithResult<SkillCatalogItem[]>(SKILLS_LIST, projectPath),
+    getDetail: (skillId: string, projectPath?: string) =>
+      invokeIpcWithResult<SkillDetail | null>(SKILLS_GET_DETAIL, skillId, projectPath),
+    previewUpsert: (request: SkillUpsertRequest) =>
+      invokeIpcWithResult<SkillReviewPreview>(SKILLS_PREVIEW_UPSERT, request),
+    applyUpsert: (request: SkillUpsertRequest) =>
+      invokeIpcWithResult<SkillDetail | null>(SKILLS_APPLY_UPSERT, request),
+    previewImport: (request: SkillImportRequest) =>
+      invokeIpcWithResult<SkillReviewPreview>(SKILLS_PREVIEW_IMPORT, request),
+    applyImport: (request: SkillImportRequest) =>
+      invokeIpcWithResult<SkillDetail | null>(SKILLS_APPLY_IMPORT, request),
+    deleteSkill: (request: SkillDeleteRequest) => invokeIpcWithResult<void>(SKILLS_DELETE, request),
+    startWatching: (projectPath?: string) =>
+      invokeIpcWithResult<string>(SKILLS_START_WATCHING, projectPath),
+    stopWatching: (watchId: string) => invokeIpcWithResult<void>(SKILLS_STOP_WATCHING, watchId),
+    onChanged: (callback: (event: SkillWatcherEvent) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: SkillWatcherEvent): void =>
+        callback(data);
+      ipcRenderer.on(SKILLS_CHANGED, listener);
+      return (): void => {
+        ipcRenderer.removeListener(SKILLS_CHANGED, listener);
+      };
+    },
   },
 
   // ===== API Keys API (Electron-only) =====

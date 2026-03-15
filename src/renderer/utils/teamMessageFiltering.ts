@@ -56,5 +56,22 @@ export function filterTeamMessages(
     });
   }
 
-  return list;
+  const visibleMessageIds = new Set(
+    list
+      .map((m) => (typeof m.messageId === 'string' ? m.messageId.trim() : ''))
+      .filter((id) => id.length > 0)
+  );
+
+  return list.filter((m) => {
+    const relayOfMessageId =
+      typeof m.relayOfMessageId === 'string' ? m.relayOfMessageId.trim() : '';
+    if (!relayOfMessageId) {
+      return true;
+    }
+    const ownMessageId = typeof m.messageId === 'string' ? m.messageId.trim() : '';
+    if (relayOfMessageId === ownMessageId) {
+      return true;
+    }
+    return !visibleMessageIds.has(relayOfMessageId);
+  });
 }

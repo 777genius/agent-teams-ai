@@ -6,6 +6,7 @@
 import { useState } from 'react';
 
 import { Badge } from '@renderer/components/ui/badge';
+import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { api } from '@renderer/api';
@@ -16,25 +17,24 @@ import { Cloud, Clock, Globe, KeyRound, Lock, Monitor, Star, Tag, Wrench } from 
 import { Github as GithubIcon } from 'lucide-react';
 
 import { InstallButton } from '../common/InstallButton';
+import { SourceBadge } from '../common/SourceBadge';
 import { sanitizeMcpServerName } from '@shared/utils/extensionNormalizers';
 
-import type { McpCatalogItem } from '@shared/types/extensions';
-
-/** Ribbon colors by source */
-const RIBBON_STYLES: Record<string, string> = {
-  official: 'bg-blue-500/90 text-white',
-  glama: 'bg-zinc-600/90 text-zinc-200',
-};
+import type { McpCatalogItem, McpServerDiagnostic } from '@shared/types/extensions';
 
 interface McpServerCardProps {
   server: McpCatalogItem;
   isInstalled: boolean;
+  diagnostic?: McpServerDiagnostic | null;
+  diagnosticsLoading?: boolean;
   onClick: (serverId: string) => void;
 }
 
 export const McpServerCard = ({
   server,
   isInstalled,
+  diagnostic,
+  diagnosticsLoading,
   onClick,
 }: McpServerCardProps): React.JSX.Element => {
   const installProgress = useStore((s) => s.mcpInstallProgress[server.id] ?? 'idle');
@@ -45,8 +45,21 @@ export const McpServerCard = ({
     server.repositoryUrl ? s.mcpGitHubStars[server.repositoryUrl] : undefined
   );
   const canAutoInstall = !!server.installSpec;
+  const requiresConfiguration =
+    server.installSpec?.type === 'http' ||
+    server.envVars.length > 0 ||
+    server.requiresAuth ||
+    (server.authHeaders?.length ?? 0) > 0;
   const [imgError, setImgError] = useState(false);
   const hasIcon = !!server.iconUrl && !imgError;
+  const diagnosticBadgeClass =
+    diagnostic?.status === 'connected'
+      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+      : diagnostic?.status === 'needs-authentication'
+        ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+        : diagnostic?.status === 'failed'
+          ? 'border-red-500/30 bg-red-500/10 text-red-400'
+          : 'border-border bg-surface-raised text-text-muted';
 
   return (
     <div
@@ -63,17 +76,8 @@ export const McpServerCard = ({
         isInstalled ? 'border-l-2 border-border border-l-emerald-500/30' : 'border-border'
       }`}
     >
-      {/* Source ribbon (top-left corner) */}
-      <div className="pointer-events-none absolute -left-[1px] -top-[1px] size-16 overflow-hidden">
-        <div
-          className={`absolute left-[-18px] top-[8px] w-[80px] rotate-[-45deg] text-center text-[9px] font-semibold leading-[18px] shadow-sm ${RIBBON_STYLES[server.source] ?? RIBBON_STYLES.glama}`}
-        >
-          {server.source === 'official' ? 'Official' : 'Glama'}
-        </div>
-      </div>
-
       {/* Header: icon + name */}
-      <div className={`flex items-start gap-2.5 ${hasIcon ? 'pl-5' : 'pl-7'}`}>
+      <div className="flex items-start gap-2.5">
         {/* Server icon (only when available) */}
         {hasIcon && (
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-raised">
@@ -87,7 +91,14 @@ export const McpServerCard = ({
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="truncate text-sm font-semibold text-text">{server.name}</h3>
+            <div className="min-w-0">
+              <h3 className="truncate text-sm font-semibold text-text">{server.name}</h3>
+              {server.source !== 'official' && (
+                <div className="mt-1">
+                  <SourceBadge source={server.source} />
+                </div>
+              )}
+            </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {isInstalled && (
                 <Badge
@@ -97,6 +108,19 @@ export const McpServerCard = ({
                   Installed
                 </Badge>
               )}
+              {isInstalled && diagnosticsLoading && !diagnostic && (
+                <Badge
+                  className="border-border bg-surface-raised text-text-muted"
+                  variant="outline"
+                >
+                  Checking...
+                </Badge>
+              )}
+              {diagnostic && (
+                <Badge className={diagnosticBadgeClass} variant="outline">
+                  {diagnostic.statusLabel}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -104,6 +128,11 @@ export const McpServerCard = ({
 
       {/* Description */}
       <p className="line-clamp-2 text-xs text-text-secondary">{server.description}</p>
+      {diagnostic?.target && (
+        <p className="truncate font-mono text-[10px] text-text-muted" title={diagnostic.target}>
+          {diagnostic.target}
+        </p>
+      )}
 
       {/* Footer indicators + install button */}
       <div className="flex items-center justify-between gap-2">
@@ -197,7 +226,7 @@ export const McpServerCard = ({
             </Tooltip>
           )}
         </div>
-        {canAutoInstall && (
+        {canAutoInstall && !requiresConfiguration && (
           <div className="shrink-0">
             <InstallButton
               state={installProgress}
@@ -215,6 +244,20 @@ export const McpServerCard = ({
               size="sm"
               errorMessage={installError}
             />
+          </div>
+        )}
+        {canAutoInstall && requiresConfiguration && (
+          <div className="shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick(server.id);
+              }}
+            >
+              {isInstalled ? 'Manage' : 'Configure'}
+            </Button>
           </div>
         )}
       </div>

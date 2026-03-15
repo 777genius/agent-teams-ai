@@ -6,6 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { Crown, Filter } from 'lucide-react';
 
+import { displayMemberName } from '@renderer/utils/memberHelpers';
+
 import type { Session } from '@renderer/types/data';
 import type { KanbanColumnId, ResolvedTeamMember } from '@shared/types';
 
@@ -156,7 +158,7 @@ export const KanbanFilterPopover = ({
                   checked={filter.selectedOwners.has(member.name)}
                   onCheckedChange={() => handleOwnerToggle(member.name)}
                 />
-                {member.name}
+                {displayMemberName(member.name)}
               </label>
             ))}
             {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Radix Checkbox renders a button, not a native input */}

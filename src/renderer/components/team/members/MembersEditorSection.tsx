@@ -3,12 +3,19 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@renderer/components/ui/button';
 import { Label } from '@renderer/components/ui/label';
 import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
-import { getMemberColorByName } from '@shared/constants/memberColors';
+import { Plus } from 'lucide-react';
 
 import { MembersJsonEditor } from '../dialogs/MembersJsonEditor';
 
 import { MemberDraftRow } from './MemberDraftRow';
-import { createMemberDraft, getWorkflowForExport } from './membersEditorUtils';
+import { getNextSuggestedMemberName } from './memberNameSets';
+import {
+  buildMemberDraftColorMap,
+  buildMemberDraftSuggestions,
+  createMemberDraft,
+  getMemberDraftRole,
+  getWorkflowForExport,
+} from './membersEditorUtils';
 
 import type { MemberDraft } from './membersEditorTypes';
 import type { InlineChip } from '@renderer/types/inlineChip';
@@ -18,12 +25,7 @@ function membersToJsonText(drafts: MemberDraft[]): string {
   const arr = drafts
     .filter((d) => d.name.trim())
     .map((d) => {
-      const role =
-        d.roleSelection === CUSTOM_ROLE
-          ? d.customRole.trim() || undefined
-          : d.roleSelection === NO_ROLE
-            ? undefined
-            : d.roleSelection.trim() || undefined;
+      const role = getMemberDraftRole(d);
       const obj: Record<string, string> = { name: d.name.trim() };
       if (role) obj.role = role;
       const workflow = getWorkflowForExport(d);
@@ -62,6 +64,10 @@ export interface MembersEditorSectionProps {
   draftKeyPrefix?: string;
   /** Project path for @file mentions in workflow */
   projectPath?: string | null;
+  /** Task suggestions for #task references in workflow */
+  taskSuggestions?: MentionSuggestion[];
+  /** Team suggestions for @@team mentions in workflow */
+  teamSuggestions?: MentionSuggestion[];
   /** Extra content rendered right below the "Members" label row */
   headerExtra?: React.ReactNode;
   /** When true, hides member rows and action buttons (label + headerExtra still visible) */
@@ -77,6 +83,8 @@ export const MembersEditorSection = ({
   showJsonEditor = true,
   draftKeyPrefix,
   projectPath,
+  taskSuggestions,
+  teamSuggestions,
   headerExtra,
   hideContent = false,
 }: MembersEditorSectionProps): React.JSX.Element => {
@@ -144,28 +152,17 @@ export const MembersEditorSection = ({
   };
 
   const addMember = (): void => {
-    onChange([...members, createMemberDraft()]);
+    const suggestedName = getNextSuggestedMemberName(members.map((member) => member.name));
+    onChange([...members, createMemberDraft({ name: suggestedName })]);
   };
 
   const names = members.map((m) => m.name.trim().toLowerCase()).filter(Boolean);
   const hasDuplicates = new Set(names).size !== names.length;
+  const memberColorMap = useMemo(() => buildMemberDraftColorMap(members), [members]);
 
-  const mentionSuggestions = useMemo<MentionSuggestion[]>(
-    () =>
-      members
-        .filter((m) => m.name.trim())
-        .map((m) => ({
-          id: m.id,
-          name: m.name.trim(),
-          subtitle:
-            m.roleSelection === CUSTOM_ROLE
-              ? m.customRole.trim() || undefined
-              : m.roleSelection && m.roleSelection !== NO_ROLE
-                ? m.roleSelection
-                : undefined,
-          color: getMemberColorByName(m.name.trim()),
-        })),
-    [members]
+  const mentionSuggestions = useMemo(
+    () => buildMemberDraftSuggestions(members, memberColorMap),
+    [members, memberColorMap]
   );
 
   return (
@@ -174,12 +171,13 @@ export const MembersEditorSection = ({
         <Label>Members</Label>
         {!hideContent && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={addMember}>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={addMember}>
+              <Plus className="size-3.5" />
               Add member
             </Button>
-            {showJsonEditor ? (
+            {showJsonEditor && !jsonEditorOpen ? (
               <Button variant="ghost" size="sm" onClick={toggleJsonEditor}>
-                {jsonEditorOpen ? 'Hide JSON' : 'Edit as JSON'}
+                Edit as JSON
               </Button>
             ) : null}
           </div>
@@ -194,6 +192,7 @@ export const MembersEditorSection = ({
                 key={member.id}
                 member={member}
                 index={index}
+                resolvedColor={memberColorMap.get(member.name.trim())}
                 nameError={validateMemberName?.(member.name) ?? null}
                 onNameChange={updateMemberName}
                 onRoleChange={updateMemberRole}
@@ -205,16 +204,27 @@ export const MembersEditorSection = ({
                 draftKeyPrefix={draftKeyPrefix}
                 projectPath={projectPath}
                 mentionSuggestions={mentionSuggestions}
+                taskSuggestions={taskSuggestions}
+                teamSuggestions={teamSuggestions}
               />
             ))}
             {jsonEditorOpen && showJsonEditor ? (
-              <MembersJsonEditor value={jsonText} onChange={handleJsonChange} error={jsonError} />
+              <MembersJsonEditor
+                value={jsonText}
+                onChange={handleJsonChange}
+                error={jsonError}
+                onClose={toggleJsonEditor}
+              />
             ) : null}
           </div>
           {hasDuplicates ? (
-            <p className="text-[11px] text-red-300">Member names must be unique</p>
+            <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+              Member names must be unique
+            </p>
           ) : fieldError ? (
-            <p className="text-[11px] text-red-300">{fieldError}</p>
+            <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+              {fieldError}
+            </p>
           ) : null}
         </>
       )}
@@ -224,7 +234,10 @@ export const MembersEditorSection = ({
 
 export type { MemberDraft } from './membersEditorTypes';
 export {
+  buildMemberDraftColorMap,
+  buildMemberDraftSuggestions,
   buildMembersFromDrafts,
   createMemberDraft,
+  getMemberDraftRole,
   validateMemberNameInline,
 } from './membersEditorUtils';

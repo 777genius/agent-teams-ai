@@ -1,8 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import {
+  areInboxMessagesEquivalentForRender,
+  areStringArraysEqual,
+  areStringMapsEqual,
+} from '@renderer/utils/messageRenderEquality';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { Layers } from 'lucide-react';
+
+import { buildMessageContext, resolveMessageRenderProps } from './activityMessageContext';
 
 import { ActivityItem, isNoiseMessage } from './ActivityItem';
 import { AnimatedHeightReveal } from './AnimatedHeightReveal';
@@ -16,7 +22,6 @@ import {
 } from './LeadThoughtsGroup';
 import { useNewItemKeys } from './useNewItemKeys';
 
-import type { ActivityCollapseState } from './collapseState';
 import type { TimelineItem } from './LeadThoughtsGroup';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
@@ -52,10 +57,37 @@ interface ActivityTimelineProps {
   teamSessionIds?: Set<string>;
   /** Current lead session ID for the active team, if known. */
   currentLeadSessionId?: string;
+  /** Whether the current team is alive. */
+  isTeamAlive?: boolean;
+  /** Current lead activity status for the active team. */
+  leadActivity?: string;
+  /** Latest lead context timestamp for the active team. */
+  leadContextUpdatedAt?: string;
+  /** Team names used for mention/team-link rendering. */
+  teamNames?: string[];
+  /** Team color mapping used by markdown viewers. */
+  teamColorByName?: ReadonlyMap<string, string>;
+  /** Opens a team tab from cross-team badges or team:// links. */
+  onTeamClick?: (teamName: string) => void;
+  /** Callback to expand a message/thought item into a fullscreen dialog. */
+  onExpandItem?: (key: string) => void;
+  /** Called when ExpandableContent is expanded via "Show more" in any ActivityItem. */
+  onExpandContent?: () => void;
 }
 
 const VIEWPORT_THRESHOLD = 0.15;
 const MESSAGES_PAGE_SIZE = 30;
+const COMPACT_MESSAGES_WIDTH_PX = 400;
+const EMPTY_TEAM_NAMES: string[] = [];
+const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
+const DEFAULT_COLLAPSE_MODE = 'default' as const;
+
+interface ItemCollapseProps {
+  collapseMode: 'default' | 'managed';
+  isCollapsed: boolean;
+  canToggleCollapse: boolean;
+  collapseToggleKey?: string;
+}
 
 /** Inline compaction boundary divider — styled like session separators but with amber accent. */
 const CompactionDivider = ({ message }: { message: InboxMessage }): React.JSX.Element => (
@@ -97,7 +129,18 @@ const MessageRowWithObserver = ({
   onVisible,
   onTaskIdClick,
   onRestartTeam,
-  collapseState,
+  collapseMode,
+  isCollapsed,
+  canToggleCollapse,
+  collapseToggleKey,
+  onToggleCollapse,
+  compactHeader,
+  teamNames,
+  teamColorByName,
+  onTeamClick,
+  onExpand,
+  expandItemKey,
+  onExpandContent,
 }: {
   message: InboxMessage;
   teamName: string;
@@ -115,7 +158,18 @@ const MessageRowWithObserver = ({
   onVisible?: (message: InboxMessage) => void;
   onTaskIdClick?: (taskId: string) => void;
   onRestartTeam?: () => void;
-  collapseState?: ActivityCollapseState;
+  collapseMode: 'default' | 'managed';
+  isCollapsed: boolean;
+  canToggleCollapse: boolean;
+  collapseToggleKey?: string;
+  onToggleCollapse?: (key: string) => void;
+  compactHeader?: boolean;
+  teamNames?: string[];
+  teamColorByName?: ReadonlyMap<string, string>;
+  onTeamClick?: (teamName: string) => void;
+  onExpand?: (key: string) => void;
+  expandItemKey?: string;
+  onExpandContent?: () => void;
 }): React.JSX.Element => {
   const ref = useRef<HTMLDivElement>(null);
   const reportedRef = useRef(false);
@@ -164,13 +218,57 @@ const MessageRowWithObserver = ({
         onReply={onReply}
         onTaskIdClick={onTaskIdClick}
         onRestartTeam={onRestartTeam}
-        collapseState={collapseState}
+        collapseMode={collapseMode}
+        isCollapsed={isCollapsed}
+        canToggleCollapse={canToggleCollapse}
+        collapseToggleKey={collapseToggleKey}
+        onToggleCollapse={onToggleCollapse}
+        compactHeader={compactHeader}
+        teamNames={teamNames}
+        teamColorByName={teamColorByName}
+        onTeamClick={onTeamClick}
+        onExpand={onExpand}
+        expandItemKey={expandItemKey}
+        onExpandContent={onExpandContent}
       />
     </AnimatedHeightReveal>
   );
 };
 
-export const ActivityTimeline = ({
+const MemoizedMessageRowWithObserver = React.memo(
+  MessageRowWithObserver,
+  (prev, next) =>
+    prev.teamName === next.teamName &&
+    prev.memberRole === next.memberRole &&
+    prev.memberColor === next.memberColor &&
+    prev.recipientColor === next.recipientColor &&
+    prev.isUnread === next.isUnread &&
+    prev.isNew === next.isNew &&
+    prev.zebraShade === next.zebraShade &&
+    prev.memberColorMap === next.memberColorMap &&
+    prev.localMemberNames === next.localMemberNames &&
+    prev.onMemberNameClick === next.onMemberNameClick &&
+    prev.onCreateTask === next.onCreateTask &&
+    prev.onReply === next.onReply &&
+    prev.onVisible === next.onVisible &&
+    prev.onTaskIdClick === next.onTaskIdClick &&
+    prev.onRestartTeam === next.onRestartTeam &&
+    prev.collapseMode === next.collapseMode &&
+    prev.isCollapsed === next.isCollapsed &&
+    prev.canToggleCollapse === next.canToggleCollapse &&
+    prev.collapseToggleKey === next.collapseToggleKey &&
+    prev.onToggleCollapse === next.onToggleCollapse &&
+    prev.compactHeader === next.compactHeader &&
+    areStringArraysEqual(prev.teamNames, next.teamNames) &&
+    areStringMapsEqual(prev.teamColorByName, next.teamColorByName) &&
+    prev.onTeamClick === next.onTeamClick &&
+    prev.onExpand === next.onExpand &&
+    prev.expandItemKey === next.expandItemKey &&
+    prev.onExpandContent === next.onExpandContent &&
+    areInboxMessagesEquivalentForRender(prev.message, next.message)
+);
+
+export const ActivityTimeline = React.memo(function ActivityTimeline({
   messages,
   teamName,
   members,
@@ -186,39 +284,54 @@ export const ActivityTimeline = ({
   onToggleExpandOverride,
   teamSessionIds,
   currentLeadSessionId,
-}: ActivityTimelineProps): React.JSX.Element => {
+  isTeamAlive,
+  leadActivity,
+  leadContextUpdatedAt,
+  teamNames = EMPTY_TEAM_NAMES,
+  teamColorByName = EMPTY_TEAM_COLOR_MAP,
+  onTeamClick,
+  onExpandItem,
+  onExpandContent,
+}: ActivityTimelineProps): React.JSX.Element {
   const [visibleCount, setVisibleCount] = useState(MESSAGES_PAGE_SIZE);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [compactHeader, setCompactHeader] = useState(false);
 
-  const colorMap = members ? buildMemberColorMap(members) : new Map<string, string>();
-  const localMemberNames = new Set((members ?? []).map((member) => member.name.trim()));
-  const memberInfo = new Map<string, { role?: string; color?: string }>();
-  if (members) {
-    for (const m of members) {
-      const info = {
-        role: m.role ?? (m.agentType !== 'general-purpose' ? m.agentType : undefined),
-        color: colorMap.get(m.name),
-      };
-      memberInfo.set(m.name, info);
-      if (m.agentType && m.agentType !== m.name) {
-        memberInfo.set(m.agentType, info);
-      }
-    }
-    // Map "user" to team-lead's resolved color and role
-    const leadMember = members.find(
-      (m) => m.agentType === 'team-lead' || m.role?.toLowerCase().includes('lead')
-    );
-    if (leadMember) {
-      const leadInfo = memberInfo.get(leadMember.name);
-      if (leadInfo) {
-        memberInfo.set('user', { role: undefined, color: colorMap.get('user') });
-      }
-    }
-  }
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
 
-  const handleMemberNameClick = (name: string): void => {
-    const member = members?.find((m) => m.name === name || m.agentType === name);
-    if (member) onMemberClick?.(member);
-  };
+    const updateCompactMode = (width: number): void => {
+      setCompactHeader((prev) => {
+        const next = width < COMPACT_MESSAGES_WIDTH_PX;
+        return prev === next ? prev : next;
+      });
+    };
+
+    updateCompactMode(el.getBoundingClientRect().width);
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      updateCompactMode(entry.contentRect.width);
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const ctx = useMemo(() => buildMessageContext(members), [members]);
+  const { colorMap, localMemberNames, memberInfo } = ctx;
+
+  const handleMemberNameClick = useCallback(
+    (name: string) => {
+      const member = members?.find(
+        (candidate) => candidate.name === name || candidate.agentType === name
+      );
+      if (member) onMemberClick?.(member);
+    },
+    [members, onMemberClick]
+  );
 
   // Pagination counts only significant (non-thought) messages so that lead thoughts
   // don't consume the page limit — they collapse into a single visual group anyway.
@@ -332,9 +445,9 @@ export const ActivityTimeline = ({
    * In collapsed mode we always keep the newest real message open, keep the pinned
    * thought group open, and let localStorage overrides reopen older items.
    */
-  const getItemCollapseState = useCallback(
-    (stableKey: string, itemIndex: number): ActivityCollapseState =>
-      resolveTimelineCollapseState({
+  const getItemCollapseProps = useCallback(
+    (stableKey: string, itemIndex: number): ItemCollapseProps => {
+      const collapseState = resolveTimelineCollapseState({
         allCollapsed,
         itemIndex,
         newestMessageIndex,
@@ -343,7 +456,23 @@ export const ActivityTimeline = ({
         onToggleOverride: onToggleExpandOverride
           ? () => onToggleExpandOverride(stableKey)
           : undefined,
-      }),
+      });
+
+      if (collapseState.mode !== DEFAULT_COLLAPSE_MODE) {
+        return {
+          collapseMode: collapseState.mode,
+          isCollapsed: collapseState.isCollapsed,
+          canToggleCollapse: collapseState.canToggle,
+          collapseToggleKey: collapseState.canToggle ? stableKey : undefined,
+        };
+      }
+
+      return {
+        collapseMode: DEFAULT_COLLAPSE_MODE,
+        isCollapsed: false,
+        canToggleCollapse: false,
+      };
+    },
     [allCollapsed, newestMessageIndex, pinnedThoughtGroup, expandOverrides, onToggleExpandOverride]
   );
 
@@ -357,29 +486,45 @@ export const ActivityTimeline = ({
   }
 
   return (
-    <div className="space-y-1">
+    <div ref={rootRef} className="space-y-1">
       {/* Pinned (newest) thought group — always at top */}
       {pinnedThoughtGroup &&
         (() => {
           const { group } = pinnedThoughtGroup;
           const firstThought = group.thoughts[0];
+          const pinnedCanBeLive = currentLeadSessionId
+            ? firstThought.leadSessionId === currentLeadSessionId
+            : true;
           const info = memberInfo.get(firstThought.from);
           const itemKey = getThoughtGroupKey(group);
           const stableKey = itemKey;
-          const collapseState = getItemCollapseState(stableKey, 0);
+          const collapseProps = getItemCollapseProps(stableKey, 0);
           return (
             <LeadThoughtsGroupRow
               key={itemKey}
               group={group}
               memberColor={info?.color}
-              canBeLive={true}
+              canBeLive={pinnedCanBeLive}
+              isTeamAlive={pinnedCanBeLive ? isTeamAlive : undefined}
+              leadActivity={pinnedCanBeLive ? leadActivity : undefined}
+              leadContextUpdatedAt={pinnedCanBeLive ? leadContextUpdatedAt : undefined}
               isNew={newItemKeys.has(itemKey)}
               onVisible={onMessageVisible}
               zebraShade={zebraShadeSet.has(0)}
-              collapseState={collapseState}
+              collapseMode={collapseProps.collapseMode}
+              isCollapsed={collapseProps.isCollapsed}
+              canToggleCollapse={collapseProps.canToggleCollapse}
+              collapseToggleKey={collapseProps.collapseToggleKey}
+              onToggleCollapse={onToggleExpandOverride}
               onTaskIdClick={onTaskIdClick}
               memberColorMap={colorMap}
               onReply={onReplyToMessage}
+              compactHeader={compactHeader}
+              teamNames={teamNames}
+              teamColorByName={teamColorByName}
+              onTeamClick={onTeamClick}
+              onExpand={compactHeader ? onExpandItem : undefined}
+              expandItemKey={compactHeader ? itemKey : undefined}
             />
           );
         })()}
@@ -425,7 +570,7 @@ export const ActivityTimeline = ({
           const info = memberInfo.get(firstThought.from);
           const itemKey = getThoughtGroupKey(group);
           const stableKey = itemKey;
-          const collapseState = getItemCollapseState(stableKey, realIndex);
+          const collapseProps = getItemCollapseProps(stableKey, realIndex);
           return (
             <React.Fragment key={itemKey}>
               {sessionSeparator}
@@ -436,10 +581,20 @@ export const ActivityTimeline = ({
                 isNew={newItemKeys.has(itemKey)}
                 onVisible={onMessageVisible}
                 zebraShade={zebraShadeSet.has(realIndex)}
-                collapseState={collapseState}
+                collapseMode={collapseProps.collapseMode}
+                isCollapsed={collapseProps.isCollapsed}
+                canToggleCollapse={collapseProps.canToggleCollapse}
+                collapseToggleKey={collapseProps.collapseToggleKey}
+                onToggleCollapse={onToggleExpandOverride}
                 onTaskIdClick={onTaskIdClick}
                 memberColorMap={colorMap}
                 onReply={onReplyToMessage}
+                compactHeader={compactHeader}
+                teamNames={teamNames}
+                teamColorByName={teamColorByName}
+                onTeamClick={onTeamClick}
+                onExpand={compactHeader ? onExpandItem : undefined}
+                expandItemKey={compactHeader ? itemKey : undefined}
               />
             </React.Fragment>
           );
@@ -458,25 +613,22 @@ export const ActivityTimeline = ({
           );
         }
 
-        const info = memberInfo.get(message.from);
-        const recipientInfo = message.to ? memberInfo.get(message.to) : undefined;
-        const recipientColor =
-          recipientInfo?.color ?? (message.to ? colorMap.get(message.to) : undefined);
+        const renderProps = resolveMessageRenderProps(message, ctx);
         const messageKey = toMessageKey(message);
         const stableKey = messageKey;
-        const collapseState = getItemCollapseState(stableKey, realIndex);
+        const collapseProps = getItemCollapseProps(stableKey, realIndex);
         const isUnread = readState
           ? !message.read && !readState.readSet.has(readState.getMessageKey(message))
           : !message.read;
         return (
           <React.Fragment key={messageKey}>
             {sessionSeparator}
-            <MessageRowWithObserver
+            <MemoizedMessageRowWithObserver
               message={message}
               teamName={teamName}
-              memberRole={info?.role}
-              memberColor={info?.color}
-              recipientColor={recipientColor}
+              memberRole={renderProps.memberRole}
+              memberColor={renderProps.memberColor}
+              recipientColor={renderProps.recipientColor}
               isUnread={isUnread}
               isNew={newItemKeys.has(messageKey)}
               zebraShade={zebraShadeSet.has(realIndex)}
@@ -488,7 +640,18 @@ export const ActivityTimeline = ({
               onVisible={onMessageVisible}
               onTaskIdClick={onTaskIdClick}
               onRestartTeam={onRestartTeam}
-              collapseState={collapseState}
+              collapseMode={collapseProps.collapseMode}
+              isCollapsed={collapseProps.isCollapsed}
+              canToggleCollapse={collapseProps.canToggleCollapse}
+              collapseToggleKey={collapseProps.collapseToggleKey}
+              onToggleCollapse={onToggleExpandOverride}
+              compactHeader={compactHeader}
+              teamNames={teamNames}
+              teamColorByName={teamColorByName}
+              onTeamClick={onTeamClick}
+              onExpand={compactHeader ? onExpandItem : undefined}
+              expandItemKey={compactHeader ? messageKey : undefined}
+              onExpandContent={onExpandContent}
             />
           </React.Fragment>
         );
@@ -539,4 +702,4 @@ export const ActivityTimeline = ({
       )}
     </div>
   );
-};
+});

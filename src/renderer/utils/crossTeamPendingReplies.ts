@@ -6,6 +6,8 @@ export interface PendingCrossTeamReply {
   conversationId?: string;
 }
 
+export const CROSS_TEAM_PENDING_REPLY_TTL_MS = 10_000;
+
 function parseQualifiedTeamName(value: string | undefined): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -16,7 +18,8 @@ function parseQualifiedTeamName(value: string | undefined): string | null {
 }
 
 export function computePendingCrossTeamReplies(
-  messages: InboxMessage[] | null | undefined
+  messages: InboxMessage[] | null | undefined,
+  nowMs = Date.now()
 ): PendingCrossTeamReply[] {
   if (!messages || messages.length === 0) return [];
 
@@ -67,14 +70,21 @@ export function computePendingCrossTeamReplies(
     }
   }
 
+  const isWithinPendingWindow = (sentAtMs: number): boolean =>
+    sentAtMs >= nowMs || nowMs - sentAtMs <= CROSS_TEAM_PENDING_REPLY_TTL_MS;
+
   const exactPending = Array.from(latestSentByConversation.values()).filter(
     ({ conversationId, sentAtMs }) =>
-      sentAtMs > (latestInboundByConversation.get(conversationId) ?? 0)
+      sentAtMs > (latestInboundByConversation.get(conversationId) ?? 0) &&
+      isWithinPendingWindow(sentAtMs)
   );
   const teamsCoveredExactly = new Set(exactPending.map((entry) => entry.teamName));
   const legacyPending = Array.from(latestSentByTeam.entries())
     .filter(([teamName]) => !teamsCoveredExactly.has(teamName))
-    .filter(([teamName, sentAtMs]) => sentAtMs > (latestInboundByTeam.get(teamName) ?? 0))
+    .filter(
+      ([teamName, sentAtMs]) =>
+        sentAtMs > (latestInboundByTeam.get(teamName) ?? 0) && isWithinPendingWindow(sentAtMs)
+    )
     .map(([teamName, sentAtMs]) => ({ teamName, sentAtMs }))
     .sort((a, b) => b.sentAtMs - a.sentAtMs);
 

@@ -10,6 +10,7 @@ export { MemberStatsComputer } from './MemberStatsComputer';
 export { ReviewApplierService } from './ReviewApplierService';
 export { TaskBoundaryParser } from './TaskBoundaryParser';
 export { TeamAttachmentStore } from './TeamAttachmentStore';
+export { TeamBackupService } from './TeamBackupService';
 export { TeamConfigReader } from './TeamConfigReader';
 export { TeamDataService } from './TeamDataService';
 export { TeamInboxReader } from './TeamInboxReader';

@@ -89,6 +89,21 @@ function quoteArg(arg: string): string {
   return arg;
 }
 
+/** Env vars injected into every spawned Claude CLI process. */
+const CLI_ENV_DEFAULTS: Record<string, string> = {
+  CLAUDE_HOOK_JUDGE_MODE: 'true',
+};
+
+/** Merge CLI_ENV_DEFAULTS into spawn/exec options.env (or process.env if absent). */
+function withCliEnv<T extends { env?: NodeJS.ProcessEnv | Record<string, string | undefined> }>(
+  options: T
+): T {
+  return {
+    ...options,
+    env: { ...(options.env ?? process.env), ...CLI_ENV_DEFAULTS },
+  };
+}
+
 /**
  * Execute a CLI binary, falling back to running the command through a
  * shell on Windows if the normal path-based spawn fails.  `binaryPath`
@@ -103,11 +118,12 @@ export async function execCli(
   options: ExecFileOptions = {}
 ): Promise<{ stdout: string; stderr: string }> {
   const target = binaryPath || 'claude';
+  const opts = withCliEnv(options);
 
   // attempt the normal execFile path first
   if (!needsShell(target)) {
     try {
-      const result = await execFileAsync(target, args, options);
+      const result = await execFileAsync(target, args, opts);
       return { stdout: String(result.stdout), stderr: String(result.stderr) };
     } catch (err: unknown) {
       // fall through to shell fallback only when the error matches the
@@ -124,7 +140,7 @@ export async function execCli(
 
   // shell fallback (Windows only; others shouldn't reach here)
   const cmd = [target, ...args].map(quoteArg).join(' ');
-  const shellResult = await execShellAsync(cmd, options as unknown as ExecOptions);
+  const shellResult = await execShellAsync(cmd, opts as unknown as ExecOptions);
   return { stdout: String(shellResult.stdout), stderr: String(shellResult.stderr) };
 }
 
@@ -139,21 +155,23 @@ export function spawnCli(
   args: string[],
   options: SpawnOptions = {}
 ): ReturnType<typeof spawn> {
+  const opts = withCliEnv(options);
+
   if (process.platform === 'win32' && needsShell(binaryPath)) {
     const cmd = [binaryPath, ...args].map(quoteArg).join(' ');
     // eslint-disable-next-line sonarjs/os-command -- cmd from known binaryPath+args, not user input (Windows EINVAL fallback)
-    return spawn(cmd, { ...options, shell: true });
+    return spawn(cmd, { ...opts, shell: true });
   }
 
   try {
-    return spawn(binaryPath, args, options);
+    return spawn(binaryPath, args, opts);
   } catch (err: unknown) {
     const code =
       err && typeof err === 'object' && 'code' in err ? (err as { code?: string }).code : undefined;
     if (process.platform === 'win32' && code === 'EINVAL') {
       const cmd = [binaryPath, ...args].map(quoteArg).join(' ');
       // eslint-disable-next-line sonarjs/os-command -- cmd from known binaryPath+args, not user input (Windows EINVAL fallback)
-      return spawn(cmd, { ...options, shell: true });
+      return spawn(cmd, { ...opts, shell: true });
     }
     throw err;
   }

@@ -5,6 +5,8 @@
  * Used by TeammateMessageItem and SubagentItem when displaying team members.
  */
 
+import { MEMBER_COLOR_HUE, MEMBER_COLOR_PALETTE } from '@shared/constants/memberColors';
+
 export interface TeamColorSet {
   /** Border accent color */
   border: string;
@@ -87,9 +89,9 @@ const TEAMMATE_COLORS: Record<string, TeamColorSet> = {
   /** Reserved for the human user — never assigned to team members. */
   user: {
     border: '#f5f5f4',
-    borderLight: '#a8a29e',
+    borderLight: '#78716c',
     badge: 'rgba(245, 245, 244, 0.12)',
-    badgeLight: 'rgba(120, 113, 108, 0.14)',
+    badgeLight: 'rgba(87, 83, 78, 0.18)',
     text: '#d6d3d1',
     textLight: '#44403c',
   },
@@ -128,12 +130,47 @@ export function getSubagentTypeColorSet(
 /** Assignable visual colors (excludes reserved 'user'). */
 const ASSIGNABLE_COLORS = COLOR_NAMES.filter((c) => c !== 'user');
 
+function hsla(hue: number, saturation: number, lightness: number, alpha = 1): string {
+  return `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
+}
+
+function buildGeneratedMemberColorSet(colorName: string): TeamColorSet | null {
+  const hue = MEMBER_COLOR_HUE[colorName];
+  if (hue === undefined) {
+    // Also accept palette names not in the hue map (shouldn't happen, but safe fallback)
+    const paletteIndex = MEMBER_COLOR_PALETTE.indexOf(
+      colorName as (typeof MEMBER_COLOR_PALETTE)[number]
+    );
+    if (paletteIndex === -1) return null;
+    // Fall back to index-based hue (legacy behavior)
+    return buildColorSetFromHue(Math.round((paletteIndex / MEMBER_COLOR_PALETTE.length) * 360));
+  }
+
+  return buildColorSetFromHue(hue);
+}
+
+function buildColorSetFromHue(hue: number): TeamColorSet {
+  const saturation = 72;
+
+  return {
+    border: hsla(hue, saturation, 50),
+    borderLight: hsla(hue, saturation, 44),
+    badge: hsla(hue, saturation, 50, 0.15),
+    badgeLight: hsla(hue, saturation, 50, 0.12),
+    text: hsla(hue, 78, 66),
+    textLight: hsla(hue, 82, 36),
+  };
+}
+
 export function getTeamColorSet(colorName: string): TeamColorSet {
   if (!colorName) return DEFAULT_COLOR;
 
   // Check named colors
   const named = TEAMMATE_COLORS[colorName.toLowerCase()];
   if (named) return named;
+
+  const generatedMemberColor = buildGeneratedMemberColorSet(colorName.toLowerCase());
+  if (generatedMemberColor) return generatedMemberColor;
 
   // If it's a hex color, generate a set from it
   if (colorName.startsWith('#')) {

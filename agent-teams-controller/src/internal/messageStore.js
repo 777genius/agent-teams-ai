@@ -51,6 +51,23 @@ function normalizeAttachments(attachments) {
   return normalized.length > 0 ? normalized : undefined;
 }
 
+function normalizeTaskRefs(taskRefs) {
+  if (!Array.isArray(taskRefs) || taskRefs.length === 0) {
+    return undefined;
+  }
+
+  const normalized = taskRefs
+    .filter((item) => item && typeof item === 'object')
+    .map((item) => ({
+      taskId: String(item.taskId || '').trim(),
+      displayId: String(item.displayId || '').trim(),
+      teamName: String(item.teamName || '').trim(),
+    }))
+    .filter((item) => item.taskId && item.displayId && item.teamName);
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
 function buildMessage(flags, defaults) {
   const timestamp =
     typeof flags.timestamp === 'string' && flags.timestamp.trim() ? flags.timestamp.trim() : nowIso();
@@ -59,6 +76,7 @@ function buildMessage(flags, defaults) {
       ? flags.messageId.trim()
       : crypto.randomUUID();
   const attachments = normalizeAttachments(flags.attachments);
+  const taskRefs = normalizeTaskRefs(flags.taskRefs);
 
   return {
     from:
@@ -69,8 +87,12 @@ function buildMessage(flags, defaults) {
     text: String(flags.text || ''),
     timestamp,
     read: defaults.read,
+    ...(taskRefs ? { taskRefs } : {}),
     ...(typeof flags.summary === 'string' && flags.summary.trim()
       ? { summary: flags.summary.trim() }
+      : {}),
+    ...(typeof flags.relayOfMessageId === 'string' && flags.relayOfMessageId.trim()
+      ? { relayOfMessageId: flags.relayOfMessageId.trim() }
       : {}),
     ...(typeof flags.source === 'string' && flags.source.trim() ? { source: flags.source.trim() } : {}),
     ...(typeof flags.leadSessionId === 'string' && flags.leadSessionId.trim()

@@ -1,14 +1,20 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+
+import {
+  getSuggestionInsertionText,
+  getSuggestionTriggerChar,
+} from '@renderer/utils/mentionSuggestions';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 
 interface UseMentionDetectionOptions {
-  suggestions: MentionSuggestion[];
   value: string;
   onValueChange: (v: string) => void;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-  /** When true, detect @-trigger even if suggestions list is empty (e.g. for file-only search) */
-  enableTriggerAlways?: boolean;
+  /** Supported trigger characters, e.g. ['@', '#'] */
+  triggerChars?: string[];
+  /** Enable or disable individual triggers dynamically. */
+  isTriggerEnabled?: (triggerChar: string) => boolean;
 }
 
 export interface DropdownPosition {
@@ -18,13 +24,18 @@ export interface DropdownPosition {
 
 interface UseMentionDetectionResult {
   isOpen: boolean;
+  activeTriggerChar: string | null;
   query: string;
-  filteredSuggestions: MentionSuggestion[];
   selectedIndex: number;
+  setSelectedIndex: Dispatch<SetStateAction<number>>;
   dropdownPosition: DropdownPosition | null;
   selectSuggestion: (s: MentionSuggestion) => void;
   dismiss: () => void;
-  handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  handleKeyDown: (
+    e: React.KeyboardEvent<HTMLTextAreaElement>,
+    suggestionCount: number,
+    onSelectSuggestion: (index: number) => void
+  ) => void;
   handleChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   handleSelect: (e: React.SyntheticEvent<HTMLTextAreaElement>) => void;
   /** Getter for trigger index — use at call time to avoid stale closure (returns -1 if no active trigger) */
@@ -33,6 +44,7 @@ interface UseMentionDetectionResult {
 
 interface MentionTrigger {
   triggerIndex: number;
+  triggerChar: string;
   query: string;
 }
 
@@ -117,27 +129,32 @@ export function getCaretCoordinates(
 }
 
 /**
- * Scans backwards from cursor position to find an @ trigger.
+ * Scans backwards from cursor position to find an active trigger.
  * Returns null if no valid trigger found.
  *
  * Rules:
- * - @ must be at start of text or preceded by whitespace
- * - Text between @ and cursor must not contain spaces
+ * - trigger must be at start of text or preceded by whitespace
+ * - Text between trigger and cursor must not contain spaces
  */
-export function findMentionTrigger(text: string, cursorPos: number): MentionTrigger | null {
+export function findMentionTrigger(
+  text: string,
+  cursorPos: number,
+  triggerChars: string[] = ['@']
+): MentionTrigger | null {
   if (cursorPos <= 0) return null;
 
   const beforeCursor = text.slice(0, cursorPos);
+  const allowedTriggerChars = new Set(triggerChars);
 
   // Scan backwards to find @
   for (let i = beforeCursor.length - 1; i >= 0; i--) {
     const char = beforeCursor[i];
 
-    // If we hit whitespace or newline before finding @, no valid trigger
+    // If we hit whitespace or newline before finding a trigger, no valid trigger
     if (char === ' ' || char === '\t' || char === '\n' || char === '\r') return null;
 
-    if (char === '@') {
-      // @ must be at start or after whitespace/newline
+    if (allowedTriggerChars.has(char)) {
+      // trigger must be at start or after whitespace/newline
       if (i > 0) {
         const preceding = beforeCursor[i - 1];
         if (preceding !== ' ' && preceding !== '\t' && preceding !== '\n' && preceding !== '\r') {
@@ -146,7 +163,7 @@ export function findMentionTrigger(text: string, cursorPos: number): MentionTrig
       }
 
       const query = beforeCursor.slice(i + 1);
-      return { triggerIndex: i, query };
+      return { triggerIndex: i, triggerChar: char, query };
     }
   }
 
@@ -154,34 +171,31 @@ export function findMentionTrigger(text: string, cursorPos: number): MentionTrig
 }
 
 export function useMentionDetection({
-  suggestions,
   value,
   onValueChange,
   textareaRef,
-  enableTriggerAlways,
+  triggerChars = ['@'],
+  isTriggerEnabled,
 }: UseMentionDetectionOptions): UseMentionDetectionResult {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTriggerChar, setActiveTriggerChar] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition | null>(null);
   const triggerIndexRef = useRef<number>(-1);
+  const activeTriggerCharRef = useRef<string | null>(null);
   // Track current query in a ref so detectTrigger can avoid resetting selectedIndex
   // on redundant selectionchange events (e.g. after ArrowDown/Up keyboard navigation)
   const queryRef = useRef('');
 
-  const filteredSuggestions = useMemo(() => {
-    if (!isOpen) return [];
-    if (!query) return suggestions;
-    const lower = query.toLowerCase();
-    return suggestions.filter((s) => s.name.toLowerCase().includes(lower));
-  }, [isOpen, query, suggestions]);
-
   const dismiss = useCallback(() => {
     setIsOpen(false);
+    setActiveTriggerChar(null);
     setQuery('');
     setSelectedIndex(0);
     setDropdownPosition(null);
     triggerIndexRef.current = -1;
+    activeTriggerCharRef.current = null;
     queryRef.current = '';
   }, []);
 
@@ -201,11 +215,18 @@ export function useMentionDetection({
   const selectSuggestion = useCallback(
     (s: MentionSuggestion) => {
       const textarea = textareaRef.current;
-      if (!textarea || triggerIndexRef.current < 0) return;
+      const triggerChar = activeTriggerCharRef.current;
+      if (!textarea || triggerIndexRef.current < 0 || !triggerChar) return;
 
       const before = value.slice(0, triggerIndexRef.current);
-      const after = value.slice(triggerIndexRef.current + 1 + query.length);
-      const insertion = `@${s.name} `;
+      const after = value.slice(triggerIndexRef.current + 1 + queryRef.current.length);
+      const suggestionText = getSuggestionInsertionText(s);
+      const expectedTriggerChar = getSuggestionTriggerChar(s);
+      const insertionBody =
+        triggerChar === expectedTriggerChar && suggestionText.startsWith(triggerChar)
+          ? suggestionText
+          : `${triggerChar}${suggestionText}`;
+      const insertion = `${insertionBody} `;
       const newValue = before + insertion + after;
       const newCursorPos = before.length + insertion.length;
 
@@ -214,15 +235,15 @@ export function useMentionDetection({
 
       // Set cursor position after React re-render
       requestAnimationFrame(() => {
-        textarea.selectionStart = newCursorPos;
-        textarea.selectionEnd = newCursorPos;
+        textarea.focus();
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
       });
     },
-    [value, query, onValueChange, textareaRef, dismiss]
+    [value, onValueChange, textareaRef, dismiss]
   );
 
   /**
-   * Detects whether cursor is inside an @-trigger region and opens/dismisses the dropdown.
+   * Detects whether cursor is inside a trigger region and opens/dismisses the dropdown.
    *
    * Called from handleSelect (selectionchange) — must NOT reset selectedIndex when
    * the trigger is already active with the same query, otherwise ArrowDown/Up navigation
@@ -230,12 +251,17 @@ export function useMentionDetection({
    */
   const detectTrigger = useCallback(
     (cursorPos: number) => {
-      const trigger = findMentionTrigger(value, cursorPos);
-      if (trigger && (suggestions.length > 0 || enableTriggerAlways)) {
+      const trigger = findMentionTrigger(value, cursorPos, triggerChars);
+      const isEnabled = trigger ? (isTriggerEnabled?.(trigger.triggerChar) ?? true) : false;
+      if (trigger && isEnabled) {
         const sameQuery =
-          triggerIndexRef.current === trigger.triggerIndex && queryRef.current === trigger.query;
+          triggerIndexRef.current === trigger.triggerIndex &&
+          activeTriggerCharRef.current === trigger.triggerChar &&
+          queryRef.current === trigger.query;
         triggerIndexRef.current = trigger.triggerIndex;
+        activeTriggerCharRef.current = trigger.triggerChar;
         queryRef.current = trigger.query;
+        setActiveTriggerChar(trigger.triggerChar);
         setQuery(trigger.query);
         setIsOpen(true);
         // Only reset selection when trigger/query actually changed —
@@ -248,7 +274,7 @@ export function useMentionDetection({
         dismiss();
       }
     },
-    [value, suggestions.length, enableTriggerAlways, dismiss, computeDropdownPosition]
+    [value, triggerChars, isTriggerEnabled, dismiss, computeDropdownPosition]
   );
 
   const handleChange = useCallback(
@@ -258,10 +284,13 @@ export function useMentionDetection({
 
       // Detect trigger based on cursor position after the change
       const cursorPos = e.target.selectionStart;
-      const trigger = findMentionTrigger(newValue, cursorPos);
-      if (trigger && (suggestions.length > 0 || enableTriggerAlways)) {
+      const trigger = findMentionTrigger(newValue, cursorPos, triggerChars);
+      const isEnabled = trigger ? (isTriggerEnabled?.(trigger.triggerChar) ?? true) : false;
+      if (trigger && isEnabled) {
         triggerIndexRef.current = trigger.triggerIndex;
+        activeTriggerCharRef.current = trigger.triggerChar;
         queryRef.current = trigger.query;
+        setActiveTriggerChar(trigger.triggerChar);
         setQuery(trigger.query);
         setIsOpen(true);
         // Text changed — always reset selection to first item
@@ -271,7 +300,7 @@ export function useMentionDetection({
         dismiss();
       }
     },
-    [onValueChange, suggestions.length, enableTriggerAlways, dismiss, computeDropdownPosition]
+    [onValueChange, triggerChars, isTriggerEnabled, dismiss, computeDropdownPosition]
   );
 
   const handleSelect = useCallback(
@@ -283,24 +312,27 @@ export function useMentionDetection({
   );
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (!isOpen || filteredSuggestions.length === 0) return;
+    (
+      e: React.KeyboardEvent<HTMLTextAreaElement>,
+      suggestionCount: number,
+      onSelectSuggestion: (index: number) => void
+    ) => {
+      if (!isOpen || suggestionCount === 0) return;
 
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          setSelectedIndex((prev) => (prev + 1) % filteredSuggestions.length);
+          setSelectedIndex((prev) => (prev + 1) % suggestionCount);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          setSelectedIndex(
-            (prev) => (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length
-          );
+          setSelectedIndex((prev) => (prev - 1 + suggestionCount) % suggestionCount);
           break;
         case 'Enter':
           if (!e.shiftKey) {
             e.preventDefault();
-            selectSuggestion(filteredSuggestions[selectedIndex]);
+            e.stopPropagation();
+            onSelectSuggestion(selectedIndex);
           }
           break;
         case 'Escape':
@@ -309,16 +341,17 @@ export function useMentionDetection({
           break;
       }
     },
-    [isOpen, filteredSuggestions, selectedIndex, selectSuggestion, dismiss]
+    [isOpen, selectedIndex, dismiss]
   );
 
   const getTriggerIndex = useCallback(() => triggerIndexRef.current, []);
 
   return {
     isOpen,
+    activeTriggerChar,
     query,
-    filteredSuggestions,
     selectedIndex,
+    setSelectedIndex,
     dropdownPosition,
     selectSuggestion,
     dismiss,

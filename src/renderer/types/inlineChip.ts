@@ -6,6 +6,7 @@
  */
 
 import { getCodeFenceLanguage } from '@renderer/utils/buildSelectionAction';
+import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
 
 // =============================================================================
 // Types
@@ -97,9 +98,10 @@ export function chipToMarkdown(chip: InlineChip): string {
  * Replaces each chip token in the text with its markdown representation.
  */
 export function serializeChipsWithText(text: string, chips: InlineChip[]): string {
-  if (chips.length === 0) return text;
+  const strippedText = stripEncodedTaskReferenceMetadata(text);
+  if (chips.length === 0) return strippedText;
 
-  let result = text;
+  let result = strippedText;
   for (const chip of chips) {
     const token = chipToken(chip);
     result = result.split(token).join(chipToMarkdown(chip));

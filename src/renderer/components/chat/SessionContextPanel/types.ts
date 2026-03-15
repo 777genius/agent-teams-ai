@@ -37,6 +37,8 @@ export interface SessionContextPanelProps {
   selectedPhase: number | null;
   /** Callback to change selected phase */
   onPhaseChange: (phase: number | null) => void;
+  /** Which side of the content the panel is on: left → borderRight, right → borderLeft */
+  side?: 'left' | 'right';
 }
 
 // =============================================================================

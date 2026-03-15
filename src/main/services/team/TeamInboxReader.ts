@@ -98,9 +98,12 @@ export class TeamInboxReader {
         text: row.text,
         timestamp: row.timestamp,
         read: typeof row.read === 'boolean' ? row.read : false,
+        taskRefs: Array.isArray(row.taskRefs) ? row.taskRefs : undefined,
         summary: typeof row.summary === 'string' ? row.summary : undefined,
         color: typeof row.color === 'string' ? row.color : undefined,
         messageId: row.messageId,
+        relayOfMessageId:
+          typeof row.relayOfMessageId === 'string' ? row.relayOfMessageId : undefined,
         source: typeof row.source === 'string' ? (row.source as InboxMessage['source']) : undefined,
         leadSessionId: typeof row.leadSessionId === 'string' ? row.leadSessionId : undefined,
         conversationId: typeof row.conversationId === 'string' ? row.conversationId : undefined,

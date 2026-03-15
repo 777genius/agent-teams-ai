@@ -12,7 +12,7 @@ import {
 } from './CodeMirrorDiffUtils';
 import { FileSectionDiff } from './FileSectionDiff';
 import { FileSectionHeader } from './FileSectionHeader';
-import { FileSectionPlaceholder } from './FileSectionPlaceholder';
+import { FullDiffLoadingBanner } from './FullDiffLoadingBanner';
 
 import type { EditorView } from '@codemirror/view';
 import type { FileChangeWithContent, HunkDecision } from '@shared/types';
@@ -23,6 +23,14 @@ interface ContinuousScrollViewProps {
   files: FileChangeSummary[];
   fileContents: Record<string, FileChangeWithContent>;
   fileContentsLoading: Record<string, boolean>;
+  globalDiffLoadingState?: {
+    totalFilesCount: number;
+    readyFilesCount: number;
+    loadingFilesCount: number;
+    snippetCount: number;
+    activeFileName?: string;
+  } | null;
+  reviewExternalChangesByFile: Record<string, { type: 'change' | 'add' | 'unlink' }>;
   viewedSet: Set<string>;
   editedContents: Record<string, string>;
   hunkDecisions: Record<string, HunkDecision>;
@@ -38,6 +46,8 @@ interface ContinuousScrollViewProps {
   onContentChanged: (filePath: string, content: string) => void;
   onDiscard: (filePath: string) => void;
   onSave: (filePath: string) => void;
+  onReloadFromDisk: (filePath: string) => void;
+  onKeepDraft: (filePath: string) => void;
   onAcceptFile: (filePath: string) => void;
   onRejectFile: (filePath: string) => void;
   onRestoreMissingFile?: (filePath: string, content: string) => void;
@@ -60,12 +70,16 @@ interface ContinuousScrollViewProps {
     filePath: string
   ) => Promise<void>;
   onSelectionChange?: (info: EditorSelectionInfo | null) => void;
+  globalHunkOffsets?: Record<string, number>;
+  totalReviewHunks?: number;
 }
 
 export const ContinuousScrollView = ({
   files,
   fileContents,
   fileContentsLoading,
+  globalDiffLoadingState,
+  reviewExternalChangesByFile,
   viewedSet,
   editedContents,
   hunkDecisions,
@@ -81,6 +95,8 @@ export const ContinuousScrollView = ({
   onContentChanged,
   onDiscard,
   onSave,
+  onReloadFromDisk,
+  onKeepDraft,
   onAcceptFile,
   onRejectFile,
   onRestoreMissingFile,
@@ -95,6 +111,8 @@ export const ContinuousScrollView = ({
   memberName,
   fetchFileContent,
   onSelectionChange,
+  globalHunkOffsets,
+  totalReviewHunks,
 }: ContinuousScrollViewProps): React.ReactElement => {
   const setFileChunkCount = useStore((s) => s.setFileChunkCount);
   const [localCollapsedFiles, setLocalCollapsedFiles] = useState<Set<string>>(() => new Set());
@@ -224,6 +242,15 @@ export const ContinuousScrollView = ({
 
   return (
     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+      {globalDiffLoadingState ? (
+        <FullDiffLoadingBanner
+          totalFilesCount={globalDiffLoadingState.totalFilesCount}
+          readyFilesCount={globalDiffLoadingState.readyFilesCount}
+          loadingFilesCount={globalDiffLoadingState.loadingFilesCount}
+          snippetCount={globalDiffLoadingState.snippetCount}
+          activeFileName={globalDiffLoadingState.activeFileName}
+        />
+      ) : null}
       {files.map((file) => {
         const filePath = file.filePath;
         const content = fileContents[filePath] ?? null;
@@ -240,6 +267,7 @@ export const ContinuousScrollView = ({
               file={file}
               fileContent={content}
               fileDecision={decision}
+              externalChange={reviewExternalChangesByFile[filePath]}
               pathChangeLabel={pathChangeLabels?.[filePath]}
               hasEdits={hasEdits}
               applying={applying}
@@ -247,31 +275,32 @@ export const ContinuousScrollView = ({
               onToggleCollapse={handleToggleCollapse}
               onDiscard={onDiscard}
               onSave={onSave}
+              onReloadFromDisk={onReloadFromDisk}
+              onKeepDraft={onKeepDraft}
               onAcceptFile={onAcceptFile}
               onRejectFile={onRejectFile}
               onRestoreMissingFile={onRestoreMissingFile}
             />
 
-            {!isCollapsed &&
-              (hasContent ? (
-                <FileSectionDiff
-                  file={file}
-                  fileContent={content}
-                  isLoading={false}
-                  collapseUnchanged={collapseUnchanged}
-                  onHunkAccepted={onHunkAccepted}
-                  onHunkRejected={onHunkRejected}
-                  onFullyViewed={onFullyViewed}
-                  onContentChanged={onContentChanged}
-                  onEditorViewReady={handleEditorViewReady}
-                  discardCounter={discardCounters[filePath] ?? 0}
-                  autoViewed={autoViewed}
-                  isViewed={isViewed}
-                  onSelectionChange={onSelectionChange}
-                />
-              ) : (
-                <FileSectionPlaceholder fileName={file.relativePath} />
-              ))}
+            {!isCollapsed && (
+              <FileSectionDiff
+                file={file}
+                fileContent={content}
+                isLoading={!hasContent}
+                collapseUnchanged={collapseUnchanged}
+                onHunkAccepted={onHunkAccepted}
+                onHunkRejected={onHunkRejected}
+                onFullyViewed={onFullyViewed}
+                onContentChanged={onContentChanged}
+                onEditorViewReady={handleEditorViewReady}
+                discardCounter={discardCounters[filePath] ?? 0}
+                autoViewed={autoViewed}
+                isViewed={isViewed}
+                onSelectionChange={onSelectionChange}
+                globalHunkOffset={globalHunkOffsets?.[filePath] ?? 0}
+                totalReviewHunks={totalReviewHunks}
+              />
+            )}
           </div>
         );
       })}

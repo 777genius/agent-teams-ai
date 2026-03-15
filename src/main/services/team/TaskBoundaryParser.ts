@@ -35,6 +35,13 @@ const MCP_TASK_BOUNDARY_TOOLS = new Set(['task_start', 'task_complete', 'task_se
 
 type DetectedMechanism = 'TaskUpdate' | 'mcp' | 'none';
 
+function extractTaskId(input: Record<string, unknown>): string {
+  const rawTaskId = input.taskId ?? input.task_id;
+  if (typeof rawTaskId === 'string') return rawTaskId;
+  if (typeof rawTaskId === 'number') return String(rawTaskId);
+  return '';
+}
+
 function pickDetectedMechanism(
   current: DetectedMechanism,
   next: Exclude<DetectedMechanism, 'none'>
@@ -191,13 +198,7 @@ export class TaskBoundaryParser {
       const input = b.input as Record<string, unknown> | undefined;
       if (!input) continue;
 
-      const rawTaskId = input.taskId;
-      const taskId =
-        typeof rawTaskId === 'string'
-          ? rawTaskId
-          : typeof rawTaskId === 'number'
-            ? String(rawTaskId)
-            : '';
+      const taskId = extractTaskId(input);
       if (!taskId) continue;
 
       const status = typeof input.status === 'string' ? input.status : '';
@@ -243,13 +244,7 @@ export class TaskBoundaryParser {
       const input = b.input as Record<string, unknown> | undefined;
       if (!input) continue;
 
-      const rawTaskId = input.taskId;
-      const taskId =
-        typeof rawTaskId === 'string'
-          ? rawTaskId
-          : typeof rawTaskId === 'number'
-            ? String(rawTaskId)
-            : '';
+      const taskId = extractTaskId(input);
       if (!taskId) continue;
 
       let event: TaskBoundaryEvent = null;

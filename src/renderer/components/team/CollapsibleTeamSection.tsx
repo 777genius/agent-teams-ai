@@ -79,14 +79,22 @@ export const CollapsibleTeamSection = ({
     <section ref={sectionRef} data-section-id={sectionId} className="min-w-0">
       <div
         className={cn(
-          'relative -mx-4 flex min-h-9 w-[calc(100%+2rem)] items-stretch py-1.5',
+          'relative -mx-[calc(1rem-5px)] flex min-h-9 w-[calc(100%+2rem-10px)] items-stretch py-1.5',
           headerClassName
         )}
       >
         <button
           type="button"
-          className={`absolute inset-0 z-0 cursor-pointer transition-colors ${isOpen ? 'rounded-t-md bg-[var(--color-section-bg-open)] hover:bg-[var(--color-section-hover-open)]' : 'rounded-md bg-[var(--color-section-bg)] hover:bg-[var(--color-section-hover)]'}`}
-          onClick={() => setOpen((prev) => !prev)}
+          className={`absolute inset-0 z-0 cursor-pointer transition-colors ${isOpen ? 'rounded-t-xl bg-[var(--color-section-bg-open)] hover:bg-[var(--color-section-hover-open)]' : 'rounded-xl bg-[var(--color-section-bg)] hover:bg-[var(--color-section-hover)]'}`}
+          onClick={() =>
+            setOpen((prev) => {
+              const next = !prev;
+              if (next && sectionRef.current) {
+                scrollAfterExpand(sectionRef.current);
+              }
+              return next;
+            })
+          }
           aria-label={isOpen ? 'Collapse section' : 'Expand section'}
         />
         <div
@@ -121,7 +129,9 @@ export const CollapsibleTeamSection = ({
           {afterBadge}
           {headerExtra}
         </div>
-        {action && <div className="relative z-10 flex shrink-0 items-center">{action}</div>}
+        {action && (
+          <div className="relative z-10 flex shrink-0 items-center self-start">{action}</div>
+        )}
       </div>
       {isOpen && (
         <div className={cn('mt-1.5 min-w-0 overflow-x-clip pb-2', contentClassName)}>

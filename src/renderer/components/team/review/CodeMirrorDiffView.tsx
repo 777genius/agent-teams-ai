@@ -51,6 +51,10 @@ interface CodeMirrorDiffViewProps {
   portionSize?: number;
   /** Called when text selection changes (for floating action menu) */
   onSelectionChange?: (info: EditorSelectionInfo | null) => void;
+  /** Global hunk offset for this file in the review order */
+  globalHunkOffset?: number;
+  /** Total hunk count across all review files */
+  totalReviewHunks?: number;
 }
 
 /** Compute hunk index for the chunk at a given position (B-side / modified doc).
@@ -200,10 +204,18 @@ export const CodeMirrorDiffView = ({
   usePortionCollapse = false,
   portionSize = 100,
   onSelectionChange,
+  globalHunkOffset = 0,
+  totalReviewHunks,
 }: CodeMirrorDiffViewProps): React.ReactElement => {
+  const rootRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const endSentinelRef = useRef<HTMLDivElement>(null);
+  const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
+  const floatingToolbarRef = useRef<HTMLDivElement>(null);
+  const floatingNavRef = useRef<HTMLDivElement>(null);
+  const floatingCounterRef = useRef<HTMLSpanElement>(null);
+  const activeChunkIndexRef = useRef<number | null>(null);
   // Local ref to hold externalViewRef for syncing via useEffect
   const externalViewRefHolder = useRef(externalViewRef);
 
@@ -250,6 +262,225 @@ export const CodeMirrorDiffView = ({
     collapseRef.current = { enabled: collapseUnchangedProp, margin: collapseMargin };
   }, [collapseUnchangedProp, collapseMargin]);
 
+  const hideFloatingToolbar = useCallback(() => {
+    const toolbar = floatingToolbarRef.current;
+    if (!toolbar) return;
+    toolbar.style.display = 'none';
+    activeChunkIndexRef.current = null;
+  }, []);
+
+  const positionFloatingToolbar = useCallback((view: EditorView, clientY: number) => {
+    const toolbar = floatingToolbarRef.current;
+    const root = rootRef.current;
+    if (!toolbar || !root) return;
+
+    const rootRect = root.getBoundingClientRect();
+    const scrollerRect = view.scrollDOM.getBoundingClientRect();
+    const toolbarWidth = toolbar.offsetWidth || 200;
+    const toolbarHeight = toolbar.offsetHeight || 28;
+    const margin = 12;
+
+    const left = scrollerRect.right - rootRect.left - toolbarWidth - margin;
+    const clampedTop = Math.max(
+      scrollerRect.top,
+      Math.min(clientY - toolbarHeight / 2, scrollerRect.bottom - toolbarHeight)
+    );
+
+    toolbar.style.left = `${left}px`;
+    toolbar.style.top = `${clampedTop - rootRect.top}px`;
+  }, []);
+
+  const resolveDeletedChunkIndex = useCallback(
+    (deletedChunk: Element, view: EditorView): number => {
+      try {
+        return computeHunkIndexAtPos(view.state, view.posAtDOM(deletedChunk));
+      } catch {
+        return -1;
+      }
+    },
+    []
+  );
+
+  const findHoveredChunkIndex = useCallback(
+    (clientX: number, clientY: number, view: EditorView): number => {
+      const hoveredElement = document.elementFromPoint(clientX, clientY);
+      if (!hoveredElement) return -1;
+      if (hoveredElement.closest('[data-review-floating-toolbar="true"]')) {
+        return activeChunkIndexRef.current ?? -1;
+      }
+
+      const deletedChunk = hoveredElement.closest('.cm-deletedChunk');
+      if (deletedChunk) {
+        return resolveDeletedChunkIndex(deletedChunk, view);
+      }
+
+      if (
+        !hoveredElement.closest(
+          '.cm-changedLine, .cm-insertedLine, .cm-inlineChangedLine, .cm-changedText, .cm-deletedText'
+        )
+      ) {
+        return -1;
+      }
+
+      const pos = view.posAtCoords({ x: clientX, y: clientY });
+      if (pos === null) return -1;
+      const chunks = getChunks(view.state);
+      if (!chunks) return -1;
+
+      for (let i = 0; i < chunks.chunks.length; i++) {
+        const chunk = chunks.chunks[i];
+        const chunkEnd = Math.min(view.state.doc.length, chunk.endB);
+        if (pos >= chunk.fromB && pos <= chunkEnd) {
+          return i;
+        }
+      }
+
+      return -1;
+    },
+    [resolveDeletedChunkIndex]
+  );
+
+  const updateFloatingToolbar = useCallback(
+    (
+      view: EditorView,
+      clientY: number,
+      options?: { clientX?: number; followCursor?: boolean }
+    ): void => {
+      if (!showMergeControls) {
+        hideFloatingToolbar();
+        return;
+      }
+
+      const toolbar = floatingToolbarRef.current;
+      const nav = floatingNavRef.current;
+      const counter = floatingCounterRef.current;
+      const chunks = getChunks(view.state);
+
+      if (!toolbar || !chunks || chunks.chunks.length === 0) {
+        hideFloatingToolbar();
+        return;
+      }
+
+      let activeIndex =
+        options?.clientX !== undefined ? findHoveredChunkIndex(options.clientX, clientY, view) : -1;
+
+      if (activeIndex < 0) {
+        hideFloatingToolbar();
+        return;
+      }
+
+      activeIndex = Math.max(0, Math.min(activeIndex, chunks.chunks.length - 1));
+      activeChunkIndexRef.current = activeIndex;
+
+      if (counter) {
+        const displayIndex = globalHunkOffset + activeIndex + 1;
+        const displayTotal = totalReviewHunks ?? chunks.chunks.length;
+        counter.textContent = `${displayIndex} of ${displayTotal}`;
+      }
+      if (nav) {
+        nav.style.display = chunks.chunks.length > 1 ? '' : 'none';
+      }
+
+      toolbar.style.display = 'flex';
+      const scrollerRect = view.scrollDOM.getBoundingClientRect();
+      const targetY = options?.followCursor
+        ? clientY
+        : (scrollerRect.top + scrollerRect.bottom) / 2;
+      positionFloatingToolbar(view, targetY);
+    },
+    [
+      findHoveredChunkIndex,
+      globalHunkOffset,
+      hideFloatingToolbar,
+      positionFloatingToolbar,
+      showMergeControls,
+      totalReviewHunks,
+    ]
+  );
+
+  const actOnActiveChunk = useCallback(
+    (decision: 'accept' | 'reject') => {
+      const view = viewRef.current;
+      const activeChunkIndex = activeChunkIndexRef.current;
+      if (!view || activeChunkIndex === null) return;
+
+      const chunks = getChunks(view.state);
+      const chunk = chunks?.chunks[activeChunkIndex];
+      if (!chunk) return;
+
+      if (decision === 'accept') {
+        acceptChunk(view, chunk.fromB);
+        onAcceptRef.current?.(activeChunkIndex);
+      } else {
+        rejectChunk(view, chunk.fromB);
+        onRejectRef.current?.(activeChunkIndex);
+      }
+
+      scrollToNextChunk();
+      requestAnimationFrame(() => {
+        const scrollerRect = view.scrollDOM.getBoundingClientRect();
+        updateFloatingToolbar(view, (scrollerRect.top + scrollerRect.bottom) / 2);
+      });
+    },
+    [scrollToNextChunk, updateFloatingToolbar]
+  );
+
+  const moveBetweenChunks = useCallback(
+    (direction: 'prev' | 'next') => {
+      const view = viewRef.current;
+      if (!view) return;
+      if (direction === 'prev') {
+        goToPreviousChunk(view);
+      } else {
+        goToNextChunk(view);
+      }
+
+      requestAnimationFrame(() => {
+        const scrollerRect = view.scrollDOM.getBoundingClientRect();
+        updateFloatingToolbar(view, (scrollerRect.top + scrollerRect.bottom) / 2);
+      });
+    },
+    [updateFloatingToolbar]
+  );
+
+  useEffect(() => {
+    if (!showMergeControls) return;
+
+    const repositionToolbar = (): void => {
+      const view = viewRef.current;
+      const root = rootRef.current;
+      const toolbar = floatingToolbarRef.current;
+      if (!view || !root || !toolbar || toolbar.style.display === 'none') return;
+
+      const pointer = lastPointerRef.current;
+      const rootRect = root.getBoundingClientRect();
+      const pointerInsideRoot =
+        pointer &&
+        pointer.x >= rootRect.left &&
+        pointer.x <= rootRect.right &&
+        pointer.y >= rootRect.top &&
+        pointer.y <= rootRect.bottom;
+
+      if (pointerInsideRoot) {
+        updateFloatingToolbar(view, pointer.y, {
+          clientX: pointer.x,
+          followCursor: true,
+        });
+        return;
+      }
+
+      const scrollerRect = view.scrollDOM.getBoundingClientRect();
+      updateFloatingToolbar(view, (scrollerRect.top + scrollerRect.bottom) / 2);
+    };
+
+    window.addEventListener('scroll', repositionToolbar, true);
+    window.addEventListener('resize', repositionToolbar);
+    return () => {
+      window.removeEventListener('scroll', repositionToolbar, true);
+      window.removeEventListener('resize', repositionToolbar);
+    };
+  }, [showMergeControls, updateFloatingToolbar]);
+
   /** Build unified merge view extension. Extracted for dynamic compartment reconfigure. */
   const buildMergeExtension = useCallback(
     (collapse: boolean, margin: number): Extension => {
@@ -260,12 +491,8 @@ export const CodeMirrorDiffView = ({
         syntaxHighlightDeletions: true,
       };
 
-      // IMPORTANT: @codemirror/merge shows accept/reject buttons by default.
-      // When our UI chooses to hide merge controls (e.g. "Missing on disk" preview),
-      // explicitly disable them rather than relying on default behavior.
-      if (!showMergeControls) {
-        mergeConfig.mergeControls = false;
-      }
+      // We render our own floating merge toolbar outside CodeMirror's DeletionWidget DOM.
+      mergeConfig.mergeControls = false;
 
       if (collapse && !usePortionCollapse) {
         mergeConfig.collapseUnchanged = {
@@ -274,120 +501,9 @@ export const CodeMirrorDiffView = ({
         };
       }
 
-      if (showMergeControls) {
-        // NOTE: We intentionally do NOT use the `action` callback from @codemirror/merge.
-        // CM's DeletionWidget caches DOM via a global WeakMap keyed by chunk.changes.
-        // When EditorView is recreated (e.g. from cached initialState), toDOM() returns
-        // the OLD cached DOM whose `action` closure references the DESTROYED view.
-        // Instead, we call acceptChunk/rejectChunk directly with viewRef.current.
-        //
-        // CM calls mergeControls twice per chunk: 'accept' first, 'reject' second.
-        // Both elements go into `.cm-chunkButtons`. We return the full toolbar for
-        // 'accept' and a hidden span for 'reject'.
-        mergeConfig.mergeControls = (type, _action) => {
-          if (type === 'reject') {
-            const empty = document.createElement('span');
-            empty.style.display = 'none';
-            return empty;
-          }
-
-          // --- Full toolbar for 'accept' ---
-          const toolbar = document.createElement('div');
-          toolbar.className = 'cm-merge-toolbar';
-
-          // Navigation section (hidden by default, shown if >1 chunks)
-          const nav = document.createElement('div');
-          nav.className = 'cm-merge-nav';
-          nav.style.display = 'none';
-
-          const prevBtn = document.createElement('button');
-          prevBtn.className = 'cm-merge-nav-btn';
-          prevBtn.textContent = '\u2227';
-          prevBtn.title = 'Previous chunk';
-          prevBtn.onmousedown = (e) => {
-            e.preventDefault();
-            const v = viewRef.current;
-            if (v) goToPreviousChunk(v);
-          };
-
-          const counter = document.createElement('span');
-          counter.className = 'cm-merge-nav-counter';
-
-          const nextBtn = document.createElement('button');
-          nextBtn.className = 'cm-merge-nav-btn';
-          nextBtn.textContent = '\u2228';
-          nextBtn.title = 'Next chunk';
-          nextBtn.onmousedown = (e) => {
-            e.preventDefault();
-            const v = viewRef.current;
-            if (v) goToNextChunk(v);
-          };
-
-          nav.append(prevBtn, counter, nextBtn);
-          toolbar.append(nav);
-
-          // Helper: create button with label + kbd shortcut
-          const makeBtn = (cls: string, label: string, shortcut: string): HTMLButtonElement => {
-            const btn = document.createElement('button');
-            btn.className = cls;
-            btn.append(document.createTextNode(label + ' '));
-            const kbd = document.createElement('kbd');
-            kbd.textContent = shortcut;
-            btn.append(kbd);
-            return btn;
-          };
-
-          // Undo button (reject action)
-          const undoBtn = makeBtn('cm-merge-undo', 'Undo', '\u2318N');
-          undoBtn.title = 'Reject change (⌘N)';
-          undoBtn.onmousedown = (e) => {
-            e.preventDefault();
-            const v = viewRef.current;
-            if (v) {
-              const pos = v.posAtDOM(toolbar);
-              const idx = computeHunkIndexAtPos(v.state, pos);
-              rejectChunk(v, pos);
-              onRejectRef.current?.(idx);
-              scrollToNextChunk();
-            }
-          };
-          toolbar.append(undoBtn);
-
-          // Keep button (accept action)
-          const keepBtn = makeBtn('cm-merge-keep', 'Keep', '\u2318Y');
-          keepBtn.title = 'Accept change (⌘Y)';
-          keepBtn.onmousedown = (e) => {
-            e.preventDefault();
-            const v = viewRef.current;
-            if (v) {
-              const pos = v.posAtDOM(toolbar);
-              const idx = computeHunkIndexAtPos(v.state, pos);
-              acceptChunk(v, pos);
-              onAcceptRef.current?.(idx);
-              scrollToNextChunk();
-            }
-          };
-          toolbar.append(keepBtn);
-
-          // Deferred: compute chunk index + show nav if >1 chunks
-          requestAnimationFrame(() => {
-            const v = viewRef.current;
-            if (!v) return;
-            const chunks = getChunks(v.state);
-            if (!chunks || chunks.chunks.length <= 1) return;
-            const pos = v.posAtDOM(toolbar);
-            const idx = computeHunkIndexAtPos(v.state, pos);
-            counter.textContent = `${idx + 1} of ${chunks.chunks.length}`;
-            nav.style.display = '';
-          });
-
-          return toolbar;
-        };
-      }
-
       return unifiedMergeView(mergeConfig);
     },
-    [original, showMergeControls, scrollToNextChunk, usePortionCollapse]
+    [original, usePortionCollapse]
   );
 
   const buildExtensions = useCallback(() => {
@@ -464,150 +580,30 @@ export const CodeMirrorDiffView = ({
       })
     );
 
-    // Merge toolbar: always visible for nearest chunk, follows cursor when hovering on chunk
+    // External merge toolbar: follows cursor without depending on CodeMirror's widget DOM.
     if (showMergeControls) {
-      // Helper: pin chunkButtons to right edge of visible viewport, accounting for horizontal scroll.
-      // Uses getBoundingClientRect() so the offset from gutters / CM content padding is handled exactly.
-      const pinToViewportRight = (btnContainer: HTMLElement, scroller: Element): void => {
-        const scrollerRect = scroller.getBoundingClientRect();
-        const chunkEl = btnContainer.parentElement;
-        if (!chunkEl) return;
-        const chunkRect = chunkEl.getBoundingClientRect();
-        const btnWidth = btnContainer.offsetWidth || 200;
-        const margin = 12;
-        // left is relative to .cm-deletedChunk — so we compute from scroller's right edge
-        btnContainer.style.left = `${scrollerRect.right - chunkRect.left - btnWidth - margin}px`;
-        btnContainer.style.right = 'auto';
-      };
-
-      // Helper: position a chunkButtons container so it's below the change block,
-      // but clamped to the visible viewport if that would be off-screen.
-      const positionAtBottom = (chunkEl: Element, scroller: Element): void => {
-        const btnContainer = chunkEl.querySelector<HTMLElement>('.cm-chunkButtons');
-        if (!btnContainer) return;
-        const parentRect = chunkEl.getBoundingClientRect();
-        const scrollerRect = scroller.getBoundingClientRect();
-        // "below block" = 100% of parent height
-        let targetY = parentRect.bottom;
-        const tbHeight = btnContainer.offsetHeight || 28;
-        // Clamp: if bottom edge would go below visible area, pin to viewport bottom
-        if (targetY + tbHeight > scrollerRect.bottom) {
-          targetY = scrollerRect.bottom - tbHeight;
-        }
-        btnContainer.style.top = `${targetY - parentRect.top}px`;
-        pinToViewportRight(btnContainer, scroller);
-      };
-
-      const positionAtCursor = (chunkEl: Element, clientY: number, scroller: Element): void => {
-        const btnContainer = chunkEl.querySelector<HTMLElement>('.cm-chunkButtons');
-        if (!btnContainer) return;
-        const parentRect = chunkEl.getBoundingClientRect();
-        const scrollerRect = scroller.getBoundingClientRect();
-        const tbHeight = btnContainer.offsetHeight || 28;
-        let targetY = clientY - tbHeight / 2;
-        // Clamp to viewport
-        if (targetY + tbHeight > scrollerRect.bottom) {
-          targetY = scrollerRect.bottom - tbHeight;
-        }
-        if (targetY < scrollerRect.top) {
-          targetY = scrollerRect.top;
-        }
-        btnContainer.style.top = `${targetY - parentRect.top}px`;
-        pinToViewportRight(btnContainer, scroller);
-      };
-
-      // Find which chunk index the mouse is directly over (deleted or inserted area)
-      const findHoveredChunkIndex = (event: MouseEvent, view: EditorView): number => {
-        const el = document.elementFromPoint(event.clientX, event.clientY);
-        if (!el) return -1;
-        const deletedChunk = el.closest('.cm-deletedChunk');
-        if (deletedChunk) {
-          const all = view.dom.querySelectorAll('.cm-deletedChunk');
-          return [...all].indexOf(deletedChunk);
-        }
-        if (el.closest('.cm-changedLine, .cm-insertedLine')) {
-          const allChunks = getChunks(view.state);
-          if (!allChunks) return -1;
-          const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
-          if (pos !== null) {
-            for (let i = 0; i < allChunks.chunks.length; i++) {
-              const chunk = allChunks.chunks[i];
-              if (pos >= chunk.fromB && pos <= chunk.toB) return i;
-            }
-          }
-        }
-        return -1;
-      };
-
-      // Find chunk nearest to cursor Y (for default "below block" display)
-      const findNearestChunkIndex = (clientY: number, view: EditorView): number => {
-        const allChunkEls = view.dom.querySelectorAll('.cm-deletedChunk');
-        let result = -1;
-        if (allChunkEls.length > 0) {
-          let bestIdx = 0;
-          let bestDist = Infinity;
-          allChunkEls.forEach((el, idx) => {
-            const rect = el.getBoundingClientRect();
-            const centerY = (rect.top + rect.bottom) / 2;
-            const dist = Math.abs(clientY - centerY);
-            if (dist < bestDist) {
-              bestDist = dist;
-              bestIdx = idx;
-            }
-          });
-          result = bestIdx;
-        }
-        return result;
-      };
-
       extensions.push(
         EditorView.domEventHandlers({
-          mousemove(event, view) {
-            const allChunks = getChunks(view.state);
-            if (allChunks && allChunks.chunks.length > 0) {
-              const scroller = view.scrollDOM;
-              const allChunkEls = view.dom.querySelectorAll('.cm-deletedChunk');
-              const hoveredIdx = findHoveredChunkIndex(event, view);
-              const nearestIdx =
-                hoveredIdx >= 0 ? hoveredIdx : findNearestChunkIndex(event.clientY, view);
-
-              const toolbars = view.dom.querySelectorAll('.cm-merge-toolbar');
-              toolbars.forEach((tb, idx) => {
-                tb.classList.toggle('cm-merge-toolbar-active', idx === nearestIdx);
-              });
-
-              if (nearestIdx >= 0 && nearestIdx < allChunkEls.length) {
-                const chunkEl = allChunkEls[nearestIdx] as HTMLElement;
-                if (hoveredIdx >= 0) {
-                  positionAtCursor(chunkEl, event.clientY, scroller);
-                } else {
-                  positionAtBottom(chunkEl, scroller);
-                }
-              }
-            }
-            return false;
-          },
-          mouseleave(_event, view) {
-            // Keep active toolbar visible, reposition to "below block"
-            const activeToolbar = view.dom.querySelector('.cm-merge-toolbar-active');
-            if (activeToolbar) {
-              const chunkEl = activeToolbar.closest('.cm-deletedChunk');
-              if (chunkEl) positionAtBottom(chunkEl, view.scrollDOM);
-            }
+          mouseleave() {
             return false;
           },
           scroll(_event, view) {
-            // Reposition active toolbar on horizontal scroll so buttons stay at viewport edge
-            const activeToolbar = view.dom.querySelector('.cm-merge-toolbar-active');
-            if (activeToolbar) {
-              const chunkEl = activeToolbar.closest('.cm-deletedChunk');
-              if (chunkEl) {
-                const btnContainer = chunkEl.querySelector<HTMLElement>('.cm-chunkButtons');
-                if (btnContainer) {
-                  pinToViewportRight(btnContainer, view.scrollDOM);
-                }
-              }
-            }
+            const scrollerRect = view.scrollDOM.getBoundingClientRect();
+            const pointer = lastPointerRef.current;
+            const pointerInsideScroller =
+              pointer &&
+              pointer.x >= scrollerRect.left &&
+              pointer.x <= scrollerRect.right &&
+              pointer.y >= scrollerRect.top &&
+              pointer.y <= scrollerRect.bottom;
+            const targetY = pointerInsideScroller
+              ? pointer.y
+              : (scrollerRect.top + scrollerRect.bottom) / 2;
+
+            updateFloatingToolbar(view, targetY, {
+              clientX: pointerInsideScroller ? pointer.x : undefined,
+              followCursor: Boolean(pointerInsideScroller),
+            });
             return false;
           },
         })
@@ -616,16 +612,10 @@ export const CodeMirrorDiffView = ({
       // Ensure at least one toolbar is visible (initial load + after accept/reject)
       extensions.push(
         EditorView.updateListener.of((update) => {
-          if (update.view.dom.querySelector('.cm-merge-toolbar-active')) return;
           requestAnimationFrame(() => {
             const v = update.view;
-            if (v.dom.querySelector('.cm-merge-toolbar-active')) return;
-            const first = v.dom.querySelector('.cm-merge-toolbar');
-            if (first) {
-              first.classList.add('cm-merge-toolbar-active');
-              const chunkEl = first.closest('.cm-deletedChunk');
-              if (chunkEl) positionAtBottom(chunkEl, v.scrollDOM);
-            }
+            const scrollerRect = v.scrollDOM.getBoundingClientRect();
+            updateFloatingToolbar(v, (scrollerRect.top + scrollerRect.bottom) / 2);
           });
         })
       );
@@ -652,7 +642,15 @@ export const CodeMirrorDiffView = ({
     );
 
     return extensions;
-  }, [readOnly, showMergeControls, buildMergeExtension, usePortionCollapse, portionSize, original]);
+  }, [
+    readOnly,
+    showMergeControls,
+    buildMergeExtension,
+    usePortionCollapse,
+    portionSize,
+    original,
+    updateFloatingToolbar,
+  ]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -682,6 +680,7 @@ export const CodeMirrorDiffView = ({
 
     return () => {
       clearTimeout(debounceTimer.current);
+      hideFloatingToolbar();
       view.destroy();
       viewRef.current = null;
       if (extRef) {
@@ -691,7 +690,7 @@ export const CodeMirrorDiffView = ({
       onViewChangeRef.current?.(null);
     };
     // We intentionally rebuild the entire editor when key props change
-  }, [original, modified, buildExtensions, initialState]);
+  }, [original, modified, buildExtensions, initialState, hideFloatingToolbar]);
 
   // Inject language extension via compartment after editor creation
   useEffect(() => {
@@ -767,8 +766,100 @@ export const CodeMirrorDiffView = ({
   }, [onFullyViewed]);
 
   return (
-    <div className="flex flex-col" style={{ maxHeight }}>
+    <div
+      ref={rootRef}
+      role="presentation"
+      className="relative flex flex-col"
+      style={{ maxHeight }}
+      onMouseMove={(e) => {
+        lastPointerRef.current = { x: e.clientX, y: e.clientY };
+        const view = viewRef.current;
+        if (!view) return;
+        updateFloatingToolbar(view, e.clientY, {
+          clientX: e.clientX,
+          followCursor: true,
+        });
+      }}
+      onMouseLeave={() => {
+        lastPointerRef.current = null;
+        hideFloatingToolbar();
+      }}
+    >
       <div ref={containerRef} className="flex-1 overflow-hidden rounded-lg border border-border" />
+      {showMergeControls && (
+        <div
+          ref={floatingToolbarRef}
+          data-review-floating-toolbar="true"
+          className="pointer-events-none absolute z-20 hidden items-center gap-0.5"
+        >
+          <div
+            ref={floatingNavRef}
+            className="pointer-events-auto flex items-center overflow-hidden rounded-md border border-border bg-surface-raised"
+            style={{ display: 'none' }}
+          >
+            <button
+              type="button"
+              className="px-2 py-[3px] text-[13px] leading-5 text-text-secondary transition-colors hover:bg-[var(--diff-merge-nav-hover-bg)]"
+              title="Previous chunk"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                moveBetweenChunks('prev');
+              }}
+            >
+              {'\u2227'}
+            </button>
+            <span
+              ref={floatingCounterRef}
+              className="whitespace-nowrap px-1 text-xs text-text-secondary"
+            />
+            <button
+              type="button"
+              className="px-2 py-[3px] text-[13px] leading-5 text-text-secondary transition-colors hover:bg-[var(--diff-merge-nav-hover-bg)]"
+              title="Next chunk"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                moveBetweenChunks('next');
+              }}
+            >
+              {'\u2228'}
+            </button>
+          </div>
+          <button
+            type="button"
+            className="pointer-events-auto rounded px-2.5 py-[3px] text-xs font-medium leading-5 transition-colors hover:[background-color:var(--diff-merge-undo-hover-bg)]"
+            style={{
+              color: 'var(--diff-merge-undo-color)',
+              backgroundColor: 'var(--diff-merge-undo-bg)',
+              border: '1px solid var(--diff-merge-undo-border)',
+            }}
+            title="Reject change (⌘N)"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              actOnActiveChunk('reject');
+            }}
+          >
+            {'Undo '}
+            <kbd className="ml-1 text-[10px] text-text-muted">{'\u2318N'}</kbd>
+          </button>
+          <button
+            type="button"
+            className="pointer-events-auto rounded px-2.5 py-[3px] text-xs font-medium leading-5 transition-colors hover:[background-color:var(--diff-merge-keep-hover-bg)]"
+            style={{
+              color: 'var(--diff-merge-keep-color)',
+              backgroundColor: 'var(--diff-merge-keep-bg)',
+              border: '1px solid var(--diff-merge-keep-border)',
+            }}
+            title="Accept change (⌘Y)"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              actOnActiveChunk('accept');
+            }}
+          >
+            {'Keep '}
+            <kbd className="ml-1 text-[10px] text-[var(--diff-merge-keep-kbd)]">{'\u2318Y'}</kbd>
+          </button>
+        </div>
+      )}
       {/* Invisible sentinel for auto-viewed detection */}
       <div ref={endSentinelRef} className="h-px shrink-0" />
     </div>

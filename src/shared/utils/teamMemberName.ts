@@ -38,3 +38,25 @@ export function createCliAutoSuffixNameGuard(
     return !allLower.has(info.base.toLowerCase());
   };
 }
+
+const PROVISIONER_SUFFIX = '-provisioner';
+
+/**
+ * Claude CLI creates temporary "{name}-provisioner" agents during team provisioning
+ * to spawn real teammates. These are always internal artifacts — never real teammates.
+ *
+ * Unlike numeric suffixes (alice-2) which can be intentional, "-provisioner" is a
+ * hardcoded CLI pattern that should never be exposed to the user. We unconditionally
+ * hide any name ending with "-provisioner" regardless of whether the base name exists.
+ */
+export function createCliProvisionerNameGuard(
+  _allNames: Iterable<string>
+): (name: string) => boolean {
+  return (name: string): boolean => {
+    const lower = name.trim().toLowerCase();
+    if (!lower.endsWith(PROVISIONER_SUFFIX)) return true;
+    const base = lower.slice(0, -PROVISIONER_SUFFIX.length);
+    // Keep bare "-provisioner" (no base) — that's not a CLI artifact pattern
+    return !base;
+  };
+}

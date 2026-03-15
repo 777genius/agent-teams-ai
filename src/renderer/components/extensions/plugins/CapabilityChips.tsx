@@ -34,7 +34,7 @@ export const CapabilityChips = ({
   }, [plugins]);
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1.5">
       {ALL_CAPABILITIES.map((cap) => {
         const count = capabilityCounts.get(cap) ?? 0;
         if (count === 0) return null;
@@ -46,7 +46,7 @@ export const CapabilityChips = ({
             size="sm"
             onClick={() => onToggle(cap)}
             aria-pressed={isActive}
-            className={`h-8 rounded-full border px-3 text-xs font-medium transition-all ${
+            className={`h-7 rounded-full border px-2.5 text-[11px] font-medium transition-all ${
               isActive
                 ? 'border-purple-500/40 bg-purple-500/15 text-purple-300 shadow-sm'
                 : 'hover:bg-surface-raised/60 border-border bg-transparent text-text-secondary hover:border-border-emphasis hover:text-text'
@@ -54,7 +54,7 @@ export const CapabilityChips = ({
           >
             <span>{getCapabilityLabel(cap)}</span>
             <span
-              className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] leading-none ${
+              className={`ml-1.5 rounded-full px-1 py-0.5 text-[9px] leading-none ${
                 isActive
                   ? 'bg-surface-raised text-text-secondary'
                   : 'bg-surface-raised/70 text-text-muted'

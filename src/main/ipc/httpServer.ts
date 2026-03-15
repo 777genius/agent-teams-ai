@@ -11,6 +11,7 @@ import { createLogger } from '@shared/utils/logger';
 import { type IpcMain } from 'electron';
 
 import { configManager } from '../services';
+import { clearTeamControlApiState } from '../services/team/TeamControlApiState';
 
 import type { HttpServer } from '../services/infrastructure/HttpServer';
 
@@ -62,9 +63,6 @@ async function handleStart(): Promise<{
   error?: string;
 }> {
   try {
-    if (httpServer.isRunning()) {
-      return { success: true, data: { running: true, port: httpServer.getPort() } };
-    }
     await startServer();
     configManager.updateConfig('httpServer', { enabled: true, port: httpServer.getPort() });
     return { success: true, data: { running: true, port: httpServer.getPort() } };
@@ -84,6 +82,7 @@ async function handleStop(): Promise<{
 }> {
   try {
     await httpServer.stop();
+    await clearTeamControlApiState();
     configManager.updateConfig('httpServer', { enabled: false });
     return { success: true, data: { running: false, port: httpServer.getPort() } };
   } catch (error) {

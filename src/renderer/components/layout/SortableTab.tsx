@@ -85,6 +85,7 @@ export const SortableTab = ({
     const displayName = team?.displayName ?? tab.label;
     return nameColorSet(displayName);
   });
+  const activeBorderColor = teamColorSet?.border ?? 'var(--color-accent, #6366f1)';
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tab.id,
@@ -119,7 +120,17 @@ export const SortableTab = ({
           : 'var(--color-text-muted)',
     outline: isSelected ? '1px solid var(--color-border-emphasis)' : 'none',
     outlineOffset: '-1px',
-    borderLeft: isActive && teamColorSet ? `2px solid ${teamColorSet.border}` : undefined,
+    borderTop: isActive ? `1px solid ${activeBorderColor}` : '1px solid transparent',
+    borderLeft: isActive ? `1px solid ${activeBorderColor}` : '1px solid transparent',
+    borderRight: isActive ? `1px solid ${activeBorderColor}` : '1px solid transparent',
+    borderBottom: isActive ? '1px solid var(--color-surface-raised)' : '1px solid transparent',
+    borderTopLeftRadius: '8px',
+    borderTopRightRadius: '8px',
+    borderBottomLeftRadius: isActive ? 0 : '8px',
+    borderBottomRightRadius: isActive ? 0 : '8px',
+    marginBottom: isActive ? '-1px' : 0,
+    position: 'relative' as const,
+    zIndex: isActive ? 1 : 0,
   };
 
   const Icon = TAB_ICONS[tab.type];
@@ -144,7 +155,7 @@ export const SortableTab = ({
       role="tab"
       tabIndex={0}
       aria-selected={isActive}
-      className="group flex shrink-0 cursor-grab items-center gap-2 rounded-md px-3 py-1.5"
+      className="group flex shrink-0 cursor-grab items-center gap-2 px-3 py-1.5"
       style={style}
       onClick={(e) => onTabClick(tab.id, e)}
       onMouseDown={(e) => onMouseDown(tab.id, e)}

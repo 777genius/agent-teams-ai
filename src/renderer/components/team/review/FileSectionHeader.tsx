@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { shortcutLabel } from '@renderer/utils/platformKeys';
 import { ChevronDown, ChevronRight, FilePlus, Loader2, Save, Undo2 } from 'lucide-react';
@@ -19,6 +20,7 @@ interface FileSectionHeaderProps {
   file: FileChangeSummary;
   fileContent: FileChangeWithContent | null;
   fileDecision: HunkDecision | undefined;
+  externalChange?: { type: 'change' | 'add' | 'unlink' };
   pathChangeLabel?:
     | { kind: 'deleted' }
     | { kind: 'moved' | 'renamed'; direction: 'from' | 'to'; otherPath: string };
@@ -28,6 +30,8 @@ interface FileSectionHeaderProps {
   onToggleCollapse: (filePath: string) => void;
   onDiscard: (filePath: string) => void;
   onSave: (filePath: string) => void;
+  onReloadFromDisk?: (filePath: string) => void;
+  onKeepDraft?: (filePath: string) => void;
   onRestoreMissingFile?: (filePath: string, content: string) => void;
   onAcceptFile?: (filePath: string) => void;
   onRejectFile?: (filePath: string) => void;
@@ -37,6 +41,7 @@ export const FileSectionHeader = ({
   file,
   fileContent,
   fileDecision,
+  externalChange,
   pathChangeLabel,
   hasEdits,
   applying,
@@ -44,6 +49,8 @@ export const FileSectionHeader = ({
   onToggleCollapse,
   onDiscard,
   onSave,
+  onReloadFromDisk,
+  onKeepDraft,
   onRestoreMissingFile,
   onAcceptFile,
   onRejectFile,
@@ -60,6 +67,14 @@ export const FileSectionHeader = ({
       return writeSnippets[writeSnippets.length - 1].newString;
     })();
   const canRestore = !!onRestoreMissingFile && isPreviewOnly && !hasEdits && restoreContent != null;
+  const externalChangeLabel =
+    externalChange?.type === 'unlink'
+      ? 'Deleted on disk'
+      : externalChange?.type === 'add'
+        ? 'Recreated on disk'
+        : externalChange?.type === 'change'
+          ? 'Changed on disk'
+          : null;
 
   const handleHeaderClick = (e: React.MouseEvent): void => {
     // Don't collapse when clicking action buttons
@@ -85,6 +100,7 @@ export const FileSectionHeader = ({
       <span className="flex shrink-0 items-center text-text-muted">
         {isCollapsed ? <ChevronRight className="size-3.5" /> : <ChevronDown className="size-3.5" />}
       </span>
+      <FileIcon fileName={file.relativePath} className="size-3.5" />
       <span className="text-xs font-medium text-text">{file.relativePath}</span>
 
       {file.isNewFile && (
@@ -167,7 +183,32 @@ export const FileSectionHeader = ({
         </span>
       )}
 
+      {externalChangeLabel && (
+        <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-300">
+          {externalChangeLabel}
+        </span>
+      )}
+
       <div className="ml-auto flex items-center gap-1.5" data-no-collapse>
+        {externalChange && onReloadFromDisk && onKeepDraft && (
+          <div className="mr-1 flex items-center gap-1.5">
+            <button
+              onClick={() => onReloadFromDisk(file.filePath)}
+              disabled={applying}
+              className="rounded bg-blue-500/15 px-2 py-1 text-xs font-medium text-blue-300 transition-colors hover:bg-blue-500/25 disabled:opacity-50"
+            >
+              Reload from disk
+            </button>
+            <button
+              onClick={() => onKeepDraft(file.filePath)}
+              disabled={applying}
+              className="rounded bg-amber-500/15 px-2 py-1 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/25 disabled:opacity-50"
+            >
+              Keep my draft
+            </button>
+          </div>
+        )}
+
         {(onAcceptFile || onRejectFile) && (
           <div className="mr-1 flex items-center gap-1.5">
             {onAcceptFile && (

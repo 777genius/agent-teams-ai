@@ -1,4 +1,10 @@
 import { api } from '@renderer/api';
+import {
+  buildTaskChangePresenceKey,
+  buildTaskChangeRequestOptions,
+  isTaskSummaryCacheableForOptions,
+  type TaskChangeRequestOptions,
+} from '@renderer/utils/taskChangeRequest';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { createLogger } from '@shared/utils/logger';
@@ -19,10 +25,16 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const ACTIVE_PROVISIONING_STATES = new Set(['validating', 'spawning', 'monitoring', 'verifying']);
 const TERMINAL_PROVISIONING_STATES = new Set(['ready', 'failed', 'disconnected', 'cancelled']);
 
 function isPendingProvisioningRunId(runId: string): boolean {
   return runId.startsWith('pending:');
+}
+
+function isUnknownProvisioningRunError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('Unknown runId');
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -55,7 +67,11 @@ async function pollProvisioningStatus(
       if (TERMINAL_PROVISIONING_STATES.has(progress.state)) {
         return;
       }
-    } catch {
+    } catch (error) {
+      if (isUnknownProvisioningRunError(error)) {
+        state.clearMissingProvisioningRun(runId);
+        return;
+      }
       // best-effort polling; don't fail launch because status fetch is flaky
     }
     await sleep(delayMs);
@@ -67,9 +83,10 @@ import type { AppState } from '../types';
 import type { AppConfig } from '@renderer/types/data';
 import type {
   AddMemberRequest,
-  CommentAttachmentPayload,
+  AddTaskCommentRequest,
   CreateTaskRequest,
   CrossTeamSendRequest,
+  EffortLevel,
   GlobalTask,
   KanbanColumnId,
   LeadActivityState,
@@ -98,6 +115,7 @@ import type { StateCreator } from 'zustand';
 // handles clarification-specific logic (e.g., marking tasks as needing user input).
 const notifiedClarificationTaskKeys = new Set<string>();
 const notifiedStatusChangeKeys = new Set<string>();
+const notifiedCommentKeys = new Set<string>();
 
 let isFirstFetchAllTasks = true;
 
@@ -224,6 +242,101 @@ function fireStatusChangeNotification(
     .catch(() => undefined);
 }
 
+function detectTaskCommentNotifications(
+  oldTasks: GlobalTask[],
+  newTasks: GlobalTask[],
+  notifyEnabled: boolean
+): void {
+  const oldTaskMap = new Map(oldTasks.map((t) => [`${t.teamName}:${t.id}`, t]));
+
+  for (const task of newTasks) {
+    const mapKey = `${task.teamName}:${task.id}`;
+    const oldTask = oldTaskMap.get(mapKey);
+    const oldCommentCount = oldTask?.comments?.length ?? 0;
+    const newCommentCount = task.comments?.length ?? 0;
+
+    if (newCommentCount <= oldCommentCount) continue;
+
+    const newComments = (task.comments ?? []).slice(oldCommentCount);
+    for (const comment of newComments) {
+      // Don't notify about user's own comments
+      if (comment.author === 'user') continue;
+      // Skip review-related comment types (already covered by status change notifications)
+      if (comment.type === 'review_request' || comment.type === 'review_approved') continue;
+
+      const key = `${task.teamName}:${task.id}:${comment.id}`;
+      if (notifiedCommentKeys.has(key)) continue;
+      notifiedCommentKeys.add(key);
+
+      fireTaskCommentNotification(task, comment, !notifyEnabled);
+    }
+  }
+}
+
+function fireTaskCommentNotification(
+  task: GlobalTask,
+  comment: { author: string; text: string; id: string },
+  suppressToast: boolean
+): void {
+  const preview = comment.text.length > 100 ? comment.text.slice(0, 100) + '...' : comment.text;
+
+  void api.teams
+    ?.showMessageNotification({
+      teamName: task.teamName,
+      teamDisplayName: task.teamDisplayName,
+      from: comment.author,
+      to: 'user',
+      summary: `Comment on ${formatTaskDisplayLabel(task)}: ${task.subject}`,
+      body: preview,
+      teamEventType: 'task_comment',
+      dedupeKey: `comment:${task.teamName}:${task.id}:${comment.id}`,
+      suppressToast,
+    })
+    .catch(() => undefined);
+}
+
+function collectTaskChangeInvalidationState(
+  teamName: string,
+  prevTasks: TeamData['tasks'],
+  nextTasks: TeamData['tasks']
+): { cacheKeys: string[]; taskIds: string[] } {
+  const nextKeys = new Set(
+    nextTasks.map((task) =>
+      buildTaskChangePresenceKey(teamName, task.id, buildTaskChangeRequestOptions(task))
+    )
+  );
+  const invalidationKeys: string[] = [];
+  const invalidationTaskIds = new Set<string>();
+  for (const task of prevTasks) {
+    const previousKey = buildTaskChangePresenceKey(
+      teamName,
+      task.id,
+      buildTaskChangeRequestOptions(task)
+    );
+    if (!nextKeys.has(previousKey)) {
+      invalidationKeys.push(previousKey);
+      invalidationTaskIds.add(task.id);
+    }
+  }
+  return {
+    cacheKeys: invalidationKeys,
+    taskIds: [...invalidationTaskIds],
+  };
+}
+
+function buildTaskChangeWarmRequests(
+  teamName: string,
+  tasks: TeamData['tasks']
+): { teamName: string; taskId: string; options: TaskChangeRequestOptions }[] {
+  return tasks.flatMap((task) => {
+    const options = buildTaskChangeRequestOptions(task);
+    if (!isTaskSummaryCacheableForOptions(options)) {
+      return [];
+    }
+    return [{ teamName, taskId: task.id, options }];
+  });
+}
+
 function mapSendMessageError(error: unknown): string {
   const message =
     error instanceof IpcError ? error.message : error instanceof Error ? error.message : '';
@@ -245,6 +358,13 @@ function mapReviewError(error: unknown): string {
 export interface GlobalTaskDetailState {
   teamName: string;
   taskId: string;
+}
+
+/** Per-team launch parameters shown in the header badge. */
+export interface TeamLaunchParams {
+  model?: string; // 'opus' | 'sonnet' | 'haiku'
+  effort?: EffortLevel;
+  limitContext?: boolean;
 }
 
 export interface TeamSlice {
@@ -269,17 +389,30 @@ export interface TeamSlice {
   openMemberProfile: (memberName: string) => void;
   closeMemberProfile: () => void;
   /** Set by GlobalTaskDetailDialog to signal TeamDetailView to open ChangeReviewDialog */
-  pendingReviewRequest: { taskId: string; filePath?: string } | null;
-  setPendingReviewRequest: (req: { taskId: string; filePath?: string } | null) => void;
+  pendingReviewRequest: {
+    taskId: string;
+    filePath?: string;
+    requestOptions: TaskChangeRequestOptions;
+  } | null;
+  setPendingReviewRequest: (
+    req: { taskId: string; filePath?: string; requestOptions: TaskChangeRequestOptions } | null
+  ) => void;
   selectedTeamName: string | null;
   selectedTeamData: TeamData | null;
   selectedTeamLoading: boolean;
+  selectedTeamLoadNonce: number;
   selectedTeamError: string | null;
   sendingMessage: boolean;
   sendMessageError: string | null;
   lastSendMessageResult: SendMessageResult | null;
   reviewActionError: string | null;
   provisioningRuns: Record<string, TeamProvisioningProgress>;
+  /** Synthetic TeamSummary snapshots for teams currently being provisioned (before config.json exists). */
+  provisioningSnapshotByTeam: Record<string, TeamSummary>;
+  currentProvisioningRunIdByTeam: Record<string, string | null>;
+  currentRuntimeRunIdByTeam: Record<string, string | null>;
+  /** Runs explicitly cleared after Unknown runId polling; late events/progress for them are ignored. */
+  ignoredProvisioningRunIds: Record<string, string>;
   /**
    * Per-team lower bound for provisioning progress timestamps.
    * Used to ignore late progress events from a previous run after stop→launch.
@@ -290,9 +423,10 @@ export interface TeamSlice {
   /** Per-team per-member spawn statuses during team provisioning/launch. */
   memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
   fetchMemberSpawnStatuses: (teamName: string) => Promise<void>;
-  activeProvisioningRunId: string | null;
-  provisioningError: string | null;
-  clearProvisioningError: () => void;
+  provisioningErrorByTeam: Record<string, string | null>;
+  clearProvisioningError: (teamName?: string) => void;
+  /** Per-team launch parameters (model, effort, extended context) — persisted in localStorage. */
+  launchParamsByTeam: Record<string, TeamLaunchParams>;
   kanbanFilterQuery: string | null;
   provisioningProgressUnsubscribe: (() => void) | null;
   fetchBranches: (paths: string[]) => Promise<void>;
@@ -301,7 +435,10 @@ export interface TeamSlice {
   openTeamsTab: () => void;
   openTeamTab: (teamName: string, projectPath?: string, taskId?: string) => void;
   clearKanbanFilter: () => void;
-  selectTeam: (teamName: string, opts?: { skipProjectAutoSelect?: boolean }) => Promise<void>;
+  selectTeam: (
+    teamName: string,
+    opts?: { skipProjectAutoSelect?: boolean; allowReloadWhileProvisioning?: boolean }
+  ) => Promise<void>;
   refreshTeamData: (teamName: string) => Promise<void>;
   sendTeamMessage: (teamName: string, request: SendMessageRequest) => Promise<void>;
   crossTeamTargets: {
@@ -311,6 +448,7 @@ export interface TeamSlice {
     color?: string;
     leadName?: string;
     leadColor?: string;
+    isOnline?: boolean;
   }[];
   crossTeamTargetsLoading: boolean;
   fetchCrossTeamTargets: () => Promise<void>;
@@ -336,8 +474,7 @@ export interface TeamSlice {
   addTaskComment: (
     teamName: string,
     taskId: string,
-    text: string,
-    attachments?: CommentAttachmentPayload[]
+    request: AddTaskCommentRequest
   ) => Promise<TaskComment>;
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
   removeMember: (teamName: string, memberName: string) => Promise<void>;
@@ -392,6 +529,7 @@ export interface TeamSlice {
   launchTeam: (request: TeamLaunchRequest) => Promise<string>;
   cancelProvisioning: (runId: string) => Promise<void>;
   getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;
+  clearMissingProvisioningRun: (runId: string) => void;
   onProvisioningProgress: (progress: TeamProvisioningProgress) => void;
   subscribeProvisioningProgress: () => void;
   unsubscribeProvisioningProgress: () => void;
@@ -405,6 +543,67 @@ export interface TeamSlice {
     allow: boolean,
     message?: string
   ) => Promise<void>;
+
+  // Messages panel UI state
+  messagesPanelMode: 'sidebar' | 'inline';
+  messagesPanelWidth: number;
+  setMessagesPanelMode: (mode: 'sidebar' | 'inline') => void;
+  setMessagesPanelWidth: (width: number) => void;
+}
+
+// --- Per-team launch params persistence ---
+const LAUNCH_PARAMS_PREFIX = 'team:launchParams:';
+
+export function getCurrentProvisioningProgressForTeam(
+  state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
+  teamName: string
+): TeamProvisioningProgress | null {
+  const currentRunId = state.currentProvisioningRunIdByTeam[teamName];
+  return currentRunId ? (state.provisioningRuns[currentRunId] ?? null) : null;
+}
+
+export function isTeamProvisioningActive(
+  state: Pick<TeamSlice, 'currentProvisioningRunIdByTeam' | 'provisioningRuns'>,
+  teamName: string
+): boolean {
+  const current = getCurrentProvisioningProgressForTeam(state, teamName);
+  return current != null && ACTIVE_PROVISIONING_STATES.has(current.state);
+}
+
+function loadAllLaunchParams(): Record<string, TeamLaunchParams> {
+  const result: Record<string, TeamLaunchParams> = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(LAUNCH_PARAMS_PREFIX)) {
+        const teamName = key.slice(LAUNCH_PARAMS_PREFIX.length);
+        const parsed = JSON.parse(localStorage.getItem(key)!) as TeamLaunchParams;
+        if (parsed && typeof parsed === 'object') {
+          result[teamName] = parsed;
+        }
+      }
+    }
+  } catch {
+    // ignore — best-effort restore
+  }
+  return result;
+}
+
+function saveLaunchParams(teamName: string, params: TeamLaunchParams): void {
+  try {
+    localStorage.setItem(LAUNCH_PARAMS_PREFIX + teamName, JSON.stringify(params));
+  } catch {
+    // ignore — best-effort persist
+  }
+}
+
+/**
+ * Extract the base model name from the raw model string sent to CLI.
+ * E.g. 'opus[1m]' → 'opus', 'sonnet' → 'sonnet', undefined → undefined.
+ */
+function extractBaseModel(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  return raw.replace(/\[1m\]$/, '') || undefined;
 }
 
 function loadToolApprovalSettings(): ToolApprovalSettings {
@@ -454,6 +653,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   selectedTeamName: null,
   selectedTeamData: null,
   selectedTeamLoading: false,
+  selectedTeamLoadNonce: 0,
   selectedTeamError: null,
   sendingMessage: false,
   sendMessageError: null,
@@ -462,23 +662,65 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   crossTeamTargetsLoading: false,
   reviewActionError: null,
   provisioningRuns: {},
+  provisioningSnapshotByTeam: {},
+  currentProvisioningRunIdByTeam: {},
+  currentRuntimeRunIdByTeam: {},
+  ignoredProvisioningRunIds: {},
   provisioningStartedAtFloorByTeam: {},
   leadActivityByTeam: {},
   leadContextByTeam: {},
   memberSpawnStatusesByTeam: {},
-  activeProvisioningRunId: null,
-  provisioningError: null,
-  clearProvisioningError: () => set({ provisioningError: null }),
+  provisioningErrorByTeam: {},
+  clearProvisioningError: (teamName?: string) =>
+    set((state) => {
+      if (!teamName) {
+        return { provisioningErrorByTeam: {} };
+      }
+
+      if (!(teamName in state.provisioningErrorByTeam)) {
+        return {};
+      }
+
+      const nextErrors = { ...state.provisioningErrorByTeam };
+      delete nextErrors[teamName];
+      return { provisioningErrorByTeam: nextErrors };
+    }),
+  launchParamsByTeam: loadAllLaunchParams(),
   fetchMemberSpawnStatuses: async (teamName: string) => {
     if (!api.teams?.getMemberSpawnStatuses) return;
     try {
-      const statuses = await api.teams.getMemberSpawnStatuses(teamName);
-      set((prev) => ({
-        memberSpawnStatusesByTeam: {
-          ...prev.memberSpawnStatusesByTeam,
-          [teamName]: statuses,
-        },
-      }));
+      const snapshot = await api.teams.getMemberSpawnStatuses(teamName);
+      set((prev) => {
+        if (
+          prev.currentRuntimeRunIdByTeam[teamName] == null &&
+          prev.leadActivityByTeam[teamName] === 'offline' &&
+          snapshot.runId != null
+        ) {
+          return {};
+        }
+
+        if (
+          snapshot.runId != null &&
+          prev.currentRuntimeRunIdByTeam[teamName] != null &&
+          prev.currentRuntimeRunIdByTeam[teamName] !== snapshot.runId
+        ) {
+          return {};
+        }
+
+        return {
+          currentRuntimeRunIdByTeam:
+            snapshot.runId == null
+              ? prev.currentRuntimeRunIdByTeam
+              : {
+                  ...prev.currentRuntimeRunIdByTeam,
+                  [teamName]: prev.currentRuntimeRunIdByTeam[teamName] ?? snapshot.runId,
+                },
+          memberSpawnStatusesByTeam: {
+            ...prev.memberSpawnStatusesByTeam,
+            [teamName]: snapshot.statuses,
+          },
+        };
+      });
     } catch {
       // ignore — spawn statuses are best-effort
     }
@@ -501,6 +743,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   deletedTasksLoading: false,
   pendingApprovals: [],
   toolApprovalSettings: loadToolApprovalSettings(),
+
+  // Messages panel UI state
+  messagesPanelMode: 'sidebar' as const,
+  messagesPanelWidth: 340,
+  setMessagesPanelMode: (mode: 'sidebar' | 'inline') => set({ messagesPanelMode: mode }),
+  setMessagesPanelWidth: (width: number) => set({ messagesPanelWidth: width }),
 
   fetchBranches: async (paths: string[]) => {
     const results: Record<string, string | null> = {};
@@ -548,7 +796,22 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           }
         }
       }
-      set({ teams, teamByName, teamBySessionId, teamsLoading: false, teamsError: null });
+      // Atomic update: set teams AND clean up provisioning snapshots in one call
+      // to prevent any render cycle with duplicate cards.
+      set((state) => {
+        const nextSnapshots = { ...state.provisioningSnapshotByTeam };
+        for (const team of teams) {
+          delete nextSnapshots[team.teamName];
+        }
+        return {
+          teams,
+          teamByName,
+          teamBySessionId,
+          teamsLoading: false,
+          teamsError: null,
+          provisioningSnapshotByTeam: nextSnapshots,
+        };
+      });
     } catch (error) {
       // On refresh failure, keep existing teams visible
       set({
@@ -587,6 +850,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           get().appConfig?.notifications?.notifyOnClarifications ?? true;
         detectClarificationNotifications(oldTasks, tasks, notifyOnClarifications);
         detectStatusChangeNotifications(oldTasks, tasks, get().appConfig, get().teamByName);
+        const notifyOnTaskComments = get().appConfig?.notifications?.notifyOnTaskComments ?? true;
+        detectTaskCommentNotifications(oldTasks, tasks, notifyOnTaskComments);
       } else {
         // Initial load — seed the Sets to prevent false notifications on next update
         for (const task of tasks) {
@@ -599,6 +864,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           }
           if (getTaskKanbanColumn(task) === 'approved') {
             notifiedStatusChangeKeys.add(`${task.teamName}:${task.id}:approved`);
+          }
+          // Seed comment keys to prevent false notifications
+          for (const comment of task.comments ?? []) {
+            notifiedCommentKeys.add(`${task.teamName}:${task.id}:${comment.id}`);
           }
         }
       }
@@ -686,11 +955,19 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   selectTeam: async (teamName: string, opts) => {
+    const allowReloadWhileProvisioning = opts?.allowReloadWhileProvisioning === true;
     // Guard: prevent duplicate in-flight fetches for the same team.
     // GlobalTaskDetailDialog + tab navigation can call selectTeam() in quick succession.
-    if (get().selectedTeamLoading && get().selectedTeamName === teamName) {
+    if (
+      get().selectedTeamLoading &&
+      get().selectedTeamName === teamName &&
+      !allowReloadWhileProvisioning
+    ) {
       return;
     }
+    const requestNonce = get().selectedTeamLoadNonce + 1;
+    const previousSelectedTeamName = get().selectedTeamName;
+    const previousData = previousSelectedTeamName === teamName ? get().selectedTeamData : null;
 
     // Stale-while-revalidate: keep previous data visible while loading new team.
     // Skeleton only shows on first load (when data is null).
@@ -698,6 +975,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     set({
       selectedTeamName: teamName,
       selectedTeamLoading: true,
+      selectedTeamLoadNonce: requestNonce,
       selectedTeamError: null,
       reviewActionError: null,
     });
@@ -709,7 +987,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         `team:getData(${teamName})`
       );
       // Stale check: user may have switched to another team during the async call
-      if (get().selectedTeamName !== teamName) {
+      if (get().selectedTeamName !== teamName || get().selectedTeamLoadNonce !== requestNonce) {
         return;
       }
       // Eagerly patch teamByName with color/displayName from detailed data
@@ -738,6 +1016,19 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         selectedTeamLoading: false,
         selectedTeamError: null,
       });
+      const invalidationState = previousData
+        ? collectTaskChangeInvalidationState(teamName, previousData.tasks, data.tasks)
+        : { cacheKeys: [], taskIds: [] };
+      if (invalidationState.cacheKeys.length > 0) {
+        get().invalidateTaskChangePresence(invalidationState.cacheKeys);
+      }
+      if (invalidationState.taskIds.length > 0) {
+        await api.review.invalidateTaskChangeSummaries(teamName, invalidationState.taskIds);
+      }
+      const warmRequests = buildTaskChangeWarmRequests(teamName, data.tasks);
+      if (warmRequests.length > 0) {
+        void get().warmTaskChangeSummaries(warmRequests);
+      }
 
       // Sync tab label with the team's display name from config
       const displayName = data.config.name || teamName;
@@ -784,11 +1075,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     } catch (error) {
       // If provisioning is in progress for this team, stay in loading state;
       // file watcher / progress callback will refresh once config is written.
-      const isProvisioning = Object.values(get().provisioningRuns).some(
-        (run) =>
-          run.teamName === teamName &&
-          !['ready', 'disconnected', 'failed', 'cancelled'].includes(run.state)
-      );
+      const currentState = get();
+      if (
+        currentState.selectedTeamName !== teamName ||
+        currentState.selectedTeamLoadNonce !== requestNonce
+      ) {
+        return;
+      }
+      const isProvisioning = isTeamProvisioningActive(currentState, teamName);
 
       const msg = error instanceof Error ? error.message : String(error);
       // IPC can report provisioning state explicitly.
@@ -823,6 +1117,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     // Silent refresh — update data without showing loading skeleton.
     // Only selectTeam() sets loading: true (for initial load).
     try {
+      const previousData = get().selectedTeamData;
       const data = await withTimeout(
         unwrapIpc('team:getData', () => api.teams.getData(teamName)),
         TEAM_GET_DATA_TIMEOUT_MS,
@@ -836,6 +1131,19 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         selectedTeamData: data,
         selectedTeamError: null,
       });
+      const invalidationState = previousData
+        ? collectTaskChangeInvalidationState(teamName, previousData.tasks, data.tasks)
+        : { cacheKeys: [], taskIds: [] };
+      if (invalidationState.cacheKeys.length > 0) {
+        get().invalidateTaskChangePresence(invalidationState.cacheKeys);
+      }
+      if (invalidationState.taskIds.length > 0) {
+        await api.review.invalidateTaskChangeSummaries(teamName, invalidationState.taskIds);
+      }
+      const warmRequests = buildTaskChangeWarmRequests(teamName, data.tasks);
+      if (warmRequests.length > 0) {
+        void get().warmTaskChangeSummaries(warmRequests);
+      }
     } catch (error) {
       if (get().selectedTeamName !== teamName) {
         return;
@@ -1040,11 +1348,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     );
   },
 
-  addTaskComment: async (teamName, taskId, text, attachments) => {
+  addTaskComment: async (teamName, taskId, request) => {
     set({ addingComment: true, addCommentError: null });
     try {
       const comment = await unwrapIpc('team:addTaskComment', () =>
-        api.teams.addTaskComment(teamName, taskId, text, attachments)
+        api.teams.addTaskComment(teamName, taskId, request)
       );
       set({ addingComment: false });
       await get().refreshTeamData(teamName);
@@ -1141,7 +1449,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           delete cleaned[runId];
         }
       }
-      return { provisioningError: null, provisioningRuns: cleaned };
+      const nextErrors = { ...state.provisioningErrorByTeam };
+      delete nextErrors[request.teamName];
+      const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
+      delete nextSpawnStatuses[request.teamName];
+      const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
+      delete nextRuntimeRunIdByTeam[request.teamName];
+      const nextIgnoredRunIds = Object.fromEntries(
+        Object.entries(state.ignoredProvisioningRunIds).filter(
+          ([, teamName]) => teamName !== request.teamName
+        )
+      );
+      return {
+        provisioningRuns: cleaned,
+        provisioningErrorByTeam: nextErrors,
+        memberSpawnStatusesByTeam: nextSpawnStatuses,
+        currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
+        ignoredProvisioningRunIds: nextIgnoredRunIds,
+      };
     });
 
     // Optimistic progress entry: ensures banner shows even if IPC progress is delayed/missed.
@@ -1158,7 +1483,25 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           updatedAt: floor,
         },
       },
-      activeProvisioningRunId: pendingRunId,
+      currentProvisioningRunIdByTeam: {
+        ...state.currentProvisioningRunIdByTeam,
+        [request.teamName]: pendingRunId,
+      },
+      // Synthetic card for the team list — visible until fetchTeams() picks up the real team.
+      provisioningSnapshotByTeam: {
+        ...state.provisioningSnapshotByTeam,
+        [request.teamName]: {
+          teamName: request.teamName,
+          displayName: request.displayName || request.teamName,
+          description: request.description || '',
+          color: request.color,
+          memberCount: request.members.length,
+          members: request.members.map((m) => ({ name: m.name, role: m.role })),
+          taskCount: 0,
+          lastActivity: null,
+          projectPath: request.cwd || undefined,
+        },
+      },
     }));
     try {
       if (typeof api.teams.createTeam !== 'function') {
@@ -1167,9 +1510,46 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         );
       }
       const response = await unwrapIpc('team:create', () => api.teams.createTeam(request));
-      set({
-        activeProvisioningRunId: response.runId,
-        provisioningError: null,
+
+      // Persist per-team launch params (model, effort, limit context)
+      const baseModel = extractBaseModel(request.model);
+      const params: TeamLaunchParams = {
+        model: baseModel || 'default',
+        effort: request.effort,
+        limitContext: request.limitContext ?? false,
+      };
+      saveLaunchParams(request.teamName, params);
+      set((state) => ({
+        launchParamsByTeam: {
+          ...state.launchParamsByTeam,
+          [request.teamName]: params,
+        },
+      }));
+
+      set((state) => {
+        const nextRuns = { ...state.provisioningRuns };
+        const pendingRun = nextRuns[pendingRunId];
+        const realProgressAlreadyExists = response.runId in nextRuns;
+        if (pendingRun) {
+          delete nextRuns[pendingRunId];
+          // Only use pending data as fallback if real progress events haven't arrived yet.
+          // This prevents overwriting real progress (e.g. 'monitoring') with stale pending data ('spawning')
+          // when the invoke response arrives before IPC progress events.
+          if (!realProgressAlreadyExists) {
+            nextRuns[response.runId] = { ...pendingRun, runId: response.runId };
+          }
+        }
+        return {
+          provisioningRuns: nextRuns,
+          currentProvisioningRunIdByTeam: {
+            ...state.currentProvisioningRunIdByTeam,
+            [request.teamName]: response.runId,
+          },
+          currentRuntimeRunIdByTeam: {
+            ...state.currentRuntimeRunIdByTeam,
+            [request.teamName]: response.runId,
+          },
+        };
       });
       try {
         await get().getProvisioningStatus(response.runId);
@@ -1179,13 +1559,27 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       void pollProvisioningStatus(get, response.runId);
       return response.runId;
     } catch (error) {
-      set({
-        provisioningError:
-          error instanceof IpcError
+      const message =
+        error instanceof IpcError
+          ? error.message
+          : error instanceof Error
             ? error.message
-            : error instanceof Error
-              ? error.message
-              : 'Failed to create team',
+            : 'Failed to create team';
+      set((state) => {
+        const nextRuns = { ...state.provisioningRuns };
+        delete nextRuns[pendingRunId];
+        const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
+        if (nextCurrentRunIdByTeam[request.teamName] === pendingRunId) {
+          delete nextCurrentRunIdByTeam[request.teamName];
+        }
+        return {
+          provisioningRuns: nextRuns,
+          currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
+          provisioningErrorByTeam: {
+            ...state.provisioningErrorByTeam,
+            [request.teamName]: message,
+          },
+        };
       });
       throw error;
     }
@@ -1212,7 +1606,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           delete cleaned[runId];
         }
       }
-      return { provisioningError: null, provisioningRuns: cleaned };
+      const nextErrors = { ...state.provisioningErrorByTeam };
+      delete nextErrors[request.teamName];
+      const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
+      delete nextSpawnStatuses[request.teamName];
+      const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
+      delete nextRuntimeRunIdByTeam[request.teamName];
+      const nextIgnoredRunIds = Object.fromEntries(
+        Object.entries(state.ignoredProvisioningRunIds).filter(
+          ([, teamName]) => teamName !== request.teamName
+        )
+      );
+      return {
+        provisioningRuns: cleaned,
+        provisioningErrorByTeam: nextErrors,
+        memberSpawnStatusesByTeam: nextSpawnStatuses,
+        currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
+        ignoredProvisioningRunIds: nextIgnoredRunIds,
+      };
     });
 
     // Optimistic progress entry: ensures banner shows even if IPC progress is delayed/missed.
@@ -1229,13 +1640,53 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           updatedAt: floor,
         },
       },
-      activeProvisioningRunId: pendingRunId,
+      currentProvisioningRunIdByTeam: {
+        ...state.currentProvisioningRunIdByTeam,
+        [request.teamName]: pendingRunId,
+      },
     }));
     try {
       const response = await unwrapIpc('team:launch', () => api.teams.launchTeam(request));
-      set({
-        activeProvisioningRunId: response.runId,
-        provisioningError: null,
+
+      // Persist per-team launch params (model, effort, limit context)
+      const baseModel = extractBaseModel(request.model);
+      const params: TeamLaunchParams = {
+        model: baseModel || 'default',
+        effort: request.effort,
+        limitContext: request.limitContext ?? false,
+      };
+      saveLaunchParams(request.teamName, params);
+      set((state) => ({
+        launchParamsByTeam: {
+          ...state.launchParamsByTeam,
+          [request.teamName]: params,
+        },
+      }));
+
+      set((state) => {
+        const nextRuns = { ...state.provisioningRuns };
+        const pendingRun = nextRuns[pendingRunId];
+        const realProgressAlreadyExists = response.runId in nextRuns;
+        if (pendingRun) {
+          delete nextRuns[pendingRunId];
+          // Only use pending data as fallback if real progress events haven't arrived yet.
+          // This prevents overwriting real progress (e.g. 'monitoring') with stale pending data ('spawning')
+          // when the invoke response arrives before IPC progress events.
+          if (!realProgressAlreadyExists) {
+            nextRuns[response.runId] = { ...pendingRun, runId: response.runId };
+          }
+        }
+        return {
+          provisioningRuns: nextRuns,
+          currentProvisioningRunIdByTeam: {
+            ...state.currentProvisioningRunIdByTeam,
+            [request.teamName]: response.runId,
+          },
+          currentRuntimeRunIdByTeam: {
+            ...state.currentRuntimeRunIdByTeam,
+            [request.teamName]: response.runId,
+          },
+        };
       });
       try {
         await get().getProvisioningStatus(response.runId);
@@ -1245,13 +1696,27 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       void pollProvisioningStatus(get, response.runId);
       return response.runId;
     } catch (error) {
-      set({
-        provisioningError:
-          error instanceof IpcError
+      const message =
+        error instanceof IpcError
+          ? error.message
+          : error instanceof Error
             ? error.message
-            : error instanceof Error
-              ? error.message
-              : 'Failed to launch team',
+            : 'Failed to launch team';
+      set((state) => {
+        const nextRuns = { ...state.provisioningRuns };
+        delete nextRuns[pendingRunId];
+        const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
+        if (nextCurrentRunIdByTeam[request.teamName] === pendingRunId) {
+          delete nextCurrentRunIdByTeam[request.teamName];
+        }
+        return {
+          provisioningRuns: nextRuns,
+          currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
+          provisioningErrorByTeam: {
+            ...state.provisioningErrorByTeam,
+            [request.teamName]: message,
+          },
+        };
       });
       throw error;
     }
@@ -1265,43 +1730,157 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     return progress;
   },
 
+  clearMissingProvisioningRun: (runId: string) => {
+    set((state) => {
+      const existing = state.provisioningRuns[runId];
+      if (!existing) {
+        return {};
+      }
+
+      const nextRuns = { ...state.provisioningRuns };
+      delete nextRuns[runId];
+
+      const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
+      const isCanonicalRun = nextCurrentRunIdByTeam[existing.teamName] === runId;
+      if (isCanonicalRun) {
+        delete nextCurrentRunIdByTeam[existing.teamName];
+      }
+      const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
+      if (nextRuntimeRunIdByTeam[existing.teamName] === runId) {
+        delete nextRuntimeRunIdByTeam[existing.teamName];
+      }
+      const nextIgnoredRunIds = {
+        ...state.ignoredProvisioningRunIds,
+        [runId]: existing.teamName,
+      };
+
+      const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
+      if (isCanonicalRun) {
+        delete nextSpawnStatuses[existing.teamName];
+      }
+
+      return {
+        provisioningRuns: nextRuns,
+        currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
+        currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
+        memberSpawnStatusesByTeam: nextSpawnStatuses,
+        ignoredProvisioningRunIds: nextIgnoredRunIds,
+      };
+    });
+  },
+
   cancelProvisioning: async (runId: string) => {
     await unwrapIpc('team:cancelProvisioning', () => api.teams.cancelProvisioning(runId));
   },
 
   onProvisioningProgress: (progress: TeamProvisioningProgress) => {
+    if (get().ignoredProvisioningRunIds[progress.runId] === progress.teamName) {
+      return;
+    }
+
     const floor = get().provisioningStartedAtFloorByTeam[progress.teamName];
     if (floor && progress.startedAt < floor) {
       // Ignore late progress from a previous run (common after stop→launch).
       return;
     }
+
+    const currentRunId = get().currentProvisioningRunIdByTeam[progress.teamName];
+    const existingProgress = get().provisioningRuns[progress.runId];
+    const becameConfigReady =
+      progress.configReady === true && existingProgress?.configReady !== true;
+    const isDuplicateProgress =
+      existingProgress?.updatedAt === progress.updatedAt &&
+      existingProgress?.state === progress.state &&
+      existingProgress?.message === progress.message &&
+      existingProgress?.error === progress.error &&
+      existingProgress?.pid === progress.pid;
+    if (isDuplicateProgress && currentRunId === progress.runId) {
+      return;
+    }
+
     set((state) => {
       const nextRuns: Record<string, TeamProvisioningProgress> = {
         ...state.provisioningRuns,
-        [progress.runId]: progress,
       };
-      // When real progress arrives, drop any pending placeholder runs for this team.
-      if (!isPendingProvisioningRunId(progress.runId)) {
-        for (const [runId, run] of Object.entries(nextRuns)) {
-          if (isPendingProvisioningRunId(runId) && run.teamName === progress.teamName) {
-            delete nextRuns[runId];
-          }
+      const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
+      const previousCurrentRunId = nextCurrentRunIdByTeam[progress.teamName];
+      let isCanonicalRun = false;
+      if (!previousCurrentRunId || previousCurrentRunId === progress.runId) {
+        nextCurrentRunIdByTeam[progress.teamName] = progress.runId;
+        isCanonicalRun = true;
+      } else if (
+        isPendingProvisioningRunId(previousCurrentRunId) &&
+        !isPendingProvisioningRunId(progress.runId)
+      ) {
+        delete nextRuns[previousCurrentRunId];
+        nextCurrentRunIdByTeam[progress.teamName] = progress.runId;
+        isCanonicalRun = true;
+      }
+      if (!previousCurrentRunId) {
+        isCanonicalRun = true;
+      }
+      if (!isCanonicalRun) {
+        if (!(progress.runId in state.provisioningRuns)) {
+          return {};
+        }
+        delete nextRuns[progress.runId];
+        return { provisioningRuns: nextRuns };
+      }
+
+      nextRuns[progress.runId] = progress;
+      for (const [runId, run] of Object.entries(nextRuns)) {
+        if (runId !== progress.runId && run.teamName === progress.teamName) {
+          delete nextRuns[runId];
         }
       }
+
+      const nextErrors = { ...state.provisioningErrorByTeam };
+      if (progress.state === 'failed') {
+        nextErrors[progress.teamName] = progress.error ?? progress.message;
+      } else {
+        delete nextErrors[progress.teamName];
+      }
+      // Clean up provisioning snapshot on terminal failure states
+      const nextSnapshots =
+        progress.state === 'failed' || progress.state === 'cancelled'
+          ? (() => {
+              const s = { ...state.provisioningSnapshotByTeam };
+              delete s[progress.teamName];
+              return s;
+            })()
+          : state.provisioningSnapshotByTeam;
       return {
         provisioningRuns: nextRuns,
-        activeProvisioningRunId: progress.runId,
-        provisioningError: progress.state === 'failed' ? (progress.error ?? null) : null,
+        currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
+        currentRuntimeRunIdByTeam: {
+          ...state.currentRuntimeRunIdByTeam,
+          [progress.teamName]: progress.runId,
+        },
+        provisioningErrorByTeam: nextErrors,
+        provisioningSnapshotByTeam: nextSnapshots,
       };
     });
 
-    if (progress.state === 'ready' || progress.state === 'disconnected') {
+    const isCanonicalRun =
+      get().currentProvisioningRunIdByTeam[progress.teamName] === progress.runId;
+
+    if (isCanonicalRun && becameConfigReady) {
+      const state = get();
+      if (state.selectedTeamName === progress.teamName && state.selectedTeamData == null) {
+        void state.selectTeam(progress.teamName, { allowReloadWhileProvisioning: true });
+      }
+    }
+
+    if (isCanonicalRun && TERMINAL_PROVISIONING_STATES.has(progress.state)) {
       // Clear spawn statuses — provisioning is complete, members now tracked via normal status
       set((prev) => {
         const next = { ...prev.memberSpawnStatusesByTeam };
         delete next[progress.teamName];
         return { memberSpawnStatusesByTeam: next };
       });
+    }
+
+    if (isCanonicalRun && (progress.state === 'ready' || progress.state === 'disconnected')) {
       void get().fetchTeams();
       // If the user already opened the team tab, reload team data now that
       // config.json is guaranteed to exist.

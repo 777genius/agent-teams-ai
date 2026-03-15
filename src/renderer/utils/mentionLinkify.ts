@@ -24,8 +24,10 @@ export function linkifyMentionsInMarkdown(
   // Sort by name length descending for greedy matching
   const names = [...memberColorMap.keys()].sort((a, b) => b.length - a.length);
   const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  // eslint-disable-next-line no-useless-escape -- escaped chars needed for regex character class
-  const pattern = new RegExp(`(^|\\s)@(${escaped.join('|')})(?=[\\s,.:;!?)\\]}\-]|$)`, 'gi');
+  const pattern = new RegExp(
+    `(^|[\\s(\\[{"\'])@(${escaped.join('|')})(?=[\\s,.:;!?)\\]}\-]|$)`,
+    'gi'
+  );
 
   return text.replace(pattern, (_match, prefix: string, name: string) => {
     // Find the canonical name (case-insensitive lookup)
@@ -53,12 +55,14 @@ export function linkifyTeamMentionsInMarkdown(
   // Sort by name length descending for greedy matching
   const sorted = [...names].sort((a, b) => b.length - a.length);
   const escaped = sorted.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  // eslint-disable-next-line no-useless-escape -- escaped chars needed for regex character class
-  const pattern = new RegExp(`(^|\\s)@(${escaped.join('|')})(?=[\\s,.:;!?)\\]}\-]|$)`, 'gi');
+  const pattern = new RegExp(
+    `(^|[\\s(\\[{"\'])@(${escaped.join('|')})(?=[\\s,.:;!?)\\]}\-]|$)`,
+    'gi'
+  );
 
   return text.replace(pattern, (_match, prefix: string, name: string) => {
     const canonical = sorted.find((n) => n.toLowerCase() === name.toLowerCase()) ?? name;
-    return `${prefix}[@${canonical}](team://${encodeURIComponent(canonical)})`;
+    return `${prefix}[${canonical}](team://${encodeURIComponent(canonical)})`;
   });
 }
 

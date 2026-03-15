@@ -1,6 +1,7 @@
-import { Fragment, useMemo } from 'react';
+import { Fragment, memo, useCallback, useMemo } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
+import { CopyButton } from '@renderer/components/common/CopyButton';
 import { AttachmentDisplay } from '@renderer/components/team/attachments/AttachmentDisplay';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { TaskTooltip } from '@renderer/components/team/TaskTooltip';
@@ -15,7 +16,6 @@ import {
 } from '@renderer/constants/cssVariables';
 import { getTeamColorSet, getThemedBorder } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
-import { useStore } from '@renderer/store';
 import {
   getMessageTypeLabel,
   getStructuredMessageSummary,
@@ -24,6 +24,12 @@ import {
 } from '@renderer/utils/agentMessageFormatting';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
+import {
+  areInboxMessagesEquivalentForRender,
+  areStringArraysEqual,
+  areStringMapsEqual,
+} from '@renderer/utils/messageRenderEquality';
+import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import {
   CROSS_TEAM_SENT_SOURCE,
@@ -34,12 +40,10 @@ import {
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
-import { AlertTriangle, ChevronRight, ListPlus, RefreshCw, Reply } from 'lucide-react';
+import { AlertTriangle, ChevronRight, ListPlus, Maximize2, RefreshCw, Reply } from 'lucide-react';
 
-import { isManagedCollapseState } from './collapseState';
 import { ReplyQuoteBlock } from './ReplyQuoteBlock';
 
-import type { ActivityCollapseState } from './collapseState';
 import type { TeamColorSet } from '@renderer/constants/teamColors';
 import type { InboxMessage } from '@shared/types';
 
@@ -95,7 +99,34 @@ export function getCrossTeamSentMemberName(value: string | undefined): string | 
   return parseQualifiedRecipient(value)?.memberName ?? null;
 }
 
-function CrossTeamTeamBadge({ teamName }: { teamName: string }): React.JSX.Element {
+function CrossTeamTeamBadge({
+  teamName,
+  onClick,
+}: {
+  teamName: string;
+  onClick?: (teamName: string) => void;
+}): React.JSX.Element {
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide"
+        style={{
+          backgroundColor: 'rgba(168, 85, 247, 0.15)',
+          color: '#c084fc',
+          cursor: 'pointer',
+          border: 'none',
+          padding: '1px 6px',
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick(teamName);
+        }}
+      >
+        {teamName}
+      </button>
+    );
+  }
   return (
     <span
       className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide"
@@ -110,6 +141,7 @@ interface ActivityItemProps {
   message: InboxMessage;
   teamName: string;
   localMemberNames?: Set<string>;
+  teamNames?: string[];
   memberRole?: string;
   memberColor?: string;
   recipientColor?: string;
@@ -117,6 +149,10 @@ interface ActivityItemProps {
   isUnread?: boolean;
   /** Map of member name → color name for @mention badge rendering. */
   memberColorMap?: Map<string, string>;
+  /** Team color mapping for team:// links rendered inside markdown. */
+  teamColorByName?: ReadonlyMap<string, string>;
+  /** Opens a team tab from cross-team badges or team:// links. */
+  onTeamClick?: (teamName: string) => void;
   onMemberNameClick?: (memberName: string) => void;
   onCreateTask?: (subject: string, description: string) => void;
   onReply?: (message: InboxMessage) => void;
@@ -126,8 +162,24 @@ interface ActivityItemProps {
   onRestartTeam?: () => void;
   /** When true, apply a subtle lighter background for zebra-striped lists. */
   zebraShade?: boolean;
-  /** Explicit collapse state for timeline-controlled collapsed mode. */
-  collapseState?: ActivityCollapseState;
+  /** Collapsed-mode primitives stabilized by ActivityTimeline. */
+  collapseMode?: 'default' | 'managed';
+  isCollapsed?: boolean;
+  canToggleCollapse?: boolean;
+  collapseToggleKey?: string;
+  onToggleCollapse?: (key: string) => void;
+  /** Compact header mode for narrow message lists. */
+  compactHeader?: boolean;
+  /** Callback to expand this item into a fullscreen dialog. */
+  onExpand?: (key: string) => void;
+  /** Stable key for expand identification. */
+  expandItemKey?: string;
+  /** Called when ExpandableContent is expanded via "Show more". */
+  onExpandContent?: () => void;
+}
+
+function areMessagesEquivalentForActivityItem(prev: InboxMessage, next: InboxMessage): boolean {
+  return areInboxMessagesEquivalentForRender(prev, next);
 }
 
 function getStringField(obj: StructuredMessage, key: string): string | null {
@@ -204,7 +256,7 @@ const NoiseRow = ({
 // ---------------------------------------------------------------------------
 
 const SYSTEM_MESSAGE_PATTERNS: { pattern: RegExp; label: string }[] = [
-  { pattern: /^New task assigned to you:/, label: 'Task assignment' },
+  { pattern: /^New task assigned to you:/, label: 'Task' },
   { pattern: /^Task #[A-Za-z0-9-]+\s+approved/, label: 'Task approved' },
   { pattern: /^Task #[A-Za-z0-9-]+\s+needs fixes/, label: 'Review changes requested' },
 ];
@@ -257,11 +309,6 @@ const AUTH_ERROR_PATTERNS = [
 // Full message card — left colored border, name badge, collapsible content
 // ---------------------------------------------------------------------------
 
-/** Convert `#<task-display-id>` in plain text to markdown links with task:// protocol. */
-export function linkifyTaskIdsInMarkdown(text: string): string {
-  return text.replace(/#([A-Za-z0-9-]+)\b/g, '[#$1](task://$1)');
-}
-
 /** Render `#<task-display-id>` in plain text as clickable inline elements with TaskTooltip. */
 function linkifyTaskIds(text: string, onClick: (taskId: string) => void): React.ReactNode[] {
   return text.split(/(#[A-Za-z0-9-]+\b)/g).map((part, i) => {
@@ -285,428 +332,584 @@ function linkifyTaskIds(text: string, onClick: (taskId: string) => void): React.
   });
 }
 
-export const ActivityItem = ({
-  message,
-  teamName,
-  localMemberNames,
-  memberRole,
-  memberColor,
-  recipientColor,
-  isUnread,
-  memberColorMap,
-  onMemberNameClick,
-  onCreateTask,
-  onReply,
-  onTaskIdClick,
-  onRestartTeam,
-  zebraShade,
-  collapseState,
-}: ActivityItemProps): React.JSX.Element => {
-  const colors = getTeamColorSet(memberColor ?? message.color ?? '');
-  const { isLight } = useTheme();
-  const formattedRole = formatAgentRole(memberRole);
-
-  const teams = useStore((s) => s.teams);
-  const teamNames = useMemo(
-    () => teams.filter((t) => !t.deletedAt).map((t) => t.teamName),
-    [teams]
-  );
-
-  const timestamp = Number.isNaN(Date.parse(message.timestamp))
-    ? message.timestamp
-    : new Date(message.timestamp).toLocaleString();
-
-  const structured = parseStructuredAgentMessage(message.text);
-  // Only flag agent messages as rate-limited, not user's own quotes
-  const rateLimited = message.from !== 'user' && isRateLimitMessage(message.text);
-  // Highlight messages containing API errors
-  const isApiError = message.text.includes('API Error');
-  // Detect auth errors that may be resolved by restarting the team
-  const isAuthError = isApiError && AUTH_ERROR_PATTERNS.some((p) => p.test(message.text));
-  // Never collapse rate limit messages as noise — they must be visible
-  const noiseLabel = structured && !rateLimited ? getNoiseLabel(structured) : null;
-
-  const systemLabel = !structured && !rateLimited ? getSystemMessageLabel(message.text) : null;
-  const isManaged = isManagedCollapseState(collapseState);
-  const isExpanded = isManaged ? !collapseState.isCollapsed : true;
-
-  const parsedCrossTeamPrefix = useMemo(() => parseCrossTeamPrefix(message.text), [message.text]);
-  const qualifiedRecipient = useMemo(() => parseQualifiedRecipient(message.to), [message.to]);
-  const crossTeamSentTarget = useMemo(
-    () => getCrossTeamSentTarget(message.to, teamName, localMemberNames),
-    [message.to, teamName, localMemberNames]
-  );
-  const crossTeamSentMemberName = useMemo(
-    () => getCrossTeamSentMemberName(message.to),
-    [message.to]
-  );
-  const isCrossTeam = message.source === CROSS_TEAM_SOURCE || parsedCrossTeamPrefix !== null;
-  const isCrossTeamSent = message.source === CROSS_TEAM_SENT_SOURCE || crossTeamSentTarget !== null;
-  const isCrossTeamAny = isCrossTeam || isCrossTeamSent;
-  const crossTeamOrigin = useMemo(() => {
-    if (!isCrossTeam) return null;
-    const fromValue = parsedCrossTeamPrefix?.from ?? message.from;
-    const dot = fromValue.indexOf('.');
-    if (dot <= 0 || dot === fromValue.length - 1) return null;
-    return {
-      teamName: fromValue.substring(0, dot),
-      memberName: fromValue.substring(dot + 1),
-    };
-  }, [isCrossTeam, message.from, parsedCrossTeamPrefix]);
-  const crossTeamTarget = useMemo(() => {
-    if (!isCrossTeamSent) return null;
-    if (crossTeamSentTarget) return crossTeamSentTarget;
-    if (qualifiedRecipient) return qualifiedRecipient.teamName;
-    if (!message.to) return null;
-    const dot = message.to.indexOf('.');
-    if (dot <= 0) return message.to;
-    return message.to.substring(0, dot);
-  }, [crossTeamSentTarget, isCrossTeamSent, message.to, qualifiedRecipient]);
-  const senderName = crossTeamOrigin ? crossTeamOrigin.memberName : message.from;
-  const senderColor = crossTeamOrigin ? undefined : (memberColor ?? message.color);
-  const senderHideAvatar =
-    message.from === 'user' || message.from === 'system' || crossTeamOrigin?.memberName === 'user';
-
-  // Strip agent-only blocks + normalize escape sequences (before linkification)
-  const strippedText = useMemo(() => {
-    if (structured) return null;
-    let stripped = stripAgentBlocks(message.text).trim();
-    if (!stripped) return null; // All content was agent-only blocks → show summary instead
-    // Strip cross-team metadata tag (e.g. `<cross-team from="team.lead" depth="0" />\n`)
-    // — kept in stored text for CLI agents / durable artifacts.
-    if (isCrossTeamAny) {
-      stripped = stripCrossTeamPrefix(stripped);
+/**
+ * Render summary text with inline bold markdown and optional task-id linkification.
+ * Splits on bold markers first, then linkifies task IDs within each segment.
+ */
+function renderInlineBoldSummary(
+  text: string,
+  onTaskIdClick?: (taskId: string) => void
+): React.ReactNode {
+  // Split by **bold** segments, keeping delimiters
+  const boldPattern = /(\*\*[^*]+\*\*)/g;
+  const parts = text.split(boldPattern);
+  return parts.map((part, i) => {
+    const boldContent = /^\*\*(.+)\*\*$/.exec(part);
+    if (boldContent) {
+      const inner = boldContent[1];
+      return (
+        <strong key={i} className="font-semibold">
+          {onTaskIdClick ? linkifyTaskIds(inner, onTaskIdClick) : inner}
+        </strong>
+      );
     }
-    // Normalize literal \n from historical CLI-produced text to real newlines
-    return stripped.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
-  }, [structured, message.text, isCrossTeamAny]);
+    return onTaskIdClick ? (
+      <Fragment key={i}>{linkifyTaskIds(part, onTaskIdClick)}</Fragment>
+    ) : (
+      <Fragment key={i}>{part}</Fragment>
+    );
+  });
+}
 
-  // Parse reply BEFORE linkification — linkifyAllMentionsInMarkdown transforms @name
-  // into markdown links which breaks the reply regex matcher
-  const parsedReply = useMemo(
-    () => (strippedText ? parseMessageReply(strippedText) : null),
-    [strippedText]
-  );
+export const ActivityItem = memo(
+  function ActivityItem({
+    message,
+    teamName,
+    localMemberNames,
+    teamNames = [],
+    memberRole,
+    memberColor,
+    recipientColor,
+    isUnread,
+    memberColorMap,
+    teamColorByName,
+    onTeamClick,
+    onMemberNameClick,
+    onCreateTask,
+    onReply,
+    onTaskIdClick,
+    onRestartTeam,
+    zebraShade,
+    collapseMode = 'default',
+    isCollapsed = false,
+    canToggleCollapse = false,
+    collapseToggleKey,
+    onToggleCollapse,
+    compactHeader = false,
+    onExpand,
+    expandItemKey,
+    onExpandContent,
+  }: ActivityItemProps): React.JSX.Element {
+    const colors = getTeamColorSet(memberColor ?? message.color ?? '');
+    const { isLight } = useTheme();
+    // Hide role when it matches the sender name (avoids "lead" badge + "Team Lead" text duplication)
+    const formattedRole =
+      memberRole && memberRole !== message.from ? formatAgentRole(memberRole) : null;
 
-  // Linkify task IDs (always, for TaskTooltip) + @mentions for display
-  const displayText = useMemo(() => {
-    if (!strippedText) return null;
-    let result = highlightSystemLabels(strippedText, !!systemLabel);
-    result = linkifyTaskIdsInMarkdown(result);
-    if ((memberColorMap && memberColorMap.size > 0) || teamNames.length > 0)
-      result = linkifyAllMentionsInMarkdown(result, memberColorMap ?? new Map(), teamNames);
-    return result;
-  }, [strippedText, memberColorMap, teamNames, systemLabel]);
+    const timestamp = useMemo(() => {
+      if (Number.isNaN(Date.parse(message.timestamp))) return message.timestamp;
+      const date = new Date(message.timestamp);
+      const now = new Date();
+      const isToday =
+        date.getFullYear() === now.getFullYear() &&
+        date.getMonth() === now.getMonth() &&
+        date.getDate() === now.getDate();
+      return isToday
+        ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : date.toLocaleString();
+    }, [message.timestamp]);
 
-  const rawSummary =
-    message.summary || (structured ? getStructuredMessageSummary(structured) : '') || '';
-  const summaryText = useMemo(() => extractMarkdownPlainText(rawSummary), [rawSummary]);
+    const structured = parseStructuredAgentMessage(message.text);
+    // Only flag agent messages as rate-limited, not user's own quotes
+    const rateLimited = message.from !== 'user' && isRateLimitMessage(message.text);
+    // Highlight messages containing API errors
+    const isApiError = message.text.includes('API Error');
+    // Detect auth errors that may be resolved by restarting the team
+    const isAuthError = isApiError && AUTH_ERROR_PATTERNS.some((p) => p.test(message.text));
+    // Never collapse rate limit messages as noise — they must be visible
+    const noiseLabel = structured && !rateLimited ? getNoiseLabel(structured) : null;
 
-  // Noise messages: minimal inline row
-  if (noiseLabel) {
-    return <NoiseRow name={message.from} label={noiseLabel} colors={colors} />;
-  }
+    const systemLabel = !structured && !rateLimited ? getSystemMessageLabel(message.text) : null;
+    const isManaged = collapseMode === 'managed';
+    const isExpanded = isManaged ? !isCollapsed : true;
 
-  const messageType =
-    structured && typeof structured.type === 'string' ? getMessageTypeLabel(structured.type) : null;
-  const autoSummary = structured ? getStructuredMessageSummary(structured) : null;
+    const parsedCrossTeamPrefix = useMemo(() => parseCrossTeamPrefix(message.text), [message.text]);
+    const qualifiedRecipient = useMemo(() => parseQualifiedRecipient(message.to), [message.to]);
+    const crossTeamSentTarget = useMemo(
+      () => getCrossTeamSentTarget(message.to, teamName, localMemberNames),
+      [message.to, teamName, localMemberNames]
+    );
+    const crossTeamSentMemberName = useMemo(
+      () => getCrossTeamSentMemberName(message.to),
+      [message.to]
+    );
+    const isCrossTeam = message.source === CROSS_TEAM_SOURCE || parsedCrossTeamPrefix !== null;
+    const isCrossTeamSent =
+      message.source === CROSS_TEAM_SENT_SOURCE || crossTeamSentTarget !== null;
+    const isCrossTeamAny = isCrossTeam || isCrossTeamSent;
+    const crossTeamOrigin = useMemo(() => {
+      if (!isCrossTeam) return null;
+      const fromValue = parsedCrossTeamPrefix?.from ?? message.from;
+      const dot = fromValue.indexOf('.');
+      if (dot <= 0 || dot === fromValue.length - 1) return null;
+      return {
+        teamName: fromValue.substring(0, dot),
+        memberName: fromValue.substring(dot + 1),
+      };
+    }, [isCrossTeam, message.from, parsedCrossTeamPrefix]);
+    const crossTeamTarget = useMemo(() => {
+      if (!isCrossTeamSent) return null;
+      if (crossTeamSentTarget) return crossTeamSentTarget;
+      if (qualifiedRecipient) return qualifiedRecipient.teamName;
+      if (!message.to) return null;
+      const dot = message.to.indexOf('.');
+      if (dot <= 0) return message.to;
+      return message.to.substring(0, dot);
+    }, [crossTeamSentTarget, isCrossTeamSent, message.to, qualifiedRecipient]);
+    const senderName = crossTeamOrigin ? crossTeamOrigin.memberName : message.from;
+    const senderColor = crossTeamOrigin ? undefined : (memberColor ?? message.color);
+    const senderHideAvatar =
+      message.from === 'user' ||
+      message.from === 'system' ||
+      crossTeamOrigin?.memberName === 'user';
 
-  const handleCreateTask = (): void => {
-    const subject = message.summary || autoSummary || `Task from ${message.from}`;
-    const plainText = structured
-      ? JSON.stringify(structured, null, 2)
-      : stripAgentBlocks(message.text);
-    const description = `From: ${message.from}\nAt: ${timestamp}\n\n${plainText}`.slice(0, 2000);
-    onCreateTask?.(subject, description);
-  };
-
-  const isHeaderClickable = isManaged ? collapseState.canToggle : false;
-  const showChevron = isHeaderClickable;
-  const isUserSent = message.source === 'user_sent' || isCrossTeamSent;
-  const isSystemMessage = message.from === 'system';
-  const onManagedToggle = isManaged ? collapseState.onToggle : undefined;
-  const handleHeaderToggle = isHeaderClickable
-    ? (): void => {
-        onManagedToggle?.();
+    // Strip agent-only blocks + normalize escape sequences (before linkification)
+    const strippedText = useMemo(() => {
+      if (structured) return null;
+      let stripped = stripAgentBlocks(message.text).trim();
+      if (!stripped) return null; // All content was agent-only blocks → show summary instead
+      // Strip cross-team metadata tag (e.g. `<cross-team from="team.lead" depth="0" />\n`)
+      // — kept in stored text for CLI agents / durable artifacts.
+      if (isCrossTeamAny) {
+        stripped = stripCrossTeamPrefix(stripped);
       }
-    : undefined;
+      // Normalize literal \n from historical CLI-produced text to real newlines
+      return stripped.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+    }, [structured, message.text, isCrossTeamAny]);
 
-  return (
-    <article
-      className="group rounded-md"
-      style={{
-        marginLeft: isUserSent ? 15 : undefined,
-        backgroundColor:
-          rateLimited || isApiError
-            ? 'var(--tool-result-error-bg)'
-            : isCrossTeamAny
-              ? 'var(--cross-team-bg)'
-              : isSystemMessage
-                ? 'var(--system-activity-bg)'
-                : zebraShade
-                  ? CARD_BG_ZEBRA
-                  : CARD_BG,
-        border:
-          rateLimited || isApiError
-            ? '1px solid var(--tool-result-error-border)'
-            : isCrossTeamAny
-              ? '1px solid var(--cross-team-border)'
-              : isSystemMessage
-                ? '1px solid var(--system-activity-border)'
-                : CARD_BORDER_STYLE,
-        borderLeft:
-          rateLimited || isApiError
-            ? '3px solid var(--tool-result-error-text)'
-            : isCrossTeamAny
-              ? '3px solid var(--cross-team-accent)'
-              : isSystemMessage
-                ? '3px solid var(--system-activity-accent)'
-                : `3px solid ${getThemedBorder(colors, isLight)}`,
-      }}
-    >
-      {/* Header — div with role=button (cannot use <button> due to nested buttons inside) */}
-      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- role=button, tabIndex, onKeyDown below; nested buttons prevent using native button */}
-      <div
-        role={isHeaderClickable ? 'button' : undefined}
-        tabIndex={isHeaderClickable ? 0 : undefined}
-        className={[
-          'flex items-center gap-2 px-3 py-2',
-          isHeaderClickable ? 'cursor-pointer select-none' : '',
-        ].join(' ')}
-        onClick={handleHeaderToggle}
-        onKeyDown={
-          isHeaderClickable
-            ? (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleHeaderToggle?.();
-                }
-              }
-            : undefined
-        }
+    // Parse reply BEFORE linkification — linkifyAllMentionsInMarkdown transforms @name
+    // into markdown links which breaks the reply regex matcher
+    const parsedReply = useMemo(
+      () => (strippedText ? parseMessageReply(strippedText) : null),
+      [strippedText]
+    );
+
+    // Linkify task IDs (always, for TaskTooltip) + @mentions for display
+    const displayText = useMemo(() => {
+      if (!strippedText) return null;
+      let result = highlightSystemLabels(strippedText, !!systemLabel);
+      result = linkifyTaskIdsInMarkdown(result, message.taskRefs);
+      if ((memberColorMap && memberColorMap.size > 0) || teamNames.length > 0)
+        result = linkifyAllMentionsInMarkdown(result, memberColorMap ?? new Map(), teamNames);
+      return result;
+    }, [strippedText, memberColorMap, teamNames, systemLabel]);
+
+    const crossTeamPreview = useMemo(() => {
+      if (!isCrossTeamAny || !strippedText) return '';
+      const oneLine = strippedText.replace(/\n+/g, ' ').trim();
+      if (!oneLine) return '';
+      return oneLine.length > 80 ? oneLine.slice(0, 80) + '…' : oneLine;
+    }, [isCrossTeamAny, strippedText]);
+
+    const rawSummary = useMemo(() => {
+      if (crossTeamPreview) return crossTeamPreview;
+      const s =
+        message.summary || (structured ? getStructuredMessageSummary(structured) : '') || '';
+      if (s) return s;
+      // Fallback: use the beginning of message text as preview for plain-text messages
+      const plain = stripAgentBlocks(message.text).trim();
+      if (!plain) return '';
+      const oneLine = plain.replace(/\n+/g, ' ');
+      return oneLine.length > 80 ? oneLine.slice(0, 80) + '…' : oneLine;
+    }, [crossTeamPreview, message.summary, structured, message.text]);
+    const summaryText = useMemo(() => extractMarkdownPlainText(rawSummary), [rawSummary]);
+
+    // Noise messages: minimal inline row
+    if (noiseLabel) {
+      return <NoiseRow name={message.from} label={noiseLabel} colors={colors} />;
+    }
+
+    const messageType =
+      structured && typeof structured.type === 'string'
+        ? getMessageTypeLabel(structured.type)
+        : null;
+    const autoSummary = structured ? getStructuredMessageSummary(structured) : null;
+
+    const handleCreateTask = useCallback((): void => {
+      const subject = message.summary || autoSummary || `Task from ${message.from}`;
+      const plainText = structured
+        ? JSON.stringify(structured, null, 2)
+        : stripAgentBlocks(message.text);
+      const description = `From: ${message.from}\nAt: ${timestamp}\n\n${plainText}`.slice(0, 2000);
+      onCreateTask?.(subject, description);
+    }, [
+      autoSummary,
+      message.from,
+      message.summary,
+      message.text,
+      onCreateTask,
+      structured,
+      timestamp,
+    ]);
+
+    const isHeaderClickable = isManaged && canToggleCollapse;
+    const showChevron = isHeaderClickable && !compactHeader;
+    const isUserSent = message.source === 'user_sent' || isCrossTeamSent;
+    const isSystemMessage = message.from === 'system';
+    const handleHeaderToggle = useCallback(() => {
+      if (isHeaderClickable && collapseToggleKey) {
+        onToggleCollapse?.(collapseToggleKey);
+      }
+    }, [collapseToggleKey, isHeaderClickable, onToggleCollapse]);
+
+    return (
+      <article
+        className="group overflow-hidden rounded-md"
+        style={{
+          marginLeft: isUserSent ? 15 : undefined,
+          backgroundColor:
+            rateLimited || isApiError
+              ? 'var(--tool-result-error-bg)'
+              : isCrossTeamAny
+                ? 'var(--cross-team-bg)'
+                : isSystemMessage
+                  ? 'var(--system-activity-bg)'
+                  : zebraShade
+                    ? CARD_BG_ZEBRA
+                    : CARD_BG,
+          border:
+            rateLimited || isApiError
+              ? '1px solid var(--tool-result-error-border)'
+              : isCrossTeamAny
+                ? '1px solid var(--cross-team-border)'
+                : isSystemMessage
+                  ? '1px solid var(--system-activity-border)'
+                  : CARD_BORDER_STYLE,
+          borderLeft:
+            rateLimited || isApiError
+              ? '3px solid var(--tool-result-error-text)'
+              : isCrossTeamAny
+                ? '3px solid var(--cross-team-accent)'
+                : isSystemMessage
+                  ? '3px solid var(--system-activity-accent)'
+                  : `3px solid ${getThemedBorder(colors, isLight)}`,
+        }}
       >
-        {isUnread ? (
-          <span className="size-2 shrink-0 rounded-full bg-blue-500" title="Unread" aria-hidden />
-        ) : null}
-        {/* Chevron for collapsible messages */}
-        {showChevron ? (
-          <ChevronRight
-            className="size-3 shrink-0 transition-transform duration-150"
-            style={{
-              color: CARD_ICON_MUTED,
-              transform: isExpanded ? 'rotate(90deg)' : undefined,
-            }}
-          />
-        ) : null}
-
-        {/* Sender avatar + name badge */}
-        {crossTeamOrigin ? <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} /> : null}
-        <MemberBadge
-          name={senderName}
-          color={senderColor}
-          hideAvatar={senderHideAvatar}
-          onClick={onMemberNameClick}
-          disableHoverCard={crossTeamOrigin != null}
-        />
-
-        {/* Role */}
-        {formattedRole ? (
-          <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-            {formattedRole}
-          </span>
-        ) : null}
-
-        {/* Message type label or system label */}
-        {systemLabel ? (
-          <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
-            {systemLabel}
-          </span>
-        ) : messageType ? (
-          <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
-            {messageType}
-          </span>
-        ) : null}
-
-        {/* Lead session marker */}
-        {message.source === 'lead_session' ? (
-          <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
-            session
-          </span>
-        ) : message.source === 'lead_process' ? (
-          <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
-            live
-          </span>
-        ) : null}
-
-        {/* Rate limit warning badge */}
-        {rateLimited ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
-            <AlertTriangle size={10} />
-            Rate Limited
-          </span>
-        ) : null}
-
-        {/* API Error warning badge */}
-        {isApiError && !rateLimited ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
-            <AlertTriangle size={10} />
-            API Error
-          </span>
-        ) : null}
-
-        {/* Recipient — arrow + avatar + badge */}
-        {message.to && message.to !== message.from ? (
-          <>
-            <span style={{ color: CARD_ICON_MUTED }} className="text-[10px]">
-              &rarr;
-            </span>
-            {crossTeamTarget ? <CrossTeamTeamBadge teamName={crossTeamTarget} /> : null}
-            {crossTeamSentMemberName || !crossTeamTarget ? (
-              <MemberBadge
-                name={crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to}
-                color={crossTeamTarget ? undefined : recipientColor}
-                hideAvatar={
-                  (crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to) ===
-                  'user'
+        {/* Header — div with role=button (cannot use <button> due to nested buttons inside) */}
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- role=button, tabIndex, onKeyDown below; nested buttons prevent using native button */}
+        <div
+          role={isHeaderClickable ? 'button' : undefined}
+          tabIndex={isHeaderClickable ? 0 : undefined}
+          className={[
+            'flex min-w-0 items-center gap-2 px-3 py-2',
+            isHeaderClickable ? 'cursor-pointer select-none' : '',
+          ].join(' ')}
+          onClick={handleHeaderToggle}
+          onKeyDown={
+            isHeaderClickable
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleHeaderToggle?.();
+                  }
                 }
-                onClick={onMemberNameClick}
-                disableHoverCard={crossTeamTarget != null}
+              : undefined
+          }
+        >
+          {isUnread ? (
+            <span className="size-2 shrink-0 rounded-full bg-blue-500" title="Unread" aria-hidden />
+          ) : null}
+          {/* Chevron for collapsible messages */}
+          {showChevron ? (
+            <ChevronRight
+              className="size-3 shrink-0 transition-transform duration-150"
+              style={{
+                color: CARD_ICON_MUTED,
+                transform: isExpanded ? 'rotate(90deg)' : undefined,
+              }}
+            />
+          ) : null}
+
+          {/* Sender avatar + name badge */}
+          {crossTeamOrigin ? (
+            <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
+          ) : null}
+          <MemberBadge
+            name={senderName}
+            color={senderColor}
+            hideAvatar={senderHideAvatar || compactHeader}
+            onClick={onMemberNameClick}
+            disableHoverCard={crossTeamOrigin != null}
+          />
+
+          {/* Role */}
+          {!compactHeader && formattedRole ? (
+            <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
+              {formattedRole}
+            </span>
+          ) : null}
+
+          {/* Message type label or system label */}
+          {systemLabel ? (
+            <span
+              className="text-[10px] uppercase tracking-wide"
+              style={{ color: CARD_ICON_MUTED }}
+            >
+              {systemLabel}
+            </span>
+          ) : messageType ? (
+            <span
+              className="text-[10px] uppercase tracking-wide"
+              style={{ color: CARD_ICON_MUTED }}
+            >
+              {messageType}
+            </span>
+          ) : null}
+
+          {/* Lead session marker */}
+          {message.source === 'lead_session' ? (
+            <span
+              className="text-[10px] uppercase tracking-wide"
+              style={{ color: CARD_ICON_MUTED }}
+            >
+              session
+            </span>
+          ) : message.source === 'lead_process' ? (
+            <span
+              className="text-[10px] uppercase tracking-wide"
+              style={{ color: CARD_ICON_MUTED }}
+            >
+              live
+            </span>
+          ) : null}
+
+          {/* Rate limit warning badge */}
+          {rateLimited ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+              <AlertTriangle size={10} />
+              Rate Limited
+            </span>
+          ) : null}
+
+          {/* API Error warning badge */}
+          {isApiError && !rateLimited ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+              <AlertTriangle size={10} />
+              API Error
+            </span>
+          ) : null}
+
+          {/* Recipient — arrow + avatar + badge */}
+          {message.to && message.to !== message.from ? (
+            <>
+              <span style={{ color: CARD_ICON_MUTED }} className="text-[10px]">
+                &rarr;
+              </span>
+              {crossTeamTarget ? (
+                <CrossTeamTeamBadge teamName={crossTeamTarget} onClick={onTeamClick} />
+              ) : null}
+              {crossTeamSentMemberName || !crossTeamTarget ? (
+                <MemberBadge
+                  name={crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to}
+                  color={crossTeamTarget ? undefined : recipientColor}
+                  hideAvatar={
+                    compactHeader ||
+                    (crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to) ===
+                      'user'
+                  }
+                  onClick={onMemberNameClick}
+                  disableHoverCard={crossTeamTarget != null}
+                />
+              ) : null}
+            </>
+          ) : null}
+
+          {/* Summary */}
+          <span className="min-w-0 flex-1 truncate text-xs" style={{ color: CARD_TEXT_LIGHT }}>
+            {onTaskIdClick
+              ? renderInlineBoldSummary(rawSummary, onTaskIdClick)
+              : renderInlineBoldSummary(rawSummary)}
+          </span>
+
+          {/* Timestamp / expand */}
+          <div className="relative flex shrink-0 items-center">
+            <span
+              className={
+                onExpand && expandItemKey
+                  ? 'text-[10px] transition-opacity group-hover:opacity-0'
+                  : 'text-[10px]'
+              }
+              style={{ color: CARD_ICON_MUTED }}
+            >
+              {timestamp}
+            </span>
+            {onExpand && expandItemKey && (
+              <button
+                type="button"
+                aria-label="Expand message"
+                className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
+                style={{ color: CARD_ICON_MUTED }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onExpand(expandItemKey);
+                }}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <Maximize2 size={12} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Content — collapsed for system messages, expanded for others */}
+        {isExpanded ? (
+          <div className="min-w-0 overflow-hidden px-3 pb-3">
+            {structured ? (
+              <div className="space-y-2">
+                {autoSummary && autoSummary !== messageType ? (
+                  <p className="text-xs text-[var(--color-text-secondary)]">{autoSummary}</p>
+                ) : null}
+                <details className="rounded border border-[var(--color-border)] bg-[var(--color-surface)]">
+                  <summary className="cursor-pointer px-2 py-1 text-[11px] text-[var(--color-text-muted)]">
+                    Raw JSON
+                  </summary>
+                  <pre className="overflow-auto px-2 pb-2 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
+                    {JSON.stringify(structured, null, 2)}
+                  </pre>
+                </details>
+              </div>
+            ) : parsedReply ? (
+              <ReplyQuoteBlock
+                reply={parsedReply}
+                memberColor={memberColorMap?.get(parsedReply.agentName)}
+                replyTaskRefs={message.taskRefs}
+              />
+            ) : displayText ? (
+              <div className="group/message-body relative">
+                <div className="absolute right-1 top-1 z-10 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/message-body:opacity-100">
+                  {onReply ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="rounded p-1 transition-colors hover:bg-[var(--color-surface-raised)]"
+                          style={{ color: CARD_ICON_MUTED }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onReply(message);
+                          }}
+                        >
+                          <Reply size={14} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Reply to message</TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                  {onCreateTask ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="rounded p-1 transition-colors hover:bg-[var(--color-surface-raised)]"
+                          style={{ color: CARD_ICON_MUTED }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateTask();
+                          }}
+                        >
+                          <ListPlus size={14} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Create task from message</TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                  <CopyButton text={displayText} inline />
+                </div>
+                <ExpandableContent onExpand={onExpandContent}>
+                  <span
+                    onClickCapture={
+                      onTaskIdClick
+                        ? (e) => {
+                            const link = (e.target as HTMLElement).closest<HTMLAnchorElement>(
+                              'a[href^="task://"]'
+                            );
+                            if (link) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const href = link.getAttribute('href');
+                              const parsedTaskLink = href ? parseTaskLinkHref(href) : null;
+                              if (parsedTaskLink?.taskId) onTaskIdClick(parsedTaskLink.taskId);
+                            }
+                          }
+                        : undefined
+                    }
+                  >
+                    <MarkdownViewer
+                      content={displayText}
+                      maxHeight="max-h-none"
+                      bare
+                      teamColorByName={teamColorByName}
+                      onTeamClick={onTeamClick}
+                    />
+                  </span>
+                </ExpandableContent>
+              </div>
+            ) : summaryText ? (
+              <p className="text-xs italic" style={{ color: CARD_TEXT_LIGHT }}>
+                {summaryText}
+              </p>
+            ) : null}
+            {/* Auth error recovery action */}
+            {isAuthError && onRestartTeam ? (
+              <div className="mt-2 flex items-start gap-2 rounded border border-red-500/30 bg-red-500/5 px-3 py-2">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0 text-red-400" />
+                <div className="flex-1 space-y-1.5">
+                  <p className="text-[11px] leading-relaxed text-red-300/90">
+                    Authentication failed. Restarting the team will refresh the session and may
+                    resolve this issue. If the problem persists, check your API credentials or try
+                    again later.
+                  </p>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-red-500/20 px-2.5 py-1 text-[11px] font-medium text-red-300 transition-colors hover:bg-red-500/30 hover:text-red-200"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRestartTeam();
+                    }}
+                  >
+                    <RefreshCw size={11} />
+                    Restart team
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            {message.attachments?.length && message.messageId ? (
+              <AttachmentDisplay
+                teamName={teamName}
+                messageId={message.messageId}
+                attachments={message.attachments}
               />
             ) : null}
-          </>
+          </div>
         ) : null}
-
-        {/* Summary */}
-        <span className="min-w-0 flex-1 truncate text-xs" style={{ color: CARD_TEXT_LIGHT }}>
-          {onTaskIdClick ? linkifyTaskIds(summaryText, onTaskIdClick) : summaryText}
-        </span>
-
-        {/* Timestamp + reply + create task */}
-        <div className="flex shrink-0 items-center gap-1.5">
-          {onReply && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="rounded p-0.5 opacity-0 transition-opacity hover:bg-[var(--color-surface-raised)] group-hover:opacity-100"
-                  style={{ color: CARD_ICON_MUTED }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onReply(message);
-                  }}
-                >
-                  <Reply size={14} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Reply to message</TooltipContent>
-            </Tooltip>
-          )}
-          {onCreateTask && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="rounded p-0.5 opacity-0 transition-opacity hover:bg-[var(--color-surface-raised)] group-hover:opacity-100"
-                  style={{ color: CARD_ICON_MUTED }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCreateTask();
-                  }}
-                >
-                  <ListPlus size={14} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Create task from message</TooltipContent>
-            </Tooltip>
-          )}
-          <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-            {timestamp}
-          </span>
-        </div>
-      </div>
-
-      {/* Content — collapsed for system messages, expanded for others */}
-      {isExpanded ? (
-        <div className="px-3 pb-3">
-          {structured ? (
-            <div className="space-y-2">
-              {autoSummary && autoSummary !== messageType ? (
-                <p className="text-xs text-[var(--color-text-secondary)]">{autoSummary}</p>
-              ) : null}
-              <details className="rounded border border-[var(--color-border)] bg-[var(--color-surface)]">
-                <summary className="cursor-pointer px-2 py-1 text-[11px] text-[var(--color-text-muted)]">
-                  Raw JSON
-                </summary>
-                <pre className="overflow-auto px-2 pb-2 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
-                  {JSON.stringify(structured, null, 2)}
-                </pre>
-              </details>
-            </div>
-          ) : parsedReply ? (
-            <ReplyQuoteBlock
-              reply={parsedReply}
-              memberColor={memberColorMap?.get(parsedReply.agentName)}
-            />
-          ) : displayText ? (
-            <ExpandableContent>
-              <span
-                onClickCapture={
-                  onTaskIdClick
-                    ? (e) => {
-                        const link = (e.target as HTMLElement).closest<HTMLAnchorElement>(
-                          'a[href^="task://"]'
-                        );
-                        if (link) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const taskId = link.getAttribute('href')?.replace('task://', '');
-                          if (taskId) onTaskIdClick(taskId);
-                        }
-                      }
-                    : undefined
-                }
-              >
-                <MarkdownViewer content={displayText} maxHeight="max-h-none" copyable bare />
-              </span>
-            </ExpandableContent>
-          ) : summaryText ? (
-            <p className="text-xs italic" style={{ color: CARD_TEXT_LIGHT }}>
-              {summaryText}
-            </p>
-          ) : null}
-          {/* Auth error recovery action */}
-          {isAuthError && onRestartTeam ? (
-            <div className="mt-2 flex items-start gap-2 rounded border border-red-500/30 bg-red-500/5 px-3 py-2">
-              <AlertTriangle size={14} className="mt-0.5 shrink-0 text-red-400" />
-              <div className="flex-1 space-y-1.5">
-                <p className="text-[11px] leading-relaxed text-red-300/90">
-                  Authentication failed. Restarting the team will refresh the session and may
-                  resolve this issue. If the problem persists, check your API credentials or try
-                  again later.
-                </p>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 rounded-md bg-red-500/20 px-2.5 py-1 text-[11px] font-medium text-red-300 transition-colors hover:bg-red-500/30 hover:text-red-200"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRestartTeam();
-                  }}
-                >
-                  <RefreshCw size={11} />
-                  Restart team
-                </button>
-              </div>
-            </div>
-          ) : null}
-          {message.attachments?.length && message.messageId ? (
-            <AttachmentDisplay
-              teamName={teamName}
-              messageId={message.messageId}
-              attachments={message.attachments}
-            />
-          ) : null}
-        </div>
-      ) : null}
-    </article>
-  );
-};
+      </article>
+    );
+  },
+  (prev, next) =>
+    prev.teamName === next.teamName &&
+    prev.localMemberNames === next.localMemberNames &&
+    prev.memberRole === next.memberRole &&
+    prev.memberColor === next.memberColor &&
+    prev.recipientColor === next.recipientColor &&
+    prev.isUnread === next.isUnread &&
+    prev.memberColorMap === next.memberColorMap &&
+    areStringArraysEqual(prev.teamNames, next.teamNames) &&
+    areStringMapsEqual(prev.teamColorByName, next.teamColorByName) &&
+    prev.onTeamClick === next.onTeamClick &&
+    prev.onMemberNameClick === next.onMemberNameClick &&
+    prev.onCreateTask === next.onCreateTask &&
+    prev.onReply === next.onReply &&
+    prev.onTaskIdClick === next.onTaskIdClick &&
+    prev.onRestartTeam === next.onRestartTeam &&
+    prev.zebraShade === next.zebraShade &&
+    prev.collapseMode === next.collapseMode &&
+    prev.isCollapsed === next.isCollapsed &&
+    prev.canToggleCollapse === next.canToggleCollapse &&
+    prev.collapseToggleKey === next.collapseToggleKey &&
+    prev.onToggleCollapse === next.onToggleCollapse &&
+    prev.compactHeader === next.compactHeader &&
+    prev.onExpand === next.onExpand &&
+    prev.expandItemKey === next.expandItemKey &&
+    prev.onExpandContent === next.onExpandContent &&
+    areMessagesEquivalentForActivityItem(prev.message, next.message)
+);

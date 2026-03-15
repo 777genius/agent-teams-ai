@@ -4,7 +4,10 @@
  * Renders CLI stream-json logs using the same rich components as session views:
  * thinking blocks, tool call cards, markdown text output.
  *
- * Replaces raw JSON display in ProvisioningProgressBlock.
+ * Supports two modes:
+ * - **Uncontrolled** (default): manages its own expansion and viewport state internally.
+ * - **Controlled**: accepts external state + callbacks so the parent can persist
+ *   expansion and viewport across surface switches (e.g. compact ↔ dialog).
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -17,7 +20,26 @@ import { Bot, ChevronRight } from 'lucide-react';
 
 import type { StreamJsonGroup, SubagentSection } from '@renderer/utils/streamJsonParser';
 
-type CliLogsOrder = 'oldest-first' | 'newest-first';
+// =============================================================================
+// Viewport state types
+// =============================================================================
+
+export type CliLogsOrder = 'oldest-first' | 'newest-first';
+
+export type ClaudeLogsViewportState =
+  | { mode: 'edge'; edge: 'newest' | 'oldest' }
+  | { mode: 'anchor'; anchorId: string; offsetTop: number };
+
+export interface ClaudeLogsViewerState {
+  collapsedGroupIds: Set<string>;
+  expandedItemIds: Set<string>;
+  expandedSubagentIds: Set<string>;
+  viewport: ClaudeLogsViewportState;
+}
+
+// =============================================================================
+// Props
+// =============================================================================
 
 interface CliLogsRichViewProps {
   cliLogsTail: string;
@@ -29,7 +51,17 @@ interface CliLogsRichViewProps {
   className?: string;
   /** Content rendered at the very bottom of the scroll container (e.g. "Show more" button). */
   footer?: React.ReactNode;
+
+  // ── Controlled mode (optional — all-or-nothing) ──────────────────────
+  /** When provided, the component uses external expansion state. */
+  viewerState?: ClaudeLogsViewerState;
+  /** Called whenever expansion or viewport state changes in controlled mode. */
+  onViewerStateChange?: (state: ClaudeLogsViewerState) => void;
 }
+
+// =============================================================================
+// Helpers
+// =============================================================================
 
 /**
  * Derives a scoped Set for a single group from the global prefixed Set.
@@ -45,6 +77,57 @@ function scopedItemIds(globalIds: Set<string>, groupId: string): Set<string> {
   }
   return scoped;
 }
+
+/** Finds the first visible anchor element and returns its id + offset from container top. */
+function computeAnchorViewport(container: HTMLDivElement): ClaudeLogsViewportState | null {
+  const anchors = container.querySelectorAll<HTMLElement>('[data-log-anchor]');
+  const containerTop = container.getBoundingClientRect().top;
+  const containerBottom = containerTop + container.clientHeight;
+
+  for (const anchor of anchors) {
+    const rect = anchor.getBoundingClientRect();
+    // First anchor whose bottom is within or below the container top
+    if (rect.bottom > containerTop && rect.top < containerBottom) {
+      const anchorId = anchor.dataset.logAnchor;
+      if (anchorId) {
+        return { mode: 'anchor', anchorId, offsetTop: rect.top - containerTop };
+      }
+    }
+  }
+  return null;
+}
+
+/** Restores scroll position from a viewport state after mount/layout. */
+function restoreViewport(
+  container: HTMLDivElement,
+  viewport: ClaudeLogsViewportState,
+  order: CliLogsOrder
+): void {
+  if (viewport.mode === 'edge') {
+    if (viewport.edge === 'newest') {
+      // eslint-disable-next-line no-param-reassign -- DOM scroll positioning requires direct mutation
+      container.scrollTop = order === 'newest-first' ? 0 : container.scrollHeight;
+    } else {
+      // eslint-disable-next-line no-param-reassign -- DOM scroll positioning requires direct mutation
+      container.scrollTop = order === 'newest-first' ? container.scrollHeight : 0;
+    }
+    return;
+  }
+
+  // Anchor mode — find the element and adjust scroll
+  const el = container.querySelector<HTMLElement>(`[data-log-anchor="${viewport.anchorId}"]`);
+  if (!el) return;
+
+  const containerRect = container.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  const currentOffset = elRect.top - containerRect.top;
+  // eslint-disable-next-line no-param-reassign -- DOM scroll positioning requires direct mutation
+  container.scrollTop += currentOffset - viewport.offsetTop;
+}
+
+// =============================================================================
+// Sub-components
+// =============================================================================
 
 /**
  * Single-item group rendered flat (no collapsible wrapper).
@@ -70,13 +153,16 @@ const FlatGroupItem = ({
   );
 
   return (
-    <DisplayItemList
-      items={group.items}
-      onItemClick={handleItemClick}
-      expandedItemIds={groupItemIds}
-      aiGroupId={group.id}
-      searchQueryOverride={searchQueryOverride}
-    />
+    <div data-log-anchor={group.id}>
+      <DisplayItemList
+        items={group.items}
+        onItemClick={handleItemClick}
+        expandedItemIds={groupItemIds}
+        aiGroupId={group.id}
+        searchQueryOverride={searchQueryOverride}
+        previewMaxLength={500}
+      />
+    </div>
   );
 };
 
@@ -109,7 +195,10 @@ const StreamGroup = ({
   );
 
   return (
-    <div className="rounded border border-[var(--color-border)] bg-[var(--color-surface)]">
+    <div
+      data-log-anchor={group.id}
+      className="rounded border border-[var(--color-border)] bg-[var(--color-surface)]"
+    >
       <button
         type="button"
         className="flex w-full items-center gap-1.5 px-2 py-1 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
@@ -144,6 +233,7 @@ const StreamGroup = ({
             expandedItemIds={groupItemIds}
             aiGroupId={group.id}
             searchQueryOverride={searchQueryOverride}
+            previewMaxLength={500}
           />
         </div>
       )}
@@ -177,7 +267,10 @@ const SubagentSectionBlock = ({
   const label = `Agent — ${section.description} (${section.toolCount} tool${section.toolCount !== 1 ? 's' : ''})`;
 
   return (
-    <div className="rounded border border-l-2 border-amber-500/30 bg-[var(--color-surface)]">
+    <div
+      data-log-anchor={section.id}
+      className="rounded border border-l-2 border-amber-500/30 bg-[var(--color-surface)]"
+    >
       <button
         type="button"
         className="flex w-full items-center gap-1.5 px-2 py-1 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
@@ -228,6 +321,21 @@ const SubagentSectionBlock = ({
   );
 };
 
+// =============================================================================
+// Hook: useToggleSet — shared toggle logic for Set<string> state
+// =============================================================================
+
+function toggleInSet(prev: Set<string>, id: string): Set<string> {
+  const next = new Set(prev);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  return next;
+}
+
+// =============================================================================
+// Main component
+// =============================================================================
+
 export const CliLogsRichView = ({
   cliLogsTail,
   order = 'oldest-first',
@@ -236,15 +344,24 @@ export const CliLogsRichView = ({
   searchQueryOverride,
   className,
   footer,
+  viewerState: controlledState,
+  onViewerStateChange,
 }: CliLogsRichViewProps): React.JSX.Element => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const stickToEdgeRef = useRef(true);
   const lastOrderRef = useRef<CliLogsOrder>(order);
-  // Tracks groups manually collapsed by user (default: all auto-expanded)
-  const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(new Set());
-  const [expandedItemIds, setExpandedItemIds] = useState<Set<string>>(new Set());
-  // Subagent sections are collapsed by default; track which are expanded
-  const [expandedSubagentIds, setExpandedSubagentIds] = useState<Set<string>>(new Set());
+  const hasRestoredRef = useRef(false);
+
+  // ── Internal state (used in uncontrolled mode) ──────────────────────
+  const [internalCollapsed, setInternalCollapsed] = useState<Set<string>>(new Set());
+  const [internalExpanded, setInternalExpanded] = useState<Set<string>>(new Set());
+  const [internalSubagent, setInternalSubagent] = useState<Set<string>>(new Set());
+
+  // ── Resolve controlled vs internal ──────────────────────────────────
+  const isControlled = controlledState !== undefined;
+  const collapsedGroupIds = isControlled ? controlledState.collapsedGroupIds : internalCollapsed;
+  const expandedItemIds = isControlled ? controlledState.expandedItemIds : internalExpanded;
+  const expandedSubagentIds = isControlled ? controlledState.expandedSubagentIds : internalSubagent;
 
   const groups = useMemo(() => parseStreamJsonToGroups(cliLogsTail), [cliLogsTail]);
   const entries = useMemo(() => groupBySubagent(groups), [groups]);
@@ -267,9 +384,43 @@ export const CliLogsRichView = ({
     return expanded;
   }, [entries, collapsedGroupIds]);
 
+  // ── Viewport computation ────────────────────────────────────────────
+
+  const computeCurrentViewport = useCallback(
+    (el: HTMLDivElement): ClaudeLogsViewportState => {
+      const thresholdPx = 16;
+
+      // Check if at the "newest" edge
+      if (order === 'newest-first' && el.scrollTop <= thresholdPx) {
+        return { mode: 'edge', edge: 'newest' };
+      }
+      if (
+        order === 'oldest-first' &&
+        el.scrollHeight - el.scrollTop - el.clientHeight <= thresholdPx
+      ) {
+        return { mode: 'edge', edge: 'newest' };
+      }
+
+      // Check if at the "oldest" edge
+      if (order === 'newest-first') {
+        const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        if (distFromBottom <= thresholdPx) {
+          return { mode: 'edge', edge: 'oldest' };
+        }
+      }
+      if (order === 'oldest-first' && el.scrollTop <= thresholdPx) {
+        return { mode: 'edge', edge: 'oldest' };
+      }
+
+      // Anchor mode — find first visible anchor
+      const anchor = computeAnchorViewport(el);
+      return anchor ?? { mode: 'edge', edge: 'newest' };
+    },
+    [order]
+  );
+
   const computeShouldStickToEdge = useCallback(
     (el: HTMLDivElement): boolean => {
-      // Small threshold makes it feel "sticky" but still allows reading slightly away from the edge
       const thresholdPx = 16;
       if (order === 'newest-first') {
         return el.scrollTop <= thresholdPx;
@@ -280,12 +431,35 @@ export const CliLogsRichView = ({
     [order]
   );
 
-  // Auto-scroll only when user is pinned to the edge.
+  // ── Viewport restoration on controlled mount ────────────────────────
+
+  useEffect(() => {
+    if (!isControlled || hasRestoredRef.current) return;
+    const el = scrollRef.current;
+    if (!el || entries.length === 0) return;
+
+    hasRestoredRef.current = true;
+
+    // Use rAF to ensure layout is complete before restoring
+    requestAnimationFrame(() => {
+      restoreViewport(el, controlledState.viewport, order);
+      stickToEdgeRef.current = computeShouldStickToEdge(el);
+    });
+  }, [isControlled, controlledState?.viewport, entries.length, order, computeShouldStickToEdge]);
+
+  // Reset restore flag when controlled state is first attached
+  useEffect(() => {
+    if (isControlled) {
+      hasRestoredRef.current = false;
+    }
+  }, [isControlled]);
+
+  // ── Auto-scroll when pinned to edge ─────────────────────────────────
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
 
-    // If the sort order changes, always snap once (expectation: show the "newest edge").
     if (lastOrderRef.current !== order) {
       lastOrderRef.current = order;
       stickToEdgeRef.current = true;
@@ -301,44 +475,80 @@ export const CliLogsRichView = ({
     el.scrollTop = el.scrollHeight;
   }, [cliLogsTail, order]);
 
-  const handleGroupToggle = useCallback((groupId: string) => {
-    setCollapsedGroupIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(groupId)) {
-        next.delete(groupId);
-      } else {
-        next.add(groupId);
-      }
-      return next;
-    });
-  }, []);
+  // ── State change handlers ───────────────────────────────────────────
 
-  const handleItemClick = useCallback((itemId: string) => {
-    setExpandedItemIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(itemId)) {
-        next.delete(itemId);
-      } else {
-        next.add(itemId);
-      }
-      return next;
-    });
-  }, []);
+  const emitStateChange = useCallback(
+    (patch: Partial<ClaudeLogsViewerState>) => {
+      if (!isControlled || !onViewerStateChange) return;
+      onViewerStateChange({ ...controlledState, ...patch });
+    },
+    [isControlled, onViewerStateChange, controlledState]
+  );
 
-  const handleSubagentToggle = useCallback((sectionId: string) => {
-    setExpandedSubagentIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(sectionId)) {
-        next.delete(sectionId);
+  const handleGroupToggle = useCallback(
+    (groupId: string) => {
+      if (isControlled) {
+        emitStateChange({ collapsedGroupIds: toggleInSet(collapsedGroupIds, groupId) });
       } else {
-        next.add(sectionId);
+        setInternalCollapsed((prev) => toggleInSet(prev, groupId));
       }
-      return next;
-    });
-  }, []);
+    },
+    [isControlled, emitStateChange, collapsedGroupIds]
+  );
+
+  const handleItemClick = useCallback(
+    (itemId: string) => {
+      if (isControlled) {
+        emitStateChange({ expandedItemIds: toggleInSet(expandedItemIds, itemId) });
+      } else {
+        setInternalExpanded((prev) => toggleInSet(prev, itemId));
+      }
+    },
+    [isControlled, emitStateChange, expandedItemIds]
+  );
+
+  const handleSubagentToggle = useCallback(
+    (sectionId: string) => {
+      if (isControlled) {
+        emitStateChange({ expandedSubagentIds: toggleInSet(expandedSubagentIds, sectionId) });
+      } else {
+        setInternalSubagent((prev) => toggleInSet(prev, sectionId));
+      }
+    },
+    [isControlled, emitStateChange, expandedSubagentIds]
+  );
+
+  // ── Scroll handler ──────────────────────────────────────────────────
+
+  const handleScrollEvent = useCallback(
+    (el: HTMLDivElement) => {
+      stickToEdgeRef.current = computeShouldStickToEdge(el);
+
+      onScroll?.({
+        scrollTop: el.scrollTop,
+        scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight,
+      });
+
+      // Report viewport state to parent in controlled mode
+      if (isControlled && onViewerStateChange) {
+        const vp = computeCurrentViewport(el);
+        emitStateChange({ viewport: vp });
+      }
+    },
+    [
+      computeShouldStickToEdge,
+      computeCurrentViewport,
+      emitStateChange,
+      isControlled,
+      onScroll,
+      onViewerStateChange,
+    ]
+  );
+
+  // ── Render ──────────────────────────────────────────────────────────
 
   if (entries.length === 0) {
-    // No parseable assistant messages yet — show waiting state
     return (
       <div
         ref={(el) => {
@@ -349,15 +559,7 @@ export const CliLogsRichView = ({
           'max-h-[400px] overflow-y-auto rounded border border-[var(--color-border)] bg-[var(--color-surface)]',
           className
         )}
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          stickToEdgeRef.current = computeShouldStickToEdge(el);
-          onScroll?.({
-            scrollTop: el.scrollTop,
-            scrollHeight: el.scrollHeight,
-            clientHeight: el.clientHeight,
-          });
-        }}
+        onScroll={(e) => handleScrollEvent(e.currentTarget)}
       >
         <div className="flex items-center gap-2 p-3">
           <span className="relative flex size-2">
@@ -382,15 +584,7 @@ export const CliLogsRichView = ({
         containerRefCallback?.(el);
       }}
       className={cn('cli-logs-compact max-h-[400px] space-y-1 overflow-y-auto', className)}
-      onScroll={(e) => {
-        const el = e.currentTarget;
-        stickToEdgeRef.current = computeShouldStickToEdge(el);
-        onScroll?.({
-          scrollTop: el.scrollTop,
-          scrollHeight: el.scrollHeight,
-          clientHeight: el.clientHeight,
-        });
-      }}
+      onScroll={(e) => handleScrollEvent(e.currentTarget)}
     >
       {visibleEntries.map((entry) =>
         entry.type === 'subagent-section' ? (

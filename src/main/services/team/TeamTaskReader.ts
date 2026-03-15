@@ -13,13 +13,25 @@ import type {
   TaskAttachmentMeta,
   TaskComment,
   TaskHistoryEvent,
+  TaskRef,
   TaskWorkInterval,
   TeamTask,
-  TeamTaskStatus,
 } from '@shared/types';
 
 const logger = createLogger('Service:TeamTaskReader');
 const MAX_TASK_FILE_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Normalise escaped newline sequences (`\\n`) that some MCP/CLI sources
+ * write as literal two-character strings instead of real line-breaks.
+ * Also handles `\\t` for consistency.  Only operates on isolated escape
+ * sequences — already-real newlines are left untouched.
+ */
+function unescapeLiteralNewlines(text: string): string {
+  // Replace literal two-char sequences \n and \t with real control chars.
+  // The regex matches a single backslash followed by 'n' or 't'.
+  return text.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+}
 
 function isValidMimeTypeString(value: unknown): value is string {
   if (typeof value !== 'string') return false;
@@ -32,6 +44,21 @@ function isValidMimeTypeString(value: unknown): value is string {
   const slash = v.indexOf('/');
   if (slash <= 0 || slash === v.length - 1) return false;
   return true;
+}
+
+function normalizeTaskRefs(value: unknown): TaskRef[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const taskRefs = (value as unknown[])
+    .filter(
+      (entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object'
+    )
+    .map((entry) => ({
+      taskId: typeof entry.taskId === 'string' ? entry.taskId : '',
+      displayId: typeof entry.displayId === 'string' ? entry.displayId : '',
+      teamName: typeof entry.teamName === 'string' ? entry.teamName : '',
+    }))
+    .filter((entry) => entry.taskId && entry.displayId && entry.teamName);
+  return taskRefs.length > 0 ? taskRefs : undefined;
 }
 
 export class TeamTaskReader {
@@ -154,8 +181,14 @@ export class TeamTaskReader {
                     : ''
                 ),
           subject,
-          description: typeof parsed.description === 'string' ? parsed.description : undefined,
+          description:
+            typeof parsed.description === 'string'
+              ? unescapeLiteralNewlines(parsed.description)
+              : undefined,
+          descriptionTaskRefs: normalizeTaskRefs(parsed.descriptionTaskRefs),
           activeForm: typeof parsed.activeForm === 'string' ? parsed.activeForm : undefined,
+          prompt: typeof parsed.prompt === 'string' ? parsed.prompt : undefined,
+          promptTaskRefs: normalizeTaskRefs(parsed.promptTaskRefs),
           owner: typeof parsed.owner === 'string' ? parsed.owner : undefined,
           createdBy: typeof parsed.createdBy === 'string' ? parsed.createdBy : undefined,
           status: (['pending', 'in_progress', 'completed', 'deleted'] as const).includes(
@@ -190,9 +223,11 @@ export class TeamTaskReader {
                 )
                 .map((c) => ({
                   ...c,
+                  text: unescapeLiteralNewlines(c.text),
                   type: (['regular', 'review_request', 'review_approved'] as const).includes(c.type)
                     ? c.type
                     : ('regular' as const),
+                  taskRefs: normalizeTaskRefs((c as unknown as Record<string, unknown>).taskRefs),
                   attachments: Array.isArray(c.attachments)
                     ? (() => {
                         const filtered = (c.attachments as unknown[])
@@ -349,7 +384,10 @@ export class TeamTaskReader {
                     : ''
                 ),
           subject,
-          description: typeof parsed.description === 'string' ? parsed.description : undefined,
+          description:
+            typeof parsed.description === 'string'
+              ? unescapeLiteralNewlines(parsed.description)
+              : undefined,
           owner: typeof parsed.owner === 'string' ? parsed.owner : undefined,
           status: 'deleted',
           deletedAt: typeof parsed.deletedAt === 'string' ? parsed.deletedAt : undefined,

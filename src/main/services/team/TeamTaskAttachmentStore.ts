@@ -1,4 +1,4 @@
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getAppDataPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -7,7 +7,6 @@ import type { AttachmentMediaType, TaskAttachmentMeta } from '@shared/types';
 
 const logger = createLogger('Service:TeamTaskAttachmentStore');
 
-const TASK_ATTACHMENTS_DIR = 'task-attachments';
 const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20 MB
 
 export class TeamTaskAttachmentStore {
@@ -30,7 +29,7 @@ export class TeamTaskAttachmentStore {
   private getTaskDir(teamName: string, taskId: string): string {
     this.assertSafePathSegment('teamName', teamName);
     this.assertSafePathSegment('taskId', taskId);
-    return path.join(getTeamsBasePath(), teamName, TASK_ATTACHMENTS_DIR, taskId);
+    return path.join(getAppDataPath(), 'task-attachments', teamName, taskId);
   }
 
   private sanitizeStoredFilename(original: string): string {

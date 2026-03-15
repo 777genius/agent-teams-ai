@@ -2,12 +2,31 @@
  * NotificationsSection - Notification settings including triggers and ignored repositories.
  */
 
+import { useState } from 'react';
+
 import { api } from '@renderer/api';
 import {
   RepositoryDropdown,
   SelectedRepositoryItem,
 } from '@renderer/components/common/RepositoryDropdown';
-import { ExternalLink } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowRightLeft,
+  Bell,
+  BellRing,
+  Clock,
+  ExternalLink,
+  EyeOff,
+  HelpCircle,
+  Inbox,
+  Info,
+  Mail,
+  MessageSquare,
+  PartyPopper,
+  Send,
+  Users,
+  Volume2,
+} from 'lucide-react';
 
 import { SettingRow, SettingsSectionHeader, SettingsSelect, SettingsToggle } from '../components';
 import { NotificationTriggerSettings } from '../NotificationTriggerSettings';
@@ -44,6 +63,7 @@ interface NotificationsSectionProps {
       | 'notifyOnUserInbox'
       | 'notifyOnClarifications'
       | 'notifyOnStatusChange'
+      | 'notifyOnTaskComments'
       | 'statusChangeOnlySolo',
     value: boolean
   ) => void;
@@ -76,41 +96,63 @@ export const NotificationsSection = ({
   onRemoveTrigger,
   onStatusChangeStatusesUpdate,
 }: NotificationsSectionProps): React.JSX.Element => {
+  const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [testError, setTestError] = useState<string | null>(null);
+
+  const handleTestNotification = async (): Promise<void> => {
+    setTestStatus('sending');
+    setTestError(null);
+    try {
+      const result = await api.notifications.testNotification();
+      if (result.success) {
+        setTestStatus('success');
+        setTimeout(() => setTestStatus('idle'), 3000);
+      } else {
+        setTestStatus('error');
+        setTestError(result.error ?? 'Unknown error');
+        setTimeout(() => setTestStatus('idle'), 5000);
+      }
+    } catch (err) {
+      console.error('[notifications] testNotification failed:', err);
+      setTestStatus('error');
+      const message = err instanceof Error ? err.message : 'Failed to send test notification';
+      setTestError(message);
+      setTimeout(() => setTestStatus('idle'), 5000);
+    }
+  };
+
+  const isDev = import.meta.env.DEV;
+
   return (
     <div>
-      {/* Task Completion Notifications */}
-      <SettingsSectionHeader title="Task Completion Notifications" />
-      <div
-        className="mb-4 rounded-lg border p-4"
-        style={{
-          borderColor: 'var(--color-border)',
-          backgroundColor: 'var(--color-surface-raised)',
-        }}
-      >
-        <p className="mb-3 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          Get native OS notifications when Claude finishes tasks — sounds, banners, and Dock/taskbar
-          badges. Works on macOS, Linux, and Windows.
-        </p>
-        <button
-          onClick={() =>
-            void api.openExternal('https://github.com/777genius/claude-notifications-go')
-          }
-          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:brightness-125"
+      {/* Dev-mode warning */}
+      {isDev ? (
+        <div
+          className="mb-4 flex items-start gap-2.5 rounded-lg border p-3"
           style={{
-            backgroundColor: 'var(--color-border-emphasis)',
-            color: 'var(--color-text)',
+            borderColor: 'rgba(234, 179, 8, 0.2)',
+            backgroundColor: 'rgba(234, 179, 8, 0.05)',
           }}
         >
-          <ExternalLink className="size-3.5" />
-          Install claude-notifications-go plugin
-        </button>
-      </div>
+          <Info className="mt-0.5 size-4 shrink-0 text-yellow-500" />
+          <div>
+            <div className="text-sm font-medium text-yellow-500">Dev Mode</div>
+            <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              Notifications may not work in development mode. macOS identifies the app as
+              &quot;Electron&quot; (bundle ID <code className="text-xs">com.github.Electron</code>)
+              instead of the production app name. Check System Settings → Notifications → Electron
+              to verify permissions.
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Notification Settings */}
-      <SettingsSectionHeader title="Notification Settings" />
+      <SettingsSectionHeader title="Notification Settings" icon={<Bell className="size-3.5" />} />
       <SettingRow
         label="Enable System Notifications"
         description="Show system notifications for errors and events"
+        icon={<BellRing className="size-4" />}
       >
         <SettingsToggle
           enabled={safeConfig.notifications.enabled}
@@ -118,7 +160,11 @@ export const NotificationsSection = ({
           disabled={saving}
         />
       </SettingRow>
-      <SettingRow label="Play sound" description="Play a sound when notifications appear">
+      <SettingRow
+        label="Play sound"
+        description="Play a sound when notifications appear"
+        icon={<Volume2 className="size-4" />}
+      >
         <SettingsToggle
           enabled={safeConfig.notifications.soundEnabled}
           onChange={(v) => onNotificationToggle('soundEnabled', v)}
@@ -128,6 +174,7 @@ export const NotificationsSection = ({
       <SettingRow
         label="Include subagent errors"
         description="Detect and notify about errors in subagent sessions"
+        icon={<AlertTriangle className="size-4" />}
       >
         <SettingsToggle
           enabled={safeConfig.notifications.includeSubagentErrors}
@@ -136,34 +183,32 @@ export const NotificationsSection = ({
         />
       </SettingRow>
       <SettingRow
-        label="Lead inbox notifications"
-        description="Notify when teammates send messages to the team lead"
+        label="Test notification"
+        description="Send a test notification to verify delivery"
+        icon={<Send className="size-4" />}
       >
-        <SettingsToggle
-          enabled={safeConfig.notifications.notifyOnLeadInbox}
-          onChange={(v) => onNotificationToggle('notifyOnLeadInbox', v)}
-          disabled={saving || !safeConfig.notifications.enabled}
-        />
-      </SettingRow>
-      <SettingRow
-        label="User inbox notifications"
-        description="Notify when teammates send messages to you"
-      >
-        <SettingsToggle
-          enabled={safeConfig.notifications.notifyOnUserInbox}
-          onChange={(v) => onNotificationToggle('notifyOnUserInbox', v)}
-          disabled={saving || !safeConfig.notifications.enabled}
-        />
-      </SettingRow>
-      <SettingRow
-        label="Task clarification notifications"
-        description="Show native OS notifications when a task needs your input"
-      >
-        <SettingsToggle
-          enabled={safeConfig.notifications.notifyOnClarifications}
-          onChange={(v) => onNotificationToggle('notifyOnClarifications', v)}
-          disabled={saving || !safeConfig.notifications.enabled}
-        />
+        <div className="flex items-center gap-2">
+          {testStatus === 'success' ? (
+            <span className="text-xs text-green-400">Sent!</span>
+          ) : testStatus === 'error' ? (
+            <span className="max-w-48 truncate text-xs text-red-400">{testError}</span>
+          ) : null}
+          <button
+            onClick={handleTestNotification}
+            disabled={saving || !safeConfig.notifications.enabled || testStatus === 'sending'}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:brightness-125 ${
+              saving || !safeConfig.notifications.enabled || testStatus === 'sending'
+                ? 'cursor-not-allowed opacity-50'
+                : ''
+            }`}
+            style={{
+              backgroundColor: 'var(--color-border-emphasis)',
+              color: 'var(--color-text)',
+            }}
+          >
+            {testStatus === 'sending' ? 'Sending...' : 'Send Test'}
+          </button>
+        </div>
       </SettingRow>
       <SettingRow
         label="Snooze notifications"
@@ -172,6 +217,7 @@ export const NotificationsSection = ({
             ? `Snoozed until ${new Date(safeConfig.notifications.snoozedUntil!).toLocaleTimeString()}`
             : 'Temporarily pause notifications'
         }
+        icon={<Clock className="size-4" />}
       >
         <div className="flex items-center gap-2">
           {isSnoozed ? (
@@ -194,63 +240,110 @@ export const NotificationsSection = ({
         </div>
       </SettingRow>
 
-      {/* Task Status Change Notifications — grouped section */}
-      <div className="border-b py-3" style={{ borderColor: 'var(--color-border-subtle)' }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-              Task status change notifications
-            </div>
-            <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              Show native OS notifications when a task&apos;s status changes
-            </div>
-          </div>
-          <div className="shrink-0">
+      {/* Team Notifications — grouped card */}
+      <SettingsSectionHeader title="Team Notifications" icon={<Users className="size-3.5" />} />
+      <div
+        className="mb-4 rounded-lg border p-4"
+        style={{
+          borderColor: 'var(--color-border)',
+          backgroundColor: 'var(--color-surface-raised)',
+        }}
+      >
+        <SettingRow
+          label="Lead inbox notifications"
+          description="Notify when teammates send messages to the team lead"
+          icon={<Inbox className="size-4" />}
+        >
+          <SettingsToggle
+            enabled={safeConfig.notifications.notifyOnLeadInbox}
+            onChange={(v) => onNotificationToggle('notifyOnLeadInbox', v)}
+            disabled={saving || !safeConfig.notifications.enabled}
+          />
+        </SettingRow>
+        <SettingRow
+          label="User inbox notifications"
+          description="Notify when teammates send messages to you"
+          icon={<Mail className="size-4" />}
+        >
+          <SettingsToggle
+            enabled={safeConfig.notifications.notifyOnUserInbox}
+            onChange={(v) => onNotificationToggle('notifyOnUserInbox', v)}
+            disabled={saving || !safeConfig.notifications.enabled}
+          />
+        </SettingRow>
+        <SettingRow
+          label="Task clarification notifications"
+          description="Show native OS notifications when a task needs your input"
+          icon={<HelpCircle className="size-4" />}
+        >
+          <SettingsToggle
+            enabled={safeConfig.notifications.notifyOnClarifications}
+            onChange={(v) => onNotificationToggle('notifyOnClarifications', v)}
+            disabled={saving || !safeConfig.notifications.enabled}
+          />
+        </SettingRow>
+        <SettingRow
+          label="Task comment notifications"
+          description="Show native OS notifications when agents comment on tasks"
+          icon={<MessageSquare className="size-4" />}
+        >
+          <SettingsToggle
+            enabled={safeConfig.notifications.notifyOnTaskComments}
+            onChange={(v) => onNotificationToggle('notifyOnTaskComments', v)}
+            disabled={saving || !safeConfig.notifications.enabled}
+          />
+        </SettingRow>
+
+        {/* Task Status Change Notifications — nested within team card */}
+        <div className="last:*:border-b-0">
+          <SettingRow
+            label="Task status change notifications"
+            description="Show native OS notifications when a task's status changes"
+            icon={<ArrowRightLeft className="size-4" />}
+          >
             <SettingsToggle
               enabled={safeConfig.notifications.notifyOnStatusChange}
               onChange={(v) => onNotificationToggle('notifyOnStatusChange', v)}
               disabled={saving || !safeConfig.notifications.enabled}
             />
-          </div>
-        </div>
-        {safeConfig.notifications.notifyOnStatusChange && safeConfig.notifications.enabled ? (
-          <div
-            className="mt-3 flex flex-col gap-3 border-t pt-3"
-            style={{ borderColor: 'var(--color-border-subtle)', paddingLeft: 15 }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div
-                  className="text-sm font-medium"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  Only in Solo mode
+          </SettingRow>
+          {safeConfig.notifications.notifyOnStatusChange && safeConfig.notifications.enabled ? (
+            <div
+              className="flex flex-col gap-3 border-b pb-3"
+              style={{ borderColor: 'var(--color-border-subtle)', paddingLeft: 30 }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div
+                    className="text-sm font-medium"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Only in Solo mode
+                  </div>
+                  <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    Notify only when the team has no teammates
+                  </div>
                 </div>
-                <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  Notify only when the team has no teammates
-                </div>
-              </div>
-              <div className="shrink-0">
-                <SettingsToggle
-                  enabled={safeConfig.notifications.statusChangeOnlySolo}
-                  onChange={(v) => onNotificationToggle('statusChangeOnlySolo', v)}
-                  disabled={saving}
-                />
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <div
-                  className="text-sm font-medium"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  Notify on these statuses
-                </div>
-                <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  Which target statuses trigger a notification
+                <div className="shrink-0">
+                  <SettingsToggle
+                    enabled={safeConfig.notifications.statusChangeOnlySolo}
+                    onChange={(v) => onNotificationToggle('statusChangeOnlySolo', v)}
+                    disabled={saving}
+                  />
                 </div>
               </div>
-              <div className="shrink-0">
+              <div className="flex flex-col gap-1.5">
+                <div>
+                  <div
+                    className="text-sm font-medium"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Notify on these statuses
+                  </div>
+                  <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    Which target statuses trigger a notification
+                  </div>
+                </div>
                 <StatusCheckboxGroup
                   selected={safeConfig.notifications.statusChangeStatuses}
                   onChange={onStatusChangeStatusesUpdate}
@@ -258,8 +351,8 @@ export const NotificationsSection = ({
                 />
               </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
       {/* Custom Triggers */}
@@ -271,7 +364,7 @@ export const NotificationsSection = ({
         onRemoveTrigger={onRemoveTrigger}
       />
 
-      <SettingsSectionHeader title="Ignored Repositories" />
+      <SettingsSectionHeader title="Ignored Repositories" icon={<EyeOff className="size-3.5" />} />
       <p className="mb-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>
         Notifications from these repositories will be ignored
       </p>
@@ -303,6 +396,37 @@ export const NotificationsSection = ({
         disabled={saving}
         dropUp
       />
+
+      {/* Task Completion Notifications */}
+      <SettingsSectionHeader
+        title="Task Completion Notifications"
+        icon={<PartyPopper className="size-3.5" />}
+      />
+      <div
+        className="mb-4 rounded-lg border p-4"
+        style={{
+          borderColor: 'var(--color-border)',
+          backgroundColor: 'var(--color-surface-raised)',
+        }}
+      >
+        <p className="mb-3 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          Get native OS notifications when Claude finishes tasks — sounds, banners, and Dock/taskbar
+          badges. Works on macOS, Linux, and Windows.
+        </p>
+        <button
+          onClick={() =>
+            void api.openExternal('https://github.com/777genius/claude-notifications-go')
+          }
+          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:brightness-125"
+          style={{
+            backgroundColor: 'var(--color-border-emphasis)',
+            color: 'var(--color-text)',
+          }}
+        >
+          <ExternalLink className="size-3.5" />
+          Install claude-notifications-go plugin
+        </button>
+      </div>
     </div>
   );
 };

@@ -299,6 +299,7 @@ export function useSettingsHandlers({
           notifyOnUserInbox: true,
           notifyOnClarifications: true,
           notifyOnStatusChange: true,
+          notifyOnTaskComments: true,
           statusChangeOnlySolo: true,
           statusChangeStatuses: ['in_progress', 'completed'],
           triggers: defaultTriggers,

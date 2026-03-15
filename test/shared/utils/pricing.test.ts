@@ -9,14 +9,14 @@ import {
 describe('Shared Pricing Module', () => {
   describe('getPricing', () => {
     it('should find pricing by exact model name', () => {
-      const pricing = getPricing('claude-3-5-sonnet-20241022');
+      const pricing = getPricing('claude-4-sonnet-20250514');
       expect(pricing).not.toBeNull();
       expect(pricing!.input_cost_per_token).toBeGreaterThan(0);
       expect(pricing!.output_cost_per_token).toBeGreaterThan(0);
     });
 
     it('should find pricing case-insensitively', () => {
-      const pricing = getPricing('Claude-3-5-Sonnet-20241022');
+      const pricing = getPricing('Claude-4-Sonnet-20250514');
       expect(pricing).not.toBeNull();
     });
 
@@ -50,7 +50,7 @@ describe('Shared Pricing Module', () => {
 
   describe('calculateMessageCost', () => {
     it('should compute cost for a known model', () => {
-      const cost = calculateMessageCost('claude-3-5-sonnet-20241022', 1000, 500, 0, 0);
+      const cost = calculateMessageCost('claude-4-sonnet-20250514', 1000, 500, 0, 0);
       expect(cost).toBeCloseTo(0.0105, 6);
     });
 
@@ -65,14 +65,14 @@ describe('Shared Pricing Module', () => {
     });
 
     it('should include cache token costs', () => {
-      const cost = calculateMessageCost('claude-3-5-sonnet-20241022', 1000, 500, 300, 200);
+      const cost = calculateMessageCost('claude-4-sonnet-20250514', 1000, 500, 300, 200);
       expect(cost).toBeGreaterThan(0.0105);
     });
   });
 
   describe('getDisplayPricing', () => {
     it('should return per-million rates for a known model', () => {
-      const dp = getDisplayPricing('claude-3-5-sonnet-20241022');
+      const dp = getDisplayPricing('claude-4-sonnet-20250514');
       expect(dp).not.toBeNull();
       expect(dp!.input).toBeCloseTo(3.0, 1);
       expect(dp!.output).toBeCloseTo(15.0, 1);

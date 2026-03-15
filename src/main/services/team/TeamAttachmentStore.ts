@@ -1,4 +1,4 @@
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getAppDataPath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -9,7 +9,6 @@ import type { AttachmentFileData, AttachmentPayload } from '@shared/types';
 
 const logger = createLogger('Service:TeamAttachmentStore');
 
-const ATTACHMENTS_DIR = 'attachments';
 const MAX_ATTACHMENTS_FILE_BYTES = 64 * 1024 * 1024; // 64MB safety cap
 
 export class TeamAttachmentStore {
@@ -27,7 +26,7 @@ export class TeamAttachmentStore {
 
   private getDir(teamName: string): string {
     this.assertSafePathSegment('teamName', teamName);
-    return path.join(getTeamsBasePath(), teamName, ATTACHMENTS_DIR);
+    return path.join(getAppDataPath(), 'attachments', teamName);
   }
 
   private getFilePath(teamName: string, messageId: string): string {

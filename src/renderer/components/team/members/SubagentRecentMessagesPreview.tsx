@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
+import { displayMemberName } from '@renderer/utils/memberHelpers';
 import { format } from 'date-fns';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -44,13 +45,17 @@ export const SubagentRecentMessagesPreview = ({
     <div className="mb-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
       <div className="mb-2 flex items-center gap-2">
         <div className="min-w-0 truncate text-[11px] text-[var(--color-text-muted)]">
-          Latest messages{memberName ? ` — ${memberName}` : ''}
+          Latest messages{memberName ? ` — ${displayMemberName(memberName)}` : ''}
         </div>
       </div>
 
       <div className={`${expandedAll ? 'max-h-none' : 'max-h-[200px]'} overflow-y-auto pr-1`}>
         {messages.map((m, index) => (
-          <div key={m.id} className="py-1.5">
+          <div
+            key={m.id}
+            className="rounded px-2 py-1.5"
+            style={index % 2 === 0 ? { backgroundColor: 'var(--card-bg-zebra)' } : undefined}
+          >
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1 text-xs text-[var(--color-text)]">
                 <MarkdownViewer
@@ -64,10 +69,6 @@ export const SubagentRecentMessagesPreview = ({
                 {format(m.timestamp, 'h:mm:ss a')}
               </div>
             </div>
-
-            {index < messages.length - 1 ? (
-              <hr className="mt-2 border-[var(--color-border)]" />
-            ) : null}
           </div>
         ))}
 

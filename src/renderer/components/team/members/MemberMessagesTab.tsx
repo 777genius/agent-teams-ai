@@ -1,3 +1,7 @@
+import { useMemo } from 'react';
+
+import { filterTeamMessages } from '@renderer/utils/teamMessageFiltering';
+
 import { ActivityItem } from '../activity/ActivityItem';
 
 import type { InboxMessage } from '@shared/types';
@@ -15,7 +19,15 @@ export const MemberMessagesTab = ({
   teamName,
   onCreateTask,
 }: MemberMessagesTabProps): React.JSX.Element => {
-  const displayMessages = messages.slice(0, MAX_MESSAGES);
+  const displayMessages = useMemo(
+    () =>
+      filterTeamMessages(messages, {
+        timeWindow: null,
+        filter: { from: new Set(), to: new Set(), showNoise: true },
+        searchQuery: '',
+      }).slice(0, MAX_MESSAGES),
+    [messages]
+  );
 
   if (displayMessages.length === 0) {
     return (

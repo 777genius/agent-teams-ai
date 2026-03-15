@@ -3,9 +3,14 @@ const path = require('path');
 const crypto = require('crypto');
 const { createControllerContext } = require('./context.js');
 const { withFileLockSync } = require('./fileLock.js');
+const messageStore = require('./messageStore.js');
 const cascadeGuard = require('./cascadeGuard.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
-const { formatCrossTeamText, CROSS_TEAM_SOURCE } = require('./crossTeamProtocol.js');
+const {
+  formatCrossTeamText,
+  CROSS_TEAM_SOURCE,
+  CROSS_TEAM_SENT_SOURCE,
+} = require('./crossTeamProtocol.js');
 
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const CROSS_TEAM_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
@@ -180,6 +185,7 @@ function sendCrossTeamMessage(context, flags) {
     replyToConversationId: replyToConversationId || undefined,
   });
   const messageId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+  const timestamp = new Date().toISOString();
   const dedupeKey = buildCrossTeamDedupeKey(fromTeam, fromMember, toTeam, text, summary);
 
   const inboxPath = path.join(targetContext.paths.teamDir, 'inboxes', `${leadName}.json`);
@@ -206,7 +212,7 @@ function sendCrossTeamMessage(context, flags) {
         from,
         to: leadName,
         text: formattedText,
-        timestamp: new Date().toISOString(),
+        timestamp,
         read: false,
         summary: summary || `Cross-team message from ${fromTeam}`,
         messageId,
@@ -224,6 +230,18 @@ function sendCrossTeamMessage(context, flags) {
       throw new Error('Cross-team inbox write verification failed');
     }
 
+    messageStore.appendSentMessage(context.paths, {
+      from: fromMember,
+      to: `${toTeam}.${leadName}`,
+      text,
+      timestamp,
+      messageId,
+      summary: summary || `Cross-team message to ${toTeam}`,
+      source: CROSS_TEAM_SENT_SOURCE,
+      conversationId: resolvedConversationId,
+      replyToConversationId: replyToConversationId || undefined,
+    });
+
     outList.push({
       messageId,
       fromTeam,
@@ -234,7 +252,7 @@ function sendCrossTeamMessage(context, flags) {
       text,
       summary,
       chainDepth,
-      timestamp: new Date().toISOString(),
+      timestamp,
     });
     writeJson(outboxPath, outList);
   });

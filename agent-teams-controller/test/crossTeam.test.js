@@ -87,6 +87,15 @@ describe('crossTeam module', () => {
       expect(outbox).toHaveLength(1);
       expect(outbox[0].toTeam).toBe('team-b');
       expect(outbox[0].conversationId).toBeTruthy();
+
+      const sentMessagesPath = path.join(claudeDir, 'teams', 'team-a', 'sentMessages.json');
+      const sentMessages = JSON.parse(fs.readFileSync(sentMessagesPath, 'utf8'));
+      expect(sentMessages).toHaveLength(1);
+      expect(sentMessages[0].from).toBe('team-lead');
+      expect(sentMessages[0].to).toBe('team-b.team-lead');
+      expect(sentMessages[0].text).toBe('Hello');
+      expect(sentMessages[0].source).toBe('cross_team_sent');
+      expect(sentMessages[0].messageId).toBe(outbox[0].messageId);
     });
 
     it('preserves reply conversation metadata for explicit replies', () => {
@@ -152,6 +161,10 @@ describe('crossTeam module', () => {
 
       const outbox = controller.crossTeam.getCrossTeamOutbox();
       expect(outbox).toHaveLength(1);
+
+      const sentMessagesPath = path.join(claudeDir, 'teams', 'team-a', 'sentMessages.json');
+      const sentMessages = JSON.parse(fs.readFileSync(sentMessagesPath, 'utf8'));
+      expect(sentMessages).toHaveLength(1);
     });
 
     it('allows resending after dedupe window expires', () => {

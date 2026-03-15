@@ -10,7 +10,12 @@ import https from 'node:https';
 import http from 'node:http';
 
 import { createLogger } from '@shared/utils/logger';
-import type { McpCatalogItem, McpEnvVarDef, McpInstallSpec } from '@shared/types/extensions';
+import type {
+  McpAuthHeaderDef,
+  McpCatalogItem,
+  McpEnvVarDef,
+  McpInstallSpec,
+} from '@shared/types/extensions';
 
 const logger = createLogger('Extensions:OfficialMcpRegistry');
 
@@ -265,6 +270,7 @@ export class OfficialMcpRegistryService {
     const meta = entry._meta?.['io.modelcontextprotocol.registry/official'];
     const installSpec = this.deriveInstallSpec(server);
     const envVars = this.collectEnvVars(server);
+    const authHeaders = this.collectAuthHeaders(server);
     const requiresAuth = this.detectAuthRequired(server);
 
     return {
@@ -285,6 +291,7 @@ export class OfficialMcpRegistryService {
       status: meta?.status,
       publishedAt: meta?.publishedAt,
       updatedAt: meta?.updatedAt,
+      authHeaders,
     };
   }
 
@@ -328,6 +335,30 @@ export class OfficialMcpRegistryService {
     }
 
     return envVars;
+  }
+
+  private collectAuthHeaders(server: RegistryServerEntry['server']): McpAuthHeaderDef[] {
+    const headers: McpAuthHeaderDef[] = [];
+    const seenKeys = new Set<string>();
+
+    for (const remote of server.remotes ?? []) {
+      for (const header of remote.headers ?? []) {
+        const key = header.name.trim();
+        if (!key || seenKeys.has(key)) {
+          continue;
+        }
+        seenKeys.add(key);
+        headers.push({
+          key,
+          description: header.description,
+          isRequired: header.isRequired,
+          isSecret: header.isSecret,
+          valueTemplate: header.value,
+        });
+      }
+    }
+
+    return headers;
   }
 
   private detectAuthRequired(server: RegistryServerEntry['server']): boolean {

@@ -9,8 +9,8 @@
 
 import type { CliArgsValidationResult } from '../utils/cliArgsParser';
 import type { CliInstallerAPI } from './cliInstaller';
-import type { EditorAPI, ProjectAPI } from './editor';
-import type { McpCatalogAPI, PluginCatalogAPI, ApiKeysAPI } from './extensions';
+import type { EditorAPI, EditorFileChangeEvent, ProjectAPI } from './editor';
+import type { McpCatalogAPI, PluginCatalogAPI, ApiKeysAPI, SkillsCatalogAPI } from './extensions';
 import type {
   AppConfig,
   DetectedError,
@@ -38,6 +38,7 @@ import type {
 } from './review';
 import type {
   AddMemberRequest,
+  AddTaskCommentRequest,
   AttachmentFileData,
   CommentAttachmentPayload,
   CreateTaskRequest,
@@ -46,11 +47,11 @@ import type {
   CrossTeamSendResult,
   GlobalTask,
   KanbanColumnId,
-  LeadActivityState,
-  LeadContextUsage,
+  LeadActivitySnapshot,
+  LeadContextUsageSnapshot,
   MemberFullStats,
   MemberLogSummary,
-  MemberSpawnStatusEntry,
+  MemberSpawnStatusesSnapshot,
   ReplaceMembersRequest,
   SendMessageRequest,
   SendMessageResult,
@@ -154,6 +155,7 @@ export interface NotificationsAPI {
   delete: (id: string) => Promise<boolean>;
   clear: () => Promise<boolean>;
   getUnreadCount: () => Promise<number>;
+  testNotification: () => Promise<{ success: boolean; error?: string }>;
   onNew: (callback: (event: unknown, error: unknown) => void) => () => void;
   onUpdated: (
     callback: (event: unknown, payload: { total: number; unreadCount: number }) => void
@@ -472,8 +474,7 @@ export interface TeamsAPI {
   addTaskComment: (
     teamName: string,
     taskId: string,
-    text: string,
-    attachments?: CommentAttachmentPayload[]
+    request: AddTaskCommentRequest
   ) => Promise<TaskComment>;
   setTaskClarification: (
     teamName: string,
@@ -483,9 +484,9 @@ export interface TeamsAPI {
   getProjectBranch: (projectPath: string) => Promise<string | null>;
   getAttachments: (teamName: string, messageId: string) => Promise<AttachmentFileData[]>;
   killProcess: (teamName: string, pid: number) => Promise<void>;
-  getLeadActivity: (teamName: string) => Promise<LeadActivityState>;
-  getLeadContext: (teamName: string) => Promise<LeadContextUsage | null>;
-  getMemberSpawnStatuses: (teamName: string) => Promise<Record<string, MemberSpawnStatusEntry>>;
+  getLeadActivity: (teamName: string) => Promise<LeadActivitySnapshot>;
+  getLeadContext: (teamName: string) => Promise<LeadContextUsageSnapshot>;
+  getMemberSpawnStatuses: (teamName: string) => Promise<MemberSpawnStatusesSnapshot>;
   softDeleteTask: (teamName: string, taskId: string) => Promise<void>;
   restoreTask: (teamName: string, taskId: string) => Promise<void>;
   getDeletedTasks: (teamName: string) => Promise<TeamTask[]>;
@@ -552,6 +553,7 @@ export interface CrossTeamAPI {
       color?: string;
       leadName?: string;
       leadColor?: string;
+      isOnline?: boolean;
     }[]
   >;
   getOutbox: (teamName: string) => Promise<CrossTeamMessage[]>;
@@ -595,10 +597,15 @@ export interface ReviewAPI {
       intervals?: { startedAt: string; completedAt?: string }[];
       /** Back-compat: single since timestamp (deprecated). */
       since?: string;
+      /** Derived task lifecycle bucket used for safe summary caching. */
+      stateBucket?: 'approved' | 'review' | 'completed' | 'active';
       /** Lightweight response for summary UIs; skips snippets/timeline details. */
       summaryOnly?: boolean;
+      /** Force a fresh recompute and overwrite any cache snapshot. */
+      forceFresh?: boolean;
     }
   ) => Promise<TaskChangeSetV2>;
+  invalidateTaskChangeSummaries: (teamName: string, taskIds: string[]) => Promise<void>;
   getChangeStats: (teamName: string, memberName: string) => Promise<ChangeStats>;
   getFileContent: (
     teamName: string,
@@ -630,6 +637,9 @@ export interface ReviewAPI {
     content: string,
     projectPath?: string
   ) => Promise<{ success: boolean }>;
+  watchFiles: (projectPath: string, filePaths: string[]) => Promise<void>;
+  unwatchFiles: () => Promise<void>;
+  onExternalFileChange: (callback: (event: EditorFileChangeEvent) => void) => () => void;
   // Decision persistence
   loadDecisions: (
     teamName: string,
@@ -813,6 +823,9 @@ export interface ElectronAPI {
 
   // Extension Store — MCP Registry API (Electron-only, optional)
   mcpRegistry?: McpCatalogAPI;
+
+  // Extension Store — Skills Catalog API (Electron-only, optional)
+  skills?: SkillsCatalogAPI;
 
   // Extension Store — API Keys Management (Electron-only, optional)
   apiKeys?: ApiKeysAPI;

@@ -3,6 +3,8 @@
  * States: idle → pending (spinner) → success (checkmark, 2s) → idle
  */
 
+import { useEffect, useState } from 'react';
+
 import { Check, Loader2, Trash2 } from 'lucide-react';
 
 import { Button } from '@renderer/components/ui/button';
@@ -38,11 +40,22 @@ export function InstallButton({
   const cliStatus = useStore((s) => s.cliStatus);
   const cliMissing = cliStatus !== null && !cliStatus.installed;
   const isDisabled = disabled || cliMissing;
+  const [lastAction, setLastAction] = useState<'install' | 'uninstall' | null>(null);
+
+  useEffect(() => {
+    if (state === 'idle' || state === 'success') {
+      setLastAction(null);
+    }
+  }, [state]);
+
+  const pendingAction = lastAction ?? (isInstalled ? 'uninstall' : 'install');
   if (state === 'pending') {
     return (
       <Button size={size} variant="outline" disabled>
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        <span className="ml-1.5">{isInstalled ? 'Removing...' : 'Installing...'}</span>
+        <span className="ml-1.5">
+          {pendingAction === 'uninstall' ? 'Removing...' : 'Installing...'}
+        </span>
       </Button>
     );
   }
@@ -64,7 +77,14 @@ export function InstallButton({
         className="border-red-500/30 text-red-400 hover:bg-red-500/10"
         onClick={(e) => {
           e.stopPropagation();
-          (isInstalled ? onUninstall : onInstall)();
+          if (pendingAction === 'uninstall') {
+            setLastAction('uninstall');
+            onUninstall();
+            return;
+          }
+
+          setLastAction('install');
+          onInstall();
         }}
         disabled={isDisabled}
       >
@@ -96,6 +116,7 @@ export function InstallButton({
       className="border-red-500/30 text-red-400 hover:bg-red-500/10"
       onClick={(e) => {
         e.stopPropagation();
+        setLastAction('uninstall');
         onUninstall();
       }}
       disabled={isDisabled}
@@ -109,6 +130,7 @@ export function InstallButton({
       variant="default"
       onClick={(e) => {
         e.stopPropagation();
+        setLastAction('install');
         onInstall();
       }}
       disabled={isDisabled}

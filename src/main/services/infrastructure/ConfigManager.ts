@@ -48,6 +48,8 @@ export interface NotificationConfig {
   notifyOnClarifications: boolean;
   /** Whether to show native OS notifications when a task status changes */
   notifyOnStatusChange: boolean;
+  /** Whether to show native OS notifications when a new comment is added to a task */
+  notifyOnTaskComments: boolean;
   /** Only notify on status changes in solo teams (no teammates) */
   statusChangeOnlySolo: boolean;
   /** Which target statuses to notify about (e.g. ['in_progress', 'completed']) */
@@ -257,11 +259,12 @@ const DEFAULT_CONFIG: AppConfig = {
     snoozedUntil: null,
     snoozeMinutes: 30,
     includeSubagentErrors: false,
-    notifyOnLeadInbox: false,
+    notifyOnLeadInbox: true,
     notifyOnUserInbox: true,
     notifyOnClarifications: true,
     notifyOnStatusChange: true,
-    statusChangeOnlySolo: true,
+    notifyOnTaskComments: true,
+    statusChangeOnlySolo: false,
     statusChangeStatuses: ['in_progress', 'completed'],
     triggers: DEFAULT_TRIGGERS,
   },

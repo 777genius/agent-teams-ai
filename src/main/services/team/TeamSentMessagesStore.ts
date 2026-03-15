@@ -72,8 +72,11 @@ export class TeamSentMessagesStore {
         text: row.text,
         timestamp: row.timestamp,
         read: typeof row.read === 'boolean' ? row.read : true,
+        taskRefs: Array.isArray(row.taskRefs) ? row.taskRefs : undefined,
         summary: typeof row.summary === 'string' ? row.summary : undefined,
         messageId: row.messageId,
+        relayOfMessageId:
+          typeof row.relayOfMessageId === 'string' ? row.relayOfMessageId : undefined,
         color: typeof row.color === 'string' ? row.color : undefined,
         attachments: Array.isArray(row.attachments) ? row.attachments : undefined,
         source: typeof row.source === 'string' ? (row.source as InboxMessage['source']) : undefined,

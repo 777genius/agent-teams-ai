@@ -23,12 +23,14 @@ import { ChangeExtractorService } from '@main/services/team/ChangeExtractorServi
 import { FileContentResolver } from '@main/services/team/FileContentResolver';
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
+import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
 import { SchedulerService } from '@main/services/schedule/SchedulerService';
 import {
   CONTEXT_CHANGED,
   SCHEDULE_CHANGE,
+  SKILLS_CHANGED,
   SSH_STATUS,
   TEAM_CHANGE,
   TEAM_TOOL_APPROVAL_EVENT,
@@ -49,10 +51,16 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
+import { setReviewMainWindow } from './ipc/review';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { startEventLoopLagMonitor } from './services/infrastructure/EventLoopLagMonitor';
 import { HttpServer } from './services/infrastructure/HttpServer';
 import { TeamInboxReader } from './services/team/TeamInboxReader';
+import {
+  buildTeamControlApiBaseUrl,
+  clearTeamControlApiState,
+  writeTeamControlApiState,
+} from './services/team/TeamControlApiState';
 import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
 import { getAppIconPath } from './utils/appIcon';
 import { getProjectsBasePath, getTeamsBasePath, getTodosBasePath } from './utils/pathDecoder';
@@ -77,12 +85,16 @@ import {
   ExtensionFacadeService,
   GlamaMcpEnrichmentService,
   McpCatalogAggregator,
+  McpHealthDiagnosticsService,
   McpInstallationStateService,
   McpInstallService,
   OfficialMcpRegistryService,
   PluginCatalogService,
   PluginInstallationStateService,
   PluginInstallService,
+  SkillsCatalogService,
+  SkillsMutationService,
+  SkillsWatcherService,
 } from './services/extensions';
 
 import type { FileChangeEvent } from '@main/types';
@@ -171,6 +183,7 @@ function extractNotificationContent(text: string): { summary: string; body: stri
 }
 
 async function notifyNewInboxMessages(teamName: string, detail: string): Promise<void> {
+  logger.debug(`[inbox-notify] called: team=${teamName} detail=${detail}`);
   const config = configManager.getConfig();
 
   // Skip orphaned team directories without config.json (e.g., "default").
@@ -179,6 +192,7 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
   // correct team name via sentMessages.json, so inbox notifications from orphaned dirs
   // would be duplicates with a wrong team name.
   if (!existsSync(join(getTeamsBasePath(), teamName, 'config.json'))) {
+    logger.debug(`[inbox-notify] skipped: no config.json for team=${teamName}`);
     return; // No config.json → orphaned team dir, skip notification
   }
 
@@ -209,6 +223,7 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
 
     if (isFirstLoad) {
       // First load — seed count, don't notify for pre-existing messages
+      logger.debug(`[inbox-notify] first load for ${key}: seeding count=${messages.length}`);
       inboxMessageCounts.set(key, messages.length);
       return;
     }
@@ -221,6 +236,10 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
     // Messages are sorted newest-first, so new ones are at the beginning
     const newMessages = messages.slice(0, messages.length - prevCount);
     inboxMessageCounts.set(key, messages.length);
+
+    logger.debug(
+      `[inbox-notify] ${key}: prevCount=${prevCount} newCount=${messages.length} newMessages=${newMessages.length} suppressToast=${String(suppressToast)}`
+    );
 
     const teamDisplayName = await resolveTeamDisplayName(teamName);
 
@@ -338,6 +357,8 @@ let cliInstallerService: CliInstallerService;
 let ptyTerminalService: PtyTerminalService;
 let httpServer: HttpServer;
 let schedulerService: SchedulerService;
+let skillsWatcherService: SkillsWatcherService | null = null;
+let teamBackupService: TeamBackupService | null = null;
 
 // File watcher event cleanup functions
 let fileChangeCleanup: (() => void) | null = null;
@@ -354,6 +375,24 @@ function getRendererIndexPath(): string {
     join(__dirname, '../renderer/index.html'),
   ];
   return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
+}
+
+function getTeamControlApiBaseUrl(): string | null {
+  if (!httpServer?.isRunning()) {
+    return null;
+  }
+
+  return buildTeamControlApiBaseUrl(httpServer.getPort());
+}
+
+async function syncTeamControlApiState(): Promise<void> {
+  const baseUrl = getTeamControlApiBaseUrl();
+  if (!baseUrl) {
+    await clearTeamControlApiState();
+    return;
+  }
+
+  await writeTeamControlApiState(baseUrl);
 }
 
 /**
@@ -528,6 +567,23 @@ function wireFileWatcherEvents(context: ServiceContext): void {
               `[FileWatcher] task start notify failed for ${teamName}#${taskId}: ${String(e)}`
             )
           );
+        void teamDataService
+          .notifyLeadOnTeammateTaskComment(teamName, taskId)
+          .catch((e: unknown) =>
+            logger.warn(
+              `[FileWatcher] task comment notify failed for ${teamName}#${taskId}: ${String(e)}`
+            )
+          );
+
+        // Schedule debounced backup for changed task file
+        if (teamBackupService) {
+          teamBackupService.scheduleTaskBackup(teamName, detail);
+        }
+      }
+
+      // Backup on config changes (covers team ready, config updates)
+      if (row.type === 'config' && detail === 'config.json' && teamBackupService) {
+        void teamBackupService.backupTeam(teamName).catch(() => undefined);
       }
     } catch {
       // ignore
@@ -671,6 +727,20 @@ function initializeServices(): void {
   ptyTerminalService = new PtyTerminalService();
   teamDataService = new TeamDataService();
   teamProvisioningService = new TeamProvisioningService();
+  void teamDataService
+    .initializeTaskCommentNotificationState()
+    .catch((error: unknown) =>
+      logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
+    );
+  teamBackupService = new TeamBackupService();
+  // Fire-and-forget: initializeServices() is sync, cannot await.
+  // Safe because TeamBackupService.initialized flag blocks all backup/restore
+  // operations until initialize() completes internally (restore → prune → set flag).
+  void teamBackupService
+    .initialize()
+    .catch((error: unknown) =>
+      logger.warn(`[Init] TeamBackupService init failed: ${String(error)}`)
+    );
 
   // Cross-team communication service
   const crossTeamConfigReader = new TeamConfigReader();
@@ -711,6 +781,10 @@ function initializeServices(): void {
   const glamaMcpService = new GlamaMcpEnrichmentService();
   const mcpAggregator = new McpCatalogAggregator(officialMcpRegistry, glamaMcpService);
   const mcpStateService = new McpInstallationStateService();
+  const mcpHealthDiagnosticsService = new McpHealthDiagnosticsService(null);
+  const skillsCatalogService = new SkillsCatalogService();
+  const skillsMutationService = new SkillsMutationService();
+  skillsWatcherService = new SkillsWatcherService();
   const extensionFacadeService = new ExtensionFacadeService(
     pluginCatalogService,
     pluginStateService,
@@ -725,6 +799,13 @@ function initializeServices(): void {
   // warmup() and ensureInstalled() are deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.
   httpServer = new HttpServer();
+  teamProvisioningService.setControlApiBaseUrlResolver(async () => {
+    if (!httpServer.isRunning()) {
+      await startHttpServer(handleModeSwitch);
+    }
+
+    return getTeamControlApiBaseUrl();
+  });
 
   // Allow TeamProvisioningService to trigger team refresh events (e.g. live lead replies).
   const teamChangeEmitter = (event: TeamChangeEvent): void => {
@@ -739,6 +820,12 @@ function initializeServices(): void {
   schedulerService.setChangeEmitter((event) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send(SCHEDULE_CHANGE, event);
+    }
+  });
+
+  skillsWatcherService.setEmitter((event) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(SKILLS_CHANGED, event);
     }
   });
 
@@ -766,6 +853,9 @@ function initializeServices(): void {
       onClaudeRootPathUpdated: (_claudeRootPath: string | null) => {
         reconfigureLocalContextForClaudeRoot();
         void schedulerService?.reloadForClaudeRootChange();
+        if (httpServer?.isRunning()) {
+          void syncTeamControlApiState().catch(() => undefined);
+        }
       },
     },
     {
@@ -783,7 +873,12 @@ function initializeServices(): void {
     pluginInstallService,
     mcpInstallService,
     apiKeyService,
-    crossTeamService
+    mcpHealthDiagnosticsService,
+    skillsCatalogService,
+    skillsMutationService,
+    skillsWatcherService,
+    crossTeamService,
+    teamBackupService ?? undefined
   );
 
   // Forward SSH state changes to renderer and HTTP SSE clients
@@ -808,7 +903,7 @@ function initializeServices(): void {
   // Start HTTP server if enabled in config
   const appConfig = configManager.getConfig();
   if (appConfig.httpServer?.enabled) {
-    void startHttpServer(handleModeSwitch);
+    void startHttpServer(handleModeSwitch).catch(() => undefined);
   }
 
   logger.info('Services initialized successfully');
@@ -821,6 +916,11 @@ async function startHttpServer(
   modeSwitchHandler: (mode: 'local' | 'ssh') => Promise<void>
 ): Promise<void> {
   try {
+    if (httpServer.isRunning()) {
+      await syncTeamControlApiState();
+      return;
+    }
+
     const config = configManager.getConfig();
     const activeContext = contextRegistry.getActive();
     const port = await httpServer.start(
@@ -832,13 +932,17 @@ async function startHttpServer(
         dataCache: activeContext.dataCache,
         updaterService,
         sshConnectionManager,
+        teamProvisioningService,
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456
     );
+    await syncTeamControlApiState();
     logger.info(`HTTP sidecar server running on port ${port}`);
   } catch (error) {
+    await clearTeamControlApiState().catch(() => undefined);
     logger.error('Failed to start HTTP server:', error);
+    throw error;
   }
 }
 
@@ -848,10 +952,23 @@ async function startHttpServer(
 function shutdownServices(): void {
   logger.info('Shutting down services...');
 
+  // Kill all team CLI processes via SIGKILL BEFORE anything else.
+  // This must happen before the OS closes stdin pipes (on app exit),
+  // because stdin EOF triggers CLI's graceful shutdown which deletes team files.
+  if (teamProvisioningService) {
+    teamProvisioningService.stopAllTeams();
+  }
+
+  // Sync backup all team data (files are stable after SIGKILL).
+  if (teamBackupService) {
+    teamBackupService.runShutdownBackupSync();
+  }
+
   // Stop HTTP server
   if (httpServer?.isRunning()) {
     void httpServer.stop();
   }
+  void clearTeamControlApiState();
 
   // Clean up file watcher event listeners
   if (fileChangeCleanup) {
@@ -880,13 +997,6 @@ function shutdownServices(): void {
     sshConnectionManager.dispose();
   }
 
-  // Stop all running team provisioning processes
-  if (teamProvisioningService) {
-    for (const teamName of teamProvisioningService.getAliveTeams()) {
-      teamProvisioningService.stopTeam(teamName);
-    }
-  }
-
   // Stop background polling timers (prevents hanging shutdown).
   if (teamDataService) {
     teamDataService.stopProcessHealthPolling();
@@ -897,6 +1007,8 @@ function shutdownServices(): void {
     void schedulerService.stop();
   }
 
+  void skillsWatcherService?.stopAll();
+
   // Kill all PTY processes
   if (ptyTerminalService) {
     ptyTerminalService.killAll();
@@ -904,6 +1016,9 @@ function shutdownServices(): void {
 
   // Remove IPC handlers
   removeIpcHandlers();
+
+  // Dispose backup service timers
+  teamBackupService?.dispose();
 
   logger.info('Services shut down successfully');
 }
@@ -1135,6 +1250,7 @@ function createWindow(): void {
       ptyTerminalService.setMainWindow(null);
     }
     setEditorMainWindow(null);
+    setReviewMainWindow(null);
     cleanupEditorState();
   });
 
@@ -1158,6 +1274,7 @@ function createWindow(): void {
     ptyTerminalService.setMainWindow(mainWindow);
   }
   setEditorMainWindow(mainWindow);
+  setReviewMainWindow(mainWindow);
 
   logger.info('Main window created');
 }

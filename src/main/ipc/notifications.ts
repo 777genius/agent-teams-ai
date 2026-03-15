@@ -8,6 +8,7 @@
  * - notifications:delete: Delete a single notification
  * - notifications:clear: Clear all notifications
  * - notifications:getUnreadCount: Get unread count for badge
+ * - notifications:testNotification: Send a test notification to verify delivery
  */
 
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -36,6 +37,7 @@ export function registerNotificationHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('notifications:delete', handleDelete);
   ipcMain.handle('notifications:clear', handleClear);
   ipcMain.handle('notifications:getUnreadCount', handleGetUnreadCount);
+  ipcMain.handle('notifications:testNotification', handleTestNotification);
 
   logger.info('Notification handlers registered');
 }
@@ -51,6 +53,7 @@ export function removeNotificationHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler('notifications:delete');
   ipcMain.removeHandler('notifications:clear');
   ipcMain.removeHandler('notifications:getUnreadCount');
+  ipcMain.removeHandler('notifications:testNotification');
 
   logger.info('Notification handlers removed');
 }
@@ -182,5 +185,22 @@ async function handleGetUnreadCount(_event: IpcMainInvokeEvent): Promise<number>
   } catch (error) {
     logger.error('Error in notifications:getUnreadCount:', error);
     return 0;
+  }
+}
+
+/**
+ * Handler for 'notifications:testNotification' IPC call.
+ * Sends a test notification to verify that native OS notifications are delivered.
+ */
+function handleTestNotification(_event: IpcMainInvokeEvent): { success: boolean; error?: string } {
+  try {
+    logger.debug('Handling notifications:testNotification request');
+    const manager = NotificationManager.getInstance();
+    const result = manager.sendTestNotification();
+    logger.debug(`notifications:testNotification result: success=${String(result.success)}`);
+    return result;
+  } catch (error) {
+    logger.error('Error in notifications:testNotification:', error);
+    return { success: false, error: getErrorMessage(error) };
   }
 }

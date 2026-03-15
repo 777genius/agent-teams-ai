@@ -9,15 +9,20 @@ import {
 } from '@renderer/components/ui/dialog';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useStore } from '@renderer/store';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import {
+  extractTaskRefsFromText,
+  stripEncodedTaskReferenceMetadata,
+} from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 import { Send } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { ResolvedTeamMember } from '@shared/types';
+import type { ResolvedTeamMember, TaskRef } from '@shared/types';
 
 interface ReviewDialogProps {
   open: boolean;
@@ -25,7 +30,7 @@ interface ReviewDialogProps {
   taskId: string | null;
   members: ResolvedTeamMember[];
   onCancel: () => void;
-  onSubmit: (comment?: string) => void;
+  onSubmit: (comment?: string, taskRefs?: TaskRef[]) => void;
 }
 
 export const ReviewDialog = ({
@@ -37,6 +42,7 @@ export const ReviewDialog = ({
   onSubmit,
 }: ReviewDialogProps): React.JSX.Element => {
   const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
+  const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
   const draft = useDraftPersistence({
     key: `requestChanges:${teamName}:${taskId ?? ''}`,
     enabled: Boolean(teamName && taskId),
@@ -54,13 +60,14 @@ export const ReviewDialog = ({
     [members, colorMap]
   );
 
-  const trimmed = draft.value.trim();
+  const trimmed = stripEncodedTaskReferenceMetadata(draft.value).trim();
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
 
   const handleSubmit = (): void => {
-    const comment = trimmed || undefined;
+    const comment = stripEncodedTaskReferenceMetadata(trimmed) || undefined;
+    const taskRefs = trimmed ? extractTaskRefsFromText(draft.value, taskSuggestions) : [];
     draft.clearDraft();
-    onSubmit(comment);
+    onSubmit(comment, taskRefs);
   };
 
   return (
@@ -85,6 +92,7 @@ export const ReviewDialog = ({
             onValueChange={draft.setValue}
             placeholder="Describe what needs to change... (Enter to submit)"
             suggestions={mentionSuggestions}
+            taskSuggestions={taskSuggestions}
             projectPath={projectPath}
             onModEnter={handleSubmit}
             minRows={4}
@@ -110,7 +118,7 @@ export const ReviewDialog = ({
                   </span>
                 ) : null}
                 {draft.isSaved ? (
-                  <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                  <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
                 ) : null}
               </div>
             }

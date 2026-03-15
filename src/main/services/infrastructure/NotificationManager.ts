@@ -102,6 +102,13 @@ export class NotificationManager extends EventEmitter {
   private mainWindow: BrowserWindow | null = null;
   private throttleMap = new Map<string, number>();
   private isInitialized: boolean = false;
+  /**
+   * Prevents GC from collecting Notification objects before they are dismissed.
+   * On macOS, if the reference is lost, the notification may silently fail
+   * and click handlers stop working after ~1-2 minutes.
+   * @see https://blog.bloomca.me/2025/02/22/electron-mac-notifications.html
+   */
+  private activeNotifications = new Set<Notification>();
   /** Promise that resolves when async initialization is complete.
    *  Used by addError() to wait for notifications to be loaded from disk
    *  before writing, preventing a race where save overwrites unloaded data. */
@@ -383,8 +390,24 @@ export class NotificationManager extends EventEmitter {
       ...(iconPath ? { icon: iconPath } : {}),
     });
 
+    // Hold a strong reference to prevent GC from collecting the notification
+    this.activeNotifications.add(notification);
+    const cleanup = (): void => {
+      this.activeNotifications.delete(notification);
+    };
+
     notification.on('click', () => {
       this.handleNativeNotificationClick(stored);
+      cleanup();
+    });
+    notification.on('close', cleanup);
+
+    notification.on('show', () => {
+      logger.debug(`[notification] shown: "Claude Code Error" — ${stored.context.projectName}`);
+    });
+    notification.on('failed', (_, error) => {
+      logger.warn(`[notification] failed: ${error}`);
+      cleanup();
     });
 
     notification.show();
@@ -398,25 +421,56 @@ export class NotificationManager extends EventEmitter {
     stored: StoredNotification,
     payload: TeamNotificationPayload
   ): void {
-    if (!this.isNativeNotificationSupported()) return;
+    if (!this.isNativeNotificationSupported()) {
+      logger.warn('[team-toast] native notifications not supported — skipping');
+      return;
+    }
 
-    const config = this.configManager.getConfig();
-    const isMac = process.platform === 'darwin';
-    const truncatedBody = stripMarkdown(payload.body).slice(0, 300);
-    const iconPath = isMac ? undefined : getAppIconPath();
-    const notification = new Notification({
-      title: payload.teamDisplayName,
-      ...(isMac ? { subtitle: payload.summary } : {}),
-      body: !isMac && payload.summary ? `${payload.summary}\n${truncatedBody}` : truncatedBody,
-      sound: config.notifications.soundEnabled ? 'default' : undefined,
-      ...(iconPath ? { icon: iconPath } : {}),
-    });
+    try {
+      const config = this.configManager.getConfig();
+      const isMac = process.platform === 'darwin';
+      const truncatedBody = stripMarkdown(payload.body).slice(0, 300);
+      const iconPath = isMac ? undefined : getAppIconPath();
 
-    notification.on('click', () => {
-      this.handleNativeNotificationClick(stored);
-    });
+      logger.debug(
+        `[team-toast] creating: title="${payload.teamDisplayName}" summary="${payload.summary ?? ''}" bodyLen=${truncatedBody.length}`
+      );
 
-    notification.show();
+      const notification = new Notification({
+        title: payload.teamDisplayName,
+        ...(isMac ? { subtitle: payload.summary } : {}),
+        body: !isMac && payload.summary ? `${payload.summary}\n${truncatedBody}` : truncatedBody,
+        sound: config.notifications.soundEnabled ? 'default' : undefined,
+        ...(iconPath ? { icon: iconPath } : {}),
+      });
+
+      // Hold a strong reference to prevent GC from collecting the notification
+      this.activeNotifications.add(notification);
+      const cleanup = (): void => {
+        this.activeNotifications.delete(notification);
+      };
+
+      notification.on('click', () => {
+        this.handleNativeNotificationClick(stored);
+        cleanup();
+      });
+      notification.on('close', cleanup);
+
+      notification.on('show', () => {
+        logger.debug(
+          `[team-toast] OS confirmed show: "${payload.teamDisplayName}" — ${payload.summary ?? ''}`
+        );
+      });
+      notification.on('failed', (_, error) => {
+        logger.warn(`[team-toast] OS failed: ${String(error)}`);
+        cleanup();
+      });
+
+      notification.show();
+      logger.debug('[team-toast] notification.show() called');
+    } catch (error) {
+      logger.error(`[team-toast] exception in showTeamNativeNotification: ${String(error)}`);
+    }
   }
 
   /**
@@ -444,6 +498,53 @@ export class NotificationManager extends EventEmitter {
       return false;
     }
     return true;
+  }
+
+  // ===========================================================================
+  // Test Notification
+  // ===========================================================================
+
+  /**
+   * Sends a test notification to verify that native notifications work.
+   * Returns a result object indicating success or failure reason.
+   */
+  sendTestNotification(): { success: boolean; error?: string } {
+    if (!this.isNativeNotificationSupported()) {
+      logger.warn('[test-notification] native notifications not supported');
+      return { success: false, error: 'Native notifications are not supported on this platform' };
+    }
+
+    const isMac = process.platform === 'darwin';
+    const iconPath = isMac ? undefined : getAppIconPath();
+    logger.debug(`[test-notification] creating Notification (platform=${process.platform})`);
+    const notification = new Notification({
+      title: 'Test Notification',
+      ...(isMac ? { subtitle: 'Claude Agent Teams UI' } : {}),
+      body: isMac
+        ? 'Notifications are working correctly!'
+        : 'Claude Agent Teams UI\nNotifications are working correctly!',
+      ...(iconPath ? { icon: iconPath } : {}),
+    });
+
+    // Hold a strong reference to prevent GC
+    this.activeNotifications.add(notification);
+    const cleanup = (): void => {
+      this.activeNotifications.delete(notification);
+    };
+
+    notification.on('click', cleanup);
+    notification.on('close', cleanup);
+
+    notification.on('show', () => {
+      logger.debug('[notification] test notification shown successfully');
+    });
+    notification.on('failed', (_, error) => {
+      logger.warn(`[notification] test notification failed: ${error}`);
+      cleanup();
+    });
+
+    notification.show();
+    return { success: true };
   }
 
   // ===========================================================================
@@ -567,10 +668,21 @@ export class NotificationManager extends EventEmitter {
   async addTeamNotification(payload: TeamNotificationPayload): Promise<StoredNotification | null> {
     const error = buildDetectedErrorFromTeam(payload);
     const stored = await this.storeNotification(error);
-    if (!stored) return null;
+    if (!stored) {
+      logger.debug(
+        `[team-notification] skipped (dedup): type=${payload.teamEventType} key=${payload.dedupeKey}`
+      );
+      return null;
+    }
 
     // Team-specific toast policy: enabled/snoozed + suppressToast + dedupeKey throttle only
-    if (!payload.suppressToast && this.areNotificationsEnabled() && !this.isToastThrottled(error)) {
+    const enabled = this.areNotificationsEnabled();
+    const throttled = this.isToastThrottled(error);
+    const shouldShow = !payload.suppressToast && enabled && !throttled;
+    logger.debug(
+      `[team-notification] toast decision: type=${payload.teamEventType} suppressToast=${String(payload.suppressToast ?? false)} enabled=${String(enabled)} throttled=${String(throttled)} → show=${String(shouldShow)}`
+    );
+    if (shouldShow) {
       this.showTeamNativeNotification(stored, payload);
     }
 

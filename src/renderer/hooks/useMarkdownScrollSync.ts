@@ -29,8 +29,14 @@ const ATTACH_RETRY_INTERVAL = 50;
 
 export interface UseMarkdownScrollSyncResult {
   previewScrollRef: React.RefObject<HTMLDivElement | null>;
+  /** Attach to editor scroll container when using a local CodeMirror instance */
+  handleCodeScroll: () => void;
   /** Attach to preview div's onScroll */
   handlePreviewScroll: () => void;
+}
+
+interface UseMarkdownScrollSyncOptions {
+  editorScrollRef?: React.RefObject<HTMLElement | null>;
 }
 
 // =============================================================================
@@ -46,13 +52,17 @@ export interface UseMarkdownScrollSyncResult {
  */
 export function useMarkdownScrollSync(
   enabled: boolean,
-  viewKey?: string | null
+  viewKey?: string | null,
+  options?: UseMarkdownScrollSyncOptions
 ): UseMarkdownScrollSyncResult {
   const previewScrollRef = useRef<HTMLDivElement | null>(null);
   const ignoreCodeScroll = useRef(false);
   const ignorePreviewScroll = useRef(false);
   const codeRafRef = useRef(0);
   const previewRafRef = useRef(0);
+  const getEditorScrollElement = useCallback(() => {
+    return options?.editorScrollRef?.current ?? editorBridge.getView()?.scrollDOM ?? null;
+  }, [options?.editorScrollRef]);
 
   // Code → Preview: proportional scroll
   const handleCodeScroll = useCallback(() => {
@@ -62,7 +72,7 @@ export function useMarkdownScrollSync(
       return;
     }
 
-    const scrollDOM = editorBridge.getView()?.scrollDOM;
+    const scrollDOM = getEditorScrollElement();
     const preview = previewScrollRef.current;
     if (!scrollDOM || !preview) return;
 
@@ -78,7 +88,7 @@ export function useMarkdownScrollSync(
       ignorePreviewScroll.current = true;
       preview.scrollTop = fraction * maxPreview;
     });
-  }, [enabled]);
+  }, [enabled, getEditorScrollElement]);
 
   // Preview → Code: proportional scroll
   const handlePreviewScroll = useCallback(() => {
@@ -88,7 +98,7 @@ export function useMarkdownScrollSync(
       return;
     }
 
-    const scrollDOM = editorBridge.getView()?.scrollDOM;
+    const scrollDOM = getEditorScrollElement();
     const preview = previewScrollRef.current;
     if (!scrollDOM || !preview) return;
 
@@ -104,7 +114,7 @@ export function useMarkdownScrollSync(
       ignoreCodeScroll.current = true;
       scrollDOM.scrollTop = fraction * maxCode;
     });
-  }, [enabled]);
+  }, [enabled, getEditorScrollElement]);
 
   // Auto-attach code scroll listener with retry on mount/viewKey change
   useEffect(() => {
@@ -115,7 +125,7 @@ export function useMarkdownScrollSync(
     let attempts = 0;
 
     const tryAttach = (): void => {
-      const scrollDOM = editorBridge.getView()?.scrollDOM;
+      const scrollDOM = getEditorScrollElement();
       if (!scrollDOM) {
         if (attempts < MAX_ATTACH_ATTEMPTS) {
           attempts++;
@@ -138,10 +148,11 @@ export function useMarkdownScrollSync(
       cancelAnimationFrame(codeRafRef.current);
       cancelAnimationFrame(previewRafRef.current);
     };
-  }, [enabled, viewKey, handleCodeScroll]);
+  }, [enabled, viewKey, handleCodeScroll, getEditorScrollElement]);
 
   return {
     previewScrollRef,
+    handleCodeScroll,
     handlePreviewScroll,
   };
 }

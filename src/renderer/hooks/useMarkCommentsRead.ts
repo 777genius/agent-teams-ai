@@ -1,35 +1,22 @@
-import { useEffect, useRef } from 'react';
-
-import { markAsRead } from '@renderer/services/commentReadStorage';
-
-import type { TaskComment } from '@shared/types';
+import { useRef } from 'react';
 
 /**
- * Marks task comments as read when the component is mounted and
- * whenever the comments list changes while mounted.
+ * Provides a stable ref callback for the comments container.
  *
- * Previously used IntersectionObserver, but since the component
- * is only rendered inside a CollapsibleTeamSection (conditional
- * mount/unmount controls visibility), a simple effect is both
- * simpler and more reliable — especially inside Dialog portals
- * where IntersectionObserver can miss the initial intersection.
+ * Previously this hook auto-marked all comments as read on mount via
+ * a useEffect. That behavior has been replaced by viewport-based
+ * tracking (useViewportCommentRead) which only marks comments read
+ * when they are scrolled into view inside the dialog.
  *
- * Returns a ref callback for the comments container (kept for
- * API compatibility with TaskCommentsSection).
+ * This hook is kept for API compatibility with TaskCommentsSection
+ * (the ref callback is still attached to the container element).
  */
 export function useMarkCommentsRead(
-  teamName: string,
-  taskId: string,
-  comments: TaskComment[]
+  _teamName: string,
+  _taskId: string,
+  _comments: unknown[]
 ): (node: HTMLElement | null) => void {
   const nodeRef = useRef<HTMLElement | null>(null);
-
-  // Mark as read on mount and whenever comments change
-  useEffect(() => {
-    if (comments.length === 0) return;
-    const latest = Math.max(...comments.map((c) => new Date(c.createdAt).getTime()));
-    if (latest > 0) markAsRead(teamName, taskId, latest);
-  }, [teamName, taskId, comments]);
 
   // Stable ref callback (no dependencies — just stores the node)
   const refCallback = useRef((node: HTMLElement | null) => {

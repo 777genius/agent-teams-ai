@@ -128,9 +128,12 @@ interface RunLike {
   provisioningComplete: boolean;
   leadMsgSeq: number;
   pendingToolCalls: { name: string; preview: string }[];
+  pendingDirectCrossTeamSendRefresh: boolean;
   lastLeadTextEmitMs: number;
   leadRelayCapture: null;
-  silentUserDmForward: null;
+  silentUserDmForward:
+    | null
+    | { target: string; startedAt: string; mode: 'user_dm' | 'member_inbox_relay' };
   suppressPostCompactReminderOutput?: boolean;
   child: Record<string, unknown> | null;
   processKilled: boolean;
@@ -138,6 +141,7 @@ interface RunLike {
   provisioningOutputParts: string[];
   request: { members: { name: string; role?: string }[] };
   activeCrossTeamReplyHints?: Array<{ toTeam: string; conversationId: string }>;
+  pendingInboxRelayCandidates?: unknown[];
 }
 
 /**
@@ -156,9 +160,11 @@ function attachRun(
     provisioningComplete: opts?.provisioningComplete ?? false,
     leadMsgSeq: 0,
     pendingToolCalls: [],
+    pendingDirectCrossTeamSendRefresh: false,
     lastLeadTextEmitMs: 0,
     leadRelayCapture: null,
     silentUserDmForward: null,
+    pendingInboxRelayCandidates: [],
     child: { stdin: { writable: true, write: vi.fn(), end: vi.fn() } },
     processKilled: false,
     cancelRequested: false,
@@ -167,7 +173,10 @@ function attachRun(
     activeCrossTeamReplyHints: [],
   };
 
-  (service as unknown as { activeByTeam: Map<string, string> }).activeByTeam.set(teamName, runId);
+  (service as unknown as { aliveRunByTeam: Map<string, string> }).aliveRunByTeam.set(
+    teamName,
+    runId
+  );
   (service as unknown as { runs: Map<string, unknown> }).runs.set(runId, run);
 
   return run;
@@ -588,6 +597,46 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     expect(hoisted.sendInboxMessage).not.toHaveBeenCalled();
   });
 
+  it('refreshes sentMessages history after direct MCP cross_team_send succeeds', () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const emitter = vi.fn<(event: TeamChangeEvent) => void>();
+    service.setTeamChangeEmitter(emitter);
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'assistant',
+      content: [
+        {
+          type: 'tool_use',
+          name: 'mcp__agent-teams__cross_team_send',
+          input: {
+            teamName: 'my-team',
+            toTeam: 'team-best',
+            text: 'Прямой вызов MCP.',
+            summary: 'Direct MCP send',
+          },
+        },
+      ],
+    });
+
+    expect(run.pendingDirectCrossTeamSendRefresh).toBe(true);
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'result',
+      subtype: 'success',
+    });
+
+    expect(run.pendingDirectCrossTeamSendRefresh).toBe(false);
+    expect(emitter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'inbox',
+        teamName: 'my-team',
+        detail: 'sentMessages.json',
+      })
+    );
+  });
+
   it('marks native cross-team teammate-message deliveries as read and restores reply hints', async () => {
     const service = new TeamProvisioningService();
     seedConfig('my-team');
@@ -625,6 +674,48 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     expect(run.activeCrossTeamReplyHints).toEqual([
       { toTeam: 'other-team', conversationId: 'conv-native-1' },
     ]);
+  });
+
+  it('suppresses native duplicate cross-team teammate-message after recent relay delivery', async () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const content =
+      '<cross-team from="other-team.team-lead" depth="0" conversationId="conv-native-dup" replyToConversationId="conv-native-dup" />\nПовторная доставка.';
+    seedLeadInbox('my-team', [
+      {
+        from: 'other-team.team-lead',
+        to: 'team-lead',
+        text: content,
+        timestamp: '2026-03-10T21:43:00.000Z',
+        read: false,
+        source: 'cross_team',
+        messageId: 'm-native-cross-team-dup',
+        conversationId: 'conv-native-dup',
+        replyToConversationId: 'conv-native-dup',
+      },
+    ]);
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+
+    (service as any).rememberRecentCrossTeamLeadDeliveryMessageIds('my-team', [
+      'm-native-cross-team-dup',
+    ]);
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'user',
+      message: {
+        role: 'user',
+        content: `<teammate-message teammate_id="other-team.team-lead" color="purple" summary="Cross-team reply">${content}</teammate-message>`,
+      },
+    });
+
+    await vi.waitFor(() => {
+      const updatedInbox = JSON.parse(
+        hoisted.files.get('/mock/teams/my-team/inboxes/team-lead.json') ?? '[]'
+      ) as Array<{ read?: boolean }>;
+      expect(updatedInbox[0]?.read).toBe(true);
+    });
+
+    expect(run.activeCrossTeamReplyHints).toEqual([]);
   });
 
   it('rescues mistaken cross_team_send recipients into actual cross-team replies', async () => {

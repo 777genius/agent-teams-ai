@@ -110,4 +110,51 @@ describe('TaskBoundaryParser', () => {
     expect(result.boundaries).toHaveLength(1);
     expect(result.boundaries[0]?.mechanism).toBe('mcp');
   });
+
+  it('accepts task_id for TaskUpdate and MCP task markers', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-boundary-parser-'));
+    const jsonlPath = path.join(tmpDir, 'task-id-underscore.jsonl');
+    await fs.writeFile(
+      jsonlPath,
+      [
+        JSON.stringify({
+          timestamp: '2026-03-01T10:00:00.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                id: 'tool-1',
+                name: 'TaskUpdate',
+                input: { task_id: 'task-123', status: 'in_progress' },
+              },
+            ],
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-03-01T10:10:00.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                id: 'tool-2',
+                name: 'task_complete',
+                input: { task_id: 'task-123' },
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const result = await new TaskBoundaryParser().parseBoundaries(jsonlPath);
+
+    expect(result.boundaries).toHaveLength(2);
+    expect(result.boundaries.map((entry) => entry.taskId)).toEqual(['task-123', 'task-123']);
+    expect(result.boundaries.map((entry) => entry.event)).toEqual(['start', 'complete']);
+  });
 });

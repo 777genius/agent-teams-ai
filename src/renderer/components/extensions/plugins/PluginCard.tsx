@@ -18,16 +18,20 @@ import type { EnrichedPlugin } from '@shared/types/extensions';
 
 interface PluginCardProps {
   plugin: EnrichedPlugin;
+  index: number;
   onClick: (pluginId: string) => void;
 }
 
-export const PluginCard = ({ plugin, onClick }: PluginCardProps): React.JSX.Element => {
+export const PluginCard = ({ plugin, index, onClick }: PluginCardProps): React.JSX.Element => {
   const capabilities = inferCapabilities(plugin);
   const category = normalizeCategory(plugin.category);
   const installProgress = useStore((s) => s.pluginInstallProgress[plugin.pluginId] ?? 'idle');
   const installPlugin = useStore((s) => s.installPlugin);
   const uninstallPlugin = useStore((s) => s.uninstallPlugin);
   const installError = useStore((s) => s.installErrors[plugin.pluginId]);
+  const baseStriped = index % 2 === 0;
+  const smStriped = Math.floor(index / 2) % 2 === 0;
+  const xlStriped = Math.floor(index / 3) % 2 === 0;
 
   return (
     <div
@@ -40,10 +44,22 @@ export const PluginCard = ({ plugin, onClick }: PluginCardProps): React.JSX.Elem
           onClick(plugin.pluginId);
         }
       }}
-      className={`hover:bg-surface-raised/45 flex w-full cursor-pointer flex-col gap-3 rounded-xl border bg-transparent p-4 text-left transition-all duration-200 hover:border-border-emphasis hover:shadow-[0_0_12px_rgba(255,255,255,0.02)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] ${
+      className={`relative flex w-full cursor-pointer flex-col gap-3 rounded-xl border p-4 text-left transition-all duration-200 hover:border-border-emphasis hover:bg-white/[0.06] hover:shadow-[0_0_12px_rgba(255,255,255,0.02)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] ${
+        baseStriped ? 'bg-white/[0.045]' : 'bg-white/[0.015]'
+      } ${smStriped ? 'sm:bg-white/[0.045]' : 'sm:bg-white/[0.015]'} ${
+        xlStriped ? 'xl:bg-white/[0.045]' : 'xl:bg-white/[0.015]'
+      } ${
         plugin.isInstalled ? 'border-l-2 border-border border-l-emerald-500/35' : 'border-border'
       }`}
     >
+      {plugin.source === 'official' && (
+        <div className="pointer-events-none absolute -left-[1px] -top-[1px] size-16 overflow-hidden">
+          <div className="absolute left-[-24px] top-[4px] w-[80px] rotate-[-45deg] bg-blue-500/90 text-center text-[9px] font-semibold leading-[18px] text-white shadow-sm">
+            Official
+          </div>
+        </div>
+      )}
+
       {/* Header: name + status/meta */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 space-y-1">

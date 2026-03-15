@@ -17,7 +17,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-4-sonnet-20250514',
           usage: {
             input_tokens: 1000,
             output_tokens: 500,
@@ -43,7 +43,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-4-sonnet-20250514',
           usage: {
             input_tokens: 1000,
             output_tokens: 500,
@@ -126,7 +126,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-4-sonnet-20250514',
           usage: {
             input_tokens: 100_000,
             output_tokens: 50_000,
@@ -154,7 +154,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-3-opus-20240229',
           usage: {
             input_tokens: 250_000,
             output_tokens: 1_000,
@@ -167,11 +167,11 @@ describe('Cost Calculation', () => {
 
       const metrics = calculateMetrics(messages);
 
-      // claude-3-5-sonnet-20241022 has no tiered rates in pricing.json, so base rates apply
-      // Input: 250000 * 0.000003 = 0.75
-      // Output: 1000 * 0.000015 = 0.015
-      // Total: 0.765
-      expect(metrics.costUsd).toBeCloseTo(0.765, 6);
+      // claude-3-opus-20240229 has no tiered rates in pricing.json, so base rates apply
+      // Input: 250000 * 0.000015 = 3.75
+      // Output: 1000 * 0.000075 = 0.075
+      // Total: 3.825
+      expect(metrics.costUsd).toBeCloseTo(3.825, 6);
     });
 
     it('should use base rates for output tokens above 200k when model has no tiered pricing', () => {
@@ -183,7 +183,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-3-opus-20240229',
           usage: {
             input_tokens: 1_000,
             output_tokens: 250_000,
@@ -197,10 +197,10 @@ describe('Cost Calculation', () => {
       const metrics = calculateMetrics(messages);
 
       // No tiered rates, so base rates for all tokens
-      // Input: 1000 * 0.000003 = 0.003
-      // Output: 250000 * 0.000015 = 3.75
-      // Total: 3.753
-      expect(metrics.costUsd).toBeCloseTo(3.753, 6);
+      // Input: 1000 * 0.000015 = 0.015
+      // Output: 250000 * 0.000075 = 18.75
+      // Total: 18.765
+      expect(metrics.costUsd).toBeCloseTo(18.765, 6);
     });
 
     it('should use base rates for cache tokens above 200k when model has no tiered pricing', () => {
@@ -212,7 +212,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-3-opus-20240229',
           usage: {
             input_tokens: 1_000,
             output_tokens: 1_000,
@@ -228,12 +228,12 @@ describe('Cost Calculation', () => {
       const metrics = calculateMetrics(messages);
 
       // No tiered rates for this model, so base rates apply
-      // Input: 1000 * 0.000003 = 0.003
-      // Output: 1000 * 0.000015 = 0.015
-      // Cache creation: 250000 * 0.00000375 = 0.9375
-      // Cache read: 250000 * 0.0000003 = 0.075
-      // Total: 1.0305
-      expect(metrics.costUsd).toBeCloseTo(1.0305, 6);
+      // Input: 1000 * 0.000015 = 0.015
+      // Output: 1000 * 0.000075 = 0.075
+      // Cache creation: 250000 * 0.00001875 = 4.6875
+      // Cache read: 250000 * 0.0000015 = 0.375
+      // Total: 5.1525
+      expect(metrics.costUsd).toBeCloseTo(5.1525, 6);
     });
 
     it('should handle model without tiered pricing', () => {
@@ -306,7 +306,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-4-sonnet-20250514',
           usage: {
             input_tokens: 1000,
             output_tokens: 500,
@@ -322,7 +322,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-4-sonnet-20250514',
           usage: {
             input_tokens: 2000,
             output_tokens: 1000,
@@ -350,7 +350,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-4-sonnet-20250514',
           usage: {
             input_tokens: 1000,
             output_tokens: 500,
@@ -397,7 +397,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-4-sonnet-20250514',
           usage: {
             input_tokens: 0,
             output_tokens: 0,
@@ -421,7 +421,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-4-sonnet-20250514',
           toolCalls: [],
           toolResults: [],
           isSidechain: false,
@@ -449,7 +449,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-4-sonnet-20250514',
           usage: {
             input_tokens: 1000,
             output_tokens: 500,
@@ -473,7 +473,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'CLAUDE-3-5-SONNET-20241022',
+          model: 'CLAUDE-4-SONNET-20250514',
           usage: {
             input_tokens: 1000,
             output_tokens: 500,
@@ -505,7 +505,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-4-sonnet-20250514',
           usage: {
             input_tokens: 0,
             output_tokens: 0,
@@ -540,7 +540,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-3-opus-20240229',
           usage: {
             input_tokens: 0,
             output_tokens: 0,
@@ -555,8 +555,8 @@ describe('Cost Calculation', () => {
       const metrics = calculateMetrics(messages);
 
       // No tiered rates for this model, so all 300k at base rate
-      // 300,000 * 0.0000003 = $0.09
-      const expectedCost = 300000 * 0.0000003;
+      // 300,000 * 0.0000015 = $0.45
+      const expectedCost = 300000 * 0.0000015;
       expect(metrics.costUsd).toBeCloseTo(expectedCost, 6);
     });
   });
@@ -571,7 +571,7 @@ describe('Cost Calculation', () => {
           isMeta: false,
           timestamp: new Date(),
           content: [],
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-4-sonnet-20250514',
           usage: {
             input_tokens: 1000,
             output_tokens: 500,

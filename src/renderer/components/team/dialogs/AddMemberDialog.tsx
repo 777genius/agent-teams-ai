@@ -1,6 +1,12 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { RoleSelect } from '@renderer/components/team/RoleSelect';
+import {
+  buildMembersFromDrafts,
+  createMemberDraft,
+  MembersEditorSection,
+  validateMemberNameInline,
+} from '@renderer/components/team/members/MembersEditorSection';
+import { getNextSuggestedMemberName } from '@renderer/components/team/members/memberNameSets';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -10,30 +16,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
-import { Input } from '@renderer/components/ui/input';
-import { Label } from '@renderer/components/ui/label';
-import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
-import { CUSTOM_ROLE, NO_ROLE } from '@renderer/constants/teamRoles';
-import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
-import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { Loader2 } from 'lucide-react';
 
-import type { MentionSuggestion } from '@renderer/types/mention';
-import type { ResolvedTeamMember } from '@shared/types';
+import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 
-const NAME_REGEX = /^[a-z0-9][a-z0-9-]*$/;
+export interface AddMemberEntry {
+  name: string;
+  role?: string;
+  workflow?: string;
+}
 
 interface AddMemberDialogProps {
   open: boolean;
   teamName: string;
   existingNames: string[];
   onClose: () => void;
-  onAdd: (name: string, role?: string, workflow?: string) => void;
+  /** Called with the list of new members to add. */
+  onAdd: (members: AddMemberEntry[]) => void;
   adding?: boolean;
   /** Project path for @file mentions in workflow field. */
   projectPath?: string | null;
-  /** Existing team members for @mention suggestions. */
-  existingMembers?: ResolvedTeamMember[];
+}
+
+const DIALOG_WIDTH = 'w-[720px]';
+
+function buildInitialDrafts(existingNames: string[]): MemberDraft[] {
+  const suggestedName = getNextSuggestedMemberName(existingNames);
+  return [createMemberDraft({ name: suggestedName })];
 }
 
 export const AddMemberDialog = ({
@@ -44,159 +53,123 @@ export const AddMemberDialog = ({
   onAdd,
   adding,
   projectPath,
-  existingMembers = [],
 }: AddMemberDialogProps): React.JSX.Element => {
-  const [name, setName] = useState('');
-  const [roleSelect, setRoleSelect] = useState<string>(NO_ROLE);
-  const [customRole, setCustomRole] = useState('');
+  const [members, setMembers] = useState<MemberDraft[]>(() => buildInitialDrafts(existingNames));
   const [error, setError] = useState<string | null>(null);
 
-  const draftKey = `addMember:${teamName}:workflow`;
-  const workflowDraft = useDraftPersistence({
-    key: draftKey,
-    enabled: open,
-  });
+  // Combine existing names + names already in the draft list for duplicate validation
+  const allNames = useMemo(() => {
+    const draftNames = members.map((m) => m.name.trim().toLowerCase()).filter(Boolean);
+    return [...existingNames.map((n) => n.toLowerCase()), ...draftNames];
+  }, [existingNames, members]);
 
-  // Pre-warm file list cache for @file mentions
-  useFileListCacheWarmer(open && projectPath ? projectPath : null);
+  const validateName = useCallback(
+    (name: string): string | null => {
+      const trimmed = name.trim().toLowerCase();
+      if (!trimmed) return null;
 
-  const mentionSuggestions = useMemo<MentionSuggestion[]>(
-    () =>
-      existingMembers
-        .filter((m) => !m.removedAt)
-        .map((m) => ({
-          id: m.name,
-          name: m.name,
-          subtitle: m.role ?? undefined,
-          color: m.color,
-        })),
-    [existingMembers]
+      const inlineError = validateMemberNameInline(name);
+      if (inlineError) return inlineError;
+
+      if (trimmed === 'user' || trimmed === 'team-lead') return `Name "${trimmed}" is reserved`;
+
+      // Check against existing team members
+      if (existingNames.some((n) => n.toLowerCase() === trimmed)) return 'Name is already taken';
+
+      // Check for duplicates within the draft list
+      const draftOccurrences = members.filter(
+        (m) => m.name.trim().toLowerCase() === trimmed
+      ).length;
+      if (draftOccurrences > 1) return 'Duplicate name in the list';
+
+      return null;
+    },
+    [existingNames, members]
   );
 
-  const effectiveRole =
-    roleSelect === CUSTOM_ROLE
-      ? customRole.trim()
-      : roleSelect === NO_ROLE
-        ? undefined
-        : roleSelect;
-
-  const validate = (): string | null => {
-    const trimmed = name.trim().toLowerCase();
-    if (!trimmed) return 'Name is required';
-    if (trimmed.length < 2) return 'Name must be at least 2 characters';
-    if (trimmed.length > 30) return 'Name must be at most 30 characters';
-    if (!NAME_REGEX.test(trimmed))
-      return 'Name must be lowercase alphanumeric with hyphens (e.g. alice, dev-1)';
-    if (trimmed === 'user') return 'Name "user" is reserved';
-    if (trimmed === 'team-lead') return 'Name "team-lead" is reserved';
-    if (existingNames.some((n) => n.toLowerCase() === trimmed)) return 'Name is already taken';
-    return null;
-  };
+  const hasValidMembers = useMemo(() => {
+    const valid = members.filter((m) => {
+      const name = m.name.trim();
+      return name.length > 0 && !validateName(name);
+    });
+    return valid.length > 0;
+  }, [members, validateName]);
 
   const handleSubmit = (): void => {
-    const err = validate();
-    if (err) {
-      setError(err);
+    const built = buildMembersFromDrafts(members);
+    // Validate all entries
+    const invalid = built.find((m) => validateName(m.name));
+    if (invalid) {
+      setError(validateName(invalid.name));
+      return;
+    }
+    if (built.length === 0) {
+      setError('Add at least one member');
       return;
     }
     setError(null);
-    const wf = workflowDraft.value.trim() || undefined;
-    onAdd(name.trim().toLowerCase(), effectiveRole, wf);
-    // Reset form fields after successful submission
-    setName('');
-    setRoleSelect(NO_ROLE);
-    setCustomRole('');
-    workflowDraft.clearDraft();
+    onAdd(
+      built.map((m) => ({
+        name: m.name,
+        role: m.role,
+        workflow: m.workflow,
+      }))
+    );
   };
 
   const handleOpenChange = (nextOpen: boolean): void => {
     if (!nextOpen) {
-      setName('');
-      setRoleSelect(NO_ROLE);
-      setCustomRole('');
-      workflowDraft.setValue('');
-      workflowDraft.clearDraft();
+      setMembers(buildInitialDrafts(existingNames));
       setError(null);
       onClose();
     }
   };
 
-  const handleWorkflowChange = useCallback(
-    (v: string) => {
-      workflowDraft.setValue(v);
-    },
-    [workflowDraft]
-  );
+  // Re-initialize drafts when the dialog opens with fresh suggested name
+  // (existingNames may have changed since last close)
+  useEffect(() => {
+    if (!open) return;
+    setMembers((prev) => {
+      const allEmpty = prev.every((m) => !m.name.trim());
+      if (prev.length === 0 || allEmpty) {
+        return buildInitialDrafts(existingNames);
+      }
+      return prev;
+    });
+  }, [open, existingNames]);
+
+  const memberCount = members.filter((m) => m.name.trim() && !validateName(m.name)).length;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className={`${DIALOG_WIDTH} max-w-[90vw]`}>
         <DialogHeader>
-          <DialogTitle>Add Member</DialogTitle>
-          <DialogDescription>Add a new member to {teamName}</DialogDescription>
+          <DialogTitle>Add Members</DialogTitle>
+          <DialogDescription>Add new members to {teamName}</DialogDescription>
         </DialogHeader>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmit();
-          }}
-        >
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Name</Label>
-              <Input
-                placeholder="e.g. alice, dev-1"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setError(null);
-                }}
-                autoFocus
-              />
-              {error && <p className="text-xs text-red-400">{error}</p>}
-            </div>
+        <div className="max-h-[60vh] overflow-y-auto py-2">
+          <MembersEditorSection
+            members={members}
+            onChange={setMembers}
+            fieldError={error ?? undefined}
+            validateMemberName={validateName}
+            showWorkflow
+            showJsonEditor={false}
+            draftKeyPrefix={`addMember:${teamName}`}
+            projectPath={projectPath}
+          />
+        </div>
 
-            <div className="space-y-2">
-              <Label className="label-optional">Role (optional)</Label>
-              <RoleSelect
-                value={roleSelect}
-                onValueChange={setRoleSelect}
-                customRole={customRole}
-                onCustomRoleChange={setCustomRole}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="label-optional">Workflow (optional)</Label>
-              <MentionableTextarea
-                className="text-xs"
-                minRows={3}
-                maxRows={8}
-                value={workflowDraft.value}
-                onValueChange={handleWorkflowChange}
-                suggestions={mentionSuggestions}
-                projectPath={projectPath ?? undefined}
-                placeholder="How this agent should behave, what tasks it handles..."
-                footerRight={
-                  workflowDraft.isSaved ? (
-                    <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-                  ) : null
-                }
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={adding}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={adding || !name.trim()}>
-              {adding ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
-              Add
-            </Button>
-          </DialogFooter>
-        </form>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} disabled={adding}>
+            Cancel
+          </Button>
+          <Button type="button" disabled={adding || !hasValidMembers} onClick={handleSubmit}>
+            {adding ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
+            {memberCount > 1 ? `Add ${memberCount} members` : 'Add member'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

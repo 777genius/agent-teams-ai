@@ -1,4 +1,7 @@
-import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
+import {
+  createCliAutoSuffixNameGuard,
+  createCliProvisionerNameGuard,
+} from '@shared/utils/teamMemberName';
 
 import type {
   InboxMessage,
@@ -149,8 +152,10 @@ export class TeamMemberResolver {
 
     // Defense: hide CLI auto-suffixed duplicates (alice-2) when base name (alice) exists.
     const keepName = createCliAutoSuffixNameGuard(names);
+    // Defense: hide CLI provisioner artifacts (alice-provisioner) when base name (alice) exists.
+    const keepProvisioner = createCliProvisionerNameGuard(names);
     for (const name of Array.from(names)) {
-      if (!keepName(name)) {
+      if (!keepName(name) || !keepProvisioner(name)) {
         names.delete(name);
       }
     }

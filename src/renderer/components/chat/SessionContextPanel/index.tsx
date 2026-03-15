@@ -55,6 +55,7 @@ export const SessionContextPanel = ({
   phaseInfo,
   selectedPhase,
   onPhaseChange,
+  side = 'left',
 }: Readonly<SessionContextPanelProps>): React.ReactElement => {
   // View mode: category sections or ranked list
   const [viewMode, setViewMode] = useState<ContextViewMode>('category');
@@ -184,7 +185,9 @@ export const SessionContextPanel = ({
       className="flex h-full flex-col"
       style={{
         backgroundColor: COLOR_SURFACE,
-        borderLeft: `1px solid ${COLOR_BORDER}`,
+        ...(side === 'left'
+          ? { borderRight: `1px solid ${COLOR_BORDER}` }
+          : { borderLeft: `1px solid ${COLOR_BORDER}` }),
       }}
     >
       <SessionContextHeader

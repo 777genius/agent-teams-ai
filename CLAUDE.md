@@ -1,6 +1,24 @@
 # Claude Agent Teams UI
 
-Electron app that visualizes Claude Code session execution
+A new approach to task management with AI agent teams. Assemble agent teams with different roles that work autonomously in parallel, communicate with each other, create and manage their own tasks, review code, and collaborate across teams. You manage everything through a kanban board — like a CTO with an AI engineering team.
+
+Key capabilities:
+- **Agent Teams** — create teams with roles, agents work autonomously in parallel
+- **Cross-team communication** — agents message each other within and across teams
+- **Kanban board** — tasks change status in real-time as agents work
+- **Code review** — diff view per task (accept/reject/comment), similar to Cursor
+- **Solo mode** — single agent with self-managed tasks, expandable to full team
+- **Live process section** — see running agents, open URLs in browser
+- **Direct messaging** — send messages to any agent, comment on tasks, add quick actions on kanban cards
+- **Deep session analysis** — bash commands, reasoning, subprocesses breakdown
+- **Context monitoring** — token usage by category (CLAUDE.md, tool outputs, thinking, team coordination)
+- **Built-in code editor** — edit files with Git support without leaving the app
+- **MCP integration** — built-in mcp-server for external tools and agent plugins
+- **Post-compact context recovery** — restores team-management instructions after context compaction
+- **Notification system** — alerts on task completion, agent attention needed, errors
+- **Zero-setup onboarding** — built-in Claude Code installation and authentication
+
+100% free, open source. No API keys. No configuration. Runs entirely locally.
 
 ## Tech Stack
 Electron 28.x, React 18.x, TypeScript 5.x, Tailwind CSS 3.x, Zustand 4.x
@@ -24,6 +42,9 @@ When running build/typecheck/test commands, pipe through `tail -20` to avoid flo
 - `pnpm test:semantic` - Semantic step extraction tests
 - `pnpm test:noise` - Noise filtering tests
 - `pnpm test:task-filtering` - Task tool filtering tests
+- `pnpm check` - Full quality gate (types + lint + test + build)
+- `pnpm fix` - Lint fix + format
+- `pnpm quality` - Full check + format check + knip
 
 ## Path Aliases
 Use path aliases for imports:
@@ -64,6 +85,14 @@ Claude Code's "Orchestrate Teams" feature: multiple sessions coordinate as a tea
 - **Session ongoing detection** treats `SendMessage` shutdown_response (approve: true) and its tool_result as ending events, not ongoing activity
 - **Display summary** counts distinct teammates (by name) separately from regular subagents
 - **Team tools**: TeamCreate, TaskCreate, TaskUpdate, TaskList, TaskGet, SendMessage, TeamDelete — have readable summaries in `toolSummaryHelpers.ts`
+
+### Structured Task References
+- **TaskRef**: `{ taskId, displayId, teamName }` — shared typed reference used to persist task mentions across UI and storage
+- **Persisted optional fields**: `InboxMessage.taskRefs`, `TaskComment.taskRefs`, `TeamTask.descriptionTaskRefs`, `TeamTask.promptTaskRefs`
+- **Request surfaces**: `SendMessageRequest.taskRefs`, `AddTaskCommentRequest.taskRefs`, `CreateTaskRequest.descriptionTaskRefs`, `CreateTaskRequest.promptTaskRefs`, `UpdateKanbanPatch` `request_changes.taskRefs`
+- **Renderer flow**: task-aware inputs use `useTaskSuggestions()` with `taskReferenceUtils.ts` to extract refs from text; encoded zero-width metadata preserves exact task identity while keeping visible text readable
+- **Main/IPC flow**: `src/main/ipc/teams.ts` and `src/main/ipc/crossTeam.ts` validate structured refs before `TeamDataService`, inbox stores, task stores, and readers persist/rehydrate them
+- **Rendering/navigation**: `linkifyTaskIdsInMarkdown()` and `parseTaskLinkHref()` turn persisted refs into stable `task://` links across messages, comments, task descriptions, and activity items
 
 ### Visible Context Tracking
 Tracks what consumes tokens in Claude's context window across 6 categories (discriminated union on `category` field):
@@ -118,7 +147,7 @@ Check for changes in message parsing or chunk building logic.
 | Services/Components | PascalCase | `ProjectScanner.ts` |
 | Utilities | camelCase | `pathDecoder.ts` |
 | Constants | UPPER_SNAKE_CASE | `PARALLEL_WINDOW_MS` |
-| Type Guards | isXxx | `isRealUserMessage()` |
+| Type Guards | isXxx | `isParsedRealUserMessage()` |
 | Builders | buildXxx | `buildChunks()` |
 | Getters | getXxx | `getResponses()` |
 
@@ -158,3 +187,9 @@ Note: renderer utils/hooks/types do NOT have barrel exports — import directly 
 1. External packages
 2. Path aliases (@main, @renderer, @shared)
 3. Relative imports
+
+### Storage And Persistence
+- New persistence flows should depend on small repository/storage abstractions, not directly on `localStorage`, `IndexedDB`, Electron APIs, or JSON files from UI components/hooks.
+- Keep persistence concerns split by responsibility: schema/normalization, repository interface, concrete storage implementation, and UI adapter logic should live in separate modules.
+- Prefer designs where the high-level feature code can swap local browser/Electron storage for a server-backed implementation without rewriting the rendering layer.
+- Reuse generic persistence/layout infrastructure when adding new draggable/resizable surfaces instead of copying feature-specific storage code.

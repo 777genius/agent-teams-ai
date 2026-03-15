@@ -66,6 +66,7 @@ import {
   removeSessionHandlers,
 } from './sessions';
 import { initializeSshHandlers, registerSshHandlers, removeSshHandlers } from './ssh';
+import { initializeSkillsHandlers, registerSkillsHandlers, removeSkillsHandlers } from './skills';
 import {
   initializeSubagentHandlers,
   registerSubagentHandlers,
@@ -104,10 +105,15 @@ import type {
 } from '../services';
 import type { HttpServer } from '../services/infrastructure/HttpServer';
 import type { CrossTeamService } from '../services/team/CrossTeamService';
+import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { ExtensionFacadeService } from '../services/extensions/ExtensionFacadeService';
 import type { McpInstallService } from '../services/extensions/install/McpInstallService';
 import type { PluginInstallService } from '../services/extensions/install/PluginInstallService';
 import type { ApiKeyService } from '../services/extensions/apikeys/ApiKeyService';
+import type { McpHealthDiagnosticsService } from '../services/extensions/state/McpHealthDiagnosticsService';
+import type { SkillsCatalogService } from '../services/extensions/skills/SkillsCatalogService';
+import type { SkillsMutationService } from '../services/extensions/skills/SkillsMutationService';
+import type { SkillsWatcherService } from '../services/extensions/skills/SkillsWatcherService';
 import type { SchedulerService } from '../services/schedule/SchedulerService';
 
 /**
@@ -141,7 +147,12 @@ export function initializeIpcHandlers(
   pluginInstaller?: PluginInstallService,
   mcpInstaller?: McpInstallService,
   apiKeyService?: ApiKeyService,
-  crossTeamService?: CrossTeamService
+  mcpHealthDiagnosticsService?: McpHealthDiagnosticsService,
+  skillsCatalogService?: SkillsCatalogService,
+  skillsMutationService?: SkillsMutationService,
+  skillsWatcherService?: SkillsWatcherService,
+  crossTeamService?: CrossTeamService,
+  teamBackupService?: TeamBackupService
 ): void {
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -155,7 +166,8 @@ export function initializeIpcHandlers(
     teamDataService,
     teamProvisioningService,
     teamMemberLogsFinder,
-    memberStatsComputer
+    memberStatsComputer,
+    teamBackupService
   );
   initializeConfigHandlers({
     onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,
@@ -177,7 +189,14 @@ export function initializeIpcHandlers(
     initializeScheduleHandlers(schedulerService);
   }
   if (extensionFacade) {
-    initializeExtensionHandlers(extensionFacade, pluginInstaller, mcpInstaller, apiKeyService);
+    initializeExtensionHandlers(
+      extensionFacade,
+      pluginInstaller,
+      mcpInstaller,
+      apiKeyService,
+      mcpHealthDiagnosticsService
+    );
+    initializeSkillsHandlers(skillsCatalogService, skillsMutationService, skillsWatcherService);
   }
   if (crossTeamService) {
     initializeCrossTeamHandlers(crossTeamService);
@@ -221,6 +240,7 @@ export function initializeIpcHandlers(
   }
   if (extensionFacade) {
     registerExtensionHandlers(ipcMain);
+    registerSkillsHandlers(ipcMain);
   }
   if (crossTeamService) {
     registerCrossTeamHandlers(ipcMain);
@@ -255,6 +275,7 @@ export function removeIpcHandlers(): void {
   removeTerminalHandlers(ipcMain);
   removeHttpServerHandlers(ipcMain);
   removeExtensionHandlers(ipcMain);
+  removeSkillsHandlers(ipcMain);
   removeCrossTeamHandlers(ipcMain);
 
   logger.info('All handlers removed');

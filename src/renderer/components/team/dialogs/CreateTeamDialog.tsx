@@ -1,7 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 import {
+  buildMemberDraftColorMap,
+  buildMemberDraftSuggestions,
   buildMembersFromDrafts,
   createMemberDraft,
   MembersEditorSection,
@@ -25,17 +27,20 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
+import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
+import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { normalizePath } from '@renderer/utils/pathNormalize';
-import { getMemberColorByName } from '@shared/constants/memberColors';
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { EffortLevelSelector } from './EffortLevelSelector';
-import { ExtendedContextCheckbox } from './ExtendedContextCheckbox';
+import { LimitContextCheckbox } from './LimitContextCheckbox';
+import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { ProjectPathSelector } from './ProjectPathSelector';
 import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
+import { getNextSuggestedTeamName } from './teamNameSets';
 import { computeEffectiveTeamModel, TeamModelSelector } from './TeamModelSelector';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
@@ -51,7 +56,6 @@ const TEAM_COLOR_NAMES = [
   'pink',
 ] as const;
 
-import type { MentionSuggestion } from '@renderer/types/mention';
 import type {
   EffortLevel,
   Project,
@@ -76,9 +80,11 @@ export interface ActiveTeamRef {
 interface CreateTeamDialogProps {
   open: boolean;
   canCreate: boolean;
-  provisioningError: string | null;
-  clearProvisioningError?: () => void;
+  provisioningErrorsByTeam: Record<string, string | null>;
+  clearProvisioningError?: (teamName?: string) => void;
   existingTeamNames: string[];
+  /** Team names currently in active provisioning (launching) — used to prevent name conflicts. */
+  provisioningTeamNames?: string[];
   activeTeams?: ActiveTeamRef[];
   initialData?: TeamCopyData;
   defaultProjectPath?: string | null;
@@ -96,10 +102,9 @@ interface ValidationResult {
   };
 }
 
-import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
+import { CUSTOM_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 const DEV_DEFAULT_TEAM = {
-  teamName: 'team-alpha',
-  description: 'Dev test team for provisioning flow',
+  teamName: 'signal-ops',
 } as const;
 
 const DEV_DEFAULT_MEMBERS: { name: string; roleSelection: string }[] = [
@@ -131,6 +136,13 @@ function validateTeamNameInline(name: string): string | null {
     return 'Name is too long (max 128 chars)';
   }
   return null;
+}
+
+function buildDefaultTeamDescription(teamName: string): string {
+  const trimmedName = teamName.trim();
+  return trimmedName.length > 0
+    ? `${trimmedName} team for provisioning flow`
+    : 'Team for provisioning flow';
 }
 
 function validateRequest(
@@ -194,9 +206,10 @@ function validateRequest(
 export const CreateTeamDialog = ({
   open,
   canCreate,
-  provisioningError,
+  provisioningErrorsByTeam,
   clearProvisioningError,
   existingTeamNames,
+  provisioningTeamNames = [],
   activeTeams,
   initialData,
   defaultProjectPath,
@@ -222,6 +235,8 @@ export const CreateTeamDialog = ({
   const [prepareState, setPrepareState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle');
   const [prepareMessage, setPrepareMessage] = useState<string | null>(null);
   const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
+  const prepareRequestSeqRef = useRef(0);
+  const lastAutoDescriptionRef = useRef<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     teamName?: string;
     members?: string;
@@ -236,8 +251,8 @@ export const CreateTeamDialog = ({
     const stored = localStorage.getItem('team:lastSelectedModel') ?? '';
     return stored === '__default__' ? '' : stored;
   });
-  const [extendedContext, setExtendedContextRaw] = useState(
-    () => localStorage.getItem('team:lastExtendedContext') === 'true'
+  const [limitContext, setLimitContextRaw] = useState(
+    () => localStorage.getItem('team:lastLimitContext') === 'true'
   );
   const [skipPermissions, setSkipPermissionsRaw] = useState(
     () => localStorage.getItem('team:lastSkipPermissions') !== 'false'
@@ -267,9 +282,9 @@ export const CreateTeamDialog = ({
     localStorage.setItem('team:lastSelectedModel', value);
   };
 
-  const setExtendedContext = (value: boolean): void => {
-    setExtendedContextRaw(value);
-    localStorage.setItem('team:lastExtendedContext', String(value));
+  const setLimitContext = (value: boolean): void => {
+    setLimitContextRaw(value);
+    localStorage.setItem('team:lastLimitContext', String(value));
   };
 
   const setSkipPermissions = (value: boolean): void => {
@@ -311,6 +326,7 @@ export const CreateTeamDialog = ({
 
   const resetFormState = (): void => {
     setTeamName('');
+    lastAutoDescriptionRef.current = null;
     descriptionDraft.clearDraft();
     promptDraft.clearDraft();
     promptChipDraft.clearChipDraft();
@@ -324,12 +340,21 @@ export const CreateTeamDialog = ({
     resetUIState();
   };
 
+  const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
+  const dialogTeamNameKey = sanitizeTeamName(teamName.trim());
+  /** All taken names: existing teams + teams currently being provisioned. */
+  const allTakenTeamNames = useMemo(
+    () => [...new Set([...existingTeamNames, ...provisioningTeamNames])],
+    [existingTeamNames, provisioningTeamNames]
+  );
+  const suggestedTeamName = getNextSuggestedTeamName(allTakenTeamNames);
+
   // Clear stale provisioning error when dialog opens
   useEffect(() => {
-    if (open) {
-      clearProvisioningError?.();
+    if (open && dialogTeamNameKey) {
+      clearProvisioningError?.(dialogTeamNameKey);
     }
-  }, [open, clearProvisioningError]);
+  }, [open, clearProvisioningError, dialogTeamNameKey]);
 
   useEffect(() => {
     if (!open || !canCreate || !launchTeam) {
@@ -345,7 +370,15 @@ export const CreateTeamDialog = ({
       return;
     }
 
+    if (!effectiveCwd) {
+      setPrepareState('idle');
+      setPrepareWarnings([]);
+      setPrepareMessage('Select a working directory to validate the launch environment.');
+      return;
+    }
+
     let cancelled = false;
+    const requestSeq = ++prepareRequestSeqRef.current;
     setPrepareState('loading');
     setPrepareMessage('Warming up CLI environment...');
     setPrepareWarnings([]);
@@ -354,13 +387,14 @@ export const CreateTeamDialog = ({
     const timer = setTimeout(() => {
       void (async () => {
         try {
-          const prepResult: TeamProvisioningPrepareResult = await api.teams.prepareProvisioning();
-          if (cancelled) return;
+          const prepResult: TeamProvisioningPrepareResult =
+            await api.teams.prepareProvisioning(effectiveCwd);
+          if (cancelled || prepareRequestSeqRef.current !== requestSeq) return;
           setPrepareState(prepResult.ready ? 'ready' : 'failed');
           setPrepareMessage(prepResult.message);
           setPrepareWarnings(prepResult.warnings ?? []);
         } catch (error) {
-          if (cancelled) return;
+          if (cancelled || prepareRequestSeqRef.current !== requestSeq) return;
           setPrepareState('failed');
           setPrepareWarnings([]);
           setPrepareMessage(
@@ -374,7 +408,7 @@ export const CreateTeamDialog = ({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [open, canCreate, launchTeam]);
+  }, [open, canCreate, launchTeam, effectiveCwd]);
 
   useEffect(() => {
     if (!open) {
@@ -456,15 +490,33 @@ export const CreateTeamDialog = ({
   }, [open]);
 
   useEffect(() => {
+    if (!open || initialData) {
+      return;
+    }
+    setTeamName((prev) => (prev.trim().length === 0 ? suggestedTeamName : prev));
+  }, [initialData, open, suggestedTeamName]);
+
+  useEffect(() => {
     if (!open || !isDev || initialData) {
       return;
     }
-    setTeamName((prev) => (prev.trim().length === 0 ? DEV_DEFAULT_TEAM.teamName : prev));
-    if (descriptionDraft.value.trim().length === 0) {
-      descriptionDraft.setValue(DEV_DEFAULT_TEAM.description);
+    const resolvedTeamName = teamName.trim() || suggestedTeamName;
+    const nextAutoDescription = buildDefaultTeamDescription(resolvedTeamName);
+    const currentDescription = descriptionDraft.value.trim();
+    const previousAutoDescription = lastAutoDescriptionRef.current?.trim() ?? '';
+    const shouldSyncDescription =
+      currentDescription.length === 0 || currentDescription === previousAutoDescription;
+
+    if (shouldSyncDescription && descriptionDraft.value !== nextAutoDescription) {
+      lastAutoDescriptionRef.current = nextAutoDescription;
+      descriptionDraft.setValue(nextAutoDescription);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- dev defaults applied once on open
-  }, [open]);
+
+    if (currentDescription === nextAutoDescription) {
+      lastAutoDescriptionRef.current = nextAutoDescription;
+    }
+  }, [descriptionDraft, initialData, isDev, open, suggestedTeamName, teamName]);
 
   // Pre-select defaultProjectPath when projects loaded (only while dialog is open)
   useEffect(() => {
@@ -485,39 +537,32 @@ export const CreateTeamDialog = ({
     setSelectedProjectPath(projects[0].path);
   }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath]);
 
-  const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
-
   useFileListCacheWarmer(effectiveCwd || null);
+
+  const { suggestions: taskSuggestions } = useTaskSuggestions(null);
+  const { suggestions: teamMentionSuggestions } = useTeamSuggestions(null);
 
   const description = descriptionDraft.value;
   const prompt = promptDraft.value;
+  const memberColorMap = useMemo(() => buildMemberDraftColorMap(members), [members]);
 
-  const mentionSuggestions = useMemo<MentionSuggestion[]>(
+  const mentionSuggestions = useMemo(
     () =>
       soloTeam
         ? [{ id: 'team-lead', name: 'team-lead', subtitle: 'Team Lead', color: 'blue' }]
-        : members
-            .filter((m) => m.name.trim())
-            .map((m) => ({
-              id: m.id,
-              name: m.name.trim(),
-              subtitle:
-                m.roleSelection === CUSTOM_ROLE
-                  ? m.customRole.trim() || undefined
-                  : m.roleSelection && m.roleSelection !== NO_ROLE
-                    ? m.roleSelection
-                    : undefined,
-              color: getMemberColorByName(m.name.trim()),
-            })),
-    [members, soloTeam]
+        : buildMemberDraftSuggestions(members, memberColorMap),
+    [memberColorMap, members, soloTeam]
   );
 
   const effectiveModel = useMemo(
-    () => computeEffectiveTeamModel(selectedModel, extendedContext),
-    [selectedModel, extendedContext]
+    () => computeEffectiveTeamModel(selectedModel, limitContext),
+    [selectedModel, limitContext]
   );
 
   const sanitizedTeamName = sanitizeTeamName(teamName.trim());
+  const isNameProvisioning =
+    provisioningTeamNames.includes(sanitizedTeamName) &&
+    !existingTeamNames.includes(sanitizedTeamName);
 
   const request = useMemo<TeamCreateRequest>(
     () => ({
@@ -529,6 +574,7 @@ export const CreateTeamDialog = ({
       prompt: prompt.trim() || undefined,
       model: effectiveModel,
       effort: (selectedEffort as EffortLevel) || undefined,
+      limitContext,
       skipPermissions,
       worktree: worktreeEnabled && worktreeName.trim() ? worktreeName.trim() : undefined,
       extraCliArgs: customArgs.trim() || undefined,
@@ -543,6 +589,7 @@ export const CreateTeamDialog = ({
       prompt,
       effectiveModel,
       selectedEffort,
+      limitContext,
       skipPermissions,
       worktreeEnabled,
       worktreeName,
@@ -561,7 +608,35 @@ export const CreateTeamDialog = ({
     return args;
   }, [skipPermissions, effectiveModel, selectedEffort]);
 
-  const activeError = localError ?? provisioningError;
+  const launchOptionalSummary = useMemo(() => {
+    const summary: string[] = [];
+    if (prompt.trim()) summary.push('Lead prompt');
+    if (selectedModel) summary.push(`Model: ${selectedModel}`);
+    if (selectedEffort) summary.push(`Effort: ${selectedEffort}`);
+    if (limitContext) summary.push('Limited to 200K context');
+    if (skipPermissions) summary.push('Auto-approve tools');
+    if (worktreeEnabled && worktreeName.trim()) summary.push(`Worktree: ${worktreeName.trim()}`);
+    if (customArgs.trim()) summary.push('Custom CLI args');
+    return summary;
+  }, [
+    prompt,
+    selectedModel,
+    selectedEffort,
+    limitContext,
+    skipPermissions,
+    worktreeEnabled,
+    worktreeName,
+    customArgs,
+  ]);
+
+  const teamDetailsSummary = useMemo(() => {
+    const summary: string[] = [];
+    if (description.trim()) summary.push('Description');
+    if (teamColor) summary.push(`Color: ${teamColor}`);
+    return summary;
+  }, [description, teamColor]);
+
+  const activeError = localError ?? provisioningErrorsByTeam[request.teamName] ?? null;
   const canOpenExistingTeam =
     activeError?.includes('Team already exists') === true && request.teamName.length > 0;
 
@@ -578,15 +653,18 @@ export const CreateTeamDialog = ({
   }, [conflictingTeam?.teamName, effectiveCwd]);
 
   const handleSubmit = (): void => {
-    if (existingTeamNames.includes(sanitizedTeamName)) {
-      setFieldErrors({ teamName: 'Team name already exists' });
-      setLocalError('Check form fields');
+    if (allTakenTeamNames.includes(sanitizedTeamName)) {
+      const msg = isNameProvisioning ? 'Team is currently launching' : 'Team name already exists';
+      setFieldErrors({ teamName: msg });
+      setLocalError(msg);
       return;
     }
     const validation = validateRequest(request, { requireCwd: launchTeam });
     if (!validation.valid) {
-      setFieldErrors(validation.errors ?? {});
-      setLocalError('Check form fields');
+      const errors = validation.errors ?? {};
+      setFieldErrors(errors);
+      const messages = Object.values(errors).filter(Boolean) as string[];
+      setLocalError(messages.join(' · ') || 'Check form fields');
       return;
     }
     setFieldErrors({});
@@ -636,8 +714,11 @@ export const CreateTeamDialog = ({
       if (!prev.teamName) return prev;
       // eslint-disable-next-line sonarjs/no-unused-vars -- destructured to omit teamName from rest
       const { teamName: _teamName, ...rest } = prev;
-      if (!rest.members && !rest.cwd && localError === 'Check form fields') {
+      const remaining = Object.values(rest).filter(Boolean) as string[];
+      if (remaining.length === 0) {
         setLocalError(null);
+      } else {
+        setLocalError(remaining.join(' · '));
       }
       return rest;
     });
@@ -749,17 +830,27 @@ export const CreateTeamDialog = ({
             <Label htmlFor="team-name">Team name</Label>
             <Input
               id="team-name"
-              className="h-8 text-xs"
+              className={cn(
+                'h-8 text-xs',
+                (fieldErrors.teamName || allTakenTeamNames.includes(sanitizedTeamName)) &&
+                  'border-[var(--field-error-border)] bg-[var(--field-error-bg)] focus-visible:ring-[var(--field-error-border)]'
+              )}
               value={teamName}
               onChange={(event) => handleTeamNameChange(event.target.value)}
-              placeholder="team-alpha"
+              placeholder={suggestedTeamName}
             />
-            {existingTeamNames.includes(sanitizedTeamName) ? (
-              <p className="text-[11px] text-red-300">Team name already exists</p>
+            {allTakenTeamNames.includes(sanitizedTeamName) ? (
+              <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                {isNameProvisioning ? 'Team is currently launching' : 'Team name already exists'}
+              </p>
             ) : validateTeamNameInline(teamName) ? (
-              <p className="text-[11px] text-red-300">{validateTeamNameInline(teamName)}</p>
+              <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                {validateTeamNameInline(teamName)}
+              </p>
             ) : fieldErrors.teamName ? (
-              <p className="text-[11px] text-red-300">{fieldErrors.teamName}</p>
+              <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                {fieldErrors.teamName}
+              </p>
             ) : null}
             {sanitizedTeamName && sanitizedTeamName !== teamName.trim() ? (
               <p className="text-[11px] text-[var(--color-text-muted)]">
@@ -778,6 +869,8 @@ export const CreateTeamDialog = ({
               showJsonEditor
               draftKeyPrefix="createTeam"
               projectPath={effectiveCwd || null}
+              taskSuggestions={taskSuggestions}
+              teamSuggestions={teamMentionSuggestions}
               hideContent={soloTeam}
               headerExtra={
                 <div className="space-y-2">
@@ -810,16 +903,36 @@ export const CreateTeamDialog = ({
             />
           </div>
 
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 md:col-span-2">
-            <div className="flex items-center gap-2">
+          <div
+            className="rounded-lg border border-[var(--color-border-emphasis)] p-4 shadow-sm md:col-span-2"
+            style={{
+              backgroundColor: isLight
+                ? 'color-mix(in srgb, var(--color-surface-overlay) 24%, white 76%)'
+                : 'var(--color-surface-overlay)',
+            }}
+          >
+            <div className="flex items-start gap-3">
               <Checkbox
                 id="launch-team"
+                className="mt-1 shrink-0"
                 checked={launchTeam}
                 onCheckedChange={(checked) => setLaunchTeam(checked === true)}
               />
-              <Label htmlFor="launch-team" className="cursor-pointer">
-                Launch team
-              </Label>
+              <div className="space-y-1">
+                <Label htmlFor="launch-team" className="cursor-pointer text-sm font-semibold">
+                  Run command after create
+                </Label>
+                <p
+                  className="text-xs"
+                  style={{
+                    color: isLight
+                      ? 'color-mix(in srgb, var(--color-text-muted) 54%, var(--color-text) 46%)'
+                      : 'var(--color-text-muted)',
+                  }}
+                >
+                  Start the team immediately via local Claude CLI.
+                </p>
+              </div>
             </div>
 
             {launchTeam ? (
@@ -837,124 +950,150 @@ export const CreateTeamDialog = ({
                   fieldError={fieldErrors.cwd}
                 />
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="team-prompt" className="label-optional">
-                    Prompt for team lead (optional)
-                  </Label>
-                  <MentionableTextarea
-                    id="team-prompt"
-                    className="text-xs"
-                    minRows={3}
-                    maxRows={12}
-                    value={prompt}
-                    onValueChange={promptDraft.setValue}
-                    suggestions={soloTeam ? [] : mentionSuggestions}
-                    projectPath={effectiveCwd || null}
-                    chips={promptChipDraft.chips}
-                    onChipRemove={promptChipDraft.removeChip}
-                    onFileChipInsert={promptChipDraft.addChip}
-                    placeholder="Instructions for the team lead during provisioning..."
-                    footerRight={
-                      promptDraft.isSaved ? (
-                        <span className="text-[10px] text-[var(--color-text-muted)]">
-                          Draft saved
-                        </span>
-                      ) : null
-                    }
-                  />
-                </div>
+                <OptionalSettingsSection
+                  title="Optional launch settings"
+                  description="Prompt, model, safety, and CLI overrides live here when you need them."
+                  summary={launchOptionalSummary}
+                >
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="team-prompt" className="label-optional">
+                        Prompt for team lead (optional)
+                      </Label>
+                      <MentionableTextarea
+                        id="team-prompt"
+                        className="text-xs"
+                        minRows={3}
+                        maxRows={12}
+                        value={prompt}
+                        onValueChange={promptDraft.setValue}
+                        suggestions={soloTeam ? [] : mentionSuggestions}
+                        teamSuggestions={teamMentionSuggestions}
+                        taskSuggestions={taskSuggestions}
+                        projectPath={effectiveCwd || null}
+                        chips={promptChipDraft.chips}
+                        onChipRemove={promptChipDraft.removeChip}
+                        onFileChipInsert={promptChipDraft.addChip}
+                        placeholder="Instructions for the team lead during provisioning..."
+                        footerRight={
+                          promptDraft.isSaved ? (
+                            <span className="text-[10px] text-[var(--color-text-muted)]">
+                              Saved
+                            </span>
+                          ) : null
+                        }
+                      />
+                    </div>
 
-                <div>
-                  <TeamModelSelector
-                    value={selectedModel}
-                    onValueChange={setSelectedModel}
-                    id="create-model"
-                  />
-                  <EffortLevelSelector
-                    value={selectedEffort}
-                    onValueChange={setSelectedEffort}
-                    id="create-effort"
-                  />
-                  <ExtendedContextCheckbox
-                    id="create-extended-context"
-                    checked={extendedContext}
-                    onCheckedChange={setExtendedContext}
-                    disabled={selectedModel === 'haiku'}
-                  />
-                  {launchTeam && (
-                    <SkipPermissionsCheckbox
-                      id="create-skip-permissions"
-                      checked={skipPermissions}
-                      onCheckedChange={setSkipPermissions}
+                    <div>
+                      <TeamModelSelector
+                        value={selectedModel}
+                        onValueChange={setSelectedModel}
+                        id="create-model"
+                      />
+                      <EffortLevelSelector
+                        value={selectedEffort}
+                        onValueChange={setSelectedEffort}
+                        id="create-effort"
+                      />
+                      <LimitContextCheckbox
+                        id="create-limit-context"
+                        checked={limitContext}
+                        onCheckedChange={setLimitContext}
+                        disabled={selectedModel === 'haiku'}
+                      />
+                      <SkipPermissionsCheckbox
+                        id="create-skip-permissions"
+                        checked={skipPermissions}
+                        onCheckedChange={setSkipPermissions}
+                      />
+                    </div>
+
+                    <AdvancedCliSection
+                      teamName={advancedKey}
+                      internalArgs={internalArgs}
+                      worktreeEnabled={worktreeEnabled}
+                      onWorktreeEnabledChange={setWorktreeEnabled}
+                      worktreeName={worktreeName}
+                      onWorktreeNameChange={setWorktreeName}
+                      customArgs={customArgs}
+                      onCustomArgsChange={setCustomArgs}
                     />
-                  )}
-                </div>
-                <AdvancedCliSection
-                  teamName={advancedKey}
-                  internalArgs={internalArgs}
-                  worktreeEnabled={worktreeEnabled}
-                  onWorktreeEnabledChange={setWorktreeEnabled}
-                  worktreeName={worktreeName}
-                  onWorktreeNameChange={setWorktreeName}
-                  customArgs={customArgs}
-                  onCustomArgsChange={setCustomArgs}
-                />
+                  </div>
+                </OptionalSettingsSection>
               </div>
             ) : null}
           </div>
 
-          <div className="space-y-1.5 md:col-span-2">
-            <Label htmlFor="team-description" className="label-optional">
-              Description (optional)
-            </Label>
-            <AutoResizeTextarea
-              id="team-description"
-              className="text-xs"
-              minRows={2}
-              maxRows={8}
-              value={description}
-              onChange={(event) => descriptionDraft.setValue(event.target.value)}
-              placeholder="Brief description of the team purpose"
-            />
-            {descriptionDraft.isSaved ? (
-              <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
-            ) : null}
-          </div>
+          <div className="md:col-span-2">
+            <OptionalSettingsSection
+              title="Optional team details"
+              description="Keep the default flow compact and only open this when you want extra context or a custom color."
+              summary={teamDetailsSummary}
+            >
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="team-description" className="label-optional">
+                    Description (optional)
+                  </Label>
+                  <AutoResizeTextarea
+                    id="team-description"
+                    className="text-xs"
+                    minRows={2}
+                    maxRows={8}
+                    value={description}
+                    onChange={(event) => descriptionDraft.setValue(event.target.value)}
+                    placeholder="Brief description of the team purpose"
+                  />
+                  {descriptionDraft.isSaved ? (
+                    <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
+                  ) : null}
+                </div>
 
-          <div className="space-y-1.5 md:col-span-2">
-            <Label className="label-optional">Color (optional)</Label>
-            <div className="flex flex-wrap gap-2">
-              {TEAM_COLOR_NAMES.map((colorName) => {
-                const colorSet = getTeamColorSet(colorName);
-                const isSelected = teamColor === colorName;
-                return (
-                  <button
-                    key={colorName}
-                    type="button"
-                    className={cn(
-                      'flex size-7 items-center justify-center rounded-full border-2 transition-all',
-                      isSelected ? 'scale-110' : 'opacity-70 hover:opacity-100'
-                    )}
-                    style={{
-                      backgroundColor: getThemedBadge(colorSet, isLight),
-                      borderColor: isSelected ? colorSet.border : 'transparent',
-                    }}
-                    title={colorName}
-                    onClick={() => setTeamColor(isSelected ? '' : colorName)}
-                  >
-                    <span
-                      className="size-3.5 rounded-full"
-                      style={{ backgroundColor: colorSet.border }}
-                    />
-                  </button>
-                );
-              })}
-            </div>
+                <div className="space-y-1.5">
+                  <Label className="label-optional">Color (optional)</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {TEAM_COLOR_NAMES.map((colorName) => {
+                      const colorSet = getTeamColorSet(colorName);
+                      const isSelected = teamColor === colorName;
+                      return (
+                        <button
+                          key={colorName}
+                          type="button"
+                          className={cn(
+                            'flex size-7 items-center justify-center rounded-full border-2 transition-all',
+                            isSelected ? 'scale-110' : 'opacity-70 hover:opacity-100'
+                          )}
+                          style={{
+                            backgroundColor: getThemedBadge(colorSet, isLight),
+                            borderColor: isSelected ? colorSet.border : 'transparent',
+                          }}
+                          title={colorName}
+                          onClick={() => setTeamColor(isSelected ? '' : colorName)}
+                        >
+                          <span
+                            className="size-3.5 rounded-full"
+                            style={{ backgroundColor: colorSet.border }}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </OptionalSettingsSection>
           </div>
         </div>
 
         {activeError ? (
-          <p className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
+          <p
+            className="rounded border p-2 text-xs"
+            style={{
+              color: 'var(--field-error-text)',
+              borderColor: 'var(--field-error-border)',
+              backgroundColor: 'var(--field-error-bg)',
+            }}
+          >
             {activeError}
           </p>
         ) : null}

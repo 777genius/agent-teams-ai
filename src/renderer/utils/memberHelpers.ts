@@ -1,4 +1,9 @@
-import { getMemberColorByName, MEMBER_COLOR_PALETTE } from '@shared/constants/memberColors';
+import {
+  getMemberColorByName,
+  MEMBER_COLOR_PALETTE,
+  normalizeMemberColorName,
+} from '@shared/constants/memberColors';
+import { isLeadAgentType } from '@shared/utils/leadDetection';
 
 import type {
   LeadActivityState,
@@ -8,6 +13,15 @@ import type {
   TeamReviewState,
   TeamTaskStatus,
 } from '@shared/types';
+
+/**
+ * UI display name for a team member.
+ * "team-lead" → "lead"; everything else passes through unchanged.
+ * Data layer (store, IPC, backend) must keep the original name untouched.
+ */
+export function displayMemberName(name: string): string {
+  return name === 'team-lead' ? 'lead' : name;
+}
 
 export function agentAvatarUrl(name: string, size = 64): string {
   return `https://robohash.org/${encodeURIComponent(name)}?size=${size}x${size}`;
@@ -29,7 +43,7 @@ export function getMemberDotClass(
   if (member.status === 'terminated') return STATUS_DOT_COLORS.terminated;
   if (isTeamProvisioning) return STATUS_DOT_COLORS.unknown;
   if (isTeamAlive === false) return STATUS_DOT_COLORS.terminated;
-  if (leadActivity && member.agentType === 'team-lead') {
+  if (leadActivity && isLeadAgentType(member.agentType)) {
     return leadActivity === 'active'
       ? `${STATUS_DOT_COLORS.active} animate-pulse`
       : STATUS_DOT_COLORS.active;
@@ -49,7 +63,7 @@ export function getPresenceLabel(
   if (member.status === 'terminated') return 'terminated';
   if (isTeamProvisioning) return 'connecting';
   if (isTeamAlive === false) return 'offline';
-  if (leadActivity && member.agentType === 'team-lead') {
+  if (leadActivity && isLeadAgentType(member.agentType)) {
     if (leadActivity === 'active') {
       return leadContextPercent != null && leadContextPercent > 0
         ? `processing (${Math.round(leadContextPercent)}%)`
@@ -155,42 +169,43 @@ interface MemberColorInput {
 
 /**
  * Build a consistent name→colorName map for all members.
- * Deduplicates colors: first member (alphabetically) keeps its stored color,
- * subsequent collisions get the next unused palette color.
- * Also maps "user" to a reserved color.
+ * Active members receive colors sequentially from MEMBER_COLOR_PALETTE,
+ * which is pre-ordered for maximum visual contrast between consecutive entries.
+ * If a member has a stored color that hasn't been assigned yet, it is used instead.
+ * Maps "user" to a reserved color.
  */
 export function buildMemberColorMap(members: MemberColorInput[]): Map<string, string> {
   const map = new Map<string, string>();
   const active = members.filter((m) => !m.removedAt);
   const removed = members.filter((m) => m.removedAt);
   const usedColors = new Set<string>();
+  let nextPaletteIdx = 0;
 
-  const paletteSize = MEMBER_COLOR_PALETTE.length;
   for (const member of active) {
-    let color = member.color;
+    let color = member.color ? normalizeMemberColorName(member.color) : undefined;
     if (!color || usedColors.has(color)) {
-      // Deterministic fallback: hash the member name to a palette color.
-      // If that color is already taken, linear-probe for the next free one.
-      color = getMemberColorByName(member.name);
-      if (usedColors.has(color)) {
-        const startIdx = MEMBER_COLOR_PALETTE.indexOf(
-          color as (typeof MEMBER_COLOR_PALETTE)[number]
-        );
-        for (let offset = 1; offset < paletteSize; offset++) {
-          const candidate = MEMBER_COLOR_PALETTE[(startIdx + offset) % paletteSize];
-          if (!usedColors.has(candidate)) {
-            color = candidate;
-            break;
-          }
-        }
+      // Assign the next unused color from the pre-ordered palette.
+      while (
+        nextPaletteIdx < MEMBER_COLOR_PALETTE.length &&
+        usedColors.has(MEMBER_COLOR_PALETTE[nextPaletteIdx])
+      ) {
+        nextPaletteIdx++;
       }
+      color =
+        nextPaletteIdx < MEMBER_COLOR_PALETTE.length
+          ? MEMBER_COLOR_PALETTE[nextPaletteIdx]
+          : MEMBER_COLOR_PALETTE[active.indexOf(member) % MEMBER_COLOR_PALETTE.length];
+      nextPaletteIdx++;
     }
     map.set(member.name, color);
     usedColors.add(color);
   }
 
-  for (let i = 0; i < removed.length; i++) {
-    map.set(removed[i].name, removed[i].color ?? getMemberColorByName(removed[i].name));
+  for (const member of removed) {
+    const color = member.color
+      ? normalizeMemberColorName(member.color)
+      : getMemberColorByName(member.name);
+    map.set(member.name, color);
   }
 
   map.set('user', 'user');

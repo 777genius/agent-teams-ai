@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useMarkCommentsRead } from '@renderer/hooks/useMarkCommentsRead';
+import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useStore } from '@renderer/store';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
@@ -21,6 +22,12 @@ import { isImageMimeType } from '@renderer/utils/attachmentUtils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
+import {
+  extractTaskRefsFromText,
+  linkifyTaskIdsInMarkdown,
+  parseTaskLinkHref,
+  stripEncodedTaskReferenceMetadata,
+} from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { formatDistanceToNow } from 'date-fns';
@@ -59,11 +66,11 @@ interface TaskCommentsSectionProps {
   containerClassName?: string;
   /** Snapshot of unread comment IDs captured when the dialog opened. Blue dot is shown for these. */
   unreadCommentIds?: Set<string>;
-}
-
-/** Convert `#<task-display-id>` in plain text to markdown links with task:// protocol. */
-function linkifyTaskIdsInMarkdown(text: string): string {
-  return text.replace(/#([A-Za-z0-9-]+)\b/g, '[#$1](task://$1)');
+  /**
+   * Ref callback factory from useViewportCommentRead.
+   * When provided, each comment element is registered for viewport-based read tracking.
+   */
+  registerCommentForViewport?: (commentId: string) => (el: HTMLElement | null) => void;
 }
 
 export const TaskCommentsSection = ({
@@ -77,6 +84,7 @@ export const TaskCommentsSection = ({
   onTaskIdClick,
   containerClassName,
   unreadCommentIds,
+  registerCommentForViewport,
 }: TaskCommentsSectionProps): React.JSX.Element => {
   const addTaskComment = useStore((s) => s.addTaskComment);
   const addingComment = useStore((s) => s.addingComment);
@@ -103,6 +111,7 @@ export const TaskCommentsSection = ({
   const chipDraft = useChipDraftPersistence(`taskCommentChips:${teamName}:${taskId}`);
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName);
+  const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
   const teamNamesForLinkify = useMemo(
     () => teamMentionSuggestions.map((t) => t.name),
     [teamMentionSuggestions]
@@ -147,7 +156,7 @@ export const TaskCommentsSection = ({
     [members, colorMap]
   );
 
-  const trimmed = draft.value.trim();
+  const trimmed = stripEncodedTaskReferenceMetadata(draft.value).trim();
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const canSubmit =
     (trimmed.length > 0 || chipDraft.chips.length > 0) &&
@@ -159,14 +168,25 @@ export const TaskCommentsSection = ({
     try {
       const serialized = serializeChipsWithText(trimmed, chipDraft.chips);
       const text = replyTo ? buildReplyBlock(replyTo.author, replyTo.text, serialized) : serialized;
-      await addTaskComment(teamName, taskId, text);
+      const taskRefs = extractTaskRefsFromText(draft.value, taskSuggestions);
+      await addTaskComment(teamName, taskId, { text, taskRefs });
       draft.clearDraft();
       chipDraft.clearChipDraft();
       setReplyTo(null);
     } catch {
       // Error is stored in addCommentError via store
     }
-  }, [canSubmit, addTaskComment, teamName, taskId, trimmed, draft, chipDraft, replyTo]);
+  }, [
+    canSubmit,
+    addTaskComment,
+    teamName,
+    taskId,
+    trimmed,
+    draft,
+    chipDraft,
+    replyTo,
+    taskSuggestions,
+  ]);
 
   return (
     <div ref={commentsRef}>
@@ -195,8 +215,11 @@ export const TaskCommentsSection = ({
             {visibleComments.map((comment, index) => (
               <AnimatedHeightReveal key={comment.id} animate={newCommentIds.has(comment.id)}>
                 <div
+                  ref={
+                    registerCommentForViewport ? registerCommentForViewport(comment.id) : undefined
+                  }
                   className={[
-                    'group px-4 py-2.5',
+                    'group min-w-0 overflow-hidden px-4 py-2.5',
                     comment.type === 'review_approved'
                       ? 'border-y border-emerald-500/20 bg-emerald-500/5'
                       : comment.type === 'review_request'
@@ -280,10 +303,12 @@ export const TaskCommentsSection = ({
                               replyText: stripAgentBlocks(reply.replyText),
                             }}
                             memberColor={colorMap.get(reply.agentName)}
+                            replyTaskRefs={comment.taskRefs}
                             bodyMaxHeight="max-h-none"
                           />
                         ) : (
                           <span
+                            className="break-words"
                             onClickCapture={
                               onTaskIdClick
                                 ? (e) => {
@@ -293,8 +318,9 @@ export const TaskCommentsSection = ({
                                     if (link) {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      const id = link.getAttribute('href')?.replace('task://', '');
-                                      if (id) onTaskIdClick(id);
+                                      const href = link.getAttribute('href');
+                                      const parsed = href ? parseTaskLinkHref(href) : null;
+                                      if (parsed?.taskId) onTaskIdClick(parsed.taskId);
                                     }
                                   }
                                 : undefined
@@ -302,7 +328,7 @@ export const TaskCommentsSection = ({
                           >
                             <MarkdownViewer
                               content={(() => {
-                                let t = linkifyTaskIdsInMarkdown(displayText);
+                                let t = linkifyTaskIdsInMarkdown(displayText, comment.taskRefs);
                                 if (colorMap.size > 0 || teamNamesForLinkify.length > 0)
                                   t = linkifyAllMentionsInMarkdown(
                                     t,
@@ -394,6 +420,7 @@ export const TaskCommentsSection = ({
               onValueChange={draft.setValue}
               suggestions={mentionSuggestions}
               teamSuggestions={teamMentionSuggestions}
+              taskSuggestions={taskSuggestions}
               projectPath={projectPath}
               chips={chipDraft.chips}
               onFileChipInsert={chipDraft.addChip}
@@ -424,7 +451,7 @@ export const TaskCommentsSection = ({
                     </span>
                   ) : null}
                   {draft.isSaved ? (
-                    <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
                   ) : null}
                 </div>
               }

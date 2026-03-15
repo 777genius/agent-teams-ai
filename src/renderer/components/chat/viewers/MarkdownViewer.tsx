@@ -27,7 +27,10 @@ import {
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import type { SearchMatch } from '@renderer/store/types';
 import { REHYPE_PLUGINS, REHYPE_PLUGINS_NO_HIGHLIGHT } from '@renderer/utils/markdownPlugins';
+import { nameColorSet } from '@renderer/utils/projectColor';
+import { parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
 import { FileText, UsersRound } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 import { useShallow } from 'zustand/react/shallow';
@@ -60,7 +63,16 @@ interface MarkdownViewerProps {
   bare?: boolean;
   /** Base directory for resolving relative URLs (images, links) via local-resource:// protocol */
   baseDir?: string;
+  /** Optional precomputed team color map to avoid subscribing to the full team list. */
+  teamColorByName?: ReadonlyMap<string, string>;
+  /** Optional team click handler to avoid subscribing to store in leaf renderers. */
+  onTeamClick?: (teamName: string) => void;
 }
+
+const EMPTY_TEAMS: Array<{ teamName?: string; displayName?: string; color?: string }> = [];
+const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
+const EMPTY_SEARCH_MATCHES: SearchMatch[] = [];
+const NOOP_TEAM_CLICK = (): void => undefined;
 
 // =============================================================================
 // Helpers
@@ -74,6 +86,49 @@ function allowCustomProtocols(url: string): string {
   if (url.startsWith('task://') || url.startsWith('mention://') || url.startsWith('team://'))
     return url;
   return defaultUrlTransform(url);
+}
+
+/**
+ * Set of standard HTML element tag names.
+ * Used to filter out non-HTML XML-like tags (e.g. `<your-name>`, `<info_for_agent>`)
+ * that appear in agent messages and cause React "unrecognized tag" warnings.
+ */
+const STANDARD_HTML_TAGS = new Set([
+  'a', 'abbr', 'address', 'area', 'article', 'aside', 'audio',
+  'b', 'base', 'bdi', 'bdo', 'blockquote', 'body', 'br', 'button',
+  'canvas', 'caption', 'cite', 'code', 'col', 'colgroup',
+  'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'div', 'dl', 'dt',
+  'em', 'embed',
+  'fieldset', 'figcaption', 'figure', 'footer', 'form',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html',
+  'i', 'iframe', 'img', 'input', 'ins',
+  'kbd',
+  'label', 'legend', 'li', 'link',
+  'main', 'map', 'mark', 'menu', 'meta', 'meter',
+  'nav', 'noscript',
+  'object', 'ol', 'optgroup', 'option', 'output',
+  'p', 'picture', 'pre', 'progress',
+  'q',
+  'rp', 'rt', 'ruby',
+  's', 'samp', 'script', 'search', 'section', 'select', 'slot', 'small', 'source', 'span',
+  'strong', 'style', 'sub', 'summary', 'sup',
+  'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track',
+  'u', 'ul',
+  'var', 'video',
+  'wbr',
+  // SVG elements commonly used inline
+  'svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'g', 'defs', 'use',
+  'text', 'tspan', 'clippath', 'mask', 'pattern', 'image', 'foreignobject',
+]);
+
+/**
+ * Filter for react-markdown's `allowElement` prop.
+ * Returns false for non-standard HTML tags (e.g. `<your-name>`, `<info_for_agent>`),
+ * which causes react-markdown to render their text content instead of the element.
+ * This prevents React "unrecognized tag" warnings from XML-like tags in agent messages.
+ */
+function isAllowedElement(element: { tagName: string }): boolean {
+  return STANDARD_HTML_TAGS.has(element.tagName.toLowerCase());
 }
 
 /** Resolve a relative path to an absolute path given a base directory */
@@ -158,7 +213,9 @@ function hastToText(node: HastNode): string {
 
 function createViewerMarkdownComponents(
   searchCtx: SearchContext | null,
-  isLight = false
+  isLight = false,
+  teamColorByName: ReadonlyMap<string, string> = new Map(),
+  onTeamClick?: (teamName: string) => void
 ): Components {
   const hl = (children: React.ReactNode): React.ReactNode =>
     searchCtx ? highlightSearchInChildren(children, searchCtx) : children;
@@ -246,10 +303,62 @@ function createViewerMarkdownComponents(
         }
         return badge;
       }
-      if (href?.startsWith('task://')) {
-        const taskId = href.slice('task://'.length);
+      if (href?.startsWith('team://')) {
+        let teamLabel = '';
+        try {
+          teamLabel = decodeURIComponent(href.slice('team://'.length));
+        } catch {
+          // malformed percent-encoding — fall back to deterministic name color
+        }
+        const teamColor = teamColorByName.get(teamLabel);
+        const colorSet = teamColor ? getTeamColorSet(teamColor) : nameColorSet(teamLabel, isLight);
+        const bg = getThemedBadge(colorSet, isLight);
+        const badgeStyle: React.CSSProperties = {
+          backgroundColor: bg,
+          color: colorSet.text,
+          borderRadius: '3px',
+          boxShadow: `0 0 0 1.5px ${bg}`,
+          fontSize: 'inherit',
+          cursor: onTeamClick ? 'pointer' : 'default',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '2px',
+          border: 'none',
+          padding: 0,
+          font: 'inherit',
+          lineHeight: 'inherit',
+        };
+        if (onTeamClick && teamLabel) {
+          return (
+            <button
+              type="button"
+              style={badgeStyle}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onTeamClick(teamLabel);
+              }}
+            >
+              <UsersRound size={11} style={{ flexShrink: 0 }} />
+              {children}
+            </button>
+          );
+        }
         return (
-          <TaskTooltip taskId={taskId}>
+          <span style={badgeStyle}>
+            <UsersRound size={11} style={{ flexShrink: 0 }} />
+            {children}
+          </span>
+        );
+      }
+      if (href?.startsWith('task://')) {
+        const parsedTaskLink = parseTaskLinkHref(href);
+        const taskId = parsedTaskLink?.taskId;
+        if (!taskId) {
+          return <>{children}</>;
+        }
+        return (
+          <TaskTooltip taskId={taskId} teamName={parsedTaskLink?.teamName}>
             <a
               href={href}
               className="cursor-pointer font-medium no-underline hover:underline"
@@ -439,9 +548,6 @@ function createViewerMarkdownComponents(
   };
 }
 
-/** Default components without search highlighting */
-const defaultComponents = createViewerMarkdownComponents(null);
-
 // Markdown + syntax highlighting can freeze the renderer on some inputs
 // (very large text, huge code blocks, pathological markdown). Keep the UI responsive:
 // - for medium/large content: disable syntax highlighting
@@ -464,10 +570,30 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   copyable = false,
   bare = false,
   baseDir,
+  teamColorByName: providedTeamColorByName,
+  onTeamClick: providedOnTeamClick,
 }) => {
   const [showRaw, setShowRaw] = React.useState(false);
   const [rawLimit, setRawLimit] = React.useState(LARGE_PREVIEW_CHARS);
   const { isLight } = useTheme();
+  const teams = useStore((s) => (providedTeamColorByName ? EMPTY_TEAMS : s.teams));
+  const openTeamTab = useStore((s) => (providedOnTeamClick ? NOOP_TEAM_CLICK : s.openTeamTab));
+
+  const fallbackTeamColorByName = React.useMemo(() => {
+    const result = new Map<string, string>();
+    for (const team of teams) {
+      if (team.teamName) {
+        result.set(team.teamName, team.color ?? '');
+      }
+      if (team.displayName) {
+        result.set(team.displayName, team.color ?? '');
+      }
+    }
+    return result;
+  }, [teams]);
+  const teamColorByName =
+    providedTeamColorByName ?? fallbackTeamColorByName ?? EMPTY_TEAM_COLOR_MAP;
+  const onTeamClick = providedOnTeamClick ?? openTeamTab;
 
   const isTooLarge = content.length > MAX_MARKDOWN_CHARS;
   const disableHighlight = content.length > DISABLE_HIGHLIGHT_CHARS;
@@ -476,7 +602,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   const { searchQuery, searchMatches, currentSearchIndex } = useStore(
     useShallow((s) => ({
       searchQuery: itemId ? s.searchQuery : '',
-      searchMatches: itemId ? s.searchMatches : [],
+      searchMatches: itemId ? s.searchMatches : EMPTY_SEARCH_MATCHES,
       currentSearchIndex: itemId ? s.currentSearchIndex : -1,
     }))
   );
@@ -620,10 +746,10 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   // When search is active, create fresh each render (match counter is stateful and must start at 0)
   // useMemo would cache stale closures when parent re-renders without search deps changing
   const baseComponents = searchCtx
-    ? createViewerMarkdownComponents(searchCtx, isLight)
+    ? createViewerMarkdownComponents(searchCtx, isLight, teamColorByName, onTeamClick)
     : isLight
-      ? createViewerMarkdownComponents(null, true)
-      : defaultComponents;
+      ? createViewerMarkdownComponents(null, true, teamColorByName, onTeamClick)
+      : createViewerMarkdownComponents(null, false, teamColorByName, onTeamClick);
 
   // When baseDir is set (editor preview), override img to load local files via IPC
   const components = baseDir
@@ -685,6 +811,8 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
             rehypePlugins={disableHighlight ? REHYPE_PLUGINS_NO_HIGHLIGHT : REHYPE_PLUGINS}
             components={components}
             urlTransform={allowCustomProtocols}
+            allowElement={isAllowedElement}
+            unwrapDisallowed
           >
             {content}
           </ReactMarkdown>

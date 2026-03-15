@@ -5,26 +5,33 @@
  */
 
 import { createIpcWrapper } from '@main/ipc/ipcWrapper';
+import { EditorFileWatcher } from '@main/services/editor';
 import { ReviewDecisionStore } from '@main/services/team/ReviewDecisionStore';
 import { validateFilePath } from '@main/utils/pathValidation';
 import {
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
   REVIEW_CLEAR_DECISIONS,
+  REVIEW_FILE_CHANGE,
   REVIEW_GET_AGENT_CHANGES,
   REVIEW_GET_CHANGE_STATS,
   REVIEW_GET_FILE_CONTENT,
   REVIEW_GET_GIT_FILE_LOG,
   REVIEW_GET_TASK_CHANGES,
+  REVIEW_INVALIDATE_TASK_CHANGE_SUMMARIES,
   REVIEW_LOAD_DECISIONS,
   REVIEW_PREVIEW_REJECT,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
   REVIEW_SAVE_DECISIONS,
   REVIEW_SAVE_EDITED_FILE,
+  REVIEW_UNWATCH_FILES,
+  REVIEW_WATCH_FILES,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
 import { createLogger } from '@shared/utils/logger';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 import type { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import type { FileContentResolver } from '@main/services/team/FileContentResolver';
@@ -43,7 +50,7 @@ import type {
   SnippetDiff,
   TaskChangeSetV2,
 } from '@shared/types/review';
-import type { IpcMain, IpcMainInvokeEvent } from 'electron';
+import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from 'electron';
 
 const wrapReviewHandler = createIpcWrapper('IPC:review');
 const logger = createLogger('IPC:review');
@@ -55,6 +62,9 @@ let reviewApplier: ReviewApplierService | null = null;
 let fileContentResolver: FileContentResolver | null = null;
 let gitDiffFallback: GitDiffFallback | null = null;
 const reviewDecisionStore = new ReviewDecisionStore();
+const reviewFileWatcher = new EditorFileWatcher();
+let reviewWatcherProjectRoot: string | null = null;
+let reviewMainWindowRef: BrowserWindow | null = null;
 
 function getChangeExtractor(): ChangeExtractorService {
   if (!changeExtractor) throw new Error('Review handlers not initialized');
@@ -91,6 +101,7 @@ export function registerReviewHandlers(ipcMain: IpcMain): void {
   // Phase 1
   ipcMain.handle(REVIEW_GET_AGENT_CHANGES, handleGetAgentChanges);
   ipcMain.handle(REVIEW_GET_TASK_CHANGES, handleGetTaskChanges);
+  ipcMain.handle(REVIEW_INVALIDATE_TASK_CHANGE_SUMMARIES, handleInvalidateTaskChangeSummaries);
   ipcMain.handle(REVIEW_GET_CHANGE_STATS, handleGetChangeStats);
   // Phase 2
   ipcMain.handle(REVIEW_CHECK_CONFLICT, handleCheckConflict);
@@ -101,6 +112,8 @@ export function registerReviewHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(REVIEW_GET_FILE_CONTENT, handleGetFileContent);
   // Editable diff
   ipcMain.handle(REVIEW_SAVE_EDITED_FILE, handleSaveEditedFile);
+  ipcMain.handle(REVIEW_WATCH_FILES, handleWatchReviewFiles);
+  ipcMain.handle(REVIEW_UNWATCH_FILES, handleUnwatchReviewFiles);
   // Phase 4
   ipcMain.handle(REVIEW_GET_GIT_FILE_LOG, handleGetGitFileLog);
   // Decision persistence
@@ -113,6 +126,7 @@ export function removeReviewHandlers(ipcMain: IpcMain): void {
   // Phase 1
   ipcMain.removeHandler(REVIEW_GET_AGENT_CHANGES);
   ipcMain.removeHandler(REVIEW_GET_TASK_CHANGES);
+  ipcMain.removeHandler(REVIEW_INVALIDATE_TASK_CHANGE_SUMMARIES);
   ipcMain.removeHandler(REVIEW_GET_CHANGE_STATS);
   // Phase 2
   ipcMain.removeHandler(REVIEW_CHECK_CONFLICT);
@@ -123,12 +137,20 @@ export function removeReviewHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(REVIEW_GET_FILE_CONTENT);
   // Editable diff
   ipcMain.removeHandler(REVIEW_SAVE_EDITED_FILE);
+  ipcMain.removeHandler(REVIEW_WATCH_FILES);
+  ipcMain.removeHandler(REVIEW_UNWATCH_FILES);
   // Phase 4
   ipcMain.removeHandler(REVIEW_GET_GIT_FILE_LOG);
   // Decision persistence
   ipcMain.removeHandler(REVIEW_LOAD_DECISIONS);
   ipcMain.removeHandler(REVIEW_SAVE_DECISIONS);
   ipcMain.removeHandler(REVIEW_CLEAR_DECISIONS);
+  reviewFileWatcher.stop();
+  reviewWatcherProjectRoot = null;
+}
+
+export function setReviewMainWindow(win: BrowserWindow | null): void {
+  reviewMainWindowRef = win;
 }
 
 // --- Phase 1 Handlers ---
@@ -174,13 +196,38 @@ async function handleGetTaskChanges(
                     typeof (i as Record<string, unknown>).completedAt === 'string')
               ) as { startedAt: string; completedAt?: string }[])
             : undefined,
+          stateBucket:
+            (options as Record<string, unknown>).stateBucket === 'approved' ||
+            (options as Record<string, unknown>).stateBucket === 'review' ||
+            (options as Record<string, unknown>).stateBucket === 'completed' ||
+            (options as Record<string, unknown>).stateBucket === 'active'
+              ? ((options as Record<string, unknown>).stateBucket as
+                  | 'approved'
+                  | 'review'
+                  | 'completed'
+                  | 'active')
+              : undefined,
           summaryOnly: (options as Record<string, unknown>).summaryOnly === true,
+          forceFresh: (options as Record<string, unknown>).forceFresh === true,
         }
       : undefined;
 
   return wrapReviewHandler('getTaskChanges', () =>
     getChangeExtractor().getTaskChanges(teamName, taskId, opts)
   );
+}
+
+async function handleInvalidateTaskChangeSummaries(
+  _event: IpcMainInvokeEvent,
+  teamName: string,
+  taskIds: string[]
+): Promise<IpcResult<void>> {
+  return wrapReviewHandler('invalidateTaskChangeSummaries', async () => {
+    await getChangeExtractor().invalidateTaskChangeSummaries(
+      teamName,
+      Array.isArray(taskIds) ? taskIds.filter((taskId) => typeof taskId === 'string') : []
+    );
+  });
 }
 
 async function handleGetChangeStats(
@@ -340,7 +387,55 @@ async function handleSaveEditedFile(
   });
 }
 
+async function handleWatchReviewFiles(
+  _event: IpcMainInvokeEvent,
+  projectPath: string,
+  filePaths: string[]
+): Promise<IpcResult<void>> {
+  return wrapReviewHandler('watchFiles', async () => {
+    const normalizedProjectPath = await validateReviewProjectPath(projectPath);
+    const shouldRestart =
+      reviewWatcherProjectRoot !== normalizedProjectPath || !reviewFileWatcher.isWatching();
+
+    if (shouldRestart) {
+      reviewFileWatcher.stop();
+      reviewWatcherProjectRoot = normalizedProjectPath;
+      reviewFileWatcher.start(normalizedProjectPath, (event) => {
+        if (reviewMainWindowRef && !reviewMainWindowRef.isDestroyed()) {
+          reviewMainWindowRef.webContents.send(REVIEW_FILE_CHANGE, event);
+        }
+      });
+    }
+
+    reviewFileWatcher.setWatchedFiles(Array.isArray(filePaths) ? filePaths : []);
+  });
+}
+
+async function handleUnwatchReviewFiles(): Promise<IpcResult<void>> {
+  return wrapReviewHandler('unwatchFiles', async () => {
+    reviewFileWatcher.stop();
+    reviewWatcherProjectRoot = null;
+  });
+}
+
 // --- Phase 4 Handlers ---
+
+async function validateReviewProjectPath(projectPath: string): Promise<string> {
+  if (!projectPath || typeof projectPath !== 'string') {
+    throw new Error('Invalid project path');
+  }
+
+  if (!path.isAbsolute(projectPath)) {
+    throw new Error('Project path must be absolute');
+  }
+
+  const normalized = path.resolve(path.normalize(projectPath));
+  const stat = await fs.stat(normalized);
+  if (!stat.isDirectory()) {
+    throw new Error('Project path is not a directory');
+  }
+  return normalized;
+}
 
 async function handleGetGitFileLog(
   _event: IpcMainInvokeEvent,

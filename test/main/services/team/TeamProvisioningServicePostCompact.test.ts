@@ -221,7 +221,11 @@ describe('TeamProvisioningService post-compact lifecycle', () => {
   it('injectPostCompactReminder defers when silentUserDmForward is active', async () => {
     const { svc, run, runId } = await setupRunningTeam('compact-test-6');
     run.pendingPostCompactReminder = true;
-    run.silentUserDmForward = { target: 'alice', startedAt: new Date().toISOString() };
+    run.silentUserDmForward = {
+      target: 'alice',
+      startedAt: new Date().toISOString(),
+      mode: 'user_dm',
+    };
 
     await (svc as any).injectPostCompactReminder(run);
 

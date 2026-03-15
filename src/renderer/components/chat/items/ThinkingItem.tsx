@@ -6,7 +6,6 @@ import { highlightQueryInText } from '../searchHighlightUtils';
 import { MarkdownViewer } from '../viewers';
 
 import { BaseItem } from './BaseItem';
-import { truncateText } from './baseItemHelpers';
 
 import type { SemanticStep } from '@renderer/types/data';
 import type { TriggerColor } from '@shared/constants/triggerColors';
@@ -43,17 +42,11 @@ export const ThinkingItem: React.FC<ThinkingItemProps> = ({
   notificationDotColor,
 }) => {
   const fullContent = step.content.thinkingText ?? preview;
-  const truncatedPreview = truncateText(preview, 60);
   const summary = searchQueryOverride
-    ? highlightQueryInText(
-        truncatedPreview,
-        searchQueryOverride,
-        `${markdownItemId ?? step.id}:summary`,
-        {
-          forceAllActive: true,
-        }
-      )
-    : truncatedPreview;
+    ? highlightQueryInText(preview, searchQueryOverride, `${markdownItemId ?? step.id}:summary`, {
+        forceAllActive: true,
+      })
+    : preview;
 
   // Get token count from step.tokens.output or step.content.tokenCount
   const tokenCount = step.tokens?.output ?? step.content.tokenCount ?? 0;

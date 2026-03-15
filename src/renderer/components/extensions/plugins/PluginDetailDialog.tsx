@@ -32,6 +32,7 @@ import { ExternalLink, Loader2, Mail } from 'lucide-react';
 
 import { InstallButton } from '../common/InstallButton';
 import { InstallCountBadge } from '../common/InstallCountBadge';
+import { SourceBadge } from '../common/SourceBadge';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 
@@ -87,14 +88,17 @@ export const PluginDetailDialog = ({
               <DialogTitle className="truncate">{plugin.name}</DialogTitle>
               <DialogDescription className="mt-1">{plugin.description}</DialogDescription>
             </div>
-            {plugin.isInstalled && (
-              <Badge
-                className="shrink-0 border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                variant="outline"
-              >
-                Installed
-              </Badge>
-            )}
+            <div className="flex shrink-0 items-center gap-1.5">
+              {plugin.isInstalled && (
+                <Badge
+                  className="shrink-0 border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                  variant="outline"
+                >
+                  Installed
+                </Badge>
+              )}
+              <SourceBadge source={plugin.source} />
+            </div>
           </div>
         </DialogHeader>
 
@@ -107,6 +111,10 @@ export const PluginDetailDialog = ({
           <div>
             <span className="text-text-muted">Category</span>
             <p className="capitalize text-text">{category}</p>
+          </div>
+          <div>
+            <span className="text-text-muted">Source</span>
+            <p className="capitalize text-text">{plugin.source}</p>
           </div>
           {plugin.version && (
             <div>

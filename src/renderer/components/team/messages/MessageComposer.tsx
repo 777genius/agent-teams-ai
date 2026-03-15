@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { api } from '@renderer/api';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
 import { ActionModeSelector } from '@renderer/components/team/messages/ActionModeSelector';
@@ -8,20 +9,32 @@ import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useComposerDraft } from '@renderer/hooks/useComposerDraft';
+import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { nameColorSet } from '@renderer/utils/projectColor';
+import {
+  extractTaskRefsFromText,
+  stripEncodedTaskReferenceMetadata,
+} from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { AlertCircle, Check, ChevronDown, ImagePlus, Mic, Search, Send } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
-import type { AttachmentPayload, ResolvedTeamMember, SendMessageResult } from '@shared/types';
+import type {
+  AttachmentPayload,
+  ResolvedTeamMember,
+  SendMessageResult,
+  TaskRef,
+} from '@shared/types';
 
 interface MessageComposerProps {
   teamName: string;
@@ -30,18 +43,22 @@ interface MessageComposerProps {
   sending: boolean;
   sendError: string | null;
   lastResult?: SendMessageResult | null;
+  /** Ref to the underlying textarea element for external focus management. */
+  textareaRef?: React.Ref<HTMLTextAreaElement>;
   onSend: (
     recipient: string,
     text: string,
     summary?: string,
     attachments?: AttachmentPayload[],
-    actionMode?: ActionMode
+    actionMode?: ActionMode,
+    taskRefs?: TaskRef[]
   ) => void;
   onCrossTeamSend?: (
     toTeam: string,
     text: string,
     summary?: string,
-    actionMode?: ActionMode
+    actionMode?: ActionMode,
+    taskRefs?: TaskRef[]
   ) => void;
 }
 
@@ -52,11 +69,25 @@ export const MessageComposer = ({
   sending,
   sendError,
   lastResult,
+  textareaRef: externalTextareaRef,
   onSend,
   onCrossTeamSend,
 }: MessageComposerProps): React.JSX.Element => {
+  const internalTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useMemo(() => {
+    // Merge internal and external refs into a single callback ref
+    return (node: HTMLTextAreaElement | null) => {
+      (internalTextareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
+      if (typeof externalTextareaRef === 'function') {
+        externalTextareaRef(node);
+      } else if (externalTextareaRef) {
+        (externalTextareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalTextareaRef]);
   const [recipient, setRecipient] = useState<string>(() => {
-    const lead = members.find((m) => m.role === 'lead' || m.name === 'team-lead');
+    const lead = members.find((m) => isLeadMember(m));
     return lead?.name ?? members[0]?.name ?? '';
   });
   const [recipientOpen, setRecipientOpen] = useState(false);
@@ -67,10 +98,12 @@ export const MessageComposer = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageRestrictionError, setImageRestrictionError] = useState<string | null>(null);
   const imageRestrictionTimerRef = useRef(0);
+  const dismissMentionsRef = useRef<(() => void) | null>(null);
 
   // Cross-team state
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [teamSelectorOpen, setTeamSelectorOpen] = useState(false);
+  const [aliveTeams, setAliveTeams] = useState<Set<string>>(new Set());
   const allCrossTeamTargets = useStore((s) => s.crossTeamTargets);
   const fetchCrossTeamTargets = useStore((s) => s.fetchCrossTeamTargets);
 
@@ -78,14 +111,52 @@ export const MessageComposer = ({
     void fetchCrossTeamTargets();
   }, [fetchCrossTeamTargets]);
 
+  const refreshAliveTeams = useCallback(async () => {
+    try {
+      const list = await api.teams.aliveList();
+      setAliveTeams(new Set(list));
+    } catch {
+      // best-effort
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshAliveTeams();
+  }, [refreshAliveTeams]);
+
+  useEffect(() => {
+    if (!teamSelectorOpen) return;
+    void refreshAliveTeams();
+  }, [teamSelectorOpen, refreshAliveTeams]);
+
   // Always filter out current team on the UI side (store is global, shared across tabs)
   const crossTeamTargets = useMemo(
     () => allCrossTeamTargets.filter((t) => t.teamName !== teamName),
     [allCrossTeamTargets, teamName]
   );
+  const sortedCrossTeamTargets = useMemo(
+    () =>
+      crossTeamTargets
+        .map((target) => ({
+          ...target,
+          isOnline: aliveTeams.has(target.teamName),
+        }))
+        .sort((a, b) => {
+          if (a.isOnline && !b.isOnline) return -1;
+          if (!a.isOnline && b.isOnline) return 1;
+          return (a.displayName || a.teamName).localeCompare(
+            b.displayName || b.teamName,
+            undefined,
+            {
+              sensitivity: 'base',
+            }
+          );
+        }),
+    [aliveTeams, crossTeamTargets]
+  );
 
   const isCrossTeam = selectedTeam !== null;
-  const selectedTarget = crossTeamTargets.find((t) => t.teamName === selectedTeam);
+  const selectedTarget = sortedCrossTeamTargets.find((t) => t.teamName === selectedTeam);
   const targetDisplayName = selectedTarget?.displayName ?? selectedTeam;
   const crossTeamHintText = isCrossTeam
     ? 'Tip: Cross-team messages go to the target team lead. If you want the reply to come back to your team lead instead of you, say that explicitly in the message.'
@@ -96,7 +167,7 @@ export const MessageComposer = ({
     if (recipient && members.some((m) => m.name === recipient)) {
       return;
     }
-    const lead = members.find((m) => m.role === 'lead' || m.name === 'team-lead');
+    const lead = members.find((m) => isLeadMember(m));
     const next = lead?.name ?? members[0]?.name ?? '';
     if (next && next !== recipient) {
       queueMicrotask(() => setRecipient(next));
@@ -110,13 +181,7 @@ export const MessageComposer = ({
     const displayName = s.selectedTeamData?.config.name ?? teamName;
     return nameColorSet(displayName).border;
   });
-  const isProvisioning = useStore((s) =>
-    Object.values(s.provisioningRuns).some(
-      (run) =>
-        run.teamName === teamName &&
-        !['ready', 'disconnected', 'failed', 'cancelled'].includes(run.state)
-    )
-  );
+  const isProvisioning = useStore((s) => isTeamProvisioningActive(s, teamName));
   const draft = useComposerDraft(teamName);
 
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
@@ -133,17 +198,27 @@ export const MessageComposer = ({
   );
 
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName);
+  const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
 
-  const trimmed = draft.text.trim();
+  const trimmed = stripEncodedTaskReferenceMetadata(draft.text).trim();
 
   const selectedMember = members.find((m) => m.name === recipient);
   const selectedResolvedColor = selectedMember ? colorMap.get(selectedMember.name) : undefined;
-  const isLeadRecipient = selectedMember?.role === 'lead' || selectedMember?.name === 'team-lead';
+  const isLeadRecipient = selectedMember ? isLeadMember(selectedMember) : false;
   const hasTeammates = members.length > 1;
   const canDelegate = hasTeammates && (isCrossTeam || isLeadRecipient);
   const shouldAutoDelegate = isLeadRecipient && canDelegate;
 
   const { actionMode, setActionMode, isLoaded: draftLoaded } = draft;
+
+  // Re-focus textarea after action mode changes (Do/Ask/Delegate button clicks)
+  const prevActionModeRef = useRef(actionMode);
+  useEffect(() => {
+    if (prevActionModeRef.current !== actionMode) {
+      prevActionModeRef.current = actionMode;
+      internalTextareaRef.current?.focus();
+    }
+  }, [actionMode]);
 
   // Auto-select delegate when lead recipient is chosen by the user.
   // Wait until draft is restored from IndexedDB (draftLoaded) before running,
@@ -196,12 +271,20 @@ export const MessageComposer = ({
   // Track whether we initiated a send — clear draft only on confirmed success
   const pendingSendRef = useRef(false);
 
+  const handleCycleActionMode = useCallback(() => {
+    const modes: ActionMode[] = canDelegate ? ['do', 'ask', 'delegate'] : ['do', 'ask'];
+    const idx = modes.indexOf(actionMode);
+    setActionMode(modes[(idx + 1) % modes.length]);
+  }, [actionMode, canDelegate, setActionMode]);
+
   const handleSend = useCallback(() => {
     if (!canSend) return;
+    dismissMentionsRef.current?.();
     pendingSendRef.current = true;
+    const taskRefs = extractTaskRefsFromText(draft.text, taskSuggestions);
     const serialized = serializeChipsWithText(trimmed, draft.chips);
     if (isCrossTeam && selectedTeam && onCrossTeamSend) {
-      onCrossTeamSend(selectedTeam, serialized, trimmed, actionMode);
+      onCrossTeamSend(selectedTeam, serialized, trimmed, actionMode, taskRefs);
     } else {
       // Summary should stay compact (no expanded chip markdown)
       onSend(
@@ -209,7 +292,8 @@ export const MessageComposer = ({
         serialized,
         trimmed,
         draft.attachments.length > 0 ? draft.attachments : undefined,
-        actionMode
+        actionMode,
+        taskRefs
       );
     }
   }, [
@@ -223,6 +307,7 @@ export const MessageComposer = ({
     selectedTeam,
     draft.attachments,
     draft.chips,
+    taskSuggestions,
   ]);
 
   // Clear draft only after send completes successfully (sending: true → false, no error)
@@ -320,10 +405,12 @@ export const MessageComposer = ({
   );
 
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
+  const hasAttachmentPreviewContent =
+    draft.attachments.length > 0 || Boolean(draft.attachmentError ?? imageRestrictionError);
 
   return (
     <div
-      className="relative mb-3 p-3"
+      className="relative mb-3 pb-3"
       role="group"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -333,212 +420,319 @@ export const MessageComposer = ({
     >
       <DropZoneOverlay active={isDragOver} rejected={!isLeadRecipient} />
 
-      <div className="mb-1 flex items-center gap-2">
-        {isLeadRecipient ? (
-          <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/gif,image/webp"
-              multiple
-              className="hidden"
-              onChange={handleFileInputChange}
-            />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    'inline-flex shrink-0 items-center gap-1 rounded p-1 transition-colors',
-                    canAttach
-                      ? 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
-                      : 'text-[var(--color-text-muted)] opacity-40'
-                  )}
-                  disabled={!canAttach}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <ImagePlus size={14} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                {!isTeamAlive
-                  ? 'Team must be online to attach images'
-                  : !draft.canAddMore
-                    ? 'Maximum attachments reached'
-                    : 'Attach images (paste or drag & drop)'}
-              </TooltipContent>
-            </Tooltip>
-            <div className="min-w-0 flex-1">
-              <AttachmentPreviewList
-                attachments={draft.attachments}
-                onRemove={draft.removeAttachment}
-                error={draft.attachmentError ?? imageRestrictionError}
-                onDismissError={draft.clearAttachmentError}
-                disabled={attachmentsBlocked}
-                disabledHint="Image attachments are only supported when sending to the team lead while the team is online. Remove attachments or switch recipient."
+      <div className="mb-1 space-y-2">
+        <div className="flex items-center gap-2">
+          {isLeadRecipient ? (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                multiple
+                className="hidden"
+                onChange={handleFileInputChange}
               />
-            </div>
-          </>
-        ) : (
-          <AttachmentPreviewList
-            attachments={draft.attachments}
-            onRemove={draft.removeAttachment}
-            error={draft.attachmentError ?? imageRestrictionError}
-            onDismissError={draft.clearAttachmentError}
-            disabled={attachmentsBlocked}
-            disabledHint="Image attachments are only supported when sending to the team lead while the team is online. Remove attachments or switch recipient."
-          />
-        )}
-
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          {isProvisioning ? (
-            <span className="text-[10px]" style={{ color: 'var(--warning-text)' }}>
-              Launching... inbox delivery only
-            </span>
-          ) : !isTeamAlive ? (
-            <span className="text-[10px]" style={{ color: 'var(--warning-text)' }}>
-              Team offline
-            </span>
-          ) : null}
-
-          {/* Combined team + member selector */}
-          {crossTeamTargets.length > 0 ? (
-            <div
-              className={cn(
-                'inline-flex items-center rounded-full border text-xs transition-colors',
-                isCrossTeam ? 'border-[var(--cross-team-border)]' : 'border-[var(--color-border)]'
-              )}
-            >
-              <Popover open={teamSelectorOpen} onOpenChange={setTeamSelectorOpen}>
-                <PopoverTrigger asChild>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-l-full border-r border-r-[var(--color-border)] px-2.5 py-1 text-xs transition-colors',
-                      isCrossTeam
-                        ? 'hover:bg-[var(--cross-team-bg)]/80 bg-[var(--cross-team-bg)] text-purple-400'
-                        : 'hover:bg-[var(--color-surface-raised)]'
+                      'inline-flex shrink-0 items-center gap-1 rounded p-1 transition-colors',
+                      canAttach
+                        ? 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+                        : 'text-[var(--color-text-muted)] opacity-40'
                     )}
+                    disabled={!canAttach}
+                    onClick={() => fileInputRef.current?.click()}
                   >
-                    {isCrossTeam ? (
-                      <>
-                        <span
-                          className="inline-block size-2 shrink-0 rounded-full"
-                          style={{
-                            backgroundColor: selectedTarget
-                              ? selectedTarget.color
-                                ? getTeamColorSet(selectedTarget.color).border
-                                : nameColorSet(selectedTarget.displayName).border
-                              : undefined,
-                          }}
-                        />
-                        <span className="max-w-[100px] truncate">{targetDisplayName}</span>
-                      </>
-                    ) : (
-                      <>
+                    <ImagePlus size={14} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {!isTeamAlive
+                    ? 'Team must be online to attach images'
+                    : !draft.canAddMore
+                      ? 'Maximum attachments reached'
+                      : 'Attach images (paste or drag & drop)'}
+                </TooltipContent>
+              </Tooltip>
+            </>
+          ) : null}
+
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            {!isTeamAlive && !isProvisioning && (
+              <span className="text-[10px]" style={{ color: 'var(--warning-text)' }}>
+                Team offline
+              </span>
+            )}
+
+            {/* Combined team + member selector */}
+            {sortedCrossTeamTargets.length > 0 ? (
+              <div
+                className={cn(
+                  'inline-flex items-center rounded-full border text-xs transition-colors',
+                  isCrossTeam ? 'border-[var(--cross-team-border)]' : 'border-[var(--color-border)]'
+                )}
+              >
+                <Popover open={teamSelectorOpen} onOpenChange={setTeamSelectorOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-l-full border-r border-r-[var(--color-border)] px-2.5 py-1 text-xs transition-colors',
+                        isCrossTeam
+                          ? 'hover:bg-[var(--cross-team-bg)]/80 bg-[var(--cross-team-bg)] text-purple-400'
+                          : 'hover:bg-[var(--color-surface-raised)]'
+                      )}
+                    >
+                      {isCrossTeam ? (
+                        <>
+                          <span
+                            className={cn(
+                              'inline-block size-2 shrink-0 rounded-full',
+                              selectedTarget?.isOnline && 'animate-pulse'
+                            )}
+                            style={{
+                              backgroundColor: selectedTarget?.isOnline
+                                ? '#22c55e'
+                                : selectedTarget
+                                  ? selectedTarget.color
+                                    ? getTeamColorSet(selectedTarget.color).border
+                                    : nameColorSet(selectedTarget.displayName).border
+                                  : undefined,
+                            }}
+                          />
+                          <span className="max-w-[100px] truncate">{targetDisplayName}</span>
+                        </>
+                      ) : (
+                        <>
+                          {currentTeamColor ? (
+                            <span
+                              className="inline-block size-2 shrink-0 rounded-full"
+                              style={{ backgroundColor: currentTeamColor }}
+                            />
+                          ) : null}
+                          <span className="text-[var(--color-text-secondary)]">This team</span>
+                        </>
+                      )}
+                      <ChevronDown size={12} className="shrink-0 text-[var(--color-text-muted)]" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-56 p-1.5">
+                    <div className="max-h-48 space-y-0.5 overflow-y-auto">
+                      {/* Current team option */}
+                      <button
+                        type="button"
+                        className={cn(
+                          'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
+                          !isCrossTeam && 'bg-[var(--color-surface-raised)]'
+                        )}
+                        onClick={() => {
+                          setSelectedTeam(null);
+                          setTeamSelectorOpen(false);
+                        }}
+                      >
                         {currentTeamColor ? (
                           <span
                             className="inline-block size-2 shrink-0 rounded-full"
                             style={{ backgroundColor: currentTeamColor }}
                           />
                         ) : null}
-                        <span className="text-[var(--color-text-secondary)]">This team</span>
-                      </>
-                    )}
-                    <ChevronDown size={12} className="shrink-0 text-[var(--color-text-muted)]" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-56 p-1.5">
-                  <div className="max-h-48 space-y-0.5 overflow-y-auto">
-                    {/* Current team option */}
+                        <span className="truncate text-[var(--color-text)]">This team</span>
+                        <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
+                          current
+                        </span>
+                        {!isCrossTeam ? (
+                          <Check size={12} className="ml-auto shrink-0 text-blue-400" />
+                        ) : null}
+                      </button>
+
+                      {/* Separator */}
+                      <div className="my-1 h-px bg-[var(--color-border)]" />
+
+                      {/* Other teams */}
+                      {sortedCrossTeamTargets.map((target) => {
+                        const isSelected = selectedTeam === target.teamName;
+                        return (
+                          <button
+                            key={target.teamName}
+                            type="button"
+                            className={cn(
+                              'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
+                              isSelected && 'bg-[var(--cross-team-bg)]'
+                            )}
+                            onClick={() => {
+                              setSelectedTeam(target.teamName);
+                              setRecipient('team-lead');
+                              setTeamSelectorOpen(false);
+                            }}
+                          >
+                            <span
+                              className={cn(
+                                'inline-block size-2 shrink-0 rounded-full',
+                                target.isOnline && 'animate-pulse'
+                              )}
+                              style={{
+                                backgroundColor: target.isOnline
+                                  ? '#22c55e'
+                                  : target.color
+                                    ? getTeamColorSet(target.color).border
+                                    : nameColorSet(target.displayName).border,
+                              }}
+                              title={target.isOnline ? 'Online' : 'Offline'}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <div className="truncate text-[var(--color-text)]">
+                                  {target.displayName}
+                                </div>
+                                <span
+                                  className={cn(
+                                    'shrink-0 text-[10px]',
+                                    target.isOnline
+                                      ? 'text-green-400'
+                                      : 'text-[var(--color-text-muted)]'
+                                  )}
+                                >
+                                  {target.isOnline ? 'online' : 'offline'}
+                                </span>
+                              </div>
+                              {target.description ? (
+                                <div className="truncate text-[10px] text-[var(--color-text-muted)]">
+                                  {target.description}
+                                </div>
+                              ) : null}
+                            </div>
+                            {isSelected ? (
+                              <Check size={12} className="ml-auto shrink-0 text-purple-400" />
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Popover
+                  open={isCrossTeam ? false : recipientOpen}
+                  onOpenChange={isCrossTeam ? undefined : setRecipientOpen}
+                >
+                  <PopoverTrigger asChild>
                     <button
                       type="button"
                       className={cn(
-                        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
-                        !isCrossTeam && 'bg-[var(--color-surface-raised)]'
+                        'inline-flex items-center gap-1.5 rounded-r-full px-2.5 py-1 text-xs transition-colors',
+                        isCrossTeam
+                          ? 'cursor-default bg-[var(--cross-team-bg)] opacity-60'
+                          : 'hover:bg-[var(--color-surface-raised)]'
                       )}
-                      onClick={() => {
-                        setSelectedTeam(null);
-                        setTeamSelectorOpen(false);
-                      }}
+                      disabled={isCrossTeam}
                     >
-                      {currentTeamColor ? (
-                        <span
-                          className="inline-block size-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: currentTeamColor }}
+                      {recipient ? (
+                        <MemberBadge
+                          name={recipient}
+                          color={selectedResolvedColor}
+                          size="sm"
+                          hideAvatar={recipient === 'user'}
+                          disableHoverCard
                         />
-                      ) : null}
-                      <span className="truncate text-[var(--color-text)]">This team</span>
-                      <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                        current
-                      </span>
-                      {!isCrossTeam ? (
-                        <Check size={12} className="ml-auto shrink-0 text-blue-400" />
-                      ) : null}
+                      ) : (
+                        <span className="text-[var(--color-text-muted)]">Select...</span>
+                      )}
+                      <ChevronDown size={12} className="shrink-0 text-[var(--color-text-muted)]" />
                     </button>
-
-                    {/* Separator */}
-                    <div className="my-1 h-px bg-[var(--color-border)]" />
-
-                    {/* Other teams */}
-                    {crossTeamTargets.map((target) => {
-                      const isSelected = selectedTeam === target.teamName;
-                      return (
-                        <button
-                          key={target.teamName}
-                          type="button"
-                          className={cn(
-                            'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
-                            isSelected && 'bg-[var(--cross-team-bg)]'
-                          )}
-                          onClick={() => {
-                            setSelectedTeam(target.teamName);
-                            setRecipient('team-lead');
-                            setTeamSelectorOpen(false);
-                          }}
-                        >
-                          <span
-                            className="inline-block size-2 shrink-0 rounded-full"
-                            style={{
-                              backgroundColor: target.color
-                                ? getTeamColorSet(target.color).border
-                                : nameColorSet(target.displayName).border,
-                            }}
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-[var(--color-text)]">
-                              {target.displayName}
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="end"
+                    className="w-56 p-1.5"
+                    onOpenAutoFocus={(e) => {
+                      e.preventDefault();
+                      setRecipientSearch('');
+                      setTimeout(() => recipientSearchRef.current?.focus(), 0);
+                    }}
+                  >
+                    {members.length > 5 && (
+                      <div className="relative mb-1">
+                        <Search
+                          size={12}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
+                        />
+                        <input
+                          ref={recipientSearchRef}
+                          type="text"
+                          className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] py-1 pl-6 pr-2 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
+                          placeholder="Search..."
+                          value={recipientSearch}
+                          onChange={(e) => setRecipientSearch(e.target.value)}
+                        />
+                      </div>
+                    )}
+                    <div className="max-h-48 space-y-0.5 overflow-y-auto">
+                      {/* eslint-disable-next-line sonarjs/function-return-type -- IIFE rendering mixed elements/null */}
+                      {(() => {
+                        const query = recipientSearch.toLowerCase().trim();
+                        const filtered = query
+                          ? members.filter((m) => m.name.toLowerCase().includes(query))
+                          : members;
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="px-2 py-3 text-center text-xs text-[var(--color-text-muted)]">
+                              No results
                             </div>
-                            {target.description ? (
-                              <div className="truncate text-[10px] text-[var(--color-text-muted)]">
-                                {target.description}
-                              </div>
-                            ) : null}
-                          </div>
-                          {isSelected ? (
-                            <Check size={12} className="ml-auto shrink-0 text-purple-400" />
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <Popover
-                open={isCrossTeam ? false : recipientOpen}
-                onOpenChange={isCrossTeam ? undefined : setRecipientOpen}
-              >
+                          );
+                        }
+                        const sorted = [...filtered].sort((a, b) => {
+                          const aIsLead = isLeadMember(a) ? 1 : 0;
+                          const bIsLead = isLeadMember(b) ? 1 : 0;
+                          return bIsLead - aIsLead;
+                        });
+                        return sorted.map((m) => {
+                          const resolvedColor = colorMap.get(m.name);
+                          const role = formatAgentRole(m.role) ?? formatAgentRole(m.agentType);
+                          const isSelected = m.name === recipient;
+                          return (
+                            <button
+                              key={m.name}
+                              type="button"
+                              className={cn(
+                                'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
+                                isSelected && 'bg-[var(--color-surface-raised)]'
+                              )}
+                              onClick={() => {
+                                setRecipient(m.name);
+                                setRecipientOpen(false);
+                                setRecipientSearch('');
+                              }}
+                            >
+                              <MemberBadge
+                                name={m.name}
+                                color={resolvedColor}
+                                size="sm"
+                                hideAvatar={m.name === 'user'}
+                                disableHoverCard
+                              />
+                              {role ? (
+                                <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
+                                  {role}
+                                </span>
+                              ) : null}
+                              {isSelected ? (
+                                <Check size={12} className="ml-auto shrink-0 text-blue-400" />
+                              ) : null}
+                            </button>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            ) : (
+              <Popover open={recipientOpen} onOpenChange={setRecipientOpen}>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className={cn(
-                      'inline-flex items-center gap-1.5 rounded-r-full px-2.5 py-1 text-xs transition-colors',
-                      isCrossTeam
-                        ? 'cursor-default bg-[var(--cross-team-bg)] opacity-60'
-                        : 'hover:bg-[var(--color-surface-raised)]'
-                    )}
-                    disabled={isCrossTeam}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs transition-colors hover:border-[var(--color-border-emphasis)] hover:bg-[var(--color-surface-raised)]"
                   >
                     {recipient ? (
                       <MemberBadge
@@ -594,8 +788,8 @@ export const MessageComposer = ({
                         );
                       }
                       const sorted = [...filtered].sort((a, b) => {
-                        const aIsLead = a.role === 'lead' || a.name === 'team-lead' ? 1 : 0;
-                        const bIsLead = b.role === 'lead' || b.name === 'team-lead' ? 1 : 0;
+                        const aIsLead = isLeadMember(a) ? 1 : 0;
+                        const bIsLead = isLeadMember(b) ? 1 : 0;
                         return bIsLead - aIsLead;
                       });
                       return sorted.map((m) => {
@@ -638,117 +832,24 @@ export const MessageComposer = ({
                   </div>
                 </PopoverContent>
               </Popover>
-            </div>
-          ) : (
-            <Popover open={recipientOpen} onOpenChange={setRecipientOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs transition-colors hover:border-[var(--color-border-emphasis)] hover:bg-[var(--color-surface-raised)]"
-                >
-                  {recipient ? (
-                    <MemberBadge
-                      name={recipient}
-                      color={selectedResolvedColor}
-                      size="sm"
-                      hideAvatar={recipient === 'user'}
-                      disableHoverCard
-                    />
-                  ) : (
-                    <span className="text-[var(--color-text-muted)]">Select...</span>
-                  )}
-                  <ChevronDown size={12} className="shrink-0 text-[var(--color-text-muted)]" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                align="end"
-                className="w-56 p-1.5"
-                onOpenAutoFocus={(e) => {
-                  e.preventDefault();
-                  setRecipientSearch('');
-                  setTimeout(() => recipientSearchRef.current?.focus(), 0);
-                }}
-              >
-                {members.length > 5 && (
-                  <div className="relative mb-1">
-                    <Search
-                      size={12}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-                    />
-                    <input
-                      ref={recipientSearchRef}
-                      type="text"
-                      className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] py-1 pl-6 pr-2 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
-                      placeholder="Search..."
-                      value={recipientSearch}
-                      onChange={(e) => setRecipientSearch(e.target.value)}
-                    />
-                  </div>
-                )}
-                <div className="max-h-48 space-y-0.5 overflow-y-auto">
-                  {/* eslint-disable-next-line sonarjs/function-return-type -- IIFE rendering mixed elements/null */}
-                  {(() => {
-                    const query = recipientSearch.toLowerCase().trim();
-                    const filtered = query
-                      ? members.filter((m) => m.name.toLowerCase().includes(query))
-                      : members;
-                    if (filtered.length === 0) {
-                      return (
-                        <div className="px-2 py-3 text-center text-xs text-[var(--color-text-muted)]">
-                          No results
-                        </div>
-                      );
-                    }
-                    const sorted = [...filtered].sort((a, b) => {
-                      const aIsLead = a.role === 'lead' || a.name === 'team-lead' ? 1 : 0;
-                      const bIsLead = b.role === 'lead' || b.name === 'team-lead' ? 1 : 0;
-                      return bIsLead - aIsLead;
-                    });
-                    return sorted.map((m) => {
-                      const resolvedColor = colorMap.get(m.name);
-                      const role = formatAgentRole(m.role) ?? formatAgentRole(m.agentType);
-                      const isSelected = m.name === recipient;
-                      return (
-                        <button
-                          key={m.name}
-                          type="button"
-                          className={cn(
-                            'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
-                            isSelected && 'bg-[var(--color-surface-raised)]'
-                          )}
-                          onClick={() => {
-                            setRecipient(m.name);
-                            setRecipientOpen(false);
-                            setRecipientSearch('');
-                          }}
-                        >
-                          <MemberBadge
-                            name={m.name}
-                            color={resolvedColor}
-                            size="sm"
-                            hideAvatar={m.name === 'user'}
-                            disableHoverCard
-                          />
-                          {role ? (
-                            <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                              {role}
-                            </span>
-                          ) : null}
-                          {isSelected ? (
-                            <Check size={12} className="ml-auto shrink-0 text-blue-400" />
-                          ) : null}
-                        </button>
-                      );
-                    });
-                  })()}
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
+            )}
+          </div>
         </div>
+
+        {hasAttachmentPreviewContent ? (
+          <AttachmentPreviewList
+            attachments={draft.attachments}
+            onRemove={draft.removeAttachment}
+            error={draft.attachmentError ?? imageRestrictionError}
+            onDismissError={draft.clearAttachmentError}
+            disabled={attachmentsBlocked}
+            disabledHint="Image attachments are only supported when sending to the team lead while the team is online. Remove attachments or switch recipient."
+          />
+        ) : null}
       </div>
 
       <MentionableTextarea
+        ref={textareaRef}
         id={`compose-${teamName}`}
         placeholder={
           isProvisioning
@@ -761,11 +862,14 @@ export const MessageComposer = ({
         onValueChange={draft.setText}
         suggestions={mentionSuggestions}
         teamSuggestions={teamMentionSuggestions}
+        taskSuggestions={taskSuggestions}
         chips={draft.chips}
         onChipRemove={draft.removeChip}
         projectPath={projectPath}
         onFileChipInsert={draft.addChip}
         onModEnter={handleSend}
+        onShiftTab={handleCycleActionMode}
+        dismissMentionsRef={dismissMentionsRef}
         minRows={2}
         maxRows={6}
         maxLength={MAX_TEXT_LENGTH}
@@ -836,7 +940,7 @@ export const MessageComposer = ({
               </span>
             ) : null}
             {draft.isSaved ? (
-              <span className="text-[10px] text-[var(--color-text-muted)]">Draft saved</span>
+              <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
             ) : null}
           </div>
         }

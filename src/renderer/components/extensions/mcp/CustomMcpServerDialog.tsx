@@ -41,11 +41,10 @@ interface CustomMcpServerDialogProps {
 
 type TransportMode = 'stdio' | 'http';
 type HttpTransport = 'streamable-http' | 'sse' | 'http';
-type Scope = 'local' | 'user' | 'project';
+type Scope = 'local' | 'user';
 
 const SCOPE_OPTIONS: { value: Scope; label: string }[] = [
   { value: 'user', label: 'User (global)' },
-  { value: 'project', label: 'Project' },
   { value: 'local', label: 'Local' },
 ];
 

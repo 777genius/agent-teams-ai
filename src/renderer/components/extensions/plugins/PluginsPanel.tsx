@@ -17,7 +17,7 @@ import {
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
 import { inferCapabilities, normalizeCategory } from '@shared/utils/extensionNormalizers';
-import { Filter, Puzzle, Search } from 'lucide-react';
+import { ArrowUpDown, Filter, Puzzle, Search } from 'lucide-react';
 
 import { SearchInput } from '../common/SearchInput';
 
@@ -176,7 +176,8 @@ export const PluginsPanel = ({
               setPluginSort({ field, order });
             }}
           >
-            <SelectTrigger className="w-full sm:w-40">
+            <SelectTrigger className="w-full gap-2 sm:w-40">
+              <ArrowUpDown className="size-3.5 shrink-0 text-text-muted" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -246,38 +247,40 @@ export const PluginsPanel = ({
             )}
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-2">
-            <section className="space-y-3 rounded-lg border border-border bg-transparent p-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
-                  Categories
-                </span>
-                <span className="text-[11px] text-text-muted">
-                  {pluginFilters.categories.length} selected
-                </span>
-              </div>
-              <CategoryChips
-                plugins={catalog}
-                selected={pluginFilters.categories}
-                onToggle={toggleCategory}
-              />
-            </section>
+          <div className="overflow-hidden rounded-lg border border-border bg-transparent">
+            <div className="grid gap-0 xl:grid-cols-2">
+              <section className="space-y-3 p-3 xl:border-r xl:border-border">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
+                    Categories
+                  </span>
+                  <span className="text-[11px] text-text-muted">
+                    {pluginFilters.categories.length} selected
+                  </span>
+                </div>
+                <CategoryChips
+                  plugins={catalog}
+                  selected={pluginFilters.categories}
+                  onToggle={toggleCategory}
+                />
+              </section>
 
-            <section className="space-y-3 rounded-lg border border-border bg-transparent p-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
-                  Capabilities
-                </span>
-                <span className="text-[11px] text-text-muted">
-                  {pluginFilters.capabilities.length} selected
-                </span>
-              </div>
-              <CapabilityChips
-                plugins={catalog}
-                selected={pluginFilters.capabilities}
-                onToggle={toggleCapability}
-              />
-            </section>
+              <section className="space-y-3 border-t border-border p-3 xl:border-t-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
+                    Capabilities
+                  </span>
+                  <span className="text-[11px] text-text-muted">
+                    {pluginFilters.capabilities.length} selected
+                  </span>
+                </div>
+                <CapabilityChips
+                  plugins={catalog}
+                  selected={pluginFilters.capabilities}
+                  onToggle={toggleCapability}
+                />
+              </section>
+            </div>
           </div>
         </div>
       </div>
@@ -358,9 +361,14 @@ export const PluginsPanel = ({
       )}
 
       {!loading && !error && filtered.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((plugin) => (
-            <PluginCard key={plugin.pluginId} plugin={plugin} onClick={setSelectedPluginId} />
+        <div className="plugins-grid grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((plugin, index) => (
+            <PluginCard
+              key={plugin.pluginId}
+              plugin={plugin}
+              index={index}
+              onClick={setSelectedPluginId}
+            />
           ))}
         </div>
       )}

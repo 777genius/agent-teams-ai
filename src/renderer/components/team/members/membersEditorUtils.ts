@@ -1,7 +1,9 @@
 import { CUSTOM_ROLE, NO_ROLE } from '@renderer/constants/teamRoles';
+import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 
 import type { MemberDraft } from './membersEditorTypes';
+import type { MentionSuggestion } from '@renderer/types/mention';
 import type { TeamProvisioningMemberInput } from '@shared/types';
 
 function isValidMemberName(name: string): boolean {
@@ -34,6 +36,41 @@ export function createMemberDraft(initial?: Partial<MemberDraft>): MemberDraft {
   };
 }
 
+export function buildMemberDraftColorMap(
+  members: ReadonlyArray<Pick<MemberDraft, 'name'>>
+): Map<string, string> {
+  return buildMemberColorMap(
+    members
+      .map((member) => member.name.trim())
+      .filter(Boolean)
+      .map((name) => ({ name }))
+  );
+}
+
+/** Resolves a MemberDraft's role selection to a display string. */
+export function getMemberDraftRole(member: MemberDraft): string | undefined {
+  return member.roleSelection === CUSTOM_ROLE
+    ? member.customRole.trim() || undefined
+    : member.roleSelection === NO_ROLE
+      ? undefined
+      : member.roleSelection.trim() || undefined;
+}
+
+/** Builds MentionSuggestion[] from MemberDraft[], reusing color map and role resolution. */
+export function buildMemberDraftSuggestions(
+  members: MemberDraft[],
+  colorMap: Map<string, string>
+): MentionSuggestion[] {
+  return members
+    .filter((m) => m.name.trim())
+    .map((m) => ({
+      id: m.id,
+      name: m.name.trim(),
+      subtitle: getMemberDraftRole(m),
+      color: colorMap.get(m.name.trim()) ?? undefined,
+    }));
+}
+
 /** Resolves workflow for export (JSON or API): serializes chips when present. */
 export function getWorkflowForExport(member: MemberDraft): string | undefined {
   const workflowRaw = member.workflow?.trim();
@@ -50,13 +87,7 @@ export function buildMembersFromDrafts(members: MemberDraft[]): TeamProvisioning
         return null;
       }
 
-      const role =
-        member.roleSelection === CUSTOM_ROLE
-          ? member.customRole.trim() || undefined
-          : member.roleSelection === NO_ROLE
-            ? undefined
-            : member.roleSelection.trim() || undefined;
-
+      const role = getMemberDraftRole(member);
       const result: TeamProvisioningMemberInput = { name, role };
       const workflow = getWorkflowForExport(member);
       if (workflow) result.workflow = workflow;

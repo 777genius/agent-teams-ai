@@ -431,6 +431,9 @@ export const REVIEW_GET_AGENT_CHANGES = 'review:getAgentChanges';
 /** Получить изменения задачи */
 export const REVIEW_GET_TASK_CHANGES = 'review:getTaskChanges';
 
+/** Инвалидировать persisted/in-memory summary cache для задач */
+export const REVIEW_INVALIDATE_TASK_CHANGE_SUMMARIES = 'review:invalidateTaskChangeSummaries';
+
 /** Получить краткую статистику изменений */
 export const REVIEW_GET_CHANGE_STATS = 'review:getChangeStats';
 
@@ -453,6 +456,15 @@ export const REVIEW_APPLY_DECISIONS = 'review:applyDecisions';
 
 /** Получить полное содержимое файла для diff view */
 export const REVIEW_GET_FILE_CONTENT = 'review:getFileContent';
+
+/** Start/update focused file watcher for review surface */
+export const REVIEW_WATCH_FILES = 'review:watchFiles';
+
+/** Stop focused file watcher for review surface */
+export const REVIEW_UNWATCH_FILES = 'review:unwatchFiles';
+
+/** File change event for review watcher (main -> renderer) */
+export const REVIEW_FILE_CHANGE = 'review:fileChange';
 
 // Phase 4 — Git fallback
 
@@ -594,6 +606,9 @@ export const MCP_REGISTRY_GET_BY_ID = 'mcpRegistry:getById';
 /** Get installed MCP servers */
 export const MCP_REGISTRY_GET_INSTALLED = 'mcpRegistry:getInstalled';
 
+/** Run Claude CLI MCP health diagnostics */
+export const MCP_REGISTRY_DIAGNOSE = 'mcpRegistry:diagnose';
+
 /** Install a plugin */
 export const PLUGIN_INSTALL = 'plugin:install';
 
@@ -611,6 +626,40 @@ export const MCP_REGISTRY_INSTALL_CUSTOM = 'mcpRegistry:installCustom';
 
 /** Fetch GitHub stars for MCP server repositories */
 export const MCP_GITHUB_STARS = 'mcpRegistry:githubStars';
+
+// =============================================================================
+// Extensions / Skills Channels
+// =============================================================================
+
+/** List discovered local skills */
+export const SKILLS_LIST = 'skills:list';
+
+/** Get full detail for a discovered skill */
+export const SKILLS_GET_DETAIL = 'skills:getDetail';
+
+/** Preview create/update changes for a skill */
+export const SKILLS_PREVIEW_UPSERT = 'skills:previewUpsert';
+
+/** Apply create/update changes for a skill */
+export const SKILLS_APPLY_UPSERT = 'skills:applyUpsert';
+
+/** Preview import changes for a skill folder */
+export const SKILLS_PREVIEW_IMPORT = 'skills:previewImport';
+
+/** Apply import for a skill folder */
+export const SKILLS_APPLY_IMPORT = 'skills:applyImport';
+
+/** Delete an existing skill */
+export const SKILLS_DELETE = 'skills:delete';
+
+/** Start focused watcher for active skill roots */
+export const SKILLS_START_WATCHING = 'skills:startWatching';
+
+/** Stop focused watcher for active skill roots */
+export const SKILLS_STOP_WATCHING = 'skills:stopWatching';
+
+/** Renderer event for focused skill root changes */
+export const SKILLS_CHANGED = 'skills:changed';
 
 // =============================================================================
 // API Keys Management Channels

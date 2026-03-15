@@ -82,7 +82,7 @@ function isAutomatedCommentNotification(message) {
   if (!text) return false;
 
   if (text.includes('Reply to this comment using:')) return true;
-  if (text.startsWith('Comment on task #')) return true;
+  if (text.startsWith('**Comment on task')) return true;
   if (text.startsWith('New comment from user on your task #')) return true;
   return false;
 }

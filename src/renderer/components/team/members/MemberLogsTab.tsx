@@ -11,18 +11,62 @@ import { asEnhancedChunkArray } from '@renderer/types/data';
 import { enhanceAIGroup } from '@renderer/utils/aiGroupEnhancer';
 import { formatDuration } from '@renderer/utils/formatters';
 import { transformChunksToConversation } from '@renderer/utils/groupTransformer';
+import { getMemberColorByName } from '@shared/constants/memberColors';
+import { getTeamColorSet } from '@renderer/constants/teamColors';
 import {
   AlertCircle,
   ChevronDown,
   ChevronRight,
   Clock,
   FileText,
+  Info,
   Loader2,
   MessageSquare,
 } from 'lucide-react';
 
 import type { EnhancedChunk } from '@renderer/types/data';
 import type { MemberLogSummary } from '@shared/types';
+
+// ---------------------------------------------------------------------------
+// Chunk filtering by task work intervals
+// ---------------------------------------------------------------------------
+
+const CHUNK_GRACE_BEFORE_MS = 30_000; // 30s before startedAt
+const CHUNK_GRACE_AFTER_MS = 10_000; // 10s after completedAt
+
+function filterChunksByWorkIntervals(
+  chunks: EnhancedChunk[] | null,
+  intervals: { startedAt: string; completedAt?: string }[] | undefined
+): EnhancedChunk[] | null {
+  if (!chunks) return null;
+  if (!intervals || intervals.length === 0) return chunks;
+
+  const now = Date.now();
+  const parsed = intervals
+    .map((i) => {
+      const s = Date.parse(i.startedAt);
+      if (!Number.isFinite(s)) return null;
+      const e = typeof i.completedAt === 'string' ? Date.parse(i.completedAt) : null;
+      return {
+        startMs: s - CHUNK_GRACE_BEFORE_MS,
+        endMs: e != null && Number.isFinite(e) ? e + CHUNK_GRACE_AFTER_MS : null,
+      };
+    })
+    .filter((v): v is { startMs: number; endMs: number | null } => v !== null);
+
+  if (parsed.length === 0) return chunks;
+
+  const filtered = chunks.filter((chunk) => {
+    const cs = chunk.startTime.getTime();
+    const ce = chunk.endTime.getTime();
+    if (!Number.isFinite(cs) || !Number.isFinite(ce)) return true;
+    return parsed.some((i) => {
+      const end = i.endMs ?? now;
+      return cs <= end && ce >= i.startMs;
+    });
+  });
+  return filtered;
+}
 
 interface MemberLogsTabProps {
   teamName: string;
@@ -144,21 +188,52 @@ export const MemberLogsTab = ({
       if (!Number.isFinite(startMs)) return Number.NaN;
       const durationMs = Number.isFinite(log.durationMs) ? Math.max(0, log.durationMs) : 0;
       const endMs = startMs + durationMs;
-      // Keep actively-updating logs at the top even if duration lags slightly.
       return log.isOngoing ? Math.max(endMs, nowMs) : endMs;
     };
 
-    const withIndex = logs.map((log, index) => ({ log, index }));
+    // When viewing a task with workIntervals, sort by overlap (most relevant first).
+    // Fallback to endMs (most recent activity) when no intervals available.
+    const getOverlapMs = (log: MemberLogSummary): number => {
+      if (!taskWorkIntervals || taskWorkIntervals.length === 0) return 0;
+      const logStartMs = new Date(log.startTime).getTime();
+      if (!Number.isFinite(logStartMs)) return 0;
+      const logDurationMs = Number.isFinite(log.durationMs) ? Math.max(0, log.durationMs) : 0;
+      const logEndMs = log.isOngoing ? nowMs : logStartMs + logDurationMs;
+
+      let totalOverlap = 0;
+      for (const interval of taskWorkIntervals) {
+        const intStart = Date.parse(interval.startedAt);
+        if (!Number.isFinite(intStart)) continue;
+        const intEnd =
+          typeof interval.completedAt === 'string' ? Date.parse(interval.completedAt) : nowMs;
+        if (!Number.isFinite(intEnd)) continue;
+        const overlapStart = Math.max(logStartMs, intStart);
+        const overlapEnd = Math.min(logEndMs, intEnd);
+        if (overlapEnd > overlapStart) totalOverlap += overlapEnd - overlapStart;
+      }
+      return totalOverlap;
+    };
+
+    const withIndex = logs.map((log, index) => ({
+      log,
+      index,
+      overlap: getOverlapMs(log),
+      lastActivity: getLastActivityMs(log),
+    }));
+
     withIndex.sort((a, b) => {
-      const aTime = getLastActivityMs(a.log);
-      const bTime = getLastActivityMs(b.log);
+      // Primary: overlap with task workIntervals (more overlap = higher)
+      if (a.overlap !== b.overlap) return b.overlap - a.overlap;
+      // Secondary: last activity (most recent first)
+      const aTime = a.lastActivity;
+      const bTime = b.lastActivity;
       if (Number.isFinite(aTime) && Number.isFinite(bTime) && aTime !== bTime) return bTime - aTime;
       if (Number.isFinite(aTime) && !Number.isFinite(bTime)) return -1;
       if (!Number.isFinite(aTime) && Number.isFinite(bTime)) return 1;
       return a.index - b.index;
     });
     return withIndex.map((x) => x.log);
-  }, [logs]);
+  }, [logs, taskWorkIntervals]);
 
   const shouldShowPreview = useMemo(() => {
     return taskId != null && (showSubagentPreview || showLeadPreview);
@@ -339,7 +414,8 @@ export const MemberLogsTab = ({
       try {
         const next = await fetchDetailForLog(previewLog);
         if (cancelled) return;
-        setPreviewChunks(next ? [...next] : null);
+        const filtered = taskId ? filterChunksByWorkIntervals(next, taskWorkIntervals) : next;
+        setPreviewChunks(filtered ? [...filtered] : null);
       } catch {
         if (cancelled) return;
         setPreviewChunks(null);
@@ -349,7 +425,7 @@ export const MemberLogsTab = ({
     return () => {
       cancelled = true;
     };
-  }, [fetchDetailForLog, previewLog, shouldShowPreview]);
+  }, [fetchDetailForLog, previewLog, shouldShowPreview, intervalsKey]);
 
   useEffect(() => {
     if (!shouldShowPreview) return;
@@ -364,7 +440,8 @@ export const MemberLogsTab = ({
       try {
         const next = await fetchDetailForLog(previewLog, { bypassCache: true });
         if (cancelled) return;
-        setPreviewChunks(next ? [...next] : null);
+        const filtered = taskId ? filterChunksByWorkIntervals(next, taskWorkIntervals) : next;
+        setPreviewChunks(filtered ? [...filtered] : null);
       } catch {
         // keep last successful preview
       } finally {
@@ -383,6 +460,7 @@ export const MemberLogsTab = ({
     previewLog,
     shouldShowPreview,
     taskStatus,
+    intervalsKey,
   ]);
 
   useEffect(() => {
@@ -397,8 +475,8 @@ export const MemberLogsTab = ({
       try {
         const next = await fetchDetailForLog(expandedLogSummary, { bypassCache: true });
         if (cancelled) return;
-        // Ensure new reference so memoized transforms update.
-        setDetailChunks(next ? [...next] : null);
+        const filtered = taskId ? filterChunksByWorkIntervals(next, taskWorkIntervals) : next;
+        setDetailChunks(filtered ? [...filtered] : null);
       } catch {
         // Keep last successful data; avoid flicker during transient errors.
       } finally {
@@ -413,7 +491,15 @@ export const MemberLogsTab = ({
       cancelled = true;
       clearInterval(interval);
     };
-  }, [beginRefreshing, endRefreshing, expandedLogSummary, fetchDetailForLog, taskId, taskStatus]);
+  }, [
+    beginRefreshing,
+    endRefreshing,
+    expandedLogSummary,
+    fetchDetailForLog,
+    taskId,
+    taskStatus,
+    intervalsKey,
+  ]);
 
   const handleExpand = useCallback(
     async (log: MemberLogSummary) => {
@@ -433,14 +519,15 @@ export const MemberLogsTab = ({
           log,
           shouldBypassCache ? { bypassCache: true } : undefined
         );
-        setDetailChunks(chunks ? [...chunks] : null);
+        const filtered = taskId ? filterChunksByWorkIntervals(chunks, taskWorkIntervals) : chunks;
+        setDetailChunks(filtered ? [...filtered] : null);
       } catch {
         setDetailChunks(null);
       } finally {
         setDetailLoading(false);
       }
     },
-    [expandedId, fetchDetailForLog, getRowId, taskStatus]
+    [expandedId, fetchDetailForLog, getRowId, taskStatus, intervalsKey]
   );
 
   if (loading && logs.length === 0) {
@@ -516,10 +603,22 @@ const LogCard = ({
   detailLoading,
   onToggle,
 }: LogCardProps): React.JSX.Element => {
-  const timeAgo = formatRelativeTime(log.startTime);
+  const createdAgo = formatRelativeTime(log.startTime);
+  const lastActivityTime = useMemo(() => {
+    const startMs = new Date(log.startTime).getTime();
+    if (!Number.isFinite(startMs) || log.durationMs <= 0) return null;
+    return new Date(startMs + log.durationMs).toISOString();
+  }, [log.startTime, log.durationMs]);
+  const updatedAgo = lastActivityTime ? formatRelativeTime(lastActivityTime) : null;
+
+  const memberColorCss = useMemo(() => {
+    if (!log.memberName) return null;
+    const colorName = getMemberColorByName(log.memberName);
+    return getTeamColorSet(colorName).text;
+  }, [log.memberName]);
 
   return (
-    <div className="min-w-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] [overflow:clip]">
+    <div className="min-w-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -531,15 +630,49 @@ const LogCard = ({
             ) : (
               <ChevronRight size={12} className="shrink-0 text-[var(--color-text-muted)]" />
             )}
+            {memberColorCss && (
+              <span
+                className="size-2 shrink-0 rounded-full"
+                style={{ backgroundColor: memberColorCss }}
+              />
+            )}
             <div className="min-w-0 flex-1 overflow-hidden">
-              <div className="truncate text-[var(--color-text)]" title={log.description}>
-                {log.description}
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-[var(--color-text)]" title={log.description}>
+                  {log.description}
+                </span>
+                {log.kind === 'lead_session' && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className="shrink-0 cursor-help text-[var(--color-text-muted)]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Info size={11} />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[240px] text-center">
+                      Full team lead session logs — useful for global orchestration context, not
+                      specific to this agent
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
               <div className="mt-0.5 flex items-center gap-3 text-[10px] text-[var(--color-text-muted)]">
-                <span className="flex items-center gap-1">
-                  <Clock size={10} />
-                  {timeAgo}
-                </span>
+                {updatedAgo && updatedAgo !== createdAgo ? (
+                  <>
+                    <span className="flex items-center gap-1">
+                      <Clock size={10} />
+                      {updatedAgo}
+                    </span>
+                    <span style={{ opacity: 0.4 }}>started {createdAgo}</span>
+                  </>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <Clock size={10} />
+                    {createdAgo}
+                  </span>
+                )}
                 {log.durationMs > 0 && <span>{formatDuration(log.durationMs)}</span>}
                 <span className="flex items-center gap-1">
                   <MessageSquare size={10} />
@@ -549,6 +682,14 @@ const LogCard = ({
                   <span className="rounded-full bg-green-500/20 px-1.5 text-green-400">active</span>
                 )}
               </div>
+              {log.lastOutputPreview && !expanded && (
+                <div
+                  className="mt-1 truncate text-[10px] text-[var(--color-text-muted)]"
+                  style={{ opacity: 0.6 }}
+                >
+                  {log.lastOutputPreview}
+                </div>
+              )}
             </div>
           </button>
         </TooltipTrigger>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 
 import { useStore } from '@renderer/store';
+import { buildTaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import { ExternalLink } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -99,11 +100,17 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
 
   const handleViewChanges = useCallback(
     (viewTaskId: string, filePath?: string) => {
-      setPendingReviewRequest({ taskId: viewTaskId, filePath });
+      const targetTask = taskMap.get(viewTaskId);
+      if (!targetTask) return;
+      setPendingReviewRequest({
+        taskId: viewTaskId,
+        filePath,
+        requestOptions: buildTaskChangeRequestOptions(targetTask),
+      });
       closeGlobalTaskDetail();
       openTeamTab(teamName);
     },
-    [closeGlobalTaskDetail, openTeamTab, setPendingReviewRequest, teamName]
+    [closeGlobalTaskDetail, openTeamTab, setPendingReviewRequest, taskMap, teamName]
   );
 
   if (!globalTaskDetail) return null;

@@ -26,6 +26,7 @@ export interface McpCatalogItem {
   updatedAt?: string;
   author?: string;
   hostingType?: McpHostingType;
+  authHeaders?: McpAuthHeaderDef[];
 }
 
 export interface McpToolDef {
@@ -58,12 +59,24 @@ export interface McpEnvVarDef {
   isRequired?: boolean; // from registry, but treat all as optional in UI
 }
 
+export interface McpAuthHeaderDef {
+  key: string;
+  description?: string;
+  isRequired?: boolean;
+  isSecret?: boolean;
+  valueTemplate?: string;
+}
+
 // ── HTTP headers (for auth/config of HTTP/SSE servers) ─────────────────────
 
 export interface McpHeaderDef {
   key: string;
   value: string;
   secret?: boolean; // true = mask in UI, don't log
+  description?: string;
+  isRequired?: boolean;
+  valueTemplate?: string;
+  locked?: boolean;
 }
 
 // ── Installed state (from ~/.claude.json / .mcp.json) ──────────────────────
@@ -72,6 +85,17 @@ export interface InstalledMcpEntry {
   name: string;
   scope: 'local' | 'user' | 'project';
   transport?: string;
+}
+
+export type McpServerHealthStatus = 'connected' | 'needs-authentication' | 'failed' | 'unknown';
+
+export interface McpServerDiagnostic {
+  name: string;
+  target: string;
+  status: McpServerHealthStatus;
+  statusLabel: string;
+  rawLine: string;
+  checkedAt: number;
 }
 
 // ── Install request (renderer → main, minimal trusted data) ────────────────

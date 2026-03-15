@@ -4,6 +4,12 @@ const crypto = require('crypto');
 
 const TASK_ATTACHMENTS_DIR = 'task-attachments';
 const MAX_TASK_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
+const CROSS_TEAM_TOOL_RECIPIENT_NAMES = new Set([
+  'cross_team_send',
+  'cross_team_list_targets',
+  'cross_team_get_outbox',
+]);
 
 function nowIso() {
   return new Date().toISOString();
@@ -46,6 +52,39 @@ function assertSafePathSegment(label, value) {
   return normalized;
 }
 
+function looksLikeQualifiedExternalRecipient(name) {
+  const trimmed = String(name || '').trim();
+  const dot = trimmed.indexOf('.');
+  if (dot <= 0 || dot === trimmed.length - 1) return false;
+  const teamName = trimmed.slice(0, dot).trim();
+  const memberName = trimmed.slice(dot + 1).trim();
+  return TEAM_NAME_PATTERN.test(teamName) && memberName.length > 0;
+}
+
+function looksLikeCrossTeamPseudoRecipient(name) {
+  const trimmed = String(name || '').trim();
+  const prefixes = [
+    'cross_team::',
+    'cross_team--',
+    'cross-team:',
+    'cross-team-',
+    'cross_team:',
+    'cross_team-',
+  ];
+  for (const prefix of prefixes) {
+    if (!trimmed.startsWith(prefix)) continue;
+    const teamName = trimmed.slice(prefix.length).trim();
+    if (TEAM_NAME_PATTERN.test(teamName)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function looksLikeCrossTeamToolRecipient(name) {
+  return CROSS_TEAM_TOOL_RECIPIENT_NAMES.has(String(name || '').trim());
+}
+
 function getHomeDir() {
   if (process.env.HOME) return process.env.HOME;
   if (process.env.USERPROFILE) return process.env.USERPROFILE;
@@ -86,21 +125,134 @@ function getPaths(flags, teamName) {
 }
 
 function inferLeadName(paths) {
-  const config = readTeamConfig(paths);
-  if (!config || !Array.isArray(config.members)) {
-    return 'team-lead';
-  }
-  const lead = config.members.find(
-    (member) => member && member.role && String(member.role).toLowerCase().includes('lead')
+  const resolved = resolveTeamMembers(paths);
+  const lead = resolved.members.find(
+    (member) =>
+      member &&
+      ((typeof member.agentType === 'string' && member.agentType === 'team-lead') ||
+        (typeof member.role === 'string' && member.role.toLowerCase().includes('lead')) ||
+        member.name === 'team-lead')
   );
   if (lead) {
     return String(lead.name);
   }
-  return config.members[0] ? String(config.members[0].name) : 'team-lead';
+  const config = resolved.config;
+  if (config && Array.isArray(config.members) && config.members[0]) {
+    return String(config.members[0].name);
+  }
+  return 'team-lead';
 }
 
 function readTeamConfig(paths) {
   return readJson(path.join(paths.teamDir, 'config.json'), null);
+}
+
+function readMembersMeta(paths) {
+  let parsed;
+  try {
+    parsed = readJson(path.join(paths.teamDir, 'members.meta.json'), null);
+  } catch {
+    return [];
+  }
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.members)) {
+    return [];
+  }
+  return parsed.members.filter((member) => member && typeof member === 'object');
+}
+
+function listInboxMemberNames(paths) {
+  const inboxDir = path.join(paths.teamDir, 'inboxes');
+  let entries;
+  try {
+    entries = fs.readdirSync(inboxDir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  return entries
+    .filter((entry) => entry && entry.isFile() && entry.name.endsWith('.json'))
+    .map((entry) => entry.name.slice(0, -5))
+    .map((name) => String(name || '').trim())
+    .filter((name) => name && name !== 'user')
+    .filter((name) => !looksLikeCrossTeamPseudoRecipient(name))
+    .filter((name) => !looksLikeCrossTeamToolRecipient(name));
+}
+
+function normalizeMemberRecord(member) {
+  if (!member || typeof member !== 'object') return null;
+  const name = typeof member.name === 'string' ? member.name.trim() : '';
+  if (!name) return null;
+  return {
+    name,
+    ...(typeof member.role === 'string' && member.role.trim() ? { role: member.role.trim() } : {}),
+    ...(typeof member.workflow === 'string' && member.workflow.trim()
+      ? { workflow: member.workflow.trim() }
+      : {}),
+    ...(typeof member.agentType === 'string' && member.agentType.trim()
+      ? { agentType: member.agentType.trim() }
+      : {}),
+    ...(typeof member.color === 'string' && member.color.trim() ? { color: member.color.trim() } : {}),
+    ...(typeof member.cwd === 'string' && member.cwd.trim() ? { cwd: member.cwd.trim() } : {}),
+    ...(typeof member.removedAt === 'number' ? { removedAt: member.removedAt } : {}),
+  };
+}
+
+function mergeResolvedMember(target, source) {
+  if (!source) return target;
+  return {
+    ...target,
+    ...(source.name ? { name: source.name } : {}),
+    ...(source.role ? { role: source.role } : {}),
+    ...(source.workflow ? { workflow: source.workflow } : {}),
+    ...(source.agentType ? { agentType: source.agentType } : {}),
+    ...(source.color ? { color: source.color } : {}),
+    ...(source.cwd ? { cwd: source.cwd } : {}),
+    ...(source.removedAt != null ? { removedAt: source.removedAt } : {}),
+  };
+}
+
+function resolveTeamMembers(paths) {
+  const config = readTeamConfig(paths) || {};
+  const configMembers = Array.isArray(config.members) ? config.members : [];
+  const metaMembers = readMembersMeta(paths);
+  const inboxNames = listInboxMemberNames(paths);
+  const memberMap = new Map();
+  const removedNames = new Set();
+
+  for (const rawMember of configMembers) {
+    const normalized = normalizeMemberRecord(rawMember);
+    if (!normalized) continue;
+    memberMap.set(normalized.name.toLowerCase(), normalized);
+  }
+
+  for (const rawMember of metaMembers) {
+    const normalized = normalizeMemberRecord(rawMember);
+    if (!normalized) continue;
+    const key = normalized.name.toLowerCase();
+    if (normalized.removedAt != null) {
+      memberMap.delete(key);
+      removedNames.add(key);
+      continue;
+    }
+    removedNames.delete(key);
+    memberMap.set(key, mergeResolvedMember(memberMap.get(key) || { name: normalized.name }, normalized));
+  }
+
+  for (const inboxName of inboxNames) {
+    const normalized = String(inboxName || '').trim();
+    if (!normalized) continue;
+    const key = normalized.toLowerCase();
+    if (!memberMap.has(key) && looksLikeQualifiedExternalRecipient(normalized)) continue;
+    if (removedNames.has(key) || memberMap.has(key)) continue;
+    memberMap.set(key, { name: normalized });
+  }
+
+  return {
+    config,
+    members: Array.from(memberMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
+    removedNames,
+    inboxNames,
+  };
 }
 
 function resolveLeadSessionId(paths) {
@@ -302,7 +454,10 @@ module.exports = {
   getPaths,
   inferLeadName,
   isProcessAlive,
+  listInboxMemberNames,
+  readMembersMeta,
   readTeamConfig,
+  resolveTeamMembers,
   resolveLeadSessionId,
   saveTaskAttachmentFile,
 };

@@ -1,5 +1,5 @@
 import * as os from 'os';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InboxMessage, TeamCreateRequest, TeamProvisioningProgress } from '@shared/types/team';
 
 vi.mock('electron', () => ({
@@ -82,6 +82,7 @@ import {
   registerTeamHandlers,
   removeTeamHandlers,
 } from '../../../src/main/ipc/teams';
+import { MEMBER_BRIEFING_BOOTSTRAP_ENV } from '../../../src/main/services/team/TeamProvisioningService';
 
 describe('ipc teams handlers', () => {
   const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
@@ -93,6 +94,7 @@ describe('ipc teams handlers', () => {
       handlers.delete(channel);
     }),
   };
+  let originalMemberBriefingBootstrapEnv: string | undefined;
 
   const service = {
     listTeams: vi.fn(async () => [{ teamName: 'my-team', displayName: 'My Team' }]),
@@ -108,6 +110,7 @@ describe('ipc teams handlers', () => {
     reconcileTeamArtifacts: vi.fn(async () => undefined),
     deleteTeam: vi.fn(async () => undefined),
     getLeadMemberName: vi.fn(async () => 'team-lead'),
+    getTeamDisplayName: vi.fn(async () => 'My Team'),
     sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'm1' })),
     sendDirectToLead: vi.fn(async () => ({ deliveredToInbox: false, messageId: 'direct-1' })),
     createTask: vi.fn(async () => ({ id: '1', subject: 'Test', status: 'pending' })),
@@ -167,8 +170,18 @@ describe('ipc teams handlers', () => {
   beforeEach(() => {
     handlers.clear();
     vi.clearAllMocks();
+    originalMemberBriefingBootstrapEnv = process.env[MEMBER_BRIEFING_BOOTSTRAP_ENV];
+    process.env[MEMBER_BRIEFING_BOOTSTRAP_ENV] = '1';
     initializeTeamHandlers(service as never, provisioningService as never);
     registerTeamHandlers(ipcMain as never);
+  });
+
+  afterEach(() => {
+    if (originalMemberBriefingBootstrapEnv === undefined) {
+      delete process.env[MEMBER_BRIEFING_BOOTSTRAP_ENV];
+    } else {
+      process.env[MEMBER_BRIEFING_BOOTSTRAP_ENV] = originalMemberBriefingBootstrapEnv;
+    }
   });
 
   it('registers all expected handlers', () => {
@@ -253,6 +266,7 @@ describe('ipc teams handlers', () => {
       'my-team',
       'team-lead',
       'Can you review the approach?',
+      undefined,
       undefined,
       undefined
     );
@@ -488,6 +502,56 @@ describe('ipc teams handlers', () => {
         name: 'alice',
         role: 'developer',
       });
+    });
+
+    it('notifies a live lead to use member_briefing bootstrap for the new teammate', async () => {
+      const handler = handlers.get(TEAM_ADD_MEMBER)!;
+      const result = (await handler({} as never, 'my-team', {
+        name: 'alice',
+        role: 'developer',
+        workflow: 'Focus on frontend polish',
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining('and the exact prompt below:')
+      );
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining('Your FIRST action: call MCP tool member_briefing')
+      );
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining('Do NOT start work, claim tasks, or improvise workflow/task/process rules')
+      );
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining('You are alice, a developer on team "My Team" (my-team).')
+      );
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining('Their workflow: Focus on frontend polish')
+      );
+    });
+
+    it('falls back to the legacy add-member spawn instruction when bootstrap flag is disabled', async () => {
+      process.env[MEMBER_BRIEFING_BOOTSTRAP_ENV] = '0';
+      const handler = handlers.get(TEAM_ADD_MEMBER)!;
+      const result = (await handler({} as never, 'my-team', {
+        name: 'alice',
+        role: 'developer',
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining('Please spawn them immediately using the Task tool with team_name="my-team" and name="alice".')
+      );
+      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining('Your FIRST action: call MCP tool member_briefing')
+      );
     });
 
     it('rejects invalid team name', async () => {

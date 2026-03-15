@@ -1,7 +1,11 @@
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
-import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
+import {
+  createCliAutoSuffixNameGuard,
+  createCliProvisionerNameGuard,
+} from '@shared/utils/teamMemberName';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -204,7 +208,7 @@ export class TeamConfigReader {
         const name = m.name?.trim();
         if (!name) return;
         // Summary/memberCount should represent teammates (exclude the lead process).
-        if (name === 'team-lead' || name === 'user' || m.agentType === 'team-lead') return;
+        if (name === 'user' || isLeadMember(m)) return;
         const key = name.toLowerCase();
         // If meta marks this name removed, do not surface it in summaries
         if (removedKeys.has(key)) return;
@@ -224,7 +228,7 @@ export class TeamConfigReader {
           const name = member.name?.trim();
           if (!name) continue;
           // Summary/memberCount should represent teammates (exclude the lead process).
-          if (name === 'team-lead' || name === 'user' || member.agentType === 'team-lead') continue;
+          if (name === 'user' || isLeadMember(member)) continue;
           const key = name.toLowerCase();
           if (member.removedAt) {
             removedKeys.add(key);
@@ -248,8 +252,10 @@ export class TeamConfigReader {
       // Defense: drop CLI auto-suffixed duplicates (alice-2) when base name exists.
       const allNames = Array.from(memberMap.values()).map((m) => m.name);
       const keepName = createCliAutoSuffixNameGuard(allNames);
+      // Defense: drop CLI provisioner artifacts (alice-provisioner) when base name exists.
+      const keepProvisioner = createCliProvisionerNameGuard(allNames);
       for (const [key, member] of Array.from(memberMap.entries())) {
-        if (!keepName(member.name)) {
+        if (!keepName(member.name) || !keepProvisioner(member.name)) {
           memberMap.delete(key);
         }
       }

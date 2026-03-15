@@ -16,7 +16,8 @@ import type {
   PluginSortField,
 } from '@shared/types/extensions';
 
-export type ExtensionsSubTab = 'plugins' | 'mcp-servers' | 'api-keys';
+export type ExtensionsSubTab = 'plugins' | 'mcp-servers' | 'skills' | 'api-keys';
+export type SkillsSortState = 'name-asc' | 'recent-desc';
 
 interface PluginSortState {
   field: PluginSortField;
@@ -48,6 +49,12 @@ export function useExtensionsTabState() {
   const [mcpSearchLoading, setMcpSearchLoading] = useState(false);
   const [mcpSearchWarnings, setMcpSearchWarnings] = useState<string[]>([]);
   const [selectedMcpServerId, setSelectedMcpServerId] = useState<string | null>(null);
+
+  // ── Skills browse ──
+  const [skillsSearchQuery, setSkillsSearchQuery] = useState('');
+  const [skillsInstalledOnly] = useState(false);
+  const [skillsSort, setSkillsSort] = useState<SkillsSortState>('name-asc');
+  const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
 
   // ── Debounced MCP search ──
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -163,5 +170,14 @@ export function useExtensionsTabState() {
     mcpSearchWarnings,
     selectedMcpServerId,
     setSelectedMcpServerId,
+
+    // Skills
+    skillsSearchQuery,
+    setSkillsSearchQuery,
+    skillsInstalledOnly,
+    skillsSort,
+    setSkillsSort,
+    selectedSkillId,
+    setSelectedSkillId,
   };
 }

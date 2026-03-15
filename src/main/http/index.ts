@@ -15,6 +15,7 @@ import { registerSearchRoutes } from './search';
 import { registerSessionRoutes } from './sessions';
 import { registerSshRoutes } from './ssh';
 import { registerSubagentRoutes } from './subagents';
+import { registerTeamRoutes } from './teams';
 import { registerUpdaterRoutes } from './updater';
 import { registerUtilityRoutes } from './utility';
 import { registerValidationRoutes } from './validation';
@@ -28,6 +29,7 @@ import type {
   UpdaterService,
 } from '../services';
 import type { SshConnectionManager } from '../services/infrastructure/SshConnectionManager';
+import type { TeamProvisioningService } from '../services/team/TeamProvisioningService';
 import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:routes');
@@ -40,6 +42,7 @@ export interface HttpServices {
   dataCache: DataCache;
   updaterService: UpdaterService;
   sshConnectionManager: SshConnectionManager;
+  teamProvisioningService?: TeamProvisioningService;
 }
 
 export function registerHttpRoutes(
@@ -51,6 +54,9 @@ export function registerHttpRoutes(
   registerSessionRoutes(app, services);
   registerSearchRoutes(app, services);
   registerSubagentRoutes(app, services);
+  if (services.teamProvisioningService) {
+    registerTeamRoutes(app, services);
+  }
   registerNotificationRoutes(app);
   registerConfigRoutes(app);
   registerValidationRoutes(app);

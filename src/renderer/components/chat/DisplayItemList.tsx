@@ -41,6 +41,8 @@ interface DisplayItemListProps {
   notificationColorMap?: Map<string, TriggerColor>;
   /** Optional callback to register tool element refs for scroll targeting */
   registerToolRef?: (toolId: string, el: HTMLDivElement | null) => void;
+  /** Max characters for preview text in item headers (default: 150 for thinking/output, 80 for input) */
+  previewMaxLength?: number;
 }
 
 /**
@@ -76,6 +78,7 @@ export const DisplayItemList = ({
   highlightColor,
   notificationColorMap,
   registerToolRef,
+  previewMaxLength,
 }: Readonly<DisplayItemListProps>): React.JSX.Element => {
   // Reply-link highlight: when hovering a reply badge, dim everything except the linked pair
   const [replyLinkToolId, setReplyLinkToolId] = useState<string | null>(null);
@@ -127,7 +130,7 @@ export const DisplayItemList = ({
             element = (
               <ThinkingItem
                 step={thinkingStep}
-                preview={truncateText(item.content, 150)}
+                preview={truncateText(item.content, previewMaxLength ?? 150)}
                 onClick={() => onItemClick(itemKey)}
                 isExpanded={expandedItemIds.has(itemKey)}
                 timestamp={item.timestamp}
@@ -153,7 +156,7 @@ export const DisplayItemList = ({
             element = (
               <TextItem
                 step={textStep}
-                preview={truncateText(item.content, 150)}
+                preview={truncateText(item.content, previewMaxLength ?? 150)}
                 onClick={() => onItemClick(itemKey)}
                 isExpanded={expandedItemIds.has(itemKey)}
                 timestamp={item.timestamp}
@@ -249,7 +252,7 @@ export const DisplayItemList = ({
               <BaseItem
                 icon={<MailOpen className="size-4" />}
                 label="Input"
-                summary={truncateText(inputContent, 80)}
+                summary={truncateText(inputContent, previewMaxLength ?? 80)}
                 tokenCount={inputTokenCount}
                 timestamp={item.timestamp}
                 onClick={() => onItemClick(itemKey)}

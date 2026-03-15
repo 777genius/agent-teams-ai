@@ -1,7 +1,14 @@
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 
+import { useStore } from '@renderer/store';
 import { createLogger } from '@shared/utils/logger';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Bug, Check, Copy, RefreshCw } from 'lucide-react';
+
+import {
+  buildBugReportText,
+  buildGitHubBugReportUrl,
+  type BugReportContext,
+} from '@renderer/utils/bugReportUtils';
 
 const logger = createLogger('Component:ErrorBoundary');
 
@@ -12,15 +19,19 @@ interface Props {
 
 interface State {
   hasError: boolean;
+  copiedReport: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
+  private copyResetTimeout: ReturnType<typeof setTimeout> | null = null;
+
   constructor(props: Props) {
     super(props);
     this.state = {
       hasError: false,
+      copiedReport: false,
       error: null,
       errorInfo: null,
     };
@@ -40,16 +51,83 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   handleReset = (): void => {
+    if (this.copyResetTimeout) {
+      clearTimeout(this.copyResetTimeout);
+      this.copyResetTimeout = null;
+    }
+
     this.setState({
       hasError: false,
+      copiedReport: false,
       error: null,
       errorInfo: null,
     });
   };
 
+  componentWillUnmount(): void {
+    if (this.copyResetTimeout) {
+      clearTimeout(this.copyResetTimeout);
+      this.copyResetTimeout = null;
+    }
+  }
+
+  getBugReportContext = (): BugReportContext => {
+    const state = useStore.getState();
+    const activeTab = state.getActiveTab();
+
+    return {
+      activeTabType: activeTab?.type ?? null,
+      activeTabLabel: activeTab?.label ?? null,
+      activeTeamName: activeTab?.teamName ?? null,
+      selectedTeamName: state.selectedTeamName,
+      taskId: state.globalTaskDetail?.taskId ?? state.pendingReviewRequest?.taskId ?? null,
+      sessionId: activeTab?.sessionId ?? null,
+      projectId: activeTab?.projectId ?? state.activeProjectId,
+    };
+  };
+
+  handleCreateGitHubIssue = (): void => {
+    const issueUrl = buildGitHubBugReportUrl({
+      error: this.state.error,
+      componentStack: this.state.errorInfo?.componentStack ?? null,
+      context: this.getBugReportContext(),
+    });
+
+    if (window.electronAPI?.openExternal) {
+      void window.electronAPI.openExternal(issueUrl);
+      return;
+    }
+
+    window.open(issueUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  handleCopyErrorDetails = async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(
+        buildBugReportText({
+          error: this.state.error,
+          componentStack: this.state.errorInfo?.componentStack ?? null,
+          context: this.getBugReportContext(),
+        })
+      );
+
+      if (this.copyResetTimeout) {
+        clearTimeout(this.copyResetTimeout);
+      }
+
+      this.setState({ copiedReport: true });
+      this.copyResetTimeout = setTimeout(() => {
+        this.setState({ copiedReport: false });
+        this.copyResetTimeout = null;
+      }, 2000);
+    } catch (error) {
+      logger.warn('Failed to copy error details:', error);
+    }
+  };
+
   // eslint-disable-next-line sonarjs/function-return-type -- Error boundaries inherently return different content based on error state
   render(): ReactNode {
-    const { hasError, error, errorInfo } = this.state;
+    const { hasError, copiedReport, error, errorInfo } = this.state;
     const { children, fallback } = this.props;
 
     if (hasError) {
@@ -85,12 +163,30 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
           )}
 
-          <div className="flex gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
             <button
               onClick={this.handleReset}
               className="flex items-center gap-2 rounded-lg border border-claude-dark-border bg-claude-dark-surface px-4 py-2 transition-colors hover:bg-claude-dark-border"
             >
               Try Again
+            </button>
+            <button
+              onClick={() => void this.handleCopyErrorDetails()}
+              className="flex items-center gap-2 rounded-lg border border-claude-dark-border bg-claude-dark-surface px-4 py-2 transition-colors hover:bg-claude-dark-border"
+            >
+              {copiedReport ? (
+                <Check className="size-4 text-green-400" />
+              ) : (
+                <Copy className="size-4" />
+              )}
+              {copiedReport ? 'Copied' : 'Copy Error Details'}
+            </button>
+            <button
+              onClick={this.handleCreateGitHubIssue}
+              className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-red-300 transition-colors hover:bg-red-500/20"
+            >
+              <Bug className="size-4" />
+              Report Bug on GitHub
             </button>
             <button
               onClick={this.handleReload}
@@ -100,6 +196,10 @@ export class ErrorBoundary extends Component<Props, State> {
               Reload App
             </button>
           </div>
+          <p className="mt-4 max-w-md text-center text-xs text-claude-dark-text-secondary">
+            GitHub bug reports and copied diagnostics include the error message, stack traces, app
+            version, active tab, selected team, task context, and environment details.
+          </p>
         </div>
       );
     }

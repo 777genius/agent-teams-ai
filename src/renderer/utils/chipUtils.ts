@@ -3,6 +3,9 @@
  */
 
 import { chipToken } from '@renderer/types/inlineChip';
+import { getSuggestionInsertionText } from '@renderer/utils/mentionSuggestions';
+
+import type { MentionSuggestion } from '@renderer/types/mention';
 import { getCodeFenceLanguage } from '@renderer/utils/buildSelectionAction';
 import { getBasename } from '@shared/utils/platformPath';
 
@@ -168,16 +171,26 @@ export interface ChipPosition {
   height: number;
 }
 
-/**
- * Calculates screen positions of chip tokens in textarea using the mirror div technique.
- * Creates a temporary mirror div that replicates textarea layout and measures chip spans.
- */
-export function calculateChipPositions(
+export interface InlineMatch<T> {
+  item: T;
+  start: number;
+  end: number;
+  token: string;
+}
+
+export interface InlineMatchPosition<T> extends InlineMatch<T> {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+export function calculateInlineMatchPositions<T>(
   textarea: HTMLTextAreaElement,
   text: string,
-  chips: InlineChip[]
-): ChipPosition[] {
-  if (chips.length === 0) return [];
+  matches: InlineMatch<T>[]
+): InlineMatchPosition<T>[] {
+  if (matches.length === 0) return [];
 
   const cs = window.getComputedStyle(textarea);
   const mirror = document.createElement('div');
@@ -210,60 +223,152 @@ export function calculateChipPositions(
   mirror.style.overflow = 'hidden';
   mirror.style.height = 'auto';
 
-  // Build content with chip tokens wrapped in spans
-  const chipSpans = new Map<string, HTMLSpanElement>();
-  const tokenPositions: { chip: InlineChip; token: string; index: number }[] = [];
+  const sortedMatches = [...matches].sort((a, b) => a.start - b.start);
+  const tokenSpans = new Map<number, HTMLSpanElement>();
 
-  // Find all chip token positions in text
-  for (const chip of chips) {
-    const token = chipToken(chip);
-    const idx = text.indexOf(token);
-    if (idx !== -1) {
-      tokenPositions.push({ chip, token, index: idx });
-    }
-  }
-
-  // Sort by position in text
-  tokenPositions.sort((a, b) => a.index - b.index);
-
-  // Build mirror content
   let lastEnd = 0;
-  for (const { chip, token, index } of tokenPositions) {
-    // Text before this chip
-    if (index > lastEnd) {
-      const textNode = document.createTextNode(text.slice(lastEnd, index));
-      mirror.appendChild(textNode);
+  sortedMatches.forEach((match, index) => {
+    if (match.start > lastEnd) {
+      mirror.appendChild(document.createTextNode(text.slice(lastEnd, match.start)));
     }
 
-    // Chip span
     const span = document.createElement('span');
-    span.textContent = token;
+    span.textContent = text.slice(match.start, match.end);
     mirror.appendChild(span);
-    chipSpans.set(chip.id, span);
+    tokenSpans.set(index, span);
 
-    lastEnd = index + token.length;
-  }
+    lastEnd = match.end;
+  });
 
-  // Text after last chip
   if (lastEnd < text.length) {
     mirror.appendChild(document.createTextNode(text.slice(lastEnd)));
   }
 
   document.body.appendChild(mirror);
 
-  const positions: ChipPosition[] = [];
-  for (const { chip } of tokenPositions) {
-    const span = chipSpans.get(chip.id);
-    if (!span) continue;
+  const positions: InlineMatchPosition<T>[] = [];
+  sortedMatches.forEach((match, index) => {
+    const span = tokenSpans.get(index);
+    if (!span) return;
     positions.push({
-      chip,
+      ...match,
       top: span.offsetTop,
       left: span.offsetLeft,
       width: span.offsetWidth,
       height: span.offsetHeight,
     });
-  }
+  });
 
   document.body.removeChild(mirror);
   return positions;
+}
+
+/**
+ * Calculates screen positions of @mention tokens in textarea using the mirror div technique.
+ */
+export interface MentionPosition {
+  suggestion: MentionSuggestion;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+export function calculateMentionPositions(
+  textarea: HTMLTextAreaElement,
+  text: string,
+  suggestions: MentionSuggestion[]
+): MentionPosition[] {
+  if (suggestions.length === 0 || !text) return [];
+
+  // Filter to member/team suggestions only (not tasks/files)
+  const mentionSuggestions = suggestions.filter(
+    (s) => s.type !== 'task' && s.type !== 'file' && s.type !== 'folder'
+  );
+  if (mentionSuggestions.length === 0) return [];
+
+  // Sort by name length descending for greedy matching
+  const sorted = [...mentionSuggestions].sort((a, b) => {
+    const aText = getSuggestionInsertionText(a);
+    const bText = getSuggestionInsertionText(b);
+    return bText.length - aText.length;
+  });
+
+  const matches: InlineMatch<MentionSuggestion>[] = [];
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] !== '@') {
+      i++;
+      continue;
+    }
+    // @ must be at start or after whitespace
+    if (i > 0) {
+      const ch = text[i - 1];
+      if (ch !== ' ' && ch !== '\t' && ch !== '\n' && ch !== '\r') {
+        i++;
+        continue;
+      }
+    }
+    let matched = false;
+    for (const suggestion of sorted) {
+      const insertionText = getSuggestionInsertionText(suggestion);
+      const end = i + 1 + insertionText.length;
+      if (end > text.length) continue;
+      if (text.slice(i + 1, end).toLowerCase() !== insertionText.toLowerCase()) continue;
+      // Character after name must be boundary
+      if (end < text.length) {
+        const after = text[end];
+        // eslint-disable-next-line no-useless-escape
+        if (!/[\s,.:;!?\)\]\}\-]/.test(after)) continue;
+      }
+      matches.push({ item: suggestion, start: i, end, token: text.slice(i, end) });
+      i = end;
+      matched = true;
+      break;
+    }
+    if (!matched) i++;
+  }
+
+  return calculateInlineMatchPositions(textarea, text, matches).map((pos) => ({
+    suggestion: pos.item,
+    top: pos.top,
+    left: pos.left,
+    width: pos.width,
+    height: pos.height,
+  }));
+}
+
+/**
+ * Calculates screen positions of chip tokens in textarea using the mirror div technique.
+ * Creates a temporary mirror div that replicates textarea layout and measures chip spans.
+ */
+export function calculateChipPositions(
+  textarea: HTMLTextAreaElement,
+  text: string,
+  chips: InlineChip[]
+): ChipPosition[] {
+  if (chips.length === 0) return [];
+  const tokenMatches: InlineMatch<InlineChip>[] = [];
+  for (const chip of chips) {
+    const token = chipToken(chip);
+    let searchFrom = 0;
+    while (searchFrom < text.length) {
+      const idx = text.indexOf(token, searchFrom);
+      if (idx === -1) break;
+      tokenMatches.push({
+        item: chip,
+        start: idx,
+        end: idx + token.length,
+        token,
+      });
+      searchFrom = idx + token.length;
+    }
+  }
+  return calculateInlineMatchPositions(textarea, text, tokenMatches).map((position) => ({
+    chip: position.item,
+    top: position.top,
+    left: position.left,
+    width: position.width,
+    height: position.height,
+  }));
 }

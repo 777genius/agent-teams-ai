@@ -35,7 +35,6 @@ export function getWorktreeNavigationState(repoId: string, worktreeId: string): 
     selectedWorktreeId: worktreeId,
     selectedProjectId: worktreeId,
     activeProjectId: worktreeId,
-    sidebarCollapsed: false,
     ...getSessionResetState(),
   };
 }

@@ -31,26 +31,29 @@ import { InstallButton } from '../common/InstallButton';
 import { SourceBadge } from '../common/SourceBadge';
 import { sanitizeMcpServerName } from '@shared/utils/extensionNormalizers';
 
-import type { McpCatalogItem, McpHeaderDef } from '@shared/types/extensions';
+import type { McpCatalogItem, McpHeaderDef, McpServerDiagnostic } from '@shared/types/extensions';
 
 interface McpServerDetailDialogProps {
   server: McpCatalogItem | null;
   isInstalled: boolean;
+  diagnostic?: McpServerDiagnostic | null;
+  diagnosticsLoading?: boolean;
   open: boolean;
   onClose: () => void;
 }
 
-type Scope = 'local' | 'user' | 'project';
+type Scope = 'local' | 'user';
 
 const SCOPE_OPTIONS: { value: Scope; label: string }[] = [
   { value: 'user', label: 'User (global)' },
-  { value: 'project', label: 'Project' },
   { value: 'local', label: 'Local' },
 ];
 
 export const McpServerDetailDialog = ({
   server,
   isInstalled,
+  diagnostic,
+  diagnosticsLoading,
   open,
   onClose,
 }: McpServerDetailDialogProps): React.JSX.Element => {
@@ -71,16 +74,29 @@ export const McpServerDetailDialog = ({
   const [imgError, setImgError] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
 
-  // Initialize form when server changes
-  const [lastServerId, setLastServerId] = useState<string | null>(null);
-  if (server && server.id !== lastServerId) {
-    setLastServerId(server.id);
+  // Initialize form when dialog opens or server changes
+  useEffect(() => {
+    if (!server || !open) {
+      return;
+    }
+
     setServerName(sanitizeMcpServerName(server.name));
     setEnvValues(Object.fromEntries(server.envVars.map((env) => [env.name, ''])));
-    setHeaders([]);
+    setHeaders(
+      (server.authHeaders ?? []).map((header) => ({
+        key: header.key,
+        value: '',
+        secret: header.isSecret,
+        description: header.description,
+        isRequired: header.isRequired,
+        valueTemplate: header.valueTemplate,
+        locked: true,
+      }))
+    );
+    setScope('user');
     setImgError(false);
     setAutoFilledFields(new Set());
-  }
+  }, [server?.id, open]);
 
   // Auto-fill env values from saved API keys
   useEffect(() => {
@@ -142,6 +158,26 @@ export const McpServerDetailDialog = ({
   const canAutoInstall = !!server.installSpec;
   const isHttp = server.installSpec?.type === 'http';
   const hasIcon = !!server.iconUrl && !imgError;
+  const npmPackageUrl =
+    server.installSpec?.type === 'stdio'
+      ? `https://www.npmjs.com/package/${server.installSpec.npmPackage}`
+      : null;
+  const hasSuggestedHeaders = headers.some((header) => header.locked);
+  const missingRequiredEnvVars = server.envVars.some(
+    (env) => env.isRequired && !envValues[env.name]?.trim()
+  );
+  const missingRequiredHeaders = headers.some(
+    (header) => header.isRequired && !header.value.trim()
+  );
+  const installDisabled = !serverName.trim() || missingRequiredEnvVars || missingRequiredHeaders;
+  const diagnosticBadgeClass =
+    diagnostic?.status === 'connected'
+      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+      : diagnostic?.status === 'needs-authentication'
+        ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+        : diagnostic?.status === 'failed'
+          ? 'border-red-500/30 bg-red-500/10 text-red-400'
+          : 'border-border bg-surface-raised text-text-muted';
 
   const handleInstall = () => {
     installMcpServer({
@@ -200,7 +236,7 @@ export const McpServerDetailDialog = ({
                       Installed
                     </Badge>
                   )}
-                  <SourceBadge source={server.source} />
+                  {server.source !== 'official' && <SourceBadge source={server.source} />}
                 </div>
               </div>
             </div>
@@ -236,13 +272,21 @@ export const McpServerDetailDialog = ({
           )}
           <div>
             <span className="text-text-muted">Install Type</span>
-            <p className="text-text">
-              {server.installSpec
-                ? server.installSpec.type === 'stdio'
-                  ? `npm: ${server.installSpec.npmPackage}`
-                  : `HTTP: ${server.installSpec.transportType}`
-                : 'Manual setup required'}
-            </p>
+            {server.installSpec?.type === 'stdio' ? (
+              <Button
+                variant="link"
+                className="h-auto p-0 text-sm text-blue-400"
+                onClick={() => void api.openExternal(npmPackageUrl!)}
+              >
+                npm: {server.installSpec.npmPackage}
+              </Button>
+            ) : (
+              <p className="text-text">
+                {server.installSpec
+                  ? `HTTP: ${server.installSpec.transportType}`
+                  : 'Manual setup required'}
+              </p>
+            )}
           </div>
           {server.author && (
             <div>
@@ -275,6 +319,46 @@ export const McpServerDetailDialog = ({
           <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-400">
             <Lock className="size-4" />
             This server requires authentication
+          </div>
+        )}
+        {isHttp && !server.requiresAuth && (server.authHeaders?.length ?? 0) === 0 && (
+          <div className="rounded-md border border-blue-500/30 bg-blue-500/5 px-3 py-2 text-sm text-blue-400">
+            Remote MCP servers may still require custom headers or API keys even when the registry
+            does not describe them. If connection fails after install, check the provider docs.
+          </div>
+        )}
+        {(isInstalled || diagnosticsLoading) && (
+          <div className="space-y-2 rounded-md border border-border bg-surface-raised px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-text">Claude Status</span>
+              {diagnosticsLoading && !diagnostic ? (
+                <Badge
+                  className="border-border bg-surface-raised text-text-muted"
+                  variant="outline"
+                >
+                  Checking...
+                </Badge>
+              ) : diagnostic ? (
+                <Badge className={diagnosticBadgeClass} variant="outline">
+                  {diagnostic.statusLabel}
+                </Badge>
+              ) : (
+                <Badge
+                  className="border-border bg-surface-raised text-text-muted"
+                  variant="outline"
+                >
+                  Not checked
+                </Badge>
+              )}
+            </div>
+            {diagnostic?.target && (
+              <div>
+                <p className="mb-1 text-xs text-text-muted">Launch Target</p>
+                <code className="block overflow-x-auto rounded bg-surface px-2 py-1 text-xs text-text">
+                  {diagnostic.target}
+                </code>
+              </div>
+            )}
           </div>
         )}
 
@@ -356,34 +440,54 @@ export const McpServerDetailDialog = ({
                     className="h-6 px-1.5 text-xs"
                   >
                     <Plus className="mr-1 size-3" />
-                    Add
+                    {hasSuggestedHeaders ? 'Add custom' : 'Add'}
                   </Button>
                 </div>
                 {headers.length > 0 && (
                   <div className="space-y-2">
                     {headers.map((header, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Input
-                          value={header.key}
-                          onChange={(e) => updateHeader(index, 'key', e.target.value)}
-                          className="h-7 w-32 text-xs"
-                          placeholder="Header-Name"
-                        />
-                        <Input
-                          type={header.secret ? 'password' : 'text'}
-                          value={header.value}
-                          onChange={(e) => updateHeader(index, 'value', e.target.value)}
-                          className="h-7 flex-1 text-xs"
-                          placeholder="value"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7 text-red-400 hover:bg-red-500/10"
-                          onClick={() => removeHeader(index)}
-                        >
-                          <Trash2 className="size-3" />
-                        </Button>
+                      <div key={index} className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          {header.locked ? (
+                            <code className="w-32 shrink-0 truncate text-xs text-blue-400">
+                              {header.key}
+                            </code>
+                          ) : (
+                            <Input
+                              value={header.key}
+                              onChange={(e) => updateHeader(index, 'key', e.target.value)}
+                              className="h-7 w-32 text-xs"
+                              placeholder="Header-Name"
+                            />
+                          )}
+                          <Input
+                            type={header.secret ? 'password' : 'text'}
+                            value={header.value}
+                            onChange={(e) => updateHeader(index, 'value', e.target.value)}
+                            className="h-7 flex-1 text-xs"
+                            placeholder={header.valueTemplate ?? header.description ?? 'value'}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 text-red-400 hover:bg-red-500/10"
+                            onClick={() => removeHeader(index)}
+                            disabled={header.locked && header.isRequired}
+                          >
+                            <Trash2 className="size-3" />
+                          </Button>
+                        </div>
+                        {(header.description || header.valueTemplate || header.isRequired) && (
+                          <p className="text-[10px] text-text-muted">
+                            {[
+                              header.isRequired ? 'Required' : null,
+                              header.description,
+                              header.valueTemplate,
+                            ]
+                              .filter(Boolean)
+                              .join(' • ')}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -398,7 +502,7 @@ export const McpServerDetailDialog = ({
                 isInstalled={isInstalled}
                 onInstall={handleInstall}
                 onUninstall={handleUninstall}
-                disabled={!serverName.trim()}
+                disabled={installDisabled}
                 size="default"
                 errorMessage={installError}
               />

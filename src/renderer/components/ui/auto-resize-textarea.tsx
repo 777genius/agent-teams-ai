@@ -40,12 +40,26 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
       const maxHeight =
         maxRows * lineHeight + paddingTop + paddingBottom + borderTop + borderBottom;
 
+      // Save scrollTop before collapsing height — setting height='auto'
+      // causes the browser to reset scrollTop to 0.
+      const savedScrollTop = textarea.scrollTop;
+
       textarea.style.height = 'auto';
       const scrollHeight = textarea.scrollHeight;
       const clampedHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
 
       textarea.style.height = `${clampedHeight}px`;
       textarea.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
+
+      // Restore scrollTop after height adjustment, then scroll to caret
+      // if cursor is at the end (common after paste).
+      if (scrollHeight > maxHeight) {
+        if (textarea.selectionStart === textarea.value.length) {
+          textarea.scrollTop = textarea.scrollHeight;
+        } else {
+          textarea.scrollTop = savedScrollTop;
+        }
+      }
     }, [minRows, maxRows]);
 
     React.useEffect(() => {

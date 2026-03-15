@@ -117,12 +117,19 @@ export type TaskHistoryEvent =
 
 export type TaskCommentType = 'regular' | 'review_request' | 'review_approved';
 
+export interface TaskRef {
+  taskId: string;
+  displayId: string;
+  teamName: string;
+}
+
 export interface TaskComment {
   id: string;
   author: string;
   text: string;
   createdAt: string;
   type: TaskCommentType;
+  taskRefs?: TaskRef[];
   /** Attachments on this comment. Metadata only — files stored on disk. */
   attachments?: TaskAttachmentMeta[];
 }
@@ -135,7 +142,10 @@ export interface TeamTask {
   displayId?: string;
   subject: string;
   description?: string;
+  descriptionTaskRefs?: TaskRef[];
   activeForm?: string;
+  prompt?: string;
+  promptTaskRefs?: TaskRef[];
   owner?: string;
   createdBy?: string;
   status: TeamTaskStatus;
@@ -244,9 +254,12 @@ export interface InboxMessage {
   text: string;
   timestamp: string;
   read: boolean;
+  taskRefs?: TaskRef[];
   summary?: string;
   color?: string;
   messageId?: string;
+  /** Original inbox messageId when this row is only a relay/delivery bridge copy. */
+  relayOfMessageId?: string;
   source?:
     | 'inbox'
     | 'lead_session'
@@ -273,11 +286,13 @@ export type AgentActionMode = 'do' | 'ask' | 'delegate';
 export interface SendMessageRequest {
   member: string;
   text: string;
+  taskRefs?: TaskRef[];
   actionMode?: AgentActionMode;
   summary?: string;
   from?: string;
   timestamp?: string;
   messageId?: string;
+  relayOfMessageId?: string;
   /** Override the `to` field in the stored message (defaults to `member`). */
   to?: string;
   color?: string;
@@ -296,6 +311,12 @@ export interface SendMessageResult {
   deliveredViaStdin?: boolean;
   messageId: string;
   deduplicated?: boolean;
+}
+
+export interface AddTaskCommentRequest {
+  text: string;
+  attachments?: CommentAttachmentPayload[];
+  taskRefs?: TaskRef[];
 }
 
 export type MemberStatus = 'active' | 'idle' | 'terminated' | 'unknown';
@@ -329,7 +350,7 @@ export interface KanbanState {
 export type UpdateKanbanPatch =
   | { op: 'set_column'; column: Extract<KanbanColumnId, 'review' | 'approved'> }
   | { op: 'remove' }
-  | { op: 'request_changes'; comment?: string };
+  | { op: 'request_changes'; comment?: string; taskRefs?: TaskRef[] };
 
 export interface ResolvedTeamMember {
   name: string;
@@ -381,6 +402,8 @@ export interface TeamLaunchRequest {
   prompt?: string;
   model?: string;
   effort?: EffortLevel;
+  /** When true, context window is limited to 200K tokens instead of the default. */
+  limitContext?: boolean;
   /** When true, skip --resume and start a fresh session (clears context memory). */
   clearContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
@@ -398,14 +421,21 @@ export interface TeamLaunchResponse {
 export interface CreateTaskRequest {
   subject: string;
   description?: string;
+  descriptionTaskRefs?: TaskRef[];
   owner?: string;
   blockedBy?: string[];
   related?: string[];
   prompt?: string;
+  promptTaskRefs?: TaskRef[];
   startImmediately?: boolean;
 }
 
 export type LeadActivityState = 'active' | 'idle' | 'offline';
+
+export interface LeadActivitySnapshot {
+  state: LeadActivityState;
+  runId: string | null;
+}
 
 export interface LeadContextUsage {
   /** Total tokens currently in context (input + cache_creation + cache_read) */
@@ -416,6 +446,16 @@ export interface LeadContextUsage {
   percent: number;
   /** ISO timestamp of last update */
   updatedAt: string;
+}
+
+export interface LeadContextUsageSnapshot {
+  usage: LeadContextUsage | null;
+  runId: string | null;
+}
+
+export interface MemberSpawnStatusesSnapshot {
+  statuses: Record<string, MemberSpawnStatusEntry>;
+  runId: string | null;
 }
 
 export interface TeamChangeEvent {
@@ -429,6 +469,7 @@ export interface TeamChangeEvent {
     | 'process'
     | 'member-spawn';
   teamName: string;
+  runId?: string;
   detail?: string;
 }
 
@@ -487,6 +528,8 @@ export interface TeamCreateRequest {
   prompt?: string;
   model?: string;
   effort?: EffortLevel;
+  /** When true, context window is limited to 200K tokens instead of the default. */
+  limitContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
   skipPermissions?: boolean;
   /** Worktree name — CLI: --worktree <name>. */
@@ -524,9 +567,19 @@ export interface TeamProvisioningProgress {
   pid?: number;
   error?: string;
   warnings?: string[];
+  /** Provisioning CLI logs shown in the launch progress UI. */
   cliLogsTail?: string;
   /** Accumulated assistant text output during provisioning (for live preview). */
   assistantOutput?: string;
+  /** True once provisioning has written a readable config.json for this team. */
+  configReady?: boolean;
+}
+
+export interface TeamRuntimeState {
+  teamName: string;
+  isAlive: boolean;
+  runId: string | null;
+  progress: TeamProvisioningProgress | null;
 }
 
 export interface GlobalTask extends TeamTaskWithKanban {
@@ -563,6 +616,8 @@ export interface MemberLogSummaryBase {
   isOngoing: boolean;
   /** Absolute path to JSONL file when known (avoids redundant findMemberLogPaths scan). */
   filePath?: string;
+  /** Short preview of the last assistant output (truncated). */
+  lastOutputPreview?: string;
 }
 
 export interface MemberSubagentLogSummary extends MemberLogSummaryBase {
@@ -633,7 +688,7 @@ export interface TeamMessageNotificationData {
   /** Optional sender color for visual context. */
   color?: string;
   /** Team event sub-type for notification categorization. */
-  teamEventType?: 'task_clarification' | 'task_status_change';
+  teamEventType?: 'task_clarification' | 'task_status_change' | 'task_comment';
   /** Stable key for storage deduplication. Required — no fallback to Date.now(). */
   dedupeKey?: string;
   /**
@@ -656,6 +711,7 @@ export interface CrossTeamMessage {
   conversationId?: string;
   replyToConversationId?: string;
   text: string;
+  taskRefs?: TaskRef[];
   summary?: string;
   chainDepth: number;
   timestamp: string;
@@ -670,6 +726,7 @@ export interface CrossTeamSendRequest {
   conversationId?: string;
   replyToConversationId?: string;
   text: string;
+  taskRefs?: TaskRef[];
   actionMode?: AgentActionMode;
   summary?: string;
   chainDepth?: number;

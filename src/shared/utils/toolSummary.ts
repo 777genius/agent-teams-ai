@@ -19,14 +19,17 @@ export function buildToolSummary(content: Record<string, unknown>[]): string | u
   }
   const total = Array.from(counts.values()).reduce((a, b) => a + b, 0);
   if (total === 0) return undefined;
-  const parts = Array.from(counts.entries())
-    .map(([name, count]) => (count === 1 ? name : `${count} ${name}`))
-    .join(', ');
-  return `${total} ${total === 1 ? 'tool' : 'tools'} (${parts})`;
+  return `${total} ${total === 1 ? 'tool' : 'tools'}`;
 }
 
 export function parseToolSummary(summary: string | undefined): ToolSummaryData | null {
   if (!summary) return null;
+  // Support new format: "3 tools"
+  const simpleMatch = /^(\d+)\s+tools?$/.exec(summary);
+  if (simpleMatch) {
+    return { total: parseInt(simpleMatch[1], 10), byName: {} };
+  }
+  // Support legacy format: "3 tools (Read, 2 Edit)"
   const match = /^(\d+)\s+tools?\s+\(([^)]+)\)$/.exec(summary);
   if (!match) return null;
   const byName: Record<string, number> = {};
@@ -42,20 +45,14 @@ export function parseToolSummary(summary: string | undefined): ToolSummaryData |
 }
 
 export function formatToolSummary(data: ToolSummaryData): string {
-  const parts = Object.entries(data.byName)
-    .map(([name, count]) => (count === 1 ? name : `${count} ${name}`))
-    .join(', ');
-  return `${data.total} ${data.total === 1 ? 'tool' : 'tools'} (${parts})`;
+  return `${data.total} ${data.total === 1 ? 'tool' : 'tools'}`;
 }
 
 /** Format tool summary directly from a Map<toolName, count>. */
 export function formatToolSummaryFromMap(counts: Map<string, number>): string | undefined {
   const total = Array.from(counts.values()).reduce((a, b) => a + b, 0);
   if (total === 0) return undefined;
-  const parts = Array.from(counts.entries())
-    .map(([name, count]) => (count === 1 ? name : `${count} ${name}`))
-    .join(', ');
-  return `${total} ${total === 1 ? 'tool' : 'tools'} (${parts})`;
+  return `${total} ${total === 1 ? 'tool' : 'tools'}`;
 }
 
 /** Format tool summary from an array of ToolCallMeta. */

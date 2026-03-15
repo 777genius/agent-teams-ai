@@ -175,7 +175,10 @@ export const BaseItem: React.FC<BaseItemProps> = ({
 
         {/* Timestamp — rightmost info element */}
         {timestamp && (
-          <span className="shrink-0 text-[11px] tabular-nums" style={{ color: TOOL_ITEM_MUTED }}>
+          <span
+            className="base-item-timestamp shrink-0 text-[11px] tabular-nums"
+            style={{ color: TOOL_ITEM_MUTED }}
+          >
             {format(timestamp, 'HH:mm:ss')}
           </span>
         )}
@@ -183,7 +186,7 @@ export const BaseItem: React.FC<BaseItemProps> = ({
         {/* Expand/collapse chevron */}
         {hasExpandableContent && (
           <ChevronRight
-            className={`size-3 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+            className={`base-item-chevron size-3 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
             style={{ color: TOOL_ITEM_MUTED }}
           />
         )}

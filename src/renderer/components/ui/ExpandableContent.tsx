@@ -11,6 +11,8 @@ interface ExpandableContentProps {
   collapsedHeight?: number;
   /** Extra className applied to the outermost wrapper. */
   className?: string;
+  /** Called when the user clicks "Show more" to expand the content. */
+  onExpand?: () => void;
 }
 
 /**
@@ -25,6 +27,7 @@ export const ExpandableContent = ({
   children,
   collapsedHeight = DEFAULT_COLLAPSED_HEIGHT,
   className,
+  onExpand,
 }: ExpandableContentProps): React.JSX.Element => {
   const anchorRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
@@ -70,13 +73,14 @@ export const ExpandableContent = ({
 
       {/* Show more */}
       {!expanded && needsTruncation ? (
-        <div className="flex justify-center pt-1">
+        <div className="relative flex justify-center" style={{ marginTop: -15 }}>
           <button
             type="button"
             className="flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] shadow-sm transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
             onClick={(e) => {
               e.stopPropagation();
               setExpanded(true);
+              onExpand?.();
             }}
           >
             <ChevronDown size={12} />

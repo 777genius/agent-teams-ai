@@ -20,23 +20,39 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       subject: z.string().min(1),
       description: z.string().optional(),
       owner: z.string().optional(),
+      createdBy: z.string().optional(),
+      from: z.string().optional(),
       blockedBy: z.array(z.string().min(1)).optional(),
       related: z.array(z.string().min(1)).optional(),
       prompt: z.string().optional(),
       startImmediately: z.boolean().optional(),
     }),
-    execute: async ({ teamName, claudeDir, subject, description, owner, blockedBy, related, prompt, startImmediately }) => {
+    execute: async ({
+      teamName,
+      claudeDir,
+      subject,
+      description,
+      owner,
+      createdBy,
+      from,
+      blockedBy,
+      related,
+      prompt,
+      startImmediately,
+    }) => {
       const controller = getController(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
           controller.tasks.createTask({
-          subject,
-          ...(description ? { description } : {}),
-          ...(owner ? { owner } : {}),
-          ...(blockedBy?.length ? { 'blocked-by': blockedBy.join(',') } : {}),
-          ...(related?.length ? { related: related.join(',') } : {}),
-          ...(prompt ? { prompt } : {}),
-          ...(startImmediately !== undefined ? { startImmediately } : {}),
+            subject,
+            ...(description ? { description } : {}),
+            ...(owner ? { owner } : {}),
+            ...(createdBy ? { createdBy } : {}),
+            ...(!createdBy && from ? { from } : {}),
+            ...(blockedBy?.length ? { 'blocked-by': blockedBy.join(',') } : {}),
+            ...(related?.length ? { related: related.join(',') } : {}),
+            ...(prompt ? { prompt } : {}),
+            ...(startImmediately !== undefined ? { startImmediately } : {}),
           })
         )
       );
@@ -260,6 +276,23 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
           getController(teamName, claudeDir).tasks.unlinkTask(taskId, targetId, relationship)
         )
       ),
+  });
+
+  server.addTool({
+    name: 'member_briefing',
+    description: 'Get bootstrap briefing for a team member',
+    parameters: z.object({
+      ...toolContextSchema,
+      memberName: z.string().min(1),
+    }),
+    execute: async ({ teamName, claudeDir, memberName }) => ({
+      content: [
+        {
+          type: 'text' as const,
+          text: await getController(teamName, claudeDir).tasks.memberBriefing(memberName),
+        },
+      ],
+    }),
   });
 
   server.addTool({

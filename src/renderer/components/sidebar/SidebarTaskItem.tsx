@@ -147,7 +147,7 @@ export const SidebarTaskItem = ({
   return (
     <button
       type="button"
-      className={`flex w-full cursor-pointer flex-col justify-center border-b px-3 py-1.5 text-left transition-colors hover:bg-surface-raised ${task.teamDeleted ? 'opacity-50' : ''}`}
+      className={`flex w-full cursor-pointer flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${task.teamDeleted ? 'opacity-50' : ''}`}
       style={{ borderColor: 'var(--color-border)' }}
       onClick={() => {
         if (!isRenaming) {
@@ -156,40 +156,42 @@ export const SidebarTaskItem = ({
       }}
     >
       {/* Row 1: status + subject */}
-      <div className="flex w-full items-start gap-1.5 overflow-hidden">
-        <StatusIcon className={`mt-0.5 size-3 shrink-0 ${cfg.color}`} />
+      <div className="w-full overflow-hidden">
         {isRenaming ? (
-          <input
-            ref={inputRef}
-            type="text"
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
+          <div className="flex items-start gap-1.5">
+            <StatusIcon className={`mt-0.5 size-3 shrink-0 ${cfg.color}`} />
+            <input
+              ref={inputRef}
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const trimmed = editValue.trim();
+                  if (trimmed && trimmed !== task.subject) {
+                    onRenameComplete?.(task.teamName, task.id, trimmed);
+                  } else {
+                    onRenameCancel?.();
+                  }
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  onRenameCancel?.();
+                }
+              }}
+              onBlur={() => {
                 const trimmed = editValue.trim();
                 if (trimmed && trimmed !== task.subject) {
                   onRenameComplete?.(task.teamName, task.id, trimmed);
                 } else {
                   onRenameCancel?.();
                 }
-              } else if (e.key === 'Escape') {
-                e.preventDefault();
-                onRenameCancel?.();
-              }
-            }}
-            onBlur={() => {
-              const trimmed = editValue.trim();
-              if (trimmed && trimmed !== task.subject) {
-                onRenameComplete?.(task.teamName, task.id, trimmed);
-              } else {
-                onRenameCancel?.();
-              }
-            }}
-            className="min-w-0 flex-1 border-none bg-transparent p-0 text-[13px] font-medium leading-tight focus:outline-none"
-            style={{ color: 'var(--color-text-muted)' }}
-            onClick={(e) => e.stopPropagation()}
-          />
+              }}
+              className="min-w-0 flex-1 border-none bg-transparent p-0 text-[13px] font-medium leading-tight focus:outline-none"
+              style={{ color: 'var(--color-text-muted)' }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
         ) : (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -197,26 +199,27 @@ export const SidebarTaskItem = ({
                 className="line-clamp-2 text-[13px] font-medium leading-tight"
                 style={{ color: 'var(--color-text-muted)' }}
               >
+                <StatusIcon className={`mr-1.5 inline-block size-3 align-[-1px] ${cfg.color}`} />
                 {displaySubject}
+                {task.reviewState === 'needsFix' && (
+                  <span
+                    className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 align-middle text-[10px] font-medium leading-none ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
+                  >
+                    {REVIEW_STATE_DISPLAY.needsFix.label}
+                  </span>
+                )}
+                {unreadCount > 0 && (
+                  <span
+                    className="ml-1.5 inline-block size-1.5 rounded-full bg-blue-400 align-middle"
+                    title={`${unreadCount} unread`}
+                  />
+                )}
               </span>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={6}>
               {displaySubject}
             </TooltipContent>
           </Tooltip>
-        )}
-        {task.reviewState === 'needsFix' && !isRenaming ? (
-          <span
-            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
-          >
-            {REVIEW_STATE_DISPLAY.needsFix.label}
-          </span>
-        ) : null}
-        {unreadCount > 0 && !isRenaming && (
-          <span
-            className="size-1.5 shrink-0 rounded-full bg-blue-400"
-            title={`${unreadCount} unread`}
-          />
         )}
       </div>
 

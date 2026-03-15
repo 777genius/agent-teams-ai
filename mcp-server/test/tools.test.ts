@@ -1,4 +1,5 @@
 import fs from 'fs';
+import http from 'http';
 import os from 'os';
 import path from 'path';
 
@@ -39,6 +40,7 @@ describe('agent-teams-mcp tools', () => {
     'kanban_list_reviewers',
     'kanban_remove_reviewer',
     'kanban_set_column',
+    'member_briefing',
     'message_send',
     'process_list',
     'process_register',
@@ -61,6 +63,8 @@ describe('agent-teams-mcp tools', () => {
     'task_set_status',
     'task_start',
     'task_unlink',
+    'team_launch',
+    'team_stop',
   ] as const;
 
   function getTool(name: string) {
@@ -71,6 +75,72 @@ describe('agent-teams-mcp tools', () => {
 
   function makeClaudeDir() {
     return fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-mcp-'));
+  }
+
+  function writeTeamConfig(
+    claudeDir: string,
+    teamName: string,
+    config: {
+      name?: string;
+      language?: string;
+      projectPath?: string;
+      members: Array<Record<string, unknown>>;
+    }
+  ) {
+    const teamDir = path.join(claudeDir, 'teams', teamName);
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify(
+        {
+          name: config.name ?? teamName,
+          ...(config.language ? { language: config.language } : {}),
+          ...(config.projectPath ? { projectPath: config.projectPath } : {}),
+          members: config.members,
+        },
+        null,
+        2
+      )
+    );
+  }
+
+  async function startControlServer(
+    handler: (request: {
+      method?: string;
+      url?: string;
+      body?: unknown;
+    }) => Promise<{ statusCode?: number; body: unknown }> | { statusCode?: number; body: unknown }
+  ) {
+    const server = http.createServer(async (req, res) => {
+      const chunks: Buffer[] = [];
+      req.on('data', (chunk) => chunks.push(chunk));
+      req.on('end', async () => {
+        try {
+          const bodyText = Buffer.concat(chunks).toString('utf8');
+          const body = bodyText ? JSON.parse(bodyText) : undefined;
+          const result = await handler({ method: req.method, url: req.url, body });
+          res.writeHead(result.statusCode ?? 200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify(result.body));
+        } catch (error) {
+          res.writeHead(500, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
+        }
+      });
+    });
+
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+    const address = server.address();
+    if (!address || typeof address === 'string') {
+      throw new Error('Failed to bind control server');
+    }
+
+    return {
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      close: async () =>
+        await new Promise<void>((resolve, reject) =>
+          server.close((error) => (error ? reject(error) : resolve()))
+        ),
+    };
   }
 
   it('registers the full expected MCP tool surface', () => {
@@ -89,9 +159,151 @@ describe('agent-teams-mcp tools', () => {
     expect(parsed?.success).toBe(true);
   });
 
+  it('launches and stops teams through the runtime MCP tools', async () => {
+    const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
+    const server = await startControlServer(async ({ method, url, body }) => {
+      calls.push({ method, url, body });
+
+      if (method === 'POST' && url === '/api/teams/alpha/launch') {
+        return { body: { runId: 'run-555' } };
+      }
+      if (method === 'GET' && url === '/api/teams/provisioning/run-555') {
+        return {
+          body: {
+            runId: 'run-555',
+            teamName: 'alpha',
+            state: 'ready',
+            message: 'Ready',
+            startedAt: '2026-03-12T00:00:00.000Z',
+            updatedAt: '2026-03-12T00:00:02.000Z',
+          },
+        };
+      }
+      if (method === 'POST' && url === '/api/teams/alpha/stop') {
+        return {
+          body: {
+            teamName: 'alpha',
+            isAlive: false,
+            runId: null,
+            progress: null,
+          },
+        };
+      }
+      if (method === 'GET' && url === '/api/teams/alpha/runtime') {
+        return {
+          body: {
+            teamName: 'alpha',
+            isAlive: false,
+            runId: null,
+            progress: null,
+          },
+        };
+      }
+
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+
+    try {
+      const launched = parseJsonToolResult(
+        await getTool('team_launch').execute({
+          teamName: 'alpha',
+          cwd: '/tmp/project',
+          controlUrl: server.baseUrl,
+        })
+      );
+      expect(launched.runId).toBe('run-555');
+      expect(launched.isAlive).toBe(true);
+      expect(launched.progress.state).toBe('ready');
+
+      const stopped = parseJsonToolResult(
+        await getTool('team_stop').execute({
+          teamName: 'alpha',
+          controlUrl: server.baseUrl,
+        })
+      );
+      expect(stopped.isAlive).toBe(false);
+
+      expect(calls).toEqual([
+        {
+          method: 'POST',
+          url: '/api/teams/alpha/launch',
+          body: { cwd: '/tmp/project' },
+        },
+        {
+          method: 'GET',
+          url: '/api/teams/provisioning/run-555',
+          body: undefined,
+        },
+        {
+          method: 'POST',
+          url: '/api/teams/alpha/stop',
+          body: undefined,
+        },
+        {
+          method: 'GET',
+          url: '/api/teams/alpha/runtime',
+          body: undefined,
+        },
+      ]);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('discovers the control endpoint from the published state file', async () => {
+    const claudeDir = makeClaudeDir();
+    const statePath = path.join(claudeDir, 'team-control-api.json');
+
+    const server = await startControlServer(async ({ method, url }) => {
+      if (method === 'POST' && url === '/api/teams/alpha/launch') {
+        return { body: { runId: 'run-state-file' } };
+      }
+      if (method === 'GET' && url === '/api/teams/provisioning/run-state-file') {
+        return {
+          body: {
+            runId: 'run-state-file',
+            teamName: 'alpha',
+            state: 'ready',
+            message: 'Ready',
+            startedAt: '2026-03-12T00:00:00.000Z',
+            updatedAt: '2026-03-12T00:00:02.000Z',
+          },
+        };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+
+    try {
+      fs.writeFileSync(
+        statePath,
+        JSON.stringify({ baseUrl: server.baseUrl, updatedAt: new Date().toISOString() }, null, 2)
+      );
+
+      const launched = parseJsonToolResult(
+        await getTool('team_launch').execute({
+          teamName: 'alpha',
+          claudeDir,
+          cwd: '/tmp/project',
+        })
+      );
+
+      expect(launched.runId).toBe('run-state-file');
+      expect(launched.progress.state).toBe('ready');
+    } finally {
+      await server.close();
+    }
+  });
+
   it('covers task lifecycle, attachments, relationships, kanban, and review flows', async () => {
     const claudeDir = makeClaudeDir();
     const teamName = 'alpha';
+    writeTeamConfig(claudeDir, teamName, {
+      language: 'en',
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'alice', role: 'developer' },
+      ],
+    });
     const attachmentPath = path.join(claudeDir, 'note.txt');
     fs.writeFileSync(attachmentPath, 'ship it');
 
@@ -109,9 +321,11 @@ describe('agent-teams-mcp tools', () => {
         teamName,
         subject: 'Review MCP adapter',
         owner: 'alice',
+        createdBy: 'ui-fixer',
       })
     );
     expect(createdTask.status).toBe('pending');
+    expect(createdTask.historyEvents?.[0]?.actor).toBe('ui-fixer');
 
     const listedTasks = parseJsonToolResult(
       await getTool('task_list').execute({
@@ -297,11 +511,30 @@ describe('agent-teams-mcp tools', () => {
     expect((briefing as { content: Array<{ text: string }> }).content[0]?.text).toContain(
       'Review MCP adapter'
     );
+
+    const memberBriefing = await getTool('member_briefing').execute({
+      claudeDir,
+      teamName,
+      memberName: 'alice',
+    });
+    const memberBriefingText = (memberBriefing as { content: Array<{ text: string }> }).content[0]
+      ?.text;
+    expect(memberBriefingText).toContain('Member briefing for alice on team "alpha" (alpha).');
+    expect(memberBriefingText).toContain('Use task_briefing as your compact queue view');
+    expect(memberBriefingText).toContain('Review MCP adapter');
   });
 
   it('keeps owner-backed MCP tasks pending by default, supports explicit startImmediately, sends owner notifications, and returns compact task_briefing output', async () => {
     const claudeDir = makeClaudeDir();
     const teamName = 'gamma';
+    writeTeamConfig(claudeDir, teamName, {
+      language: 'en',
+      projectPath: '/tmp/gamma-project',
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'alice', role: 'developer', workflow: 'Stay focused' },
+      ],
+    });
 
     const queuedTask = parseJsonToolResult(
       await getTool('task_create').execute({
@@ -380,8 +613,15 @@ describe('agent-teams-mcp tools', () => {
     expect(ownerInbox[0].summary).toContain(`#${queuedTask.displayId}`);
     expect(ownerInbox[0].text).toContain('task_get');
     expect(ownerInbox[0].text).toContain('task_start');
+    expect(ownerInbox[0].text).toContain('task_add_comment');
     expect(ownerInbox[0].text).toContain('Read the plan before starting.');
+    expect(ownerInbox[0].text).toContain('If you are idle and this task is ready to start, start it now.');
+    expect(ownerInbox[0].text).toContain(
+      'If you are busy, blocked, or still need more context, immediately add a short task comment'
+    );
     expect(ownerInbox[3].summary).toContain(`#${unassignedTask.displayId}`);
+    expect(ownerInbox[3].text).toContain('If you are idle and this task is ready to start, start it now.');
+    expect(ownerInbox[3].text).toContain('task_add_comment');
 
     const briefing = (await getTool('task_briefing').execute({
       claudeDir,
@@ -399,6 +639,63 @@ describe('agent-teams-mcp tools', () => {
     expect(briefingText).toContain('Completed:');
     expect(briefingText).toContain(`#${completedTask.displayId}`);
     expect(briefingText).not.toContain('Completed description should also stay compact');
+
+    const memberBriefing = (await getTool('member_briefing').execute({
+      claudeDir,
+      teamName,
+      memberName: 'alice',
+    })) as { content: Array<{ text: string }> };
+    const memberBriefingText = memberBriefing.content[0]?.text ?? '';
+    expect(memberBriefingText).toContain(
+      'You must NOT start work, claim tasks, or improvise task/process protocol'
+    );
+    expect(memberBriefingText).toContain(
+      'A newly assigned task must NOT remain silently pending/TODO. If you are idle and the task is ready to start, start it now.'
+    );
+    expect(memberBriefingText).toContain('reason and your best ETA or what you are waiting on');
+    expect(memberBriefingText).toContain('IMPORTANT: Communicate in English.');
+    expect(memberBriefingText).toContain('TURN ACTION MODE PROTOCOL (HIGHEST PRIORITY FOR EACH USER TURN):');
+    expect(memberBriefingText).toContain('Task briefing for alice:');
+    expect(memberBriefingText).toContain(`#${activeTask.displayId}`);
+
+    fs.mkdirSync(path.join(claudeDir, 'teams', teamName, 'inboxes'), { recursive: true });
+    fs.writeFileSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'carol.json'), '[]');
+    fs.writeFileSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'cross_team_send.json'), '[]');
+    fs.writeFileSync(path.join(claudeDir, 'teams', teamName, 'inboxes', 'other-team.alice.json'), '[]');
+
+    const inboxResolvedBriefing = (await getTool('member_briefing').execute({
+      claudeDir,
+      teamName,
+      memberName: 'carol',
+    })) as { content: Array<{ text: string }> };
+    const inboxResolvedBriefingText = inboxResolvedBriefing.content[0]?.text ?? '';
+    expect(inboxResolvedBriefingText).toContain('Member briefing for carol on team "gamma" (gamma).');
+    expect(inboxResolvedBriefingText).toContain('Role: team member.');
+
+    await expect(
+      getTool('member_briefing').execute({
+        claudeDir,
+        teamName,
+        memberName: 'dave',
+      })
+    ).rejects.toThrow('Member not found in team metadata or inboxes: dave');
+    await expect(
+      getTool('member_briefing').execute({
+        claudeDir,
+        teamName,
+        memberName: 'cross_team_send',
+      })
+    ).rejects.toThrow('Member not found in team metadata or inboxes: cross_team_send');
+    await expect(
+      getTool('member_briefing').execute({
+        claudeDir,
+        teamName,
+        memberName: 'other-team.alice',
+      })
+    ).rejects.toThrow('Member not found in team metadata or inboxes: other-team.alice');
+    expect(inboxResolvedBriefingText).not.toContain(
+      'Warning: Member metadata was not found in config.json, members.meta.json, or inbox files yet.'
+    );
   });
 
   it('covers review_request_changes and full process lifecycle tools', async () => {
@@ -557,6 +854,15 @@ describe('agent-teams-mcp tools', () => {
         claudeDir: '/tmp/demo',
       }).success
     ).toBe(false);
+
+    expect(
+      getTool('task_create').parameters?.safeParse({
+        teamName: 'demo',
+        claudeDir: '/tmp/demo',
+        subject: 'Created by schema',
+        createdBy: 'ui-fixer',
+      }).success
+    ).toBe(true);
 
     expect(
       getTool('process_register').parameters?.safeParse({

@@ -381,6 +381,10 @@ export class HttpAPIClient implements ElectronAPI {
     delete: (id) => this.del(`/api/notifications/${encodeURIComponent(id)}`),
     clear: () => this.del('/api/notifications'),
     getUnreadCount: () => this.get('/api/notifications/unread-count'),
+    testNotification: async () => ({
+      success: false,
+      error: 'Test notifications require Electron (not available in browser mode)',
+    }),
     // IPC signature: (event: unknown, error: unknown) => void
     onNew: (callback) =>
       this.addEventListener('notification:new', (data: unknown) => callback(null, data)),
@@ -820,14 +824,14 @@ export class HttpAPIClient implements ElectronAPI {
     killProcess: async (_teamName: string, _pid: number): Promise<void> => {
       // Not available via HTTP client — no-op
     },
-    getLeadActivity: async (_teamName: string): Promise<'active' | 'idle' | 'offline'> => {
-      return 'offline';
+    getLeadActivity: async (_teamName: string) => {
+      return { state: 'offline' as const, runId: null };
     },
     getLeadContext: async () => {
-      return null;
+      return { usage: null, runId: null };
     },
     getMemberSpawnStatuses: async () => {
-      return {};
+      return { statuses: {}, runId: null };
     },
     softDeleteTask: async (_teamName: string, _taskId: string): Promise<void> => {
       // Not available via HTTP client — no-op
@@ -942,9 +946,14 @@ export class HttpAPIClient implements ElectronAPI {
         status?: string;
         intervals?: { startedAt: string; completedAt?: string }[];
         since?: string;
+        stateBucket?: 'approved' | 'review' | 'completed' | 'active';
         summaryOnly?: boolean;
+        forceFresh?: boolean;
       }
     ): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    invalidateTaskChangeSummaries: async (): Promise<never> => {
       throw new Error('Review is not available in browser mode');
     },
     getChangeStats: async (_teamName: string, _memberName: string): Promise<never> => {
@@ -977,6 +986,15 @@ export class HttpAPIClient implements ElectronAPI {
     // Editable diff stubs
     saveEditedFile: async (): Promise<never> => {
       throw new Error('Review is not available in browser mode');
+    },
+    watchFiles: async (): Promise<never> => {
+      throw new Error('Review file watching is not available in browser mode');
+    },
+    unwatchFiles: async (): Promise<never> => {
+      throw new Error('Review file watching is not available in browser mode');
+    },
+    onExternalFileChange: (): (() => void) => {
+      return () => {};
     },
     // Decision persistence stubs
     loadDecisions: async (): Promise<never> => {

@@ -18,7 +18,9 @@ const ACTION_MODE_BLOCKS: Record<AgentActionMode, string[]> = {
   delegate: [
     'TURN ACTION MODE: DELEGATE',
     '- This turn is STRICTLY delegation/orchestration mode.',
-    '- If you are the team lead, decompose the work, create/assign tasks, coordinate teammates, and monitor progress.',
+    '- If you are the team lead, stay at orchestration level: decompose the work, create/assign tasks fast, delegate triage/research to the best teammate, and monitor progress.',
+    '- In this mode, do NOT inspect code, do root-cause research, or spend time narrowing scope yourself before delegating unless the human explicitly asked you for analysis/planning instead of delegation.',
+    '- If the request is underspecified, create a coarse investigation/triage task for the most relevant teammate immediately; that teammate should inspect the codebase, refine scope, and create follow-up tasks if needed.',
     '- FORBIDDEN: implementing the work yourself, editing files yourself, running state-changing/code-changing commands yourself, or taking direct execution ownership unless you are truly in SOLO MODE.',
     '- If you are not the lead or no delegation target exists, do not execute the work yourself; explain the limitation briefly and request a different mode or a lead handoff.',
   ],
@@ -34,7 +36,7 @@ export function buildActionModeProtocol(): string {
     '- Modes:',
     '  - DO: Full execution mode. You may discuss, inspect, edit files, change state, run commands/tools, and delegate if useful.',
     '  - ASK: Strict read-only conversation mode. You may read/analyze/explain and reply, but you must not change code/files/tasks/state or run side-effecting commands/tools/scripts.',
-    '  - DELEGATE: Strict orchestration mode for leads. Delegate the work to teammates and coordinate it, but do not implement it yourself unless you are truly in SOLO MODE.',
+    '  - DELEGATE: Strict orchestration mode for leads. Delegate the work and any needed investigation to teammates, coordinate it, and do not implement or personally research it yourself unless you are truly in SOLO MODE.',
   ].join('\n');
 }
 

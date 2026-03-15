@@ -20,21 +20,40 @@ vi.mock('../../../src/renderer/api', () => ({
       browse: vi.fn(),
       getById: vi.fn(),
       getInstalled: vi.fn(),
+      diagnose: vi.fn(),
       install: vi.fn(),
       uninstall: vi.fn(),
+    },
+    skills: {
+      list: vi.fn(),
+      getDetail: vi.fn(),
+      previewUpsert: vi.fn(),
+      applyUpsert: vi.fn(),
+      previewImport: vi.fn(),
+      applyImport: vi.fn(),
+      deleteSkill: vi.fn(),
+      startWatching: vi.fn(),
+      stopWatching: vi.fn(),
+      onChanged: vi.fn(),
     },
   },
 }));
 
 import { api } from '../../../src/renderer/api';
 
-import type { EnrichedPlugin, McpCatalogItem } from '../../../src/shared/types/extensions';
+import type {
+  EnrichedPlugin,
+  McpCatalogItem,
+  SkillCatalogItem,
+  SkillDetail,
+} from '../../../src/shared/types/extensions';
 
 const makePlugin = (overrides: Partial<EnrichedPlugin>): EnrichedPlugin => ({
   pluginId: 'test@marketplace',
   marketplaceId: 'test@marketplace',
   qualifiedName: 'test@marketplace',
   name: 'Test Plugin',
+  source: 'official',
   description: 'A test plugin',
   category: 'testing',
   hasLspServers: false,
@@ -58,6 +77,42 @@ const makeMcpServer = (overrides: Partial<McpCatalogItem>): McpCatalogItem => ({
   envVars: [],
   tools: [],
   requiresAuth: false,
+  ...overrides,
+});
+
+const makeSkill = (overrides: Partial<SkillCatalogItem>): SkillCatalogItem => ({
+  id: '/tmp/skills/demo',
+  sourceType: 'filesystem',
+  name: 'Demo Skill',
+  description: 'Helps with demo work',
+  folderName: 'demo',
+  scope: 'user',
+  rootKind: 'claude',
+  projectRoot: null,
+  discoveryRoot: '/tmp/skills',
+  skillDir: '/tmp/skills/demo',
+  skillFile: '/tmp/skills/demo/SKILL.md',
+  metadata: {},
+  invocationMode: 'auto',
+  flags: {
+    hasScripts: false,
+    hasReferences: false,
+    hasAssets: false,
+  },
+  isValid: true,
+  issues: [],
+  modifiedAt: 1,
+  ...overrides,
+});
+
+const makeSkillDetail = (overrides: Partial<SkillDetail> = {}): SkillDetail => ({
+  item: makeSkill({ id: '/tmp/skills/demo', skillDir: '/tmp/skills/demo' }),
+  body: 'body',
+  rawContent: '# Demo',
+  rawFrontmatter: null,
+  referencesFiles: [],
+  scriptFiles: [],
+  assetFiles: [],
   ...overrides,
 });
 
@@ -181,6 +236,16 @@ describe('extensionsSlice', () => {
       expect(extTab!.label).toBe('Extensions');
     });
 
+    it('seeds projectId from activeProjectId when selectedProjectId is null', () => {
+      store.setState({ selectedProjectId: null, activeProjectId: 'project-active' });
+
+      store.getState().openExtensionsTab();
+
+      const tabs = store.getState().paneLayout.panes.flatMap((p) => p.tabs);
+      const extTab = tabs.find((t) => t.type === 'extensions');
+      expect(extTab?.projectId).toBe('project-active');
+    });
+
     it('activates existing extensions tab instead of creating new', () => {
       store.getState().openExtensionsTab();
       const tabs1 = store.getState().paneLayout.panes.flatMap((p) => p.tabs);
@@ -241,6 +306,7 @@ describe('extensionsSlice', () => {
     it('sets progress to pending then success', async () => {
       (api.mcpRegistry!.install as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'success' });
       (api.mcpRegistry!.getInstalled as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.mcpRegistry!.diagnose as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       const promise = store.getState().installMcpServer({
         registryId: 'test-id',
@@ -261,13 +327,74 @@ describe('extensionsSlice', () => {
     it('sets progress to pending then success', async () => {
       (api.mcpRegistry!.uninstall as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'success' });
       (api.mcpRegistry!.getInstalled as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.mcpRegistry!.diagnose as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
-      const promise = store.getState().uninstallMcpServer('test-server', 'user');
+      const promise = store.getState().uninstallMcpServer('test-id', 'test-server', 'user');
 
-      expect(store.getState().mcpInstallProgress['test-server']).toBe('pending');
+      expect(store.getState().mcpInstallProgress['test-id']).toBe('pending');
 
       await promise;
-      expect(store.getState().mcpInstallProgress['test-server']).toBe('success');
+      expect(store.getState().mcpInstallProgress['test-id']).toBe('success');
+    });
+  });
+
+  describe('skills state hardening', () => {
+    it('ignores stale catalog responses for the same project key', async () => {
+      let resolveFirst!: (value: SkillCatalogItem[]) => void;
+      const firstPromise = new Promise<SkillCatalogItem[]>((resolve) => {
+        resolveFirst = resolve;
+      });
+      const secondResult = [
+        makeSkill({
+          id: '/tmp/project/.claude/skills/newer',
+          skillDir: '/tmp/project/.claude/skills/newer',
+          skillFile: '/tmp/project/.claude/skills/newer/SKILL.md',
+          scope: 'project',
+          projectRoot: '/tmp/project',
+          discoveryRoot: '/tmp/project/.claude/skills',
+          name: 'Newer Skill',
+        }),
+      ];
+
+      (api.skills!.list as ReturnType<typeof vi.fn>)
+        .mockImplementationOnce(() => firstPromise)
+        .mockResolvedValueOnce(secondResult);
+
+      const firstFetch = store.getState().fetchSkillsCatalog('/tmp/project');
+      const secondFetch = store.getState().fetchSkillsCatalog('/tmp/project');
+
+      await secondFetch;
+      resolveFirst([
+        makeSkill({
+          id: '/tmp/project/.claude/skills/older',
+          skillDir: '/tmp/project/.claude/skills/older',
+          skillFile: '/tmp/project/.claude/skills/older/SKILL.md',
+          scope: 'project',
+          projectRoot: '/tmp/project',
+          discoveryRoot: '/tmp/project/.claude/skills',
+          name: 'Older Skill',
+        }),
+      ]);
+      await firstFetch;
+
+      expect(store.getState().skillsProjectCatalogByProjectPath['/tmp/project']).toEqual(
+        secondResult
+      );
+    });
+
+    it('keeps the previous detail cache when a detail fetch fails', async () => {
+      const cachedDetail = makeSkillDetail();
+      store.setState({
+        skillsDetailsById: { [cachedDetail.item.id]: cachedDetail },
+      });
+      (api.skills!.getDetail as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('detail fail'));
+
+      await expect(
+        store.getState().fetchSkillDetail(cachedDetail.item.id, '/tmp/project')
+      ).rejects.toThrow('detail fail');
+
+      expect(store.getState().skillsDetailsById[cachedDetail.item.id]).toEqual(cachedDetail);
+      expect(store.getState().skillsDetailErrorById[cachedDetail.item.id]).toBe('detail fail');
     });
   });
 });

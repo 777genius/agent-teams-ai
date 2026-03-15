@@ -1,5 +1,7 @@
-import { useStore } from '@renderer/store';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { isLeadAgentType } from '@shared/utils/leadDetection';
 
 import { MemberCard } from './MemberCard';
 
@@ -45,13 +47,31 @@ export const MemberList = ({
   onAssignTask,
   onOpenTask,
 }: MemberListProps): React.JSX.Element => {
-  const sidebarCollapsed = useStore((s) => s.sidebarCollapsed);
-  const gridClass = sidebarCollapsed ? 'grid grid-cols-2 gap-1' : 'grid grid-cols-1 gap-1';
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isWide, setIsWide] = useState(false);
+
+  const handleResize = useCallback((entries: ResizeObserverEntry[]) => {
+    const entry = entries[0];
+    if (entry) {
+      setIsWide(entry.contentRect.width > 1000);
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver(handleResize);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [handleResize]);
+
+  const gridClass = isWide ? 'grid grid-cols-2 gap-1' : 'grid grid-cols-1 gap-1';
   const activeMembers = members
     .filter((m) => !m.removedAt)
     .sort((a, b) => {
-      if (a.agentType === 'team-lead') return -1;
-      if (b.agentType === 'team-lead') return 1;
+      if (isLeadAgentType(a.agentType)) return -1;
+      if (isLeadAgentType(b.agentType)) return 1;
       return 0;
     });
   const removedMembers = members.filter((m) => m.removedAt);
@@ -68,14 +88,14 @@ export const MemberList = ({
   const renderCard = (member: ResolvedTeamMember, isRemoved: boolean): React.JSX.Element => {
     const currentTask =
       member.currentTaskId && taskMap ? (taskMap.get(member.currentTaskId) ?? null) : null;
-    const reviewTask =
-      !currentTask && taskMap
-        ? (Array.from(taskMap.values()).find(
-            (task) =>
-              task.reviewer === member.name &&
-              (task.reviewState === 'review' || task.kanbanColumn === 'review')
-          ) ?? null)
-        : null;
+    const reviewTask = taskMap
+      ? (Array.from(taskMap.values()).find(
+          (task) =>
+            task.reviewer === member.name &&
+            task.id !== member.currentTaskId &&
+            (task.reviewState === 'review' || task.kanbanColumn === 'review')
+        ) ?? null)
+      : null;
     const awaitingReply = Boolean(pendingRepliesByMember?.[member.name]);
     const spawnEntry = memberSpawnStatuses?.get(member.name);
     return (
@@ -86,18 +106,15 @@ export const MemberList = ({
         taskCounts={memberTaskCounts?.get(member.name.toLowerCase())}
         isTeamAlive={isTeamAlive}
         isTeamProvisioning={isTeamProvisioning}
-        leadActivity={member.agentType === 'team-lead' ? leadActivity : undefined}
+        leadActivity={isLeadAgentType(member.agentType) ? leadActivity : undefined}
         currentTask={isRemoved ? null : currentTask}
         reviewTask={isRemoved ? null : reviewTask}
         isAwaitingReply={isRemoved ? false : awaitingReply}
         isRemoved={isRemoved}
         spawnStatus={isRemoved ? undefined : spawnEntry?.status}
         spawnError={isRemoved ? undefined : spawnEntry?.error}
-        onOpenTask={
-          !isRemoved && (currentTask ?? reviewTask)
-            ? () => onOpenTask?.((currentTask ?? reviewTask)!)
-            : undefined
-        }
+        onOpenTask={!isRemoved && currentTask ? () => onOpenTask?.(currentTask) : undefined}
+        onOpenReviewTask={!isRemoved && reviewTask ? () => onOpenTask?.(reviewTask) : undefined}
         onClick={() => onMemberClick?.(member)}
         onSendMessage={() => onSendMessage?.(member)}
         onAssignTask={() => onAssignTask?.(member)}
@@ -106,7 +123,7 @@ export const MemberList = ({
   };
 
   return (
-    <div className="flex flex-col gap-1">
+    <div ref={containerRef} className="flex flex-col gap-1">
       <div className={gridClass}>{activeMembers.map((member) => renderCard(member, false))}</div>
       {removedMembers.length > 0 && (
         <>

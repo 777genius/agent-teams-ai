@@ -4,6 +4,67 @@ import { TeamDataService } from '../../../../src/main/services/team/TeamDataServ
 
 import type { TeamTask } from '../../../../src/shared/types/team';
 
+const TASK_COMMENT_FORWARDING_ENV = 'CLAUDE_TEAM_TASK_COMMENT_FORWARDING';
+
+function createForwardingJournalStore(initialEntries: Array<Record<string, unknown>> = []) {
+  const journalEntries = initialEntries;
+  const journal = {
+    exists: vi.fn(async () => true),
+    ensureFile: vi.fn(async () => undefined),
+    withEntries: vi.fn(async (_teamName: string, fn: (entries: unknown[]) => Promise<{ result: unknown }>) => {
+      const outcome = await fn(journalEntries);
+      return outcome.result;
+    }),
+  };
+
+  return { journalEntries, journal };
+}
+
+function createTaskCommentForwardingService(options: {
+  tasks: TeamTask[];
+  inboxWriter?: { sendMessage: ReturnType<typeof vi.fn> };
+  inboxMessagesForLead?: Array<Record<string, unknown>>;
+  journal?: {
+    exists: ReturnType<typeof vi.fn>;
+    ensureFile: ReturnType<typeof vi.fn>;
+    withEntries: ReturnType<typeof vi.fn>;
+  };
+  members?: Array<{ name: string; role?: string }>;
+}) {
+  const inboxWriter = options.inboxWriter ?? { sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg-1' })) };
+  const journal = options.journal ?? createForwardingJournalStore().journal;
+
+  const service = new TeamDataService(
+    {
+      listTeams: vi.fn(),
+      getConfig: vi.fn(async () => ({
+        name: 'My team',
+        members: options.members ?? [{ name: 'team-lead', role: 'Lead' }],
+        leadSessionId: 'lead-1',
+      })),
+    } as never,
+    {
+      getTasks: vi.fn(async () => options.tasks),
+    } as never,
+    {
+      listInboxNames: vi.fn(async () => []),
+      getMessages: vi.fn(async () => []),
+      getMessagesFor: vi.fn(async () => options.inboxMessagesForLead ?? []),
+    } as never,
+    inboxWriter as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    (() => ({}) as never) as never,
+    journal as never
+  );
+
+  return { service, inboxWriter, journal };
+}
+
 describe('TeamDataService', () => {
   it('keeps getTeamData read-only and skips kanban garbage-collect', async () => {
     const order: string[] = [];
@@ -505,7 +566,7 @@ describe('TeamDataService', () => {
     });
     expect(approveReviewMock).toHaveBeenCalledWith('task-1', {
       from: 'user',
-      note: 'Approved from kanban',
+      suppressTaskComment: true,
       'notify-owner': true,
       leadSessionId: 'lead-2',
     });
@@ -514,5 +575,1091 @@ describe('TeamDataService', () => {
       comment: 'Needs fixes',
       leadSessionId: 'lead-2',
     });
+  });
+
+  it('seeds historical eligible task comments without sending when the journal is missing', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    const journalEntries: Array<Record<string, unknown>> = [];
+    let journalExists = false;
+    const inboxWriter = { sendMessage: vi.fn() };
+    const journal = {
+      exists: vi.fn(async () => journalExists),
+      ensureFile: vi.fn(async () => {
+        journalExists = true;
+      }),
+      withEntries: vi.fn(async (_teamName: string, fn: (entries: unknown[]) => Promise<{ result: unknown }>) => {
+        const outcome = await fn(journalEntries);
+        return outcome.result;
+      }),
+    };
+
+    try {
+      const service = new TeamDataService(
+        {
+          listTeams: vi.fn(async () => [
+            {
+              teamName: 'my-team',
+              displayName: 'My team',
+              description: '',
+              memberCount: 1,
+              taskCount: 1,
+              lastActivity: null,
+            },
+          ]),
+          getConfig: vi.fn(async () => ({
+            name: 'My team',
+            members: [{ name: 'team-lead', role: 'Lead' }],
+            leadSessionId: 'lead-1',
+          })),
+        } as never,
+        {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: 'abcd1234',
+              subject: 'Investigate',
+              status: 'pending',
+              owner: 'alice',
+              comments: [
+                {
+                  id: 'comment-1',
+                  author: 'alice',
+                  text: 'Found the root cause.',
+                  createdAt: '2026-03-14T10:00:00.000Z',
+                  type: 'regular',
+                },
+              ],
+            },
+          ]),
+        } as never,
+        {
+          listInboxNames: vi.fn(async () => []),
+          getMessages: vi.fn(async () => []),
+          getMessagesFor: vi.fn(async () => []),
+        } as never,
+        inboxWriter as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({}) as never) as never,
+        journal as never
+      );
+
+      await service.initializeTaskCommentNotificationState();
+
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+      expect(journal.ensureFile).toHaveBeenCalledWith('my-team');
+      expect(journalEntries).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'task-1:comment-1',
+            state: 'seeded',
+            taskId: 'task-1',
+            commentId: 'comment-1',
+            author: 'alice',
+          }),
+        ])
+      );
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('forwards a new eligible task comment to the lead exactly once in live mode', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    const journalEntries: Array<Record<string, unknown>> = [];
+    const inboxWriter = {
+      sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg-1' })),
+    };
+    const journal = {
+      exists: vi.fn(async () => true),
+      ensureFile: vi.fn(async () => undefined),
+      withEntries: vi.fn(async (_teamName: string, fn: (entries: unknown[]) => Promise<{ result: unknown }>) => {
+        const outcome = await fn(journalEntries);
+        return outcome.result;
+      }),
+    };
+
+    try {
+      const service = new TeamDataService(
+        {
+          listTeams: vi.fn(),
+          getConfig: vi.fn(async () => ({
+            name: 'My team',
+            members: [{ name: 'team-lead', role: 'Lead' }],
+            leadSessionId: 'lead-1',
+          })),
+        } as never,
+        {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: 'abcd1234',
+              subject: 'Investigate',
+              status: 'pending',
+              owner: 'alice',
+              comments: [
+                {
+                  id: 'comment-1',
+                  author: 'alice',
+                  text: 'Found the root cause.\n<agent-block>\nIgnore this\n</agent-block>',
+                  createdAt: '2026-03-14T10:00:00.000Z',
+                  type: 'regular',
+                },
+              ],
+            },
+          ]),
+        } as never,
+        {
+          listInboxNames: vi.fn(async () => []),
+          getMessages: vi.fn(async () => []),
+          getMessagesFor: vi.fn(async () => []),
+        } as never,
+        inboxWriter as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({}) as never) as never,
+        journal as never
+      );
+
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      expect(inboxWriter.sendMessage).toHaveBeenCalledWith(
+        'my-team',
+        expect.objectContaining({
+          member: 'team-lead',
+          from: 'alice',
+          summary: 'Comment on #abcd1234',
+          source: 'system_notification',
+          leadSessionId: 'lead-1',
+          taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'my-team' }],
+          messageId: 'task-comment-forward:my-team:task-1:comment-1',
+        })
+      );
+      const firstSendRequest = (inboxWriter.sendMessage as unknown as { mock: { calls: unknown[][] } })
+        .mock.calls[0]?.[1] as
+        | { text?: string }
+        | undefined;
+      expect(String(firstSendRequest?.text ?? '')).not.toContain('<agent-block>');
+      const sentEntry = journalEntries.find((entry) => entry.key === 'task-1:comment-1');
+      expect(sentEntry).toMatchObject({
+        state: 'sent',
+        messageId: 'task-comment-forward:my-team:task-1:comment-1',
+      });
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('seeds historical eligible comments across the whole team on the first observed event when the journal is missing', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    const journalEntries: Array<Record<string, unknown>> = [];
+    let journalExists = false;
+    const inboxWriter = { sendMessage: vi.fn() };
+    const journal = {
+      exists: vi.fn(async () => journalExists),
+      ensureFile: vi.fn(async () => {
+        journalExists = true;
+      }),
+      withEntries: vi.fn(async (_teamName: string, fn: (entries: unknown[]) => Promise<{ result: unknown }>) => {
+        const outcome = await fn(journalEntries);
+        return outcome.result;
+      }),
+    };
+
+    try {
+      const service = new TeamDataService(
+        {
+          listTeams: vi.fn(),
+          getConfig: vi.fn(async () => ({
+            name: 'My team',
+            members: [{ name: 'team-lead', role: 'Lead' }],
+          })),
+        } as never,
+        {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: 'abcd1234',
+              subject: 'Investigate',
+              status: 'pending',
+              owner: 'alice',
+              comments: [
+                {
+                  id: 'comment-1',
+                  author: 'alice',
+                  text: 'Still pending from prior attempt.',
+                  createdAt: '2026-03-14T10:00:00.000Z',
+                  type: 'regular',
+                },
+              ],
+            },
+            {
+              id: 'task-2',
+              displayId: 'efgh5678',
+              subject: 'Second historical task',
+              status: 'pending',
+              owner: 'bob',
+              comments: [
+                {
+                  id: 'comment-2',
+                  author: 'bob',
+                  text: 'Historical comment on another task.',
+                  createdAt: '2026-03-14T10:01:00.000Z',
+                  type: 'regular',
+                },
+              ],
+            },
+          ]),
+        } as never,
+        {
+          listInboxNames: vi.fn(async () => []),
+          getMessages: vi.fn(async () => []),
+          getMessagesFor: vi.fn(async () => []),
+        } as never,
+        inboxWriter as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({}) as never) as never,
+        journal as never
+      );
+
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+      expect(journal.ensureFile).toHaveBeenCalledWith('my-team');
+      expect(journalEntries).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'task-1:comment-1',
+            state: 'seeded',
+            messageId: 'task-comment-forward:my-team:task-1:comment-1',
+          }),
+          expect.objectContaining({
+            key: 'task-2:comment-2',
+            state: 'seeded',
+            messageId: 'task-comment-forward:my-team:task-2:comment-2',
+          }),
+        ])
+      );
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('does not notify for deleted teams', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    const journalEntries: Array<Record<string, unknown>> = [];
+    const inboxWriter = { sendMessage: vi.fn() };
+    const journal = {
+      exists: vi.fn(async () => true),
+      ensureFile: vi.fn(async () => undefined),
+      withEntries: vi.fn(async (_teamName: string, fn: (entries: unknown[]) => Promise<{ result: unknown }>) => {
+        const outcome = await fn(journalEntries);
+        return outcome.result;
+      }),
+    };
+
+    try {
+      const service = new TeamDataService(
+        {
+          listTeams: vi.fn(),
+          getConfig: vi.fn(async () => ({
+            name: 'My team',
+            deletedAt: '2026-03-14T10:00:00.000Z',
+            members: [{ name: 'team-lead', role: 'Lead' }],
+          })),
+        } as never,
+        {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: 'abcd1234',
+              subject: 'Investigate',
+              status: 'pending',
+              owner: 'alice',
+              comments: [
+                {
+                  id: 'comment-1',
+                  author: 'alice',
+                  text: 'Deleted teams should not notify.',
+                  createdAt: '2026-03-14T10:00:00.000Z',
+                  type: 'regular',
+                },
+              ],
+            },
+          ]),
+        } as never,
+        {
+          listInboxNames: vi.fn(async () => []),
+          getMessages: vi.fn(async () => []),
+          getMessagesFor: vi.fn(async () => []),
+        } as never,
+        inboxWriter as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({}) as never) as never,
+        journal as never
+      );
+
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+      expect(journal.withEntries).not.toHaveBeenCalled();
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('reconciles pending_send journal rows without resending when the inbox already contains the message', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    const journalEntries: Array<Record<string, unknown>> = [
+      {
+        key: 'task-1:comment-1',
+        taskId: 'task-1',
+        commentId: 'comment-1',
+        author: 'alice',
+        messageId: 'task-comment-forward:my-team:task-1:comment-1',
+        state: 'pending_send',
+        createdAt: '2026-03-14T10:00:00.000Z',
+        updatedAt: '2026-03-14T10:00:00.000Z',
+      },
+    ];
+    const inboxWriter = { sendMessage: vi.fn() };
+    const journal = {
+      exists: vi.fn(async () => true),
+      ensureFile: vi.fn(async () => undefined),
+      withEntries: vi.fn(async (_teamName: string, fn: (entries: unknown[]) => Promise<{ result: unknown }>) => {
+        const outcome = await fn(journalEntries);
+        return outcome.result;
+      }),
+    };
+
+    try {
+      const service = new TeamDataService(
+        {
+          listTeams: vi.fn(async () => [
+            {
+              teamName: 'my-team',
+              displayName: 'My team',
+              description: '',
+              memberCount: 1,
+              taskCount: 1,
+              lastActivity: null,
+            },
+          ]),
+          getConfig: vi.fn(async () => ({
+            name: 'My team',
+            members: [{ name: 'team-lead', role: 'Lead' }],
+          })),
+        } as never,
+        {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: 'abcd1234',
+              subject: 'Investigate',
+              status: 'pending',
+              owner: 'alice',
+              comments: [
+                {
+                  id: 'comment-1',
+                  author: 'alice',
+                  text: 'Recovered after restart.',
+                  createdAt: '2026-03-14T10:00:00.000Z',
+                  type: 'regular',
+                },
+              ],
+            },
+          ]),
+        } as never,
+        {
+          listInboxNames: vi.fn(async () => []),
+          getMessages: vi.fn(async () => []),
+          getMessagesFor: vi.fn(async () => [
+            {
+              from: 'alice',
+              to: 'team-lead',
+              text: 'Existing notification',
+              timestamp: '2026-03-14T10:00:01.000Z',
+              read: false,
+              messageId: 'task-comment-forward:my-team:task-1:comment-1',
+            },
+          ]),
+        } as never,
+        inboxWriter as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({}) as never) as never,
+        journal as never
+      );
+
+      await service.initializeTaskCommentNotificationState();
+
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+      expect(journalEntries[0]).toMatchObject({
+        state: 'sent',
+        messageId: 'task-comment-forward:my-team:task-1:comment-1',
+      });
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('retries pending_send journal rows during startup recovery when inbox does not contain the message', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    const journalEntries: Array<Record<string, unknown>> = [
+      {
+        key: 'task-1:comment-1',
+        taskId: 'task-1',
+        commentId: 'comment-1',
+        author: 'alice',
+        messageId: 'task-comment-forward:my-team:task-1:comment-1',
+        state: 'pending_send',
+        createdAt: '2026-03-14T10:00:00.000Z',
+        updatedAt: '2026-03-14T10:00:00.000Z',
+      },
+    ];
+    const inboxWriter = {
+      sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'task-comment-forward:my-team:task-1:comment-1' })),
+    };
+    const journal = {
+      exists: vi.fn(async () => true),
+      ensureFile: vi.fn(async () => undefined),
+      withEntries: vi.fn(async (_teamName: string, fn: (entries: unknown[]) => Promise<{ result: unknown }>) => {
+        const outcome = await fn(journalEntries);
+        return outcome.result;
+      }),
+    };
+
+    try {
+      const service = new TeamDataService(
+        {
+          listTeams: vi.fn(async () => [
+            {
+              teamName: 'my-team',
+              displayName: 'My team',
+              description: '',
+              memberCount: 1,
+              taskCount: 1,
+              lastActivity: null,
+            },
+          ]),
+          getConfig: vi.fn(async () => ({
+            name: 'My team',
+            members: [{ name: 'team-lead', role: 'Lead' }],
+          })),
+        } as never,
+        {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: 'abcd1234',
+              subject: 'Investigate',
+              status: 'pending',
+              owner: 'alice',
+              comments: [
+                {
+                  id: 'comment-1',
+                  author: 'alice',
+                  text: 'Recovered after restart and resend.',
+                  createdAt: '2026-03-14T10:00:00.000Z',
+                  type: 'regular',
+                },
+              ],
+            },
+          ]),
+        } as never,
+        {
+          listInboxNames: vi.fn(async () => []),
+          getMessages: vi.fn(async () => []),
+          getMessagesFor: vi.fn(async () => []),
+        } as never,
+        inboxWriter as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({}) as never) as never,
+        journal as never
+      );
+
+      await service.initializeTaskCommentNotificationState();
+
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      expect(journalEntries[0]).toMatchObject({
+        state: 'sent',
+        messageId: 'task-comment-forward:my-team:task-1:comment-1',
+      });
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('retries pending_send rows on later task changes when the inbox does not contain the message', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    const journalEntries: Array<Record<string, unknown>> = [
+      {
+        key: 'task-1:comment-1',
+        taskId: 'task-1',
+        commentId: 'comment-1',
+        author: 'alice',
+        messageId: 'task-comment-forward:my-team:task-1:comment-1',
+        state: 'pending_send',
+        createdAt: '2026-03-14T10:00:00.000Z',
+        updatedAt: '2026-03-14T10:00:00.000Z',
+      },
+    ];
+    const inboxWriter = {
+      sendMessage: vi.fn(async () => ({
+        deliveredToInbox: true,
+        messageId: 'task-comment-forward:my-team:task-1:comment-1',
+      })),
+    };
+    const journal = {
+      exists: vi.fn(async () => true),
+      ensureFile: vi.fn(async () => undefined),
+      withEntries: vi.fn(async (_teamName: string, fn: (entries: unknown[]) => Promise<{ result: unknown }>) => {
+        const outcome = await fn(journalEntries);
+        return outcome.result;
+      }),
+    };
+
+    try {
+      const service = new TeamDataService(
+        {
+          listTeams: vi.fn(),
+          getConfig: vi.fn(async () => ({
+            name: 'My team',
+            members: [{ name: 'team-lead', role: 'Lead' }],
+          })),
+        } as never,
+        {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: 'abcd1234',
+              subject: 'Investigate',
+              status: 'pending',
+              owner: 'alice',
+              comments: [
+                {
+                  id: 'comment-1',
+                  author: 'alice',
+                  text: 'Retry on later task change.',
+                  createdAt: '2026-03-14T10:00:00.000Z',
+                  type: 'regular',
+                },
+              ],
+            },
+          ]),
+        } as never,
+        {
+          listInboxNames: vi.fn(async () => []),
+          getMessages: vi.fn(async () => []),
+          getMessagesFor: vi.fn(async () => []),
+        } as never,
+        inboxWriter as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({}) as never) as never,
+        journal as never
+      );
+
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      expect(journalEntries[0]).toMatchObject({
+        state: 'sent',
+        messageId: 'task-comment-forward:my-team:task-1:comment-1',
+      });
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('does not duplicate later-task-change recovery while a send is already in flight', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    const journalEntries: Array<Record<string, unknown>> = [
+      {
+        key: 'task-1:comment-1',
+        taskId: 'task-1',
+        commentId: 'comment-1',
+        author: 'alice',
+        messageId: 'task-comment-forward:my-team:task-1:comment-1',
+        state: 'pending_send',
+        createdAt: '2026-03-14T10:00:00.000Z',
+        updatedAt: '2026-03-14T10:00:00.000Z',
+      },
+    ];
+    let releaseSend: (() => void) | undefined;
+    let resolveSendStarted: (() => void) | undefined;
+    const sendGate = new Promise<void>((resolve) => {
+      releaseSend = resolve;
+    });
+    const sendStarted = new Promise<void>((resolve) => {
+      resolveSendStarted = resolve;
+    });
+    const inboxWriter = {
+      sendMessage: vi.fn(async () => {
+        resolveSendStarted?.();
+        await sendGate;
+        return {
+          deliveredToInbox: true,
+          messageId: 'task-comment-forward:my-team:task-1:comment-1',
+        };
+      }),
+    };
+    const journal = {
+      exists: vi.fn(async () => true),
+      ensureFile: vi.fn(async () => undefined),
+      withEntries: vi.fn(async (_teamName: string, fn: (entries: unknown[]) => Promise<{ result: unknown }>) => {
+        const outcome = await fn(journalEntries);
+        return outcome.result;
+      }),
+    };
+
+    try {
+      const service = new TeamDataService(
+        {
+          listTeams: vi.fn(),
+          getConfig: vi.fn(async () => ({
+            name: 'My team',
+            members: [{ name: 'team-lead', role: 'Lead' }],
+          })),
+        } as never,
+        {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: 'abcd1234',
+              subject: 'Investigate',
+              status: 'pending',
+              owner: 'alice',
+              comments: [
+                {
+                  id: 'comment-1',
+                  author: 'alice',
+                  text: 'Concurrent retry protection.',
+                  createdAt: '2026-03-14T10:00:00.000Z',
+                  type: 'regular',
+                },
+              ],
+            },
+          ]),
+        } as never,
+        {
+          listInboxNames: vi.fn(async () => []),
+          getMessages: vi.fn(async () => []),
+          getMessagesFor: vi.fn(async () => []),
+        } as never,
+        inboxWriter as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({}) as never) as never,
+        journal as never
+      );
+
+      const first = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+      const second = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+
+      await sendStarted;
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+
+      if (!releaseSend) {
+        throw new Error('Expected send release');
+      }
+      releaseSend();
+
+      await first;
+      await second;
+
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      expect(journalEntries[0]).toMatchObject({
+        state: 'sent',
+      });
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('forwards eligible teammate comments even when the commenter is not the current task owner', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    const journalEntries: Array<Record<string, unknown>> = [];
+    const inboxWriter = {
+      sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg-1' })),
+    };
+    const journal = {
+      exists: vi.fn(async () => true),
+      ensureFile: vi.fn(async () => undefined),
+      withEntries: vi.fn(async (_teamName: string, fn: (entries: unknown[]) => Promise<{ result: unknown }>) => {
+        const outcome = await fn(journalEntries);
+        return outcome.result;
+      }),
+    };
+
+    try {
+      const service = new TeamDataService(
+        {
+          listTeams: vi.fn(),
+          getConfig: vi.fn(async () => ({
+            name: 'My team',
+            members: [{ name: 'team-lead', role: 'Lead' }],
+            leadSessionId: 'lead-1',
+          })),
+        } as never,
+        {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: 'abcd1234',
+              subject: 'Investigate',
+              status: 'pending',
+              owner: 'alice',
+              comments: [
+                {
+                  id: 'comment-2',
+                  author: 'bob',
+                  text: 'Independent research result from another teammate.',
+                  createdAt: '2026-03-14T10:05:00.000Z',
+                  type: 'regular',
+                },
+              ],
+            },
+          ]),
+        } as never,
+        {
+          listInboxNames: vi.fn(async () => []),
+          getMessages: vi.fn(async () => []),
+          getMessagesFor: vi.fn(async () => []),
+        } as never,
+        inboxWriter as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({}) as never) as never,
+        journal as never
+      );
+
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      expect(inboxWriter.sendMessage).toHaveBeenCalledWith(
+        'my-team',
+        expect.objectContaining({
+          from: 'bob',
+          summary: 'Comment on #abcd1234',
+          messageId: 'task-comment-forward:my-team:task-1:comment-2',
+        })
+      );
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('does not forward user-authored, lead-authored, mirrored, or non-regular comments', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+
+    try {
+      const { journalEntries, journal } = createForwardingJournalStore();
+      const { service, inboxWriter } = createTaskCommentForwardingService({
+        journal,
+        tasks: [
+          {
+            id: 'task-1',
+            displayId: 'abcd1234',
+            subject: 'Investigate',
+            status: 'pending',
+            owner: 'alice',
+            comments: [
+              {
+                id: 'comment-user',
+                author: 'user',
+                text: 'User comment should not notify.',
+                createdAt: '2026-03-14T10:00:00.000Z',
+                type: 'regular',
+              },
+              {
+                id: 'comment-lead',
+                author: 'team-lead',
+                text: 'Lead already knows this.',
+                createdAt: '2026-03-14T10:01:00.000Z',
+                type: 'regular',
+              },
+              {
+                id: 'msg-legacy',
+                author: 'alice',
+                text: 'Mirrored inbox artifact.',
+                createdAt: '2026-03-14T10:02:00.000Z',
+                type: 'regular',
+              },
+              {
+                id: 'comment-review-request',
+                author: 'alice',
+                text: 'Please review.',
+                createdAt: '2026-03-14T10:03:00.000Z',
+                type: 'review_request',
+              },
+              {
+                id: 'comment-review-approved',
+                author: 'alice',
+                text: 'Approved.',
+                createdAt: '2026-03-14T10:04:00.000Z',
+                type: 'review_approved',
+              },
+            ],
+          },
+        ],
+      });
+
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+      expect(journalEntries).toEqual([]);
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('does not forward comments for lead-owned tasks', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+
+    try {
+      const { journalEntries, journal } = createForwardingJournalStore();
+      const { service, inboxWriter } = createTaskCommentForwardingService({
+        journal,
+        tasks: [
+          {
+            id: 'task-1',
+            displayId: 'abcd1234',
+            subject: 'Lead-owned task',
+            status: 'pending',
+            owner: 'team-lead',
+            comments: [
+              {
+                id: 'comment-1',
+                author: 'alice',
+                text: 'Should not create a second lead notification.',
+                createdAt: '2026-03-14T10:00:00.000Z',
+                type: 'regular',
+              },
+            ],
+          },
+        ],
+      });
+
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+      expect(journalEntries).toEqual([]);
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('does not replay historical comment notifications after lead rename because the journal key is team-level', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+
+    try {
+      const { journalEntries, journal } = createForwardingJournalStore([
+        {
+          key: 'task-1:comment-1',
+          taskId: 'task-1',
+          commentId: 'comment-1',
+          author: 'alice',
+          messageId: 'task-comment-forward:my-team:task-1:comment-1',
+          state: 'sent',
+          createdAt: '2026-03-14T10:00:00.000Z',
+          updatedAt: '2026-03-14T10:00:00.000Z',
+          sentAt: '2026-03-14T10:00:00.000Z',
+        },
+      ]);
+      const { service, inboxWriter } = createTaskCommentForwardingService({
+        journal,
+        members: [{ name: 'new-lead', role: 'Lead' }],
+        tasks: [
+          {
+            id: 'task-1',
+            displayId: 'abcd1234',
+            subject: 'Investigate',
+            status: 'pending',
+            owner: 'alice',
+            comments: [
+              {
+                id: 'comment-1',
+                author: 'alice',
+                text: 'Already forwarded before lead rename.',
+                createdAt: '2026-03-14T10:00:00.000Z',
+                type: 'regular',
+              },
+            ],
+          },
+        ],
+      });
+
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+      expect(journalEntries).toHaveLength(1);
+      expect(journalEntries[0]).toMatchObject({
+        key: 'task-1:comment-1',
+        state: 'sent',
+      });
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('waits for startup initialization before processing watcher-driven comment notifications', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    let releaseInit: (() => void) | undefined;
+    const initGate = new Promise<void>((resolve) => {
+      releaseInit = () => resolve();
+    });
+    const inboxWriter = { sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'msg-1' })) };
+    const journalEntries: Array<Record<string, unknown>> = [];
+    const journal = {
+      exists: vi.fn(async () => true),
+      ensureFile: vi.fn(async () => undefined),
+      withEntries: vi.fn(async (_teamName: string, fn: (entries: unknown[]) => Promise<{ result: unknown }>) => {
+        const outcome = await fn(journalEntries);
+        return outcome.result;
+      }),
+    };
+
+    try {
+      const service = new TeamDataService(
+        {
+          listTeams: vi.fn(async () => {
+            await initGate;
+            return [
+              {
+                teamName: 'my-team',
+                displayName: 'My team',
+                description: '',
+                memberCount: 1,
+                taskCount: 1,
+                lastActivity: null,
+              },
+            ];
+          }),
+          getConfig: vi.fn(async () => ({
+            name: 'My team',
+            members: [{ name: 'team-lead', role: 'Lead' }],
+          })),
+        } as never,
+        {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: 'abcd1234',
+              subject: 'Investigate',
+              status: 'pending',
+              owner: 'alice',
+              comments: [
+                {
+                  id: 'comment-1',
+                  author: 'alice',
+                  text: 'New comment after startup barrier.',
+                  createdAt: '2026-03-14T10:00:00.000Z',
+                  type: 'regular',
+                },
+              ],
+            },
+          ]),
+        } as never,
+        {
+          listInboxNames: vi.fn(async () => []),
+          getMessages: vi.fn(async () => []),
+          getMessagesFor: vi.fn(async () => []),
+        } as never,
+        inboxWriter as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({}) as never) as never,
+        journal as never
+      );
+
+      const initPromise = service.initializeTaskCommentNotificationState();
+      const notifyPromise = service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
+
+      await Promise.resolve();
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+
+      if (!releaseInit) {
+        throw new Error('Expected initialization gate release');
+      }
+      releaseInit();
+      await initPromise;
+      await notifyPromise;
+
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
   });
 });

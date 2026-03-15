@@ -69,7 +69,7 @@ export function getTaskUnreadCount(
   readState: ReturnType<typeof getSnapshot>,
   teamName: string,
   taskId: string,
-  comments: { createdAt: string }[] | undefined
+  comments: { id?: string; createdAt: string }[] | undefined
 ): number {
   return getUnreadCount(readState, teamName, taskId, comments ?? []);
 }

@@ -1,5 +1,6 @@
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { getAppIconPath } from '@main/utils/appIcon';
+import { getAppDataPath } from '@main/utils/pathDecoder';
 import { stripMarkdown } from '@main/utils/textFormatting';
 import {
   TEAM_ADD_MEMBER,
@@ -81,6 +82,7 @@ import {
 } from '../services/team/actionModeInstructions';
 import { gitIdentityResolver } from '../services/parsing/GitIdentityResolver';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
+import { buildAddMemberSpawnMessage } from '../services/team/TeamProvisioningService';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 
 import {
@@ -97,7 +99,9 @@ import type {
   TeamMemberLogsFinder,
   TeamProvisioningService,
 } from '../services';
+import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type {
+  AddTaskCommentRequest,
   AgentActionMode,
   AttachmentFileData,
   AttachmentMeta,
@@ -108,13 +112,17 @@ import type {
   IpcResult,
   KanbanColumnId,
   LeadContextUsage,
+  LeadActivitySnapshot,
+  LeadContextUsageSnapshot,
   MemberFullStats,
+  MemberSpawnStatusesSnapshot,
   MemberLogSummary,
   MemberSpawnStatusEntry,
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
   TaskComment,
+  TaskRef,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
   TeamConfig,
@@ -193,12 +201,19 @@ let teamDataService: TeamDataService | null = null;
 let teamProvisioningService: TeamProvisioningService | null = null;
 let teamMemberLogsFinder: TeamMemberLogsFinder | null = null;
 let memberStatsComputer: MemberStatsComputer | null = null;
+let teamBackupService: TeamBackupService | null = null;
 
 const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
 
 const ALLOWED_ATTACHMENT_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB per file
+
+/**
+ * Prevents GC from collecting Notification objects in the deprecated showTeamNativeNotification.
+ * @see https://blog.bloomca.me/2025/02/22/electron-mac-notifications.html
+ */
+const activeTeamNotifications = new Set<Notification>();
 const MAX_ATTACHMENTS = 5;
 const MAX_TOTAL_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20MB total
 
@@ -206,12 +221,14 @@ export function initializeTeamHandlers(
   service: TeamDataService,
   provisioningService: TeamProvisioningService,
   logsFinder?: TeamMemberLogsFinder,
-  statsComputer?: MemberStatsComputer
+  statsComputer?: MemberStatsComputer,
+  backupService?: TeamBackupService
 ): void {
   teamDataService = service;
   teamProvisioningService = provisioningService;
   teamMemberLogsFinder = logsFinder ?? null;
   memberStatsComputer = statsComputer ?? null;
+  teamBackupService = backupService ?? null;
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
@@ -521,9 +538,21 @@ async function handlePermanentlyDeleteTeam(
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
-  return wrapTeamHandler('permanentlyDeleteTeam', () =>
-    getTeamDataService().permanentlyDeleteTeam(validated.value!)
-  );
+  return wrapTeamHandler('permanentlyDeleteTeam', async () => {
+    await getTeamDataService().permanentlyDeleteTeam(validated.value!);
+    // Clean up app-owned data (attachments, task-attachments) that lives outside ~/.claude/
+    const appData = getAppDataPath();
+    await fs.promises
+      .rm(path.join(appData, 'attachments', validated.value!), { recursive: true, force: true })
+      .catch(() => undefined);
+    await fs.promises
+      .rm(path.join(appData, 'task-attachments', validated.value!), { recursive: true, force: true })
+      .catch(() => undefined);
+    // Mark in backup registry AFTER successful deletion
+    if (teamBackupService) {
+      await teamBackupService.markDeletedByUser(validated.value!);
+    }
+  });
 }
 
 async function handleUpdateConfig(
@@ -927,10 +956,53 @@ function isUpdateKanbanPatch(value: unknown): value is UpdateKanbanPatch {
   }
 
   if (patch.op === 'request_changes') {
-    return patch.comment === undefined || typeof patch.comment === 'string';
+    return (
+      (patch.comment === undefined || typeof patch.comment === 'string') &&
+      validateTaskRefs((patch as { taskRefs?: unknown }).taskRefs).valid
+    );
   }
 
   return patch.op === 'set_column' && (patch.column === 'review' || patch.column === 'approved');
+}
+
+function validateTaskRefs(
+  value: unknown
+): { valid: true; value: TaskRef[] | undefined } | { valid: false; error: string } {
+  if (value === undefined) {
+    return { valid: true, value: undefined };
+  }
+  if (!Array.isArray(value)) {
+    return { valid: false, error: 'taskRefs must be an array' };
+  }
+
+  const taskRefs: TaskRef[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') {
+      return { valid: false, error: 'taskRefs entries must be objects' };
+    }
+    const row = entry as Partial<TaskRef>;
+    const taskId = typeof row.taskId === 'string' ? row.taskId.trim() : '';
+    const displayId = typeof row.displayId === 'string' ? row.displayId.trim() : '';
+    const teamName = typeof row.teamName === 'string' ? row.teamName.trim() : '';
+    if (!taskId || !displayId || !teamName) {
+      return { valid: false, error: 'Each taskRef must include taskId, displayId, and teamName' };
+    }
+    const validatedTaskId = validateTaskId(taskId);
+    if (!validatedTaskId.valid) {
+      return { valid: false, error: validatedTaskId.error ?? 'Invalid taskRef taskId' };
+    }
+    const validatedTeamName = validateTeamName(teamName);
+    if (!validatedTeamName.valid) {
+      return { valid: false, error: validatedTeamName.error ?? 'Invalid taskRef teamName' };
+    }
+    taskRefs.push({
+      taskId: validatedTaskId.value!,
+      displayId,
+      teamName: validatedTeamName.value!,
+    });
+  }
+
+  return { valid: true, value: taskRefs };
 }
 
 async function handleGetAttachments(
@@ -1068,6 +1140,10 @@ async function handleSendMessage(
   if (payload.actionMode !== undefined && !isAgentActionMode(payload.actionMode)) {
     return { success: false, error: 'actionMode must be one of: do, ask, delegate' };
   }
+  const validatedTaskRefs = validateTaskRefs(payload.taskRefs);
+  if (!validatedTaskRefs.valid) {
+    return { success: false, error: validatedTaskRefs.error };
+  }
 
   let validatedAttachments: AttachmentPayload[] | undefined;
   if (
@@ -1175,7 +1251,8 @@ async function handleSendMessage(
             resolvedLeadName,
             payload.text!,
             payload.summary,
-            attachmentMeta
+            attachmentMeta,
+            validatedTaskRefs.value
           );
         } catch (persistError) {
           logger.warn(`Persistence failed after stdin delivery for ${tn}: ${String(persistError)}`);
@@ -1199,6 +1276,7 @@ async function handleSendMessage(
           messageId: result.messageId,
           source: 'user_sent',
           attachments: attachmentMeta,
+          taskRefs: validatedTaskRefs.value,
         });
 
         return result;
@@ -1216,6 +1294,8 @@ async function handleSendMessage(
       text: memberDeliveryText,
       summary: payload.summary,
       from: payload.from,
+      source: 'user_sent',
+      taskRefs: validatedTaskRefs.value,
     });
 
     // Best-effort live relay so active processes see the inbox row promptly.
@@ -1264,6 +1344,10 @@ async function handleCreateTask(
   if (payload.description !== undefined && typeof payload.description !== 'string') {
     return { success: false, error: 'description must be string' };
   }
+  const validatedDescriptionTaskRefs = validateTaskRefs(payload.descriptionTaskRefs);
+  if (!validatedDescriptionTaskRefs.valid) {
+    return { success: false, error: validatedDescriptionTaskRefs.error };
+  }
   if (payload.owner !== undefined) {
     const validatedOwner = validateMemberName(payload.owner);
     if (!validatedOwner.valid) {
@@ -1297,6 +1381,10 @@ async function handleCreateTask(
       return { success: false, error: 'prompt exceeds max length (5000)' };
     }
   }
+  const validatedPromptTaskRefs = validateTaskRefs(payload.promptTaskRefs);
+  if (!validatedPromptTaskRefs.valid) {
+    return { success: false, error: validatedPromptTaskRefs.error };
+  }
   if (payload.startImmediately !== undefined && typeof payload.startImmediately !== 'boolean') {
     return { success: false, error: 'startImmediately must be a boolean' };
   }
@@ -1308,7 +1396,9 @@ async function handleCreateTask(
       owner: payload.owner?.trim() || undefined,
       blockedBy: payload.blockedBy,
       related: payload.related,
+      descriptionTaskRefs: validatedDescriptionTaskRefs.value,
       prompt: payload.prompt?.trim() || undefined,
+      promptTaskRefs: validatedPromptTaskRefs.value,
       startImmediately: payload.startImmediately,
     })
   );
@@ -1766,7 +1856,7 @@ async function handleAliveList(_event: IpcMainInvokeEvent): Promise<IpcResult<st
 async function handleLeadActivity(
   _event: IpcMainInvokeEvent,
   teamName: unknown
-): Promise<IpcResult<string>> {
+): Promise<IpcResult<LeadActivitySnapshot>> {
   const validated = validateTeamName(teamName);
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };
@@ -1779,7 +1869,7 @@ async function handleLeadActivity(
 async function handleLeadContext(
   _event: IpcMainInvokeEvent,
   teamName: unknown
-): Promise<IpcResult<LeadContextUsage | null>> {
+): Promise<IpcResult<LeadContextUsageSnapshot>> {
   const validated = validateTeamName(teamName);
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };
@@ -1792,7 +1882,7 @@ async function handleLeadContext(
 async function handleMemberSpawnStatuses(
   _event: IpcMainInvokeEvent,
   teamName: unknown
-): Promise<IpcResult<Record<string, MemberSpawnStatusEntry>>> {
+): Promise<IpcResult<MemberSpawnStatusesSnapshot>> {
   const validated = validateTeamName(teamName);
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };
@@ -1884,14 +1974,24 @@ async function handleAddMember(
     // If team is alive, notify the lead to spawn the new teammate
     const provisioning = getTeamProvisioningService();
     if (provisioning.isTeamAlive(tn)) {
-      const roleHint = typeof role === 'string' && role.trim() ? ` with role "${role.trim()}"` : '';
-      const workflowHint =
-        typeof workflow === 'string' && workflow.trim()
-          ? ` Their workflow: ${workflow.trim()}`
-          : '';
-      const spawnMessage =
-        `A new teammate "${memberName}"${roleHint} has been added to the team. ` +
-        `Please spawn them immediately using the Task tool with team_name="${tn}" and name="${memberName}".${workflowHint}`;
+      const teamDataService = getTeamDataService();
+      let leadName = 'team-lead';
+      let displayName = tn;
+      try {
+        const [resolvedLeadName, resolvedDisplayName] = await Promise.all([
+          teamDataService.getLeadMemberName(tn),
+          teamDataService.getTeamDisplayName(tn),
+        ]);
+        leadName = resolvedLeadName || 'team-lead';
+        displayName = resolvedDisplayName || tn;
+      } catch {
+        // Best-effort: fall back to default lead and team names
+      }
+      const spawnMessage = buildAddMemberSpawnMessage(tn, displayName, leadName, {
+        name: memberName,
+        ...(typeof role === 'string' ? { role } : {}),
+        ...(typeof workflow === 'string' ? { workflow } : {}),
+      });
       try {
         await provisioning.sendMessageToTeam(tn, spawnMessage);
       } catch {
@@ -2197,6 +2297,12 @@ export function showTeamNativeNotification(opts: {
     ...(iconPath ? { icon: iconPath } : {}),
   });
 
+  // Hold a strong reference to prevent GC from collecting the notification
+  activeTeamNotifications.add(notification);
+  const cleanup = (): void => {
+    activeTeamNotifications.delete(notification);
+  };
+
   notification.on('click', () => {
     const windows = BrowserWindow.getAllWindows();
     const mainWin = windows[0];
@@ -2204,7 +2310,9 @@ export function showTeamNativeNotification(opts: {
       mainWin.show();
       mainWin.focus();
     }
+    cleanup();
   });
+  notification.on('close', cleanup);
 
   notification.on('show', () => {
     logger.debug(`[native-notification] shown: "${opts.title}" — ${opts.subtitle ?? ''}`);
@@ -2212,6 +2320,7 @@ export function showTeamNativeNotification(opts: {
 
   notification.on('failed', (_, error) => {
     logger.warn(`[native-notification] failed: ${error}`);
+    cleanup();
   });
 
   notification.show();
@@ -2221,19 +2330,27 @@ async function handleAddTaskComment(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
   taskId: unknown,
-  text: unknown,
-  attachments?: unknown
+  request: unknown
 ): Promise<IpcResult<TaskComment>> {
   const vTeam = validateTeamName(teamName);
   if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
   const vTask = validateTaskId(taskId);
   if (!vTask.valid) return { success: false, error: vTask.error ?? 'Invalid taskId' };
+  if (!request || typeof request !== 'object') {
+    return { success: false, error: 'Invalid add task comment request' };
+  }
+  const payload = request as Partial<AddTaskCommentRequest>;
+  const text = payload.text;
   if (typeof text !== 'string' || text.trim().length === 0)
     return { success: false, error: 'Comment text must be non-empty' };
   if (text.trim().length > MAX_TEXT_LENGTH)
     return { success: false, error: `Comment exceeds ${MAX_TEXT_LENGTH} characters` };
+  const validatedTaskRefs = validateTaskRefs(payload.taskRefs);
+  if (!validatedTaskRefs.valid) {
+    return { success: false, error: validatedTaskRefs.error };
+  }
 
-  const rawAttachments = Array.isArray(attachments) ? attachments : [];
+  const rawAttachments = Array.isArray(payload.attachments) ? payload.attachments : [];
   if (rawAttachments.length > MAX_ATTACHMENTS) {
     return { success: false, error: `Maximum ${MAX_ATTACHMENTS} attachments per comment` };
   }
@@ -2247,7 +2364,7 @@ async function handleAddTaskComment(
         if (!att || typeof att !== 'object') {
           throw new Error('Invalid attachment data');
         }
-        const a = att as Record<string, unknown>;
+        const a = att as unknown as Record<string, unknown>;
         if (
           typeof a.id !== 'string' ||
           typeof a.filename !== 'string' ||
@@ -2278,7 +2395,8 @@ async function handleAddTaskComment(
       vTeam.value!,
       vTask.value!,
       text.trim(),
-      savedAttachments
+      savedAttachments,
+      validatedTaskRefs.value
     );
   });
 }

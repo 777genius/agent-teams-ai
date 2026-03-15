@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { undo } from '@codemirror/commands';
 import { rejectChunk } from '@codemirror/merge';
-import { isElectronMode } from '@renderer/api';
+import { api, isElectronMode } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
 import { useContinuousScrollNav } from '@renderer/hooks/useContinuousScrollNav';
 import { useDiffNavigation } from '@renderer/hooks/useDiffNavigation';
@@ -13,8 +13,12 @@ import { getFileHunkCount, REVIEW_INSTANT_APPLY } from '@renderer/store/slices/c
 import { buildSelectionAction } from '@renderer/utils/buildSelectionAction';
 import { buildSelectionInfo, SELECTION_DEBOUNCE_MS } from '@renderer/utils/codemirrorSelectionInfo';
 import { sortItemsAsTree } from '@renderer/utils/fileTreeBuilder';
+import { displayMemberName } from '@renderer/utils/memberHelpers';
+import { type TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
+import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { ChevronDown, Clock, X } from 'lucide-react';
 
+import { ChangesLoadingAnimation } from './ChangesLoadingAnimation';
 import { acceptAllChunks, computeChunkIndexAtPos, rejectAllChunks } from './CodeMirrorDiffUtils';
 import { ContinuousScrollView } from './ContinuousScrollView';
 import { FileEditTimeline } from './FileEditTimeline';
@@ -33,11 +37,13 @@ import type {
 } from '@shared/types';
 import type { EditorSelectionAction, EditorSelectionInfo } from '@shared/types/editor';
 
-type RecentHunkUndoAction = {
+interface RecentHunkUndoAction {
   filePath: string;
   originalIndex: number;
   at: number;
-};
+}
+
+const REVIEW_LOCAL_WRITE_COOLDOWN_MS = 2000;
 
 interface ChangeReviewDialogProps {
   open: boolean;
@@ -47,6 +53,7 @@ interface ChangeReviewDialogProps {
   memberName?: string;
   taskId?: string;
   initialFilePath?: string;
+  taskChangeRequestOptions?: TaskChangeRequestOptions;
   projectPath?: string;
   onEditorAction?: (action: EditorSelectionAction) => void;
 }
@@ -63,6 +70,7 @@ export const ChangeReviewDialog = ({
   memberName,
   taskId,
   initialFilePath,
+  taskChangeRequestOptions,
   projectPath,
   onEditorAction,
 }: ChangeReviewDialogProps): React.ReactElement | null => {
@@ -95,6 +103,9 @@ export const ChangeReviewDialog = ({
     updateEditedContent,
     discardFileEdits,
     saveEditedFile,
+    reviewExternalChangesByFile,
+    clearReviewFileExternalChange,
+    reloadReviewFileFromDisk,
     loadDecisionsFromDisk,
     persistDecisions,
     clearDecisionsFromDisk,
@@ -104,6 +115,7 @@ export const ChangeReviewDialog = ({
     undoBulkReview,
     reviewUndoStack,
     hunkContextHashesByFile,
+    globalTasks,
   } = useStore();
 
   // Build scope keys (pure values — safe to compute before hooks that depend on them)
@@ -159,10 +171,15 @@ export const ChangeReviewDialog = ({
     { file: FileChangeSummary; index: number; restoreContent: string; removedAt: number }[]
   >([]);
   const lastNewFileRemoveAtRef = useRef<number>(0);
+  const recentReviewWritesRef = useRef(new Map<string, number>());
 
   // Proxy ref for useDiffNavigation (points to active file's editor)
   const activeEditorViewRef = useRef<EditorView | null>(null);
   const activeFilePathRef = useRef<string | null>(null);
+
+  const markRecentReviewWrite = useCallback((filePath: string): void => {
+    recentReviewWritesRef.current.set(normalizePathForComparison(filePath), Date.now());
+  }, []);
 
   const getEditorFilePathForTarget = useCallback((target: Element | null): string | null => {
     if (!target) return null;
@@ -195,6 +212,30 @@ export const ChangeReviewDialog = ({
     () => sortItemsAsTree(activeChangeSet?.files ?? [], (f) => f.relativePath),
     [activeChangeSet]
   );
+  const loadingFiles = useMemo(
+    () => sortedFiles.filter((file) => fileContentsLoading[file.filePath]),
+    [sortedFiles, fileContentsLoading]
+  );
+  const globalDiffLoadingState = useMemo(() => {
+    if (loadingFiles.length === 0) return null;
+
+    const preferredFile =
+      (activeFilePath
+        ? loadingFiles.find((file) => file.filePath === activeFilePath)
+        : undefined) ?? loadingFiles[0];
+    const snippetCount = loadingFiles.reduce(
+      (sum, file) => sum + file.snippets.filter((snippet) => !snippet.isError).length,
+      0
+    );
+
+    return {
+      totalFilesCount: sortedFiles.length,
+      readyFilesCount: sortedFiles.filter((file) => file.filePath in fileContents).length,
+      loadingFilesCount: loadingFiles.length,
+      snippetCount,
+      activeFileName: preferredFile?.relativePath ?? preferredFile?.filePath,
+    };
+  }, [activeFilePath, loadingFiles, sortedFiles, fileContents]);
 
   // File paths for viewed tracking
   const allFilePaths = useMemo(() => sortedFiles.map((f) => f.filePath), [sortedFiles]);
@@ -295,6 +336,49 @@ export const ChangeReviewDialog = ({
   const handleVisibleFileChange = useCallback((filePath: string) => {
     setActiveFilePath(filePath);
   }, []);
+
+  useEffect(() => {
+    if (!open || !projectPath || !isElectronMode()) return;
+
+    const unsubscribe = api.review.onExternalFileChange((event) => {
+      const normalizedPath = normalizePathForComparison(event.path);
+      const recentWriteAt = recentReviewWritesRef.current.get(normalizedPath);
+      if (recentWriteAt && Date.now() - recentWriteAt < REVIEW_LOCAL_WRITE_COOLDOWN_MS) {
+        return;
+      }
+
+      const state = useStore.getState();
+      const active = state.activeChangeSet;
+      if (!active) return;
+
+      const file = active.files.find(
+        (entry) => normalizePathForComparison(entry.filePath) === normalizedPath
+      );
+      if (!file) return;
+
+      const changeType =
+        event.type === 'create' ? 'add' : event.type === 'delete' ? 'unlink' : 'change';
+
+      if (file.filePath in state.editedContents) {
+        state.markReviewFileExternallyChanged(file.filePath, changeType);
+        return;
+      }
+
+      state.clearReviewFileExternalChange(file.filePath);
+      state.invalidateResolvedFileContent(file.filePath);
+      void state.fetchFileContent(teamName, memberName, file.filePath);
+    });
+
+    void api.review.watchFiles(
+      projectPath,
+      sortedFiles.map((file) => file.filePath)
+    );
+
+    return () => {
+      unsubscribe();
+      void api.review.unwatchFiles();
+    };
+  }, [open, projectPath, sortedFiles, teamName, memberName]);
 
   // Tree click → scroll to file
   const handleTreeFileClick = useCallback(
@@ -418,6 +502,7 @@ export const ChangeReviewDialog = ({
           } else {
             const hasErrorForFile = !!result?.errors.some((e) => e.filePath === filePath);
             if (result && !hasErrorForFile) {
+              markRecentReviewWrite(filePath);
               // Disk state is now authoritative. Clear stale decisions/cache so reopening
               // doesn't try to re-apply and the diff can re-resolve from disk.
               clearReviewStateForFile(filePath);
@@ -437,6 +522,7 @@ export const ChangeReviewDialog = ({
       teamName,
       taskId,
       memberName,
+      markRecentReviewWrite,
       removeReviewFile,
       fileContents,
       clearReviewStateForFile,
@@ -479,6 +565,7 @@ export const ChangeReviewDialog = ({
         void applySingleFileDecision(teamName, filePath, taskId, memberName).then((result) => {
           const hasErrorForFile = !!result?.errors.some((e) => e.filePath === filePath);
           if (result && !hasErrorForFile) {
+            markRecentReviewWrite(filePath);
             clearReviewStateForFile(filePath);
             setDiscardCounters((prev) => ({ ...prev, [filePath]: (prev[filePath] ?? 0) + 1 }));
             void fetchFileContent(teamName, memberName, filePath);
@@ -492,6 +579,7 @@ export const ChangeReviewDialog = ({
       teamName,
       taskId,
       memberName,
+      markRecentReviewWrite,
       clearReviewStateForFile,
       fetchFileContent,
     ]
@@ -514,19 +602,43 @@ export const ChangeReviewDialog = ({
   );
 
   const handleSaveFile = useCallback(
-    (filePath: string) => {
-      void saveEditedFile(filePath, projectPath);
+    async (filePath: string) => {
+      await saveEditedFile(filePath, projectPath);
+      if (!useStore.getState().applyError) {
+        markRecentReviewWrite(filePath);
+      }
     },
-    [saveEditedFile, projectPath]
+    [saveEditedFile, projectPath, markRecentReviewWrite]
   );
 
   const handleRestoreMissingFile = useCallback(
     (filePath: string, content: string) => {
       updateEditedContent(filePath, content);
       // Ensure editedContents is set before saveEditedFile reads it.
-      void Promise.resolve().then(() => saveEditedFile(filePath, projectPath));
+      void Promise.resolve().then(async () => {
+        await saveEditedFile(filePath, projectPath);
+        if (!useStore.getState().applyError) {
+          markRecentReviewWrite(filePath);
+        }
+      });
     },
-    [updateEditedContent, saveEditedFile, projectPath]
+    [updateEditedContent, saveEditedFile, projectPath, markRecentReviewWrite]
+  );
+
+  const handleReloadFromDisk = useCallback(
+    (filePath: string) => {
+      reloadReviewFileFromDisk(filePath);
+      setDiscardCounters((prev) => ({ ...prev, [filePath]: (prev[filePath] ?? 0) + 1 }));
+      void fetchFileContent(teamName, memberName, filePath);
+    },
+    [reloadReviewFileFromDisk, fetchFileContent, teamName, memberName]
+  );
+
+  const handleKeepDraft = useCallback(
+    (filePath: string) => {
+      clearReviewFileExternalChange(filePath);
+    },
+    [clearReviewFileExternalChange]
   );
 
   const handleDiscardFile = useCallback(
@@ -616,8 +728,14 @@ export const ChangeReviewDialog = ({
 
   // Save active file (for Cmd+S keyboard shortcut)
   const handleSaveActiveFile = useCallback(() => {
-    if (activeFilePath) void saveEditedFile(activeFilePath, projectPath);
-  }, [activeFilePath, saveEditedFile, projectPath]);
+    if (!activeFilePath) return;
+    void (async () => {
+      await saveEditedFile(activeFilePath, projectPath);
+      if (!useStore.getState().applyError) {
+        markRecentReviewWrite(activeFilePath);
+      }
+    })();
+  }, [activeFilePath, saveEditedFile, projectPath, markRecentReviewWrite]);
 
   // Continuous navigation options for cross-file hunk navigation
   const continuousOptions = useMemo(
@@ -644,6 +762,16 @@ export const ChangeReviewDialog = ({
     (filePath, fallbackSnippetsLength) =>
       getFileHunkCount(filePath, fallbackSnippetsLength, fileChunkCounts)
   );
+
+  const reviewHunkOrder = useMemo(() => {
+    const offsets: Record<string, number> = {};
+    let total = 0;
+    for (const file of sortedFiles) {
+      offsets[file.filePath] = total;
+      total += getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
+    }
+    return { offsets, total };
+  }, [sortedFiles, fileChunkCounts]);
 
   const toggleCollapsedFile = useCallback((filePath: string) => {
     setCollapsedFiles((prev) => {
@@ -692,7 +820,7 @@ export const ChangeReviewDialog = ({
     if (mode === 'agent' && memberName) {
       void fetchAgentChanges(teamName, memberName);
     } else if (mode === 'task' && taskId) {
-      void fetchTaskChanges(teamName, taskId);
+      void fetchTaskChanges(teamName, taskId, taskChangeRequestOptions ?? {});
     }
 
     // On close — clear only volatile cache, keep decisions in store
@@ -703,6 +831,7 @@ export const ChangeReviewDialog = ({
     teamName,
     memberName,
     taskId,
+    taskChangeRequestOptions,
     decisionScopeKey,
     fetchAgentChanges,
     fetchTaskChanges,
@@ -871,7 +1000,12 @@ export const ChangeReviewDialog = ({
           scheduleScrollToFile(snap.file.filePath);
           updateEditedContent(snap.file.filePath, snap.restoreContent);
           // Ensure editedContents is set before saveEditedFile reads it.
-          void Promise.resolve().then(() => saveEditedFile(snap.file.filePath, projectPath));
+          void Promise.resolve().then(async () => {
+            await saveEditedFile(snap.file.filePath, projectPath);
+            if (!useStore.getState().applyError) {
+              markRecentReviewWrite(snap.file.filePath);
+            }
+          });
           return;
         }
 
@@ -1048,10 +1182,13 @@ export const ChangeReviewDialog = ({
     return activeChangeSet.files.find((f) => f.filePath === activeFilePath) ?? null;
   }, [activeChangeSet, activeFilePath]);
 
-  const title =
-    mode === 'agent'
-      ? `Changes by ${memberName ?? 'unknown'}`
-      : `Changes for task #${taskId ?? '?'}`;
+  const title = useMemo(() => {
+    if (mode === 'agent') return `Changes by ${displayMemberName(memberName ?? 'unknown')}`;
+    const task = taskId ? globalTasks.find((t) => t.id === taskId) : undefined;
+    const shortId = task?.displayId ?? taskId?.slice(0, 8) ?? '?';
+    const subject = task?.subject;
+    return subject ? `Changes for task #${shortId} — ${subject}` : `Changes for task #${shortId}`;
+  }, [mode, memberName, taskId, globalTasks]);
 
   const isMacElectron =
     isElectronMode() && window.navigator.userAgent.toLowerCase().includes('mac');
@@ -1137,11 +1274,7 @@ export const ChangeReviewDialog = ({
 
       {/* Content */}
       <div className="flex flex-1 overflow-hidden">
-        {changeSetLoading && (
-          <div className="flex w-full items-center justify-center text-sm text-text-muted">
-            Loading changes...
-          </div>
-        )}
+        {changeSetLoading && <ChangesLoadingAnimation />}
 
         {changeSetError && (
           <div className="flex w-full items-center justify-center text-sm text-red-400">
@@ -1201,6 +1334,8 @@ export const ChangeReviewDialog = ({
                 files={sortedFiles}
                 fileContents={fileContents}
                 fileContentsLoading={fileContentsLoading}
+                globalDiffLoadingState={globalDiffLoadingState}
+                reviewExternalChangesByFile={reviewExternalChangesByFile}
                 viewedSet={viewedSet}
                 editedContents={editedContents}
                 hunkDecisions={hunkDecisions}
@@ -1216,6 +1351,8 @@ export const ChangeReviewDialog = ({
                 onContentChanged={handleContentChanged}
                 onDiscard={handleDiscardFile}
                 onSave={handleSaveFile}
+                onReloadFromDisk={handleReloadFromDisk}
+                onKeepDraft={handleKeepDraft}
                 onAcceptFile={handleAcceptFile}
                 onRejectFile={handleRejectFile}
                 onRestoreMissingFile={handleRestoreMissingFile}
@@ -1230,6 +1367,8 @@ export const ChangeReviewDialog = ({
                 memberName={memberName}
                 fetchFileContent={fetchFileContent}
                 onSelectionChange={onEditorAction ? handleSelectionChange : undefined}
+                globalHunkOffsets={reviewHunkOrder.offsets}
+                totalReviewHunks={reviewHunkOrder.total}
               />
               {selectionInfo && onEditorAction && (
                 <EditorSelectionMenu

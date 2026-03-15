@@ -13,8 +13,6 @@ import { SessionContextPanel } from './SessionContextPanel/index';
 
 /** Pixels from bottom considered "near bottom" for scroll-button visibility and auto-scroll. */
 const SCROLL_THRESHOLD = 300;
-/** Must match the `w-80` (320px) context panel width used in the layout below. */
-const CONTEXT_PANEL_WIDTH_PX = 320;
 
 import {
   computeRemainingContext,
@@ -833,6 +831,28 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
       style={{ backgroundColor: 'var(--color-surface)' }}
     >
       <div className="relative flex flex-1 overflow-hidden">
+        {/* Context panel sidebar (left) */}
+        {isContextPanelVisible && allContextInjections.length > 0 && (
+          <div className="w-80 shrink-0">
+            <SessionContextPanel
+              injections={allContextInjections}
+              onClose={() => setContextPanelVisible(false)}
+              projectRoot={sessionDetail?.session?.projectPath}
+              onNavigateToTurn={handleNavigateToTurn}
+              onNavigateToTool={handleNavigateToTool}
+              onNavigateToUserGroup={handleNavigateToUserGroup}
+              totalSessionTokens={lastAiGroupTotalTokens}
+              sessionMetrics={sessionDetail?.metrics}
+              subagentCostUsd={subagentCostUsd}
+              onViewReport={effectiveTabId ? () => openSessionReport(effectiveTabId) : undefined}
+              phaseInfo={sessionPhaseInfo ?? undefined}
+              selectedPhase={selectedContextPhase}
+              onPhaseChange={setSelectedContextPhase}
+              side="left"
+            />
+          </div>
+        )}
+
         {/* Chat content */}
         <div
           ref={scrollContainerRef}
@@ -842,7 +862,7 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
         >
           {/* Sticky Context button */}
           {allContextInjections.length > 0 && (
-            <div className="pointer-events-none sticky top-0 z-10 flex justify-end px-4 pb-0 pt-3">
+            <div className="pointer-events-none sticky top-0 z-10 flex justify-start px-4 pb-0 pt-3">
               <button
                 onClick={() => setContextPanelVisible(!isContextPanelVisible)}
                 onMouseEnter={() => setIsContextButtonHovered(true)}
@@ -981,10 +1001,7 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
             }}
             className="absolute bottom-5 z-20 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs shadow-lg backdrop-blur-md transition-all"
             style={{
-              right:
-                isContextPanelVisible && allContextInjections.length > 0
-                  ? `calc(${CONTEXT_PANEL_WIDTH_PX}px + 1rem)`
-                  : '1rem',
+              right: '1rem',
               backgroundColor: 'var(--context-btn-bg)',
               color: 'var(--color-text-secondary)',
               border: '1px solid var(--color-border-emphasis)',
@@ -994,27 +1011,6 @@ export const ChatHistory = ({ tabId }: ChatHistoryProps): JSX.Element => {
             <ChevronsDown className="size-3.5" />
             <span>Bottom</span>
           </button>
-        )}
-
-        {/* Context panel sidebar */}
-        {isContextPanelVisible && allContextInjections.length > 0 && (
-          <div className="w-80 shrink-0">
-            <SessionContextPanel
-              injections={allContextInjections}
-              onClose={() => setContextPanelVisible(false)}
-              projectRoot={sessionDetail?.session?.projectPath}
-              onNavigateToTurn={handleNavigateToTurn}
-              onNavigateToTool={handleNavigateToTool}
-              onNavigateToUserGroup={handleNavigateToUserGroup}
-              totalSessionTokens={lastAiGroupTotalTokens}
-              sessionMetrics={sessionDetail?.metrics}
-              subagentCostUsd={subagentCostUsd}
-              onViewReport={effectiveTabId ? () => openSessionReport(effectiveTabId) : undefined}
-              phaseInfo={sessionPhaseInfo ?? undefined}
-              selectedPhase={selectedContextPhase}
-              onPhaseChange={setSelectedContextPhase}
-            />
-          </div>
         )}
       </div>
     </div>

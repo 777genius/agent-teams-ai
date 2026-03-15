@@ -1,5 +1,7 @@
 import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import { normalizePathForComparison } from '@shared/utils/platformPath';
+import { createHash } from 'crypto';
 import { diffLines } from 'diff';
 import { createReadStream } from 'fs';
 import { access, readFile } from 'fs/promises';
@@ -17,6 +19,7 @@ interface ContentCacheEntry {
   original: string | null;
   modified: string | null;
   source: FileChangeWithContent['contentSource'];
+  validationFingerprint: string;
   expiresAt: number;
 }
 
@@ -30,7 +33,7 @@ interface ContentCacheEntry {
  */
 export class FileContentResolver {
   private cache = new Map<string, ContentCacheEntry>();
-  private readonly cacheTtl = 30 * 1000; // 30 сек — shorter TTL to reduce stale data risk
+  private readonly provisionalCacheTtl = 5 * 1000;
 
   constructor(
     private readonly logsFinder: TeamMemberLogsFinder,
@@ -60,18 +63,40 @@ export class FileContentResolver {
     modified: string | null;
     source: FileChangeWithContent['contentSource'];
   }> {
-    const cacheKey = `${teamName}:${memberName}:${filePath}`;
-    const cached = this.cache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      return { original: cached.original, modified: cached.modified, source: cached.source };
-    }
-
     // Read current file from disk (= modified state after agent's changes)
     let currentContent: string | null = null;
     try {
       currentContent = await readFile(filePath, 'utf8');
     } catch {
       logger.debug(`Файл недоступен на диске: ${filePath}`);
+    }
+
+    const cacheKey = `${teamName}:${memberName}:${filePath}`;
+    const validationFingerprint = this.buildValidationFingerprint(
+      filePath,
+      currentContent,
+      snippets
+    );
+    const cached = this.cache.get(cacheKey);
+    if (
+      cached &&
+      cached.expiresAt > Date.now() &&
+      cached.validationFingerprint === validationFingerprint
+    ) {
+      return { original: cached.original, modified: cached.modified, source: cached.source };
+    }
+
+    // Fast path: if the agent created the file and it still exists on disk,
+    // the original content is definitely empty, so skip expensive history lookup.
+    const hasWriteNew = snippets.some((s) => !s.isError && s.type === 'write-new');
+    if (hasWriteNew && currentContent !== null) {
+      const result = {
+        original: '',
+        modified: currentContent,
+        source: 'snippet-reconstruction' as const,
+      };
+      this.cacheResult(cacheKey, validationFingerprint, result);
+      return result;
     }
 
     // Strategy 1: Try file-history backup
@@ -82,7 +107,7 @@ export class FileContentResolver {
         modified: currentContent,
         source: 'file-history' as const,
       };
-      this.cacheResult(cacheKey, result);
+      this.cacheResult(cacheKey, validationFingerprint, result);
       return result;
     }
 
@@ -94,7 +119,7 @@ export class FileContentResolver {
         modified: currentContent,
         source: 'snippet-reconstruction' as const,
       };
-      this.cacheResult(cacheKey, result);
+      this.cacheResult(cacheKey, validationFingerprint, result);
       return result;
     }
 
@@ -107,7 +132,7 @@ export class FileContentResolver {
           modified: currentContent,
           source: 'git-fallback' as const,
         };
-        this.cacheResult(cacheKey, result);
+        this.cacheResult(cacheKey, validationFingerprint, result);
         return result;
       }
     }
@@ -119,12 +144,14 @@ export class FileContentResolver {
         modified: currentContent,
         source: 'disk-current' as const,
       };
-      this.cacheResult(cacheKey, result);
+      this.cacheResult(cacheKey, validationFingerprint, result);
       return result;
     }
 
     // Nothing available
-    return { original: null, modified: null, source: 'unavailable' };
+    const unavailable = { original: null, modified: null, source: 'unavailable' as const };
+    this.cacheResult(cacheKey, validationFingerprint, unavailable);
+    return unavailable;
   }
 
   /**
@@ -525,8 +552,62 @@ export class FileContentResolver {
 
   // ── Private: Cache helpers ──
 
+  private normalizeResolverPath(filePath: string): string {
+    return normalizePathForComparison(filePath);
+  }
+
+  private hashString(input: string): string {
+    return createHash('sha256').update(input).digest('hex');
+  }
+
+  private buildDiskFingerprint(currentContent: string | null): string {
+    if (currentContent === null) return 'missing';
+    return this.hashString(`present:${currentContent}`);
+  }
+
+  private buildSnippetFingerprint(snippets: SnippetDiff[]): string {
+    const hash = createHash('sha256');
+    for (const snippet of snippets) {
+      hash.update('\u0000snippet\u0000');
+      hash.update(this.normalizeResolverPath(snippet.filePath));
+      hash.update('\u0000');
+      hash.update(snippet.toolUseId);
+      hash.update('\u0000');
+      hash.update(snippet.type);
+      hash.update('\u0000');
+      hash.update(snippet.oldString);
+      hash.update('\u0000');
+      hash.update(snippet.newString);
+      hash.update('\u0000');
+      hash.update(snippet.replaceAll ? '1' : '0');
+      hash.update('\u0000');
+      hash.update(snippet.timestamp);
+      hash.update('\u0000');
+      hash.update(snippet.isError ? '1' : '0');
+      hash.update('\u0000');
+      hash.update(snippet.contextHash ?? '');
+    }
+    return hash.digest('hex');
+  }
+
+  private buildValidationFingerprint(
+    filePath: string,
+    currentContent: string | null,
+    snippets: SnippetDiff[]
+  ): string {
+    const normalizedPath = this.normalizeResolverPath(filePath);
+    const diskFingerprint = this.buildDiskFingerprint(currentContent);
+    const snippetFingerprint = this.buildSnippetFingerprint(snippets);
+    return this.hashString(`${normalizedPath}|${diskFingerprint}|${snippetFingerprint}`);
+  }
+
+  private getCacheTtlForSource(_source: FileChangeWithContent['contentSource']): number {
+    return this.provisionalCacheTtl;
+  }
+
   private cacheResult(
     key: string,
+    validationFingerprint: string,
     result: {
       original: string | null;
       modified: string | null;
@@ -537,7 +618,8 @@ export class FileContentResolver {
       original: result.original,
       modified: result.modified,
       source: result.source,
-      expiresAt: Date.now() + this.cacheTtl,
+      validationFingerprint,
+      expiresAt: Date.now() + this.getCacheTtlForSource(result.source),
     });
   }
 }

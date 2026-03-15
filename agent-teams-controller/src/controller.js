@@ -6,6 +6,7 @@ const messages = require('./internal/messages.js');
 const processes = require('./internal/processes.js');
 const maintenance = require('./internal/maintenance.js');
 const crossTeam = require('./internal/crossTeam.js');
+const runtime = require('./internal/runtime.js');
 
 function bindModule(context, moduleApi) {
   return Object.fromEntries(
@@ -28,6 +29,7 @@ function createController(options) {
     processes: bindModule(context, processes),
     maintenance: bindModule(context, maintenance),
     crossTeam: bindModule(context, crossTeam),
+    runtime: bindModule(context, runtime),
   };
 }
 
@@ -41,4 +43,5 @@ module.exports = {
   processes,
   maintenance,
   crossTeam,
+  runtime,
 };

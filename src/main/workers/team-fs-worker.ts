@@ -2,6 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parentPort } from 'node:worker_threads';
 
+import { isLeadMember } from '@shared/utils/leadDetection';
+
 interface ListTeamsPayload {
   teamsDir: string;
   largeConfigBytes: number;
@@ -36,6 +38,14 @@ function deriveTaskDisplayId(taskId: string): string {
   const normalized = taskId.trim();
   if (!normalized) return normalized;
   return UUID_TASK_ID_PATTERN.test(normalized) ? normalized.slice(0, 8).toLowerCase() : normalized;
+}
+
+/**
+ * Normalise escaped newline sequences (`\\n`) that some MCP/CLI sources
+ * write as literal two-character strings instead of real line-breaks.
+ */
+function unescapeLiteralNewlines(text: string): string {
+  return text.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
 }
 
 // ---------------------------------------------------------------------------
@@ -106,7 +116,10 @@ interface ParsedTask {
   subject?: unknown;
   title?: unknown;
   description?: unknown;
+  descriptionTaskRefs?: unknown;
   activeForm?: unknown;
+  prompt?: unknown;
+  promptTaskRefs?: unknown;
   owner?: unknown;
   createdBy?: unknown;
   status?: unknown;
@@ -143,6 +156,7 @@ interface RawComment {
   text?: unknown;
   createdAt?: unknown;
   type?: unknown;
+  taskRefs?: unknown;
 }
 
 // ---------------------------------------------------------------------------
@@ -251,7 +265,7 @@ function mergeMember(
 ): void {
   const name = typeof m.name === 'string' ? m.name.trim() : '';
   if (!name) return;
-  if (name === 'team-lead' || name === 'user' || m.agentType === 'team-lead') return;
+  if (name === 'user' || isLeadMember(m)) return;
   const key = name.toLowerCase();
   if (removedKeys.has(key)) return;
   const existing = memberMap.get(key);
@@ -276,6 +290,26 @@ function dropCliAutoSuffixedMembers(
     if (!Number.isFinite(suffix) || suffix < 2) continue;
     const baseLower = match[1].toLowerCase();
     if (allLower.has(baseLower)) {
+      memberMap.delete(key);
+    }
+  }
+}
+
+const PROVISIONER_SUFFIX = '-provisioner';
+
+/**
+ * Drop CLI provisioner artifacts ("{name}-provisioner") unconditionally.
+ * These are temporary internal agents created during team provisioning
+ * and should never be shown to the user.
+ */
+function dropCliProvisionerMembers(
+  memberMap: Map<string, { name: string; role?: string; color?: string }>
+): void {
+  for (const [key, member] of Array.from(memberMap.entries())) {
+    const lower = member.name.trim().toLowerCase();
+    if (!lower.endsWith(PROVISIONER_SUFFIX)) continue;
+    const base = lower.slice(0, -PROVISIONER_SUFFIX.length);
+    if (base) {
       memberMap.delete(key);
     }
   }
@@ -401,7 +435,7 @@ async function listTeams(
           if (!isRawMember(member)) continue;
           const name = typeof member.name === 'string' ? member.name.trim() : '';
           if (!name) continue;
-          if (name === 'team-lead' || member.agentType === 'team-lead') continue;
+          if (isLeadMember(member)) continue;
           const key = name.toLowerCase();
           if (member.removedAt) {
             removedKeys.add(key);
@@ -424,6 +458,7 @@ async function listTeams(
     }
 
     dropCliAutoSuffixedMembers(memberMap);
+    dropCliProvisionerMembers(memberMap);
 
     const members = Array.from(memberMap.values());
     const summary = {
@@ -524,8 +559,9 @@ function normalizeComments(parsed: ParsedTask): unknown[] | undefined {
     .map((c) => ({
       id: c.id as string,
       author: c.author as string,
-      text: c.text as string,
+      text: unescapeLiteralNewlines(c.text as string),
       createdAt: c.createdAt as string,
+      taskRefs: Array.isArray(c.taskRefs) ? c.taskRefs : undefined,
       type:
         c.type === 'regular' || c.type === 'review_request' || c.type === 'review_approved'
           ? (c.type as string)
@@ -625,8 +661,18 @@ async function readTasksDirForTeam(
                   : ''
               ),
         subject,
-        description: typeof parsed.description === 'string' ? parsed.description : undefined,
+        description:
+          typeof parsed.description === 'string'
+            ? unescapeLiteralNewlines(parsed.description)
+            : undefined,
+        descriptionTaskRefs: Array.isArray(parsed.descriptionTaskRefs)
+          ? (parsed.descriptionTaskRefs as unknown[])
+          : undefined,
         activeForm: typeof parsed.activeForm === 'string' ? parsed.activeForm : undefined,
+        prompt: typeof parsed.prompt === 'string' ? parsed.prompt : undefined,
+        promptTaskRefs: Array.isArray(parsed.promptTaskRefs)
+          ? (parsed.promptTaskRefs as unknown[])
+          : undefined,
         owner: typeof parsed.owner === 'string' ? parsed.owner : undefined,
         createdBy: typeof parsed.createdBy === 'string' ? parsed.createdBy : undefined,
         status:

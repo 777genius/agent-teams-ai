@@ -1,7 +1,7 @@
 /**
  * PaneView - Single pane wrapper with focus management.
- * Handles click-to-focus, visual focus indicator, width,
- * and edge split drop zones for DnD.
+ * Handles click-to-focus, width, and edge split drop zones for DnD.
+ * TabBar is now rendered in TabBarRow (above sidebar + content area).
  */
 
 import { useDndContext } from '@dnd-kit/core';
@@ -11,7 +11,6 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { PaneContent } from './PaneContent';
 import { PaneSplitDropZone } from './PaneSplitDropZone';
-import { TabBar } from './TabBar';
 
 interface PaneViewProps {
   paneId: string;
@@ -50,18 +49,6 @@ export const PaneView = ({ paneId }: PaneViewProps): React.JSX.Element => {
       }}
       onMouseDown={handleMouseDown}
     >
-      {/* Focus indicator - accent border on top of focused pane's TabBar */}
-      <div
-        style={{
-          borderTop:
-            isFocused && paneCount > 1
-              ? '2px solid var(--color-accent, #6366f1)'
-              : '2px solid transparent',
-        }}
-      >
-        <TabBar paneId={paneId} />
-      </div>
-
       <PaneContent pane={pane} />
 
       {/* Edge split drop zones - visible only during active drag when under MAX_PANES */}

@@ -78,21 +78,22 @@ const ACTIVE_PROVIDER = PROVIDERS[0];
 const MODEL_OPTIONS = [
   { value: '', label: 'Default' },
   { value: 'opus', label: 'Opus 4.6' },
-  { value: 'sonnet', label: 'Sonnet 4.5' },
+  { value: 'sonnet', label: 'Sonnet 4.6' },
   { value: 'haiku', label: 'Haiku 4.5' },
 ] as const;
 
 /**
  * Computes the effective model string for team provisioning.
- * - Without extended context: returns base model or undefined.
- * - With extended context: haiku stays as-is; opus/sonnet get [1m] suffix; default → sonnet[1m].
+ * By default adds [1m] suffix for 1M context (Opus/Sonnet).
+ * When limitContext=true, returns base model without [1m] (200K context).
+ * Haiku does not support 1M — always returned as-is.
  */
 export function computeEffectiveTeamModel(
   selectedModel: string,
-  extendedContext: boolean
+  limitContext: boolean
 ): string | undefined {
   const base = selectedModel || undefined;
-  if (!extendedContext) return base;
+  if (limitContext) return base;
   if (base === 'haiku') return base;
   return base ? `${base}[1m]` : 'sonnet[1m]';
 }

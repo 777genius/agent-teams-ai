@@ -1,9 +1,8 @@
 /**
- * Sidebar - Breadcrumb-style navigation with project/worktree hierarchy.
+ * Sidebar - Navigation with task list and session list.
  *
  * Structure:
- * - Fixed Header: Project selector (Row 1) + Worktree selector (Row 2, conditional)
- * - Tab bar: Tasks | Sessions
+ * - Tab bar: Collapse button + Tasks | Sessions
  * - Scrollable Body: Task list or date-grouped session list
  * - Resizable: Drag right edge to resize
  * - Collapsible: Cmd+B to toggle (Notion-style)
@@ -12,13 +11,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useStore } from '@renderer/store';
+import { formatShortcut } from '@renderer/utils/stringUtils';
+import { PanelLeft } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { DateGroupedSessions } from '../sidebar/DateGroupedSessions';
 import { GlobalTaskList } from '../sidebar/GlobalTaskList';
 import { defaultTaskFiltersState } from '../sidebar/taskFiltersState';
-
-import { SidebarHeader } from './SidebarHeader';
 
 import type { TaskFiltersState } from '../sidebar/taskFiltersState';
 
@@ -29,9 +28,10 @@ const MAX_WIDTH = 500;
 const DEFAULT_WIDTH = 280;
 
 export const Sidebar = (): React.JSX.Element => {
-  const { sidebarCollapsed } = useStore(
+  const { sidebarCollapsed, toggleSidebar } = useStore(
     useShallow((s) => ({
       sidebarCollapsed: s.sidebarCollapsed,
+      toggleSidebar: s.toggleSidebar,
     }))
   );
   const [width, setWidth] = useState(DEFAULT_WIDTH);
@@ -39,14 +39,15 @@ export const Sidebar = (): React.JSX.Element => {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('tasks');
   const [taskFilters, setTaskFilters] = useState<TaskFiltersState>(defaultTaskFiltersState);
   const [taskFiltersPopoverOpen, setTaskFiltersPopoverOpen] = useState(false);
+  const [isCollapseHovered, setIsCollapseHovered] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  // Handle mouse move during resize
+  // Handle mouse move during resize (right sidebar: width = viewport - clientX)
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!isResizing) return;
 
-      const newWidth = e.clientX;
+      const newWidth = window.innerWidth - e.clientX;
       if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
         setWidth(newWidth);
       }
@@ -84,31 +85,44 @@ export const Sidebar = (): React.JSX.Element => {
   return (
     <div
       ref={sidebarRef}
-      className="relative flex shrink-0 flex-col overflow-hidden border-r"
+      className="relative flex shrink-0 flex-col overflow-hidden border-l"
       style={{
         backgroundColor: 'var(--color-surface-sidebar)',
         borderColor: 'var(--color-border)',
         width: sidebarCollapsed ? 0 : width,
         minWidth: sidebarCollapsed ? 0 : undefined,
-        borderRightWidth: sidebarCollapsed ? 0 : undefined,
+        borderLeftWidth: sidebarCollapsed ? 0 : undefined,
         transition: 'width 0.22s ease-out, border-width 0.22s ease-out',
       }}
     >
       <div
-        className="flex min-w-0 flex-1 flex-col overflow-hidden pr-2"
+        className="flex min-w-0 flex-1 flex-col overflow-hidden pl-2"
         style={{
           width: '100%',
           minWidth: sidebarCollapsed ? 0 : width,
         }}
       >
-        <SidebarHeader />
-
-        {/* Tab bar: Tasks | Sessions — tab strip style, filters on the right */}
+        {/* Tab bar: Collapse button + Tasks | Sessions */}
         <div
           className="flex shrink-0 items-end gap-2 border-b px-3 pt-1"
           style={{ borderColor: 'var(--color-border)' }}
         >
-          <div className="flex flex-1" />
+          {/* Collapse sidebar button */}
+          <button
+            onClick={toggleSidebar}
+            onMouseEnter={() => setIsCollapseHovered(true)}
+            onMouseLeave={() => setIsCollapseHovered(false)}
+            className="mb-1 shrink-0 rounded-md p-1 transition-colors"
+            style={{
+              color: isCollapseHovered ? 'var(--color-text-secondary)' : 'var(--color-text-muted)',
+              backgroundColor: isCollapseHovered ? 'var(--color-surface-raised)' : 'transparent',
+            }}
+            title={`Collapse sidebar (${formatShortcut('B')})`}
+          >
+            <PanelLeft className="size-3.5" />
+          </button>
+
+          <div className="flex-1" />
           <div className="flex" role="tablist" aria-label="Sidebar view">
             <button
               type="button"
@@ -190,7 +204,7 @@ export const Sidebar = (): React.JSX.Element => {
         <button
           type="button"
           aria-label="Resize sidebar"
-          className={`absolute right-0 top-0 h-full w-1 cursor-col-resize border-0 bg-transparent p-0 transition-colors hover:bg-blue-500/50 ${
+          className={`absolute left-0 top-0 h-full w-1 cursor-col-resize border-0 bg-transparent p-0 transition-colors hover:bg-blue-500/50 ${
             isResizing ? 'bg-blue-500/50' : ''
           }`}
           onMouseDown={handleResizeStart}

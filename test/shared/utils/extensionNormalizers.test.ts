@@ -39,6 +39,7 @@ describe('inferCapabilities', () => {
     marketplaceId: 'test@marketplace',
     qualifiedName: 'test@marketplace',
     name: 'test',
+    source: 'official',
     description: 'test',
     category: 'development',
     hasLspServers: false,

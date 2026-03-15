@@ -14,6 +14,7 @@ export interface PluginCatalogItem {
   name: string; // display name only
 
   // Metadata
+  source: 'official';
   description: string;
   category: string; // open-ended string, derived from marketplace.json
   author?: { name: string; email?: string };

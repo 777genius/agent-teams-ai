@@ -289,6 +289,7 @@ export class PluginCatalogService {
         marketplaceId: qualifiedName,
         qualifiedName,
         name: raw.name,
+        source: 'official',
         description: raw.description ?? '',
         category: raw.category ?? 'other',
         author: raw.author,

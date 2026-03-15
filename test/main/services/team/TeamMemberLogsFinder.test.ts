@@ -168,6 +168,157 @@ describe('TeamMemberLogsFinder', () => {
     }
   });
 
+  it('routing.sender overrides teammate_id="team-lead" from spawn message', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-logs-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'tA';
+    const projectPath = '/Users/test/projA';
+    const projectId = '-Users-test-projA';
+    const leadSessionId = 'sA';
+
+    await fs.mkdir(path.join(tmpDir, 'teams', teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamName, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        projectPath,
+        leadSessionId,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'carol', agentType: 'general-purpose' },
+        ],
+      }),
+      'utf8'
+    );
+
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    await fs.mkdir(path.join(projectRoot, leadSessionId, 'subagents'), { recursive: true });
+
+    // Lead session file
+    await fs.writeFile(
+      path.join(projectRoot, `${leadSessionId}.jsonl`),
+      JSON.stringify({
+        timestamp: '2026-01-01T00:00:00.000Z',
+        type: 'user',
+        message: { role: 'user', content: 'Start' },
+      }) + '\n',
+      'utf8'
+    );
+
+    // Subagent file: first message has teammate_id="team-lead" (sender),
+    // but routing.sender="carol" (the actual agent) appears later.
+    await fs.writeFile(
+      path.join(projectRoot, leadSessionId, 'subagents', 'agent-carol01.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:01.000Z',
+          type: 'user',
+          message: {
+            role: 'user',
+            content:
+              '<teammate-message teammate_id="team-lead" color="yellow" summary="Fix button layout">You are carol, a developer.</teammate-message>',
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:02.000Z',
+          type: 'assistant',
+          message: { role: 'assistant', content: [{ type: 'text', text: 'Working on it' }] },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:03.000Z',
+          toolUseResult: { routing: { sender: 'carol' } },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+    const carolLogs = await finder.findMemberLogs(teamName, 'carol');
+
+    expect(carolLogs).toHaveLength(1);
+    expect(carolLogs[0]?.kind).toBe('subagent');
+    if (carolLogs[0]?.kind === 'subagent') {
+      expect(carolLogs[0].subagentId).toBe('carol01');
+      expect(carolLogs[0].description).toBe('Fix button layout');
+    }
+  });
+
+  it('process.team.memberName overrides teammate_id and text_mention', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-logs-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'tB';
+    const projectPath = '/Users/test/projB';
+    const projectId = '-Users-test-projB';
+    const leadSessionId = 'sB';
+
+    await fs.mkdir(path.join(tmpDir, 'teams', teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamName, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        projectPath,
+        leadSessionId,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'alice', agentType: 'general-purpose' },
+          { name: 'bob', agentType: 'general-purpose' },
+        ],
+      }),
+      'utf8'
+    );
+
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    await fs.mkdir(path.join(projectRoot, leadSessionId, 'subagents'), { recursive: true });
+
+    // Lead session file
+    await fs.writeFile(
+      path.join(projectRoot, `${leadSessionId}.jsonl`),
+      JSON.stringify({
+        timestamp: '2026-01-01T00:00:00.000Z',
+        type: 'user',
+        message: { role: 'user', content: 'Start' },
+      }) + '\n',
+      'utf8'
+    );
+
+    // Subagent file: teammate_id="alice" but process.team.memberName="bob"
+    await fs.writeFile(
+      path.join(projectRoot, leadSessionId, 'subagents', 'agent-bob01.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:01.000Z',
+          type: 'user',
+          message: {
+            role: 'user',
+            content:
+              '<teammate-message teammate_id="alice" color="green" summary="Refactor code">Do the work</teammate-message>',
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:02.000Z',
+          process: { team: { memberName: 'bob' } },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+    const bobLogs = await finder.findMemberLogs(teamName, 'bob');
+
+    expect(bobLogs).toHaveLength(1);
+    expect(bobLogs[0]?.kind).toBe('subagent');
+    if (bobLogs[0]?.kind === 'subagent') {
+      expect(bobLogs[0].subagentId).toBe('bob01');
+    }
+
+    // Verify alice does NOT get this file
+    const aliceLogs = await finder.findMemberLogs(teamName, 'alice');
+    const aliceSubagents = aliceLogs.filter((l) => l.kind === 'subagent');
+    expect(aliceSubagents).toHaveLength(0);
+  });
+
   it('reports accurate messageCount from full file (not limited by scan lines)', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-logs-'));
     setClaudeBasePathOverride(tmpDir);
@@ -648,5 +799,286 @@ describe('TeamMemberLogsFinder', () => {
     await expect(finder.hasTaskUpdateMarker(structuredPath, 'task-42')).resolves.toBe(true);
     await expect(finder.hasTaskUpdateMarker(legacyPath, 'task-42')).resolves.toBe(false);
     await expect(finder.hasTaskUpdateMarker(noisePath, 'task-42')).resolves.toBe(false);
+  });
+
+  it('findLogFileRefsForTask returns correct refs for a task', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-refs-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'refs-team';
+    const projectPath = '/Users/test/ref-proj';
+    const projectId = '-Users-test-ref-proj';
+    const sessionId = 'sr1';
+
+    await fs.mkdir(path.join(tmpDir, 'teams', teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamName, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        projectPath,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'dev', agentType: 'general-purpose' },
+        ],
+      }),
+      'utf8'
+    );
+
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    await fs.mkdir(path.join(projectRoot, sessionId, 'subagents'), { recursive: true });
+
+    await fs.writeFile(
+      path.join(projectRoot, sessionId, 'subagents', 'agent-ref1.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:01.000Z',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: 'You are dev, a developer on team "refs-team" (refs-team).',
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:02.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              { type: 'tool_use', name: 'TaskUpdate', input: { taskId: '5', status: 'in_progress' } },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+    const refs = await finder.findLogFileRefsForTask(teamName, '5');
+
+    expect(refs).toHaveLength(1);
+    expect(refs[0].memberName.toLowerCase()).toBe('dev');
+    expect(refs[0].filePath).toContain('agent-ref1.jsonl');
+  });
+
+  it('findLogFileRefsForTask does not mix tasks across teams sharing a projectPath', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-refs-cross-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const projectPath = '/Users/test/shared-ref-proj';
+    const projectId = '-Users-test-shared-ref-proj';
+    const sessionId = 'sref';
+    const teamA = 'ref-a';
+    const teamB = 'ref-b';
+
+    await fs.mkdir(path.join(tmpDir, 'teams', teamA), { recursive: true });
+    await fs.mkdir(path.join(tmpDir, 'teams', teamB), { recursive: true });
+
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamA, 'config.json'),
+      JSON.stringify({
+        name: teamA,
+        projectPath,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'alice', agentType: 'general-purpose' },
+        ],
+      }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamB, 'config.json'),
+      JSON.stringify({
+        name: teamB,
+        projectPath,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'bob', agentType: 'general-purpose' },
+        ],
+      }),
+      'utf8'
+    );
+
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    await fs.mkdir(path.join(projectRoot, sessionId, 'subagents'), { recursive: true });
+
+    // Team A agent with task 7
+    await fs.writeFile(
+      path.join(projectRoot, sessionId, 'subagents', 'agent-ra.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:01.000Z',
+          type: 'user',
+          message: { role: 'user', content: 'You are alice, a developer on team "ref-a" (ref-a).' },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:02.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              { type: 'tool_use', name: 'TaskUpdate', input: { taskId: '7', status: 'completed' } },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    // Team B agent with same task id 7
+    await fs.writeFile(
+      path.join(projectRoot, sessionId, 'subagents', 'agent-rb.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:03.000Z',
+          type: 'user',
+          message: { role: 'user', content: 'You are bob, a developer on team "ref-b" (ref-b).' },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:04.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              { type: 'tool_use', name: 'TaskUpdate', input: { taskId: '7', status: 'completed' } },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+    const refsA = await finder.findLogFileRefsForTask(teamA, '7');
+
+    expect(refsA.some((r) => r.memberName.toLowerCase() === 'alice')).toBe(true);
+    expect(refsA.some((r) => r.memberName.toLowerCase() === 'bob')).toBe(false);
+  });
+
+  it('findLogFileRefsForTask does not duplicate refs for owner logs', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-refs-dedup-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'dedup-team';
+    const projectPath = '/Users/test/dedup-proj';
+    const projectId = '-Users-test-dedup-proj';
+    const sessionId = 'sdd';
+
+    await fs.mkdir(path.join(tmpDir, 'teams', teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamName, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        projectPath,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'dev', agentType: 'general-purpose' },
+        ],
+      }),
+      'utf8'
+    );
+
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    await fs.mkdir(path.join(projectRoot, sessionId, 'subagents'), { recursive: true });
+
+    // Agent file that mentions task AND belongs to owner 'dev'
+    await fs.writeFile(
+      path.join(projectRoot, sessionId, 'subagents', 'agent-dd1.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:01.000Z',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: 'You are dev, a developer on team "dedup-team" (dedup-team).',
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-01-01T00:00:02.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              { type: 'tool_use', name: 'TaskUpdate', input: { taskId: '3', status: 'in_progress' } },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+    // File found as direct task hit AND as owner log — should appear once
+    const refs = await finder.findLogFileRefsForTask(teamName, '3', {
+      owner: 'dev',
+      status: 'in_progress',
+    });
+
+    // Count refs with this file path — should be exactly 1
+    const deduped = refs.filter((r) => r.filePath.includes('agent-dd1.jsonl'));
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0].memberName.toLowerCase()).toBe('dev');
+  });
+
+  it('findMemberLogs returns results sorted by startTime descending', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-sort-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'sort-team';
+    const projectPath = '/Users/test/sort-proj';
+    const projectId = '-Users-test-sort-proj';
+    const sessionId = 'ss1';
+
+    await fs.mkdir(path.join(tmpDir, 'teams', teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamName, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        projectPath,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'dev', agentType: 'general-purpose' },
+        ],
+      }),
+      'utf8'
+    );
+
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    await fs.mkdir(path.join(projectRoot, sessionId, 'subagents'), { recursive: true });
+
+    // 3 agent files with different startTimes: 00:03, 00:01, 00:02
+    for (const [id, ts] of [
+      ['agent-s1.jsonl', '2026-01-01T00:00:03.000Z'],
+      ['agent-s2.jsonl', '2026-01-01T00:00:01.000Z'],
+      ['agent-s3.jsonl', '2026-01-01T00:00:02.000Z'],
+    ] as const) {
+      await fs.writeFile(
+        path.join(projectRoot, sessionId, 'subagents', id),
+        [
+          JSON.stringify({
+            timestamp: ts,
+            type: 'user',
+            message: {
+              role: 'user',
+              content: `You are dev, a developer on team "${teamName}" (${teamName}).`,
+            },
+          }),
+          JSON.stringify({
+            timestamp: ts,
+            type: 'assistant',
+            message: { role: 'assistant', content: [{ type: 'text', text: 'OK' }] },
+          }),
+        ].join('\n') + '\n',
+        'utf8'
+      );
+    }
+
+    const finder = new TeamMemberLogsFinder();
+    const logs = await finder.findMemberLogs(teamName, 'dev');
+
+    expect(logs).toHaveLength(3);
+    // Must be descending: 00:03, 00:02, 00:01
+    const times = logs.map((l) => new Date(l.startTime).getTime());
+    expect(times[0]).toBeGreaterThan(times[1]);
+    expect(times[1]).toBeGreaterThan(times[2]);
   });
 });

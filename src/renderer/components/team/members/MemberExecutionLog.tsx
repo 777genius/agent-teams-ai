@@ -27,6 +27,12 @@ export const MemberExecutionLog = ({
 }: MemberExecutionLogProps): React.JSX.Element => {
   const conversation = useMemo(() => transformChunksToConversation(chunks, [], false), [chunks]);
 
+  // Show newest groups first — most recent activity is most relevant in execution logs.
+  const orderedItems = useMemo(
+    () => [...conversation.items].reverse(),
+    [conversation.items]
+  );
+
   // Store collapsed groups instead of expanded: by default, everything is expanded.
   // This avoids resetting state in an effect when conversation changes.
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(new Set());
@@ -34,7 +40,7 @@ export const MemberExecutionLog = ({
     new Map()
   );
 
-  if (!conversation.items.length) {
+  if (!orderedItems.length) {
     return (
       <div className="py-6 text-center text-xs text-[var(--color-text-muted)]">
         Nothing to display
@@ -44,7 +50,7 @@ export const MemberExecutionLog = ({
 
   return (
     <div className="min-w-0 space-y-6 overflow-hidden">
-      {conversation.items.map((item) => {
+      {orderedItems.map((item) => {
         if (item.type === 'system') {
           return <SystemChatGroup key={item.group.id} systemGroup={item.group} />;
         }

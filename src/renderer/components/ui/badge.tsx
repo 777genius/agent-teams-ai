@@ -25,9 +25,12 @@ const badgeVariants = cva(
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
 
-const Badge = ({ className, variant, ...props }: BadgeProps): React.JSX.Element => {
-  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
-};
+const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
+  ({ className, variant, ...props }, ref) => {
+    return <span ref={ref} className={cn(badgeVariants({ variant }), className)} {...props} />;
+  }
+);
+Badge.displayName = 'Badge';
 
 // eslint-disable-next-line react-refresh/only-export-components -- Standard shadcn export pattern
 export { Badge, badgeVariants };

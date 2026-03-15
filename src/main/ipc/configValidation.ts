@@ -113,6 +113,7 @@ function validateNotificationsSection(
     'snoozedUntil',
     'snoozeMinutes',
     'notifyOnStatusChange',
+    'notifyOnTaskComments',
     'statusChangeOnlySolo',
     'statusChangeStatuses',
     'triggers',
@@ -170,6 +171,12 @@ function validateNotificationsSection(
           return { valid: false, error: `notifications.${key} must be a boolean` };
         }
         result.notifyOnStatusChange = value;
+        break;
+      case 'notifyOnTaskComments':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnTaskComments = value;
         break;
       case 'statusChangeOnlySolo':
         if (typeof value !== 'boolean') {

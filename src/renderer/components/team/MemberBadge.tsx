@@ -5,7 +5,7 @@ import {
   getThemedText,
 } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
-import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
+import { agentAvatarUrl, displayMemberName } from '@renderer/utils/memberHelpers';
 
 import { MemberHoverCard } from './members/MemberHoverCard';
 
@@ -13,7 +13,7 @@ interface MemberBadgeProps {
   name: string;
   color?: string;
   /** Avatar + badge size variant */
-  size?: 'sm' | 'md';
+  size?: 'xs' | 'sm' | 'md';
   /** Hide the avatar icon, show only the name badge */
   hideAvatar?: boolean;
   onClick?: (name: string) => void;
@@ -37,9 +37,10 @@ export const MemberBadge = ({
 }: MemberBadgeProps): React.JSX.Element => {
   const colors = getTeamColorSet(color ?? '');
   const { isLight } = useTheme();
-  const avatarSize = size === 'md' ? 32 : 24;
-  const avatarClass = size === 'md' ? 'size-6' : 'size-5';
-  const textClass = size === 'md' ? 'text-xs' : 'text-[10px]';
+  const avatarSize = size === 'md' ? 32 : size === 'sm' ? 24 : 18;
+  const avatarClass = size === 'md' ? 'size-6' : size === 'sm' ? 'size-5' : 'size-4';
+  const textClass = size === 'md' ? 'text-xs' : size === 'sm' ? 'text-[10px]' : 'text-[9px]';
+  const paddingClass = size === 'xs' ? 'px-1 py-0.5' : 'px-1.5 py-0.5';
 
   const badgeStyle = {
     backgroundColor: getThemedBadge(colors, isLight),
@@ -58,10 +59,10 @@ export const MemberBadge = ({
 
   const badge = (
     <span
-      className={`rounded px-1.5 py-0.5 ${textClass} font-medium tracking-wide`}
+      className={`rounded ${paddingClass} ${textClass} font-medium tracking-wide`}
       style={badgeStyle}
     >
-      {name === 'team-lead' ? 'lead' : name}
+      {displayMemberName(name)}
     </span>
   );
 
