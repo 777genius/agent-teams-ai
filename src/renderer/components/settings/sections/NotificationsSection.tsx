@@ -7,7 +7,21 @@ import {
   RepositoryDropdown,
   SelectedRepositoryItem,
 } from '@renderer/components/common/RepositoryDropdown';
-import { ExternalLink } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowRightLeft,
+  Bell,
+  BellRing,
+  Clock,
+  ExternalLink,
+  EyeOff,
+  HelpCircle,
+  Inbox,
+  Mail,
+  MessageSquare,
+  PartyPopper,
+  Volume2,
+} from 'lucide-react';
 
 import { SettingRow, SettingsSectionHeader, SettingsSelect, SettingsToggle } from '../components';
 import { NotificationTriggerSettings } from '../NotificationTriggerSettings';
@@ -80,7 +94,10 @@ export const NotificationsSection = ({
   return (
     <div>
       {/* Task Completion Notifications */}
-      <SettingsSectionHeader title="Task Completion Notifications" />
+      <SettingsSectionHeader
+        title="Task Completion Notifications"
+        icon={<PartyPopper className="size-3.5" />}
+      />
       <div
         className="mb-4 rounded-lg border p-4"
         style={{
@@ -108,10 +125,11 @@ export const NotificationsSection = ({
       </div>
 
       {/* Notification Settings */}
-      <SettingsSectionHeader title="Notification Settings" />
+      <SettingsSectionHeader title="Notification Settings" icon={<Bell className="size-3.5" />} />
       <SettingRow
         label="Enable System Notifications"
         description="Show system notifications for errors and events"
+        icon={<BellRing className="size-4" />}
       >
         <SettingsToggle
           enabled={safeConfig.notifications.enabled}
@@ -119,7 +137,11 @@ export const NotificationsSection = ({
           disabled={saving}
         />
       </SettingRow>
-      <SettingRow label="Play sound" description="Play a sound when notifications appear">
+      <SettingRow
+        label="Play sound"
+        description="Play a sound when notifications appear"
+        icon={<Volume2 className="size-4" />}
+      >
         <SettingsToggle
           enabled={safeConfig.notifications.soundEnabled}
           onChange={(v) => onNotificationToggle('soundEnabled', v)}
@@ -129,6 +151,7 @@ export const NotificationsSection = ({
       <SettingRow
         label="Include subagent errors"
         description="Detect and notify about errors in subagent sessions"
+        icon={<AlertTriangle className="size-4" />}
       >
         <SettingsToggle
           enabled={safeConfig.notifications.includeSubagentErrors}
@@ -139,6 +162,7 @@ export const NotificationsSection = ({
       <SettingRow
         label="Lead inbox notifications"
         description="Notify when teammates send messages to the team lead"
+        icon={<Inbox className="size-4" />}
       >
         <SettingsToggle
           enabled={safeConfig.notifications.notifyOnLeadInbox}
@@ -149,6 +173,7 @@ export const NotificationsSection = ({
       <SettingRow
         label="User inbox notifications"
         description="Notify when teammates send messages to you"
+        icon={<Mail className="size-4" />}
       >
         <SettingsToggle
           enabled={safeConfig.notifications.notifyOnUserInbox}
@@ -159,6 +184,7 @@ export const NotificationsSection = ({
       <SettingRow
         label="Task clarification notifications"
         description="Show native OS notifications when a task needs your input"
+        icon={<HelpCircle className="size-4" />}
       >
         <SettingsToggle
           enabled={safeConfig.notifications.notifyOnClarifications}
@@ -169,6 +195,7 @@ export const NotificationsSection = ({
       <SettingRow
         label="Task comment notifications"
         description="Show native OS notifications when agents comment on tasks"
+        icon={<MessageSquare className="size-4" />}
       >
         <SettingsToggle
           enabled={safeConfig.notifications.notifyOnTaskComments}
@@ -183,6 +210,7 @@ export const NotificationsSection = ({
             ? `Snoozed until ${new Date(safeConfig.notifications.snoozedUntil!).toLocaleTimeString()}`
             : 'Temporarily pause notifications'
         }
+        icon={<Clock className="size-4" />}
       >
         <div className="flex items-center gap-2">
           {isSnoozed ? (
@@ -208,12 +236,17 @@ export const NotificationsSection = ({
       {/* Task Status Change Notifications — grouped section */}
       <div className="border-b py-3" style={{ borderColor: 'var(--color-border-subtle)' }}>
         <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-              Task status change notifications
+          <div className="flex items-start gap-2.5">
+            <div className="mt-0.5 shrink-0" style={{ color: 'var(--color-text-muted)' }}>
+              <ArrowRightLeft className="size-4" />
             </div>
-            <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              Show native OS notifications when a task&apos;s status changes
+            <div>
+              <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                Task status change notifications
+              </div>
+              <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                Show native OS notifications when a task&apos;s status changes
+              </div>
             </div>
           </div>
           <div className="shrink-0">
@@ -282,7 +315,7 @@ export const NotificationsSection = ({
         onRemoveTrigger={onRemoveTrigger}
       />
 
-      <SettingsSectionHeader title="Ignored Repositories" />
+      <SettingsSectionHeader title="Ignored Repositories" icon={<EyeOff className="size-3.5" />} />
       <p className="mb-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>
         Notifications from these repositories will be ignored
       </p>

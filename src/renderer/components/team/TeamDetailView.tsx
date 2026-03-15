@@ -1581,8 +1581,14 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
                 const el = document.querySelector(`[data-task-id="${taskId}"]`);
                 if (el) {
                   el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                  el.classList.add('ring-2', 'ring-blue-400/50');
-                  setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400/50'), 1500);
+                  el.classList.remove('kanban-card-focus-pulse');
+                  void (el as HTMLElement).offsetWidth;
+                  el.classList.add('kanban-card-focus-pulse');
+                  el.addEventListener(
+                    'animationend',
+                    () => el.classList.remove('kanban-card-focus-pulse'),
+                    { once: true }
+                  );
                 }
               }}
               onTaskClick={(task) => setSelectedTask(task)}
@@ -1919,8 +1925,14 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               const el = document.querySelector(`[data-task-id="${taskId}"]`);
               if (el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                el.classList.add('ring-2', 'ring-blue-400/50');
-                setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400/50'), 1500);
+                el.classList.remove('kanban-card-focus-pulse');
+                void (el as HTMLElement).offsetWidth;
+                el.classList.add('kanban-card-focus-pulse');
+                el.addEventListener(
+                  'animationend',
+                  () => el.classList.remove('kanban-card-focus-pulse'),
+                  { once: true }
+                );
               }
             }}
             onOwnerChange={(taskId, owner) => {

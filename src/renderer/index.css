@@ -295,6 +295,43 @@
   }
 }
 
+@keyframes kanban-focus-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.6);
+    background-color: rgba(96, 165, 250, 0.15);
+  }
+  14% {
+    box-shadow: 0 0 16px 6px rgba(96, 165, 250, 0.5);
+    background-color: rgba(96, 165, 250, 0.12);
+  }
+  28% {
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.1);
+    background-color: rgba(96, 165, 250, 0.02);
+  }
+  42% {
+    box-shadow: 0 0 14px 5px rgba(96, 165, 250, 0.45);
+    background-color: rgba(96, 165, 250, 0.1);
+  }
+  56% {
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.1);
+    background-color: rgba(96, 165, 250, 0.02);
+  }
+  70% {
+    box-shadow: 0 0 10px 4px rgba(96, 165, 250, 0.3);
+    background-color: rgba(96, 165, 250, 0.06);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0);
+    background-color: transparent;
+  }
+}
+
+.kanban-card-focus-pulse {
+  animation: kanban-focus-pulse 2.2s ease-out;
+  outline: 2px solid rgba(96, 165, 250, 0.6);
+  outline-offset: -1px;
+}
+
 .kanban-grid-resize-handle-n,
 .kanban-grid-resize-handle-s {
   left: 50%;
