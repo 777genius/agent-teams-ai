@@ -660,7 +660,7 @@ function getEffectiveReviewState(kanbanEntry, task) {
   const events = Array.isArray(task.historyEvents) ? task.historyEvents : [];
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
-    if (e.type === 'review_requested' || e.type === 'review_changes_requested' || e.type === 'review_approved') {
+    if (e.type === 'review_requested' || e.type === 'review_changes_requested' || e.type === 'review_approved' || e.type === 'review_started') {
       return e.to;
     }
     if (e.type === 'status_changed' && e.to === 'in_progress') {

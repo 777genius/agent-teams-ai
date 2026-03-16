@@ -43,6 +43,7 @@ declare module 'agent-teams-controller' {
     requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
     approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
     requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
+    startReview(taskId: string, flags?: Record<string, unknown>): unknown;
   }
 
   export interface ControllerMessageApi {

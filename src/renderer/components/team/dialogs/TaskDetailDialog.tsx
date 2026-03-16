@@ -565,10 +565,12 @@ export const TaskDetailDialog = ({
                     borderRight: `1px solid ${getThemedBorder(colors, isLight)}40`,
                     borderBottom: `1px solid ${getThemedBorder(colors, isLight)}40`,
                   };
-                  const reviewEventType =
-                    currentTask.reviewState === 'approved' ? 'review_approved' : 'review_requested';
                   const lastReviewEvent = currentTask.historyEvents
-                    ?.filter((e) => e.type === reviewEventType)
+                    ?.filter((e) =>
+                      currentTask.reviewState === 'approved'
+                        ? e.type === 'review_approved'
+                        : e.type === 'review_requested' || e.type === 'review_started'
+                    )
                     .at(-1);
                   const reviewDate = lastReviewEvent
                     ? new Date(lastReviewEvent.timestamp)

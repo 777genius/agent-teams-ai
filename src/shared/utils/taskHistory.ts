@@ -26,7 +26,8 @@ export function getDerivedReviewState(task: Pick<TeamTask, 'historyEvents'>): Te
     if (
       event.type === 'review_requested' ||
       event.type === 'review_changes_requested' ||
-      event.type === 'review_approved'
+      event.type === 'review_approved' ||
+      event.type === 'review_started'
     ) {
       return event.to;
     }

@@ -36,7 +36,7 @@ function getCurrentReviewState(task) {
   const events = Array.isArray(task.historyEvents) ? task.historyEvents : [];
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
-    if (e.type === 'review_requested' || e.type === 'review_changes_requested' || e.type === 'review_approved') {
+    if (e.type === 'review_requested' || e.type === 'review_changes_requested' || e.type === 'review_approved' || e.type === 'review_started') {
       return e.to;
     }
     if (e.type === 'status_changed' && e.to === 'in_progress') {
@@ -44,6 +44,44 @@ function getCurrentReviewState(task) {
     }
   }
   return 'none';
+}
+
+function startReview(context, taskId, flags = {}) {
+  const task = tasks.getTask(context, taskId);
+  if (task.status === 'deleted') {
+    throw new Error(`Task #${task.displayId || task.id} is deleted`);
+  }
+
+  const from =
+    typeof flags.from === 'string' && flags.from.trim() ? flags.from.trim() : 'reviewer';
+  const prevReviewState = getCurrentReviewState(task);
+
+  // Idempotent: already in review → return ok without duplicate history event
+  if (prevReviewState === 'review') {
+    return { ok: true, taskId: task.id, displayId: task.displayId, column: 'review' };
+  }
+
+  try {
+    kanban.setKanbanColumn(context, task.id, 'review');
+    tasks.updateTask(context, task.id, (t) => {
+      t.historyEvents = tasks.appendHistoryEvent(t.historyEvents, {
+        type: 'review_started',
+        from: prevReviewState,
+        to: 'review',
+        actor: from,
+      });
+      t.reviewState = 'review';
+      return t;
+    });
+    return { ok: true, taskId: task.id, displayId: task.displayId, column: 'review' };
+  } catch (error) {
+    try {
+      kanban.clearKanban(context, task.id);
+    } catch {
+      // Best-effort rollback
+    }
+    throw error;
+  }
 }
 
 function requestReview(context, taskId, flags = {}) {
@@ -84,7 +122,9 @@ function requestReview(context, taskId, flags = {}) {
       text:
         `**Please review** task #${task.displayId || task.id}\n\n` +
         wrapAgentBlock(
-          `When approved, use MCP tool review_approve:\n` +
+          `FIRST call review_start to signal you are beginning the review:\n` +
+            `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>" }\n\n` +
+            `When approved, use MCP tool review_approve:\n` +
             `{ teamName: "${context.teamName}", taskId: "${task.id}", notifyOwner: true }\n\n` +
             `If changes are needed, use MCP tool review_request_changes:\n` +
             `{ teamName: "${context.teamName}", taskId: "${task.id}", comment: "..." }`
@@ -210,4 +250,5 @@ module.exports = {
   approveReview,
   requestReview,
   requestChanges,
+  startReview,
 };

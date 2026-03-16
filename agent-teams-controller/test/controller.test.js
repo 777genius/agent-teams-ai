@@ -530,6 +530,50 @@ describe('agent-teams-controller API', () => {
     expect(inbox[0].leadSessionId).toBe('lead-session-1');
   });
 
+  it('starts review idempotently without requiring completed status', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.tasks.createTask({ subject: 'Review me', owner: 'bob' });
+
+    // startReview does not require completed status
+    const result = controller.review.startReview(task.id, { from: 'alice' });
+    expect(result.ok).toBe(true);
+    expect(result.taskId).toBe(task.id);
+    expect(result.displayId).toBe(task.displayId);
+    expect(result.column).toBe('review');
+
+    // Verify kanban state
+    const kanbanState = controller.kanban.getKanbanState();
+    expect(kanbanState.tasks[task.id].column).toBe('review');
+
+    // Verify task reviewState
+    const updatedTask = controller.tasks.getTask(task.id);
+    expect(updatedTask.reviewState).toBe('review');
+
+    // Verify history event
+    const reviewEvent = updatedTask.historyEvents.find((e) => e.type === 'review_started');
+    expect(reviewEvent).toBeDefined();
+    expect(reviewEvent.from).toBe('none');
+    expect(reviewEvent.to).toBe('review');
+    expect(reviewEvent.actor).toBe('alice');
+
+    // Idempotent: calling again should also succeed without duplicate events
+    const again = controller.review.startReview(task.id, { from: 'alice' });
+    expect(again.ok).toBe(true);
+    const reloaded = controller.tasks.getTask(task.id);
+    const startedEvents = reloaded.historyEvents.filter((e) => e.type === 'review_started');
+    expect(startedEvents).toHaveLength(1);
+  });
+
+  it('throws when starting review on a deleted task', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.tasks.createTask({ subject: 'Deleted task', owner: 'bob' });
+    controller.tasks.softDeleteTask(task.id, 'bob');
+
+    expect(() => controller.review.startReview(task.id, { from: 'alice' })).toThrow('is deleted');
+  });
+
   it('persists full inbox metadata through controller messages.sendMessage', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });

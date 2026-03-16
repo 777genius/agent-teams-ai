@@ -49,6 +49,7 @@ describe('agent-teams-mcp tools', () => {
     'review_approve',
     'review_request',
     'review_request_changes',
+    'review_start',
     'task_add_comment',
     'task_attach_comment_file',
     'task_attach_file',
@@ -773,6 +774,27 @@ describe('agent-teams-mcp tools', () => {
       })
     );
     expect(kanbanCleared.tasks[createdTask.id]).toBeUndefined();
+
+    // review_start: moves task to review without requiring completed status
+    const pendingTask = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Start review test',
+        owner: 'bob',
+      })
+    );
+    const reviewStarted = parseJsonToolResult(
+      await getTool('review_start').execute({
+        claudeDir,
+        teamName,
+        taskId: pendingTask.id,
+        from: 'alice',
+      })
+    );
+    expect(reviewStarted.ok).toBe(true);
+    expect(reviewStarted.column).toBe('review');
+    expect(reviewStarted.taskId).toBe(pendingTask.id);
 
     const pid = process.pid;
 

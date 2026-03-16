@@ -35,6 +35,24 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
   });
 
   server.addTool({
+    name: 'review_start',
+    description: 'Signal that reviewer is beginning to review a task (moves to REVIEW column)',
+    parameters: z.object({
+      ...toolContextSchema,
+      taskId: z.string().min(1),
+      from: z.string().optional(),
+    }),
+    execute: async ({ teamName, claudeDir, taskId, from }) =>
+      await Promise.resolve(
+        jsonTextContent(
+          getController(teamName, claudeDir).review.startReview(taskId, {
+            ...(from ? { from } : {}),
+          }) as Record<string, unknown>
+        )
+      ),
+  });
+
+  server.addTool({
     name: 'review_approve',
     description: 'Approve task review and move kanban state accordingly',
     parameters: z.object({

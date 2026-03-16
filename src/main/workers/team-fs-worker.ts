@@ -535,7 +535,12 @@ function deriveReviewStateFromEvents(events: RawHistoryEvent[] | undefined): str
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
     const t = e.type;
-    if (t === 'review_requested' || t === 'review_changes_requested' || t === 'review_approved') {
+    if (
+      t === 'review_requested' ||
+      t === 'review_changes_requested' ||
+      t === 'review_approved' ||
+      t === 'review_started'
+    ) {
       const to = typeof e.to === 'string' ? e.to : 'none';
       return to === 'review' || to === 'needsFix' || to === 'approved' ? to : 'none';
     }

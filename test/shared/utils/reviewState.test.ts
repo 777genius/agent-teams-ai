@@ -17,4 +17,21 @@ describe('reviewState utils', () => {
   it('does not map needsFix to a kanban column', () => {
     expect(getKanbanColumnFromReviewState('needsFix')).toBeUndefined();
   });
+
+  it('derives review state from review_started history event', () => {
+    expect(
+      getReviewStateFromTask({
+        historyEvents: [
+          {
+            id: '1',
+            timestamp: '2026-01-01T00:00:00Z',
+            type: 'review_started',
+            from: 'none',
+            to: 'review',
+            actor: 'alice',
+          },
+        ],
+      })
+    ).toBe('review');
+  });
 });

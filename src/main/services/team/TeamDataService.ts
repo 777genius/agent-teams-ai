@@ -155,6 +155,9 @@ export class TeamDataService {
       if (event.type === 'review_approved' && event.actor) {
         return event.actor;
       }
+      if (event.type === 'review_started' && event.actor) {
+        return event.actor;
+      }
       if (event.type === 'review_requested' && event.reviewer) {
         return event.reviewer;
       }

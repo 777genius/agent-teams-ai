@@ -122,6 +122,13 @@ const EventContent = ({
           ) : null}
         </span>
       );
+    case 'review_started':
+      return (
+        <span className="flex items-center gap-1">
+          <Eye size={10} className="text-purple-400" />
+          Review started
+        </span>
+      );
     case 'review_changes_requested':
       return (
         <span className="flex items-center gap-1">
@@ -175,6 +182,8 @@ function dotColor(event: TaskHistoryEvent): string {
     case 'status_changed':
       return dotColorForStatus(event.to);
     case 'review_requested':
+      return 'bg-purple-400';
+    case 'review_started':
       return 'bg-purple-400';
     case 'review_changes_requested':
       return 'bg-amber-400';

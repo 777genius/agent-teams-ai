@@ -384,6 +384,13 @@ function buildMemberTaskProtocol(teamName) {
    - After that follow-up work finishes, add a short task comment with the result, what changed, or what you verified.
    - After that, run task_complete again before your reply.
    - Never do comment-driven implementation/fix work while the task is still shown as pending, review, completed, or approved.
+   - After task_complete, if the task needs review AND the team has a member whose role includes reviewing (e.g. "reviewer", "tech-lead", "qa"), IMMEDIATELY call review_request to move it to the review column and notify the reviewer:
+     { teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", reviewer: "<reviewer-name>" }
+     Do NOT leave a completed task without sending it to review when review is expected and a reviewer exists.
+     If no team member has a reviewer role, skip review_request — the task stays completed.
+3b. When you BEGIN reviewing a task, FIRST call review_start to ensure it appears in the REVIEW column:
+   { teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>" }
+   This is MANDATORY before review_approve or review_request_changes. Without this step, the kanban board may not show the task in REVIEW during your review.
 4. If you are asked to review and the task is accepted, move it to APPROVED (not DONE) with MCP tool review_approve:
    { teamName: "${teamName}", taskId: "<taskId>", note?: "<optional note>", notifyOwner: true }
 5. If review fails and changes are needed, use MCP tool review_request_changes:
@@ -402,8 +409,10 @@ function buildMemberTaskProtocol(teamName) {
    - If you are reviewing work for task #X, run review_approve/review_request_changes on #X (the work task).
    - Do NOT approve a separate "review task" (e.g. #2 created just to ask for a review) — that will put the wrong task into APPROVED.
    - Typical flow:
-     a) Owner finishes work on #X -> task_complete #X
-     b) Reviewer accepts -> review_approve #X
+     a) Owner finishes work on #X -> task_complete #X -> review_request #X (moves to review column, notifies reviewer)
+     b) Reviewer begins reviewing -> review_start #X (ensures task is in REVIEW column on kanban)
+     c) Reviewer accepts -> review_approve #X
+     d) Reviewer rejects -> review_request_changes #X (moves back to pending with needsFix)
 12. CLARIFICATION PROTOCOL (CRITICAL — MANDATORY):
    When you are blocked and need information to continue a task, you MUST do ALL steps below — skipping the board update or comment breaks traceability:
    a) STEP 1 — FIRST, set the clarification flag with MCP tool task_set_clarification:

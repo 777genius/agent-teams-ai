@@ -563,7 +563,7 @@ function buildTeamCtlOpsInstructions(teamName: string, leadName: string): string
       `- Use blockedBy when a task cannot start until another is done.`,
       `- If you set blockedBy, create the task in pending (for example with startImmediately: false). Do NOT put blocked tasks into in_progress.`,
       `- Use related to link related work (e.g. frontend + backend) without blocking.`,
-      `- Review tasks: Prefer NOT creating a separate "review task". Reviews apply to the work task (#X) via review_approve/review_request_changes on #X.`,
+      `- Review tasks: Prefer NOT creating a separate "review task". Reviews apply to the work task (#X) via review_start/review_approve/review_request_changes on #X.`,
       `  - If you must create a separate review reminder/assignment task, keep it pending and link it to #X with related (and optionally blockedBy #X if it truly cannot start yet).`,
       `  - Dependencies do not auto-start tasks; the owner must explicitly start it when ready.`,
       `- Avoid over-specifying. Only add dependencies when execution order matters.`,
@@ -571,6 +571,7 @@ function buildTeamCtlOpsInstructions(teamName: string, leadName: string): string
       `Notification policy:`,
       `- Task assignment notifications are handled by the board runtime, so do NOT send a separate SendMessage for the same assignment unless you have extra context that is not already on the task.`,
       `- Review requests are also handled by the board runtime: review_request already notifies the reviewer, so do NOT send a second manual SendMessage for the same review request unless you are adding materially new context that is not already on the task.`,
+      `- When beginning a review, always call review_start first to move the task into the REVIEW column on the kanban board.`,
       `- If you receive a task-scoped system notification like "Comment on #...", treat it as requiring an on-task reply. Reply via task_add_comment on that task; do NOT continue the same discussion only in direct messages.`,
       `- Teammate task comments are auto-forwarded to you. When that happens, you MUST reply on-task first. Direct messages are allowed only as an additional urgent wake-up ping or clearly non-task coordination, never as the only reply to the task comment.`,
       `- When you skip sending a message because it would be a duplicate or was already delivered, produce NO text output about it. Do not write meta-commentary like "(Already relayed…)", "(No additional relay needed…)", or similar. Just silently move on.`,
@@ -826,7 +827,7 @@ function buildProvisioningPrompt(request: TeamCreateRequest): string {
   - When tasks have natural ordering (e.g. setup -> implementation -> testing), use blockedBy relationships.
   - If a task is blocked (uses blockedBy), it MUST be created as pending (for example with task_create + startImmediately: false). Do NOT mark blocked tasks in_progress.
      - Review guidance:
-      - Prefer NOT creating a separate "review task". Our workflow reviews the work task itself: run review_approve/review_request_changes on the implementation task #X.
+      - Prefer NOT creating a separate "review task". Our workflow reviews the work task itself: call review_start when beginning review, then review_approve/review_request_changes on the implementation task #X.
        - If you MUST create a separate review reminder/assignment task, create it as pending and link it to the work task:
         - Use related to connect it to #X (non-blocking link).
         - If the review truly cannot start until #X is done, ALSO add blockedBy #X.
