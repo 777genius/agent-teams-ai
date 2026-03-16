@@ -547,7 +547,7 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(true);
       expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
         'my-team',
-        expect.stringContaining('Please spawn them immediately using the Task tool with team_name="my-team" and name="alice".')
+        expect.stringContaining('Please spawn them immediately using the Task tool with team_name="my-team", name="alice", and subagent_type="general-purpose".')
       );
       expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalledWith(
         'my-team',

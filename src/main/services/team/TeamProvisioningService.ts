@@ -35,7 +35,7 @@ import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { parseAllTeammateMessages } from '@shared/utils/teammateMessageParser';
-import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
+import { createCliAutoSuffixNameGuard, parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { spawn, type ChildProcess } from 'child_process';
@@ -597,7 +597,7 @@ export function buildAddMemberSpawnMessage(
   if (!isMemberBriefingBootstrapEnabled()) {
     return (
       `A new teammate "${member.name}"${roleHint} has been added to the team. ` +
-      `Please spawn them immediately using the Task tool with team_name="${teamName}" and name="${member.name}".${workflowHint}`
+      `Please spawn them immediately using the Task tool with team_name="${teamName}", name="${member.name}", and subagent_type="general-purpose".${workflowHint}`
     );
   }
 
@@ -4247,11 +4247,17 @@ export class TeamProvisioningService {
 
     // Flag any expected member not found in config.json (excluding the lead)
     for (const expected of run.expectedMembers) {
+      // Check exact name or CLI-suffixed variant (e.g., "alice-2" for "alice")
       if (registeredNames.has(expected)) continue;
+      const hasSuffixed = [...registeredNames].some((name) => {
+        const parsed = parseNumericSuffixName(name);
+        return parsed !== null && parsed.suffix >= 2 && parsed.base === expected;
+      });
+      if (hasSuffixed) continue;
 
-      // Skip if already in a terminal status (e.g., previously set 'error')
+      // Skip if already in a terminal or positive status
       const current = run.memberSpawnStatuses.get(expected);
-      if (current?.status === 'error') continue;
+      if (current?.status === 'error' || current?.status === 'online') continue;
 
       logger.warn(
         `[${run.teamName}] Member "${expected}" not found in config.json members after provisioning`

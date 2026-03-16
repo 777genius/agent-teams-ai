@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { displayMemberName } from '@renderer/utils/memberHelpers';
+import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { format } from 'date-fns';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -39,7 +40,19 @@ export const SubagentRecentMessagesPreview = ({
 }: SubagentRecentMessagesPreviewProps): React.JSX.Element | null => {
   const [expandedAll, setExpandedAll] = useState(false);
 
-  if (!messages.length) return null;
+  // Strip agent-only blocks from message content before display
+  const cleanMessages = useMemo(
+    () =>
+      messages
+        .map((m) => {
+          const cleaned = stripAgentBlocks(m.content);
+          return cleaned !== m.content ? { ...m, content: cleaned } : m;
+        })
+        .filter((m) => m.content.trim().length > 0),
+    [messages]
+  );
+
+  if (!cleanMessages.length) return null;
 
   return (
     <div className="mb-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
@@ -50,7 +63,7 @@ export const SubagentRecentMessagesPreview = ({
       </div>
 
       <div className={`${expandedAll ? 'max-h-none' : 'max-h-[200px]'} overflow-y-auto pr-1`}>
-        {messages.map((m, index) => (
+        {cleanMessages.map((m, index) => (
           <div
             key={m.id}
             className="rounded px-2 py-1.5"
