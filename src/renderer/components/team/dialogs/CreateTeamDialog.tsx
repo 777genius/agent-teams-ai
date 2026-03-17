@@ -103,11 +103,8 @@ interface ValidationResult {
 }
 
 import { CUSTOM_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
-const DEV_DEFAULT_TEAM = {
-  teamName: 'signal-ops',
-} as const;
 
-const DEV_DEFAULT_MEMBERS: { name: string; roleSelection: string; workflow?: string }[] = [
+const DEFAULT_MEMBERS: { name: string; roleSelection: string; workflow?: string }[] = [
   {
     name: 'alice',
     roleSelection: 'reviewer',
@@ -228,7 +225,6 @@ export const CreateTeamDialog = ({
   onCreate,
   onOpenTeam,
 }: CreateTeamDialogProps): React.JSX.Element => {
-  const isDev = process.env.NODE_ENV !== 'production';
   const { isLight } = useTheme();
 
   const [teamName, setTeamName] = useState('');
@@ -503,20 +499,15 @@ export const CreateTeamDialog = ({
       return;
     }
 
-    if (isDev) {
-      setMembers(
-        DEV_DEFAULT_MEMBERS.map((member) =>
-          createMemberDraft({
-            name: member.name,
-            roleSelection: member.roleSelection,
-            workflow: member.workflow,
-          })
-        )
-      );
-      return;
-    }
-
-    setMembers([createMemberDraft()]);
+    setMembers(
+      DEFAULT_MEMBERS.map((member) =>
+        createMemberDraft({
+          name: member.name,
+          roleSelection: member.roleSelection,
+          workflow: member.workflow,
+        })
+      )
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initialData is checked once on open
   }, [open]);
 
@@ -528,7 +519,7 @@ export const CreateTeamDialog = ({
   }, [initialData, open, suggestedTeamName]);
 
   useEffect(() => {
-    if (!open || !isDev || initialData) {
+    if (!open || initialData) {
       return;
     }
     const resolvedTeamName = teamName.trim() || suggestedTeamName;
@@ -547,7 +538,7 @@ export const CreateTeamDialog = ({
     if (currentDescription === nextAutoDescription) {
       lastAutoDescriptionRef.current = nextAutoDescription;
     }
-  }, [descriptionDraft, initialData, isDev, open, suggestedTeamName, teamName]);
+  }, [descriptionDraft, initialData, open, suggestedTeamName, teamName]);
 
   // Pre-select defaultProjectPath when projects loaded (only while dialog is open)
   useEffect(() => {

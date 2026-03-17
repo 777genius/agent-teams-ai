@@ -35,6 +35,8 @@ interface CollapsibleTeamSectionProps {
   headerClassName?: string;
   /** Extra classes for the inner header content (e.g. "pl-6" to match parent padding). */
   headerContentClassName?: string;
+  /** When true, children stay mounted (hidden via CSS) when collapsed. Useful when children drive header state (e.g. online indicators). */
+  keepMounted?: boolean;
   children: React.ReactNode;
 }
 
@@ -53,6 +55,7 @@ export const CollapsibleTeamSection = ({
   contentClassName,
   headerClassName,
   headerContentClassName,
+  keepMounted,
   children,
 }: CollapsibleTeamSectionProps): React.JSX.Element => {
   const [open, setOpen] = useState(defaultOpen);
@@ -133,10 +136,19 @@ export const CollapsibleTeamSection = ({
           <div className="relative z-10 flex shrink-0 items-center self-start">{action}</div>
         )}
       </div>
-      {isOpen && (
-        <div className={cn('mt-1.5 min-w-0 overflow-x-clip pb-2', contentClassName)}>
+      {keepMounted ? (
+        <div
+          className={cn('mt-1.5 min-w-0 overflow-x-clip pb-2', contentClassName)}
+          style={isOpen ? undefined : { display: 'none' }}
+        >
           {children}
         </div>
+      ) : (
+        isOpen && (
+          <div className={cn('mt-1.5 min-w-0 overflow-x-clip pb-2', contentClassName)}>
+            {children}
+          </div>
+        )
       )}
     </section>
   );

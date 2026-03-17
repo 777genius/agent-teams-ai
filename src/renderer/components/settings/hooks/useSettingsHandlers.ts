@@ -303,6 +303,7 @@ export function useSettingsHandlers({
           notifyOnTaskCreated: true,
           notifyOnAllTasksCompleted: true,
           notifyOnCrossTeamMessage: true,
+          notifyOnTeamLaunched: true,
           statusChangeOnlySolo: true,
           statusChangeStatuses: ['in_progress', 'completed'],
           triggers: defaultTriggers,

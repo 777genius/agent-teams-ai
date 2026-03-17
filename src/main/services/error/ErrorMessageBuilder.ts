@@ -14,6 +14,7 @@ import { randomUUID } from 'crypto';
 import { type ExtractedToolResult } from '../analysis/ToolResultExtractor';
 
 import type { TriggerColor } from '@shared/constants/triggerColors';
+import type { TeamEventType } from '@shared/types/notifications';
 
 // =============================================================================
 // Types
@@ -52,18 +53,7 @@ export interface DetectedError {
   /** Notification domain: 'error' (default/undefined) or 'team' */
   category?: 'error' | 'team';
   /** For team notifications: specific event sub-type */
-  teamEventType?:
-    | 'rate_limit'
-    | 'lead_inbox'
-    | 'user_inbox'
-    | 'task_clarification'
-    | 'task_status_change'
-    | 'task_comment'
-    | 'task_created'
-    | 'all_tasks_completed'
-    | 'cross_team_message'
-    | 'schedule_completed'
-    | 'schedule_failed';
+  teamEventType?: TeamEventType;
   /** Explicit key for storage deduplication. Two notifications with the same dedupeKey won't be stored twice. */
   dedupeKey?: string;
   /** Additional context about the error */

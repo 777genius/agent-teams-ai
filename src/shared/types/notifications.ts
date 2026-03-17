@@ -16,6 +16,24 @@ import type { TriggerColor } from '@shared/constants/triggerColors';
 // =============================================================================
 
 /**
+ * Team notification event sub-types.
+ * Single source of truth — used by DetectedError, TeamNotificationPayload, and TEAM_NOTIFICATION_CONFIG.
+ */
+export type TeamEventType =
+  | 'rate_limit'
+  | 'lead_inbox'
+  | 'user_inbox'
+  | 'task_clarification'
+  | 'task_status_change'
+  | 'task_comment'
+  | 'task_created'
+  | 'all_tasks_completed'
+  | 'cross_team_message'
+  | 'schedule_completed'
+  | 'schedule_failed'
+  | 'team_launched';
+
+/**
  * Detected error from session JSONL files.
  * Used for notification display and deep linking to error locations.
  */
@@ -53,18 +71,7 @@ export interface DetectedError {
   /** Notification domain: 'error' (default/undefined) or 'team' */
   category?: 'error' | 'team';
   /** For team notifications: specific event sub-type */
-  teamEventType?:
-    | 'rate_limit'
-    | 'lead_inbox'
-    | 'user_inbox'
-    | 'task_clarification'
-    | 'task_status_change'
-    | 'task_comment'
-    | 'task_created'
-    | 'all_tasks_completed'
-    | 'cross_team_message'
-    | 'schedule_completed'
-    | 'schedule_failed';
+  teamEventType?: TeamEventType;
   /** Explicit key for storage deduplication. Two notifications with the same dedupeKey won't be stored twice. */
   dedupeKey?: string;
   /** Additional context */
@@ -280,6 +287,8 @@ export interface AppConfig {
     notifyOnAllTasksCompleted: boolean;
     /** Whether to show native OS notifications for cross-team messages */
     notifyOnCrossTeamMessage: boolean;
+    /** Whether to show native OS notifications when a team finishes launching */
+    notifyOnTeamLaunched: boolean;
     /** Only notify on status changes in solo teams (no teammates) */
     statusChangeOnlySolo: boolean;
     /** Which target statuses to notify about (e.g. ['in_progress', 'completed']) */

@@ -1,8 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { Label } from '@renderer/components/ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, Info } from 'lucide-react';
 
 // --- Provider SVG Icons (real brand logos from Simple Icons, monochrome currentColor) ---
 
@@ -164,7 +170,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               type="button"
               id={opt.value === value ? id : undefined}
               className={cn(
-                'rounded-[3px] px-3 py-1 text-xs font-medium transition-colors',
+                'flex items-center gap-1 rounded-[3px] px-3 py-1 text-xs font-medium transition-colors',
                 value === opt.value
                   ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
                   : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
@@ -172,6 +178,20 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               onClick={() => onValueChange(opt.value)}
             >
               {opt.label}
+              {opt.value === '' && (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                      <Info className="size-3 opacity-40 transition-opacity hover:opacity-70" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[240px] text-xs">
+                      Default model from Claude CLI (/model).
+                      <br />
+                      Currently Sonnet 4.6, but may change with CLI updates.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </button>
           ))}
         </div>

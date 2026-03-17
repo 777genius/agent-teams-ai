@@ -7,6 +7,7 @@ import {
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
 import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
+import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { createLogger } from '@shared/utils/logger';
 import { getTaskKanbanColumn } from '@shared/utils/reviewState';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
@@ -145,8 +146,9 @@ function detectClarificationNotifications(
 function fireClarificationNotification(task: GlobalTask, suppressToast: boolean): void {
   // Delegate to main process for native OS notification (cross-platform, no permission needed)
   const latestComment = task.comments?.length ? task.comments[task.comments.length - 1] : undefined;
-  const body =
+  const rawBody =
     latestComment?.text || task.description || `${formatTaskDisplayLabel(task)}: ${task.subject}`;
+  const body = stripAgentBlocks(rawBody).trim();
 
   void api.teams
     ?.showMessageNotification({
@@ -295,7 +297,11 @@ function fireTaskCommentNotification(
   comment: { author: string; text: string; id: string },
   suppressToast: boolean
 ): void {
-  const preview = comment.text.length > 100 ? comment.text.slice(0, 100) + '...' : comment.text;
+  // Double-check: never notify about user's own comments
+  if (comment.author === 'user') return;
+
+  const stripped = stripAgentBlocks(comment.text).trim();
+  const preview = stripped.length > 100 ? stripped.slice(0, 100) + '...' : stripped;
 
   void api.teams
     ?.showMessageNotification({
@@ -337,7 +343,7 @@ function fireTaskCreatedNotification(task: GlobalTask, suppressToast: boolean): 
       from: task.owner ?? 'system',
       to: 'user',
       summary: `New task ${formatTaskDisplayLabel(task)}: ${task.subject}`,
-      body: task.description || task.subject,
+      body: stripAgentBlocks(task.description || task.subject).trim(),
       teamEventType: 'task_created',
       dedupeKey: `created:${task.teamName}:${task.id}`,
       suppressToast,

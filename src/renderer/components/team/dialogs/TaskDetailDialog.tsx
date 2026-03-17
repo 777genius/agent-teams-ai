@@ -1107,6 +1107,7 @@ export const TaskDetailDialog = ({
                 headerClassName="-mx-6 w-[calc(100%+3rem)]"
                 headerContentClassName="pl-6"
                 defaultOpen={false}
+                keepMounted
               >
                 <div className="min-w-0">
                   <MemberLogsTab

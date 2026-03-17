@@ -7,25 +7,18 @@
 
 import { randomUUID } from 'crypto';
 
+import { stripAgentBlocks } from '@shared/constants/agentBlocks';
+
 import type { DetectedError } from '../services/error/ErrorMessageBuilder';
 import type { TriggerColor } from '@shared/constants/triggerColors';
+import type { TeamEventType } from '@shared/types/notifications';
+
+// Re-export for callers that import TeamEventType from this module
+export type { TeamEventType } from '@shared/types/notifications';
 
 // =============================================================================
 // Types
 // =============================================================================
-
-export type TeamEventType =
-  | 'rate_limit'
-  | 'lead_inbox'
-  | 'user_inbox'
-  | 'task_clarification'
-  | 'task_status_change'
-  | 'task_comment'
-  | 'task_created'
-  | 'all_tasks_completed'
-  | 'cross_team_message'
-  | 'schedule_completed'
-  | 'schedule_failed';
 
 /**
  * Domain payload for team notifications.
@@ -71,6 +64,7 @@ const TEAM_NOTIFICATION_CONFIG: Record<TeamEventType, TeamNotificationConfig> = 
   cross_team_message: { triggerName: 'Cross-Team', triggerColor: 'cyan' },
   schedule_completed: { triggerName: 'Schedule Done', triggerColor: 'green' },
   schedule_failed: { triggerName: 'Schedule Failed', triggerColor: 'red' },
+  team_launched: { triggerName: 'Team Launched', triggerColor: 'green' },
 };
 
 // =============================================================================
@@ -91,7 +85,7 @@ export function buildDetectedErrorFromTeam(payload: TeamNotificationPayload): De
     projectId: payload.teamName,
     filePath: '',
     source: payload.teamEventType,
-    message: `[${payload.from}] ${payload.body.slice(0, 300)}`,
+    message: `[${payload.from}] ${stripAgentBlocks(payload.body).trim().slice(0, 300)}`,
     category: 'team',
     teamEventType: payload.teamEventType,
     dedupeKey: payload.dedupeKey,

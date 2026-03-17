@@ -114,6 +114,7 @@ describe('configValidation', () => {
     'notifyOnUserInbox',
     'notifyOnClarifications',
     'notifyOnStatusChange',
+    'notifyOnTeamLaunched',
     'statusChangeOnlySolo',
   ] as const)('accepts boolean %s toggle', (key) => {
     const resultOn = validateConfigUpdatePayload('notifications', { [key]: true });
@@ -134,6 +135,7 @@ describe('configValidation', () => {
     'notifyOnUserInbox',
     'notifyOnClarifications',
     'notifyOnStatusChange',
+    'notifyOnTeamLaunched',
     'statusChangeOnlySolo',
   ] as const)('rejects non-boolean %s', (key) => {
     const result = validateConfigUpdatePayload('notifications', { [key]: 'yes' });

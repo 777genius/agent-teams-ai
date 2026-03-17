@@ -18,6 +18,7 @@
 import { getAppIconPath } from '@main/utils/appIcon';
 import { getHomeDir } from '@main/utils/pathDecoder';
 import { stripMarkdown } from '@main/utils/textFormatting';
+import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { createLogger } from '@shared/utils/logger';
 import { type BrowserWindow, Notification } from 'electron';
 import { EventEmitter } from 'events';
@@ -429,7 +430,7 @@ export class NotificationManager extends EventEmitter {
     try {
       const config = this.configManager.getConfig();
       const isMac = process.platform === 'darwin';
-      const truncatedBody = stripMarkdown(payload.body).slice(0, 300);
+      const truncatedBody = stripMarkdown(stripAgentBlocks(payload.body)).slice(0, 300);
       const iconPath = isMac ? undefined : getAppIconPath();
 
       logger.debug(

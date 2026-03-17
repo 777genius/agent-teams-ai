@@ -26,6 +26,7 @@ import {
   Mail,
   MessageSquare,
   PartyPopper,
+  Rocket,
   Send,
   Users,
   Volume2,
@@ -72,6 +73,7 @@ interface NotificationsSectionProps {
       | 'notifyOnTaskCreated'
       | 'notifyOnAllTasksCompleted'
       | 'notifyOnCrossTeamMessage'
+      | 'notifyOnTeamLaunched'
       | 'statusChangeOnlySolo',
     value: boolean
   ) => void;
@@ -331,6 +333,17 @@ export const NotificationsSection = ({
           <SettingsToggle
             enabled={safeConfig.notifications.notifyOnCrossTeamMessage}
             onChange={(v) => onNotificationToggle('notifyOnCrossTeamMessage', v)}
+            disabled={saving || !safeConfig.notifications.enabled}
+          />
+        </SettingRow>
+        <SettingRow
+          label="Team launched notifications"
+          description="Notify when a team finishes launching and is ready"
+          icon={<Rocket className="size-4" />}
+        >
+          <SettingsToggle
+            enabled={safeConfig.notifications.notifyOnTeamLaunched}
+            onChange={(v) => onNotificationToggle('notifyOnTeamLaunched', v)}
             disabled={saving || !safeConfig.notifications.enabled}
           />
         </SettingRow>

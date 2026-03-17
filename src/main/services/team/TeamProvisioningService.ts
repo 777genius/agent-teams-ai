@@ -1,5 +1,6 @@
 /* eslint-disable no-param-reassign -- ProvisioningRun object is intentionally mutated as a state tracker throughout the provisioning lifecycle */
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
+import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
 import { killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import {
@@ -5393,6 +5394,9 @@ export class TeamProvisioningService {
       this.aliveRunByTeam.set(run.teamName, run.runId);
       logger.info(`[${run.teamName}] Launch complete. Process alive for subsequent tasks.`);
 
+      // Fire "Team Launched" notification
+      void this.fireTeamLaunchedNotification(run);
+
       // Pick up any direct messages that arrived before/while reconnecting.
       void this.relayLeadInboxMessages(run.teamName).catch((e: unknown) =>
         logger.warn(`[${run.teamName}] post-reconnect relay failed: ${String(e)}`)
@@ -5486,10 +5490,50 @@ export class TeamProvisioningService {
     this.aliveRunByTeam.set(run.teamName, run.runId);
     logger.info(`[${run.teamName}] Provisioning complete. Process alive for subsequent tasks.`);
 
+    // Fire "Team Launched" notification
+    void this.fireTeamLaunchedNotification(run);
+
     // Pick up any direct messages that arrived during provisioning.
     void this.relayLeadInboxMessages(run.teamName).catch((e: unknown) =>
       logger.warn(`[${run.teamName}] post-provisioning relay failed: ${String(e)}`)
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Team Launched notification
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Fires a "team_launched" notification when a team transitions to ready state.
+   * Uses the existing addTeamNotification() pipeline.
+   */
+  private async fireTeamLaunchedNotification(run: ProvisioningRun): Promise<void> {
+    try {
+      const config = ConfigManager.getInstance().getConfig();
+      const suppressToast = !config.notifications.notifyOnTeamLaunched;
+      const displayName = run.request.displayName || run.teamName;
+      const body = run.isLaunch
+        ? `Team "${displayName}" has been launched and is ready for tasks.`
+        : `Team "${displayName}" has been provisioned and is ready for tasks.`;
+
+      await NotificationManager.getInstance().addTeamNotification({
+        teamEventType: 'team_launched',
+        teamName: run.teamName,
+        teamDisplayName: displayName,
+        from: 'system',
+        summary: run.isLaunch ? 'Team launched' : 'Team provisioned',
+        body,
+        dedupeKey: `team_launched:${run.teamName}:${run.runId}`,
+        projectPath: run.request.cwd,
+        suppressToast,
+      });
+    } catch (error) {
+      logger.warn(
+        `[${run.teamName}] Failed to fire team_launched notification: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   }
 
   // ---------------------------------------------------------------------------

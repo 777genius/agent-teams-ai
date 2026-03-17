@@ -98,6 +98,7 @@ describe('buildDetectedErrorFromTeam', () => {
     cross_team_message: { triggerName: 'Cross-Team', triggerColor: 'cyan' },
     schedule_completed: { triggerName: 'Schedule Done', triggerColor: 'green' },
     schedule_failed: { triggerName: 'Schedule Failed', triggerColor: 'red' },
+    team_launched: { triggerName: 'Team Launched', triggerColor: 'green' },
   };
 
   for (const [eventType, expected] of Object.entries(EXPECTED_CONFIG)) {
