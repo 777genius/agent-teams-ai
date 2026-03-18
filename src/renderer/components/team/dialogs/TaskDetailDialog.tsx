@@ -818,6 +818,83 @@ export const TaskDetailDialog = ({
 
           {/* Sections container with uniform spacing */}
           <div className="min-w-0 space-y-1">
+            {/* Dependencies */}
+            {blockedByIds.length > 0 || blocksIds.length > 0 ? (
+              <div className="space-y-1">
+                {blockedByIds.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-0.5 text-xs text-yellow-300">
+                      <ArrowLeftFromLine size={12} />
+                      Blocked by
+                    </span>
+                    {blockedByIds.map((id) => {
+                      const depTask = taskMap.get(id);
+                      const isCompleted = depTask?.status === 'completed';
+                      const label = depTask
+                        ? `${formatTaskDisplayLabel(depTask)}: ${depTask.subject}`
+                        : `#${deriveTaskDisplayId(id)}`;
+                      return (
+                        <Tooltip key={id}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                isCompleted
+                                  ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                                  : 'bg-yellow-500/15 text-yellow-300 hover:bg-yellow-500/25'
+                              } cursor-pointer`}
+                              onClick={() => handleDependencyClick(id)}
+                            >
+                              {depTask
+                                ? formatTaskDisplayLabel(depTask)
+                                : `#${deriveTaskDisplayId(id)}`}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">{label}</TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                ) : null}
+
+                {blocksIds.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-0.5 text-xs text-blue-400">
+                      <ArrowRightFromLine size={12} />
+                      Blocks
+                    </span>
+                    {blocksIds.map((id) => {
+                      const depTask = taskMap.get(id);
+                      const isCompleted = depTask?.status === 'completed';
+                      const label = depTask
+                        ? `${formatTaskDisplayLabel(depTask)}: ${depTask.subject}`
+                        : `#${deriveTaskDisplayId(id)}`;
+                      return (
+                        <Tooltip key={id}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                isCompleted
+                                  ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                                  : 'bg-blue-500/15 text-blue-400 hover:bg-blue-500/25'
+                              } cursor-pointer`}
+                              onClick={() => handleDependencyClick(id)}
+                            >
+                              {depTask
+                                ? formatTaskDisplayLabel(depTask)
+                                : `#${deriveTaskDisplayId(id)}`}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">{label}</TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
             {/* Description */}
             <CollapsibleTeamSection
               title="Description"
@@ -1130,101 +1207,19 @@ export const TaskDetailDialog = ({
               </CollapsibleTeamSection>
             ) : null}
 
-            {blockedByIds.length > 0 ||
-            blocksIds.length > 0 ||
-            relatedIds.length > 0 ||
-            relatedByIds.length > 0 ||
-            kanbanTaskState?.reviewer ||
-            kanbanTaskState?.errorDescription ? (
+            {/* Review info */}
+            {kanbanTaskState?.reviewer || kanbanTaskState?.errorDescription ? (
               <div className="space-y-1">
-                {/* Dependencies */}
-                {blockedByIds.length > 0 ? (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center gap-0.5 text-xs text-yellow-300">
-                      <ArrowLeftFromLine size={12} />
-                      Blocked by
+                <div className="flex items-center gap-2">
+                  {kanbanTaskState.reviewer ? (
+                    <span className="text-xs text-[var(--color-text-secondary)]">
+                      Reviewer: {kanbanTaskState.reviewer}
                     </span>
-                    {blockedByIds.map((id) => {
-                      const depTask = taskMap.get(id);
-                      const isCompleted = depTask?.status === 'completed';
-                      const label = depTask
-                        ? `${formatTaskDisplayLabel(depTask)}: ${depTask.subject}`
-                        : `#${deriveTaskDisplayId(id)}`;
-                      return (
-                        <Tooltip key={id}>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                isCompleted
-                                  ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-                                  : 'bg-yellow-500/15 text-yellow-300 hover:bg-yellow-500/25'
-                              } cursor-pointer`}
-                              onClick={() => handleDependencyClick(id)}
-                            >
-                              {depTask
-                                ? formatTaskDisplayLabel(depTask)
-                                : `#${deriveTaskDisplayId(id)}`}
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">{label}</TooltipContent>
-                        </Tooltip>
-                      );
-                    })}
-                  </div>
-                ) : null}
-
-                {blocksIds.length > 0 ? (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center gap-0.5 text-xs text-blue-400">
-                      <ArrowRightFromLine size={12} />
-                      Blocks
-                    </span>
-                    {blocksIds.map((id) => {
-                      const depTask = taskMap.get(id);
-                      const isCompleted = depTask?.status === 'completed';
-                      const label = depTask
-                        ? `${formatTaskDisplayLabel(depTask)}: ${depTask.subject}`
-                        : `#${deriveTaskDisplayId(id)}`;
-                      return (
-                        <Tooltip key={id}>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                isCompleted
-                                  ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-                                  : 'bg-blue-500/15 text-blue-400 hover:bg-blue-500/25'
-                              } cursor-pointer`}
-                              onClick={() => handleDependencyClick(id)}
-                            >
-                              {depTask
-                                ? formatTaskDisplayLabel(depTask)
-                                : `#${deriveTaskDisplayId(id)}`}
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">{label}</TooltipContent>
-                        </Tooltip>
-                      );
-                    })}
-                  </div>
-                ) : null}
-
-                {/* Review info */}
-                {kanbanTaskState?.reviewer || kanbanTaskState?.errorDescription ? (
-                  <div className="flex items-center gap-2">
-                    {kanbanTaskState.reviewer ? (
-                      <span className="text-xs text-[var(--color-text-secondary)]">
-                        Reviewer: {kanbanTaskState.reviewer}
-                      </span>
-                    ) : null}
-                    {kanbanTaskState.errorDescription ? (
-                      <span className="text-xs text-red-400">
-                        {kanbanTaskState.errorDescription}
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
+                  ) : null}
+                  {kanbanTaskState.errorDescription ? (
+                    <span className="text-xs text-red-400">{kanbanTaskState.errorDescription}</span>
+                  ) : null}
+                </div>
               </div>
             ) : null}
 
