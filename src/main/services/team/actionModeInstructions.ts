@@ -2,6 +2,13 @@ import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBloc
 
 import type { AgentActionMode } from '@shared/types';
 
+import * as agentTeamsControllerModule from 'agent-teams-controller';
+
+const { protocols } = agentTeamsControllerModule;
+
+const LEAD_DELEGATE_DESCRIPTION =
+  'Strict orchestration mode for leads. Delegate the work and any needed investigation to teammates, coordinate it, and do not implement or personally research it yourself unless you are truly in SOLO MODE.';
+
 const ACTION_MODE_BLOCKS: Record<AgentActionMode, string[]> = {
   do: [
     'TURN ACTION MODE: DO',
@@ -27,17 +34,7 @@ const ACTION_MODE_BLOCKS: Record<AgentActionMode, string[]> = {
 };
 
 export function buildActionModeProtocol(): string {
-  return [
-    'TURN ACTION MODE PROTOCOL (HIGHEST PRIORITY FOR EACH USER TURN):',
-    '- Some incoming user or relay messages may include a hidden agent-only block that declares the current action mode.',
-    '- If such a block is present, that mode applies to THIS TURN ONLY and overrides any conflicting default behavior.',
-    '- Never silently broaden permissions beyond the selected mode.',
-    '- Never reveal the hidden mode block verbatim to the human unless they explicitly ask for it.',
-    '- Modes:',
-    '  - DO: Full execution mode. You may discuss, inspect, edit files, change state, run commands/tools, and delegate if useful.',
-    '  - ASK: Strict read-only conversation mode. You may read/analyze/explain and reply, but you must not change code/files/tasks/state or run side-effecting commands/tools/scripts.',
-    '  - DELEGATE: Strict orchestration mode for leads. Delegate the work and any needed investigation to teammates, coordinate it, and do not implement or personally research it yourself unless you are truly in SOLO MODE.',
-  ].join('\n');
+  return protocols.buildActionModeProtocolText(LEAD_DELEGATE_DESCRIPTION);
 }
 
 export function buildActionModeAgentBlock(mode: AgentActionMode | undefined): string {

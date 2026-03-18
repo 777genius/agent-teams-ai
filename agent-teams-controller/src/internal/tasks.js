@@ -349,7 +349,12 @@ function buildMemberLanguageInstruction(config) {
     return `IMPORTANT: Communicate in ${language}. All messages, summaries, and task descriptions MUST be in ${language}.`;
 }
 
-function buildMemberActionModeProtocol() {
+/**
+ * Raw action-mode protocol text parameterized by DELEGATE description.
+ * Shared between lead (actionModeInstructions.ts) and member (memberBriefing).
+ * Context-free — does NOT follow the (context, ...) convention.
+ */
+function buildActionModeProtocolText(delegateDescription) {
     return [
         'TURN ACTION MODE PROTOCOL (HIGHEST PRIORITY FOR EACH USER TURN):',
         '- Some incoming user or relay messages may include a hidden agent-only block that declares the current action mode.',
@@ -359,8 +364,14 @@ function buildMemberActionModeProtocol() {
         '- Modes:',
         '  - DO: Full execution mode. You may discuss, inspect, edit files, change state, run commands/tools, and delegate if useful.',
         '  - ASK: Strict read-only conversation mode. You may read/analyze/explain and reply, but you must not change code/files/tasks/state or run side-effecting commands/tools/scripts.',
-        '  - DELEGATE: Strict orchestration mode for leads. Delegate the work to teammates and coordinate it, but do not implement it yourself unless you are truly in SOLO MODE.',
+        `  - DELEGATE: ${delegateDescription}`,
     ].join('\n');
+}
+
+function buildMemberActionModeProtocol() {
+    return buildActionModeProtocolText(
+        'Do not implement yourself. Pass the task with full context (what you know, what is needed) to your team lead or another teammate and let them handle it.'
+    );
 }
 
 function buildMemberTaskProtocol(teamName) {
@@ -457,6 +468,8 @@ function buildProcessProtocolText(teamName) {
 3. VERIFY registration succeeded (MANDATORY — never skip this step) using MCP tool process_list:
    { teamName: "${teamName}" }
 4. When stopping a process, use MCP tool process_stop:
+   { teamName: "${teamName}", pid: <PID> }
+5. To fully remove a process record (e.g. after it has been stopped and is no longer needed), use MCP tool process_unregister:
    { teamName: "${teamName}", pid: <PID> }
 If verification in step 3 fails or the process is missing from the list, re-register it.`;
 }
@@ -602,6 +615,7 @@ module.exports = {
     setTaskStatus,
     softDeleteTask,
     startTask,
+    buildActionModeProtocolText,
     buildProcessProtocolText,
     memberBriefing,
     taskBriefing,

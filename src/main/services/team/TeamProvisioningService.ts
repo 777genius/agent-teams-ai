@@ -99,6 +99,8 @@ import type {
 const logger = createLogger('Service:TeamProvisioning');
 const { createController, protocols } = agentTeamsControllerModule;
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
+const MEMBER_DELEGATE_DESCRIPTION =
+  'Do not implement yourself. Pass the task with full context (what you know, what is needed) to your team lead or another teammate and let them handle it.';
 const RUN_TIMEOUT_MS = 300_000;
 const VERIFY_TIMEOUT_MS = 15_000;
 const VERIFY_POLL_MS = 500;
@@ -421,7 +423,7 @@ function buildMemberSpawnPrompt(
   const workflowBlock = member.workflow?.trim()
     ? `\n\nYour workflow and how you should behave:${formatWorkflowBlock(member.workflow, '')}`
     : '';
-  const actionModeProtocol = buildActionModeProtocol();
+  const actionModeProtocol = protocols.buildActionModeProtocolText(MEMBER_DELEGATE_DESCRIPTION);
   return `You are ${member.name}, a ${role} on team "${displayName}" (${teamName}).${workflowBlock}
 
 ${getAgentLanguageInstruction()}
@@ -452,7 +454,10 @@ function buildReconnectMemberSpawnPrompt(
   const workflowBlock = member.workflow?.trim()
     ? `\n\nYour workflow and how you should behave:${formatWorkflowBlock(member.workflow, '     ')}`
     : '';
-  const actionModeProtocol = indentMultiline(buildActionModeProtocol(), '     ');
+  const actionModeProtocol = indentMultiline(
+    protocols.buildActionModeProtocolText(MEMBER_DELEGATE_DESCRIPTION),
+    '     '
+  );
   return `   For "${member.name}":
    - prompt:
      You are ${member.name}, a ${role} on team "${teamName}" (${teamName}).${workflowBlock}
@@ -676,7 +681,7 @@ Constraints:
 - If the request is ambiguous or still needs technical discovery, immediately create a coarse investigation/triage task for the best-fit teammate. That teammate owns the code inspection, scope refinement, and creation of any follow-up tasks needed for execution.
 - Only do lead-side research first if the human explicitly asked YOU for analysis/planning, or if there is genuinely no appropriate teammate to own the investigation.
 - TaskCreate is optional for private planning only; do NOT use it for team-board tasks.
-- When messaging "user" (the human): NEVER mention internal MCP tools, scripts, CLI commands, or file paths under ~/.claude/. The user sees messages in the UI — write plain human language. If a task needs a status update, do it yourself via the board MCP tools; never ask the user to run a command.${soloConstraint}
+- When messaging "user" (the human): write plain human language. If a task needs a status update, do it yourself via the board MCP tools; never ask the user to run a command.${soloConstraint}
 
 ${teamCtlOps}
 

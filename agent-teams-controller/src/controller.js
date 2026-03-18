@@ -39,6 +39,7 @@ module.exports = {
   createControllerContext,
   agentBlocks,
   protocols: {
+    buildActionModeProtocolText: tasks.buildActionModeProtocolText,
     buildProcessProtocolText: tasks.buildProcessProtocolText,
   },
   tasks,

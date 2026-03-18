@@ -122,6 +122,8 @@ vi.mock('agent-teams-controller', () => ({
     },
   }),
   protocols: {
+    buildActionModeProtocolText: (delegate: string) =>
+      `ACTION MODE PROTOCOL (mock, delegate: ${delegate})`,
     buildProcessProtocolText: (teamName: string) =>
       `BACKGROUND PROCESS REGISTRATION (mock for ${teamName})`,
   },
