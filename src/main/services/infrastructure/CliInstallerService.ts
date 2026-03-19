@@ -17,9 +17,9 @@
  * - Human-readable error messages per phase
  */
 
+import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { appendCliAuthDiag } from '@main/utils/cliAuthDiagLog';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
-import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { getClaudeBasePath, getHomeDir } from '@main/utils/pathDecoder';
 import {
   getCachedShellEnv,

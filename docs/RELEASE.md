@@ -201,6 +201,8 @@ electron-builder generates these artifacts per platform:
 ## Stable Download Links
 
 The `upload-stable-links` job in `release.yml` re-uploads key assets with version-agnostic names.
+It starts only after **release-mac** (two matrix jobs), **release-win**, and **release-linux** all succeed, so it often stays in **Queued** until the slowest job finishes. Delays of several minutes are common when macOS hosted runners are backed up.
+
 This enables permanent links in README that always point to the latest release:
 
 ```

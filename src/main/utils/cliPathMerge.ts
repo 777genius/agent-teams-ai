@@ -3,10 +3,9 @@
  * Packaged macOS apps get a minimal PATH; login-shell cache fixes that once warm.
  */
 
-import { realpathSync } from 'fs';
-import { dirname, join, posix as pathPosix, win32 as pathWin32 } from 'path';
-
 import { getCachedShellEnv, getShellPreferredHome } from '@main/utils/shellEnv';
+import { realpathSync } from 'fs';
+import { join as pathJoin, posix as pathPosix, win32 as pathWin32 } from 'path';
 
 /**
  * Build a PATH string that prefers the CLI binary directory, then the user's
@@ -20,10 +19,11 @@ export function buildMergedCliPath(binaryPath?: string | null): string {
   const extraDirs: string[] = [];
 
   if (binaryPath) {
-    const binDir = dirname(binaryPath);
+    const pathForBin = process.platform === 'win32' ? pathWin32 : pathPosix;
+    const binDir = pathForBin.dirname(binaryPath);
     extraDirs.push(binDir);
     try {
-      const realBinDir = dirname(realpathSync(binaryPath));
+      const realBinDir = pathForBin.dirname(realpathSync(binaryPath));
       if (realBinDir !== binDir) {
         extraDirs.push(realBinDir);
       }
@@ -36,18 +36,18 @@ export function buildMergedCliPath(binaryPath?: string | null): string {
   if (cachedEnv?.PATH) {
     extraDirs.push(...cachedEnv.PATH.split(sep).filter(Boolean));
   } else if (process.platform === 'win32') {
-    extraDirs.push(join(home, 'AppData', 'Roaming', 'npm'), join(home, 'scoop', 'shims'));
+    extraDirs.push(pathJoin(home, 'AppData', 'Roaming', 'npm'), pathJoin(home, 'scoop', 'shims'));
     if (process.env.LOCALAPPDATA) {
-      extraDirs.push(join(process.env.LOCALAPPDATA, 'Programs', 'claude'));
+      extraDirs.push(pathJoin(process.env.LOCALAPPDATA, 'Programs', 'claude'));
     }
     if (process.env.ProgramFiles) {
-      extraDirs.push(join(process.env.ProgramFiles, 'claude'));
+      extraDirs.push(pathJoin(process.env.ProgramFiles, 'claude'));
     }
   } else {
     extraDirs.push(
-      join(home, '.local', 'bin'),
-      join(home, '.npm-global', 'bin'),
-      join(home, '.npm', 'bin'),
+      pathPosix.join(home, '.local', 'bin'),
+      pathPosix.join(home, '.npm-global', 'bin'),
+      pathPosix.join(home, '.npm', 'bin'),
       '/usr/local/bin',
       '/opt/homebrew/bin'
     );
