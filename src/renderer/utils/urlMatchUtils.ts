@@ -4,9 +4,10 @@ export interface TextMatch {
   value: string;
 }
 
-const URL_REGEX = /https?:\/\/[^\s]+/g;
+const URL_REGEX = /https?:\/\/\S+/g;
 
 function trimUrlMatch(rawUrl: string): string {
+  // eslint-disable-next-line sonarjs/slow-regex -- trailing punctuation only, input bounded
   return rawUrl.replace(/[),.!?;:]+$/g, '');
 }
 

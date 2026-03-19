@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { chipToken } from '@renderer/types/inlineChip';
 import {
+  calculateMentionPositions,
   createChipFromSelection,
   findChipBoundary,
   isInsideChip,
@@ -249,5 +250,56 @@ describe('removeChipTokenFromText', () => {
     const token = chipToken(chip);
     const text = `A\n${token}\nB`;
     expect(removeChipTokenFromText(text, chip)).toBe('A\nB');
+  });
+});
+
+describe('calculateMentionPositions boundary regex', () => {
+  function makeTextarea(): HTMLTextAreaElement {
+    const ta = document.createElement('textarea');
+    ta.style.cssText = 'font:16px monospace;width:400px;height:100px';
+    document.body.appendChild(ta);
+    return ta;
+  }
+
+  function makeMemberSuggestion(name: string) {
+    return { id: name, name, type: 'member' as const };
+  }
+
+  it('matches @mention when char after is boundary: space, comma, dot', () => {
+    const ta = makeTextarea();
+    const suggestions = [makeMemberSuggestion('Alice')];
+    expect(calculateMentionPositions(ta, '@Alice ', suggestions)).toHaveLength(1);
+    expect(calculateMentionPositions(ta, '@Alice,', suggestions)).toHaveLength(1);
+    expect(calculateMentionPositions(ta, '@Alice.', suggestions)).toHaveLength(1);
+    document.body.removeChild(ta);
+  });
+
+  it('matches @mention when char after is boundary: colon, semicolon, bang, question', () => {
+    const ta = makeTextarea();
+    const suggestions = [makeMemberSuggestion('Alice')];
+    expect(calculateMentionPositions(ta, '@Alice:', suggestions)).toHaveLength(1);
+    expect(calculateMentionPositions(ta, '@Alice;', suggestions)).toHaveLength(1);
+    expect(calculateMentionPositions(ta, '@Alice!', suggestions)).toHaveLength(1);
+    expect(calculateMentionPositions(ta, '@Alice?', suggestions)).toHaveLength(1);
+    document.body.removeChild(ta);
+  });
+
+  it('matches @mention when char after is boundary: ), ], }, -', () => {
+    const ta = makeTextarea();
+    const suggestions = [makeMemberSuggestion('Alice')];
+    expect(calculateMentionPositions(ta, '@Alice)', suggestions)).toHaveLength(1);
+    expect(calculateMentionPositions(ta, '@Alice]', suggestions)).toHaveLength(1);
+    expect(calculateMentionPositions(ta, '@Alice}', suggestions)).toHaveLength(1);
+    expect(calculateMentionPositions(ta, '@Alice-', suggestions)).toHaveLength(1);
+    document.body.removeChild(ta);
+  });
+
+  it('does NOT match @mention when char after is word char (letter, digit)', () => {
+    const ta = makeTextarea();
+    const suggestions = [makeMemberSuggestion('Alice')];
+    expect(calculateMentionPositions(ta, '@Alicex', suggestions)).toHaveLength(0);
+    expect(calculateMentionPositions(ta, '@Alice1', suggestions)).toHaveLength(0);
+    expect(calculateMentionPositions(ta, '@Alice_', suggestions)).toHaveLength(0);
+    document.body.removeChild(ta);
   });
 });

@@ -12,7 +12,11 @@ export function normalizeRepoUrl(url: string): string {
   return url
     .toLowerCase()
     .replace(/\.git$/, '')
-    .replace(/\/+$/, '');
+    .replace(
+      /* eslint-disable-next-line sonarjs/slow-regex -- trailing slashes only, URL length bounded */
+      /\/+$/,
+      ''
+    );
 }
 
 /**
@@ -112,7 +116,11 @@ export function parseGitHubOwnerRepo(url: string): { owner: string; repo: string
     const parts = parsed.pathname
       .replace(/^\//, '')
       .replace(/\.git$/, '')
-      .replace(/\/+$/, '')
+      .replace(
+        /* eslint-disable-next-line sonarjs/slow-regex -- trailing slashes only, pathname bounded */
+        /\/+$/,
+        ''
+      )
       .split('/');
     if (parts.length < 2 || !parts[0] || !parts[1]) return null;
     return { owner: parts[0], repo: parts[1] };

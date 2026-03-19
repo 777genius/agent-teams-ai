@@ -47,7 +47,8 @@ export function deriveTaskSince(task: TaskChangeTaskLike | null): string | undef
   }
   if (sources.length === 0) return undefined;
 
-  const earliest = sources.reduce((a, b) => (a < b ? a : b));
+  const [first, ...rest] = sources;
+  const earliest = rest.reduce((a, b) => (a < b ? a : b), first);
   const date = new Date(earliest);
   date.setTime(date.getTime() - TASK_SINCE_GRACE_MS);
   return date.toISOString();

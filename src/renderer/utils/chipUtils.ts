@@ -317,8 +317,7 @@ export function calculateMentionPositions(
       // Character after name must be boundary
       if (end < text.length) {
         const after = text[end];
-        // eslint-disable-next-line no-useless-escape
-        if (!/[\s,.:;!?\)\]\}\-]/.test(after)) continue;
+        if (!/[\s,.:;!?)\]}-]/.test(after)) continue;
       }
       matches.push({ item: suggestion, start: i, end, token: text.slice(i, end) });
       i = end;

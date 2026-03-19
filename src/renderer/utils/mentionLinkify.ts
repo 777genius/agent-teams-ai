@@ -25,11 +25,12 @@ export function linkifyMentionsInMarkdown(
   const names = [...memberColorMap.keys()].sort((a, b) => b.length - a.length);
   const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const pattern = new RegExp(
+    // eslint-disable-next-line no-useless-escape -- backslash-quote and backslash-hyphen needed in template literal for RegExp
     `(^|[\\s(\\[{"\'])@(${escaped.join('|')})(?=[\\s,.:;!?)\\]}\-]|$)`,
     'gi'
   );
 
-  return text.replace(pattern, (_match, prefix: string, name: string) => {
+  return text.replace(pattern, (_match: string, prefix: string, name: string) => {
     // Find the canonical name (case-insensitive lookup)
     const canonical = names.find((n) => n.toLowerCase() === name.toLowerCase()) ?? name;
     const color = memberColorMap.get(canonical) ?? '';
@@ -49,18 +50,19 @@ export function linkifyTeamMentionsInMarkdown(
   text: string,
   teamNames: ReadonlySet<string> | readonly string[]
 ): string {
-  const names = Array.isArray(teamNames) ? teamNames : [...teamNames];
+  const names: readonly string[] = Array.isArray(teamNames) ? teamNames : [...teamNames];
   if (names.length === 0) return text;
 
   // Sort by name length descending for greedy matching
   const sorted = [...names].sort((a, b) => b.length - a.length);
   const escaped = sorted.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const pattern = new RegExp(
+    // eslint-disable-next-line no-useless-escape -- backslash-quote and backslash-hyphen needed in template literal for RegExp
     `(^|[\\s(\\[{"\'])@(${escaped.join('|')})(?=[\\s,.:;!?)\\]}\-]|$)`,
     'gi'
   );
 
-  return text.replace(pattern, (_match, prefix: string, name: string) => {
+  return text.replace(pattern, (_match: string, prefix: string, name: string) => {
     const canonical = sorted.find((n) => n.toLowerCase() === name.toLowerCase()) ?? name;
     return `${prefix}[${canonical}](team://${encodeURIComponent(canonical)})`;
   });

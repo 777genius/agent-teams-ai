@@ -38,7 +38,10 @@ function unescapeCrossTeamAttribute(value: string): string {
 
 function parseCrossTeamAttributes(raw: string): Map<string, string> {
   const attrs = new Map<string, string>();
-  const matches = raw.matchAll(/([A-Za-z][A-Za-z0-9]*)="([^"]*)"/g);
+  const matches = raw.matchAll(
+    /* eslint-disable-next-line sonarjs/slow-regex -- attr values bounded by quotes, trusted prefix input */
+    /([A-Za-z][A-Za-z0-9]*)="([^"]*)"/g
+  );
   for (const match of matches) {
     const key = match[1]?.trim();
     const value = match[2];

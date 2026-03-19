@@ -100,10 +100,12 @@ export interface McpServerDiagnostic {
 
 // ── Install request (renderer → main, minimal trusted data) ────────────────
 
+export type McpInstallScope = 'local' | 'user' | 'project';
+
 export interface McpInstallRequest {
   registryId: string; // server ID from registry (NOT full catalog item)
   serverName: string; // user-chosen name for `claude mcp add`
-  scope: 'local' | 'user' | 'project';
+  scope: McpInstallScope;
   projectPath?: string; // required for 'project' scope
   envValues: Record<string, string>;
   headers: McpHeaderDef[]; // for HTTP/SSE servers (CLI --header flag)
@@ -113,7 +115,7 @@ export interface McpInstallRequest {
 
 export interface McpCustomInstallRequest {
   serverName: string;
-  scope: 'local' | 'user' | 'project';
+  scope: McpInstallScope;
   projectPath?: string;
   installSpec: McpInstallSpec; // user provides directly
   envValues: Record<string, string>;

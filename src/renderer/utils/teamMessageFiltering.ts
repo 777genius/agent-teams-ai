@@ -33,14 +33,14 @@ export function filterTeamMessages(
   const hasTo = filter.to.size > 0;
   if (hasFrom && hasTo) {
     list = list.filter((m) => {
-      const fromMatch = m.from?.trim() && filter.from.has(m.from.trim());
-      const toMatch = m.to?.trim() && filter.to.has(m.to.trim());
+      const fromMatch = Boolean(m.from?.trim() && filter.from.has(m.from.trim()));
+      const toMatch = Boolean(m.to?.trim() && filter.to.has(m.to.trim()));
       return fromMatch && toMatch;
     });
   } else if (hasFrom || hasTo) {
     list = list.filter((m) => {
-      if (hasFrom) return m.from?.trim() && filter.from.has(m.from.trim());
-      if (hasTo) return m.to?.trim() && filter.to.has(m.to.trim());
+      if (hasFrom) return Boolean(m.from?.trim() && filter.from.has(m.from.trim()));
+      if (hasTo) return Boolean(m.to?.trim() && filter.to.has(m.to.trim()));
       return true;
     });
   }

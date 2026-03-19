@@ -40,7 +40,6 @@ import type {
   AddMemberRequest,
   AddTaskCommentRequest,
   AttachmentFileData,
-  CommentAttachmentPayload,
   CreateTaskRequest,
   CrossTeamMessage,
   CrossTeamSendRequest,

@@ -10,6 +10,7 @@ import {
   inferCapabilities,
   normalizeCategory,
   normalizeRepoUrl,
+  parseGitHubOwnerRepo,
   sanitizeMcpServerName,
 } from '@shared/utils/extensionNormalizers';
 
@@ -166,5 +167,37 @@ describe('sanitizeMcpServerName', () => {
   it('handles simple names', () => {
     expect(sanitizeMcpServerName('Alpic')).toBe('alpic');
     expect(sanitizeMcpServerName('Context7')).toBe('context7');
+  });
+});
+
+describe('parseGitHubOwnerRepo', () => {
+  it('extracts owner/repo from https URL', () => {
+    expect(parseGitHubOwnerRepo('https://github.com/owner/repo')).toEqual({
+      owner: 'owner',
+      repo: 'repo',
+    });
+  });
+
+  it('strips .git suffix', () => {
+    expect(parseGitHubOwnerRepo('https://github.com/owner/repo.git')).toEqual({
+      owner: 'owner',
+      repo: 'repo',
+    });
+  });
+
+  it('strips trailing slashes', () => {
+    expect(parseGitHubOwnerRepo('https://github.com/owner/repo/')).toEqual({
+      owner: 'owner',
+      repo: 'repo',
+    });
+  });
+
+  it('returns null for non-GitHub URLs', () => {
+    expect(parseGitHubOwnerRepo('https://gitlab.com/owner/repo')).toBeNull();
+    expect(parseGitHubOwnerRepo('https://example.com')).toBeNull();
+  });
+
+  it('returns null for invalid URL', () => {
+    expect(parseGitHubOwnerRepo('not-a-url')).toBeNull();
   });
 });

@@ -34,7 +34,9 @@ export function parseToolSummary(summary: string | undefined): ToolSummaryData |
   if (!match) return null;
   const byName: Record<string, number> = {};
   for (const part of match[2].split(', ')) {
-    const m = /^(\d+)\s+(\S+(?:\s+\S+)*)$/.exec(part);
+    const m =
+      // eslint-disable-next-line security/detect-unsafe-regex -- part from split, bounded by summary
+      /^(\d+)\s+(\S+(?:\s+\S+)*)$/.exec(part);
     if (m) {
       byName[m[2]] = parseInt(m[1], 10);
     } else {

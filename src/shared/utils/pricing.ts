@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-restricted-imports -- resources/ is outside src/, no alias available
 import pricingData from '../../../resources/pricing.json';
 
 export interface LiteLLMPricing {

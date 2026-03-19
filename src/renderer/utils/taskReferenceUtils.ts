@@ -13,7 +13,7 @@ const ZERO_WIDTH_TO_BITS = new Map(
 
 function isAllowedTaskRefBoundary(char: string | undefined): boolean {
   if (!char) return true;
-  return !/[A-Za-z0-9_]/.test(char);
+  return !/\w/.test(char);
 }
 
 function buildSuggestionsByRef(
