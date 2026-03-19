@@ -65,27 +65,30 @@ const DependencyBadge = ({
 }: DependencyBadgeProps): React.JSX.Element => {
   const depTask = taskMap.get(taskId);
   const isCompleted = depTask?.status === 'completed';
+  const label = depTask
+    ? `${formatTaskDisplayLabel(depTask)}: ${depTask.subject}`
+    : `#${deriveTaskDisplayId(taskId)}`;
 
   return (
-    <button
-      type="button"
-      className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-        isCompleted
-          ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-          : 'bg-yellow-500/15 text-yellow-300 hover:bg-yellow-500/25'
-      } ${onScrollToTask ? 'cursor-pointer' : ''}`}
-      title={
-        depTask
-          ? `${formatTaskDisplayLabel(depTask)}: ${depTask.subject}`
-          : `#${deriveTaskDisplayId(taskId)}`
-      }
-      onClick={(e) => {
-        e.stopPropagation();
-        onScrollToTask?.(taskId);
-      }}
-    >
-      {depTask ? formatTaskDisplayLabel(depTask) : `#${deriveTaskDisplayId(taskId)}`}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+            isCompleted
+              ? 'bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25 dark:text-emerald-400'
+              : 'bg-yellow-500/15 text-yellow-700 hover:bg-yellow-500/25 dark:text-yellow-300'
+          } ${onScrollToTask ? 'cursor-pointer' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onScrollToTask?.(taskId);
+          }}
+        >
+          {depTask ? formatTaskDisplayLabel(depTask) : `#${deriveTaskDisplayId(taskId)}`}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{label}</TooltipContent>
+    </Tooltip>
   );
 };
 
@@ -349,7 +352,7 @@ export const KanbanTaskCard = ({
 
       {hasBlockedBy ? (
         <div className="mb-2 flex flex-wrap items-center gap-1">
-          <span className="inline-flex items-center gap-0.5 text-[10px] text-yellow-300">
+          <span className="inline-flex items-center gap-0.5 text-[10px] text-yellow-700 dark:text-yellow-300">
             <ArrowLeftFromLine size={10} />
             Blocked by
           </span>

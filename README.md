@@ -38,21 +38,34 @@ A new approach to task management with AI agent teams.
 <details>
 <summary><strong>More features</strong></summary>
 
-<br />
 - **Task creation with attachments** — Simply send a message to the team lead with any attached images (planed all files). The lead will automatically create a fully described task and attach your files directly to the task for complete context.
+
 - **Deep session analysis** — detailed breakdown of what happened in each Claude session: bash commands, reasoning, subprocesses
+
 - **Smart task-to-log/changes matching** — automatically links Claude session logs/changes to specific tasks
+
 - **Advanced context monitoring system** — comprehensive breakdown of what consumes tokens at every step: user messages, Claude.md instructions, tool outputs, thinking text, and team coordination. Token usage, percentage of context window, and session cost are displayed for each category, with detailed views by category or size.
+
 - **Recent tasks across projects** — browse the latest completed tasks from all your projects in one place
+
 - **Zero-setup onboarding** — built-in Claude Code installation and authentication
+
 - **Built-in code editor** — edit project files with Git support without leaving the app
+
 - **Branch strategy** — choose via prompt: single branch or git worktree per agent
+
 - **Team member stats** — global performance statistics per member
+
 - **Attach code context** — reference files or snippets in messages, like in Cursor. You can also mention tasks using `#task-id`, or refer to another team with `@team-name` in your messages.
+
 - **Notification system** — configurable alerts when tasks complete, agents need attention, or errors occur
+
 - **MCP integration** — supports the built-in `mcp-server` (see [mcp-server folder](./mcp-server)) for integrating external tools and extensible agent plugins out of the box
+
 - **Post-compact context recovery** — when Claude compresses its context, the app restores the key team-management instructions so kanban/task-board coordination stays consistent and important operational context is not lost
+
 - **Task context is preserved** — thanks to task descriptions, comments, and attachments, all essential information about each task remains available for ongoing work and future reference
+
 </details>
 
 ## Installation

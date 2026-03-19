@@ -17,6 +17,7 @@ import {
   areThoughtMessagesEquivalentForRender,
 } from '@renderer/utils/messageRenderEquality';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
+import { isApiErrorMessage } from '@shared/utils/apiErrorDetector';
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
 import { formatToolSummary, parseToolSummary } from '@shared/utils/toolSummary';
 import { ChevronDown, ChevronRight, ChevronUp, Maximize2 } from 'lucide-react';
@@ -560,6 +561,9 @@ const LeadThoughtsGroupRowComponent = ({
     return null;
   }, [thoughts]);
 
+  // Detect if any thought in this group is an API error
+  const hasApiError = useMemo(() => thoughts.some((t) => isApiErrorMessage(t.text)), [thoughts]);
+
   const [expanded, setExpanded] = useState(false);
   const [needsTruncation, setNeedsTruncation] = useState(false);
   const isManaged = collapseMode === 'managed';
@@ -719,8 +723,8 @@ const LeadThoughtsGroupRowComponent = ({
         className="group rounded-md [overflow:clip]"
         style={{
           backgroundColor: zebraShade ? CARD_BG_ZEBRA : CARD_BG,
-          border: CARD_BORDER_STYLE,
-          borderLeft: `3px solid ${colors.border}`,
+          border: hasApiError ? '1px solid rgba(248, 113, 113, 0.3)' : CARD_BORDER_STYLE,
+          borderLeft: `3px solid ${hasApiError ? '#f87171' : colors.border}`,
         }}
       >
         {/* Header */}
@@ -732,6 +736,7 @@ const LeadThoughtsGroupRowComponent = ({
             'flex select-none items-center gap-2 px-3 py-1.5',
             canToggleBodyVisibility ? 'cursor-pointer' : '',
           ].join(' ')}
+          style={hasApiError ? { backgroundColor: 'rgba(248, 113, 113, 0.08)' } : undefined}
           onClick={handleBodyToggle}
           onKeyDown={
             canToggleBodyVisibility
@@ -879,10 +884,13 @@ const LeadThoughtsGroupRowComponent = ({
         ) : null}
       </article>
       {isBodyVisible && !expanded && needsTruncation ? (
-        <div className="pointer-events-none flex justify-center" style={{ marginTop: -15 }}>
+        <div
+          className="pointer-events-none relative z-10 flex justify-center"
+          style={{ marginTop: -15 }}
+        >
           <button
             type="button"
-            className="pointer-events-auto flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] shadow-sm transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+            className="pointer-events-auto flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] shadow-sm transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
             onClick={(e) => {
               e.stopPropagation();
               setExpanded(true);

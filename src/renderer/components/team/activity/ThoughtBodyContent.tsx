@@ -4,6 +4,7 @@ import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer
 import { CopyButton } from '@renderer/components/common/CopyButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { CARD_ICON_MUTED, CARD_TEXT_LIGHT } from '@renderer/constants/cssVariables';
+import { isApiErrorMessage } from '@shared/utils/apiErrorDetector';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
 import {
   areStringArraysEqual,
@@ -74,6 +75,8 @@ export const ThoughtBodyContent = memo(
       [onReply, thought]
     );
 
+    const isApiError = useMemo(() => isApiErrorMessage(thought.text), [thought.text]);
+
     return (
       <>
         {showDivider && (
@@ -85,8 +88,8 @@ export const ThoughtBodyContent = memo(
         )}
         <div className="group/thought relative flex text-[11px]">
           <div
-            className="min-w-0 flex-1 [&>span>div>div>div]:py-2"
-            style={{ color: CARD_TEXT_LIGHT }}
+            className={`min-w-0 flex-1 [&>span>div>div>div]:py-2${isApiError ? '[&_code]:!text-red-400 [&_p]:!text-red-400' : ''}`}
+            style={{ color: isApiError ? '#f87171' : CARD_TEXT_LIGHT }}
           >
             <span onClickCapture={onTaskIdClick ? handleTaskLinkClick : undefined}>
               <MarkdownViewer

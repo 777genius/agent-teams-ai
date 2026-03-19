@@ -70,6 +70,7 @@ import {
 } from '@shared/utils/cliArgsParser';
 import { createLogger } from '@shared/utils/logger';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
+import { isApiErrorMessage } from '@shared/utils/apiErrorDetector';
 import crypto from 'crypto';
 import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
 import * as fs from 'fs';
@@ -156,6 +157,13 @@ const seenRateLimitKeys = new Set<string>();
 const SEEN_RATE_LIMIT_KEYS_MAX = 500;
 
 /**
+ * In-memory set of API error message keys already processed.
+ * Independent of NotificationManager storage — survives notification deletion/pruning.
+ */
+const seenApiErrorKeys = new Set<string>();
+const SEEN_API_ERROR_KEYS_MAX = 500;
+
+/**
  * Check messages for rate limit indicators and fire notifications for new ones.
  * Uses both in-memory seenRateLimitKeys (to prevent resurrection after deletion)
  * and NotificationManager dedupeKey (to prevent storage duplicates).
@@ -191,6 +199,53 @@ function checkRateLimitMessages(
         from: msg.from,
         summary: `Rate limit: ${msg.from}`,
         body: msg.text.slice(0, 200),
+        dedupeKey,
+        projectPath,
+      })
+      .catch(() => undefined);
+  }
+}
+
+/**
+ * Check messages for API errors (e.g. "API Error: 429 ...") and fire OS notifications.
+ * Mirrors the rate-limit approach: in-memory dedup + NotificationManager dedupeKey.
+ * Skips rate-limit messages (they have their own notification path).
+ */
+function checkApiErrorMessages(
+  messages: readonly { messageId?: string; from: string; text: string; timestamp: string }[],
+  teamName: string,
+  teamDisplayName: string,
+  projectPath?: string
+): void {
+  for (const msg of messages) {
+    if (msg.from === 'user') continue;
+    if (!isApiErrorMessage(msg.text)) continue;
+    // Don't double-notify if it's also a rate limit message
+    if (isRateLimitMessage(msg.text)) continue;
+
+    const rawKey = msg.messageId ?? `${msg.from}:${msg.timestamp}`;
+    const dedupeKey = `api-error:${teamName}:${rawKey}`;
+
+    if (seenApiErrorKeys.has(dedupeKey)) continue;
+    seenApiErrorKeys.add(dedupeKey);
+
+    if (seenApiErrorKeys.size > SEEN_API_ERROR_KEYS_MAX) {
+      const first = seenApiErrorKeys.values().next().value;
+      if (first) seenApiErrorKeys.delete(first);
+    }
+
+    // Extract status code for summary
+    const statusMatch = msg.text.match(/^API Error:\s*(\d{3})/);
+    const statusCode = statusMatch?.[1] ?? '???';
+
+    void NotificationManager.getInstance()
+      .addTeamNotification({
+        teamEventType: 'rate_limit', // reuse rate_limit type — closest fit
+        teamName,
+        teamDisplayName,
+        from: msg.from,
+        summary: `API Error ${statusCode}: ${msg.from}`,
+        body: msg.text.slice(0, 400),
         dedupeKey,
         projectPath,
       })
@@ -443,6 +498,7 @@ async function handleGetData(
   const live = provisioning.getLiveLeadProcessMessages(tn);
   if (live.length === 0) {
     checkRateLimitMessages(data.messages, tn, displayName, projectPath);
+    checkApiErrorMessages(data.messages, tn, displayName, projectPath);
     return { success: true, data: { ...data, isAlive } };
   }
 
@@ -503,6 +559,7 @@ async function handleGetData(
   merged.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 
   checkRateLimitMessages(merged, tn, displayName, projectPath);
+  checkApiErrorMessages(merged, tn, displayName, projectPath);
   return { success: true, data: { ...data, isAlive, messages: merged } };
 }
 

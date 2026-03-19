@@ -823,7 +823,7 @@ export const TaskDetailDialog = ({
               <div className="space-y-1">
                 {blockedByIds.length > 0 ? (
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center gap-0.5 text-xs text-yellow-300">
+                    <span className="inline-flex items-center gap-0.5 text-xs text-yellow-700 dark:text-yellow-300">
                       <ArrowLeftFromLine size={12} />
                       Blocked by
                     </span>
@@ -840,8 +840,8 @@ export const TaskDetailDialog = ({
                               type="button"
                               className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
                                 isCompleted
-                                  ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-                                  : 'bg-yellow-500/15 text-yellow-300 hover:bg-yellow-500/25'
+                                  ? 'bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25 dark:text-emerald-400'
+                                  : 'bg-yellow-500/15 text-yellow-700 hover:bg-yellow-500/25 dark:text-yellow-300'
                               } cursor-pointer`}
                               onClick={() => handleDependencyClick(id)}
                             >
@@ -859,7 +859,7 @@ export const TaskDetailDialog = ({
 
                 {blocksIds.length > 0 ? (
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center gap-0.5 text-xs text-blue-400">
+                    <span className="inline-flex items-center gap-0.5 text-xs text-blue-600 dark:text-blue-400">
                       <ArrowRightFromLine size={12} />
                       Blocks
                     </span>
@@ -876,8 +876,8 @@ export const TaskDetailDialog = ({
                               type="button"
                               className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
                                 isCompleted
-                                  ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-                                  : 'bg-blue-500/15 text-blue-400 hover:bg-blue-500/25'
+                                  ? 'bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25 dark:text-emerald-400'
+                                  : 'bg-blue-500/15 text-blue-600 hover:bg-blue-500/25 dark:text-blue-400'
                               } cursor-pointer`}
                               onClick={() => handleDependencyClick(id)}
                             >
