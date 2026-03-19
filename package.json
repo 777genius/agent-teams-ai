@@ -1,7 +1,7 @@
 {
   "name": "claude-agent-teams-ui",
   "type": "module",
-  "version": "1.0.2",
+  "version": "1.0.0",
   "description": "Desktop app that visualizes Claude Code session execution — explore conversations, track context usage, and analyze tool calls",
   "license": "AGPL-3.0",
   "author": {

@@ -46,6 +46,9 @@ When running build/typecheck/test commands, pipe through `tail -20` to avoid flo
 - `pnpm fix` - Lint fix + format
 - `pnpm quality` - Full check + format check + knip
 
+## Git commits
+Use normal, human-readable messages. Do not add tool-attribution trailers (for example `Made-with: …`) to commit messages.
+
 ## Path Aliases
 Use path aliases for imports:
 - `@main/*` → `src/main/*`

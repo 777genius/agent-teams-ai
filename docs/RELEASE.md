@@ -1,16 +1,16 @@
 # Release Guide
 
-## Published: v1.0.2 (2026-03-19)
+## Published: v1.0.0 (2026-03-19)
 
-Patch release: reliable Claude CLI detection and login status in packaged builds (shell PATH/HOME, `CLAUDE_CONFIG_DIR`, auth output parsing), IPC cache invalidation on status errors, concurrent binary resolution guard, capped NDJSON diagnostics. Full list: [CHANGELOG.md](./CHANGELOG.md).
+Initial release: Claude Agent Teams UI with reliable CLI detection in packaged builds (shell PATH/HOME, `CLAUDE_CONFIG_DIR`, auth output parsing), IPC status cache handling, concurrent binary resolution, capped NDJSON diagnostics. Full list: [CHANGELOG.md](./CHANGELOG.md).
 
 After CI uploads artifacts, optional notes update:
 
 ```bash
-gh release edit v1.0.2 --repo 777genius/claude_agent_teams_ui --notes "$(cat <<'EOF'
-## Claude Agent Teams UI v1.0.2
+gh release edit v1.0.0 --repo 777genius/claude_agent_teams_ui --notes "$(cat <<'EOF'
+## Claude Agent Teams UI v1.0.0
 
-Patch focused on CLI/auth reliability in packaged apps and related IPC hardening.
+First stable build: CLI/auth reliability in packaged apps, IPC hardening, and platform packaging.
 
 ### What's New
 - Setting to auto-expand AI response groups in transcripts (`general.autoExpandAIGroups`).
@@ -29,33 +29,33 @@ Patch focused on CLI/auth reliability in packaged apps and related IPC hardening
 <table>
 <tr>
 <td align="center">
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.2/Claude.Agent.Teams.UI-1.0.2-arm64.dmg">
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.0/Claude.Agent.Teams.UI-1.0.0-arm64.dmg">
     <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
   </a>
   <br />
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.2/Claude.Agent.Teams.UI-1.0.2.dmg">
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.0/Claude.Agent.Teams.UI-1.0.0.dmg">
     <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
   </a>
 </td>
 <td align="center">
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.2/Claude.Agent.Teams.UI.Setup.1.0.2.exe">
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.0/Claude.Agent.Teams.UI.Setup.1.0.0.exe">
     <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
   </a>
   <br />
   <sub>May trigger SmartScreen — click "More info" → "Run anyway"</sub>
 </td>
 <td align="center">
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.2/Claude.Agent.Teams.UI-1.0.2.AppImage">
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.0/Claude.Agent.Teams.UI-1.0.0.AppImage">
     <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
   </a>
   <br />
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.2/claude-agent-teams-ui_1.0.2_amd64.deb">
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.0/claude-agent-teams-ui_1.0.0_amd64.deb">
     <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
   </a>&nbsp;
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.2/claude-agent-teams-ui-1.0.2.x86_64.rpm">
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.0/claude-agent-teams-ui-1.0.0.x86_64.rpm">
     <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
   </a>&nbsp;
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.2/claude-agent-teams-ui-1.0.2.pacman">
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/download/v1.0.0/claude-agent-teams-ui-1.0.0.pacman">
     <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
   </a>
 </td>
@@ -233,14 +233,14 @@ electron-builder generates `latest-mac.yml`, `latest.yml`, `latest-linux.yml` al
 
 ```bash
 # Create and publish a release
-git tag v1.0.2
-git push origin v1.0.2
+git tag v1.0.0
+git push origin v1.0.0
 # Wait for CI to finish (~10 min), then update notes
 
 # Delete a release (if needed)
-gh release delete v1.0.2 --repo 777genius/claude_agent_teams_ui --yes
-git tag -d v1.0.2
-git push origin :refs/tags/v1.0.2
+gh release delete v1.0.0 --repo 777genius/claude_agent_teams_ui --yes
+git tag -d v1.0.0
+git push origin :refs/tags/v1.0.0
 
 # Check workflow status
 gh run list --repo 777genius/claude_agent_teams_ui --workflow release.yml --limit 3
