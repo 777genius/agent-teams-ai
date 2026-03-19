@@ -5,7 +5,7 @@
 <h1 align="center">Claude Agent Teams UI</h1>
 
 <p align="center">
-  <strong><code>You're the CTO, agents are your team. They handle tasks themselves, message each other, review each other's code. You just look at the kanban board and drink coffee.</code></strong>
+  <strong><code>You're the CTO, agents are your team. They handle tasks themselves, message each other, review each other. You just look at the kanban board and drink coffee.</code></strong>
 </p>
 
 <p align="center">
@@ -17,6 +17,12 @@
 <p align="center">
   <sub>100% free, open source. No API keys. No configuration. Runs entirely locally. Not just coding agents.</sub>
 </p>
+
+
+
+https://github.com/user-attachments/assets/9cae73cd-7f42-46e5-a8fb-ad6d41737ff8
+
+
 
 <br />
 
