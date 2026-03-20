@@ -172,7 +172,11 @@ function getTaskComment(context, taskId, commentId) {
     }
     const task = taskStore.readTask(context.paths, taskId, { includeDeleted: true });
     const comments = Array.isArray(task.comments) ? task.comments : [];
-    const comment = comments.find((c) => c && c.id === normalizedCommentId);
+
+    // Exact match first, then prefix match (allows short IDs like first 8 chars)
+    const comment =
+        comments.find((c) => c && c.id === normalizedCommentId) ||
+        comments.find((c) => c && typeof c.id === 'string' && c.id.startsWith(normalizedCommentId));
     if (!comment) {
         throw new Error(`Comment ${normalizedCommentId} not found on task #${task.displayId || task.id}`);
     }
