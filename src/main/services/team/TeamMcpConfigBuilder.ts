@@ -23,6 +23,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
+function isPackagedApp(): boolean {
+  try {
+    const { app } = require('electron') as typeof import('electron');
+    return app.isPackaged;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * In a packaged Electron build the mcp-server bundle lives under
+ * `process.resourcesPath/mcp-server/index.js` (copied via extraResources).
+ * In dev mode we resolve relative to the workspace root (process.cwd()).
+ */
+function getPackagedServerEntry(): string {
+  return path.join(process.resourcesPath, 'mcp-server', 'index.js');
+}
+
 function getWorkspaceRoot(): string {
   return process.cwd();
 }
@@ -82,17 +100,34 @@ async function resolveNodePath(): Promise<string> {
 }
 
 async function resolveMcpLaunchSpec(): Promise<McpLaunchSpec> {
+  const checked: string[] = [];
+
+  // 1. Packaged Electron app — use extraResources bundle
+  if (isPackagedApp()) {
+    const packagedEntry = getPackagedServerEntry();
+    checked.push(packagedEntry);
+    if (await pathExists(packagedEntry)) {
+      return {
+        command: await resolveNodePath(),
+        args: [packagedEntry],
+      };
+    }
+    logger.warn(`Packaged MCP entry not found at ${packagedEntry}, falling back to workspace`);
+  }
+
+  // 2. Dev mode — prefer source for hot changes
   const sourceEntry = getSourceServerEntry();
+  checked.push(sourceEntry);
   if (await pathExists(sourceEntry)) {
-    // Prefer source in workspace/dev runs so newly added MCP tools are available
-    // immediately and we do not accidentally serve a stale built dist bundle.
     return {
       command: 'pnpm',
       args: ['--dir', getMcpServerDir(), 'exec', 'tsx', sourceEntry],
     };
   }
 
+  // 3. Dev mode — built dist
   const builtEntry = getBuiltServerEntry();
+  checked.push(builtEntry);
   if (await pathExists(builtEntry)) {
     return {
       command: await resolveNodePath(),
@@ -100,7 +135,9 @@ async function resolveMcpLaunchSpec(): Promise<McpLaunchSpec> {
     };
   }
 
-  throw new Error('agent-teams-mcp entrypoint not found in mcp-server package');
+  throw new Error(
+    `agent-teams-mcp entrypoint not found. Checked paths:\n${checked.map((p) => `  - ${p}`).join('\n')}`
+  );
 }
 
 export class TeamMcpConfigBuilder {

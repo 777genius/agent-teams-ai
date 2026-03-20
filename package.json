@@ -20,7 +20,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "dev:kill": "node bin/kill-dev.js",
-    "prebuild": "tsx scripts/fetch-pricing-data.ts",
+    "prebuild": "tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
     "build": "electron-vite build",
     "dist": "electron-builder --mac --win --linux",
     "dist:mac": "electron-builder --mac",
@@ -223,6 +223,14 @@
       {
         "from": "resources/pricing.json",
         "to": "pricing.json"
+      },
+      {
+        "from": "mcp-server/dist/index.js",
+        "to": "mcp-server/index.js"
+      },
+      {
+        "from": "mcp-server/package.json",
+        "to": "mcp-server/package.json"
       }
     ],
     "npmRebuild": false,

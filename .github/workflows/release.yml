@@ -113,6 +113,7 @@ jobs:
           test -f dist-electron/main/index.cjs
           test -f dist-electron/preload/index.js
           test -f out/renderer/index.html
+          test -f mcp-server/dist/index.js
 
       - name: Package (macOS ${{ matrix.arch }})
         env:
@@ -180,6 +181,7 @@ jobs:
           test -f dist-electron/main/index.cjs
           test -f dist-electron/preload/index.js
           test -f out/renderer/index.html
+          test -f mcp-server/dist/index.js
 
       - name: Package (Windows)
         env:
@@ -246,6 +248,7 @@ jobs:
           test -f dist-electron/main/index.cjs
           test -f dist-electron/preload/index.js
           test -f out/renderer/index.html
+          test -f mcp-server/dist/index.js
 
       - name: Package (Linux)
         env:
