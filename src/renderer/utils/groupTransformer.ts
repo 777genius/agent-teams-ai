@@ -13,7 +13,12 @@ import {
   isEnhancedSystemChunk,
   isEnhancedUserChunk,
 } from '@renderer/types/data';
-import { getFirstSegment, hasPathSeparator, isRelativePath } from '@renderer/utils/pathUtils';
+import {
+  getFirstSegment,
+  hasPathSeparator,
+  isRelativePath,
+  splitPathSegments,
+} from '@renderer/utils/pathUtils';
 import { isCommandContent, sanitizeDisplayContent } from '@shared/utils/contentSanitizer';
 import { createLogger } from '@shared/utils/logger';
 
@@ -369,8 +374,13 @@ function isValidFileRef(path: string): boolean {
     return true;
   }
   // Check if contains a path separator (indicates directory structure)
+  // Require either 3+ segments or a file extension to avoid matching
+  // npm scoped packages like @scope/name (extracted as "scope/name")
   if (hasPathSeparator(path) && path.length > 2) {
-    return true;
+    const segments = splitPathSegments(path);
+    if (segments.length > 2 || /\.[a-zA-Z0-9]+$/.test(path)) {
+      return true;
+    }
   }
   return false;
 }

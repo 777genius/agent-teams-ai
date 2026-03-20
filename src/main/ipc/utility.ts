@@ -256,6 +256,10 @@ async function handleReadMentionedFile(
       estimatedTokens,
     };
   } catch (error) {
+    // ENOENT is expected — file simply doesn't exist (e.g. stale or misdetected references)
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
     logger.error(`Error in read-mentioned-file for ${absolutePath}:`, error);
     return null;
   }

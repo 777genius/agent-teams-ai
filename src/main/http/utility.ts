@@ -111,6 +111,10 @@ export function registerUtilityRoutes(app: FastifyInstance): void {
           estimatedTokens,
         };
       } catch (error) {
+        // ENOENT is expected — file simply doesn't exist (e.g. stale or misdetected references)
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          return null;
+        }
         logger.error(
           `Error in POST /api/read-mentioned-file for ${request.body.absolutePath}:`,
           error
