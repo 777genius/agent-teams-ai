@@ -96,7 +96,7 @@ export const ToolApprovalSettingsPanel: React.FC = () => {
               <SelectTrigger className="h-7 w-[120px] text-xs">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[60]">
                 <SelectItem value="wait">Wait forever</SelectItem>
                 <SelectItem value="allow">Allow</SelectItem>
                 <SelectItem value="deny">Deny</SelectItem>

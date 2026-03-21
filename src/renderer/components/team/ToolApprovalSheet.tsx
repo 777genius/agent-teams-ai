@@ -332,6 +332,7 @@ const ToolInputPreview = ({
         style={{
           backgroundColor: 'var(--color-surface)',
           borderColor: 'var(--color-border)',
+          color: 'var(--color-text-secondary)',
         }}
       >
         {/* highlightLines uses hljs which HTML-escapes all input text, producing only <span class="hljs-*"> tags.
@@ -341,7 +342,6 @@ const ToolInputPreview = ({
           <div
             key={i}
             className="whitespace-pre-wrap break-all"
-            style={{ color: 'var(--color-text-secondary)' }}
             dangerouslySetInnerHTML={{ __html: html || '&nbsp;' }}
           />
         ))}
