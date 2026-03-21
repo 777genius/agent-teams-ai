@@ -150,6 +150,19 @@ function generateDiff(oldLines: string[], newLines: string[]): DiffLine[] {
 }
 
 /**
+ * Computes diff statistics from old/new strings using the same algorithm as DiffViewer.
+ */
+export function computeDiffLineStats(
+  oldString: string,
+  newString: string
+): { added: number; removed: number } {
+  const oldLines = oldString.split(/\r?\n/);
+  const newLines = newString.split(/\r?\n/);
+  const diffLines = generateDiff(oldLines, newLines);
+  return computeStats(diffLines);
+}
+
+/**
  * Computes diff statistics.
  */
 function computeStats(diffLines: DiffLine[]): { added: number; removed: number } {
