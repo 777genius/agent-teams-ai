@@ -4,6 +4,7 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { highlightLines } from '@renderer/utils/syntaxHighlighter';
+import { getMemberColorByName } from '@shared/constants/memberColors';
 import { AlertTriangle, FileText, Search, Terminal } from 'lucide-react';
 
 import { ToolApprovalDiffPreview } from './ToolApprovalDiffPreview';
@@ -169,10 +170,11 @@ export const ToolApprovalSheet: React.FC = () => {
   if (!current) return null;
 
   // Prefer color from the approval itself (always available, even during provisioning),
-  // fall back to teams list for older approvals without the field.
+  // fall back to teams list, then deterministic color from team name.
   const teamSummary = teams.find((t) => t.teamName === current.teamName);
-  const colorName = current.teamColor ?? teamSummary?.color;
-  const teamColor = colorName ? getTeamColorSet(colorName) : null;
+  const colorName =
+    current.teamColor ?? teamSummary?.color ?? getMemberColorByName(current.teamName);
+  const teamColor = getTeamColorSet(colorName);
   const displayName = current.teamDisplayName ?? teamSummary?.displayName ?? current.teamName;
 
   return (
@@ -196,30 +198,18 @@ export const ToolApprovalSheet: React.FC = () => {
           </span>
         </div>
         <div className="flex items-center gap-2.5">
-          {selectedTeamName !== current.teamName &&
-            (teamColor ? (
-              <span
-                className="rounded-full px-2 py-0.5 text-[10px] font-medium"
-                style={{
-                  backgroundColor: getThemedBadge(teamColor, isLight),
-                  color: teamColor.text,
-                  border: `1px solid ${teamColor.border}`,
-                }}
-              >
-                {displayName}
-              </span>
-            ) : (
-              <span
-                className="rounded-full px-2 py-0.5 text-[10px] font-medium"
-                style={{
-                  backgroundColor: 'var(--color-surface-raised)',
-                  color: 'var(--color-text-secondary)',
-                  border: '1px solid var(--color-border-emphasis)',
-                }}
-              >
-                {displayName}
-              </span>
-            ))}
+          {selectedTeamName !== current.teamName && (
+            <span
+              className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+              style={{
+                backgroundColor: getThemedBadge(teamColor, isLight),
+                color: teamColor.text,
+                border: `1px solid ${teamColor.border}`,
+              }}
+            >
+              {displayName}
+            </span>
+          )}
           <ElapsedDisplay receivedAt={current.receivedAt} />
         </div>
       </div>
