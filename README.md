@@ -28,14 +28,54 @@ https://github.com/user-attachments/assets/9cae73cd-7f42-46e5-a8fb-ad6d41737ff8
 
 ## Table of contents
 
-- [What is this](#what-is-this)
 - [Installation](#installation)
+- [What is this](#what-is-this)
+- [Comparison](#comparison)
 - [Quick start](#quick-start)
 - [FAQ](#faq)
-- [Comparison](#comparison)
 - [Roadmap](#roadmap)
 - [Development](#development)
 - [Contributing](#contributing)
+
+## Installation
+
+No prerequisites — Claude Code can be installed and configured directly from the app.
+
+<table align="center">
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI-Setup.exe">
+    <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen — click "More info" → "Run anyway"</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI-amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI-x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
 
 ## What is this
 
@@ -89,47 +129,32 @@ A new approach to task management with AI agent teams.
 
 </details>
 
+## Comparison
 
-## Installation
+How we compare to other multi-agent orchestration tools:
 
-No prerequisites — Claude Code can be installed and configured directly from the app.
+| Feature | Claude Agent Teams UI | Vibe Kanban | Aperant | Cursor | Claude Code CLI |
+|---|---|---|---|---|---|
+| **Agent-to-agent messaging** | ✅ Native real-time mailbox | ❌ Agents are independent | ❌ Fixed pipeline | ❌ | ✅⚠️ Built-in (no UI) |
+| **Cross-team communication** | ✅ | ❌ | ❌ | ❌ | ✅⚠️ (no UI) |
+| **Kanban board** | ✅ 5 columns, real-time | ✅ | ✅ 6 columns (pipeline) | ❌ | ❌ |
+| **Per-task code review** | ✅ Accept / reject / comment | ⚠️ PR-level only | ⚠️ File-level only | ✅ BugBot on PRs | ❌ |
+| **Hunk-level review** | ✅ Accept / reject individual hunks | ❌ | ❌ | ✅ | ❌ |
+| **Review workflow** | ✅ Agents review each other | ❌ | ⚠️ Auto QA pipeline | ❌ | ✅⚠️ (no UI) |
+| **Session analysis** | ✅ 6-category token tracking | ❌ | ⚠️ Execution logs | ❌ | ❌ |
+| **Execution log viewer** | ✅ Tool calls, reasoning, timeline | ❌ | ✅ Phase-based logs | ✅ | ❌ |
+| **Zero setup** | ✅ | ❌ Config required | ❌ Config required | ✅ | ✅ |
+| **Live processes** | ✅ View, stop, open URLs in browser | ❌ | ✅ 12 agent terminals | ✅ | ❌ |
+| **Flexible autonomy** | ✅ Granular settings, per-action approval, notifications | ❌ | ⚠️ Plan approval only | ✅ | ✅ |
+| **Full autonomy** | ✅ Agents create, assign, review tasks end-to-end | ❌ Human manages tasks | ❌ Fixed pipeline | ⚠️ Isolated tasks only | ✅⚠️ (no UI) |
+| **Task dependencies (blocked by)** | ✅ Guaranteed ordering | ❌ | ⚠️ Within plan only | ❌ | ❌ |
+| **Linked tasks** | ✅ Cross-references in messages | ⚠️ Subtasks only | ❌ | ❌ | ❌ |
+| **Task attachments** | ✅ Auto-attach, agents read & attach files | ❌ | ✅ Images + files | ❌ | ❌ |
+| **Multi-agent backend** | 🗓️ In development | ✅ 6+ agents | ✅ 11 providers | ✅ Own models | — |
+| **Git worktree isolation** | ✅ Optional | ⚠️ Mandatory | ⚠️ Mandatory | ✅ | ✅ |
+| **Price** | **Free** | Free / $30 user/mo | Free | $0–$200/mo | Claude subscription |
 
-<table align="center">
-<tr>
-<td align="center">
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI-arm64.dmg">
-    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
-  </a>
-  <br />
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI-x64.dmg">
-    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
-  </a>
-</td>
-<td align="center">
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI-Setup.exe">
-    <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
-  </a>
-  <br />
-  <sub>May trigger SmartScreen — click "More info" → "Run anyway"</sub>
-</td>
-<td align="center">
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI.AppImage">
-    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
-  </a>
-  <br />
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI-amd64.deb">
-    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
-  </a>&nbsp;
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI-x86_64.rpm">
-    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
-  </a>&nbsp;
-  <a href="https://github.com/777genius/claude_agent_teams_ui/releases/latest/download/Claude-Agent-Teams-UI.pacman">
-    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
-  </a>
-</td>
-</tr>
-</table>
-
+---
 
 ### Tech stack
 
@@ -196,33 +221,6 @@ Yes. The app works as a session viewer — browse, search, and analyze any Claud
 <br />
 Yes. Run multiple teams in one project or across different projects, even simultaneously. To avoid Git conflicts, ask agents to use git worktree in your provisioning prompt.
 </details>
-
----
-
-## Comparison
-
-How we compare to other multi-agent orchestration tools:
-
-| Feature | Claude Agent Teams UI | Vibe Kanban | Aperant | Cursor | Claude Code CLI |
-|---|---|---|---|---|---|
-| **Agent-to-agent messaging** | ✅ Native real-time mailbox | ❌ Agents are independent | ❌ Fixed pipeline | ❌ | ✅⚠️ Built-in (no UI) |
-| **Cross-team communication** | ✅ | ❌ | ❌ | ❌ | ✅⚠️ (no UI) |
-| **Kanban board** | ✅ 5 columns, real-time | ✅ | ✅ 6 columns (pipeline) | ❌ | ❌ |
-| **Per-task code review** | ✅ Accept / reject / comment | ⚠️ PR-level only | ⚠️ File-level only | ✅ BugBot on PRs | ❌ |
-| **Hunk-level review** | ✅ Accept / reject individual hunks | ❌ | ❌ | ✅ | ❌ |
-| **Review workflow** | ✅ Agents review each other | ❌ | ⚠️ Auto QA pipeline | ❌ | ✅⚠️ (no UI) |
-| **Session analysis** | ✅ 6-category token tracking | ❌ | ⚠️ Execution logs | ❌ | ❌ |
-| **Execution log viewer** | ✅ Tool calls, reasoning, timeline | ❌ | ✅ Phase-based logs | ✅ | ❌ |
-| **Zero setup** | ✅ | ❌ Config required | ❌ Config required | ✅ | ✅ |
-| **Live processes** | ✅ View, stop, open URLs in browser | ❌ | ✅ 12 agent terminals | ✅ | ❌ |
-| **Flexible autonomy** | ✅ Granular settings, per-action approval, notifications | ❌ | ⚠️ Plan approval only | ✅ | ✅ |
-| **Full autonomy** | ✅ Agents create, assign, review tasks end-to-end | ❌ Human manages tasks | ❌ Fixed pipeline | ⚠️ Isolated tasks only | ✅⚠️ (no UI) |
-| **Task dependencies (blocked by)** | ✅ Guaranteed ordering | ❌ | ⚠️ Within plan only | ❌ | ❌ |
-| **Linked tasks** | ✅ Cross-references in messages | ⚠️ Subtasks only | ❌ | ❌ | ❌ |
-| **Task attachments** | ✅ Auto-attach, agents read & attach files | ❌ | ✅ Images + files | ❌ | ❌ |
-| **Multi-agent backend** | 🗓️ In development | ✅ 6+ agents | ✅ 11 providers | ✅ Own models | — |
-| **Git worktree isolation** | ✅ Optional | ⚠️ Mandatory | ⚠️ Mandatory | ✅ | ✅ |
-| **Price** | **Free** | Free / $30 user/mo | Free | $0–$200/mo | Claude subscription |
 
 ---
 

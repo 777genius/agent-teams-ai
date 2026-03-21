@@ -4291,6 +4291,15 @@ export class TeamProvisioningService {
       // Only track spawns for this team
       if (teamName !== run.teamName) continue;
       this.setMemberSpawnStatus(run, memberName, 'spawning');
+
+      // Advance stepper to "Members joining" when first member spawn is detected
+      if (
+        !run.provisioningComplete &&
+        (run.progress.state === 'configuring' || run.progress.state === 'spawning')
+      ) {
+        const progress = updateProgress(run, 'assembling', `Spawning member ${memberName}...`);
+        run.onProgress(progress);
+      }
     }
   }
 
