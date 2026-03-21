@@ -244,34 +244,26 @@ function notifyUnblockedOwners(context, completedTask) {
             if (!normalizeActorName(blockedTask.owner)) continue;
 
             const allBlockerIds = Array.isArray(blockedTask.blockedBy) ? blockedTask.blockedBy : [];
-            const pendingBlockers = allBlockerIds.filter((id) => {
-                if (id === completedTask.id) return false;
+            const pendingBlockerTasks = [];
+            for (const id of allBlockerIds) {
+                if (id === completedTask.id) continue;
                 try {
                     const t = taskStore.readTask(context.paths, id, { includeDeleted: true });
-                    return t.status !== 'completed' && t.status !== 'deleted';
-                } catch { return false; }
-            });
-
-            const allResolved = pendingBlockers.length === 0;
-            const blockedLabel = `#${blockedTask.displayId || blockedTask.id}`;
-
-            let pendingList = '';
-            if (!allResolved) {
-                const refs = pendingBlockers.map((id) => {
-                    try {
-                        const t = taskStore.readTask(context.paths, id, { includeDeleted: true });
-                        return `#${t.displayId || t.id}`;
-                    } catch { return `#${id.slice(0, 8)}`; }
-                });
-                pendingList = refs.join(', ');
+                    if (t.status !== 'completed' && t.status !== 'deleted') {
+                        pendingBlockerTasks.push(t);
+                    }
+                } catch { /* missing task = not blocking */ }
             }
+
+            const allResolved = pendingBlockerTasks.length === 0;
+            const blockedLabel = `#${blockedTask.displayId || blockedTask.id}`;
 
             const lines = [
                 `**Dependency resolved** — task ${completedLabel} _${completedTask.subject}_ completed.`,
                 ``,
                 allResolved
                     ? `All blockers for ${blockedLabel} are resolved — this task is ready to start.`
-                    : `${allBlockerIds.length - pendingBlockers.length} of ${allBlockerIds.length} blockers resolved. Still waiting on: ${pendingList}.`,
+                    : `${allBlockerIds.length - pendingBlockerTasks.length} of ${allBlockerIds.length} blockers resolved. Still waiting on: ${pendingBlockerTasks.map((t) => `#${t.displayId || t.id}`).join(', ')}.`,
             ];
 
             if (allResolved) {
@@ -299,7 +291,7 @@ function notifyUnblockedOwners(context, completedTask) {
 function completeTask(context, taskId, actor) {
     const task = setTaskStatus(context, taskId, 'completed', actor);
     try {
-        notifyUnblockedOwners(context, task, actor);
+        notifyUnblockedOwners(context, task);
     } catch {
         // Best-effort: task completion succeeded, notification failure is non-fatal
     }
