@@ -1,5 +1,6 @@
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
+import { getAppIconPath } from '@main/utils/appIcon';
 import { killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import {
@@ -594,6 +595,7 @@ function buildTeamCtlOpsInstructions(teamName: string, leadName: string): string
       `- Request review (after task_complete): review_request { teamName: "${teamName}", taskId: "<id>", from: "${leadName}", reviewer: "<reviewer-name>" }`,
       `- Start review (reviewer signals they are beginning): review_start { teamName: "${teamName}", taskId: "<id>", from: "<reviewer-name>" }`,
       `- Approve review: review_approve { teamName: "${teamName}", taskId: "<id>", note?: "<note>", notifyOwner: true }`,
+      `  Call review_approve EXACTLY ONCE per review. Include your review feedback in the "note" field of that single call. Do NOT call it twice (once to approve, once with a note). The tool auto-creates a comment from the note.`,
       `- Request changes: review_request_changes { teamName: "${teamName}", taskId: "<id>", comment: "<what to fix>" }`,
       `CRITICAL: Writing "approved" or "LGTM" as a task comment does NOT move the task on the kanban board. You MUST call the review_approve MCP tool. Without the tool call the task stays stuck in the REVIEW column.`,
       ``,
@@ -874,6 +876,7 @@ function buildProvisioningPrompt(request: TeamCreateRequest): string {
      - Review guidance:
       - Prefer NOT creating a separate "review task". Our workflow reviews the work task itself: call review_start when beginning review, then review_approve/review_request_changes on the implementation task #X.
       - CRITICAL: Text comments ("approved", "LGTM") do NOT move the task on the kanban board. You MUST call the MCP tool review_approve to move from REVIEW to APPROVED. Without the tool call, the task stays stuck in REVIEW.
+      - Call review_approve EXACTLY ONCE per review. Include your review feedback in the "note" field of that single call. Do NOT call it a second time to add a note — one call does everything (moves kanban + creates comment from note).
        - If you MUST create a separate review reminder/assignment task, create it as pending and link it to the work task:
         - Use related to connect it to #X (non-blocking link).
         - If the review truly cannot start until #X is done, ALSO add blockedBy #X.
@@ -1947,9 +1950,15 @@ export class TeamProvisioningService {
   }
 
   private toolApprovalEventEmitter: ((event: ToolApprovalEvent) => void) | null = null;
+  private mainWindowRef: import('electron').BrowserWindow | null = null;
+  private activeApprovalNotifications = new Set<import('electron').Notification>();
 
   setToolApprovalEventEmitter(emitter: (event: ToolApprovalEvent) => void): void {
     this.toolApprovalEventEmitter = emitter;
+  }
+
+  setMainWindow(win: import('electron').BrowserWindow | null): void {
+    this.mainWindowRef = win;
   }
 
   updateToolApprovalSettings(settings: ToolApprovalSettings): void {
@@ -5343,6 +5352,102 @@ export class TeamProvisioningService {
     run.pendingApprovals.set(requestId, approval);
     this.emitToolApprovalEvent(approval);
     this.startApprovalTimeout(run, requestId);
+
+    // Show OS notification when window is not focused
+    this.maybeShowToolApprovalOsNotification(run, approval);
+  }
+
+  /**
+   * Shows a native OS notification for a pending tool approval when the app
+   * is not in focus. On macOS, adds Allow/Deny action buttons that respond
+   * directly from the notification without switching to the app.
+   */
+  private maybeShowToolApprovalOsNotification(
+    run: ProvisioningRun,
+    approval: ToolApprovalRequest
+  ): void {
+    const win = this.mainWindowRef;
+    if (win && !win.isDestroyed() && win.isFocused()) return;
+
+    const config = ConfigManager.getInstance().getConfig();
+    if (!config.notifications.enabled || !config.notifications.notifyOnToolApproval) return;
+
+    const { Notification: ElectronNotification } = require('electron') as typeof import('electron');
+    if (!ElectronNotification.isSupported()) return;
+
+    const isMac = process.platform === 'darwin';
+    const iconPath = isMac ? undefined : getAppIconPath();
+    const teamLabel = run.request.displayName ?? run.teamName;
+    const body = this.formatToolApprovalBody(approval.toolName, approval.toolInput);
+
+    const notification = new ElectronNotification({
+      title: `Tool Approval — ${teamLabel}`,
+      body,
+      sound: config.notifications.soundEnabled ? 'default' : undefined,
+      ...(iconPath ? { icon: iconPath } : {}),
+      ...(isMac
+        ? {
+            actions: [
+              { type: 'button' as const, text: 'Allow' },
+              { type: 'button' as const, text: 'Deny' },
+            ],
+          }
+        : {}),
+    });
+
+    // Prevent GC from collecting the notification (macOS issue)
+    this.activeApprovalNotifications.add(notification);
+    const cleanup = (): void => {
+      this.activeApprovalNotifications.delete(notification);
+    };
+
+    notification.on('click', () => {
+      cleanup();
+      if (win && !win.isDestroyed()) {
+        win.show();
+        win.focus();
+      }
+    });
+
+    notification.on('close', cleanup);
+
+    // macOS action buttons: Allow (index 0) / Deny (index 1)
+    if (isMac) {
+      notification.on('action', (_event, index) => {
+        cleanup();
+        const allow = index === 0;
+        logger.info(
+          `[${run.teamName}] Tool approval ${allow ? 'allowed' : 'denied'} via OS notification`
+        );
+        void this.respondToToolApproval(
+          run.teamName,
+          run.runId,
+          approval.requestId,
+          allow,
+          allow ? undefined : 'Denied via notification'
+        ).catch((err) => {
+          logger.error(
+            `[${run.teamName}] Failed to respond via notification: ${err instanceof Error ? err.message : String(err)}`
+          );
+        });
+      });
+    }
+
+    notification.show();
+  }
+
+  private formatToolApprovalBody(toolName: string, toolInput: Record<string, unknown>): string {
+    switch (toolName) {
+      case 'Bash':
+        return `Bash: ${typeof toolInput.command === 'string' ? toolInput.command.slice(0, 150) : 'command'}`;
+      case 'Write':
+      case 'Edit':
+      case 'Read':
+      case 'NotebookEdit':
+        return `${toolName}: ${typeof toolInput.file_path === 'string' ? toolInput.file_path : 'file'}`;
+      default:
+        return `${toolName}: ${JSON.stringify(toolInput).slice(0, 150)}`;
+    }
   }
 
   /**

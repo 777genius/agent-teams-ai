@@ -304,6 +304,7 @@ export function useSettingsHandlers({
           notifyOnAllTasksCompleted: true,
           notifyOnCrossTeamMessage: true,
           notifyOnTeamLaunched: true,
+          notifyOnToolApproval: true,
           statusChangeOnlySolo: true,
           statusChangeStatuses: ['in_progress', 'completed'],
           triggers: defaultTriggers,

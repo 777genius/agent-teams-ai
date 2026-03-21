@@ -28,6 +28,7 @@ import {
   PartyPopper,
   Rocket,
   Send,
+  ShieldQuestion,
   Users,
   Volume2,
 } from 'lucide-react';
@@ -74,6 +75,7 @@ interface NotificationsSectionProps {
       | 'notifyOnAllTasksCompleted'
       | 'notifyOnCrossTeamMessage'
       | 'notifyOnTeamLaunched'
+      | 'notifyOnToolApproval'
       | 'statusChangeOnlySolo',
     value: boolean
   ) => void;
@@ -344,6 +346,17 @@ export const NotificationsSection = ({
           <SettingsToggle
             enabled={safeConfig.notifications.notifyOnTeamLaunched}
             onChange={(v) => onNotificationToggle('notifyOnTeamLaunched', v)}
+            disabled={saving || !safeConfig.notifications.enabled}
+          />
+        </SettingRow>
+        <SettingRow
+          label="Tool approval notifications"
+          description="Notify when a tool needs your approval (Allow/Deny) while the app is not focused"
+          icon={<ShieldQuestion className="size-4" />}
+        >
+          <SettingsToggle
+            enabled={safeConfig.notifications.notifyOnToolApproval}
+            onChange={(v) => onNotificationToggle('notifyOnToolApproval', v)}
             disabled={saving || !safeConfig.notifications.enabled}
           />
         </SettingRow>

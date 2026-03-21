@@ -847,6 +847,8 @@ function initializeServices(): void {
     }
   });
 
+  teamProvisioningService.setMainWindow(mainWindow);
+
   // startProcessHealthPolling() is deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.
 

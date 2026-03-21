@@ -58,6 +58,8 @@ export interface NotificationConfig {
   notifyOnCrossTeamMessage: boolean;
   /** Whether to show native OS notifications when a team finishes launching */
   notifyOnTeamLaunched: boolean;
+  /** Whether to show native OS notifications when a tool needs user approval */
+  notifyOnToolApproval: boolean;
   /** Only notify on status changes in solo teams (no teammates) */
   statusChangeOnlySolo: boolean;
   /** Which target statuses to notify about (e.g. ['in_progress', 'completed']) */
@@ -276,6 +278,7 @@ const DEFAULT_CONFIG: AppConfig = {
     notifyOnAllTasksCompleted: true,
     notifyOnCrossTeamMessage: true,
     notifyOnTeamLaunched: true,
+    notifyOnToolApproval: true,
     statusChangeOnlySolo: false,
     statusChangeStatuses: ['in_progress', 'completed'],
     triggers: DEFAULT_TRIGGERS,
