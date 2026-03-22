@@ -118,6 +118,7 @@ export class TeamBackupService {
 
   async initialize(): Promise<void> {
     this.registry = await this.loadRegistry();
+    await this.reconcileResurrectedTeams();
     await this.restoreIfNeeded();
     void this.pruneStaleBackups().catch((err: unknown) =>
       logger.warn(`[Backup] prune failed: ${String(err)}`)
@@ -153,6 +154,10 @@ export class TeamBackupService {
     this.isShuttingDown = true;
     this.backupGeneration++;
     this.dispose();
+
+    // Re-activate any resurrected teams before the backup loop.
+    // At shutdown, source files are still on disk (SIGKILL ran before stdin EOF).
+    this.reconcileResurrectedTeamsSync();
 
     for (const [teamName, entry] of Object.entries(this.registry.teams)) {
       if (entry.status !== 'active') continue;
@@ -260,6 +265,12 @@ export class TeamBackupService {
 
     const backupDir = this.getBackupDir(teamName);
     let manifest = await this.loadManifest(teamName);
+    // Reset stale manifest from a previously deleted team with the same name.
+    // The backup dir may already contain the new team's files (copied by FileWatcher),
+    // but the manifest was never updated because the deletion guard blocked it.
+    if (manifest?.status === 'deleted_by_user') {
+      manifest = null;
+    }
     const isNew = !manifest;
 
     if (!manifest) {
@@ -273,6 +284,11 @@ export class TeamBackupService {
         fileStats: {},
       };
       await this.ensureIdentityMarker(teamName, identityId);
+    } else {
+      // Ensure identity marker is present — may have been lost during full restore
+      // (reconcile creates new identity in manifest, but restored config.json
+      // from backup doesn't have the marker yet)
+      await this.ensureIdentityMarker(teamName, manifest.identityId);
     }
 
     // Prune stale backup files (only if source enumeration was error-free)
@@ -288,9 +304,14 @@ export class TeamBackupService {
     }
 
     if (anyChanged || isNew) {
-      // Guard: if team was deleted while we were backing up, don't overwrite
+      // Guard: if team was deleted while we were backing up, don't overwrite.
+      // For resurrected teams (isNew after manifest reset), allow only if
+      // the source config still exists — if it was rm -rf'd mid-backup,
+      // the user genuinely deleted the team and we must not re-activate it.
       const currentEntry = this.registry.teams[teamName];
-      if (currentEntry?.status === 'deleted_by_user') return;
+      if (currentEntry?.status === 'deleted_by_user') {
+        if (!isNew || !(await this.isConfigReady(teamName))) return;
+      }
 
       manifest.lastBackupAt = nowIso();
       // Update informational fields from config
@@ -357,6 +378,30 @@ export class TeamBackupService {
         const config = JSON.parse(raw) as Record<string, unknown>;
         config._backupIdentityId = identityId;
         fs.mkdirSync(path.dirname(configPath), { recursive: true });
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+      } catch {
+        // best-effort
+      }
+    }
+
+    // Reset stale manifest from a previously deleted team with the same name.
+    // Without this, manifest.status ('deleted_by_user') would be written back
+    // to the registry (line below), blocking future backups and restores.
+    if (manifest.status === 'deleted_by_user') {
+      const identityId = crypto.randomUUID();
+      manifest = {
+        teamName,
+        identityId,
+        status: 'active',
+        firstBackupAt: nowIso(),
+        lastBackupAt: nowIso(),
+        fileStats: {},
+      };
+      // Write identity marker (sync, best-effort)
+      try {
+        const configRaw = fs.readFileSync(configPath, 'utf8');
+        const config = JSON.parse(configRaw) as Record<string, unknown>;
+        config._backupIdentityId = identityId;
         fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
       } catch {
         // best-effort
@@ -1005,17 +1050,103 @@ export class TeamBackupService {
     }
   }
 
+  private reconcileResurrectedTeamsSync(): void {
+    const teamsDir = getTeamsBasePath();
+    try {
+      const entries = fs.readdirSync(teamsDir, { withFileTypes: true });
+      for (const dirEntry of entries) {
+        if (!dirEntry.isDirectory()) continue;
+        const entry = this.registry.teams[dirEntry.name];
+        if (entry?.status !== 'deleted_by_user') continue;
+        const configPath = path.join(teamsDir, dirEntry.name, 'config.json');
+        try {
+          const raw = fs.readFileSync(configPath, 'utf8');
+          if (isValidConfig(raw)) {
+            logger.info(`[Backup] Shutdown reconcile: ${dirEntry.name} resurrected`);
+            entry.status = 'active';
+            delete entry.deletedByUserAt;
+          }
+        } catch {
+          // no config — truly deleted
+        }
+      }
+    } catch {
+      // no teams dir
+    }
+    // Registry will be saved by saveRegistrySync() at end of runShutdownBackupSync()
+  }
+
+  private async reconcileResurrectedTeams(): Promise<void> {
+    let changed = false;
+    for (const [teamName, entry] of Object.entries(this.registry.teams)) {
+      if (entry.status !== 'deleted_by_user') continue;
+
+      // Level 1: source config exists on disk — team is alive right now
+      if (await this.isConfigReady(teamName)) {
+        logger.info(`[Backup] Reconcile: team ${teamName} alive on disk`);
+        entry.status = 'active';
+        delete entry.deletedByUserAt;
+        changed = true;
+        continue;
+      }
+
+      // Level 2: source config gone, but backup data is NEWER than deletion.
+      // Catches: new team created → FileWatcher copied files to backup →
+      // force-kill → CLI cleaned up source → backup has the new team's data.
+      if (!entry.deletedByUserAt) continue;
+      const deletedAtMs = new Date(entry.deletedByUserAt).getTime();
+      const backupConfigPath = path.join(this.getBackupDir(teamName), 'config.json');
+      try {
+        const stat = await fs.promises.stat(backupConfigPath);
+        if (stat.mtimeMs > deletedAtMs + 60_000) {
+          logger.info(
+            `[Backup] Reconcile: team ${teamName} has post-deletion backup data, re-activating`
+          );
+          entry.status = 'active';
+          delete entry.deletedByUserAt;
+          // Reset stale manifest so restoreTeam() does full restore with new identity
+          const manifest = await this.loadManifest(teamName);
+          if (manifest?.status === 'deleted_by_user') {
+            manifest.identityId = crypto.randomUUID();
+            manifest.status = 'active';
+            delete manifest.deletedByUserAt;
+            manifest.fileStats = {};
+            await this.saveManifest(teamName, manifest);
+          }
+          changed = true;
+        }
+      } catch {
+        // no backup config — truly deleted, leave as is
+      }
+    }
+    if (changed) await this.saveRegistry();
+  }
+
   private async discoverActiveTeams(): Promise<string[]> {
     const teamsDir = getTeamsBasePath();
     try {
       const entries = await fs.promises.readdir(teamsDir, { withFileTypes: true });
       const teams: string[] = [];
+      let registryChanged = false;
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
         const registryEntry = this.registry.teams[entry.name];
-        if (registryEntry?.status === 'deleted_by_user') continue;
+        if (registryEntry?.status === 'deleted_by_user') {
+          // A valid config on disk means a new team was created with the same name.
+          // permanentlyDeleteTeam() removes files BEFORE markDeletedByUser(), so
+          // if config exists after marking deleted, it must be a new team.
+          if (await this.isConfigReady(entry.name)) {
+            logger.info(`[Backup] Team ${entry.name} resurrected (valid config on disk)`);
+            registryEntry.status = 'active';
+            delete registryEntry.deletedByUserAt;
+            registryChanged = true;
+          } else {
+            continue;
+          }
+        }
         teams.push(entry.name);
       }
+      if (registryChanged) await this.saveRegistry();
       return teams;
     } catch {
       return [];
