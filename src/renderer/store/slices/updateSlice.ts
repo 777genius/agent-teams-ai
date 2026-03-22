@@ -10,6 +10,8 @@ import type { StateCreator } from 'zustand';
 
 const logger = createLogger('Store:update');
 
+const DISMISSED_VERSION_KEY = 'update:dismissed-version';
+
 // =============================================================================
 // Slice Interface
 // =============================================================================
@@ -30,11 +32,13 @@ export interface UpdateSlice {
   updateError: string | null;
   showUpdateDialog: boolean;
   showUpdateBanner: boolean;
+  dismissedUpdateVersion: string | null;
 
   // Actions
   checkForUpdates: () => void;
   downloadUpdate: () => void;
   installUpdate: () => void;
+  openUpdateDialog: () => void;
   dismissUpdateDialog: () => void;
   dismissUpdateBanner: () => void;
 }
@@ -43,7 +47,7 @@ export interface UpdateSlice {
 // Slice Creator
 // =============================================================================
 
-export const createUpdateSlice: StateCreator<AppState, [], [], UpdateSlice> = (set) => ({
+export const createUpdateSlice: StateCreator<AppState, [], [], UpdateSlice> = (set, get) => ({
   // Initial state
   updateStatus: 'idle',
   availableVersion: null,
@@ -52,12 +56,16 @@ export const createUpdateSlice: StateCreator<AppState, [], [], UpdateSlice> = (s
   updateError: null,
   showUpdateDialog: false,
   showUpdateBanner: false,
+  dismissedUpdateVersion: localStorage.getItem(DISMISSED_VERSION_KEY),
 
   checkForUpdates: () => {
     set({ updateStatus: 'checking', updateError: null });
     api.updater.check().catch((error) => {
       logger.error('Failed to check for updates:', error);
-      set({ updateStatus: 'error', updateError: error instanceof Error ? error.message : 'Check failed' });
+      set({
+        updateStatus: 'error',
+        updateError: error instanceof Error ? error.message : 'Check failed',
+      });
     });
   },
 
@@ -74,8 +82,18 @@ export const createUpdateSlice: StateCreator<AppState, [], [], UpdateSlice> = (s
     });
   },
 
+  openUpdateDialog: () => {
+    set({ showUpdateDialog: true });
+  },
+
   dismissUpdateDialog: () => {
-    set({ showUpdateDialog: false });
+    const version = get().availableVersion;
+    if (version) {
+      localStorage.setItem(DISMISSED_VERSION_KEY, version);
+      set({ showUpdateDialog: false, dismissedUpdateVersion: version });
+    } else {
+      set({ showUpdateDialog: false });
+    }
   },
 
   dismissUpdateBanner: () => {

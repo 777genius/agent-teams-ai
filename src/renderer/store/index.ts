@@ -668,20 +668,40 @@ export function initializeNotificationListeners(): () => void {
     const cleanup = api.updater.onStatus((_event: unknown, status: unknown) => {
       const s = status as UpdaterStatus;
       switch (s.type) {
-        case 'checking':
-          useStore.setState({ updateStatus: 'checking' });
+        case 'checking': {
+          // Don't downgrade status if we already know about an available/downloaded update
+          // or if a download is in progress (prevents UI flash during periodic re-checks)
+          const current = useStore.getState().updateStatus;
+          if (current !== 'available' && current !== 'downloaded' && current !== 'downloading') {
+            useStore.setState({ updateStatus: 'checking' });
+          }
           break;
-        case 'available':
+        }
+        case 'available': {
+          // Don't downgrade from downloading/downloaded — the update is already
+          // in progress or ready to install (prevents periodic re-check from
+          // resetting the state after download completes)
+          const currentStatus = useStore.getState().updateStatus;
+          if (currentStatus === 'downloading' || currentStatus === 'downloaded') {
+            break;
+          }
+          const dismissed = useStore.getState().dismissedUpdateVersion;
           useStore.setState({
             updateStatus: 'available',
             availableVersion: s.version ?? null,
             releaseNotes: s.releaseNotes ?? null,
-            showUpdateDialog: true,
+            showUpdateDialog: s.version !== dismissed,
           });
           break;
-        case 'not-available':
-          useStore.setState({ updateStatus: 'not-available' });
+        }
+        case 'not-available': {
+          // Don't reset status if update is already downloading or downloaded
+          const notAvailCurrent = useStore.getState().updateStatus;
+          if (notAvailCurrent !== 'downloading' && notAvailCurrent !== 'downloaded') {
+            useStore.setState({ updateStatus: 'not-available' });
+          }
           break;
+        }
         case 'downloading':
           useStore.setState({
             updateStatus: 'downloading',
@@ -695,12 +715,19 @@ export function initializeNotificationListeners(): () => void {
             availableVersion: s.version ?? useStore.getState().availableVersion,
           });
           break;
-        case 'error':
+        case 'error': {
+          // Don't lose downloaded state due to a transient check error —
+          // the update is already on disk and ready to install
+          const errCurrent = useStore.getState().updateStatus;
+          if (errCurrent === 'downloaded') {
+            break;
+          }
           useStore.setState({
             updateStatus: 'error',
             updateError: s.error ?? 'Unknown error',
           });
           break;
+        }
       }
     });
     if (typeof cleanup === 'function') {

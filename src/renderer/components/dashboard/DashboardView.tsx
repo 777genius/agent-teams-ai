@@ -30,6 +30,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Command, FolderGit2, FolderOpen, GitBranch, GitFork, Search, Users } from 'lucide-react';
 
 import { CliStatusBanner } from './CliStatusBanner';
+import { DashboardUpdateBanner } from './DashboardUpdateBanner';
 
 import type { RepositoryGroup } from '@renderer/types/data';
 
@@ -747,6 +748,9 @@ export const DashboardView = (): React.JSX.Element => {
 
       {/* Content */}
       <div className="relative mx-auto max-w-5xl px-8 py-12">
+        {/* App update banner */}
+        <DashboardUpdateBanner />
+
         {/* CLI Status Banner */}
         <CliStatusBanner />
 

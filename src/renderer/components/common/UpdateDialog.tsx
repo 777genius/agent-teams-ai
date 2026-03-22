@@ -3,22 +3,26 @@
  *
  * Prompts the user to download the update or dismiss it.
  * Release notes (markdown from GitHub) are rendered with ReactMarkdown.
+ * Shows "Restart now" when the update has already been downloaded.
  */
 
 import { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 
+import { isElectronMode } from '@renderer/api';
 import { markdownComponents } from '@renderer/components/chat/markdownComponents';
 import { useStore } from '@renderer/store';
 import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
-import { X } from 'lucide-react';
+import { ExternalLink, X } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 
 export const UpdateDialog = (): React.JSX.Element | null => {
   const showUpdateDialog = useStore((s) => s.showUpdateDialog);
+  const updateStatus = useStore((s) => s.updateStatus);
   const availableVersion = useStore((s) => s.availableVersion);
   const releaseNotes = useStore((s) => s.releaseNotes);
   const downloadUpdate = useStore((s) => s.downloadUpdate);
+  const installUpdate = useStore((s) => s.installUpdate);
   const dismissUpdateDialog = useStore((s) => s.dismissUpdateDialog);
 
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -75,6 +79,21 @@ export const UpdateDialog = (): React.JSX.Element | null => {
 
   if (!showUpdateDialog) return null;
 
+  const isDownloaded = updateStatus === 'downloaded';
+
+  const releaseUrl = availableVersion
+    ? `https://github.com/777genius/claude_agent_teams_ui/releases/tag/v${availableVersion}`
+    : null;
+
+  const openReleaseOnGitHub = (): void => {
+    if (!releaseUrl) return;
+    if (isElectronMode()) {
+      void window.electronAPI.openExternal(releaseUrl);
+    } else {
+      window.open(releaseUrl, '_blank');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
@@ -87,7 +106,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
       />
       <div
         ref={dialogRef}
-        className="relative mx-4 w-full max-w-sm rounded-md border p-4 shadow-lg"
+        className="relative mx-4 w-full max-w-lg rounded-md border p-5 shadow-lg"
         role="dialog"
         aria-modal="true"
         aria-label="Update available"
@@ -107,25 +126,33 @@ export const UpdateDialog = (): React.JSX.Element | null => {
 
         <div className="mb-3 pr-8">
           <h2 className="text-base font-semibold" style={{ color: 'var(--color-text)' }}>
-            Update Available
+            {isDownloaded ? 'Update Ready' : 'Update Available'}
           </h2>
           {availableVersion && (
-            <div className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            <div
+              className="mt-1.5 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium"
+              style={{
+                backgroundColor: isDownloaded
+                  ? 'rgba(34, 197, 94, 0.15)'
+                  : 'rgba(59, 130, 246, 0.15)',
+                color: isDownloaded ? '#4ade80' : '#60a5fa',
+              }}
+            >
               v{availableVersion}
             </div>
           )}
         </div>
 
         {/* Release notes */}
-        {releaseNotes && (
-          <div
-            className="prose prose-sm prose-invert mb-4 max-h-60 overflow-y-auto rounded border p-3 text-xs"
-            style={{
-              backgroundColor: 'var(--color-surface)',
-              borderColor: 'var(--color-border)',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
+        <div
+          className="prose prose-sm prose-invert mb-4 max-h-[60vh] overflow-y-auto rounded border p-3 text-xs"
+          style={{
+            backgroundColor: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text-secondary)',
+          }}
+        >
+          {releaseNotes ? (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={REHYPE_PLUGINS}
@@ -133,11 +160,26 @@ export const UpdateDialog = (): React.JSX.Element | null => {
             >
               {releaseNotes}
             </ReactMarkdown>
-          </div>
-        )}
+          ) : (
+            <p className="italic" style={{ color: 'var(--color-text-muted)' }}>
+              No release notes available.
+            </p>
+          )}
+        </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2">
+        <div className="flex items-center gap-2">
+          {releaseUrl && (
+            <button
+              onClick={openReleaseOnGitHub}
+              className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs transition-colors hover:bg-white/5"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              <ExternalLink className="size-3" />
+              View on GitHub
+            </button>
+          )}
+          <div className="flex-1" />
           <button
             onClick={dismissUpdateDialog}
             className="rounded-md border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-white/5"
@@ -148,12 +190,21 @@ export const UpdateDialog = (): React.JSX.Element | null => {
           >
             Later
           </button>
-          <button
-            onClick={downloadUpdate}
-            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
-          >
-            Download
-          </button>
+          {isDownloaded ? (
+            <button
+              onClick={installUpdate}
+              className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-500"
+            >
+              Restart now
+            </button>
+          ) : (
+            <button
+              onClick={downloadUpdate}
+              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
+            >
+              Download
+            </button>
+          )}
         </div>
       </div>
     </div>

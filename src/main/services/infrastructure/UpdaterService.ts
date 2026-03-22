@@ -18,6 +18,7 @@ const logger = createLogger('UpdaterService');
 
 export class UpdaterService {
   private mainWindow: BrowserWindow | null = null;
+  private periodicTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     autoUpdater.autoDownload = false;
@@ -64,6 +65,27 @@ export class UpdaterService {
    */
   quitAndInstall(): void {
     autoUpdater.quitAndInstall(true, true);
+  }
+
+  /**
+   * Start periodic update checks at the given interval (default: 1 hour).
+   * Uses unref() so the timer does not prevent process exit.
+   */
+  startPeriodicCheck(intervalMs: number = 3_600_000): void {
+    this.stopPeriodicCheck();
+    this.periodicTimer = setInterval(() => void this.checkForUpdates(), intervalMs);
+    this.periodicTimer.unref();
+    logger.info(`Periodic update check started (interval: ${Math.round(intervalMs / 60_000)}min)`);
+  }
+
+  /**
+   * Stop periodic update checks.
+   */
+  stopPeriodicCheck(): void {
+    if (this.periodicTimer !== null) {
+      clearInterval(this.periodicTimer);
+      this.periodicTimer = null;
+    }
   }
 
   private sendStatus(status: UpdaterStatus): void {
