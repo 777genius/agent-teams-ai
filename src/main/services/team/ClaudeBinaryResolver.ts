@@ -167,6 +167,12 @@ async function resolveFromExplicitPath(inputPath: string): Promise<string | null
 
 let cachedPath: string | null | undefined;
 
+/** Timestamp of last successful cache verification (ms). */
+let cacheVerifiedAt = 0;
+
+/** Re-verify cached binary at most once per 30 seconds. */
+const CACHE_VERIFY_TTL_MS = 30_000;
+
 /** Coalesce concurrent first resolves so `cachedPath` is not torn by parallel scans. */
 let resolveInFlight: Promise<string | null> | null = null;
 
@@ -177,10 +183,25 @@ export class ClaudeBinaryResolver {
    */
   static clearCache(): void {
     cachedPath = undefined;
+    cacheVerifiedAt = 0;
   }
 
   static async resolve(): Promise<string | null> {
-    if (cachedPath !== undefined) return cachedPath;
+    if (cachedPath !== undefined) {
+      const now = Date.now();
+      // Re-verify the cached binary still exists, but at most once per TTL
+      if (cachedPath !== null && now - cacheVerifiedAt > CACHE_VERIFY_TTL_MS) {
+        if (await isExecutable(cachedPath)) {
+          cacheVerifiedAt = now;
+          return cachedPath;
+        }
+        cachedPath = undefined;
+        cacheVerifiedAt = 0;
+        // Fall through to full resolution below
+      } else {
+        return cachedPath;
+      }
+    }
     if (!resolveInFlight) {
       resolveInFlight = ClaudeBinaryResolver.runResolve().finally(() => {
         resolveInFlight = null;
@@ -203,6 +224,7 @@ export class ClaudeBinaryResolver {
 
       if (resolvedOverride) {
         cachedPath = resolvedOverride;
+        cacheVerifiedAt = Date.now();
         return cachedPath;
       }
     }
@@ -211,6 +233,7 @@ export class ClaudeBinaryResolver {
     const fromPath = await resolveFromPathEnv(baseBinaryName, enrichedPath);
     if (fromPath) {
       cachedPath = fromPath;
+      cacheVerifiedAt = Date.now();
       return cachedPath;
     }
 
@@ -259,6 +282,7 @@ export class ClaudeBinaryResolver {
     const found = results.find((r) => r.ok);
     if (found) {
       cachedPath = found.path;
+      cacheVerifiedAt = Date.now();
       return cachedPath;
     }
 

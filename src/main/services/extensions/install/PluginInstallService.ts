@@ -5,8 +5,12 @@
  * from the current catalog snapshot (never trusts renderer-provided paths).
  */
 
+import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { execCli } from '@main/utils/childProcess';
+import { buildEnrichedEnv } from '@main/utils/cliEnv';
+import { CLI_NOT_FOUND_MESSAGE } from '@shared/constants/cli';
 import { createLogger } from '@shared/utils/logger';
+import path from 'path';
 
 import type { PluginCatalogService } from '../catalog/PluginCatalogService';
 import type { OperationResult, PluginInstallRequest } from '@shared/types/extensions';
@@ -23,10 +27,7 @@ const INSTALL_TIMEOUT_MS = 120_000; // plugins may clone repos
 const UNINSTALL_TIMEOUT_MS = 30_000;
 
 export class PluginInstallService {
-  constructor(
-    private readonly claudeBinary: string | null,
-    private readonly catalogService: PluginCatalogService
-  ) {}
+  constructor(private readonly catalogService: PluginCatalogService) {}
 
   async install(request: PluginInstallRequest): Promise<OperationResult> {
     const { pluginId, scope, projectPath } = request;
@@ -40,7 +41,7 @@ export class PluginInstallService {
     }
 
     // 2. Validate projectPath
-    if (projectPath && !projectPath.startsWith('/')) {
+    if (projectPath && !path.isAbsolute(projectPath)) {
       return {
         state: 'error',
         error: 'projectPath must be an absolute path',
@@ -76,9 +77,18 @@ export class PluginInstallService {
     logger.info(`Installing plugin: ${qualifiedName} (scope: ${scope ?? 'user'})`);
 
     try {
-      const { stdout, stderr } = await execCli(this.claudeBinary, args, {
+      const claudeBinary = await ClaudeBinaryResolver.resolve();
+      if (!claudeBinary) {
+        return {
+          state: 'error',
+          error: CLI_NOT_FOUND_MESSAGE,
+        };
+      }
+
+      const { stdout, stderr } = await execCli(claudeBinary, args, {
         timeout: INSTALL_TIMEOUT_MS,
         cwd: projectPath,
+        env: buildEnrichedEnv(claudeBinary),
       });
 
       if (stderr && !stdout) {
@@ -106,7 +116,7 @@ export class PluginInstallService {
       };
     }
 
-    if (projectPath && !projectPath.startsWith('/')) {
+    if (projectPath && !path.isAbsolute(projectPath)) {
       return {
         state: 'error',
         error: 'projectPath must be an absolute path',
@@ -140,9 +150,18 @@ export class PluginInstallService {
     logger.info(`Uninstalling plugin: ${qualifiedName} (scope: ${scope ?? 'user'})`);
 
     try {
-      await execCli(this.claudeBinary, args, {
+      const claudeBinary = await ClaudeBinaryResolver.resolve();
+      if (!claudeBinary) {
+        return {
+          state: 'error',
+          error: CLI_NOT_FOUND_MESSAGE,
+        };
+      }
+
+      await execCli(claudeBinary, args, {
         timeout: UNINSTALL_TIMEOUT_MS,
         cwd: projectPath,
+        env: buildEnrichedEnv(claudeBinary),
       });
       return { state: 'success' };
     } catch (err) {

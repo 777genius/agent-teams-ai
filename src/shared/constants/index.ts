@@ -4,6 +4,7 @@
 
 export * from './agentBlocks';
 export * from './cache';
+export * from './cli';
 export * from './crossTeam';
 export * from './kanban';
 export * from './memberColors';

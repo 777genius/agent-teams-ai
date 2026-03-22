@@ -15,6 +15,7 @@ import {
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
 import { formatRelativeTime } from '@renderer/utils/formatters';
+import { CLI_NOT_FOUND_MARKER } from '@shared/constants/cli';
 import { sanitizeMcpServerName } from '@shared/utils/extensionNormalizers';
 import { AlertTriangle, RefreshCw, Search, Server } from 'lucide-react';
 
@@ -311,11 +312,23 @@ export const McpServersPanel = ({
         </div>
       )}
 
-      {mcpDiagnosticsError && (
-        <div className="rounded-md border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-400">
-          {mcpDiagnosticsError}
-        </div>
-      )}
+      {mcpDiagnosticsError &&
+        (mcpDiagnosticsError.includes(CLI_NOT_FOUND_MARKER) ? (
+          <div className="flex items-start gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+            <div>
+              <p className="text-sm font-medium text-amber-300">Claude CLI not installed</p>
+              <p className="mt-0.5 text-xs text-text-muted">
+                MCP health checks require Claude CLI. Go to the Dashboard to install it
+                automatically.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-md border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-400">
+            {mcpDiagnosticsError}
+          </div>
+        ))}
 
       {/* Empty state */}
       {!isLoading && displayServers.length === 0 && (

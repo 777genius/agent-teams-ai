@@ -793,7 +793,7 @@ function initializeServices(): void {
   const glamaMcpService = new GlamaMcpEnrichmentService();
   const mcpAggregator = new McpCatalogAggregator(officialMcpRegistry, glamaMcpService);
   const mcpStateService = new McpInstallationStateService();
-  const mcpHealthDiagnosticsService = new McpHealthDiagnosticsService(null);
+  const mcpHealthDiagnosticsService = new McpHealthDiagnosticsService();
   const skillsCatalogService = new SkillsCatalogService();
   const skillsMutationService = new SkillsMutationService();
   skillsWatcherService = new SkillsWatcherService();
@@ -804,9 +804,9 @@ function initializeServices(): void {
     mcpStateService
   );
 
-  // Install services — pass null for binary (uses PATH lookup via execCli fallback)
-  const pluginInstallService = new PluginInstallService(null, pluginCatalogService);
-  const mcpInstallService = new McpInstallService(null, mcpAggregator);
+  // Install services — resolve binary dynamically via ClaudeBinaryResolver
+  const pluginInstallService = new PluginInstallService(pluginCatalogService);
+  const mcpInstallService = new McpInstallService(mcpAggregator);
   const apiKeyService = new ApiKeyService();
   // warmup() and ensureInstalled() are deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.
@@ -1167,6 +1167,7 @@ function createWindow(): void {
       }
 
       setTimeout(() => updaterService.checkForUpdates(), 3000);
+      updaterService.startPeriodicCheck(60 * 60 * 1000);
 
       // Defer non-critical startup work to avoid thread pool contention.
       // The window is now visible and responsive; these run in the background.
@@ -1255,6 +1256,7 @@ function createWindow(): void {
       notificationManager.setMainWindow(null);
     }
     if (updaterService) {
+      updaterService.stopPeriodicCheck();
       updaterService.setMainWindow(null);
     }
     if (cliInstallerService) {

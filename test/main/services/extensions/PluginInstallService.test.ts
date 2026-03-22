@@ -10,6 +10,14 @@ vi.mock('@main/utils/childProcess', () => ({
   execCli: vi.fn(),
 }));
 
+vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
+  ClaudeBinaryResolver: {
+    resolve: vi.fn().mockResolvedValue('/usr/local/bin/claude'),
+  },
+}));
+
+import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
+
 import { execCli } from '@main/utils/childProcess';
 
 const mockExecCli = vi.mocked(execCli);
@@ -33,8 +41,9 @@ describe('PluginInstallService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
     catalog = createMockCatalog();
-    service = new PluginInstallService(null, catalog);
+    service = new PluginInstallService(catalog);
   });
 
   afterEach(() => {
@@ -54,7 +63,7 @@ describe('PluginInstallService', () => {
 
       expect(result.state).toBe('success');
       expect(mockExecCli).toHaveBeenCalledWith(
-        null,
+        '/usr/local/bin/claude',
         ['plugin', 'install', 'context7@claude-plugins-official'],
         expect.objectContaining({ timeout: 120_000 }),
       );
@@ -70,7 +79,7 @@ describe('PluginInstallService', () => {
       });
 
       expect(mockExecCli).toHaveBeenCalledWith(
-        null,
+        '/usr/local/bin/claude',
         ['plugin', 'install', '-s', 'project', 'context7@claude-plugins-official'],
         expect.objectContaining({ cwd: '/tmp/test-project' }),
       );
@@ -80,7 +89,7 @@ describe('PluginInstallService', () => {
       catalog = createMockCatalog({
         resolvePlugin: vi.fn().mockResolvedValue(null) as PluginCatalogService['resolvePlugin'],
       });
-      service = new PluginInstallService(null, catalog);
+      service = new PluginInstallService(catalog);
 
       const result = await service.install({ pluginId: 'nonexistent', scope: 'user' });
 
@@ -95,7 +104,7 @@ describe('PluginInstallService', () => {
           qualifiedName: '../../../etc/passwd',
         }) as PluginCatalogService['resolvePlugin'],
       });
-      service = new PluginInstallService(null, catalog);
+      service = new PluginInstallService(catalog);
 
       const result = await service.install({ pluginId: 'evil', scope: 'user' });
 
@@ -124,7 +133,7 @@ describe('PluginInstallService', () => {
 
       expect(result.state).toBe('success');
       expect(mockExecCli).toHaveBeenCalledWith(
-        null,
+        '/usr/local/bin/claude',
         ['plugin', 'uninstall', 'context7@claude-plugins-official'],
         expect.objectContaining({ timeout: 30_000 }),
       );
@@ -136,7 +145,7 @@ describe('PluginInstallService', () => {
       await service.uninstall('context7', 'project', '/tmp/test-project');
 
       expect(mockExecCli).toHaveBeenCalledWith(
-        null,
+        '/usr/local/bin/claude',
         ['plugin', 'uninstall', '-s', 'project', 'context7@claude-plugins-official'],
         expect.objectContaining({ cwd: '/tmp/test-project' }),
       );
@@ -146,7 +155,7 @@ describe('PluginInstallService', () => {
       catalog = createMockCatalog({
         resolvePlugin: vi.fn().mockResolvedValue(null) as PluginCatalogService['resolvePlugin'],
       });
-      service = new PluginInstallService(null, catalog);
+      service = new PluginInstallService(catalog);
 
       const result = await service.uninstall('nonexistent');
 

@@ -106,8 +106,7 @@ function withCliEnv<T extends { env?: NodeJS.ProcessEnv | Record<string, string 
 
 /**
  * Execute a CLI binary, falling back to running the command through a
- * shell on Windows if the normal path-based spawn fails.  `binaryPath`
- * may be `null` which causes `claude` (lookup via PATH) to be used.
+ * shell on Windows if the normal path-based spawn fails.
  *
  * The return value matches the shape of Node's `execFile` promise: an
  * object with `stdout` and `stderr` strings.
@@ -117,7 +116,12 @@ export async function execCli(
   args: string[],
   options: ExecFileOptions = {}
 ): Promise<{ stdout: string; stderr: string }> {
-  const target = binaryPath || 'claude';
+  if (!binaryPath) {
+    throw new Error(
+      'Claude CLI binary path is null. Resolve the binary via ClaudeBinaryResolver before calling execCli.'
+    );
+  }
+  const target = binaryPath;
   const opts = withCliEnv(options);
 
   // attempt the normal execFile path first

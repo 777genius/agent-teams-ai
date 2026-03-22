@@ -2,7 +2,10 @@
  * Runs `claude mcp list` and parses per-server health statuses.
  */
 
+import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { execCli } from '@main/utils/childProcess';
+import { buildEnrichedEnv } from '@main/utils/cliEnv';
+import { CLI_NOT_FOUND_MESSAGE } from '@shared/constants/cli';
 import { createLogger } from '@shared/utils/logger';
 
 import type { McpServerDiagnostic, McpServerHealthStatus } from '@shared/types/extensions';
@@ -12,11 +15,15 @@ const logger = createLogger('Extensions:McpHealthDiagnostics');
 const TIMEOUT_MS = 30_000;
 
 export class McpHealthDiagnosticsService {
-  constructor(private readonly claudeBinary: string | null) {}
-
   async diagnose(): Promise<McpServerDiagnostic[]> {
-    const { stdout, stderr } = await execCli(this.claudeBinary, ['mcp', 'list'], {
+    const claudeBinary = await ClaudeBinaryResolver.resolve();
+    if (!claudeBinary) {
+      throw new Error(CLI_NOT_FOUND_MESSAGE);
+    }
+
+    const { stdout, stderr } = await execCli(claudeBinary, ['mcp', 'list'], {
       timeout: TIMEOUT_MS,
+      env: buildEnrichedEnv(claudeBinary),
     });
 
     const output = [stdout, stderr].filter(Boolean).join('\n');

@@ -11,6 +11,14 @@ vi.mock('@main/utils/childProcess', () => ({
   execCli: vi.fn(),
 }));
 
+vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
+  ClaudeBinaryResolver: {
+    resolve: vi.fn().mockResolvedValue('/usr/local/bin/claude'),
+  },
+}));
+
+import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
+
 import { execCli } from '@main/utils/childProcess';
 
 const mockExecCli = vi.mocked(execCli);
@@ -67,8 +75,9 @@ describe('McpInstallService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
     aggregator = createMockAggregator();
-    service = new McpInstallService(null, aggregator);
+    service = new McpInstallService(aggregator);
   });
 
   afterEach(() => {
@@ -91,7 +100,7 @@ describe('McpInstallService', () => {
 
       expect(result.state).toBe('success');
       expect(mockExecCli).toHaveBeenCalledWith(
-        null,
+        '/usr/local/bin/claude',
         ['mcp', 'add', '-s', 'user', '-e', 'UPSTASH_API_KEY=test-key-123', 'context7', '--', 'npx', '-y', '@upstash/context7-mcp@1.0.0'],
         expect.objectContaining({ timeout: 30_000 }),
       );
@@ -135,7 +144,7 @@ describe('McpInstallService', () => {
   describe('install (http)', () => {
     it('builds correct CLI args for HTTP server', async () => {
       aggregator = createMockAggregator(makeHttpServer());
-      service = new McpInstallService(null, aggregator);
+      service = new McpInstallService(aggregator);
       mockExecCli.mockResolvedValue({ stdout: '', stderr: '' });
 
       const result = await service.install({
@@ -148,7 +157,7 @@ describe('McpInstallService', () => {
 
       expect(result.state).toBe('success');
       expect(mockExecCli).toHaveBeenCalledWith(
-        null,
+        '/usr/local/bin/claude',
         ['mcp', 'add', '-s', 'user', '-t', 'sse', '-H', 'Authorization: Bearer token123', 'example-http', 'https://mcp.example.com/sse'],
         expect.objectContaining({ timeout: 30_000 }),
       );
@@ -174,7 +183,7 @@ describe('McpInstallService', () => {
 
     it('returns error if server not found in registry', async () => {
       aggregator = createMockAggregator(null);
-      service = new McpInstallService(null, aggregator);
+      service = new McpInstallService(aggregator);
 
       const result = await service.install({
         registryId: 'nonexistent',
@@ -194,7 +203,7 @@ describe('McpInstallService', () => {
         installSpec: null,
       };
       aggregator = createMockAggregator(serverNoSpec);
-      service = new McpInstallService(null, aggregator);
+      service = new McpInstallService(aggregator);
 
       const result = await service.install({
         registryId: 'test',
@@ -232,7 +241,7 @@ describe('McpInstallService', () => {
 
     it('masks header values in error messages', async () => {
       aggregator = createMockAggregator(makeHttpServer());
-      service = new McpInstallService(null, aggregator);
+      service = new McpInstallService(aggregator);
       mockExecCli.mockRejectedValue(
         new Error('Auth failed with Bearer my-token-value'),
       );
@@ -260,7 +269,7 @@ describe('McpInstallService', () => {
 
       expect(result.state).toBe('success');
       expect(mockExecCli).toHaveBeenCalledWith(
-        null,
+        '/usr/local/bin/claude',
         ['mcp', 'remove', 'context7'],
         expect.objectContaining({ timeout: 30_000 }),
       );

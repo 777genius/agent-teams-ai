@@ -7,8 +7,12 @@
  * from renderer).
  */
 
+import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { execCli } from '@main/utils/childProcess';
+import { buildEnrichedEnv } from '@main/utils/cliEnv';
+import { CLI_NOT_FOUND_MESSAGE } from '@shared/constants/cli';
 import { createLogger } from '@shared/utils/logger';
+import path from 'path';
 
 import type { McpCatalogAggregator } from '../catalog/McpCatalogAggregator';
 import type {
@@ -34,10 +38,7 @@ const HEADER_KEY_RE = /^[A-Za-z][\w-]{0,100}$/;
 const TIMEOUT_MS = 30_000;
 
 export class McpInstallService {
-  constructor(
-    private readonly claudeBinary: string | null,
-    private readonly aggregator: McpCatalogAggregator
-  ) {}
+  constructor(private readonly aggregator: McpCatalogAggregator) {}
 
   async install(request: McpInstallRequest): Promise<OperationResult> {
     const { registryId, serverName, scope, projectPath, envValues, headers } = request;
@@ -79,7 +80,7 @@ export class McpInstallService {
     }
 
     // 5. Validate projectPath (if provided, must be absolute)
-    if (projectPath && !projectPath.startsWith('/')) {
+    if (projectPath && !path.isAbsolute(projectPath)) {
       return {
         state: 'error',
         error: 'projectPath must be an absolute path',
@@ -161,9 +162,18 @@ export class McpInstallService {
     // Don't log env values or header values (may contain secrets)
 
     try {
-      const { stderr } = await execCli(this.claudeBinary, args, {
+      const claudeBinary = await ClaudeBinaryResolver.resolve();
+      if (!claudeBinary) {
+        return {
+          state: 'error',
+          error: CLI_NOT_FOUND_MESSAGE,
+        };
+      }
+
+      const { stderr } = await execCli(claudeBinary, args, {
         timeout: TIMEOUT_MS,
         cwd: projectPath,
+        env: buildEnrichedEnv(claudeBinary),
       });
 
       if (stderr) {
@@ -214,7 +224,7 @@ export class McpInstallService {
       }
     }
 
-    if (projectPath && !projectPath.startsWith('/')) {
+    if (projectPath && !path.isAbsolute(projectPath)) {
       return { state: 'error', error: 'projectPath must be an absolute path' };
     }
 
@@ -263,9 +273,18 @@ export class McpInstallService {
     );
 
     try {
-      const { stderr } = await execCli(this.claudeBinary, args, {
+      const claudeBinary = await ClaudeBinaryResolver.resolve();
+      if (!claudeBinary) {
+        return {
+          state: 'error',
+          error: CLI_NOT_FOUND_MESSAGE,
+        };
+      }
+
+      const { stderr } = await execCli(claudeBinary, args, {
         timeout: TIMEOUT_MS,
         cwd: projectPath,
+        env: buildEnrichedEnv(claudeBinary),
       });
 
       if (stderr) {
@@ -300,7 +319,7 @@ export class McpInstallService {
       };
     }
 
-    if (projectPath && !projectPath.startsWith('/')) {
+    if (projectPath && !path.isAbsolute(projectPath)) {
       return {
         state: 'error',
         error: 'projectPath must be an absolute path',
@@ -316,9 +335,18 @@ export class McpInstallService {
     logger.info(`Removing MCP server: ${name} (scope: ${scope ?? 'local'})`);
 
     try {
-      await execCli(this.claudeBinary, args, {
+      const claudeBinary = await ClaudeBinaryResolver.resolve();
+      if (!claudeBinary) {
+        return {
+          state: 'error',
+          error: CLI_NOT_FOUND_MESSAGE,
+        };
+      }
+
+      await execCli(claudeBinary, args, {
         timeout: TIMEOUT_MS,
         cwd: projectPath,
+        env: buildEnrichedEnv(claudeBinary),
       });
       return { state: 'success' };
     } catch (err) {
