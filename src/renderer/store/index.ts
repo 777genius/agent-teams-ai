@@ -695,7 +695,7 @@ export function initializeNotificationListeners(): () => void {
             updateStatus: 'available',
             availableVersion: s.version ?? null,
             releaseNotes: s.releaseNotes ?? null,
-            showUpdateDialog: s.version !== dismissed,
+            showUpdateDialog: (s.version ?? null) !== dismissed,
           });
           break;
         }

@@ -3,7 +3,7 @@ import {
   MEMBER_COLOR_PALETTE,
   normalizeMemberColorName,
 } from '@shared/constants/memberColors';
-import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
+import { isLeadMember } from '@shared/utils/leadDetection';
 
 import type {
   LeadActivityState,

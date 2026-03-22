@@ -6,6 +6,7 @@
  * (main: process.env, renderer: import.meta.env).
  */
 
+// eslint-disable-next-line @typescript-eslint/naming-convention -- Vite `define` injects this global
 declare const __APP_VERSION__: string;
 
 /** Release identifier injected at build time via Vite `define`. */

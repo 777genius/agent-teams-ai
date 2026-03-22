@@ -48,7 +48,7 @@ export function initSentryRenderer(): void {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-version @sentry/core type mismatch
-  const beforeSend = (event: any) => (telemetryAllowed ? event : null);
+  const beforeSend = (event: any): any => (telemetryAllowed ? event : null);
 
   if (window.electronAPI) {
     // Electron renderer — uses IPC transport to main process.

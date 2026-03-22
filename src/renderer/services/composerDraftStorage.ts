@@ -39,7 +39,7 @@ function storageKey(teamName: string): string {
 }
 
 /** Legacy keys used by the old three-key approach. */
-function legacyKeys(teamName: string) {
+function legacyKeys(teamName: string): { text: string; chips: string; attachments: string } {
   return {
     text: `draft:compose:${teamName}`,
     chips: `draft:compose:${teamName}:chips`,

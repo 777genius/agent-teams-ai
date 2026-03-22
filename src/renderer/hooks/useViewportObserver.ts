@@ -51,7 +51,10 @@ export function useViewportObserver({
   registerElement: (value: string) => (el: HTMLElement | null) => void;
 } {
   const onVisibleChangeRef = useRef(onVisibleChange);
-  onVisibleChangeRef.current = onVisibleChange;
+
+  useEffect(() => {
+    onVisibleChangeRef.current = onVisibleChange;
+  }, [onVisibleChange]);
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const visibleValuesRef = useRef<Set<string>>(new Set());
@@ -67,6 +70,9 @@ export function useViewportObserver({
     // and produce false positives for all visible elements.
     if (!root) return;
 
+    // Capture ref values for cleanup closure
+    const visibleValues = visibleValuesRef.current;
+
     const observer = new IntersectionObserver(
       (entries) => {
         let changed = false;
@@ -75,19 +81,19 @@ export function useViewportObserver({
           if (!value) continue;
 
           if (entry.isIntersecting) {
-            if (!visibleValuesRef.current.has(value)) {
-              visibleValuesRef.current.add(value);
+            if (!visibleValues.has(value)) {
+              visibleValues.add(value);
               changed = true;
             }
           } else {
-            if (visibleValuesRef.current.has(value)) {
-              visibleValuesRef.current.delete(value);
+            if (visibleValues.has(value)) {
+              visibleValues.delete(value);
               changed = true;
             }
           }
         }
         if (changed) {
-          onVisibleChangeRef.current(Array.from(visibleValuesRef.current));
+          onVisibleChangeRef.current(Array.from(visibleValues));
         }
       },
       { root, threshold }
@@ -105,7 +111,7 @@ export function useViewportObserver({
     return () => {
       observer.disconnect();
       observerRef.current = null;
-      visibleValuesRef.current.clear();
+      visibleValues.clear();
     };
   }, [root, threshold]);
 

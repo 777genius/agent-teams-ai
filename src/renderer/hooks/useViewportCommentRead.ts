@@ -47,8 +47,11 @@ export function useViewportCommentRead({
   const seenIdsRef = useRef<Set<string>>(new Set());
   const teamNameRef = useRef(teamName);
   const taskIdRef = useRef(taskId);
-  teamNameRef.current = teamName;
-  taskIdRef.current = taskId;
+
+  useEffect(() => {
+    teamNameRef.current = teamName;
+    taskIdRef.current = taskId;
+  }, [teamName, taskId]);
 
   // Reset tracked state when team/task changes
   useEffect(() => {

@@ -88,6 +88,10 @@ export function useStableTeamMentionMeta(teams: readonly TeamSummary[]): TeamMen
     null
   );
 
+  // Intentional ref-as-cache pattern: avoids allocating a new object every
+  // render while still returning a referentially-stable value when the
+  // underlying data hasn't changed.
+
   if (
     stableRef.current === null ||
     !areTeamMentionEntriesEqual(stableRef.current.entries, entries)
@@ -98,5 +102,6 @@ export function useStableTeamMentionMeta(teams: readonly TeamSummary[]): TeamMen
     };
   }
 
+  // eslint-disable-next-line react-hooks/refs -- stable ref cache pattern
   return stableRef.current.value;
 }
