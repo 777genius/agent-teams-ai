@@ -36,6 +36,7 @@ export const EditToolViewer: React.FC<EditToolViewerProps> = ({ linkedTool, stat
         oldString={oldString}
         newString={newString}
         tokenCount={linkedTool.callTokens}
+        syntaxHighlight
       />
 
       {/* Show result status if available */}

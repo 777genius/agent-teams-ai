@@ -12,6 +12,7 @@ import {
   DIFF_ADDED_TEXT,
   DIFF_REMOVED_TEXT,
 } from '@renderer/constants/cssVariables';
+import { highlightLines } from '@renderer/utils/syntaxHighlighter';
 
 /**
  * Renders the input section based on tool type with theme-aware styling.
@@ -58,6 +59,7 @@ export function renderInput(toolName: string, input: Record<string, unknown>): R
   if (toolName === 'Bash') {
     const command = input.command as string | undefined;
     const description = input.description as string | undefined;
+    const highlighted = command ? highlightLines(command, 'command.sh') : null;
 
     return (
       <div className="space-y-2">
@@ -66,11 +68,13 @@ export function renderInput(toolName: string, input: Record<string, unknown>): R
             {description}
           </div>
         )}
-        {command && (
-          <code className="whitespace-pre-wrap break-all" style={{ color: COLOR_TEXT }}>
-            {command}
+        {highlighted ? (
+          <code className="hljs block whitespace-pre-wrap break-all">
+            {highlighted.map((html, i) => (
+              <div key={i} dangerouslySetInnerHTML={{ __html: html || ' ' }} />
+            ))}
           </code>
-        )}
+        ) : null}
       </div>
     );
   }

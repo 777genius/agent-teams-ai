@@ -126,6 +126,7 @@ export const SkillReviewDialog = ({
                             oldString={change.oldContent ?? ''}
                             newString={change.newContent ?? ''}
                             maxHeight="max-h-80"
+                            syntaxHighlight
                           />
                         </div>
                       )}
