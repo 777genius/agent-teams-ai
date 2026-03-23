@@ -3,7 +3,7 @@ import { useLocaleStore } from "~/stores/locale";
 
 export const useLocation = () => {
   const nuxtApp = useNuxtApp();
-  const i18n = nuxtApp.$i18n;
+  const i18n = nuxtApp.$i18n as { locale?: { value: string }; setLocale?: (code: string) => void } | undefined;
   const localeStore = useLocaleStore();
   const cookie = useCookie("i18n_redirected", { default: () => "" });
 

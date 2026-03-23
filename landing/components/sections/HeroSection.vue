@@ -4,6 +4,25 @@ import { mdiRobotOutline, mdiViewDashboardOutline, mdiOpenSourceInitiative } fro
 const { content } = useLandingContent();
 const { t } = useI18n();
 const { baseURL } = useRuntimeConfig().app;
+
+const downloadStore = useDownloadStore();
+const { resolve, data: releaseData } = useReleaseDownloads();
+
+const releaseVersion = computed(() => releaseData.value?.version || null);
+const releaseDate = computed(() => {
+  const raw = releaseData.value?.pubDate;
+  if (!raw) return null;
+  return new Date(raw).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+});
+
+onMounted(() => downloadStore.init());
+
+const heroDownloadUrl = computed(() => {
+  const asset = downloadStore.selectedAsset;
+  if (!asset) return 'https://github.com/777genius/claude_agent_teams_ui/releases/latest';
+  const arch = asset.os === 'macos' ? downloadStore.macArch : asset.arch;
+  return resolve(asset.os, arch)?.url || asset.url;
+});
 </script>
 
 <template>
@@ -31,7 +50,7 @@ const { baseURL } = useRuntimeConfig().app;
             <v-btn
               variant="flat"
               size="large"
-              href="https://github.com/777genius/claude_agent_teams_ui/releases/latest"
+              :href="heroDownloadUrl"
               target="_blank"
               class="hero-section__btn-primary"
             >
@@ -40,11 +59,16 @@ const { baseURL } = useRuntimeConfig().app;
             <v-btn
               variant="outlined"
               size="large"
-              href="#features"
+              href="#comparison"
               class="hero-section__btn-secondary"
             >
               {{ t('hero.ctaSecondary') }}
             </v-btn>
+          </div>
+
+          <!-- Release version badge -->
+          <div v-if="releaseVersion" class="hero-section__release-badge">
+            v{{ releaseVersion }}<template v-if="releaseDate"> · {{ releaseDate }}</template>
           </div>
 
           <!-- Trust indicators -->
@@ -71,7 +95,12 @@ const { baseURL } = useRuntimeConfig().app;
           <div class="hero-section__preview">
             <div class="hero-section__preview-glow" />
             <ClientOnly>
-              <HeroDemoVideo />
+              <Suspense>
+                <LazyHeroDemoVideo />
+                <template #fallback>
+                  <div class="hero-demo-fallback" />
+                </template>
+              </Suspense>
               <template #fallback>
                 <div class="hero-demo-fallback" />
               </template>
@@ -149,9 +178,21 @@ const { baseURL } = useRuntimeConfig().app;
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
-  margin-bottom: 40px;
+  margin-bottom: 16px;
   animation: heroFadeIn 0.8s ease both;
   animation-delay: 0.4s;
+}
+
+/* ─── Release badge ─── */
+.hero-section__release-badge {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #8892b0;
+  opacity: 0.7;
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 24px;
+  animation: heroFadeIn 0.8s ease both;
+  animation-delay: 0.45s;
 }
 
 .hero-section__btn-primary {

@@ -12,7 +12,7 @@
     "badge": "Claude Agent Teams",
     "downloadNow": "Descargar ahora",
     "ctaPrimary": "Descargar para {platform}",
-    "ctaSecondary": "Ver funciones",
+    "ctaSecondary": "Comparar",
     "preview": "Vista previa del producto",
     "trust": {
       "agentTeams": "Equipos de agentes",
@@ -33,7 +33,8 @@
     "light": "Claro"
   },
   "language": {
-    "label": "Idioma"
+    "label": "Idioma",
+    "search": "Buscar idioma…"
   },
   "features": {
     "sectionTitle": "Todo lo que necesitas para orquestar agentes IA",

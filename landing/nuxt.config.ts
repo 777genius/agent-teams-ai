@@ -12,14 +12,14 @@ const baseURL = process.env.NUXT_APP_BASE_URL || "/";
 export default defineNuxtConfig({
   compatibilityDate: "2026-01-19",
   ssr: true,
-  experimental: {
-    inlineSSRStyles: false
-  },
   app: {
     baseURL,
     head: {
       link: [
         { rel: "icon", type: "image/x-icon", href: `${baseURL}favicon.ico` },
+        { rel: "icon", type: "image/png", sizes: "32x32", href: `${baseURL}favicon-32.png` },
+        { rel: "apple-touch-icon", sizes: "192x192", href: `${baseURL}logo-192.png` },
+        { rel: "dns-prefetch", href: "https://api.github.com" },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
         { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
         { rel: "preload", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap", as: "style" },
@@ -57,6 +57,8 @@ export default defineNuxtConfig({
     prerender: {
       routes: [
         ...generateI18nRoutes(),
+        "/sitemap.xml",
+        "/robots.txt"
       ]
     }
   },

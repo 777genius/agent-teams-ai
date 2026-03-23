@@ -23,6 +23,9 @@ const flagIconMap: Record<string, string> = {
   hi: "circle-flags:in",
   ar: "circle-flags:sa",
   pt: "circle-flags:br",
+  fr: "circle-flags:fr",
+  ja: "circle-flags:jp",
+  de: "circle-flags:de",
   ru: "circle-flags:ru"
 };
 
@@ -43,6 +46,25 @@ const currentFlagIcon = computed(() => {
 });
 
 const iconMenuOpen = ref(false);
+const searchQuery = ref("");
+const searchInputRef = ref<HTMLInputElement | null>(null);
+
+const filteredDropdownItems = computed(() => {
+  const q = searchQuery.value.toLowerCase().trim();
+  if (!q) return dropdownItems.value;
+  return dropdownItems.value.filter(
+    (item) =>
+      item.title.toLowerCase().includes(q) ||
+      item.value.toLowerCase().includes(q)
+  );
+});
+
+watch(iconMenuOpen, (open) => {
+  if (open) {
+    searchQuery.value = "";
+    nextTick(() => searchInputRef.value?.focus());
+  }
+});
 
 const { trackLanguageSwitch } = useAnalytics();
 
@@ -51,8 +73,8 @@ const onChange = async (value: string | LocaleCode) => {
   iconMenuOpen.value = false;
   trackLanguageSwitch(locale.value as string, nextLocale);
   localeStore.setLocale(nextLocale, true);
-  if (nuxtApp.$i18n?.setLocale) {
-    await nuxtApp.$i18n.setLocale(nextLocale);
+  if ((nuxtApp.$i18n as any)?.setLocale) {
+    await (nuxtApp.$i18n as any).setLocale(nextLocale);
   } else {
     locale.value = nextLocale;
   }
@@ -64,27 +86,44 @@ const onChange = async (value: string | LocaleCode) => {
 </script>
 
 <template>
-  <!-- Icon-only mode -->
-  <v-menu v-if="props.iconOnly" v-model="iconMenuOpen" location="bottom end">
+  <!-- Icon-only mode with search dropdown -->
+  <v-menu v-if="props.iconOnly" v-model="iconMenuOpen" location="bottom end" :close-on-content-click="false">
     <template #activator="{ props: menuProps }">
       <v-btn variant="text" v-bind="menuProps" :aria-label="t('language.label')">
         <Icon :name="currentFlagIcon" class="language-switcher__flag-icon" />
       </v-btn>
     </template>
-    <v-list density="compact" class="language-switcher__menu-list">
-      <v-list-item
-        v-for="item in dropdownItems"
-        :key="item.value"
-        @click="onChange(item.value)"
-      >
-        <template #title>
-          <span class="language-switcher__item">
-            <Icon :name="item.flagIcon" class="language-switcher__flag-icon" />
-            <span>{{ item.title }}</span>
-          </span>
-        </template>
-      </v-list-item>
-    </v-list>
+    <div class="language-switcher__dropdown-panel">
+      <div class="language-switcher__search-wrap">
+        <input
+          ref="searchInputRef"
+          v-model="searchQuery"
+          type="text"
+          class="language-switcher__search-input"
+          :placeholder="t('language.search')"
+          @keydown.esc="iconMenuOpen = false"
+        />
+      </div>
+      <v-list density="compact" class="language-switcher__menu-list">
+        <v-list-item
+          v-for="item in filteredDropdownItems"
+          :key="item.value"
+          @click="onChange(item.value)"
+        >
+          <template #title>
+            <span class="language-switcher__item">
+              <Icon :name="item.flagIcon" class="language-switcher__flag-icon" />
+              <span>{{ item.title }}</span>
+            </span>
+          </template>
+        </v-list-item>
+        <v-list-item v-if="filteredDropdownItems.length === 0" disabled>
+          <template #title>
+            <span class="language-switcher__no-results">—</span>
+          </template>
+        </v-list-item>
+      </v-list>
+    </div>
   </v-menu>
 
   <!-- Standard mode with search -->
@@ -164,5 +203,64 @@ const onChange = async (value: string | LocaleCode) => {
 
 .language-switcher__menu-list {
   min-width: 180px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.language-switcher__dropdown-panel {
+  background: rgb(var(--v-theme-surface));
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 200px;
+}
+
+.language-switcher__search-wrap {
+  padding: 8px 10px 4px;
+}
+
+.language-switcher__search-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.language-switcher__search-input:focus {
+  border-color: rgba(0, 240, 255, 0.4);
+}
+
+.language-switcher__search-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.82rem;
+}
+
+.language-switcher__no-results {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.82rem;
+  text-align: center;
+  display: block;
+}
+
+/* Light theme */
+.v-theme--light .language-switcher__search-input {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.v-theme--light .language-switcher__search-input:focus {
+  border-color: rgba(0, 140, 180, 0.4);
+}
+
+.v-theme--light .language-switcher__search-input::placeholder {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.v-theme--light .language-switcher__no-results {
+  color: rgba(0, 0, 0, 0.35);
 }
 </style>

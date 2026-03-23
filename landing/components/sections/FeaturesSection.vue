@@ -12,7 +12,7 @@ const items = computed(() =>
       if (!contentItem) return null;
       return { ...contentItem, icon: feature.icon, accent: feature.accent };
     })
-    .filter(Boolean)
+    .filter((item): item is NonNullable<typeof item> => item !== null)
 );
 </script>
 

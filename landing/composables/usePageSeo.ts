@@ -57,7 +57,7 @@ export const usePageSeo = (titleKey: string, descriptionKey: string, options: Pa
     ogSiteName: siteName,
     ogUrl: canonicalUrl,
     ogImage: resolvedImageUrl,
-    ogImageType: computed(() => resolvedImage.value.type),
+    ogImageType: computed(() => resolvedImage.value.type) as any,
     ogImageWidth: computed(() => (resolvedImage.value.width ? String(resolvedImage.value.width) : undefined)),
     ogImageHeight: computed(() => (resolvedImage.value.height ? String(resolvedImage.value.height) : undefined)),
     ogImageAlt: computed(() => resolvedImage.value.alt),
@@ -72,7 +72,7 @@ export const usePageSeo = (titleKey: string, descriptionKey: string, options: Pa
   });
 
   useHead(() => {
-    const links = supportedLocales.map((locale) => {
+    const links: { rel: string; hreflang?: string; href: string }[] = supportedLocales.map((locale) => {
       const path = switchLocale(locale.code) || canonicalPath.value;
       return {
         rel: "alternate",

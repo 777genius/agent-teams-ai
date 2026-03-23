@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { mdiApple, mdiMicrosoftWindows, mdiPenguin, mdiDownload, mdiCheckCircle } from '@mdi/js';
 import { downloadAssets } from "~/data/downloads";
+import type { DownloadOs, DownloadArch } from "~/data/downloads";
 
 const { content } = useLandingContent();
 const { t, locale } = useI18n();
@@ -22,23 +23,32 @@ const platformColors: Record<string, string> = {
   linux: "#ffd700",
 };
 
-const visibleAssets = computed(() =>
-  downloadAssets.map((asset) => {
+const visibleAssets = computed(() => {
+  const enriched = downloadAssets.map((asset) => {
     if (asset.os !== "macos") return { ...asset };
     if (!downloadStore.isMacOs) return { ...asset };
     return {
       ...asset,
       archLabel: downloadStore.macArch === "arm64" ? "Apple Silicon" : "Intel",
     };
-  })
-);
+  });
 
-const getDownloadUrl = (asset: (typeof downloadAssets)[number]) => {
-  const arch = asset.os === "macos" ? downloadStore.macArch : asset.arch;
-  return resolve(asset.os, arch)?.url || asset.url;
+  // Reorder so detected OS is always in the center (index 1)
+  const detectedIdx = enriched.findIndex((a) => a.id === downloadStore.selectedId);
+  if (detectedIdx === -1 || detectedIdx === 1) return enriched;
+
+  const result = [...enriched];
+  const [detected] = result.splice(detectedIdx, 1);
+  const [first, ...rest] = result;
+  return [first, detected, ...rest];
+});
+
+const getDownloadUrl = (asset: { os: string; arch: string; url: string }) => {
+  const arch = (asset.os === "macos" ? downloadStore.macArch : asset.arch) as DownloadArch;
+  return resolve(asset.os as DownloadOs, arch)?.url || asset.url;
 };
 
-const getDownloadArch = (asset: (typeof downloadAssets)[number]) => {
+const getDownloadArch = (asset: { os: string; arch: string }) => {
   return asset.os === "macos" ? downloadStore.macArch : asset.arch;
 };
 

@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { register } from 'swiper/element/bundle';
 import { mdiChevronLeft, mdiChevronRight, mdiClose, mdiArrowExpand } from '@mdi/js';
+import { screenshots as screenshotData } from '~/data/screenshots';
 
 const { t } = useI18n();
 const { baseURL } = useRuntimeConfig().app;
@@ -10,17 +11,12 @@ register();
 
 const publicPath = (path: string) => `${baseURL}${path.replace(/^\//, '')}`;
 
-const screenshots = [
-  { src: publicPath('/screenshots/1.jpg'), alt: 'Kanban board with agent tasks' },
-  { src: publicPath('/screenshots/2.jpg'), alt: 'Agent team communication' },
-  { src: publicPath('/screenshots/3.png'), alt: 'Code review diff view' },
-  { src: publicPath('/screenshots/4.png'), alt: 'Team management dashboard' },
-  { src: publicPath('/screenshots/5.png'), alt: 'Live process monitoring' },
-  { src: publicPath('/screenshots/6.png'), alt: 'Session context analysis' },
-  { src: publicPath('/screenshots/7.png'), alt: 'Cross-team messaging' },
-  { src: publicPath('/screenshots/8.png'), alt: 'Task details and comments' },
-  { src: publicPath('/screenshots/9.png'), alt: 'Built-in code editor' },
-];
+const screenshots = screenshotData.map((s) => ({
+  src: publicPath(s.path),
+  alt: s.alt,
+  width: s.width,
+  height: s.height,
+}));
 
 const swiperRef = ref<HTMLElement | null>(null);
 const swiperReady = ref(false);
@@ -160,8 +156,11 @@ function slideNext() {
             <img
               :src="shot.src"
               :alt="shot.alt"
+              :width="shot.width"
+              :height="shot.height"
               class="screenshots-section__img"
               loading="lazy"
+              decoding="async"
             />
             <div class="screenshots-section__card-overlay">
               <v-icon :icon="mdiArrowExpand" size="24" />
@@ -208,6 +207,7 @@ function slideNext() {
               :src="screenshots[lightboxIndex].src"
               :alt="screenshots[lightboxIndex].alt"
               class="screenshots-lightbox__img"
+              decoding="async"
             />
             <div class="screenshots-lightbox__counter">
               {{ lightboxIndex + 1 }} / {{ screenshots.length }}

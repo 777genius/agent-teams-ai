@@ -1,0 +1,113 @@
+{
+  "nav": {
+    "features": "Fonctionnalités",
+    "screenshots": "Captures d'écran",
+    "comparison": "Comparer",
+    "download": "Télécharger",
+    "pricing": "Gratuit",
+    "faq": "FAQ",
+    "viewOnGithub": "View on GitHub"
+  },
+  "hero": {
+    "badge": "Claude Agent Teams",
+    "downloadNow": "Télécharger",
+    "ctaPrimary": "Télécharger pour {platform}",
+    "ctaSecondary": "Comparer",
+    "preview": "Aperçu du produit",
+    "trust": {
+      "agentTeams": "Équipes d'agents",
+      "kanban": "Tableau Kanban",
+      "openSource": "Open Source"
+    },
+    "watchDemo": "Voir la démo",
+    "videoUnavailable": "Vidéo indisponible"
+  },
+  "download": {
+    "title": "Télécharger",
+    "detected": "Détecté",
+    "systemRequirements": "Configuration requise",
+    "version": "Version {version}"
+  },
+  "theme": {
+    "dark": "Sombre",
+    "light": "Clair"
+  },
+  "language": {
+    "label": "Langue",
+    "search": "Rechercher une langue…"
+  },
+  "features": {
+    "sectionTitle": "Tout pour l'orchestration d'agents IA",
+    "sectionSubtitle": "Des outils puissants pour une collaboration multi-agents efficace."
+  },
+  "pricing": {
+    "sectionTitle": "100% Gratuit. Sans conditions.",
+    "sectionSubtitle": "Open source, sans clé API, sans configuration. Installez et c'est parti.",
+    "getStarted": "Télécharger",
+    "popular": "Gratuit pour toujours",
+    "note": "100% open source. Sans clé API. Sans configuration. Fonctionne entièrement en local."
+  },
+  "testimonials": {
+    "sectionTitle": "Ce que disent les développeurs",
+    "sectionSubtitle": "De vrais retours de vrais développeurs",
+    "showMore": "Voir plus",
+    "showLess": "Réduire",
+    "feedbackCta": "Vous souhaitez partager votre expérience ? Ouvrez une issue sur"
+  },
+  "faq": {
+    "sectionTitle": "Des questions ? Nous avons les réponses",
+    "subtitle": "Tout ce qu'il faut savoir sur Claude Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Comment nous nous comparons",
+    "sectionSubtitle": "Comparaison fonctionnalité par fonctionnalité avec d'autres outils IA.",
+    "feature": "Fonctionnalité",
+    "features": {
+      "crossTeam": "Communication inter-équipes",
+      "agentMessaging": "Messagerie entre agents",
+      "linkedTasks": "Tâches liées",
+      "sessionAnalysis": "Analyse de session",
+      "taskAttachments": "Pièces jointes aux tâches",
+      "hunkReview": "Revue par hunk",
+      "codeEditor": "Éditeur de code intégré",
+      "fullAutonomy": "Autonomie complète",
+      "taskDeps": "Dépendances de tâches",
+      "reviewWorkflow": "Flux de revue",
+      "zeroSetup": "Zéro configuration",
+      "kanban": "Tableau Kanban",
+      "execLog": "Journal d'exécution",
+      "liveProcesses": "Processus en direct",
+      "perTaskReview": "Revue de code par tâche",
+      "flexAutonomy": "Autonomie flexible",
+      "worktree": "Isolation Git worktree",
+      "multiAgent": "Backend multi-agents",
+      "price": "Prix"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Voyez-le en action",
+    "sectionSubtitle": "Captures d'écran réelles — tableau kanban, revue de code, équipes d'agents et plus."
+  },
+  "common": {
+    "learnMore": "En savoir plus"
+  },
+  "footer": {
+    "copyright": "© {year} Claude Agent Teams",
+    "tagline": "Orchestration d'agents IA pour développeurs",
+    "links": {
+      "github": "GitHub",
+      "docs": "Documentation"
+    }
+  },
+  "meta": {
+    "homeTitle": "Claude Agent Teams — Orchestration d'agents IA pour développeurs",
+    "homeDescription": "Application desktop gratuite et open source pour gérer des équipes d'agents IA. Tableau kanban, revue de code, communication inter-équipes. Fonctionne entièrement en local."
+  },
+  "error": {
+    "notFoundTitle": "Page introuvable",
+    "notFoundDescription": "La page que vous recherchez n'existe pas ou a été déplacée.",
+    "genericTitle": "Une erreur est survenue",
+    "genericDescription": "Une erreur inattendue s'est produite. Veuillez réessayer plus tard.",
+    "goHome": "Retour à l'accueil"
+  }
+}

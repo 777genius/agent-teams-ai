@@ -12,7 +12,7 @@
     "badge": "Claude Agent Teams",
     "downloadNow": "Скачать",
     "ctaPrimary": "Скачать для {platform}",
-    "ctaSecondary": "Посмотреть возможности",
+    "ctaSecondary": "Сравнить",
     "preview": "Превью продукта",
     "trust": {
       "agentTeams": "Команды агентов",
@@ -33,7 +33,8 @@
     "light": "Светлая"
   },
   "language": {
-    "label": "Язык"
+    "label": "Язык",
+    "search": "Найти язык…"
   },
   "features": {
     "sectionTitle": "Всё для оркестрации ИИ-агентов",

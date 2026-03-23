@@ -1,0 +1,113 @@
+{
+  "nav": {
+    "features": "機能",
+    "screenshots": "スクリーンショット",
+    "comparison": "比較",
+    "download": "ダウンロード",
+    "pricing": "無料",
+    "faq": "FAQ",
+    "viewOnGithub": "View on GitHub"
+  },
+  "hero": {
+    "badge": "Claude Agent Teams",
+    "downloadNow": "ダウンロード",
+    "ctaPrimary": "{platform}版をダウンロード",
+    "ctaSecondary": "比較する",
+    "preview": "製品プレビュー",
+    "trust": {
+      "agentTeams": "エージェントチーム",
+      "kanban": "カンバンボード",
+      "openSource": "オープンソース"
+    },
+    "watchDemo": "デモを見る",
+    "videoUnavailable": "動画は利用できません"
+  },
+  "download": {
+    "title": "ダウンロード",
+    "detected": "検出済み",
+    "systemRequirements": "動作環境",
+    "version": "バージョン {version}"
+  },
+  "theme": {
+    "dark": "ダーク",
+    "light": "ライト"
+  },
+  "language": {
+    "label": "言語",
+    "search": "言語を検索…"
+  },
+  "features": {
+    "sectionTitle": "AIエージェントオーケストレーションに必要なすべて",
+    "sectionSubtitle": "マルチエージェント連携を実現する強力なツール。"
+  },
+  "pricing": {
+    "sectionTitle": "100%無料。制約なし。",
+    "sectionSubtitle": "オープンソース、APIキー不要、設定不要。インストールするだけ。",
+    "getStarted": "ダウンロード",
+    "popular": "永久無料",
+    "note": "100%オープンソース。APIキー不要。設定不要。完全にローカルで動作。"
+  },
+  "testimonials": {
+    "sectionTitle": "開発者の声",
+    "sectionSubtitle": "実際の開発者からのリアルなフィードバック",
+    "showMore": "もっと見る",
+    "showLess": "折りたたむ",
+    "feedbackCta": "体験を共有しませんか？issueを作成してください："
+  },
+  "faq": {
+    "sectionTitle": "よくある質問",
+    "subtitle": "Claude Agent Teamsについて知っておくべきこと"
+  },
+  "comparison": {
+    "sectionTitle": "他ツールとの比較",
+    "sectionSubtitle": "他のAIコーディングツールとの機能比較。",
+    "feature": "機能",
+    "features": {
+      "crossTeam": "チーム間コミュニケーション",
+      "agentMessaging": "エージェント間メッセージング",
+      "linkedTasks": "タスクリンク",
+      "sessionAnalysis": "セッション分析",
+      "taskAttachments": "タスク添付ファイル",
+      "hunkReview": "ハンクレベルレビュー",
+      "codeEditor": "組み込みコードエディタ",
+      "fullAutonomy": "完全自律",
+      "taskDeps": "タスク依存関係",
+      "reviewWorkflow": "レビューワークフロー",
+      "zeroSetup": "ゼロ設定",
+      "kanban": "カンバンボード",
+      "execLog": "実行ログビューア",
+      "liveProcesses": "ライブプロセス",
+      "perTaskReview": "タスク別コードレビュー",
+      "flexAutonomy": "柔軟な自律性",
+      "worktree": "Git worktree分離",
+      "multiAgent": "マルチエージェントバックエンド",
+      "price": "価格"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "実際の画面",
+    "sectionSubtitle": "アプリの実際のスクリーンショット — カンバンボード、コードレビュー、エージェントチームなど。"
+  },
+  "common": {
+    "learnMore": "詳細"
+  },
+  "footer": {
+    "copyright": "© {year} Claude Agent Teams",
+    "tagline": "開発者向けAIエージェントオーケストレーション",
+    "links": {
+      "github": "GitHub",
+      "docs": "ドキュメント"
+    }
+  },
+  "meta": {
+    "homeTitle": "Claude Agent Teams — 開発者向けAIエージェントオーケストレーション",
+    "homeDescription": "AIエージェントチームを管理する無料のオープンソースデスクトップアプリ。カンバンボード、コードレビュー、チーム間通信。完全にローカルで動作。"
+  },
+  "error": {
+    "notFoundTitle": "ページが見つかりません",
+    "notFoundDescription": "お探しのページは存在しないか、移動された可能性があります。",
+    "genericTitle": "エラーが発生しました",
+    "genericDescription": "予期しないエラーが発生しました。後でもう一度お試しください。",
+    "goHome": "ホームに戻る"
+  }
+}

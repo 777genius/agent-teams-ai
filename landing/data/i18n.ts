@@ -1,4 +1,4 @@
-export type LocaleCode = "en" | "ru" | "zh" | "es" | "hi" | "ar" | "pt";
+export type LocaleCode = "en" | "ru" | "zh" | "es" | "hi" | "ar" | "pt" | "fr" | "ja" | "de";
 
 export const supportedLocales = [
   { code: "en", iso: "en-US", name: "English", flag: "\u{1F1FA}\u{1F1F8}", file: "en.json" },
@@ -7,6 +7,9 @@ export const supportedLocales = [
   { code: "hi", iso: "hi-IN", name: "हिन्दी", flag: "\u{1F1EE}\u{1F1F3}", file: "hi.json" },
   { code: "ar", iso: "ar-SA", name: "العربية", flag: "\u{1F1F8}\u{1F1E6}", file: "ar.json", dir: "rtl" },
   { code: "pt", iso: "pt-BR", name: "Português", flag: "\u{1F1E7}\u{1F1F7}", file: "pt.json" },
+  { code: "fr", iso: "fr-FR", name: "Français", flag: "\u{1F1EB}\u{1F1F7}", file: "fr.json" },
+  { code: "ja", iso: "ja-JP", name: "日本語", flag: "\u{1F1EF}\u{1F1F5}", file: "ja.json" },
+  { code: "de", iso: "de-DE", name: "Deutsch", flag: "\u{1F1E9}\u{1F1EA}", file: "de.json" },
   { code: "ru", iso: "ru-RU", name: "Русский", flag: "\u{1F1F7}\u{1F1FA}", file: "ru.json" }
 ] as const;
 

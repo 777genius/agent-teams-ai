@@ -12,7 +12,7 @@
     "badge": "Claude Agent Teams",
     "downloadNow": "अभी डाउनलोड करें",
     "ctaPrimary": "{platform} के लिए डाउनलोड करें",
-    "ctaSecondary": "सुविधाएँ देखें",
+    "ctaSecondary": "तुलना करें",
     "preview": "प्रोडक्ट प्रीव्यू",
     "trust": {
       "agentTeams": "एजेंट टीमें",
@@ -33,7 +33,8 @@
     "light": "लाइट"
   },
   "language": {
-    "label": "भाषा"
+    "label": "भाषा",
+    "search": "भाषा खोजें…"
   },
   "features": {
     "sectionTitle": "AI एजेंट ऑर्केस्ट्रेशन के लिए सब कुछ",

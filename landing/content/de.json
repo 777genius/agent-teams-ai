@@ -1,0 +1,102 @@
+{
+  "hero": {
+    "title": "Claude Agent Teams",
+    "subtitle": "Sie sind der CTO, Agenten sind Ihr Team. Sie erledigen Aufgaben, kommunizieren untereinander, reviewen Code. Sie schauen aufs Kanban-Board und trinken Kaffee."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Agenten-Teams",
+      "description": "Erstellen Sie Teams mit verschiedenen Rollen. Agenten arbeiten parallel und autonom, kommunizieren untereinander und kollaborieren teamübergreifend."
+    },
+    {
+      "id": "kanban",
+      "title": "Kanban-Board",
+      "description": "Aufgabenstatus ändern sich in Echtzeit. Ziehen, zuweisen, reviewen — alles auf einem visuellen Board."
+    },
+    {
+      "id": "codeReview",
+      "title": "Code-Review",
+      "description": "Diff-Ansicht pro Aufgabe mit Annehmen, Ablehnen und Kommentieren. Integrierter Code-Editor mit Git-Unterstützung."
+    },
+    {
+      "id": "crossTeam",
+      "title": "Teamübergreifende Kommunikation",
+      "description": "Agenten kommunizieren inner- und teamübergreifend. Direktnachrichten, Aufgabenkommentare und Schnellaktionen."
+    },
+    {
+      "id": "soloMode",
+      "title": "Solo-Modus",
+      "description": "Starten Sie mit einem einzelnen Agenten, der seine Aufgaben selbst verwaltet. Erweitern Sie jederzeit zum vollständigen Team."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Live-Prozesse",
+      "description": "Sehen Sie laufende Agenten, öffnen Sie URLs im Browser, überwachen Sie Token-Nutzung und Sitzungskontext in Echtzeit."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "Was ist Claude Agent Teams?",
+      "answer": "Eine Desktop-App, mit der Sie KI-Agenten-Teams mit Claude Code zusammenstellen können. Jeder Agent hat eine Rolle, arbeitet autonom und kollaboriert mit Teammitgliedern — alles über ein Kanban-Board verwaltet."
+    },
+    {
+      "id": "isFree",
+      "question": "Ist es wirklich kostenlos?",
+      "answer": "Ja. Die App ist 100% kostenlos und Open Source. Sie brauchen nur ein Claude-Abo (Max oder Pro) — das war's. Claude Code wird automatisch installiert und eingerichtet."
+    },
+    {
+      "id": "platforms",
+      "question": "Welche Plattformen werden unterstützt?",
+      "answer": "macOS (Apple Silicon und Intel), Windows und Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "Wie funktioniert es?",
+      "answer": "App installieren, Team erstellen, Rollen zuweisen — Agenten beginnen parallel zu arbeiten. Sie verfolgen den Fortschritt am Kanban-Board, reviewen Code-Diffs und kommunizieren direkt mit Agenten."
+    },
+    {
+      "id": "privacy",
+      "question": "Ist mein Code sicher?",
+      "answer": "Alles läuft lokal auf Ihrem Rechner. Keine Daten werden an externe Server gesendet. Ihr Code, Gespräche und Agentenaktivität bleiben vollständig privat."
+    },
+    {
+      "id": "requirements",
+      "question": "Was brauche ich zum Start?",
+      "answer": "Einfach die App installieren — Claude Code Installation und Authentifizierung sind integriert. Zero-Setup-Onboarding bringt Sie in Minuten zum Laufen."
+    }
+  ],
+  "download": {
+    "title": "Herunterladen",
+    "note": "Wählen Sie Ihre Plattform und starten Sie mit KI-Agenten-Teams."
+  },
+  "testimonials": [
+    { "id": "user1", "name": "Alex K.", "role": "Tech Lead", "text": "Endlich ein Tool, das KI-Agenten wie ein Engineering-Team verwaltet. Das Kanban-Board ist ein Game-Changer für parallele Arbeit." },
+    { "id": "user2", "name": "Sarah M.", "role": "Full-Stack-Entwicklerin", "text": "Solo-Modus ist perfekt für schnelle Aufgaben. Bei Bedarf starte ich in Sekunden ein vollständiges Team. Teamübergreifende Kommunikation funktioniert einfach." },
+    { "id": "user3", "name": "David R.", "role": "Senior Engineer", "text": "Der Code-Review-Workflow ist brillant — Diff-Ansicht pro Aufgabe, Annehmen/Ablehnen, Kommentare. Wie ein Team, das tatsächlich Anweisungen befolgt." },
+    { "id": "user4", "name": "Yuki T.", "role": "DevOps Engineer", "text": "Live-Prozessüberwachung und Kontext-Tracking sind unglaublich nützlich. Ich sehe genau, was jeder Agent tut." },
+    { "id": "user5", "name": "Maria S.", "role": "Indie-Entwicklerin", "text": "Zero-Setup-Onboarding ist echt — App installiert, einmal authentifiziert, und in 5 Minuten arbeiteten Agenten an meinem Code." },
+    { "id": "user6", "name": "Chris L.", "role": "Startup-CTO", "text": "Hat mein Prototyping komplett verändert. Teams für verschiedene Stack-Teile aufsetzen und parallel arbeiten lassen. 10x Produktivitätssteigerung." }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "Für immer kostenlos",
+      "price": "0€",
+      "period": "für immer",
+      "description": "Alles inklusive. Keine Limits, keine API-Schlüssel, keine Kreditkarte.",
+      "features": [
+        "Unbegrenzte Agenten-Teams",
+        "Kanban-Board mit Echtzeit-Updates",
+        "Code-Review mit Diff-Ansicht",
+        "Teamübergreifende Kommunikation",
+        "Solo- und Team-Modi",
+        "Live-Prozessüberwachung",
+        "Integrierter Code-Editor",
+        "MCP-Integration"
+      ],
+      "highlighted": true
+    }
+  ]
+}

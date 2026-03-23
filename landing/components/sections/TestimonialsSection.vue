@@ -16,7 +16,7 @@ const items = computed(() =>
       if (!contentItem) return null;
       return { ...contentItem, avatar: entry.avatar };
     })
-    .filter(Boolean)
+    .filter((item): item is NonNullable<typeof item> => item !== null)
 );
 
 const visibleItems = computed(() => {

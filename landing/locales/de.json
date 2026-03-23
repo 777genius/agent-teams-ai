@@ -1,0 +1,113 @@
+{
+  "nav": {
+    "features": "Funktionen",
+    "screenshots": "Screenshots",
+    "comparison": "Vergleich",
+    "download": "Download",
+    "pricing": "Kostenlos",
+    "faq": "FAQ",
+    "viewOnGithub": "View on GitHub"
+  },
+  "hero": {
+    "badge": "Claude Agent Teams",
+    "downloadNow": "Herunterladen",
+    "ctaPrimary": "Für {platform} herunterladen",
+    "ctaSecondary": "Vergleichen",
+    "preview": "Produktvorschau",
+    "trust": {
+      "agentTeams": "Agenten-Teams",
+      "kanban": "Kanban-Board",
+      "openSource": "Open Source"
+    },
+    "watchDemo": "Demo ansehen",
+    "videoUnavailable": "Video nicht verfügbar"
+  },
+  "download": {
+    "title": "Herunterladen",
+    "detected": "Erkannt",
+    "systemRequirements": "Systemanforderungen",
+    "version": "Version {version}"
+  },
+  "theme": {
+    "dark": "Dunkel",
+    "light": "Hell"
+  },
+  "language": {
+    "label": "Sprache",
+    "search": "Sprache suchen…"
+  },
+  "features": {
+    "sectionTitle": "Alles für die KI-Agenten-Orchestrierung",
+    "sectionSubtitle": "Leistungsstarke Tools für effektive Multi-Agenten-Zusammenarbeit."
+  },
+  "pricing": {
+    "sectionTitle": "100% Kostenlos. Ohne Haken.",
+    "sectionSubtitle": "Open Source, keine API-Schlüssel, keine Konfiguration. Einfach installieren und loslegen.",
+    "getStarted": "Herunterladen",
+    "popular": "Für immer kostenlos",
+    "note": "100% Open Source. Keine API-Schlüssel. Keine Konfiguration. Läuft vollständig lokal."
+  },
+  "testimonials": {
+    "sectionTitle": "Was Entwickler sagen",
+    "sectionSubtitle": "Echtes Feedback von echten Entwicklern",
+    "showMore": "Mehr anzeigen",
+    "showLess": "Weniger anzeigen",
+    "feedbackCta": "Möchten Sie Ihre Erfahrung teilen? Erstellen Sie ein Issue auf"
+  },
+  "faq": {
+    "sectionTitle": "Fragen? Wir haben Antworten",
+    "subtitle": "Alles, was Sie über Claude Agent Teams wissen müssen"
+  },
+  "comparison": {
+    "sectionTitle": "Wie wir im Vergleich abschneiden",
+    "sectionSubtitle": "Funktionsvergleich mit anderen KI-Coding-Tools.",
+    "feature": "Funktion",
+    "features": {
+      "crossTeam": "Teamübergreifende Kommunikation",
+      "agentMessaging": "Agent-zu-Agent-Messaging",
+      "linkedTasks": "Verknüpfte Aufgaben",
+      "sessionAnalysis": "Sitzungsanalyse",
+      "taskAttachments": "Aufgabenanhänge",
+      "hunkReview": "Hunk-Level-Review",
+      "codeEditor": "Integrierter Code-Editor",
+      "fullAutonomy": "Volle Autonomie",
+      "taskDeps": "Aufgabenabhängigkeiten",
+      "reviewWorkflow": "Review-Workflow",
+      "zeroSetup": "Keine Einrichtung",
+      "kanban": "Kanban-Board",
+      "execLog": "Ausführungsprotokoll",
+      "liveProcesses": "Live-Prozesse",
+      "perTaskReview": "Code-Review pro Aufgabe",
+      "flexAutonomy": "Flexible Autonomie",
+      "worktree": "Git-Worktree-Isolation",
+      "multiAgent": "Multi-Agenten-Backend",
+      "price": "Preis"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "In Aktion sehen",
+    "sectionSubtitle": "Echte Screenshots der App — Kanban-Board, Code-Review, Agenten-Teams und mehr."
+  },
+  "common": {
+    "learnMore": "Mehr erfahren"
+  },
+  "footer": {
+    "copyright": "© {year} Claude Agent Teams",
+    "tagline": "KI-Agenten-Orchestrierung für Entwickler",
+    "links": {
+      "github": "GitHub",
+      "docs": "Dokumentation"
+    }
+  },
+  "meta": {
+    "homeTitle": "Claude Agent Teams — KI-Agenten-Orchestrierung für Entwickler",
+    "homeDescription": "Kostenlose Open-Source-Desktop-App für KI-Agenten-Teams. Kanban-Board, Code-Review, teamübergreifende Kommunikation. Läuft vollständig lokal."
+  },
+  "error": {
+    "notFoundTitle": "Seite nicht gefunden",
+    "notFoundDescription": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
+    "genericTitle": "Etwas ist schiefgelaufen",
+    "genericDescription": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
+    "goHome": "Zur Startseite"
+  }
+}

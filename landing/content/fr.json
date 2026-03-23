@@ -1,0 +1,102 @@
+{
+  "hero": {
+    "title": "Claude Agent Teams",
+    "subtitle": "Vous êtes le CTO, les agents sont votre équipe. Ils gèrent les tâches, communiquent entre eux, révisent le code. Vous regardez le kanban et buvez votre café."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Équipes d'agents",
+      "description": "Créez des équipes avec différents rôles. Les agents travaillent en parallèle de manière autonome, communiquent entre eux et collaborent entre équipes."
+    },
+    {
+      "id": "kanban",
+      "title": "Tableau Kanban",
+      "description": "Les tâches changent de statut en temps réel. Glissez, assignez, révisez — tout sur un tableau visuel."
+    },
+    {
+      "id": "codeReview",
+      "title": "Revue de code",
+      "description": "Vue diff par tâche avec acceptation, rejet et commentaires. Éditeur de code intégré avec support Git."
+    },
+    {
+      "id": "crossTeam",
+      "title": "Communication inter-équipes",
+      "description": "Les agents communiquent entre eux au sein et entre les équipes. Messages directs, commentaires sur les tâches et actions rapides."
+    },
+    {
+      "id": "soloMode",
+      "title": "Mode solo",
+      "description": "Commencez avec un seul agent qui gère ses tâches. Passez à une équipe complète quand vous avez besoin de plus de puissance."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Processus en direct",
+      "description": "Visualisez les agents en cours, ouvrez les URL dans le navigateur, surveillez l'utilisation des tokens et le contexte en temps réel."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "Qu'est-ce que Claude Agent Teams ?",
+      "answer": "Une application de bureau qui vous permet d'assembler des équipes d'agents IA propulsés par Claude Code. Chaque agent a un rôle, travaille de manière autonome et collabore avec ses coéquipiers — le tout géré via un tableau kanban."
+    },
+    {
+      "id": "isFree",
+      "question": "C'est vraiment gratuit ?",
+      "answer": "Oui. L'application est 100% gratuite et open source. Vous avez juste besoin d'un abonnement Claude (Max ou Pro) — c'est tout. Claude Code est installé et configuré automatiquement, sans terminal."
+    },
+    {
+      "id": "platforms",
+      "question": "Quelles plateformes sont supportées ?",
+      "answer": "macOS (Apple Silicon et Intel), Windows et Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "Comment ça marche ?",
+      "answer": "Installez l'application, créez une équipe, assignez des rôles — les agents commencent à travailler en parallèle. Vous suivez la progression sur le kanban, révisez le code et communiquez directement avec les agents."
+    },
+    {
+      "id": "privacy",
+      "question": "Mon code est-il privé ?",
+      "answer": "Tout fonctionne localement sur votre machine. Aucune donnée n'est envoyée à des serveurs externes. Votre code, vos conversations et l'activité des agents restent entièrement privés."
+    },
+    {
+      "id": "requirements",
+      "question": "De quoi ai-je besoin pour commencer ?",
+      "answer": "Installez simplement l'application — elle inclut l'installation et l'authentification intégrées de Claude Code. L'onboarding zéro-configuration vous fait démarrer en quelques minutes."
+    }
+  ],
+  "download": {
+    "title": "Télécharger",
+    "note": "Choisissez votre plateforme et commencez à travailler avec des équipes d'agents IA."
+  },
+  "testimonials": [
+    { "id": "user1", "name": "Alex K.", "role": "Tech Lead", "text": "Enfin un outil qui me permet de gérer les agents IA comme mon équipe d'ingénieurs. Le kanban est un game-changer pour suivre le travail parallèle." },
+    { "id": "user2", "name": "Sarah M.", "role": "Développeuse full-stack", "text": "Le mode solo est parfait pour les tâches rapides. Quand j'ai besoin de plus, je lance une équipe complète en quelques secondes." },
+    { "id": "user3", "name": "David R.", "role": "Ingénieur senior", "text": "Le workflow de revue de code est brillant — vue diff par tâche, accepter/rejeter, commentaires. Comme avoir une équipe qui suit vraiment les instructions." },
+    { "id": "user4", "name": "Yuki T.", "role": "Ingénieur DevOps", "text": "La surveillance des processus et le suivi du contexte sont incroyablement utiles. Je vois exactement ce que chaque agent fait." },
+    { "id": "user5", "name": "Maria S.", "role": "Développeuse indépendante", "text": "L'onboarding zéro-configuration est réel — installé, authentifié une fois, et les agents travaillaient sur mon code en 5 minutes." },
+    { "id": "user6", "name": "Chris L.", "role": "CTO de startup", "text": "Ça a complètement changé ma façon de prototyper. Je configure des équipes pour différentes parties du stack et les laisse travailler en parallèle." }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "Gratuit pour toujours",
+      "price": "0€",
+      "period": "pour toujours",
+      "description": "Tout inclus. Sans limites, sans clés API, sans carte bancaire.",
+      "features": [
+        "Équipes d'agents illimitées",
+        "Kanban avec mises à jour en temps réel",
+        "Revue de code avec vue diff",
+        "Communication inter-équipes",
+        "Modes solo et équipe",
+        "Surveillance des processus en direct",
+        "Éditeur de code intégré",
+        "Intégration MCP"
+      ],
+      "highlighted": true
+    }
+  ]
+}
