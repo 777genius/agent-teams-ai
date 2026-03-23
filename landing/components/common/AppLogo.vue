@@ -41,10 +41,16 @@
   font-weight: 700;
   font-size: 14px;
   letter-spacing: 0.05em;
+  background: linear-gradient(135deg, #ffffff, #00f0ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
+</style>
 
-.v-theme--dark .app-logo__text {
-  background: linear-gradient(135deg, #e0e6ff, #00f0ff);
+<style>
+.v-theme--light .app-logo__text {
+  background: linear-gradient(135deg, #1e293b, #0891b2);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;

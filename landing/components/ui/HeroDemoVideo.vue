@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { mdiPlay, mdiPause, mdiVolumeHigh, mdiVolumeOff, mdiFullscreen } from '@mdi/js';
 
 const { t } = useI18n();
+const videoSrc = 'https://github.com/user-attachments/assets/9cae73cd-7f42-46e5-a8fb-ad6d41737ff8';
 const videoRef = ref<HTMLVideoElement | null>(null);
 const containerRef = ref<HTMLElement | null>(null);
 const isPlaying = ref(false);
@@ -146,7 +147,7 @@ onUnmounted(() => {
       @timeupdate="onTimeUpdate"
       @click="togglePlay"
     >
-      <source src="/video/demo.mp4" type="video/mp4" />
+      <source :src="videoSrc" type="video/mp4" />
     </video>
 
     <!-- Play overlay (when paused) -->
@@ -203,6 +204,7 @@ onUnmounted(() => {
 .hero-video {
   position: relative;
   z-index: 1;
+  aspect-ratio: 16 / 9;
   border-radius: 16px;
   background: rgba(10, 10, 15, 0.95);
   backdrop-filter: blur(20px);
