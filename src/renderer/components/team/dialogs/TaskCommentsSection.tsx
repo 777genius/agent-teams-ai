@@ -227,12 +227,19 @@ export const TaskCommentsSection = ({
                         : '',
                   ].join(' ')}
                   style={
-                    !comment.type || comment.type === 'regular'
+                    comment.author === 'system'
                       ? {
-                          backgroundColor:
-                            index % 2 === 1 ? 'var(--card-bg-zebra)' : 'var(--card-bg)',
+                          backgroundColor: 'var(--system-activity-bg)',
+                          borderTop: '1px solid var(--system-activity-border)',
+                          borderBottom: '1px solid var(--system-activity-border)',
+                          borderLeft: '3px solid var(--system-activity-accent)',
                         }
-                      : undefined
+                      : !comment.type || comment.type === 'regular'
+                        ? {
+                            backgroundColor:
+                              index % 2 === 1 ? 'var(--card-bg-zebra)' : 'var(--card-bg)',
+                          }
+                        : undefined
                   }
                 >
                   <div className="mb-1 flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
@@ -242,7 +249,7 @@ export const TaskCommentsSection = ({
                     <MemberBadge
                       name={comment.author}
                       color={colorMap.get(comment.author)}
-                      hideAvatar={comment.author === 'user'}
+                      hideAvatar={comment.author === 'user' || comment.author === 'system'}
                     />
                     {comment.type === 'review_approved' ? (
                       <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">

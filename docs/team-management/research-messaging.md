@@ -31,7 +31,6 @@
 - Race condition при одновременной записи (см. [research-inbox.md](./research-inbox.md))
 - Формат недокументирован (internal API)
 - Доставка между turns, не real-time
-- from: "user" может не работать
 
 ### Формат сообщения
 
@@ -93,6 +92,66 @@ claude --message "Send message to teammate-1: stop working on X"
 
 ---
 
+## Архитектура доставки (обновлено 2026-03-23)
+
+### Два разных механизма: лид vs тиммейты
+
+**Лид** читает ТОЛЬКО stdin (stream-json). Для доставки сообщений лиду используется `relayLeadInboxMessages()` — конвертирует inbox-записи в stream-json на stdin. Без relay лид не видит inbox.
+
+**Тиммейты** — полноценные независимые Claude Code процессы. Каждый мониторит свой inbox файл через fs.watch и читает сообщения напрямую. Relay через лида НЕ нужен.
+
+### Поток сообщений: Юзер → Тиммейт
+
+```
+User → [UI] → TeamInboxWriter → inboxes/{member}.json (read: false)
+                                        ↓
+                              Teammate CLI (fs.watch) → читает → обрабатывает
+                                        ↓
+                              Teammate → inboxes/user.json (ответ)
+                                        ↓
+                              [UI] ← TeamInboxReader ← читает user.json
+```
+
+Лид в этой цепочке НЕ участвует. Сообщение доставляется напрямую.
+
+### Поток сообщений: Юзер → Лид
+
+```
+User → [UI] → stdin (stream-json) → Lead CLI
+                                        ↓
+Lead → sentMessages.json / liveLeadProcessMessages
+                                        ↓
+                              [UI] ← читает и отображает
+```
+
+Для лида дополнительно работает `relayLeadInboxMessages()` при изменении `inboxes/{lead}.json`.
+
+### Ответы тиммейтов
+
+Тиммейт отвечает юзеру через `SendMessage(to="user")`, что записывается в `inboxes/user.json`. UI читает этот файл через `TeamInboxReader.getMessages()` (читает ВСЕ inbox файлы в директории).
+
+Сообщения в `user.json` могут не содержать `messageId` — `TeamInboxReader` генерирует детерминированный ID из sha256(from + timestamp + text).
+
+### from: "user" — подтверждено работает
+
+`from: "user"` работает корректно (подтверждено эмпирически 2026-03-23):
+- Тиммейт получает сообщение
+- Тиммейт корректно определяет что это от юзера
+- Тиммейт отвечает в `inboxes/user.json`
+- Fallback на `from: "team-lead"` не нужен
+
+### Почему relay через лида был ОТКЛЮЧЁН (2026-03-23)
+
+Ранее при отправке DM тиммейту, помимо записи в inbox, вызывался `relayMemberInboxMessages()` — инструкция лиду переслать сообщение через `SendMessage(to=member)`. Это вызывало 3 бага:
+
+1. **Лид отвечал вместо тиммейта** — LLM интерпретировал relay-инструкцию как обращение к себе и отвечал юзеру напрямую
+2. **Дубликаты сообщений** — `markInboxMessagesRead()` записывал в файл → FileWatcher срабатывал → relay запускался повторно → цикл
+3. **Тиммейт не отвечал юзеру** — relay-промпт содержал "Do NOT send to user", что тиммейт тоже видел через лида
+
+Relay отключён в `teams.ts` (handleSendMessage) и `index.ts` (FileWatcher). Код закомментирован, не удалён. Relay для лида (`relayLeadInboxMessages`) не затронут.
+
+---
+
 ## Доставка: Timing и ограничения
 
 ### Цикл тиммейта
@@ -143,15 +202,9 @@ Turn N+1:
 
 ---
 
-## Финальное решение (после 3 раундов ревью)
+## Финальное решение
 
-### Поле from
-
-- Используем `from: "user"` — интуитивно и описывает источник
-- Fallback `from: "team-lead"` если агент не реагирует (team-lead всегда есть в config.json members)
-- Практический тест необходим при первой реализации (см. [research-inbox.md](./research-inbox.md))
-
-### messageId — обязателен в каждом сообщении
+### messageId — обязателен в каждом исходящем сообщении
 
 Каждое исходящее сообщение включает `messageId: crypto.randomUUID()`:
 
@@ -181,9 +234,3 @@ Turn N+1:
 | `TERMINATED` | Получен `shutdown_response` с `approve: true` | Серый dot, "Завершён" |
 
 Определение состояния по timestamp последнего события в inbox (idle_notification, любое сообщение). TERMINATED — исключительно по явному `shutdown_response`.
-
-### Что не входит в MVP
-
-- Автоматический retry при потере сообщения
-- `from: "user"` validation через config.json members (проверяем практически)
-- Hard Interrupt (kill -SIGINT, файловый flag) — Phase 2

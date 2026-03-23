@@ -1,5 +1,5 @@
-import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { addMainBreadcrumb } from '@main/sentry';
+import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { getAppIconPath } from '@main/utils/appIcon';
 import { getAppDataPath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { stripMarkdown } from '@main/utils/textFormatting';
@@ -1455,14 +1455,23 @@ async function handleSendMessage(
       taskRefs: validatedTaskRefs.value,
     });
 
-    // Best-effort live relay so active processes see the inbox row promptly.
-    if (!isLeadRecipient && isAlive) {
-      try {
-        await provisioning.relayMemberInboxMessages(tn, memberName);
-      } catch (e: unknown) {
-        logger.warn(`Relay after sendMessage failed for teammate "${memberName}": ${String(e)}`);
-      }
-    }
+    // Teammate inbox relay DISABLED (2026-03-23).
+    // Teammates read their own inbox files directly via fs.watch — confirmed empirically.
+    // Relaying through the lead (relayMemberInboxMessages) caused multiple bugs:
+    //   1. Lead responded to user instead of forwarding to the teammate
+    //   2. Duplicate messages (relay loop: markInboxMessagesRead → FileWatcher → relay again)
+    //   3. Fragile LLM-dependent prompt chain for routing
+    // The message is already persisted in inboxes/{member}.json above — that's sufficient.
+    // Teammate responses go to inboxes/user.json and are read by TeamInboxReader.
+    // Lead relay (relayLeadInboxMessages) is still needed — lead reads stdin only, not inbox.
+    //
+    // if (!isLeadRecipient && isAlive) {
+    //   try {
+    //     await provisioning.relayMemberInboxMessages(tn, memberName);
+    //   } catch (e: unknown) {
+    //     logger.warn(`Relay after sendMessage failed for teammate "${memberName}": ${String(e)}`);
+    //   }
+    // }
 
     // Best-effort relay for lead via inbox
     if (isLeadRecipient && isAlive) {

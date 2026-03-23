@@ -115,7 +115,6 @@ const FS_MONITOR_POLL_MS = 2000;
 const TASK_WAIT_FALLBACK_MS = 15_000;
 const STALL_CHECK_INTERVAL_MS = 10_000;
 const STALL_WARNING_THRESHOLD_MS = 20_000;
-const STALL_WARNING_REPEAT_MS = 30_000;
 const TEAM_JSON_READ_TIMEOUT_MS = 5_000;
 const TEAM_CONFIG_MAX_BYTES = 10 * 1024 * 1024;
 const TEAM_INBOX_MAX_BYTES = 2 * 1024 * 1024;
@@ -230,8 +229,22 @@ interface ProvisioningRun {
   lastLogProgressAt: number;
   /** Monotonic ms timestamp of last stdout/stderr data. For stall detection. */
   lastDataReceivedAt: number;
+  /** Monotonic ms timestamp of last stdout data only. Stall watchdog uses this
+   *  instead of lastDataReceivedAt because stderr emits periodic debug logs
+   *  that reset the timer without producing any user-visible output. */
+  lastStdoutReceivedAt: number;
   /** Stall watchdog interval handle. Cleared in cleanupRun(). */
   stallCheckHandle: NodeJS.Timeout | null;
+  /** Index of the current stall warning in provisioningOutputParts.
+   *  Used to replace in-place instead of pushing duplicates. */
+  stallWarningIndex: number | null;
+  /** The progress.message before the stall watchdog overwrote it.
+   *  Restored when stdout resumes and the stall warning is cleared. */
+  preStallMessage: string | null;
+  /** Monotonic ms timestamp of last api_retry message. When set, the stall
+   *  watchdog defers to retry messages for progress.message (retries are
+   *  more informative than the generic "CLI not responding" stall text). */
+  lastRetryAt: number;
   /** True after emitApiErrorWarning() fires once — prevents duplicate warnings and pre-complete false positives. */
   apiErrorWarningEmitted: boolean;
   fsPhase: 'waiting_config' | 'waiting_members' | 'waiting_tasks' | 'all_files_found';
@@ -2428,8 +2441,6 @@ export class TeamProvisioningService {
   private startStallWatchdog(run: ProvisioningRun): void {
     if (run.stallCheckHandle) return;
 
-    let lastWarningAt = 0;
-
     run.stallCheckHandle = setInterval(() => {
       // try/catch: Node.js does NOT catch errors in setInterval callbacks —
       // without this, an exception would silently kill the watchdog.
@@ -2445,24 +2456,47 @@ export class TeamProvisioningService {
         }
 
         const now = Date.now();
-        const silenceMs = now - run.lastDataReceivedAt;
+        const silenceMs = now - run.lastStdoutReceivedAt;
 
         if (silenceMs < STALL_WARNING_THRESHOLD_MS) return;
-        if (lastWarningAt > 0 && now - lastWarningAt < STALL_WARNING_REPEAT_MS) return;
 
-        // Don't show stall warnings if CLI has already produced output —
-        // silence between tool calls is normal (e.g. waiting for teammate spawn).
-        if (run.claudeLogLines.length > 0) return;
-
-        lastWarningAt = now;
+        // Instead of pushing new warnings (which bloats Live output),
+        // replace the existing stall warning in-place so the displayed
+        // silence duration stays current (20s → 30s → 1m → ...).
         const silenceSec = Math.round(silenceMs / 1000);
+        const warningText = this.buildStallWarningText(silenceSec, run);
 
-        run.provisioningOutputParts.push(this.buildStallWarningText(silenceSec, run));
+        if (run.stallWarningIndex != null) {
+          run.provisioningOutputParts[run.stallWarningIndex] = warningText;
+        } else {
+          // Save current message ONLY if it's a normal provisioning message,
+          // not a retry message (which has higher priority and its own lifecycle).
+          if (run.progress.messageSeverity !== 'error') {
+            run.preStallMessage = run.progress.message;
+          }
+          run.stallWarningIndex = run.provisioningOutputParts.length;
+          run.provisioningOutputParts.push(warningText);
+        }
+
         const mins = Math.floor(silenceSec / 60);
         const secs = silenceSec % 60;
         const elapsed = mins > 0 ? `${mins}m ${secs > 0 ? `${secs}s` : ''}` : `${secs}s`;
-        run.progress.message = `CLI not responding for ${elapsed} — possible rate limit`;
-        emitLogsProgress(run);
+
+        // If retry messages are flowing, they are more informative than our
+        // generic stall text — don't overwrite progress.message / severity.
+        // Only update the Live output (assistantOutput) with the stall warning.
+        const retryActive = run.lastRetryAt > 0 && now - run.lastRetryAt < 90_000;
+
+        run.progress = {
+          ...run.progress,
+          updatedAt: nowIso(),
+          ...(!retryActive && {
+            message: `CLI not responding for ${elapsed} — possible rate limit`,
+            messageSeverity: 'warning' as const,
+          }),
+          assistantOutput: run.provisioningOutputParts.join('\n\n'),
+        };
+        run.onProgress(run.progress);
       } catch (err) {
         logger.error(
           `[${run.teamName}] Stall watchdog error: ${
@@ -2654,6 +2688,7 @@ export class TeamProvisioningService {
     this.attachStderrHandler(run);
 
     run.lastDataReceivedAt = Date.now();
+    run.lastStdoutReceivedAt = Date.now();
     this.startStallWatchdog(run);
 
     // Restart filesystem monitor for createTeam (launch skips it)
@@ -2709,8 +2744,9 @@ export class TeamProvisioningService {
 
     let stdoutLineBuf = '';
     child.stdout.on('data', (chunk: Buffer) => {
-      // Reset stall watchdog FIRST — any data (even partial JSON) means the CLI is alive.
+      // Reset generic data timestamp (used for other purposes, not stall detection).
       run.lastDataReceivedAt = Date.now();
+
       const text = chunk.toString('utf8');
       this.appendCliLogs(run, 'stdout', text);
       run.stdoutBuffer += text;
@@ -2741,6 +2777,23 @@ export class TeamProvisioningService {
         if (!trimmed) continue;
         try {
           const msg = JSON.parse(trimmed) as Record<string, unknown>;
+          // Only reset stall timer on messages that represent actual API progress
+          // (assistant response or result). System messages like retry attempts
+          // (type=system, subtype=attempt) are informational — the CLI is still
+          // waiting for the API and the user should see the stall warning.
+          const msgType = msg.type;
+          if (msgType === 'assistant' || msgType === 'result') {
+            run.lastStdoutReceivedAt = Date.now();
+            if (run.stallWarningIndex != null) {
+              run.provisioningOutputParts.splice(run.stallWarningIndex, 1);
+              run.stallWarningIndex = null;
+              if (run.preStallMessage != null) {
+                run.progress.message = run.preStallMessage;
+                run.preStallMessage = null;
+                delete run.progress.messageSeverity;
+              }
+            }
+          }
           this.handleStreamJsonMessage(run, msg);
         } catch {
           // Not valid JSON — check for auth failure in raw text output
@@ -2859,7 +2912,11 @@ export class TeamProvisioningService {
         request,
         lastLogProgressAt: 0,
         lastDataReceivedAt: 0, // intentionally 0 — real reset happens after spawn (see startStallWatchdog call sites)
+        lastStdoutReceivedAt: 0,
         stallCheckHandle: null,
+        stallWarningIndex: null,
+        preStallMessage: null,
+        lastRetryAt: 0,
         apiErrorWarningEmitted: false,
         waitingTasksSince: null,
         provisioningComplete: false,
@@ -2885,7 +2942,9 @@ export class TeamProvisioningService {
         pendingPostCompactReminder: false,
         postCompactReminderInFlight: false,
         suppressPostCompactReminderOutput: false,
-        memberSpawnStatuses: new Map(),
+        memberSpawnStatuses: new Map(
+          request.members.map((m) => [m.name, { status: 'waiting' as const, updatedAt: nowIso() }])
+        ),
         progress: {
           runId,
           teamName: request.teamName,
@@ -3015,6 +3074,7 @@ export class TeamProvisioningService {
       // Reset AFTER spawn — not at run init — because async operations (buildProvisioningEnv,
       // writeConfigFile) between init and spawn can take seconds, causing false stall warnings.
       run.lastDataReceivedAt = Date.now();
+      run.lastStdoutReceivedAt = Date.now();
       this.startStallWatchdog(run);
 
       // Filesystem-based progress monitor: actively polls team files instead
@@ -3284,7 +3344,11 @@ export class TeamProvisioningService {
         request: syntheticRequest,
         lastLogProgressAt: 0,
         lastDataReceivedAt: 0, // intentionally 0 — real reset happens after spawn (see startStallWatchdog call sites)
+        lastStdoutReceivedAt: 0,
         stallCheckHandle: null,
+        stallWarningIndex: null,
+        preStallMessage: null,
+        lastRetryAt: 0,
         apiErrorWarningEmitted: false,
         waitingTasksSince: null,
         provisioningComplete: false,
@@ -3310,7 +3374,9 @@ export class TeamProvisioningService {
         pendingPostCompactReminder: false,
         postCompactReminderInFlight: false,
         suppressPostCompactReminderOutput: false,
-        memberSpawnStatuses: new Map(),
+        memberSpawnStatuses: new Map(
+          expectedMembers.map((name) => [name, { status: 'waiting' as const, updatedAt: nowIso() }])
+        ),
         progress: {
           runId,
           teamName: request.teamName,
@@ -3442,6 +3508,7 @@ export class TeamProvisioningService {
       // Reset AFTER spawn — not at run init — because async operations between init
       // and spawn can take seconds, causing false stall warnings.
       run.lastDataReceivedAt = Date.now();
+      run.lastStdoutReceivedAt = Date.now();
       this.startStallWatchdog(run);
 
       // For launch, skip the filesystem monitor — files (config, inboxes, tasks)
@@ -3575,12 +3642,13 @@ export class TeamProvisioningService {
   }
 
   /**
-   * Best-effort: forward a user-written DM to a teammate via the live lead process.
-   * This covers cases where teammates don't automatically respond to inbox JSON,
-   * and only react to Claude Code internal SendMessage routing.
+   * UNUSED (2026-03-23): teammates read their own inbox files directly via fs.watch,
+   * so forwarding through the lead is unnecessary. Kept for reference — the prompt
+   * pattern here ("MUST: ask teammate to reply back to user") was a useful finding
+   * that informed the direct inbox approach.
    *
-   * Note: We suppress the lead's textual output for this injected turn to avoid
-   * confusing lead responses like "No action needed."
+   * Original purpose: forward a user DM to a teammate by injecting a relay turn
+   * into the lead's stdin and suppressing the lead's textual output.
    */
   async forwardUserDmToTeammate(
     teamName: string,
@@ -3683,19 +3751,17 @@ export class TeamProvisioningService {
       const rememberedRelayIds = this.rememberPendingInboxRelayCandidates(run, memberName, batch);
 
       const message = [
-        `Relay inbox messages to teammate "${memberName}".`,
+        `Inbox relay (internal) — forward to "${memberName}".`,
         wrapInAgentBlock(
           [
-            `Use the SendMessage tool with recipient="${memberName}".`,
-            `Forward each inbox item below as a teammate message, preserving task IDs and critical instructions.`,
-            `If an inbox item is marked Source: system_notification, treat it as an automated runtime notification.`,
-            `Forward that automated notification exactly once; do NOT send an additional paraphrased/manual follow-up for the same assignment/review/comment in this relay turn unless you truly need extra non-redundant context.`,
-            `Do NOT send any message to recipient "user" for this relay turn.`,
-            `Do NOT add extra narration outside the SendMessage calls.`,
+            `CRITICAL: Do NOT send any message to recipient "user" for this relay turn. The ONLY valid recipient is "${memberName}".`,
+            `Use the SendMessage tool with recipient="${memberName}" to forward each inbox item below.`,
+            `Preserve task IDs and critical instructions. Do NOT add extra narration outside the SendMessage calls.`,
+            `If an inbox item is marked Source: system_notification, forward that notification exactly once without paraphrasing.`,
           ].join('\n')
         ),
         ``,
-        `Messages:`,
+        `Messages to relay (DO NOT respond to user directly):`,
         ...batch.flatMap((m, idx) => {
           const summaryLine = m.summary?.trim() ? `Summary: ${m.summary.trim()}` : null;
           const crossTeamMeta =
@@ -4524,6 +4590,21 @@ export class TeamProvisioningService {
         continue;
       }
 
+      // Suppress SendMessage(to="user") during member_inbox_relay.
+      // Context: when relaying inbox messages, the lead sometimes ignores the relay
+      // instruction and responds to the user directly instead of forwarding to the
+      // target teammate. This filter prevents that wrong response from appearing
+      // in the UI and being persisted to sentMessages.json.
+      // Note: teammate DM relay is currently disabled (see teams.ts handleSendMessage
+      // and index.ts FileWatcher). This guard is kept as safety net in case relay
+      // is re-enabled in the future.
+      if (recipient === 'user' && run.silentUserDmForward?.mode === 'member_inbox_relay') {
+        logger.debug(
+          `[${run.teamName}] Suppressed SendMessage→user during member_inbox_relay to "${run.silentUserDmForward.target}"`
+        );
+        continue;
+      }
+
       const relayOfMessageId =
         recipient !== 'user'
           ? this.consumePendingInboxRelayCandidate(
@@ -5122,6 +5203,33 @@ export class TeamProvisioningService {
               run.postCompactReminderInFlight ? ' (re-armed during in-flight reminder)' : ''
             }`
           );
+        }
+      }
+
+      // Show API retry attempts in Live output so the user knows what's happening
+      if (sub === 'api_retry') {
+        const attempt = typeof msg.attempt === 'number' ? msg.attempt : '?';
+        const maxRetries = typeof msg.max_retries === 'number' ? msg.max_retries : '?';
+        const errorStatus = typeof msg.error_status === 'number' ? msg.error_status : undefined;
+        const errorLabel = typeof msg.error === 'string' ? msg.error.replace(/_/g, ' ') : undefined;
+        const retryDelay = typeof msg.retry_delay_ms === 'number' ? msg.retry_delay_ms : undefined;
+
+        // Use CLI's own error label (e.g. "rate limit") with status code
+        const statusLabel = errorLabel
+          ? `${errorLabel}${errorStatus ? ` (${errorStatus})` : ''}`
+          : `error ${errorStatus ?? 'unknown'}`;
+        const delayLabel = retryDelay ? ` — next retry in ${Math.round(retryDelay / 1000)}s` : '';
+        const retryText = `API retry ${attempt}/${maxRetries}: ${statusLabel}${delayLabel}`;
+
+        if (!run.provisioningComplete) {
+          run.lastRetryAt = Date.now();
+          run.progress = {
+            ...run.progress,
+            updatedAt: nowIso(),
+            message: retryText,
+            messageSeverity: 'error' as const,
+          };
+          run.onProgress(run.progress);
         }
       }
     }

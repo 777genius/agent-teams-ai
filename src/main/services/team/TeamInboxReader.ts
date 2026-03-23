@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import * as fs from 'fs';
@@ -86,12 +88,18 @@ export class TeamInboxReader {
       if (
         typeof row.from !== 'string' ||
         typeof row.text !== 'string' ||
-        typeof row.timestamp !== 'string' ||
-        typeof row.messageId !== 'string' ||
-        row.messageId.trim().length === 0
+        typeof row.timestamp !== 'string'
       ) {
         continue;
       }
+      // messageId is optional in inbox files. Teammate responses (e.g. inboxes/user.json)
+      // often lack messageId because Claude Code CLI doesn't generate one.
+      // We produce a deterministic hash so the same message always gets the same ID
+      // across reads — important for React keys, dedup, and message tracking.
+      const messageId =
+        typeof row.messageId === 'string' && row.messageId.trim().length > 0
+          ? row.messageId
+          : `inbox-${createHash('sha256').update(`${row.from}\n${row.timestamp}\n${row.text}`).digest('hex').slice(0, 16)}`;
       messages.push({
         from: row.from,
         to: typeof row.to === 'string' ? row.to : undefined,
@@ -101,7 +109,7 @@ export class TeamInboxReader {
         taskRefs: Array.isArray(row.taskRefs) ? row.taskRefs : undefined,
         summary: typeof row.summary === 'string' ? row.summary : undefined,
         color: typeof row.color === 'string' ? row.color : undefined,
-        messageId: row.messageId,
+        messageId,
         relayOfMessageId:
           typeof row.relayOfMessageId === 'string' ? row.relayOfMessageId : undefined,
         source: typeof row.source === 'string' ? (row.source as InboxMessage['source']) : undefined,

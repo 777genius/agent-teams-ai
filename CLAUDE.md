@@ -83,6 +83,19 @@ Keep orphaned Task calls (no matching subagent) for visibility.
 
 ### Agent Teams
 Claude Code's "Orchestrate Teams" feature: multiple sessions coordinate as a team.
+Official docs: https://code.claude.com/docs/en/agent-teams
+
+#### Message Delivery Architecture
+- **Lead** reads ONLY stdin (stream-json). Messages to lead must go through `relayLeadInboxMessages()` which converts inbox entries to stdin.
+- **Teammates** are independent CLI processes. Claude Code runtime monitors each teammate's inbox file and delivers messages between turns. No relay through lead needed.
+- **User → Teammate DM**: UI writes to `inboxes/{member}.json` with `from: "user"`. Teammate reads it directly.
+- **Teammate → User response**: Teammate writes to `inboxes/user.json`. UI reads all inbox files including `user.json` via `TeamInboxReader`.
+- **`relayMemberInboxMessages` is DISABLED** for teammate DMs (commented out in `teams.ts` and `index.ts`). It caused bugs: lead responding instead of teammate, duplicate messages, relay loops. Code preserved but not called.
+- **`relayLeadInboxMessages` is ACTIVE** — lead needs it because lead reads stdin, not inbox files.
+- Messages in `user.json` may lack `messageId` — `TeamInboxReader` generates deterministic IDs via sha256(from+timestamp+text).
+- See `docs/team-management/research-messaging.md` for full architecture details.
+
+#### Team Protocol Details
 - **Process.team?** `{ teamName, memberName, memberColor }` — enriched by SubagentResolver from Task call inputs and `teammate_spawned` tool results
 - **Teammate messages** arrive as `<teammate-message teammate_id="..." color="..." summary="...">content</teammate-message>` in user messages (isMeta: false). Detected by `isParsedTeammateMessage()` — excluded from UserChunks, rendered as `TeammateMessageItem` cards
 - **Session ongoing detection** treats `SendMessage` shutdown_response (approve: true) and its tool_result as ending events, not ongoing activity

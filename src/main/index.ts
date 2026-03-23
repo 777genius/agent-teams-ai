@@ -18,7 +18,6 @@ process.env.UV_THREADPOOL_SIZE ??= '16';
 
 // Sentry must be the first import to capture early errors.
 import './sentry';
-import { syncTelemetryFlag } from './sentry';
 
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
@@ -85,6 +84,7 @@ import { TeamInboxReader } from './services/team/TeamInboxReader';
 import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
 import { getAppIconPath } from './utils/appIcon';
 import { getProjectsBasePath, getTeamsBasePath, getTodosBasePath } from './utils/pathDecoder';
+import { syncTelemetryFlag } from './sentry';
 import {
   CliInstallerService,
   configManager,
@@ -530,7 +530,10 @@ function wireFileWatcherEvents(context: ServiceContext): void {
                 if (inboxName === leadName) {
                   return teamProvisioningService.relayLeadInboxMessages(teamName);
                 }
-                return teamProvisioningService.relayMemberInboxMessages(teamName, inboxName);
+                // Teammate inbox relay DISABLED (2026-03-23): teammates read their own
+                // inbox files directly via fs.watch. See teams.ts handleSendMessage for details.
+                // Lead relay is still needed (lead reads stdin only, not inbox files).
+                return undefined;
               })
               .catch((e: unknown) =>
                 logger.warn(`[FileWatcher] relay failed for ${teamName}: ${String(e)}`)
