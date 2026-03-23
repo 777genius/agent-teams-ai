@@ -355,7 +355,7 @@ export const SendMessageDialog = ({
         onDrop={handleDropWrapper}
         onPaste={handlePasteWrapper}
       >
-        <DropZoneOverlay active={isDragOver} rejected={!isLeadRecipient} />
+        <DropZoneOverlay active={isDragOver} rejected={!supportsAttachments} />
 
         <DialogHeader>
           <DialogTitle>Send Message</DialogTitle>

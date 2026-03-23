@@ -44,7 +44,7 @@
     {
       "id": "isFree",
       "question": "Is it really free?",
-      "answer": "Yes. 100% free, open source, no API keys required. The app runs entirely locally using your existing Claude Code setup."
+      "answer": "Yes. The app itself is 100% free and open source. You just need a Claude subscription (Max or Pro plan) — that's it. Claude Code is installed and set up automatically through our app, no terminal required."
     },
     {
       "id": "platforms",

@@ -1,0 +1,112 @@
+{
+  "nav": {
+    "features": "सुविधाएँ",
+    "screenshots": "स्क्रीनशॉट",
+    "comparison": "तुलना",
+    "download": "डाउनलोड",
+    "pricing": "मुफ़्त",
+    "faq": "FAQ",
+    "viewOnGithub": "View on GitHub"
+  },
+  "hero": {
+    "badge": "Claude Agent Teams",
+    "downloadNow": "अभी डाउनलोड करें",
+    "ctaPrimary": "{platform} के लिए डाउनलोड करें",
+    "ctaSecondary": "सुविधाएँ देखें",
+    "preview": "प्रोडक्ट प्रीव्यू",
+    "trust": {
+      "agentTeams": "एजेंट टीमें",
+      "kanban": "कानबन बोर्ड",
+      "openSource": "ओपन सोर्स"
+    },
+    "watchDemo": "डेमो देखें",
+    "videoUnavailable": "वीडियो उपलब्ध नहीं"
+  },
+  "download": {
+    "title": "डाउनलोड",
+    "detected": "पहचाना गया",
+    "systemRequirements": "सिस्टम आवश्यकताएँ",
+    "version": "संस्करण {version}"
+  },
+  "theme": {
+    "dark": "डार्क",
+    "light": "लाइट"
+  },
+  "language": {
+    "label": "भाषा"
+  },
+  "features": {
+    "sectionTitle": "AI एजेंट ऑर्केस्ट्रेशन के लिए सब कुछ",
+    "sectionSubtitle": "शक्तिशाली उपकरण जो मल्टी-एजेंट सहयोग को वास्तव में काम करते हैं।"
+  },
+  "pricing": {
+    "sectionTitle": "100% मुफ़्त। कोई शर्त नहीं।",
+    "sectionSubtitle": "ओपन सोर्स, कोई API कुंजी नहीं, कोई कॉन्फ़िगरेशन नहीं। बस इंस्टॉल करें और शुरू करें।",
+    "getStarted": "अभी डाउनलोड करें",
+    "popular": "हमेशा मुफ़्त",
+    "note": "100% ओपन सोर्स। कोई API कुंजी नहीं। कोई कॉन्फ़िगरेशन नहीं। पूरी तरह लोकल चलता है।"
+  },
+  "testimonials": {
+    "sectionTitle": "डेवलपर्स क्या कहते हैं",
+    "sectionSubtitle": "असली डेवलपर्स से असली फ़ीडबैक",
+    "showMore": "और दिखाएँ",
+    "showLess": "कम दिखाएँ",
+    "feedbackCta": "अपना अनुभव साझा करना चाहते हैं? इस पर issue खोलें"
+  },
+  "faq": {
+    "sectionTitle": "सवाल हैं? हमारे पास जवाब हैं",
+    "subtitle": "Claude Agent Teams के बारे में सब कुछ"
+  },
+  "comparison": {
+    "sectionTitle": "तुलना करें",
+    "sectionSubtitle": "अन्य AI कोडिंग टूल्स के साथ सुविधा-दर-सुविधा तुलना।",
+    "feature": "सुविधा",
+    "features": {
+      "crossTeam": "क्रॉस-टीम संचार",
+      "agentMessaging": "एजेंट-टू-एजेंट मैसेजिंग",
+      "linkedTasks": "लिंक किए गए कार्य",
+      "sessionAnalysis": "सेशन विश्लेषण",
+      "taskAttachments": "कार्य अटैचमेंट",
+      "hunkReview": "हंक-लेवल रिव्यू",
+      "codeEditor": "बिल्ट-इन कोड एडिटर",
+      "fullAutonomy": "पूर्ण स्वायत्तता",
+      "taskDeps": "कार्य निर्भरताएँ",
+      "reviewWorkflow": "रिव्यू वर्कफ़्लो",
+      "zeroSetup": "शून्य सेटअप",
+      "kanban": "कानबन बोर्ड",
+      "execLog": "एक्ज़ीक्यूशन लॉग व्यूअर",
+      "liveProcesses": "लाइव प्रोसेस",
+      "perTaskReview": "प्रति-कार्य कोड रिव्यू",
+      "flexAutonomy": "लचीली स्वायत्तता",
+      "worktree": "Git worktree आइसोलेशन",
+      "multiAgent": "मल्टी-एजेंट बैकएंड",
+      "price": "कीमत"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "इसे एक्शन में देखें",
+    "sectionSubtitle": "ऐप के असली स्क्रीनशॉट — कानबन बोर्ड, कोड रिव्यू, एजेंट टीमें, और बहुत कुछ।"
+  },
+  "common": {
+    "learnMore": "और जानें"
+  },
+  "footer": {
+    "copyright": "© {year} Claude Agent Teams",
+    "tagline": "डेवलपर्स के लिए AI एजेंट ऑर्केस्ट्रेशन",
+    "links": {
+      "github": "GitHub",
+      "docs": "दस्तावेज़"
+    }
+  },
+  "meta": {
+    "homeTitle": "Claude Agent Teams — डेवलपर्स के लिए AI एजेंट ऑर्केस्ट्रेशन",
+    "homeDescription": "AI एजेंट टीमें बनाने के लिए मुफ़्त, ओपन-सोर्स डेस्कटॉप ऐप। कानबन बोर्ड, कोड रिव्यू, क्रॉस-टीम संचार। पूरी तरह लोकल चलता है।"
+  },
+  "error": {
+    "notFoundTitle": "पेज नहीं मिला",
+    "notFoundDescription": "आप जो पेज ढूँढ रहे हैं वह मौजूद नहीं है या स्थानांतरित कर दिया गया है।",
+    "genericTitle": "कुछ गलत हो गया",
+    "genericDescription": "एक अप्रत्याशित त्रुटि हुई। कृपया बाद में पुनः प्रयास करें।",
+    "goHome": "होमपेज पर जाएँ"
+  }
+}

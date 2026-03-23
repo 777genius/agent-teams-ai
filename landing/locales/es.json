@@ -1,0 +1,112 @@
+{
+  "nav": {
+    "features": "Funciones",
+    "screenshots": "Capturas",
+    "comparison": "Comparar",
+    "download": "Descargar",
+    "pricing": "Gratis",
+    "faq": "FAQ",
+    "viewOnGithub": "View on GitHub"
+  },
+  "hero": {
+    "badge": "Claude Agent Teams",
+    "downloadNow": "Descargar ahora",
+    "ctaPrimary": "Descargar para {platform}",
+    "ctaSecondary": "Ver funciones",
+    "preview": "Vista previa del producto",
+    "trust": {
+      "agentTeams": "Equipos de agentes",
+      "kanban": "Tablero Kanban",
+      "openSource": "Open Source"
+    },
+    "watchDemo": "Ver demo",
+    "videoUnavailable": "Vídeo no disponible"
+  },
+  "download": {
+    "title": "Descargar",
+    "detected": "Detectado",
+    "systemRequirements": "Requisitos del sistema",
+    "version": "Versión {version}"
+  },
+  "theme": {
+    "dark": "Oscuro",
+    "light": "Claro"
+  },
+  "language": {
+    "label": "Idioma"
+  },
+  "features": {
+    "sectionTitle": "Todo lo que necesitas para orquestar agentes IA",
+    "sectionSubtitle": "Herramientas potentes que hacen que la colaboración multi-agente realmente funcione."
+  },
+  "pricing": {
+    "sectionTitle": "100% Gratis. Sin letra pequeña.",
+    "sectionSubtitle": "Código abierto, sin claves API, sin configuración. Instala y empieza.",
+    "getStarted": "Descargar ahora",
+    "popular": "Gratis para siempre",
+    "note": "100% código abierto. Sin claves API. Sin configuración. Funciona completamente en local."
+  },
+  "testimonials": {
+    "sectionTitle": "Lo que dicen los desarrolladores",
+    "sectionSubtitle": "Opiniones reales de desarrolladores reales",
+    "showMore": "Mostrar más",
+    "showLess": "Mostrar menos",
+    "feedbackCta": "¿Quieres compartir tu experiencia? Abre un issue en"
+  },
+  "faq": {
+    "sectionTitle": "¿Tienes preguntas? Tenemos respuestas",
+    "subtitle": "Todo lo que necesitas saber sobre Claude Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Cómo nos comparamos",
+    "sectionSubtitle": "Comparación detallada de funciones con otras herramientas de programación con IA.",
+    "feature": "Función",
+    "features": {
+      "crossTeam": "Comunicación entre equipos",
+      "agentMessaging": "Mensajería entre agentes",
+      "linkedTasks": "Tareas vinculadas",
+      "sessionAnalysis": "Análisis de sesiones",
+      "taskAttachments": "Archivos adjuntos en tareas",
+      "hunkReview": "Revisión a nivel de hunk",
+      "codeEditor": "Editor de código integrado",
+      "fullAutonomy": "Autonomía total",
+      "taskDeps": "Dependencias de tareas",
+      "reviewWorkflow": "Flujo de revisión",
+      "zeroSetup": "Sin configuración",
+      "kanban": "Tablero Kanban",
+      "execLog": "Visor de logs de ejecución",
+      "liveProcesses": "Procesos en vivo",
+      "perTaskReview": "Revisión de código por tarea",
+      "flexAutonomy": "Autonomía flexible",
+      "worktree": "Aislamiento Git worktree",
+      "multiAgent": "Backend multi-agente",
+      "price": "Precio"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Míralo en acción",
+    "sectionSubtitle": "Capturas reales de la aplicación — tablero kanban, revisión de código, equipos de agentes y más."
+  },
+  "common": {
+    "learnMore": "Más información"
+  },
+  "footer": {
+    "copyright": "© {year} Claude Agent Teams",
+    "tagline": "Orquestación de agentes IA para desarrolladores",
+    "links": {
+      "github": "GitHub",
+      "docs": "Documentación"
+    }
+  },
+  "meta": {
+    "homeTitle": "Claude Agent Teams — Orquestación de agentes IA para desarrolladores",
+    "homeDescription": "App de escritorio gratuita y de código abierto para montar equipos de agentes IA. Tablero kanban, revisión de código, comunicación entre equipos. Funciona completamente en local."
+  },
+  "error": {
+    "notFoundTitle": "Página no encontrada",
+    "notFoundDescription": "La página que buscas no existe o ha sido movida.",
+    "genericTitle": "Algo salió mal",
+    "genericDescription": "Se produjo un error inesperado. Inténtalo de nuevo más tarde.",
+    "goHome": "Ir al inicio"
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "nav": {
+    "features": "Recursos",
+    "screenshots": "Capturas",
+    "comparison": "Comparar",
+    "download": "Baixar",
+    "pricing": "Grátis",
+    "faq": "FAQ",
+    "viewOnGithub": "View on GitHub"
+  },
+  "hero": {
+    "badge": "Claude Agent Teams",
+    "downloadNow": "Baixar agora",
+    "ctaPrimary": "Baixar para {platform}",
+    "ctaSecondary": "Ver recursos",
+    "preview": "Prévia do produto",
+    "trust": {
+      "agentTeams": "Equipes de agentes",
+      "kanban": "Quadro Kanban",
+      "openSource": "Open Source"
+    },
+    "watchDemo": "Ver demo",
+    "videoUnavailable": "Vídeo indisponível"
+  },
+  "download": {
+    "title": "Baixar",
+    "detected": "Detectado",
+    "systemRequirements": "Requisitos do sistema",
+    "version": "Versão {version}"
+  },
+  "theme": {
+    "dark": "Escuro",
+    "light": "Claro"
+  },
+  "language": {
+    "label": "Idioma"
+  },
+  "features": {
+    "sectionTitle": "Tudo para orquestração de agentes IA",
+    "sectionSubtitle": "Ferramentas poderosas que fazem a colaboração multi-agente realmente funcionar."
+  },
+  "pricing": {
+    "sectionTitle": "100% Grátis. Sem pegadinhas.",
+    "sectionSubtitle": "Código aberto, sem chaves de API, sem configuração. Instale e comece.",
+    "getStarted": "Baixar agora",
+    "popular": "Grátis para sempre",
+    "note": "100% código aberto. Sem chaves de API. Sem configuração. Roda totalmente local."
+  },
+  "testimonials": {
+    "sectionTitle": "O que os desenvolvedores dizem",
+    "sectionSubtitle": "Feedback real de desenvolvedores reais",
+    "showMore": "Mostrar mais",
+    "showLess": "Mostrar menos",
+    "feedbackCta": "Quer compartilhar sua experiência? Abra uma issue no"
+  },
+  "faq": {
+    "sectionTitle": "Tem perguntas? Temos respostas",
+    "subtitle": "Tudo sobre o Claude Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Como nos comparamos",
+    "sectionSubtitle": "Comparação detalhada de recursos com outras ferramentas de programação com IA.",
+    "feature": "Recurso",
+    "features": {
+      "crossTeam": "Comunicação entre equipes",
+      "agentMessaging": "Mensagens entre agentes",
+      "linkedTasks": "Tarefas vinculadas",
+      "sessionAnalysis": "Análise de sessões",
+      "taskAttachments": "Anexos de tarefas",
+      "hunkReview": "Revisão por hunk",
+      "codeEditor": "Editor de código integrado",
+      "fullAutonomy": "Autonomia total",
+      "taskDeps": "Dependências de tarefas",
+      "reviewWorkflow": "Fluxo de revisão",
+      "zeroSetup": "Sem configuração",
+      "kanban": "Quadro Kanban",
+      "execLog": "Visualizador de logs",
+      "liveProcesses": "Processos ao vivo",
+      "perTaskReview": "Revisão de código por tarefa",
+      "flexAutonomy": "Autonomia flexível",
+      "worktree": "Isolamento Git worktree",
+      "multiAgent": "Backend multi-agente",
+      "price": "Preço"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Veja em ação",
+    "sectionSubtitle": "Capturas reais do app — quadro kanban, revisão de código, equipes de agentes e mais."
+  },
+  "common": {
+    "learnMore": "Saiba mais"
+  },
+  "footer": {
+    "copyright": "© {year} Claude Agent Teams",
+    "tagline": "Orquestração de agentes IA para desenvolvedores",
+    "links": {
+      "github": "GitHub",
+      "docs": "Documentação"
+    }
+  },
+  "meta": {
+    "homeTitle": "Claude Agent Teams — Orquestração de agentes IA para desenvolvedores",
+    "homeDescription": "App desktop gratuito e open source para montar equipes de agentes IA. Quadro kanban, revisão de código, comunicação entre equipes. Roda totalmente local."
+  },
+  "error": {
+    "notFoundTitle": "Página não encontrada",
+    "notFoundDescription": "A página que você procura não existe ou foi movida.",
+    "genericTitle": "Algo deu errado",
+    "genericDescription": "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+    "goHome": "Ir para o início"
+  }
+}

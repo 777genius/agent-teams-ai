@@ -412,7 +412,7 @@ export const MessageComposer = ({
       onDrop={handleDropWrapper}
       onPaste={handlePasteWrapper}
     >
-      <DropZoneOverlay active={isDragOver} rejected={!isLeadRecipient} />
+      <DropZoneOverlay active={isDragOver} rejected={!supportsAttachments} />
 
       <div className="mb-1 space-y-2">
         <div className="flex items-center gap-2">

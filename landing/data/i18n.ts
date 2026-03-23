@@ -1,7 +1,12 @@
-export type LocaleCode = "en" | "ru";
+export type LocaleCode = "en" | "ru" | "zh" | "es" | "hi" | "ar" | "pt";
 
 export const supportedLocales = [
   { code: "en", iso: "en-US", name: "English", flag: "\u{1F1FA}\u{1F1F8}", file: "en.json" },
+  { code: "zh", iso: "zh-CN", name: "中文", flag: "\u{1F1E8}\u{1F1F3}", file: "zh.json" },
+  { code: "es", iso: "es-ES", name: "Español", flag: "\u{1F1EA}\u{1F1F8}", file: "es.json" },
+  { code: "hi", iso: "hi-IN", name: "हिन्दी", flag: "\u{1F1EE}\u{1F1F3}", file: "hi.json" },
+  { code: "ar", iso: "ar-SA", name: "العربية", flag: "\u{1F1F8}\u{1F1E6}", file: "ar.json", dir: "rtl" },
+  { code: "pt", iso: "pt-BR", name: "Português", flag: "\u{1F1E7}\u{1F1F7}", file: "pt.json" },
   { code: "ru", iso: "ru-RU", name: "Русский", flag: "\u{1F1F7}\u{1F1FA}", file: "ru.json" }
 ] as const;
 

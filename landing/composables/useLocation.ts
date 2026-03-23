@@ -11,7 +11,7 @@ export const useLocation = () => {
     if (!process.client) return "en";
     const browserLocale = navigator.language || "en";
     const normalized = browserLocale.split("-")[0].toLowerCase();
-    const supported = supportedLocales.map((item) => item.code);
+    const supported: readonly string[] = supportedLocales.map((item) => item.code);
     return supported.includes(normalized) ? normalized : "en";
   };
 

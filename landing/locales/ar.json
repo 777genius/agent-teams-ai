@@ -1,0 +1,112 @@
+{
+  "nav": {
+    "features": "المميزات",
+    "screenshots": "لقطات الشاشة",
+    "comparison": "المقارنة",
+    "download": "تحميل",
+    "pricing": "مجاني",
+    "faq": "الأسئلة الشائعة",
+    "viewOnGithub": "View on GitHub"
+  },
+  "hero": {
+    "badge": "Claude Agent Teams",
+    "downloadNow": "حمّل الآن",
+    "ctaPrimary": "تحميل لـ {platform}",
+    "ctaSecondary": "عرض المميزات",
+    "preview": "معاينة المنتج",
+    "trust": {
+      "agentTeams": "فرق الوكلاء",
+      "kanban": "لوحة كانبان",
+      "openSource": "مفتوح المصدر"
+    },
+    "watchDemo": "شاهد العرض",
+    "videoUnavailable": "الفيديو غير متوفر"
+  },
+  "download": {
+    "title": "تحميل",
+    "detected": "تم الكشف",
+    "systemRequirements": "متطلبات النظام",
+    "version": "الإصدار {version}"
+  },
+  "theme": {
+    "dark": "داكن",
+    "light": "فاتح"
+  },
+  "language": {
+    "label": "اللغة"
+  },
+  "features": {
+    "sectionTitle": "كل ما تحتاجه لتنسيق وكلاء الذكاء الاصطناعي",
+    "sectionSubtitle": "أدوات قوية تجعل التعاون متعدد الوكلاء يعمل فعلاً."
+  },
+  "pricing": {
+    "sectionTitle": "مجاني 100%. بدون شروط.",
+    "sectionSubtitle": "مفتوح المصدر، بدون مفاتيح API، بدون إعدادات. فقط ثبّت وابدأ.",
+    "getStarted": "حمّل الآن",
+    "popular": "مجاني للأبد",
+    "note": "مفتوح المصدر 100%. بدون مفاتيح API. بدون إعدادات. يعمل محلياً بالكامل."
+  },
+  "testimonials": {
+    "sectionTitle": "ماذا يقول المطورون",
+    "sectionSubtitle": "آراء حقيقية من مطورين حقيقيين",
+    "showMore": "عرض المزيد",
+    "showLess": "عرض أقل",
+    "feedbackCta": "تريد مشاركة تجربتك؟ افتح issue على"
+  },
+  "faq": {
+    "sectionTitle": "لديك أسئلة؟ لدينا إجابات",
+    "subtitle": "كل ما تحتاج معرفته عن Claude Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "كيف نقارن",
+    "sectionSubtitle": "مقارنة تفصيلية للمميزات مع أدوات البرمجة بالذكاء الاصطناعي الأخرى.",
+    "feature": "الميزة",
+    "features": {
+      "crossTeam": "التواصل بين الفرق",
+      "agentMessaging": "مراسلة بين الوكلاء",
+      "linkedTasks": "مهام مرتبطة",
+      "sessionAnalysis": "تحليل الجلسات",
+      "taskAttachments": "مرفقات المهام",
+      "hunkReview": "مراجعة على مستوى الكتلة",
+      "codeEditor": "محرر كود مدمج",
+      "fullAutonomy": "استقلالية كاملة",
+      "taskDeps": "تبعيات المهام",
+      "reviewWorkflow": "سير عمل المراجعة",
+      "zeroSetup": "بدون إعداد",
+      "kanban": "لوحة كانبان",
+      "execLog": "عارض سجلات التنفيذ",
+      "liveProcesses": "عمليات مباشرة",
+      "perTaskReview": "مراجعة كود لكل مهمة",
+      "flexAutonomy": "استقلالية مرنة",
+      "worktree": "عزل Git worktree",
+      "multiAgent": "خلفية متعددة الوكلاء",
+      "price": "السعر"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "شاهده أثناء العمل",
+    "sectionSubtitle": "لقطات شاشة حقيقية من التطبيق — لوحة كانبان، مراجعة الكود، فرق الوكلاء، والمزيد."
+  },
+  "common": {
+    "learnMore": "اعرف المزيد"
+  },
+  "footer": {
+    "copyright": "© {year} Claude Agent Teams",
+    "tagline": "تنسيق وكلاء الذكاء الاصطناعي للمطورين",
+    "links": {
+      "github": "GitHub",
+      "docs": "التوثيق"
+    }
+  },
+  "meta": {
+    "homeTitle": "Claude Agent Teams — تنسيق وكلاء الذكاء الاصطناعي للمطورين",
+    "homeDescription": "تطبيق سطح مكتب مجاني ومفتوح المصدر لتشكيل فرق وكلاء الذكاء الاصطناعي. لوحة كانبان، مراجعة الكود، تواصل بين الفرق. يعمل محلياً بالكامل."
+  },
+  "error": {
+    "notFoundTitle": "الصفحة غير موجودة",
+    "notFoundDescription": "الصفحة التي تبحث عنها غير موجودة أو تم نقلها.",
+    "genericTitle": "حدث خطأ ما",
+    "genericDescription": "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى لاحقاً.",
+    "goHome": "العودة للرئيسية"
+  }
+}
