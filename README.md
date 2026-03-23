@@ -168,7 +168,7 @@ A new approach to task management with AI agent teams.
 | **Zero setup** | ✅ | ❌ Config required | ❌ Config required | ✅ | ⚠️ CLI install required |
 | **Kanban board** | ✅ 5 columns, real-time | ✅ | ✅ 6 columns (pipeline) | ❌ | ❌ |
 | **Execution log viewer** | ✅ Tool calls, reasoning, timeline | ❌ | ✅ Phase-based logs | ✅ | ❌ |
-| **Live processes** | ✅ View, stop, open URLs in browser | ❌ | ✅ 12 agent terminals | ✅ | ❌ |
+| **Live processes** | ✅ View, stop, open URLs in browser | ❌ | ❌ | ✅ | ❌ |
 | **Per-task code review** | ✅ Accept / reject / comment | ⚠️ PR-level only | ⚠️ File-level only | ✅ BugBot on PRs | ❌ |
 | **Flexible autonomy** | ✅ Granular settings, per-action approval, notifications | ❌ | ⚠️ Plan approval only | ✅ | ✅ |
 | **Git worktree isolation** | ✅ Optional | ⚠️ Mandatory | ⚠️ Mandatory | ✅ | ✅ |

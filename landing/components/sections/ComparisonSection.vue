@@ -125,7 +125,7 @@ const rows = computed<ComparisonRow[]>(() => [
     feature: t('comparison.features.liveProcesses'),
     us: { status: 'yes', note: 'View, stop, open URLs' },
     vibeKanban: { status: 'no' },
-    aperant: { status: 'yes', note: '12 agent terminals' },
+    aperant: { status: 'no' },
     cursor: { status: 'yes' },
     claudeCli: { status: 'no' },
   },
@@ -318,9 +318,9 @@ function getStatusIcon(status: string): string {
   margin: 0;
 }
 
-/* Table wrapper for horizontal scroll on mobile */
+/* Table wrapper */
 .comparison-table__wrap {
-  overflow-x: auto;
+  overflow-x: clip;
   border-radius: 16px;
   border: 1px solid rgba(0, 240, 255, 0.15);
   background: rgba(10, 10, 15, 0.6);
@@ -337,6 +337,12 @@ function getStatusIcon(status: string): string {
 }
 
 /* Header */
+.comparison-table thead {
+  position: sticky;
+  top: 64px;
+  z-index: 2;
+}
+
 .comparison-table__th {
   padding: 16px 12px;
   text-align: center;
@@ -348,6 +354,7 @@ function getStatusIcon(status: string): string {
   border-bottom: 1px solid rgba(0, 240, 255, 0.1);
   white-space: nowrap;
   font-family: "JetBrains Mono", monospace;
+  background: rgb(10, 10, 15);
 }
 
 .comparison-table__th--feature {
@@ -358,7 +365,7 @@ function getStatusIcon(status: string): string {
 
 .comparison-table__th--highlight {
   color: #00f0ff;
-  background: rgba(0, 240, 255, 0.06);
+  background: rgba(0, 18, 20, 0.97);
   position: relative;
 }
 
@@ -525,11 +532,12 @@ function getStatusIcon(status: string): string {
 .v-theme--light .comparison-table__th {
   color: #64748b;
   border-bottom-color: rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .v-theme--light .comparison-table__th--highlight {
   color: #0891b2;
-  background: rgba(8, 145, 178, 0.06);
+  background: rgba(240, 253, 255, 0.97);
 }
 
 .v-theme--light .comparison-table__th--highlight::after {
@@ -600,6 +608,10 @@ function getStatusIcon(status: string): string {
 
 /* Responsive */
 @media (max-width: 960px) {
+  .comparison-table__wrap {
+    overflow-x: auto;
+  }
+
   .comparison-section__title {
     font-size: 1.85rem;
   }
