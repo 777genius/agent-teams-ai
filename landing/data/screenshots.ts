@@ -19,4 +19,7 @@ export const screenshots: (Omit<Screenshot, "src"> & { path: string })[] = [
   { path: "screenshots/7.png", alt: "Cross-team messaging", width: 1920, height: 1080 },
   { path: "screenshots/8.png", alt: "Task details and comments", width: 1920, height: 1080 },
   { path: "screenshots/9.png", alt: "Built-in code editor", width: 1920, height: 1080 },
+  { path: "screenshots/10.png", alt: "Task details with code changes and execution logs", width: 2624, height: 1642 },
+  { path: "screenshots/11.png", alt: "Agent code review comments and task workflow", width: 2624, height: 1696 },
+  { path: "screenshots/12.png", alt: "Allow or deny agent actions with live preview", width: 2624, height: 1646 },
 ];
