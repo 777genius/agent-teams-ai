@@ -1,4 +1,4 @@
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import { defineConfig } from 'electron-vite'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
 import react from '@vitejs/plugin-react'
 import { readFileSync } from 'fs'
@@ -51,9 +51,6 @@ const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
 export default defineConfig({
   main: {
     plugins: [
-      externalizeDepsPlugin({
-        exclude: bundledDeps
-      }),
       nativeModuleStub(),
       ...sentryPlugins,
     ],
@@ -71,6 +68,9 @@ export default defineConfig({
       }
     },
     build: {
+      externalizeDeps: {
+        exclude: bundledDeps
+      },
       sourcemap: 'hidden',
       outDir: 'dist-electron/main',
       rollupOptions: {
@@ -93,7 +93,6 @@ export default defineConfig({
     }
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
     resolve: {
       alias: {
         '@preload': resolve(__dirname, 'src/preload'),
