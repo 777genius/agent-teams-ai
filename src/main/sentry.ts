@@ -5,9 +5,11 @@
  * so that Sentry captures errors from the earliest point possible.
  *
  * When `SENTRY_DSN` is not set (dev / self-builds), everything is a no-op.
+ *
+ * The @sentry/electron/main import is lazy so this module can be safely
+ * loaded in standalone (non-Electron) mode without crashing.
  */
 
-import * as Sentry from '@sentry/electron/main';
 import {
   isValidDsn,
   SENTRY_ENVIRONMENT,
@@ -34,25 +36,40 @@ export function syncTelemetryFlag(enabled: boolean): void {
 }
 
 // ---------------------------------------------------------------------------
-// Init
+// Lazy Sentry import — safe in non-Electron environments
 // ---------------------------------------------------------------------------
 
-const dsn = process.env.SENTRY_DSN;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let Sentry: any = null;
 let initialized = false;
 
-if (isValidDsn(dsn)) {
-  Sentry.init({
-    dsn,
-    release: SENTRY_RELEASE,
-    environment: SENTRY_ENVIRONMENT,
-    tracesSampleRate: TRACES_SAMPLE_RATE,
-    sendDefaultPii: false,
+const dsn = process.env.SENTRY_DSN;
 
-    beforeSend(event) {
-      return telemetryAllowed ? event : null;
-    },
-  });
-  initialized = true;
+if (isValidDsn(dsn)) {
+  try {
+    // Dynamic import would be cleaner but top-level await is not available
+    // in all contexts. require() is synchronous and works in both Electron
+    // and Node.js — it simply throws in standalone mode where the electron
+    // module is not resolvable.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    Sentry = require('@sentry/electron/main');
+    Sentry.init({
+      dsn,
+      release: SENTRY_RELEASE,
+      environment: SENTRY_ENVIRONMENT,
+      tracesSampleRate: TRACES_SAMPLE_RATE,
+      sendDefaultPii: false,
+
+      beforeSend(event: unknown) {
+        return telemetryAllowed ? event : null;
+      },
+    });
+    initialized = true;
+  } catch {
+    // @sentry/electron/main requires Electron runtime — not available in
+    // standalone (pure Node.js) mode. All exported helpers are no-ops when
+    // initialized is false, so this is safe to swallow.
+  }
 }
 
 // ---------------------------------------------------------------------------

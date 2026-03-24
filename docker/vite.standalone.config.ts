@@ -10,6 +10,11 @@ import { defineConfig } from 'vite'
 
 import type { Plugin } from 'vite'
 
+// This config lives in docker/ but is invoked from the repo root via
+// `vite build --config docker/vite.standalone.config.ts`, so __dirname
+// is docker/. All paths must resolve relative to the repo root.
+const ROOT = resolve(__dirname, '..')
+
 // Node.js built-in modules that should be externalized
 const nodeBuiltins = new Set([
   'fs', 'path', 'os', 'events', 'stream', 'util', 'net', 'tls',
@@ -21,7 +26,8 @@ const nodeBuiltins = new Set([
 // Packages that must be externalized because they break when bundled
 // (fastify ecosystem uses internal file resolution that doesn't survive bundling)
 const externalPackages = [
-  'fastify', '@fastify/cors', '@fastify/static'
+  'fastify', '@fastify/cors', '@fastify/static',
+  'agent-teams-controller'
 ]
 
 // Stub native .node addons (ssh2/cpu-features have JS fallbacks)
@@ -57,6 +63,8 @@ export const ipcMain = { handle: noop, on: noop, removeHandler: noop };
 export const shell = { openPath: noop, openExternal: noop };
 export const dialog = { showOpenDialog: async () => ({ canceled: true, filePaths: [] }) };
 export const Notification = class { show() {} };
+export const safeStorage = { isEncryptionAvailable: () => false, encryptString: noop, decryptString: () => '' };
+export const screen = proxyObj;
 export default proxyObj;
 `
   return {
@@ -75,12 +83,13 @@ export default proxyObj;
 }
 
 export default defineConfig({
+  root: ROOT,
   plugins: [nativeModuleStub(), electronStub()],
   resolve: {
     alias: {
-      '@main': resolve(__dirname, 'src/main'),
-      '@shared': resolve(__dirname, 'src/shared'),
-      '@preload': resolve(__dirname, 'src/preload')
+      '@main': resolve(ROOT, 'src/main'),
+      '@shared': resolve(ROOT, 'src/shared'),
+      '@preload': resolve(ROOT, 'src/preload')
     }
   },
   ssr: {
@@ -94,7 +103,7 @@ export default defineConfig({
     ssr: true,
     rollupOptions: {
       input: {
-        index: resolve(__dirname, 'src/main/standalone.ts')
+        index: resolve(ROOT, 'src/main/standalone.ts')
       },
       output: {
         format: 'cjs',
