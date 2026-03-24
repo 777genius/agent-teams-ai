@@ -50,16 +50,16 @@ export function useResizablePanel({
 
   // Keep callbacks in refs to avoid stale closures in mousemove listener
   const onWidthChangeRef = useRef(onWidthChange);
-  onWidthChangeRef.current = onWidthChange;
-
   const minWidthRef = useRef(minWidth);
-  minWidthRef.current = minWidth;
-
   const maxWidthRef = useRef(maxWidth);
-  maxWidthRef.current = maxWidth;
-
   const sideRef = useRef(side);
-  sideRef.current = side;
+
+  useEffect(() => {
+    onWidthChangeRef.current = onWidthChange;
+    minWidthRef.current = minWidth;
+    maxWidthRef.current = maxWidth;
+    sideRef.current = side;
+  });
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {

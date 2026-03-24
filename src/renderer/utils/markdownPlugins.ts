@@ -37,7 +37,7 @@ const sanitizeSchema: SanitizeSchema = {
   attributes: {
     ...defaultSchema.attributes,
     // Allow title on abbr (for tooltip definitions)
-    abbr: [...(defaultSchema.attributes?.['abbr'] ?? []), 'title'],
+    abbr: [...(defaultSchema.attributes?.abbr ?? []), 'title'],
   },
 };
 
