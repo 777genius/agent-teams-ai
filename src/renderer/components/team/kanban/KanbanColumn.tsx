@@ -47,7 +47,7 @@ export const KanbanColumn = ({
       )}
       <header
         className={cn(
-          'border-b border-[var(--color-border)] px-3 py-2',
+          'rounded-t-md border-b border-[var(--color-border)] px-3 py-2',
           headerClassName,
           headerDragClassName
         )}

@@ -25,6 +25,7 @@ import {
   type SessionMetadataLevel,
   type SessionsByIdsOptions,
   type SessionsPaginationOptions,
+  type WorktreeSource,
 } from '@main/types';
 import {
   analyzeSessionFileMetadata,
@@ -45,6 +46,19 @@ import {
 import { createLogger } from '@shared/utils/logger';
 import * as path from 'path';
 
+import {
+  AUTO_CLAUDE_DIR,
+  CCSWITCH_DIR,
+  CLAUDE_CODE_DIR,
+  CLAUDE_WORKTREES_DIR,
+  CONDUCTOR_DIR,
+  CURSOR_DIR,
+  TWENTYFIRST_DIR,
+  VIBE_KANBAN_DIR,
+  WORKSPACES_DIR,
+  WORKTREES_DIR,
+} from '@main/constants/worktreePatterns';
+
 import { LocalFileSystemProvider } from '../infrastructure/LocalFileSystemProvider';
 
 import { ProjectPathResolver } from './ProjectPathResolver';
@@ -52,7 +66,6 @@ import { SessionContentFilter } from './SessionContentFilter';
 import { SessionSearcher } from './SessionSearcher';
 import { SubagentLocator } from './SubagentLocator';
 import { subprojectRegistry } from './SubprojectRegistry';
-import { WorktreeGrouper } from './WorktreeGrouper';
 
 import type { FileSystemProvider, FsDirent } from '../infrastructure/FileSystemProvider';
 
@@ -63,6 +76,51 @@ const logger = createLogger('Discovery:ProjectScanner');
 // Keep this non-zero because parts of the renderer still rely on a (partial) sessionId list
 // for lookups and navigation; a small cap preserves that behavior without huge payloads.
 const MAX_SESSION_IDS_EXPORTED = 200;
+
+/**
+ * Fast, zero-I/O worktree detection based on path patterns only.
+ * Used by scanWithWorktreeGrouping to provide accurate worktree metadata
+ * without expensive git filesystem operations.
+ */
+function detectWorktreeFromPath(projectPath: string): {
+  isWorktree: boolean;
+  source: WorktreeSource;
+} {
+  const parts = projectPath.split(path.sep).filter(Boolean);
+
+  if (parts.includes(VIBE_KANBAN_DIR) && parts.includes(WORKTREES_DIR)) {
+    return { isWorktree: true, source: 'vibe-kanban' };
+  }
+  if (parts.includes(CONDUCTOR_DIR) && parts.includes(WORKSPACES_DIR)) {
+    // Only subpaths after workspaces/{repo} are worktrees
+    const idx = parts.indexOf(CONDUCTOR_DIR);
+    if (idx >= 0 && parts.length > idx + 3) {
+      return { isWorktree: true, source: 'conductor' };
+    }
+  }
+  if (parts.includes(AUTO_CLAUDE_DIR) && parts.includes(WORKTREES_DIR)) {
+    return { isWorktree: true, source: 'auto-claude' };
+  }
+  if (parts.includes(TWENTYFIRST_DIR) && parts.includes(WORKTREES_DIR)) {
+    return { isWorktree: true, source: '21st' };
+  }
+  if (parts.includes(CLAUDE_WORKTREES_DIR)) {
+    return { isWorktree: true, source: 'claude-desktop' };
+  }
+  if (parts.includes(CCSWITCH_DIR) && parts.includes(WORKTREES_DIR)) {
+    return { isWorktree: true, source: 'ccswitch' };
+  }
+  if (parts.includes(CURSOR_DIR) && parts.includes(WORKTREES_DIR)) {
+    return { isWorktree: true, source: 'git' };
+  }
+  {
+    const claudeCodeIdx = parts.indexOf(CLAUDE_CODE_DIR);
+    if (claudeCodeIdx >= 0 && parts[claudeCodeIdx + 1] === WORKTREES_DIR) {
+      return { isWorktree: true, source: 'claude-code' };
+    }
+  }
+  return { isWorktree: false, source: 'unknown' };
+}
 
 export class ProjectScanner {
   private readonly projectsDir: string;
@@ -96,7 +154,6 @@ export class ProjectScanner {
   // Delegated services
   private readonly fsProvider: FileSystemProvider;
   private readonly sessionContentFilter: typeof SessionContentFilter;
-  private readonly worktreeGrouper: WorktreeGrouper;
   private readonly subagentLocator: SubagentLocator;
   private readonly sessionSearcher: SessionSearcher;
   private readonly projectPathResolver: ProjectPathResolver;
@@ -108,7 +165,6 @@ export class ProjectScanner {
 
     // Initialize delegated services
     this.sessionContentFilter = SessionContentFilter;
-    this.worktreeGrouper = new WorktreeGrouper(this.projectsDir, this.fsProvider);
     this.subagentLocator = new SubagentLocator(this.projectsDir, this.fsProvider);
     this.sessionSearcher = new SessionSearcher(this.projectsDir, this.fsProvider);
     this.projectPathResolver = new ProjectPathResolver(this.projectsDir, this.fsProvider);
@@ -230,6 +286,7 @@ export class ProjectScanner {
       // Each project becomes a single-worktree group.
       const groups: RepositoryGroup[] = projects.map((project) => {
         const totalSessions = project.totalSessions ?? project.sessions.length;
+        const worktreeInfo = detectWorktreeFromPath(project.path);
         return {
           id: project.id,
           identity: null,
@@ -238,8 +295,8 @@ export class ProjectScanner {
               id: project.id,
               path: project.path,
               name: project.name,
-              isMainWorktree: true,
-              source: 'unknown' as const,
+              isMainWorktree: !worktreeInfo.isWorktree,
+              source: worktreeInfo.source,
               sessions: project.sessions,
               totalSessions,
               createdAt: project.createdAt,

@@ -72,6 +72,8 @@ export interface MembersEditorSectionProps {
   headerExtra?: React.ReactNode;
   /** When true, hides member rows and action buttons (label + headerExtra still visible) */
   hideContent?: boolean;
+  /** Existing team members — used to reserve their colors so drafts get the next available ones */
+  existingMembers?: readonly { name: string; color?: string; removedAt?: number | string | null }[];
 }
 
 export const MembersEditorSection = ({
@@ -87,6 +89,7 @@ export const MembersEditorSection = ({
   teamSuggestions,
   headerExtra,
   hideContent = false,
+  existingMembers,
 }: MembersEditorSectionProps): React.JSX.Element => {
   const [jsonEditorOpen, setJsonEditorOpen] = useState(false);
   const [jsonText, setJsonText] = useState('');
@@ -158,7 +161,10 @@ export const MembersEditorSection = ({
 
   const names = members.map((m) => m.name.trim().toLowerCase()).filter(Boolean);
   const hasDuplicates = new Set(names).size !== names.length;
-  const memberColorMap = useMemo(() => buildMemberDraftColorMap(members), [members]);
+  const memberColorMap = useMemo(
+    () => buildMemberDraftColorMap(members, existingMembers),
+    [members, existingMembers]
+  );
 
   const mentionSuggestions = useMemo(
     () => buildMemberDraftSuggestions(members, memberColorMap),

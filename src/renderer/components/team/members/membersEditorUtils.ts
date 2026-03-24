@@ -36,15 +36,37 @@ export function createMemberDraft(initial?: Partial<MemberDraft>): MemberDraft {
   };
 }
 
+interface ExistingMemberColorInput {
+  name: string;
+  color?: string;
+  removedAt?: number | string | null;
+}
+
 export function buildMemberDraftColorMap(
-  members: readonly Pick<MemberDraft, 'name'>[]
+  members: readonly Pick<MemberDraft, 'name'>[],
+  existingMembers?: readonly ExistingMemberColorInput[]
 ): Map<string, string> {
-  return buildMemberColorMap(
-    members
-      .map((member) => member.name.trim())
-      .filter(Boolean)
-      .map((name) => ({ name }))
-  );
+  const draftEntries = members
+    .map((member) => member.name.trim())
+    .filter(Boolean)
+    .map((name) => ({ name }));
+
+  // When existing members are provided, include them first so their colors
+  // are reserved and new drafts receive the next available palette entries.
+  const allEntries = existingMembers ? [...existingMembers, ...draftEntries] : draftEntries;
+
+  const fullMap = buildMemberColorMap(allEntries);
+
+  // Return only draft entries so callers don't see existing-member keys
+  // they didn't ask for (keeps the API surface unchanged).
+  if (!existingMembers) return fullMap;
+
+  const draftMap = new Map<string, string>();
+  for (const entry of draftEntries) {
+    const color = fullMap.get(entry.name);
+    if (color) draftMap.set(entry.name, color);
+  }
+  return draftMap;
 }
 
 /** Resolves a MemberDraft's role selection to a display string. */

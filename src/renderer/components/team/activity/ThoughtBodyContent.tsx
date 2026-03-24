@@ -12,6 +12,7 @@ import {
 } from '@renderer/utils/messageRenderEquality';
 import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
 import { isApiErrorMessage } from '@shared/utils/apiErrorDetector';
+import { stripTeammateMessageBlocks } from '@shared/utils/inboxNoise';
 import { Reply } from 'lucide-react';
 
 import { formatTimeWithSec, ToolSummaryTooltipContent } from './LeadThoughtsGroup';
@@ -41,7 +42,8 @@ export const ThoughtBodyContent = memo(
     onTeamClick,
   }: ThoughtBodyContentProps): JSX.Element {
     const displayContent = useMemo(() => {
-      let text = thought.text.replace(/\n/g, '  \n');
+      // Strip leaked protocol XML (<teammate-message> blocks) before rendering
+      let text = stripTeammateMessageBlocks(thought.text).replace(/\n/g, '  \n');
       text = linkifyTaskIdsInMarkdown(text, thought.taskRefs);
       if ((memberColorMap && memberColorMap.size > 0) || teamNames.length > 0) {
         text = linkifyAllMentionsInMarkdown(

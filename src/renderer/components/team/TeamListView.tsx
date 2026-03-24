@@ -405,7 +405,13 @@ export const TeamListView = (): React.JSX.Element => {
         if (projA !== projB) return projA - projB;
       }
 
-      return 0;
+      // 3. Most recently active teams first (stable secondary sort)
+      const tsA = a.lastActivity ? new Date(a.lastActivity).getTime() : 0;
+      const tsB = b.lastActivity ? new Date(b.lastActivity).getTime() : 0;
+      if (tsA !== tsB) return tsB - tsA;
+
+      // 4. Fallback: alphabetical by team name for deterministic order
+      return a.teamName.localeCompare(b.teamName);
     });
 
     return result;
@@ -808,17 +814,7 @@ export const TeamListView = (): React.JSX.Element => {
                   }
                 }}
               >
-                {teamColorSet ? (
-                  <div
-                    className="pointer-events-none absolute inset-0 z-0 rounded-lg"
-                    style={{ backgroundColor: getThemedBadge(teamColorSet, isLight) }}
-                  />
-                ) : null}
-                <div
-                  className={
-                    teamColorSet ? 'relative z-10 flex flex-1 flex-col' : 'flex flex-1 flex-col'
-                  }
-                >
+                <div className="flex flex-1 flex-col">
                   <div className="flex items-start justify-between">
                     <div className="flex min-w-0 flex-1 items-center gap-2">
                       <h3 className="truncate text-sm font-semibold text-[var(--color-text)]">

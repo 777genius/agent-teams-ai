@@ -136,6 +136,11 @@ export const SendMessageDialog = ({
   const shouldAutoDelegate = canDelegate;
   const supportsAttachments = isLeadRecipient && !!isTeamAlive;
   const canAttach = supportsAttachments && canAddMore;
+  const attachmentRestrictionReason = !supportsAttachments
+    ? !isLeadRecipient
+      ? 'Files can only be sent to the team lead'
+      : 'Team must be online to attach files'
+    : undefined;
 
   // Auto-switch to delegate when lead recipient is selected, but don't
   // override user's explicit choice on dialog open.
@@ -281,12 +286,14 @@ export const SendMessageDialog = ({
   );
 
   const showFileRestrictionError = useCallback(() => {
-    setFileRestrictionError('Files can only be sent to the team lead');
+    setFileRestrictionError(
+      attachmentRestrictionReason ?? 'Files can only be sent to the team lead'
+    );
     window.clearTimeout(fileRestrictionTimerRef.current);
     fileRestrictionTimerRef.current = window.setTimeout(() => {
       setFileRestrictionError(null);
     }, 4000);
-  }, []);
+  }, [attachmentRestrictionReason]);
 
   // Cleanup restriction error timer on unmount
   useEffect(() => {
@@ -355,7 +362,11 @@ export const SendMessageDialog = ({
         onDrop={handleDropWrapper}
         onPaste={handlePasteWrapper}
       >
-        <DropZoneOverlay active={isDragOver} rejected={!supportsAttachments} />
+        <DropZoneOverlay
+          active={isDragOver}
+          rejected={!supportsAttachments}
+          rejectionReason={attachmentRestrictionReason}
+        />
 
         <DialogHeader>
           <DialogTitle>Send Message</DialogTitle>

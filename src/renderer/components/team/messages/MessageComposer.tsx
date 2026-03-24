@@ -257,6 +257,13 @@ export const MessageComposer = ({
   // );
   const supportsAttachments = isLeadRecipient && !isCrossTeam && !!isTeamAlive;
   const canAttach = supportsAttachments && draft.canAddMore;
+  const attachmentRestrictionReason = !supportsAttachments
+    ? isCrossTeam
+      ? 'File attachments are not supported for cross-team messages'
+      : !isLeadRecipient
+        ? 'Files can only be sent to the team lead'
+        : 'Team must be online to attach files'
+    : undefined;
   const attachmentsBlocked = draft.attachments.length > 0 && !supportsAttachments;
   const canSend =
     recipient.length > 0 &&
@@ -332,12 +339,14 @@ export const MessageComposer = ({
   );
 
   const showFileRestrictionError = useCallback(() => {
-    setFileRestrictionError('Files can only be sent to the team lead');
+    setFileRestrictionError(
+      attachmentRestrictionReason ?? 'Files can only be sent to the team lead'
+    );
     window.clearTimeout(fileRestrictionTimerRef.current);
     fileRestrictionTimerRef.current = window.setTimeout(() => {
       setFileRestrictionError(null);
     }, 4000);
-  }, []);
+  }, [attachmentRestrictionReason]);
 
   // Cleanup restriction error timer on unmount
   useEffect(() => {
@@ -841,7 +850,11 @@ export const MessageComposer = ({
       </div>
 
       <div className="relative">
-        <DropZoneOverlay active={isDragOver} rejected={!supportsAttachments} />
+        <DropZoneOverlay
+          active={isDragOver}
+          rejected={!supportsAttachments}
+          rejectionReason={attachmentRestrictionReason}
+        />
         <MentionableTextarea
           ref={textareaRef}
           id={`compose-${teamName}`}

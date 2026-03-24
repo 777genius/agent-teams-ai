@@ -37,28 +37,28 @@ const COLUMN_ACCENTS: Record<
   { headerBg: string; bodyBg: string; icon: React.ReactNode }
 > = {
   todo: {
-    headerBg: 'rgba(59, 130, 246, 0.12)',
-    bodyBg: 'rgba(59, 130, 246, 0.05)',
+    headerBg: 'rgba(59, 130, 246, 0.15)',
+    bodyBg: 'rgba(59, 130, 246, 0.015)',
     icon: <ClipboardList size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
   },
   in_progress: {
-    headerBg: 'rgba(234, 179, 8, 0.14)',
-    bodyBg: 'rgba(234, 179, 8, 0.06)',
+    headerBg: 'rgba(234, 179, 8, 0.18)',
+    bodyBg: 'rgba(234, 179, 8, 0.018)',
     icon: <PlayCircle size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
   },
   done: {
-    headerBg: 'rgba(34, 197, 94, 0.12)',
-    bodyBg: 'rgba(34, 197, 94, 0.05)',
+    headerBg: 'rgba(34, 197, 94, 0.15)',
+    bodyBg: 'rgba(34, 197, 94, 0.015)',
     icon: <CheckCircle2 size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
   },
   review: {
-    headerBg: 'rgba(139, 92, 246, 0.12)',
-    bodyBg: 'rgba(139, 92, 246, 0.05)',
+    headerBg: 'rgba(139, 92, 246, 0.15)',
+    bodyBg: 'rgba(139, 92, 246, 0.015)',
     icon: <Eye size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
   },
   approved: {
-    headerBg: 'rgba(34, 197, 94, 0.24)',
-    bodyBg: 'rgba(34, 197, 94, 0.11)',
+    headerBg: 'rgba(34, 197, 94, 0.28)',
+    bodyBg: 'rgba(34, 197, 94, 0.033)',
     icon: <ShieldCheck size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
   },
 };

@@ -9,6 +9,7 @@
  */
 
 import { killProcessTree, spawnCli } from '@main/utils/childProcess';
+import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
 
@@ -102,7 +103,9 @@ export class ScheduledTaskExecutor {
 
     const child = spawnCli(binaryPath, args, {
       cwd: request.config.cwd,
-      env: { ...process.env, ...shellEnv, CLAUDECODE: undefined },
+      // shellEnv spread after buildEnrichedEnv ensures freshly-resolved values
+      // take precedence over the cached snapshot inside buildEnrichedEnv.
+      env: { ...buildEnrichedEnv(binaryPath), ...shellEnv, CLAUDECODE: undefined },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 

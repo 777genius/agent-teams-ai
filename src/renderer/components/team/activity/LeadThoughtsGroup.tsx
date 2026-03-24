@@ -27,6 +27,7 @@ import {
 } from '@renderer/utils/messageRenderEquality';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { isApiErrorMessage } from '@shared/utils/apiErrorDetector';
+import { isThoughtProtocolNoise } from '@shared/utils/inboxNoise';
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
 import { formatToolSummary, parseToolSummary } from '@shared/utils/toolSummary';
 import { ChevronDown, ChevronRight, ChevronUp, Maximize2 } from 'lucide-react';
@@ -60,6 +61,8 @@ export function isLeadThought(msg: InboxMessage): boolean {
   if (typeof msg.to === 'string' && msg.to.trim().length > 0) return false;
   // Compaction boundary events are system messages, not lead thoughts
   if (isCompactionMessage(msg)) return false;
+  // Protocol noise (JSON coordination signals, raw teammate-message XML) should be hidden
+  if (isThoughtProtocolNoise(msg.text)) return false;
   if (msg.source === 'lead_session') return true;
   if (msg.source === 'lead_process') return true;
   return false;

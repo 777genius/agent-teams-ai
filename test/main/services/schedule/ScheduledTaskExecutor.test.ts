@@ -26,6 +26,10 @@ vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnv: () => mockResolveShellEnv(),
 }));
 
+vi.mock('@main/utils/cliEnv', () => ({
+  buildEnrichedEnv: () => ({ ...process.env }),
+}));
+
 vi.mock('../../../../src/main/services/team/ClaudeBinaryResolver', () => ({
   ClaudeBinaryResolver: {
     resolve: () => mockResolve(),

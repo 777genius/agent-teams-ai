@@ -1315,10 +1315,12 @@ const CommentImagesGrid = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   return (
-    <div className="mt-3 space-y-1.5">
-      <div className="flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)]">
-        <MessageSquare size={10} />
-        From comments
+    <div className="mt-3 space-y-1">
+      <div className="flex items-center gap-1.5">
+        <MessageSquare size={12} className="text-[var(--color-text-muted)]" />
+        <span className="text-[11px] font-medium text-[var(--color-text-muted)]">
+          From comments
+        </span>
       </div>
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (

@@ -36,6 +36,8 @@ interface AddMemberDialogProps {
   adding?: boolean;
   /** Project path for @file mentions in workflow field. */
   projectPath?: string | null;
+  /** Existing team members with their colors — used so new drafts get the next available color */
+  existingMembers?: readonly { name: string; color?: string; removedAt?: number | string | null }[];
 }
 
 const DIALOG_WIDTH = 'w-[720px]';
@@ -53,6 +55,7 @@ export const AddMemberDialog = ({
   onAdd,
   adding,
   projectPath,
+  existingMembers,
 }: AddMemberDialogProps): React.JSX.Element => {
   const [members, setMembers] = useState<MemberDraft[]>(() => buildInitialDrafts(existingNames));
   const [error, setError] = useState<string | null>(null);
@@ -158,6 +161,7 @@ export const AddMemberDialog = ({
             showJsonEditor={false}
             draftKeyPrefix={`addMember:${teamName}`}
             projectPath={projectPath}
+            existingMembers={existingMembers}
           />
         </div>
 

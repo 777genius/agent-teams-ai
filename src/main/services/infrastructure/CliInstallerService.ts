@@ -19,6 +19,7 @@
 
 import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { appendCliAuthDiag } from '@main/utils/cliAuthDiagLog';
+import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { getClaudeBasePath, getHomeDir } from '@main/utils/pathDecoder';
 import {
@@ -32,7 +33,7 @@ import { createHash } from 'crypto';
 import { createWriteStream, existsSync, promises as fsp } from 'fs';
 import http from 'http';
 import https from 'https';
-import { tmpdir, userInfo } from 'os';
+import { tmpdir } from 'os';
 import { join, posix as pathPosix, win32 as pathWin32 } from 'path';
 
 import { ClaudeBinaryResolver } from '../team/ClaudeBinaryResolver';
@@ -81,29 +82,6 @@ const AUTH_STATUS_MAX_RETRIES = 2;
 
 /** Delay before retrying auth status check (ms) — gives previous process time to clean up */
 const AUTH_STATUS_RETRY_DELAY_MS = 1500;
-
-/**
- * Build env for child processes with correct HOME and enriched PATH.
- * PATH merging lives in `cliPathMerge.ts` (shared with binary discovery).
- */
-function buildChildEnv(binaryPath?: string | null): NodeJS.ProcessEnv {
-  const home = getShellPreferredHome();
-  const shellEnv = getCachedShellEnv();
-  let osUsername = '';
-  try {
-    osUsername = userInfo().username;
-  } catch {
-    // userInfo() can throw in restricted environments (Docker, no passwd entry)
-  }
-  const user = shellEnv?.USER?.trim() || process.env.USER?.trim() || osUsername || '';
-  return {
-    ...process.env,
-    HOME: home,
-    USERPROFILE: home,
-    PATH: buildMergedCliPath(binaryPath),
-    ...(user ? { USER: user, LOGNAME: user } : {}),
-  };
-}
 
 /** `claude auth status` may prefix stderr noise or warnings; extract the JSON object. */
 function parseClaudeAuthStatusStdout(stdout: string): { loggedIn?: boolean; authMethod?: string } {
@@ -388,12 +366,7 @@ export class CliInstallerService {
    * Env for CLI subprocesses: login-shell vars + consistent HOME/PATH + same config root as the app.
    */
   private envForCli(binaryPath: string): NodeJS.ProcessEnv {
-    return {
-      ...process.env,
-      ...(getCachedShellEnv() ?? {}),
-      ...buildChildEnv(binaryPath),
-      CLAUDE_CONFIG_DIR: getClaudeBasePath(),
-    };
+    return buildEnrichedEnv(binaryPath);
   }
 
   // ---------------------------------------------------------------------------

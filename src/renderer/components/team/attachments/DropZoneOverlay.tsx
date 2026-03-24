@@ -4,11 +4,14 @@ interface DropZoneOverlayProps {
   active: boolean;
   /** Show a "rejected" variant when files can't be sent to this recipient. */
   rejected?: boolean;
+  /** Custom rejection message. Defaults to generic restriction text. */
+  rejectionReason?: string;
 }
 
 export const DropZoneOverlay = ({
   active,
   rejected,
+  rejectionReason,
 }: DropZoneOverlayProps): React.JSX.Element | null => {
   if (!active) return null;
 
@@ -23,7 +26,9 @@ export const DropZoneOverlay = ({
       >
         <div className="flex flex-col items-center gap-1.5 text-red-400">
           <Ban size={24} />
-          <span className="text-xs font-medium">Files can only be sent to the team lead</span>
+          <span className="text-xs font-medium">
+            {rejectionReason ?? 'Files can only be sent to the team lead'}
+          </span>
         </div>
       </div>
     );

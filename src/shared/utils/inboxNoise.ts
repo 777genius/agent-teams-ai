@@ -36,3 +36,45 @@ export function isInboxNoiseMessage(text: string): boolean {
   const type = getInboxJsonType(text);
   return !!type && INBOX_NOISE_SET.has(type);
 }
+
+// ---------------------------------------------------------------------------
+// Teammate-message XML block detection & stripping
+// ---------------------------------------------------------------------------
+
+const TEAMMATE_MESSAGE_BLOCK_RE = /<teammate-message\s[^>]*>[\s\S]*?<\/teammate-message>/g;
+
+/**
+ * Removes `<teammate-message>` XML blocks from text.
+ * Used to clean protocol artifacts that leak into lead thoughts.
+ */
+export function stripTeammateMessageBlocks(text: string): string {
+  return text
+    .replace(TEAMMATE_MESSAGE_BLOCK_RE, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
+ * Returns true if the entire text consists only of `<teammate-message>` blocks
+ * (possibly with whitespace between them) and no meaningful user-visible content.
+ */
+export function isOnlyTeammateMessageBlocks(text: string): boolean {
+  const stripped = stripTeammateMessageBlocks(text);
+  return stripped.length === 0;
+}
+
+// ---------------------------------------------------------------------------
+// Combined protocol noise check for lead thoughts
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true if a lead thought text is entirely protocol noise and should
+ * be hidden from the user.  Covers:
+ * 1. Structured JSON noise (idle_notification, shutdown_*, etc.)
+ * 2. Text that consists solely of `<teammate-message>` XML blocks
+ */
+export function isThoughtProtocolNoise(text: string): boolean {
+  if (isInboxNoiseMessage(text)) return true;
+  if (isOnlyTeammateMessageBlocks(text)) return true;
+  return false;
+}
