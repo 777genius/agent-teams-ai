@@ -6885,9 +6885,12 @@ export class TeamProvisioningService {
       USER: user,
       LOGNAME: shellEnv.LOGNAME?.trim() || process.env.LOGNAME?.trim() || user,
       TERM: shellEnv.TERM?.trim() || process.env.TERM?.trim() || 'xterm-256color',
-      // Ensure CLI reads/writes from the same Claude root as the app.
-      // This aligns teams/tasks locations when the app overrides claudeRootPath.
-      CLAUDE_CONFIG_DIR: getClaudeBasePath(),
+      // Only set CLAUDE_CONFIG_DIR when the user configured a custom path.
+      // Setting it to the default ~/.claude changes the macOS Keychain namespace
+      // for OAuth credential lookup, causing auth failures. (See issue #27)
+      ...(getClaudeBasePath() !== getAutoDetectedClaudeBasePath()
+        ? { CLAUDE_CONFIG_DIR: getClaudeBasePath() }
+        : {}),
       CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: '1',
     };
 
