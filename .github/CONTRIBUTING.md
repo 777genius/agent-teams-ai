@@ -2,6 +2,23 @@
 
 Thanks for contributing to Claude Agent Teams UI.
 
+## Project Philosophy & Scope
+
+claude-devtools exists to make the invisible parts of Claude Code visible — the token flows, context injections, tool executions, and session dynamics that are otherwise hidden behind the CLI. It is not a general-purpose dashboard or an IDE.
+
+Our priorities:
+
+1. **Parity with Claude Code** — When Claude Code ships new capabilities (agent teams, context tracking, new tool types), we adopt them quickly so users always have full visibility.
+2. **Context engineering insight** — Features that help users understand *what* is consuming their context window, *how* tokens flow through a session, and *where* to optimize. If it doesn't help someone make better decisions about their Claude Code usage, it probably doesn't belong here.
+3. **Stability over novelty** — A reliable, fast tool for professional workflows. We'd rather do fewer things well than many things poorly.
+
+**What we generally do not accept:**
+- Large custom features that don't directly serve context visibility or Claude Code parity.
+- Speculative features that add maintenance burden without solving a concrete problem users face today.
+- PRs that significantly expand scope without prior discussion in an Issue.
+
+If you're considering a non-trivial contribution, **open an Issue first** to check alignment with the current roadmap. This saves everyone time and keeps the project focused.
+
 ## Prerequisites
 - Node.js 20+
 - pnpm 10+
