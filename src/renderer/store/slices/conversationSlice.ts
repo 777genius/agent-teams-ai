@@ -397,10 +397,17 @@ export const createConversationSlice: StateCreator<AppState, [], [], Conversatio
       });
     }
 
+    // Rebuild matchItemIds from synced matches
+    const syncedMatchItemIds = new Set<string>();
+    for (const match of nextMatches) {
+      syncedMatchItemIds.add(match.itemId);
+    }
+
     set({
       searchMatches: nextMatches,
       searchResultCount: nextMatches.length,
       currentSearchIndex: newCurrentIndex,
+      searchMatchItemIds: syncedMatchItemIds,
     });
   },
 
