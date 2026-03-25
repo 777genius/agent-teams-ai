@@ -71,6 +71,9 @@ import type { FileSystemProvider, FsDirent } from '../infrastructure/FileSystemP
 
 const logger = createLogger('Discovery:ProjectScanner');
 
+/** How long to reuse the cached project list for search (ms) */
+const SEARCH_PROJECT_CACHE_TTL_MS = 30_000;
+
 // IPC payload safety: session ID arrays can be extremely large for long-lived projects.
 // Keep counts accurate via totalSessions, but truncate ID lists to keep renderer responsive.
 // Keep this non-zero because parts of the renderer still rely on a (partial) sessionId list
@@ -146,6 +149,9 @@ export class ProjectScanner {
   // Both getProjects() and getRepositoryGroups() call scan() — the cache deduplicates.
   private scanCache: { projects: Project[]; timestamp: number } | null = null;
   private static readonly SCAN_CACHE_TTL_MS = 2000;
+
+  /** Cached project list for search — avoids re-scanning disk on every query */
+  private searchProjectCache: { projects: Project[]; timestamp: number } | null = null;
 
   // Platform-aware batch sizes to avoid UV thread pool saturation on Windows
   private static readonly LOCAL_SESSION_BATCH = process.platform === 'win32' ? 16 : 64;
@@ -1329,8 +1335,17 @@ export class ProjectScanner {
         return { results: [], totalMatches: 0, sessionsSearched: 0, query };
       }
 
-      // Get all projects
-      const projects = await this.scan();
+      // Use cached project list to avoid re-scanning disk on every keystroke
+      let projects: Project[];
+      if (
+        this.searchProjectCache &&
+        Date.now() - this.searchProjectCache.timestamp < SEARCH_PROJECT_CACHE_TTL_MS
+      ) {
+        projects = this.searchProjectCache.projects;
+      } else {
+        projects = await this.scan();
+        this.searchProjectCache = { projects, timestamp: Date.now() };
+      }
 
       if (projects.length === 0) {
         return { results: [], totalMatches: 0, sessionsSearched: 0, query };
@@ -1338,7 +1353,7 @@ export class ProjectScanner {
 
       // Search across all projects with bounded concurrency
       const allResults: SearchSessionsResult[] = [];
-      const searchBatchSize = this.fsProvider.type === 'ssh' ? 2 : 4;
+      const searchBatchSize = this.fsProvider.type === 'ssh' ? 2 : 8;
 
       for (let i = 0; i < projects.length; i += searchBatchSize) {
         const batch = projects.slice(i, i + searchBatchSize);
