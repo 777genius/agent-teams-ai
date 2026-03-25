@@ -152,6 +152,7 @@ import {
   TEAM_SHOW_MESSAGE_NOTIFICATION,
   TEAM_SOFT_DELETE_TASK,
   TEAM_START_TASK,
+  TEAM_START_TASK_BY_USER,
   TEAM_STOP,
   TEAM_TOOL_APPROVAL_EVENT,
   TEAM_TOOL_APPROVAL_READ_FILE,
@@ -871,6 +872,13 @@ const electronAPI: ElectronAPI = {
     },
     startTask: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<{ notifiedOwner: boolean }>(TEAM_START_TASK, teamName, taskId);
+    },
+    startTaskByUser: async (teamName: string, taskId: string) => {
+      return invokeIpcWithResult<{ notifiedOwner: boolean }>(
+        TEAM_START_TASK_BY_USER,
+        teamName,
+        taskId
+      );
     },
     processSend: async (teamName: string, message: string) => {
       return invokeIpcWithResult<void>(TEAM_PROCESS_SEND, teamName, message);

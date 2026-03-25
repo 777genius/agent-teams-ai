@@ -583,6 +583,7 @@ export interface TeamSlice {
   ) => Promise<void>;
   createTeamTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;
   startTask: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
+  startTaskByUser: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
   updateTaskOwner: (teamName: string, taskId: string, owner: string | null) => Promise<void>;
   updateTaskFields: (
@@ -1439,6 +1440,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   startTask: async (teamName: string, taskId: string) => {
     const result = await unwrapIpc('team:startTask', () => api.teams.startTask(teamName, taskId));
+    await get().refreshTeamData(teamName);
+    return result;
+  },
+
+  startTaskByUser: async (teamName: string, taskId: string) => {
+    const result = await unwrapIpc('team:startTaskByUser', () =>
+      api.teams.startTaskByUser(teamName, taskId)
+    );
     await get().refreshTeamData(teamName);
     return result;
   },

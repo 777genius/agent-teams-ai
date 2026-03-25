@@ -12,6 +12,7 @@ import {
   AGENT_BLOCK_CLOSE,
   AGENT_BLOCK_OPEN,
   stripAgentBlocks,
+  wrapAgentBlock,
 } from '@shared/constants/agentBlocks';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
@@ -919,6 +920,61 @@ export class TeamDataService {
             source: 'system_notification',
           });
         }
+      } catch {
+        // Best-effort notification
+      }
+    }
+
+    return { notifiedOwner: !!task.owner };
+  }
+
+  /**
+   * Start a task triggered by the user via UI.
+   * Unlike startTask(), this always notifies the owner (including the lead in solo teams).
+   */
+  async startTaskByUser(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }> {
+    const tasks = await this.taskReader.getTasks(teamName);
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) {
+      throw new Error(`Task #${taskId} not found`);
+    }
+    if (task.status !== 'pending') {
+      throw new Error(`Task #${taskId} is not pending (current: ${task.status})`);
+    }
+
+    this.getController(teamName).tasks.startTask(taskId, 'user');
+
+    if (task.owner) {
+      try {
+        const parts = [
+          `**start working on task now** ${this.getTaskLabel(task)} "${task.subject}"`,
+        ];
+        if (task.description?.trim()) {
+          parts.push(`\nDetails:\n${task.description.trim()}`);
+        }
+        if (task.prompt?.trim()) {
+          parts.push(`\nInstructions:\n${task.prompt.trim()}`);
+        }
+        parts.push(
+          '',
+          wrapAgentBlock(
+            [
+              `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
+              `To fetch the full task context (description, comments, attachments) use:`,
+              `task_get { teamName: "${teamName}", taskId: "${task.id}" }`,
+              `When done, update task status:`,
+              `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
+            ].join('\n')
+          )
+        );
+        await this.sendMessage(teamName, {
+          member: task.owner,
+          from: 'user',
+          text: parts.join('\n'),
+          taskRefs: task.descriptionTaskRefs,
+          summary: `Start working on ${this.getTaskLabel(task)}`,
+          source: 'system_notification',
+        });
       } catch {
         // Best-effort notification
       }

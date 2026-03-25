@@ -443,6 +443,7 @@ export interface TeamsAPI {
     fields: { subject?: string; description?: string }
   ) => Promise<void>;
   startTask: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
+  startTaskByUser: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   processSend: (teamName: string, message: string) => Promise<void>;
   processAlive: (teamName: string) => Promise<boolean>;
   aliveList: () => Promise<string[]>;

@@ -261,7 +261,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     sendTeamMessage,
     requestReview,
     createTeamTask,
-    startTask,
+    startTaskByUser,
     deleteTeam,
     openTeamsTab,
     closeTab,
@@ -310,7 +310,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       sendTeamMessage: s.sendTeamMessage,
       requestReview: s.requestReview,
       createTeamTask: s.createTeamTask,
-      startTask: s.startTask,
+      startTaskByUser: s.startTaskByUser,
       deleteTeam: s.deleteTeam,
       openTeamsTab: s.openTeamsTab,
       closeTab: s.closeTab,
@@ -1537,7 +1537,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               onStartTask={(taskId) => {
                 void (async () => {
                   try {
-                    const result = await startTask(teamName, taskId);
+                    const result = await startTaskByUser(teamName, taskId);
                     if (data?.isAlive) {
                       const task = data.tasks.find((t) => t.id === taskId);
                       try {

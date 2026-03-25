@@ -50,6 +50,7 @@ import {
   TEAM_SHOW_MESSAGE_NOTIFICATION,
   TEAM_SOFT_DELETE_TASK,
   TEAM_START_TASK,
+  TEAM_START_TASK_BY_USER,
   TEAM_STOP,
   TEAM_TOOL_APPROVAL_READ_FILE,
   TEAM_TOOL_APPROVAL_RESPOND,
@@ -332,6 +333,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_MEMBER_STATS, handleGetMemberStats);
   ipcMain.handle(TEAM_UPDATE_CONFIG, handleUpdateConfig);
   ipcMain.handle(TEAM_START_TASK, handleStartTask);
+  ipcMain.handle(TEAM_START_TASK_BY_USER, handleStartTaskByUser);
   ipcMain.handle(TEAM_GET_ALL_TASKS, handleGetAllTasks);
   ipcMain.handle(TEAM_ADD_TASK_COMMENT, handleAddTaskComment);
   ipcMain.handle(TEAM_ADD_MEMBER, handleAddMember);
@@ -393,6 +395,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_GET_MEMBER_STATS);
   ipcMain.removeHandler(TEAM_UPDATE_CONFIG);
   ipcMain.removeHandler(TEAM_START_TASK);
+  ipcMain.removeHandler(TEAM_START_TASK_BY_USER);
   ipcMain.removeHandler(TEAM_GET_ALL_TASKS);
   ipcMain.removeHandler(TEAM_ADD_TASK_COMMENT);
   ipcMain.removeHandler(TEAM_ADD_MEMBER);
@@ -2113,6 +2116,24 @@ async function handleStartTask(
   }
   return wrapTeamHandler('startTask', () =>
     getTeamDataService().startTask(validatedTeamName.value!, validatedTaskId.value!)
+  );
+}
+
+async function handleStartTaskByUser(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown
+): Promise<IpcResult<{ notifiedOwner: boolean }>> {
+  const validatedTeamName = validateTeamName(teamName);
+  if (!validatedTeamName.valid) {
+    return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
+  }
+  const validatedTaskId = validateTaskId(taskId);
+  if (!validatedTaskId.valid) {
+    return { success: false, error: validatedTaskId.error ?? 'Invalid taskId' };
+  }
+  return wrapTeamHandler('startTaskByUser', () =>
+    getTeamDataService().startTaskByUser(validatedTeamName.value!, validatedTaskId.value!)
   );
 }
 

@@ -64,6 +64,13 @@ Path encoding: `/Users/name/project` → `-Users-name-project`
 
 ## Critical Concepts
 
+### Agent Blocks
+- Use `wrapAgentBlock(text)` from `@shared/constants/agentBlocks` to wrap agent-only content.
+  Do NOT manually concatenate `AGENT_BLOCK_OPEN/CLOSE` — the wrapper handles trimming and formatting.
+- `stripAgentBlocks(text)` — removes agent blocks for UI display
+- `unwrapAgentBlock(block)` — extracts content from a single block
+- Agent blocks are hidden from the user in UI, used for internal instructions between agents.
+
 ### isMeta Flag
 - `isMeta: false` = Real user message (creates new chunks)
 - `isMeta: true` = Internal message (tool results, system-generated)

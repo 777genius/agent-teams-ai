@@ -19,6 +19,7 @@ import {
   AGENT_BLOCK_CLOSE,
   AGENT_BLOCK_OPEN,
   stripAgentBlocks,
+  wrapAgentBlock,
 } from '@shared/constants/agentBlocks';
 import {
   CROSS_TEAM_PREFIX_TAG,
@@ -387,11 +388,8 @@ async function ensureCwdExists(cwd: string): Promise<void> {
   }
 }
 
-function wrapInAgentBlock(text: string): string {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return '';
-  return `${AGENT_BLOCK_OPEN}\n${trimmed}\n${AGENT_BLOCK_CLOSE}`;
-}
+/** @deprecated Use wrapAgentBlock from @shared/constants/agentBlocks instead. */
+const wrapInAgentBlock = wrapAgentBlock;
 
 function indentMultiline(text: string, indent: string): string {
   return text
