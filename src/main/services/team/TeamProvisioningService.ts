@@ -4055,6 +4055,9 @@ export class TeamProvisioningService {
       );
       const permissionRequestIds = new Set(permissionRequestMsgs.map((m) => m.messageId));
       if (permissionRequestMsgs.length > 0) {
+        logger.warn(
+          `[${run.teamName}] [PERM-TRACE] relay intercepted ${permissionRequestMsgs.length} permission_request(s) from inbox`
+        );
         for (const msg of permissionRequestMsgs) {
           const perm = parsePermissionRequest(msg.text)!;
           this.handleTeammatePermissionRequest(run, perm, msg.timestamp);
@@ -4907,6 +4910,24 @@ export class TeamProvisioningService {
     // {"type":"assistant","content":[{"type":"text","text":"..."},...]}
     // {"type":"result","subtype":"success",...}
     if (msg.type === 'user') {
+      // Check for permission_request in raw user message text BEFORE teammate-message parsing.
+      // The permission_request may arrive as plain JSON without <teammate-message> wrapper,
+      // and handleNativeTeammateUserMessage only processes <teammate-message> blocks.
+      const rawUserText = this.extractStreamUserText(msg);
+      if (rawUserText) {
+        const perm = parsePermissionRequest(rawUserText);
+        if (perm) {
+          logger.warn(
+            `[${run.teamName}] [PERM-TRACE] Intercepted permission_request from stdout user message: agent=${perm.agentId} tool=${perm.toolName} requestId=${perm.requestId}`
+          );
+          this.handleTeammatePermissionRequest(run, perm, new Date().toISOString());
+        } else if (rawUserText.includes('permission_request')) {
+          // Log near-miss: text contains "permission_request" but wasn't parsed
+          logger.warn(
+            `[${run.teamName}] [PERM-TRACE] stdout user message contains "permission_request" but parsePermissionRequest returned null. Text preview: ${rawUserText.slice(0, 300)}`
+          );
+        }
+      }
       this.handleNativeTeammateUserMessage(run, msg);
       return;
     }
@@ -5586,7 +5607,16 @@ export class TeamProvisioningService {
     messageTimestamp: string
   ): void {
     // Skip if already tracked (idempotency — relay can be called multiple times)
-    if (run.pendingApprovals.has(perm.requestId)) return;
+    if (run.pendingApprovals.has(perm.requestId)) {
+      logger.warn(
+        `[${run.teamName}] [PERM-TRACE] Duplicate permission_request skipped: ${perm.requestId}`
+      );
+      return;
+    }
+
+    logger.warn(
+      `[${run.teamName}] [PERM-TRACE] handleTeammatePermissionRequest: agent=${perm.agentId} tool=${perm.toolName} requestId=${perm.requestId}`
+    );
 
     const approval: ToolApprovalRequest = {
       requestId: perm.requestId,
