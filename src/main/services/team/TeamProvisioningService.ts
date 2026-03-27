@@ -319,6 +319,8 @@ interface ProvisioningRun {
   } | null;
   /** Pending tool approval requests awaiting user response (control_request protocol). */
   pendingApprovals: Map<string, ToolApprovalRequest>;
+  /** Teammate permission_request IDs already intercepted (prevents re-processing read messages). */
+  processedPermissionRequestIds: Set<string>;
   /**
    * Post-compact context reinjection lifecycle.
    * - pendingPostCompactReminder: compact_boundary was received; waiting for idle to inject.
@@ -1837,6 +1839,9 @@ export class TeamProvisioningService {
         color: message.color,
         toolSummary: message.toolSummary,
         toolCalls: message.toolCalls,
+        messageKind: message.messageKind,
+        slashCommand: message.slashCommand,
+        commandOutput: message.commandOutput,
       });
     } catch (error) {
       logger.warn(`[${teamName}] sent-message persist failed: ${String(error)}`);
@@ -1865,6 +1870,9 @@ export class TeamProvisioningService {
         color: message.color,
         toolSummary: message.toolSummary,
         toolCalls: message.toolCalls,
+        messageKind: message.messageKind,
+        slashCommand: message.slashCommand,
+        commandOutput: message.commandOutput,
       });
     } catch (error) {
       logger.warn(`[${teamName}] inbox-message persist for ${recipient} failed: ${String(error)}`);
@@ -2956,6 +2964,7 @@ export class TeamProvisioningService {
         authRetryInProgress: false,
         spawnContext: null,
         pendingApprovals: new Map(),
+        processedPermissionRequestIds: new Set(),
         pendingPostCompactReminder: false,
         postCompactReminderInFlight: false,
         suppressPostCompactReminderOutput: false,
@@ -3388,6 +3397,7 @@ export class TeamProvisioningService {
         authRetryInProgress: false,
         spawnContext: null,
         pendingApprovals: new Map(),
+        processedPermissionRequestIds: new Set(),
         pendingPostCompactReminder: false,
         postCompactReminderInFlight: false,
         suppressPostCompactReminderOutput: false,
@@ -3904,24 +3914,55 @@ export class TeamProvisioningService {
     }
 
     const work = (async (): Promise<number> => {
-      const runId = this.getAliveRunId(teamName);
+      const runId = this.getAliveRunId(teamName) ?? this.getProvisioningRunId(teamName);
       if (!runId) return 0;
       const run = this.runs.get(runId);
       if (!run?.child || run.processKilled || run.cancelRequested) return 0;
-      if (!run.provisioningComplete) return 0;
 
-      const relayedIds = this.relayedLeadInboxMessageIds.get(teamName) ?? new Set<string>();
-
+      // Permission request scan runs even during provisioning — teammates may need
+      // tool approval before the lead's first turn completes. CLI marks inbox messages
+      // as read after native delivery, so we must scan ALL messages (including read).
       let config: Awaited<ReturnType<TeamConfigReader['getConfig']>> | null = null;
       try {
         config = await this.configReader.getConfig(teamName);
       } catch {
-        return 0;
+        // config not ready yet during early provisioning — skip scan
+      }
+      if (config) {
+        const leadName = config.members?.find((m) => isLeadMember(m))?.name?.trim() || 'team-lead';
+        try {
+          const leadInboxMessages = await this.inboxReader.getMessagesFor(teamName, leadName);
+          for (const msg of leadInboxMessages) {
+            if (typeof msg.text !== 'string') continue;
+            const perm = parsePermissionRequest(msg.text);
+            if (!perm) continue;
+            if (run.processedPermissionRequestIds.has(perm.requestId)) continue;
+            run.processedPermissionRequestIds.add(perm.requestId);
+            logger.warn(
+              `[${run.teamName}] [PERM-TRACE] Intercepted permission_request from inbox scan (read=${String(msg.read)}): agent=${perm.agentId} tool=${perm.toolName} requestId=${perm.requestId}`
+            );
+            this.handleTeammatePermissionRequest(run, perm, msg.timestamp);
+          }
+        } catch {
+          // best-effort — inbox may not exist yet
+        }
+      }
+
+      if (!run.provisioningComplete) return 0;
+
+      const relayedIds = this.relayedLeadInboxMessageIds.get(teamName) ?? new Set<string>();
+
+      // Re-read config if needed (already fetched above but guard provisioningComplete path)
+      if (!config) {
+        try {
+          config = await this.configReader.getConfig(teamName);
+        } catch {
+          return 0;
+        }
       }
       if (!config) return 0;
 
       const leadName = config.members?.find((m) => isLeadMember(m))?.name?.trim() || 'team-lead';
-
       let leadInboxMessages: Awaited<ReturnType<TeamInboxReader['getMessagesFor']>> = [];
       try {
         leadInboxMessages = await this.inboxReader.getMessagesFor(teamName, leadName);

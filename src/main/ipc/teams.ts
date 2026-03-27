@@ -78,6 +78,10 @@ import {
 } from '@shared/utils/cliArgsParser';
 import { createLogger } from '@shared/utils/logger';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
+import {
+  buildStandaloneSlashCommandMeta,
+  parseStandaloneSlashCommand,
+} from '@shared/utils/slashCommands';
 import crypto from 'crypto';
 import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
 import * as fs from 'fs';
@@ -1412,25 +1416,38 @@ async function handleSendMessage(
       const preGeneratedMessageId = crypto.randomUUID();
       // Separate try blocks: stdin delivery vs persistence
       // If stdin succeeds but persistence fails, do NOT fallback to inbox (would duplicate)
-      // Wrap with instructions so lead responds with visible text (not just agent-only blocks)
-      const wrappedText = [
-        `You received a direct message from the user.`,
-        `IMPORTANT: Your text response here is shown to the user in the Messages panel. Always include a brief human-readable reply. Do NOT respond with only an agent-only block.`,
-        AGENT_BLOCK_OPEN,
-        `MessageId: ${preGeneratedMessageId}`,
-        `When creating a task from this user message, prefer task_create_from_message with messageId="${preGeneratedMessageId}" for reliable provenance. Only use this exact messageId — never guess or fabricate one.`,
-        AGENT_BLOCK_CLOSE,
-        ``,
-        `Message from user:`,
-        buildMessageDeliveryText(payload.text!, {
-          actionMode,
-          isLeadRecipient: true,
-        }),
-      ].join('\n');
+      const standaloneSlashCommand = !validatedAttachments?.length
+        ? parseStandaloneSlashCommand(payload.text!)
+        : null;
+      const slashCommandMeta = standaloneSlashCommand
+        ? buildStandaloneSlashCommandMeta(standaloneSlashCommand.raw)
+        : null;
+      const rawSlashCommandText = standaloneSlashCommand?.raw;
+      const stdinTextForLead = rawSlashCommandText
+        ? rawSlashCommandText
+        : [
+            `You received a direct message from the user.`,
+            `IMPORTANT: Your text response here is shown to the user in the Messages panel. Always include a brief human-readable reply. Do NOT respond with only an agent-only block.`,
+            AGENT_BLOCK_OPEN,
+            `MessageId: ${preGeneratedMessageId}`,
+            `When creating a task from this user message, prefer task_create_from_message with messageId="${preGeneratedMessageId}" for reliable provenance. Only use this exact messageId — never guess or fabricate one.`,
+            AGENT_BLOCK_CLOSE,
+            ``,
+            `Message from user:`,
+            buildMessageDeliveryText(payload.text!, {
+              actionMode,
+              isLeadRecipient: true,
+            }),
+          ].join('\n');
+      const persistTextForLead = rawSlashCommandText ?? payload.text!;
 
       let stdinSent = false;
       try {
-        await provisioning.sendMessageToTeam(tn, wrappedText, validatedAttachments);
+        await provisioning.sendMessageToTeam(
+          tn,
+          stdinTextForLead,
+          rawSlashCommandText ? undefined : validatedAttachments
+        );
         stdinSent = true;
       } catch (stdinError: unknown) {
         // Stdin failed (process died between check and write)
@@ -1477,7 +1494,7 @@ async function handleSendMessage(
           result = await getTeamDataService().sendDirectToLead(
             tn,
             resolvedLeadName,
-            payload.text!,
+            persistTextForLead,
             payload.summary,
             attachmentMeta,
             validatedTaskRefs.value,
@@ -1493,7 +1510,7 @@ async function handleSendMessage(
         provisioning.pushLiveLeadProcessMessage(tn, {
           from: 'user',
           to: resolvedLeadName,
-          text: payload.text!,
+          text: persistTextForLead,
           timestamp: new Date().toISOString(),
           read: true,
           summary: payload.summary,
@@ -1501,6 +1518,12 @@ async function handleSendMessage(
           source: 'user_sent',
           attachments: attachmentMeta,
           taskRefs: validatedTaskRefs.value,
+          ...(slashCommandMeta
+            ? {
+                messageKind: 'slash_command' as const,
+                slashCommand: slashCommandMeta,
+              }
+            : {}),
         });
 
         return result;

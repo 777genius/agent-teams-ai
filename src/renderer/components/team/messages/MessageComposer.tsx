@@ -25,6 +25,7 @@ import {
 } from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { isLeadMember } from '@shared/utils/leadDetection';
+import { KNOWN_SLASH_COMMANDS, parseStandaloneSlashCommand } from '@shared/utils/slashCommands';
 import { AlertCircle, Check, ChevronDown, Mic, Paperclip, Search, Send } from 'lucide-react';
 
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
@@ -198,8 +199,21 @@ export const MessageComposer = ({
 
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(teamName);
   const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
+  const slashCommandSuggestions = useMemo<MentionSuggestion[]>(
+    () =>
+      KNOWN_SLASH_COMMANDS.map((command) => ({
+        id: `command:${command.name}`,
+        name: command.name,
+        command: command.command,
+        description: command.description,
+        subtitle: command.description,
+        type: 'command',
+      })),
+    []
+  );
 
   const trimmed = stripEncodedTaskReferenceMetadata(draft.text).trim();
+  const standaloneSlashCommand = useMemo(() => parseStandaloneSlashCommand(trimmed), [trimmed]);
 
   const selectedMember = members.find((m) => m.name === recipient);
   const selectedResolvedColor = selectedMember ? colorMap.get(selectedMember.name) : undefined;
@@ -265,6 +279,17 @@ export const MessageComposer = ({
         : 'Team must be online to attach files'
     : undefined;
   const attachmentsBlocked = draft.attachments.length > 0 && !supportsAttachments;
+  const slashCommandRestrictionReason = standaloneSlashCommand
+    ? draft.attachments.length > 0
+      ? 'Slash commands require a live team lead and cannot be sent with attachments'
+      : isCrossTeam
+        ? 'Slash commands can only be run on the current team lead'
+        : !isLeadRecipient
+          ? 'Slash commands can only be sent to the team lead'
+          : !isTeamAlive
+            ? 'Slash commands require the team lead to be online'
+            : null
+    : null;
   const canSend =
     recipient.length > 0 &&
     trimmed.length > 0 &&
@@ -272,6 +297,7 @@ export const MessageComposer = ({
     !sending &&
     !isProvisioning &&
     !attachmentsBlocked &&
+    !slashCommandRestrictionReason &&
     (!isCrossTeam || onCrossTeamSend !== undefined);
 
   // Track whether we initiated a send — clear draft only on confirmed success
@@ -870,6 +896,7 @@ export const MessageComposer = ({
           suggestions={mentionSuggestions}
           teamSuggestions={teamMentionSuggestions}
           taskSuggestions={taskSuggestions}
+          commandSuggestions={slashCommandSuggestions}
           chips={draft.chips}
           onChipRemove={draft.removeChip}
           projectPath={projectPath}
@@ -877,6 +904,7 @@ export const MessageComposer = ({
           onModEnter={handleSend}
           onShiftTab={handleCycleActionMode}
           dismissMentionsRef={dismissMentionsRef}
+          extraTips={['Tip: You can use "/" to run any Claude commands.']}
           minRows={2}
           maxRows={6}
           maxLength={MAX_TEXT_LENGTH}
@@ -918,7 +946,9 @@ export const MessageComposer = ({
                     </button>
                   </span>
                 </TooltipTrigger>
-                {isProvisioning && !sending ? (
+                {slashCommandRestrictionReason ? (
+                  <TooltipContent side="top">{slashCommandRestrictionReason}</TooltipContent>
+                ) : isProvisioning && !sending ? (
                   <TooltipContent side="top">
                     Sending unavailable while team is launching
                   </TooltipContent>
@@ -928,7 +958,12 @@ export const MessageComposer = ({
           }
           footerRight={
             <div className="flex items-center gap-2">
-              {sendError ? (
+              {slashCommandRestrictionReason ? (
+                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
+                  <AlertCircle size={10} className="shrink-0" />
+                  {slashCommandRestrictionReason}
+                </span>
+              ) : sendError ? (
                 <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">
                   <AlertCircle size={10} className="shrink-0" />
                   {sendError}

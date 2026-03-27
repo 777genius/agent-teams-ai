@@ -39,8 +39,21 @@ import {
 } from '@shared/constants/crossTeam';
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
+import {
+  buildStandaloneSlashCommandMeta,
+  getKnownSlashCommand,
+  parseStandaloneSlashCommand,
+} from '@shared/utils/slashCommands';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
-import { AlertTriangle, ChevronRight, ListPlus, Maximize2, RefreshCw, Reply } from 'lucide-react';
+import {
+  AlertTriangle,
+  ChevronRight,
+  Command,
+  ListPlus,
+  Maximize2,
+  RefreshCw,
+  Reply,
+} from 'lucide-react';
 
 import { ReplyQuoteBlock } from './ReplyQuoteBlock';
 
@@ -68,6 +81,16 @@ function parseCrossTeamPseudoRecipient(value: string | undefined): string | null
   if (!trimmed.startsWith('cross-team:')) return null;
   const teamName = trimmed.slice('cross-team:'.length).trim();
   return teamName.length > 0 ? teamName : null;
+}
+
+function getCommandOutputSummary(text: string): string {
+  const firstLine = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean);
+
+  if (!firstLine) return '';
+  return firstLine.length > 120 ? `${firstLine.slice(0, 120)}…` : firstLine;
 }
 
 export function isQualifiedExternalRecipient(
@@ -475,6 +498,8 @@ export const ActivityItem = memo(
       message.from === 'user' ||
       message.from === 'system' ||
       crossTeamOrigin?.memberName === 'user';
+    const isUserSent = message.source === 'user_sent' || isCrossTeamSent;
+    const isSystemMessage = message.from === 'system';
 
     // Strip agent-only blocks + normalize escape sequences (before linkification)
     const strippedText = useMemo(() => {
@@ -489,6 +514,28 @@ export const ActivityItem = memo(
       // Normalize literal \n from historical CLI-produced text to real newlines
       return stripped.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
     }, [structured, message.text, isCrossTeamAny]);
+    const standaloneSlashCommand = useMemo(
+      () => (strippedText ? parseStandaloneSlashCommand(strippedText) : null),
+      [strippedText]
+    );
+    const slashCommandMeta = useMemo(
+      () =>
+        message.slashCommand ??
+        (standaloneSlashCommand
+          ? buildStandaloneSlashCommandMeta(standaloneSlashCommand.raw)
+          : null),
+      [message.slashCommand, standaloneSlashCommand]
+    );
+    const knownSlashCommand = useMemo(
+      () => (slashCommandMeta?.name ? (getKnownSlashCommand(slashCommandMeta.name) ?? null) : null),
+      [slashCommandMeta]
+    );
+    const isSlashCommandResult =
+      message.messageKind === 'slash_command_result' && !!message.commandOutput;
+    const isSlashCommandMessage =
+      !isSlashCommandResult &&
+      (message.messageKind === 'slash_command' || (isUserSent && standaloneSlashCommand !== null));
+    const isCommandOutputError = isSlashCommandResult && message.commandOutput?.stream === 'stderr';
 
     // Parse reply BEFORE linkification — linkifyAllMentionsInMarkdown transforms @name
     // into markdown links which breaks the reply regex matcher
@@ -515,6 +562,16 @@ export const ActivityItem = memo(
     }, [isCrossTeamAny, strippedText]);
 
     const rawSummary = useMemo(() => {
+      if (isSlashCommandResult && message.commandOutput) {
+        return message.summary || getCommandOutputSummary(message.text);
+      }
+      if (isSlashCommandMessage && slashCommandMeta) {
+        if (slashCommandMeta.args) {
+          const oneLine = slashCommandMeta.args.replace(/\n+/g, ' ').trim();
+          return `${slashCommandMeta.command} ${oneLine}`;
+        }
+        return slashCommandMeta.command;
+      }
       if (crossTeamPreview) return crossTeamPreview;
       const s =
         message.summary || (structured ? getStructuredMessageSummary(structured) : '') || '';
@@ -524,7 +581,17 @@ export const ActivityItem = memo(
       if (!plain) return '';
       const oneLine = plain.replace(/\n+/g, ' ');
       return oneLine.length > 80 ? oneLine.slice(0, 80) + '…' : oneLine;
-    }, [crossTeamPreview, message.summary, structured, message.text]);
+    }, [
+      crossTeamPreview,
+      isSlashCommandMessage,
+      isSlashCommandResult,
+      message.commandOutput,
+      message.summary,
+      message.text,
+      slashCommandMeta,
+      standaloneSlashCommand,
+      structured,
+    ]);
     const summaryText = useMemo(() => extractMarkdownPlainText(rawSummary), [rawSummary]);
 
     // Noise messages: minimal inline row
@@ -557,8 +624,6 @@ export const ActivityItem = memo(
 
     const isHeaderClickable = isManaged && canToggleCollapse;
     const showChevron = isHeaderClickable && !compactHeader;
-    const isUserSent = message.source === 'user_sent' || isCrossTeamSent;
-    const isSystemMessage = message.from === 'system';
     const handleHeaderToggle = useCallback(() => {
       if (isHeaderClickable && collapseToggleKey) {
         onToggleCollapse?.(collapseToggleKey);
@@ -569,33 +634,45 @@ export const ActivityItem = memo(
       <article
         className="group overflow-hidden rounded-md"
         style={{
-          marginLeft: isUserSent ? 15 : undefined,
+          marginLeft: isSlashCommandResult ? 26 : isUserSent ? 15 : undefined,
           backgroundColor:
             rateLimited || isApiError
               ? 'var(--tool-result-error-bg)'
-              : isCrossTeamAny
-                ? 'var(--cross-team-bg)'
-                : isSystemMessage
-                  ? 'var(--system-activity-bg)'
-                  : zebraShade
-                    ? CARD_BG_ZEBRA
-                    : CARD_BG,
+              : isSlashCommandResult
+                ? 'rgba(245, 158, 11, 0.08)'
+                : isSlashCommandMessage
+                  ? 'rgba(245, 158, 11, 0.08)'
+                  : isCrossTeamAny
+                    ? 'var(--cross-team-bg)'
+                    : isSystemMessage
+                      ? 'var(--system-activity-bg)'
+                      : zebraShade
+                        ? CARD_BG_ZEBRA
+                        : CARD_BG,
           border:
             rateLimited || isApiError
               ? '1px solid var(--tool-result-error-border)'
-              : isCrossTeamAny
-                ? '1px solid var(--cross-team-border)'
-                : isSystemMessage
-                  ? '1px solid var(--system-activity-border)'
-                  : CARD_BORDER_STYLE,
+              : isSlashCommandResult
+                ? '1px solid rgba(245, 158, 11, 0.22)'
+                : isSlashCommandMessage
+                  ? '1px solid rgba(245, 158, 11, 0.22)'
+                  : isCrossTeamAny
+                    ? '1px solid var(--cross-team-border)'
+                    : isSystemMessage
+                      ? '1px solid var(--system-activity-border)'
+                      : CARD_BORDER_STYLE,
           borderLeft:
             rateLimited || isApiError
               ? '3px solid var(--tool-result-error-text)'
-              : isCrossTeamAny
-                ? '3px solid var(--cross-team-accent)'
-                : isSystemMessage
-                  ? '3px solid var(--system-activity-accent)'
-                  : `3px solid ${getThemedBorder(colors, isLight)}`,
+              : isSlashCommandResult
+                ? '3px solid rgba(245, 158, 11, 0.85)'
+                : isSlashCommandMessage
+                  ? '3px solid rgba(245, 158, 11, 0.85)'
+                  : isCrossTeamAny
+                    ? '3px solid var(--cross-team-accent)'
+                    : isSystemMessage
+                      ? '3px solid var(--system-activity-accent)'
+                      : `3px solid ${getThemedBorder(colors, isLight)}`,
         }}
       >
         {/* Header — div with role=button (cannot use <button> due to nested buttons inside) */}
@@ -637,16 +714,22 @@ export const ActivityItem = memo(
           {crossTeamOrigin ? (
             <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
           ) : null}
-          <MemberBadge
-            name={senderName}
-            color={senderColor}
-            hideAvatar={senderHideAvatar || compactHeader}
-            onClick={onMemberNameClick}
-            disableHoverCard={crossTeamOrigin != null}
-          />
+          {isSlashCommandResult ? (
+            <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
+              result
+            </span>
+          ) : (
+            <MemberBadge
+              name={senderName}
+              color={senderColor}
+              hideAvatar={senderHideAvatar || compactHeader}
+              onClick={onMemberNameClick}
+              disableHoverCard={crossTeamOrigin != null}
+            />
+          )}
 
           {/* Role */}
-          {!compactHeader && formattedRole ? (
+          {!compactHeader && formattedRole && !isSlashCommandResult ? (
             <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
               {formattedRole}
             </span>
@@ -660,6 +743,19 @@ export const ActivityItem = memo(
             >
               {systemLabel}
             </span>
+          ) : isSlashCommandResult && message.commandOutput ? (
+            <span
+              className={[
+                'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] uppercase tracking-wide',
+                isCommandOutputError
+                  ? 'bg-rose-500/15 text-rose-300'
+                  : 'bg-amber-500/15 text-amber-300',
+              ].join(' ')}
+            >
+              {message.commandOutput.stream}
+            </span>
+          ) : isSlashCommandMessage ? (
+            <span className="text-[10px] uppercase tracking-wide text-amber-400">command</span>
           ) : messageType ? (
             <span
               className="text-[10px] uppercase tracking-wide"
@@ -670,14 +766,14 @@ export const ActivityItem = memo(
           ) : null}
 
           {/* Lead session marker */}
-          {message.source === 'lead_session' ? (
+          {message.source === 'lead_session' && !isSlashCommandResult ? (
             <span
               className="text-[10px] uppercase tracking-wide"
               style={{ color: CARD_ICON_MUTED }}
             >
               session
             </span>
-          ) : message.source === 'lead_process' ? (
+          ) : message.source === 'lead_process' && !isSlashCommandResult ? (
             <span
               className="text-[10px] uppercase tracking-wide"
               style={{ color: CARD_ICON_MUTED }}
@@ -729,9 +825,48 @@ export const ActivityItem = memo(
 
           {/* Summary */}
           <span className="min-w-0 flex-1 truncate text-xs" style={{ color: CARD_TEXT_LIGHT }}>
-            {onTaskIdClick
-              ? renderInlineBoldSummary(rawSummary, onTaskIdClick)
-              : renderInlineBoldSummary(rawSummary)}
+            {isSlashCommandResult && message.commandOutput ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Command
+                  size={12}
+                  className={[
+                    'shrink-0',
+                    isCommandOutputError ? 'text-rose-400' : 'text-amber-400',
+                  ].join(' ')}
+                />
+                <span
+                  className={[
+                    'font-mono text-[11px]',
+                    isCommandOutputError ? 'text-rose-300' : 'text-amber-300',
+                  ].join(' ')}
+                >
+                  {message.commandOutput.commandLabel}
+                </span>
+                <span className="truncate text-[11px] text-[var(--color-text-secondary)]">
+                  {message.summary || getCommandOutputSummary(message.text) || rawSummary}
+                </span>
+              </span>
+            ) : isSlashCommandMessage && slashCommandMeta ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Command size={12} className="shrink-0 text-amber-400" />
+                <span className="font-mono text-[11px] text-amber-300">
+                  {slashCommandMeta.command}
+                </span>
+                {slashCommandMeta.args ? (
+                  <span className="truncate text-[11px] text-[var(--color-text-secondary)]">
+                    {slashCommandMeta.args.replace(/\n+/g, ' ')}
+                  </span>
+                ) : (slashCommandMeta.knownDescription ?? knownSlashCommand?.description) ? (
+                  <span className="truncate text-[11px] text-[var(--color-text-secondary)]">
+                    {slashCommandMeta.knownDescription ?? knownSlashCommand?.description}
+                  </span>
+                ) : null}
+              </span>
+            ) : onTaskIdClick ? (
+              renderInlineBoldSummary(rawSummary, onTaskIdClick)
+            ) : (
+              renderInlineBoldSummary(rawSummary)
+            )}
           </span>
 
           {/* Timestamp / expand */}
@@ -780,6 +915,70 @@ export const ActivityItem = memo(
                     {JSON.stringify(structured, null, 2)}
                   </pre>
                 </details>
+              </div>
+            ) : isSlashCommandResult && message.commandOutput ? (
+              <div
+                className={[
+                  'rounded-md px-3 py-2',
+                  isCommandOutputError
+                    ? 'border border-rose-400/20 bg-rose-500/5'
+                    : 'border border-amber-400/20 bg-amber-500/5',
+                ].join(' ')}
+              >
+                <div className="flex items-center gap-2">
+                  <Command
+                    size={14}
+                    className={[
+                      'shrink-0',
+                      isCommandOutputError ? 'text-rose-400' : 'text-amber-400',
+                    ].join(' ')}
+                  />
+                  <span
+                    className={[
+                      'font-mono text-xs',
+                      isCommandOutputError ? 'text-rose-300' : 'text-amber-300',
+                    ].join(' ')}
+                  >
+                    {message.commandOutput.commandLabel}
+                  </span>
+                  <span
+                    className={[
+                      'rounded-full px-1.5 py-0.5 text-[10px] uppercase tracking-wide',
+                      isCommandOutputError
+                        ? 'bg-rose-500/15 text-rose-300'
+                        : 'bg-amber-500/15 text-amber-300',
+                    ].join(' ')}
+                  >
+                    {message.commandOutput.stream}
+                  </span>
+                  <div className="ml-auto">
+                    <CopyButton text={message.text} inline />
+                  </div>
+                </div>
+                <ExpandableContent className="mt-2" collapsedHeight={160}>
+                  <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 font-mono text-[11px] leading-relaxed text-[var(--color-text-secondary)]">
+                    {message.text}
+                  </pre>
+                </ExpandableContent>
+              </div>
+            ) : isSlashCommandMessage && slashCommandMeta ? (
+              <div className="rounded-md border border-amber-400/20 bg-amber-500/5 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <Command size={14} className="shrink-0 text-amber-400" />
+                  <span className="font-mono text-xs text-amber-300">
+                    {slashCommandMeta.command}
+                  </span>
+                </div>
+                {(slashCommandMeta.knownDescription ?? knownSlashCommand?.description) ? (
+                  <p className="mt-1 text-[11px] leading-relaxed text-[var(--color-text-secondary)]">
+                    {slashCommandMeta.knownDescription ?? knownSlashCommand?.description}
+                  </p>
+                ) : null}
+                {slashCommandMeta.args ? (
+                  <div className="mt-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 font-mono text-[11px] text-[var(--color-text-secondary)]">
+                    {slashCommandMeta.args}
+                  </div>
+                ) : null}
               </div>
             ) : parsedReply ? (
               <ReplyQuoteBlock

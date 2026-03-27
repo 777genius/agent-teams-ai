@@ -131,6 +131,37 @@ export class TeamInboxReader {
                 preview: typeof tc.preview === 'string' ? tc.preview : undefined,
               }))
           : undefined,
+        messageKind:
+          row.messageKind === 'slash_command' || row.messageKind === 'slash_command_result'
+            ? row.messageKind
+            : row.messageKind === 'default'
+              ? 'default'
+              : undefined,
+        slashCommand:
+          row.slashCommand &&
+          typeof row.slashCommand === 'object' &&
+          typeof row.slashCommand.name === 'string' &&
+          typeof row.slashCommand.command === 'string'
+            ? {
+                name: row.slashCommand.name,
+                command: row.slashCommand.command as `/${string}`,
+                args: typeof row.slashCommand.args === 'string' ? row.slashCommand.args : undefined,
+                knownDescription:
+                  typeof row.slashCommand.knownDescription === 'string'
+                    ? row.slashCommand.knownDescription
+                    : undefined,
+              }
+            : undefined,
+        commandOutput:
+          row.commandOutput &&
+          typeof row.commandOutput === 'object' &&
+          (row.commandOutput.stream === 'stdout' || row.commandOutput.stream === 'stderr') &&
+          typeof row.commandOutput.commandLabel === 'string'
+            ? {
+                stream: row.commandOutput.stream,
+                commandLabel: row.commandOutput.commandLabel,
+              }
+            : undefined,
       });
     }
 

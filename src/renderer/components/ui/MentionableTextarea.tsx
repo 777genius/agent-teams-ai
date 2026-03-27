@@ -24,12 +24,14 @@ import {
   findUrlMatches,
   removeUrlMatchFromText,
 } from '@renderer/utils/urlMatchUtils';
+import { getKnownSlashCommand, parseStandaloneSlashCommand } from '@shared/utils/slashCommands';
 
 import { AutoResizeTextarea } from './auto-resize-textarea';
 import { ChipInteractionLayer } from './ChipInteractionLayer';
 import { CodeChipBadge } from './CodeChipBadge';
 import { MentionInteractionLayer } from './MentionInteractionLayer';
 import { MentionSuggestionList } from './MentionSuggestionList';
+import { SlashCommandInteractionLayer } from './SlashCommandInteractionLayer';
 import { TaskReferenceInteractionLayer } from './TaskReferenceInteractionLayer';
 import { UrlInteractionLayer } from './UrlInteractionLayer';
 
@@ -72,7 +74,19 @@ interface ChipSegment {
   chip: InlineChip;
 }
 
-type Segment = TextSegment | MentionSegment | TaskSegment | UrlSegment | ChipSegment;
+interface SlashCommandSegment {
+  type: 'slash_command';
+  value: string;
+  known: boolean;
+}
+
+type Segment =
+  | TextSegment
+  | MentionSegment
+  | TaskSegment
+  | UrlSegment
+  | ChipSegment
+  | SlashCommandSegment;
 
 // ---------------------------------------------------------------------------
 // Mention segment parsing (splits text into plain text + @mention segments)
@@ -236,6 +250,16 @@ function parseSegments(
   chips: InlineChip[]
 ): Segment[] {
   if (!text) return [{ type: 'text', value: text }];
+  const slashCommand = parseStandaloneSlashCommand(text);
+  if (slashCommand) {
+    return [
+      {
+        type: 'slash_command',
+        value: slashCommand.raw,
+        known: getKnownSlashCommand(slashCommand.name) !== null,
+      },
+    ];
+  }
   if (chips.length === 0) return parseSuggestionSegments(text, mentionSuggestions, taskSuggestions);
 
   // Build a map of chip tokens for fast lookup
@@ -322,12 +346,16 @@ interface MentionableTextareaProps extends Omit<
   teamSuggestions?: MentionSuggestion[];
   /** Task suggestions for #task references */
   taskSuggestions?: MentionSuggestion[];
+  /** Slash command suggestions for /command autocomplete */
+  commandSuggestions?: MentionSuggestion[];
   /** Called when Enter (without Shift) is pressed. */
   onModEnter?: () => void;
   /** Called when Shift+Tab is pressed. */
   onShiftTab?: () => void;
   /** Ref that receives the dismiss callback to close mention dropdown from outside */
   dismissMentionsRef?: React.MutableRefObject<(() => void) | null>;
+  /** Additional rotating tips to append after the defaults */
+  extraTips?: string[];
 }
 
 export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, MentionableTextareaProps>(
@@ -347,9 +375,11 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       onFileChipInsert,
       teamSuggestions = [],
       taskSuggestions = [],
+      commandSuggestions = [],
       onModEnter,
       onShiftTab,
       dismissMentionsRef,
+      extraTips = [],
       style,
       className,
       ...textareaProps
@@ -394,10 +424,16 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       value,
       onValueChange,
       textareaRef: internalRef,
-      triggerChars: enableTaskSearch ? ['@', '#'] : ['@'],
+      triggerChars:
+        commandSuggestions.length > 0 ? ['@', '#', '/'] : enableTaskSearch ? ['@', '#'] : ['@'],
       isTriggerEnabled: (triggerChar) => {
         if (triggerChar === '#') return enableTaskSearch;
+        if (triggerChar === '/') return commandSuggestions.length > 0;
         return suggestions.length > 0 || enableFiles || teamSuggestions.length > 0;
+      },
+      isTriggerMatchValid: (trigger, text) => {
+        if (trigger.triggerChar !== '/') return true;
+        return text.slice(0, trigger.triggerIndex).trim().length === 0;
       },
     });
 
@@ -413,7 +449,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       isOpen && enableFiles && activeTriggerChar === '@'
     );
 
-    const isAtTrigger = activeTriggerChar !== '#';
+    const isAtTrigger = activeTriggerChar !== '#' && activeTriggerChar !== '/';
 
     const memberSuggestions = React.useMemo(() => {
       if (!isOpen || !isAtTrigger) return [];
@@ -434,6 +470,12 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       return taskSuggestions.filter((task) => doesSuggestionMatchQuery(task, query));
     }, [taskSuggestions, activeTriggerChar, isOpen, query]);
 
+    const filteredCommandSuggestions = React.useMemo(() => {
+      if (commandSuggestions.length === 0 || !isOpen || activeTriggerChar !== '/') return [];
+      if (!query) return commandSuggestions;
+      return commandSuggestions.filter((command) => doesSuggestionMatchQuery(command, query));
+    }, [commandSuggestions, activeTriggerChar, isOpen, query]);
+
     // Merged suggestion list: members → online teams → offline teams → files
     const atSuggestions = React.useMemo(() => {
       const onlineTeams = filteredTeamSuggestions.filter((t) => t.isOnline);
@@ -444,7 +486,11 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       return [...merged, ...fileSuggestions];
     }, [memberSuggestions, filteredTeamSuggestions, enableFiles, fileSuggestions]);
     const effectiveSuggestions =
-      activeTriggerChar === '#' ? filteredTaskSuggestions : atSuggestions;
+      activeTriggerChar === '/'
+        ? filteredCommandSuggestions
+        : activeTriggerChar === '#'
+          ? filteredTaskSuggestions
+          : atSuggestions;
 
     React.useEffect(() => {
       if (!isOpen) return;
@@ -607,6 +653,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
     const hasOverlay =
       value.includes('http://') ||
       value.includes('https://') ||
+      parseStandaloneSlashCommand(value) !== null ||
       suggestions.length > 0 ||
       teamSuggestions.length > 0 ||
       taskSuggestions.length > 0 ||
@@ -616,6 +663,11 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
     const mentionOverlaySuggestions = React.useMemo(
       () => (teamSuggestions.length > 0 ? [...suggestions, ...teamSuggestions] : suggestions),
       [suggestions, teamSuggestions]
+    );
+    const slashCommand = React.useMemo(() => parseStandaloneSlashCommand(value), [value]);
+    const knownSlashCommand = React.useMemo(
+      () => (slashCommand ? getKnownSlashCommand(slashCommand.name) : null),
+      [slashCommand]
     );
 
     const segments = React.useMemo(
@@ -962,8 +1014,9 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
         'Tip: Use @ for members/files and # for tasks',
         'Tip: Mention "create a task" to add it to the kanban',
         "Tip: Don't overload the team lead with tasks — ask them to delegate to teammates",
+        ...extraTips,
       ],
-      []
+      [extraTips]
     );
     const [tipIndex, setTipIndex] = React.useState(0);
     const [tipVisible, setTipVisible] = React.useState(true);
@@ -984,7 +1037,11 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
     const resolvedHintText = hintText ?? rotatingTips[tipIndex];
     const showHintRow =
       showHint &&
-      (suggestions.length > 0 || enableFiles || teamSuggestions.length > 0 || enableTaskSearch);
+      (suggestions.length > 0 ||
+        enableFiles ||
+        teamSuggestions.length > 0 ||
+        enableTaskSearch ||
+        commandSuggestions.length > 0);
     const showFooter = showHintRow || footerRight;
 
     return (
@@ -1011,6 +1068,26 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
                 }
                 if (seg.type === 'chip') {
                   return <CodeChipBadge key={idx} chip={seg.chip} tokenText={seg.value} />;
+                }
+                if (seg.type === 'slash_command') {
+                  return (
+                    <span
+                      key={idx}
+                      style={{
+                        backgroundColor: seg.known
+                          ? 'rgba(245, 158, 11, 0.18)'
+                          : 'rgba(148, 163, 184, 0.16)',
+                        color: seg.known ? '#f59e0b' : 'var(--color-text-secondary)',
+                        borderRadius: '4px',
+                        boxShadow: `inset 0 0 0 1px ${
+                          seg.known ? 'rgba(245, 158, 11, 0.3)' : 'rgba(148, 163, 184, 0.24)'
+                        }`,
+                        padding: '2px 0',
+                      }}
+                    >
+                      {seg.value}
+                    </span>
+                  );
                 }
                 if (seg.type === 'task') {
                   return (
@@ -1104,6 +1181,16 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           {mentionOverlaySuggestions.length > 0 ? (
             <MentionInteractionLayer
               suggestions={mentionOverlaySuggestions}
+              value={value}
+              textareaRef={internalRef}
+              scrollTop={scrollTop}
+            />
+          ) : null}
+
+          {slashCommand ? (
+            <SlashCommandInteractionLayer
+              command={slashCommand}
+              definition={knownSlashCommand}
               value={value}
               textareaRef={internalRef}
               scrollTop={scrollTop}

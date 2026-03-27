@@ -61,6 +61,7 @@ export function isLeadThought(msg: InboxMessage): boolean {
   if (typeof msg.to === 'string' && msg.to.trim().length > 0) return false;
   // Compaction boundary events are system messages, not lead thoughts
   if (isCompactionMessage(msg)) return false;
+  if (msg.messageKind === 'slash_command_result') return false;
   // Protocol noise (JSON coordination signals, raw teammate-message XML) should be hidden
   if (isThoughtProtocolNoise(msg.text)) return false;
   if (msg.source === 'lead_session') return true;

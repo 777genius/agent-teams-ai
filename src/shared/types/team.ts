@@ -166,6 +166,20 @@ export interface SourceMessageSnapshot {
   }[];
 }
 
+export type InboxMessageKind = 'default' | 'slash_command' | 'slash_command_result';
+
+export interface SlashCommandMeta {
+  name: string;
+  command: `/${string}`;
+  args?: string;
+  knownDescription?: string;
+}
+
+export interface CommandOutputMeta {
+  stream: 'stdout' | 'stderr';
+  commandLabel: string;
+}
+
 // Fields are validated in TeamTaskReader.getTasks() using `satisfies Record<keyof TeamTask, unknown>`.
 // Adding a field here without mapping it there will cause a compile error.
 export interface TeamTask {
@@ -323,6 +337,12 @@ export interface InboxMessage {
   toolSummary?: string;
   /** Structured tool call details for tooltip display. */
   toolCalls?: ToolCallMeta[];
+  /** Renderer-friendly semantic kind. Defaults to "default" when absent. */
+  messageKind?: InboxMessageKind;
+  /** Structured slash-command metadata for sent command rows. */
+  slashCommand?: SlashCommandMeta;
+  /** Structured command-output metadata for session-derived result rows. */
+  commandOutput?: CommandOutputMeta;
 }
 
 export type AgentActionMode = 'do' | 'ask' | 'delegate';
@@ -348,6 +368,9 @@ export interface SendMessageRequest {
   replyToConversationId?: string;
   toolSummary?: string;
   toolCalls?: ToolCallMeta[];
+  messageKind?: InboxMessageKind;
+  slashCommand?: SlashCommandMeta;
+  commandOutput?: CommandOutputMeta;
 }
 
 export interface SendMessageResult {

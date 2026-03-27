@@ -293,6 +293,101 @@ describe('ipc teams handlers', () => {
     );
   });
 
+  it('sends standalone slash commands to lead stdin without the UI routing wrapper', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'team-lead',
+      text: '  /COMPACT keep kanban  ',
+    })) as { success: boolean };
+
+    expect(result.success).toBe(true);
+    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+      'my-team',
+      '/COMPACT keep kanban',
+      undefined
+    );
+    const compactCall = vi.mocked(provisioningService.sendMessageToTeam).mock
+      .calls as unknown[][];
+    expect(String(compactCall[0]?.[1] ?? '')).not.toContain('You received a direct message from the user');
+    expect(service.sendDirectToLead).toHaveBeenCalledWith(
+      'my-team',
+      'team-lead',
+      '/COMPACT keep kanban',
+      undefined,
+      undefined,
+      undefined,
+      expect.any(String)
+    );
+  });
+
+  it('routes unknown standalone slash commands through the same raw stdin path', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'team-lead',
+      text: ' /foo bar ',
+    })) as { success: boolean };
+
+    expect(result.success).toBe(true);
+    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+      'my-team',
+      '/foo bar',
+      undefined
+    );
+    const unknownSlashCall = vi.mocked(provisioningService.sendMessageToTeam).mock
+      .calls as unknown[][];
+    expect(String(unknownSlashCall[0]?.[1] ?? '')).not.toContain(
+      'You received a direct message from the user'
+    );
+    expect(service.sendDirectToLead).toHaveBeenCalledWith(
+      'my-team',
+      'team-lead',
+      '/foo bar',
+      undefined,
+      undefined,
+      undefined,
+      expect.any(String)
+    );
+  });
+
+  it('does not route slash commands through raw stdin when attachments are present', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+    vi.stubEnv('HOME', os.tmpdir());
+    try {
+      const result = (await sendHandler!({} as never, 'my-team', {
+        member: 'team-lead',
+        text: '/compact keep kanban',
+        attachments: [
+          {
+            id: 'att-1',
+            filename: 'note.txt',
+            mimeType: 'text/plain',
+            size: 4,
+            data: Buffer.from('test').toString('base64'),
+          },
+        ],
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining('You received a direct message from the user'),
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'att-1',
+            filename: 'note.txt',
+          }),
+        ])
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('rejects delegate mode when recipient is not the team lead', async () => {
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();

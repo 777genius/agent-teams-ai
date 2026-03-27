@@ -18,6 +18,7 @@ import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { getKanbanColumnFromReviewState, normalizeReviewState } from '@shared/utils/reviewState';
+import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
@@ -40,6 +41,7 @@ import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
 import { TeamTaskReader } from './TeamTaskReader';
 import { TeamTaskWriter } from './TeamTaskWriter';
+import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
 import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
 
 import type {
@@ -249,6 +251,47 @@ export class TeamDataService {
     }
 
     return result;
+  }
+
+  private isLeadThoughtCandidateForSlashResult(message: InboxMessage): boolean {
+    if (typeof message.to === 'string' && message.to.trim().length > 0) return false;
+    if (message.from === 'system') return false;
+    return message.source === 'lead_session' || message.source === 'lead_process';
+  }
+
+  private annotateSlashCommandResponses(messages: InboxMessage[]): void {
+    let pendingSlash = null as InboxMessage['slashCommand'] | null;
+
+    for (const message of messages) {
+      const slashCommand =
+        message.source === 'user_sent'
+          ? (message.slashCommand ?? buildStandaloneSlashCommandMeta(message.text))
+          : null;
+
+      if (slashCommand) {
+        pendingSlash = slashCommand;
+        continue;
+      }
+
+      if (!pendingSlash) {
+        continue;
+      }
+
+      if (message.messageKind === 'slash_command_result') {
+        continue;
+      }
+
+      if (this.isLeadThoughtCandidateForSlashResult(message)) {
+        message.messageKind = 'slash_command_result';
+        message.commandOutput = {
+          stream: 'stdout',
+          commandLabel: pendingSlash.command,
+        };
+        continue;
+      }
+
+      pendingSlash = null;
+    }
   }
 
   async getTaskChangePresence(teamName: string): Promise<Record<string, TaskChangePresenceState>> {
@@ -592,6 +635,9 @@ export class TeamDataService {
         }
       }
     }
+
+    messages.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+    this.annotateSlashCommandResponses(messages);
 
     messages.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 
@@ -1342,6 +1388,15 @@ export class TeamDataService {
         // non-critical
       }
     }
+    const slashCommandMeta =
+      enrichedRequest.slashCommand ?? buildStandaloneSlashCommandMeta(enrichedRequest.text);
+    if (slashCommandMeta) {
+      enrichedRequest = {
+        ...enrichedRequest,
+        messageKind: 'slash_command',
+        slashCommand: slashCommandMeta,
+      };
+    }
     return this.getController(teamName).messages.sendMessage({
       member: enrichedRequest.member,
       from: enrichedRequest.from,
@@ -1354,6 +1409,9 @@ export class TeamDataService {
       replyToConversationId: enrichedRequest.replyToConversationId,
       toolSummary: enrichedRequest.toolSummary,
       toolCalls: enrichedRequest.toolCalls,
+      messageKind: enrichedRequest.messageKind,
+      slashCommand: enrichedRequest.slashCommand,
+      commandOutput: enrichedRequest.commandOutput,
       taskRefs: enrichedRequest.taskRefs,
       summary: enrichedRequest.summary,
       source: enrichedRequest.source,
@@ -1782,6 +1840,7 @@ export class TeamDataService {
       // non-critical — proceed without sessionId
     }
 
+    const slashCommandMeta = buildStandaloneSlashCommandMeta(text);
     const msg = this.getController(teamName).messages.appendSentMessage({
       from: 'user',
       to: leadName,
@@ -1791,6 +1850,12 @@ export class TeamDataService {
       source: 'user_sent',
       attachments: attachments?.length ? attachments : undefined,
       leadSessionId,
+      ...(slashCommandMeta
+        ? {
+            messageKind: 'slash_command',
+            slashCommand: slashCommandMeta,
+          }
+        : {}),
       ...(messageId ? { messageId } : {}),
     }) as InboxMessage;
     return {
@@ -1961,7 +2026,7 @@ export class TeamDataService {
     return sessionIds;
   }
 
-  private async extractLeadSessionTextsFromJsonl(
+  private async extractLeadAssistantTextsFromJsonl(
     jsonlPath: string,
     leadName: string,
     leadSessionId: string,
@@ -1969,10 +2034,8 @@ export class TeamDataService {
   ): Promise<InboxMessage[]> {
     if (maxTexts <= 0) return [];
 
-    // Optimization: read from the end of the JSONL file (we only need the last N texts).
-    // The full file can be huge; scanning from the start causes long stalls on Windows.
-    const MAX_SCAN_BYTES = 8 * 1024 * 1024; // 8MB tail cap
-    const INITIAL_SCAN_BYTES = 256 * 1024; // 256KB
+    const MAX_SCAN_BYTES = 8 * 1024 * 1024;
+    const INITIAL_SCAN_BYTES = 256 * 1024;
 
     const textsReversed: InboxMessage[] = [];
     const seenMessageIds = new Set<string>();
@@ -1989,7 +2052,6 @@ export class TeamDataService {
         const chunk = buffer.toString('utf8');
 
         const lines = chunk.split(/\r?\n/);
-        // If we started mid-file, the first line may be partial — drop it.
         const fromIndex = start > 0 ? 1 : 0;
 
         for (let i = lines.length - 1; i >= fromIndex; i--) {
@@ -2022,8 +2084,6 @@ export class TeamDataService {
           const combined = stripAgentBlocks(textParts.join('\n')).trim();
           if (combined.length < MIN_TEXT_LENGTH) continue;
 
-          // Collect tool_use details from following lines (text and tool_use are separate in JSONL).
-          // tool_result (type=user) lines are interleaved between tool_use lines — skip them.
           const toolCallsList: ToolCallMeta[] = [];
           const lookaheadLimit = Math.min(i + 200, lines.length);
           for (let j = i + 1; j < lookaheadLimit; j++) {
@@ -2035,12 +2095,12 @@ export class TeamDataService {
             } catch {
               continue;
             }
-            if (tMsg.type !== 'assistant') continue; // skip tool_result (type=user) lines
+            if (tMsg.type !== 'assistant') continue;
             const tMessage = (tMsg.message ?? tMsg) as Record<string, unknown>;
             const tContent = tMessage.content;
             if (!Array.isArray(tContent)) continue;
             const tBlocks = tContent as Record<string, unknown>[];
-            if (tBlocks.some((b) => b.type === 'text')) break; // next text = stop
+            if (tBlocks.some((b) => b.type === 'text')) break;
             for (const b of tBlocks) {
               if (b.type === 'tool_use' && typeof b.name === 'string' && b.name !== 'SendMessage') {
                 const input = (b.input ?? {}) as Record<string, unknown>;
@@ -2062,7 +2122,6 @@ export class TeamDataService {
               ? `lead-thought-msg-${assistantMessageId}`
               : null;
 
-          // Fallback messageId: timestamp + text prefix (survives tail-scan range changes)
           const textPrefix = combined
             .slice(0, 50)
             .replace(/[^\p{L}\p{N}]/gu, '')
@@ -2095,10 +2154,29 @@ export class TeamDataService {
       await handle.close();
     }
 
-    // Convert back to chronological order (old behavior) and keep the last N texts.
     textsReversed.reverse();
-    const texts = textsReversed;
-    return texts.length > maxTexts ? texts.slice(-maxTexts) : texts;
+    return textsReversed.length > maxTexts ? textsReversed.slice(-maxTexts) : textsReversed;
+  }
+
+  private async extractLeadSessionTextsFromJsonl(
+    jsonlPath: string,
+    leadName: string,
+    leadSessionId: string,
+    maxTexts: number
+  ): Promise<InboxMessage[]> {
+    const [assistantTexts, commandResults] = await Promise.all([
+      this.extractLeadAssistantTextsFromJsonl(jsonlPath, leadName, leadSessionId, maxTexts),
+      extractLeadSessionMessagesFromJsonl({
+        jsonlPath,
+        leadName,
+        leadSessionId,
+        maxMessages: maxTexts,
+      }),
+    ]);
+
+    const combined = [...assistantTexts, ...commandResults];
+    combined.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+    return combined.length > maxTexts ? combined.slice(-maxTexts) : combined;
   }
 
   private async extractLeadSessionTexts(config: TeamConfig): Promise<InboxMessage[]> {

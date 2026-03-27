@@ -1945,4 +1945,117 @@ describe('TeamDataService', () => {
     expect(data).toEqual({ 'task-1': 'has_changes' });
     expect(getMessages).not.toHaveBeenCalled();
   });
+
+  it('persists standalone slash metadata when sending directly to the live lead', async () => {
+    const appendSentMessage = vi.fn((payload) => payload);
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({
+          name: 'My team',
+          members: [{ name: 'team-lead', role: 'Lead' }],
+          leadSessionId: 'lead-1',
+        })),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      () =>
+        ({
+          messages: {
+            appendSentMessage,
+          },
+        }) as never
+    );
+
+    const result = await service.sendDirectToLead(
+      'my-team',
+      'team-lead',
+      '/compact keep only kanban context'
+    );
+
+    expect(result.deliveredViaStdin).toBe(true);
+    expect(appendSentMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: '/compact keep only kanban context',
+        messageKind: 'slash_command',
+        slashCommand: expect.objectContaining({
+          name: 'compact',
+          command: '/compact',
+          args: 'keep only kanban context',
+        }),
+      })
+    );
+  });
+
+  it('annotates immediate lead replies after slash commands as command results', async () => {
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({
+          name: 'My team',
+          members: [{ name: 'team-lead', role: 'Lead' }],
+          leadSessionId: 'lead-1',
+        })),
+      } as never,
+      {
+        getTasks: vi.fn(async () => []),
+      } as never,
+      {
+        listInboxNames: vi.fn(async () => []),
+        getMessages: vi.fn(async () => [
+          {
+            from: 'team-lead',
+            text: 'Total cost: $1.05',
+            timestamp: '2026-03-27T22:17:01.000Z',
+            read: true,
+            source: 'lead_process',
+            leadSessionId: 'lead-1',
+            messageId: 'lead-thought-1',
+          },
+        ]),
+      } as never,
+      {} as never,
+      {} as never,
+      {
+        resolveMembers: vi.fn(() => []),
+      } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
+      } as never,
+      {} as never,
+      {} as never,
+      {
+        readMessages: vi.fn(async () => [
+          {
+            from: 'user',
+            to: 'team-lead',
+            text: '/cost',
+            timestamp: '2026-03-27T22:17:00.000Z',
+            read: true,
+            source: 'user_sent',
+            leadSessionId: 'lead-1',
+            messageId: 'user-cost-1',
+          },
+        ]),
+      } as never
+    );
+
+    const data = await service.getTeamData('my-team');
+    const costResult = data.messages.find((message) => message.messageId === 'lead-thought-1');
+
+    expect(costResult).toMatchObject({
+      messageKind: 'slash_command_result',
+      commandOutput: {
+        stream: 'stdout',
+        commandLabel: '/cost',
+      },
+    });
+  });
 });
