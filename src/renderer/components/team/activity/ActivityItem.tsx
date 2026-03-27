@@ -222,6 +222,19 @@ function getNoiseLabel(parsed: StructuredMessage): string | null {
       : 'Completed a task';
   }
 
+  if (type === 'permission_request') {
+    const toolName = getStringField(parsed, 'tool_name');
+    const description = getStringField(parsed, 'description');
+    const label = toolName ? `Permission: ${toolName}` : 'Permission request';
+    return description ? `${label} — ${description}` : label;
+  }
+
+  if (type === 'permission_response') {
+    if (parsed.approved === true) return 'Permission granted';
+    if (parsed.approved === false) return 'Permission denied';
+    return 'Permission response';
+  }
+
   return null;
 }
 

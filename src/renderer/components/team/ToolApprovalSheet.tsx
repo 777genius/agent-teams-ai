@@ -202,6 +202,7 @@ export const ToolApprovalSheet: React.FC = () => {
         <div className="flex items-center gap-2">
           {getToolIcon(current.toolName)}
           <span className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+            {current.source !== 'lead' ? `${current.source} — ` : ''}
             {current.toolName}
           </span>
         </div>

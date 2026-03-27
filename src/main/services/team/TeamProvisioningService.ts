@@ -32,7 +32,11 @@ import { getMemberColorByName } from '@shared/constants/memberColors';
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
-import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
+import {
+  isInboxNoiseMessage,
+  parsePermissionRequest,
+  type ParsedPermissionRequest,
+} from '@shared/utils/inboxNoise';
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
@@ -4027,12 +4031,35 @@ export class TeamProvisioningService {
       );
       const deferredIds = new Set(deferredByAge.map((m) => m.messageId));
 
+      // Category 4: teammate permission requests — intercept and convert to tool approvals.
+      // Don't relay these to the lead agent (it can't handle them).
+      const permissionRequestMsgs = unread.filter(
+        (m) =>
+          !permanentlyIgnoredIds.has(m.messageId) &&
+          !nativeMatchedMessageIds.has(m.messageId) &&
+          !deferredIds.has(m.messageId) &&
+          parsePermissionRequest(m.text) !== null
+      );
+      const permissionRequestIds = new Set(permissionRequestMsgs.map((m) => m.messageId));
+      if (permissionRequestMsgs.length > 0) {
+        for (const msg of permissionRequestMsgs) {
+          const perm = parsePermissionRequest(msg.text)!;
+          this.handleTeammatePermissionRequest(run, perm, msg.timestamp);
+        }
+        try {
+          await this.markInboxMessagesRead(teamName, leadName, permissionRequestMsgs);
+        } catch {
+          // best-effort
+        }
+      }
+
       // Actionable: everything not in any category.
       const actionableUnread = unread.filter(
         (m) =>
           !permanentlyIgnoredIds.has(m.messageId) &&
           !nativeMatchedMessageIds.has(m.messageId) &&
-          !deferredIds.has(m.messageId)
+          !deferredIds.has(m.messageId) &&
+          !permissionRequestIds.has(m.messageId)
       );
 
       // Layer 3: schedule retry timers.
@@ -5537,6 +5564,52 @@ export class TeamProvisioningService {
   }
 
   /**
+   * Handles a teammate permission_request received via inbox message.
+   * Converts it to a ToolApprovalRequest and feeds it into the existing approval flow.
+   */
+  private handleTeammatePermissionRequest(
+    run: ProvisioningRun,
+    perm: ParsedPermissionRequest,
+    messageTimestamp: string
+  ): void {
+    // Skip if already tracked (idempotency — relay can be called multiple times)
+    if (run.pendingApprovals.has(perm.requestId)) return;
+
+    const approval: ToolApprovalRequest = {
+      requestId: perm.requestId,
+      runId: run.runId,
+      teamName: run.teamName,
+      source: perm.agentId,
+      toolName: perm.toolName,
+      toolInput: perm.input,
+      receivedAt: messageTimestamp || new Date().toISOString(),
+      teamColor: run.request.color,
+      teamDisplayName: run.request.displayName,
+    };
+
+    const autoResult = shouldAutoAllow(this.toolApprovalSettings, perm.toolName, perm.input);
+    if (autoResult.autoAllow) {
+      logger.info(
+        `[${run.teamName}] Auto-allowing teammate ${perm.agentId} ${perm.toolName} (${autoResult.reason})`
+      );
+      void this.respondToTeammatePermission(run, perm.agentId, perm.requestId, true);
+      this.emitToolApprovalEvent({
+        autoResolved: true,
+        requestId: perm.requestId,
+        runId: run.runId,
+        teamName: run.teamName,
+        reason: 'auto_allow_category',
+      } as ToolApprovalAutoResolved);
+      return;
+    }
+
+    run.pendingApprovals.set(perm.requestId, approval);
+    this.emitToolApprovalEvent(approval);
+    this.startApprovalTimeout(run, perm.requestId);
+    this.maybeShowToolApprovalOsNotification(run, approval);
+  }
+
+  /**
    * Shows a native OS notification for a pending tool approval when the app
    * is not in focus. On macOS, adds Allow/Deny action buttons that respond
    * directly from the notification without switching to the app.
@@ -5704,6 +5777,31 @@ export class TeamProvisioningService {
       const allow = currentAction === 'allow';
       logger.info(`[${run.teamName}] Timeout ${allow ? 'allowing' : 'denying'} ${requestId}`);
 
+      const approval = run.pendingApprovals.get(requestId);
+      if (approval && approval.source !== 'lead') {
+        // Teammate request — respond via inbox + control_response fallback.
+        // Defer cleanup until the async write completes to avoid silent data loss.
+        this.respondToTeammatePermission(
+          run,
+          approval.source,
+          requestId,
+          allow,
+          allow ? undefined : 'Timed out — auto-denied by settings'
+        ).finally(() => {
+          run.pendingApprovals.delete(requestId);
+          this.inFlightResponses.delete(requestId);
+          this.dismissApprovalNotification(requestId);
+          this.emitToolApprovalEvent({
+            autoResolved: true,
+            requestId,
+            runId: run.runId,
+            teamName: run.teamName,
+            reason: allow ? 'timeout_allow' : 'timeout_deny',
+          } as ToolApprovalAutoResolved);
+        });
+        return;
+      }
+
       if (allow) {
         this.autoAllowControlRequest(run, requestId);
       } else {
@@ -5768,7 +5866,12 @@ export class TeamProvisioningService {
         );
         if (result.autoAllow) {
           this.clearApprovalTimeout(requestId);
-          this.autoAllowControlRequest(run, requestId);
+          if (!this.tryClaimResponse(requestId)) continue;
+          if (approval.source !== 'lead') {
+            void this.respondToTeammatePermission(run, approval.source, requestId, true);
+          } else {
+            this.autoAllowControlRequest(run, requestId);
+          }
           this.dismissApprovalNotification(requestId);
           toRemove.push(requestId);
           this.emitToolApprovalEvent({
@@ -5794,6 +5897,7 @@ export class TeamProvisioningService {
       }
       for (const requestId of toRemove) {
         run.pendingApprovals.delete(requestId);
+        this.inFlightResponses.delete(requestId);
       }
     }
   }
@@ -5831,6 +5935,20 @@ export class TeamProvisioningService {
     if (!run.pendingApprovals.has(requestId)) {
       // Approval was removed (e.g. by reEvaluatePendingApprovals) — clean up claim and exit
       this.inFlightResponses.delete(requestId);
+      return;
+    }
+
+    const approval = run.pendingApprovals.get(requestId)!;
+
+    // Teammate permission requests use a different response path (inbox, not stdin)
+    if (approval.source !== 'lead') {
+      try {
+        await this.respondToTeammatePermission(run, approval.source, requestId, allow, message);
+      } finally {
+        run.pendingApprovals.delete(requestId);
+        this.inFlightResponses.delete(requestId);
+        this.dismissApprovalNotification(requestId);
+      }
       return;
     }
 
@@ -5886,6 +6004,93 @@ export class TeamProvisioningService {
       run.pendingApprovals.delete(requestId);
       this.inFlightResponses.delete(requestId);
       this.dismissApprovalNotification(requestId);
+    }
+  }
+
+  /**
+   * Respond to a teammate's permission_request by writing to the teammate's inbox
+   * AND attempting a control_response via stdin (belt-and-suspenders).
+   */
+  private async respondToTeammatePermission(
+    run: ProvisioningRun,
+    agentId: string,
+    requestId: string,
+    allow: boolean,
+    message?: string
+  ): Promise<void> {
+    const teamsBase = getTeamsBasePath();
+    const inboxPath = path.join(teamsBase, run.teamName, 'inboxes', `${agentId}.json`);
+
+    // 1. Write permission_response to teammate's inbox (with proper file locking)
+    const responseMsg = {
+      from: 'user',
+      text: JSON.stringify({
+        type: 'permission_response',
+        request_id: requestId,
+        approved: allow,
+        ...(message ? { message } : {}),
+      }),
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+
+    try {
+      await withFileLock(inboxPath, async () => {
+        await withInboxLock(inboxPath, async () => {
+          let existing: unknown[] = [];
+          try {
+            const raw = await tryReadRegularFileUtf8(inboxPath, {
+              timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+              maxBytes: TEAM_INBOX_MAX_BYTES,
+            });
+            if (raw) {
+              const parsed = JSON.parse(raw) as unknown;
+              if (Array.isArray(parsed)) existing = parsed;
+            }
+          } catch {
+            // File may not exist yet — start with empty array
+          }
+          existing.push(responseMsg);
+          await atomicWriteAsync(inboxPath, JSON.stringify(existing, null, 2));
+        });
+      });
+      logger.info(
+        `[${run.teamName}] Wrote permission_response to ${agentId} inbox: ${allow ? 'allow' : 'deny'}`
+      );
+    } catch (error) {
+      logger.error(
+        `[${run.teamName}] Failed to write permission_response to ${agentId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+
+    // 2. Also try control_response via stdin (in case lead runtime can forward it)
+    if (run.child?.stdin?.writable) {
+      const controlResponse = allow
+        ? {
+            type: 'control_response',
+            response: {
+              subtype: 'success',
+              request_id: requestId,
+              response: { behavior: 'allow' },
+            },
+          }
+        : {
+            type: 'control_response',
+            response: {
+              subtype: 'success',
+              request_id: requestId,
+              response: { behavior: 'deny', message: message ?? 'User denied' },
+            },
+          };
+      run.child.stdin.write(JSON.stringify(controlResponse) + '\n', (err) => {
+        if (err) {
+          logger.warn(
+            `[${run.teamName}] control_response via stdin for teammate ${agentId} failed (non-critical): ${err.message}`
+          );
+        }
+      });
     }
   }
 

@@ -38,6 +38,47 @@ export function isInboxNoiseMessage(text: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Teammate permission request parsing
+// ---------------------------------------------------------------------------
+
+/** Parsed teammate permission request from inbox message. */
+export interface ParsedPermissionRequest {
+  requestId: string;
+  agentId: string;
+  toolName: string;
+  toolUseId: string;
+  description: string;
+  input: Record<string, unknown>;
+}
+
+/**
+ * Parses a `permission_request` JSON message from a teammate's inbox entry.
+ * Returns null if the text is not a valid permission_request.
+ */
+export function parsePermissionRequest(text: string): ParsedPermissionRequest | null {
+  const parsed = parseInboxJson(text);
+  if (!parsed || parsed.type !== 'permission_request') return null;
+
+  const requestId = typeof parsed.request_id === 'string' ? parsed.request_id : null;
+  const agentId = typeof parsed.agent_id === 'string' ? parsed.agent_id : null;
+  const toolName = typeof parsed.tool_name === 'string' ? parsed.tool_name : null;
+
+  if (!requestId || !agentId || !toolName) return null;
+
+  return {
+    requestId,
+    agentId,
+    toolName,
+    toolUseId: typeof parsed.tool_use_id === 'string' ? parsed.tool_use_id : '',
+    description: typeof parsed.description === 'string' ? parsed.description : '',
+    input:
+      parsed.input && typeof parsed.input === 'object' && !Array.isArray(parsed.input)
+        ? (parsed.input as Record<string, unknown>)
+        : {},
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Teammate-message XML block detection & stripping
 // ---------------------------------------------------------------------------
 
