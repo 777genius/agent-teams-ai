@@ -4033,10 +4033,12 @@ export class TeamProvisioningService {
 
       // Category 4: teammate permission requests — intercept and convert to tool approvals.
       // Don't relay these to the lead agent (it can't handle them).
+      // NOTE: We intentionally do NOT exclude nativeMatchedMessageIds here — even if
+      // Claude Code runtime natively delivered the message to the lead, we still need
+      // to intercept permission_request and show the ToolApprovalSheet for the user.
       const permissionRequestMsgs = unread.filter(
         (m) =>
           !permanentlyIgnoredIds.has(m.messageId) &&
-          !nativeMatchedMessageIds.has(m.messageId) &&
           !deferredIds.has(m.messageId) &&
           parsePermissionRequest(m.text) !== null
       );
