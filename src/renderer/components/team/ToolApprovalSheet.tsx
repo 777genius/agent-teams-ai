@@ -186,156 +186,161 @@ export const ToolApprovalSheet: React.FC = () => {
   const displayName = current.teamDisplayName ?? teamSummary?.displayName ?? current.teamName;
 
   return (
-    <div
-      ref={containerRef}
-      className={`fixed bottom-4 left-1/2 z-[55] w-full -translate-x-1/2 rounded-lg border shadow-xl outline-none transition-all duration-200 animate-in fade-in slide-in-from-bottom-4 ${diffExpanded ? 'max-w-screen-sm' : 'max-w-[480px]'}`}
-      style={{
-        backgroundColor: 'var(--color-surface-overlay)',
-        borderColor: 'var(--color-border-emphasis)',
-      }}
-    >
-      {/* Header */}
+    <>
+      {/* Backdrop overlay */}
+      <div className="fixed inset-0 z-[54] bg-black/40 duration-200 animate-in fade-in" />
+
       <div
-        className="flex items-center justify-between border-b px-4 py-2.5"
-        style={{ borderColor: 'var(--color-border)' }}
+        ref={containerRef}
+        className={`fixed bottom-4 left-1/2 z-[55] w-full -translate-x-1/2 rounded-lg border shadow-xl outline-none transition-all duration-200 animate-in fade-in slide-in-from-bottom-4 ${diffExpanded ? 'max-w-screen-sm' : 'max-w-[480px]'}`}
+        style={{
+          backgroundColor: 'var(--color-surface-overlay)',
+          borderColor: 'var(--color-border-emphasis)',
+        }}
       >
-        <div className="flex items-center gap-2">
-          {getToolIcon(current.toolName)}
-          <span className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-            {current.source !== 'lead' ? `${current.source} — ` : ''}
-            {current.toolName}
-          </span>
-        </div>
-        <div className="flex items-center gap-2.5">
-          {selectedTeamName !== current.teamName && (
-            <span
-              className="rounded-full px-2 py-0.5 text-[10px] font-medium"
-              style={{
-                backgroundColor: getThemedBadge(teamColor, isLight),
-                color: teamColor.text,
-                border: `1px solid ${teamColor.border}`,
-              }}
-            >
-              {displayName}
-            </span>
-          )}
-          <ElapsedDisplay receivedAt={current.receivedAt} />
-        </div>
-      </div>
-
-      {/* Tool input preview (syntax-highlighted) */}
-      <ToolInputPreview
-        toolName={current.toolName}
-        toolInput={current.toolInput}
-        projectPath={selectedTeamData?.config?.projectPath}
-      />
-
-      {/* Diff preview (Write/Edit/NotebookEdit only) */}
-      <ToolApprovalDiffPreview
-        toolName={current.toolName}
-        toolInput={current.toolInput}
-        requestId={current.requestId}
-        onExpandedChange={setDiffExpanded}
-      />
-
-      {/* Error feedback */}
-      {error && (
+        {/* Header */}
         <div
-          className="mx-4 mb-1 flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
-          style={{
-            backgroundColor: 'rgba(239, 68, 68, 0.08)',
-            borderColor: 'rgba(239, 68, 68, 0.25)',
-            color: 'rgb(248, 113, 113)',
-          }}
+          className="flex items-center justify-between border-b px-4 py-2.5"
+          style={{ borderColor: 'var(--color-border)' }}
         >
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-          <span className="break-words">{error}</span>
+          <div className="flex items-center gap-2">
+            {getToolIcon(current.toolName)}
+            <span className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+              {current.source !== 'lead' ? `${current.source} — ` : ''}
+              {current.toolName}
+            </span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            {selectedTeamName !== current.teamName && (
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                style={{
+                  backgroundColor: getThemedBadge(teamColor, isLight),
+                  color: teamColor.text,
+                  border: `1px solid ${teamColor.border}`,
+                }}
+              >
+                {displayName}
+              </span>
+            )}
+            <ElapsedDisplay receivedAt={current.receivedAt} />
+          </div>
         </div>
-      )}
 
-      {/* Actions */}
-      <div
-        className="flex items-center justify-between border-t px-4 py-2.5"
-        style={{ borderColor: 'var(--color-border)' }}
-      >
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => handleRespond(true)}
-            className="rounded-md px-3.5 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
-            style={{ backgroundColor: 'rgb(5, 150, 105)' }}
-            onMouseEnter={(e) => {
-              if (!disabled)
-                Object.assign(e.currentTarget.style, { backgroundColor: 'rgb(16, 185, 129)' });
-            }}
-            onMouseLeave={(e) => {
-              Object.assign(e.currentTarget.style, { backgroundColor: 'rgb(5, 150, 105)' });
-            }}
-          >
-            Allow
-          </button>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => handleRespond(false)}
-            className="rounded-md border px-3.5 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+        {/* Tool input preview (syntax-highlighted) */}
+        <ToolInputPreview
+          toolName={current.toolName}
+          toolInput={current.toolInput}
+          projectPath={selectedTeamData?.config?.projectPath}
+        />
+
+        {/* Diff preview (Write/Edit/NotebookEdit only) */}
+        <ToolApprovalDiffPreview
+          toolName={current.toolName}
+          toolInput={current.toolInput}
+          requestId={current.requestId}
+          onExpandedChange={setDiffExpanded}
+        />
+
+        {/* Error feedback */}
+        {error && (
+          <div
+            className="mx-4 mb-1 flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
             style={{
-              borderColor: 'rgba(239, 68, 68, 0.5)',
+              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+              borderColor: 'rgba(239, 68, 68, 0.25)',
               color: 'rgb(248, 113, 113)',
             }}
-            onMouseEnter={(e) => {
-              if (!disabled)
-                Object.assign(e.currentTarget.style, {
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                });
-            }}
-            onMouseLeave={(e) => {
-              Object.assign(e.currentTarget.style, { backgroundColor: 'transparent' });
-            }}
           >
-            Deny
-          </button>
-
-          <div className="mx-1 h-4 w-px" style={{ backgroundColor: 'var(--color-border)' }} />
-
-          <button
-            type="button"
-            onClick={() => void updateToolApprovalSettings({ autoAllowAll: true })}
-            className="rounded-md border px-3.5 py-1.5 text-xs font-medium transition-colors"
-            style={{
-              color: 'var(--color-text-muted)',
-              borderColor: 'var(--color-border-emphasis)',
-            }}
-            onMouseEnter={(e) => {
-              Object.assign(e.currentTarget.style, {
-                color: 'var(--color-text-secondary)',
-                backgroundColor: 'var(--color-surface-raised)',
-              });
-            }}
-            onMouseLeave={(e) => {
-              Object.assign(e.currentTarget.style, {
-                color: 'var(--color-text-muted)',
-                backgroundColor: 'transparent',
-              });
-            }}
-          >
-            Allow all
-          </button>
-        </div>
-        {pendingApprovals.length > 1 && (
-          <span className="text-[11px] text-[var(--color-text-muted)]">
-            {pendingApprovals.length - 1} pending
-          </span>
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+            <span className="break-words">{error}</span>
+          </div>
         )}
+
+        {/* Actions */}
+        <div
+          className="flex items-center justify-between border-t px-4 py-2.5"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => handleRespond(true)}
+              className="rounded-md px-3.5 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
+              style={{ backgroundColor: 'rgb(5, 150, 105)' }}
+              onMouseEnter={(e) => {
+                if (!disabled)
+                  Object.assign(e.currentTarget.style, { backgroundColor: 'rgb(16, 185, 129)' });
+              }}
+              onMouseLeave={(e) => {
+                Object.assign(e.currentTarget.style, { backgroundColor: 'rgb(5, 150, 105)' });
+              }}
+            >
+              Allow
+            </button>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => handleRespond(false)}
+              className="rounded-md border px-3.5 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+              style={{
+                borderColor: 'rgba(239, 68, 68, 0.5)',
+                color: 'rgb(248, 113, 113)',
+              }}
+              onMouseEnter={(e) => {
+                if (!disabled)
+                  Object.assign(e.currentTarget.style, {
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  });
+              }}
+              onMouseLeave={(e) => {
+                Object.assign(e.currentTarget.style, { backgroundColor: 'transparent' });
+              }}
+            >
+              Deny
+            </button>
+
+            <div className="mx-1 h-4 w-px" style={{ backgroundColor: 'var(--color-border)' }} />
+
+            <button
+              type="button"
+              onClick={() => void updateToolApprovalSettings({ autoAllowAll: true })}
+              className="rounded-md border px-3.5 py-1.5 text-xs font-medium transition-colors"
+              style={{
+                color: 'var(--color-text-muted)',
+                borderColor: 'var(--color-border-emphasis)',
+              }}
+              onMouseEnter={(e) => {
+                Object.assign(e.currentTarget.style, {
+                  color: 'var(--color-text-secondary)',
+                  backgroundColor: 'var(--color-surface-raised)',
+                });
+              }}
+              onMouseLeave={(e) => {
+                Object.assign(e.currentTarget.style, {
+                  color: 'var(--color-text-muted)',
+                  backgroundColor: 'transparent',
+                });
+              }}
+            >
+              Allow all
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            {pendingApprovals.length > 1 && (
+              <span className="text-[11px] text-[var(--color-text-muted)]">
+                {pendingApprovals.length - 1} pending
+              </span>
+            )}
+            <ToolApprovalSettingsPanel />
+          </div>
+        </div>
+
+        {/* Timeout progress bar */}
+        <TimeoutProgress receivedAt={current.receivedAt} />
       </div>
-
-      {/* Settings panel (full-width, outside flex row) */}
-      <ToolApprovalSettingsPanel />
-
-      {/* Timeout progress bar */}
-      <TimeoutProgress receivedAt={current.receivedAt} />
-    </div>
+    </>
   );
 };
 

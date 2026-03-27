@@ -20,8 +20,8 @@ export const ToolApprovalSettingsPanel: React.FC = () => {
   const updateSettings = useStore((s) => s.updateToolApprovalSettings);
 
   return (
-    <div className="border-t px-4 py-2" style={{ borderColor: 'var(--color-border)' }}>
-      {/* Toggle button */}
+    <>
+      {/* Toggle button — rendered inline in parent layout */}
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
@@ -41,10 +41,10 @@ export const ToolApprovalSettingsPanel: React.FC = () => {
         {expanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
       </button>
 
-      {/* Collapsible panel */}
+      {/* Collapsible panel — full-width, below toggle */}
       {expanded && (
         <div
-          className="mt-2 space-y-3 rounded-md border p-3"
+          className="mx-4 mb-2 mt-1 space-y-3 rounded-md border p-3"
           style={{
             backgroundColor: 'var(--color-surface)',
             borderColor: 'var(--color-border)',
@@ -160,6 +160,6 @@ export const ToolApprovalSettingsPanel: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
