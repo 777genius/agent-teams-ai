@@ -167,11 +167,13 @@ export function useGraphSimulation(): UseGraphSimulationResult {
   // Track previous node IDs and states for effect spawning
   const prevNodeIdsRef = useRef(new Set<string>());
   const prevNodeStatesRef = useRef(new Map<string, string>());
+  // All node IDs ever seen — never shrinks. Prevents spawn effects replaying
+  // when nodes reappear after being filtered out (e.g. Tasks toggle OFF→ON).
+  const allKnownNodeIdsRef = useRef(new Set<string>());
 
   // Update data from adapter
   const updateData = useCallback((nodes: GraphNode[], edges: GraphEdge[], particles: GraphParticle[]) => {
     const state = stateRef.current;
-    const prevIds = prevNodeIdsRef.current;
     const prevStates = prevNodeStatesRef.current;
 
     // Preserve positions from previous frame
@@ -193,9 +195,11 @@ export function useGraphSimulation(): UseGraphSimulationResult {
     }
 
     // Detect state transitions → spawn visual effects
+    const allKnown = allKnownNodeIdsRef.current;
     for (const node of nodes) {
-      // New node appeared → spawn effect
-      if (!prevIds.has(node.id) && node.x != null && node.y != null) {
+      // New node appeared → spawn effect (only if truly new, never seen before).
+      // Nodes returning from filter (e.g. Tasks toggle OFF→ON) are already in allKnown.
+      if (!allKnown.has(node.id) && node.x != null && node.y != null) {
         state.effects.push(createSpawnEffect(node.x, node.y, node.color ?? getStateColor(node.state)));
       }
 
@@ -206,7 +210,8 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       }
     }
 
-    // Update tracking refs
+    // Update tracking refs — allKnown only grows, never shrinks
+    for (const n of nodes) allKnown.add(n.id);
     prevNodeIdsRef.current = new Set(nodes.map((n) => n.id));
     prevNodeStatesRef.current = new Map(nodes.map((n) => [n.id, n.state]));
 
