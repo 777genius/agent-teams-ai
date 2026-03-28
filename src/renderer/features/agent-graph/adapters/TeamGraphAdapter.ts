@@ -8,6 +8,7 @@
  */
 
 import { isLeadMember } from '@shared/utils/leadDetection';
+import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
 
 import type {
   GraphDataPort,
@@ -128,6 +129,7 @@ export class TeamGraphAdapter {
       state: data.isAlive ? 'active' : 'idle',
       color: data.config.color ?? undefined,
       contextUsage: percent != null ? Math.max(0, Math.min(1, percent / 100)) : undefined,
+      avatarUrl: agentAvatarUrl('team-lead', 64),
       domainRef: { kind: 'lead', teamName },
     });
   }
@@ -155,6 +157,7 @@ export class TeamGraphAdapter {
         color: member.color ?? undefined,
         role: member.role ?? undefined,
         spawnStatus: spawn?.status,
+        avatarUrl: agentAvatarUrl(member.name, 64),
         domainRef: { kind: 'member', teamName, memberName: member.name },
       });
 

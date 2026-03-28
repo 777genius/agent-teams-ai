@@ -44,8 +44,8 @@ export function drawAgents(
     // Hexagonal body with interior fill
     drawHexBody(ctx, x, y, r, color, node.state, time, isSelected, isHovered);
 
-    // Avatar: first letter of name centered inside hexagon
-    drawAvatar(ctx, x, y, r, node.label, color, node.kind === 'lead');
+    // Avatar: robohash image or fallback letter
+    drawAvatar(ctx, x, y, r, node.label, color, node.kind === 'lead', node.avatarUrl);
 
     // Breathing animation + spawn/waiting effects
     drawBreathing(ctx, x, y, r, node.state, time, node.spawnStatus);
@@ -210,6 +210,30 @@ function drawBreathing(
   }
 }
 
+// ─── Avatar image cache ─────────────────────────────────────────────────────
+
+const avatarCache = new Map<string, HTMLImageElement>();
+const avatarLoading = new Set<string>();
+
+function getAvatarImage(url: string): HTMLImageElement | null {
+  const cached = avatarCache.get(url);
+  if (cached) return cached;
+  if (avatarLoading.has(url)) return null;
+
+  avatarLoading.add(url);
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    avatarCache.set(url, img);
+    avatarLoading.delete(url);
+  };
+  img.onerror = () => {
+    avatarLoading.delete(url);
+  };
+  img.src = url;
+  return null;
+}
+
 function drawAvatar(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -218,10 +242,28 @@ function drawAvatar(
   name: string,
   color: string,
   isLead: boolean,
+  avatarUrl?: string,
 ): void {
+  const avatarR = r * 0.6;
+
+  // Try to draw avatar image
+  if (avatarUrl) {
+    const img = getAvatarImage(avatarUrl);
+    if (img) {
+      ctx.save();
+      // Clip to circle inside hexagon
+      ctx.beginPath();
+      ctx.arc(x, y, avatarR, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(img, x - avatarR, y - avatarR, avatarR * 2, avatarR * 2);
+      ctx.restore();
+      return;
+    }
+  }
+
+  // Fallback: first letter
   const letter = name.charAt(0).toUpperCase();
   const fontSize = isLead ? Math.round(r * 0.6) : Math.round(r * 0.7);
-
   ctx.font = `bold ${fontSize}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

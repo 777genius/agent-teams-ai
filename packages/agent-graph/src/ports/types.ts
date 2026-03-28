@@ -43,6 +43,8 @@ export interface GraphNode {
   // ─── Member/Lead-specific ──────────────────────────────────────────────
   /** Agent role description */
   role?: string;
+  /** Avatar image URL (e.g., robohash) */
+  avatarUrl?: string;
   /** Spawn lifecycle status */
   spawnStatus?: 'offline' | 'waiting' | 'spawning' | 'online' | 'error';
   /** Context window usage ratio (0..1), available for lead only */

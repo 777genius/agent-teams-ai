@@ -8,7 +8,7 @@
  */
 
 import type { GraphNode } from '../ports/types';
-import { KANBAN_ZONE, TASK_PILL } from '../constants/canvas-constants';
+import { KANBAN_ZONE } from '../constants/canvas-constants';
 
 /** Column header info for rendering */
 export interface KanbanColumnHeader {
@@ -125,10 +125,10 @@ export class KanbanLayoutEngine {
       const colX = baseX + colIdx * columnWidth;
       const config = COLUMN_LABELS[col.name] ?? { label: col.name, color: '#888' };
 
-      // Column header — centered over pill area
+      // Column header — centered over pill area (pill center = colX since drawTaskPill translates to x,y)
       headers.push({
         label: config.label,
-        x: colX + TASK_PILL.width / 2, // horizontally centered over pills
+        x: colX, // pill center = task.x = colX
         y: baseY,
         color: config.color,
       });
