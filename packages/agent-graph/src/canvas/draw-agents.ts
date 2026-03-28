@@ -83,8 +83,8 @@ export function drawAgents(
 
 function getNodeOpacity(node: GraphNode): number {
   if (node.state === 'terminated' || node.state === 'complete') return 0.3;
-  if (node.spawnStatus === 'spawning') return 0.6;
-  if (node.spawnStatus === 'waiting') return 0.4;
+  if (node.spawnStatus === 'spawning') return 0.85;
+  if (node.spawnStatus === 'waiting') return 0.7;
   if (node.spawnStatus === 'offline') return 0;
   return 1;
 }
@@ -162,29 +162,71 @@ function drawBreathing(
   time: number,
   spawnStatus?: GraphNode['spawnStatus'],
 ): void {
-  // Spawning: rotating dashed ring (loading spinner)
+  // Spawning: bright animated double ring + radial glow
   if (spawnStatus === 'spawning') {
     const ringR = r + AGENT_DRAW.orbitParticleOffset;
     const rotation = time * ANIM.orbitSpeed * 2;
+
+    // Outer glow pulse
+    const glowAlpha = 0.15 + 0.1 * Math.sin(time * 3);
+    const grad = ctx.createRadialGradient(x, y, r, x, y, ringR + 15);
+    grad.addColorStop(0, hexWithAlpha(COLORS.holoBase, glowAlpha));
+    grad.addColorStop(1, hexWithAlpha(COLORS.holoBase, 0));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, ringR + 15, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Primary spinning arc
     ctx.save();
     ctx.beginPath();
-    ctx.arc(x, y, ringR, rotation, rotation + Math.PI * 1.4);
-    ctx.strokeStyle = COLORS.holoBase + alphaHex(0.5);
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 4]);
+    ctx.arc(x, y, ringR, rotation, rotation + Math.PI * 1.2);
+    ctx.strokeStyle = hexWithAlpha(COLORS.holoBase, 0.7);
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([8, 5]);
+    ctx.stroke();
+
+    // Secondary counter-rotating arc
+    ctx.beginPath();
+    ctx.arc(x, y, ringR + 5, -rotation * 0.7, -rotation * 0.7 + Math.PI * 0.6);
+    ctx.strokeStyle = hexWithAlpha(COLORS.holoBase, 0.3);
+    ctx.lineWidth = 1;
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.restore();
+
+    // "connecting" label below name
+    ctx.font = '7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = hexWithAlpha(COLORS.holoBase, 0.5 + 0.3 * Math.sin(time * 2));
+    ctx.fillText('connecting...', x, y + r + AGENT_DRAW.labelYOffset + 14);
     return;
   }
 
-  // Waiting: pulsing hex outline (breathing border)
+  // Waiting: pulsing glow + hex outline + "waiting" label
   if (spawnStatus === 'waiting') {
-    const pulse = 0.12 + 0.12 * Math.sin(time * AGENT_DRAW.waitingBreatheSpeed);
+    const pulse = 0.15 + 0.15 * Math.sin(time * AGENT_DRAW.waitingBreatheSpeed);
+
+    // Soft glow
+    const grad = ctx.createRadialGradient(x, y, r * 0.5, x, y, r + 10);
+    grad.addColorStop(0, hexWithAlpha(COLORS.waiting, pulse * 0.5));
+    grad.addColorStop(1, hexWithAlpha(COLORS.waiting, 0));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, r + 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Pulsing hex outline
     drawHexagon(ctx, x, y, r + AGENT_DRAW.outerRingOffset);
-    ctx.strokeStyle = COLORS.holoBase + alphaHex(pulse);
+    ctx.strokeStyle = hexWithAlpha(COLORS.waiting, pulse);
     ctx.lineWidth = 1.5;
     ctx.stroke();
+
+    // "waiting" label
+    ctx.font = '7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = hexWithAlpha(COLORS.waiting, 0.4 + 0.2 * Math.sin(time * 1.5));
+    ctx.fillText('waiting...', x, y + r + AGENT_DRAW.labelYOffset + 14);
     return;
   }
 
