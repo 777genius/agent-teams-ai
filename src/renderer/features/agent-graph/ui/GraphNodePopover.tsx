@@ -80,7 +80,10 @@ function MemberPopoverContent({
   onCreateTask?: (owner: string) => void;
   onOpenTask?: (taskId: string) => void;
 }): React.JSX.Element {
-  const memberName = node.domainRef.kind === 'member' ? node.domainRef.memberName : 'team-lead';
+  const memberName =
+    node.domainRef.kind === 'member' || node.domainRef.kind === 'lead'
+      ? node.domainRef.memberName
+      : 'team-lead';
   const avatarSrc = node.avatarUrl ?? agentAvatarUrl(memberName, 64);
   const statusLabel =
     node.state === 'active'
@@ -89,7 +92,9 @@ function MemberPopoverContent({
         ? 'Idle'
         : node.state === 'terminated'
           ? 'Offline'
-          : node.state;
+          : node.state === 'tool_calling'
+            ? 'Running tool'
+            : node.state;
 
   const statusDotColor =
     node.state === 'active' || node.state === 'thinking' || node.state === 'tool_calling'
@@ -196,6 +201,67 @@ function MemberPopoverContent({
               ? `${node.currentTaskSubject.slice(0, 30)}…`
               : node.currentTaskSubject}
           </button>
+        </div>
+      )}
+
+      {node.activeTool && (
+        <div className="mt-2 rounded border border-[var(--color-border)] bg-[var(--color-surface-secondary)] px-2 py-1.5 text-[10px]">
+          <div className="flex items-center gap-1.5">
+            <Loader2
+              className={`size-3 shrink-0 ${node.activeTool.state === 'running' ? 'animate-spin' : ''}`}
+              style={{
+                color:
+                  node.activeTool.state === 'error'
+                    ? '#ef4444'
+                    : node.activeTool.state === 'complete'
+                      ? '#22c55e'
+                      : (node.color ?? '#66ccff'),
+              }}
+            />
+            <span className="font-medium text-[var(--color-text)]">
+              {node.activeTool.state === 'running'
+                ? 'Running tool'
+                : node.activeTool.state === 'error'
+                  ? 'Tool failed'
+                  : 'Tool finished'}
+            </span>
+          </div>
+          <div className="mt-1 font-mono text-[var(--color-text-muted)]">
+            {node.activeTool.preview
+              ? `${node.activeTool.name}: ${node.activeTool.preview}`
+              : node.activeTool.name}
+          </div>
+          {node.activeTool.resultPreview && node.activeTool.state !== 'running' && (
+            <div className="mt-1 text-[var(--color-text-muted)]">
+              {node.activeTool.resultPreview}
+            </div>
+          )}
+        </div>
+      )}
+
+      {node.recentTools && node.recentTools.length > 0 && (
+        <div className="mt-2">
+          <div className="mb-1 text-[10px] font-medium text-[var(--color-text-muted)]">
+            Recent tools
+          </div>
+          <div className="space-y-1">
+            {node.recentTools.slice(0, 3).map((tool) => (
+              <div
+                key={`${tool.name}:${tool.finishedAt}:${tool.startedAt}`}
+                className="rounded border border-[var(--color-border)] bg-[var(--color-surface-secondary)] px-2 py-1 text-[10px]"
+              >
+                <div
+                  className="font-mono"
+                  style={{ color: tool.state === 'error' ? '#ef4444' : '#22c55e' }}
+                >
+                  {tool.preview ? `${tool.name}: ${tool.preview}` : tool.name}
+                </div>
+                {tool.resultPreview && (
+                  <div className="mt-0.5 text-[var(--color-text-muted)]">{tool.resultPreview}</div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

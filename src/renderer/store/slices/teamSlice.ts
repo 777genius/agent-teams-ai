@@ -129,6 +129,7 @@ import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import type { AppState } from '../types';
 import type { AppConfig } from '@renderer/types/data';
 import type {
+  ActiveToolCall,
   AddMemberRequest,
   AddTaskCommentRequest,
   CreateTaskRequest,
@@ -559,6 +560,8 @@ export interface TeamSlice {
   currentRuntimeRunIdByTeam: Record<string, string | null>;
   /** Runs explicitly cleared after Unknown runId polling; late events/progress for them are ignored. */
   ignoredProvisioningRunIds: Record<string, string>;
+  /** Runtime runs explicitly tombstoned after stop/offline so late events cannot resurrect UI state. */
+  ignoredRuntimeRunIds: Record<string, string>;
   /**
    * Per-team lower bound for provisioning progress timestamps.
    * Used to ignore late progress events from a previous run after stop→launch.
@@ -566,6 +569,9 @@ export interface TeamSlice {
   provisioningStartedAtFloorByTeam: Record<string, string>;
   leadActivityByTeam: Record<string, LeadActivityState>;
   leadContextByTeam: Record<string, LeadContextUsage>;
+  activeToolsByTeam: Record<string, Record<string, Record<string, ActiveToolCall>>>;
+  finishedVisibleByTeam: Record<string, Record<string, Record<string, ActiveToolCall>>>;
+  toolHistoryByTeam: Record<string, Record<string, ActiveToolCall[]>>;
   /** Per-team per-member spawn statuses during team provisioning/launch. */
   memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
   fetchMemberSpawnStatuses: (teamName: string) => Promise<void>;
@@ -822,9 +828,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   currentProvisioningRunIdByTeam: {},
   currentRuntimeRunIdByTeam: {},
   ignoredProvisioningRunIds: {},
+  ignoredRuntimeRunIds: {},
   provisioningStartedAtFloorByTeam: {},
   leadActivityByTeam: {},
   leadContextByTeam: {},
+  activeToolsByTeam: {},
+  finishedVisibleByTeam: {},
+  toolHistoryByTeam: {},
   memberSpawnStatusesByTeam: {},
   provisioningErrorByTeam: {},
   clearProvisioningError: (teamName?: string) =>
@@ -847,6 +857,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     try {
       const snapshot = await api.teams.getMemberSpawnStatuses(teamName);
       set((prev) => {
+        if (snapshot.runId != null && prev.ignoredRuntimeRunIds[snapshot.runId] === teamName) {
+          return {};
+        }
+
         if (
           prev.currentRuntimeRunIdByTeam[teamName] == null &&
           prev.leadActivityByTeam[teamName] === 'offline' &&
@@ -871,6 +885,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
                   ...prev.currentRuntimeRunIdByTeam,
                   [teamName]: prev.currentRuntimeRunIdByTeam[teamName] ?? snapshot.runId,
                 },
+          ignoredRuntimeRunIds:
+            snapshot.runId == null
+              ? prev.ignoredRuntimeRunIds
+              : Object.fromEntries(
+                  Object.entries(prev.ignoredRuntimeRunIds).filter(
+                    ([, ignoredTeamName]) => ignoredTeamName !== teamName
+                  )
+                ),
           memberSpawnStatusesByTeam: {
             ...prev.memberSpawnStatusesByTeam,
             [teamName]: snapshot.statuses,
@@ -1737,19 +1759,44 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       delete nextErrors[request.teamName];
       const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
       delete nextSpawnStatuses[request.teamName];
+      const nextActiveTools = { ...state.activeToolsByTeam };
+      delete nextActiveTools[request.teamName];
+      const nextFinishedVisible = { ...state.finishedVisibleByTeam };
+      delete nextFinishedVisible[request.teamName];
+      const nextToolHistory = { ...state.toolHistoryByTeam };
+      delete nextToolHistory[request.teamName];
       const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
+      const previousRuntimeRunId = nextRuntimeRunIdByTeam[request.teamName];
       delete nextRuntimeRunIdByTeam[request.teamName];
       const nextIgnoredRunIds = Object.fromEntries(
         Object.entries(state.ignoredProvisioningRunIds).filter(
           ([, teamName]) => teamName !== request.teamName
         )
       );
+      const nextIgnoredRuntimeRunIds = previousRuntimeRunId
+        ? {
+            ...Object.fromEntries(
+              Object.entries(state.ignoredRuntimeRunIds).filter(
+                ([, teamName]) => teamName !== request.teamName
+              )
+            ),
+            [previousRuntimeRunId]: request.teamName,
+          }
+        : Object.fromEntries(
+            Object.entries(state.ignoredRuntimeRunIds).filter(
+              ([, teamName]) => teamName !== request.teamName
+            )
+          );
       return {
         provisioningRuns: cleaned,
         provisioningErrorByTeam: nextErrors,
         memberSpawnStatusesByTeam: nextSpawnStatuses,
+        activeToolsByTeam: nextActiveTools,
+        finishedVisibleByTeam: nextFinishedVisible,
+        toolHistoryByTeam: nextToolHistory,
         currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
         ignoredProvisioningRunIds: nextIgnoredRunIds,
+        ignoredRuntimeRunIds: nextIgnoredRuntimeRunIds,
       };
     });
 
@@ -1833,6 +1880,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             ...state.currentRuntimeRunIdByTeam,
             [request.teamName]: response.runId,
           },
+          ignoredRuntimeRunIds: Object.fromEntries(
+            Object.entries(state.ignoredRuntimeRunIds).filter(
+              ([, teamName]) => teamName !== request.teamName
+            )
+          ),
         };
       });
       try {
@@ -1894,19 +1946,44 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       delete nextErrors[request.teamName];
       const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
       delete nextSpawnStatuses[request.teamName];
+      const nextActiveTools = { ...state.activeToolsByTeam };
+      delete nextActiveTools[request.teamName];
+      const nextFinishedVisible = { ...state.finishedVisibleByTeam };
+      delete nextFinishedVisible[request.teamName];
+      const nextToolHistory = { ...state.toolHistoryByTeam };
+      delete nextToolHistory[request.teamName];
       const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
+      const previousRuntimeRunId = nextRuntimeRunIdByTeam[request.teamName];
       delete nextRuntimeRunIdByTeam[request.teamName];
       const nextIgnoredRunIds = Object.fromEntries(
         Object.entries(state.ignoredProvisioningRunIds).filter(
           ([, teamName]) => teamName !== request.teamName
         )
       );
+      const nextIgnoredRuntimeRunIds = previousRuntimeRunId
+        ? {
+            ...Object.fromEntries(
+              Object.entries(state.ignoredRuntimeRunIds).filter(
+                ([, teamName]) => teamName !== request.teamName
+              )
+            ),
+            [previousRuntimeRunId]: request.teamName,
+          }
+        : Object.fromEntries(
+            Object.entries(state.ignoredRuntimeRunIds).filter(
+              ([, teamName]) => teamName !== request.teamName
+            )
+          );
       return {
         provisioningRuns: cleaned,
         provisioningErrorByTeam: nextErrors,
         memberSpawnStatusesByTeam: nextSpawnStatuses,
+        activeToolsByTeam: nextActiveTools,
+        finishedVisibleByTeam: nextFinishedVisible,
+        toolHistoryByTeam: nextToolHistory,
         currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
         ignoredProvisioningRunIds: nextIgnoredRunIds,
+        ignoredRuntimeRunIds: nextIgnoredRuntimeRunIds,
       };
     });
 
@@ -1970,6 +2047,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             ...state.currentRuntimeRunIdByTeam,
             [request.teamName]: response.runId,
           },
+          ignoredRuntimeRunIds: Object.fromEntries(
+            Object.entries(state.ignoredRuntimeRunIds).filter(
+              ([, teamName]) => teamName !== request.teamName
+            )
+          ),
         };
       });
       try {
@@ -2037,10 +2119,25 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         ...state.ignoredProvisioningRunIds,
         [runId]: existing.teamName,
       };
+      const nextIgnoredRuntimeRunIds =
+        state.currentRuntimeRunIdByTeam[existing.teamName] === runId
+          ? {
+              ...state.ignoredRuntimeRunIds,
+              [runId]: existing.teamName,
+            }
+          : state.ignoredRuntimeRunIds;
 
       const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
       if (isCanonicalRun) {
         delete nextSpawnStatuses[existing.teamName];
+      }
+      const nextActiveTools = { ...state.activeToolsByTeam };
+      const nextFinishedVisible = { ...state.finishedVisibleByTeam };
+      const nextToolHistory = { ...state.toolHistoryByTeam };
+      if (isCanonicalRun) {
+        delete nextActiveTools[existing.teamName];
+        delete nextFinishedVisible[existing.teamName];
+        delete nextToolHistory[existing.teamName];
       }
 
       return {
@@ -2048,7 +2145,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
         currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
         memberSpawnStatusesByTeam: nextSpawnStatuses,
+        activeToolsByTeam: nextActiveTools,
+        finishedVisibleByTeam: nextFinishedVisible,
+        toolHistoryByTeam: nextToolHistory,
         ignoredProvisioningRunIds: nextIgnoredRunIds,
+        ignoredRuntimeRunIds: nextIgnoredRuntimeRunIds,
       };
     });
   },
@@ -2059,6 +2160,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   onProvisioningProgress: (progress: TeamProvisioningProgress) => {
     if (get().ignoredProvisioningRunIds[progress.runId] === progress.teamName) {
+      return;
+    }
+    if (get().ignoredRuntimeRunIds[progress.runId] === progress.teamName) {
       return;
     }
 
@@ -2140,6 +2244,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           ...state.currentRuntimeRunIdByTeam,
           [progress.teamName]: progress.runId,
         },
+        ignoredRuntimeRunIds: Object.fromEntries(
+          Object.entries(state.ignoredRuntimeRunIds).filter(
+            ([, teamName]) => teamName !== progress.teamName
+          )
+        ),
         provisioningErrorByTeam: nextErrors,
         provisioningSnapshotByTeam: nextSnapshots,
       };

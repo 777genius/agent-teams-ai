@@ -55,6 +55,26 @@ export interface GraphNode {
   currentTaskSubject?: string;
   /** Agent is awaiting tool approval from the user */
   pendingApproval?: boolean;
+  /** Currently running or just-finished tool activity shown near the node */
+  activeTool?: {
+    name: string;
+    preview?: string;
+    state: 'running' | 'complete' | 'error';
+    startedAt: string;
+    finishedAt?: string;
+    resultPreview?: string;
+    source: 'runtime' | 'inbox';
+  };
+  /** Recent completed tool activity for popovers and secondary UI */
+  recentTools?: Array<{
+    name: string;
+    preview?: string;
+    state: 'complete' | 'error';
+    startedAt: string;
+    finishedAt: string;
+    resultPreview?: string;
+    source: 'runtime' | 'inbox';
+  }>;
 
   // ─── Task-specific ─────────────────────────────────────────────────────
   /** Short display ID (e.g., "#3") */
@@ -119,7 +139,7 @@ export interface GraphParticle {
 // ─── Domain Reference (opaque back-pointer) ──────────────────────────────────
 
 export type GraphDomainRef =
-  | { kind: 'lead'; teamName: string }
+  | { kind: 'lead'; teamName: string; memberName: string }
   | { kind: 'member'; teamName: string; memberName: string }
   | { kind: 'task'; teamName: string; taskId: string }
   | { kind: 'process'; teamName: string; processId: string };

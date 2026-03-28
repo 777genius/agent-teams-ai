@@ -82,6 +82,10 @@ export function drawAgents(
       ctx.stroke();
     }
 
+    if (node.activeTool) {
+      drawToolCard(ctx, x, y, r, node.activeTool, time);
+    }
+
     // Name + role label (single line: "jack · developer")
     const labelText = node.role ? `${node.label} · ${node.role}` : node.label;
     drawLabel(ctx, x, y, r, labelText, color);
@@ -147,7 +151,7 @@ function drawHexBody(
   ctx.fill();
 
   // Scanline effect
-  const scanSpeed = state === 'active' || state === 'thinking'
+  const scanSpeed = state === 'active' || state === 'thinking' || state === 'tool_calling'
     ? ANIM.scanline.active
     : ANIM.scanline.normal;
   const scanY = ((time * scanSpeed) % (r * 2)) - r;
@@ -172,6 +176,87 @@ function drawHexBody(
   ctx.strokeStyle = hexWithAlpha(color, isHovered ? 0.8 : 0.5);
   ctx.lineWidth = isSelected ? 2 : 1;
   ctx.stroke();
+}
+
+function truncateCardText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+): string {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let out = text;
+  while (out.length > 1 && ctx.measureText(`${out}...`).width > maxWidth) {
+    out = out.slice(0, -1);
+  }
+  return `${out}...`;
+}
+
+function drawToolCard(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  tool: NonNullable<GraphNode['activeTool']>,
+  time: number,
+): void {
+  const labelBase = tool.preview ? `${tool.name}: ${tool.preview}` : tool.name;
+  const labelText =
+    tool.state === 'error'
+      ? `${tool.name}: failed`
+      : tool.state === 'complete' && tool.resultPreview
+        ? `${tool.name}: ${tool.resultPreview}`
+        : labelBase;
+
+  ctx.save();
+  ctx.font = '8px monospace';
+  const truncated = truncateCardText(ctx, labelText, 104);
+  const textWidth = ctx.measureText(truncated).width;
+  const cardW = Math.max(62, Math.min(124, textWidth + 24));
+  const cardH = 18;
+  const cardX = x - cardW / 2;
+  const cardY = y - r - cardH - 10;
+  const accent =
+    tool.state === 'error'
+      ? COLORS.error
+      : tool.state === 'complete'
+        ? COLORS.complete
+        : COLORS.tool_calling;
+
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, 4);
+  ctx.fillStyle = tool.state === 'running' ? 'rgba(10, 15, 30, 0.85)' : 'rgba(10, 15, 30, 0.78)';
+  ctx.fill();
+  ctx.strokeStyle = hexWithAlpha(accent, 0.7);
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  const indicatorX = cardX + 10;
+  const indicatorY = cardY + cardH / 2;
+
+  if (tool.state === 'running') {
+    ctx.beginPath();
+    ctx.arc(
+      indicatorX,
+      indicatorY,
+      4.5,
+      time * 3,
+      time * 3 + Math.PI * 1.2,
+    );
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.arc(indicatorX, indicatorY, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = accent;
+    ctx.fill();
+  }
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = accent;
+  ctx.fillText(truncated, indicatorX + 8, indicatorY);
+  ctx.restore();
 }
 
 function drawBreathing(

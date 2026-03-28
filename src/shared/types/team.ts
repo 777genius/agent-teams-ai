@@ -304,6 +304,42 @@ export interface ToolCallMeta {
   name: string;
   /** Human-readable preview extracted from input args, e.g. "index.ts", "grep -r foo" */
   preview?: string;
+  /** Optional runtime tool_use identifier when available. */
+  toolUseId?: string;
+}
+
+export type ToolActivitySource = 'runtime' | 'inbox';
+export type ToolActivityState = 'running' | 'complete' | 'error';
+
+/** Live or recently finished tool activity for one team member. */
+export interface ActiveToolCall {
+  memberName: string;
+  toolUseId: string;
+  toolName: string;
+  preview?: string;
+  startedAt: string;
+  state: ToolActivityState;
+  source: ToolActivitySource;
+  finishedAt?: string;
+  resultPreview?: string;
+}
+
+/** Renderer-facing event payload for tool lifecycle updates. */
+export interface ToolActivityEventPayload {
+  action: 'start' | 'finish' | 'reset';
+  activity?: {
+    memberName: string;
+    toolUseId: string;
+    toolName: string;
+    preview?: string;
+    startedAt: string;
+    source: ToolActivitySource;
+  };
+  memberName?: string;
+  toolUseId?: string;
+  finishedAt?: string;
+  resultPreview?: string;
+  isError?: boolean;
 }
 
 export interface InboxMessage {
@@ -534,6 +570,7 @@ export interface TeamChangeEvent {
     | 'lead-activity'
     | 'lead-context'
     | 'lead-message'
+    | 'tool-activity'
     | 'process'
     | 'member-spawn';
   teamName: string;

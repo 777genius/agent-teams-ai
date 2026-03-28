@@ -45,7 +45,11 @@ import {
   type ParsedTeammateContent,
 } from '@shared/utils/teammateMessageParser';
 import { createCliAutoSuffixNameGuard, parseNumericSuffixName } from '@shared/utils/teamMemberName';
-import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
+import {
+  extractToolPreview,
+  extractToolResultPreview,
+  formatToolSummaryFromCalls,
+} from '@shared/utils/toolSummary';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { type ChildProcess, type spawn } from 'child_process';
 import { randomUUID } from 'crypto';
@@ -80,6 +84,7 @@ function killTeamProcess(child: ChildProcess | null | undefined): void {
 }
 
 import type {
+  ActiveToolCall,
   CrossTeamSendResult,
   InboxMessage,
   LeadContextUsage,
@@ -95,6 +100,7 @@ import type {
   TeamProvisioningState,
   TeamRuntimeState,
   TeamTask,
+  ToolActivityEventPayload,
   ToolApprovalAutoResolved,
   ToolApprovalEvent,
   ToolApprovalRequest,
@@ -275,6 +281,8 @@ interface ProvisioningRun {
   leadMsgSeq: number;
   /** Accumulated tool_use details between text messages. */
   pendingToolCalls: ToolCallMeta[];
+  /** Active runtime tool calls keyed by tool_use_id. */
+  activeToolCalls: Map<string, ActiveToolCall>;
   /** True when a direct MCP cross_team_send happened and sentMessages history should refresh. */
   pendingDirectCrossTeamSendRefresh: boolean;
   /** Throttle timestamp for emitting inbox refresh events for lead text. */
@@ -1673,6 +1681,18 @@ export class TeamProvisioningService {
     return text.length > 0 ? text : null;
   }
 
+  private extractStreamContentBlocks(msg: Record<string, unknown>): Record<string, unknown>[] {
+    const topLevelContent = msg.content;
+    if (Array.isArray(topLevelContent)) {
+      return topLevelContent as Record<string, unknown>[];
+    }
+
+    const message = msg.message;
+    if (!message || typeof message !== 'object') return [];
+    const innerContent = (message as Record<string, unknown>).content;
+    return Array.isArray(innerContent) ? (innerContent as Record<string, unknown>[]) : [];
+  }
+
   private async matchCrossTeamLeadInboxMessages(
     teamName: string,
     leadName: string,
@@ -2087,6 +2107,94 @@ export class TeamProvisioningService {
       runId: run.runId,
       detail: state,
     });
+  }
+
+  private emitToolActivity(run: ProvisioningRun, payload: ToolActivityEventPayload): void {
+    if (!this.isCurrentTrackedRun(run)) return;
+    this.teamChangeEmitter?.({
+      type: 'tool-activity',
+      teamName: run.teamName,
+      runId: run.runId,
+      detail: JSON.stringify(payload),
+    });
+  }
+
+  private startRuntimeToolActivity(
+    run: ProvisioningRun,
+    memberName: string,
+    block: Record<string, unknown>
+  ): void {
+    const rawId = typeof block.id === 'string' ? block.id.trim() : '';
+    if (!rawId) return;
+
+    const toolUseId = rawId;
+    if (run.activeToolCalls.has(toolUseId)) return;
+
+    const toolName = typeof block.name === 'string' ? block.name : 'unknown';
+    const input = (block.input ?? {}) as Record<string, unknown>;
+    const activity: ActiveToolCall = {
+      memberName,
+      toolUseId,
+      toolName,
+      preview: extractToolPreview(toolName, input),
+      startedAt: nowIso(),
+      state: 'running',
+      source: 'runtime',
+    };
+
+    run.activeToolCalls.set(toolUseId, activity);
+    this.emitToolActivity(run, {
+      action: 'start',
+      activity: {
+        memberName: activity.memberName,
+        toolUseId: activity.toolUseId,
+        toolName: activity.toolName,
+        preview: activity.preview,
+        startedAt: activity.startedAt,
+        source: activity.source,
+      },
+    });
+  }
+
+  private finishRuntimeToolActivity(
+    run: ProvisioningRun,
+    toolUseId: string,
+    resultContent: unknown,
+    isError: boolean
+  ): void {
+    const active = run.activeToolCalls.get(toolUseId);
+    if (!active) return;
+
+    run.activeToolCalls.delete(toolUseId);
+    this.emitToolActivity(run, {
+      action: 'finish',
+      memberName: active.memberName,
+      toolUseId,
+      finishedAt: nowIso(),
+      resultPreview: extractToolResultPreview(resultContent),
+      isError,
+    });
+  }
+
+  private resetRuntimeToolActivity(run: ProvisioningRun, memberName?: string): void {
+    if (run.activeToolCalls.size === 0) return;
+
+    if (!memberName) {
+      run.activeToolCalls.clear();
+      this.emitToolActivity(run, { action: 'reset' });
+      return;
+    }
+
+    let removed = false;
+    for (const [toolUseId, active] of run.activeToolCalls.entries()) {
+      if (active.memberName !== memberName) continue;
+      run.activeToolCalls.delete(toolUseId);
+      removed = true;
+    }
+
+    if (removed) {
+      this.emitToolActivity(run, { action: 'reset', memberName });
+    }
   }
 
   /**
@@ -2951,6 +3059,7 @@ export class TeamProvisioningService {
         activeCrossTeamReplyHints: [],
         leadMsgSeq: 0,
         pendingToolCalls: [],
+        activeToolCalls: new Map(),
         pendingDirectCrossTeamSendRefresh: false,
         lastLeadTextEmitMs: 0,
         silentUserDmForward: null,
@@ -3384,6 +3493,7 @@ export class TeamProvisioningService {
         activeCrossTeamReplyHints: [],
         leadMsgSeq: 0,
         pendingToolCalls: [],
+        activeToolCalls: new Map(),
         pendingDirectCrossTeamSendRefresh: false,
         lastLeadTextEmitMs: 0,
         silentUserDmForward: null,
@@ -4955,6 +5065,7 @@ export class TeamProvisioningService {
       // The permission_request may arrive as plain JSON without <teammate-message> wrapper,
       // and handleNativeTeammateUserMessage only processes <teammate-message> blocks.
       const rawUserText = this.extractStreamUserText(msg);
+      const content = this.extractStreamContentBlocks(msg);
       if (rawUserText) {
         const perm = parsePermissionRequest(rawUserText);
         if (perm) {
@@ -4969,20 +5080,22 @@ export class TeamProvisioningService {
           );
         }
       }
+      for (const block of content) {
+        if (block?.type !== 'tool_result' || typeof block.tool_use_id !== 'string') continue;
+        this.finishRuntimeToolActivity(
+          run,
+          block.tool_use_id,
+          block.content,
+          block.is_error === true
+        );
+      }
       this.handleNativeTeammateUserMessage(run, msg);
       return;
     }
     if (msg.type === 'assistant') {
-      const content = Array.isArray(msg.content)
-        ? (msg.content as Record<string, unknown>[])
-        : (() => {
-            const message = msg.message;
-            if (!message || typeof message !== 'object') return null;
-            const inner = (message as Record<string, unknown>).content;
-            return Array.isArray(inner) ? (inner as Record<string, unknown>[]) : null;
-          })();
+      const content = this.extractStreamContentBlocks(msg);
 
-      const hasCapturedSendMessage = (content ?? []).some((part) => {
+      const hasCapturedSendMessage = content.some((part) => {
         if (!part || typeof part !== 'object') return false;
         if (part.type !== 'tool_use' || part.name !== 'SendMessage') return false;
         const input = part.input;
@@ -4991,7 +5104,7 @@ export class TeamProvisioningService {
         return typeof recipient === 'string' && recipient.trim().length > 0;
       });
 
-      const textParts = (content ?? [])
+      const textParts = content
         .filter((part) => part.type === 'text' && typeof part.text === 'string')
         .map((part) => part.text as string);
       if (textParts.length > 0) {
@@ -5059,7 +5172,7 @@ export class TeamProvisioningService {
       // Accumulate tool_use details from tool-only messages (text + tool_use are separate in stream-json).
       // These details will be attached to the next text message as toolCalls/toolSummary.
       // Works in both pre-ready and post-ready phases so early live messages get tool metadata.
-      for (const block of content ?? []) {
+      for (const block of content) {
         if (
           block?.type === 'tool_use' &&
           typeof block.name === 'string' &&
@@ -5069,19 +5182,21 @@ export class TeamProvisioningService {
           run.pendingToolCalls.push({
             name: block.name,
             preview: extractToolPreview(block.name, input),
+            toolUseId: typeof block.id === 'string' ? block.id : undefined,
           });
+          this.startRuntimeToolActivity(run, this.getRunLeadName(run), block);
         }
       }
 
       // Track member spawn events from Task tool_use blocks with team_name.
       // When the lead calls Task(team_name=X, name=Y), it means member Y is being spawned.
-      this.captureTeamSpawnEvents(run, content ?? []);
+      this.captureTeamSpawnEvents(run, content);
 
       // Capture SendMessage tool_use blocks from assistant output.
       // Works in both pre-ready and post-ready phases so outbound runtime messages
       // are visible in our team message artifacts even if Claude's own routing drifts.
       if (!run.silentUserDmForward || run.silentUserDmForward.mode === 'member_inbox_relay') {
-        this.captureSendMessages(run, content ?? []);
+        this.captureSendMessages(run, content);
       }
 
       // Extract context window usage from message.usage for real-time tracking.
@@ -5100,12 +5215,24 @@ export class TeamProvisioningService {
                 : 0;
             const cacheRead =
               typeof usage.cache_read_input_tokens === 'number' ? usage.cache_read_input_tokens : 0;
+            // Total context window usage = all three token categories
+            // input_tokens = tokens AFTER last cache breakpoint (small)
+            // cache_creation = tokens written to cache (first request)
+            // cache_read = tokens read from cache (subsequent requests) — these ARE in context window
             const currentTokens = inputTokens + cacheCreation + cacheRead;
 
             if (!run.leadContextUsage) {
+              // Determine initial context window from model selection
+              // computeEffectiveTeamModel() defaults to 'opus[1m]' when no model selected
+              const modelStr = (run.request.model ?? '').toLowerCase();
+              const isHaiku = modelStr.includes('haiku');
+              const isLimitedContext = run.request.limitContext === true;
+              // limitContext=true → 200K, haiku → 200K, [1m] → 1M, default → 1M (opus[1m])
+              const initialContextWindow = isLimitedContext || isHaiku ? 200_000 : 1_000_000;
+
               run.leadContextUsage = {
                 currentTokens,
-                contextWindow: 200_000,
+                contextWindow: initialContextWindow,
                 lastUsageMessageId: msgId,
                 lastEmittedAt: 0,
               };
@@ -5225,6 +5352,7 @@ export class TeamProvisioningService {
             );
           }
 
+          this.resetRuntimeToolActivity(run, this.getRunLeadName(run));
           this.setLeadActivity(run, 'idle');
         }
         if (run.pendingDirectCrossTeamSendRefresh) {
@@ -5311,6 +5439,7 @@ export class TeamProvisioningService {
               `[${run.teamName}] post-compact reminder ${wasInFlight ? 'turn errored' : 'pending dropped'} — clearing (strict policy)`
             );
           }
+          this.resetRuntimeToolActivity(run, this.getRunLeadName(run));
           this.setLeadActivity(run, 'idle');
         }
       }
@@ -5566,6 +5695,7 @@ export class TeamProvisioningService {
     } catch (error) {
       // Strict drop-after-attempt — do not re-arm.
       clearPostCompactReminderState(run);
+      this.resetRuntimeToolActivity(run, this.getRunLeadName(run));
       this.setLeadActivity(run, 'idle');
       logger.warn(
         `[${run.teamName}] post-compact reminder injection failed: ${
@@ -6233,6 +6363,7 @@ export class TeamProvisioningService {
     }
 
     run.provisioningComplete = true;
+    this.resetRuntimeToolActivity(run, this.getRunLeadName(run));
     this.setLeadActivity(run, 'idle');
 
     // Clear provisioning timeout — no longer needed
@@ -6697,6 +6828,7 @@ export class TeamProvisioningService {
    * Remove a run from tracking maps.
    */
   private cleanupRun(run: ProvisioningRun): void {
+    this.resetRuntimeToolActivity(run);
     this.setLeadActivity(run, 'offline');
     run.pendingDirectCrossTeamSendRefresh = false;
     if (run.timeoutHandle) {

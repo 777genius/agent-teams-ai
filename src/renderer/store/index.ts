@@ -37,10 +37,12 @@ import { createUpdateSlice } from './slices/updateSlice';
 import type { DetectedError } from '../types/data';
 import type { AppState } from './types';
 import type {
+  ActiveToolCall,
   CliInstallerProgress,
   LeadContextUsage,
   ScheduleChangeEvent,
   TeamChangeEvent,
+  ToolActivityEventPayload,
   ToolApprovalEvent,
   ToolApprovalRequest,
   UpdaterStatus,
@@ -48,6 +50,8 @@ import type {
 
 const ENABLE_AUTO_TEAM_CHANGE_PRESENCE_TRACKING = false;
 const IN_PROGRESS_CHANGE_PRESENCE_POLL_MS = 10_000;
+const FINISHED_TOOL_DISPLAY_MS = 1_500;
+const MAX_TOOL_HISTORY_PER_MEMBER = 6;
 
 // =============================================================================
 // Store Creation
@@ -155,6 +159,7 @@ export function initializeNotificationListeners(): () => void {
   const pendingProjectRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let teamRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let teamPresenceRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  let toolActivityTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let inProgressChangePresencePollInFlight = false;
   const inProgressChangePresenceCursorByTeam = new Map<string, number>();
 
@@ -166,6 +171,112 @@ export function initializeNotificationListeners(): () => void {
   const TEAM_PRESENCE_REFRESH_THROTTLE_MS = 400;
   const TEAM_LIST_REFRESH_THROTTLE_MS = 2000;
   const GLOBAL_TASKS_REFRESH_THROTTLE_MS = 500;
+  const buildToolActivityTimerKey = (
+    teamName: string,
+    memberName: string,
+    toolUseId: string,
+    kind: 'fade'
+  ): string => `${teamName}:${memberName}:${toolUseId}:${kind}`;
+  const clearToolActivityTimer = (
+    teamName: string,
+    memberName: string,
+    toolUseId: string,
+    kind: 'fade'
+  ): void => {
+    const key = buildToolActivityTimerKey(teamName, memberName, toolUseId, kind);
+    const existing = toolActivityTimers.get(key);
+    if (existing) {
+      clearTimeout(existing);
+      toolActivityTimers.delete(key);
+    }
+  };
+  const scheduleToolActivityTimer = (
+    teamName: string,
+    memberName: string,
+    toolUseId: string,
+    kind: 'fade',
+    delayMs: number,
+    cb: () => void
+  ): void => {
+    clearToolActivityTimer(teamName, memberName, toolUseId, kind);
+    const key = buildToolActivityTimerKey(teamName, memberName, toolUseId, kind);
+    const timer = setTimeout(() => {
+      toolActivityTimers.delete(key);
+      cb();
+    }, delayMs);
+    toolActivityTimers.set(key, timer);
+  };
+  const clearToolActivityTimersForTeam = (teamName: string): void => {
+    for (const [key, timer] of toolActivityTimers.entries()) {
+      if (!key.startsWith(`${teamName}:`)) continue;
+      clearTimeout(timer);
+      toolActivityTimers.delete(key);
+    }
+  };
+  const clearRuntimeToolStateForTeam = (
+    prev: AppState,
+    teamName: string
+  ): Pick<AppState, 'activeToolsByTeam' | 'finishedVisibleByTeam' | 'toolHistoryByTeam'> => {
+    const nextActive = { ...prev.activeToolsByTeam };
+    const nextFinished = { ...prev.finishedVisibleByTeam };
+    const nextHistory = { ...prev.toolHistoryByTeam };
+    delete nextActive[teamName];
+    delete nextFinished[teamName];
+    delete nextHistory[teamName];
+    return {
+      activeToolsByTeam: nextActive,
+      finishedVisibleByTeam: nextFinished,
+      toolHistoryByTeam: nextHistory,
+    };
+  };
+  const pushToolHistoryEntry = (
+    history: Record<string, Record<string, ActiveToolCall[]>>,
+    teamName: string,
+    entry: ActiveToolCall
+  ): Record<string, Record<string, ActiveToolCall[]>> => {
+    const teamHistory = { ...(history[teamName] ?? {}) };
+    const existing = teamHistory[entry.memberName] ?? [];
+    teamHistory[entry.memberName] = [
+      entry,
+      ...existing.filter((t) => t.toolUseId !== entry.toolUseId),
+    ].slice(0, MAX_TOOL_HISTORY_PER_MEMBER);
+    return { ...history, [teamName]: teamHistory };
+  };
+  const upsertMemberToolEntry = (
+    teamState: Record<string, Record<string, ActiveToolCall>> | undefined,
+    entry: ActiveToolCall
+  ): Record<string, Record<string, ActiveToolCall>> => ({
+    ...(teamState ?? {}),
+    [entry.memberName]: {
+      ...((teamState ?? {})[entry.memberName] ?? {}),
+      [entry.toolUseId]: entry,
+    },
+  });
+  const removeMemberToolEntry = (
+    teamState: Record<string, Record<string, ActiveToolCall>> | undefined,
+    memberName: string,
+    toolUseId: string
+  ): Record<string, Record<string, ActiveToolCall>> => {
+    if (!teamState?.[memberName]?.[toolUseId]) return teamState ?? {};
+    const nextTeamState = { ...(teamState ?? {}) };
+    const nextMemberState = { ...(nextTeamState[memberName] ?? {}) };
+    delete nextMemberState[toolUseId];
+    if (Object.keys(nextMemberState).length === 0) {
+      delete nextTeamState[memberName];
+    } else {
+      nextTeamState[memberName] = nextMemberState;
+    }
+    return nextTeamState;
+  };
+  const removeMemberToolGroup = (
+    teamState: Record<string, Record<string, ActiveToolCall>> | undefined,
+    memberName: string
+  ): Record<string, Record<string, ActiveToolCall>> => {
+    if (!teamState?.[memberName]) return teamState ?? {};
+    const nextTeamState = { ...(teamState ?? {}) };
+    delete nextTeamState[memberName];
+    return nextTeamState;
+  };
   const getBaseProjectId = (projectId: string | null | undefined): string | null => {
     if (!projectId) return null;
     const separatorIndex = projectId.indexOf('::');
@@ -497,7 +608,11 @@ export function initializeNotificationListeners(): () => void {
     const cleanup = api.teams.onTeamChange((_event: unknown, event: TeamChangeEvent) => {
       const isIgnoredRuntimeRun = (() => {
         if (!event.runId) return false;
-        return useStore.getState().ignoredProvisioningRunIds[event.runId] === event.teamName;
+        const state = useStore.getState();
+        return (
+          state.ignoredProvisioningRunIds[event.runId] === event.teamName ||
+          state.ignoredRuntimeRunIds[event.runId] === event.teamName
+        );
       })();
       if (isIgnoredRuntimeRun) {
         return;
@@ -518,6 +633,11 @@ export function initializeNotificationListeners(): () => void {
               ...prev.currentRuntimeRunIdByTeam,
               [event.teamName]: event.runId ?? null,
             },
+            ignoredRuntimeRunIds: Object.fromEntries(
+              Object.entries(prev.ignoredRuntimeRunIds).filter(
+                ([, teamName]) => teamName !== event.teamName
+              )
+            ),
           }));
         }
       };
@@ -550,8 +670,16 @@ export function initializeNotificationListeners(): () => void {
           if (nextActivity === 'offline') {
             nextState.leadContextByTeam = { ...prev.leadContextByTeam };
             delete nextState.leadContextByTeam[event.teamName];
+            Object.assign(nextState, clearRuntimeToolStateForTeam(prev, event.teamName));
             nextState.currentRuntimeRunIdByTeam = { ...prev.currentRuntimeRunIdByTeam };
             delete nextState.currentRuntimeRunIdByTeam[event.teamName];
+            nextState.ignoredRuntimeRunIds = event.runId
+              ? {
+                  ...prev.ignoredRuntimeRunIds,
+                  [event.runId]: event.teamName,
+                }
+              : prev.ignoredRuntimeRunIds;
+            clearToolActivityTimersForTeam(event.teamName);
           }
 
           return nextState as typeof prev;
@@ -571,6 +699,128 @@ export function initializeNotificationListeners(): () => void {
             ...prev,
             leadContextByTeam: { ...prev.leadContextByTeam, [event.teamName]: ctx },
           }));
+        } catch {
+          /* ignore malformed detail */
+        }
+        return;
+      }
+
+      if (event.type === 'tool-activity' && event.detail) {
+        if (isStaleRuntimeEvent) {
+          return;
+        }
+        seedCurrentRunIdIfMissing();
+        try {
+          const payload = JSON.parse(event.detail) as ToolActivityEventPayload;
+          if (payload.action === 'start' && payload.activity) {
+            const activity: ActiveToolCall = {
+              memberName: payload.activity.memberName,
+              toolUseId: payload.activity.toolUseId,
+              toolName: payload.activity.toolName,
+              preview: payload.activity.preview,
+              startedAt: payload.activity.startedAt,
+              source: payload.activity.source,
+              state: 'running',
+            };
+
+            useStore.setState((prev) => ({
+              activeToolsByTeam: {
+                ...prev.activeToolsByTeam,
+                [event.teamName]: upsertMemberToolEntry(
+                  prev.activeToolsByTeam[event.teamName],
+                  activity
+                ),
+              },
+            }));
+          } else if (payload.action === 'finish' && payload.memberName && payload.toolUseId) {
+            const memberName = payload.memberName;
+            const toolUseId = payload.toolUseId;
+            useStore.setState((prev) => {
+              const current = prev.activeToolsByTeam[event.teamName]?.[memberName]?.[toolUseId];
+              if (!current) {
+                return {};
+              }
+
+              const completed: ActiveToolCall = {
+                ...current,
+                state: payload.isError ? 'error' : 'complete',
+                finishedAt: payload.finishedAt ?? new Date().toISOString(),
+                resultPreview: payload.resultPreview,
+              };
+
+              scheduleToolActivityTimer(
+                event.teamName,
+                memberName,
+                toolUseId,
+                'fade',
+                FINISHED_TOOL_DISPLAY_MS,
+                () => {
+                  useStore.setState((state) => {
+                    const nextCurrent =
+                      state.finishedVisibleByTeam[event.teamName]?.[memberName]?.[toolUseId];
+                    if (!nextCurrent) {
+                      return {};
+                    }
+                    return {
+                      finishedVisibleByTeam: {
+                        ...state.finishedVisibleByTeam,
+                        [event.teamName]: removeMemberToolEntry(
+                          state.finishedVisibleByTeam[event.teamName],
+                          memberName,
+                          toolUseId
+                        ),
+                      },
+                    };
+                  });
+                }
+              );
+
+              return {
+                activeToolsByTeam: {
+                  ...prev.activeToolsByTeam,
+                  [event.teamName]: removeMemberToolEntry(
+                    prev.activeToolsByTeam[event.teamName],
+                    memberName,
+                    toolUseId
+                  ),
+                },
+                finishedVisibleByTeam: {
+                  ...prev.finishedVisibleByTeam,
+                  [event.teamName]: upsertMemberToolEntry(
+                    prev.finishedVisibleByTeam[event.teamName],
+                    completed
+                  ),
+                },
+                toolHistoryByTeam: pushToolHistoryEntry(
+                  prev.toolHistoryByTeam,
+                  event.teamName,
+                  completed
+                ),
+              };
+            });
+          } else if (payload.action === 'reset') {
+            if (payload.memberName) {
+              const memberName = payload.memberName;
+              useStore.setState((prev) => {
+                if (!prev.activeToolsByTeam[event.teamName]?.[memberName]) {
+                  return {};
+                }
+                return {
+                  activeToolsByTeam: {
+                    ...prev.activeToolsByTeam,
+                    [event.teamName]: removeMemberToolGroup(
+                      prev.activeToolsByTeam[event.teamName],
+                      memberName
+                    ),
+                  },
+                };
+              });
+            } else {
+              useStore.setState((prev) => ({
+                activeToolsByTeam: { ...prev.activeToolsByTeam, [event.teamName]: {} },
+              }));
+            }
+          }
         } catch {
           /* ignore malformed detail */
         }
@@ -666,6 +916,8 @@ export function initializeNotificationListeners(): () => void {
         teamRefreshTimers = new Map();
         for (const t of teamPresenceRefreshTimers.values()) clearTimeout(t);
         teamPresenceRefreshTimers = new Map();
+        for (const t of toolActivityTimers.values()) clearTimeout(t);
+        toolActivityTimers = new Map();
         if (teamListRefreshTimer) {
           clearTimeout(teamListRefreshTimer);
           teamListRefreshTimer = null;

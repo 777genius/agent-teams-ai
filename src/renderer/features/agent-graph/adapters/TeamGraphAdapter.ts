@@ -17,7 +17,12 @@ import type {
   GraphNodeState,
   GraphParticle,
 } from '@claude-teams/agent-graph';
-import type { InboxMessage, MemberSpawnStatusEntry, TeamData } from '@shared/types/team';
+import type {
+  ActiveToolCall,
+  InboxMessage,
+  MemberSpawnStatusEntry,
+  TeamData,
+} from '@shared/types/team';
 import type { LeadContextUsage } from '@shared/types/team';
 
 export class TeamGraphAdapter {
@@ -51,7 +56,10 @@ export class TeamGraphAdapter {
     teamName: string,
     spawnStatuses?: Record<string, MemberSpawnStatusEntry>,
     leadContext?: LeadContextUsage,
-    pendingApprovalAgents?: Set<string>
+    pendingApprovalAgents?: Set<string>,
+    activeTools?: Record<string, Record<string, ActiveToolCall>>,
+    finishedVisible?: Record<string, Record<string, ActiveToolCall>>,
+    toolHistory?: Record<string, ActiveToolCall[]>
   ): GraphDataPort {
     if (teamData?.teamName !== teamName) {
       return TeamGraphAdapter.#emptyResult(teamName);
@@ -62,7 +70,44 @@ export class TeamGraphAdapter {
     const approvalKey = pendingApprovalAgents?.size
       ? Array.from(pendingApprovalAgents).sort().join(',')
       : '';
-    const hash = `${teamData.teamName}:${teamData.members.length}:${teamData.tasks.length}:${teamData.messages.length}:${teamData.isAlive}:${leadContext?.percent}:${totalComments}:${approvalKey}`;
+    const activeToolKey = activeTools
+      ? Object.entries(activeTools)
+          .flatMap(([memberName, tools]) =>
+            Object.values(tools).map(
+              (tool) =>
+                `${memberName}:${tool.toolUseId}:${tool.state}:${tool.toolName}:${tool.preview ?? ''}:${tool.resultPreview ?? ''}:${tool.startedAt}:${tool.finishedAt ?? ''}`
+            )
+          )
+          .sort()
+          .join('|')
+      : '';
+    const finishedVisibleKey = finishedVisible
+      ? Object.entries(finishedVisible)
+          .flatMap(([memberName, tools]) =>
+            Object.values(tools).map(
+              (tool) =>
+                `${memberName}:${tool.toolUseId}:${tool.state}:${tool.toolName}:${tool.preview ?? ''}:${tool.resultPreview ?? ''}:${tool.startedAt}:${tool.finishedAt ?? ''}`
+            )
+          )
+          .sort()
+          .join('|')
+      : '';
+    const historyKey = toolHistory
+      ? Object.entries(toolHistory)
+          .map(
+            ([memberName, tools]) =>
+              `${memberName}:${tools
+                .slice(0, 3)
+                .map(
+                  (tool) =>
+                    `${tool.toolUseId}:${tool.state}:${tool.toolName}:${tool.preview ?? ''}:${tool.resultPreview ?? ''}:${tool.startedAt}:${tool.finishedAt ?? ''}`
+                )
+                .join(',')}`
+          )
+          .sort()
+          .join('|')
+      : '';
+    const hash = `${teamData.teamName}:${teamData.members.length}:${teamData.tasks.length}:${teamData.messages.length}:${teamData.isAlive}:${leadContext?.percent}:${totalComments}:${approvalKey}:${activeToolKey}:${finishedVisibleKey}:${historyKey}`;
     if (hash === this.#lastDataHash && teamName === this.#lastTeamName) {
       return this.#cachedResult;
     }
@@ -84,8 +129,19 @@ export class TeamGraphAdapter {
     const particles: GraphParticle[] = [];
 
     const leadId = `lead:${teamName}`;
+    const leadName = TeamGraphAdapter.#getLeadMemberName(teamData, teamName);
 
-    this.#buildLeadNode(nodes, leadId, teamData, teamName, leadContext);
+    this.#buildLeadNode(
+      nodes,
+      leadId,
+      teamData,
+      teamName,
+      leadName,
+      leadContext,
+      activeTools,
+      finishedVisible,
+      toolHistory
+    );
     this.#buildMemberNodes(
       nodes,
       edges,
@@ -93,7 +149,10 @@ export class TeamGraphAdapter {
       teamData,
       teamName,
       spawnStatuses,
-      pendingApprovalAgents
+      pendingApprovalAgents,
+      activeTools,
+      finishedVisible,
+      toolHistory
     );
     this.#buildTaskNodes(nodes, edges, teamData, teamName);
     this.#buildProcessNodes(nodes, edges, teamData, teamName);
@@ -126,23 +185,75 @@ export class TeamGraphAdapter {
 
   // ─── Private: node builders ──────────────────────────────────────────────
 
+  static #getLeadMemberName(data: TeamData, teamName: string): string {
+    return data.members.find((member) => isLeadMember(member))?.name ?? `${teamName}-lead`;
+  }
+
+  static #selectVisibleTool(
+    runningTools?: Record<string, ActiveToolCall>,
+    finishedTools?: Record<string, ActiveToolCall>
+  ): ActiveToolCall | undefined {
+    const newestRunning = Object.values(runningTools ?? {}).sort((a, b) =>
+      b.startedAt.localeCompare(a.startedAt)
+    )[0];
+    if (newestRunning) return newestRunning;
+    return Object.values(finishedTools ?? {}).sort((a, b) =>
+      (b.finishedAt ?? '').localeCompare(a.finishedAt ?? '')
+    )[0];
+  }
+
   #buildLeadNode(
     nodes: GraphNode[],
     leadId: string,
     data: TeamData,
     teamName: string,
-    leadContext?: LeadContextUsage
+    leadName: string,
+    leadContext?: LeadContextUsage,
+    activeTools?: Record<string, Record<string, ActiveToolCall>>,
+    finishedVisible?: Record<string, Record<string, ActiveToolCall>>,
+    toolHistory?: Record<string, ActiveToolCall[]>
   ): void {
     const percent = leadContext?.percent;
+    const activeTool = TeamGraphAdapter.#selectVisibleTool(
+      activeTools?.[leadName],
+      finishedVisible?.[leadName]
+    );
     nodes.push({
       id: leadId,
       kind: 'lead',
       label: data.config.name || teamName,
-      state: data.isAlive ? 'active' : 'idle',
+      state: !data.isAlive
+        ? 'idle'
+        : Object.keys(activeTools?.[leadName] ?? {}).length > 0
+          ? 'tool_calling'
+          : 'active',
       color: data.config.color ?? undefined,
       contextUsage: percent != null ? Math.max(0, Math.min(1, percent / 100)) : undefined,
-      avatarUrl: agentAvatarUrl('team-lead', 64),
-      domainRef: { kind: 'lead', teamName },
+      avatarUrl: agentAvatarUrl(leadName, 64),
+      activeTool: activeTool
+        ? {
+            name: activeTool.toolName,
+            preview: activeTool.preview,
+            state: activeTool.state,
+            startedAt: activeTool.startedAt,
+            finishedAt: activeTool.finishedAt,
+            resultPreview: activeTool.resultPreview,
+            source: activeTool.source,
+          }
+        : undefined,
+      recentTools: (toolHistory?.[leadName] ?? [])
+        .filter((tool) => tool.state !== 'running' && !!tool.finishedAt)
+        .slice(0, 3)
+        .map((tool) => ({
+          name: tool.toolName,
+          preview: tool.preview,
+          state: tool.state === 'error' ? 'error' : 'complete',
+          startedAt: tool.startedAt,
+          finishedAt: tool.finishedAt!,
+          resultPreview: tool.resultPreview,
+          source: tool.source,
+        })),
+      domainRef: { kind: 'lead', teamName, memberName: leadName },
     });
   }
 
@@ -153,7 +264,10 @@ export class TeamGraphAdapter {
     data: TeamData,
     teamName: string,
     spawnStatuses?: Record<string, MemberSpawnStatusEntry>,
-    pendingApprovalAgents?: Set<string>
+    pendingApprovalAgents?: Set<string>,
+    activeTools?: Record<string, Record<string, ActiveToolCall>>,
+    finishedVisible?: Record<string, Record<string, ActiveToolCall>>,
+    toolHistory?: Record<string, ActiveToolCall[]>
   ): void {
     for (const member of data.members) {
       if (member.removedAt) continue;
@@ -161,12 +275,19 @@ export class TeamGraphAdapter {
 
       const memberId = `member:${teamName}:${member.name}`;
       const spawn = spawnStatuses?.[member.name];
+      const activeTool = TeamGraphAdapter.#selectVisibleTool(
+        activeTools?.[member.name],
+        finishedVisible?.[member.name]
+      );
+      const hasRunningTool = Object.keys(activeTools?.[member.name] ?? {}).length > 0;
 
       nodes.push({
         id: memberId,
         kind: 'member',
         label: member.name,
-        state: TeamGraphAdapter.#mapMemberStatus(member.status, spawn?.status),
+        state: hasRunningTool
+          ? 'tool_calling'
+          : TeamGraphAdapter.#mapMemberStatus(member.status, spawn?.status),
         color: member.color ?? undefined,
         role: member.role ?? undefined,
         spawnStatus: spawn?.status,
@@ -176,6 +297,29 @@ export class TeamGraphAdapter {
           ? data.tasks.find((t) => t.id === member.currentTaskId)?.subject
           : undefined,
         pendingApproval: pendingApprovalAgents?.has(member.name) ?? false,
+        activeTool: activeTool
+          ? {
+              name: activeTool.toolName,
+              preview: activeTool.preview,
+              state: activeTool.state,
+              startedAt: activeTool.startedAt,
+              finishedAt: activeTool.finishedAt,
+              resultPreview: activeTool.resultPreview,
+              source: activeTool.source,
+            }
+          : undefined,
+        recentTools: (toolHistory?.[member.name] ?? [])
+          .filter((tool) => tool.state !== 'running' && !!tool.finishedAt)
+          .slice(0, 3)
+          .map((tool) => ({
+            name: tool.toolName,
+            preview: tool.preview,
+            state: tool.state === 'error' ? 'error' : 'complete',
+            startedAt: tool.startedAt,
+            finishedAt: tool.finishedAt!,
+            resultPreview: tool.resultPreview,
+            source: tool.source,
+          })),
         domainRef: { kind: 'member', teamName, memberName: member.name },
       });
 
