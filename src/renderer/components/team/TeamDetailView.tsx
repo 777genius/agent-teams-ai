@@ -246,11 +246,26 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       setSendDialogDefaultChip(undefined);
       setSendDialogOpen(true);
     };
+    const onOpenProfile = (e: Event) => {
+      const { teamName: tn, memberName } = (e as CustomEvent).detail ?? {};
+      if (tn !== teamName || !data) return;
+      const member = data.members.find((m: { name: string }) => m.name === memberName);
+      if (member) setSelectedMember(member);
+    };
+    const onCreateTask = (e: Event) => {
+      const { teamName: tn, owner } = (e as CustomEvent).detail ?? {};
+      if (tn !== teamName) return;
+      openCreateTaskDialog('', '', owner ?? '');
+    };
     window.addEventListener('graph:open-task', onOpenTask);
     window.addEventListener('graph:send-message', onSendMsg);
+    window.addEventListener('graph:open-profile', onOpenProfile);
+    window.addEventListener('graph:create-task', onCreateTask);
     return () => {
       window.removeEventListener('graph:open-task', onOpenTask);
       window.removeEventListener('graph:send-message', onSendMsg);
+      window.removeEventListener('graph:open-profile', onOpenProfile);
+      window.removeEventListener('graph:create-task', onCreateTask);
     };
   });
 

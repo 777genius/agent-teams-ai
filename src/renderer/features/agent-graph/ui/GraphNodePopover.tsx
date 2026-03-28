@@ -7,7 +7,7 @@
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
-import { MessageSquare, ExternalLink, User } from 'lucide-react';
+import { MessageSquare, ExternalLink, User, Plus } from 'lucide-react';
 
 import type { GraphNode } from '@claude-teams/agent-graph';
 
@@ -17,6 +17,7 @@ interface GraphNodePopoverProps {
   onSendMessage?: (memberName: string) => void;
   onOpenTaskDetail?: (taskId: string) => void;
   onOpenMemberProfile?: (memberName: string) => void;
+  onCreateTask?: (owner: string) => void;
 }
 
 export function GraphNodePopover({
@@ -25,6 +26,7 @@ export function GraphNodePopover({
   onSendMessage,
   onOpenTaskDetail,
   onOpenMemberProfile,
+  onCreateTask,
 }: GraphNodePopoverProps): React.JSX.Element {
   if (node.kind === 'member' || node.kind === 'lead') {
     return (
@@ -33,6 +35,7 @@ export function GraphNodePopover({
         onClose={onClose}
         onSendMessage={onSendMessage}
         onOpenProfile={onOpenMemberProfile}
+        onCreateTask={onCreateTask}
       />
     );
   }
@@ -66,11 +69,13 @@ function MemberPopoverContent({
   onClose,
   onSendMessage,
   onOpenProfile,
+  onCreateTask,
 }: {
   node: GraphNode;
   onClose: () => void;
   onSendMessage?: (name: string) => void;
   onOpenProfile?: (name: string) => void;
+  onCreateTask?: (owner: string) => void;
 }): React.JSX.Element {
   const memberName = node.domainRef.kind === 'member' ? node.domainRef.memberName : 'team-lead';
   const avatarSrc = node.avatarUrl ?? agentAvatarUrl(memberName, 64);
@@ -167,7 +172,7 @@ function MemberPopoverContent({
       )}
 
       {/* Actions */}
-      <div className="mt-3 flex gap-1.5">
+      <div className="mt-3 flex flex-wrap gap-1.5">
         <Button
           variant="outline"
           size="sm"
@@ -189,6 +194,17 @@ function MemberPopoverContent({
           }}
         >
           <User size={12} /> Profile
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1 px-2 text-xs"
+          onClick={() => {
+            onCreateTask?.(memberName);
+            onClose();
+          }}
+        >
+          <Plus size={12} /> Task
         </Button>
       </div>
     </div>

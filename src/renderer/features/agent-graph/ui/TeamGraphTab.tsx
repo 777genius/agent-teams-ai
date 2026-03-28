@@ -37,18 +37,30 @@ export const TeamGraphTab = ({ teamName }: TeamGraphTabProps): React.JSX.Element
       ),
     [teamName]
   );
+  const dispatchOpenProfile = useCallback(
+    (memberName: string) =>
+      window.dispatchEvent(
+        new CustomEvent('graph:open-profile', { detail: { teamName, memberName } })
+      ),
+    [teamName]
+  );
+  const dispatchCreateTask = useCallback(
+    (owner: string) =>
+      window.dispatchEvent(new CustomEvent('graph:create-task', { detail: { teamName, owner } })),
+    [teamName]
+  );
 
   const events: GraphEventPort = {
     onNodeDoubleClick: useCallback(
       (ref: GraphDomainRef) => {
         if (ref.kind === 'task') dispatchOpenTask(ref.taskId);
-        else if (ref.kind === 'member') dispatchSendMessage(ref.memberName);
+        else if (ref.kind === 'member') dispatchOpenProfile(ref.memberName);
       },
-      [dispatchOpenTask, dispatchSendMessage]
+      [dispatchOpenTask, dispatchOpenProfile]
     ),
     onSendMessage: dispatchSendMessage,
     onOpenTaskDetail: dispatchOpenTask,
-    onOpenMemberProfile: dispatchSendMessage,
+    onOpenMemberProfile: dispatchOpenProfile,
   };
 
   return (
@@ -64,7 +76,8 @@ export const TeamGraphTab = ({ teamName }: TeamGraphTabProps): React.JSX.Element
             onClose={onClose}
             onSendMessage={dispatchSendMessage}
             onOpenTaskDetail={dispatchOpenTask}
-            onOpenMemberProfile={dispatchSendMessage}
+            onOpenMemberProfile={dispatchOpenProfile}
+            onCreateTask={dispatchCreateTask}
           />
         )}
       />
