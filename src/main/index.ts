@@ -30,6 +30,7 @@ import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
+import { TeamMcpConfigBuilder } from '@main/services/team/TeamMcpConfigBuilder';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import {
   CONTEXT_CHANGED,
@@ -746,6 +747,8 @@ function initializeServices(): void {
   ptyTerminalService = new PtyTerminalService();
   teamDataService = new TeamDataService();
   teamProvisioningService = new TeamProvisioningService();
+  // Startup GC: remove stale MCP config files from previous sessions (best-effort)
+  void new TeamMcpConfigBuilder().gcStaleConfigs();
   void teamDataService
     .initializeTaskCommentNotificationState()
     .catch((error: unknown) =>
@@ -979,6 +982,9 @@ function shutdownServices(): void {
   if (teamProvisioningService) {
     teamProvisioningService.stopAllTeams();
   }
+
+  // Best-effort cleanup of MCP config files owned by this process
+  void new TeamMcpConfigBuilder().gcOwnConfigs();
 
   // Sync backup all team data (files are stable after SIGKILL).
   if (teamBackupService) {

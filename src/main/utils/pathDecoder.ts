@@ -392,8 +392,8 @@ export function getAppDataPath(): string {
 
 let appDataBasePathOverride: string | null = null;
 
-export function setAppDataBasePath(p: string): void {
-  appDataBasePathOverride = p;
+export function setAppDataBasePath(p: string | null | undefined): void {
+  appDataBasePathOverride = p ?? null;
 }
 
 function getAppDataBasePath(): string {
@@ -407,4 +407,22 @@ function getAppDataBasePath(): string {
     // Outside Electron (tests, CLI) — fall back to home dir
     return path.join(getHomeDir(), '.claude-agent-teams-ui');
   }
+}
+
+/**
+ * Directory for per-team MCP config JSON files.
+ * Stored in app's userData so they persist across sessions and are
+ * accessible by Claude CLI subprocess on all platforms (including AppImage).
+ */
+export function getMcpConfigsBasePath(): string {
+  return path.join(getAppDataBasePath(), 'mcp-configs');
+}
+
+/**
+ * Directory for the stable MCP server bundle copy (packaged builds).
+ * Versioned subdirectories contain the copied index.js + package.json
+ * so the server runs from a writable, non-FUSE location.
+ */
+export function getMcpServerBasePath(): string {
+  return path.join(getAppDataBasePath(), 'mcp-server');
 }
