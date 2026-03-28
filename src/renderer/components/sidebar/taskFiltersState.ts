@@ -25,6 +25,7 @@ export type ReadFilter = 'all' | 'unread' | 'read';
 export interface TaskFiltersState {
   statusIds: Set<TaskStatusFilterId>;
   teamName: string | null;
+  projectPath: string | null;
   /** @deprecated Use readFilter instead */
   unreadOnly: boolean;
   readFilter: ReadFilter;
@@ -33,6 +34,7 @@ export interface TaskFiltersState {
 export const defaultTaskFiltersState = (): TaskFiltersState => ({
   statusIds: new Set(STATUS_OPTIONS.map((o) => o.id)),
   teamName: null,
+  projectPath: null,
   unreadOnly: false,
   readFilter: 'all',
 });

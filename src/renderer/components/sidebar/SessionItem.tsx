@@ -240,13 +240,13 @@ export const SessionItem = ({
     }
   }, [activeProjectId, openTab, selectSession, session.id, sessionLabel, splitPane]);
 
-  // Height must match SESSION_HEIGHT (58px) in DateGroupedSessions.tsx for virtual scroll
+  // Height must match SESSION_HEIGHT (54px) in DateGroupedSessions.tsx for virtual scroll
   return (
     <>
       <button
         onClick={handleClick}
         onContextMenu={handleContextMenu}
-        className={`h-[58px] w-full overflow-hidden border-b px-3 py-2 text-left transition-colors ${isActive ? '' : 'bg-transparent hover:bg-surface-raised'}`}
+        className={`flex h-[54px] w-full flex-col justify-center overflow-hidden border-b px-2 py-1.5 text-left transition-colors ${isActive ? '' : 'bg-transparent hover:bg-surface-raised'}`}
         style={{
           borderColor: 'var(--color-border)',
           ...(isActive ? { backgroundColor: 'var(--color-surface-raised)' } : {}),

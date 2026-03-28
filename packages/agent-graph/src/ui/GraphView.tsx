@@ -10,7 +10,8 @@
  * ALL animation state (positions, particles, effects, time) lives in refs.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 import type { GraphDataPort } from '../ports/GraphDataPort';
 import type { GraphEventPort } from '../ports/GraphEventPort';
 import type { GraphConfigPort } from '../ports/GraphConfigPort';
@@ -68,9 +69,12 @@ export function GraphView({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasHandle = useRef<GraphCanvasHandle>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef(0);
   const lastTimeRef = useRef(0);
   const runningRef = useRef(false);
+  const hasAutoFit = useRef(false);
+  const allowAutoFitRef = useRef(true);
 
   // ─── Hooks ──────────────────────────────────────────────────────────────
   const simulation = useGraphSimulation();
@@ -172,25 +176,63 @@ export function GraphView({
     };
   }, [effectivePaused, animate]);
 
-  // ─── Auto-fit: center graph immediately when data arrives ──────────────
-  const hasAutoFit = useRef(false);
+  const fitGraphToViewport = useCallback(() => {
+    const el = containerRef.current;
+    if (!el || data.nodes.length === 0) return;
+    camera.zoomToFit(simulation.stateRef.current.nodes, el.clientWidth, el.clientHeight);
+  }, [camera, data.nodes.length, simulation.stateRef]);
+
+  // ─── Auto-fit: until first user interaction, also react to container resizes ─────
   useEffect(() => {
-    if (data.nodes.length > 0 && !hasAutoFit.current) {
-      hasAutoFit.current = true;
-      // Immediate fit (simulation already settled from 120 pre-ticks)
-      const el = containerRef.current;
-      if (el) {
-        camera.zoomToFit(simulation.stateRef.current.nodes, el.clientWidth, el.clientHeight);
-      }
-      // Second fit after mount stabilizes (ResizeObserver may fire late)
-      const timer = setTimeout(() => {
-        if (el) {
-          camera.zoomToFit(simulation.stateRef.current.nodes, el.clientWidth, el.clientHeight);
-        }
-      }, 300);
-      return () => clearTimeout(timer);
+    if (data.nodes.length === 0) {
+      hasAutoFit.current = false;
+      allowAutoFitRef.current = true;
+      return;
     }
-  }, [data.nodes.length, camera, simulation.stateRef]);
+
+    if (!hasAutoFit.current) {
+      hasAutoFit.current = true;
+      fitGraphToViewport();
+
+      const raf1 = requestAnimationFrame(() => {
+        fitGraphToViewport();
+        requestAnimationFrame(() => {
+          fitGraphToViewport();
+        });
+      });
+
+      return () => cancelAnimationFrame(raf1);
+    }
+  }, [data.nodes.length, fitGraphToViewport]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || data.nodes.length === 0) return;
+
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      if (!allowAutoFitRef.current) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        fitGraphToViewport();
+      });
+    });
+
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [data.nodes.length, fitGraphToViewport]);
+
+  const markUserInteracted = useCallback(() => {
+    allowAutoFitRef.current = false;
+  }, []);
+
+  const handleWheel = useCallback((e: WheelEvent) => {
+    markUserInteracted();
+    camera.handleWheel(e);
+  }, [camera, markUserInteracted]);
 
   // ─── Mouse handlers (Figma-style: drag empty space = pan, drag node = move) ─
   const isPanningRef = useRef(false);
@@ -208,13 +250,15 @@ export function GraphView({
 
     if (interaction.dragNodeId.current) {
       // Hit a node → will drag it
+      markUserInteracted();
       isPanningRef.current = false;
     } else {
       // Hit empty space → pan
+      markUserInteracted();
       isPanningRef.current = true;
       camera.handlePanStart(e.clientX, e.clientY);
     }
-  }, [camera, interaction, simulation.stateRef]);
+  }, [camera, interaction, markUserInteracted, simulation.stateRef]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     // Dragging with left button held
@@ -313,6 +357,58 @@ export function GraphView({
       ? simulation.stateRef.current.nodes.find((n) => n.id === selectedNodeId) ?? null
       : null;
 
+  useLayoutEffect(() => {
+    if (!selectedNode || !containerRef.current || !overlayRef.current) {
+      return;
+    }
+
+    const container = containerRef.current;
+    const floating = overlayRef.current;
+
+    const reference = {
+      getBoundingClientRect(): DOMRect {
+        const containerRect = container.getBoundingClientRect();
+        const screenPos = camera.worldToScreen(selectedNode.x ?? 0, selectedNode.y ?? 0);
+        return DOMRect.fromRect({
+          x: containerRect.left + screenPos.x,
+          y: containerRect.top + screenPos.y,
+          width: 0,
+          height: 0,
+        });
+      },
+    };
+
+    const updatePosition = async (): Promise<void> => {
+      const { x, y } = await computePosition(reference, floating, {
+        strategy: 'fixed',
+        placement: 'right-start',
+        middleware: [
+          offset(16),
+          flip({
+            boundary: container,
+            padding: 12,
+            fallbackPlacements: ['left-start', 'bottom-start', 'top-start'],
+          }),
+          shift({
+            boundary: container,
+            padding: 12,
+          }),
+        ],
+      });
+
+      floating.style.left = `${x}px`;
+      floating.style.top = `${y}px`;
+    };
+
+    const cleanup = autoUpdate(reference, floating, updatePosition, {
+      animationFrame: true,
+    });
+
+    void updatePosition();
+
+    return cleanup;
+  }, [camera, selectedNode]);
+
   // ─── Render ─────────────────────────────────────────────────────────────
   return (
     <div ref={containerRef} className={`relative w-full h-full ${className ?? ''}`}>
@@ -321,7 +417,7 @@ export function GraphView({
         showHexGrid={config?.showHexGrid ?? true}
         showStarField={config?.showStarField ?? true}
         bloomIntensity={config?.bloomIntensity ?? 0.6}
-        onWheel={camera.handleWheel}
+        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -331,9 +427,16 @@ export function GraphView({
       <GraphControls
         filters={filters}
         onFiltersChange={setFilters}
-        onZoomIn={camera.zoomIn}
-        onZoomOut={camera.zoomOut}
+        onZoomIn={() => {
+          markUserInteracted();
+          camera.zoomIn();
+        }}
+        onZoomOut={() => {
+          markUserInteracted();
+          camera.zoomOut();
+        }}
         onZoomToFit={() => {
+          markUserInteracted();
           const el = containerRef.current;
           if (el) camera.zoomToFit(simulation.stateRef.current.nodes, el.clientWidth, el.clientHeight);
         }}
@@ -345,28 +448,22 @@ export function GraphView({
         isAlive={data.isAlive}
       />
 
-      {selectedNode && renderOverlay ? (
-        <div
-          className="absolute z-20 pointer-events-auto"
-          style={{
-            left: `${camera.worldToScreen(selectedNode.x ?? 0, selectedNode.y ?? 0).x + 20}px`,
-            top: `${camera.worldToScreen(selectedNode.x ?? 0, selectedNode.y ?? 0).y - 20}px`,
-            transform: 'translateY(-50%)',
-          }}
-        >
-          {renderOverlay({
-            node: selectedNode,
-            screenPos: camera.worldToScreen(selectedNode.x ?? 0, selectedNode.y ?? 0),
-            onClose: () => setSelectedNodeId(null),
-          })}
+      {selectedNode && (
+        <div ref={overlayRef} className="fixed z-20 pointer-events-auto">
+          {renderOverlay ? (
+            renderOverlay({
+              node: selectedNode,
+              screenPos: camera.worldToScreen(selectedNode.x ?? 0, selectedNode.y ?? 0),
+              onClose: () => setSelectedNodeId(null),
+            })
+          ) : (
+            <GraphOverlay
+              selectedNode={selectedNode}
+              events={events}
+              onDeselect={() => setSelectedNodeId(null)}
+            />
+          )}
         </div>
-      ) : (
-        <GraphOverlay
-          selectedNode={selectedNode}
-          worldToScreen={camera.worldToScreen}
-          events={events}
-          onDeselect={() => setSelectedNodeId(null)}
-        />
       )}
     </div>
   );

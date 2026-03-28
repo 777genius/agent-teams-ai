@@ -14,6 +14,11 @@ import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 
 import { DEFAULT_CLAUDE_LOGS_FILTER } from './ClaudeLogsFilterPopover';
+import {
+  createDefaultClaudeLogsSidebarUiState,
+  getTeamClaudeLogsSidebarUiState,
+  setTeamClaudeLogsSidebarUiState,
+} from './sidebar/teamSidebarUiState';
 
 import type { ClaudeLogsFilterState } from './ClaudeLogsFilterPopover';
 import type { ClaudeLogsViewerState } from './CliLogsRichView';
@@ -364,12 +369,7 @@ function filterStreamJsonText(
 // =============================================================================
 
 function createDefaultViewerState(): ClaudeLogsViewerState {
-  return {
-    collapsedGroupIds: new Set(),
-    expandedItemIds: new Set(),
-    expandedSubagentIds: new Set(),
-    viewport: { mode: 'edge', edge: 'newest' },
-  };
+  return createDefaultClaudeLogsSidebarUiState().viewerState;
 }
 
 // =============================================================================
@@ -389,15 +389,17 @@ export function useClaudeLogsController(teamName: string): ClaudeLogsController 
   const [error, setError] = useState<string | null>(null);
 
   // ── Search & filter state ─────────────────────────────────────────────
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState<ClaudeLogsFilterState>(() => ({
-    streams: new Set(DEFAULT_CLAUDE_LOGS_FILTER.streams),
-    kinds: new Set(DEFAULT_CLAUDE_LOGS_FILTER.kinds),
-  }));
-  const [filterOpen, setFilterOpen] = useState(false);
+  const initialSidebarStateRef = useRef(getTeamClaudeLogsSidebarUiState(teamName));
+  const [searchQuery, setSearchQuery] = useState(initialSidebarStateRef.current.searchQuery);
+  const [filter, setFilter] = useState<ClaudeLogsFilterState>(
+    initialSidebarStateRef.current.filter
+  );
+  const [filterOpen, setFilterOpen] = useState(initialSidebarStateRef.current.filterOpen);
 
   // ── Viewer state (expansion + viewport) ───────────────────────────────
-  const [viewerState, setViewerState] = useState<ClaudeLogsViewerState>(createDefaultViewerState);
+  const [viewerState, setViewerState] = useState<ClaudeLogsViewerState>(
+    initialSidebarStateRef.current.viewerState
+  );
 
   const onViewerStateChange = useCallback((state: ClaudeLogsViewerState) => {
     setViewerState(state);
@@ -415,6 +417,7 @@ export function useClaudeLogsController(teamName: string): ClaudeLogsController 
 
   // ── Reset on team change ──────────────────────────────────────────────
   useEffect(() => {
+    initialSidebarStateRef.current = getTeamClaudeLogsSidebarUiState(teamName);
     setLoadedCount(PAGE_SIZE);
     setData({ lines: [], total: 0, hasMore: false });
     setPending(null);
@@ -422,13 +425,20 @@ export function useClaudeLogsController(teamName: string): ClaudeLogsController 
     latestRef.current = null;
     atTopRef.current = true;
     setError(null);
-    setSearchQuery('');
-    setFilter({
-      streams: new Set(DEFAULT_CLAUDE_LOGS_FILTER.streams),
-      kinds: new Set(DEFAULT_CLAUDE_LOGS_FILTER.kinds),
-    });
-    setViewerState(createDefaultViewerState());
+    setSearchQuery(initialSidebarStateRef.current.searchQuery);
+    setFilter(initialSidebarStateRef.current.filter);
+    setFilterOpen(initialSidebarStateRef.current.filterOpen);
+    setViewerState(initialSidebarStateRef.current.viewerState);
   }, [teamName]);
+
+  useEffect(() => {
+    setTeamClaudeLogsSidebarUiState(teamName, {
+      searchQuery,
+      filter,
+      filterOpen,
+      viewerState,
+    });
+  }, [teamName, searchQuery, filter, filterOpen, viewerState]);
 
   // ── Sync refs ─────────────────────────────────────────────────────────
   useEffect(() => {

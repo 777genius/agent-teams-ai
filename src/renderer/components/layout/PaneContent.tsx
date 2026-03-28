@@ -21,9 +21,10 @@ import type { Pane } from '@renderer/types/panes';
 
 interface PaneContentProps {
   pane: Pane;
+  isPaneFocused: boolean;
 }
 
-export const PaneContent = ({ pane }: PaneContentProps): React.JSX.Element => {
+export const PaneContent = ({ pane, isPaneFocused }: PaneContentProps): React.JSX.Element => {
   const activeTabId = pane.activeTabId;
 
   // Show default dashboard if no tabs are open in this pane
@@ -51,7 +52,7 @@ export const PaneContent = ({ pane }: PaneContentProps): React.JSX.Element => {
             {tab.type === 'teams' && <TeamListView />}
             {tab.type === 'team' && (
               <TabUIProvider tabId={tab.id}>
-                <TeamDetailView teamName={tab.teamName ?? ''} />
+                <TeamDetailView teamName={tab.teamName ?? ''} isPaneFocused={isPaneFocused} />
               </TabUIProvider>
             )}
             {tab.type === 'session' && (
@@ -68,7 +69,11 @@ export const PaneContent = ({ pane }: PaneContentProps): React.JSX.Element => {
             {tab.type === 'schedules' && <SchedulesView />}
             {tab.type === 'graph' && (
               <TabUIProvider tabId={tab.id}>
-                <TeamGraphTab teamName={tab.teamName ?? ''} isActive={isActive} />
+                <TeamGraphTab
+                  teamName={tab.teamName ?? ''}
+                  isActive={isActive}
+                  isPaneFocused={isPaneFocused}
+                />
               </TabUIProvider>
             )}
           </div>

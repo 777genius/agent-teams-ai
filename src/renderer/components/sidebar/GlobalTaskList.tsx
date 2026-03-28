@@ -29,7 +29,7 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 
 import { AnimatedHeightReveal } from '../team/activity/AnimatedHeightReveal';
-import { Combobox, type ComboboxOption } from '../ui/combobox';
+import { type ComboboxOption } from '../ui/combobox';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
 import { SidebarTaskItem } from './SidebarTaskItem';
@@ -246,9 +246,6 @@ export const GlobalTaskList = ({
     [newTaskIds]
   );
 
-  // Local project filter (independent from sessions tab)
-  const [localProjectFilter, setLocalProjectFilter] = useState<string | null>(null);
-
   const setGroupingMode = (mode: TaskGroupingMode): void => {
     setGroupingModeState(mode);
     saveGroupingMode(mode);
@@ -326,8 +323,8 @@ export const GlobalTaskList = ({
     }));
   }, [viewMode, repositoryGroups, projects]);
 
-  // Resolve local filter to a project path
-  const selectedProjectPath = localProjectFilter;
+  // Resolve project filter from filters state
+  const selectedProjectPath = filters.projectPath;
 
   const filtered = useMemo(() => {
     let result = globalTasks;
@@ -355,7 +352,7 @@ export const GlobalTaskList = ({
     return result;
   }, [
     globalTasks,
-    selectedProjectPath,
+    filters.projectPath,
     filters.statusIds,
     filters.teamName,
     filters.readFilter,
@@ -493,24 +490,10 @@ export const GlobalTaskList = ({
           open={filtersPopoverOpen}
           onOpenChange={setFiltersPopoverOpen}
           teams={teams.map((t) => ({ teamName: t.teamName, displayName: t.displayName }))}
+          projectOptions={projectFilterOptions}
           filters={filters}
           onFiltersChange={setFilters}
           onApply={() => {}}
-        />
-      </div>
-
-      {/* Project filter */}
-      <div className="shrink-0 px-2 py-1">
-        <Combobox
-          options={projectFilterOptions}
-          value={localProjectFilter ?? ''}
-          onValueChange={(v) => setLocalProjectFilter(v)}
-          placeholder="All Projects"
-          searchPlaceholder="Search projects..."
-          emptyMessage="No projects"
-          className="text-[11px]"
-          resetLabel="All Projects"
-          onReset={() => setLocalProjectFilter(null)}
         />
       </div>
 
@@ -547,14 +530,10 @@ export const GlobalTaskList = ({
         </div>
       )}
 
-      {/* Grouping mode — compact segmented toggle */}
+      {/* Grouping mode — compact text toggle */}
       <div className="flex shrink-0 items-center gap-1.5 px-2 py-1">
         <span className="shrink-0 text-[11px] text-text-muted">Group by:</span>
-        <div
-          className="inline-flex rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5 text-[11px]"
-          role="group"
-          aria-label="Group by"
-        >
+        <div className="inline-flex gap-1 text-[11px]" role="group" aria-label="Group by">
           {(['none', 'project', 'time'] as const).map((mode) => {
             const label = mode === 'none' ? 'None' : mode === 'project' ? 'Project' : 'Time';
             return (
@@ -563,10 +542,8 @@ export const GlobalTaskList = ({
                 type="button"
                 onClick={() => setGroupingMode(mode)}
                 className={cn(
-                  'rounded px-2 py-0.5 transition-colors',
-                  groupingMode === mode
-                    ? 'bg-surface-raised text-text-secondary shadow-sm ring-1 ring-[var(--color-border)]'
-                    : 'text-text-muted hover:text-text-secondary'
+                  'rounded px-1.5 py-0.5 transition-colors',
+                  groupingMode === mode ? 'text-text' : 'text-text-muted hover:text-text-secondary'
                 )}
               >
                 {label}

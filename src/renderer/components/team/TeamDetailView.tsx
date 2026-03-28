@@ -84,6 +84,9 @@ import { ScheduleSection } from './schedule/ScheduleSection';
 import { ClaudeLogsSection } from './ClaudeLogsSection';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 import { ProcessesSection } from './ProcessesSection';
+import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
+import { TeamSidebarPortalSource } from './sidebar/TeamSidebarPortalSource';
+import { TeamSidebarRail } from './sidebar/TeamSidebarRail';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { TeamSessionsSection } from './TeamSessionsSection';
 
@@ -102,6 +105,7 @@ import type { EditorSelectionAction } from '@shared/types/editor';
 
 interface TeamDetailViewProps {
   teamName: string;
+  isPaneFocused?: boolean;
 }
 
 interface CreateTaskDialogState {
@@ -178,7 +182,10 @@ function filterKanbanTasks(tasks: TeamTaskWithKanban[], query: string): TeamTask
   );
 }
 
-export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Element => {
+export const TeamDetailView = ({
+  teamName,
+  isPaneFocused = false,
+}: TeamDetailViewProps): React.JSX.Element => {
   const { isLight } = useTheme();
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<TeamTaskWithKanban | null>(null);
@@ -1101,6 +1108,27 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   const headerColorSet = data.config.color
     ? getTeamColorSet(data.config.color)
     : nameColorSet(data.config.name);
+  const sharedMessagesPanelProps = {
+    teamName,
+    onTogglePosition: toggleMessagesPanelMode,
+    members: activeMembers,
+    tasks: data.tasks,
+    messages: data.messages,
+    isTeamAlive: data.isAlive,
+    leadActivity: leadActivityByTeam[teamName],
+    leadContextUpdatedAt,
+    timeWindow,
+    teamSessionIds,
+    currentLeadSessionId: data.config.leadSessionId,
+    pendingRepliesByMember,
+    onPendingReplyChange: setPendingRepliesByMember,
+    onMemberClick: setSelectedMember,
+    onTaskClick: setSelectedTask,
+    onCreateTaskFromMessage: handleCreateTaskFromMessage,
+    onReplyToMessage: handleReplyToMessage,
+    onRestartTeam: handleRestartTeam,
+    onTaskIdClick: handleTaskIdClick,
+  };
 
   return (
     <>
@@ -1155,48 +1183,25 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         )}
 
         {/* Messages sidebar (left, after context panel) */}
-        {messagesPanelMode === 'sidebar' && (
-          <div
-            className="relative shrink-0 overflow-hidden border-r border-[var(--color-border)]"
-            style={{ width: messagesPanelWidth }}
+        <TeamSidebarHost
+          teamName={teamName}
+          surface="team"
+          isActive={isThisTabActive}
+          isFocused={isPaneFocused}
+        >
+          <TeamSidebarPortalSource
+            teamName={teamName}
+            isActive={isThisTabActive}
+            isFocused={isPaneFocused}
           >
-            <div className="flex size-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface)]">
-              <div className="shrink-0 overflow-hidden px-3">
-                <ClaudeLogsSection teamName={teamName} position="sidebar" />
-              </div>
-              <div className="bg-[var(--color-text-muted)]/35 mx-3 h-px shrink-0" />
-              <div className="min-h-0 flex-1">
-                <MessagesPanel
-                  teamName={teamName}
-                  position="sidebar"
-                  onTogglePosition={toggleMessagesPanelMode}
-                  members={activeMembers}
-                  tasks={data.tasks}
-                  messages={data.messages}
-                  isTeamAlive={data.isAlive}
-                  leadActivity={leadActivityByTeam[teamName]}
-                  leadContextUpdatedAt={leadContextUpdatedAt}
-                  timeWindow={timeWindow}
-                  teamSessionIds={teamSessionIds}
-                  currentLeadSessionId={data?.config.leadSessionId}
-                  pendingRepliesByMember={pendingRepliesByMember}
-                  onPendingReplyChange={setPendingRepliesByMember}
-                  onMemberClick={setSelectedMember}
-                  onTaskClick={setSelectedTask}
-                  onCreateTaskFromMessage={handleCreateTaskFromMessage}
-                  onReplyToMessage={handleReplyToMessage}
-                  onRestartTeam={handleRestartTeam}
-                  onTaskIdClick={handleTaskIdClick}
-                />
-              </div>
-            </div>
-            {/* Resize handle */}
-            <div
-              className={`absolute inset-y-0 right-0 z-20 w-1 cursor-col-resize transition-colors hover:bg-blue-500/30 ${isMessagesPanelResizing ? 'bg-blue-500/40' : ''}`}
-              onMouseDown={messagesPanelHandleProps.onMouseDown}
+            <TeamSidebarRail
+              teamName={teamName}
+              messagesPanelProps={sharedMessagesPanelProps}
+              isResizing={isMessagesPanelResizing}
+              onResizeMouseDown={messagesPanelHandleProps.onMouseDown}
             />
-          </div>
-        )}
+          </TeamSidebarPortalSource>
+        </TeamSidebarHost>
 
         <div
           ref={contentRef}
@@ -1759,28 +1764,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           {messagesPanelMode !== 'sidebar' && <ClaudeLogsSection teamName={teamName} />}
 
           {messagesPanelMode === 'inline' && (
-            <MessagesPanel
-              teamName={teamName}
-              position="inline"
-              onTogglePosition={toggleMessagesPanelMode}
-              members={activeMembers}
-              tasks={data.tasks}
-              messages={data.messages}
-              isTeamAlive={data.isAlive}
-              leadActivity={leadActivityByTeam[teamName]}
-              leadContextUpdatedAt={leadContextUpdatedAt}
-              timeWindow={timeWindow}
-              teamSessionIds={teamSessionIds}
-              currentLeadSessionId={data?.config.leadSessionId}
-              pendingRepliesByMember={pendingRepliesByMember}
-              onPendingReplyChange={setPendingRepliesByMember}
-              onMemberClick={setSelectedMember}
-              onTaskClick={setSelectedTask}
-              onCreateTaskFromMessage={handleCreateTaskFromMessage}
-              onReplyToMessage={handleReplyToMessage}
-              onRestartTeam={handleRestartTeam}
-              onTaskIdClick={handleTaskIdClick}
-            />
+            <MessagesPanel position="inline" {...sharedMessagesPanelProps} />
           )}
 
           <ReviewDialog

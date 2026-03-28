@@ -13,6 +13,8 @@ import {
   type TaskStatusFilterId,
 } from './taskFiltersState';
 
+import type { ComboboxOption } from '../ui/combobox';
+
 const READ_FILTER_OPTIONS: { value: ReadFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'unread', label: 'Unread' },
@@ -23,6 +25,7 @@ interface TaskFiltersPopoverProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   teams: { teamName: string; displayName: string }[];
+  projectOptions: ComboboxOption[];
   filters: TaskFiltersState;
   onFiltersChange: (f: TaskFiltersState) => void;
   onApply: () => void;
@@ -32,6 +35,7 @@ export const TaskFiltersPopover = ({
   open,
   onOpenChange,
   teams,
+  projectOptions,
   filters,
   onFiltersChange,
   onApply,
@@ -137,6 +141,25 @@ export const TaskFiltersPopover = ({
               className="text-[12px]"
             />
           </div>
+
+          {projectOptions.length > 0 && (
+            <div>
+              <span className="mb-1.5 block text-[11px] font-semibold text-text-secondary">
+                Project
+              </span>
+              <Combobox
+                options={projectOptions}
+                value={draft.projectPath ?? ''}
+                onValueChange={(v) => setDraft({ ...draft, projectPath: v || null })}
+                placeholder="All Projects"
+                searchPlaceholder="Search projects..."
+                emptyMessage="No projects"
+                className="text-[12px]"
+                resetLabel="All Projects"
+                onReset={() => setDraft({ ...draft, projectPath: null })}
+              />
+            </div>
+          )}
 
           <div>
             <span className="mb-1.5 block text-[11px] font-semibold text-text-secondary">

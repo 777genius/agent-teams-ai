@@ -6,6 +6,7 @@
 import { useCallback } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
+import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
 
 import { useTeamGraphAdapter } from '../adapters/useTeamGraphAdapter';
 import { GraphNodePopover } from './GraphNodePopover';
@@ -54,13 +55,14 @@ export const TeamGraphOverlay = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#050510' }}>
+    <div className="fixed inset-0 z-50 flex overflow-hidden" style={{ background: '#050510' }}>
+      <TeamSidebarHost teamName={teamName} surface="graph-overlay" isActive isFocused />
       <GraphView
         data={graphData}
         events={events}
         onRequestClose={onClose}
         onRequestPinAsTab={onPinAsTab}
-        className="flex-1"
+        className="min-w-0 flex-1"
         renderOverlay={({ node, onClose: closePopover }) => (
           <GraphNodePopover
             node={node}

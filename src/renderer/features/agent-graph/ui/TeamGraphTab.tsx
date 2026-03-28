@@ -6,6 +6,7 @@
 import { useCallback, useState, lazy, Suspense } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
+import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
 
 import { useTeamGraphAdapter } from '../adapters/useTeamGraphAdapter';
 import { GraphNodePopover } from './GraphNodePopover';
@@ -19,11 +20,13 @@ const TeamGraphOverlay = lazy(() =>
 export interface TeamGraphTabProps {
   teamName: string;
   isActive?: boolean;
+  isPaneFocused?: boolean;
 }
 
 export const TeamGraphTab = ({
   teamName,
   isActive = true,
+  isPaneFocused = false,
 }: TeamGraphTabProps): React.JSX.Element => {
   const graphData = useTeamGraphAdapter(teamName);
   const [fullscreen, setFullscreen] = useState(false);
@@ -68,24 +71,32 @@ export const TeamGraphTab = ({
   };
 
   return (
-    <div className="size-full" style={{ background: '#050510' }}>
-      <GraphView
-        data={graphData}
-        events={events}
-        className="size-full"
-        suspendAnimation={!isActive}
-        onRequestFullscreen={() => setFullscreen(true)}
-        renderOverlay={({ node, onClose }) => (
-          <GraphNodePopover
-            node={node}
-            onClose={onClose}
-            onSendMessage={dispatchSendMessage}
-            onOpenTaskDetail={dispatchOpenTask}
-            onOpenMemberProfile={dispatchOpenProfile}
-            onCreateTask={dispatchCreateTask}
-          />
-        )}
+    <div className="flex size-full overflow-hidden" style={{ background: '#050510' }}>
+      <TeamSidebarHost
+        teamName={teamName}
+        surface="graph-tab"
+        isActive={isActive}
+        isFocused={isPaneFocused}
       />
+      <div className="min-w-0 flex-1">
+        <GraphView
+          data={graphData}
+          events={events}
+          className="size-full"
+          suspendAnimation={!isActive}
+          onRequestFullscreen={() => setFullscreen(true)}
+          renderOverlay={({ node, onClose }) => (
+            <GraphNodePopover
+              node={node}
+              onClose={onClose}
+              onSendMessage={dispatchSendMessage}
+              onOpenTaskDetail={dispatchOpenTask}
+              onOpenMemberProfile={dispatchOpenProfile}
+              onCreateTask={dispatchCreateTask}
+            />
+          )}
+        />
+      </div>
       {fullscreen && (
         <Suspense fallback={null}>
           <TeamGraphOverlay teamName={teamName} onClose={() => setFullscreen(false)} />

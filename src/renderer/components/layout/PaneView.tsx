@@ -49,7 +49,7 @@ export const PaneView = ({ paneId }: PaneViewProps): React.JSX.Element => {
       }}
       onMouseDown={handleMouseDown}
     >
-      <PaneContent pane={pane} />
+      <PaneContent pane={pane} isPaneFocused={isFocused} />
 
       {/* Edge split drop zones - visible only during active drag when under MAX_PANES */}
       <PaneSplitDropZone paneId={paneId} side="left" isActive={showSplitZones} />
