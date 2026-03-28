@@ -5,7 +5,7 @@ import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { shortenDisplayPath } from '@renderer/utils/pathDisplay';
 import { highlightLines } from '@renderer/utils/syntaxHighlighter';
-import { AlertTriangle, FileText, Search, Terminal } from 'lucide-react';
+import { AlertTriangle, FileText, MessageCircleQuestion, Search, Terminal } from 'lucide-react';
 
 import { MemberBadge } from './MemberBadge';
 
@@ -35,6 +35,8 @@ function getToolIcon(toolName: string): React.JSX.Element {
     case 'Grep':
     case 'Glob':
       return <Search className={cls} />;
+    case 'AskUserQuestion':
+      return <MessageCircleQuestion className={cls} />;
     default:
       return <Terminal className={cls} />;
   }
@@ -378,6 +380,78 @@ const ToolInputPreview = ({
   toolInput: Record<string, unknown>;
   projectPath?: string;
 }): React.JSX.Element => {
+  // AskUserQuestion: render questions with options as readable UI
+  if (toolName === 'AskUserQuestion' && Array.isArray(toolInput.questions)) {
+    const questions = toolInput.questions as {
+      question?: string;
+      header?: string;
+      options?: { label?: string; description?: string }[];
+      multiSelect?: boolean;
+    }[];
+    return (
+      <div className="space-y-3 px-4 py-2.5">
+        {questions.map((q, qi) => (
+          <div
+            key={qi}
+            className="rounded-md border p-3"
+            style={{
+              backgroundColor: 'var(--color-surface)',
+              borderColor: 'var(--color-border)',
+            }}
+          >
+            {q.header && (
+              <span
+                className="mb-1.5 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+                style={{
+                  backgroundColor: 'var(--color-surface-raised)',
+                  color: 'var(--color-text-muted)',
+                }}
+              >
+                {q.header}
+              </span>
+            )}
+            {q.question && (
+              <p className="mb-2 text-xs font-medium" style={{ color: 'var(--color-text)' }}>
+                {q.question}
+              </p>
+            )}
+            {Array.isArray(q.options) && (
+              <div className="space-y-1.5">
+                {q.options.map((opt, oi) => (
+                  <div
+                    key={oi}
+                    className="flex items-start gap-2 rounded px-2 py-1.5"
+                    style={{ backgroundColor: 'var(--color-surface-raised)' }}
+                  >
+                    <span
+                      className="mt-0.5 text-[10px]"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
+                      {q.multiSelect ? '☐' : '○'}
+                    </span>
+                    <div className="min-w-0">
+                      <span className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>
+                        {opt.label}
+                      </span>
+                      {opt.description && (
+                        <p
+                          className="mt-0.5 text-[10px]"
+                          style={{ color: 'var(--color-text-muted)' }}
+                        >
+                          {opt.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   const text = renderToolInput(toolName, toolInput, projectPath);
   const fileName = getToolInputFileName(toolName, toolInput);
   const lines = useMemo(() => highlightLines(text, fileName), [text, fileName]);
