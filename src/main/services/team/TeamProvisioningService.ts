@@ -4042,12 +4042,22 @@ export class TeamProvisioningService {
         const leadName = config.members?.find((m) => isLeadMember(m))?.name?.trim() || 'team-lead';
         try {
           const leadInboxMessages = await this.inboxReader.getMessagesFor(teamName, leadName);
+          const permMsgsToMarkRead: { messageId: string }[] = [];
           for (const msg of leadInboxMessages) {
             if (typeof msg.text !== 'string') continue;
             const perm = parsePermissionRequest(msg.text);
             if (!perm) continue;
             // Dedup is handled inside handleTeammatePermissionRequest via processedPermissionRequestIds
             this.handleTeammatePermissionRequest(run, perm, msg.timestamp);
+            // Mark unread permission_request messages as read to prevent stale unread indicators
+            if (!msg.read && this.hasStableMessageId(msg)) {
+              permMsgsToMarkRead.push({ messageId: msg.messageId });
+            }
+          }
+          if (permMsgsToMarkRead.length > 0) {
+            await this.markInboxMessagesRead(teamName, leadName, permMsgsToMarkRead).catch(
+              () => {}
+            );
           }
         } catch {
           // best-effort — inbox may not exist yet
