@@ -6042,13 +6042,27 @@ export class TeamProvisioningService {
 
     // IMPORTANT: request_id is NESTED inside response, NOT top-level
     // (asymmetry with control_request — confirmed by Python SDK, Elixir SDK and issue #29991)
+    const allowResponse: Record<string, unknown> = { behavior: 'allow' };
+    // For AskUserQuestion: pass user's answer via updatedInput so the CLI
+    // can deliver it without re-prompting. Format follows --permission-prompt-tool spec.
+    if (allow && message) {
+      const pending = run.pendingApprovals.get(requestId);
+      if (pending?.toolName === 'AskUserQuestion') {
+        const questions = (pending.toolInput.questions as { question?: string }[]) ?? [];
+        const answers: Record<string, string> = {};
+        for (const q of questions) {
+          if (q.question) answers[q.question] = message;
+        }
+        allowResponse.updatedInput = { ...pending.toolInput, answers };
+      }
+    }
     const response = allow
       ? {
           type: 'control_response',
           response: {
             subtype: 'success',
             request_id: requestId,
-            response: { behavior: 'allow' },
+            response: allowResponse,
           },
         }
       : {

@@ -170,6 +170,12 @@ export const ToolApprovalSheet: React.FC = () => {
       setDisabled(true);
       setError(null);
 
+      // For AskUserQuestion, build answers from selected options
+      const answersMessage =
+        allow && current.toolName === 'AskUserQuestion' && selectedOptions.size > 0
+          ? Array.from(selectedOptions).join(', ')
+          : undefined;
+
       // Safety timeout — if IPC hangs (e.g. stdin.write callback never fires),
       // re-enable the button so the user isn't stuck forever.
       const safetyTimer = setTimeout(() => {
@@ -177,7 +183,13 @@ export const ToolApprovalSheet: React.FC = () => {
         setError('Response timed out — process may be unresponsive. Try again or stop the team.');
       }, RESPOND_TIMEOUT_MS);
 
-      respondToToolApproval(current.teamName, current.runId, current.requestId, allow)
+      respondToToolApproval(
+        current.teamName,
+        current.runId,
+        current.requestId,
+        allow,
+        answersMessage
+      )
         .then(() => {
           clearTimeout(safetyTimer);
           // Small delay before re-enabling to prevent accidental double-clicks
@@ -190,7 +202,7 @@ export const ToolApprovalSheet: React.FC = () => {
           setDisabled(false);
         });
     },
-    [current, disabled, respondToToolApproval]
+    [current, disabled, respondToToolApproval, selectedOptions]
   );
 
   const isAskQuestion = current?.toolName === 'AskUserQuestion';
@@ -213,6 +225,7 @@ export const ToolApprovalSheet: React.FC = () => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if (e.key === 'Enter') {
+        if (isAskQuestion && !hasSelection) return;
         e.preventDefault();
         handleRespond(true);
       } else if (e.key === 'Escape') {
@@ -223,7 +236,7 @@ export const ToolApprovalSheet: React.FC = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleRespond]);
+  }, [handleRespond, isAskQuestion, hasSelection]);
 
   // Resolve teammate color for MemberBadge (when source !== 'lead')
   const sourceColor = useMemo(() => {
