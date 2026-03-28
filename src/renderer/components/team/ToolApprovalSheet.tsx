@@ -7,6 +7,8 @@ import { shortenDisplayPath } from '@renderer/utils/pathDisplay';
 import { highlightLines } from '@renderer/utils/syntaxHighlighter';
 import { AlertTriangle, FileText, Search, Terminal } from 'lucide-react';
 
+import { MemberBadge } from './MemberBadge';
+
 import {
   ToolApprovalSettingsContent,
   ToolApprovalSettingsToggle,
@@ -189,6 +191,13 @@ export const ToolApprovalSheet: React.FC = () => {
   const teamColor = getTeamColorSet(colorName);
   const displayName = current.teamDisplayName ?? teamSummary?.displayName ?? current.teamName;
 
+  // Resolve teammate color for MemberBadge (when source !== 'lead')
+  const sourceColor = useMemo(() => {
+    if (current.source === 'lead') return undefined;
+    const member = selectedTeamData?.members?.find((m) => m.name === current.source);
+    return member?.color;
+  }, [current.source, selectedTeamData?.members]);
+
   return (
     <>
       {/* Backdrop overlay */}
@@ -208,9 +217,11 @@ export const ToolApprovalSheet: React.FC = () => {
           style={{ borderColor: 'var(--color-border)' }}
         >
           <div className="flex items-center gap-2">
+            {current.source !== 'lead' && (
+              <MemberBadge name={current.source} color={sourceColor} size="xs" disableHoverCard />
+            )}
             {getToolIcon(current.toolName)}
             <span className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-              {current.source !== 'lead' ? `${current.source} — ` : ''}
               {current.toolName}
             </span>
           </div>
