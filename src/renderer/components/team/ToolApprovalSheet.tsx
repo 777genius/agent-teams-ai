@@ -182,21 +182,19 @@ export const ToolApprovalSheet: React.FC = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleRespond]);
 
+  // Resolve teammate color for MemberBadge (when source !== 'lead')
+  const sourceColor = useMemo(() => {
+    if (!current || current.source === 'lead') return undefined;
+    const member = selectedTeamData?.members?.find((m) => m.name === current.source);
+    return member?.color;
+  }, [current, selectedTeamData?.members]);
+
   if (!current) return null;
 
-  // Prefer color from the approval itself (always available, even during provisioning),
-  // fall back to teams list, then getTeamColorSet hashes unknown names into TEAMMATE_COLORS.
   const teamSummary = teams.find((t) => t.teamName === current.teamName);
   const colorName = current.teamColor ?? teamSummary?.color ?? current.teamName;
   const teamColor = getTeamColorSet(colorName);
   const displayName = current.teamDisplayName ?? teamSummary?.displayName ?? current.teamName;
-
-  // Resolve teammate color for MemberBadge (when source !== 'lead')
-  const sourceColor = useMemo(() => {
-    if (current.source === 'lead') return undefined;
-    const member = selectedTeamData?.members?.find((m) => m.name === current.source);
-    return member?.color;
-  }, [current.source, selectedTeamData?.members]);
 
   return (
     <>
