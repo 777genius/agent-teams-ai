@@ -380,6 +380,12 @@ const ToolInputPreview = ({
   toolInput: Record<string, unknown>;
   projectPath?: string;
 }): React.JSX.Element => {
+  const text = renderToolInput(toolName, toolInput, projectPath);
+  const fileName = getToolInputFileName(toolName, toolInput);
+  const lines = useMemo(() => highlightLines(text, fileName), [text, fileName]);
+  const rawFilePath = typeof toolInput.file_path === 'string' ? toolInput.file_path : null;
+  const isFileTool = FILE_TOOLS.has(toolName) && rawFilePath;
+
   // AskUserQuestion: render questions with options as readable UI
   if (toolName === 'AskUserQuestion' && Array.isArray(toolInput.questions)) {
     const questions = toolInput.questions as {
@@ -451,12 +457,6 @@ const ToolInputPreview = ({
       </div>
     );
   }
-
-  const text = renderToolInput(toolName, toolInput, projectPath);
-  const fileName = getToolInputFileName(toolName, toolInput);
-  const lines = useMemo(() => highlightLines(text, fileName), [text, fileName]);
-  const rawFilePath = typeof toolInput.file_path === 'string' ? toolInput.file_path : null;
-  const isFileTool = FILE_TOOLS.has(toolName) && rawFilePath;
 
   return (
     <div className="px-4 py-2.5">
