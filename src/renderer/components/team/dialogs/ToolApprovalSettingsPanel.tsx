@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import {
@@ -11,7 +11,7 @@ import {
 import { useStore } from '@renderer/store';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 
-import type { ToolApprovalTimeoutAction } from '@shared/types';
+import type { ToolApprovalSettings, ToolApprovalTimeoutAction } from '@shared/types';
 
 export const ToolApprovalSettingsToggle: React.FC<{ expanded: boolean; onToggle: () => void }> = ({
   expanded,
@@ -37,10 +37,17 @@ export const ToolApprovalSettingsToggle: React.FC<{ expanded: boolean; onToggle:
   </button>
 );
 
-export const ToolApprovalSettingsContent: React.FC<{ expanded: boolean }> = ({ expanded }) => {
+export const ToolApprovalSettingsContent: React.FC<{
+  expanded: boolean;
+  teamName?: string;
+}> = ({ expanded, teamName }) => {
   const [localSeconds, setLocalSeconds] = useState<string>('');
   const settings = useStore((s) => s.toolApprovalSettings);
-  const updateSettings = useStore((s) => s.updateToolApprovalSettings);
+  const rawUpdateSettings = useStore((s) => s.updateToolApprovalSettings);
+  const updateSettings = useCallback(
+    (patch: Partial<ToolApprovalSettings>) => rawUpdateSettings(patch, teamName),
+    [rawUpdateSettings, teamName]
+  );
 
   if (!expanded) return null;
 

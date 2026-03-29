@@ -696,7 +696,10 @@ export interface TeamSlice {
   /** Resolved permission approvals: request_id → allowed (true/false). Used for noise row icons. */
   resolvedApprovals: Map<string, boolean>;
   toolApprovalSettings: ToolApprovalSettings;
-  updateToolApprovalSettings: (patch: Partial<ToolApprovalSettings>) => Promise<void>;
+  updateToolApprovalSettings: (
+    patch: Partial<ToolApprovalSettings>,
+    forTeam?: string
+  ) => Promise<void>;
   respondToToolApproval: (
     teamName: string,
     runId: string,
@@ -2347,8 +2350,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     set({ provisioningProgressUnsubscribe: unsubscribe });
   },
 
-  updateToolApprovalSettings: async (patch) => {
-    const teamName = get().selectedTeamName;
+  updateToolApprovalSettings: async (patch, forTeam) => {
+    const teamName = forTeam ?? get().selectedTeamName;
     const current = get().toolApprovalSettings;
     const merged = { ...current, ...patch };
     set({ toolApprovalSettings: merged });

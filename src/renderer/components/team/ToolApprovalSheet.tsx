@@ -408,7 +408,9 @@ export const ToolApprovalSheet: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => void updateToolApprovalSettings({ autoAllowAll: true })}
+              onClick={() =>
+                void updateToolApprovalSettings({ autoAllowAll: true }, current.teamName)
+              }
               className="rounded-md border px-3.5 py-1.5 text-xs font-medium transition-colors"
               style={{
                 color: 'var(--color-text-muted)',
@@ -444,7 +446,7 @@ export const ToolApprovalSheet: React.FC = () => {
         </div>
 
         {/* Settings expanded content — below actions row */}
-        <ToolApprovalSettingsContent expanded={settingsExpanded} />
+        <ToolApprovalSettingsContent expanded={settingsExpanded} teamName={current.teamName} />
 
         {/* Timeout progress bar */}
         <TimeoutProgress receivedAt={current.receivedAt} />
