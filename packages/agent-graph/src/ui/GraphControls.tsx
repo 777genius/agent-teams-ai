@@ -167,7 +167,7 @@ export function GraphControls({
         </div>
 
         <div
-          className="flex items-center gap-2 rounded-lg px-3 py-1.5 backdrop-blur-sm"
+          className="pointer-events-auto flex items-center gap-2 rounded-lg px-3 py-1.5 backdrop-blur-sm"
           style={{
             background: 'rgba(8, 12, 24, 0.8)',
             border: '1px solid rgba(100, 200, 255, 0.08)',
