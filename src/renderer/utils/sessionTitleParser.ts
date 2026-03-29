@@ -20,9 +20,9 @@ export interface ParsedSessionTitle {
 const PROVISION_RE =
   /^agent_teams_ui\s+\[Agent Team:\s*["\u201C]([^"\u201D]+)["\u201D]\s*\|\s*Project:\s*["\u201C]([^"\u201D]+)["\u201D]\s*\|\s*Lead:\s*["\u201C]([^"\u201D]+)["\u201D]\]/;
 
-// Matches: Team Start [Agent Team: ...] or Team Start (resume) [Agent Team: ...]
+// Matches: Team Start [Agent Team: ...] (after stripping optional "(resume)" prefix)
 const LAUNCH_RE =
-  /^Team Start(?:\s*\(resume\))?\s+\[Agent Team:\s*["\u201C]([^"\u201D]+)["\u201D]\s*\|\s*Project:\s*["\u201C]([^"\u201D]+)["\u201D]\s*\|\s*Lead:\s*["\u201C]([^"\u201D]+)["\u201D]\]/;
+  /^Team Start\s+\[Agent Team:\s*["\u201C]([^"\u201D]+)["\u201D]\s*\|\s*Project:\s*["\u201C]([^"\u201D]+)["\u201D]\s*\|\s*Lead:\s*["\u201C]([^"\u201D]+)["\u201D]\]/;
 
 // Matches one or more [Image #N] prefixes
 const IMAGE_PREFIX_RE = /^(?:\[Image\s+#\d+\]\s*)+/;
@@ -33,7 +33,7 @@ export function parseSessionTitle(firstMessage: string | undefined): ParsedSessi
   }
 
   // New team provisioning: agent_teams_ui [Agent Team: ...]
-  const provisionMatch = firstMessage.match(PROVISION_RE);
+  const provisionMatch = PROVISION_RE.exec(firstMessage);
   if (provisionMatch) {
     return {
       kind: 'team-new',
@@ -43,8 +43,9 @@ export function parseSessionTitle(firstMessage: string | undefined): ParsedSessi
     };
   }
 
-  // Team resume/launch: Team Start [Agent Team: ...]
-  const launchMatch = firstMessage.match(LAUNCH_RE);
+  // Team resume/launch: Team Start [Agent Team: ...] or Team Start (resume) [...]
+  const launchMsg = firstMessage.replace(/^(Team Start)\s*\(resume\)/, '$1');
+  const launchMatch = LAUNCH_RE.exec(launchMsg);
   if (launchMatch) {
     return {
       kind: 'team-resume',

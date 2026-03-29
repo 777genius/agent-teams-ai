@@ -1,8 +1,12 @@
+import * as path from 'path';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { BranchStatusService } from '@main/services/team/BranchStatusService';
 
 import type { ProjectBranchChangeEvent } from '@shared/types';
+
+const REPO = path.normalize('/repo');
 
 interface Deferred<T> {
   promise: Promise<T>;
@@ -33,16 +37,16 @@ describe('BranchStatusService', () => {
     const events: ProjectBranchChangeEvent[] = [];
     const service = new BranchStatusService((event) => events.push(event), { getBranch });
 
-    await service.setTracking('/repo', true);
-    expect(events).toEqual([{ projectPath: '/repo', branch: 'main' }]);
+    await service.setTracking(REPO, true);
+    expect(events).toEqual([{ projectPath: REPO, branch: 'main' }]);
 
     await vi.advanceTimersByTimeAsync(20_000);
     expect(events).toHaveLength(1);
 
     await vi.advanceTimersByTimeAsync(20_000);
     expect(events).toEqual([
-      { projectPath: '/repo', branch: 'main' },
-      { projectPath: '/repo', branch: 'feature/refactor' },
+      { projectPath: REPO, branch: 'main' },
+      { projectPath: REPO, branch: 'feature/refactor' },
     ]);
 
     service.dispose();
@@ -54,15 +58,15 @@ describe('BranchStatusService', () => {
     const getBranch = vi.fn().mockResolvedValue('main');
     const service = new BranchStatusService(() => undefined, { getBranch });
 
-    await service.setTracking('/repo', true);
-    await service.setTracking('/repo', true);
+    await service.setTracking(REPO, true);
+    await service.setTracking(REPO, true);
     expect(getBranch).toHaveBeenCalledTimes(1);
 
-    await service.setTracking('/repo', false);
+    await service.setTracking(REPO, false);
     await vi.advanceTimersByTimeAsync(20_000);
     expect(getBranch).toHaveBeenCalledTimes(2);
 
-    await service.setTracking('/repo', false);
+    await service.setTracking(REPO, false);
     await vi.advanceTimersByTimeAsync(40_000);
     expect(getBranch).toHaveBeenCalledTimes(2);
 
@@ -79,11 +83,11 @@ describe('BranchStatusService', () => {
     const events: ProjectBranchChangeEvent[] = [];
     const service = new BranchStatusService((event) => events.push(event), { getBranch });
 
-    const firstEnable = service.setTracking('/repo', true);
+    const firstEnable = service.setTracking(REPO, true);
     await Promise.resolve();
 
-    await service.setTracking('/repo', false);
-    const secondEnable = service.setTracking('/repo', true);
+    await service.setTracking(REPO, false);
+    const secondEnable = service.setTracking(REPO, true);
     await Promise.resolve();
 
     first.resolve('main');
@@ -92,7 +96,7 @@ describe('BranchStatusService', () => {
 
     second.resolve('feature/refactor');
     await secondEnable;
-    expect(events).toEqual([{ projectPath: '/repo', branch: 'feature/refactor' }]);
+    expect(events).toEqual([{ projectPath: REPO, branch: 'feature/refactor' }]);
 
     service.dispose();
   });
