@@ -37,7 +37,11 @@ export function drawParticles(
     if (!source || !target) continue;
     if (source.x == null || source.y == null || target.x == null || target.y == null) continue;
 
-    const cp = computeControlPoints(source.x, source.y, target.x, target.y);
+    // Reverse: swap source/target for particles going in opposite direction
+    const from = p.reverse ? target : source;
+    const to = p.reverse ? source : target;
+
+    const cp = computeControlPoints(from.x!, from.y!, to.x!, to.y!);
     const color = p.color || COLORS.message;
     const baseSize = (p.size ?? 1) * 3;
     // Differentiate visual by particle kind
@@ -50,12 +54,12 @@ export function drawParticles(
     const phaseOffset = p.id.charCodeAt(Math.min(5, p.id.length - 1)) * 0.1;
     const wobbleAmp = BEAM.wobble.amp;
 
-    drawParticleTrail(ctx, source, target, cp, p.progress, color, size, wobbleAmp, phaseOffset, time, p.kind);
-    drawParticleCore(ctx, source, target, cp, p.progress, color, size, wobbleAmp, phaseOffset, time, p.kind);
+    drawParticleTrail(ctx, from, to, cp, p.progress, color, size, wobbleAmp, phaseOffset, time, p.kind);
+    drawParticleCore(ctx, from, to, cp, p.progress, color, size, wobbleAmp, phaseOffset, time, p.kind);
 
     // Label
     if (p.label && p.progress > PARTICLE_DRAW.labelMinT && p.progress < PARTICLE_DRAW.labelMaxT) {
-      const pos = getWobbledPosition(source, target, cp, p.progress, wobbleAmp, phaseOffset, time);
+      const pos = getWobbledPosition(from, to, cp, p.progress, wobbleAmp, phaseOffset, time);
       ctx.font = `${PARTICLE_DRAW.labelFontSize}px monospace`;
       ctx.textAlign = 'center';
       ctx.fillStyle = hexWithAlpha(color, 0.56);

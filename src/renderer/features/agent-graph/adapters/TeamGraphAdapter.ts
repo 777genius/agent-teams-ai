@@ -494,11 +494,18 @@ export class TeamGraphAdapter {
       if (this.#seenMessageIds.has(msgKey)) continue;
       this.#seenMessageIds.add(msgKey);
 
-      // Skip system/noise messages (idle notifications, JSON blobs)
-      if (TeamGraphAdapter.#isSystemMessage(msg)) continue;
-
       const edgeId = TeamGraphAdapter.#resolveMessageEdge(msg, teamName, leadId, leadName, edges);
       if (!edgeId) continue;
+
+      // Determine direction: messages FROM a teammate TO lead should reverse
+      // (edges are always lead→member, but message goes member→lead)
+      const fromId = TeamGraphAdapter.#resolveParticipantId(
+        msg.from ?? '',
+        teamName,
+        leadId,
+        leadName
+      );
+      const isFromTeammate = fromId !== leadId;
 
       particles.push({
         id: `particle:msg:${teamName}:${msgKey}`,
@@ -507,6 +514,7 @@ export class TeamGraphAdapter {
         kind: 'inbox_message',
         color: msg.color ?? '#66ccff',
         label: TeamGraphAdapter.#buildParticleLabel(msg.summary ?? msg.text, 'inbox'),
+        reverse: isFromTeammate,
       });
     }
   }
@@ -692,18 +700,6 @@ export class TeamGraphAdapter {
     if (normalized === 'user' || normalized === 'team-lead') return leadId;
     if (leadName && normalized === leadName.trim().toLowerCase()) return leadId;
     return `member:${teamName}:${name}`;
-  }
-
-  /** Filter out system/noise messages that shouldn't show as particles */
-  static #isSystemMessage(msg: InboxMessage): boolean {
-    const text = msg.text ?? '';
-    // JSON system messages (idle_notification, shutdown, etc.)
-    if (text.startsWith('{"type":') || text.startsWith('{"type" :')) return true;
-    // Very short system messages
-    if (text.length < 3) return true;
-    // System notification source
-    if (msg.source === 'system_notification') return true;
-    return false;
   }
 
   static #buildParticleLabel(
