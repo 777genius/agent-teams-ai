@@ -3,7 +3,7 @@ import type { FastMCP } from 'fastmcp';
 import agentTeamsControllerModule from 'agent-teams-controller';
 
 const { AGENT_TEAMS_MCP_TOOL_GROUPS, AGENT_TEAMS_REGISTERED_TOOL_NAMES } =
-  agentTeamsControllerModule as typeof import('agent-teams-controller');
+  agentTeamsControllerModule;
 
 import { registerCrossTeamTools } from './crossTeamTools';
 import { registerKanbanTools } from './kanbanTools';
