@@ -26,8 +26,6 @@
   <sub>100% free, open source. No API keys. No configuration. Runs entirely locally. Not just coding agents.</sub>
 </p>
 
-> [!WARNING]
-> There is an upstream Claude Code issue where teammates spawned via Agent/Task may fail to inherit external MCP tools. In Agent Teams this breaks bootstrap because `mcp__agent-teams__member_briefing` is missing from the teammate tool surface, so agents report that `member_briefing` is unavailable and stop before starting work. We reproduced this locally with direct Claude Code binaries `2.1.86` and `2.1.87`, so a reliable version-pin workaround is not confirmed. Track upstream status in [anthropics/claude-code#7296](https://github.com/anthropics/claude-code/issues/7296).
 <table>
 <tr>
 <td width="50%">
