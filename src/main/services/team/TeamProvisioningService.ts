@@ -5848,6 +5848,8 @@ export class TeamProvisioningService {
       receivedAt: messageTimestamp || new Date().toISOString(),
       teamColor: run.request.color,
       teamDisplayName: run.request.displayName,
+      permissionSuggestions:
+        perm.permissionSuggestions.length > 0 ? perm.permissionSuggestions : undefined,
     };
 
     const autoResult = shouldAutoAllow(
@@ -5859,7 +5861,14 @@ export class TeamProvisioningService {
       logger.info(
         `[${run.teamName}] Auto-allowing teammate ${perm.agentId} ${perm.toolName} (${autoResult.reason})`
       );
-      void this.respondToTeammatePermission(run, perm.agentId, perm.requestId, true);
+      void this.respondToTeammatePermission(
+        run,
+        perm.agentId,
+        perm.requestId,
+        true,
+        undefined,
+        perm.permissionSuggestions
+      );
       this.emitToolApprovalEvent({
         autoResolved: true,
         requestId: perm.requestId,
@@ -6046,14 +6055,14 @@ export class TeamProvisioningService {
 
       const approval = run.pendingApprovals.get(requestId);
       if (approval && approval.source !== 'lead') {
-        // Teammate request — respond via inbox + control_response fallback.
-        // Defer cleanup until the async write completes to avoid silent data loss.
+        // Teammate request — apply permission_suggestions to project settings.
         this.respondToTeammatePermission(
           run,
           approval.source,
           requestId,
           allow,
-          allow ? undefined : 'Timed out — auto-denied by settings'
+          allow ? undefined : 'Timed out — auto-denied by settings',
+          approval.permissionSuggestions
         ).finally(() => {
           run.pendingApprovals.delete(requestId);
           this.inFlightResponses.delete(requestId);
@@ -6132,7 +6141,14 @@ export class TeamProvisioningService {
           this.clearApprovalTimeout(requestId);
           if (!this.tryClaimResponse(requestId)) continue;
           if (approval.source !== 'lead') {
-            void this.respondToTeammatePermission(run, approval.source, requestId, true);
+            void this.respondToTeammatePermission(
+              run,
+              approval.source,
+              requestId,
+              true,
+              undefined,
+              approval.permissionSuggestions
+            );
           } else {
             this.autoAllowControlRequest(run, requestId);
           }
@@ -6198,10 +6214,17 @@ export class TeamProvisioningService {
 
     const approval = run.pendingApprovals.get(requestId)!;
 
-    // Teammate permission requests use a different response path (inbox, not stdin)
+    // Teammate permission requests: apply permission_suggestions to project settings
     if (approval.source !== 'lead') {
       try {
-        await this.respondToTeammatePermission(run, approval.source, requestId, allow, message);
+        await this.respondToTeammatePermission(
+          run,
+          approval.source,
+          requestId,
+          allow,
+          message,
+          approval.permissionSuggestions
+        );
       } finally {
         run.pendingApprovals.delete(requestId);
         this.inFlightResponses.delete(requestId);
@@ -6284,90 +6307,131 @@ export class TeamProvisioningService {
   }
 
   /**
-   * Respond to a teammate's permission_request by writing to the teammate's inbox
-   * AND attempting a control_response via stdin (belt-and-suspenders).
+   * Respond to a teammate's permission_request by applying permission_suggestions.
+   *
+   * FACT: Claude Code teammate runtime sends permission_request via SendMessage (inbox protocol).
+   * FACT: Writing permission_response to teammate inbox does NOT work - runtime ignores it.
+   * FACT: control_response via stdin does NOT work for teammate requests - request_id doesn't match.
+   * FACT: permission_suggestions.destination "localSettings" refers to {cwd}/.claude/settings.local.json.
+   * FACT: Claude Code CLI reads this file via --setting-sources user,project,local.
+   *
+   * When allow=true: applies permission_suggestions (adds tool rules to project settings).
+   * When allow=false: no action needed - tool stays blocked by default.
    */
   private async respondToTeammatePermission(
     run: ProvisioningRun,
     agentId: string,
     requestId: string,
     allow: boolean,
-    message?: string
+    _message?: string,
+    permissionSuggestions?: import('@shared/utils/inboxNoise').PermissionSuggestion[]
   ): Promise<void> {
-    const teamsBase = getTeamsBasePath();
-    const inboxPath = path.join(teamsBase, run.teamName, 'inboxes', `${agentId}.json`);
+    if (!allow) {
+      logger.info(`[${run.teamName}] Denied teammate ${agentId} permission ${requestId}`);
+      return;
+    }
 
-    // 1. Write permission_response to teammate's inbox (with proper file locking)
-    const responseMsg = {
-      from: 'user',
-      text: JSON.stringify({
-        type: 'permission_response',
-        request_id: requestId,
-        approved: allow,
-        ...(message ? { message } : {}),
-      }),
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
+    // Apply permission_suggestions: add tool rules to project settings file
+    const suggestions = permissionSuggestions ?? [];
+    if (suggestions.length === 0) {
+      logger.warn(`[${run.teamName}] No permission_suggestions for ${requestId} — cannot add rule`);
+      return;
+    }
 
+    // Resolve project cwd from team config
+    let projectCwd: string | undefined;
     try {
-      await withFileLock(inboxPath, async () => {
-        await withInboxLock(inboxPath, async () => {
-          let existing: unknown[] = [];
-          try {
-            const raw = await tryReadRegularFileUtf8(inboxPath, {
-              timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-              maxBytes: TEAM_INBOX_MAX_BYTES,
-            });
-            if (raw) {
-              const parsed = JSON.parse(raw) as unknown;
-              if (Array.isArray(parsed)) existing = parsed;
-            }
-          } catch {
-            // File may not exist yet — start with empty array
-          }
-          existing.push(responseMsg);
-          await atomicWriteAsync(inboxPath, JSON.stringify(existing, null, 2));
-        });
-      });
-      logger.info(
-        `[${run.teamName}] Wrote permission_response to ${agentId} inbox: ${allow ? 'allow' : 'deny'}`
-      );
-    } catch (error) {
-      logger.error(
-        `[${run.teamName}] Failed to write permission_response to ${agentId}: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
+      const config = await this.configReader.getConfig(run.teamName);
+      projectCwd = config?.projectPath ?? config?.members?.[0]?.cwd;
+    } catch {
+      // best-effort
+    }
+    if (!projectCwd) {
+      logger.warn(`[${run.teamName}] Cannot resolve project cwd for permission rule — skipping`);
+      return;
     }
 
-    // 2. Also try control_response via stdin (in case lead runtime can forward it)
-    if (run.child?.stdin?.writable) {
-      const controlResponse = allow
-        ? {
-            type: 'control_response',
-            response: {
-              subtype: 'success',
-              request_id: requestId,
-              response: { behavior: 'allow' },
-            },
-          }
-        : {
-            type: 'control_response',
-            response: {
-              subtype: 'success',
-              request_id: requestId,
-              response: { behavior: 'deny', message: message ?? 'User denied' },
-            },
-          };
-      run.child.stdin.write(JSON.stringify(controlResponse) + '\n', (err) => {
-        if (err) {
-          logger.warn(
-            `[${run.teamName}] control_response via stdin for teammate ${agentId} failed (non-critical): ${err.message}`
-          );
-        }
-      });
+    for (const suggestion of suggestions) {
+      if (suggestion.type !== 'addRules' || !Array.isArray(suggestion.rules)) continue;
+
+      const toolNames = suggestion.rules
+        .map((r) => r.toolName)
+        .filter((name): name is string => typeof name === 'string' && name.length > 0);
+      if (toolNames.length === 0) continue;
+
+      const behavior = suggestion.behavior ?? 'allow';
+      // FACT: observed destinations are "localSettings" (project-level .claude/settings.local.json)
+      const settingsPath =
+        suggestion.destination === 'localSettings'
+          ? path.join(projectCwd, '.claude', 'settings.local.json')
+          : path.join(projectCwd, '.claude', 'settings.local.json'); // default to local
+
+      try {
+        await this.addPermissionRulesToSettings(settingsPath, toolNames, behavior);
+        logger.info(
+          `[${run.teamName}] Added permission rules for ${agentId}: ${toolNames.join(', ')} → ${behavior} in ${settingsPath}`
+        );
+      } catch (error) {
+        logger.error(
+          `[${run.teamName}] Failed to add permission rules: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
     }
+  }
+
+  /**
+   * Safely add tool names to the permissions.allow (or deny) array in a Claude settings file.
+   * Creates the file and parent directories if they don't exist.
+   * Merges with existing entries — never overwrites.
+   */
+  private async addPermissionRulesToSettings(
+    settingsPath: string,
+    toolNames: string[],
+    behavior: string
+  ): Promise<void> {
+    const dir = path.dirname(settingsPath);
+    await fs.promises.mkdir(dir, { recursive: true });
+
+    // Read existing settings (or start with empty object)
+    let settings: Record<string, unknown> = {};
+    try {
+      const raw = await fs.promises.readFile(settingsPath, 'utf-8');
+      const parsed = JSON.parse(raw) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        settings = parsed as Record<string, unknown>;
+      }
+    } catch {
+      // File doesn't exist or invalid JSON — start fresh
+    }
+
+    // Ensure permissions object exists
+    if (!settings.permissions || typeof settings.permissions !== 'object') {
+      settings.permissions = {};
+    }
+    const perms = settings.permissions as Record<string, unknown>;
+
+    // Target array: "allow" or "deny" based on behavior
+    const key = behavior === 'deny' ? 'deny' : 'allow';
+    if (!Array.isArray(perms[key])) {
+      perms[key] = [];
+    }
+    const list = perms[key] as string[];
+
+    // Add tool names that aren't already in the list
+    const existing = new Set(list);
+    let added = 0;
+    for (const name of toolNames) {
+      if (!existing.has(name)) {
+        list.push(name);
+        added++;
+      }
+    }
+
+    if (added === 0) return; // Nothing new to add
+
+    await fs.promises.writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf-8');
   }
 
   /**

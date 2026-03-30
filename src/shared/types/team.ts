@@ -888,6 +888,15 @@ export interface ToolApprovalRequest {
   teamColor?: string;
   /** Team display name (from config or create request). */
   teamDisplayName?: string;
+  /** Permission suggestions from teammate runtime (only for teammate permission_request).
+   * FACT: Populated by Claude Code runtime, contains instructions to add permission rules.
+   */
+  permissionSuggestions?: {
+    type: string;
+    rules?: { toolName: string }[];
+    behavior?: string;
+    destination?: string;
+  }[];
 }
 
 /** Dismissal event — process died, all pending approvals for this team+run should be removed. */

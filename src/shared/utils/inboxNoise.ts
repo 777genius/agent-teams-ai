@@ -41,6 +41,14 @@ export function isInboxNoiseMessage(text: string): boolean {
 // Teammate permission request parsing
 // ---------------------------------------------------------------------------
 
+/** A single permission suggestion from the teammate runtime. */
+export interface PermissionSuggestion {
+  type: string;
+  rules?: { toolName: string }[];
+  behavior?: string;
+  destination?: string;
+}
+
 /** Parsed teammate permission request from inbox message. */
 export interface ParsedPermissionRequest {
   requestId: string;
@@ -49,6 +57,11 @@ export interface ParsedPermissionRequest {
   toolUseId: string;
   description: string;
   input: Record<string, unknown>;
+  /** Suggestions from teammate runtime on how to resolve the permission.
+   * FACT: This field is populated by Claude Code runtime, not by the AI agent.
+   * FACT: Observed format: { type: "addRules", rules: [{toolName}], behavior: "allow", destination: "localSettings" }
+   */
+  permissionSuggestions: PermissionSuggestion[];
 }
 
 /**
@@ -75,6 +88,9 @@ export function parsePermissionRequest(text: string): ParsedPermissionRequest | 
       parsed.input && typeof parsed.input === 'object' && !Array.isArray(parsed.input)
         ? (parsed.input as Record<string, unknown>)
         : {},
+    permissionSuggestions: Array.isArray(parsed.permission_suggestions)
+      ? (parsed.permission_suggestions as PermissionSuggestion[])
+      : [],
   };
 }
 
