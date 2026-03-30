@@ -4,6 +4,10 @@ import { CodeMirrorDiffView } from './CodeMirrorDiffView';
 import { DiffErrorBoundary } from './DiffErrorBoundary';
 import { FileSectionPlaceholder } from './FileSectionPlaceholder';
 import { ReviewDiffContent } from './ReviewDiffContent';
+import {
+  shouldRenderCodeMirrorReviewDiff,
+  shouldRenderSnippetReviewPreview,
+} from './reviewDiffSafety';
 
 import type { EditorView } from '@codemirror/view';
 import type { FileChangeWithContent } from '@shared/types';
@@ -47,6 +51,7 @@ export const FileSectionDiff = ({
 }: FileSectionDiffProps): React.ReactElement => {
   const localEditorViewRef = useRef<EditorView | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const canRenderSnippetPreview = shouldRenderSnippetReviewPreview(file.snippets);
 
   // Notify parent whenever CodeMirrorDiffView creates or destroys its EditorView.
   // This fires on every editor lifecycle event: initial mount, key-change remount,
@@ -87,7 +92,11 @@ export const FileSectionDiff = ({
 
     return (
       <div className="overflow-auto">
-        <ReviewDiffContent file={file} />
+        {canRenderSnippetPreview ? (
+          <ReviewDiffContent file={file} />
+        ) : (
+          <OversizedDiffNotice message="Diff preview skipped because the change is too large to render safely." />
+        )}
         <div ref={sentinelRef} className="h-1 shrink-0" />
       </div>
     );
@@ -115,17 +124,28 @@ export const FileSectionDiff = ({
   //   pretend it's empty — fall back to snippet-level diff.
   const canRenderCodeMirror =
     resolvedModified !== null && (file.isNewFile || resolvedOriginal !== null);
+  const originalForDiff = file.isNewFile ? '' : (resolvedOriginal ?? '');
+  const canRenderCodeMirrorSafely =
+    canRenderCodeMirror &&
+    shouldRenderCodeMirrorReviewDiff(originalForDiff, resolvedModified ?? '');
 
-  if (!canRenderCodeMirror) {
+  if (!canRenderCodeMirrorSafely) {
     return (
       <div className="overflow-auto">
-        <ReviewDiffContent file={file} />
+        <OversizedDiffNotice
+          message={
+            canRenderCodeMirror && !canRenderSnippetPreview
+              ? 'Full diff skipped because it is large enough to risk a renderer out-of-memory crash.'
+              : canRenderCodeMirror
+                ? 'Large diff opened in safe preview mode to avoid a renderer out-of-memory crash.'
+                : 'Diff preview skipped because the available change data is too large to render safely.'
+          }
+        />
+        {canRenderSnippetPreview ? <ReviewDiffContent file={file} /> : null}
         <div ref={sentinelRef} className="h-1 shrink-0" />
       </div>
     );
   }
-
-  const originalForDiff = file.isNewFile ? '' : (resolvedOriginal ?? '');
 
   return (
     <div className="overflow-auto">
@@ -167,6 +187,14 @@ export const FileSectionDiff = ({
         />
       </DiffErrorBoundary>
       <div ref={sentinelRef} className="h-1 shrink-0" />
+    </div>
+  );
+};
+
+const OversizedDiffNotice = ({ message }: { message: string }): React.ReactElement => {
+  return (
+    <div className="border-b border-border bg-amber-500/10 px-4 py-3 text-xs text-amber-300">
+      {message}
     </div>
   );
 };

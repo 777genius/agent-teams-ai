@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
@@ -24,6 +24,10 @@ import { ActivityTimeline } from '../activity/ActivityTimeline';
 import { getThoughtGroupKey, groupTimelineItems } from '../activity/LeadThoughtsGroup';
 import { MessageExpandDialog } from '../activity/MessageExpandDialog';
 import { CollapsibleTeamSection } from '../CollapsibleTeamSection';
+import {
+  getTeamMessagesSidebarUiState,
+  setTeamMessagesSidebarUiState,
+} from '../sidebar/teamSidebarUiState';
 
 import { MessageComposer } from './MessageComposer';
 import { MessagesFilterPopover } from './MessagesFilterPopover';
@@ -110,20 +114,72 @@ export const MessagesPanel = memo(function MessagesPanel({
   const openTeamTab = useStore((s) => s.openTeamTab);
 
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
   const handleExpandContent = useCallback(() => {
     // no-op: user is reading expanded content, not composing
   }, []);
 
-  const [messagesSearchQuery, setMessagesSearchQuery] = useState('');
-  const [messagesFilter, setMessagesFilter] = useState<MessagesFilterState>({
-    from: new Set(),
-    to: new Set(),
-    showNoise: false,
-  });
-  const [messagesFilterOpen, setMessagesFilterOpen] = useState(false);
-  const [messagesCollapsed, setMessagesCollapsed] = useState(true);
-  const [sidebarSearchVisible, setSidebarSearchVisible] = useState(false);
-  const [expandedItemKey, setExpandedItemKey] = useState<string | null>(null);
+  const initialSidebarStateRef = useRef(getTeamMessagesSidebarUiState(teamName));
+  const [messagesSearchQuery, setMessagesSearchQuery] = useState(
+    initialSidebarStateRef.current.messagesSearchQuery
+  );
+  const [messagesFilter, setMessagesFilter] = useState<MessagesFilterState>(
+    initialSidebarStateRef.current.messagesFilter
+  );
+  const [messagesFilterOpen, setMessagesFilterOpen] = useState(
+    initialSidebarStateRef.current.messagesFilterOpen
+  );
+  const [messagesCollapsed, setMessagesCollapsed] = useState(
+    initialSidebarStateRef.current.messagesCollapsed
+  );
+  const [sidebarSearchVisible, setSidebarSearchVisible] = useState(
+    initialSidebarStateRef.current.sidebarSearchVisible
+  );
+  const [expandedItemKey, setExpandedItemKey] = useState<string | null>(
+    initialSidebarStateRef.current.expandedItemKey
+  );
+  const [sidebarScrollTop, setSidebarScrollTop] = useState(
+    initialSidebarStateRef.current.sidebarScrollTop
+  );
+
+  useEffect(() => {
+    initialSidebarStateRef.current = getTeamMessagesSidebarUiState(teamName);
+    setMessagesSearchQuery(initialSidebarStateRef.current.messagesSearchQuery);
+    setMessagesFilter(initialSidebarStateRef.current.messagesFilter);
+    setMessagesFilterOpen(initialSidebarStateRef.current.messagesFilterOpen);
+    setMessagesCollapsed(initialSidebarStateRef.current.messagesCollapsed);
+    setSidebarSearchVisible(initialSidebarStateRef.current.sidebarSearchVisible);
+    setExpandedItemKey(initialSidebarStateRef.current.expandedItemKey);
+    setSidebarScrollTop(initialSidebarStateRef.current.sidebarScrollTop);
+  }, [teamName]);
+
+  useEffect(() => {
+    setTeamMessagesSidebarUiState(teamName, {
+      messagesSearchQuery,
+      messagesFilter,
+      messagesFilterOpen,
+      messagesCollapsed,
+      sidebarSearchVisible,
+      expandedItemKey,
+      sidebarScrollTop,
+    });
+  }, [
+    teamName,
+    messagesSearchQuery,
+    messagesFilter,
+    messagesFilterOpen,
+    messagesCollapsed,
+    sidebarSearchVisible,
+    expandedItemKey,
+    sidebarScrollTop,
+  ]);
+
+  useLayoutEffect(() => {
+    if (position !== 'sidebar') return;
+    const el = sidebarScrollRef.current;
+    if (!el) return;
+    el.scrollTop = sidebarScrollTop;
+  }, [position, sidebarScrollTop]);
 
   const filteredMessages = useMemo(() => {
     return filterTeamMessages(messages, {
@@ -479,7 +535,11 @@ export const MessagesPanel = memo(function MessagesPanel({
           </div>
         )}
         {/* Scrollable content */}
-        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-14 pr-3 pt-2">
+        <div
+          ref={sidebarScrollRef}
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-14 pr-3 pt-2"
+          onScroll={(e) => setSidebarScrollTop(e.currentTarget.scrollTop)}
+        >
           <div className="pl-3">
             <MessageComposer
               teamName={teamName}

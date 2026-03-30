@@ -73,6 +73,8 @@ const TYPE_LABELS: Record<string, string> = {
   shutdown_response: 'Shutdown response',
   message: 'Message',
   broadcast: 'Broadcast',
+  permission_request: 'Permission request',
+  permission_response: 'Permission response',
 };
 
 export function parseStructuredAgentMessage(content: string): StructuredAgentMessage | null {

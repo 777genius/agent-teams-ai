@@ -17,6 +17,7 @@
 
 import { getAppIconPath } from '@main/utils/appIcon';
 import { getHomeDir } from '@main/utils/pathDecoder';
+import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { createLogger } from '@shared/utils/logger';
@@ -481,7 +482,7 @@ export class NotificationManager extends EventEmitter {
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       this.mainWindow.show();
       this.mainWindow.focus();
-      this.mainWindow.webContents.send('notification:clicked', stored);
+      safeSendToRenderer(this.mainWindow, 'notification:clicked', stored);
     }
     this.emit('notification-clicked', stored);
   }
@@ -556,9 +557,7 @@ export class NotificationManager extends EventEmitter {
    * Emits a notification:new event to the renderer.
    */
   private emitNewNotification(notification: StoredNotification): void {
-    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.webContents.send('notification:new', notification);
-    }
+    safeSendToRenderer(this.mainWindow, 'notification:new', notification);
 
     this.emit('notification-new', notification);
   }
@@ -567,12 +566,10 @@ export class NotificationManager extends EventEmitter {
    * Emits a notification:updated event to the renderer.
    */
   private emitNotificationUpdated(): void {
-    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.webContents.send('notification:updated', {
-        total: this.notifications.length,
-        unreadCount: this.getUnreadCountSync(),
-      });
-    }
+    safeSendToRenderer(this.mainWindow, 'notification:updated', {
+      total: this.notifications.length,
+      unreadCount: this.getUnreadCountSync(),
+    });
 
     this.emit('notification-updated', {
       total: this.notifications.length,

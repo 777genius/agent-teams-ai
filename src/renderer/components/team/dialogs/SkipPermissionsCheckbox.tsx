@@ -2,7 +2,7 @@ import React from 'react';
 
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
-import { AlertTriangle, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 interface SkipPermissionsCheckboxProps {
   id: string;
@@ -33,13 +33,13 @@ export const SkipPermissionsCheckbox: React.FC<SkipPermissionsCheckboxProps> = (
       <div
         className="mt-1.5 rounded-md border px-3 py-2 text-xs"
         style={{
-          backgroundColor: 'var(--warning-bg)',
-          borderColor: 'var(--warning-border)',
-          color: 'var(--warning-text)',
+          backgroundColor: 'rgba(59, 130, 246, 0.08)',
+          borderColor: 'rgba(59, 130, 246, 0.2)',
+          color: 'var(--color-text-secondary)',
         }}
       >
         <div className="flex items-start gap-2">
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          <Info className="mt-0.5 size-3.5 shrink-0 text-blue-400" />
           <p>
             Unleash Claude&apos;s full power — no interruptions asking for permission. Autonomous
             mode — all tools execute without confirmation. Be cautious with untrusted code.

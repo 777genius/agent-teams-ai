@@ -3,7 +3,7 @@ import http from 'http';
 import os from 'os';
 import path from 'path';
 
-import { registerTools } from '../src/tools';
+import { AGENT_TEAMS_REGISTERED_TOOL_NAMES, registerTools } from '../src/tools';
 
 type RegisteredTool = {
   name: string;
@@ -30,45 +30,6 @@ function parseJsonToolResult(result: unknown) {
 
 describe('agent-teams-mcp tools', () => {
   const tools = collectTools();
-  const expectedToolNames = [
-    'cross_team_get_outbox',
-    'cross_team_list_targets',
-    'cross_team_send',
-    'kanban_add_reviewer',
-    'kanban_clear',
-    'kanban_get',
-    'kanban_list_reviewers',
-    'kanban_remove_reviewer',
-    'kanban_set_column',
-    'member_briefing',
-    'message_send',
-    'process_list',
-    'process_register',
-    'process_stop',
-    'process_unregister',
-    'review_approve',
-    'review_request',
-    'review_request_changes',
-    'review_start',
-    'task_add_comment',
-    'task_attach_comment_file',
-    'task_attach_file',
-    'task_briefing',
-    'task_complete',
-    'task_create',
-    'task_create_from_message',
-    'task_get',
-    'task_get_comment',
-    'task_link',
-    'task_list',
-    'task_set_clarification',
-    'task_set_owner',
-    'task_set_status',
-    'task_start',
-    'task_unlink',
-    'team_launch',
-    'team_stop',
-  ] as const;
 
   function getTool(name: string) {
     const tool = tools.get(name);
@@ -147,7 +108,7 @@ describe('agent-teams-mcp tools', () => {
   }
 
   it('registers the full expected MCP tool surface', () => {
-    expect([...tools.keys()].sort()).toEqual([...expectedToolNames]);
+    expect([...tools.keys()].sort()).toEqual([...AGENT_TEAMS_REGISTERED_TOOL_NAMES].sort());
   });
 
   it('accepts explicit conversation threading fields for cross_team_send', () => {

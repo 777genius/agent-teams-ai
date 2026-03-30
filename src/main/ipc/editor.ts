@@ -7,6 +7,7 @@
 
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { isPathWithinRoot } from '@main/utils/pathValidation';
+import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import {
   EDITOR_CHANGE,
   EDITOR_CLOSE,
@@ -367,9 +368,7 @@ async function handleEditorWatchDir(
         }
 
         // Forward event to renderer
-        if (mainWindowRef && !mainWindowRef.isDestroyed()) {
-          mainWindowRef.webContents.send(EDITOR_CHANGE, event);
-        }
+        safeSendToRenderer(mainWindowRef, EDITOR_CHANGE, event);
       });
     } else {
       editorFileWatcher.stop();

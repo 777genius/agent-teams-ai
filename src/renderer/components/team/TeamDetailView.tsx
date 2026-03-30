@@ -42,6 +42,7 @@ import {
   FolderOpen,
   GitBranch,
   History,
+  Network,
   Pencil,
   Play,
   Plus,
@@ -71,10 +72,18 @@ import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 const ProjectEditorOverlay = lazy(() =>
   import('./editor/ProjectEditorOverlay').then((m) => ({ default: m.ProjectEditorOverlay }))
 );
+const TeamGraphOverlay = lazy(() =>
+  import('@renderer/features/agent-graph/ui/TeamGraphOverlay').then((m) => ({
+    default: m.TeamGraphOverlay,
+  }))
+);
 import { MemberList } from './members/MemberList';
 import { MessagesPanel } from './messages/MessagesPanel';
 import { ChangeReviewDialog } from './review/ChangeReviewDialog';
 import { ScheduleSection } from './schedule/ScheduleSection';
+import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
+import { TeamSidebarPortalSource } from './sidebar/TeamSidebarPortalSource';
+import { TeamSidebarRail } from './sidebar/TeamSidebarRail';
 import { ClaudeLogsSection } from './ClaudeLogsSection';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 import { ProcessesSection } from './ProcessesSection';
@@ -96,6 +105,7 @@ import type { EditorSelectionAction } from '@shared/types/editor';
 
 interface TeamDetailViewProps {
   teamName: string;
+  isPaneFocused?: boolean;
 }
 
 interface CreateTaskDialogState {
@@ -172,7 +182,10 @@ function filterKanbanTasks(tasks: TeamTaskWithKanban[], query: string): TeamTask
   );
 }
 
-export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Element => {
+export const TeamDetailView = ({
+  teamName,
+  isPaneFocused = false,
+}: TeamDetailViewProps): React.JSX.Element => {
   const { isLight } = useTheme();
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<TeamTaskWithKanban | null>(null);
@@ -192,20 +205,172 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [graphOpen, setGraphOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const provisioningBannerRef = useRef<HTMLDivElement>(null);
   const wasProvisioningRef = useRef(false);
 
-  // Set inert on background content when editor overlay is open (a11y focus trap)
+  // Set inert on background content when editor/graph overlay is open (a11y focus trap)
   useEffect(() => {
     const el = contentRef.current;
     if (!el) return;
-    if (editorOpen) {
+    if (editorOpen || graphOpen) {
       el.setAttribute('inert', '');
     } else {
       el.removeAttribute('inert');
     }
-  }, [editorOpen]);
+  }, [editorOpen, graphOpen]);
+
+  // Listen for Cmd+Shift+G keyboard shortcut — opens graph tab
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.teamName === teamName) {
+        useStore.getState().openTab({
+          type: 'graph',
+          label: `${teamName} Graph`,
+          teamName,
+        });
+      }
+    };
+    window.addEventListener('toggle-team-graph', handler);
+    return () => window.removeEventListener('toggle-team-graph', handler);
+  }, [teamName]);
+
+  // Listen for graph tab actions (open task, send message)
+  useEffect(() => {
+    const onOpenTask = (e: Event) => {
+      const { teamName: tn, taskId } = (e as CustomEvent).detail ?? {};
+      if (tn !== teamName || !data) return;
+      const task = data.tasks.find((t: { id: string }) => t.id === taskId);
+      if (task) setSelectedTask(task);
+    };
+    const onSendMsg = (e: Event) => {
+      const { teamName: tn, memberName } = (e as CustomEvent).detail ?? {};
+      if (tn !== teamName) return;
+      setSendDialogRecipient(memberName);
+      setSendDialogDefaultText(undefined);
+      setSendDialogDefaultChip(undefined);
+      setSendDialogOpen(true);
+    };
+    const onOpenProfile = (e: Event) => {
+      const { teamName: tn, memberName } = (e as CustomEvent).detail ?? {};
+      if (tn !== teamName || !data) return;
+      const member = data.members.find((m: { name: string }) => m.name === memberName);
+      if (member) setSelectedMember(member);
+    };
+    const onCreateTask = (e: Event) => {
+      const { teamName: tn, owner } = (e as CustomEvent).detail ?? {};
+      if (tn !== teamName) return;
+      openCreateTaskDialog('', '', owner ?? '');
+    };
+    window.addEventListener('graph:open-task', onOpenTask);
+    window.addEventListener('graph:send-message', onSendMsg);
+    window.addEventListener('graph:open-profile', onOpenProfile);
+    window.addEventListener('graph:create-task', onCreateTask);
+
+    // Task action events from graph
+    const taskAction = (handler: (taskId: string) => void) => (e: Event) => {
+      const { teamName: tn, taskId } = (e as CustomEvent).detail ?? {};
+      if (tn !== teamName || !taskId) return;
+      handler(taskId);
+    };
+    const onStartTask = taskAction((taskId) => {
+      void (async () => {
+        try {
+          const result = await startTaskByUser(teamName, taskId);
+          if (data?.isAlive) {
+            const task = data.tasks.find((t: { id: string }) => t.id === taskId);
+            try {
+              if (result.notifiedOwner && task?.owner) {
+                await api.teams.processSend(
+                  teamName,
+                  `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has started. Please begin working on it.`
+                );
+              }
+            } catch {
+              /* best-effort */
+            }
+          }
+        } catch {
+          /* error via store */
+        }
+      })();
+    });
+    const onCompleteTask = taskAction((taskId) => {
+      void (async () => {
+        try {
+          await updateTaskStatus(teamName, taskId, 'completed');
+        } catch {
+          /* */
+        }
+      })();
+    });
+    const onApproveTask = taskAction((taskId) => {
+      void (async () => {
+        try {
+          await updateKanban(teamName, taskId, { op: 'set_column', column: 'approved' });
+        } catch {
+          /* */
+        }
+      })();
+    });
+    const onRequestReviewTask = taskAction((taskId) => {
+      void (async () => {
+        try {
+          await requestReview(teamName, taskId);
+        } catch {
+          /* */
+        }
+      })();
+    });
+    const onRequestChangesTask = taskAction((taskId) => {
+      setRequestChangesTaskId(taskId);
+    });
+    const onCancelTask = taskAction((taskId) => {
+      void (async () => {
+        try {
+          await updateTaskStatus(teamName, taskId, 'pending');
+        } catch {
+          /* */
+        }
+      })();
+    });
+    const onMoveBackToDoneTask = taskAction((taskId) => {
+      void (async () => {
+        try {
+          await updateKanban(teamName, taskId, { op: 'remove' });
+          await updateTaskStatus(teamName, taskId, 'completed');
+        } catch {
+          /* */
+        }
+      })();
+    });
+    const onDeleteTaskGraph = taskAction((taskId) => handleDeleteTask(taskId));
+
+    window.addEventListener('graph:start-task', onStartTask);
+    window.addEventListener('graph:complete-task', onCompleteTask);
+    window.addEventListener('graph:approve-task', onApproveTask);
+    window.addEventListener('graph:request-review', onRequestReviewTask);
+    window.addEventListener('graph:request-changes', onRequestChangesTask);
+    window.addEventListener('graph:cancel-task', onCancelTask);
+    window.addEventListener('graph:move-back-to-done', onMoveBackToDoneTask);
+    window.addEventListener('graph:delete-task', onDeleteTaskGraph);
+    return () => {
+      window.removeEventListener('graph:open-task', onOpenTask);
+      window.removeEventListener('graph:send-message', onSendMsg);
+      window.removeEventListener('graph:open-profile', onOpenProfile);
+      window.removeEventListener('graph:create-task', onCreateTask);
+      window.removeEventListener('graph:start-task', onStartTask);
+      window.removeEventListener('graph:complete-task', onCompleteTask);
+      window.removeEventListener('graph:approve-task', onApproveTask);
+      window.removeEventListener('graph:request-review', onRequestReviewTask);
+      window.removeEventListener('graph:request-changes', onRequestChangesTask);
+      window.removeEventListener('graph:cancel-task', onCancelTask);
+      window.removeEventListener('graph:move-back-to-done', onMoveBackToDoneTask);
+      window.removeEventListener('graph:delete-task', onDeleteTaskGraph);
+    };
+  });
 
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -261,7 +426,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     sendTeamMessage,
     requestReview,
     createTeamTask,
-    startTask,
+    startTaskByUser,
     deleteTeam,
     openTeamsTab,
     closeTab,
@@ -310,7 +475,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
       sendTeamMessage: s.sendTeamMessage,
       requestReview: s.requestReview,
       createTeamTask: s.createTeamTask,
-      startTask: s.startTask,
+      startTaskByUser: s.startTaskByUser,
       deleteTeam: s.deleteTeam,
       openTeamsTab: s.openTeamsTab,
       closeTab: s.closeTab,
@@ -612,6 +777,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
     () => (teamProjectPath ? [teamProjectPath] : []),
     [teamProjectPath]
   );
+  // Live branch sync now uses main-side background tracking instead of renderer polling.
   useBranchSync(branchSyncPaths, { live: true });
   const leadBranch = useStore((s) =>
     teamProjectPath ? (s.branchByPath[normalizePath(teamProjectPath)] ?? null) : null
@@ -1038,6 +1204,27 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
   const headerColorSet = data.config.color
     ? getTeamColorSet(data.config.color)
     : nameColorSet(data.config.name);
+  const sharedMessagesPanelProps = {
+    teamName,
+    onTogglePosition: toggleMessagesPanelMode,
+    members: activeMembers,
+    tasks: data.tasks,
+    messages: data.messages,
+    isTeamAlive: data.isAlive,
+    leadActivity: leadActivityByTeam[teamName],
+    leadContextUpdatedAt,
+    timeWindow,
+    teamSessionIds,
+    currentLeadSessionId: data.config.leadSessionId,
+    pendingRepliesByMember,
+    onPendingReplyChange: setPendingRepliesByMember,
+    onMemberClick: setSelectedMember,
+    onTaskClick: setSelectedTask,
+    onCreateTaskFromMessage: handleCreateTaskFromMessage,
+    onReplyToMessage: handleReplyToMessage,
+    onRestartTeam: handleRestartTeam,
+    onTaskIdClick: handleTaskIdClick,
+  };
 
   return (
     <>
@@ -1092,48 +1279,25 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
         )}
 
         {/* Messages sidebar (left, after context panel) */}
-        {messagesPanelMode === 'sidebar' && (
-          <div
-            className="relative shrink-0 overflow-hidden border-r border-[var(--color-border)]"
-            style={{ width: messagesPanelWidth }}
+        <TeamSidebarHost
+          teamName={teamName}
+          surface="team"
+          isActive={isThisTabActive}
+          isFocused={isPaneFocused}
+        >
+          <TeamSidebarPortalSource
+            teamName={teamName}
+            isActive={isThisTabActive}
+            isFocused={isPaneFocused}
           >
-            <div className="flex size-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface)]">
-              <div className="shrink-0 overflow-hidden px-3">
-                <ClaudeLogsSection teamName={teamName} position="sidebar" />
-              </div>
-              <div className="bg-[var(--color-text-muted)]/35 mx-3 h-px shrink-0" />
-              <div className="min-h-0 flex-1">
-                <MessagesPanel
-                  teamName={teamName}
-                  position="sidebar"
-                  onTogglePosition={toggleMessagesPanelMode}
-                  members={activeMembers}
-                  tasks={data.tasks}
-                  messages={data.messages}
-                  isTeamAlive={data.isAlive}
-                  leadActivity={leadActivityByTeam[teamName]}
-                  leadContextUpdatedAt={leadContextUpdatedAt}
-                  timeWindow={timeWindow}
-                  teamSessionIds={teamSessionIds}
-                  currentLeadSessionId={data?.config.leadSessionId}
-                  pendingRepliesByMember={pendingRepliesByMember}
-                  onPendingReplyChange={setPendingRepliesByMember}
-                  onMemberClick={setSelectedMember}
-                  onTaskClick={setSelectedTask}
-                  onCreateTaskFromMessage={handleCreateTaskFromMessage}
-                  onReplyToMessage={handleReplyToMessage}
-                  onRestartTeam={handleRestartTeam}
-                  onTaskIdClick={handleTaskIdClick}
-                />
-              </div>
-            </div>
-            {/* Resize handle */}
-            <div
-              className={`absolute inset-y-0 right-0 z-20 w-1 cursor-col-resize transition-colors hover:bg-blue-500/30 ${isMessagesPanelResizing ? 'bg-blue-500/40' : ''}`}
-              onMouseDown={messagesPanelHandleProps.onMouseDown}
+            <TeamSidebarRail
+              teamName={teamName}
+              messagesPanelProps={sharedMessagesPanelProps}
+              isResizing={isMessagesPanelResizing}
+              onResizeMouseDown={messagesPanelHandleProps.onMouseDown}
             />
-          </div>
-        )}
+          </TeamSidebarPortalSource>
+        </TeamSidebarHost>
 
         <div
           ref={contentRef}
@@ -1406,18 +1570,41 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             badge={activeTeammateCount === 0 ? 'Solo' : activeTeammateCount}
             defaultOpen
             action={
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAddMemberDialogOpen(true);
-                }}
-              >
-                <UserPlus size={12} />
-                Member
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    useStore.getState().openTab({
+                      type: 'graph',
+                      label: `${data.config.name} Graph`,
+                      teamName,
+                    });
+                  }}
+                >
+                  <span className="relative">
+                    <Network size={12} />
+                    <span className="absolute -right-3.5 -top-2.5 rounded-sm bg-emerald-500/20 px-0.5 py-px text-[7px] font-bold leading-none text-emerald-400">
+                      NEW
+                    </span>
+                  </span>
+                  Graph
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAddMemberDialogOpen(true);
+                  }}
+                >
+                  <UserPlus size={12} />
+                  Member
+                </Button>
+              </div>
             }
           >
             <MemberList
@@ -1537,7 +1724,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
               onStartTask={(taskId) => {
                 void (async () => {
                   try {
-                    const result = await startTask(teamName, taskId);
+                    const result = await startTaskByUser(teamName, taskId);
                     if (data?.isAlive) {
                       const task = data.tasks.find((t) => t.id === taskId);
                       try {
@@ -1678,28 +1865,7 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
           {messagesPanelMode !== 'sidebar' && <ClaudeLogsSection teamName={teamName} />}
 
           {messagesPanelMode === 'inline' && (
-            <MessagesPanel
-              teamName={teamName}
-              position="inline"
-              onTogglePosition={toggleMessagesPanelMode}
-              members={activeMembers}
-              tasks={data.tasks}
-              messages={data.messages}
-              isTeamAlive={data.isAlive}
-              leadActivity={leadActivityByTeam[teamName]}
-              leadContextUpdatedAt={leadContextUpdatedAt}
-              timeWindow={timeWindow}
-              teamSessionIds={teamSessionIds}
-              currentLeadSessionId={data?.config.leadSessionId}
-              pendingRepliesByMember={pendingRepliesByMember}
-              onPendingReplyChange={setPendingRepliesByMember}
-              onMemberClick={setSelectedMember}
-              onTaskClick={setSelectedTask}
-              onCreateTaskFromMessage={handleCreateTaskFromMessage}
-              onReplyToMessage={handleReplyToMessage}
-              onRestartTeam={handleRestartTeam}
-              onTaskIdClick={handleTaskIdClick}
-            />
+            <MessagesPanel position="inline" {...sharedMessagesPanelProps} />
           )}
 
           <ReviewDialog
@@ -2040,6 +2206,37 @@ export const TeamDetailView = ({ teamName }: TeamDetailViewProps): React.JSX.Ele
             projectPath={data.config.projectPath}
             onClose={() => setEditorOpen(false)}
             onEditorAction={handleEditorAction}
+          />
+        </Suspense>
+      )}
+
+      {graphOpen && (
+        <Suspense fallback={null}>
+          <TeamGraphOverlay
+            teamName={teamName}
+            onClose={() => setGraphOpen(false)}
+            onPinAsTab={() => {
+              setGraphOpen(false);
+              useStore
+                .getState()
+                .openTab({ type: 'graph', label: `${data.config.name} Graph`, teamName });
+            }}
+            onSendMessage={(memberName) => {
+              setSendDialogRecipient(memberName);
+              setSendDialogDefaultText(undefined);
+              setSendDialogDefaultChip(undefined);
+              setSendDialogOpen(true);
+            }}
+            onOpenTaskDetail={(taskId) => {
+              const task = data.tasks.find((t) => t.id === taskId);
+              if (task) setSelectedTask(task);
+            }}
+            onOpenMemberProfile={(memberName) => {
+              setSendDialogRecipient(memberName);
+              setSendDialogDefaultText(undefined);
+              setSendDialogDefaultChip(undefined);
+              setSendDialogOpen(true);
+            }}
           />
         </Suspense>
       )}

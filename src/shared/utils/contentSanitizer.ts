@@ -21,18 +21,29 @@ const NOISE_TAG_PATTERNS = [
   /<system-reminder>[\s\S]*?<\/system-reminder>/gi,
 ];
 
+export interface CommandOutputInfo {
+  stream: 'stdout' | 'stderr';
+  output: string;
+}
+
 /**
  * Extract content from <local-command-stdout> tags.
  * Returns the command output without the wrapper tags.
  */
-function extractCommandOutput(content: string): string | null {
+export function extractCommandOutputInfo(content: string): CommandOutputInfo | null {
   const match = /<local-command-stdout>([\s\S]*?)<\/local-command-stdout>/i.exec(content);
   const matchStderr = /<local-command-stderr>([\s\S]*?)<\/local-command-stderr>/i.exec(content);
   if (match) {
-    return match[1].trim();
+    return {
+      stream: 'stdout',
+      output: match[1].trim(),
+    };
   }
   if (matchStderr) {
-    return matchStderr[1].trim();
+    return {
+      stream: 'stderr',
+      output: matchStderr[1].trim(),
+    };
   }
   return null;
 }
@@ -84,9 +95,9 @@ export function isCommandOutputContent(content: string): boolean {
 export function sanitizeDisplayContent(content: string): string {
   // If it's a command output message, extract the output content
   if (isCommandOutputContent(content)) {
-    const commandOutput = extractCommandOutput(content);
+    const commandOutput = extractCommandOutputInfo(content);
     if (commandOutput) {
-      return commandOutput;
+      return commandOutput.output;
     }
   }
 

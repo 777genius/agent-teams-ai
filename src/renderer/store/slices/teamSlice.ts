@@ -3,7 +3,7 @@ import { normalizePath } from '@renderer/utils/pathNormalize';
 import {
   buildTaskChangePresenceKey,
   buildTaskChangeRequestOptions,
-  isTaskSummaryCacheableForOptions,
+  canDisplayTaskChangesForOptions,
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
 import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
@@ -57,6 +57,43 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   });
 }
 
+async function refreshTaskChangePresenceForUpdatedTask(
+  getState: () => AppState,
+  teamName: string,
+  taskId: string
+): Promise<void> {
+  const state = getState();
+  if (state.selectedTeamName !== teamName || !state.selectedTeamData) {
+    return;
+  }
+
+  const task = state.selectedTeamData.tasks.find((candidate) => candidate.id === taskId);
+  if (!task) {
+    return;
+  }
+
+  const options = buildTaskChangeRequestOptions(task);
+  if (!canDisplayTaskChangesForOptions(options)) {
+    return;
+  }
+
+  if (
+    typeof state.invalidateTaskChangePresence !== 'function' ||
+    typeof state.checkTaskHasChanges !== 'function'
+  ) {
+    return;
+  }
+
+  const cacheKey = buildTaskChangePresenceKey(teamName, taskId, options);
+  state.invalidateTaskChangePresence([cacheKey]);
+
+  try {
+    await state.checkTaskHasChanges(teamName, taskId, options);
+  } catch {
+    // Best-effort refresh after explicit task transition.
+  }
+}
+
 async function pollProvisioningStatus(
   getState: () => TeamSlice,
   runId: string,
@@ -92,6 +129,7 @@ import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import type { AppState } from '../types';
 import type { AppConfig } from '@renderer/types/data';
 import type {
+  ActiveToolCall,
   AddMemberRequest,
   AddTaskCommentRequest,
   CreateTaskRequest,
@@ -104,6 +142,7 @@ import type {
   MemberSpawnStatusEntry,
   SendMessageRequest,
   SendMessageResult,
+  TaskChangePresenceState,
   TaskComment,
   TeamCreateRequest,
   TeamData,
@@ -445,17 +484,54 @@ function collectTaskChangeInvalidationState(
   };
 }
 
-function buildTaskChangeWarmRequests(
+function preserveKnownTaskChangePresence(
   teamName: string,
-  tasks: TeamData['tasks']
-): { teamName: string; taskId: string; options: TaskChangeRequestOptions }[] {
-  return tasks.flatMap((task) => {
-    const options = buildTaskChangeRequestOptions(task);
-    if (!isTaskSummaryCacheableForOptions(options)) {
-      return [];
+  prevTasks: TeamData['tasks'] | null | undefined,
+  nextTasks: TeamData['tasks']
+): TeamData['tasks'] {
+  if (!Array.isArray(prevTasks) || prevTasks.length === 0 || nextTasks.length === 0) {
+    return nextTasks;
+  }
+
+  const prevTaskById = new Map(prevTasks.map((task) => [task.id, task]));
+  let changed = false;
+
+  const mergedTasks = nextTasks.map((task) => {
+    if (task.changePresence && task.changePresence !== 'unknown') {
+      return task;
     }
-    return [{ teamName, taskId: task.id, options }];
+
+    const previousTask = prevTaskById.get(task.id);
+    if (
+      !previousTask ||
+      !previousTask.changePresence ||
+      previousTask.changePresence === 'unknown'
+    ) {
+      return task;
+    }
+
+    const previousKey = buildTaskChangePresenceKey(
+      teamName,
+      previousTask.id,
+      buildTaskChangeRequestOptions(previousTask)
+    );
+    const nextKey = buildTaskChangePresenceKey(
+      teamName,
+      task.id,
+      buildTaskChangeRequestOptions(task)
+    );
+    if (previousKey !== nextKey) {
+      return task;
+    }
+
+    changed = true;
+    return {
+      ...task,
+      changePresence: previousTask.changePresence,
+    };
   });
+
+  return changed ? mergedTasks : nextTasks;
 }
 
 function mapSendMessageError(error: unknown): string {
@@ -534,6 +610,8 @@ export interface TeamSlice {
   currentRuntimeRunIdByTeam: Record<string, string | null>;
   /** Runs explicitly cleared after Unknown runId polling; late events/progress for them are ignored. */
   ignoredProvisioningRunIds: Record<string, string>;
+  /** Runtime runs explicitly tombstoned after stop/offline so late events cannot resurrect UI state. */
+  ignoredRuntimeRunIds: Record<string, string>;
   /**
    * Per-team lower bound for provisioning progress timestamps.
    * Used to ignore late progress events from a previous run after stop→launch.
@@ -541,6 +619,9 @@ export interface TeamSlice {
   provisioningStartedAtFloorByTeam: Record<string, string>;
   leadActivityByTeam: Record<string, LeadActivityState>;
   leadContextByTeam: Record<string, LeadContextUsage>;
+  activeToolsByTeam: Record<string, Record<string, Record<string, ActiveToolCall>>>;
+  finishedVisibleByTeam: Record<string, Record<string, Record<string, ActiveToolCall>>>;
+  toolHistoryByTeam: Record<string, Record<string, ActiveToolCall[]>>;
   /** Per-team per-member spawn statuses during team provisioning/launch. */
   memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
   fetchMemberSpawnStatuses: (teamName: string) => Promise<void>;
@@ -556,6 +637,12 @@ export interface TeamSlice {
   openTeamsTab: () => void;
   openTeamTab: (teamName: string, projectPath?: string, taskId?: string) => void;
   clearKanbanFilter: () => void;
+  setSelectedTeamTaskChangePresence: (
+    teamName: string,
+    taskId: string,
+    presence: TaskChangePresenceState
+  ) => void;
+  refreshSelectedTeamChangePresence: (teamName: string) => Promise<void>;
   selectTeam: (
     teamName: string,
     opts?: { skipProjectAutoSelect?: boolean; allowReloadWhileProvisioning?: boolean }
@@ -583,6 +670,7 @@ export interface TeamSlice {
   ) => Promise<void>;
   createTeamTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;
   startTask: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
+  startTaskByUser: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
   updateTaskOwner: (teamName: string, taskId: string, owner: string | null) => Promise<void>;
   updateTaskFields: (
@@ -655,8 +743,13 @@ export interface TeamSlice {
   subscribeProvisioningProgress: () => void;
   unsubscribeProvisioningProgress: () => void;
   pendingApprovals: ToolApprovalRequest[];
+  /** Resolved permission approvals: request_id → allowed (true/false). Used for noise row icons. */
+  resolvedApprovals: Map<string, boolean>;
   toolApprovalSettings: ToolApprovalSettings;
-  updateToolApprovalSettings: (patch: Partial<ToolApprovalSettings>) => Promise<void>;
+  updateToolApprovalSettings: (
+    patch: Partial<ToolApprovalSettings>,
+    forTeam?: string
+  ) => Promise<void>;
   respondToToolApproval: (
     teamName: string,
     runId: string,
@@ -727,10 +820,11 @@ function extractBaseModel(raw?: string): string | undefined {
   return raw.replace(/\[1m\]$/, '') || undefined;
 }
 
-function loadToolApprovalSettings(): ToolApprovalSettings {
+const TOOL_APPROVAL_PREFIX = 'team:toolApprovalSettings:';
+
+function parseToolApprovalSettings(raw: string | null): ToolApprovalSettings {
+  if (!raw) return DEFAULT_TOOL_APPROVAL_SETTINGS;
   try {
-    const raw = localStorage.getItem('team:toolApprovalSettings');
-    if (!raw) return DEFAULT_TOOL_APPROVAL_SETTINGS;
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const d = DEFAULT_TOOL_APPROVAL_SETTINGS;
     return {
@@ -761,6 +855,23 @@ function loadToolApprovalSettings(): ToolApprovalSettings {
   }
 }
 
+function loadToolApprovalSettingsForTeam(teamName: string): ToolApprovalSettings {
+  return parseToolApprovalSettings(localStorage.getItem(TOOL_APPROVAL_PREFIX + teamName));
+}
+
+function saveToolApprovalSettingsForTeam(teamName: string, settings: ToolApprovalSettings): void {
+  try {
+    localStorage.setItem(TOOL_APPROVAL_PREFIX + teamName, JSON.stringify(settings));
+  } catch {
+    // best-effort
+  }
+}
+
+/** Load global settings (legacy fallback for first load / no team selected). */
+function loadToolApprovalSettings(): ToolApprovalSettings {
+  return parseToolApprovalSettings(localStorage.getItem('team:toolApprovalSettings'));
+}
+
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
   teams: [],
   teamByName: {},
@@ -788,9 +899,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   currentProvisioningRunIdByTeam: {},
   currentRuntimeRunIdByTeam: {},
   ignoredProvisioningRunIds: {},
+  ignoredRuntimeRunIds: {},
   provisioningStartedAtFloorByTeam: {},
   leadActivityByTeam: {},
   leadContextByTeam: {},
+  activeToolsByTeam: {},
+  finishedVisibleByTeam: {},
+  toolHistoryByTeam: {},
   memberSpawnStatusesByTeam: {},
   provisioningErrorByTeam: {},
   clearProvisioningError: (teamName?: string) =>
@@ -813,6 +928,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     try {
       const snapshot = await api.teams.getMemberSpawnStatuses(teamName);
       set((prev) => {
+        if (snapshot.runId != null && prev.ignoredRuntimeRunIds[snapshot.runId] === teamName) {
+          return {};
+        }
+
         if (
           prev.currentRuntimeRunIdByTeam[teamName] == null &&
           prev.leadActivityByTeam[teamName] === 'offline' &&
@@ -837,6 +956,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
                   ...prev.currentRuntimeRunIdByTeam,
                   [teamName]: prev.currentRuntimeRunIdByTeam[teamName] ?? snapshot.runId,
                 },
+          ignoredRuntimeRunIds:
+            snapshot.runId == null
+              ? prev.ignoredRuntimeRunIds
+              : Object.fromEntries(
+                  Object.entries(prev.ignoredRuntimeRunIds).filter(
+                    ([, ignoredTeamName]) => ignoredTeamName !== teamName
+                  )
+                ),
           memberSpawnStatusesByTeam: {
             ...prev.memberSpawnStatusesByTeam,
             [teamName]: snapshot.statuses,
@@ -864,6 +991,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   deletedTasks: [],
   deletedTasksLoading: false,
   pendingApprovals: [],
+  resolvedApprovals: new Map(),
   toolApprovalSettings: loadToolApprovalSettings(),
 
   // Messages panel UI state
@@ -873,17 +1001,31 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   setMessagesPanelWidth: (width: number) => set({ messagesPanelWidth: width }),
 
   fetchBranches: async (paths: string[]) => {
-    const results: Record<string, string | null> = {};
-    for (const p of paths) {
-      try {
-        const branch = await api.teams.getProjectBranch(p);
-        results[normalizePath(p)] = branch;
-      } catch {
-        results[normalizePath(p)] = null;
-      }
-    }
+    const entries = await Promise.all(
+      paths.map(async (p) => {
+        try {
+          const branch = await api.teams.getProjectBranch(p);
+          return [normalizePath(p), branch] as const;
+        } catch {
+          return [normalizePath(p), null] as const;
+        }
+      })
+    );
+    const results: Record<string, string | null> = Object.fromEntries(entries);
     if (Object.keys(results).length > 0) {
-      set((state) => ({ branchByPath: { ...state.branchByPath, ...results } }));
+      set((state) => {
+        let changed = false;
+        for (const [key, value] of Object.entries(results)) {
+          if (state.branchByPath[key] !== value) {
+            changed = true;
+            break;
+          }
+        }
+        if (!changed) {
+          return {};
+        }
+        return { branchByPath: { ...state.branchByPath, ...results } };
+      });
     }
   },
 
@@ -1098,6 +1240,89 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     set({ kanbanFilterQuery: null });
   },
 
+  setSelectedTeamTaskChangePresence: (teamName, taskId, presence) => {
+    set((state) => {
+      let selectedChanged = false;
+      const nextSelectedTeamData =
+        state.selectedTeamName === teamName && state.selectedTeamData
+          ? {
+              ...state.selectedTeamData,
+              tasks: state.selectedTeamData.tasks.map((task) => {
+                if (task.id !== taskId || task.changePresence === presence) {
+                  return task;
+                }
+                selectedChanged = true;
+                return { ...task, changePresence: presence };
+              }),
+            }
+          : state.selectedTeamData;
+
+      let globalChanged = false;
+      const nextGlobalTasks = state.globalTasks.map((task) => {
+        if (task.teamName !== teamName || task.id !== taskId || task.changePresence === presence) {
+          return task;
+        }
+        globalChanged = true;
+        return { ...task, changePresence: presence };
+      });
+
+      if (!selectedChanged && !globalChanged) {
+        return {};
+      }
+
+      return {
+        ...(selectedChanged ? { selectedTeamData: nextSelectedTeamData } : {}),
+        ...(globalChanged ? { globalTasks: nextGlobalTasks } : {}),
+      };
+    });
+  },
+
+  refreshSelectedTeamChangePresence: async (teamName: string) => {
+    const selected = get().selectedTeamData;
+    if (get().selectedTeamName !== teamName || !selected) {
+      return;
+    }
+
+    try {
+      const presenceByTaskId = await unwrapIpc('team:getTaskChangePresence', () =>
+        api.teams.getTaskChangePresence(teamName)
+      );
+
+      if (get().selectedTeamName !== teamName || !get().selectedTeamData) {
+        return;
+      }
+
+      set((state) => {
+        if (state.selectedTeamName !== teamName || !state.selectedTeamData) {
+          return {};
+        }
+
+        let changed = false;
+        const nextTasks = state.selectedTeamData.tasks.map((task) => {
+          const nextPresence = presenceByTaskId[task.id] ?? 'unknown';
+          if (task.changePresence === nextPresence) {
+            return task;
+          }
+          changed = true;
+          return { ...task, changePresence: nextPresence };
+        });
+
+        if (!changed) {
+          return {};
+        }
+
+        return {
+          selectedTeamData: {
+            ...state.selectedTeamData,
+            tasks: nextTasks,
+          },
+        };
+      });
+    } catch {
+      // best-effort lightweight refresh; keep current UI state on failure
+    }
+  },
+
   selectTeam: async (teamName: string, opts) => {
     const allowReloadWhileProvisioning = opts?.allowReloadWhileProvisioning === true;
     // Guard: prevent duplicate in-flight fetches for the same team.
@@ -1122,6 +1347,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       selectedTeamLoadNonce: requestNonce,
       selectedTeamError: null,
       reviewActionError: null,
+      // Load per-team tool approval settings
+      toolApprovalSettings: loadToolApprovalSettingsForTeam(teamName),
     });
 
     try {
@@ -1156,7 +1383,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
       set({
         selectedTeamName: teamName,
-        selectedTeamData: data,
+        selectedTeamData: previousData
+          ? {
+              ...data,
+              tasks: preserveKnownTaskChangePresence(teamName, previousData.tasks, data.tasks),
+            }
+          : data,
         selectedTeamLoading: false,
         selectedTeamError: null,
       });
@@ -1169,11 +1401,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       if (invalidationState.taskIds.length > 0) {
         await api.review.invalidateTaskChangeSummaries(teamName, invalidationState.taskIds);
       }
-      const warmRequests = buildTaskChangeWarmRequests(teamName, data.tasks);
-      if (warmRequests.length > 0) {
-        void get().warmTaskChangeSummaries(warmRequests);
-      }
-
       // Sync tab label with the team's display name from config
       const displayName = data.config.name || teamName;
       const allTabs = get().getAllPaneTabs();
@@ -1282,7 +1509,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         return;
       }
       set({
-        selectedTeamData: data,
+        selectedTeamData: previousData
+          ? {
+              ...data,
+              tasks: preserveKnownTaskChangePresence(teamName, previousData.tasks, data.tasks),
+            }
+          : data,
         selectedTeamError: null,
       });
       const invalidationState = previousData
@@ -1293,10 +1525,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       if (invalidationState.taskIds.length > 0) {
         await api.review.invalidateTaskChangeSummaries(teamName, invalidationState.taskIds);
-      }
-      const warmRequests = buildTaskChangeWarmRequests(teamName, data.tasks);
-      if (warmRequests.length > 0) {
-        void get().warmTaskChangeSummaries(warmRequests);
       }
     } catch (error) {
       if (get().selectedTeamName !== teamName) {
@@ -1423,6 +1651,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       set({ reviewActionError: null });
       await unwrapIpc('team:requestReview', () => api.teams.requestReview(teamName, taskId));
       await get().refreshTeamData(teamName);
+      void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
     } catch (error) {
       set({
         reviewActionError: mapReviewError(error),
@@ -1440,6 +1669,16 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   startTask: async (teamName: string, taskId: string) => {
     const result = await unwrapIpc('team:startTask', () => api.teams.startTask(teamName, taskId));
     await get().refreshTeamData(teamName);
+    void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
+    return result;
+  },
+
+  startTaskByUser: async (teamName: string, taskId: string) => {
+    const result = await unwrapIpc('team:startTaskByUser', () =>
+      api.teams.startTaskByUser(teamName, taskId)
+    );
+    await get().refreshTeamData(teamName);
+    void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
     return result;
   },
 
@@ -1448,6 +1687,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       api.teams.updateTaskStatus(teamName, taskId, status)
     );
     await get().refreshTeamData(teamName);
+    void refreshTaskChangePresenceForUpdatedTask(get, teamName, taskId);
   },
 
   updateTaskOwner: async (teamName: string, taskId: string, owner: string | null) => {
@@ -1616,19 +1856,44 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       delete nextErrors[request.teamName];
       const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
       delete nextSpawnStatuses[request.teamName];
+      const nextActiveTools = { ...state.activeToolsByTeam };
+      delete nextActiveTools[request.teamName];
+      const nextFinishedVisible = { ...state.finishedVisibleByTeam };
+      delete nextFinishedVisible[request.teamName];
+      const nextToolHistory = { ...state.toolHistoryByTeam };
+      delete nextToolHistory[request.teamName];
       const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
+      const previousRuntimeRunId = nextRuntimeRunIdByTeam[request.teamName];
       delete nextRuntimeRunIdByTeam[request.teamName];
       const nextIgnoredRunIds = Object.fromEntries(
         Object.entries(state.ignoredProvisioningRunIds).filter(
           ([, teamName]) => teamName !== request.teamName
         )
       );
+      const nextIgnoredRuntimeRunIds = previousRuntimeRunId
+        ? {
+            ...Object.fromEntries(
+              Object.entries(state.ignoredRuntimeRunIds).filter(
+                ([, teamName]) => teamName !== request.teamName
+              )
+            ),
+            [previousRuntimeRunId]: request.teamName,
+          }
+        : Object.fromEntries(
+            Object.entries(state.ignoredRuntimeRunIds).filter(
+              ([, teamName]) => teamName !== request.teamName
+            )
+          );
       return {
         provisioningRuns: cleaned,
         provisioningErrorByTeam: nextErrors,
         memberSpawnStatusesByTeam: nextSpawnStatuses,
+        activeToolsByTeam: nextActiveTools,
+        finishedVisibleByTeam: nextFinishedVisible,
+        toolHistoryByTeam: nextToolHistory,
         currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
         ignoredProvisioningRunIds: nextIgnoredRunIds,
+        ignoredRuntimeRunIds: nextIgnoredRuntimeRunIds,
       };
     });
 
@@ -1666,6 +1931,13 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         },
       },
     }));
+    // Initialize per-team tool approval settings based on skipPermissions flag
+    const initialSettings: ToolApprovalSettings =
+      request.skipPermissions === false
+        ? DEFAULT_TOOL_APPROVAL_SETTINGS
+        : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true };
+    saveToolApprovalSettingsForTeam(request.teamName, initialSettings);
+    set({ toolApprovalSettings: initialSettings });
     try {
       if (typeof api.teams.createTeam !== 'function') {
         throw new Error(
@@ -1712,6 +1984,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             ...state.currentRuntimeRunIdByTeam,
             [request.teamName]: response.runId,
           },
+          ignoredRuntimeRunIds: Object.fromEntries(
+            Object.entries(state.ignoredRuntimeRunIds).filter(
+              ([, teamName]) => teamName !== request.teamName
+            )
+          ),
         };
       });
       try {
@@ -1773,19 +2050,44 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       delete nextErrors[request.teamName];
       const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
       delete nextSpawnStatuses[request.teamName];
+      const nextActiveTools = { ...state.activeToolsByTeam };
+      delete nextActiveTools[request.teamName];
+      const nextFinishedVisible = { ...state.finishedVisibleByTeam };
+      delete nextFinishedVisible[request.teamName];
+      const nextToolHistory = { ...state.toolHistoryByTeam };
+      delete nextToolHistory[request.teamName];
       const nextRuntimeRunIdByTeam = { ...state.currentRuntimeRunIdByTeam };
+      const previousRuntimeRunId = nextRuntimeRunIdByTeam[request.teamName];
       delete nextRuntimeRunIdByTeam[request.teamName];
       const nextIgnoredRunIds = Object.fromEntries(
         Object.entries(state.ignoredProvisioningRunIds).filter(
           ([, teamName]) => teamName !== request.teamName
         )
       );
+      const nextIgnoredRuntimeRunIds = previousRuntimeRunId
+        ? {
+            ...Object.fromEntries(
+              Object.entries(state.ignoredRuntimeRunIds).filter(
+                ([, teamName]) => teamName !== request.teamName
+              )
+            ),
+            [previousRuntimeRunId]: request.teamName,
+          }
+        : Object.fromEntries(
+            Object.entries(state.ignoredRuntimeRunIds).filter(
+              ([, teamName]) => teamName !== request.teamName
+            )
+          );
       return {
         provisioningRuns: cleaned,
         provisioningErrorByTeam: nextErrors,
         memberSpawnStatusesByTeam: nextSpawnStatuses,
+        activeToolsByTeam: nextActiveTools,
+        finishedVisibleByTeam: nextFinishedVisible,
+        toolHistoryByTeam: nextToolHistory,
         currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
         ignoredProvisioningRunIds: nextIgnoredRunIds,
+        ignoredRuntimeRunIds: nextIgnoredRuntimeRunIds,
       };
     });
 
@@ -1808,6 +2110,15 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         [request.teamName]: pendingRunId,
       },
     }));
+    // Initialize per-team tool approval settings based on skipPermissions flag
+    {
+      const launchSettings: ToolApprovalSettings =
+        request.skipPermissions === false
+          ? DEFAULT_TOOL_APPROVAL_SETTINGS
+          : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true };
+      saveToolApprovalSettingsForTeam(request.teamName, launchSettings);
+      set({ toolApprovalSettings: launchSettings });
+    }
     try {
       const response = await unwrapIpc('team:launch', () => api.teams.launchTeam(request));
 
@@ -1849,6 +2160,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             ...state.currentRuntimeRunIdByTeam,
             [request.teamName]: response.runId,
           },
+          ignoredRuntimeRunIds: Object.fromEntries(
+            Object.entries(state.ignoredRuntimeRunIds).filter(
+              ([, teamName]) => teamName !== request.teamName
+            )
+          ),
         };
       });
       try {
@@ -1916,10 +2232,25 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         ...state.ignoredProvisioningRunIds,
         [runId]: existing.teamName,
       };
+      const nextIgnoredRuntimeRunIds =
+        state.currentRuntimeRunIdByTeam[existing.teamName] === runId
+          ? {
+              ...state.ignoredRuntimeRunIds,
+              [runId]: existing.teamName,
+            }
+          : state.ignoredRuntimeRunIds;
 
       const nextSpawnStatuses = { ...state.memberSpawnStatusesByTeam };
       if (isCanonicalRun) {
         delete nextSpawnStatuses[existing.teamName];
+      }
+      const nextActiveTools = { ...state.activeToolsByTeam };
+      const nextFinishedVisible = { ...state.finishedVisibleByTeam };
+      const nextToolHistory = { ...state.toolHistoryByTeam };
+      if (isCanonicalRun) {
+        delete nextActiveTools[existing.teamName];
+        delete nextFinishedVisible[existing.teamName];
+        delete nextToolHistory[existing.teamName];
       }
 
       return {
@@ -1927,7 +2258,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
         currentRuntimeRunIdByTeam: nextRuntimeRunIdByTeam,
         memberSpawnStatusesByTeam: nextSpawnStatuses,
+        activeToolsByTeam: nextActiveTools,
+        finishedVisibleByTeam: nextFinishedVisible,
+        toolHistoryByTeam: nextToolHistory,
         ignoredProvisioningRunIds: nextIgnoredRunIds,
+        ignoredRuntimeRunIds: nextIgnoredRuntimeRunIds,
       };
     });
   },
@@ -1938,6 +2273,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   onProvisioningProgress: (progress: TeamProvisioningProgress) => {
     if (get().ignoredProvisioningRunIds[progress.runId] === progress.teamName) {
+      return;
+    }
+    if (get().ignoredRuntimeRunIds[progress.runId] === progress.teamName) {
       return;
     }
 
@@ -2019,6 +2357,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           ...state.currentRuntimeRunIdByTeam,
           [progress.teamName]: progress.runId,
         },
+        ignoredRuntimeRunIds: Object.fromEntries(
+          Object.entries(state.ignoredRuntimeRunIds).filter(
+            ([, teamName]) => teamName !== progress.teamName
+          )
+        ),
         provisioningErrorByTeam: nextErrors,
         provisioningSnapshotByTeam: nextSnapshots,
       };
@@ -2067,13 +2410,19 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     set({ provisioningProgressUnsubscribe: unsubscribe });
   },
 
-  updateToolApprovalSettings: async (patch) => {
+  updateToolApprovalSettings: async (patch, forTeam) => {
+    const teamName = forTeam ?? get().selectedTeamName;
     const current = get().toolApprovalSettings;
     const merged = { ...current, ...patch };
     set({ toolApprovalSettings: merged });
-    localStorage.setItem('team:toolApprovalSettings', JSON.stringify(merged));
+    // Save per-team if a team is selected, otherwise global fallback
+    if (teamName) {
+      saveToolApprovalSettingsForTeam(teamName, merged);
+    } else {
+      localStorage.setItem('team:toolApprovalSettings', JSON.stringify(merged));
+    }
     try {
-      await api.teams.updateToolApprovalSettings(merged);
+      await api.teams.updateToolApprovalSettings(teamName ?? '__global__', merged);
     } catch (err) {
       logger.warn('Failed to sync tool approval settings to main:', err);
     }
@@ -2083,11 +2432,16 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     try {
       await api.teams.respondToToolApproval(teamName, runId, requestId, allow, message);
       // Remove ONLY after successful IPC, by runId+requestId pair
-      set((s) => ({
-        pendingApprovals: s.pendingApprovals.filter(
-          (a) => !(a.runId === runId && a.requestId === requestId)
-        ),
-      }));
+      set((s) => {
+        const next = new Map(s.resolvedApprovals);
+        next.set(requestId, allow);
+        return {
+          pendingApprovals: s.pendingApprovals.filter(
+            (a) => !(a.runId === runId && a.requestId === requestId)
+          ),
+          resolvedApprovals: next,
+        };
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error(`respondToToolApproval failed for ${teamName}/${requestId}: ${msg}`);

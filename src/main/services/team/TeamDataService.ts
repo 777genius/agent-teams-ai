@@ -12,11 +12,13 @@ import {
   AGENT_BLOCK_CLOSE,
   AGENT_BLOCK_OPEN,
   stripAgentBlocks,
+  wrapAgentBlock,
 } from '@shared/constants/agentBlocks';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { getKanbanColumnFromReviewState, normalizeReviewState } from '@shared/utils/reviewState';
+import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
@@ -28,6 +30,8 @@ import * as path from 'path';
 import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 
 import { atomicWriteAsync } from './atomicWrite';
+import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
+import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
 import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
@@ -40,6 +44,9 @@ import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificatio
 import { TeamTaskReader } from './TeamTaskReader';
 import { TeamTaskWriter } from './TeamTaskWriter';
 
+import type { PersistedTaskChangePresenceIndex } from './cache/taskChangePresenceCacheTypes';
+import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
+import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type {
   AddMemberRequest,
   AttachmentMeta,
@@ -52,6 +59,7 @@ import type {
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
+  TaskChangePresenceState,
   TaskComment,
   TaskRef,
   TeamConfig,
@@ -90,6 +98,11 @@ interface EligibleTaskCommentNotification {
   summary: string;
 }
 
+interface TaskChangeLogSourceSnapshot {
+  projectFingerprint: string | null;
+  logSourceGeneration: string | null;
+}
+
 export class TeamDataService {
   private processHealthTimer: ReturnType<typeof setInterval> | null = null;
   private processHealthTeams = new Set<string>();
@@ -97,6 +110,8 @@ export class TeamDataService {
   private notifiedTaskStarts = new Set<string>();
   private taskCommentNotificationInitialization: Promise<void> | null = null;
   private taskCommentNotificationInFlight = new Set<string>();
+  private taskChangePresenceRepository: TaskChangePresenceRepository | null = null;
+  private teamLogSourceTracker: TeamLogSourceTracker | null = null;
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -165,6 +180,161 @@ export class TeamDataService {
       }
     }
     return null;
+  }
+
+  setTaskChangePresenceServices(
+    repository: TaskChangePresenceRepository,
+    tracker: TeamLogSourceTracker
+  ): void {
+    this.taskChangePresenceRepository = repository;
+    this.teamLogSourceTracker = tracker;
+  }
+
+  setTaskChangePresenceTracking(teamName: string, enabled: boolean): void {
+    if (!this.teamLogSourceTracker) {
+      return;
+    }
+
+    if (enabled) {
+      void this.teamLogSourceTracker
+        .enableTracking(teamName, 'change_presence')
+        .catch((error) =>
+          logger.debug(`Failed to start change-presence tracking for ${teamName}: ${String(error)}`)
+        );
+      return;
+    }
+
+    void this.teamLogSourceTracker
+      .disableTracking(teamName, 'change_presence')
+      .catch((error) =>
+        logger.debug(`Failed to stop change-presence tracking for ${teamName}: ${String(error)}`)
+      );
+  }
+
+  private resolveTaskChangePresenceMap(
+    tasks: readonly TeamTaskWithKanban[],
+    changePresenceEnabled: boolean,
+    presenceIndex: PersistedTaskChangePresenceIndex | null,
+    logSourceSnapshot: TaskChangeLogSourceSnapshot | null
+  ): Record<string, TaskChangePresenceState> {
+    const result: Record<string, TaskChangePresenceState> = {};
+    if (
+      !changePresenceEnabled ||
+      !presenceIndex ||
+      !logSourceSnapshot?.projectFingerprint ||
+      !logSourceSnapshot.logSourceGeneration ||
+      presenceIndex.projectFingerprint !== logSourceSnapshot.projectFingerprint ||
+      presenceIndex.logSourceGeneration !== logSourceSnapshot.logSourceGeneration
+    ) {
+      for (const task of tasks) {
+        result[task.id] = 'unknown';
+      }
+      return result;
+    }
+
+    for (const task of tasks) {
+      const descriptor = buildTaskChangePresenceDescriptor({
+        createdAt: task.createdAt,
+        owner: task.owner,
+        status: task.status,
+        intervals: task.workIntervals,
+        reviewState: task.reviewState,
+        historyEvents: task.historyEvents,
+        kanbanColumn: task.kanbanColumn,
+      });
+      const presenceEntry = presenceIndex.entries[task.id];
+      result[task.id] =
+        presenceEntry?.taskSignature === descriptor.taskSignature &&
+        presenceEntry.logSourceGeneration === logSourceSnapshot.logSourceGeneration
+          ? presenceEntry.presence
+          : 'unknown';
+    }
+
+    return result;
+  }
+
+  private isLeadThoughtCandidateForSlashResult(message: InboxMessage): boolean {
+    if (typeof message.to === 'string' && message.to.trim().length > 0) return false;
+    if (message.from === 'system') return false;
+    return message.source === 'lead_session' || message.source === 'lead_process';
+  }
+
+  private annotateSlashCommandResponses(messages: InboxMessage[]): void {
+    let pendingSlash = null as InboxMessage['slashCommand'] | null;
+
+    for (const message of messages) {
+      const slashCommand =
+        message.source === 'user_sent'
+          ? (message.slashCommand ?? buildStandaloneSlashCommandMeta(message.text))
+          : null;
+
+      if (slashCommand) {
+        pendingSlash = slashCommand;
+        continue;
+      }
+
+      if (!pendingSlash) {
+        continue;
+      }
+
+      if (message.messageKind === 'slash_command_result') {
+        continue;
+      }
+
+      if (this.isLeadThoughtCandidateForSlashResult(message)) {
+        message.messageKind = 'slash_command_result';
+        message.commandOutput = {
+          stream: 'stdout',
+          commandLabel: pendingSlash.command,
+        };
+        continue;
+      }
+
+      pendingSlash = null;
+    }
+  }
+
+  async getTaskChangePresence(teamName: string): Promise<Record<string, TaskChangePresenceState>> {
+    const config = await this.configReader.getConfig(teamName);
+    if (!config) {
+      throw new Error(`Team not found: ${teamName}`);
+    }
+
+    const changePresenceEnabled =
+      this.taskChangePresenceRepository !== null && this.teamLogSourceTracker !== null;
+    const logSourceSnapshot: TaskChangeLogSourceSnapshot | null =
+      changePresenceEnabled &&
+      typeof (this.teamLogSourceTracker as { getSnapshot?: (teamName: string) => unknown })
+        .getSnapshot === 'function'
+        ? ((
+            this.teamLogSourceTracker as {
+              getSnapshot: (teamName: string) => TaskChangeLogSourceSnapshot | null;
+            }
+          ).getSnapshot(teamName) ?? null)
+        : null;
+
+    const [tasks, kanbanState, presenceIndex] = await Promise.all([
+      this.taskReader.getTasks(teamName).catch(() => [] as TeamTask[]),
+      this.kanbanManager
+        .getState(teamName)
+        .catch(() => ({ teamName, reviewers: [], tasks: {} }) as KanbanState),
+      changePresenceEnabled &&
+      logSourceSnapshot?.projectFingerprint &&
+      logSourceSnapshot.logSourceGeneration
+        ? this.taskChangePresenceRepository!.load(teamName)
+        : Promise.resolve(null),
+    ]);
+
+    const tasksWithKanbanBase: TeamTaskWithKanban[] = tasks.map((task) =>
+      this.attachKanbanCompatibility(task, kanbanState.tasks[task.id])
+    );
+
+    return this.resolveTaskChangePresenceMap(
+      tasksWithKanbanBase,
+      changePresenceEnabled,
+      presenceIndex,
+      logSourceSnapshot
+    );
   }
 
   async listTeams(): Promise<TeamSummary[]> {
@@ -332,6 +502,24 @@ export class TeamDataService {
     mark('config');
 
     const warnings: string[] = [];
+    const changePresenceEnabled =
+      this.taskChangePresenceRepository !== null && this.teamLogSourceTracker !== null;
+    const logSourceSnapshot: TaskChangeLogSourceSnapshot | null =
+      changePresenceEnabled &&
+      typeof (this.teamLogSourceTracker as { getSnapshot?: (teamName: string) => unknown })
+        .getSnapshot === 'function'
+        ? ((
+            this.teamLogSourceTracker as {
+              getSnapshot: (teamName: string) => TaskChangeLogSourceSnapshot | null;
+            }
+          ).getSnapshot(teamName) ?? null)
+        : null;
+    const presenceIndexPromise =
+      changePresenceEnabled &&
+      logSourceSnapshot?.projectFingerprint &&
+      logSourceSnapshot.logSourceGeneration
+        ? this.taskChangePresenceRepository!.load(teamName)
+        : Promise.resolve(null);
 
     let tasks: TeamTask[] = [];
     try {
@@ -448,6 +636,9 @@ export class TeamDataService {
       }
     }
 
+    messages.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+    this.annotateSlashCommandResponses(messages);
+
     messages.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 
     let metaMembers: TeamConfig['members'] = [];
@@ -472,9 +663,24 @@ export class TeamDataService {
 
     mark('kanbanGc');
 
-    const tasksWithKanban: TeamTaskWithKanban[] = tasks.map((task) =>
+    const tasksWithKanbanBase: TeamTaskWithKanban[] = tasks.map((task) =>
       this.attachKanbanCompatibility(task, kanbanState.tasks[task.id])
     );
+
+    const presenceIndex = await presenceIndexPromise;
+
+    const taskChangePresenceById = this.resolveTaskChangePresenceMap(
+      tasksWithKanbanBase,
+      changePresenceEnabled,
+      presenceIndex,
+      logSourceSnapshot
+    );
+    const tasksWithKanban: TeamTaskWithKanban[] = changePresenceEnabled
+      ? tasksWithKanbanBase.map((task) => ({
+          ...task,
+          changePresence: taskChangePresenceById[task.id] ?? 'unknown',
+        }))
+      : tasksWithKanbanBase;
 
     const members = this.memberResolver.resolveMembers(
       config,
@@ -490,10 +696,6 @@ export class TeamDataService {
     mark('enrichBranches');
 
     mark('syncComments');
-
-    const tasksToReturn: TeamTaskWithKanban[] = tasks.map((task) =>
-      this.attachKanbanCompatibility(task, kanbanState.tasks[task.id])
-    );
 
     let processes: TeamProcess[] = [];
     try {
@@ -529,7 +731,7 @@ export class TeamDataService {
     return {
       teamName,
       config,
-      tasks: tasksToReturn,
+      tasks: tasksWithKanban,
       members,
       messages,
       kanbanState,
@@ -876,6 +1078,19 @@ export class TeamDataService {
       ...(shouldStart ? { startImmediately: true } : {}),
     }) as TeamTask;
 
+    // Controller's maybeNotifyAssignedOwner skips the lead (owner === lead).
+    // For user-created tasks with startImmediately, ensure the lead also gets notified.
+    if (shouldStart) {
+      try {
+        const leadName = await this.resolveLeadName(teamName);
+        if (this.isLeadOwner(task.owner!, leadName)) {
+          await this.sendUserTaskStartNotification(teamName, task);
+        }
+      } catch {
+        /* best-effort */
+      }
+    }
+
     return task;
   }
 
@@ -925,6 +1140,69 @@ export class TeamDataService {
     }
 
     return { notifiedOwner: !!task.owner };
+  }
+
+  /**
+   * Start a task triggered by the user via UI.
+   * Unlike startTask(), this always notifies the owner (including the lead in solo teams).
+   */
+  async startTaskByUser(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }> {
+    const tasks = await this.taskReader.getTasks(teamName);
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) {
+      throw new Error(`Task #${taskId} not found`);
+    }
+    if (task.status !== 'pending') {
+      throw new Error(`Task #${taskId} is not pending (current: ${task.status})`);
+    }
+
+    this.getController(teamName).tasks.startTask(taskId, 'user');
+
+    if (task.owner) {
+      await this.sendUserTaskStartNotification(teamName, task);
+    }
+
+    return { notifiedOwner: !!task.owner };
+  }
+
+  /**
+   * Send a task start notification from the user to the task owner.
+   * Includes description, prompt, and task_get/task_complete instructions.
+   * Used by startTaskByUser and createTask (startImmediately).
+   */
+  private async sendUserTaskStartNotification(teamName: string, task: TeamTask): Promise<void> {
+    if (!task.owner) return;
+    try {
+      const parts = [`**start working on task now** ${this.getTaskLabel(task)} "${task.subject}"`];
+      if (task.description?.trim()) {
+        parts.push(`\nDetails:\n${task.description.trim()}`);
+      }
+      if (task.prompt?.trim()) {
+        parts.push(`\nInstructions:\n${task.prompt.trim()}`);
+      }
+      parts.push(
+        '',
+        wrapAgentBlock(
+          [
+            `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
+            `To fetch the full task context (description, comments, attachments) use:`,
+            `task_get { teamName: "${teamName}", taskId: "${task.id}" }`,
+            `When done, update task status:`,
+            `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
+          ].join('\n')
+        )
+      );
+      await this.sendMessage(teamName, {
+        member: task.owner,
+        from: 'user',
+        text: parts.join('\n'),
+        taskRefs: task.descriptionTaskRefs,
+        summary: `Start working on ${this.getTaskLabel(task)}`,
+        source: 'system_notification',
+      });
+    } catch {
+      // Best-effort notification
+    }
   }
 
   async updateTaskStatus(
@@ -1110,6 +1388,15 @@ export class TeamDataService {
         // non-critical
       }
     }
+    const slashCommandMeta =
+      enrichedRequest.slashCommand ?? buildStandaloneSlashCommandMeta(enrichedRequest.text);
+    if (slashCommandMeta) {
+      enrichedRequest = {
+        ...enrichedRequest,
+        messageKind: 'slash_command',
+        slashCommand: slashCommandMeta,
+      };
+    }
     return this.getController(teamName).messages.sendMessage({
       member: enrichedRequest.member,
       from: enrichedRequest.from,
@@ -1122,6 +1409,9 @@ export class TeamDataService {
       replyToConversationId: enrichedRequest.replyToConversationId,
       toolSummary: enrichedRequest.toolSummary,
       toolCalls: enrichedRequest.toolCalls,
+      messageKind: enrichedRequest.messageKind,
+      slashCommand: enrichedRequest.slashCommand,
+      commandOutput: enrichedRequest.commandOutput,
       taskRefs: enrichedRequest.taskRefs,
       summary: enrichedRequest.summary,
       source: enrichedRequest.source,
@@ -1517,6 +1807,7 @@ export class TeamDataService {
             text: notification.text,
             summary: notification.summary,
             source: TASK_COMMENT_NOTIFICATION_SOURCE,
+            messageKind: 'task_comment_notification',
             leadSessionId: notification.leadSessionId,
             taskRefs: [notification.taskRef],
             messageId: notification.messageId,
@@ -1550,6 +1841,7 @@ export class TeamDataService {
       // non-critical — proceed without sessionId
     }
 
+    const slashCommandMeta = buildStandaloneSlashCommandMeta(text);
     const msg = this.getController(teamName).messages.appendSentMessage({
       from: 'user',
       to: leadName,
@@ -1559,6 +1851,12 @@ export class TeamDataService {
       source: 'user_sent',
       attachments: attachments?.length ? attachments : undefined,
       leadSessionId,
+      ...(slashCommandMeta
+        ? {
+            messageKind: 'slash_command',
+            slashCommand: slashCommandMeta,
+          }
+        : {}),
       ...(messageId ? { messageId } : {}),
     }) as InboxMessage;
     return {
@@ -1729,7 +2027,7 @@ export class TeamDataService {
     return sessionIds;
   }
 
-  private async extractLeadSessionTextsFromJsonl(
+  private async extractLeadAssistantTextsFromJsonl(
     jsonlPath: string,
     leadName: string,
     leadSessionId: string,
@@ -1737,10 +2035,8 @@ export class TeamDataService {
   ): Promise<InboxMessage[]> {
     if (maxTexts <= 0) return [];
 
-    // Optimization: read from the end of the JSONL file (we only need the last N texts).
-    // The full file can be huge; scanning from the start causes long stalls on Windows.
-    const MAX_SCAN_BYTES = 8 * 1024 * 1024; // 8MB tail cap
-    const INITIAL_SCAN_BYTES = 256 * 1024; // 256KB
+    const MAX_SCAN_BYTES = 8 * 1024 * 1024;
+    const INITIAL_SCAN_BYTES = 256 * 1024;
 
     const textsReversed: InboxMessage[] = [];
     const seenMessageIds = new Set<string>();
@@ -1757,7 +2053,6 @@ export class TeamDataService {
         const chunk = buffer.toString('utf8');
 
         const lines = chunk.split(/\r?\n/);
-        // If we started mid-file, the first line may be partial — drop it.
         const fromIndex = start > 0 ? 1 : 0;
 
         for (let i = lines.length - 1; i >= fromIndex; i--) {
@@ -1790,8 +2085,6 @@ export class TeamDataService {
           const combined = stripAgentBlocks(textParts.join('\n')).trim();
           if (combined.length < MIN_TEXT_LENGTH) continue;
 
-          // Collect tool_use details from following lines (text and tool_use are separate in JSONL).
-          // tool_result (type=user) lines are interleaved between tool_use lines — skip them.
           const toolCallsList: ToolCallMeta[] = [];
           const lookaheadLimit = Math.min(i + 200, lines.length);
           for (let j = i + 1; j < lookaheadLimit; j++) {
@@ -1803,12 +2096,12 @@ export class TeamDataService {
             } catch {
               continue;
             }
-            if (tMsg.type !== 'assistant') continue; // skip tool_result (type=user) lines
+            if (tMsg.type !== 'assistant') continue;
             const tMessage = (tMsg.message ?? tMsg) as Record<string, unknown>;
             const tContent = tMessage.content;
             if (!Array.isArray(tContent)) continue;
             const tBlocks = tContent as Record<string, unknown>[];
-            if (tBlocks.some((b) => b.type === 'text')) break; // next text = stop
+            if (tBlocks.some((b) => b.type === 'text')) break;
             for (const b of tBlocks) {
               if (b.type === 'tool_use' && typeof b.name === 'string' && b.name !== 'SendMessage') {
                 const input = (b.input ?? {}) as Record<string, unknown>;
@@ -1830,7 +2123,6 @@ export class TeamDataService {
               ? `lead-thought-msg-${assistantMessageId}`
               : null;
 
-          // Fallback messageId: timestamp + text prefix (survives tail-scan range changes)
           const textPrefix = combined
             .slice(0, 50)
             .replace(/[^\p{L}\p{N}]/gu, '')
@@ -1863,10 +2155,29 @@ export class TeamDataService {
       await handle.close();
     }
 
-    // Convert back to chronological order (old behavior) and keep the last N texts.
     textsReversed.reverse();
-    const texts = textsReversed;
-    return texts.length > maxTexts ? texts.slice(-maxTexts) : texts;
+    return textsReversed.length > maxTexts ? textsReversed.slice(-maxTexts) : textsReversed;
+  }
+
+  private async extractLeadSessionTextsFromJsonl(
+    jsonlPath: string,
+    leadName: string,
+    leadSessionId: string,
+    maxTexts: number
+  ): Promise<InboxMessage[]> {
+    const [assistantTexts, commandResults] = await Promise.all([
+      this.extractLeadAssistantTextsFromJsonl(jsonlPath, leadName, leadSessionId, maxTexts),
+      extractLeadSessionMessagesFromJsonl({
+        jsonlPath,
+        leadName,
+        leadSessionId,
+        maxMessages: maxTexts,
+      }),
+    ]);
+
+    const combined = [...assistantTexts, ...commandResults];
+    combined.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+    return combined.length > maxTexts ? combined.slice(-maxTexts) : combined;
   }
 
   private async extractLeadSessionTexts(config: TeamConfig): Promise<InboxMessage[]> {

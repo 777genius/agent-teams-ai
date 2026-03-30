@@ -32,6 +32,7 @@ vi.mock('@main/utils/pathDecoder', async (importOriginal) => {
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { spawnCli } from '@main/utils/childProcess';
+import { setAppDataBasePath } from '@main/utils/pathDecoder';
 
 function createFakeChild() {
   const writeSpy = vi.fn((_data: unknown, cb?: (err?: Error | null) => void) => {
@@ -109,11 +110,13 @@ describe('TeamProvisioningService post-compact lifecycle', () => {
     tempClaudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-team-compact-'));
     tempTeamsBase = path.join(tempClaudeRoot, 'teams');
     tempTasksBase = path.join(tempClaudeRoot, 'tasks');
+    setAppDataBasePath(tempClaudeRoot);
     fs.mkdirSync(tempTeamsBase, { recursive: true });
     fs.mkdirSync(tempTasksBase, { recursive: true });
   });
 
   afterEach(() => {
+    setAppDataBasePath(null);
     try {
       fs.rmSync(tempClaudeRoot, { recursive: true, force: true });
     } catch {

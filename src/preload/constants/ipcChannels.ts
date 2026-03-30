@@ -210,6 +210,15 @@ export const TEAM_LIST = 'team:list';
 /** Get detailed team data */
 export const TEAM_GET_DATA = 'team:getData';
 
+/** Get lightweight task change presence map for the currently viewed team */
+export const TEAM_GET_TASK_CHANGE_PRESENCE = 'team:getTaskChangePresence';
+
+/** Enable or disable task change presence tracking for a visible team tab */
+export const TEAM_SET_CHANGE_PRESENCE_TRACKING = 'team:setChangePresenceTracking';
+
+/** Enable or disable live teammate tool activity tracking for a visible team tab */
+export const TEAM_SET_TOOL_ACTIVITY_TRACKING = 'team:setToolActivityTracking';
+
 /** Get buffered Claude CLI logs (paged, newest-first) */
 export const TEAM_GET_CLAUDE_LOGS = 'team:getClaudeLogs';
 
@@ -298,6 +307,9 @@ export const TEAM_GET_MEMBER_STATS = 'team:getMemberStats';
 /** Start a pending task (transition to in_progress + notify agent) */
 export const TEAM_START_TASK = 'team:startTask';
 
+/** Start a pending task from UI — always notifies owner (including lead in solo teams) */
+export const TEAM_START_TASK_BY_USER = 'team:startTaskByUser';
+
 /** Get all tasks across all teams */
 export const TEAM_GET_ALL_TASKS = 'team:getAllTasks';
 
@@ -306,6 +318,12 @@ export const TEAM_ADD_TASK_COMMENT = 'team:addTaskComment';
 
 /** Get current git branch for a project path (live read from .git/HEAD) */
 export const TEAM_GET_PROJECT_BRANCH = 'team:getProjectBranch';
+
+/** Enable or disable background tracking for a project path's git branch */
+export const TEAM_SET_PROJECT_BRANCH_TRACKING = 'team:setProjectBranchTracking';
+
+/** Push event: tracked project branch changed (main → renderer) */
+export const TEAM_PROJECT_BRANCH_CHANGE = 'team:projectBranchChange';
 
 /** Add a new member to an existing team */
 export const TEAM_ADD_MEMBER = 'team:addMember';
@@ -404,6 +422,9 @@ export const CLI_INSTALLER_INSTALL = 'cliInstaller:install';
 
 /** CLI installer progress events (main -> renderer) */
 export const CLI_INSTALLER_PROGRESS = 'cliInstaller:progress';
+
+/** Invalidate cached CLI status (forces fresh check on next getStatus) */
+export const CLI_INSTALLER_INVALIDATE_STATUS = 'cliInstaller:invalidateStatus';
 
 // =============================================================================
 // Terminal API Channels

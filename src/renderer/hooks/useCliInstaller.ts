@@ -29,6 +29,7 @@ export function useCliInstaller(): {
   installerRawChunks: string[];
   completedVersion: string | null;
   fetchCliStatus: () => Promise<void>;
+  invalidateCliStatus: () => Promise<void>;
   installCli: () => void;
   isBusy: boolean;
 } {
@@ -44,6 +45,7 @@ export function useCliInstaller(): {
   const installerRawChunks = useStore((s) => s.cliInstallerRawChunks);
   const completedVersion = useStore((s) => s.cliCompletedVersion);
   const fetchCliStatus = useStore((s) => s.fetchCliStatus);
+  const invalidateCliStatus = useStore((s) => s.invalidateCliStatus);
   const installCli = useStore((s) => s.installCli);
 
   const isBusy = installerState !== 'idle' && installerState !== 'error';
@@ -61,6 +63,7 @@ export function useCliInstaller(): {
     installerRawChunks,
     completedVersion,
     fetchCliStatus,
+    invalidateCliStatus,
     installCli,
     isBusy,
   };

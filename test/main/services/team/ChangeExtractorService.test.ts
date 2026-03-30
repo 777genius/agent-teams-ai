@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as fs from 'fs/promises';
 
 import { ChangeExtractorService } from '../../../../src/main/services/team/ChangeExtractorService';
+import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
 import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
 const TEAM_NAME = 'team-a';
@@ -70,31 +71,134 @@ function persistedEntryPath(baseDir: string): string {
   return path.join(baseDir, 'task-change-summaries', encodeURIComponent(TEAM_NAME), `${TASK_ID}.json`);
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+function makeTaskChangeResult(
+  taskId = TASK_ID,
+  overrides: Partial<{
+    teamName: string;
+    taskId: string;
+    filePath: string;
+    confidence: 'high' | 'medium' | 'low' | 'fallback';
+    content: string;
+    warning: string;
+  }> = {}
+) {
+  const teamName = overrides.teamName ?? TEAM_NAME;
+  const targetTaskId = overrides.taskId ?? taskId;
+  const filePath = overrides.filePath ?? '/repo/src/file.ts';
+  const content = overrides.content ?? 'export const value = 1;\n';
+  const confidence = overrides.confidence ?? 'high';
+  const confidenceTierByLabel = {
+    high: 1,
+    medium: 2,
+    low: 3,
+    fallback: 4,
+  } as const;
+  const files =
+    content.length > 0
+      ? [
+          {
+            filePath,
+            relativePath: 'src/file.ts',
+            snippets: [],
+            linesAdded: 1,
+            linesRemoved: 0,
+            isNewFile: true,
+          },
+        ]
+      : [];
+
+  return {
+    teamName,
+    taskId: targetTaskId,
+    files,
+    totalFiles: files.length,
+    totalLinesAdded: files.reduce((sum, file) => sum + file.linesAdded, 0),
+    totalLinesRemoved: files.reduce((sum, file) => sum + file.linesRemoved, 0),
+    confidence,
+    computedAt: '2026-03-01T12:00:00.000Z',
+    scope: {
+      taskId: targetTaskId,
+      memberName: 'alice',
+      startLine: 0,
+      endLine: 0,
+      startTimestamp: '',
+      endTimestamp: '',
+      toolUseIds: [],
+      filePaths: files.map((file) => file.filePath),
+      confidence: {
+        tier: confidenceTierByLabel[confidence],
+        label: confidence,
+        reason: 'test fixture',
+      },
+    },
+    warnings: overrides.warning ? [overrides.warning] : [],
+  };
+}
+
 function createService(params: {
   logPaths: string[];
   projectPath?: string;
   findLogFileRefsForTask?: (teamName: string, taskId: string, options?: unknown) => Promise<unknown[]>;
+  taskChangePresenceRepository?: { upsertEntry: ReturnType<typeof vi.fn> };
+  teamLogSourceTracker?: {
+    ensureTracking: ReturnType<
+      typeof vi.fn<() => Promise<{ projectFingerprint: string | null; logSourceGeneration: string | null }>>
+    >;
+  };
+  taskChangeWorkerClient?: {
+    isAvailable: ReturnType<typeof vi.fn<() => boolean>>;
+    computeTaskChanges: ReturnType<typeof vi.fn<() => Promise<unknown>>>;
+  };
 }) {
   const findLogFileRefsForTask =
     params.findLogFileRefsForTask ??
     vi.fn(async () => params.logPaths.map((filePath) => ({ filePath, memberName: 'alice' })));
+  const taskChangeWorkerClient =
+    params.taskChangeWorkerClient ??
+    ({
+      isAvailable: vi.fn(() => false),
+      computeTaskChanges: vi.fn(async () => {
+        throw new Error('worker disabled in test');
+      }),
+    } as const);
+  const service = new ChangeExtractorService(
+    {
+      findLogFileRefsForTask,
+      findMemberLogPaths: vi.fn(async () => []),
+    } as any,
+    {
+      parseBoundaries: vi.fn(async () => ({
+        boundaries: [],
+        scopes: [],
+        isSingleTaskSession: true,
+        detectedMechanism: 'none' as const,
+      })),
+    } as any,
+    { getConfig: vi.fn(async () => ({ projectPath: params.projectPath ?? PROJECT_PATH })) } as any,
+    undefined,
+    taskChangeWorkerClient as any
+  );
+
+  if (params.taskChangePresenceRepository && params.teamLogSourceTracker) {
+    service.setTaskChangePresenceServices(
+      params.taskChangePresenceRepository as any,
+      params.teamLogSourceTracker as any
+    );
+  }
+
   return {
     findLogFileRefsForTask,
-    service: new ChangeExtractorService(
-      {
-        findLogFileRefsForTask,
-        findMemberLogPaths: vi.fn(async () => []),
-      } as any,
-      {
-        parseBoundaries: vi.fn(async () => ({
-          boundaries: [],
-          scopes: [],
-          isSingleTaskSession: true,
-          detectedMechanism: 'none' as const,
-        })),
-      } as any,
-      { getConfig: vi.fn(async () => ({ projectPath: params.projectPath ?? PROJECT_PATH })) } as any
-    ),
+    service,
   };
 }
 
@@ -337,7 +441,14 @@ describe('ChangeExtractorService', () => {
           detectedMechanism: 'none' as const,
         })),
       } as any,
-      { getConfig: vi.fn(async () => ({ projectPath: PROJECT_PATH })) } as any
+      { getConfig: vi.fn(async () => ({ projectPath: PROJECT_PATH })) } as any,
+      undefined,
+      {
+        isAvailable: vi.fn(() => false),
+        computeTaskChanges: vi.fn(async () => {
+          throw new Error('worker disabled in test');
+        }),
+      } as any
     );
 
     const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
@@ -372,5 +483,267 @@ describe('ChangeExtractorService', () => {
     expect(result.files).toHaveLength(1);
     expect(result.files[0]?.relativePath).toBe('src/same.ts');
     expect(result.totalLinesAdded).toBe(2);
+  });
+
+  it('prefers worker task-change results when the worker is available', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir);
+
+    const workerResult = makeTaskChangeResult();
+    const computeTaskChanges = vi.fn(async () => workerResult);
+    const { service, findLogFileRefsForTask } = createService({
+      logPaths: [],
+      taskChangeWorkerClient: {
+        isAvailable: vi.fn(() => true),
+        computeTaskChanges,
+      },
+    });
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      owner: 'alice',
+      status: 'completed',
+    });
+
+    expect(result).toEqual(workerResult);
+    expect(computeTaskChanges).toHaveBeenCalledTimes(1);
+    expect(findLogFileRefsForTask).not.toHaveBeenCalled();
+  });
+
+  it('falls back inline when task-change worker is unavailable', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir);
+
+    const logPath = path.join(tmpDir, 'alice-inline-unavailable.jsonl');
+    await writeJsonl(logPath, [
+      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+    ]);
+
+    const computeTaskChanges = vi.fn();
+    const { service, findLogFileRefsForTask } = createService({
+      logPaths: [logPath],
+      taskChangeWorkerClient: {
+        isAvailable: vi.fn(() => false),
+        computeTaskChanges,
+      },
+    });
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      owner: 'alice',
+      status: 'completed',
+    });
+
+    expect(result.files).toHaveLength(1);
+    expect(findLogFileRefsForTask).toHaveBeenCalled();
+    expect(computeTaskChanges).not.toHaveBeenCalled();
+  });
+
+  it('falls back inline when task-change worker throws', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir);
+
+    const logPath = path.join(tmpDir, 'alice-inline-worker-error.jsonl');
+    await writeJsonl(logPath, [
+      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+    ]);
+
+    const computeTaskChanges = vi.fn(async () => {
+      throw new Error('worker failed');
+    });
+    const { service, findLogFileRefsForTask } = createService({
+      logPaths: [logPath],
+      taskChangeWorkerClient: {
+        isAvailable: vi.fn(() => true),
+        computeTaskChanges,
+      },
+    });
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, {
+      owner: 'alice',
+      status: 'completed',
+    });
+
+    expect(result.files).toHaveLength(1);
+    expect(computeTaskChanges).toHaveBeenCalledTimes(1);
+    expect(findLogFileRefsForTask).toHaveBeenCalled();
+  });
+
+  it('keeps summary cache in main and skips worker on repeat terminal summary requests', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir);
+
+    const logPath = path.join(tmpDir, 'alice-worker-summary-cache.jsonl');
+    await writeJsonl(logPath, [
+      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+    ]);
+
+    const computeTaskChanges = vi.fn(async () => makeTaskChangeResult());
+    const { service } = createService({
+      logPaths: [logPath],
+      taskChangeWorkerClient: {
+        isAvailable: vi.fn(() => true),
+        computeTaskChanges,
+      },
+    });
+
+    await service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+    await service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+
+    expect(computeTaskChanges).toHaveBeenCalledTimes(1);
+  });
+
+  it('restores persisted summaries without invoking worker compute', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir);
+
+    const logPath = path.join(tmpDir, 'alice-worker-persisted.jsonl');
+    await writeJsonl(logPath, [
+      buildAssistantWriteEntry('tool-1', '/repo/src/file.ts', 'export const value = 1;\n', '2026-03-01T10:00:00.000Z'),
+    ]);
+
+    const firstWorker = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(async () => makeTaskChangeResult()),
+    };
+    await createService({
+      logPaths: [logPath],
+      taskChangeWorkerClient: firstWorker,
+    }).service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+
+    const secondWorker = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(async () => makeTaskChangeResult(TASK_ID, { content: 'stale\n' })),
+    };
+    const restored = await createService({
+      logPaths: [logPath],
+      taskChangeWorkerClient: secondWorker,
+    }).service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+
+    expect(restored.files).toHaveLength(1);
+    expect(secondWorker.computeTaskChanges).not.toHaveBeenCalled();
+  });
+
+  it('does not let stale worker results populate summary cache after invalidation', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir);
+
+    const first = deferred<ReturnType<typeof makeTaskChangeResult>>();
+    const worker = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi
+        .fn()
+        .mockImplementationOnce(() => first.promise)
+        .mockImplementationOnce(async () =>
+          makeTaskChangeResult(TASK_ID, { filePath: '/repo/src/newer.ts' })
+        ),
+    };
+    const { service } = createService({
+      logPaths: [],
+      taskChangeWorkerClient: worker,
+    });
+
+    const stalePromise = service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+    await service.invalidateTaskChangeSummaries(TEAM_NAME, [TASK_ID], { deletePersisted: true });
+    const freshPromise = service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+    first.resolve(makeTaskChangeResult());
+    const stale = await stalePromise;
+    const fresh = await freshPromise;
+
+    expect(stale.files[0]?.filePath).toBe('/repo/src/file.ts');
+    expect(fresh.files[0]?.filePath).toBe('/repo/src/newer.ts');
+    expect(worker.computeTaskChanges).toHaveBeenCalledTimes(2);
+  });
+
+  it('writes has_changes presence entries after successful task diff computation', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir);
+
+    const logPath = path.join(tmpDir, 'alice-presence.jsonl');
+    await writeJsonl(logPath, [
+      buildAssistantWriteEntry(
+        'tool-1',
+        '/repo/src/file.ts',
+        'export const value = 1;\n',
+        '2026-03-01T10:00:00.000Z'
+      ),
+    ]);
+
+    const upsertEntry = vi.fn(async () => undefined);
+    const ensureTracking = vi.fn(async () => ({
+      projectFingerprint: 'project-fingerprint',
+      logSourceGeneration: 'log-generation',
+    }));
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(async () => makeTaskChangeResult()),
+    };
+    const { service } = createService({
+      logPaths: [logPath],
+      taskChangePresenceRepository: { upsertEntry },
+      teamLogSourceTracker: { ensureTracking },
+      taskChangeWorkerClient: workerClient,
+    });
+
+    await service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+
+    expect(upsertEntry).toHaveBeenCalledWith(
+      TEAM_NAME,
+      expect.objectContaining({
+        projectFingerprint: 'project-fingerprint',
+        logSourceGeneration: 'log-generation',
+      }),
+      expect.objectContaining({
+        taskId: TASK_ID,
+        presence: 'has_changes',
+        taskSignature: buildTaskChangePresenceDescriptor({
+          createdAt: '2026-03-01T09:55:00.000Z',
+          owner: 'alice',
+          status: 'completed',
+          intervals: [
+            {
+              startedAt: '2026-03-01T10:00:00.000Z',
+              completedAt: '2026-03-01T10:10:00.000Z',
+            },
+          ],
+          reviewState: 'none',
+          historyEvents: [],
+        }).taskSignature,
+      })
+    );
+  });
+
+  it('does not write no_changes presence entries for uncertain empty task diff results', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir);
+
+    const upsertEntry = vi.fn(async () => undefined);
+    const ensureTracking = vi.fn(async () => ({
+      projectFingerprint: 'project-fingerprint',
+      logSourceGeneration: 'log-generation',
+    }));
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(async () => makeTaskChangeResult(TASK_ID, { content: '', confidence: 'fallback' })),
+    };
+    const { service } = createService({
+      logPaths: [],
+      taskChangePresenceRepository: { upsertEntry },
+      teamLogSourceTracker: { ensureTracking },
+      taskChangeWorkerClient: workerClient,
+    });
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+
+    expect(result.files).toHaveLength(0);
+    expect(result.confidence === 'high' || result.confidence === 'medium').toBe(false);
+    expect(upsertEntry).not.toHaveBeenCalled();
   });
 });

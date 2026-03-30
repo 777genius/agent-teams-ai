@@ -463,9 +463,15 @@ class GitIdentityResolver {
    * @param projectPath - The filesystem path to check
    * @returns Branch name or null
    */
-  async getBranch(projectPath: string): Promise<string | null> {
+  async getBranch(
+    projectPath: string,
+    options?: {
+      forceRefresh?: boolean;
+    }
+  ): Promise<string | null> {
+    const forceRefresh = options?.forceRefresh === true;
     const cached = this.branchCache.get(projectPath);
-    if (cached && cached.expiry > Date.now()) {
+    if (!forceRefresh && cached && cached.expiry > Date.now()) {
       return cached.value;
     }
 

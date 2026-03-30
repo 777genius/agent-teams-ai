@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useStore } from '@renderer/store';
 import { ChevronDown, Columns3, History, MessageSquare, Terminal, Users } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
@@ -22,11 +23,16 @@ export const TeamTabSectionNav = ({
   teamName,
   onActivate,
 }: TeamTabSectionNavProps): React.JSX.Element => {
+  const messagesPanelMode = useStore((s) => s.messagesPanelMode);
   const [open, setOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 0 });
+  const visibleSections = SECTIONS.filter(
+    (section) =>
+      messagesPanelMode !== 'sidebar' || (section.id !== 'messages' && section.id !== 'claude-logs')
+  );
 
   const handleNavigate = useCallback(
     (sectionId: string) => {
@@ -99,7 +105,7 @@ export const TeamTabSectionNav = ({
               if (e.key === 'Escape') setOpen(false);
             }}
           >
-            {SECTIONS.map((section) => {
+            {visibleSections.map((section) => {
               const SectionIcon = section.icon;
               return (
                 <button

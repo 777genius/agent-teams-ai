@@ -17,6 +17,7 @@ import {
   Calendar,
   FileText,
   LayoutDashboard,
+  Network,
   Pin,
   Puzzle,
   Search,
@@ -52,6 +53,7 @@ const TAB_ICONS = {
   report: Activity,
   extensions: Puzzle,
   schedules: Calendar,
+  graph: Network,
 } as const;
 
 export const SortableTab = ({

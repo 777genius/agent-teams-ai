@@ -5,7 +5,7 @@ import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { getTeamColorSet, getThemedText } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { nameColorSet } from '@renderer/utils/projectColor';
-import { Folder, Hash, Loader2, UsersRound } from 'lucide-react';
+import { Command, Folder, Hash, Loader2, UsersRound } from 'lucide-react';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 
@@ -83,10 +83,11 @@ export const MentionSuggestionList = ({
   }
 
   // Categorize suggestions (folders are grouped with files)
-  type Section = 'member' | 'team' | 'task' | 'file';
+  type Section = 'member' | 'team' | 'task' | 'file' | 'command';
   const getSuggestionSection = (s: MentionSuggestion): Section => {
     if (s.type === 'file' || s.type === 'folder') return 'file';
     if (s.type === 'task') return 'task';
+    if (s.type === 'command') return 'command';
     if (s.type === 'team') return 'team';
     return 'member';
   };
@@ -96,6 +97,7 @@ export const MentionSuggestionList = ({
     team: 'Teams',
     task: 'Tasks',
     file: 'Files',
+    command: 'Commands',
   };
 
   // Determine which sections are present
@@ -114,6 +116,7 @@ export const MentionSuggestionList = ({
     const isFileOrFolder = isFile || isFolder;
     const isTeam = section === 'team';
     const isTask = section === 'task';
+    const isCommand = section === 'command';
     const taskTeamColorSet =
       isTask && s.color
         ? getTeamColorSet(s.color)
@@ -160,6 +163,8 @@ export const MentionSuggestionList = ({
           <FileIcon fileName={s.name} className="size-3.5" />
         ) : isTask ? (
           <Hash size={13} className="shrink-0 text-blue-500 dark:text-blue-400" />
+        ) : isCommand ? (
+          <Command size={13} className="shrink-0 text-amber-500 dark:text-amber-400" />
         ) : isTeam ? (
           <UsersRound
             size={13}
@@ -181,12 +186,17 @@ export const MentionSuggestionList = ({
               style={
                 isTask
                   ? { color: 'var(--color-link, #60a5fa)' }
-                  : colorSet
-                    ? { color: getThemedText(colorSet, isLight) }
-                    : undefined
+                  : isCommand
+                    ? { color: 'rgb(245 158 11)' }
+                    : colorSet
+                      ? { color: getThemedText(colorSet, isLight) }
+                      : undefined
               }
             >
-              <HighlightedName name={isTask ? `#${s.name}` : s.name} query={query} />
+              <HighlightedName
+                name={isTask ? `#${s.name}` : isCommand ? (s.command ?? `/${s.name}`) : s.name}
+                query={query}
+              />
             </span>
             {!isTask && !isFileOrFolder && s.subtitle ? (
               <span className="truncate text-[var(--color-text-muted)]">{s.subtitle}</span>
@@ -207,6 +217,11 @@ export const MentionSuggestionList = ({
           </div>
           {isTask && s.subtitle ? (
             <div className="truncate text-[10px] text-[var(--color-text-muted)]">{s.subtitle}</div>
+          ) : null}
+          {isCommand && s.description ? (
+            <div className="truncate text-[10px] text-[var(--color-text-muted)]">
+              {s.description}
+            </div>
           ) : null}
         </div>
         {isTeam && s.isOnline !== undefined ? (

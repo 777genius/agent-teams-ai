@@ -12,6 +12,15 @@ vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnv: vi.fn(),
 }));
 
+const addTeamNotificationMock = vi.fn().mockResolvedValue(null);
+vi.mock('@main/services/infrastructure/NotificationManager', () => ({
+  NotificationManager: {
+    getInstance: () => ({
+      addTeamNotification: addTeamNotificationMock,
+    }),
+  },
+}));
+
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
@@ -21,6 +30,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    addTeamNotificationMock.mockResolvedValue(null);
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-team-prepare-'));
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     vi.mocked(resolveInteractiveShellEnv).mockResolvedValue({
@@ -149,6 +159,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       timeoutHandle: null,
       fsMonitorHandle: null,
       claudeLogLines: [],
+      activeToolCalls: new Map(),
       leadActivityState: 'active',
       leadContextUsage: null,
     };
@@ -205,6 +216,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       timeoutHandle: null,
       fsMonitorHandle: null,
       claudeLogLines: [],
+      activeToolCalls: new Map(),
       leadActivityState: 'active',
       leadContextUsage: null,
     };
@@ -218,6 +230,66 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       expect.objectContaining({
         runId: 'run-2',
         state: 'ready',
+      })
+    );
+  });
+
+  it('emits a lead-message refresh after provisioning reaches ready', async () => {
+    const svc = new TeamProvisioningService();
+    const emitter = vi.fn();
+    svc.setTeamChangeEmitter(emitter);
+    vi.spyOn(svc as any, 'updateConfigPostLaunch').mockResolvedValue(undefined);
+    vi.spyOn(svc as any, 'cleanupPrelaunchBackup').mockResolvedValue(undefined);
+    vi.spyOn(svc as any, 'relayLeadInboxMessages').mockResolvedValue(undefined);
+
+    const run = {
+      runId: 'run-3',
+      teamName: 'team-alpha',
+      request: {
+        cwd: tempRoot,
+        color: 'blue',
+        members: [{ name: 'dev', role: 'engineer' }],
+      },
+      progress: {
+        runId: 'run-3',
+        teamName: 'team-alpha',
+        state: 'assembling',
+        message: 'Assembling',
+        startedAt: '2026-03-12T10:00:00.000Z',
+        updatedAt: '2026-03-12T10:00:00.000Z',
+      },
+      provisioningComplete: false,
+      cancelRequested: false,
+      processKilled: false,
+      stdoutBuffer: '',
+      stdoutLogLineBuf: '',
+      stdoutParserCarry: '',
+      stdoutParserCarryIsCompleteJson: false,
+      stdoutParserCarryLooksLikeClaudeJson: false,
+      stderrBuffer: '',
+      stderrLogLineBuf: '',
+      provisioningOutputParts: [],
+      onProgress: vi.fn(),
+      isLaunch: true,
+      detectedSessionId: null,
+      timeoutHandle: null,
+      fsMonitorHandle: null,
+      claudeLogLines: [],
+      activeToolCalls: new Map(),
+      leadActivityState: 'active',
+      leadContextUsage: null,
+    };
+
+    (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
+
+    await (svc as any).handleProvisioningTurnComplete(run);
+
+    expect(emitter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'lead-message',
+        teamName: 'team-alpha',
+        runId: 'run-3',
+        detail: 'lead-session-sync',
       })
     );
   });

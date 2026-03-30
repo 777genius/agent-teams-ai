@@ -43,6 +43,7 @@ import {
   TEAM_PROVISIONING_STATUS,
   TEAM_REQUEST_REVIEW,
   TEAM_SEND_MESSAGE,
+  TEAM_SET_CHANGE_PRESENCE_TRACKING,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_LOGS_FOR_TASK,
   TEAM_GET_MEMBER_LOGS,
@@ -56,6 +57,7 @@ import {
   TEAM_ADD_TASK_COMMENT,
   TEAM_GET_ATTACHMENTS,
   TEAM_GET_DELETED_TASKS,
+  TEAM_GET_TASK_CHANGE_PRESENCE,
   TEAM_GET_PROJECT_BRANCH,
   TEAM_KILL_PROCESS,
   TEAM_LEAD_ACTIVITY,
@@ -105,7 +107,9 @@ describe('ipc teams handlers', () => {
       kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
       processes: [],
     })),
+    getTaskChangePresence: vi.fn(async () => ({ 'task-1': 'has_changes' })),
     reconcileTeamArtifacts: vi.fn(async () => undefined),
+    setTaskChangePresenceTracking: vi.fn(() => undefined),
     deleteTeam: vi.fn(async () => undefined),
     getLeadMemberName: vi.fn(async () => 'team-lead'),
     getTeamDisplayName: vi.fn(async () => 'My Team'),
@@ -175,6 +179,8 @@ describe('ipc teams handlers', () => {
   it('registers all expected handlers', () => {
     expect(handlers.has(TEAM_LIST)).toBe(true);
     expect(handlers.has(TEAM_GET_DATA)).toBe(true);
+    expect(handlers.has(TEAM_GET_TASK_CHANGE_PRESENCE)).toBe(true);
+    expect(handlers.has(TEAM_SET_CHANGE_PRESENCE_TRACKING)).toBe(true);
     expect(handlers.has(TEAM_DELETE_TEAM)).toBe(true);
     expect(handlers.has(TEAM_PREPARE_PROVISIONING)).toBe(true);
     expect(handlers.has(TEAM_CREATE)).toBe(true);
@@ -224,6 +230,32 @@ describe('ipc teams handlers', () => {
     expect(handlers.has(TEAM_DELETE_TASK_ATTACHMENT)).toBe(true);
   });
 
+  it('updates change presence tracking for a team', async () => {
+    const handler = handlers.get(TEAM_SET_CHANGE_PRESENCE_TRACKING);
+    expect(handler).toBeDefined();
+
+    const result = (await handler!({} as never, 'my-team', true)) as {
+      success: boolean;
+      data?: void;
+    };
+
+    expect(result.success).toBe(true);
+    expect(service.setTaskChangePresenceTracking).toHaveBeenCalledWith('my-team', true);
+  });
+
+  it('returns lightweight task change presence for a team', async () => {
+    const handler = handlers.get(TEAM_GET_TASK_CHANGE_PRESENCE);
+    expect(handler).toBeDefined();
+
+    const result = (await handler!({} as never, 'my-team')) as {
+      success: boolean;
+      data?: Record<string, string>;
+    };
+
+    expect(result).toEqual({ success: true, data: { 'task-1': 'has_changes' } });
+    expect(service.getTaskChangePresence).toHaveBeenCalledWith('my-team');
+  });
+
   it('returns success false on invalid sendMessage args', async () => {
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();
@@ -259,6 +291,101 @@ describe('ipc teams handlers', () => {
       undefined,
       expect.any(String)
     );
+  });
+
+  it('sends standalone slash commands to lead stdin without the UI routing wrapper', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'team-lead',
+      text: '  /COMPACT keep kanban  ',
+    })) as { success: boolean };
+
+    expect(result.success).toBe(true);
+    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+      'my-team',
+      '/COMPACT keep kanban',
+      undefined
+    );
+    const compactCall = vi.mocked(provisioningService.sendMessageToTeam).mock
+      .calls as unknown[][];
+    expect(String(compactCall[0]?.[1] ?? '')).not.toContain('You received a direct message from the user');
+    expect(service.sendDirectToLead).toHaveBeenCalledWith(
+      'my-team',
+      'team-lead',
+      '/COMPACT keep kanban',
+      undefined,
+      undefined,
+      undefined,
+      expect.any(String)
+    );
+  });
+
+  it('routes unknown standalone slash commands through the same raw stdin path', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'team-lead',
+      text: ' /foo bar ',
+    })) as { success: boolean };
+
+    expect(result.success).toBe(true);
+    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+      'my-team',
+      '/foo bar',
+      undefined
+    );
+    const unknownSlashCall = vi.mocked(provisioningService.sendMessageToTeam).mock
+      .calls as unknown[][];
+    expect(String(unknownSlashCall[0]?.[1] ?? '')).not.toContain(
+      'You received a direct message from the user'
+    );
+    expect(service.sendDirectToLead).toHaveBeenCalledWith(
+      'my-team',
+      'team-lead',
+      '/foo bar',
+      undefined,
+      undefined,
+      undefined,
+      expect.any(String)
+    );
+  });
+
+  it('does not route slash commands through raw stdin when attachments are present', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+    vi.stubEnv('HOME', os.tmpdir());
+    try {
+      const result = (await sendHandler!({} as never, 'my-team', {
+        member: 'team-lead',
+        text: '/compact keep kanban',
+        attachments: [
+          {
+            id: 'att-1',
+            filename: 'note.txt',
+            mimeType: 'text/plain',
+            size: 4,
+            data: Buffer.from('test').toString('base64'),
+          },
+        ],
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        expect.stringContaining('You received a direct message from the user'),
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'att-1',
+            filename: 'note.txt',
+          }),
+        ])
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('rejects delegate mode when recipient is not the team lead', async () => {

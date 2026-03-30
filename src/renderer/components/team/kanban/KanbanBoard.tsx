@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -8,6 +8,7 @@ import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useResizableColumns } from '@renderer/hooks/useResizableColumns';
 import { cn } from '@renderer/lib/utils';
+import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import {
   CheckCircle2,
   ClipboardList,
@@ -201,7 +202,7 @@ interface SortableKanbanTaskCardProps {
   kanbanState: KanbanState;
   compact?: boolean;
   taskMap: Map<string, TeamTask>;
-  members: ResolvedTeamMember[];
+  memberColorMap: Map<string, string>;
   onRequestReview: (taskId: string) => void;
   onApprove: (taskId: string) => void;
   onRequestChanges: (taskId: string) => void;
@@ -222,7 +223,7 @@ const SortableKanbanTaskCard = ({
   kanbanState,
   compact,
   taskMap,
-  members,
+  memberColorMap,
   onRequestReview,
   onApprove,
   onRequestChanges,
@@ -257,7 +258,7 @@ const SortableKanbanTaskCard = ({
         hasReviewers={kanbanState.reviewers.length > 0}
         compact={compact}
         taskMap={taskMap}
-        members={members}
+        memberColorMap={memberColorMap}
         onRequestReview={onRequestReview}
         onApprove={onApprove}
         onRequestChanges={onRequestChanges}
@@ -306,7 +307,27 @@ export const KanbanBoard = ({
   const enableTaskSorting =
     viewMode === 'columns' && !!onColumnOrderChange && sort.field === 'manual';
 
-  const taskMap = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
+  const stableTaskMapRef = useRef<{
+    signatures: string[];
+    map: Map<string, TeamTask>;
+  } | null>(null);
+  const taskMap = useMemo(() => {
+    const signatures = tasks.map(
+      (task) => `${task.id}\0${task.displayId ?? ''}\0${task.subject}\0${task.status}`
+    );
+    const previous = stableTaskMapRef.current;
+    if (
+      previous?.signatures.length === signatures.length &&
+      previous.signatures.every((signature, index) => signature === signatures[index])
+    ) {
+      return previous.map;
+    }
+
+    const next = new Map(tasks.map((task) => [task.id, task]));
+    stableTaskMapRef.current = { signatures, map: next };
+    return next;
+  }, [tasks]);
+  const memberColorMap = useMemo(() => buildMemberColorMap(members), [members]);
   const grouped = useMemo(() => {
     const result = new Map<KanbanColumnId, TeamTask[]>(
       COLUMNS.map(({ id }) => [id, [] as TeamTask[]])
@@ -406,7 +427,7 @@ export const KanbanBoard = ({
                 kanbanState={kanbanState}
                 compact={compact}
                 taskMap={taskMap}
-                members={members}
+                memberColorMap={memberColorMap}
                 onRequestReview={onRequestReview}
                 onApprove={onApprove}
                 onRequestChanges={onRequestChanges}
@@ -437,7 +458,7 @@ export const KanbanBoard = ({
             hasReviewers={kanbanState.reviewers.length > 0}
             compact={compact}
             taskMap={taskMap}
-            members={members}
+            memberColorMap={memberColorMap}
             onRequestReview={onRequestReview}
             onApprove={onApprove}
             onRequestChanges={onRequestChanges}

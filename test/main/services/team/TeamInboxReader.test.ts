@@ -150,4 +150,32 @@ describe('TeamInboxReader', () => {
     expect(supported).toBeDefined();
     expect(supported!.messageId).toBe('m-1');
   });
+
+  it('preserves task comment notification semantic kind', async () => {
+    hoisted.files.set(
+      '/mock/teams/my-team/inboxes/alice.json',
+      JSON.stringify([
+        {
+          from: 'bob',
+          to: 'team-lead',
+          text: 'Notification payload',
+          timestamp: '2026-01-01T02:00:00.000Z',
+          read: false,
+          messageId: 'm-task-comment',
+          source: 'system_notification',
+          messageKind: 'task_comment_notification',
+          summary: 'Comment on #abcd1234',
+        },
+      ])
+    );
+
+    const messages = await reader.getMessagesFor('my-team', 'alice');
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      messageId: 'm-task-comment',
+      source: 'system_notification',
+      messageKind: 'task_comment_notification',
+      summary: 'Comment on #abcd1234',
+    });
+  });
 });

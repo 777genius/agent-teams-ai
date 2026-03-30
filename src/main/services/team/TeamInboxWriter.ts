@@ -41,6 +41,9 @@ export class TeamInboxWriter {
       }),
       ...(request.toolSummary && { toolSummary: request.toolSummary }),
       ...(request.toolCalls && { toolCalls: request.toolCalls }),
+      ...(request.messageKind && { messageKind: request.messageKind }),
+      ...(request.slashCommand && { slashCommand: request.slashCommand }),
+      ...(request.commandOutput && { commandOutput: request.commandOutput }),
     };
 
     await withFileLock(inboxPath, async () => {

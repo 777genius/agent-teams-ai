@@ -668,6 +668,17 @@ export class HttpAPIClient implements ElectronAPI {
     getData: async (_teamName: string): Promise<TeamData> => {
       throw new Error('Teams detail is not available in browser mode');
     },
+    getTaskChangePresence: async (): Promise<
+      Record<string, 'has_changes' | 'no_changes' | 'unknown'>
+    > => {
+      return {};
+    },
+    setChangePresenceTracking: async (): Promise<void> => {
+      // Not available in browser mode — no-op.
+    },
+    setToolActivityTracking: async (): Promise<void> => {
+      // Not available in browser mode — no-op.
+    },
     getClaudeLogs: async (
       _teamName: string,
       _query?: TeamClaudeLogsQuery
@@ -756,6 +767,12 @@ export class HttpAPIClient implements ElectronAPI {
     startTask: async (_teamName: string, _taskId: string): Promise<{ notifiedOwner: boolean }> => {
       throw new Error('Team start task is not available in browser mode');
     },
+    startTaskByUser: async (
+      _teamName: string,
+      _taskId: string
+    ): Promise<{ notifiedOwner: boolean }> => {
+      throw new Error('Team start task by user is not available in browser mode');
+    },
     processSend: async (_teamName: string, _message: string): Promise<void> => {
       throw new Error('Team process communication is not available in browser mode');
     },
@@ -821,6 +838,9 @@ export class HttpAPIClient implements ElectronAPI {
     },
     getProjectBranch: async (_projectPath: string): Promise<string | null> => {
       return null;
+    },
+    setProjectBranchTracking: async (): Promise<void> => {
+      // Not available in browser mode — no-op.
     },
     getAttachments: async (
       _teamName: string,
@@ -900,6 +920,9 @@ export class HttpAPIClient implements ElectronAPI {
       _mimeType: string
     ): Promise<void> => {
       throw new Error('Task attachments are not available in browser mode');
+    },
+    onProjectBranchChange: (): (() => void) => {
+      return () => {};
     },
     onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {
       return this.addEventListener('team-change', (data: unknown) =>
@@ -1045,6 +1068,7 @@ export class HttpAPIClient implements ElectronAPI {
     install: async (): Promise<void> => {
       console.warn('[HttpAPIClient] CLI installer not available in browser mode');
     },
+    invalidateStatus: async (): Promise<void> => {},
     onProgress: (): (() => void) => {
       return () => {};
     },

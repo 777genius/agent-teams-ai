@@ -3,11 +3,10 @@ import {
   isTaskChangeSummaryCacheable,
   type TaskChangeStateBucket,
 } from '@shared/utils/taskChangeState';
+import { deriveTaskSince as deriveSharedTaskSince } from '@shared/utils/taskChangeSince';
 
 import type { ReviewAPI } from '@shared/types/api';
 import type { TeamTaskWithKanban } from '@shared/types/team';
-
-const TASK_SINCE_GRACE_MS = 2 * 60 * 1000;
 
 export type TaskChangeRequestOptions = NonNullable<Parameters<ReviewAPI['getTaskChanges']>[2]>;
 
@@ -31,27 +30,7 @@ type TaskChangeTaskLike = Pick<
 >;
 
 export function deriveTaskSince(task: TaskChangeTaskLike | null): string | undefined {
-  if (!task) return undefined;
-
-  const sources: string[] = [];
-  if (task.createdAt) sources.push(task.createdAt);
-  if (Array.isArray(task.workIntervals)) {
-    for (const interval of task.workIntervals) {
-      if (interval.startedAt) sources.push(interval.startedAt);
-    }
-  }
-  if (Array.isArray(task.historyEvents)) {
-    for (const event of task.historyEvents) {
-      if (event.timestamp) sources.push(event.timestamp);
-    }
-  }
-  if (sources.length === 0) return undefined;
-
-  const [first, ...rest] = sources;
-  const earliest = rest.reduce((a, b) => (a < b ? a : b), first);
-  const date = new Date(earliest);
-  date.setTime(date.getTime() - TASK_SINCE_GRACE_MS);
-  return date.toISOString();
+  return deriveSharedTaskSince(task);
 }
 
 export function buildTaskChangeRequestOptions(

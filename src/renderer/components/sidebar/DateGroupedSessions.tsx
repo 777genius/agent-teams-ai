@@ -150,7 +150,7 @@ type VirtualItem =
  * Mismatch causes items to overlap!
  */
 const HEADER_HEIGHT = 28;
-const SESSION_HEIGHT = 58; // Must match h-[58px] in SessionItem.tsx
+const SESSION_HEIGHT = 54; // Must match h-[54px] in SessionItem.tsx
 const LOADER_HEIGHT = 36;
 const OVERSCAN = 5;
 
@@ -736,10 +736,10 @@ export const DateGroupedSessions = (): React.JSX.Element => {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {projectSelector}
-      <div className="flex items-center gap-2 px-4 py-2">
-        <Calendar className="size-4" style={{ color: 'var(--color-text-muted)' }} />
+      <div className="flex items-center gap-2 px-2 py-1.5">
+        <Calendar className="size-3.5" style={{ color: 'var(--color-text-muted)' }} />
         <h2
-          className="text-xs uppercase tracking-wider"
+          className="text-[11px] uppercase tracking-wider"
           style={{ color: 'var(--color-text-muted)' }}
         >
           {sessionSortMode === 'most-context' ? 'By Context' : 'Sessions'}
@@ -747,7 +747,7 @@ export const DateGroupedSessions = (): React.JSX.Element => {
         {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- tooltip trigger via hover, not interactive */}
         <span
           ref={countRef}
-          className="text-xs"
+          className="text-[11px]"
           style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}
           onMouseEnter={() => setShowCountTooltip(true)}
           onMouseLeave={() => setShowCountTooltip(false)}
@@ -898,7 +898,7 @@ export const DateGroupedSessions = (): React.JSX.Element => {
               >
                 {item.type === 'pinned-header' ? (
                   <div
-                    className="sticky top-0 flex h-full items-center gap-1.5 border-t px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider backdrop-blur-sm"
+                    className="sticky top-0 flex h-full items-center gap-1.5 border-t px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider backdrop-blur-sm"
                     style={{
                       backgroundColor:
                         'color-mix(in srgb, var(--color-surface-sidebar) 95%, transparent)',
@@ -911,7 +911,7 @@ export const DateGroupedSessions = (): React.JSX.Element => {
                   </div>
                 ) : item.type === 'header' ? (
                   <div
-                    className="sticky top-0 flex h-full items-center border-t px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider backdrop-blur-sm"
+                    className="sticky top-0 flex h-full items-center border-t px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider backdrop-blur-sm"
                     style={{
                       backgroundColor:
                         'color-mix(in srgb, var(--color-surface-sidebar) 95%, transparent)',

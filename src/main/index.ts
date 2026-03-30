@@ -22,6 +22,7 @@ import './sentry';
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
 import { SchedulerService } from '@main/services/schedule/SchedulerService';
+import { JsonTaskChangePresenceRepository } from '@main/services/team/cache/JsonTaskChangePresenceRepository';
 import { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import { CrossTeamService } from '@main/services/team/CrossTeamService';
 import { FileContentResolver } from '@main/services/team/FileContentResolver';
@@ -30,6 +31,7 @@ import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
+import { TeamMcpConfigBuilder } from '@main/services/team/TeamMcpConfigBuilder';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import {
   CONTEXT_CHANGED,
@@ -37,6 +39,7 @@ import {
   SKILLS_CHANGED,
   SSH_STATUS,
   TEAM_CHANGE,
+  TEAM_PROJECT_BRANCH_CHANGE,
   TEAM_TOOL_APPROVAL_EVENT,
   WINDOW_FULLSCREEN_CHANGED,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants shared between main and preload
@@ -84,8 +87,15 @@ import { TeamInboxReader } from './services/team/TeamInboxReader';
 import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
 import { getAppIconPath } from './utils/appIcon';
 import { getProjectsBasePath, getTeamsBasePath, getTodosBasePath } from './utils/pathDecoder';
+import {
+  clearRendererAvailability,
+  markRendererReady,
+  markRendererUnavailable,
+  safeSendToRenderer,
+} from './utils/safeWebContentsSend';
 import { syncTelemetryFlag } from './sentry';
 import {
+  BranchStatusService,
   CliInstallerService,
   configManager,
   LocalFileSystemProvider,
@@ -97,6 +107,8 @@ import {
   SshConnectionManager,
   TaskBoundaryParser,
   TeamDataService,
+  TeamLogSourceTracker,
+  TeammateToolTracker,
   TeamMemberLogsFinder,
   TeamProvisioningService,
   UpdaterService,
@@ -382,6 +394,9 @@ let httpServer: HttpServer;
 let schedulerService: SchedulerService;
 let skillsWatcherService: SkillsWatcherService | null = null;
 let teamBackupService: TeamBackupService | null = null;
+let branchStatusService: BranchStatusService | null = null;
+let rendererRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
+let rendererRecoveryAttempts = 0;
 
 // File watcher event cleanup functions
 let fileChangeCleanup: (() => void) | null = null;
@@ -472,9 +487,7 @@ function wireFileWatcherEvents(context: ServiceContext): void {
       // ignore
     }
 
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('file-change', event);
-    }
+    safeSendToRenderer(mainWindow, 'file-change', event);
     httpServer?.broadcast('file-change', event);
   };
   context.fileWatcher.on('file-change', fileChangeHandler);
@@ -488,9 +501,7 @@ function wireFileWatcherEvents(context: ServiceContext): void {
 
   // Forward checklist-change events to renderer and HTTP SSE (mirrors file-change pattern above)
   const todoChangeHandler = (event: unknown): void => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('todo-change', event);
-    }
+    safeSendToRenderer(mainWindow, 'todo-change', event);
     httpServer?.broadcast('todo-change', event);
   };
   context.fileWatcher.on('todo-change', todoChangeHandler);
@@ -498,9 +509,7 @@ function wireFileWatcherEvents(context: ServiceContext): void {
 
   // Forward team-change events to renderer and HTTP SSE
   const teamChangeHandler = (event: unknown): void => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(TEAM_CHANGE, event);
-    }
+    safeSendToRenderer(mainWindow, TEAM_CHANGE, event);
     httpServer?.broadcast('team-change', event);
 
     // Process inbox and task change events.
@@ -648,13 +657,11 @@ function onContextSwitched(context: ServiceContext): void {
   rewireContextEvents(context);
 
   // Notify renderer of context change
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(SSH_STATUS, sshConnectionManager.getStatus());
-    mainWindow.webContents.send(CONTEXT_CHANGED, {
-      id: context.id,
-      type: context.type,
-    });
-  }
+  safeSendToRenderer(mainWindow, SSH_STATUS, sshConnectionManager.getStatus());
+  safeSendToRenderer(mainWindow, CONTEXT_CHANGED, {
+    id: context.id,
+    type: context.type,
+  });
 }
 
 /**
@@ -753,6 +760,8 @@ function initializeServices(): void {
   ptyTerminalService = new PtyTerminalService();
   teamDataService = new TeamDataService();
   teamProvisioningService = new TeamProvisioningService();
+  // Startup GC: remove stale MCP config files from previous sessions (best-effort)
+  void new TeamMcpConfigBuilder().gcStaleConfigs();
   void teamDataService
     .initializeTaskCommentNotificationState()
     .catch((error: unknown) =>
@@ -780,9 +789,17 @@ function initializeServices(): void {
   teamProvisioningService.setCrossTeamSender((request) => crossTeamService.send(request));
 
   const teamMemberLogsFinder = new TeamMemberLogsFinder();
+  const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
+  const teamLogSourceTracker = new TeamLogSourceTracker(teamMemberLogsFinder);
+  let teammateToolTracker: TeammateToolTracker | null = null;
+  branchStatusService = new BranchStatusService((event) => {
+    safeSendToRenderer(mainWindow, TEAM_PROJECT_BRANCH_CHANGE, event);
+  });
   const memberStatsComputer = new MemberStatsComputer(teamMemberLogsFinder);
   const taskBoundaryParser = new TaskBoundaryParser();
   const changeExtractor = new ChangeExtractorService(teamMemberLogsFinder, taskBoundaryParser);
+  teamDataService.setTaskChangePresenceServices(taskChangePresenceRepository, teamLogSourceTracker);
+  changeExtractor.setTaskChangePresenceServices(taskChangePresenceRepository, teamLogSourceTracker);
   const gitDiffFallback = new GitDiffFallback();
   const fileContentResolver = new FileContentResolver(teamMemberLogsFinder, gitDiffFallback);
   const reviewApplier = new ReviewApplierService();
@@ -833,32 +850,39 @@ function initializeServices(): void {
     return getTeamControlApiBaseUrl();
   });
 
-  // Allow TeamProvisioningService to trigger team refresh events (e.g. live lead replies).
-  const teamChangeEmitter = (event: TeamChangeEvent): void => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(TEAM_CHANGE, event);
-    }
+  const forwardTeamChange = (event: TeamChangeEvent): void => {
+    safeSendToRenderer(mainWindow, TEAM_CHANGE, event);
     httpServer?.broadcast('team-change', event);
   };
+  teammateToolTracker = new TeammateToolTracker(
+    teamMemberLogsFinder,
+    teamLogSourceTracker,
+    forwardTeamChange
+  );
+  // Allow TeamProvisioningService to trigger team refresh events (e.g. live lead replies).
+  const teamChangeEmitter = (event: TeamChangeEvent): void => {
+    forwardTeamChange(event);
+    if (event.type === 'lead-activity' && event.detail === 'offline') {
+      teammateToolTracker?.handleTeamOffline(event.teamName);
+    }
+  };
   teamProvisioningService.setTeamChangeEmitter(teamChangeEmitter);
+  teamLogSourceTracker.setEmitter(teamChangeEmitter);
+  teamLogSourceTracker.onLogSourceChange((teamName) => {
+    teammateToolTracker?.handleLogSourceChange(teamName);
+  });
 
   // Allow SchedulerService to push schedule events to renderer
   schedulerService.setChangeEmitter((event) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(SCHEDULE_CHANGE, event);
-    }
+    safeSendToRenderer(mainWindow, SCHEDULE_CHANGE, event);
   });
 
   skillsWatcherService.setEmitter((event) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(SKILLS_CHANGED, event);
-    }
+    safeSendToRenderer(mainWindow, SKILLS_CHANGED, event);
   });
 
   teamProvisioningService.setToolApprovalEventEmitter((event) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(TEAM_TOOL_APPROVAL_EVENT, event);
-    }
+    safeSendToRenderer(mainWindow, TEAM_TOOL_APPROVAL_EVENT, event);
   });
 
   teamProvisioningService.setMainWindow(mainWindow);
@@ -875,6 +899,8 @@ function initializeServices(): void {
     teamProvisioningService,
     teamMemberLogsFinder,
     memberStatsComputer,
+    teammateToolTracker ?? undefined,
+    branchStatusService ?? undefined,
     {
       rewire: rewireContextEvents,
       full: onContextSwitched,
@@ -911,9 +937,7 @@ function initializeServices(): void {
 
   // Forward SSH state changes to renderer and HTTP SSE clients
   sshConnectionManager.on('state-change', (status: unknown) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(SSH_STATUS, status);
-    }
+    safeSendToRenderer(mainWindow, SSH_STATUS, status);
     httpServer.broadcast('ssh:status', status);
   });
 
@@ -987,6 +1011,9 @@ function shutdownServices(): void {
     teamProvisioningService.stopAllTeams();
   }
 
+  // Best-effort cleanup of MCP config files owned by this process
+  void new TeamMcpConfigBuilder().gcOwnConfigs();
+
   // Sync backup all team data (files are stable after SIGKILL).
   if (teamBackupService) {
     teamBackupService.runShutdownBackupSync();
@@ -1029,6 +1056,8 @@ function shutdownServices(): void {
   if (teamDataService) {
     teamDataService.stopProcessHealthPolling();
   }
+  branchStatusService?.dispose();
+  branchStatusService = null;
 
   // Stop scheduled task execution and croner jobs
   if (schedulerService) {
@@ -1061,7 +1090,35 @@ function syncTrafficLightPosition(win: BrowserWindow): void {
   if (process.platform === 'darwin') {
     win.setWindowButtonPosition(position);
   }
-  win.webContents.send(WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL, zoomFactor);
+  safeSendToRenderer(win, WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL, zoomFactor);
+}
+
+function scheduleRendererRecovery(win: BrowserWindow): void {
+  if (rendererRecoveryTimer) {
+    return;
+  }
+  if (rendererRecoveryAttempts >= 2) {
+    logger.error('Renderer recovery limit reached; skipping automatic reload');
+    return;
+  }
+
+  rendererRecoveryAttempts += 1;
+  const delayMs = rendererRecoveryAttempts * 1000;
+  logger.warn(`Scheduling renderer recovery attempt ${rendererRecoveryAttempts} in ${delayMs}ms`);
+
+  rendererRecoveryTimer = setTimeout(() => {
+    rendererRecoveryTimer = null;
+    if (!mainWindow || mainWindow !== win || win.isDestroyed()) {
+      return;
+    }
+
+    markRendererUnavailable(win);
+    try {
+      win.webContents.reload();
+    } catch (error) {
+      logger.error(`Renderer recovery reload failed: ${String(error)}`);
+    }
+  }, delayMs);
 }
 
 /**
@@ -1090,6 +1147,7 @@ function createWindow(): void {
     ...(isMac && { trafficLightPosition: getTrafficLightPositionForZoom(1) }),
     title: 'Claude Agent Teams UI',
   });
+  markRendererUnavailable(mainWindow);
 
   // In dev, forward selected renderer console warnings/errors to the main terminal.
   // Use the new single-argument event payload to avoid Electron deprecation warnings.
@@ -1147,25 +1205,30 @@ function createWindow(): void {
 
   // Notify renderer when entering/leaving fullscreen (so traffic light padding can be removed)
   mainWindow.on('enter-full-screen', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(WINDOW_FULLSCREEN_CHANGED, true);
-    }
+    safeSendToRenderer(mainWindow, WINDOW_FULLSCREEN_CHANGED, true);
   });
   mainWindow.on('leave-full-screen', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(WINDOW_FULLSCREEN_CHANGED, false);
-    }
+    safeSendToRenderer(mainWindow, WINDOW_FULLSCREEN_CHANGED, false);
+  });
+
+  mainWindow.webContents.on('did-start-loading', () => {
+    markRendererUnavailable(mainWindow);
+    branchStatusService?.resetAllTracking();
   });
 
   // Set traffic light position + notify renderer on first load, and auto-check for updates
   mainWindow.webContents.on('did-finish-load', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
+      markRendererReady(mainWindow);
+      rendererRecoveryAttempts = 0;
+      if (rendererRecoveryTimer) {
+        clearTimeout(rendererRecoveryTimer);
+        rendererRecoveryTimer = null;
+      }
       logger.warn('[startup] renderer did-finish-load');
       syncTrafficLightPosition(mainWindow);
       setTimeout(() => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send(WINDOW_FULLSCREEN_CHANGED, mainWindow.isFullScreen());
-        }
+        safeSendToRenderer(mainWindow, WINDOW_FULLSCREEN_CHANGED, mainWindow?.isFullScreen());
       }, 0);
       // Start file watchers now that the window is visible and responsive.
       // Deferred from initializeServices() to avoid blocking window creation
@@ -1234,7 +1297,7 @@ function createWindow(): void {
     // Prevent Cmd+N / Ctrl+N from opening new window; forward to renderer for review shortcuts
     if (isMod && input.key.toLowerCase() === 'n') {
       event.preventDefault();
-      mainWindow.webContents.send('review:cmdN');
+      safeSendToRenderer(mainWindow, 'review:cmdN');
       return;
     }
 
@@ -1264,6 +1327,11 @@ function createWindow(): void {
   });
 
   mainWindow.on('closed', () => {
+    if (rendererRecoveryTimer) {
+      clearTimeout(rendererRecoveryTimer);
+      rendererRecoveryTimer = null;
+    }
+    clearRendererAvailability(mainWindow);
     mainWindow = null;
     // Clear main window references
     if (notificationManager) {
@@ -1290,7 +1358,13 @@ function createWindow(): void {
   // Handle renderer process crashes (render-process-gone replaces deprecated 'crashed' event)
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     logger.error('Renderer process gone:', details.reason, details.exitCode);
-    // Could show an error dialog or attempt to reload the window
+    markRendererUnavailable(mainWindow);
+    branchStatusService?.resetAllTracking();
+    const activeContext = contextRegistry.getActive();
+    activeContext?.stopFileWatcher();
+    if (mainWindow) {
+      scheduleRendererRecovery(mainWindow);
+    }
   });
 
   // Set main window reference for notification manager and updater

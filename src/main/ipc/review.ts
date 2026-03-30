@@ -8,6 +8,7 @@ import { createIpcWrapper } from '@main/ipc/ipcWrapper';
 import { EditorFileWatcher } from '@main/services/editor';
 import { ReviewDecisionStore } from '@main/services/team/ReviewDecisionStore';
 import { validateFilePath } from '@main/utils/pathValidation';
+import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import {
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
@@ -401,9 +402,7 @@ async function handleWatchReviewFiles(
       reviewFileWatcher.stop();
       reviewWatcherProjectRoot = normalizedProjectPath;
       reviewFileWatcher.start(normalizedProjectPath, (event) => {
-        if (reviewMainWindowRef && !reviewMainWindowRef.isDestroyed()) {
-          reviewMainWindowRef.webContents.send(REVIEW_FILE_CHANGE, event);
-        }
+        safeSendToRenderer(reviewMainWindowRef, REVIEW_FILE_CHANGE, event);
       });
     }
 

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 
 import type { TeamTask } from '../../../../src/shared/types/team';
@@ -143,6 +144,48 @@ describe('TeamDataService', () => {
 
     await service.reconcileTeamArtifacts('my-team');
     expect(reconcileArtifacts).toHaveBeenCalledWith({ reason: 'file-watch' });
+  });
+
+  it('starts and stops task change presence tracking outside getTeamData', async () => {
+    const enableTracking = vi.fn(async () => undefined);
+    const disableTracking = vi.fn(async () => undefined);
+
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [] })),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {
+        resolveMembers: vi.fn(() => []),
+      } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
+        garbageCollect: vi.fn(async () => undefined),
+      } as never
+    );
+
+    service.setTaskChangePresenceServices(
+      {
+        load: vi.fn(async () => null),
+        save: vi.fn(async () => undefined),
+        deleteTasks: vi.fn(async () => undefined),
+      } as never,
+      {
+        enableTracking,
+        disableTracking,
+      } as never
+    );
+
+    service.setTaskChangePresenceTracking('my-team', true);
+    service.setTaskChangePresenceTracking('my-team', false);
+    await Promise.resolve();
+
+    expect(enableTracking).toHaveBeenNthCalledWith(1, 'my-team', 'change_presence');
+    expect(disableTracking).toHaveBeenNthCalledWith(1, 'my-team', 'change_presence');
   });
 
   it('surfaces controller reconcile failures', async () => {
@@ -743,6 +786,7 @@ describe('TeamDataService', () => {
           from: 'alice',
           summary: 'Comment on #abcd1234',
           source: 'system_notification',
+          messageKind: 'task_comment_notification',
           leadSessionId: 'lead-1',
           taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'my-team' }],
           messageId: 'task-comment-forward:my-team:task-1:comment-1',
@@ -1400,6 +1444,7 @@ describe('TeamDataService', () => {
         expect.objectContaining({
           from: 'bob',
           summary: 'Comment on #abcd1234',
+          messageKind: 'task_comment_notification',
           messageId: 'task-comment-forward:my-team:task-1:comment-2',
         })
       );
@@ -1661,5 +1706,443 @@ describe('TeamDataService', () => {
       if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
       else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
     }
+  });
+
+  it('returns unknown changePresence when no cached presence entry exists', async () => {
+    const task: TeamTask = {
+      id: 'task-1',
+      subject: 'Review API',
+      status: 'completed',
+      owner: 'alice',
+      workIntervals: [{ startedAt: '2026-03-01T10:05:00.000Z' }],
+      historyEvents: [],
+    };
+
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [], projectPath: '/repo' })),
+      } as never,
+      {
+        getTasks: vi.fn(async () => [task]),
+      } as never,
+      {
+        listInboxNames: vi.fn(async () => []),
+        getMessages: vi.fn(async () => []),
+      } as never,
+      {} as never,
+      {} as never,
+      {
+        resolveMembers: vi.fn(() => []),
+      } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
+      } as never
+    );
+
+    const load = vi.fn(async () => null);
+
+    service.setTaskChangePresenceServices(
+      {
+        load,
+        upsertEntry: vi.fn(async () => undefined),
+      } as never,
+      {
+        ensureTracking: vi.fn(async () => ({
+          projectFingerprint: 'project-fingerprint',
+          logSourceGeneration: 'log-generation',
+        })),
+      } as never
+    );
+
+    const data = await service.getTeamData('my-team');
+
+    expect(data.tasks[0]?.changePresence).toBe('unknown');
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it('returns cached changePresence only when signature and generation still match', async () => {
+    const task: TeamTask = {
+      id: 'task-1',
+      subject: 'Review API',
+      status: 'completed',
+      owner: 'alice',
+      workIntervals: [{ startedAt: '2026-03-01T10:05:00.000Z' }],
+      historyEvents: [],
+    };
+    const descriptor = buildTaskChangePresenceDescriptor({
+      owner: task.owner,
+      status: task.status,
+      intervals: task.workIntervals,
+      historyEvents: task.historyEvents,
+      reviewState: 'none',
+    });
+
+    const createServiceWithPresence = (
+      load: ReturnType<typeof vi.fn>,
+      trackerSnapshot: { projectFingerprint: string; logSourceGeneration: string } | null
+    ) => {
+      const service = new TeamDataService(
+        {
+          listTeams: vi.fn(),
+          getConfig: vi.fn(async () => ({ name: 'My team', members: [], projectPath: '/repo' })),
+        } as never,
+        {
+          getTasks: vi.fn(async () => [task]),
+        } as never,
+        {
+          listInboxNames: vi.fn(async () => []),
+          getMessages: vi.fn(async () => []),
+        } as never,
+        {} as never,
+        {} as never,
+        {
+          resolveMembers: vi.fn(() => []),
+        } as never,
+        {
+          getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
+        } as never
+      );
+
+      service.setTaskChangePresenceServices(
+        {
+          load,
+          upsertEntry: vi.fn(async () => undefined),
+        } as never,
+        {
+          getSnapshot: vi.fn(() => trackerSnapshot),
+          ensureTracking: vi.fn(async () => trackerSnapshot),
+        } as never
+      );
+
+      return service;
+    };
+
+    const matched = await createServiceWithPresence(
+      vi.fn(async () => ({
+        version: 1,
+        teamName: 'my-team',
+        projectFingerprint: 'project-fingerprint',
+        logSourceGeneration: 'log-generation',
+        writtenAt: '2026-03-01T12:00:00.000Z',
+        entries: {
+          'task-1': {
+            taskId: 'task-1',
+            taskSignature: descriptor.taskSignature,
+            presence: 'has_changes',
+            writtenAt: '2026-03-01T12:00:00.000Z',
+            logSourceGeneration: 'log-generation',
+          },
+        },
+      })),
+      {
+        projectFingerprint: 'project-fingerprint',
+        logSourceGeneration: 'log-generation',
+      }
+    ).getTeamData('my-team');
+    expect(matched.tasks[0]?.changePresence).toBe('has_changes');
+
+    const mismatched = await createServiceWithPresence(
+      vi.fn(async () => ({
+        version: 1,
+        teamName: 'my-team',
+        projectFingerprint: 'project-fingerprint',
+        logSourceGeneration: 'stale-generation',
+        writtenAt: '2026-03-01T12:00:00.000Z',
+        entries: {
+          'task-1': {
+            taskId: 'task-1',
+            taskSignature: descriptor.taskSignature,
+            presence: 'has_changes',
+            writtenAt: '2026-03-01T12:00:00.000Z',
+            logSourceGeneration: 'stale-generation',
+          },
+        },
+      })),
+      {
+        projectFingerprint: 'project-fingerprint',
+        logSourceGeneration: 'log-generation',
+      }
+    ).getTeamData('my-team');
+    expect(mismatched.tasks[0]?.changePresence).toBe('unknown');
+  });
+
+  it('preserves cached changePresence when persisted entry was recorded with derived since', async () => {
+    const task: TeamTask = {
+      id: 'task-1',
+      subject: 'Review API',
+      status: 'completed',
+      owner: 'alice',
+      createdAt: '2026-03-01T10:05:00.000Z',
+      workIntervals: [{ startedAt: '2026-03-01T10:10:00.000Z' }],
+      historyEvents: [
+        {
+          id: 'evt-1',
+          type: 'status_changed',
+          from: 'pending',
+          to: 'in_progress',
+          timestamp: '2026-03-01T10:00:00.000Z',
+        },
+      ],
+    };
+
+    const persistedDescriptor = buildTaskChangePresenceDescriptor({
+      createdAt: task.createdAt,
+      owner: task.owner,
+      status: task.status,
+      intervals: task.workIntervals,
+      since: '2026-03-01T09:58:00.000Z',
+      historyEvents: task.historyEvents,
+      reviewState: 'none',
+    });
+
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [], projectPath: '/repo' })),
+      } as never,
+      {
+        getTasks: vi.fn(async () => [task]),
+      } as never,
+      {
+        listInboxNames: vi.fn(async () => []),
+        getMessages: vi.fn(async () => []),
+      } as never,
+      {} as never,
+      {} as never,
+      {
+        resolveMembers: vi.fn(() => []),
+      } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
+      } as never
+    );
+
+    service.setTaskChangePresenceServices(
+      {
+        load: vi.fn(async () => ({
+          version: 1,
+          teamName: 'my-team',
+          projectFingerprint: 'project-fingerprint',
+          logSourceGeneration: 'log-generation',
+          writtenAt: '2026-03-01T12:00:00.000Z',
+          entries: {
+            'task-1': {
+              taskId: 'task-1',
+              taskSignature: persistedDescriptor.taskSignature,
+              presence: 'has_changes',
+              writtenAt: '2026-03-01T12:00:00.000Z',
+              logSourceGeneration: 'log-generation',
+            },
+          },
+        })),
+        upsertEntry: vi.fn(async () => undefined),
+      } as never,
+      {
+        getSnapshot: vi.fn(() => ({
+          projectFingerprint: 'project-fingerprint',
+          logSourceGeneration: 'log-generation',
+        })),
+        ensureTracking: vi.fn(async () => ({
+          projectFingerprint: 'project-fingerprint',
+          logSourceGeneration: 'log-generation',
+        })),
+      } as never
+    );
+
+    const data = await service.getTeamData('my-team');
+
+    expect(data.tasks[0]?.changePresence).toBe('has_changes');
+  });
+
+  it('returns lightweight task change presence without loading full team data', async () => {
+    const task: TeamTask = {
+      id: 'task-1',
+      subject: 'Review API',
+      status: 'completed',
+      owner: 'alice',
+      workIntervals: [{ startedAt: '2026-03-01T10:05:00.000Z' }],
+      historyEvents: [],
+    };
+    const descriptor = buildTaskChangePresenceDescriptor({
+      owner: task.owner,
+      status: task.status,
+      intervals: task.workIntervals,
+      historyEvents: task.historyEvents,
+      reviewState: 'none',
+    });
+    const getMessages = vi.fn(async () => []);
+
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [], projectPath: '/repo' })),
+      } as never,
+      {
+        getTasks: vi.fn(async () => [task]),
+      } as never,
+      {
+        listInboxNames: vi.fn(async () => []),
+        getMessages,
+      } as never,
+      {} as never,
+      {} as never,
+      {
+        resolveMembers: vi.fn(() => []),
+      } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
+      } as never
+    );
+
+    service.setTaskChangePresenceServices(
+      {
+        load: vi.fn(async () => ({
+          version: 1,
+          teamName: 'my-team',
+          projectFingerprint: 'project-fingerprint',
+          logSourceGeneration: 'log-generation',
+          writtenAt: '2026-03-01T12:00:00.000Z',
+          entries: {
+            'task-1': {
+              taskId: 'task-1',
+              taskSignature: descriptor.taskSignature,
+              presence: 'has_changes',
+              writtenAt: '2026-03-01T12:00:00.000Z',
+              logSourceGeneration: 'log-generation',
+            },
+          },
+        })),
+        upsertEntry: vi.fn(async () => undefined),
+      } as never,
+      {
+        getSnapshot: vi.fn(() => ({
+          projectFingerprint: 'project-fingerprint',
+          logSourceGeneration: 'log-generation',
+        })),
+        ensureTracking: vi.fn(async () => ({
+          projectFingerprint: 'project-fingerprint',
+          logSourceGeneration: 'log-generation',
+        })),
+      } as never
+    );
+
+    const data = await service.getTaskChangePresence('my-team');
+
+    expect(data).toEqual({ 'task-1': 'has_changes' });
+    expect(getMessages).not.toHaveBeenCalled();
+  });
+
+  it('persists standalone slash metadata when sending directly to the live lead', async () => {
+    const appendSentMessage = vi.fn((payload) => payload);
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({
+          name: 'My team',
+          members: [{ name: 'team-lead', role: 'Lead' }],
+          leadSessionId: 'lead-1',
+        })),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      () =>
+        ({
+          messages: {
+            appendSentMessage,
+          },
+        }) as never
+    );
+
+    const result = await service.sendDirectToLead(
+      'my-team',
+      'team-lead',
+      '/compact keep only kanban context'
+    );
+
+    expect(result.deliveredViaStdin).toBe(true);
+    expect(appendSentMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: '/compact keep only kanban context',
+        messageKind: 'slash_command',
+        slashCommand: expect.objectContaining({
+          name: 'compact',
+          command: '/compact',
+          args: 'keep only kanban context',
+        }),
+      })
+    );
+  });
+
+  it('annotates immediate lead replies after slash commands as command results', async () => {
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({
+          name: 'My team',
+          members: [{ name: 'team-lead', role: 'Lead' }],
+          leadSessionId: 'lead-1',
+        })),
+      } as never,
+      {
+        getTasks: vi.fn(async () => []),
+      } as never,
+      {
+        listInboxNames: vi.fn(async () => []),
+        getMessages: vi.fn(async () => [
+          {
+            from: 'team-lead',
+            text: 'Total cost: $1.05',
+            timestamp: '2026-03-27T22:17:01.000Z',
+            read: true,
+            source: 'lead_process',
+            leadSessionId: 'lead-1',
+            messageId: 'lead-thought-1',
+          },
+        ]),
+      } as never,
+      {} as never,
+      {} as never,
+      {
+        resolveMembers: vi.fn(() => []),
+      } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
+      } as never,
+      {} as never,
+      {} as never,
+      {
+        readMessages: vi.fn(async () => [
+          {
+            from: 'user',
+            to: 'team-lead',
+            text: '/cost',
+            timestamp: '2026-03-27T22:17:00.000Z',
+            read: true,
+            source: 'user_sent',
+            leadSessionId: 'lead-1',
+            messageId: 'user-cost-1',
+          },
+        ]),
+      } as never
+    );
+
+    const data = await service.getTeamData('my-team');
+    const costResult = data.messages.find((message) => message.messageId === 'lead-thought-1');
+
+    expect(costResult).toMatchObject({
+      messageKind: 'slash_command_result',
+      commandOutput: {
+        stream: 'stdout',
+        commandLabel: '/cost',
+      },
+    });
   });
 });

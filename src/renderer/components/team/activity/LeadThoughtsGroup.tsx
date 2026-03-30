@@ -61,11 +61,27 @@ export function isLeadThought(msg: InboxMessage): boolean {
   if (typeof msg.to === 'string' && msg.to.trim().length > 0) return false;
   // Compaction boundary events are system messages, not lead thoughts
   if (isCompactionMessage(msg)) return false;
+  if (msg.messageKind === 'slash_command_result') return false;
   // Protocol noise (JSON coordination signals, raw teammate-message XML) should be hidden
   if (isThoughtProtocolNoise(msg.text)) return false;
   if (msg.source === 'lead_session') return true;
   if (msg.source === 'lead_process') return true;
   return false;
+}
+
+/**
+ * Check if a message from lead session/process is protocol noise that should be
+ * completely excluded from the timeline (not shown as thoughts OR standalone messages).
+ *
+ * When `isLeadThought` returns false due to `isThoughtProtocolNoise`, the message
+ * falls through to become a standalone ActivityItem — but ActivityItem can't parse
+ * noise JSON wrapped in `<teammate-message>` tags. This helper catches those cases
+ * so `groupTimelineItems` can skip them entirely.
+ */
+function isLeadSessionNoise(msg: InboxMessage): boolean {
+  if (msg.source !== 'lead_session' && msg.source !== 'lead_process') return false;
+  if (typeof msg.to === 'string' && msg.to.trim().length > 0) return false;
+  return isThoughtProtocolNoise(msg.text);
 }
 
 export type TimelineItem =
@@ -108,6 +124,12 @@ export function groupTimelineItems(messages: InboxMessage[]): TimelineItem[] {
       }
       pendingThoughts.push(msg);
     } else {
+      // Skip lead session/process messages that are protocol noise — they should
+      // not appear in the timeline at all (neither as thoughts nor as standalone messages).
+      // isLeadThought already rejects these from thoughts, but without this guard
+      // they fall through as standalone ActivityItem cards that can't parse the noise JSON.
+      // Check BEFORE flushThoughts() so noise between two thoughts doesn't split the group.
+      if (isLeadSessionNoise(msg)) continue;
       flushThoughts();
       result.push({ type: 'message', message: msg });
     }

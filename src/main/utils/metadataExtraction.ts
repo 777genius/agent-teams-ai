@@ -9,10 +9,23 @@ import * as readline from 'readline';
 import { LocalFileSystemProvider } from '../services/infrastructure/LocalFileSystemProvider';
 import { type ChatHistoryEntry, isTextContent, type UserEntry } from '../types';
 
+import { translateWslMountPath } from './pathDecoder';
+
 import type { FileSystemProvider } from '../services/infrastructure/FileSystemProvider';
 import type { Readable } from 'stream';
 
 const logger = createLogger('Util:metadataExtraction');
+
+/**
+ * Normalize Windows drive letter to uppercase for consistent path comparison.
+ * CLI uses uppercase (C:\...) while VS Code extension uses lowercase (c:\...).
+ */
+function normalizeDriveLetter(p: string): string {
+  if (p.length >= 2 && p[1] === ':') {
+    return p[0].toUpperCase() + p.slice(1);
+  }
+  return p;
+}
 
 const defaultProvider = new LocalFileSystemProvider();
 
@@ -100,7 +113,7 @@ export async function extractCwd(
       }
       // Only conversational entries have cwd
       if ('cwd' in entry && entry.cwd) {
-        return entry.cwd;
+        return normalizeDriveLetter(translateWslMountPath(entry.cwd));
       }
     }
   } catch (error) {

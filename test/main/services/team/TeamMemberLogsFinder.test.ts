@@ -97,6 +97,72 @@ describe('TeamMemberLogsFinder', () => {
     expect(lead?.projectId).toBe(projectId);
   });
 
+  it('listAttributedSubagentFiles only returns files from the current lead session for live tracking', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-logs-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'live-tools';
+    const projectPath = '/Users/test/live-tools';
+    const projectId = '-Users-test-live-tools';
+    const currentSessionId = 'session-current';
+    const oldSessionId = 'session-old';
+
+    await fs.mkdir(path.join(tmpDir, 'teams', teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamName, 'config.json'),
+      JSON.stringify(
+        {
+          name: teamName,
+          projectPath,
+          leadSessionId: currentSessionId,
+          sessionHistory: [oldSessionId],
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'alice', agentType: 'general-purpose' },
+          ],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    await fs.mkdir(path.join(projectRoot, currentSessionId, 'subagents'), { recursive: true });
+    await fs.mkdir(path.join(projectRoot, oldSessionId, 'subagents'), { recursive: true });
+
+    const attributedLog = [
+      JSON.stringify({
+        timestamp: '2026-01-01T00:00:01.000Z',
+        type: 'user',
+        message: { role: 'user', content: `You are alice, a developer on team "${teamName}" (${teamName}).` },
+      }),
+      JSON.stringify({
+        timestamp: '2026-01-01T00:00:02.000Z',
+        type: 'assistant',
+        message: { role: 'assistant', content: [{ type: 'text', text: 'OK' }] },
+      }),
+    ].join('\n') + '\n';
+
+    await fs.writeFile(
+      path.join(projectRoot, currentSessionId, 'subagents', 'agent-current.jsonl'),
+      attributedLog,
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(projectRoot, oldSessionId, 'subagents', 'agent-old.jsonl'),
+      attributedLog,
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+    const files = await finder.listAttributedSubagentFiles(teamName);
+
+    expect(files).toHaveLength(1);
+    expect(files[0]?.sessionId).toBe(currentSessionId);
+    expect(files[0]?.filePath).toContain(path.join(currentSessionId, 'subagents'));
+  });
+
   it('detects member via teammate_id attribute in <teammate-message> tag', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-logs-'));
     setClaudeBasePathOverride(tmpDir);

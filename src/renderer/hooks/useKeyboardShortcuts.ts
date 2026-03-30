@@ -174,6 +174,18 @@ export function useKeyboardShortcuts(): void {
         return;
       }
 
+      // Cmd+Shift+G: Toggle team graph overlay
+      if (key === 'g' && event.shiftKey && !event.altKey) {
+        event.preventDefault();
+        const activeTab = openTabs.find((t) => t.id === activeTabId);
+        if (activeTab?.type === 'team' && activeTab.teamName) {
+          window.dispatchEvent(
+            new CustomEvent('toggle-team-graph', { detail: { teamName: activeTab.teamName } })
+          );
+        }
+        return;
+      }
+
       // Cmd+W: Close selected tabs (if multi-selected) or active tab
       if (key === 'w' && !event.altKey) {
         event.preventDefault();

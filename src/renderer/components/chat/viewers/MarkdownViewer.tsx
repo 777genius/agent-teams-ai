@@ -36,14 +36,14 @@ import { useShallow } from 'zustand/react/shallow';
 
 import {
   createSearchContext,
+  EMPTY_SEARCH_MATCHES,
   highlightSearchInChildren,
   type SearchContext,
 } from '../searchHighlightUtils';
+import { highlightLine } from '../viewers/syntaxHighlighter';
 
 import { FileLink, isRelativeUrl } from './FileLink';
 import { MermaidDiagram } from './MermaidDiagram';
-
-import type { SearchMatch } from '@renderer/store/types';
 
 // =============================================================================
 // Types
@@ -72,7 +72,6 @@ interface MarkdownViewerProps {
 
 const EMPTY_TEAMS: { teamName?: string; displayName?: string; color?: string }[] = [];
 const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
-const EMPTY_SEARCH_MATCHES: SearchMatch[] = [];
 const NOOP_TEAM_CLICK = (): void => undefined;
 
 // =============================================================================
@@ -535,12 +534,21 @@ function createViewerMarkdownComponents(
       const isBlock = (hasLanguage ?? false) || isMultiLine;
 
       if (isBlock) {
+        const lang = codeClassName?.replace('language-', '') ?? '';
+        const raw = typeof children === 'string' ? children : '';
+        const text = raw.replace(/\n$/, '');
+        const lines = text.split('\n');
         return (
           <code
             className={`font-mono text-xs ${codeClassName ?? ''}`.trim()}
             style={{ color: COLOR_TEXT }}
           >
-            {hl(children)}
+            {lines.map((line, i) => (
+              <React.Fragment key={i}>
+                {hl(highlightLine(line, lang))}
+                {i < lines.length - 1 ? '\n' : null}
+              </React.Fragment>
+            ))}
           </code>
         );
       }
@@ -704,13 +712,16 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   const isTooLarge = content.length > MAX_MARKDOWN_CHARS;
   const disableHighlight = content.length > DISABLE_HIGHLIGHT_CHARS;
 
-  // Only subscribe to search store when itemId is provided
+  // Only re-render if THIS item has search matches
   const { searchQuery, searchMatches, currentSearchIndex } = useStore(
-    useShallow((s) => ({
-      searchQuery: itemId ? s.searchQuery : '',
-      searchMatches: itemId ? s.searchMatches : EMPTY_SEARCH_MATCHES,
-      currentSearchIndex: itemId ? s.currentSearchIndex : -1,
-    }))
+    useShallow((s) => {
+      const hasMatch = itemId ? s.searchMatchItemIds.has(itemId) : false;
+      return {
+        searchQuery: hasMatch ? s.searchQuery : '',
+        searchMatches: hasMatch ? s.searchMatches : EMPTY_SEARCH_MATCHES,
+        currentSearchIndex: hasMatch ? s.currentSearchIndex : -1,
+      };
+    })
   );
 
   // Guard: very large markdown can freeze the renderer (remark/rehype + highlighting).

@@ -10,6 +10,7 @@ import {
   APP_RELAUNCH,
   CLI_INSTALLER_GET_STATUS,
   CLI_INSTALLER_INSTALL,
+  CLI_INSTALLER_INVALIDATE_STATUS,
   CLI_INSTALLER_PROGRESS,
   CONTEXT_CHANGED,
   CONTEXT_GET_ACTIVE,
@@ -127,6 +128,7 @@ import {
   TEAM_GET_PROJECT_BRANCH,
   TEAM_GET_SAVED_REQUEST,
   TEAM_GET_TASK_ATTACHMENT,
+  TEAM_GET_TASK_CHANGE_PRESENCE,
   TEAM_KILL_PROCESS,
   TEAM_LAUNCH,
   TEAM_LEAD_ACTIVITY,
@@ -137,6 +139,7 @@ import {
   TEAM_PREPARE_PROVISIONING,
   TEAM_PROCESS_ALIVE,
   TEAM_PROCESS_SEND,
+  TEAM_PROJECT_BRANCH_CHANGE,
   TEAM_PROVISIONING_PROGRESS,
   TEAM_PROVISIONING_STATUS,
   TEAM_REMOVE_MEMBER,
@@ -147,10 +150,14 @@ import {
   TEAM_RESTORE_TASK,
   TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SEND_MESSAGE,
+  TEAM_SET_CHANGE_PRESENCE_TRACKING,
+  TEAM_SET_PROJECT_BRANCH_TRACKING,
   TEAM_SET_TASK_CLARIFICATION,
+  TEAM_SET_TOOL_ACTIVITY_TRACKING,
   TEAM_SHOW_MESSAGE_NOTIFICATION,
   TEAM_SOFT_DELETE_TASK,
   TEAM_START_TASK,
+  TEAM_START_TASK_BY_USER,
   TEAM_STOP,
   TEAM_TOOL_APPROVAL_EVENT,
   TEAM_TOOL_APPROVAL_READ_FILE,
@@ -243,6 +250,7 @@ import type {
   MemberLogSummary,
   MemberSpawnStatusesSnapshot,
   NotificationTrigger,
+  ProjectBranchChangeEvent,
   RejectResult,
   ReplaceMembersRequest,
   Schedule,
@@ -258,6 +266,7 @@ import type {
   SshConnectionStatus,
   SshLastConnection,
   TaskAttachmentMeta,
+  TaskChangePresenceState,
   TaskChangeSetV2,
   TaskComment,
   TeamChangeEvent,
@@ -798,6 +807,18 @@ const electronAPI: ElectronAPI = {
     getData: async (teamName: string) => {
       return invokeIpcWithResult<TeamData>(TEAM_GET_DATA, teamName);
     },
+    getTaskChangePresence: async (teamName: string) => {
+      return invokeIpcWithResult<Record<string, TaskChangePresenceState>>(
+        TEAM_GET_TASK_CHANGE_PRESENCE,
+        teamName
+      );
+    },
+    setChangePresenceTracking: async (teamName: string, enabled: boolean) => {
+      return invokeIpcWithResult<void>(TEAM_SET_CHANGE_PRESENCE_TRACKING, teamName, enabled);
+    },
+    setToolActivityTracking: async (teamName: string, enabled: boolean) => {
+      return invokeIpcWithResult<void>(TEAM_SET_TOOL_ACTIVITY_TRACKING, teamName, enabled);
+    },
     getClaudeLogs: async (teamName: string, query?: TeamClaudeLogsQuery) => {
       return invokeIpcWithResult<TeamClaudeLogsResponse>(TEAM_GET_CLAUDE_LOGS, teamName, query);
     },
@@ -871,6 +892,13 @@ const electronAPI: ElectronAPI = {
     startTask: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<{ notifiedOwner: boolean }>(TEAM_START_TASK, teamName, taskId);
     },
+    startTaskByUser: async (teamName: string, taskId: string) => {
+      return invokeIpcWithResult<{ notifiedOwner: boolean }>(
+        TEAM_START_TASK_BY_USER,
+        teamName,
+        taskId
+      );
+    },
     processSend: async (teamName: string, message: string) => {
       return invokeIpcWithResult<void>(TEAM_PROCESS_SEND, teamName, message);
     },
@@ -932,6 +960,9 @@ const electronAPI: ElectronAPI = {
     },
     getProjectBranch: async (projectPath: string) => {
       return invokeIpcWithResult<string | null>(TEAM_GET_PROJECT_BRANCH, projectPath);
+    },
+    setProjectBranchTracking: async (projectPath: string, enabled: boolean) => {
+      return invokeIpcWithResult<void>(TEAM_SET_PROJECT_BRANCH_TRACKING, projectPath, enabled);
     },
     getAttachments: async (teamName: string, messageId: string) => {
       return invokeIpcWithResult<AttachmentFileData[]>(TEAM_GET_ATTACHMENTS, teamName, messageId);
@@ -1041,6 +1072,20 @@ const electronAPI: ElectronAPI = {
         mimeType
       );
     },
+    onProjectBranchChange: (
+      callback: (event: unknown, data: ProjectBranchChangeEvent) => void
+    ): (() => void) => {
+      ipcRenderer.on(
+        TEAM_PROJECT_BRANCH_CHANGE,
+        callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+      );
+      return (): void => {
+        ipcRenderer.removeListener(
+          TEAM_PROJECT_BRANCH_CHANGE,
+          callback as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+        );
+      };
+    },
     onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void): (() => void) => {
       ipcRenderer.on(
         TEAM_CHANGE,
@@ -1100,8 +1145,8 @@ const electronAPI: ElectronAPI = {
         );
       };
     },
-    updateToolApprovalSettings: async (settings: ToolApprovalSettings) => {
-      return invokeIpcWithResult<void>(TEAM_TOOL_APPROVAL_SETTINGS, settings);
+    updateToolApprovalSettings: async (teamName: string, settings: ToolApprovalSettings) => {
+      return invokeIpcWithResult<void>(TEAM_TOOL_APPROVAL_SETTINGS, teamName, settings);
     },
     readFileForToolApproval: async (filePath: string) => {
       return invokeIpcWithResult<ToolApprovalFileContent>(TEAM_TOOL_APPROVAL_READ_FILE, filePath);
@@ -1292,6 +1337,9 @@ const electronAPI: ElectronAPI = {
     },
     install: async (): Promise<void> => {
       return invokeIpcWithResult<void>(CLI_INSTALLER_INSTALL);
+    },
+    invalidateStatus: async (): Promise<void> => {
+      return invokeIpcWithResult<void>(CLI_INSTALLER_INVALIDATE_STATUS);
     },
     onProgress: (callback: (event: unknown, data: CliInstallerProgress) => void): (() => void) => {
       ipcRenderer.on(

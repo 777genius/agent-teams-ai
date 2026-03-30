@@ -3,6 +3,7 @@ import { useCallback, useMemo } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { resolveProjectIdByPath } from '@renderer/utils/projectLookup';
+import { formatSessionLabel } from '@renderer/utils/sessionTitleParser';
 import { formatDistanceToNowStrict } from 'date-fns';
 import {
   AlertCircle,
@@ -69,7 +70,7 @@ export const TeamSessionsSection = ({
           type: 'session',
           sessionId: session.id,
           projectId,
-          label: session.firstMessage?.slice(0, 50) ?? 'Session',
+          label: formatSessionLabel(session.firstMessage),
         },
         { forceNewTab: true }
       );
@@ -173,7 +174,7 @@ const SessionRow = ({
   onToggleFilter,
 }: SessionRowProps): React.JSX.Element => {
   const timeAgo = formatShortTime(new Date(session.createdAt));
-  const label = session.firstMessage ?? 'Untitled session';
+  const label = formatSessionLabel(session.firstMessage);
 
   return (
     <div

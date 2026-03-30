@@ -15,6 +15,8 @@ interface UseMentionDetectionOptions {
   triggerChars?: string[];
   /** Enable or disable individual triggers dynamically. */
   isTriggerEnabled?: (triggerChar: string) => boolean;
+  /** Additional validation for trigger matches before opening the dropdown. */
+  isTriggerMatchValid?: (trigger: MentionTrigger, text: string) => boolean;
 }
 
 export interface DropdownPosition {
@@ -176,6 +178,7 @@ export function useMentionDetection({
   textareaRef,
   triggerChars = ['@'],
   isTriggerEnabled,
+  isTriggerMatchValid,
 }: UseMentionDetectionOptions): UseMentionDetectionResult {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTriggerChar, setActiveTriggerChar] = useState<string | null>(null);
@@ -253,7 +256,8 @@ export function useMentionDetection({
     (cursorPos: number) => {
       const trigger = findMentionTrigger(value, cursorPos, triggerChars);
       const isEnabled = trigger ? (isTriggerEnabled?.(trigger.triggerChar) ?? true) : false;
-      if (trigger && isEnabled) {
+      const isValid = trigger ? (isTriggerMatchValid?.(trigger, value) ?? true) : false;
+      if (trigger && isEnabled && isValid) {
         const sameQuery =
           triggerIndexRef.current === trigger.triggerIndex &&
           activeTriggerCharRef.current === trigger.triggerChar &&
@@ -274,7 +278,7 @@ export function useMentionDetection({
         dismiss();
       }
     },
-    [value, triggerChars, isTriggerEnabled, dismiss, computeDropdownPosition]
+    [value, triggerChars, isTriggerEnabled, isTriggerMatchValid, dismiss, computeDropdownPosition]
   );
 
   const handleChange = useCallback(
@@ -286,7 +290,8 @@ export function useMentionDetection({
       const cursorPos = e.target.selectionStart;
       const trigger = findMentionTrigger(newValue, cursorPos, triggerChars);
       const isEnabled = trigger ? (isTriggerEnabled?.(trigger.triggerChar) ?? true) : false;
-      if (trigger && isEnabled) {
+      const isValid = trigger ? (isTriggerMatchValid?.(trigger, newValue) ?? true) : false;
+      if (trigger && isEnabled && isValid) {
         triggerIndexRef.current = trigger.triggerIndex;
         activeTriggerCharRef.current = trigger.triggerChar;
         queryRef.current = trigger.query;
@@ -300,7 +305,14 @@ export function useMentionDetection({
         dismiss();
       }
     },
-    [onValueChange, triggerChars, isTriggerEnabled, dismiss, computeDropdownPosition]
+    [
+      onValueChange,
+      triggerChars,
+      isTriggerEnabled,
+      isTriggerMatchValid,
+      dismiss,
+      computeDropdownPosition,
+    ]
   );
 
   const handleSelect = useCallback(

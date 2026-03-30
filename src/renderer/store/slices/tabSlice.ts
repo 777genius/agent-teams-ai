@@ -292,7 +292,7 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
 
       for (const repo of state.repositoryGroups) {
         for (const wt of repo.worktrees) {
-          if (wt.sessions.includes(sessionId)) {
+          if (wt.id === projectId) {
             foundRepo = repo.id;
             foundWorktree = wt.id;
             break;
@@ -372,11 +372,11 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
       }
     }
 
-    // For team tabs, re-select the team so global selectedTeamData matches this tab.
+    // For team and graph tabs, re-select the team so global selectedTeamData matches this tab.
     // Without this, switching between team A and team B tabs leaves stale data
     // because each TeamDetailView is kept mounted (CSS display-toggle) and its
     // useEffect(teamName) only fires once on mount.
-    if (tab.type === 'team' && tab.teamName) {
+    if ((tab.type === 'team' || tab.type === 'graph') && tab.teamName) {
       if (state.selectedTeamName !== tab.teamName) {
         // Different team -- full reload (also auto-selects project via selectTeam)
         void state.selectTeam(tab.teamName);

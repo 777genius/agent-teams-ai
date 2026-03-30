@@ -44,7 +44,11 @@ import {
   TASK_STATUS_LABELS,
   TASK_STATUS_STYLES,
 } from '@renderer/utils/memberHelpers';
-import { buildTaskChangeRequestOptions, deriveTaskSince } from '@renderer/utils/taskChangeRequest';
+import {
+  buildTaskChangeRequestOptions,
+  buildTaskChangeSignature,
+  deriveTaskSince,
+} from '@renderer/utils/taskChangeRequest';
 import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { getTaskKanbanColumn } from '@shared/utils/reviewState';
@@ -78,6 +82,8 @@ import {
   X,
 } from 'lucide-react';
 
+const TASK_CHANGES_AUTO_REFRESH_MS = 20_000;
+
 import { SourceMessageAttachments } from '../attachments/SourceMessageAttachments';
 
 import { WorkflowTimeline } from './StatusHistoryTimeline';
@@ -91,8 +97,19 @@ import type {
   KanbanTaskState,
   ResolvedTeamMember,
   TaskAttachmentMeta,
+  TaskChangeSetV2,
   TeamTaskWithKanban,
 } from '@shared/types';
+
+function resolveTaskChangePresenceFromResult(
+  data: Pick<TaskChangeSetV2, 'files' | 'confidence'>
+): 'has_changes' | 'no_changes' | null {
+  if (data.files.length > 0) {
+    return 'has_changes';
+  }
+
+  return data.confidence === 'high' || data.confidence === 'medium' ? 'no_changes' : null;
+}
 
 interface TaskDetailDialogProps {
   open: boolean;
@@ -135,6 +152,7 @@ export const TaskDetailDialog = ({
   const currentTask = task ? (taskMap.get(task.id) ?? task) : null;
   const updateTaskFields = useStore((s) => s.updateTaskFields);
   const recordTaskHasChanges = useStore((s) => s.recordTaskHasChanges);
+  const setSelectedTeamTaskChangePresence = useStore((s) => s.setSelectedTeamTaskChangePresence);
 
   const [logsRefreshing, setLogsRefreshing] = useState(false);
   const [executionPreviewOnline, setExecutionPreviewOnline] = useState(false);
@@ -142,6 +160,9 @@ export const TaskDetailDialog = ({
   const [taskChangesFiles, setTaskChangesFiles] = useState<FileChangeSummary[] | null>(null);
   const [taskChangesLoading, setTaskChangesLoading] = useState(false);
   const [taskChangesError, setTaskChangesError] = useState<string | null>(null);
+  const loadedTaskChangeSummaryKeyRef = useRef<string | null>(null);
+  const taskChangesLoadInFlightRef = useRef(false);
+  const currentTaskChangeSummaryKeyRef = useRef<string | null>(null);
 
   // Inline editing: subject
   const [editingSubject, setEditingSubject] = useState(false);
@@ -311,6 +332,17 @@ export const TaskDetailDialog = ({
     () => (currentTask ? buildTaskChangeRequestOptions(currentTask) : null),
     [currentTask]
   );
+  const taskChangeRequestSignature = useMemo(
+    () => (taskChangeRequestOptions ? buildTaskChangeSignature(taskChangeRequestOptions) : null),
+    [taskChangeRequestOptions]
+  );
+  const currentTaskChangeSummaryKey = useMemo(
+    () =>
+      currentTask
+        ? `${teamName}:${currentTask.id}:${taskChangeRequestSignature ?? 'default'}`
+        : null,
+    [currentTask, teamName, taskChangeRequestSignature]
+  );
   const taskChangeSummaryOptions = useMemo(
     () =>
       currentTask
@@ -323,8 +355,12 @@ export const TaskDetailDialog = ({
   );
   const setTaskNeedsClarification = useStore((s) => s.setTaskNeedsClarification);
 
+  useEffect(() => {
+    currentTaskChangeSummaryKeyRef.current = currentTaskChangeSummaryKey;
+  }, [currentTaskChangeSummaryKey]);
+
   const loadTaskChangeSummary = useCallback(
-    async (forceFresh = false): Promise<FileChangeSummary[] | null> => {
+    async (forceFresh = false): Promise<TaskChangeSetV2 | null> => {
       if (
         !currentTask ||
         !taskChangeSummaryOptions ||
@@ -338,9 +374,94 @@ export const TaskDetailDialog = ({
         ...taskChangeSummaryOptions,
         forceFresh,
       });
-      return data.files;
+      return data;
     },
     [canShowTaskChanges, currentTask, onViewChanges, taskChangeSummaryOptions, teamName, variant]
+  );
+
+  const syncTaskChangeSummaryResult = useCallback(
+    (data: TaskChangeSetV2 | null) => {
+      setTaskChangesFiles(data?.files ?? null);
+      if (currentTask && taskChangeRequestOptions) {
+        recordTaskHasChanges(
+          teamName,
+          currentTask.id,
+          taskChangeRequestOptions,
+          !!data?.files.length
+        );
+      }
+      const nextPresence = data ? resolveTaskChangePresenceFromResult(data) : null;
+      if (currentTask && nextPresence) {
+        setSelectedTeamTaskChangePresence(teamName, currentTask.id, nextPresence);
+      }
+    },
+    [
+      currentTask,
+      recordTaskHasChanges,
+      setSelectedTeamTaskChangePresence,
+      taskChangeRequestOptions,
+      teamName,
+    ]
+  );
+
+  const requestTaskChangeSummary = useCallback(
+    async ({
+      forceFresh = false,
+      showSpinner = false,
+      preserveFilesOnError = false,
+    }: {
+      forceFresh?: boolean;
+      showSpinner?: boolean;
+      preserveFilesOnError?: boolean;
+    } = {}): Promise<void> => {
+      const requestKey = currentTaskChangeSummaryKeyRef.current;
+      if (taskChangesLoadInFlightRef.current) return;
+      if (
+        !requestKey ||
+        !currentTask ||
+        variant !== 'team' ||
+        !canShowTaskChanges ||
+        !onViewChanges
+      )
+        return;
+
+      taskChangesLoadInFlightRef.current = true;
+      if (showSpinner) {
+        setTaskChangesLoading(true);
+      }
+      setTaskChangesError(null);
+
+      try {
+        const data = await loadTaskChangeSummary(forceFresh);
+        if (currentTaskChangeSummaryKeyRef.current !== requestKey) {
+          return;
+        }
+        syncTaskChangeSummaryResult(data);
+      } catch (error) {
+        if (currentTaskChangeSummaryKeyRef.current !== requestKey) {
+          return;
+        }
+        if (!preserveFilesOnError) {
+          setTaskChangesFiles(null);
+        }
+        setTaskChangesError(
+          error instanceof Error ? error.message : 'Failed to load task changes summary'
+        );
+      } finally {
+        taskChangesLoadInFlightRef.current = false;
+        if (showSpinner) {
+          setTaskChangesLoading(false);
+        }
+      }
+    },
+    [
+      canShowTaskChanges,
+      currentTask,
+      loadTaskChangeSummary,
+      onViewChanges,
+      syncTaskChangeSummaryResult,
+      variant,
+    ]
   );
 
   useEffect(() => {
@@ -348,58 +469,19 @@ export const TaskDetailDialog = ({
     if (!open || !currentTask || !canShowTaskChanges || !onViewChanges || !changesSectionOpen)
       return;
 
-    let cancelled = false;
+    const summaryKey = currentTaskChangeSummaryKey;
+    if (loadedTaskChangeSummaryKeyRef.current === summaryKey) {
+      return;
+    }
+    loadedTaskChangeSummaryKeyRef.current = summaryKey;
+
     // Show full loading state only when no files are cached yet;
     // otherwise let the refresh button spinner indicate background reload.
-    if (!taskChangesFiles || taskChangesFiles.length === 0) {
-      setTaskChangesLoading(true);
-    }
-    setTaskChangesError(null);
-    void loadTaskChangeSummary()
-      .then((files) => {
-        if (!cancelled) {
-          setTaskChangesFiles(files ?? null);
-          if (currentTask && taskChangeRequestOptions) {
-            recordTaskHasChanges(
-              teamName,
-              currentTask.id,
-              taskChangeRequestOptions,
-              !!files?.length
-            );
-          }
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setTaskChangesFiles(null);
-          setTaskChangesError(
-            error instanceof Error ? error.message : 'Failed to load task changes summary'
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setTaskChangesLoading(false);
-      });
-
-    void loadTaskChangeSummary(true)
-      .then((files) => {
-        if (!cancelled && files) {
-          setTaskChangesFiles(files);
-          if (currentTask && taskChangeRequestOptions) {
-            recordTaskHasChanges(
-              teamName,
-              currentTask.id,
-              taskChangeRequestOptions,
-              files.length > 0
-            );
-          }
-        }
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
+    void requestTaskChangeSummary({
+      forceFresh: false,
+      showSpinner: !taskChangesFiles || taskChangesFiles.length === 0,
+      preserveFilesOnError: false,
+    });
   }, [
     changesSectionOpen,
     open,
@@ -407,39 +489,53 @@ export const TaskDetailDialog = ({
     canShowTaskChanges,
     teamName,
     onViewChanges,
-    taskSince,
+    currentTaskChangeSummaryKey,
+    taskChangeRequestSignature,
     variant,
-    loadTaskChangeSummary,
+    requestTaskChangeSummary,
+    taskChangesFiles,
   ]);
 
-  const handleRefreshChanges = useCallback(() => {
-    if (!currentTask || variant !== 'team' || !canShowTaskChanges || !onViewChanges) return;
-    setTaskChangesLoading(true);
-    setTaskChangesError(null);
-    void loadTaskChangeSummary(true)
-      .then((files) => {
-        setTaskChangesFiles(files ?? null);
-        if (currentTask && taskChangeRequestOptions) {
-          recordTaskHasChanges(teamName, currentTask.id, taskChangeRequestOptions, !!files?.length);
-        }
-      })
-      .catch((error) => {
-        setTaskChangesFiles(null);
-        setTaskChangesError(
-          error instanceof Error ? error.message : 'Failed to load task changes summary'
-        );
-      })
-      .finally(() => setTaskChangesLoading(false));
+  useEffect(() => {
+    if (!open || !changesSectionOpen) {
+      loadedTaskChangeSummaryKeyRef.current = null;
+    }
+  }, [open, changesSectionOpen]);
+
+  useEffect(() => {
+    if (variant !== 'team') return;
+    if (!open || !currentTask || !canShowTaskChanges || !onViewChanges || !changesSectionOpen) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void requestTaskChangeSummary({
+        forceFresh: true,
+        showSpinner: false,
+        preserveFilesOnError: true,
+      });
+    }, TASK_CHANGES_AUTO_REFRESH_MS);
+
+    return () => {
+      window.clearInterval(timer);
+    };
   }, [
+    changesSectionOpen,
+    open,
     currentTask,
     canShowTaskChanges,
     onViewChanges,
-    loadTaskChangeSummary,
-    recordTaskHasChanges,
-    taskChangeRequestOptions,
-    teamName,
+    requestTaskChangeSummary,
     variant,
   ]);
+
+  const handleRefreshChanges = useCallback(() => {
+    void requestTaskChangeSummary({
+      forceFresh: true,
+      showSpinner: true,
+      preserveFilesOnError: false,
+    });
+  }, [requestTaskChangeSummary]);
 
   const handleDependencyClick = (taskId: string): void => {
     // Resolve short displayId (e.g. "8ce74455") to full UUID via taskMap,
@@ -531,7 +627,7 @@ export const TaskDetailDialog = ({
       open={open}
       onOpenChange={(v) => {
         if (!v && lightboxOpenRef.current) return;
-        if (!v) onClose();
+        if (!v) handleClose();
       }}
     >
       <DialogContent

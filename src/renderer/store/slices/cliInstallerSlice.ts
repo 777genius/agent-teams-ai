@@ -42,6 +42,7 @@ export interface CliInstallerSlice {
 
   // Actions
   fetchCliStatus: () => Promise<void>;
+  invalidateCliStatus: () => Promise<void>;
   installCli: () => void;
 }
 
@@ -88,6 +89,10 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     })();
 
     return cliStatusInFlight;
+  },
+
+  invalidateCliStatus: async () => {
+    await api.cliInstaller?.invalidateStatus();
   },
 
   installCli: () => {

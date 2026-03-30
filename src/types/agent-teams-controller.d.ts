@@ -93,9 +93,35 @@ declare module 'agent-teams-controller' {
     buildProcessProtocolText(teamName: string): string;
   }
 
+  export type AgentTeamsMcpToolGroupId =
+    | 'task'
+    | 'kanban'
+    | 'review'
+    | 'message'
+    | 'process'
+    | 'runtime'
+    | 'crossTeam';
+
+  export interface AgentTeamsMcpToolGroup {
+    id: AgentTeamsMcpToolGroupId;
+    teammateOperational: boolean;
+    toolNames: readonly string[];
+  }
+
   export function createController(options: ControllerContextOptions): AgentTeamsController;
 
   export const agentBlocks: AgentBlocksApi;
 
   export const protocols: ProtocolsApi;
+  export const AGENT_TEAMS_TASK_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_REVIEW_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_MESSAGE_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_CROSS_TEAM_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_PROCESS_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_KANBAN_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_RUNTIME_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_MCP_TOOL_GROUPS: readonly AgentTeamsMcpToolGroup[];
+  export const AGENT_TEAMS_REGISTERED_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES: readonly string[];
+  export const AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES: readonly string[];
 }

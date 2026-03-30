@@ -103,6 +103,8 @@ export interface ParsedMessage {
   toolUseResult?: ToolUseResultData;
   /** Whether this is a compact summary boundary message */
   isCompactSummary?: boolean;
+  /** API request ID for deduplicating streaming entries */
+  requestId?: string;
 }
 
 // =============================================================================

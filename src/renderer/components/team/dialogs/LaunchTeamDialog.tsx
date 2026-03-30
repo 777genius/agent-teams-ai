@@ -1146,8 +1146,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                           ? 'Warming up CLI environment...'
                           : 'Preparing environment...')}
                     </span>
-                    <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
-                      Pre-flight check to catch errors before launch
+                    <p className="mt-0.5 flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
+                      <span>Pre-flight check to catch errors before launch</span>
+                      <button
+                        type="button"
+                        onClick={() => setPrepareState('ready')}
+                        className="rounded px-1.5 py-0.5 text-[10px] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text-secondary)]"
+                      >
+                        Skip
+                      </button>
                     </p>
                   </div>
                 </div>

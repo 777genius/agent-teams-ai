@@ -36,6 +36,7 @@ import {
 } from '@main/services/team/TeamProvisioningService';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { spawnCli } from '@main/utils/childProcess';
+import { setAppDataBasePath } from '@main/utils/pathDecoder';
 
 function createFakeChild() {
   const writeSpy = vi.fn((_data: unknown, cb?: (err?: Error | null) => void) => {
@@ -72,11 +73,13 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     tempClaudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-team-prompts-'));
     tempTeamsBase = path.join(tempClaudeRoot, 'teams');
     tempTasksBase = path.join(tempClaudeRoot, 'tasks');
+    setAppDataBasePath(tempClaudeRoot);
     fs.mkdirSync(tempTeamsBase, { recursive: true });
     fs.mkdirSync(tempTasksBase, { recursive: true });
   });
 
   afterEach(() => {
+    setAppDataBasePath(null);
     // Best-effort cleanup of temp dir (per-test)
     try {
       fs.rmSync(tempClaudeRoot, { recursive: true, force: true });

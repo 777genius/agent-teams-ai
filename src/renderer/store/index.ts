@@ -5,6 +5,13 @@
 import { api } from '@renderer/api';
 import { syncRendererTelemetry } from '@renderer/sentry';
 import { cleanupStale as cleanupCommentReadState } from '@renderer/services/commentReadStorage';
+import { normalizePath } from '@renderer/utils/pathNormalize';
+import {
+  buildTaskChangePresenceKey,
+  buildTaskChangeRequestOptions,
+  canDisplayTaskChangesForOptions,
+} from '@renderer/utils/taskChangeRequest';
+import { isVersionOlder, normalizeVersion } from '@shared/utils/version';
 import { create } from 'zustand';
 
 import { createChangeReviewSlice } from './slices/changeReviewSlice';
@@ -32,14 +39,23 @@ import { createUpdateSlice } from './slices/updateSlice';
 import type { DetectedError } from '../types/data';
 import type { AppState } from './types';
 import type {
+  ActiveToolCall,
   CliInstallerProgress,
   LeadContextUsage,
   ScheduleChangeEvent,
   TeamChangeEvent,
+  ToolActivityEventPayload,
   ToolApprovalEvent,
   ToolApprovalRequest,
   UpdaterStatus,
 } from '@shared/types';
+
+const ENABLE_AUTO_TEAM_CHANGE_PRESENCE_TRACKING = false;
+const IN_PROGRESS_CHANGE_PRESENCE_POLL_MS = 10_000;
+const FINISHED_TOOL_DISPLAY_MS = 1_500;
+const MAX_TOOL_HISTORY_PER_MEMBER = 6;
+const CURRENT_APP_VERSION =
+  typeof __APP_VERSION__ === 'string' ? normalizeVersion(__APP_VERSION__) : '0.0.0';
 
 // =============================================================================
 // Store Creation
@@ -135,21 +151,216 @@ export function initializeNotificationListeners(): () => void {
   cleanupFns.push(() => {
     if (cliStatusTimer) clearTimeout(cliStatusTimer);
   });
+  // This lightweight renderer-side poll keeps visible in-progress task badges fresh.
+  // It is intentionally independent from the backend log-source tracking feature flag below.
+  const inProgressChangePresencePollTimer = setInterval(() => {
+    void pollVisibleTeamInProgressChangePresence();
+  }, IN_PROGRESS_CHANGE_PRESENCE_POLL_MS);
+  cleanupFns.push(() => {
+    clearInterval(inProgressChangePresencePollTimer);
+  });
   const pendingSessionRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const pendingProjectRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let teamRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  let teamPresenceRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  let toolActivityTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  let inProgressChangePresencePollInFlight = false;
+  const inProgressChangePresenceCursorByTeam = new Map<string, number>();
 
   let teamListRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   let globalTasksRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   const SESSION_REFRESH_DEBOUNCE_MS = 150;
   const PROJECT_REFRESH_DEBOUNCE_MS = 300;
   const TEAM_REFRESH_THROTTLE_MS = 800;
+  const TEAM_PRESENCE_REFRESH_THROTTLE_MS = 400;
   const TEAM_LIST_REFRESH_THROTTLE_MS = 2000;
   const GLOBAL_TASKS_REFRESH_THROTTLE_MS = 500;
+  const buildToolActivityTimerKey = (
+    teamName: string,
+    memberName: string,
+    toolUseId: string,
+    kind: 'fade'
+  ): string => `${teamName}:${memberName}:${toolUseId}:${kind}`;
+  const clearToolActivityTimer = (
+    teamName: string,
+    memberName: string,
+    toolUseId: string,
+    kind: 'fade'
+  ): void => {
+    const key = buildToolActivityTimerKey(teamName, memberName, toolUseId, kind);
+    const existing = toolActivityTimers.get(key);
+    if (existing) {
+      clearTimeout(existing);
+      toolActivityTimers.delete(key);
+    }
+  };
+  const scheduleToolActivityTimer = (
+    teamName: string,
+    memberName: string,
+    toolUseId: string,
+    kind: 'fade',
+    delayMs: number,
+    cb: () => void
+  ): void => {
+    clearToolActivityTimer(teamName, memberName, toolUseId, kind);
+    const key = buildToolActivityTimerKey(teamName, memberName, toolUseId, kind);
+    const timer = setTimeout(() => {
+      toolActivityTimers.delete(key);
+      cb();
+    }, delayMs);
+    toolActivityTimers.set(key, timer);
+  };
+  const clearToolActivityTimersForTeam = (teamName: string): void => {
+    for (const [key, timer] of toolActivityTimers.entries()) {
+      if (!key.startsWith(`${teamName}:`)) continue;
+      clearTimeout(timer);
+      toolActivityTimers.delete(key);
+    }
+  };
+  const clearRuntimeToolStateForTeam = (
+    prev: AppState,
+    teamName: string
+  ): Pick<AppState, 'activeToolsByTeam' | 'finishedVisibleByTeam' | 'toolHistoryByTeam'> => {
+    const nextActive = { ...prev.activeToolsByTeam };
+    const nextFinished = { ...prev.finishedVisibleByTeam };
+    const nextHistory = { ...prev.toolHistoryByTeam };
+    delete nextActive[teamName];
+    delete nextFinished[teamName];
+    delete nextHistory[teamName];
+    return {
+      activeToolsByTeam: nextActive,
+      finishedVisibleByTeam: nextFinished,
+      toolHistoryByTeam: nextHistory,
+    };
+  };
+  const pushToolHistoryEntry = (
+    history: Record<string, Record<string, ActiveToolCall[]>>,
+    teamName: string,
+    entry: ActiveToolCall
+  ): Record<string, Record<string, ActiveToolCall[]>> => {
+    const teamHistory = { ...(history[teamName] ?? {}) };
+    const existing = teamHistory[entry.memberName] ?? [];
+    teamHistory[entry.memberName] = [
+      entry,
+      ...existing.filter((t) => t.toolUseId !== entry.toolUseId),
+    ].slice(0, MAX_TOOL_HISTORY_PER_MEMBER);
+    return { ...history, [teamName]: teamHistory };
+  };
+  const upsertMemberToolEntry = (
+    teamState: Record<string, Record<string, ActiveToolCall>> | undefined,
+    entry: ActiveToolCall
+  ): Record<string, Record<string, ActiveToolCall>> => ({
+    ...(teamState ?? {}),
+    [entry.memberName]: {
+      ...((teamState ?? {})[entry.memberName] ?? {}),
+      [entry.toolUseId]: entry,
+    },
+  });
+  const removeMemberToolEntry = (
+    teamState: Record<string, Record<string, ActiveToolCall>> | undefined,
+    memberName: string,
+    toolUseId: string
+  ): Record<string, Record<string, ActiveToolCall>> => {
+    if (!teamState?.[memberName]?.[toolUseId]) return teamState ?? {};
+    const nextTeamState = { ...(teamState ?? {}) };
+    const nextMemberState = { ...(nextTeamState[memberName] ?? {}) };
+    delete nextMemberState[toolUseId];
+    if (Object.keys(nextMemberState).length === 0) {
+      delete nextTeamState[memberName];
+    } else {
+      nextTeamState[memberName] = nextMemberState;
+    }
+    return nextTeamState;
+  };
+  const removeMemberToolGroup = (
+    teamState: Record<string, Record<string, ActiveToolCall>> | undefined,
+    memberName: string
+  ): Record<string, Record<string, ActiveToolCall>> => {
+    if (!teamState?.[memberName]) return teamState ?? {};
+    const nextTeamState = { ...(teamState ?? {}) };
+    delete nextTeamState[memberName];
+    return nextTeamState;
+  };
+  const removeMemberToolEntries = (
+    teamState: Record<string, Record<string, ActiveToolCall>> | undefined,
+    memberName: string,
+    toolUseIds: readonly string[]
+  ): Record<string, Record<string, ActiveToolCall>> => {
+    if (!teamState?.[memberName] || toolUseIds.length === 0) return teamState ?? {};
+    let nextTeamState = teamState ?? {};
+    let changed = false;
+    for (const toolUseId of toolUseIds) {
+      if (!nextTeamState[memberName]?.[toolUseId]) continue;
+      nextTeamState = removeMemberToolEntry(nextTeamState, memberName, toolUseId);
+      changed = true;
+    }
+    return changed ? nextTeamState : (teamState ?? {});
+  };
   const getBaseProjectId = (projectId: string | null | undefined): string | null => {
     if (!projectId) return null;
     const separatorIndex = projectId.indexOf('::');
     return separatorIndex >= 0 ? projectId.slice(0, separatorIndex) : projectId;
+  };
+
+  const pollVisibleTeamInProgressChangePresence = async (): Promise<void> => {
+    if (inProgressChangePresencePollInFlight) {
+      return;
+    }
+
+    const state = useStore.getState();
+    const selectedTeamName = state.selectedTeamName;
+    const selectedTeamData = state.selectedTeamData;
+    if (
+      !selectedTeamName ||
+      selectedTeamData?.teamName !== selectedTeamName ||
+      !isTeamVisibleInAnyPane(selectedTeamName)
+    ) {
+      return;
+    }
+
+    const candidateTasks = selectedTeamData.tasks.filter((task) => {
+      if (task.status !== 'in_progress') {
+        return false;
+      }
+      return canDisplayTaskChangesForOptions(buildTaskChangeRequestOptions(task));
+    });
+    if (candidateTasks.length === 0) {
+      inProgressChangePresenceCursorByTeam.delete(selectedTeamName);
+      return;
+    }
+
+    inProgressChangePresencePollInFlight = true;
+    try {
+      const cursor = inProgressChangePresenceCursorByTeam.get(selectedTeamName) ?? 0;
+      const unknownTasks = candidateTasks.filter((task) => task.changePresence === 'unknown');
+      const sourceTasks = unknownTasks.length > 0 ? unknownTasks : candidateTasks;
+      const nextTask = sourceTasks[cursor % sourceTasks.length];
+
+      inProgressChangePresenceCursorByTeam.set(selectedTeamName, (cursor + 1) % sourceTasks.length);
+
+      const current = useStore.getState();
+      if (
+        current.selectedTeamName !== selectedTeamName ||
+        current.selectedTeamData?.teamName !== selectedTeamName ||
+        !isTeamVisibleInAnyPane(selectedTeamName)
+      ) {
+        return;
+      }
+
+      const currentTask = current.selectedTeamData.tasks.find((task) => task.id === nextTask.id);
+      if (currentTask?.status !== 'in_progress') {
+        return;
+      }
+
+      const requestOptions = buildTaskChangeRequestOptions(currentTask);
+      const cacheKey = buildTaskChangePresenceKey(selectedTeamName, currentTask.id, requestOptions);
+      current.invalidateTaskChangePresence([cacheKey]);
+      await current.checkTaskHasChanges(selectedTeamName, currentTask.id, requestOptions);
+    } catch {
+      // Best-effort polling for in-progress tasks only.
+    } finally {
+      inProgressChangePresencePollInFlight = false;
+    }
   };
 
   const scheduleSessionRefresh = (projectId: string, sessionId: string): void => {
@@ -257,6 +468,111 @@ export function initializeNotificationListeners(): () => void {
     });
   };
 
+  const getTrackedChangePresenceTeams = (): Set<string> => {
+    const { selectedTeamName, selectedTeamData } = useStore.getState();
+    if (
+      !selectedTeamName ||
+      selectedTeamData?.teamName !== selectedTeamName ||
+      !isTeamVisibleInAnyPane(selectedTeamName)
+    ) {
+      return new Set<string>();
+    }
+    return new Set([selectedTeamName]);
+  };
+
+  const getTrackedToolActivityTeams = (): Set<string> => {
+    const { paneLayout } = useStore.getState();
+    const tracked = new Set<string>();
+    for (const pane of paneLayout.panes) {
+      if (!pane.activeTabId) continue;
+      const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
+      if (activeTab?.type === 'team' && activeTab.teamName) {
+        tracked.add(activeTab.teamName);
+      }
+    }
+    return tracked;
+  };
+
+  if (ENABLE_AUTO_TEAM_CHANGE_PRESENCE_TRACKING && api.teams?.setChangePresenceTracking) {
+    let trackedTeamNames = new Set<string>();
+    const syncVisibleTeamTracking = (): void => {
+      const nextTrackedTeamNames = getTrackedChangePresenceTeams();
+
+      for (const teamName of nextTrackedTeamNames) {
+        if (!trackedTeamNames.has(teamName)) {
+          void api.teams.setChangePresenceTracking(teamName, true).catch(() => undefined);
+        }
+      }
+
+      for (const teamName of trackedTeamNames) {
+        if (!nextTrackedTeamNames.has(teamName)) {
+          void api.teams.setChangePresenceTracking(teamName, false).catch(() => undefined);
+        }
+      }
+
+      trackedTeamNames = nextTrackedTeamNames;
+    };
+
+    syncVisibleTeamTracking();
+
+    const unsubscribeVisibleTeamTracking = useStore.subscribe((state, prevState) => {
+      if (
+        state.paneLayout === prevState.paneLayout &&
+        state.selectedTeamName === prevState.selectedTeamName &&
+        state.selectedTeamData === prevState.selectedTeamData
+      ) {
+        return;
+      }
+      syncVisibleTeamTracking();
+    });
+
+    cleanupFns.push(() => {
+      unsubscribeVisibleTeamTracking();
+      for (const teamName of trackedTeamNames) {
+        void api.teams.setChangePresenceTracking(teamName, false).catch(() => undefined);
+      }
+      trackedTeamNames.clear();
+    });
+  }
+
+  if (api.teams?.setToolActivityTracking) {
+    let trackedTeamNames = new Set<string>();
+    const syncVisibleTeamTracking = (): void => {
+      const nextTrackedTeamNames = getTrackedToolActivityTeams();
+
+      for (const teamName of nextTrackedTeamNames) {
+        if (!trackedTeamNames.has(teamName)) {
+          void api.teams.setToolActivityTracking(teamName, true).catch(() => undefined);
+        }
+      }
+
+      for (const teamName of trackedTeamNames) {
+        if (!nextTrackedTeamNames.has(teamName)) {
+          void api.teams.setToolActivityTracking(teamName, false).catch(() => undefined);
+        }
+      }
+
+      trackedTeamNames = nextTrackedTeamNames;
+    };
+
+    syncVisibleTeamTracking();
+
+    const unsubscribeVisibleTeamTracking = useStore.subscribe((state, prevState) => {
+      if (state.paneLayout === prevState.paneLayout) {
+        return;
+      }
+      syncVisibleTeamTracking();
+    });
+
+    cleanupFns.push(() => {
+      unsubscribeVisibleTeamTracking();
+      for (const teamName of trackedTeamNames) {
+        void api.teams.setToolActivityTracking(teamName, false).catch(() => undefined);
+      }
+      trackedTeamNames.clear();
+    });
+  }
+
   // Listen for task-list file changes to refresh currently viewed session metadata
   if (api.onTodoChange) {
     const cleanup = api.onTodoChange((event) => {
@@ -362,7 +678,11 @@ export function initializeNotificationListeners(): () => void {
     const cleanup = api.teams.onTeamChange((_event: unknown, event: TeamChangeEvent) => {
       const isIgnoredRuntimeRun = (() => {
         if (!event.runId) return false;
-        return useStore.getState().ignoredProvisioningRunIds[event.runId] === event.teamName;
+        const state = useStore.getState();
+        return (
+          state.ignoredProvisioningRunIds[event.runId] === event.teamName ||
+          state.ignoredRuntimeRunIds[event.runId] === event.teamName
+        );
       })();
       if (isIgnoredRuntimeRun) {
         return;
@@ -383,6 +703,11 @@ export function initializeNotificationListeners(): () => void {
               ...prev.currentRuntimeRunIdByTeam,
               [event.teamName]: event.runId ?? null,
             },
+            ignoredRuntimeRunIds: Object.fromEntries(
+              Object.entries(prev.ignoredRuntimeRunIds).filter(
+                ([, teamName]) => teamName !== event.teamName
+              )
+            ),
           }));
         }
       };
@@ -415,8 +740,16 @@ export function initializeNotificationListeners(): () => void {
           if (nextActivity === 'offline') {
             nextState.leadContextByTeam = { ...prev.leadContextByTeam };
             delete nextState.leadContextByTeam[event.teamName];
+            Object.assign(nextState, clearRuntimeToolStateForTeam(prev, event.teamName));
             nextState.currentRuntimeRunIdByTeam = { ...prev.currentRuntimeRunIdByTeam };
             delete nextState.currentRuntimeRunIdByTeam[event.teamName];
+            nextState.ignoredRuntimeRunIds = event.runId
+              ? {
+                  ...prev.ignoredRuntimeRunIds,
+                  [event.runId]: event.teamName,
+                }
+              : prev.ignoredRuntimeRunIds;
+            clearToolActivityTimersForTeam(event.teamName);
           }
 
           return nextState as typeof prev;
@@ -436,6 +769,135 @@ export function initializeNotificationListeners(): () => void {
             ...prev,
             leadContextByTeam: { ...prev.leadContextByTeam, [event.teamName]: ctx },
           }));
+        } catch {
+          /* ignore malformed detail */
+        }
+        return;
+      }
+
+      if (event.type === 'tool-activity' && event.detail) {
+        if (isStaleRuntimeEvent) {
+          return;
+        }
+        seedCurrentRunIdIfMissing();
+        try {
+          const payload = JSON.parse(event.detail) as ToolActivityEventPayload;
+          if (payload.action === 'start' && payload.activity) {
+            const activity: ActiveToolCall = {
+              memberName: payload.activity.memberName,
+              toolUseId: payload.activity.toolUseId,
+              toolName: payload.activity.toolName,
+              preview: payload.activity.preview,
+              startedAt: payload.activity.startedAt,
+              source: payload.activity.source,
+              state: 'running',
+            };
+
+            useStore.setState((prev) => ({
+              activeToolsByTeam: {
+                ...prev.activeToolsByTeam,
+                [event.teamName]: upsertMemberToolEntry(
+                  prev.activeToolsByTeam[event.teamName],
+                  activity
+                ),
+              },
+            }));
+          } else if (payload.action === 'finish' && payload.memberName && payload.toolUseId) {
+            const memberName = payload.memberName;
+            const toolUseId = payload.toolUseId;
+            useStore.setState((prev) => {
+              const current = prev.activeToolsByTeam[event.teamName]?.[memberName]?.[toolUseId];
+              if (!current) {
+                return {};
+              }
+
+              const completed: ActiveToolCall = {
+                ...current,
+                state: payload.isError ? 'error' : 'complete',
+                finishedAt: payload.finishedAt ?? new Date().toISOString(),
+                resultPreview: payload.resultPreview,
+              };
+
+              scheduleToolActivityTimer(
+                event.teamName,
+                memberName,
+                toolUseId,
+                'fade',
+                FINISHED_TOOL_DISPLAY_MS,
+                () => {
+                  useStore.setState((state) => {
+                    const nextCurrent =
+                      state.finishedVisibleByTeam[event.teamName]?.[memberName]?.[toolUseId];
+                    if (!nextCurrent) {
+                      return {};
+                    }
+                    return {
+                      finishedVisibleByTeam: {
+                        ...state.finishedVisibleByTeam,
+                        [event.teamName]: removeMemberToolEntry(
+                          state.finishedVisibleByTeam[event.teamName],
+                          memberName,
+                          toolUseId
+                        ),
+                      },
+                    };
+                  });
+                }
+              );
+
+              return {
+                activeToolsByTeam: {
+                  ...prev.activeToolsByTeam,
+                  [event.teamName]: removeMemberToolEntry(
+                    prev.activeToolsByTeam[event.teamName],
+                    memberName,
+                    toolUseId
+                  ),
+                },
+                finishedVisibleByTeam: {
+                  ...prev.finishedVisibleByTeam,
+                  [event.teamName]: upsertMemberToolEntry(
+                    prev.finishedVisibleByTeam[event.teamName],
+                    completed
+                  ),
+                },
+                toolHistoryByTeam: pushToolHistoryEntry(
+                  prev.toolHistoryByTeam,
+                  event.teamName,
+                  completed
+                ),
+              };
+            });
+          } else if (payload.action === 'reset') {
+            if (payload.memberName) {
+              const memberName = payload.memberName;
+              const toolUseIds =
+                Array.isArray(payload.toolUseIds) && payload.toolUseIds.length > 0
+                  ? payload.toolUseIds
+                  : null;
+              useStore.setState((prev) => {
+                if (!prev.activeToolsByTeam[event.teamName]?.[memberName]) {
+                  return {};
+                }
+                return {
+                  activeToolsByTeam: {
+                    ...prev.activeToolsByTeam,
+                    [event.teamName]: toolUseIds
+                      ? removeMemberToolEntries(
+                          prev.activeToolsByTeam[event.teamName],
+                          memberName,
+                          toolUseIds
+                        )
+                      : removeMemberToolGroup(prev.activeToolsByTeam[event.teamName], memberName),
+                  },
+                };
+              });
+            } else {
+              useStore.setState((prev) => ({
+                activeToolsByTeam: { ...prev.activeToolsByTeam, [event.teamName]: {} },
+              }));
+            }
+          }
         } catch {
           /* ignore malformed detail */
         }
@@ -471,6 +933,22 @@ export function initializeNotificationListeners(): () => void {
           void current.refreshTeamData(event.teamName);
         }, TEAM_REFRESH_THROTTLE_MS);
         teamRefreshTimers.set(event.teamName, timer);
+        return;
+      }
+
+      if (event.type === 'log-source-change') {
+        if (!event?.teamName || !isTeamVisibleInAnyPane(event.teamName)) {
+          return;
+        }
+        if (teamPresenceRefreshTimers.has(event.teamName)) {
+          return;
+        }
+        const timer = setTimeout(() => {
+          teamPresenceRefreshTimers.delete(event.teamName);
+          const current = useStore.getState();
+          void current.refreshSelectedTeamChangePresence(event.teamName);
+        }, TEAM_PRESENCE_REFRESH_THROTTLE_MS);
+        teamPresenceRefreshTimers.set(event.teamName, timer);
         return;
       }
 
@@ -513,6 +991,10 @@ export function initializeNotificationListeners(): () => void {
         cleanup();
         for (const t of teamRefreshTimers.values()) clearTimeout(t);
         teamRefreshTimers = new Map();
+        for (const t of teamPresenceRefreshTimers.values()) clearTimeout(t);
+        teamPresenceRefreshTimers = new Map();
+        for (const t of toolActivityTimers.values()) clearTimeout(t);
+        toolActivityTimers = new Map();
         if (teamListRefreshTimer) {
           clearTimeout(teamListRefreshTimer);
           teamListRefreshTimer = null;
@@ -525,17 +1007,46 @@ export function initializeNotificationListeners(): () => void {
     }
   }
 
+  if (api.teams?.onProjectBranchChange) {
+    const cleanup = api.teams.onProjectBranchChange((_event: unknown, event) => {
+      if (!event?.projectPath) return;
+      const normalizedPath = normalizePath(event.projectPath);
+      if (!normalizedPath) return;
+      useStore.setState((prev) => {
+        const current = prev.branchByPath[normalizedPath];
+        if (current === event.branch) {
+          return {};
+        }
+        return {
+          branchByPath: {
+            ...prev.branchByPath,
+            [normalizedPath]: event.branch,
+          },
+        };
+      });
+    });
+    if (typeof cleanup === 'function') {
+      cleanupFns.push(cleanup);
+    }
+  }
+
   // Tool approval events from CLI control_request protocol
   if (api.teams?.onToolApprovalEvent) {
     const cleanup = api.teams.onToolApprovalEvent((_event: unknown, data: unknown) => {
       const event = data as ToolApprovalEvent;
       if ('autoResolved' in event && event.autoResolved) {
-        // Timeout or auto-allow resolved in main — remove from UI
-        useStore.setState((s) => ({
-          pendingApprovals: s.pendingApprovals.filter(
-            (a) => !(a.runId === event.runId && a.requestId === event.requestId)
-          ),
-        }));
+        // Timeout or auto-allow resolved in main — remove from UI and record result
+        const allowed = event.reason !== 'timeout_deny';
+        useStore.setState((s) => {
+          const next = new Map(s.resolvedApprovals);
+          next.set(event.requestId, allowed);
+          return {
+            pendingApprovals: s.pendingApprovals.filter(
+              (a) => !(a.runId === event.runId && a.requestId === event.requestId)
+            ),
+            resolvedApprovals: next,
+          };
+        });
       } else if ('dismissed' in event && event.dismissed) {
         const dismiss = event;
         useStore.setState((s) => ({
@@ -556,7 +1067,8 @@ export function initializeNotificationListeners(): () => void {
 
     // Sync saved tool approval settings to main process on startup
     const savedSettings = useStore.getState().toolApprovalSettings;
-    api.teams.updateToolApprovalSettings?.(savedSettings).catch(() => {
+    const activeTeam = useStore.getState().selectedTeamName ?? '__global__';
+    api.teams.updateToolApprovalSettings?.(activeTeam, savedSettings).catch(() => {
       // Silently ignore — settings will use defaults until next update
     });
   }
@@ -690,12 +1202,16 @@ export function initializeNotificationListeners(): () => void {
           if (currentStatus === 'downloading' || currentStatus === 'downloaded') {
             break;
           }
+          const nextVersion = s.version ? normalizeVersion(s.version) : null;
+          if (!nextVersion || !isVersionOlder(CURRENT_APP_VERSION, nextVersion)) {
+            break;
+          }
           const dismissed = useStore.getState().dismissedUpdateVersion;
           useStore.setState({
             updateStatus: 'available',
-            availableVersion: s.version ?? null,
+            availableVersion: nextVersion,
             releaseNotes: s.releaseNotes ?? null,
-            showUpdateDialog: (s.version ?? null) !== dismissed,
+            showUpdateDialog: nextVersion !== dismissed,
           });
           break;
         }
@@ -714,10 +1230,15 @@ export function initializeNotificationListeners(): () => void {
           });
           break;
         case 'downloaded':
+          if (s.version && !isVersionOlder(CURRENT_APP_VERSION, normalizeVersion(s.version))) {
+            break;
+          }
           useStore.setState({
             updateStatus: 'downloaded',
             downloadProgress: 100,
-            availableVersion: s.version ?? useStore.getState().availableVersion,
+            availableVersion: s.version
+              ? normalizeVersion(s.version)
+              : useStore.getState().availableVersion,
           });
           break;
         case 'error': {

@@ -166,6 +166,24 @@ export interface SourceMessageSnapshot {
   }[];
 }
 
+export type InboxMessageKind =
+  | 'default'
+  | 'slash_command'
+  | 'slash_command_result'
+  | 'task_comment_notification';
+
+export interface SlashCommandMeta {
+  name: string;
+  command: `/${string}`;
+  args?: string;
+  knownDescription?: string;
+}
+
+export interface CommandOutputMeta {
+  stream: 'stdout' | 'stderr';
+  commandLabel: string;
+}
+
 // Fields are validated in TeamTaskReader.getTasks() using `satisfies Record<keyof TeamTask, unknown>`.
 // Adding a field here without mapping it there will cause a compile error.
 export interface TeamTask {
@@ -218,11 +236,15 @@ export interface TeamTask {
 }
 
 /** Task enriched for UI/DTO use (overlay from kanban-state.json). */
+export type TaskChangePresenceState = 'has_changes' | 'no_changes' | 'unknown';
+
 export interface TeamTaskWithKanban extends TeamTask {
   /** Set when task is in team kanban (review or approved column). */
   kanbanColumn?: 'review' | 'approved';
   /** Reviewer assigned in kanban state, when applicable. */
   reviewer?: string | null;
+  /** Cheap persisted change-presence state for kanban rendering. */
+  changePresence?: TaskChangePresenceState;
 }
 
 /** Metadata for an attachment associated with a task or comment. */
@@ -286,6 +308,43 @@ export interface ToolCallMeta {
   name: string;
   /** Human-readable preview extracted from input args, e.g. "index.ts", "grep -r foo" */
   preview?: string;
+  /** Optional runtime tool_use identifier when available. */
+  toolUseId?: string;
+}
+
+export type ToolActivitySource = 'runtime' | 'member_log' | 'inbox';
+export type ToolActivityState = 'running' | 'complete' | 'error';
+
+/** Live or recently finished tool activity for one team member. */
+export interface ActiveToolCall {
+  memberName: string;
+  toolUseId: string;
+  toolName: string;
+  preview?: string;
+  startedAt: string;
+  state: ToolActivityState;
+  source: ToolActivitySource;
+  finishedAt?: string;
+  resultPreview?: string;
+}
+
+/** Renderer-facing event payload for tool lifecycle updates. */
+export interface ToolActivityEventPayload {
+  action: 'start' | 'finish' | 'reset';
+  activity?: {
+    memberName: string;
+    toolUseId: string;
+    toolName: string;
+    preview?: string;
+    startedAt: string;
+    source: ToolActivitySource;
+  };
+  memberName?: string;
+  toolUseId?: string;
+  toolUseIds?: string[];
+  finishedAt?: string;
+  resultPreview?: string;
+  isError?: boolean;
 }
 
 export interface InboxMessage {
@@ -319,6 +378,12 @@ export interface InboxMessage {
   toolSummary?: string;
   /** Structured tool call details for tooltip display. */
   toolCalls?: ToolCallMeta[];
+  /** Renderer-friendly semantic kind. Defaults to "default" when absent. */
+  messageKind?: InboxMessageKind;
+  /** Structured slash-command metadata for sent command rows. */
+  slashCommand?: SlashCommandMeta;
+  /** Structured command-output metadata for session-derived result rows. */
+  commandOutput?: CommandOutputMeta;
 }
 
 export type AgentActionMode = 'do' | 'ask' | 'delegate';
@@ -344,6 +409,9 @@ export interface SendMessageRequest {
   replyToConversationId?: string;
   toolSummary?: string;
   toolCalls?: ToolCallMeta[];
+  messageKind?: InboxMessageKind;
+  slashCommand?: SlashCommandMeta;
+  commandOutput?: CommandOutputMeta;
 }
 
 export interface SendMessageResult {
@@ -502,15 +570,22 @@ export interface TeamChangeEvent {
   type:
     | 'config'
     | 'inbox'
+    | 'log-source-change'
     | 'task'
     | 'lead-activity'
     | 'lead-context'
     | 'lead-message'
+    | 'tool-activity'
     | 'process'
     | 'member-spawn';
   teamName: string;
   runId?: string;
   detail?: string;
+}
+
+export interface ProjectBranchChangeEvent {
+  projectPath: string;
+  branch: string | null;
 }
 
 /** Per-member spawn status entry, exposed to renderer via IPC. */
@@ -813,6 +888,15 @@ export interface ToolApprovalRequest {
   teamColor?: string;
   /** Team display name (from config or create request). */
   teamDisplayName?: string;
+  /** Permission suggestions from teammate runtime (only for teammate permission_request).
+   * FACT: Populated by Claude Code runtime, contains instructions to add permission rules.
+   */
+  permissionSuggestions?: {
+    type: string;
+    rules?: { toolName: string }[];
+    behavior?: string;
+    destination?: string;
+  }[];
 }
 
 /** Dismissal event — process died, all pending approvals for this team+run should be removed. */

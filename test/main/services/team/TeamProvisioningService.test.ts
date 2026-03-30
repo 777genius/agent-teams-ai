@@ -1,19 +1,59 @@
 import type { ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const hoisted = vi.hoisted(() => ({
+  paths: {
+    claudeRoot: '',
+    teamsBase: '',
+    tasksBase: '',
+    projectsBase: '',
+  },
+}));
+
+let tempClaudeRoot = '';
+let tempTeamsBase = '';
+let tempTasksBase = '';
+let tempProjectsBase = '';
 
 vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   ClaudeBinaryResolver: { resolve: vi.fn() },
 }));
 
+vi.mock('@main/services/team/TeamTaskReader', () => ({
+  TeamTaskReader: class {
+    async getTasks() {
+      return [];
+    }
+  },
+}));
+
 vi.mock('@main/utils/childProcess', () => ({
   spawnCli: vi.fn(),
+  killProcessTree: vi.fn(),
 }));
+
+vi.mock('@main/utils/pathDecoder', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@main/utils/pathDecoder')>();
+  return {
+    ...actual,
+    getAutoDetectedClaudeBasePath: () => hoisted.paths.claudeRoot,
+    getClaudeBasePath: () => hoisted.paths.claudeRoot,
+    getHomeDir: () => hoisted.paths.claudeRoot,
+    getProjectsBasePath: () => hoisted.paths.projectsBase,
+    getTasksBasePath: () => hoisted.paths.tasksBase,
+    getTeamsBasePath: () => hoisted.paths.teamsBase,
+  };
+});
 
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { spawnCli } from '@main/utils/childProcess';
+import { AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES } from 'agent-teams-controller';
 
 function allowConsoleLogs() {
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -30,9 +70,47 @@ function createFakeChild(exitCode: number): ChildProcess {
   return child;
 }
 
+function createRunningChild() {
+  return Object.assign(new EventEmitter(), {
+    pid: 12345,
+    stdin: {
+      writable: true,
+      write: vi.fn(() => true),
+      end: vi.fn(),
+    },
+    stdout: new EventEmitter(),
+    stderr: new EventEmitter(),
+    kill: vi.fn(),
+  });
+}
+
 describe('TeamProvisioningService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    tempClaudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-team-provisioning-'));
+    tempTeamsBase = path.join(tempClaudeRoot, 'teams');
+    tempTasksBase = path.join(tempClaudeRoot, 'tasks');
+    tempProjectsBase = path.join(tempClaudeRoot, 'projects');
+    hoisted.paths.claudeRoot = tempClaudeRoot;
+    hoisted.paths.teamsBase = tempTeamsBase;
+    hoisted.paths.tasksBase = tempTasksBase;
+    hoisted.paths.projectsBase = tempProjectsBase;
+    fs.mkdirSync(tempTeamsBase, { recursive: true });
+    fs.mkdirSync(tempTasksBase, { recursive: true });
+    fs.mkdirSync(tempProjectsBase, { recursive: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    try {
+      fs.rmSync(tempClaudeRoot, { recursive: true, force: true });
+    } catch {
+      // ignore temp cleanup failures
+    }
+    hoisted.paths.claudeRoot = '';
+    hoisted.paths.teamsBase = '';
+    hoisted.paths.tasksBase = '';
+    hoisted.paths.projectsBase = '';
   });
 
   describe('warmup', () => {
@@ -52,5 +130,355 @@ describe('TeamProvisioningService', () => {
       await expect(svc.warmup()).resolves.not.toThrow();
       expect(spawnCli).toHaveBeenCalled();
     });
+  });
+
+  it('removes generated MCP config when createTeam spawn fails synchronously', async () => {
+    allowConsoleLogs();
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+    vi.mocked(spawnCli).mockImplementation(() => {
+      throw new Error('spawn EINVAL');
+    });
+
+    const mcpConfigBuilder = {
+      writeConfigFile: vi.fn(async () => '/mock/mcp-config-create.json'),
+      removeConfigFile: vi.fn(async () => {}),
+    };
+    const membersMetaStore = {
+      writeMembers: vi.fn(async () => {}),
+    };
+    const teamMetaStore = {
+      writeMeta: vi.fn(async () => {}),
+      deleteMeta: vi.fn(async () => {}),
+    };
+
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      membersMetaStore as any,
+      undefined,
+      mcpConfigBuilder as any,
+      teamMetaStore as any
+    );
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).pathExists = vi.fn(async () => false);
+
+    await expect(
+      svc.createTeam(
+        {
+          teamName: 'cleanup-team',
+          cwd: tempClaudeRoot,
+          members: [{ name: 'alice' }],
+        },
+        () => {}
+      )
+    ).rejects.toThrow('spawn EINVAL');
+
+    expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(tempClaudeRoot);
+    expect(mcpConfigBuilder.removeConfigFile).toHaveBeenCalledWith('/mock/mcp-config-create.json');
+    expect(teamMetaStore.deleteMeta).toHaveBeenCalledWith('cleanup-team');
+  });
+
+  it('removes generated MCP config when launchTeam spawn fails synchronously', async () => {
+    allowConsoleLogs();
+    const teamName = 'launch-cleanup-team';
+    const teamDir = path.join(tempTeamsBase, teamName);
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        projectPath: tempClaudeRoot,
+        members: [{ name: 'team-lead', agentType: 'team-lead' }, { name: 'alice' }],
+      }),
+      'utf8'
+    );
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+    vi.mocked(spawnCli).mockImplementation(() => {
+      throw new Error('launch spawn EINVAL');
+    });
+
+    const mcpConfigBuilder = {
+      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+      removeConfigFile: vi.fn(async () => {}),
+    };
+    const restorePrelaunchConfig = vi.fn(async () => {});
+
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      mcpConfigBuilder as any
+    );
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+      members: [{ name: 'alice' }],
+      source: 'members-meta',
+      warning: undefined,
+    }));
+    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
+    (svc as any).restorePrelaunchConfig = restorePrelaunchConfig;
+    (svc as any).pathExists = vi.fn(async () => false);
+
+    await expect(svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {})).rejects.toThrow(
+      'launch spawn EINVAL'
+    );
+
+    expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(tempClaudeRoot);
+    expect(mcpConfigBuilder.removeConfigFile).toHaveBeenCalledWith('/mock/mcp-config-launch.json');
+    expect(restorePrelaunchConfig).toHaveBeenCalledWith(teamName);
+  });
+
+  it('regenerates a missing --mcp-config before auth-failure respawn', async () => {
+    vi.useFakeTimers();
+    allowConsoleLogs();
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+
+    const firstChild = createRunningChild();
+    const secondChild = createRunningChild();
+    vi.mocked(spawnCli)
+      .mockImplementationOnce(() => firstChild as any)
+      .mockImplementationOnce(() => secondChild as any);
+
+    const mcpConfigBuilder = {
+      writeConfigFile: vi
+        .fn()
+        .mockResolvedValueOnce('/missing/original-mcp-config.json')
+        .mockResolvedValueOnce('/regenerated/mcp-config.json'),
+      removeConfigFile: vi.fn(async () => {}),
+    };
+    const membersMetaStore = {
+      writeMembers: vi.fn(async () => {}),
+    };
+    const teamMetaStore = {
+      writeMeta: vi.fn(async () => {}),
+      deleteMeta: vi.fn(async () => {}),
+    };
+
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      membersMetaStore as any,
+      undefined,
+      mcpConfigBuilder as any,
+      teamMetaStore as any
+    );
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).pathExists = vi.fn(async () => false);
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).stopFilesystemMonitor = vi.fn();
+    (svc as any).startStallWatchdog = vi.fn();
+    (svc as any).stopStallWatchdog = vi.fn();
+    (svc as any).attachStdoutHandler = vi.fn();
+    (svc as any).attachStderrHandler = vi.fn();
+
+    const { runId } = await svc.createTeam(
+      {
+        teamName: 'retry-team',
+        cwd: tempClaudeRoot,
+        members: [{ name: 'alice' }],
+      },
+      () => {}
+    );
+
+    const run = (svc as any).runs.get(runId);
+    expect(run).toBeTruthy();
+
+    const mcpFlagIdx = run.spawnContext.args.indexOf('--mcp-config');
+    expect(mcpFlagIdx).toBeGreaterThanOrEqual(0);
+    run.spawnContext.args[mcpFlagIdx + 1] = path.join(tempClaudeRoot, 'deleted-mcp-config.json');
+    run.mcpConfigPath = run.spawnContext.args[mcpFlagIdx + 1];
+    run.authRetryInProgress = true;
+
+    const respawnPromise = (svc as any).respawnAfterAuthFailure(run);
+    await vi.advanceTimersByTimeAsync(2000);
+    await respawnPromise;
+
+    expect(mcpConfigBuilder.writeConfigFile).toHaveBeenNthCalledWith(2, tempClaudeRoot);
+    expect(run.spawnContext.args[mcpFlagIdx + 1]).toBe('/regenerated/mcp-config.json');
+    expect(run.mcpConfigPath).toBe('/regenerated/mcp-config.json');
+    expect(vi.mocked(spawnCli)).toHaveBeenNthCalledWith(
+      2,
+      '/mock/claude',
+      run.spawnContext.args,
+      expect.objectContaining({
+        cwd: tempClaudeRoot,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+    );
+    expect(run.child).toBe(secondChild);
+
+    if (run.timeoutHandle) {
+      clearTimeout(run.timeoutHandle);
+      run.timeoutHandle = null;
+    }
+  });
+
+  it('pre-seeds teammate operational MCP permissions before createTeam spawn', async () => {
+    allowConsoleLogs();
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+    vi.mocked(spawnCli).mockImplementation(() => {
+      throw new Error('spawn EINVAL');
+    });
+
+    const mcpConfigBuilder = {
+      writeConfigFile: vi.fn(async () => '/mock/mcp-config-create.json'),
+      removeConfigFile: vi.fn(async () => {}),
+    };
+    const membersMetaStore = {
+      writeMembers: vi.fn(async () => {}),
+    };
+    const teamMetaStore = {
+      writeMeta: vi.fn(async () => {}),
+      deleteMeta: vi.fn(async () => {}),
+    };
+
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      membersMetaStore as any,
+      undefined,
+      mcpConfigBuilder as any,
+      teamMetaStore as any
+    );
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).pathExists = vi.fn(async () => false);
+
+    await expect(
+      svc.createTeam(
+        {
+          teamName: 'seeded-team',
+          cwd: tempClaudeRoot,
+          members: [{ name: 'alice' }],
+          skipPermissions: false,
+        },
+        () => {}
+      )
+    ).rejects.toThrow('spawn EINVAL');
+
+    const settingsPath = path.join(tempClaudeRoot, '.claude', 'settings.local.json');
+    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as {
+      permissions?: { allow?: string[] };
+    };
+    expect(settings.permissions?.allow).toEqual(
+      expect.arrayContaining([...AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES])
+    );
+    expect(settings.permissions?.allow).not.toContain('mcp__agent-teams__team_stop');
+    expect(settings.permissions?.allow).not.toContain('mcp__agent-teams__kanban_clear');
+  });
+
+  it('expands teammate permission suggestions to the operational tool set only', async () => {
+    allowConsoleLogs();
+    const svc = new TeamProvisioningService(
+      {
+        getConfig: vi.fn(async () => ({
+          projectPath: tempClaudeRoot,
+          members: [{ cwd: tempClaudeRoot }],
+        })),
+      } as any
+    );
+
+    await (svc as any).respondToTeammatePermission(
+      { teamName: 'ops-team' },
+      'alice',
+      'req-1',
+      true,
+      undefined,
+      [
+        {
+          type: 'addRules',
+          behavior: 'allow',
+          destination: 'localSettings',
+          rules: [{ toolName: 'mcp__agent-teams__task_get' }],
+        },
+      ]
+    );
+
+    const settingsPath = path.join(tempClaudeRoot, '.claude', 'settings.local.json');
+    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as {
+      permissions?: { allow?: string[] };
+    };
+    expect(settings.permissions?.allow).toEqual(
+      expect.arrayContaining([...AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES])
+    );
+    expect(settings.permissions?.allow).not.toContain('mcp__agent-teams__team_stop');
+    expect(settings.permissions?.allow).not.toContain('mcp__agent-teams__kanban_clear');
+  });
+
+  it('does not broaden admin/runtime teammate permission suggestions', async () => {
+    allowConsoleLogs();
+    const svc = new TeamProvisioningService(
+      {
+        getConfig: vi.fn(async () => ({
+          projectPath: tempClaudeRoot,
+          members: [{ cwd: tempClaudeRoot }],
+        })),
+      } as any
+    );
+
+    await (svc as any).respondToTeammatePermission(
+      { teamName: 'ops-team' },
+      'alice',
+      'req-2',
+      true,
+      undefined,
+      [
+        {
+          type: 'addRules',
+          behavior: 'allow',
+          destination: 'localSettings',
+          rules: [{ toolName: 'mcp__agent-teams__team_stop' }],
+        },
+      ]
+    );
+
+    const settingsPath = path.join(tempClaudeRoot, '.claude', 'settings.local.json');
+    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as {
+      permissions?: { allow?: string[] };
+    };
+    expect(settings.permissions?.allow).toEqual(['mcp__agent-teams__team_stop']);
+  });
+
+  it('uses a non-alarming cloud delay message before 2 minutes of silence', () => {
+    const svc = new TeamProvisioningService();
+
+    expect((svc as any).buildStallProgressMessage(90, '1m 30s')).toBe(
+      'Waiting on Cloud response for 1m 30s — logs can be delayed, this is still OK'
+    );
+
+    expect(
+      (svc as any).buildStallWarningText(90, {
+        request: { model: 'sonnet' },
+      })
+    ).toContain('Logs can sometimes show up after 1-1.5 minutes, and that is still okay.');
+  });
+
+  it('marks a cloud wait as unusual after 2 minutes of silence', () => {
+    const svc = new TeamProvisioningService();
+
+    expect((svc as any).buildStallProgressMessage(120, '2m')).toBe(
+      'Still waiting on Cloud response for 2m — this is unusual'
+    );
+
+    expect(
+      (svc as any).buildStallWarningText(120, {
+        request: { model: 'sonnet' },
+      })
+    ).toContain('but no logs for 2m is already unusual.');
   });
 });

@@ -37,6 +37,7 @@ vi.mock('@renderer/api', () => ({
 function createSliceStore() {
   return create<any>()((set, get, store) => ({
     ...createChangeReviewSlice(set as never, get as never, store as never),
+    setSelectedTeamTaskChangePresence: vi.fn(),
   }));
 }
 
@@ -199,6 +200,164 @@ describe('changeReviewSlice task changes', () => {
     await store.getState().checkTaskHasChanges('team-a', '1', OPTIONS_A);
     await store.getState().checkTaskHasChanges('team-a', '1', OPTIONS_A);
     await store.getState().checkTaskHasChanges('team-a', '1', OPTIONS_B);
+
+    expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(2);
+  });
+
+  it('updates selected team task changePresence after a positive summary check', async () => {
+    const store = createSliceStore();
+    hoisted.getTaskChanges.mockResolvedValue(makeTaskChangeSet('presence-hit'));
+
+    await store.getState().checkTaskHasChanges('team-a', 'presence-hit', OPTIONS_A);
+
+    expect(store.getState().setSelectedTeamTaskChangePresence).toHaveBeenCalledWith(
+      'team-a',
+      'presence-hit',
+      'has_changes'
+    );
+  });
+
+  it('updates selected team task changePresence to no_changes only for confirmed empty summaries', async () => {
+    const store = createSliceStore();
+    hoisted.getTaskChanges.mockResolvedValue({
+      files: [],
+      totalFiles: 0,
+      totalLinesAdded: 0,
+      totalLinesRemoved: 0,
+      teamName: 'team-a',
+      taskId: 'presence-empty',
+      confidence: 'high',
+      computedAt: '2026-03-01T12:00:00.000Z',
+      scope: {
+        taskId: 'presence-empty',
+        memberName: '',
+        startLine: 0,
+        endLine: 0,
+        startTimestamp: '',
+        endTimestamp: '',
+        toolUseIds: [],
+        filePaths: [],
+        confidence: { tier: 1, label: 'high', reason: 'test fixture' },
+      },
+      warnings: [],
+    });
+
+    await store.getState().checkTaskHasChanges('team-a', 'presence-empty', OPTIONS_A);
+
+    expect(store.getState().setSelectedTeamTaskChangePresence).toHaveBeenCalledWith(
+      'team-a',
+      'presence-empty',
+      'no_changes'
+    );
+  });
+
+  it('keeps changePresence unknown for fallback empty summaries', async () => {
+    const store = createSliceStore();
+    hoisted.getTaskChanges.mockResolvedValue({
+      files: [],
+      totalFiles: 0,
+      totalLinesAdded: 0,
+      totalLinesRemoved: 0,
+      teamName: 'team-a',
+      taskId: 'presence-unknown',
+      confidence: 'fallback',
+      computedAt: '2026-03-01T12:00:00.000Z',
+      scope: {
+        taskId: 'presence-unknown',
+        memberName: '',
+        startLine: 0,
+        endLine: 0,
+        startTimestamp: '',
+        endTimestamp: '',
+        toolUseIds: [],
+        filePaths: [],
+        confidence: { tier: 4, label: 'fallback', reason: 'test fixture' },
+      },
+      warnings: [],
+    });
+
+    await store.getState().checkTaskHasChanges('team-a', 'presence-unknown', OPTIONS_A);
+
+    expect(store.getState().setSelectedTeamTaskChangePresence).not.toHaveBeenCalledWith(
+      'team-a',
+      'presence-unknown',
+      'no_changes'
+    );
+  });
+
+  it('downgrades stale known presence to unknown for fallback empty summaries', async () => {
+    const store = createSliceStore();
+    store.setState({
+      selectedTeamName: 'team-a',
+      selectedTeamData: {
+        tasks: [{ id: 'presence-stale', changePresence: 'has_changes' }],
+      },
+    });
+    hoisted.getTaskChanges.mockResolvedValue({
+      files: [],
+      totalFiles: 0,
+      totalLinesAdded: 0,
+      totalLinesRemoved: 0,
+      teamName: 'team-a',
+      taskId: 'presence-stale',
+      confidence: 'fallback',
+      computedAt: '2026-03-01T12:00:00.000Z',
+      scope: {
+        taskId: 'presence-stale',
+        memberName: '',
+        startLine: 0,
+        endLine: 0,
+        startTimestamp: '',
+        endTimestamp: '',
+        toolUseIds: [],
+        filePaths: [],
+        confidence: { tier: 4, label: 'fallback', reason: 'test fixture' },
+      },
+      warnings: [],
+    });
+
+    await store.getState().checkTaskHasChanges('team-a', 'presence-stale', OPTIONS_A);
+
+    expect(store.getState().setSelectedTeamTaskChangePresence).toHaveBeenCalledWith(
+      'team-a',
+      'presence-stale',
+      'unknown'
+    );
+  });
+
+  it('bypasses stale negative cache when selected team task presence is unknown', async () => {
+    const store = createSliceStore();
+    hoisted.getTaskChanges.mockResolvedValue({
+      files: [],
+      totalFiles: 0,
+      totalLinesAdded: 0,
+      totalLinesRemoved: 0,
+      teamName: 'team-a',
+      taskId: 'presence-bypass',
+      confidence: 'fallback',
+      computedAt: '2026-03-01T12:00:00.000Z',
+      scope: {
+        taskId: 'presence-bypass',
+        memberName: '',
+        startLine: 0,
+        endLine: 0,
+        startTimestamp: '',
+        endTimestamp: '',
+        toolUseIds: [],
+        filePaths: [],
+        confidence: { tier: 4, label: 'fallback', reason: 'test fixture' },
+      },
+      warnings: [],
+    });
+
+    await store.getState().checkTaskHasChanges('team-a', 'presence-bypass', OPTIONS_A);
+    store.setState({
+      selectedTeamName: 'team-a',
+      selectedTeamData: {
+        tasks: [{ id: 'presence-bypass', changePresence: 'unknown' }],
+      },
+    });
+    await store.getState().checkTaskHasChanges('team-a', 'presence-bypass', OPTIONS_A);
 
     expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(2);
   });
@@ -397,6 +556,85 @@ describe('changeReviewSlice task changes', () => {
     expect(
       store.getState().taskHasChanges[buildTaskChangePresenceKey(teamName, taskId, OPTIONS_A)]
     ).toBe(true);
+  });
+
+  it('warms task summaries with bounded concurrency', async () => {
+    const store = createSliceStore();
+    const pending = Array.from({ length: 6 }, () => deferred<any>());
+    let callIndex = 0;
+    hoisted.getTaskChanges.mockImplementation(() => pending[callIndex++].promise);
+
+    const requests = Array.from({ length: 6 }, (_, index) => ({
+      teamName: 'team-a',
+      taskId: `task-${index}`,
+      options: {
+        owner: 'alice',
+        status: 'completed',
+        intervals: [{ startedAt: `2026-03-01T1${index}:00:00.000Z` }],
+        since: `2026-03-01T0${index}:58:00.000Z`,
+        stateBucket: 'completed' as const,
+      },
+    }));
+
+    const warmPromise = store.getState().warmTaskChangeSummaries(requests);
+    await flushAsyncWork();
+
+    expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(4);
+
+    for (let index = 0; index < 4; index++) {
+      pending[index].resolve({
+        teamName: 'team-a',
+        taskId: `task-${index}`,
+        files: [],
+        totalFiles: 0,
+        totalLinesAdded: 0,
+        totalLinesRemoved: 0,
+        confidence: 'fallback',
+        computedAt: '2026-12-01T12:00:00.000Z',
+        scope: {
+          taskId: `task-${index}`,
+          memberName: '',
+          startLine: 0,
+          endLine: 0,
+          startTimestamp: '',
+          endTimestamp: '',
+          toolUseIds: [],
+          filePaths: [],
+          confidence: { tier: 4, label: 'fallback', reason: 'No log files found for task' },
+        },
+        warnings: [],
+      });
+    }
+    await flushAsyncWork();
+
+    expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(6);
+
+    for (let index = 4; index < 6; index++) {
+      pending[index].resolve({
+        teamName: 'team-a',
+        taskId: `task-${index}`,
+        files: [],
+        totalFiles: 0,
+        totalLinesAdded: 0,
+        totalLinesRemoved: 0,
+        confidence: 'fallback',
+        computedAt: '2026-12-01T12:00:00.000Z',
+        scope: {
+          taskId: `task-${index}`,
+          memberName: '',
+          startLine: 0,
+          endLine: 0,
+          startTimestamp: '',
+          endTimestamp: '',
+          toolUseIds: [],
+          filePaths: [],
+          confidence: { tier: 4, label: 'fallback', reason: 'No log files found for task' },
+        },
+        warnings: [],
+      });
+    }
+
+    await warmPromise;
   });
 
   it('clears optimistic terminal presence after background forceFresh revalidation', async () => {

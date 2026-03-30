@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
-import { Brain, Expand, MessageSquare, Terminal, Wrench } from 'lucide-react';
+import { Brain, Expand, MessageSquare, Wrench } from 'lucide-react';
 
 import { ClaudeLogsDialog } from './ClaudeLogsDialog';
 import { ClaudeLogsPanel } from './ClaudeLogsPanel';
@@ -96,11 +96,7 @@ export const ClaudeLogsSection = ({
       <CollapsibleTeamSection
         sectionId="claude-logs"
         title="Claude logs"
-        icon={
-          <span className="inline-flex size-5 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] shadow-sm">
-            <Terminal size={12} />
-          </span>
-        }
+        icon={null}
         badge={ctrl.badge}
         afterBadge={
           ctrl.data.total > 0 ? (

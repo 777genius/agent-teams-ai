@@ -77,7 +77,8 @@ interface SendMessageDialogProps {
 }
 
 // Sticky action mode — survives dialog close/reopen (component remount)
-let stickyActionMode: ActionMode = 'do';
+// Default: 'delegate' for teams (overridden to 'do' if solo/no teammates)
+let stickyActionMode: ActionMode = 'delegate';
 
 export const SendMessageDialog = ({
   open,

@@ -56,6 +56,10 @@ Use path aliases for imports:
 - `@shared/*` → `src/shared/*`
 - `@preload/*` → `src/preload/*`
 
+## Features Architecture
+**All new features MUST be created in `src/renderer/features/<feature-name>/`.**
+See `src/renderer/features/CLAUDE.md` for the full guide on creating features with Clean Architecture, SOLID, and class-based patterns.
+
 ## Data Sources
 ~/.claude/projects/{encoded-path}/*.jsonl - Session files
 ~/.claude/todos/{sessionId}.json - Todo data
@@ -63,6 +67,13 @@ Use path aliases for imports:
 Path encoding: `/Users/name/project` → `-Users-name-project`
 
 ## Critical Concepts
+
+### Agent Blocks
+- Use `wrapAgentBlock(text)` from `@shared/constants/agentBlocks` to wrap agent-only content.
+  Do NOT manually concatenate `AGENT_BLOCK_OPEN/CLOSE` — the wrapper handles trimming and formatting.
+- `stripAgentBlocks(text)` — removes agent blocks for UI display
+- `unwrapAgentBlock(block)` — extracts content from a single block
+- Agent blocks are hidden from the user in UI, used for internal instructions between agents.
 
 ### isMeta Flag
 - `isMeta: false` = Real user message (creates new chunks)

@@ -243,42 +243,53 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
             isMacElectron && isLeftmostPane
               ? 'var(--macos-traffic-light-padding-left, 72px)'
               : '8px',
-          WebkitAppRegion: 'no-drag',
+          WebkitAppRegion: isMacElectron ? 'drag' : 'no-drag',
           opacity: isFocused || paneCount === 1 ? 1 : 0.7,
         } as React.CSSProperties
       }
     >
-      {/* Tab list with horizontal scroll, sortable DnD, and droppable area.
-          Capped at 75% so the drag spacer always has room to the right. */}
       <div
-        ref={(el) => {
-          scrollContainerRef.current = el;
-          setDroppableRef(el);
-        }}
-        className="scrollbar-none flex min-w-0 flex-1 items-center gap-1"
-        style={{
-          outline: isDroppableOver ? '1px dashed var(--color-accent, #6366f1)' : 'none',
-          outlineOffset: '-1px',
-          overflowX: 'auto',
-          overflowY: 'hidden',
-        }}
+        className="flex min-w-0 shrink items-center gap-1"
+        style={
+          {
+            WebkitAppRegion: 'no-drag',
+            flex: '0 1 auto',
+            maxWidth: 'calc(100% - 32px)',
+          } as React.CSSProperties
+        }
       >
-        <SortableContext items={tabIds} strategy={horizontalListSortingStrategy}>
-          {openTabs.map((tab) => (
-            <SortableTab
-              key={tab.id}
-              tab={tab}
-              paneId={paneId}
-              isActive={tab.id === activeTabId}
-              isSelected={selectedSet.has(tab.id)}
-              onTabClick={handleTabClick}
-              onMouseDown={handleMouseDown}
-              onContextMenu={handleContextMenu}
-              onClose={closeTab}
-              setRef={setTabRef}
-            />
-          ))}
-        </SortableContext>
+        {/* Keep the sortable list inside a no-drag group so tabs remain clickable,
+            while any leftover space in the pane segment can drag the window. */}
+        <div
+          ref={(el) => {
+            scrollContainerRef.current = el;
+            setDroppableRef(el);
+          }}
+          className="scrollbar-none flex min-w-0 flex-1 items-center gap-1"
+          style={{
+            outline: isDroppableOver ? '1px dashed var(--color-accent, #6366f1)' : 'none',
+            outlineOffset: '-1px',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+          }}
+        >
+          <SortableContext items={tabIds} strategy={horizontalListSortingStrategy}>
+            {openTabs.map((tab) => (
+              <SortableTab
+                key={tab.id}
+                tab={tab}
+                paneId={paneId}
+                isActive={tab.id === activeTabId}
+                isSelected={selectedSet.has(tab.id)}
+                onTabClick={handleTabClick}
+                onMouseDown={handleMouseDown}
+                onContextMenu={handleContextMenu}
+                onClose={closeTab}
+                setRef={setTabRef}
+              />
+            ))}
+          </SortableContext>
+        </div>
 
         {/* Refresh button - show only for session tabs */}
         {activeTab?.type === 'session' && (
@@ -297,6 +308,9 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
           </button>
         )}
       </div>
+
+      {/* Guaranteed drag target, even when the tab list is dense. */}
+      <div className="min-w-8 flex-1 self-stretch" />
 
       {/* Context menu */}
       {contextMenu && contextMenuTabId && (

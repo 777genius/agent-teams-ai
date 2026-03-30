@@ -17,6 +17,33 @@ interface UseViewportCommentReadOptions {
   scrollContainer: HTMLElement | null;
 }
 
+const VISIBILITY_THRESHOLD = 0.1;
+
+export function getVisibleCommentIdsFallback(
+  scrollContainer: HTMLElement | null,
+  elementsById: ReadonlyMap<string, HTMLElement>
+): string[] {
+  if (!scrollContainer || elementsById.size === 0) return [];
+
+  const rootRect = scrollContainer.getBoundingClientRect();
+  const visibleIds: string[] = [];
+
+  for (const [commentId, element] of elementsById) {
+    const rect = element.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) continue;
+
+    const visibleWidth = Math.min(rect.right, rootRect.right) - Math.max(rect.left, rootRect.left);
+    const visibleHeight = Math.min(rect.bottom, rootRect.bottom) - Math.max(rect.top, rootRect.top);
+
+    if (visibleWidth <= 0 || visibleHeight <= 0) continue;
+    if (visibleHeight / rect.height < VISIBILITY_THRESHOLD) continue;
+
+    visibleIds.push(commentId);
+  }
+
+  return visibleIds;
+}
+
 /**
  * Marks task comments as read based on viewport visibility.
  *
@@ -45,6 +72,7 @@ export function useViewportCommentRead({
   flush: () => void;
 } {
   const seenIdsRef = useRef<Set<string>>(new Set());
+  const commentElementsRef = useRef<Map<string, HTMLElement>>(new Map());
   const teamNameRef = useRef(teamName);
   const taskIdRef = useRef(taskId);
 
@@ -56,6 +84,7 @@ export function useViewportCommentRead({
   // Reset tracked state when team/task changes
   useEffect(() => {
     seenIdsRef.current = new Set();
+    commentElementsRef.current.clear();
   }, [teamName, taskId]);
 
   const persistSeen = useCallback(() => {
@@ -82,18 +111,37 @@ export function useViewportCommentRead({
 
   const { registerElement } = useViewportObserver({
     root: scrollContainer,
-    threshold: 0.1,
+    threshold: VISIBILITY_THRESHOLD,
     onVisibleChange: handleVisibleChange,
   });
 
   const registerComment = useCallback(
-    (commentId: string) => registerElement(commentId),
+    (commentId: string) => {
+      const registerObservedElement = registerElement(commentId);
+
+      return (el: HTMLElement | null) => {
+        if (el) {
+          commentElementsRef.current.set(commentId, el);
+        } else {
+          commentElementsRef.current.delete(commentId);
+        }
+
+        registerObservedElement(el);
+      };
+    },
     [registerElement]
   );
 
   const flush = useCallback(() => {
+    const fallbackVisibleIds = getVisibleCommentIdsFallback(
+      scrollContainer,
+      commentElementsRef.current
+    );
+    for (const commentId of fallbackVisibleIds) {
+      seenIdsRef.current.add(commentId);
+    }
     persistSeen();
-  }, [persistSeen]);
+  }, [persistSeen, scrollContainer]);
 
   return { registerComment, flush };
 }

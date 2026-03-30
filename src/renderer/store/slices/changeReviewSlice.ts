@@ -16,6 +16,7 @@ const taskChangesPresenceRevalidationInFlight = new Set<string>();
 /** Negative results cached with timestamp — recheck after 30s */
 const taskChangesNegativeCache = new Map<string, number>();
 const NEGATIVE_CACHE_TTL = 30_000;
+const TASK_CHANGE_WARM_CONCURRENCY = 4;
 const CHANGE_REVIEW_SLICE_BOOT_TIME = Date.now();
 let latestTaskChangesRequestToken = 0;
 
@@ -75,6 +76,16 @@ function wasRestoredBeforeCurrentSession(data: TaskChangeSetV2): boolean {
     return true;
   }
   return computedAtMs < CHANGE_REVIEW_SLICE_BOOT_TIME;
+}
+
+function resolveTaskChangePresenceFromResult(
+  data: Pick<TaskChangeSetV2, 'files' | 'confidence'>
+): 'has_changes' | 'no_changes' | null {
+  if (data.files.length > 0) {
+    return 'has_changes';
+  }
+
+  return data.confidence === 'high' || data.confidence === 'medium' ? 'no_changes' : null;
 }
 
 export interface ChangeReviewSlice {
@@ -503,10 +514,14 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         const data = await api.review.getTaskChanges(teamName, taskId, options);
         if (requestToken !== latestTaskChangesRequestToken) return;
         const cacheKey = buildTaskChangePresenceKey(teamName, taskId, options);
+        const nextPresence = resolveTaskChangePresenceFromResult(data);
         installActiveChangeSetForLoad(data, {
           activeTaskChangeRequestOptions: options,
           taskHasChanges: { ...get().taskHasChanges, [cacheKey]: data.files.length > 0 },
         });
+        if (nextPresence) {
+          get().setSelectedTeamTaskChangePresence(teamName, taskId, nextPresence);
+        }
         if (data.files.length > 0) {
           taskChangesNegativeCache.delete(cacheKey);
         } else {
@@ -1310,12 +1325,20 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       taskId: string,
       options: TaskChangeRequestOptions
     ) => {
+      const selectedTask =
+        get().selectedTeamName === teamName
+          ? get().selectedTeamData?.tasks.find((task) => task.id === taskId)
+          : undefined;
       const cacheKey = buildTaskChangePresenceKey(teamName, taskId, options);
       const summaryCacheable = isTaskSummaryCacheableForOptions(options);
-      if (summaryCacheable && get().taskHasChanges[cacheKey] === true) return;
+      if (summaryCacheable && get().taskHasChanges[cacheKey] === true) {
+        get().setSelectedTeamTaskChangePresence(teamName, taskId, 'has_changes');
+        return;
+      }
       if (taskChangesCheckInFlight.has(cacheKey)) return;
       const negativeTs = taskChangesNegativeCache.get(cacheKey);
-      if (negativeTs && Date.now() - negativeTs < NEGATIVE_CACHE_TTL) return;
+      const hasUnknownPresence = selectedTask?.changePresence === 'unknown';
+      if (negativeTs && Date.now() - negativeTs < NEGATIVE_CACHE_TTL && !hasUnknownPresence) return;
 
       taskChangesCheckInFlight.add(cacheKey);
       try {
@@ -1323,11 +1346,13 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           ...options,
           summaryOnly: true,
         });
+        const nextPresence = resolveTaskChangePresenceFromResult(data);
         if (data.files.length > 0) {
           set((s) => ({
             taskHasChanges: { ...s.taskHasChanges, [cacheKey]: true },
           }));
           taskChangesNegativeCache.delete(cacheKey);
+          get().setSelectedTeamTaskChangePresence(teamName, taskId, 'has_changes');
           if (wasRestoredBeforeCurrentSession(data)) {
             void revalidateTaskChangePresence(teamName, taskId, options);
           }
@@ -1336,6 +1361,11 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
             taskHasChanges: { ...s.taskHasChanges, [cacheKey]: false },
           }));
           taskChangesNegativeCache.set(cacheKey, Date.now());
+          if (nextPresence === 'no_changes') {
+            get().setSelectedTeamTaskChangePresence(teamName, taskId, 'no_changes');
+          } else if (selectedTask?.changePresence && selectedTask.changePresence !== 'unknown') {
+            get().setSelectedTeamTaskChangePresence(teamName, taskId, 'unknown');
+          }
         }
       } catch {
         // Allow immediate retry after transient failures (race, file lock, late logs).
@@ -1359,39 +1389,46 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         uniqueRequests.set(cacheKey, request);
       }
 
-      await Promise.all(
-        [...uniqueRequests.entries()].map(async ([cacheKey, request]) => {
-          if (get().taskHasChanges[cacheKey] === true || taskChangesCheckInFlight.has(cacheKey))
-            return;
+      const entries = [...uniqueRequests.entries()];
+      const runWarmRequest = async (
+        cacheKey: string,
+        request: { teamName: string; taskId: string; options: TaskChangeRequestOptions }
+      ): Promise<void> => {
+        if (get().taskHasChanges[cacheKey] === true || taskChangesCheckInFlight.has(cacheKey)) {
+          return;
+        }
 
-          taskChangesCheckInFlight.add(cacheKey);
-          try {
-            const data = await api.review.getTaskChanges(request.teamName, request.taskId, {
-              ...request.options,
-              summaryOnly: true,
-            });
-            set((s) => ({
-              taskHasChanges: { ...s.taskHasChanges, [cacheKey]: data.files.length > 0 },
-            }));
-            if (data.files.length > 0) {
-              taskChangesNegativeCache.delete(cacheKey);
-              if (wasRestoredBeforeCurrentSession(data)) {
-                void revalidateTaskChangePresence(
-                  request.teamName,
-                  request.taskId,
-                  request.options
-                );
-              }
-            } else {
-              taskChangesNegativeCache.set(cacheKey, Date.now());
+        taskChangesCheckInFlight.add(cacheKey);
+        try {
+          const data = await api.review.getTaskChanges(request.teamName, request.taskId, {
+            ...request.options,
+            summaryOnly: true,
+          });
+          set((s) => ({
+            taskHasChanges: { ...s.taskHasChanges, [cacheKey]: data.files.length > 0 },
+          }));
+          if (data.files.length > 0) {
+            taskChangesNegativeCache.delete(cacheKey);
+            if (wasRestoredBeforeCurrentSession(data)) {
+              void revalidateTaskChangePresence(request.teamName, request.taskId, request.options);
             }
-          } catch {
-            // Best-effort warm path.
-          } finally {
-            taskChangesCheckInFlight.delete(cacheKey);
+          } else {
+            taskChangesNegativeCache.set(cacheKey, Date.now());
           }
-        })
-      );
+        } catch {
+          // Best-effort warm path.
+        } finally {
+          taskChangesCheckInFlight.delete(cacheKey);
+        }
+      };
+
+      for (let index = 0; index < entries.length; index += TASK_CHANGE_WARM_CONCURRENCY) {
+        await Promise.all(
+          entries
+            .slice(index, index + TASK_CHANGE_WARM_CONCURRENCY)
+            .map(([cacheKey, request]) => runWarmRequest(cacheKey, request))
+        );
+      }
     },
 
     invalidateTaskChangePresence: (cacheKeys) => {

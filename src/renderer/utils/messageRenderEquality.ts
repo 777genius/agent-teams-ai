@@ -89,6 +89,29 @@ export function areToolCallsEqual(
   return true;
 }
 
+export function areSlashCommandsEqual(
+  prev?: InboxMessage['slashCommand'],
+  next?: InboxMessage['slashCommand']
+): boolean {
+  if (prev === next) return true;
+  if (!prev || !next) return !prev && !next;
+  return (
+    prev.name === next.name &&
+    prev.command === next.command &&
+    prev.args === next.args &&
+    prev.knownDescription === next.knownDescription
+  );
+}
+
+export function areCommandOutputsEqual(
+  prev?: InboxMessage['commandOutput'],
+  next?: InboxMessage['commandOutput']
+): boolean {
+  if (prev === next) return true;
+  if (!prev || !next) return !prev && !next;
+  return prev.stream === next.stream && prev.commandLabel === next.commandLabel;
+}
+
 export function areInboxMessagesEquivalentForRender(
   prev: InboxMessage,
   next: InboxMessage
@@ -107,10 +130,13 @@ export function areInboxMessagesEquivalentForRender(
   if (prev.source !== next.source) return false;
   if (prev.leadSessionId !== next.leadSessionId) return false;
   if (prev.toolSummary !== next.toolSummary) return false;
+  if (prev.messageKind !== next.messageKind) return false;
 
   return (
     areTaskRefsEqual(prev.taskRefs, next.taskRefs) &&
-    areAttachmentsEqual(prev.attachments, next.attachments)
+    areAttachmentsEqual(prev.attachments, next.attachments) &&
+    areSlashCommandsEqual(prev.slashCommand, next.slashCommand) &&
+    areCommandOutputsEqual(prev.commandOutput, next.commandOutput)
   );
 }
 

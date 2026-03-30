@@ -144,6 +144,30 @@ describe('teamSlice actions', () => {
     );
   });
 
+  it('does not warm task-change summaries on team open', async () => {
+    const store = createSliceStore();
+    hoisted.getData.mockResolvedValue({
+      teamName: 'my-team',
+      config: { name: 'My Team' },
+      tasks: [
+        {
+          id: 'completed-1',
+          owner: 'alice',
+          status: 'completed',
+          createdAt: '2026-03-20T08:00:00.000Z',
+          updatedAt: '2026-03-20T12:00:00.000Z',
+        },
+      ],
+      members: [],
+      messages: [],
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+    });
+
+    await store.getState().selectTeam('my-team');
+
+    expect(store.getState().warmTaskChangeSummaries).not.toHaveBeenCalled();
+  });
+
   describe('refreshTeamData provisioning safety', () => {
     it('does not set fatal error on TEAM_PROVISIONING', async () => {
       const store = createSliceStore();
@@ -265,7 +289,7 @@ describe('teamSlice actions', () => {
       expect(store.getState().selectedTeamError).toBe('Team not found');
     });
 
-    it('invalidates changed task summaries and warms only cacheable terminal tasks', async () => {
+    it('invalidates changed task summaries without warming task availability on refresh', async () => {
       const store = createSliceStore();
       const invalidateTaskChangePresence = vi.fn();
       const warmTaskChangeSummaries = vi.fn(async () => undefined);
@@ -367,9 +391,63 @@ describe('teamSlice actions', () => {
 
       expect(hoisted.invalidateTaskChangeSummaries).toHaveBeenCalledWith('my-team', ['task-1']);
       expect(invalidateTaskChangePresence).toHaveBeenCalledTimes(1);
-      expect(warmTaskChangeSummaries).toHaveBeenCalledWith([
-        expect.objectContaining({ teamName: 'my-team', taskId: 'task-2' }),
-      ]);
+      expect(warmTaskChangeSummaries).not.toHaveBeenCalled();
+    });
+
+    it('preserves known task changePresence across refresh when task change signature is unchanged', async () => {
+      const store = createSliceStore();
+      store.setState({
+        selectedTeamName: 'my-team',
+        selectedTeamData: {
+          teamName: 'my-team',
+          config: { name: 'My Team' },
+          tasks: [
+            {
+              id: 'task-1',
+              subject: 'Known changes',
+              status: 'in_progress',
+              owner: 'alice',
+              createdAt: '2026-03-01T10:00:00.000Z',
+              updatedAt: '2026-03-01T10:00:00.000Z',
+              workIntervals: [{ startedAt: '2026-03-01T10:05:00.000Z' }],
+              historyEvents: [],
+              comments: [],
+              attachments: [],
+              changePresence: 'has_changes',
+            },
+          ],
+          members: [],
+          messages: [],
+          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        },
+      });
+
+      hoisted.getData.mockResolvedValue({
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [
+          {
+            id: 'task-1',
+            subject: 'Known changes',
+            status: 'in_progress',
+            owner: 'alice',
+            createdAt: '2026-03-01T10:00:00.000Z',
+            updatedAt: '2026-03-01T10:00:00.000Z',
+            workIntervals: [{ startedAt: '2026-03-01T10:05:00.000Z' }],
+            historyEvents: [],
+            comments: [],
+            attachments: [],
+            changePresence: 'unknown',
+          },
+        ],
+        members: [],
+        messages: [{ from: 'team-lead', text: 'Ping', timestamp: '2026-03-01T10:10:00.000Z' }],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      });
+
+      await store.getState().refreshTeamData('my-team');
+
+      expect(store.getState().selectedTeamData?.tasks[0]?.changePresence).toBe('has_changes');
     });
   });
 
@@ -475,6 +553,9 @@ describe('teamSlice actions', () => {
         currentProvisioningRunIdByTeam: {
           'my-team': 'pending:my-team:1',
         },
+        currentRuntimeRunIdByTeam: {
+          'my-team': 'pending:my-team:1',
+        },
         memberSpawnStatusesByTeam: {
           'my-team': {
             alice: { status: 'spawning', updatedAt: '2026-03-12T10:00:00.000Z' },
@@ -489,6 +570,7 @@ describe('teamSlice actions', () => {
       expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBeUndefined();
       expect(store.getState().memberSpawnStatusesByTeam['my-team']).toBeUndefined();
       expect(store.getState().ignoredProvisioningRunIds['pending:my-team:1']).toBe('my-team');
+      expect(store.getState().ignoredRuntimeRunIds['pending:my-team:1']).toBe('my-team');
     });
 
     it('does not resurrect a cleared missing run when late progress arrives', () => {
@@ -558,6 +640,91 @@ describe('teamSlice actions', () => {
       });
       hoisted.getMemberSpawnStatuses.mockResolvedValue({
         runId: 'old-runtime-run',
+        statuses: {
+          alice: { status: 'spawning', updatedAt: '2026-03-12T10:00:00.000Z' },
+        },
+      });
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBeUndefined();
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toBeUndefined();
+    });
+
+    it('tombstones the previous runtime run and clears tool layers before creating a new run', async () => {
+      const store = createSliceStore();
+      store.setState({
+        currentRuntimeRunIdByTeam: {
+          'my-team': 'runtime-old',
+        },
+        activeToolsByTeam: {
+          'my-team': {
+            'team-lead': {
+              'tool-a': {
+                memberName: 'team-lead',
+                toolUseId: 'tool-a',
+                toolName: 'Read',
+                startedAt: '2026-03-12T10:00:00.000Z',
+                state: 'running',
+                source: 'runtime',
+              },
+            },
+          },
+        },
+        finishedVisibleByTeam: {
+          'my-team': {
+            'team-lead': {
+              'tool-b': {
+                memberName: 'team-lead',
+                toolUseId: 'tool-b',
+                toolName: 'Bash',
+                startedAt: '2026-03-12T10:00:01.000Z',
+                finishedAt: '2026-03-12T10:00:02.000Z',
+                state: 'complete',
+                source: 'runtime',
+              },
+            },
+          },
+        },
+        toolHistoryByTeam: {
+          'my-team': {
+            'team-lead': [
+              {
+                memberName: 'team-lead',
+                toolUseId: 'tool-b',
+                toolName: 'Bash',
+                startedAt: '2026-03-12T10:00:01.000Z',
+                finishedAt: '2026-03-12T10:00:02.000Z',
+                state: 'complete',
+                source: 'runtime',
+              },
+            ],
+          },
+        },
+      });
+
+      await store.getState().createTeam({
+        teamName: 'my-team',
+        cwd: '/tmp/project',
+        members: [],
+      });
+
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-1');
+      expect(store.getState().ignoredRuntimeRunIds['runtime-old']).toBeUndefined();
+      expect(store.getState().activeToolsByTeam['my-team']).toBeUndefined();
+      expect(store.getState().finishedVisibleByTeam['my-team']).toBeUndefined();
+      expect(store.getState().toolHistoryByTeam['my-team']).toBeUndefined();
+    });
+
+    it('ignores tombstoned runtime spawn-status snapshots', async () => {
+      const store = createSliceStore();
+      store.setState({
+        ignoredRuntimeRunIds: {
+          'runtime-old': 'my-team',
+        },
+      });
+      hoisted.getMemberSpawnStatuses.mockResolvedValue({
+        runId: 'runtime-old',
         statuses: {
           alice: { status: 'spawning', updatedAt: '2026-03-12T10:00:00.000Z' },
         },

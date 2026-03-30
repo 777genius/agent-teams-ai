@@ -113,6 +113,7 @@ vi.mock('../../../../src/main/utils/fsRead', async (importOriginal) => {
 });
 
 vi.mock('agent-teams-controller', () => ({
+  AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES: [] as readonly string[],
   createController: ({ teamName }: { teamName: string }) => ({
     messages: {
       appendSentMessage: (message: Record<string, unknown>) =>
@@ -174,6 +175,7 @@ function attachAliveRun(
     },
     leadMsgSeq: 0,
     pendingToolCalls: [],
+    activeToolCalls: new Map(),
     pendingDirectCrossTeamSendRefresh: false,
     lastLeadTextEmitMs: 0,
     activeCrossTeamReplyHints: [],
@@ -254,6 +256,55 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(payload).toContain('"type":"user"');
     expect(payload).toContain('Please assign this to Alice.');
     expect(service.getLiveLeadProcessMessages(teamName)).toHaveLength(1);
+  });
+
+  it('shows assistant text after relay capture has already settled', () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    attachAliveRun(service, teamName);
+
+    const run = (service as unknown as { runs: Map<string, unknown> }).runs.get('run-1') as {
+      leadRelayCapture: {
+        leadName: string;
+        startedAt: string;
+        textParts: string[];
+        settled: boolean;
+        idleHandle: NodeJS.Timeout | null;
+        idleMs: number;
+        resolveOnce: (text: string) => void;
+        rejectOnce: (error: string) => void;
+        timeoutHandle: NodeJS.Timeout;
+      } | null;
+    };
+
+    run.leadRelayCapture = {
+      leadName: 'team-lead',
+      startedAt: new Date().toISOString(),
+      textParts: [],
+      settled: true,
+      idleHandle: null,
+      idleMs: 800,
+      resolveOnce: vi.fn(),
+      rejectOnce: vi.fn(),
+      timeoutHandle: setTimeout(() => undefined, 60_000),
+    };
+
+    try {
+      (service as any).handleStreamJsonMessage(run, {
+        type: 'assistant',
+        content: [{ type: 'text', text: 'Late reply after relay completion.' }],
+      });
+
+      const live = service.getLiveLeadProcessMessages(teamName);
+      expect(live).toHaveLength(1);
+      expect(live[0].to).toBeUndefined();
+      expect(live[0].text).toBe('Late reply after relay completion.');
+      expect(live[0].source).toBe('lead_process');
+    } finally {
+      clearTimeout(run.leadRelayCapture.timeoutHandle);
+      run.leadRelayCapture = null;
+    }
   });
 
   it('adds task-first reply guidance for task comment notifications in lead relay prompts', async () => {
@@ -348,6 +399,19 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     (service as unknown as { runs: Map<string, unknown> }).runs.set('run-1', {
       runId: 'run-1',
       teamName,
+      request: {
+        teamName,
+        members: [{ name: 'team-lead', role: 'team-lead' }],
+      },
+      activeToolCalls: new Map(),
+      pendingToolCalls: [],
+      leadMsgSeq: 0,
+      pendingDirectCrossTeamSendRefresh: false,
+      lastLeadTextEmitMs: 0,
+      activeCrossTeamReplyHints: [],
+      pendingInboxRelayCandidates: [],
+      silentUserDmForward: null,
+      silentUserDmForwardClearHandle: null,
       child: { stdin: { writable: true, write: writeSpy } },
       processKilled: false,
       cancelRequested: false,

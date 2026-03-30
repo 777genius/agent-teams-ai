@@ -7,7 +7,9 @@
 
 import crypto from 'node:crypto';
 
+import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { getHomeDir } from '@main/utils/pathDecoder';
+import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 // eslint-disable-next-line boundaries/element-types -- IPC channel constants shared between main and preload
 import { TERMINAL_DATA, TERMINAL_EXIT } from '@preload/constants/ipcChannels';
 import { createLogger } from '@shared/utils/logger';
@@ -65,9 +67,7 @@ export class PtyTerminalService {
       rows: options?.rows ?? 24,
       cwd: options?.cwd ?? home,
       env: {
-        ...process.env,
-        HOME: home,
-        USERPROFILE: home,
+        ...buildEnrichedEnv(),
         ...options?.env,
       } as Record<string, string>,
     });
@@ -111,8 +111,6 @@ export class PtyTerminalService {
   }
 
   private send(channel: string, ...args: unknown[]): void {
-    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.webContents.send(channel, ...args);
-    }
+    safeSendToRenderer(this.mainWindow, channel, ...args);
   }
 }

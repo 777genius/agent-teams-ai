@@ -69,7 +69,10 @@ export function decodePath(encodedName: string): string {
   }
 
   // Ensure leading slash for POSIX-style absolute paths
-  return decodedPath.startsWith('/') ? decodedPath : `/${decodedPath}`;
+  const absolutePath = decodedPath.startsWith('/') ? decodedPath : `/${decodedPath}`;
+
+  // Translate WSL mount paths to Windows drive-letter paths on Windows
+  return translateWslMountPath(absolutePath);
 }
 
 /**
@@ -89,6 +92,23 @@ export function extractProjectName(encodedName: string, cwdHint?: string): strin
   const decoded = decodePath(encodedName);
   const segments = decoded.split('/').filter(Boolean);
   return segments[segments.length - 1] || encodedName;
+}
+
+/**
+ * Translate WSL mount paths (/mnt/X/...) to Windows drive-letter paths (X:/...)
+ * when running on Windows. No-op on other platforms.
+ */
+export function translateWslMountPath(posixPath: string): string {
+  if (process.platform !== 'win32') {
+    return posixPath;
+  }
+  const match = /^\/mnt\/([a-zA-Z])(\/.*)?$/.exec(posixPath);
+  if (match) {
+    const drive = match[1].toUpperCase();
+    const rest = match[2] ?? '';
+    return `${drive}:${rest}`;
+  }
+  return posixPath;
 }
 
 // =============================================================================
@@ -373,6 +393,10 @@ export function getTaskChangeSummariesBasePath(): string {
   return path.join(getClaudeBasePath(), 'task-change-summaries');
 }
 
+export function getTaskChangePresenceBasePath(): string {
+  return path.join(getClaudeBasePath(), 'task-change-presence');
+}
+
 /**
  * Get the backups directory path for the app's own storage.
  */
@@ -392,8 +416,8 @@ export function getAppDataPath(): string {
 
 let appDataBasePathOverride: string | null = null;
 
-export function setAppDataBasePath(p: string): void {
-  appDataBasePathOverride = p;
+export function setAppDataBasePath(p: string | null | undefined): void {
+  appDataBasePathOverride = p ?? null;
 }
 
 function getAppDataBasePath(): string {
@@ -407,4 +431,22 @@ function getAppDataBasePath(): string {
     // Outside Electron (tests, CLI) — fall back to home dir
     return path.join(getHomeDir(), '.claude-agent-teams-ui');
   }
+}
+
+/**
+ * Directory for per-team MCP config JSON files.
+ * Stored in app's userData so they persist across sessions and are
+ * accessible by Claude CLI subprocess on all platforms (including AppImage).
+ */
+export function getMcpConfigsBasePath(): string {
+  return path.join(getAppDataBasePath(), 'mcp-configs');
+}
+
+/**
+ * Directory for the stable MCP server bundle copy (packaged builds).
+ * Versioned subdirectories contain the copied index.js + package.json
+ * so the server runs from a writable, non-FUSE location.
+ */
+export function getMcpServerBasePath(): string {
+  return path.join(getAppDataBasePath(), 'mcp-server');
 }

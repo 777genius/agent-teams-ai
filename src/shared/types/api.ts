@@ -51,10 +51,12 @@ import type {
   MemberFullStats,
   MemberLogSummary,
   MemberSpawnStatusesSnapshot,
+  ProjectBranchChangeEvent,
   ReplaceMembersRequest,
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
+  TaskChangePresenceState,
   TaskComment,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
@@ -416,6 +418,9 @@ export interface HttpServerAPI {
 export interface TeamsAPI {
   list: () => Promise<TeamSummary[]>;
   getData: (teamName: string) => Promise<TeamData>;
+  getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
+  setChangePresenceTracking: (teamName: string, enabled: boolean) => Promise<void>;
+  setToolActivityTracking: (teamName: string, enabled: boolean) => Promise<void>;
   getClaudeLogs: (teamName: string, query?: TeamClaudeLogsQuery) => Promise<TeamClaudeLogsResponse>;
   deleteTeam: (teamName: string) => Promise<void>;
   restoreTeam: (teamName: string) => Promise<void>;
@@ -443,6 +448,7 @@ export interface TeamsAPI {
     fields: { subject?: string; description?: string }
   ) => Promise<void>;
   startTask: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
+  startTaskByUser: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   processSend: (teamName: string, message: string) => Promise<void>;
   processAlive: (teamName: string) => Promise<boolean>;
   aliveList: () => Promise<string[]>;
@@ -484,6 +490,7 @@ export interface TeamsAPI {
     value: 'lead' | 'user' | null
   ) => Promise<void>;
   getProjectBranch: (projectPath: string) => Promise<string | null>;
+  setProjectBranchTracking: (projectPath: string, enabled: boolean) => Promise<void>;
   getAttachments: (teamName: string, messageId: string) => Promise<AttachmentFileData[]>;
   killProcess: (teamName: string, pid: number) => Promise<void>;
   getLeadActivity: (teamName: string) => Promise<LeadActivitySnapshot>;
@@ -525,6 +532,9 @@ export interface TeamsAPI {
     attachmentId: string,
     mimeType: string
   ) => Promise<void>;
+  onProjectBranchChange: (
+    callback: (event: unknown, data: ProjectBranchChangeEvent) => void
+  ) => () => void;
   onTeamChange: (callback: (event: unknown, data: TeamChangeEvent) => void) => () => void;
   onProvisioningProgress: (
     callback: (event: unknown, data: TeamProvisioningProgress) => void
@@ -538,7 +548,7 @@ export interface TeamsAPI {
   ) => Promise<void>;
   validateCliArgs: (rawArgs: string) => Promise<CliArgsValidationResult>;
   onToolApprovalEvent: (callback: (event: unknown, data: ToolApprovalEvent) => void) => () => void;
-  updateToolApprovalSettings: (settings: ToolApprovalSettings) => Promise<void>;
+  updateToolApprovalSettings: (teamName: string, settings: ToolApprovalSettings) => Promise<void>;
   readFileForToolApproval: (filePath: string) => Promise<ToolApprovalFileContent>;
 }
 

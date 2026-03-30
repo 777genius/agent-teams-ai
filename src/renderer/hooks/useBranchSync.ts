@@ -1,60 +1,37 @@
 /**
- * Centralized git branch polling hook.
+ * Centralized git branch sync hook.
  *
  * Provides two modes:
  * - `live: false` (default) — one-shot fetch on mount / path change
- * - `live: true` — continuous polling with ref-counted shared timer
+ * - `live: true` — background tracking in main with ref-counted subscriptions
  *
  * Data is stored in the Zustand store (`branchByPath`) so any component
  * can read it via `useStore(s => s.branchByPath)`.
  *
- * The module-level polling manager guarantees:
- * - A single shared `setInterval` across all live subscribers
- * - Deduplication: N components subscribing to the same path = 1 poll
- * - Automatic cleanup: timer stops when all subscribers unmount
+ * The module-level tracking manager guarantees:
+ * - Deduplication: N components subscribing to the same path = 1 background tracker
+ * - Automatic cleanup: tracking stops when all subscribers unmount
  */
 
 import { useEffect, useMemo } from 'react';
 
+import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 
 // =============================================================================
-// Constants
-// =============================================================================
-
-const POLL_INTERVAL_MS = 6_000;
-
-// =============================================================================
-// Module-level polling manager (singleton, outside React lifecycle)
+// Module-level tracking manager (singleton, outside React lifecycle)
 // =============================================================================
 
 const livePaths = new Map<string, { actualPath: string; refCount: number }>();
-let pollTimer: ReturnType<typeof setInterval> | null = null;
-
-function startPollingIfNeeded(): void {
-  if (pollTimer || livePaths.size === 0) return;
-  pollTimer = setInterval(() => {
-    const paths = Array.from(livePaths.values()).map((v) => v.actualPath);
-    void useStore.getState().fetchBranches(paths);
-  }, POLL_INTERVAL_MS);
-}
-
-function stopPollingIfEmpty(): void {
-  if (pollTimer && livePaths.size === 0) {
-    clearInterval(pollTimer);
-    pollTimer = null;
-  }
-}
-
 function subscribe(normalizedKey: string, actualPath: string): void {
   const entry = livePaths.get(normalizedKey);
   if (entry) {
     entry.refCount++;
   } else {
     livePaths.set(normalizedKey, { actualPath, refCount: 1 });
+    void api.teams?.setProjectBranchTracking?.(actualPath, true).catch(() => undefined);
   }
-  startPollingIfNeeded();
 }
 
 function unsubscribe(normalizedKey: string): void {
@@ -63,8 +40,8 @@ function unsubscribe(normalizedKey: string): void {
   entry.refCount--;
   if (entry.refCount <= 0) {
     livePaths.delete(normalizedKey);
+    void api.teams?.setProjectBranchTracking?.(entry.actualPath, false).catch(() => undefined);
   }
-  stopPollingIfEmpty();
 }
 
 // =============================================================================
@@ -75,7 +52,7 @@ function unsubscribe(normalizedKey: string): void {
  * Sync git branch data for the given project paths into the store.
  *
  * @param paths - Raw project paths to resolve branches for
- * @param options.live - When true, keeps polling every 6s while mounted
+ * @param options.live - When true, enables main-side branch tracking while mounted
  */
 export function useBranchSync(paths: string[], options?: { live?: boolean }): void {
   const live = options?.live ?? false;

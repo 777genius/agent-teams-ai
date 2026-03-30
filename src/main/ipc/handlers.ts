@@ -88,6 +88,7 @@ import { registerValidationHandlers, removeValidationHandlers } from './validati
 import { registerWindowHandlers, removeWindowHandlers } from './window';
 
 import type {
+  BranchStatusService,
   ChangeExtractorService,
   CliInstallerService,
   FileContentResolver,
@@ -99,6 +100,7 @@ import type {
   ServiceContextRegistry,
   SshConnectionManager,
   TeamDataService,
+  TeammateToolTracker,
   TeamMemberLogsFinder,
   TeamProvisioningService,
   UpdaterService,
@@ -127,6 +129,8 @@ export function initializeIpcHandlers(
   teamProvisioningService: TeamProvisioningService,
   teamMemberLogsFinder: TeamMemberLogsFinder,
   memberStatsComputer: MemberStatsComputer,
+  teammateToolTracker: TeammateToolTracker | undefined,
+  branchStatusService: BranchStatusService | undefined,
   contextCallbacks: {
     rewire: (context: ServiceContext) => void;
     full: (context: ServiceContext) => void;
@@ -167,7 +171,9 @@ export function initializeIpcHandlers(
     teamProvisioningService,
     teamMemberLogsFinder,
     memberStatsComputer,
-    teamBackupService
+    teamBackupService,
+    teammateToolTracker,
+    branchStatusService
   );
   initializeConfigHandlers({
     onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,

@@ -19,6 +19,7 @@ import {
   AGENT_BLOCK_CLOSE,
   AGENT_BLOCK_OPEN,
   stripAgentBlocks,
+  wrapAgentBlock,
 } from '@shared/constants/agentBlocks';
 import {
   CROSS_TEAM_PREFIX_TAG,
@@ -31,7 +32,11 @@ import { getMemberColorByName } from '@shared/constants/memberColors';
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
-import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
+import {
+  isInboxNoiseMessage,
+  type ParsedPermissionRequest,
+  parsePermissionRequest,
+} from '@shared/utils/inboxNoise';
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
@@ -40,7 +45,11 @@ import {
   type ParsedTeammateContent,
 } from '@shared/utils/teammateMessageParser';
 import { createCliAutoSuffixNameGuard, parseNumericSuffixName } from '@shared/utils/teamMemberName';
-import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
+import {
+  extractToolPreview,
+  extractToolResultPreview,
+  formatToolSummaryFromCalls,
+} from '@shared/utils/toolSummary';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { type ChildProcess, type spawn } from 'child_process';
 import { randomUUID } from 'crypto';
@@ -75,6 +84,7 @@ function killTeamProcess(child: ChildProcess | null | undefined): void {
 }
 
 import type {
+  ActiveToolCall,
   CrossTeamSendResult,
   InboxMessage,
   LeadContextUsage,
@@ -90,6 +100,7 @@ import type {
   TeamProvisioningState,
   TeamRuntimeState,
   TeamTask,
+  ToolActivityEventPayload,
   ToolApprovalAutoResolved,
   ToolApprovalEvent,
   ToolApprovalRequest,
@@ -98,7 +109,8 @@ import type {
 } from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
-const { createController, protocols } = agentTeamsControllerModule;
+const { AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES, createController, protocols } =
+  agentTeamsControllerModule;
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const RUN_TIMEOUT_MS = 300_000;
 const VERIFY_TIMEOUT_MS = 15_000;
@@ -250,6 +262,8 @@ interface ProvisioningRun {
   fsPhase: 'waiting_config' | 'waiting_members' | 'waiting_tasks' | 'all_files_found';
   waitingTasksSince: number | null;
   provisioningComplete: boolean;
+  /** Path to the generated MCP config file for later cleanup. */
+  mcpConfigPath: string | null;
   isLaunch: boolean;
   leadRelayCapture: {
     leadName: string;
@@ -270,6 +284,8 @@ interface ProvisioningRun {
   leadMsgSeq: number;
   /** Accumulated tool_use details between text messages. */
   pendingToolCalls: ToolCallMeta[];
+  /** Active runtime tool calls keyed by tool_use_id. */
+  activeToolCalls: Map<string, ActiveToolCall>;
   /** True when a direct MCP cross_team_send happened and sentMessages history should refresh. */
   pendingDirectCrossTeamSendRefresh: boolean;
   /** Throttle timestamp for emitting inbox refresh events for lead text. */
@@ -314,6 +330,8 @@ interface ProvisioningRun {
   } | null;
   /** Pending tool approval requests awaiting user response (control_request protocol). */
   pendingApprovals: Map<string, ToolApprovalRequest>;
+  /** Teammate permission_request IDs already intercepted (prevents re-processing read messages). */
+  processedPermissionRequestIds: Set<string>;
   /**
    * Post-compact context reinjection lifecycle.
    * - pendingPostCompactReminder: compact_boundary was received; waiting for idle to inject.
@@ -387,11 +405,8 @@ async function ensureCwdExists(cwd: string): Promise<void> {
   }
 }
 
-function wrapInAgentBlock(text: string): string {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return '';
-  return `${AGENT_BLOCK_OPEN}\n${trimmed}\n${AGENT_BLOCK_CLOSE}`;
-}
+/** @deprecated Use wrapAgentBlock from @shared/constants/agentBlocks instead. */
+const wrapInAgentBlock = wrapAgentBlock;
 
 function indentMultiline(text: string, indent: string): string {
   return text
@@ -555,7 +570,7 @@ export function buildAddMemberSpawnMessage(
 
   return (
     `A new teammate "${member.name}"${roleHint} has been added to the team. ` +
-    `Please spawn them immediately using the Task tool with team_name="${teamName}", name="${member.name}", subagent_type="general-purpose", and the exact prompt below:${workflowHint}\n\n` +
+    `Please spawn them immediately using the **Agent** tool with team_name="${teamName}", name="${member.name}", subagent_type="general-purpose", and the exact prompt below:${workflowHint}\n\n` +
     indentMultiline(prompt, '  ')
   );
 }
@@ -680,8 +695,8 @@ function buildPersistentLeadContext(opts: {
       `\n  - FORBIDDEN (until teammates exist): Do NOT spawn teammates via the Task tool with a team_name parameter — there are no teammates to spawn yet.` +
       `\n  - FORBIDDEN (until teammates exist): Do NOT call SendMessage to any teammate name — no teammates exist yet.` +
       `\n  - ALLOWED: You may message "user" (the human operator) via SendMessage.` +
-      `\n  - ALLOWED: You may use the Task tool for regular subagents WITHOUT team_name — these are normal Claude Code helpers, not teammates.` +
-      `\n  - If teammates are added later (e.g. via UI), you may then spawn them using the Task tool with team_name + name.` +
+      `\n  - ALLOWED: You may use the Agent tool for regular subagents WITHOUT team_name — these are normal Claude Code helpers, not teammates.` +
+      `\n  - If teammates are added later (e.g. via UI), you may then spawn them using the Agent tool with team_name + name.` +
       `\n  - TASK BOARD FIRST (MANDATORY): Do NOT do substantial work silently or off-board.` +
       `\n    - Before you start meaningful implementation, debugging, research, review, or follow-up work, make sure there is a visible team-board task for it and that task is assigned to you.` +
       `\n    - If the user asks for new work, your first move is to create/update the relevant board task(s), then start work from those tasks.` +
@@ -901,8 +916,9 @@ function buildProvisioningPrompt(request: TeamCreateRequest): string {
 
   const step2Block = isSolo
     ? '2) Skip — this is a solo team with no teammates to spawn.'
-    : `2) Spawn each member as a live teammate using the Task tool:
-   - team_name: “${request.teamName}”
+    : `2) Spawn each member as a live teammate using the **Agent** tool:
+   CRITICAL: Every Agent call MUST include team_name=”${request.teamName}”. Without team_name the agent becomes an ephemeral subagent that exits immediately instead of a persistent teammate.
+   - team_name: “${request.teamName}”  ← MANDATORY, never omit
    - name: the member's name (see per-member list below)
    - subagent_type: “general-purpose”
    - IMPORTANT: Use the exact prompt shown for each member.
@@ -1006,8 +1022,9 @@ function buildLaunchPrompt(
       })
       .join('\n\n');
 
-    step2And3Block = `2) Spawn each existing member as a live teammate using the Task tool:
-   - team_name: "${request.teamName}"
+    step2And3Block = `2) Spawn each existing member as a live teammate using the **Agent** tool:
+   CRITICAL: Every Agent call MUST include team_name="${request.teamName}". Without team_name the agent becomes an ephemeral subagent that exits immediately instead of a persistent teammate.
+   - team_name: "${request.teamName}"  ← MANDATORY, never omit
    - name: the member's name
    - subagent_type: "general-purpose"
    - IMPORTANT: Use the exact prompt shown for each member.
@@ -1260,7 +1277,7 @@ export class TeamProvisioningService {
   private helpOutputCache: string | null = null;
   private helpOutputCacheTime = 0;
   private static readonly HELP_CACHE_TTL_MS = 5 * 60 * 1000;
-  private toolApprovalSettings: ToolApprovalSettings = DEFAULT_TOOL_APPROVAL_SETTINGS;
+  private toolApprovalSettingsByTeam = new Map<string, ToolApprovalSettings>();
   private pendingTimeouts = new Map<string, NodeJS.Timeout>();
   private inFlightResponses = new Set<string>();
   private controlApiBaseUrlResolver: (() => Promise<string | null>) | null = null;
@@ -1667,6 +1684,40 @@ export class TeamProvisioningService {
     return text.length > 0 ? text : null;
   }
 
+  private extractStreamContentBlocks(msg: Record<string, unknown>): Record<string, unknown>[] {
+    const topLevelContent = msg.content;
+    if (Array.isArray(topLevelContent)) {
+      return topLevelContent as Record<string, unknown>[];
+    }
+
+    const message = msg.message;
+    if (!message || typeof message !== 'object') return [];
+    const innerContent = (message as Record<string, unknown>).content;
+    return Array.isArray(innerContent) ? (innerContent as Record<string, unknown>[]) : [];
+  }
+
+  private hasCapturedVisibleMessageToUser(content: Record<string, unknown>[]): boolean {
+    return content.some((part) => {
+      if (!part || typeof part !== 'object') return false;
+      if (part.type !== 'tool_use' || typeof part.name !== 'string') return false;
+
+      // Only native SendMessage(to="user") is guaranteed to be materialized as a
+      // visible outbound message by captureSendMessages().
+      // Keep this intentionally narrower than captureSendMessages(): if another tool path
+      // later starts creating its own user-visible row, expand this helper in lockstep.
+      if (part.name !== 'SendMessage') return false;
+
+      const input = part.input;
+      if (!input || typeof input !== 'object') return false;
+      const inp = input as Record<string, unknown>;
+      const target = (
+        typeof inp.recipient === 'string' ? inp.recipient : typeof inp.to === 'string' ? inp.to : ''
+      ).trim();
+
+      return target.toLowerCase() === 'user';
+    });
+  }
+
   private async matchCrossTeamLeadInboxMessages(
     teamName: string,
     leadName: string,
@@ -1745,6 +1796,17 @@ export class TeamProvisioningService {
     const blocks = parseAllTeammateMessages(rawText);
     if (blocks.length === 0) return;
 
+    // Intercept teammate permission_request messages delivered natively via stdout.
+    // This runs even during provisioning (unlike relayLeadInboxMessages which waits
+    // for provisioningComplete). The lead already received the message — we can't
+    // prevent that — but we create a ToolApprovalRequest so the user sees the dialog.
+    for (const block of blocks) {
+      const perm = parsePermissionRequest(block.content);
+      if (perm) {
+        this.handleTeammatePermissionRequest(run, perm, new Date().toISOString());
+      }
+    }
+
     const crossTeamBlocks = blocks.flatMap((block) => {
       const origin = parseCrossTeamPrefix(block.content);
       const sourceTeam = origin?.from.includes('.') ? origin.from.split('.', 1)[0] : null;
@@ -1822,6 +1884,9 @@ export class TeamProvisioningService {
         color: message.color,
         toolSummary: message.toolSummary,
         toolCalls: message.toolCalls,
+        messageKind: message.messageKind,
+        slashCommand: message.slashCommand,
+        commandOutput: message.commandOutput,
       });
     } catch (error) {
       logger.warn(`[${teamName}] sent-message persist failed: ${String(error)}`);
@@ -1850,6 +1915,9 @@ export class TeamProvisioningService {
         color: message.color,
         toolSummary: message.toolSummary,
         toolCalls: message.toolCalls,
+        messageKind: message.messageKind,
+        slashCommand: message.slashCommand,
+        commandOutput: message.commandOutput,
       });
     } catch (error) {
       logger.warn(`[${teamName}] inbox-message persist for ${recipient} failed: ${String(error)}`);
@@ -1977,8 +2045,12 @@ export class TeamProvisioningService {
     this.mainWindowRef = win;
   }
 
-  updateToolApprovalSettings(settings: ToolApprovalSettings): void {
-    this.toolApprovalSettings = settings;
+  private getToolApprovalSettings(teamName: string): ToolApprovalSettings {
+    return this.toolApprovalSettingsByTeam.get(teamName) ?? DEFAULT_TOOL_APPROVAL_SETTINGS;
+  }
+
+  updateToolApprovalSettings(teamName: string, settings: ToolApprovalSettings): void {
+    this.toolApprovalSettingsByTeam.set(teamName, settings);
     this.reEvaluatePendingApprovals();
   }
 
@@ -2064,6 +2136,94 @@ export class TeamProvisioningService {
       runId: run.runId,
       detail: state,
     });
+  }
+
+  private emitToolActivity(run: ProvisioningRun, payload: ToolActivityEventPayload): void {
+    if (!this.isCurrentTrackedRun(run)) return;
+    this.teamChangeEmitter?.({
+      type: 'tool-activity',
+      teamName: run.teamName,
+      runId: run.runId,
+      detail: JSON.stringify(payload),
+    });
+  }
+
+  private startRuntimeToolActivity(
+    run: ProvisioningRun,
+    memberName: string,
+    block: Record<string, unknown>
+  ): void {
+    const rawId = typeof block.id === 'string' ? block.id.trim() : '';
+    if (!rawId) return;
+
+    const toolUseId = rawId;
+    if (run.activeToolCalls.has(toolUseId)) return;
+
+    const toolName = typeof block.name === 'string' ? block.name : 'unknown';
+    const input = (block.input ?? {}) as Record<string, unknown>;
+    const activity: ActiveToolCall = {
+      memberName,
+      toolUseId,
+      toolName,
+      preview: extractToolPreview(toolName, input),
+      startedAt: nowIso(),
+      state: 'running',
+      source: 'runtime',
+    };
+
+    run.activeToolCalls.set(toolUseId, activity);
+    this.emitToolActivity(run, {
+      action: 'start',
+      activity: {
+        memberName: activity.memberName,
+        toolUseId: activity.toolUseId,
+        toolName: activity.toolName,
+        preview: activity.preview,
+        startedAt: activity.startedAt,
+        source: activity.source,
+      },
+    });
+  }
+
+  private finishRuntimeToolActivity(
+    run: ProvisioningRun,
+    toolUseId: string,
+    resultContent: unknown,
+    isError: boolean
+  ): void {
+    const active = run.activeToolCalls.get(toolUseId);
+    if (!active) return;
+
+    run.activeToolCalls.delete(toolUseId);
+    this.emitToolActivity(run, {
+      action: 'finish',
+      memberName: active.memberName,
+      toolUseId,
+      finishedAt: nowIso(),
+      resultPreview: extractToolResultPreview(resultContent),
+      isError,
+    });
+  }
+
+  private resetRuntimeToolActivity(run: ProvisioningRun, memberName?: string): void {
+    if (run.activeToolCalls.size === 0) return;
+
+    if (!memberName) {
+      run.activeToolCalls.clear();
+      this.emitToolActivity(run, { action: 'reset' });
+      return;
+    }
+
+    let removed = false;
+    for (const [toolUseId, active] of run.activeToolCalls.entries()) {
+      if (active.memberName !== memberName) continue;
+      run.activeToolCalls.delete(toolUseId);
+      removed = true;
+    }
+
+    if (removed) {
+      this.emitToolActivity(run, { action: 'reset', memberName });
+    }
   }
 
   /**
@@ -2482,7 +2642,7 @@ export class TeamProvisioningService {
 
         const mins = Math.floor(silenceSec / 60);
         const secs = silenceSec % 60;
-        const elapsed = mins > 0 ? `${mins}m ${secs > 0 ? `${secs}s` : ''}` : `${secs}s`;
+        const elapsed = mins > 0 ? (secs > 0 ? `${mins}m ${secs}s` : `${mins}m`) : `${secs}s`;
 
         // If retry messages are flowing, they are more informative than our
         // generic stall text — don't overwrite progress.message / severity.
@@ -2493,7 +2653,7 @@ export class TeamProvisioningService {
           ...run.progress,
           updatedAt: nowIso(),
           ...(!retryActive && {
-            message: `CLI not responding for ${elapsed} — possible rate limit`,
+            message: this.buildStallProgressMessage(silenceSec, elapsed),
             messageSeverity: 'warning' as const,
           }),
           assistantOutput: run.provisioningOutputParts.join('\n\n'),
@@ -2519,15 +2679,15 @@ export class TeamProvisioningService {
   private buildStallWarningText(silenceSec: number, run: ProvisioningRun): string {
     const mins = Math.floor(silenceSec / 60);
     const secs = silenceSec % 60;
-    const elapsed = mins > 0 ? `${mins}m ${secs > 0 ? `${secs}s` : ''}` : `${secs}s`;
+    const elapsed = mins > 0 ? (secs > 0 ? `${mins}m ${secs}s` : `${mins}m`) : `${secs}s`;
 
     if (silenceSec < 60) {
       return (
         `---\n\n` +
         `**Waiting for CLI response** (silent for ${elapsed})\n\n` +
-        `The process is running but not producing output yet. ` +
-        `This may be caused by an API delay (rate limit / model cooldown) — ` +
-        `the SDK retries automatically.\n\n` +
+        `The process is running but not producing output yet. Cloud sometimes delays logs, ` +
+        `and short waits like this are normal. The SDK also retries automatically if the ` +
+        `request briefly hits rate limiting.\n\n` +
         `Waiting...`
       );
     }
@@ -2536,9 +2696,10 @@ export class TeamProvisioningService {
       return (
         `---\n\n` +
         `**Waiting for CLI response** (silent for ${elapsed})\n\n` +
-        `The process is still not responding. Likely delayed due to rate limiting ` +
-        `(error 429 / model cooldown). The SDK retries the request automatically — ` +
-        `this usually resolves within 1-3 minutes.\n\n` +
+        `The process is still waiting on Cloud. Logs can sometimes show up after ` +
+        `1-1.5 minutes, and that is still okay. The SDK retries automatically if the ` +
+        `request hits rate limiting (error 429 / model cooldown).\n\n` +
+        `If there is still no output after 2 minutes, that starts to look unusual.\n\n` +
         `You can cancel and try again later if the wait continues.`
       );
     }
@@ -2549,13 +2710,21 @@ export class TeamProvisioningService {
     return (
       `---\n\n` +
       `**Extended CLI wait** (silent for ${elapsed})\n\n` +
-      `Model **${modelName}**${effortLabel} appears to be under heavy load and is not responding. ` +
-      `Most likely this is a 429 error (rate limit / model cooldown).\n\n` +
-      `The process has been silent for over ${mins} minutes. Possible causes:\n` +
+      `Model **${modelName}**${effortLabel} is still waiting on Cloud. Some delay is normal, ` +
+      `but no logs for ${elapsed} is already unusual.\n\n` +
+      `Possible causes:\n` +
       `- Rate limiting / model cooldown (429) — SDK retries automatically\n` +
-      `- API server overload for this model\n\n` +
+      `- API server overload for this model\n` +
+      `- A stalled or delayed Cloud response\n\n` +
       `Consider canceling and trying with a different model.`
     );
+  }
+
+  private buildStallProgressMessage(silenceSec: number, elapsed: string): string {
+    if (silenceSec < 120) {
+      return `Waiting on Cloud response for ${elapsed} — logs can be delayed, this is still OK`;
+    }
+    return `Still waiting on Cloud response for ${elapsed} — this is unusual`;
   }
 
   /**
@@ -2640,6 +2809,32 @@ export class TeamProvisioningService {
     if (run.cancelRequested) {
       run.authRetryInProgress = false;
       return;
+    }
+
+    // Verify --mcp-config still exists; regenerate if deleted (e.g. by stale GC)
+    const mcpFlagIdx = ctx.args.indexOf('--mcp-config');
+    if (mcpFlagIdx !== -1 && mcpFlagIdx + 1 < ctx.args.length) {
+      const existingConfigPath = ctx.args[mcpFlagIdx + 1];
+      try {
+        await fs.promises.access(existingConfigPath, fs.constants.F_OK);
+      } catch {
+        logger.warn(`[${run.teamName}] MCP config ${existingConfigPath} missing, regenerating`);
+        try {
+          const newConfigPath = await this.mcpConfigBuilder.writeConfigFile(ctx.cwd);
+          ctx.args[mcpFlagIdx + 1] = newConfigPath;
+          run.mcpConfigPath = newConfigPath;
+          logger.info(`[${run.teamName}] Regenerated MCP config at ${newConfigPath}`);
+        } catch (regenErr) {
+          run.authRetryInProgress = false;
+          const progress = updateProgress(run, 'failed', 'Failed to regenerate MCP config', {
+            error: regenErr instanceof Error ? regenErr.message : String(regenErr),
+            cliLogsTail: extractCliLogsFromRun(run),
+          });
+          run.onProgress(progress);
+          this.cleanupRun(run);
+          return;
+        }
+      }
     }
 
     // Respawn with saved context — CLI handles its own auth refresh.
@@ -2922,12 +3117,14 @@ export class TeamProvisioningService {
         apiErrorWarningEmitted: false,
         waitingTasksSince: null,
         provisioningComplete: false,
+        mcpConfigPath: null,
         isLaunch: false,
         fsPhase: 'waiting_config',
         leadRelayCapture: null,
         activeCrossTeamReplyHints: [],
         leadMsgSeq: 0,
         pendingToolCalls: [],
+        activeToolCalls: new Map(),
         pendingDirectCrossTeamSendRefresh: false,
         lastLeadTextEmitMs: 0,
         silentUserDmForward: null,
@@ -2941,6 +3138,7 @@ export class TeamProvisioningService {
         authRetryInProgress: false,
         spawnContext: null,
         pendingApprovals: new Map(),
+        processedPermissionRequestIds: new Set(),
         pendingPostCompactReminder: false,
         postCompactReminderInFlight: false,
         suppressPostCompactReminderOutput: false,
@@ -2968,6 +3166,7 @@ export class TeamProvisioningService {
       let mcpConfigPath: string;
       try {
         mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(request.cwd);
+        run.mcpConfigPath = mcpConfigPath;
       } catch (error) {
         this.runs.delete(runId);
         this.provisioningRunByTeam.delete(request.teamName);
@@ -3027,6 +3226,9 @@ export class TeamProvisioningService {
             joinedAt: Date.now(),
           }))
         );
+        if (request.skipPermissions === false) {
+          await this.seedTeammateOperationalPermissionRules(request.teamName, request.cwd);
+        }
 
         child = spawnCli(claudePath, spawnArgs, {
           cwd: request.cwd,
@@ -3040,6 +3242,10 @@ export class TeamProvisioningService {
         const tasksDir = path.join(getTasksBasePath(), request.teamName);
         await fs.promises.rm(teamDir, { recursive: true, force: true }).catch(() => {});
         await fs.promises.rm(tasksDir, { recursive: true, force: true }).catch(() => {});
+        if (run.mcpConfigPath) {
+          await this.mcpConfigBuilder.removeConfigFile(run.mcpConfigPath).catch(() => {});
+          run.mcpConfigPath = null;
+        }
         this.runs.delete(runId);
         this.provisioningRunByTeam.delete(request.teamName);
         throw error;
@@ -3354,12 +3560,14 @@ export class TeamProvisioningService {
         apiErrorWarningEmitted: false,
         waitingTasksSince: null,
         provisioningComplete: false,
+        mcpConfigPath: null,
         isLaunch: true,
         fsPhase: 'waiting_members',
         leadRelayCapture: null,
         activeCrossTeamReplyHints: [],
         leadMsgSeq: 0,
         pendingToolCalls: [],
+        activeToolCalls: new Map(),
         pendingDirectCrossTeamSendRefresh: false,
         lastLeadTextEmitMs: 0,
         silentUserDmForward: null,
@@ -3373,6 +3581,7 @@ export class TeamProvisioningService {
         authRetryInProgress: false,
         spawnContext: null,
         pendingApprovals: new Map(),
+        processedPermissionRequestIds: new Set(),
         pendingPostCompactReminder: false,
         postCompactReminderInFlight: false,
         suppressPostCompactReminderOutput: false,
@@ -3422,6 +3631,7 @@ export class TeamProvisioningService {
       let mcpConfigPath: string;
       try {
         mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(request.cwd);
+        run.mcpConfigPath = mcpConfigPath;
       } catch (error) {
         this.runs.delete(runId);
         this.provisioningRunByTeam.delete(request.teamName);
@@ -3466,12 +3676,19 @@ export class TeamProvisioningService {
       // Without it, CLI creates a fresh session ID automatically.
 
       try {
+        if (request.skipPermissions === false) {
+          await this.seedTeammateOperationalPermissionRules(request.teamName, request.cwd);
+        }
         child = spawnCli(claudePath, launchArgs, {
           cwd: request.cwd,
           env: { ...shellEnv },
           stdio: ['pipe', 'pipe', 'pipe'],
         });
       } catch (error) {
+        if (run.mcpConfigPath) {
+          await this.mcpConfigBuilder.removeConfigFile(run.mcpConfigPath).catch(() => {});
+          run.mcpConfigPath = null;
+        }
         this.runs.delete(runId);
         this.provisioningRunByTeam.delete(request.teamName);
         await this.restorePrelaunchConfig(request.teamName);
@@ -3889,24 +4106,71 @@ export class TeamProvisioningService {
     }
 
     const work = (async (): Promise<number> => {
-      const runId = this.getAliveRunId(teamName);
+      const runId = this.getAliveRunId(teamName) ?? this.getProvisioningRunId(teamName);
       if (!runId) return 0;
       const run = this.runs.get(runId);
       if (!run?.child || run.processKilled || run.cancelRequested) return 0;
-      if (!run.provisioningComplete) return 0;
 
-      const relayedIds = this.relayedLeadInboxMessageIds.get(teamName) ?? new Set<string>();
-
+      // Permission request scan runs even during provisioning — teammates may need
+      // tool approval before the lead's first turn completes. CLI marks inbox messages
+      // as read after native delivery, so we must scan ALL messages (including read).
       let config: Awaited<ReturnType<TeamConfigReader['getConfig']>> | null = null;
       try {
         config = await this.configReader.getConfig(teamName);
       } catch {
-        return 0;
+        // config not ready yet during early provisioning — skip scan
+      }
+      if (config) {
+        const leadName = config.members?.find((m) => isLeadMember(m))?.name?.trim() || 'team-lead';
+        try {
+          const leadInboxMessages = await this.inboxReader.getMessagesFor(teamName, leadName);
+          const permMsgsToMarkRead: { messageId: string }[] = [];
+          const runStartedAtMs = Date.parse(run.startedAt);
+          for (const msg of leadInboxMessages) {
+            if (typeof msg.text !== 'string') continue;
+            const perm = parsePermissionRequest(msg.text);
+            if (!perm) continue;
+            // Skip permission_requests from previous runs — they're stale
+            const msgTs = Date.parse(msg.timestamp);
+            if (
+              Number.isFinite(msgTs) &&
+              Number.isFinite(runStartedAtMs) &&
+              msgTs < runStartedAtMs
+            ) {
+              continue;
+            }
+            // Dedup is handled inside handleTeammatePermissionRequest via processedPermissionRequestIds
+            this.handleTeammatePermissionRequest(run, perm, msg.timestamp);
+            // Mark unread permission_request messages as read to prevent stale unread indicators
+            if (!msg.read && this.hasStableMessageId(msg)) {
+              permMsgsToMarkRead.push({ messageId: msg.messageId });
+            }
+          }
+          if (permMsgsToMarkRead.length > 0) {
+            await this.markInboxMessagesRead(teamName, leadName, permMsgsToMarkRead).catch(
+              () => {}
+            );
+          }
+        } catch {
+          // best-effort — inbox may not exist yet
+        }
+      }
+
+      if (!run.provisioningComplete) return 0;
+
+      const relayedIds = this.relayedLeadInboxMessageIds.get(teamName) ?? new Set<string>();
+
+      // Re-read config if needed (already fetched above but guard provisioningComplete path)
+      if (!config) {
+        try {
+          config = await this.configReader.getConfig(teamName);
+        } catch {
+          return 0;
+        }
       }
       if (!config) return 0;
 
       const leadName = config.members?.find((m) => isLeadMember(m))?.name?.trim() || 'team-lead';
-
       let leadInboxMessages: Awaited<ReturnType<TeamInboxReader['getMessagesFor']>> = [];
       try {
         leadInboxMessages = await this.inboxReader.getMessagesFor(teamName, leadName);
@@ -4027,12 +4291,27 @@ export class TeamProvisioningService {
       );
       const deferredIds = new Set(deferredByAge.map((m) => m.messageId));
 
+      // Category 4: teammate permission requests — filter from actionable so they're
+      // NOT relayed to the lead. The actual interception + ToolApprovalRequest emission
+      // is handled by the early scan above (which checks processedPermissionRequestIds).
+      const permissionRequestIds = new Set(
+        unread
+          .filter(
+            (m) =>
+              !permanentlyIgnoredIds.has(m.messageId) &&
+              !deferredIds.has(m.messageId) &&
+              parsePermissionRequest(m.text) !== null
+          )
+          .map((m) => m.messageId)
+      );
+
       // Actionable: everything not in any category.
       const actionableUnread = unread.filter(
         (m) =>
           !permanentlyIgnoredIds.has(m.messageId) &&
           !nativeMatchedMessageIds.has(m.messageId) &&
-          !deferredIds.has(m.messageId)
+          !deferredIds.has(m.messageId) &&
+          !permissionRequestIds.has(m.messageId)
       );
 
       // Layer 3: schedule retry timers.
@@ -4395,7 +4674,20 @@ export class TeamProvisioningService {
       const inp = input as Record<string, unknown>;
       const teamName = typeof inp.team_name === 'string' ? inp.team_name.trim() : '';
       const memberName = typeof inp.name === 'string' ? inp.name.trim() : '';
-      if (!teamName || !memberName) continue;
+      if (!memberName) continue;
+      if (!teamName) {
+        logger.warn(
+          `[captureTeamSpawnEvents] Agent call for "${memberName}" is missing team_name — ` +
+            `teammate will be an ephemeral subagent, not a persistent member of "${run.teamName}"`
+        );
+        this.setMemberSpawnStatus(
+          run,
+          memberName,
+          'error',
+          `Agent spawn for "${memberName}" is missing team_name — spawned as ephemeral subagent instead of persistent teammate`
+        );
+        continue;
+      }
       // Only track spawns for this team
       if (teamName !== run.teamName) continue;
       this.setMemberSpawnStatus(run, memberName, 'spawning');
@@ -4854,29 +5146,43 @@ export class TeamProvisioningService {
     // {"type":"assistant","content":[{"type":"text","text":"..."},...]}
     // {"type":"result","subtype":"success",...}
     if (msg.type === 'user') {
+      // Check for permission_request in raw user message text BEFORE teammate-message parsing.
+      // The permission_request may arrive as plain JSON without <teammate-message> wrapper,
+      // and handleNativeTeammateUserMessage only processes <teammate-message> blocks.
+      const rawUserText = this.extractStreamUserText(msg);
+      const content = this.extractStreamContentBlocks(msg);
+      if (rawUserText) {
+        const perm = parsePermissionRequest(rawUserText);
+        if (perm) {
+          logger.warn(
+            `[${run.teamName}] [PERM-TRACE] Intercepted permission_request from stdout user message: agent=${perm.agentId} tool=${perm.toolName} requestId=${perm.requestId}`
+          );
+          this.handleTeammatePermissionRequest(run, perm, new Date().toISOString());
+        } else if (rawUserText.includes('permission_request')) {
+          // Log near-miss: text contains "permission_request" but wasn't parsed
+          logger.warn(
+            `[${run.teamName}] [PERM-TRACE] stdout user message contains "permission_request" but parsePermissionRequest returned null. Text preview: ${rawUserText.slice(0, 300)}`
+          );
+        }
+      }
+      for (const block of content) {
+        if (block?.type !== 'tool_result' || typeof block.tool_use_id !== 'string') continue;
+        this.finishRuntimeToolActivity(
+          run,
+          block.tool_use_id,
+          block.content,
+          block.is_error === true
+        );
+      }
       this.handleNativeTeammateUserMessage(run, msg);
       return;
     }
     if (msg.type === 'assistant') {
-      const content = Array.isArray(msg.content)
-        ? (msg.content as Record<string, unknown>[])
-        : (() => {
-            const message = msg.message;
-            if (!message || typeof message !== 'object') return null;
-            const inner = (message as Record<string, unknown>).content;
-            return Array.isArray(inner) ? (inner as Record<string, unknown>[]) : null;
-          })();
+      const content = this.extractStreamContentBlocks(msg);
 
-      const hasCapturedSendMessage = (content ?? []).some((part) => {
-        if (!part || typeof part !== 'object') return false;
-        if (part.type !== 'tool_use' || part.name !== 'SendMessage') return false;
-        const input = part.input;
-        if (!input || typeof input !== 'object') return false;
-        const recipient = (input as Record<string, unknown>).recipient;
-        return typeof recipient === 'string' && recipient.trim().length > 0;
-      });
+      const hasCapturedVisibleMessageToUser = this.hasCapturedVisibleMessageToUser(content);
 
-      const textParts = (content ?? [])
+      const textParts = content
         .filter((part) => part.type === 'text' && typeof part.text === 'string')
         .map((part) => part.text as string);
       if (textParts.length > 0) {
@@ -4895,26 +5201,27 @@ export class TeamProvisioningService {
           run.provisioningOutputParts.push(text);
         }
 
-        if (run.leadRelayCapture) {
+        // Once relay capture is settled, later assistant chunks belong to the normal live
+        // message flow. Keeping them in the capture branch would drop them on the floor
+        // until relayLeadInboxMessages() finally clears run.leadRelayCapture.
+        if (run.leadRelayCapture && !run.leadRelayCapture.settled) {
           const capture = run.leadRelayCapture;
-          if (!capture.settled) {
-            capture.textParts.push(text);
-            if (capture.idleHandle) {
-              clearTimeout(capture.idleHandle);
-            }
-            capture.idleHandle = setTimeout(() => {
-              const combined = capture.textParts.join('\n').trim();
-              capture.resolveOnce(combined);
-            }, capture.idleMs);
+          capture.textParts.push(text);
+          if (capture.idleHandle) {
+            clearTimeout(capture.idleHandle);
           }
+          capture.idleHandle = setTimeout(() => {
+            const combined = capture.textParts.join('\n').trim();
+            capture.resolveOnce(combined);
+          }, capture.idleMs);
         } else if (run.provisioningComplete) {
           // Push each assistant text block as a separate live message (per-message pattern).
-          // When the same assistant message includes SendMessage(...), skip text —
+          // When the same assistant message includes a user-visible message send, skip text —
           // captureSendMessages() handles the visible outbound message separately.
           if (
             !run.silentUserDmForward &&
             !run.suppressPostCompactReminderOutput &&
-            !hasCapturedSendMessage
+            !hasCapturedVisibleMessageToUser
           ) {
             const cleanText = stripAgentBlocks(text).trim();
             if (cleanText.length > 0) {
@@ -4928,7 +5235,7 @@ export class TeamProvisioningService {
         } else {
           // Pre-ready: keep showing provisioning narration in the banner, but also mirror it
           // into the live cache so Messages/Activity can show the earliest assistant output.
-          if (!run.silentUserDmForward && !hasCapturedSendMessage) {
+          if (!run.silentUserDmForward && !hasCapturedVisibleMessageToUser) {
             const cleanText = stripAgentBlocks(text).trim();
             if (cleanText.length > 0) {
               this.pushLiveLeadTextMessage(
@@ -4944,7 +5251,7 @@ export class TeamProvisioningService {
       // Accumulate tool_use details from tool-only messages (text + tool_use are separate in stream-json).
       // These details will be attached to the next text message as toolCalls/toolSummary.
       // Works in both pre-ready and post-ready phases so early live messages get tool metadata.
-      for (const block of content ?? []) {
+      for (const block of content) {
         if (
           block?.type === 'tool_use' &&
           typeof block.name === 'string' &&
@@ -4954,19 +5261,21 @@ export class TeamProvisioningService {
           run.pendingToolCalls.push({
             name: block.name,
             preview: extractToolPreview(block.name, input),
+            toolUseId: typeof block.id === 'string' ? block.id : undefined,
           });
+          this.startRuntimeToolActivity(run, this.getRunLeadName(run), block);
         }
       }
 
       // Track member spawn events from Task tool_use blocks with team_name.
       // When the lead calls Task(team_name=X, name=Y), it means member Y is being spawned.
-      this.captureTeamSpawnEvents(run, content ?? []);
+      this.captureTeamSpawnEvents(run, content);
 
       // Capture SendMessage tool_use blocks from assistant output.
       // Works in both pre-ready and post-ready phases so outbound runtime messages
       // are visible in our team message artifacts even if Claude's own routing drifts.
       if (!run.silentUserDmForward || run.silentUserDmForward.mode === 'member_inbox_relay') {
-        this.captureSendMessages(run, content ?? []);
+        this.captureSendMessages(run, content);
       }
 
       // Extract context window usage from message.usage for real-time tracking.
@@ -4985,12 +5294,24 @@ export class TeamProvisioningService {
                 : 0;
             const cacheRead =
               typeof usage.cache_read_input_tokens === 'number' ? usage.cache_read_input_tokens : 0;
+            // Total context window usage = all three token categories
+            // input_tokens = tokens AFTER last cache breakpoint (small)
+            // cache_creation = tokens written to cache (first request)
+            // cache_read = tokens read from cache (subsequent requests) — these ARE in context window
             const currentTokens = inputTokens + cacheCreation + cacheRead;
 
             if (!run.leadContextUsage) {
+              // Determine initial context window from model selection
+              // computeEffectiveTeamModel() defaults to 'opus[1m]' when no model selected
+              const modelStr = (run.request.model ?? '').toLowerCase();
+              const isHaiku = modelStr.includes('haiku');
+              const isLimitedContext = run.request.limitContext === true;
+              // limitContext=true → 200K, haiku → 200K, [1m] → 1M, default → 1M (opus[1m])
+              const initialContextWindow = isLimitedContext || isHaiku ? 200_000 : 1_000_000;
+
               run.leadContextUsage = {
                 currentTokens,
-                contextWindow: 200_000,
+                contextWindow: initialContextWindow,
                 lastUsageMessageId: msgId,
                 lastEmittedAt: 0,
               };
@@ -5110,6 +5431,7 @@ export class TeamProvisioningService {
             );
           }
 
+          this.resetRuntimeToolActivity(run, this.getRunLeadName(run));
           this.setLeadActivity(run, 'idle');
         }
         if (run.pendingDirectCrossTeamSendRefresh) {
@@ -5196,6 +5518,7 @@ export class TeamProvisioningService {
               `[${run.teamName}] post-compact reminder ${wasInFlight ? 'turn errored' : 'pending dropped'} — clearing (strict policy)`
             );
           }
+          this.resetRuntimeToolActivity(run, this.getRunLeadName(run));
           this.setLeadActivity(run, 'idle');
         }
       }
@@ -5451,6 +5774,7 @@ export class TeamProvisioningService {
     } catch (error) {
       // Strict drop-after-attempt — do not re-arm.
       clearPostCompactReminderState(run);
+      this.resetRuntimeToolActivity(run, this.getRunLeadName(run));
       this.setLeadActivity(run, 'idle');
       logger.warn(
         `[${run.teamName}] post-compact reminder injection failed: ${
@@ -5501,7 +5825,11 @@ export class TeamProvisioningService {
     };
 
     // Check auto-allow rules before prompting user
-    const autoResult = shouldAutoAllow(this.toolApprovalSettings, toolName, toolInput);
+    const autoResult = shouldAutoAllow(
+      this.getToolApprovalSettings(run.teamName),
+      toolName,
+      toolInput
+    );
     if (autoResult.autoAllow) {
       logger.info(`[${run.teamName}] Auto-allowing ${toolName} (${autoResult.reason})`);
       this.autoAllowControlRequest(run, requestId);
@@ -5520,6 +5848,72 @@ export class TeamProvisioningService {
     this.startApprovalTimeout(run, requestId);
 
     // Show OS notification when window is not focused
+    this.maybeShowToolApprovalOsNotification(run, approval);
+  }
+
+  /**
+   * Handles a teammate permission_request received via inbox message.
+   * Converts it to a ToolApprovalRequest and feeds it into the existing approval flow.
+   */
+  private handleTeammatePermissionRequest(
+    run: ProvisioningRun,
+    perm: ParsedPermissionRequest,
+    messageTimestamp: string
+  ): void {
+    // Skip if already tracked (idempotency — multiple paths can trigger this:
+    // early inbox scan, stdout parsing, native message blocks, relay Category 4)
+    if (run.processedPermissionRequestIds.has(perm.requestId)) return;
+    if (run.pendingApprovals.has(perm.requestId)) return;
+    run.processedPermissionRequestIds.add(perm.requestId);
+
+    logger.warn(
+      `[${run.teamName}] [PERM-TRACE] handleTeammatePermissionRequest: agent=${perm.agentId} tool=${perm.toolName} requestId=${perm.requestId}`
+    );
+
+    const approval: ToolApprovalRequest = {
+      requestId: perm.requestId,
+      runId: run.runId,
+      teamName: run.teamName,
+      source: perm.agentId,
+      toolName: perm.toolName,
+      toolInput: perm.input,
+      receivedAt: messageTimestamp || new Date().toISOString(),
+      teamColor: run.request.color,
+      teamDisplayName: run.request.displayName,
+      permissionSuggestions:
+        perm.permissionSuggestions.length > 0 ? perm.permissionSuggestions : undefined,
+    };
+
+    const autoResult = shouldAutoAllow(
+      this.getToolApprovalSettings(run.teamName),
+      perm.toolName,
+      perm.input
+    );
+    if (autoResult.autoAllow) {
+      logger.info(
+        `[${run.teamName}] Auto-allowing teammate ${perm.agentId} ${perm.toolName} (${autoResult.reason})`
+      );
+      void this.respondToTeammatePermission(
+        run,
+        perm.agentId,
+        perm.requestId,
+        true,
+        undefined,
+        perm.permissionSuggestions
+      );
+      this.emitToolApprovalEvent({
+        autoResolved: true,
+        requestId: perm.requestId,
+        runId: run.runId,
+        teamName: run.teamName,
+        reason: 'auto_allow_category',
+      } as ToolApprovalAutoResolved);
+      return;
+    }
+
+    run.pendingApprovals.set(perm.requestId, approval);
+    this.emitToolApprovalEvent(approval);
+    this.startApprovalTimeout(run, perm.requestId);
     this.maybeShowToolApprovalOsNotification(run, approval);
   }
 
@@ -5652,7 +6046,7 @@ export class TeamProvisioningService {
       response: {
         subtype: 'success',
         request_id: requestId,
-        response: { behavior: 'allow' },
+        response: { behavior: 'allow', updatedInput: {} },
       },
     };
 
@@ -5672,7 +6066,7 @@ export class TeamProvisioningService {
   }
 
   private startApprovalTimeout(run: ProvisioningRun, requestId: string): void {
-    const { timeoutAction, timeoutSeconds } = this.toolApprovalSettings;
+    const { timeoutAction, timeoutSeconds } = this.getToolApprovalSettings(run.teamName);
     if (timeoutAction === 'wait') return;
 
     const timeoutMs = timeoutSeconds * 1000;
@@ -5682,7 +6076,7 @@ export class TeamProvisioningService {
       if (!this.tryClaimResponse(requestId)) return;
 
       // Read CURRENT settings (not captured closure) in case user changed action
-      const currentAction = this.toolApprovalSettings.timeoutAction;
+      const currentAction = this.getToolApprovalSettings(run.teamName).timeoutAction;
       if (currentAction === 'wait') {
         // Settings changed to 'wait' but timer fired before reEvaluatePendingApprovals cleared it
         this.inFlightResponses.delete(requestId);
@@ -5690,6 +6084,31 @@ export class TeamProvisioningService {
       }
       const allow = currentAction === 'allow';
       logger.info(`[${run.teamName}] Timeout ${allow ? 'allowing' : 'denying'} ${requestId}`);
+
+      const approval = run.pendingApprovals.get(requestId);
+      if (approval && approval.source !== 'lead') {
+        // Teammate request — apply permission_suggestions to project settings.
+        this.respondToTeammatePermission(
+          run,
+          approval.source,
+          requestId,
+          allow,
+          allow ? undefined : 'Timed out — auto-denied by settings',
+          approval.permissionSuggestions
+        ).finally(() => {
+          run.pendingApprovals.delete(requestId);
+          this.inFlightResponses.delete(requestId);
+          this.dismissApprovalNotification(requestId);
+          this.emitToolApprovalEvent({
+            autoResolved: true,
+            requestId,
+            runId: run.runId,
+            teamName: run.teamName,
+            reason: allow ? 'timeout_allow' : 'timeout_deny',
+          } as ToolApprovalAutoResolved);
+        });
+        return;
+      }
 
       if (allow) {
         this.autoAllowControlRequest(run, requestId);
@@ -5746,16 +6165,25 @@ export class TeamProvisioningService {
 
   private reEvaluatePendingApprovals(): void {
     for (const [, run] of this.runs) {
+      const settings = this.getToolApprovalSettings(run.teamName);
       const toRemove: string[] = [];
       for (const [requestId, approval] of run.pendingApprovals) {
-        const result = shouldAutoAllow(
-          this.toolApprovalSettings,
-          approval.toolName,
-          approval.toolInput
-        );
+        const result = shouldAutoAllow(settings, approval.toolName, approval.toolInput);
         if (result.autoAllow) {
           this.clearApprovalTimeout(requestId);
-          this.autoAllowControlRequest(run, requestId);
+          if (!this.tryClaimResponse(requestId)) continue;
+          if (approval.source !== 'lead') {
+            void this.respondToTeammatePermission(
+              run,
+              approval.source,
+              requestId,
+              true,
+              undefined,
+              approval.permissionSuggestions
+            );
+          } else {
+            this.autoAllowControlRequest(run, requestId);
+          }
           this.dismissApprovalNotification(requestId);
           toRemove.push(requestId);
           this.emitToolApprovalEvent({
@@ -5765,22 +6193,17 @@ export class TeamProvisioningService {
             teamName: run.teamName,
             reason: 'auto_allow_category',
           } as ToolApprovalAutoResolved);
-        } else if (
-          this.toolApprovalSettings.timeoutAction !== 'wait' &&
-          !this.pendingTimeouts.has(requestId)
-        ) {
+        } else if (settings.timeoutAction !== 'wait' && !this.pendingTimeouts.has(requestId)) {
           // Settings changed from 'wait' to allow/deny — start timer for already pending items
           this.startApprovalTimeout(run, requestId);
-        } else if (
-          this.toolApprovalSettings.timeoutAction === 'wait' &&
-          this.pendingTimeouts.has(requestId)
-        ) {
+        } else if (settings.timeoutAction === 'wait' && this.pendingTimeouts.has(requestId)) {
           // Settings changed TO 'wait' — clear existing timers
           this.clearApprovalTimeout(requestId);
         }
       }
       for (const requestId of toRemove) {
         run.pendingApprovals.delete(requestId);
+        this.inFlightResponses.delete(requestId);
       }
     }
   }
@@ -5821,19 +6244,58 @@ export class TeamProvisioningService {
       return;
     }
 
+    const approval = run.pendingApprovals.get(requestId)!;
+
+    // Teammate permission requests: apply permission_suggestions to project settings
+    if (approval.source !== 'lead') {
+      try {
+        await this.respondToTeammatePermission(
+          run,
+          approval.source,
+          requestId,
+          allow,
+          message,
+          approval.permissionSuggestions
+        );
+      } finally {
+        run.pendingApprovals.delete(requestId);
+        this.inFlightResponses.delete(requestId);
+        this.dismissApprovalNotification(requestId);
+      }
+      return;
+    }
+
     if (!run.child?.stdin?.writable) {
       throw new Error(`Team "${teamName}" process stdin is not writable`);
     }
 
     // IMPORTANT: request_id is NESTED inside response, NOT top-level
     // (asymmetry with control_request — confirmed by Python SDK, Elixir SDK and issue #29991)
+    const allowResponse: Record<string, unknown> = { behavior: 'allow', updatedInput: {} };
+    // For AskUserQuestion: pass user's answers via updatedInput so the CLI
+    // can deliver them without re-prompting. Format follows --permission-prompt-tool spec.
+    if (allow && message) {
+      const pending = run.pendingApprovals.get(requestId);
+      if (pending?.toolName === 'AskUserQuestion') {
+        try {
+          const answers = JSON.parse(message) as Record<string, string>;
+          allowResponse.updatedInput = { ...pending.toolInput, answers };
+        } catch {
+          // If message isn't JSON, use as-is for the first question
+          const questions = (pending.toolInput.questions as { question?: string }[]) ?? [];
+          const answers: Record<string, string> = {};
+          if (questions[0]?.question) answers[questions[0].question] = message;
+          allowResponse.updatedInput = { ...pending.toolInput, answers };
+        }
+      }
+    }
     const response = allow
       ? {
           type: 'control_response',
           response: {
             subtype: 'success',
             request_id: requestId,
-            response: { behavior: 'allow' },
+            response: allowResponse,
           },
         }
       : {
@@ -5877,6 +6339,231 @@ export class TeamProvisioningService {
   }
 
   /**
+   * Respond to a teammate's permission_request by applying permission_suggestions.
+   *
+   * FACT: Claude Code teammate runtime sends permission_request via SendMessage (inbox protocol).
+   * FACT: Writing permission_response to teammate inbox does NOT work - runtime ignores it.
+   * FACT: control_response via stdin does NOT work for teammate requests - request_id doesn't match.
+   * FACT: permission_suggestions.destination "localSettings" refers to {cwd}/.claude/settings.local.json.
+   * FACT: Claude Code CLI reads this file via --setting-sources user,project,local.
+   *
+   * When allow=true: applies permission_suggestions (adds tool rules to project settings).
+   * When allow=false: no action needed - tool stays blocked by default.
+   */
+  private async respondToTeammatePermission(
+    run: ProvisioningRun,
+    agentId: string,
+    requestId: string,
+    allow: boolean,
+    _message?: string,
+    permissionSuggestions?: import('@shared/utils/inboxNoise').PermissionSuggestion[]
+  ): Promise<void> {
+    if (!allow) {
+      logger.info(`[${run.teamName}] Denied teammate ${agentId} permission ${requestId}`);
+      return;
+    }
+
+    // Apply permission_suggestions: add tool rules to project settings file
+    const suggestions = permissionSuggestions ?? [];
+    if (suggestions.length === 0) {
+      logger.warn(`[${run.teamName}] No permission_suggestions for ${requestId} — cannot add rule`);
+      return;
+    }
+
+    // Resolve project cwd from team config
+    let projectCwd: string | undefined;
+    try {
+      const config = await this.configReader.getConfig(run.teamName);
+      projectCwd = config?.projectPath ?? config?.members?.[0]?.cwd;
+    } catch {
+      // best-effort
+    }
+    if (!projectCwd) {
+      logger.warn(`[${run.teamName}] Cannot resolve project cwd for permission rule — skipping`);
+      return;
+    }
+
+    for (const suggestion of suggestions) {
+      // Handle "setMode" suggestions (e.g. Write/Edit tools suggest acceptEdits mode)
+      // FACT: Write/Edit permission_requests have permission_suggestions:
+      //   { type: "setMode", mode: "acceptEdits", destination: "session" }
+      // Since we can't change session mode of a subprocess, we translate to addRules.
+      if (suggestion.type === 'setMode') {
+        const mode = typeof suggestion.mode === 'string' ? suggestion.mode : '';
+        let toolNames: string[] = [];
+        if (mode === 'acceptEdits') {
+          toolNames = ['Edit', 'Write', 'NotebookEdit'];
+        } else if (mode === 'bypassPermissions') {
+          // Broad approval — add common tools
+          toolNames = ['Edit', 'Write', 'NotebookEdit', 'Bash', 'Read', 'Grep', 'Glob'];
+        }
+        if (toolNames.length > 0) {
+          const settingsPath = path.join(projectCwd, '.claude', 'settings.local.json');
+          try {
+            await this.addPermissionRulesToSettings(settingsPath, toolNames, 'allow');
+            logger.info(
+              `[${run.teamName}] Applied setMode "${mode}" for ${agentId}: ${toolNames.join(', ')} in ${settingsPath}`
+            );
+          } catch (error) {
+            logger.error(
+              `[${run.teamName}] Failed to apply setMode: ${
+                error instanceof Error ? error.message : String(error)
+              }`
+            );
+          }
+        }
+        continue;
+      }
+
+      if (suggestion.type !== 'addRules' || !Array.isArray(suggestion.rules)) continue;
+
+      let toolNames = suggestion.rules
+        .map((r) => r.toolName)
+        .filter((name): name is string => typeof name === 'string' && name.length > 0);
+      if (toolNames.length === 0) continue;
+
+      // Expand teammate-safe operational tools only.
+      // This removes the bootstrap/task workflow race without accidentally granting
+      // admin/runtime tools like team_stop or kanban_clear.
+      if (
+        toolNames.some((name) =>
+          AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES.includes(name)
+        )
+      ) {
+        const merged = new Set([
+          ...toolNames,
+          ...AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES,
+        ]);
+        toolNames = Array.from(merged);
+      }
+
+      const behavior = suggestion.behavior ?? 'allow';
+      // FACT: observed destinations are "localSettings" (project-level .claude/settings.local.json)
+      const settingsPath =
+        suggestion.destination === 'localSettings'
+          ? path.join(projectCwd, '.claude', 'settings.local.json')
+          : path.join(projectCwd, '.claude', 'settings.local.json'); // default to local
+
+      try {
+        await this.addPermissionRulesToSettings(settingsPath, toolNames, behavior);
+        logger.info(
+          `[${run.teamName}] Added permission rules for ${agentId}: ${toolNames.join(', ')} → ${behavior} in ${settingsPath}`
+        );
+      } catch (error) {
+        logger.error(
+          `[${run.teamName}] Failed to add permission rules: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+    }
+
+    // Also attempt control_response via stdin — the lead runtime MAY forward it
+    // to the teammate subprocess. This was broken before (missing updatedInput: {})
+    // but is now fixed. Belt-and-suspenders: settings handle future calls,
+    // control_response may unblock the CURRENT waiting prompt.
+    if (allow && run.child?.stdin?.writable) {
+      const controlResponse = {
+        type: 'control_response',
+        response: {
+          subtype: 'success',
+          request_id: requestId,
+          response: { behavior: 'allow', updatedInput: {} },
+        },
+      };
+      run.child.stdin.write(JSON.stringify(controlResponse) + '\n', (err) => {
+        if (err) {
+          logger.warn(
+            `[${run.teamName}] control_response via stdin for teammate ${agentId} failed (non-critical): ${err.message}`
+          );
+        }
+      });
+    }
+  }
+
+  /**
+   * Safely add tool names to the permissions.allow (or deny) array in a Claude settings file.
+   * Creates the file and parent directories if they don't exist.
+   * Merges with existing entries — never overwrites.
+   */
+  private async addPermissionRulesToSettings(
+    settingsPath: string,
+    toolNames: string[],
+    behavior: string
+  ): Promise<number> {
+    const dir = path.dirname(settingsPath);
+    await fs.promises.mkdir(dir, { recursive: true });
+
+    // Read existing settings (or start with empty object)
+    let settings: Record<string, unknown> = {};
+    try {
+      const raw = await fs.promises.readFile(settingsPath, 'utf-8');
+      const parsed = JSON.parse(raw) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        settings = parsed as Record<string, unknown>;
+      }
+    } catch {
+      // File doesn't exist or invalid JSON — start fresh
+    }
+
+    // Ensure permissions object exists
+    if (!settings.permissions || typeof settings.permissions !== 'object') {
+      settings.permissions = {};
+    }
+    const perms = settings.permissions as Record<string, unknown>;
+
+    // Target array: "allow" or "deny" based on behavior
+    const key = behavior === 'deny' ? 'deny' : 'allow';
+    if (!Array.isArray(perms[key])) {
+      perms[key] = [];
+    }
+    const list = perms[key] as string[];
+
+    // Add tool names that aren't already in the list
+    const existing = new Set(list);
+    let added = 0;
+    for (const name of toolNames) {
+      if (!existing.has(name)) {
+        list.push(name);
+        added++;
+      }
+    }
+
+    if (added === 0) return 0; // Nothing new to add
+
+    await atomicWriteAsync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
+    return added;
+  }
+
+  private async seedTeammateOperationalPermissionRules(
+    teamName: string,
+    projectCwd: string
+  ): Promise<void> {
+    const settingsPath = path.join(projectCwd, '.claude', 'settings.local.json');
+    try {
+      // FACT: Teammates need both MCP tools AND standard file tools (Write/Edit).
+      // FACT: Standard tools use "setMode: acceptEdits" permission_suggestions, but
+      // we can't change subprocess session mode — so we pre-add them as allow rules.
+      const allTools = [
+        ...AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES,
+        'Edit',
+        'Write',
+        'NotebookEdit',
+      ];
+      const added = await this.addPermissionRulesToSettings(settingsPath, allTools, 'allow');
+      logger.info(
+        `[${teamName}] Seeded teammate operational MCP rules in ${settingsPath} (${added} added)`
+      );
+    } catch (error) {
+      logger.warn(
+        `[${teamName}] Failed to seed teammate operational MCP rules: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  /**
    * Called when the first stream-json turn completes successfully.
    * Verifies provisioning files exist and marks as ready.
    * Process stays alive for subsequent tasks.
@@ -5913,6 +6600,7 @@ export class TeamProvisioningService {
     }
 
     run.provisioningComplete = true;
+    this.resetRuntimeToolActivity(run, this.getRunLeadName(run));
     this.setLeadActivity(run, 'idle');
 
     // Clear provisioning timeout — no longer needed
@@ -5970,6 +6658,15 @@ export class TeamProvisioningService {
       this.provisioningRunByTeam.delete(run.teamName);
       this.aliveRunByTeam.set(run.teamName, run.runId);
       logger.info(`[${run.teamName}] Launch complete. Process alive for subsequent tasks.`);
+
+      // Force a post-ready detail refresh so Messages reload persisted lead_session
+      // texts from JSONL even if the last visible assistant output only reached disk.
+      this.teamChangeEmitter?.({
+        type: 'lead-message',
+        teamName: run.teamName,
+        runId: run.runId,
+        detail: 'lead-session-sync',
+      });
 
       // Fire "Team Launched" notification
       void this.fireTeamLaunchedNotification(run);
@@ -6069,6 +6766,15 @@ export class TeamProvisioningService {
     this.provisioningRunByTeam.delete(run.teamName);
     this.aliveRunByTeam.set(run.teamName, run.runId);
     logger.info(`[${run.teamName}] Provisioning complete. Process alive for subsequent tasks.`);
+
+    // Force a post-ready detail refresh so Messages reload persisted lead_session
+    // texts from JSONL even if the last visible assistant output only reached disk.
+    this.teamChangeEmitter?.({
+      type: 'lead-message',
+      teamName: run.teamName,
+      runId: run.runId,
+      detail: 'lead-session-sync',
+    });
 
     // Fire "Team Launched" notification
     void this.fireTeamLaunchedNotification(run);
@@ -6377,6 +7083,7 @@ export class TeamProvisioningService {
    * Remove a run from tracking maps.
    */
   private cleanupRun(run: ProvisioningRun): void {
+    this.resetRuntimeToolActivity(run);
     this.setLeadActivity(run, 'offline');
     run.pendingDirectCrossTeamSendRefresh = false;
     if (run.timeoutHandle) {
@@ -6437,6 +7144,11 @@ export class TeamProvisioningService {
       }
       this.emitToolApprovalEvent({ dismissed: true, teamName: run.teamName, runId: run.runId });
       run.pendingApprovals.clear();
+    }
+    // Clean up the generated MCP config file (best-effort, fire-and-forget)
+    if (run.mcpConfigPath) {
+      void this.mcpConfigBuilder.removeConfigFile(run.mcpConfigPath);
+      run.mcpConfigPath = null;
     }
     // Remove from runs Map to free memory (stdoutBuffer, stderrBuffer, claudeLogLines)
     this.runs.delete(run.runId);
@@ -6885,9 +7597,12 @@ export class TeamProvisioningService {
       USER: user,
       LOGNAME: shellEnv.LOGNAME?.trim() || process.env.LOGNAME?.trim() || user,
       TERM: shellEnv.TERM?.trim() || process.env.TERM?.trim() || 'xterm-256color',
-      // Ensure CLI reads/writes from the same Claude root as the app.
-      // This aligns teams/tasks locations when the app overrides claudeRootPath.
-      CLAUDE_CONFIG_DIR: getClaudeBasePath(),
+      // Only set CLAUDE_CONFIG_DIR when the user configured a custom path.
+      // Setting it to the default ~/.claude changes the macOS Keychain namespace
+      // for OAuth credential lookup, causing auth failures. (See issue #27)
+      ...(getClaudeBasePath() !== getAutoDetectedClaudeBasePath()
+        ? { CLAUDE_CONFIG_DIR: getClaudeBasePath() }
+        : {}),
       CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: '1',
     };
 

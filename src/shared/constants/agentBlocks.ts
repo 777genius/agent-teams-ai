@@ -82,6 +82,16 @@ export function extractAgentBlockContents(text: string): string[] {
 export const AGENT_BLOCK_REGEX = new RegExp(AGENT_BLOCK_PATTERN, 'g');
 
 /**
+ * Wraps text in agent-only block markers.
+ * Use this instead of manually concatenating AGENT_BLOCK_OPEN/CLOSE.
+ */
+export function wrapAgentBlock(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return '';
+  return `${AGENT_BLOCK_OPEN}\n${trimmed}\n${AGENT_BLOCK_CLOSE}`;
+}
+
+/**
  * Fenced code block marker for reply messages between agents.
  *
  * Format:

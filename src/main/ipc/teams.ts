@@ -26,6 +26,7 @@ import {
   TEAM_GET_PROJECT_BRANCH,
   TEAM_GET_SAVED_REQUEST,
   TEAM_GET_TASK_ATTACHMENT,
+  TEAM_GET_TASK_CHANGE_PRESENCE,
   TEAM_KILL_PROCESS,
   TEAM_LAUNCH,
   TEAM_LEAD_ACTIVITY,
@@ -46,10 +47,14 @@ import {
   TEAM_RESTORE_TASK,
   TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SEND_MESSAGE,
+  TEAM_SET_CHANGE_PRESENCE_TRACKING,
+  TEAM_SET_PROJECT_BRANCH_TRACKING,
   TEAM_SET_TASK_CLARIFICATION,
+  TEAM_SET_TOOL_ACTIVITY_TRACKING,
   TEAM_SHOW_MESSAGE_NOTIFICATION,
   TEAM_SOFT_DELETE_TASK,
   TEAM_START_TASK,
+  TEAM_START_TASK_BY_USER,
   TEAM_STOP,
   TEAM_TOOL_APPROVAL_READ_FILE,
   TEAM_TOOL_APPROVAL_RESPOND,
@@ -75,6 +80,10 @@ import {
 } from '@shared/utils/cliArgsParser';
 import { createLogger } from '@shared/utils/logger';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
+import {
+  buildStandaloneSlashCommandMeta,
+  parseStandaloneSlashCommand,
+} from '@shared/utils/slashCommands';
 import crypto from 'crypto';
 import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
 import * as fs from 'fs';
@@ -102,8 +111,10 @@ import {
 } from './guards';
 
 import type {
+  BranchStatusService,
   MemberStatsComputer,
   TeamDataService,
+  TeammateToolTracker,
   TeamMemberLogsFinder,
   TeamProvisioningService,
 } from '../services';
@@ -265,6 +276,8 @@ let teamProvisioningService: TeamProvisioningService | null = null;
 let teamMemberLogsFinder: TeamMemberLogsFinder | null = null;
 let memberStatsComputer: MemberStatsComputer | null = null;
 let teamBackupService: TeamBackupService | null = null;
+let teammateToolTracker: TeammateToolTracker | null = null;
+let branchStatusService: BranchStatusService | null = null;
 
 const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
@@ -293,18 +306,26 @@ export function initializeTeamHandlers(
   provisioningService: TeamProvisioningService,
   logsFinder?: TeamMemberLogsFinder,
   statsComputer?: MemberStatsComputer,
-  backupService?: TeamBackupService
+  backupService?: TeamBackupService,
+  toolTracker?: TeammateToolTracker,
+  branchTracker?: BranchStatusService
 ): void {
   teamDataService = service;
   teamProvisioningService = provisioningService;
   teamMemberLogsFinder = logsFinder ?? null;
   memberStatsComputer = statsComputer ?? null;
   teamBackupService = backupService ?? null;
+  teammateToolTracker = toolTracker ?? null;
+  branchStatusService = branchTracker ?? null;
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_LIST, handleListTeams);
   ipcMain.handle(TEAM_GET_DATA, handleGetData);
+  ipcMain.handle(TEAM_GET_TASK_CHANGE_PRESENCE, handleGetTaskChangePresence);
+  ipcMain.handle(TEAM_SET_CHANGE_PRESENCE_TRACKING, handleSetChangePresenceTracking);
+  ipcMain.handle(TEAM_SET_PROJECT_BRANCH_TRACKING, handleSetProjectBranchTracking);
+  ipcMain.handle(TEAM_SET_TOOL_ACTIVITY_TRACKING, handleSetToolActivityTracking);
   ipcMain.handle(TEAM_GET_CLAUDE_LOGS, handleGetClaudeLogs);
   ipcMain.handle(TEAM_PREPARE_PROVISIONING, handlePrepareProvisioning);
   ipcMain.handle(TEAM_CREATE, handleCreateTeam);
@@ -332,6 +353,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_MEMBER_STATS, handleGetMemberStats);
   ipcMain.handle(TEAM_UPDATE_CONFIG, handleUpdateConfig);
   ipcMain.handle(TEAM_START_TASK, handleStartTask);
+  ipcMain.handle(TEAM_START_TASK_BY_USER, handleStartTaskByUser);
   ipcMain.handle(TEAM_GET_ALL_TASKS, handleGetAllTasks);
   ipcMain.handle(TEAM_ADD_TASK_COMMENT, handleAddTaskComment);
   ipcMain.handle(TEAM_ADD_MEMBER, handleAddMember);
@@ -366,6 +388,10 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
 export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_LIST);
   ipcMain.removeHandler(TEAM_GET_DATA);
+  ipcMain.removeHandler(TEAM_GET_TASK_CHANGE_PRESENCE);
+  ipcMain.removeHandler(TEAM_SET_CHANGE_PRESENCE_TRACKING);
+  ipcMain.removeHandler(TEAM_SET_PROJECT_BRANCH_TRACKING);
+  ipcMain.removeHandler(TEAM_SET_TOOL_ACTIVITY_TRACKING);
   ipcMain.removeHandler(TEAM_GET_CLAUDE_LOGS);
   ipcMain.removeHandler(TEAM_PREPARE_PROVISIONING);
   ipcMain.removeHandler(TEAM_CREATE);
@@ -393,6 +419,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_GET_MEMBER_STATS);
   ipcMain.removeHandler(TEAM_UPDATE_CONFIG);
   ipcMain.removeHandler(TEAM_START_TASK);
+  ipcMain.removeHandler(TEAM_START_TASK_BY_USER);
   ipcMain.removeHandler(TEAM_GET_ALL_TASKS);
   ipcMain.removeHandler(TEAM_ADD_TASK_COMMENT);
   ipcMain.removeHandler(TEAM_ADD_MEMBER);
@@ -435,6 +462,20 @@ function getTeamProvisioningService(): TeamProvisioningService {
     throw new Error('Team provisioning handlers are not initialized');
   }
   return teamProvisioningService;
+}
+
+function getTeammateToolTracker(): TeammateToolTracker {
+  if (!teammateToolTracker) {
+    throw new Error('Teammate tool tracker is not initialized');
+  }
+  return teammateToolTracker;
+}
+
+function getBranchStatusService(): BranchStatusService {
+  if (!branchStatusService) {
+    throw new Error('Branch status service is not initialized');
+  }
+  return branchStatusService;
 }
 
 async function wrapTeamHandler<T>(
@@ -608,6 +649,73 @@ async function handleGetData(
   checkRateLimitMessages(merged, tn, displayName, projectPath);
   checkApiErrorMessages(merged, tn, displayName, projectPath);
   return { success: true, data: { ...data, isAlive, messages: merged } };
+}
+
+async function handleGetTaskChangePresence(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown
+): Promise<IpcResult<Record<string, 'has_changes' | 'no_changes' | 'unknown'>>> {
+  const validated = validateTeamName(teamName);
+  if (!validated.valid) {
+    return { success: false, error: validated.error ?? 'Invalid teamName' };
+  }
+
+  return wrapTeamHandler('getTaskChangePresence', () =>
+    getTeamDataService().getTaskChangePresence(validated.value!)
+  );
+}
+
+async function handleSetChangePresenceTracking(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  enabled: unknown
+): Promise<IpcResult<void>> {
+  const validated = validateTeamName(teamName);
+  if (!validated.valid) {
+    return { success: false, error: validated.error ?? 'Invalid teamName' };
+  }
+  if (typeof enabled !== 'boolean') {
+    return { success: false, error: 'enabled must be a boolean' };
+  }
+
+  return wrapTeamHandler('setChangePresenceTracking', async () => {
+    getTeamDataService().setTaskChangePresenceTracking(validated.value!, enabled);
+  });
+}
+
+async function handleSetProjectBranchTracking(
+  _event: IpcMainInvokeEvent,
+  projectPath: unknown,
+  enabled: unknown
+): Promise<IpcResult<void>> {
+  if (typeof projectPath !== 'string' || projectPath.trim().length === 0) {
+    return { success: false, error: 'projectPath must be a non-empty string' };
+  }
+  if (typeof enabled !== 'boolean') {
+    return { success: false, error: 'enabled must be a boolean' };
+  }
+
+  return wrapTeamHandler('setProjectBranchTracking', async () => {
+    await getBranchStatusService().setTracking(projectPath.trim(), enabled);
+  });
+}
+
+async function handleSetToolActivityTracking(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  enabled: unknown
+): Promise<IpcResult<void>> {
+  const validated = validateTeamName(teamName);
+  if (!validated.valid) {
+    return { success: false, error: validated.error ?? 'Invalid teamName' };
+  }
+  if (typeof enabled !== 'boolean') {
+    return { success: false, error: 'enabled must be a boolean' };
+  }
+
+  return wrapTeamHandler('setToolActivityTracking', async () => {
+    await getTeammateToolTracker().setTracking(validated.value!, enabled);
+  });
 }
 
 async function handleDeleteTeam(
@@ -1371,25 +1479,38 @@ async function handleSendMessage(
       const preGeneratedMessageId = crypto.randomUUID();
       // Separate try blocks: stdin delivery vs persistence
       // If stdin succeeds but persistence fails, do NOT fallback to inbox (would duplicate)
-      // Wrap with instructions so lead responds with visible text (not just agent-only blocks)
-      const wrappedText = [
-        `You received a direct message from the user.`,
-        `IMPORTANT: Your text response here is shown to the user in the Messages panel. Always include a brief human-readable reply. Do NOT respond with only an agent-only block.`,
-        AGENT_BLOCK_OPEN,
-        `MessageId: ${preGeneratedMessageId}`,
-        `When creating a task from this user message, prefer task_create_from_message with messageId="${preGeneratedMessageId}" for reliable provenance. Only use this exact messageId — never guess or fabricate one.`,
-        AGENT_BLOCK_CLOSE,
-        ``,
-        `Message from user:`,
-        buildMessageDeliveryText(payload.text!, {
-          actionMode,
-          isLeadRecipient: true,
-        }),
-      ].join('\n');
+      const standaloneSlashCommand = !validatedAttachments?.length
+        ? parseStandaloneSlashCommand(payload.text!)
+        : null;
+      const slashCommandMeta = standaloneSlashCommand
+        ? buildStandaloneSlashCommandMeta(standaloneSlashCommand.raw)
+        : null;
+      const rawSlashCommandText = standaloneSlashCommand?.raw;
+      const stdinTextForLead = rawSlashCommandText
+        ? rawSlashCommandText
+        : [
+            `You received a direct message from the user.`,
+            `IMPORTANT: Your text response here is shown to the user in the Messages panel. Always include a brief human-readable reply. Do NOT respond with only an agent-only block.`,
+            AGENT_BLOCK_OPEN,
+            `MessageId: ${preGeneratedMessageId}`,
+            `When creating a task from this user message, prefer task_create_from_message with messageId="${preGeneratedMessageId}" for reliable provenance. Only use this exact messageId — never guess or fabricate one.`,
+            AGENT_BLOCK_CLOSE,
+            ``,
+            `Message from user:`,
+            buildMessageDeliveryText(payload.text!, {
+              actionMode,
+              isLeadRecipient: true,
+            }),
+          ].join('\n');
+      const persistTextForLead = rawSlashCommandText ?? payload.text!;
 
       let stdinSent = false;
       try {
-        await provisioning.sendMessageToTeam(tn, wrappedText, validatedAttachments);
+        await provisioning.sendMessageToTeam(
+          tn,
+          stdinTextForLead,
+          rawSlashCommandText ? undefined : validatedAttachments
+        );
         stdinSent = true;
       } catch (stdinError: unknown) {
         // Stdin failed (process died between check and write)
@@ -1436,7 +1557,7 @@ async function handleSendMessage(
           result = await getTeamDataService().sendDirectToLead(
             tn,
             resolvedLeadName,
-            payload.text!,
+            persistTextForLead,
             payload.summary,
             attachmentMeta,
             validatedTaskRefs.value,
@@ -1452,7 +1573,7 @@ async function handleSendMessage(
         provisioning.pushLiveLeadProcessMessage(tn, {
           from: 'user',
           to: resolvedLeadName,
-          text: payload.text!,
+          text: persistTextForLead,
           timestamp: new Date().toISOString(),
           read: true,
           summary: payload.summary,
@@ -1460,6 +1581,12 @@ async function handleSendMessage(
           source: 'user_sent',
           attachments: attachmentMeta,
           taskRefs: validatedTaskRefs.value,
+          ...(slashCommandMeta
+            ? {
+                messageKind: 'slash_command' as const,
+                slashCommand: slashCommandMeta,
+              }
+            : {}),
         });
 
         return result;
@@ -2113,6 +2240,24 @@ async function handleStartTask(
   }
   return wrapTeamHandler('startTask', () =>
     getTeamDataService().startTask(validatedTeamName.value!, validatedTaskId.value!)
+  );
+}
+
+async function handleStartTaskByUser(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown
+): Promise<IpcResult<{ notifiedOwner: boolean }>> {
+  const validatedTeamName = validateTeamName(teamName);
+  if (!validatedTeamName.valid) {
+    return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
+  }
+  const validatedTaskId = validateTaskId(taskId);
+  if (!validatedTaskId.valid) {
+    return { success: false, error: validatedTaskId.error ?? 'Invalid taskId' };
+  }
+  return wrapTeamHandler('startTaskByUser', () =>
+    getTeamDataService().startTaskByUser(validatedTeamName.value!, validatedTaskId.value!)
   );
 }
 
@@ -2800,8 +2945,12 @@ async function handleToolApprovalRespond(
 
 async function handleToolApprovalSettings(
   _event: IpcMainInvokeEvent,
+  teamName: unknown,
   settings: unknown
 ): Promise<IpcResult<void>> {
+  if (typeof teamName !== 'string' || teamName.trim().length === 0) {
+    return { success: false, error: 'teamName must be a non-empty string' };
+  }
   if (typeof settings !== 'object' || settings === null) {
     return { success: false, error: 'Settings must be an object' };
   }
@@ -2828,7 +2977,10 @@ async function handleToolApprovalSettings(
   }
 
   try {
-    getTeamProvisioningService().updateToolApprovalSettings(s as unknown as ToolApprovalSettings);
+    getTeamProvisioningService().updateToolApprovalSettings(
+      teamName,
+      s as unknown as ToolApprovalSettings
+    );
   } catch (err) {
     return {
       success: false,

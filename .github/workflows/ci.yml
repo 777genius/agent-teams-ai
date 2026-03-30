@@ -2,11 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - 'src/**'
       - 'agent-teams-controller/**'
       - 'mcp-server/**'
+      - 'packages/**'
       - 'test/**'
       - '.github/workflows/**'
       - 'pnpm-workspace.yaml'
@@ -18,11 +19,11 @@ on:
       - 'tailwind.config.*'
       - 'eslint.config.*'
   pull_request:
-    branches: [main]
     paths:
       - 'src/**'
       - 'agent-teams-controller/**'
       - 'mcp-server/**'
+      - 'packages/**'
       - 'test/**'
       - '.github/workflows/**'
       - 'pnpm-workspace.yaml'
@@ -58,9 +59,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .eslintcache
-          key: eslint-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'eslint.config.*') }}
-          restore-keys: |
-            eslint-${{ runner.os }}-
+          key: eslint-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'eslint.config.*', 'src/**/*.ts', 'src/**/*.tsx') }}
+
+      - name: Auto-fix import sort (Node version parity)
+        run: npx eslint src/ --fix --no-cache || true
 
       - name: Validate workspace truth gate
         run: pnpm check

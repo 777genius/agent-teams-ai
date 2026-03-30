@@ -150,7 +150,7 @@ describe('CliInstallerService', () => {
 
       const mockWindow = {
         isDestroyed: () => false,
-        webContents: { send: vi.fn() },
+        webContents: { send: vi.fn(), isDestroyed: () => false },
       };
       service.setMainWindow(mockWindow as unknown as import('electron').BrowserWindow);
 
@@ -177,7 +177,7 @@ describe('CliInstallerService', () => {
 
       const mockWindow = {
         isDestroyed: () => false,
-        webContents: { send: vi.fn() },
+        webContents: { send: vi.fn(), isDestroyed: () => false },
       };
       service.setMainWindow(mockWindow as unknown as import('electron').BrowserWindow);
 
@@ -206,7 +206,7 @@ describe('CliInstallerService', () => {
     it('accepts a BrowserWindow instance', () => {
       const mockWindow = {
         isDestroyed: () => false,
-        webContents: { send: vi.fn() },
+        webContents: { send: vi.fn(), isDestroyed: () => false },
       };
       service.setMainWindow(mockWindow as unknown as import('electron').BrowserWindow);
       expect(true).toBe(true);
@@ -425,7 +425,7 @@ describe('CliInstallerService', () => {
 
       const mockWindow = {
         isDestroyed: () => true,
-        webContents: { send: vi.fn() },
+        webContents: { send: vi.fn(), isDestroyed: () => true },
       };
       service.setMainWindow(mockWindow as unknown as import('electron').BrowserWindow);
 

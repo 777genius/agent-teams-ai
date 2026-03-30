@@ -83,6 +83,8 @@ export interface CliInstallerAPI {
   getStatus: () => Promise<CliInstallationStatus>;
   /** Start install/update flow. Progress sent via onProgress events. */
   install: () => Promise<void>;
+  /** Invalidate cached status (forces fresh check on next getStatus) */
+  invalidateStatus: () => Promise<void>;
   /** Subscribe to progress events. Returns cleanup function. */
   onProgress: (cb: (event: unknown, data: CliInstallerProgress) => void) => () => void;
 }

@@ -8,9 +8,10 @@ import { useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useStore } from '@renderer/store';
+import { formatSessionLabel, parseSessionTitle } from '@renderer/utils/sessionTitleParser';
 import { formatTokensCompact } from '@shared/utils/tokenFormatting';
 import { formatDistanceToNowStrict } from 'date-fns';
-import { EyeOff, MessageSquare, Pin } from 'lucide-react';
+import { EyeOff, MessageSquare, Pin, Play, RotateCw, Users } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { OngoingIndicator } from '../common/OngoingIndicator';
@@ -178,7 +179,7 @@ export const SessionItem = ({
         type: 'session',
         sessionId: session.id,
         projectId: activeProjectId,
-        label: session.firstMessage?.slice(0, 50) ?? 'Session',
+        label: formatSessionLabel(session.firstMessage),
       },
       forceNewTab ? { forceNewTab } : { replaceActiveTab: true }
     );
@@ -191,7 +192,7 @@ export const SessionItem = ({
     setContextMenu({ x: e.clientX, y: e.clientY });
   }, []);
 
-  const sessionLabel = session.firstMessage?.slice(0, 50) ?? 'Session';
+  const sessionLabel = formatSessionLabel(session.firstMessage);
 
   const handleOpenInCurrentPane = useCallback(() => {
     if (!activeProjectId) return;
@@ -240,62 +241,99 @@ export const SessionItem = ({
     }
   }, [activeProjectId, openTab, selectSession, session.id, sessionLabel, splitPane]);
 
-  // Height must match SESSION_HEIGHT (58px) in DateGroupedSessions.tsx for virtual scroll
+  // Height must match SESSION_HEIGHT (54px) in DateGroupedSessions.tsx for virtual scroll
   return (
     <>
       <button
         onClick={handleClick}
         onContextMenu={handleContextMenu}
-        className={`h-[58px] w-full overflow-hidden border-b px-3 py-2 text-left transition-colors ${isActive ? '' : 'bg-transparent hover:bg-surface-raised'}`}
+        className={`flex h-[54px] w-full flex-col justify-center overflow-hidden border-b px-2 py-1.5 text-left transition-colors ${isActive ? '' : 'bg-transparent hover:bg-surface-raised'}`}
         style={{
           borderColor: 'var(--color-border)',
           ...(isActive ? { backgroundColor: 'var(--color-surface-raised)' } : {}),
           ...(isHidden ? { opacity: 0.5 } : {}),
         }}
       >
-        {/* First line: title + ongoing indicator + pin/hidden icons */}
-        <div className="flex items-center gap-1.5">
-          {multiSelectActive && (
-            <input
-              type="checkbox"
-              checked={isSelected ?? false}
-              onChange={() => onToggleSelect?.()}
-              onClick={(e) => e.stopPropagation()}
-              className="size-3.5 shrink-0 accent-blue-500"
-            />
-          )}
-          {session.isOngoing && <OngoingIndicator />}
-          {isPinned && <Pin className="size-2.5 shrink-0 text-blue-400" />}
-          {isHidden && <EyeOff className="size-2.5 shrink-0 text-zinc-500" />}
-          <span
-            className="line-clamp-2 text-[13px] font-medium leading-tight"
-            style={{ color: isActive ? 'var(--color-text)' : 'var(--color-text-muted)' }}
-          >
-            {session.firstMessage ?? 'Untitled'}
-          </span>
-        </div>
-
-        {/* Second line: message count + time + context consumption */}
-        <div
-          className="mt-0.5 flex items-center gap-2 text-[10px] leading-tight"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          <span className="flex items-center gap-0.5">
-            <MessageSquare className="size-2.5" />
-            {session.messageCount}
-          </span>
-          <span style={{ opacity: 0.5 }}>·</span>
-          <span className="tabular-nums">{formatShortTime(new Date(session.createdAt))}</span>
-          {session.contextConsumption != null && session.contextConsumption > 0 && (
+        {(() => {
+          const parsed = parseSessionTitle(session.firstMessage);
+          const isTeam = parsed.kind !== 'regular';
+          return (
             <>
-              <span style={{ opacity: 0.5 }}>·</span>
-              <ConsumptionBadge
-                contextConsumption={session.contextConsumption}
-                phaseBreakdown={session.phaseBreakdown}
-              />
+              {/* First line: title + ongoing indicator + pin/hidden icons */}
+              <div className="flex items-center gap-1.5">
+                {multiSelectActive && (
+                  <input
+                    type="checkbox"
+                    checked={isSelected ?? false}
+                    onChange={() => onToggleSelect?.()}
+                    onClick={(e) => e.stopPropagation()}
+                    className="size-3.5 shrink-0 accent-blue-500"
+                  />
+                )}
+                {session.isOngoing && <OngoingIndicator />}
+                {isPinned && <Pin className="size-2.5 shrink-0 text-blue-400" />}
+                {isHidden && <EyeOff className="size-2.5 shrink-0 text-zinc-500" />}
+                {isTeam ? (
+                  <span
+                    className="flex items-center gap-1.5 truncate text-[13px] font-medium leading-tight"
+                    style={{ color: isActive ? 'var(--color-text)' : 'var(--color-text-muted)' }}
+                  >
+                    <Users className="size-3 shrink-0 text-blue-400" />
+                    <span className="truncate">{parsed.displayText}</span>
+                  </span>
+                ) : (
+                  <span
+                    className="line-clamp-2 text-[13px] font-medium leading-tight"
+                    style={{ color: isActive ? 'var(--color-text)' : 'var(--color-text-muted)' }}
+                  >
+                    {parsed.displayText}
+                  </span>
+                )}
+              </div>
+
+              {/* Second line: metadata */}
+              <div
+                className="mt-0.5 flex items-center gap-2 text-[10px] leading-tight"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                {isTeam && parsed.projectName && (
+                  <>
+                    <span className="truncate">{parsed.projectName}</span>
+                    <span style={{ opacity: 0.5 }}>·</span>
+                  </>
+                )}
+                {isTeam && (
+                  <>
+                    <span className="flex shrink-0 items-center gap-0.5">
+                      {parsed.kind === 'team-resume' ? (
+                        <RotateCw className="size-2.5" />
+                      ) : (
+                        <Play className="size-2.5" />
+                      )}
+                      {parsed.kind === 'team-resume' ? 'resume' : 'new'}
+                    </span>
+                    <span style={{ opacity: 0.5 }}>·</span>
+                  </>
+                )}
+                <span className="flex shrink-0 items-center gap-0.5">
+                  <MessageSquare className="size-2.5" />
+                  {session.messageCount}
+                </span>
+                <span style={{ opacity: 0.5 }}>·</span>
+                <span className="tabular-nums">{formatShortTime(new Date(session.createdAt))}</span>
+                {session.contextConsumption != null && session.contextConsumption > 0 && (
+                  <>
+                    <span style={{ opacity: 0.5 }}>·</span>
+                    <ConsumptionBadge
+                      contextConsumption={session.contextConsumption}
+                      phaseBreakdown={session.phaseBreakdown}
+                    />
+                  </>
+                )}
+              </div>
             </>
-          )}
-        </div>
+          );
+        })()}
       </button>
 
       {contextMenu &&

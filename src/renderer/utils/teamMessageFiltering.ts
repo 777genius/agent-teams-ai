@@ -18,7 +18,7 @@ export function filterTeamMessages(
 ): InboxMessage[] {
   const { timeWindow, filter, searchQuery } = options;
 
-  let list = messages;
+  let list = messages.filter((m) => m.messageKind !== 'task_comment_notification');
   if (timeWindow) {
     list = list.filter((m) => {
       const ts = new Date(m.timestamp).getTime();

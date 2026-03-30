@@ -105,4 +105,31 @@ describe('filterTeamMessages', () => {
     expect(result).toHaveLength(1);
     expect(result[0].messageId).toBe('msg-2');
   });
+
+  it('hides task comment notifications by semantic kind instead of text matching', () => {
+    const messages = [
+      makeMessage({
+        messageId: 'task-comment-1',
+        source: 'system_notification',
+        messageKind: 'task_comment_notification',
+        summary: 'Comment on #abcd1234',
+        text: 'Some future wording that may change completely.',
+      }),
+      makeMessage({
+        messageId: 'msg-2',
+        source: 'system_notification',
+        summary: 'Task #abcd1234 started',
+        text: 'Visible system notification',
+      }),
+    ];
+
+    const result = filterTeamMessages(messages, {
+      timeWindow: null,
+      filter: { from: new Set(), to: new Set(), showNoise: true },
+      searchQuery: '',
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].messageId).toBe('msg-2');
+  });
 });

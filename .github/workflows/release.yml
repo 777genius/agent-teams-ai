@@ -143,7 +143,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          for f in release/*.dmg release/*.zip release/*.blockmap release/*.yml; do
+          for f in release/*.dmg release/*.zip release/*.blockmap; do
             [ -f "$f" ] && gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber
           done
 
@@ -213,7 +213,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          for f in release/*.exe release/*.blockmap release/*.yml; do
+          for f in release/*.exe release/*.blockmap; do
             [ -f "$f" ] && gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber
           done
 
@@ -285,7 +285,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          for f in release/*.AppImage release/*.deb release/*.rpm release/*.pacman release/*.blockmap release/*.yml; do
+          for f in release/*.AppImage release/*.deb release/*.rpm release/*.pacman release/*.blockmap; do
             [ -f "$f" ] && gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber
           done
 
@@ -326,3 +326,85 @@ jobs:
               gh release upload "v${VERSION}" "$STABLE_NAME" --repo "$REPO" --clobber
             rm -f "$STABLE_NAME"
           done
+
+      - name: Publish canonical updater metadata
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          TAG="v${VERSION}"
+          REPO="${GITHUB_REPOSITORY}"
+          RELEASE_DATE="$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")"
+          TMP_DIR="$(mktemp -d)"
+          cd "$TMP_DIR"
+
+          sha512_base64() {
+            openssl dgst -sha512 -binary "$1" | openssl base64 -A
+          }
+
+          file_size() {
+            wc -c < "$1" | tr -d '[:space:]'
+          }
+
+          download_asset() {
+            local name="$1"
+            curl -fSL -o "$name" "https://github.com/${REPO}/releases/download/${TAG}/${name}"
+          }
+
+          # Canonical Windows feed
+          download_asset "Claude-Agent-Teams-UI-Setup.exe"
+          WIN_SHA="$(sha512_base64 Claude-Agent-Teams-UI-Setup.exe)"
+          WIN_SIZE="$(file_size Claude-Agent-Teams-UI-Setup.exe)"
+          cat > latest.yml <<EOF
+          version: ${VERSION}
+          files:
+            - url: Claude-Agent-Teams-UI-Setup.exe
+              sha512: ${WIN_SHA}
+              size: ${WIN_SIZE}
+          path: Claude-Agent-Teams-UI-Setup.exe
+          sha512: ${WIN_SHA}
+          releaseDate: '${RELEASE_DATE}'
+          EOF
+
+          # Canonical Linux feed
+          download_asset "Claude-Agent-Teams-UI.AppImage"
+          LINUX_SHA="$(sha512_base64 Claude-Agent-Teams-UI.AppImage)"
+          LINUX_SIZE="$(file_size Claude-Agent-Teams-UI.AppImage)"
+          cat > latest-linux.yml <<EOF
+          version: ${VERSION}
+          files:
+            - url: Claude-Agent-Teams-UI.AppImage
+              sha512: ${LINUX_SHA}
+              size: ${LINUX_SIZE}
+          path: Claude-Agent-Teams-UI.AppImage
+          sha512: ${LINUX_SHA}
+          releaseDate: '${RELEASE_DATE}'
+          EOF
+
+          # Canonical macOS feed.
+          # electron-updater consumes only one latest-mac.yml asset on GitHub releases.
+          # We publish the x64 feed here because it works on Intel Macs and remains
+          # installable on Apple Silicon via Rosetta until we add arch-specific feed
+          # selection or universal packaging.
+          download_asset "Claude.Agent.Teams.UI-${VERSION}-mac.zip"
+          download_asset "Claude.Agent.Teams.UI-${VERSION}.dmg"
+          MAC_ZIP_SHA="$(sha512_base64 Claude.Agent.Teams.UI-${VERSION}-mac.zip)"
+          MAC_ZIP_SIZE="$(file_size Claude.Agent.Teams.UI-${VERSION}-mac.zip)"
+          MAC_DMG_SHA="$(sha512_base64 Claude.Agent.Teams.UI-${VERSION}.dmg)"
+          MAC_DMG_SIZE="$(file_size Claude.Agent.Teams.UI-${VERSION}.dmg)"
+          cat > latest-mac.yml <<EOF
+          version: ${VERSION}
+          files:
+            - url: Claude.Agent.Teams.UI-${VERSION}-mac.zip
+              sha512: ${MAC_ZIP_SHA}
+              size: ${MAC_ZIP_SIZE}
+            - url: Claude.Agent.Teams.UI-${VERSION}.dmg
+              sha512: ${MAC_DMG_SHA}
+              size: ${MAC_DMG_SIZE}
+          path: Claude.Agent.Teams.UI-${VERSION}-mac.zip
+          sha512: ${MAC_ZIP_SHA}
+          releaseDate: '${RELEASE_DATE}'
+          EOF
+
+          gh release upload "${TAG}" latest.yml latest-linux.yml latest-mac.yml --repo "${REPO}" --clobber

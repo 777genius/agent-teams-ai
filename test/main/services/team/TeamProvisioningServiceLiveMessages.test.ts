@@ -95,6 +95,7 @@ vi.mock('../../../../src/main/utils/fsRead', async (importOriginal) => {
 });
 
 vi.mock('agent-teams-controller', () => ({
+  AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES: [] as readonly string[],
   createController: ({ teamName }: { teamName: string }) => ({
     messages: {
       appendSentMessage: (message: Record<string, unknown>) =>
@@ -134,6 +135,7 @@ interface RunLike {
   provisioningComplete: boolean;
   leadMsgSeq: number;
   pendingToolCalls: { name: string; preview: string }[];
+  activeToolCalls: Map<string, unknown>;
   pendingDirectCrossTeamSendRefresh: boolean;
   lastLeadTextEmitMs: number;
   leadRelayCapture: null;
@@ -166,6 +168,7 @@ function attachRun(
     provisioningComplete: opts?.provisioningComplete ?? false,
     leadMsgSeq: 0,
     pendingToolCalls: [],
+    activeToolCalls: new Map(),
     pendingDirectCrossTeamSendRefresh: false,
     lastLeadTextEmitMs: 0,
     leadRelayCapture: null,
@@ -330,7 +333,7 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     expect(hoisted.appendSentMessage).toHaveBeenCalledTimes(1);
   });
 
-  it('captures SendMessage(to:team-lead) without rendering duplicate assistant thought text', () => {
+  it('keeps assistant thought text when SendMessage targets a teammate', () => {
     const service = new TeamProvisioningService();
     seedConfig('my-team');
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
@@ -353,13 +356,46 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     });
 
     const live = service.getLiveLeadProcessMessages('my-team');
-    expect(live).toHaveLength(1);
-    expect(live[0].to).toBe('team-lead');
-    expect(live[0].text).toBe('Need clarification on #abcd1234');
+    expect(live).toHaveLength(2);
+    expect(live[0].to).toBeUndefined();
+    expect(live[0].text).toBe('Forwarding the clarification request now.');
     expect(live[0].source).toBe('lead_process');
+    expect(live[1].to).toBe('team-lead');
+    expect(live[1].text).toBe('Need clarification on #abcd1234');
+    expect(live[1].source).toBe('lead_process');
     // Non-user recipient → delivered to inbox, not sentMessages
     expect(hoisted.sendInboxMessage).toHaveBeenCalledTimes(1);
     expect(hoisted.appendSentMessage).not.toHaveBeenCalled();
+  });
+
+  it('suppresses duplicate assistant thought text when SendMessage targets user', () => {
+    const service = new TeamProvisioningService();
+    seedConfig('my-team');
+    const run = attachRun(service, 'my-team', { provisioningComplete: true });
+
+    callHandleStreamJsonMessage(service, run, {
+      type: 'assistant',
+      content: [
+        { type: 'text', text: 'Task completed. Sending the summary now.' },
+        {
+          type: 'tool_use',
+          name: 'SendMessage',
+          input: {
+            type: 'message',
+            recipient: 'user',
+            content: 'Task completed successfully.',
+            summary: 'Done',
+          },
+        },
+      ],
+    });
+
+    const live = service.getLiveLeadProcessMessages('my-team');
+    expect(live).toHaveLength(1);
+    expect(live[0].to).toBe('user');
+    expect(live[0].text).toBe('Task completed successfully.');
+    expect(live[0].source).toBe('lead_process');
+    expect(hoisted.appendSentMessage).toHaveBeenCalledTimes(1);
   });
 
   it('post-ready path also uses the unified helper', () => {

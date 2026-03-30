@@ -10,6 +10,7 @@
 import {
   CLI_INSTALLER_GET_STATUS,
   CLI_INSTALLER_INSTALL,
+  CLI_INSTALLER_INVALIDATE_STATUS,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants shared between main and preload
 } from '@preload/constants/ipcChannels';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -39,6 +40,7 @@ export function initializeCliInstallerHandlers(installerService: CliInstallerSer
 export function registerCliInstallerHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(CLI_INSTALLER_GET_STATUS, handleGetStatus);
   ipcMain.handle(CLI_INSTALLER_INSTALL, handleInstall);
+  ipcMain.handle(CLI_INSTALLER_INVALIDATE_STATUS, handleInvalidateStatus);
 
   logger.info('CLI installer handlers registered');
 }
@@ -49,6 +51,7 @@ export function registerCliInstallerHandlers(ipcMain: IpcMain): void {
 export function removeCliInstallerHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(CLI_INSTALLER_GET_STATUS);
   ipcMain.removeHandler(CLI_INSTALLER_INSTALL);
+  ipcMain.removeHandler(CLI_INSTALLER_INVALIDATE_STATUS);
 
   logger.info('CLI installer handlers removed');
 }
@@ -104,4 +107,9 @@ async function handleInstall(_event: IpcMainInvokeEvent): Promise<IpcResult<void
     logger.error('Error in cliInstaller:install:', msg);
     return { success: false, error: msg };
   }
+}
+
+function handleInvalidateStatus(_event: IpcMainInvokeEvent): IpcResult<void> {
+  cachedStatus = null;
+  return { success: true, data: undefined };
 }

@@ -85,7 +85,8 @@ export interface Tab {
     | 'team'
     | 'report'
     | 'extensions'
-    | 'schedules';
+    | 'schedules'
+    | 'graph';
 
   /** Session ID (required when type === 'session') */
   sessionId?: string;

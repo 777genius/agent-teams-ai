@@ -21,7 +21,7 @@ export const WriteToolViewer: React.FC<WriteToolViewerProps> = ({ linkedTool }) 
   const content = (toolUseResult?.content as string) || (linkedTool.input.content as string) || '';
   const isCreate = toolUseResult?.type === 'create';
   const isMarkdownFile = /\.mdx?$/i.test(filePath);
-  const [viewMode, setViewMode] = React.useState<'code' | 'preview'>('code');
+  const [viewMode, setViewMode] = React.useState<'code' | 'preview'>(isMarkdownFile ? 'preview' : 'code');
 
   return (
     <div className="space-y-2">

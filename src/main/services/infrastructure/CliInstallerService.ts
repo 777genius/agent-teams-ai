@@ -22,6 +22,7 @@ import { appendCliAuthDiag } from '@main/utils/cliAuthDiagLog';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { getClaudeBasePath, getHomeDir } from '@main/utils/pathDecoder';
+import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import {
   getCachedShellEnv,
   getShellPreferredHome,
@@ -678,9 +679,7 @@ export class CliInstallerService {
   // ---------------------------------------------------------------------------
 
   private sendProgress(progress: CliInstallerProgress): void {
-    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.webContents.send(CLI_INSTALLER_PROGRESS_CHANNEL, progress);
-    }
+    safeSendToRenderer(this.mainWindow, CLI_INSTALLER_PROGRESS_CHANNEL, progress);
   }
 
   private detectPlatform(): CliPlatform {

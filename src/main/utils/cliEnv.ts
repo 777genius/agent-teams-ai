@@ -9,7 +9,7 @@
  */
 
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
-import { getClaudeBasePath } from '@main/utils/pathDecoder';
+import { getAutoDetectedClaudeBasePath, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { getCachedShellEnv, getShellPreferredHome } from '@main/utils/shellEnv';
 import { userInfo } from 'os';
 
@@ -29,13 +29,20 @@ export function buildEnrichedEnv(binaryPath?: string | null): NodeJS.ProcessEnv 
     osUsername ||
     '';
 
+  // Only set CLAUDE_CONFIG_DIR when the user has configured a custom path.
+  // Setting it to the default ~/.claude changes the macOS Keychain namespace
+  // that the CLI uses for OAuth credential lookup, causing "not logged in"
+  // even though `claude auth login` succeeded without the env var.
+  const configDir = getClaudeBasePath();
+  const isCustomConfigDir = configDir !== getAutoDetectedClaudeBasePath();
+
   return {
     ...process.env,
     ...(shellEnv ?? {}),
     HOME: home,
     USERPROFILE: home,
     PATH: buildMergedCliPath(binaryPath),
-    CLAUDE_CONFIG_DIR: getClaudeBasePath(),
+    ...(isCustomConfigDir ? { CLAUDE_CONFIG_DIR: configDir } : {}),
     ...(user
       ? {
           USER: user,

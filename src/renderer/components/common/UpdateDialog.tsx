@@ -81,6 +81,11 @@ export const UpdateDialog = (): React.JSX.Element | null => {
 
   const isDownloaded = updateStatus === 'downloaded';
 
+  // Strip "Downloads" section (and everything after it) from release notes
+  const filteredNotes = releaseNotes
+    ? releaseNotes.replace(/\n#{1,3}\s+Downloads[\s\S]*$/i, '').trimEnd()
+    : releaseNotes;
+
   const releaseUrl = availableVersion
     ? `https://github.com/777genius/claude_agent_teams_ui/releases/tag/v${availableVersion}`
     : null;
@@ -106,7 +111,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
       />
       <div
         ref={dialogRef}
-        className="relative mx-4 w-full max-w-lg rounded-md border p-5 shadow-lg"
+        className="relative mx-4 w-full max-w-2xl rounded-md border p-5 shadow-lg"
         role="dialog"
         aria-modal="true"
         aria-label="Update available"
@@ -145,20 +150,20 @@ export const UpdateDialog = (): React.JSX.Element | null => {
 
         {/* Release notes */}
         <div
-          className="prose prose-sm prose-invert mb-4 max-h-[60vh] overflow-y-auto rounded border p-3 text-xs"
+          className="prose prose-sm prose-invert mb-4 max-h-[60vh] max-w-none overflow-y-auto rounded border p-3 text-xs"
           style={{
             backgroundColor: 'var(--color-surface)',
             borderColor: 'var(--color-border)',
             color: 'var(--color-text-secondary)',
           }}
         >
-          {releaseNotes ? (
+          {filteredNotes ? (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={REHYPE_PLUGINS}
               components={markdownComponents}
             >
-              {releaseNotes}
+              {filteredNotes}
             </ReactMarkdown>
           ) : (
             <p className="italic" style={{ color: 'var(--color-text-muted)' }}>

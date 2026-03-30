@@ -2,5 +2,6 @@ packages:
   - agent-teams-controller
   - mcp-server
   - landing
+  - packages/agent-graph
 ignoredBuiltDependencies:
   - esbuild

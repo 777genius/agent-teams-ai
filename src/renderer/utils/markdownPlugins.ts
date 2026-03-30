@@ -39,6 +39,11 @@ const sanitizeSchema: SanitizeSchema = {
     // Allow title on abbr (for tooltip definitions)
     abbr: [...(defaultSchema.attributes?.abbr ?? []), 'title'],
   },
+  protocols: {
+    ...defaultSchema.protocols,
+    // Allow internal-only protocols used for mention badges, team badges, and task tooltips
+    href: [...(defaultSchema.protocols?.href ?? []), 'mention', 'team', 'task'],
+  },
 };
 
 /** Full plugin chain: raw HTML → sanitize → syntax highlighting */

@@ -25,6 +25,7 @@
 <p align="center">
   <sub>100% free, open source. No API keys. No configuration. Runs entirely locally. Not just coding agents.</sub>
 </p>
+
 <table>
 <tr>
 <td width="50%">
@@ -303,6 +304,11 @@ pnpm dist            # macOS + Windows + Linux
 - [ ] 2 modes: current (agent teams), and a new mode: regular subagents (no communication between them)
 - [ ] Curate what context each agent sees (files, docs, MCP servers, skills)
 - [ ] Slash commands
+- [ ] Outgoing message queue — queue user messages while the lead (or agent) is busy; clear agent-busy status in the UI; flush to stdin or relay from inbox when idle (durable queue on disk for the lead inbox path)
+- [ ] `createTasksBatch` — IPC/service API to create many team tasks in one call (playbooks, markdown checklist import, scripts); complements single `createTask`
+- [ ] Command palette — extend Cmd/Ctrl+K beyond project/session search to runnable actions (quick commands, navigation shortcuts, team/task operations) in a keyboard-first flow
+- [ ] Custom kanban columns
+- [ ] Run terminal commands
 
 ---
 

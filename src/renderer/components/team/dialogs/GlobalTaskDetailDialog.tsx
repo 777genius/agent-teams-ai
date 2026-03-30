@@ -5,6 +5,10 @@ import { buildTaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest
 import { ExternalLink } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import {
+  hasSelectedTargetTeamData,
+  shouldKeepGlobalTaskDialogLoading,
+} from './globalTaskDetailDialogLoading';
 import { TaskDetailDialog } from './TaskDetailDialog';
 
 import type { GlobalTask, TeamTaskWithKanban } from '@shared/types';
@@ -21,6 +25,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
     selectedTeamName,
     selectedTeamData,
     selectedTeamLoading,
+    selectedTeamError,
     selectTeam,
     openTeamTab,
     setPendingReviewRequest,
@@ -32,6 +37,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
       selectedTeamName: s.selectedTeamName,
       selectedTeamData: s.selectedTeamData,
       selectedTeamLoading: s.selectedTeamLoading,
+      selectedTeamError: s.selectedTeamError,
       selectTeam: s.selectTeam,
       openTeamTab: s.openTeamTab,
       setPendingReviewRequest: s.setPendingReviewRequest,
@@ -41,6 +47,11 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
 
   const teamName = globalTaskDetail?.teamName ?? '';
   const taskId = globalTaskDetail?.taskId ?? '';
+  const hasTargetTeamData = hasSelectedTargetTeamData(
+    teamName,
+    selectedTeamName,
+    selectedTeamData?.teamName
+  );
 
   // Load full team data in the background to enable "as before" details (logs/changes/members).
   useEffect(() => {
@@ -65,13 +76,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
     teamName,
   ]);
 
-  const isFullTeamLoaded = selectedTeamName === teamName && !!selectedTeamData;
-  // Team data is still loading when:
-  // - selectTeam() hasn't updated selectedTeamName yet (team switch pending)
-  // - selectedTeamName matches but IPC fetch is still in flight
-  const isThisTeamLoading =
-    selectedTeamName !== teamName ||
-    (selectedTeamName === teamName && selectedTeamLoading && !selectedTeamData);
+  const isFullTeamLoaded = hasTargetTeamData;
 
   const taskMap = useMemo(() => {
     const map = new Map<string, TeamTaskWithKanban>();
@@ -119,12 +124,21 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
   const kanbanTaskState = isFullTeamLoaded
     ? selectedTeamData?.kanbanState.tasks[taskId]
     : undefined;
+  const loading = shouldKeepGlobalTaskDialogLoading({
+    teamName,
+    taskId,
+    selectedTeamName,
+    selectedTeamDataPresent: hasTargetTeamData,
+    selectedTeamLoading,
+    selectedTeamError,
+    hasTaskInMap: taskMap.has(taskId),
+  });
 
   return (
     <TaskDetailDialog
       open
       variant={isFullTeamLoaded ? 'team' : 'global'}
-      loading={!isFullTeamLoaded && isThisTeamLoading}
+      loading={!isFullTeamLoaded && loading}
       task={task}
       teamName={teamName}
       kanbanTaskState={kanbanTaskState}

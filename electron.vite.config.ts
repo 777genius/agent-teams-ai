@@ -76,7 +76,8 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/main/index.ts'),
-          'team-fs-worker': resolve(__dirname, 'src/main/workers/team-fs-worker.ts')
+          'team-fs-worker': resolve(__dirname, 'src/main/workers/team-fs-worker.ts'),
+          'task-change-worker': resolve(__dirname, 'src/main/workers/task-change-worker.ts')
         },
         output: {
           // CJS format so bundled deps can use __dirname/require.
