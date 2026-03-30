@@ -2,6 +2,7 @@ import {
   getTaskChangeStateBucket,
   type TaskChangeStateBucket,
 } from '@shared/utils/taskChangeState';
+import { deriveTaskSince } from '@shared/utils/taskChangeSince';
 import { createHash } from 'crypto';
 
 export interface TaskChangePresenceInterval {
@@ -13,6 +14,7 @@ export interface TaskChangePresenceDescriptorInput {
   owner?: string;
   status?: string;
   intervals?: TaskChangePresenceInterval[];
+  createdAt?: string;
   since?: string;
   reviewState?: 'review' | 'needsFix' | 'approved' | 'none';
   historyEvents?: unknown[];
@@ -102,6 +104,15 @@ export function computeTaskChangePresenceProjectFingerprint(
 export function buildTaskChangePresenceDescriptor(
   input: TaskChangePresenceDescriptorInput
 ): TaskChangePresenceDescriptor {
+  const effectiveSince =
+    typeof input.since === 'string'
+      ? input.since
+      : deriveTaskSince({
+          createdAt: input.createdAt,
+          workIntervals: input.intervals,
+          historyEvents: input.historyEvents as { timestamp?: string | null }[] | undefined,
+        });
+
   const effectiveIntervals =
     Array.isArray(input.intervals) && input.intervals.length > 0
       ? input.intervals.map((interval) => ({
@@ -124,7 +135,7 @@ export function buildTaskChangePresenceDescriptor(
     owner: typeof input.owner === 'string' ? input.owner.trim() : '',
     status: typeof input.status === 'string' ? input.status.trim() : '',
     intervals: effectiveIntervals,
-    since: typeof input.since === 'string' ? input.since : '',
+    since: effectiveSince ?? '',
   };
 
   return {

@@ -234,6 +234,7 @@ export class TeamDataService {
 
     for (const task of tasks) {
       const descriptor = buildTaskChangePresenceDescriptor({
+        createdAt: task.createdAt,
         owner: task.owner,
         status: task.status,
         intervals: task.workIntervals,

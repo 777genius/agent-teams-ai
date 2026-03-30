@@ -156,16 +156,7 @@ function drawParticleCore(
   ctx.drawImage(sprite, pos.x - glowR, pos.y - glowR);
 
   if (kind === 'task_comment') {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.arc(pos.x, pos.y, size * 1.1, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(pos.x, pos.y, size * 0.35, 0, Math.PI * 2);
-    ctx.fill();
+    drawCommentBubble(ctx, pos.x, pos.y, size, color);
     return;
   }
 
@@ -180,4 +171,49 @@ function drawParticleCore(
   ctx.beginPath();
   ctx.arc(pos.x, pos.y, size * PARTICLE_DRAW.coreHighlightScale, 0, Math.PI * 2);
   ctx.fill();
+}
+
+/**
+ * Draw a speech-bubble icon for comment particles.
+ * Rounded rect body + small triangular tail at bottom-left.
+ */
+function drawCommentBubble(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  size: number,
+  color: string,
+): void {
+  const w = size * 2.4;
+  const h = size * 1.8;
+  const r = size * 0.4; // corner radius
+  const x = cx - w / 2;
+  const y = cy - h / 2;
+
+  // Bubble body
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+  ctx.fill();
+
+  // Tail (small triangle at bottom-left)
+  const tailX = x + w * 0.25;
+  const tailY = y + h;
+  ctx.beginPath();
+  ctx.moveTo(tailX, tailY - 1);
+  ctx.lineTo(tailX - size * 0.4, tailY + size * 0.5);
+  ctx.lineTo(tailX + size * 0.4, tailY - 1);
+  ctx.closePath();
+  ctx.fill();
+
+  // Inner dots (three small dots to suggest text)
+  ctx.fillStyle = '#ffffff';
+  const dotR = size * 0.18;
+  const dotY = cy - size * 0.05;
+  const gap = size * 0.5;
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath();
+    ctx.arc(cx + i * gap, dotY, dotR, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }

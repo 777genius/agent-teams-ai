@@ -371,6 +371,7 @@ export class ChangeExtractorService {
         return derived.length > 0 ? derived : undefined;
       })();
       return {
+        createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : undefined,
         owner: typeof parsed.owner === 'string' ? parsed.owner : undefined,
         status: typeof parsed.status === 'string' ? parsed.status : undefined,
         intervals: derivedIntervals,
@@ -725,6 +726,7 @@ export class ChangeExtractorService {
     }
 
     const descriptor = buildTaskChangePresenceDescriptor({
+      createdAt: taskMeta.createdAt,
       owner: effectiveOptions.owner ?? taskMeta.owner,
       status: effectiveOptions.status ?? taskMeta.status,
       intervals: effectiveOptions.intervals ?? taskMeta.intervals,

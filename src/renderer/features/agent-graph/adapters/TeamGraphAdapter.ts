@@ -494,6 +494,9 @@ export class TeamGraphAdapter {
       if (this.#seenMessageIds.has(msgKey)) continue;
       this.#seenMessageIds.add(msgKey);
 
+      // Skip comment notifications — #buildCommentParticles handles them with real text
+      if (msg.summary?.startsWith('Comment on ')) continue;
+
       const edgeId = TeamGraphAdapter.#resolveMessageEdge(msg, teamName, leadId, leadName, edges);
       if (!edgeId) continue;
 

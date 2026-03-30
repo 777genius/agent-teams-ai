@@ -1,6 +1,7 @@
 import type { TaskChangeSetV2 } from '@shared/types';
 
 export interface TaskChangeTaskMeta {
+  createdAt?: string;
   owner?: string;
   status?: string;
   intervals?: { startedAt: string; completedAt?: string }[];
