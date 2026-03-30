@@ -7,7 +7,7 @@
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
-import { Loader2, MessageSquare, ExternalLink, User, Plus } from 'lucide-react';
+import { ExternalLink, Loader2, MessageSquare, Plus, User } from 'lucide-react';
 
 import type { GraphNode } from '@claude-teams/agent-graph';
 
@@ -20,14 +20,14 @@ interface GraphNodePopoverProps {
   onCreateTask?: (owner: string) => void;
 }
 
-export function GraphNodePopover({
+export const GraphNodePopover = ({
   node,
   onClose,
   onSendMessage,
   onOpenTaskDetail,
   onOpenMemberProfile,
   onCreateTask,
-}: GraphNodePopoverProps): React.JSX.Element {
+}: GraphNodePopoverProps): React.JSX.Element => {
   if (node.kind === 'member' || node.kind === 'lead') {
     return (
       <MemberPopoverContent
@@ -61,11 +61,11 @@ export function GraphNodePopover({
       )}
     </div>
   );
-}
+};
 
 // ─── Member Popover ─────────────────────────────────────────────────────────
 
-function MemberPopoverContent({
+const MemberPopoverContent = ({
   node,
   onClose,
   onSendMessage,
@@ -79,7 +79,7 @@ function MemberPopoverContent({
   onOpenProfile?: (name: string) => void;
   onCreateTask?: (owner: string) => void;
   onOpenTask?: (taskId: string) => void;
-}): React.JSX.Element {
+}): React.JSX.Element => {
   const memberName =
     node.domainRef.kind === 'member' || node.domainRef.kind === 'lead'
       ? node.domainRef.memberName
@@ -303,11 +303,11 @@ function MemberPopoverContent({
       </div>
     </div>
   );
-}
+};
 
 // ─── Task Popover ───────────────────────────────────────────────────────────
 
-function TaskPopoverContent({
+const TaskPopoverContent = ({
   node,
   onClose,
   onOpenDetail,
@@ -315,7 +315,7 @@ function TaskPopoverContent({
   node: GraphNode;
   onClose: () => void;
   onOpenDetail?: (taskId: string) => void;
-}): React.JSX.Element {
+}): React.JSX.Element => {
   const taskId = node.domainRef.kind === 'task' ? node.domainRef.taskId : '';
 
   const statusColor =
@@ -379,4 +379,4 @@ function TaskPopoverContent({
       </div>
     </div>
   );
-}
+};

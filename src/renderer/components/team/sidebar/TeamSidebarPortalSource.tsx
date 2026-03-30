@@ -3,13 +3,13 @@ import { createPortal } from 'react-dom';
 
 import { useStore } from '@renderer/store';
 
+import { useTeamSidebarHostId } from './TeamSidebarHost';
 import {
   getTeamSidebarHostElement,
   removeTeamSidebarSource,
   upsertTeamSidebarSource,
   useTeamSidebarPortalSnapshot,
 } from './TeamSidebarPortalManager';
-import { useTeamSidebarHostId } from './TeamSidebarHost';
 
 interface TeamSidebarPortalSourceProps {
   teamName: string;

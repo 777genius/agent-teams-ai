@@ -12,6 +12,15 @@ vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnv: vi.fn(),
 }));
 
+const addTeamNotificationMock = vi.fn().mockResolvedValue(null);
+vi.mock('@main/services/infrastructure/NotificationManager', () => ({
+  NotificationManager: {
+    getInstance: () => ({
+      addTeamNotification: addTeamNotificationMock,
+    }),
+  },
+}));
+
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
@@ -21,6 +30,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    addTeamNotificationMock.mockResolvedValue(null);
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-team-prepare-'));
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     vi.mocked(resolveInteractiveShellEnv).mockResolvedValue({
@@ -228,6 +238,9 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     const svc = new TeamProvisioningService();
     const emitter = vi.fn();
     svc.setTeamChangeEmitter(emitter);
+    vi.spyOn(svc as any, 'updateConfigPostLaunch').mockResolvedValue(undefined);
+    vi.spyOn(svc as any, 'cleanupPrelaunchBackup').mockResolvedValue(undefined);
+    vi.spyOn(svc as any, 'relayLeadInboxMessages').mockResolvedValue(undefined);
 
     const run = {
       runId: 'run-3',

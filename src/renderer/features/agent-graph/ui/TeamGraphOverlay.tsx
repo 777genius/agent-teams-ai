@@ -9,6 +9,7 @@ import { GraphView } from '@claude-teams/agent-graph';
 import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
 
 import { useTeamGraphAdapter } from '../adapters/useTeamGraphAdapter';
+
 import { GraphNodePopover } from './GraphNodePopover';
 
 import type { GraphDomainRef, GraphEventPort } from '@claude-teams/agent-graph';

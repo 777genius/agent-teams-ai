@@ -95,11 +95,11 @@ import {
 } from './utils/safeWebContentsSend';
 import { syncTelemetryFlag } from './sentry';
 import {
+  BranchStatusService,
   CliInstallerService,
   configManager,
   LocalFileSystemProvider,
   MemberStatsComputer,
-  BranchStatusService,
   NotificationManager,
   PtyTerminalService,
   ServiceContext,
@@ -108,8 +108,8 @@ import {
   TaskBoundaryParser,
   TeamDataService,
   TeamLogSourceTracker,
-  TeamMemberLogsFinder,
   TeammateToolTracker,
+  TeamMemberLogsFinder,
   TeamProvisioningService,
   UpdaterService,
 } from './services';

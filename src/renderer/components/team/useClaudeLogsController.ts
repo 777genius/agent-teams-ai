@@ -13,12 +13,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 
-import { DEFAULT_CLAUDE_LOGS_FILTER } from './ClaudeLogsFilterPopover';
 import {
   createDefaultClaudeLogsSidebarUiState,
   getTeamClaudeLogsSidebarUiState,
   setTeamClaudeLogsSidebarUiState,
 } from './sidebar/teamSidebarUiState';
+import { DEFAULT_CLAUDE_LOGS_FILTER } from './ClaudeLogsFilterPopover';
 
 import type { ClaudeLogsFilterState } from './ClaudeLogsFilterPopover';
 import type { ClaudeLogsViewerState } from './CliLogsRichView';

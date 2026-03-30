@@ -6,12 +6,12 @@ import { api } from '@renderer/api';
 import { syncRendererTelemetry } from '@renderer/sentry';
 import { cleanupStale as cleanupCommentReadState } from '@renderer/services/commentReadStorage';
 import { normalizePath } from '@renderer/utils/pathNormalize';
-import { isVersionOlder, normalizeVersion } from '@shared/utils/version';
 import {
   buildTaskChangePresenceKey,
   buildTaskChangeRequestOptions,
   canDisplayTaskChangesForOptions,
 } from '@renderer/utils/taskChangeRequest';
+import { isVersionOlder, normalizeVersion } from '@shared/utils/version';
 import { create } from 'zustand';
 
 import { createChangeReviewSlice } from './slices/changeReviewSlice';

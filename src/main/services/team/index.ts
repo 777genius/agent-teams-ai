@@ -1,5 +1,5 @@
-export { CascadeGuard } from './CascadeGuard';
 export { BranchStatusService } from './BranchStatusService';
+export { CascadeGuard } from './CascadeGuard';
 export { ChangeExtractorService } from './ChangeExtractorService';
 export { ClaudeBinaryResolver } from './ClaudeBinaryResolver';
 export { CrossTeamOutbox } from './CrossTeamOutbox';
@@ -18,10 +18,10 @@ export { TeamInboxReader } from './TeamInboxReader';
 export { TeamInboxWriter } from './TeamInboxWriter';
 export { TeamKanbanManager } from './TeamKanbanManager';
 export { TeamLogSourceTracker } from './TeamLogSourceTracker';
+export { TeammateToolTracker } from './TeammateToolTracker';
 export { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 export { TeamMemberResolver } from './TeamMemberResolver';
 export { TeamMembersMetaStore } from './TeamMembersMetaStore';
-export { TeammateToolTracker } from './TeammateToolTracker';
 export { TeamProvisioningService } from './TeamProvisioningService';
 export { TeamSentMessagesStore } from './TeamSentMessagesStore';
 export { TeamTaskReader } from './TeamTaskReader';

@@ -88,8 +88,8 @@ import { registerValidationHandlers, removeValidationHandlers } from './validati
 import { registerWindowHandlers, removeWindowHandlers } from './window';
 
 import type {
-  ChangeExtractorService,
   BranchStatusService,
+  ChangeExtractorService,
   CliInstallerService,
   FileContentResolver,
   GitDiffFallback,
@@ -100,8 +100,8 @@ import type {
   ServiceContextRegistry,
   SshConnectionManager,
   TeamDataService,
-  TeamMemberLogsFinder,
   TeammateToolTracker,
+  TeamMemberLogsFinder,
   TeamProvisioningService,
   UpdaterService,
 } from '../services';

@@ -3,9 +3,9 @@ import { useMemo } from 'react';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
-import { formatSessionLabel } from '@renderer/utils/sessionTitleParser';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { displayMemberName } from '@renderer/utils/memberHelpers';
+import { formatSessionLabel } from '@renderer/utils/sessionTitleParser';
 import { Crown, Filter } from 'lucide-react';
 
 import type { Session } from '@renderer/types/data';

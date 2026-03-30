@@ -337,7 +337,7 @@ export class TeammateToolTracker {
 
     for (const block of content) {
       if (!block || typeof block !== 'object') continue;
-      const typedBlock = block as Record<string, unknown>;
+      const typedBlock = block;
       if (typedBlock.type === 'tool_use') {
         const rawId = typeof typedBlock.id === 'string' ? typedBlock.id.trim() : '';
         if (!rawId) continue;

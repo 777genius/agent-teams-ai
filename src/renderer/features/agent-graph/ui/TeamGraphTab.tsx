@@ -3,12 +3,13 @@
  * Provides Fullscreen button that opens the overlay.
  */
 
-import { useCallback, useState, lazy, Suspense } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
 import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
 
 import { useTeamGraphAdapter } from '../adapters/useTeamGraphAdapter';
+
 import { GraphNodePopover } from './GraphNodePopover';
 
 import type { GraphDomainRef, GraphEventPort, GraphNode } from '@claude-teams/agent-graph';

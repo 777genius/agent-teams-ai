@@ -1,6 +1,5 @@
-import * as path from 'path';
-
 import { createLogger } from '@shared/utils/logger';
+import * as path from 'path';
 
 import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 

@@ -7,13 +7,12 @@ import { shortenDisplayPath } from '@renderer/utils/pathDisplay';
 import { highlightLines } from '@renderer/utils/syntaxHighlighter';
 import { AlertTriangle, FileText, MessageCircleQuestion, Search, Terminal } from 'lucide-react';
 
-import { MemberBadge } from './MemberBadge';
-
 import {
   ToolApprovalSettingsContent,
   ToolApprovalSettingsToggle,
 } from './dialogs/ToolApprovalSettingsPanel';
 import { FileIcon } from './editor/FileIcon';
+import { MemberBadge } from './MemberBadge';
 import { ToolApprovalDiffPreview } from './ToolApprovalDiffPreview';
 
 import type { ToolApprovalRequest } from '@shared/types';

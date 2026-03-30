@@ -7,8 +7,8 @@
  * Class-based with ES #private fields, caching, and DI-ready constructor.
  */
 
-import { isLeadMember } from '@shared/utils/leadDetection';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
+import { isLeadMember } from '@shared/utils/leadDetection';
 
 import type {
   GraphDataPort,

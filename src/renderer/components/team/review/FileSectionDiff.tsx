@@ -191,10 +191,10 @@ export const FileSectionDiff = ({
   );
 };
 
-function OversizedDiffNotice({ message }: { message: string }): React.ReactElement {
+const OversizedDiffNotice = ({ message }: { message: string }): React.ReactElement => {
   return (
     <div className="border-b border-border bg-amber-500/10 px-4 py-3 text-xs text-amber-300">
       {message}
     </div>
   );
-}
+};

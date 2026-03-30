@@ -81,12 +81,12 @@ import { MemberList } from './members/MemberList';
 import { MessagesPanel } from './messages/MessagesPanel';
 import { ChangeReviewDialog } from './review/ChangeReviewDialog';
 import { ScheduleSection } from './schedule/ScheduleSection';
-import { ClaudeLogsSection } from './ClaudeLogsSection';
-import { CollapsibleTeamSection } from './CollapsibleTeamSection';
-import { ProcessesSection } from './ProcessesSection';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
 import { TeamSidebarPortalSource } from './sidebar/TeamSidebarPortalSource';
 import { TeamSidebarRail } from './sidebar/TeamSidebarRail';
+import { ClaudeLogsSection } from './ClaudeLogsSection';
+import { CollapsibleTeamSection } from './CollapsibleTeamSection';
+import { ProcessesSection } from './ProcessesSection';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { TeamSessionsSection } from './TeamSessionsSection';
 

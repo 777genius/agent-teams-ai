@@ -1,10 +1,9 @@
 import { isParsedSystemChunkMessage, isParsedUserChunkMessage, isTextContent } from '@main/types';
 import { parseJsonlLine } from '@main/utils/jsonl';
-import { createHash } from 'crypto';
-import * as fs from 'fs';
-
 import { extractCommandOutputInfo, extractSlashInfo } from '@shared/utils/contentSanitizer';
 import { buildSlashCommandMeta } from '@shared/utils/slashCommands';
+import { createHash } from 'crypto';
+import * as fs from 'fs';
 
 import type { ParsedMessage } from '@main/types';
 import type { CommandOutputMeta, InboxMessage, SlashCommandMeta } from '@shared/types';

@@ -34,8 +34,8 @@ import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import {
   isInboxNoiseMessage,
-  parsePermissionRequest,
   type ParsedPermissionRequest,
+  parsePermissionRequest,
 } from '@shared/utils/inboxNoise';
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
