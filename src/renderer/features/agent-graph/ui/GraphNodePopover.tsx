@@ -11,6 +11,37 @@ import { Loader2, MessageSquare, ExternalLink, User, Plus } from 'lucide-react';
 
 import type { GraphNode } from '@claude-teams/agent-graph';
 
+// ─── Tool name/preview formatters ───────────────────────────────────────────
+
+/** Clean up tool names: "mcp__agent-teams__task_create" → "Task Create" */
+function formatToolName(raw: string): string {
+  // Strip MCP prefixes (mcp__serverName__toolName → toolName)
+  const parts = raw.split('__');
+  const name = parts[parts.length - 1] ?? raw;
+  // snake_case → Title Case
+  return name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Clean up tool preview: strip raw JSON, extract meaningful part */
+function formatToolPreview(preview: string | undefined): string | undefined {
+  if (!preview) return undefined;
+  // If it looks like raw JSON object, try to extract a readable field
+  if (preview.startsWith('{') || preview.startsWith('[')) {
+    try {
+      const obj = JSON.parse(preview.length > 200 ? preview.slice(0, 200) : preview);
+      // Common readable fields
+      return (
+        obj.subject ?? obj.name ?? obj.label ?? obj.file_path ?? obj.path ?? obj.query ?? undefined
+      );
+    } catch {
+      // Truncated JSON — extract first quoted value
+      const match = preview.match(/"(?:subject|name|label|path|query)":\s*"([^"]{1,60})"/);
+      if (match) return match[1];
+    }
+  }
+  return preview.length > 50 ? preview.slice(0, 50) + '...' : preview;
+}
+
 interface GraphNodePopoverProps {
   node: GraphNode;
   onClose: () => void;
