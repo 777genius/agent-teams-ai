@@ -143,8 +143,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
+          upload() {
+            gh release upload "$TAG" "$1" --repo "$GITHUB_REPOSITORY" --clobber || \
+              (sleep 5 && gh release upload "$TAG" "$1" --repo "$GITHUB_REPOSITORY" --clobber)
+          }
           for f in release/*.dmg release/*.zip release/*.blockmap; do
-            [ -f "$f" ] && gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber
+            [ -f "$f" ] && upload "$f"
           done
 
   release-win:
@@ -213,8 +217,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
+          upload() {
+            gh release upload "$TAG" "$1" --repo "$GITHUB_REPOSITORY" --clobber || \
+              (sleep 5 && gh release upload "$TAG" "$1" --repo "$GITHUB_REPOSITORY" --clobber)
+          }
           for f in release/*.exe release/*.blockmap; do
-            [ -f "$f" ] && gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber
+            [ -f "$f" ] && upload "$f"
           done
 
   release-linux:
@@ -285,8 +293,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
+          upload() {
+            gh release upload "$TAG" "$1" --repo "$GITHUB_REPOSITORY" --clobber || \
+              (sleep 5 && gh release upload "$TAG" "$1" --repo "$GITHUB_REPOSITORY" --clobber)
+          }
           for f in release/*.AppImage release/*.deb release/*.rpm release/*.pacman release/*.blockmap; do
-            [ -f "$f" ] && gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber
+            [ -f "$f" ] && upload "$f"
           done
 
   upload-stable-links:
