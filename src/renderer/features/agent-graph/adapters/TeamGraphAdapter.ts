@@ -886,7 +886,13 @@ export class TeamGraphAdapter {
     kind: 'inbox' | 'comment',
     max = 52
   ): string | undefined {
-    const normalized = text?.replace(/\s+/g, ' ').trim();
+    let normalized = text?.replace(/\s+/g, ' ').trim();
+    // Clean up raw task ID hashes like "#363e78de done|sent to review" → "done | sent to review"
+    if (normalized) {
+      normalized = normalized.replace(/#[a-f0-9]{6,}\s*/gi, '').trim();
+      // Clean pipe separators
+      normalized = normalized.replace(/\|/g, ' - ');
+    }
     const prefix = kind === 'comment' ? '\u{1F4AC}' : '\u{2709}';
     if (!normalized) return prefix;
     const clipped =
