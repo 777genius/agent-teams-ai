@@ -26,6 +26,9 @@
   <sub>100% free, open source. No API keys. No configuration. Runs entirely locally. Not just coding agents.</sub>
 </p>
 
+<img width="1902" height="1350" alt="image" src="https://github.com/user-attachments/assets/9c8917e0-5847-4fa9-a495-0aa7b75fb939" />
+
+
 <table>
 <tr>
 <td width="50%">
