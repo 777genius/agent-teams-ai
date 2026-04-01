@@ -27,8 +27,6 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
-
 import { atomicWriteAsync } from './atomicWrite';
 import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
 import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
@@ -691,10 +689,6 @@ export class TeamDataService {
     );
     mark('resolveMembers');
 
-    // Enrich members with git branch when it differs from lead's branch
-    await this.enrichMemberBranches(members, config);
-    mark('enrichBranches');
-
     mark('syncComments');
 
     let processes: TeamProcess[] = [];
@@ -714,9 +708,9 @@ export class TeamDataService {
           'sentMessages'
         )} membersMeta=${msSince('metaMembers')} kanban=${msSince('kanbanState')} kanbanGc=${msSince(
           'kanbanGc'
-        )} resolveMembers=${msSince('resolveMembers')} enrichBranches=${msSince(
-          'enrichBranches'
-        )} syncComments=${msSince('syncComments')} processes=${msSince('processes')}`
+        )} resolveMembers=${msSince('resolveMembers')} syncComments=${msSince('syncComments')} processes=${msSince(
+          'processes'
+        )}`
       );
     }
 
@@ -801,68 +795,6 @@ export class TeamDataService {
       this.getController(teamName).processes.stopProcess({ pid });
     } catch {
       // Ignore missing persisted registry rows after OS-level stop.
-    }
-  }
-
-  /**
-   * Enriches members with gitBranch when their cwd differs from the lead's.
-   * Mutates members in-place for efficiency (called right after resolveMembers).
-   */
-  private async enrichMemberBranches(
-    members: ResolvedTeamMember[],
-    config: TeamConfig
-  ): Promise<void> {
-    // Determine lead's cwd — prefer explicit member entry, fall back to config.projectPath
-    const leadEntry = config.members?.find((m) => isLeadMember(m));
-    const leadCwd = leadEntry?.cwd ?? config.projectPath;
-    if (!leadCwd) return;
-
-    const withTimeout = async <T>(p: Promise<T>, ms: number): Promise<T> => {
-      let timer: NodeJS.Timeout | null = null;
-      try {
-        return await Promise.race([
-          p,
-          new Promise<T>((_resolve, reject) => {
-            timer = setTimeout(() => reject(new Error('timeout')), ms);
-          }),
-        ]);
-      } finally {
-        if (timer) clearTimeout(timer);
-      }
-    };
-
-    let leadBranch: string | null = null;
-    try {
-      // Git can hang on some Windows setups (network drives, locked repos, credential prompts).
-      // Branch is best-effort; never block team:getData on it.
-      leadBranch = await withTimeout(gitIdentityResolver.getBranch(path.normalize(leadCwd)), 2000);
-    } catch {
-      // Lead cwd may not be a git repo — skip enrichment entirely
-      return;
-    }
-
-    const candidates = members.filter((m) => m.cwd && m.cwd !== leadCwd);
-    if (candidates.length === 0) return;
-
-    const concurrency = process.platform === 'win32' ? 4 : 8;
-    for (let i = 0; i < candidates.length; i += concurrency) {
-      const batch = candidates.slice(i, i + concurrency);
-      await Promise.all(
-        batch.map(async (member) => {
-          if (!member.cwd) return;
-          try {
-            const branch = await withTimeout(
-              gitIdentityResolver.getBranch(path.normalize(member.cwd)),
-              2000
-            );
-            if (branch && branch !== leadBranch) {
-              member.gitBranch = branch;
-            }
-          } catch {
-            // Member cwd may not be a git repo — skip silently
-          }
-        })
-      );
     }
   }
 
