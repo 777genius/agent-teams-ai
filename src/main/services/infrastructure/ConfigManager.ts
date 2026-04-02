@@ -204,6 +204,7 @@ export interface GeneralConfig {
   showDockIcon: boolean;
   theme: 'dark' | 'light' | 'system';
   defaultTab: 'dashboard' | 'last-session';
+  multimodelEnabled: boolean;
   claudeRootPath: string | null;
   agentLanguage: string;
   autoExpandAIGroups: boolean;
@@ -290,6 +291,7 @@ const DEFAULT_CONFIG: AppConfig = {
     showDockIcon: true,
     theme: 'dark',
     defaultTab: 'dashboard',
+    multimodelEnabled: true,
     claudeRootPath: null,
     agentLanguage: 'system',
     autoExpandAIGroups: false,

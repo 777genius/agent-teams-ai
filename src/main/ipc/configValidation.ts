@@ -286,6 +286,7 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
     'showDockIcon',
     'theme',
     'defaultTab',
+    'multimodelEnabled',
     'claudeRootPath',
     'agentLanguage',
     'autoExpandAIGroups',
@@ -327,6 +328,12 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
           };
         }
         result.defaultTab = value;
+        break;
+      case 'multimodelEnabled':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: 'general.multimodelEnabled must be a boolean' };
+        }
+        result.multimodelEnabled = value;
         break;
       case 'claudeRootPath':
         if (value === null) {

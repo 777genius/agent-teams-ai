@@ -3,6 +3,8 @@ import { getShellPreferredHome, resolveInteractiveShellEnv } from '@main/utils/s
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { getConfiguredCliFlavor } from './cliFlavor';
+
 async function isExecutable(filePath: string): Promise<boolean> {
   if (process.platform === 'win32') {
     try {
@@ -165,6 +167,28 @@ async function resolveFromExplicitPath(inputPath: string): Promise<string | null
   return null;
 }
 
+async function resolveFromCandidateList(candidates: string[]): Promise<string | null> {
+  for (const candidate of candidates) {
+    if (await isExecutable(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function getRepoLocalCliCandidates(): string[] {
+  if (process.platform === 'win32') {
+    return [];
+  }
+
+  const repoRoot = process.cwd();
+  return [
+    path.resolve(repoRoot, '..', 'free-code-gemini-research', 'cli'),
+    path.resolve(repoRoot, '..', 'free-code-gemini-research', 'cli-dev'),
+    path.resolve(repoRoot, '..', 'free-code-gemini-research', 'dist', 'cli'),
+  ];
+}
+
 let cachedPath: string | null | undefined;
 
 /** Timestamp of last successful cache verification (ms). */
@@ -213,6 +237,7 @@ export class ClaudeBinaryResolver {
   private static async runResolve(): Promise<string | null> {
     await resolveInteractiveShellEnv();
     const enrichedPath = buildMergedCliPath(null);
+    const flavor = getConfiguredCliFlavor();
 
     const overrideRaw = process.env.CLAUDE_CLI_PATH?.trim();
     if (overrideRaw) {
@@ -227,6 +252,19 @@ export class ClaudeBinaryResolver {
         cacheVerifiedAt = Date.now();
         return cachedPath;
       }
+    }
+
+    if (flavor === 'free-code') {
+      const repoLocalCli = await resolveFromCandidateList(getRepoLocalCliCandidates());
+      if (repoLocalCli) {
+        cachedPath = repoLocalCli;
+        cacheVerifiedAt = Date.now();
+        return cachedPath;
+      }
+
+      // Free-code mode is explicit. If the configured local runtime is missing,
+      // fail closed instead of silently falling back to a different CLI.
+      return null;
     }
 
     const baseBinaryName = 'claude';

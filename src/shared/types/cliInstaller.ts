@@ -21,6 +21,40 @@ export type CliPlatform =
   | 'win32-x64'
   | 'win32-arm64';
 
+export type CliFlavor = 'claude' | 'free-code';
+
+export type CliProviderId = 'anthropic' | 'codex' | 'gemini';
+
+export interface CliProviderStatus {
+  providerId: CliProviderId;
+  displayName: string;
+  supported: boolean;
+  authenticated: boolean;
+  authMethod: string | null;
+  verificationState: 'verified' | 'unknown' | 'offline' | 'error';
+  statusMessage?: string | null;
+  models: string[];
+  canLoginFromUi: boolean;
+  capabilities: {
+    teamLaunch: boolean;
+    oneShot: boolean;
+  };
+  backend?: {
+    kind: string;
+    label: string;
+    endpointLabel?: string | null;
+    projectId?: string | null;
+    authMethodDetail?: string | null;
+  } | null;
+}
+
+export interface CliFlavorUiOptions {
+  displayName: string;
+  supportsSelfUpdate: boolean;
+  showVersionDetails: boolean;
+  showBinaryPath: boolean;
+}
+
 // =============================================================================
 // Installation Status
 // =============================================================================
@@ -29,6 +63,16 @@ export type CliPlatform =
  * Current CLI installation status returned by getStatus().
  */
 export interface CliInstallationStatus {
+  /** Selected CLI runtime flavor */
+  flavor: CliFlavor;
+  /** Display label for the configured runtime */
+  displayName: string;
+  /** Whether this runtime should expose self-update/install actions in the UI */
+  supportsSelfUpdate: boolean;
+  /** Whether version text should be shown in the UI */
+  showVersionDetails: boolean;
+  /** Whether binary path should be shown in the UI */
+  showBinaryPath: boolean;
   /** Whether CLI binary is found on the system */
   installed: boolean;
   /** Installed version string (e.g. "2.1.59"), null if not installed */
@@ -43,6 +87,8 @@ export interface CliInstallationStatus {
   authLoggedIn: boolean;
   /** Auth method if logged in (e.g. "oauth_token", "api_key"), null otherwise */
   authMethod: string | null;
+  /** Provider-level runtime status when supported by the configured runtime */
+  providers: CliProviderStatus[];
 }
 
 // =============================================================================
@@ -54,7 +100,7 @@ export interface CliInstallationStatus {
  */
 export interface CliInstallerProgress {
   /** Current phase of the installation process */
-  type: 'checking' | 'downloading' | 'verifying' | 'installing' | 'completed' | 'error';
+  type: 'checking' | 'downloading' | 'verifying' | 'installing' | 'completed' | 'error' | 'status';
   /** Download progress 0-100, only present for 'downloading' */
   percent?: number;
   /** Bytes downloaded so far */
@@ -69,6 +115,8 @@ export interface CliInstallerProgress {
   detail?: string;
   /** Raw terminal output chunk (with ANSI codes), only for 'installing' */
   rawChunk?: string;
+  /** Partial or full CLI status snapshot during status gathering. */
+  status?: CliInstallationStatus;
 }
 
 // =============================================================================

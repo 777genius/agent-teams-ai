@@ -29,6 +29,7 @@ export interface SafeConfig {
     showDockIcon: boolean;
     theme: 'dark' | 'light' | 'system';
     defaultTab: 'dashboard' | 'last-session';
+    multimodelEnabled: boolean;
     claudeRootPath: string | null;
     agentLanguage: string;
     autoExpandAIGroups: boolean;
@@ -169,6 +170,7 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
         showDockIcon: displayConfig?.general?.showDockIcon ?? true,
         theme: displayConfig?.general?.theme ?? 'dark',
         defaultTab: displayConfig?.general?.defaultTab ?? 'dashboard',
+        multimodelEnabled: displayConfig?.general?.multimodelEnabled ?? true,
         claudeRootPath: displayConfig?.general?.claudeRootPath ?? null,
         agentLanguage: displayConfig?.general?.agentLanguage ?? 'system',
         autoExpandAIGroups: displayConfig?.general?.autoExpandAIGroups ?? false,

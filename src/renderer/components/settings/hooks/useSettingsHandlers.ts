@@ -314,6 +314,7 @@ export function useSettingsHandlers({
           showDockIcon: true,
           theme: 'dark',
           defaultTab: 'dashboard',
+          multimodelEnabled: true,
           claudeRootPath: null,
           agentLanguage: 'system',
           autoExpandAIGroups: false,

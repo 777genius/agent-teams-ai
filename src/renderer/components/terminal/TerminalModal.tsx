@@ -14,6 +14,8 @@ interface TerminalModalProps {
   args?: string[];
   /** Working directory */
   cwd?: string;
+  /** Environment variables merged into the PTY process env */
+  env?: Record<string, string>;
   /** Called when the modal should close */
   onClose: () => void;
   /** Called when the PTY process exits */
@@ -31,6 +33,7 @@ export function TerminalModal({
   command,
   args,
   cwd,
+  env,
   onClose,
   onExit,
   autoCloseOnSuccessMs = 0,
@@ -116,7 +119,7 @@ export function TerminalModal({
 
         {/* Terminal area — always visible, status bar overlaid at bottom */}
         <div className="relative flex min-h-0 flex-1 flex-col p-2">
-          <EmbeddedTerminal command={command} args={args} cwd={cwd} onExit={handleExit} />
+          <EmbeddedTerminal command={command} args={args} cwd={cwd} env={env} onExit={handleExit} />
 
           {exited !== null && (
             <div

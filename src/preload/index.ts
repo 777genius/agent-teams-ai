@@ -837,8 +837,17 @@ const electronAPI: ElectronAPI = {
     deleteDraft: async (teamName: string) => {
       return invokeIpcWithResult<void>(TEAM_DELETE_DRAFT, teamName);
     },
-    prepareProvisioning: async (cwd?: string) => {
-      return invokeIpcWithResult<TeamProvisioningPrepareResult>(TEAM_PREPARE_PROVISIONING, cwd);
+    prepareProvisioning: async (
+      cwd?: string,
+      providerId?: TeamLaunchRequest['providerId'],
+      providerIds?: TeamLaunchRequest['providerId'][]
+    ) => {
+      return invokeIpcWithResult<TeamProvisioningPrepareResult>(
+        TEAM_PREPARE_PROVISIONING,
+        cwd,
+        providerId,
+        providerIds
+      );
     },
     createTeam: async (request: TeamCreateRequest) => {
       return invokeIpcWithResult<TeamCreateResponse>(TEAM_CREATE, request);

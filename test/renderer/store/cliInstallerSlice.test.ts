@@ -83,6 +83,11 @@ describe('cliInstallerSlice', () => {
   describe('fetchCliStatus', () => {
     it('updates cliStatus from API', async () => {
       const mockStatus: CliInstallationStatus = {
+        flavor: 'claude',
+        displayName: 'Claude CLI',
+        supportsSelfUpdate: true,
+        showVersionDetails: true,
+        showBinaryPath: true,
         installed: true,
         installedVersion: '2.1.59',
         binaryPath: '/usr/local/bin/claude',
@@ -90,6 +95,7 @@ describe('cliInstallerSlice', () => {
         updateAvailable: false,
         authLoggedIn: false,
         authMethod: null,
+        providers: [],
       };
       vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(mockStatus);
 
@@ -109,6 +115,11 @@ describe('cliInstallerSlice', () => {
 
     it('detects update available', async () => {
       const mockStatus: CliInstallationStatus = {
+        flavor: 'claude',
+        displayName: 'Claude CLI',
+        supportsSelfUpdate: true,
+        showVersionDetails: true,
+        showBinaryPath: true,
         installed: true,
         installedVersion: '2.1.34',
         binaryPath: '/usr/local/bin/claude',
@@ -116,6 +127,7 @@ describe('cliInstallerSlice', () => {
         updateAvailable: true,
         authLoggedIn: true,
         authMethod: 'oauth_token',
+        providers: [],
       };
       vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(mockStatus);
 

@@ -1167,6 +1167,11 @@ export function initializeNotificationListeners(): () => void {
             cliInstallerError: progress.error ?? 'Unknown error',
           });
           break;
+        case 'status':
+          if (progress.status) {
+            useStore.setState({ cliStatus: progress.status });
+          }
+          break;
       }
     });
     if (typeof cleanup === 'function') {

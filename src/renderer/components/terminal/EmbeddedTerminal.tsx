@@ -16,6 +16,8 @@ interface EmbeddedTerminalProps {
   args?: string[];
   /** Working directory */
   cwd?: string;
+  /** Environment variables merged into the PTY process env */
+  env?: Record<string, string>;
   /** Callback when PTY process exits */
   onExit?: (exitCode: number) => void;
   /** CSS class for container */
@@ -26,6 +28,7 @@ export const EmbeddedTerminal = ({
   command,
   args,
   cwd,
+  env,
   onExit,
   className,
 }: EmbeddedTerminalProps): React.JSX.Element => {
@@ -99,6 +102,7 @@ export const EmbeddedTerminal = ({
       ...(command ? { command } : {}),
       ...(args ? { args } : {}),
       ...(cwd ? { cwd } : {}),
+      ...(env ? { env } : {}),
       cols: term.cols,
       rows: term.rows,
     };

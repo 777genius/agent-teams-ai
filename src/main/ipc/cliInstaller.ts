@@ -17,6 +17,7 @@ import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
 import type { CliInstallerService } from '../services';
+import { ClaudeBinaryResolver } from '../services/team/ClaudeBinaryResolver';
 import type { CliInstallationStatus, IpcResult } from '@shared/types';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
@@ -111,5 +112,6 @@ async function handleInstall(_event: IpcMainInvokeEvent): Promise<IpcResult<void
 
 function handleInvalidateStatus(_event: IpcMainInvokeEvent): IpcResult<void> {
   cachedStatus = null;
+  ClaudeBinaryResolver.clearCache();
   return { success: true, data: undefined };
 }
