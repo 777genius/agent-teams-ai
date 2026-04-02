@@ -22,6 +22,9 @@ export interface DisplayPricing {
 const TIER_THRESHOLD = 200_000;
 
 const PRICING_MAP = pricingData as Record<string, unknown>;
+const PRICING_ALIASES: Record<string, string> = {
+  'gpt-5.3-codex-spark': 'gpt-5.3-codex',
+};
 
 // Pre-compute lowercase key map for O(1) case-insensitive lookups
 const LOWERCASE_KEY_MAP = new Map<string, string>();
@@ -53,6 +56,12 @@ export function getPricing(modelName: string): LiteLLMPricing | null {
   const originalKey = LOWERCASE_KEY_MAP.get(lowerName);
   if (originalKey) {
     return tryGetPricing(originalKey);
+  }
+
+  const alias = PRICING_ALIASES[lowerName];
+  if (alias) {
+    const aliased = tryGetPricing(alias);
+    if (aliased) return aliased;
   }
 
   return null;

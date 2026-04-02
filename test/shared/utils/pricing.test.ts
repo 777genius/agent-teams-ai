@@ -20,6 +20,27 @@ describe('Shared Pricing Module', () => {
       expect(pricing).not.toBeNull();
     });
 
+    it('should find pricing for codex runtime models', () => {
+      const pricing = getPricing('gpt-5.1-codex-mini');
+      expect(pricing).not.toBeNull();
+      expect(pricing!.input_cost_per_token).toBeGreaterThan(0);
+      expect(pricing!.output_cost_per_token).toBeGreaterThan(0);
+    });
+
+    it('should alias codex spark pricing to the closest published codex tier', () => {
+      const sparkPricing = getPricing('gpt-5.3-codex-spark');
+      const codexPricing = getPricing('gpt-5.3-codex');
+      expect(sparkPricing).not.toBeNull();
+      expect(sparkPricing).toEqual(codexPricing);
+    });
+
+    it('should find pricing for gemini runtime models', () => {
+      const pricing = getPricing('gemini-2.5-flash-lite');
+      expect(pricing).not.toBeNull();
+      expect(pricing!.input_cost_per_token).toBeGreaterThan(0);
+      expect(pricing!.output_cost_per_token).toBeGreaterThan(0);
+    });
+
     it('should return null for unknown models', () => {
       const pricing = getPricing('totally-fake-model-xyz');
       expect(pricing).toBeNull();

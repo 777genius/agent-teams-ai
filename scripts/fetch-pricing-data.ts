@@ -2,7 +2,7 @@
 
 /**
  * Fetch latest model pricing from LiteLLM and save to renderer assets.
- * Filters to Claude models only to reduce bundle size.
+ * Filters to the models this app currently exposes in the UI/runtime to reduce bundle size.
  * Runs automatically during prebuild.
  */
 
@@ -41,9 +41,26 @@ function isValidModelPricing(entry: unknown): entry is ModelPricing {
   );
 }
 
+const EXPLICIT_MODEL_ALLOWLIST = new Set([
+  'gpt-5.4',
+  'gpt-5.4-mini',
+  'gpt-5.3-codex',
+  'gpt-5.2-codex',
+  'gpt-5.2',
+  'gpt-5.1-codex-max',
+  'gpt-5.1-codex-mini',
+  'gemini-2.5-pro',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+]);
+
 function isClaudeModel(modelName: string): boolean {
   const lower = modelName.toLowerCase();
   return lower.includes('claude');
+}
+
+function isIncludedModel(modelName: string): boolean {
+  return isClaudeModel(modelName) || EXPLICIT_MODEL_ALLOWLIST.has(modelName);
 }
 
 async function fetchPricingData(): Promise<Record<string, ModelPricing>> {
@@ -63,16 +80,22 @@ async function fetchPricingData(): Promise<Record<string, ModelPricing>> {
     const data = (await response.json()) as Record<string, unknown>;
     console.log(`Fetched pricing for ${Object.keys(data).length} models`);
 
-    // Filter to Claude models only and validate entries
-    const claudeModels: Record<string, ModelPricing> = {};
+    // Filter to the models currently exposed by this app and validate entries.
+    const selectedModels: Record<string, ModelPricing> = {};
     for (const [modelName, entry] of Object.entries(data)) {
-      if (isClaudeModel(modelName) && isValidModelPricing(entry)) {
-        claudeModels[modelName] = entry;
+      if (isIncludedModel(modelName) && isValidModelPricing(entry)) {
+        selectedModels[modelName] = entry;
       }
     }
 
-    console.log(`Filtered to ${Object.keys(claudeModels).length} Claude models`);
-    return claudeModels;
+    // LiteLLM currently publishes no priced top-level entry for gpt-5.3-codex-spark.
+    // Keep cost estimation non-zero by aliasing it to the closest published Codex tier.
+    if (!selectedModels['gpt-5.3-codex-spark'] && selectedModels['gpt-5.3-codex']) {
+      selectedModels['gpt-5.3-codex-spark'] = selectedModels['gpt-5.3-codex'];
+    }
+
+    console.log(`Filtered to ${Object.keys(selectedModels).length} supported models`);
+    return selectedModels;
   } catch (error) {
     clearTimeout(timeout);
     if (error instanceof Error && error.name === 'AbortError') {
