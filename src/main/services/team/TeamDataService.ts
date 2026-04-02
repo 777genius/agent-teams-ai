@@ -948,6 +948,15 @@ export class TeamDataService {
       name,
       role: request.role?.trim() || undefined,
       workflow: request.workflow?.trim() || undefined,
+      providerId:
+        request.providerId === 'codex' || request.providerId === 'gemini'
+          ? request.providerId
+          : undefined,
+      model: request.model?.trim() || undefined,
+      effort:
+        request.effort === 'low' || request.effort === 'medium' || request.effort === 'high'
+          ? request.effort
+          : undefined,
       agentType: 'general-purpose',
       color: getMemberColorByName(name),
       joinedAt: Date.now(),
@@ -977,7 +986,16 @@ export class TeamDataService {
 
   async replaceMembers(
     teamName: string,
-    request: { members: { name: string; role?: string; workflow?: string }[] }
+    request: {
+      members: {
+        name: string;
+        role?: string;
+        workflow?: string;
+        providerId?: 'anthropic' | 'codex' | 'gemini';
+        model?: string;
+        effort?: 'low' | 'medium' | 'high';
+      }[];
+    }
   ): Promise<void> {
     const existing = await this.membersMetaStore.getMembers(teamName);
     const existingLead = existing.find(isLeadMember) ?? null;
@@ -1003,6 +1021,15 @@ export class TeamDataService {
         name,
         role: member.role?.trim() || undefined,
         workflow: member.workflow?.trim() || undefined,
+        providerId:
+          member.providerId === 'codex' || member.providerId === 'gemini'
+            ? member.providerId
+            : undefined,
+        model: member.model?.trim() || undefined,
+        effort:
+          member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
+            ? member.effort
+            : undefined,
         agentType: prev?.agentType ?? 'general-purpose',
         color: prev?.color ?? getMemberColorByName(name),
         joinedAt: prev?.joinedAt ?? joinedAt,
@@ -1957,6 +1984,16 @@ export class TeamDataService {
           return name;
         })(),
         role: member.role?.trim() || undefined,
+        workflow: member.workflow?.trim() || undefined,
+        providerId:
+          member.providerId === 'codex' || member.providerId === 'gemini'
+            ? member.providerId
+            : undefined,
+        model: member.model?.trim() || undefined,
+        effort:
+          member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
+            ? member.effort
+            : undefined,
         agentType: 'general-purpose',
         color: getMemberColorByName(member.name.trim()),
         joinedAt,

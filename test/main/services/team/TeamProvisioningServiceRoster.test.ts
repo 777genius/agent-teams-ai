@@ -59,6 +59,27 @@ describe('TeamProvisioningService (launch roster discovery)', () => {
     expect(result.members.map((m: { name: string }) => m.name)).toEqual(['alice-2']);
   });
 
+  it('inbox fallback merges provider/model overrides from config for multimodel reconnect', async () => {
+    const svc = new TeamProvisioningService(
+      {} as never,
+      { listInboxNames: vi.fn(async () => ['bob']) } as never,
+      { getMembers: vi.fn(async () => []) } as never,
+      {} as never
+    );
+
+    const configRaw = JSON.stringify({
+      name: 't',
+      members: [{ name: 'bob', role: 'reviewer', provider: 'codex', model: 'gpt-5.4' }],
+    });
+
+    const result = await (svc as unknown as any).resolveLaunchExpectedMembers('t', configRaw);
+    expect(result.source).toBe('inboxes');
+    expect(result.members).toEqual([
+      { name: 'bob', role: 'reviewer', workflow: undefined, providerId: 'codex', model: 'gpt-5.4' },
+    ]);
+    expect(result.warning).toContain('best-effort');
+  });
+
   it('members.meta.json fallback never returns reserved names (user/team-lead)', async () => {
     const svc = new TeamProvisioningService(
       {} as never,

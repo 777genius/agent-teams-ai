@@ -48,8 +48,8 @@ export const EffortLevelSelector: React.FC<EffortLevelSelectorProps> = ({
       </div>
     </div>
     <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
-      Controls how much reasoning Claude invests before responding. Default uses Claude&apos;s
-      standard behavior.
+      Controls how much reasoning the selected provider invests before responding. Default uses the
+      provider&apos;s standard behavior for the selected model.
     </p>
   </div>
 );

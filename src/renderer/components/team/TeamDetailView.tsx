@@ -135,6 +135,9 @@ function areResolvedMembersEqual(
       prevMember.agentType !== nextMember.agentType ||
       prevMember.role !== nextMember.role ||
       prevMember.workflow !== nextMember.workflow ||
+      prevMember.providerId !== nextMember.providerId ||
+      prevMember.model !== nextMember.model ||
+      prevMember.effort !== nextMember.effort ||
       prevMember.cwd !== nextMember.cwd ||
       prevMember.gitBranch !== nextMember.gitBranch ||
       prevMember.removedAt !== nextMember.removedAt
@@ -1616,6 +1619,7 @@ export const TeamDetailView = ({
               isTeamAlive={data.isAlive}
               isTeamProvisioning={isTeamProvisioning}
               leadActivity={leadActivityByTeam[teamName]}
+              launchParams={launchParams}
               onMemberClick={setSelectedMember}
               onSendMessage={(member) => {
                 setSendDialogRecipient(member.name);
@@ -1976,6 +1980,7 @@ export const TeamDetailView = ({
             currentDescription={data.config.description ?? ''}
             currentColor={data.config.color ?? ''}
             currentMembers={data.members.filter((m) => !isLeadMember(m))}
+            isTeamAlive={data.isAlive && !isTeamProvisioning}
             projectPath={data.config.projectPath}
             onClose={() => setEditDialogOpen(false)}
             onSaved={() => void selectTeam(teamName)}
@@ -1998,6 +2003,9 @@ export const TeamDetailView = ({
                       name: entry.name,
                       role: entry.role,
                       workflow: entry.workflow,
+                      providerId: entry.providerId,
+                      model: entry.model,
+                      effort: entry.effort,
                     });
                   }
                   setAddMemberDialogOpen(false);

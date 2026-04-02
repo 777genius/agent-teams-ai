@@ -79,6 +79,38 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(probeSpy.mock.calls[1]?.[1]).toBe(cwdB);
   });
 
+  it('checks each unique provider during multi-provider prepare and blocks on provider auth failure', async () => {
+    const svc = new TeamProvisioningService();
+    const getCachedOrProbeResult = vi.spyOn(svc as any, 'getCachedOrProbeResult');
+    getCachedOrProbeResult.mockImplementation(async (_cwd: unknown, providerId: unknown) => {
+      if (providerId === 'codex') {
+        return {
+          claudePath: '/fake/claude',
+          authSource: 'none',
+          warning: 'Not logged in to Codex runtime',
+        };
+      }
+      return {
+        claudePath: '/fake/claude',
+        authSource: 'oauth_token',
+      };
+    });
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      forceFresh: true,
+      providerId: 'anthropic',
+      providerIds: ['codex', 'anthropic'],
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe('Codex: Not logged in to Codex runtime');
+    expect(getCachedOrProbeResult).toHaveBeenCalledTimes(2);
+    expect(getCachedOrProbeResult.mock.calls.map((call) => call[1])).toEqual([
+      'anthropic',
+      'codex',
+    ]);
+  });
+
   it('maps ANTHROPIC_AUTH_TOKEN into ANTHROPIC_API_KEY for headless preflight', async () => {
     const svc = new TeamProvisioningService();
     vi.mocked(resolveInteractiveShellEnv).mockResolvedValue({

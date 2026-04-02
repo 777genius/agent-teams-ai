@@ -27,6 +27,11 @@ export function startEventLoopLagMonitor(): void {
     // Only report meaningful stalls
     if (maxMs < 250) return;
 
+    // For known IPC/main-thread operations we already emit operation-specific
+    // timing diagnostics. Suppress the generic event-loop warning to avoid
+    // duplicate noisy logs that do not add new debugging value.
+    if (currentOp) return;
+
     logger.warn(
       `Event loop stall detected: p95=${p95Ms.toFixed(1)}ms max=${maxMs.toFixed(1)}ms` +
         (currentOp ? ` op=${currentOp}` : '')

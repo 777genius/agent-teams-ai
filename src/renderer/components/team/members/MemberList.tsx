@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import {
+  getTeamEffortLabel,
+  getTeamModelLabel,
+  getTeamProviderLabel,
+} from '@renderer/components/team/dialogs/TeamModelSelector';
+import type { TeamLaunchParams } from '@renderer/store/slices/teamSlice';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 
@@ -27,6 +33,7 @@ interface MemberListProps {
   isTeamAlive?: boolean;
   isTeamProvisioning?: boolean;
   leadActivity?: LeadActivityState;
+  launchParams?: TeamLaunchParams;
   onMemberClick?: (member: ResolvedTeamMember) => void;
   onSendMessage?: (member: ResolvedTeamMember) => void;
   onAssignTask?: (member: ResolvedTeamMember) => void;
@@ -42,6 +49,7 @@ export const MemberList = ({
   isTeamAlive,
   isTeamProvisioning,
   leadActivity,
+  launchParams,
   onMemberClick,
   onSendMessage,
   onAssignTask,
@@ -77,6 +85,45 @@ export const MemberList = ({
   const removedMembers = members.filter((m) => m.removedAt);
   const colorMap = buildMemberColorMap(members);
 
+  const buildRuntimeSummary = useCallback(
+    (member: ResolvedTeamMember): string | undefined => {
+      const hasMemberOverride = Boolean(member.providerId || member.model || member.effort);
+      if (!hasMemberOverride && launchParams) {
+        return undefined;
+      }
+
+      const defaultProvider = launchParams?.providerId ?? 'anthropic';
+      const memberProvider = member.providerId ?? defaultProvider;
+      const defaultModel = launchParams?.model?.trim() || '';
+      const memberModel = member.model?.trim() || '';
+      const defaultEffort = launchParams?.effort;
+      const memberEffort = member.effort;
+
+      const showProvider =
+        !launchParams || Boolean(member.providerId && memberProvider !== defaultProvider);
+      const showModel = !launchParams
+        ? Boolean(memberModel)
+        : Boolean(memberModel && memberModel !== defaultModel);
+      const showEffort = !launchParams
+        ? Boolean(memberEffort)
+        : Boolean(memberEffort && memberEffort !== defaultEffort);
+
+      const parts: string[] = [];
+      if (showProvider) {
+        parts.push(getTeamProviderLabel(memberProvider));
+      }
+      if (showModel) {
+        parts.push(getTeamModelLabel(memberModel));
+      }
+      if (showEffort && memberEffort) {
+        parts.push(getTeamEffortLabel(memberEffort));
+      }
+
+      return parts.length > 0 ? parts.join(' · ') : undefined;
+    },
+    [launchParams]
+  );
+
   if (members.length === 0) {
     return (
       <div className="rounded-md border border-[var(--color-border)] p-4 text-sm text-[var(--color-text-muted)]">
@@ -111,6 +158,7 @@ export const MemberList = ({
         reviewTask={isRemoved ? null : reviewTask}
         isAwaitingReply={isRemoved ? false : awaitingReply}
         isRemoved={isRemoved}
+        runtimeSummary={isRemoved ? buildRuntimeSummary(member) : buildRuntimeSummary(member)}
         spawnStatus={isRemoved ? undefined : spawnEntry?.status}
         spawnError={isRemoved ? undefined : spawnEntry?.error}
         onOpenTask={!isRemoved && currentTask ? () => onOpenTask?.(currentTask) : undefined}

@@ -19,11 +19,15 @@ import {
 import { Loader2 } from 'lucide-react';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
+import type { EffortLevel, TeamProviderId } from '@shared/types';
 
 export interface AddMemberEntry {
   name: string;
   role?: string;
   workflow?: string;
+  providerId?: TeamProviderId;
+  model?: string;
+  effort?: EffortLevel;
 }
 
 interface AddMemberDialogProps {
@@ -116,6 +120,9 @@ export const AddMemberDialog = ({
         name: m.name,
         role: m.role,
         workflow: m.workflow,
+        providerId: m.providerId,
+        model: m.model,
+        effort: m.effort,
       }))
     );
   };

@@ -17,6 +17,7 @@ const CROSS_TEAM_TOOL_RECIPIENT_NAMES = new Set([
   'cross_team_list_targets',
   'cross_team_get_outbox',
 ]);
+const GENERATED_AGENT_ID_PATTERN = /^a[0-9a-f]{16}$/i;
 
 function looksLikeQualifiedExternalRecipient(name: string): boolean {
   const trimmed = name.trim();
@@ -49,6 +50,10 @@ function looksLikeCrossTeamPseudoRecipient(name: string): boolean {
 
 function looksLikeCrossTeamToolRecipient(name: string): boolean {
   return CROSS_TEAM_TOOL_RECIPIENT_NAMES.has(name.trim());
+}
+
+function looksLikeGeneratedAgentId(name: string): boolean {
+  return GENERATED_AGENT_ID_PATTERN.test(name.trim());
 }
 
 export class TeamMemberResolver {
@@ -106,13 +111,25 @@ export class TeamMemberResolver {
         ) {
           continue;
         }
+        if (!explicitNames.has(trimmed.toLowerCase()) && looksLikeGeneratedAgentId(trimmed)) {
+          continue;
+        }
         addName(trimmed);
       }
     }
 
     const configMemberMap = new Map<
       string,
-      { agentType?: string; role?: string; workflow?: string; color?: string; cwd?: string }
+      {
+        agentType?: string;
+        role?: string;
+        workflow?: string;
+        providerId?: 'anthropic' | 'codex' | 'gemini';
+        model?: string;
+        effort?: 'low' | 'medium' | 'high';
+        color?: string;
+        cwd?: string;
+      }
     >();
     if (Array.isArray(config.members)) {
       for (const m of config.members) {
@@ -121,6 +138,9 @@ export class TeamMemberResolver {
             agentType: m.agentType,
             role: m.role,
             workflow: m.workflow,
+            providerId: m.providerId,
+            model: m.model,
+            effort: m.effort,
             color: m.color,
             cwd: m.cwd,
           });
@@ -130,7 +150,16 @@ export class TeamMemberResolver {
 
     const metaMemberMap = new Map<
       string,
-      { agentType?: string; role?: string; workflow?: string; color?: string; removedAt?: number }
+      {
+        agentType?: string;
+        role?: string;
+        workflow?: string;
+        providerId?: 'anthropic' | 'codex' | 'gemini';
+        model?: string;
+        effort?: 'low' | 'medium' | 'high';
+        color?: string;
+        removedAt?: number;
+      }
     >();
     if (Array.isArray(metaMembers)) {
       for (const member of metaMembers) {
@@ -139,6 +168,9 @@ export class TeamMemberResolver {
             agentType: member.agentType,
             role: member.role,
             workflow: member.workflow,
+            providerId: member.providerId,
+            model: member.model,
+            effort: member.effort,
             color: member.color,
             removedAt: member.removedAt,
           });
@@ -193,6 +225,9 @@ export class TeamMemberResolver {
         agentType: configMember?.agentType ?? metaMember?.agentType,
         role: configMember?.role ?? metaMember?.role,
         workflow: configMember?.workflow ?? metaMember?.workflow,
+        providerId: configMember?.providerId ?? metaMember?.providerId,
+        model: configMember?.model ?? metaMember?.model,
+        effort: configMember?.effort ?? metaMember?.effort,
         cwd: configMember?.cwd,
         removedAt: metaMember?.removedAt,
       });

@@ -5,7 +5,7 @@
  * Repository Pattern abstraction allows swapping storage backend (JSON → sql.js/Drizzle).
  */
 
-import type { EffortLevel } from './team';
+import type { EffortLevel, TeamProviderId } from './team';
 
 // =============================================================================
 // Schedule Status Types
@@ -49,6 +49,7 @@ export interface Schedule {
 export interface ScheduleLaunchConfig {
   cwd: string;
   prompt: string;
+  providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
   skipPermissions?: boolean;

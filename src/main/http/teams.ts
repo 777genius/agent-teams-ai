@@ -89,6 +89,16 @@ function assertOptionalEffort(value: unknown): EffortLevel | undefined {
 
 function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchRequest {
   const payload = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+  const providerId =
+    payload.providerId === 'codex'
+      ? 'codex'
+      : payload.providerId === 'gemini'
+        ? 'gemini'
+        : payload.providerId == null || payload.providerId === 'anthropic'
+          ? 'anthropic'
+          : (() => {
+              throw new HttpBadRequestError('providerId must be anthropic, codex, or gemini');
+            })();
   const prompt = assertOptionalString(payload.prompt, 'prompt');
   const model = assertOptionalString(payload.model, 'model');
   const effort = assertOptionalEffort(payload.effort);
@@ -100,6 +110,7 @@ function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchRequest 
   return {
     teamName,
     cwd: assertAbsoluteCwd(payload.cwd),
+    providerId,
     ...(prompt && {
       prompt,
     }),

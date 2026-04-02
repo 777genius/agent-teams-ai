@@ -1,10 +1,10 @@
-import { CUSTOM_ROLE, NO_ROLE } from '@renderer/constants/teamRoles';
+import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 
 import type { MemberDraft } from './membersEditorTypes';
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { TeamProvisioningMemberInput } from '@shared/types';
+import type { EffortLevel, TeamProvisioningMemberInput, TeamProviderId } from '@shared/types';
 
 function isValidMemberName(name: string): boolean {
   if (name.length < 1 || name.length > 128) return false;
@@ -33,7 +33,58 @@ export function createMemberDraft(initial?: Partial<MemberDraft>): MemberDraft {
     roleSelection: initial?.roleSelection ?? '',
     customRole: initial?.customRole ?? '',
     workflow: initial?.workflow,
+    providerId: initial?.providerId,
+    model: initial?.model ?? '',
+    effort: initial?.effort,
   };
+}
+
+export function createMemberDraftsFromInputs(
+  members: readonly {
+    name: string;
+    role?: string;
+    workflow?: string;
+    providerId?: TeamProviderId;
+    model?: string;
+    effort?: EffortLevel;
+    removedAt?: number | string | null;
+  }[]
+): MemberDraft[] {
+  return members
+    .filter((member) => !member.removedAt)
+    .map((member) => {
+      const role = typeof member.role === 'string' ? member.role.trim() : '';
+      const presetRoles: readonly string[] = PRESET_ROLES;
+      const isPreset = presetRoles.includes(role);
+      return createMemberDraft({
+        name: member.name,
+        roleSelection: role ? (isPreset ? role : CUSTOM_ROLE) : '',
+        customRole: role && !isPreset ? role : '',
+        workflow: member.workflow,
+        providerId:
+          member.providerId === 'codex' || member.providerId === 'gemini'
+            ? member.providerId
+            : 'anthropic',
+        model: member.model ?? '',
+        effort: normalizeDraftEffort(member.effort),
+      });
+    });
+}
+
+export function clearMemberModelOverrides(member: MemberDraft): MemberDraft {
+  return {
+    ...member,
+    providerId: undefined,
+    model: '',
+    effort: undefined,
+  };
+}
+
+function normalizeDraftEffort(value: string | undefined): EffortLevel | undefined {
+  if (value === 'low' || value === 'medium' || value === 'high') {
+    return value;
+  }
+  return undefined;
 }
 
 interface ExistingMemberColorInput {
@@ -113,6 +164,21 @@ export function buildMembersFromDrafts(members: MemberDraft[]): TeamProvisioning
       const result: TeamProvisioningMemberInput = { name, role };
       const workflow = getWorkflowForExport(member);
       if (workflow) result.workflow = workflow;
+      const providerId: TeamProviderId =
+        member.providerId === 'codex' || member.providerId === 'gemini'
+          ? member.providerId
+          : 'anthropic';
+      if (providerId !== 'anthropic') {
+        result.providerId = providerId;
+      }
+      const model = member.model?.trim();
+      if (model) {
+        result.model = model;
+      }
+      const effort = normalizeDraftEffort(member.effort);
+      if (effort) {
+        result.effort = effort;
+      }
       return result;
     })
     .filter((member): member is NonNullable<typeof member> => member !== null);

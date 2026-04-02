@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Label } from '@renderer/components/ui/label';
 import {
@@ -8,6 +8,7 @@ import {
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
+import { useStore } from '@renderer/store';
 import { Check, ChevronDown, Info } from 'lucide-react';
 
 // --- Provider SVG Icons (real brand logos from Simple Icons, monochrome currentColor) ---
@@ -26,38 +27,9 @@ const OpenAIIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-/** Google Gemini — official sparkle/star mark (Simple Icons) */
-const GoogleIcon: React.FC<{ className?: string }> = ({ className }) => (
+const GoogleGeminiIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81" />
-  </svg>
-);
-
-/** Local — server rack icon */
-const LocalIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className}>
-    <rect x="3" y="3" width="18" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
-    <rect x="3" y="14" width="18" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
-    <circle cx="7" cy="6.5" r="1" fill="currentColor" />
-    <circle cx="7" cy="17.5" r="1" fill="currentColor" />
-    <line
-      x1="10.5"
-      y1="6.5"
-      x2="17.5"
-      y2="6.5"
-      stroke="currentColor"
-      strokeWidth="1.2"
-      strokeLinecap="round"
-    />
-    <line
-      x1="10.5"
-      y1="17.5"
-      x2="17.5"
-      y2="17.5"
-      stroke="currentColor"
-      strokeWidth="1.2"
-      strokeLinecap="round"
-    />
+    <path d="M12 2.25c.62 3.9 1.6 6.57 3.18 8.15 1.58 1.58 4.25 2.56 8.15 3.18-3.9.62-6.57 1.6-8.15 3.18-1.58 1.58-2.56 4.25-3.18 8.15-.62-3.9-1.6-6.57-3.18-8.15-1.58-1.58-4.25-2.56-8.15-3.18 3.9-.62 6.57-1.6 8.15-3.18C10.4 8.82 11.38 6.15 12 2.25Z" />
   </svg>
 );
 
@@ -72,21 +44,87 @@ interface ProviderDef {
 
 const PROVIDERS: ProviderDef[] = [
   { id: 'anthropic', label: 'Anthropic', icon: AnthropicIcon, comingSoon: false },
-  { id: 'openai', label: 'OpenAI', icon: OpenAIIcon, comingSoon: true },
-  { id: 'google', label: 'Google', icon: GoogleIcon, comingSoon: true },
-  { id: 'local', label: 'Local', icon: LocalIcon, comingSoon: true },
+  { id: 'codex', label: 'Codex', icon: OpenAIIcon, comingSoon: false },
+  { id: 'gemini', label: 'Gemini', icon: GoogleGeminiIcon, comingSoon: false },
 ];
 
-const ACTIVE_PROVIDER = PROVIDERS[0];
-
-// --- Model options (Anthropic only for now) ---
-
-const MODEL_OPTIONS = [
+const ANTHROPIC_MODEL_OPTIONS = [
   { value: '', label: 'Default' },
   { value: 'opus', label: 'Opus 4.6' },
   { value: 'sonnet', label: 'Sonnet 4.6' },
   { value: 'haiku', label: 'Haiku 4.5' },
 ] as const;
+
+const CODEX_MODEL_OPTIONS = [
+  { value: '', label: 'Default' },
+  { value: 'gpt-5.4', label: 'GPT-5.4' },
+  { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini' },
+  { value: 'gpt-5.3-codex', label: 'GPT-5.3 Codex' },
+  { value: 'gpt-5.3-codex-spark', label: 'GPT-5.3 Codex Spark' },
+  { value: 'gpt-5.2', label: 'GPT-5.2' },
+  { value: 'gpt-5.2-codex', label: 'GPT-5.2 Codex' },
+  { value: 'gpt-5.1-codex-mini', label: 'GPT-5.1 Codex Mini' },
+  { value: 'gpt-5.1-codex-max', label: 'GPT-5.1 Codex Max' },
+] as const;
+
+const GEMINI_MODEL_OPTIONS = [
+  { value: '', label: 'Default' },
+  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
+] as const;
+
+const MODEL_LABEL_OVERRIDES: Record<string, string> = {
+  'claude-sonnet-4-6': 'Sonnet 4.6',
+  'claude-sonnet-4-6[1m]': 'Sonnet 4.6 (1M)',
+  'claude-opus-4-6': 'Opus 4.6',
+  'claude-opus-4-6[1m]': 'Opus 4.6 (1M)',
+  'claude-haiku-4-5-20251001': 'Haiku 4.5',
+  'gpt-5.4': 'GPT-5.4',
+  'gpt-5.4-mini': 'GPT-5.4 Mini',
+  'gpt-5.3-codex': 'GPT-5.3 Codex',
+  'gpt-5.3-codex-spark': 'GPT-5.3 Spark',
+  'gpt-5.2-codex': 'GPT-5.2 Codex',
+  'gpt-5.2': 'GPT-5.2',
+  'gpt-5.1-codex-mini': 'GPT-5.1 Mini',
+  'gpt-5.1-codex-max': 'GPT-5.1 Max',
+  'gemini-2.5-pro': 'Gemini 2.5 Pro',
+  'gemini-2.5-flash': 'Gemini 2.5 Flash',
+  'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
+};
+
+export function getTeamModelLabel(model: string): string {
+  return MODEL_LABEL_OVERRIDES[model] ?? model;
+}
+
+export function getTeamProviderLabel(providerId: 'anthropic' | 'codex' | 'gemini'): string {
+  switch (providerId) {
+    case 'codex':
+      return 'Codex';
+    case 'gemini':
+      return 'Gemini';
+    case 'anthropic':
+    default:
+      return 'Anthropic';
+  }
+}
+
+export function getTeamEffortLabel(effort: string): string {
+  const trimmed = effort.trim();
+  if (!trimmed) return 'Default';
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+export function formatTeamModelSummary(
+  providerId: 'anthropic' | 'codex' | 'gemini',
+  model: string,
+  effort?: string
+): string {
+  const providerLabel = getTeamProviderLabel(providerId);
+  const modelLabel = model.trim() ? getTeamModelLabel(model.trim()) : 'Default';
+  const effortLabel = effort?.trim() ? getTeamEffortLabel(effort) : '';
+  return [providerLabel, modelLabel, effortLabel].filter(Boolean).join(' · ');
+}
 
 /**
  * Computes the effective model string for team provisioning.
@@ -96,25 +134,33 @@ const MODEL_OPTIONS = [
  */
 export function computeEffectiveTeamModel(
   selectedModel: string,
-  limitContext: boolean
+  limitContext: boolean,
+  providerId: 'anthropic' | 'codex' | 'gemini' = 'anthropic'
 ): string | undefined {
   const base = selectedModel || undefined;
+  if (providerId !== 'anthropic') return base;
   if (limitContext) return base;
   if (base === 'haiku') return base;
   return base ? `${base}[1m]` : 'opus[1m]';
 }
 
 export interface TeamModelSelectorProps {
+  providerId: 'anthropic' | 'codex' | 'gemini';
+  onProviderChange: (providerId: 'anthropic' | 'codex' | 'gemini') => void;
   value: string;
   onValueChange: (value: string) => void;
   id?: string;
 }
 
 export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
+  providerId,
+  onProviderChange,
   value,
   onValueChange,
   id,
 }) => {
+  const cliStatus = useStore((s) => s.cliStatus);
+  const multimodelAvailable = cliStatus?.flavor === 'free-code';
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -132,29 +178,55 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownOpen]);
 
-  const ProviderIcon = ACTIVE_PROVIDER.icon;
+  const activeProvider = PROVIDERS.find((provider) => provider.id === providerId) ?? PROVIDERS[0];
+  const ProviderIcon = activeProvider.icon;
+  const isProviderSelectable = (candidateProviderId: string): boolean =>
+    multimodelAvailable || candidateProviderId === 'anthropic';
+  const activeProviderSelectable = isProviderSelectable(providerId);
+  const runtimeModels =
+    cliStatus?.providers.find((provider) => provider.providerId === providerId)?.models ?? [];
+  const modelOptions = useMemo(() => {
+    const fallback =
+      providerId === 'codex'
+        ? CODEX_MODEL_OPTIONS
+        : providerId === 'gemini'
+          ? GEMINI_MODEL_OPTIONS
+          : ANTHROPIC_MODEL_OPTIONS;
+    if (runtimeModels.length === 0) {
+      return [...fallback];
+    }
+    const dynamicOptions = runtimeModels.map((model) => ({
+      value: model,
+      label: getTeamModelLabel(model),
+    }));
+    return [{ value: '', label: 'Default' }, ...dynamicOptions];
+  }, [providerId, runtimeModels]);
 
   return (
     <div className="mb-5">
       <Label htmlFor={id} className="label-optional mb-1.5 block">
         Model (optional)
       </Label>
-      <div ref={containerRef} className="relative inline-block">
-        <div className="inline-flex rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
-          {/* Provider button */}
+      <div ref={containerRef} className="relative space-y-2">
+        <div className="relative inline-flex">
           <button
             type="button"
             className={cn(
-              'flex items-center gap-1.5 rounded-[3px] px-2.5 py-1 text-xs font-medium transition-colors',
-              'mr-0.5 border-r border-[var(--color-border)] pr-2.5',
+              'flex min-w-[170px] items-center justify-between gap-2 rounded-md border px-3 py-2 text-xs font-medium transition-colors',
               dropdownOpen
                 ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
                 : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
             )}
+            style={{
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'var(--color-surface)',
+            }}
             onClick={() => setDropdownOpen(!dropdownOpen)}
           >
-            <ProviderIcon className="size-3.5" />
-            <span>{ACTIVE_PROVIDER.label}</span>
+            <span className="flex items-center gap-2">
+              <ProviderIcon className="size-3.5" />
+              <span>{activeProvider.label}</span>
+            </span>
             <ChevronDown
               className={cn(
                 'size-3 transition-transform duration-200',
@@ -163,31 +235,116 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             />
           </button>
 
-          {/* Model pills */}
-          {MODEL_OPTIONS.map((opt) => (
+          {/* Provider dropdown */}
+          {dropdownOpen && (
+            <div
+              className="absolute left-0 top-full z-50 mt-1 min-w-[220px] overflow-hidden rounded-md border py-1 shadow-xl shadow-black/20"
+              style={{
+                backgroundColor: 'var(--color-surface-raised)',
+                borderColor: 'var(--color-border-subtle)',
+              }}
+            >
+              {PROVIDERS.map((provider, index) => {
+                const Icon = provider.icon;
+                const isActive = provider.id === activeProvider.id;
+                const isFirst = index === 0;
+                const prevWasActive = index > 0 && !PROVIDERS[index - 1].comingSoon;
+
+                return (
+                  <React.Fragment key={provider.id}>
+                    {prevWasActive && !isFirst && (
+                      <div
+                        className="mx-2 my-1 border-t"
+                        style={{ borderColor: 'var(--color-border-subtle)' }}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      disabled={provider.comingSoon || !isProviderSelectable(provider.id)}
+                      onClick={() => {
+                        if (!provider.comingSoon && isProviderSelectable(provider.id)) {
+                          onProviderChange(provider.id as 'anthropic' | 'codex' | 'gemini');
+                          setDropdownOpen(false);
+                        }
+                      }}
+                      className={cn(
+                        'flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors duration-100',
+                        isActive && 'bg-indigo-500/10 text-indigo-400',
+                        (provider.comingSoon || !isProviderSelectable(provider.id)) &&
+                          'cursor-not-allowed opacity-40',
+                        !isActive &&
+                          !provider.comingSoon &&
+                          isProviderSelectable(provider.id) &&
+                          'hover:bg-white/5'
+                      )}
+                      style={
+                        !isActive && !provider.comingSoon && isProviderSelectable(provider.id)
+                          ? { color: 'var(--color-text-secondary)' }
+                          : undefined
+                      }
+                    >
+                      <Icon className="size-3.5 shrink-0" />
+                      <span className="flex-1">{provider.label}</span>
+                      {provider.comingSoon && (
+                        <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)]">
+                          Coming Soon
+                        </span>
+                      )}
+                      {!provider.comingSoon && !isProviderSelectable(provider.id) && (
+                        <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)]">
+                          Multimodel off
+                        </span>
+                      )}
+                      {isActive && <Check className="size-3.5 shrink-0" />}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {!multimodelAvailable && (
+          <p className="text-[11px] text-[var(--color-text-muted)]">
+            Codex and Gemini require Multimodel mode.
+          </p>
+        )}
+
+        <div
+          className="grid gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
+        >
+          {modelOptions.map((opt) => (
             <button
               key={opt.value || '__default__'}
               type="button"
               id={opt.value === value ? id : undefined}
               className={cn(
-                'flex items-center gap-1 rounded-[3px] px-3 py-1 text-xs font-medium transition-colors',
+                'flex min-h-[44px] items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-center text-xs font-medium transition-colors',
                 value === opt.value
                   ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
-                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]',
+                !activeProviderSelectable && 'cursor-not-allowed opacity-45'
               )}
-              onClick={() => onValueChange(opt.value)}
+              style={{
+                borderColor: value === opt.value ? 'var(--color-border-emphasis)' : 'transparent',
+              }}
+              disabled={!activeProviderSelectable}
+              onClick={() => {
+                if (!activeProviderSelectable) return;
+                onValueChange(opt.value);
+              }}
             >
-              {opt.label}
+              <span className="leading-tight">{opt.label}</span>
               {opt.value === '' && (
                 <TooltipProvider delayDuration={200}>
                   <Tooltip>
                     <TooltipTrigger asChild onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                      <Info className="size-3 opacity-40 transition-opacity hover:opacity-70" />
+                      <Info className="size-3 shrink-0 opacity-40 transition-opacity hover:opacity-70" />
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-[240px] text-xs">
                       Default model from Claude CLI (/model).
                       <br />
-                      Currently Sonnet 4.6, but may change with CLI updates.
+                      Uses the runtime default for the selected provider.
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -195,64 +352,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             </button>
           ))}
         </div>
-
-        {/* Provider dropdown */}
-        {dropdownOpen && (
-          <div
-            className="absolute bottom-full left-0 z-50 mb-1 min-w-[220px] overflow-hidden rounded-md border py-1 shadow-xl shadow-black/20"
-            style={{
-              backgroundColor: 'var(--color-surface-raised)',
-              borderColor: 'var(--color-border-subtle)',
-            }}
-          >
-            {PROVIDERS.map((provider, index) => {
-              const Icon = provider.icon;
-              const isActive = provider.id === ACTIVE_PROVIDER.id;
-              const isFirst = index === 0;
-              const prevWasActive = index > 0 && !PROVIDERS[index - 1].comingSoon;
-
-              return (
-                <React.Fragment key={provider.id}>
-                  {prevWasActive && !isFirst && (
-                    <div
-                      className="mx-2 my-1 border-t"
-                      style={{ borderColor: 'var(--color-border-subtle)' }}
-                    />
-                  )}
-                  <button
-                    type="button"
-                    disabled={provider.comingSoon}
-                    onClick={() => {
-                      if (!provider.comingSoon) {
-                        setDropdownOpen(false);
-                      }
-                    }}
-                    className={cn(
-                      'flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors duration-100',
-                      isActive && 'bg-indigo-500/10 text-indigo-400',
-                      provider.comingSoon && 'cursor-not-allowed opacity-40',
-                      !isActive && !provider.comingSoon && 'hover:bg-white/5'
-                    )}
-                    style={
-                      !isActive && !provider.comingSoon
-                        ? { color: 'var(--color-text-secondary)' }
-                        : undefined
-                    }
-                  >
-                    <Icon className="size-3.5 shrink-0" />
-                    <span className="flex-1">{provider.label}</span>
-                    {provider.comingSoon && (
-                      <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)]">
-                        Coming Soon
-                      </span>
-                    )}
-                    {isActive && <Check className="size-3.5 shrink-0" />}
-                  </button>
-                </React.Fragment>
-              );
-            })}
-          </div>
-        )}
       </div>
     </div>
   );

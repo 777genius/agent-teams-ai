@@ -69,6 +69,8 @@ import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMetaStore } from './TeamMetaStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { TeamTaskReader } from './TeamTaskReader';
+import { applyProviderRuntimeEnv, resolveTeamProviderId } from '../runtime/providerRuntimeEnv';
+import { resolveGeminiRuntimeAuth } from '../runtime/geminiRuntimeAuth';
 
 /**
  * Kill a team CLI process using SIGKILL (uncatchable).
@@ -106,6 +108,7 @@ import type {
   ToolApprovalRequest,
   ToolApprovalSettings,
   ToolCallMeta,
+  TeamProviderId,
 } from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
@@ -121,6 +124,9 @@ const LOG_PROGRESS_THROTTLE_MS = 300;
 const UI_LOGS_TAIL_LIMIT = 128 * 1024;
 const PROBE_CACHE_TTL_MS = 36 * 60 * 60 * 1000;
 const PREFLIGHT_TIMEOUT_MS = 60000;
+const PREFLIGHT_CODEX_TIMEOUT_MS = 20000;
+const PREFLIGHT_GEMINI_TIMEOUT_MS = 15000;
+const PREFLIGHT_BINARY_TIMEOUT_MS = 8000;
 const PREFLIGHT_AUTH_RETRY_DELAY_MS = 2000;
 const PREFLIGHT_AUTH_MAX_RETRIES = 2;
 const FS_MONITOR_POLL_MS = 2000;
@@ -143,18 +149,69 @@ const HANDLED_STREAM_JSON_TYPES = new Set([
   'system',
 ]);
 const PREFLIGHT_PING_PROMPT = 'Output only the single word PONG.';
-const PREFLIGHT_PING_ARGS = [
-  '-p',
-  PREFLIGHT_PING_PROMPT,
-  '--output-format',
-  'text',
-  '--model',
-  'haiku',
-  '--max-turns',
-  '1',
-  '--no-session-persistence',
-] as const;
 const PREFLIGHT_EXPECTED = 'PONG';
+const PREFLIGHT_CODEX_MODEL = 'gpt-5.4-mini';
+const PREFLIGHT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
+
+function getPreflightPingModel(providerId: TeamProviderId | undefined): string {
+  switch (resolveTeamProviderId(providerId)) {
+    case 'codex':
+      return PREFLIGHT_CODEX_MODEL;
+    case 'gemini':
+      return PREFLIGHT_GEMINI_MODEL;
+    case 'anthropic':
+    default:
+      return 'haiku';
+  }
+}
+
+function getPreflightPingArgs(providerId: TeamProviderId | undefined): string[] {
+  return [
+    '-p',
+    PREFLIGHT_PING_PROMPT,
+    '--output-format',
+    'text',
+    '--model',
+    getPreflightPingModel(providerId),
+    '--max-turns',
+    '1',
+    '--no-session-persistence',
+  ];
+}
+
+function getPreflightTimeoutMs(providerId: TeamProviderId | undefined): number {
+  switch (resolveTeamProviderId(providerId)) {
+    case 'codex':
+      return PREFLIGHT_CODEX_TIMEOUT_MS;
+    case 'gemini':
+      return PREFLIGHT_GEMINI_TIMEOUT_MS;
+    case 'anthropic':
+    default:
+      return PREFLIGHT_TIMEOUT_MS;
+  }
+}
+
+function isProbeTimeoutMessage(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('timeout running:') ||
+    lower.includes('timed out') ||
+    lower.includes('did not complete') ||
+    lower.includes('etimedout')
+  );
+}
+
+function getTeamProviderLabel(providerId: TeamProviderId): string {
+  switch (providerId) {
+    case 'codex':
+      return 'Codex';
+    case 'gemini':
+      return 'Gemini';
+    case 'anthropic':
+    default:
+      return 'Anthropic';
+  }
+}
 
 type TeamsBaseLocation = 'configured' | 'default';
 
@@ -257,6 +314,8 @@ interface ProvisioningRun {
    *  watchdog defers to retry messages for progress.message (retries are
    *  more informative than the generic "CLI not responding" stall text). */
   lastRetryAt: number;
+  /** Index of the latest api_retry warning block in provisioningOutputParts. */
+  apiRetryWarningIndex: number | null;
   /** True after emitApiErrorWarning() fires once — prevents duplicate warnings and pre-complete false positives. */
   apiErrorWarningEmitted: boolean;
   fsPhase: 'waiting_config' | 'waiting_members' | 'waiting_tasks' | 'all_files_found';
@@ -351,7 +410,12 @@ interface ProvisioningRun {
 
 type LeadActivityState = 'active' | 'idle' | 'offline';
 
-type ProvisioningAuthSource = 'anthropic_api_key' | 'anthropic_auth_token' | 'none';
+type ProvisioningAuthSource =
+  | 'anthropic_api_key'
+  | 'anthropic_auth_token'
+  | 'codex_runtime'
+  | 'gemini_runtime'
+  | 'none';
 
 interface ProvisioningEnvResolution {
   env: NodeJS.ProcessEnv;
@@ -405,6 +469,11 @@ async function ensureCwdExists(cwd: string): Promise<void> {
   }
 }
 
+function isMissingCwdSpawnError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes('spawn ') && lower.includes(' enoent');
+}
+
 /** @deprecated Use wrapAgentBlock from @shared/constants/agentBlocks instead. */
 const wrapInAgentBlock = wrapAgentBlock;
 
@@ -426,10 +495,16 @@ function buildMembersPrompt(members: TeamCreateRequest['members']): string {
   return members
     .map((member) => {
       const rolePart = member.role?.trim() ? ` (role: ${member.role.trim()})` : '';
+      const providerPart =
+        member.providerId && member.providerId !== 'anthropic'
+          ? ` [provider: ${member.providerId}]`
+          : '';
+      const modelPart = member.model?.trim() ? ` [model: ${member.model.trim()}]` : '';
+      const effortPart = member.effort ? ` [effort: ${member.effort}]` : '';
       const workflowPart = member.workflow?.trim()
         ? `\n     Workflow/instructions:${formatWorkflowBlock(member.workflow, '       ')}`
         : '';
-      return `- ${member.name}${rolePart}${workflowPart}`;
+      return `- ${member.name}${rolePart}${providerPart}${modelPart}${effortPart}${workflowPart}`;
     })
     .join('\n');
 }
@@ -463,13 +538,21 @@ function buildMemberSpawnPrompt(
   leadName: string
 ): string {
   const role = member.role?.trim() || 'team member';
+  const providerLine =
+    member.providerId && member.providerId !== 'anthropic'
+      ? `\nProvider override for this teammate: ${member.providerId}.`
+      : '';
+  const modelLine = member.model?.trim()
+    ? `\nModel override for this teammate: ${member.model.trim()}.`
+    : '';
+  const effortLine = member.effort ? `\nEffort override for this teammate: ${member.effort}.` : '';
   const workflowBlock = member.workflow?.trim()
     ? `\n\nYour workflow and how you should behave:${formatWorkflowBlock(member.workflow, '')}`
     : '';
   const actionModeProtocol = protocols.buildActionModeProtocolText(
     protocols.MEMBER_DELEGATE_DESCRIPTION
   );
-  return `You are ${member.name}, a ${role} on team "${displayName}" (${teamName}).${workflowBlock}
+  return `You are ${member.name}, a ${role} on team "${displayName}" (${teamName}).${providerLine}${modelLine}${effortLine}${workflowBlock}
 
 ${getAgentLanguageInstruction()}
 Your FIRST action: call MCP tool member_briefing with:
@@ -499,6 +582,16 @@ function buildReconnectMemberSpawnPrompt(
   hasTasks: boolean
 ): string {
   const role = member.role?.trim() || 'team member';
+  const providerLine =
+    member.providerId && member.providerId !== 'anthropic'
+      ? `\n     Provider override for this teammate: ${member.providerId}.`
+      : '';
+  const modelLine = member.model?.trim()
+    ? `\n     Model override for this teammate: ${member.model.trim()}.`
+    : '';
+  const effortLine = member.effort
+    ? `\n     Effort override for this teammate: ${member.effort}.`
+    : '';
   const workflowBlock = member.workflow?.trim()
     ? `\n\nYour workflow and how you should behave:${formatWorkflowBlock(member.workflow, '     ')}`
     : '';
@@ -506,9 +599,15 @@ function buildReconnectMemberSpawnPrompt(
     protocols.buildActionModeProtocolText(protocols.MEMBER_DELEGATE_DESCRIPTION),
     '     '
   );
+  const providerArgLine =
+    member.providerId && member.providerId !== 'anthropic'
+      ? `   - provider: "${member.providerId}"\n`
+      : '';
+  const modelArgLine = member.model?.trim() ? `   - model: "${member.model.trim()}"\n` : '';
+  const effortArgLine = member.effort ? `   - effort: "${member.effort}"\n` : '';
   return `   For "${member.name}":
-   - prompt:
-     You are ${member.name}, a ${role} on team "${teamName}" (${teamName}).${workflowBlock}
+${providerArgLine}${modelArgLine}${effortArgLine}   - prompt:
+     You are ${member.name}, a ${role} on team "${teamName}" (${teamName}).${providerLine}${modelLine}${effortLine}${workflowBlock}
 
      ${getAgentLanguageInstruction()}
      The team has been reconnected after a restart.
@@ -546,7 +645,10 @@ export function buildAddMemberSpawnMessage(
   teamName: string,
   displayName: string,
   leadName: string,
-  member: Pick<TeamCreateRequest['members'][number], 'name' | 'role' | 'workflow'>
+  member: Pick<
+    TeamCreateRequest['members'][number],
+    'name' | 'role' | 'workflow' | 'providerId' | 'model' | 'effort'
+  >
 ): string {
   const roleHint =
     typeof member.role === 'string' && member.role.trim()
@@ -562,15 +664,24 @@ export function buildAddMemberSpawnMessage(
       name: member.name,
       ...(member.role ? { role: member.role } : {}),
       ...(member.workflow ? { workflow: member.workflow } : {}),
+      ...(member.providerId ? { providerId: member.providerId } : {}),
+      ...(member.model ? { model: member.model } : {}),
+      ...(member.effort ? { effort: member.effort } : {}),
     },
     displayName,
     teamName,
     leadName
   );
+  const providerPart =
+    member.providerId && member.providerId !== 'anthropic'
+      ? `, provider="${member.providerId}"`
+      : '';
+  const modelPart = member.model?.trim() ? `, model="${member.model.trim()}"` : '';
+  const effortPart = member.effort ? `, effort="${member.effort}"` : '';
 
   return (
     `A new teammate "${member.name}"${roleHint} has been added to the team. ` +
-    `Please spawn them immediately using the **Agent** tool with team_name="${teamName}", name="${member.name}", subagent_type="general-purpose", and the exact prompt below:${workflowHint}\n\n` +
+    `Please spawn them immediately using the **Agent** tool with team_name="${teamName}", name="${member.name}", subagent_type="general-purpose"${providerPart}${modelPart}${effortPart}, and the exact prompt below:${workflowHint}\n\n` +
     indentMultiline(prompt, '  ')
   );
 }
@@ -926,15 +1037,18 @@ function buildProvisioningPrompt(request: TeamCreateRequest): string {
 
    Per-member spawn instructions:
 ${request.members
-  .map(
-    (m) => `   For “${m.name}”:
+  .map((m) => {
+    const providerLine =
+      m.providerId && m.providerId !== 'anthropic' ? `   - provider: “${m.providerId}”\n` : '';
+    const modelLine = m.model?.trim() ? `   - model: “${m.model.trim()}”\n` : '';
+    return `   For “${m.name}”:
    - name: “${m.name}”
-   - prompt:
+${providerLine}${modelLine}   - prompt:
 ${buildMemberSpawnPrompt(m, displayName, request.teamName, leadName)
   .split('\n')
   .map((line) => `     ${line}`)
-  .join('\n')}`
-  )
+  .join('\n')}`;
+  })
   .join('\n\n')}`;
 
   const persistentContext = buildPersistentLeadContext({
@@ -1212,8 +1326,8 @@ type AuthWarningSource = 'probe' | 'stdout' | 'stderr' | 'assistant' | 'pre-comp
 const cachedProbeResults = new Map<string, CachedProbeResult>();
 const probeInFlightByKey = new Map<string, Promise<ProbeResult | null>>();
 
-function createProbeCacheKey(cwd: string): string {
-  return `${path.resolve(cwd)}::${getClaudeBasePath()}`;
+function createProbeCacheKey(cwd: string, providerId: TeamProviderId | undefined): string {
+  return `${path.resolve(cwd)}::${getClaudeBasePath()}::${resolveTeamProviderId(providerId)}`;
 }
 
 function isTransientProbeWarning(warning: string): boolean {
@@ -1225,6 +1339,17 @@ function isTransientProbeWarning(warning: string): boolean {
     lower.includes('etimedout') ||
     lower.includes('econnreset') ||
     lower.includes('eai_again')
+  );
+}
+
+function isBinaryProbeWarning(warning: string): boolean {
+  const lower = warning.toLowerCase();
+  return (
+    (lower.includes('spawn ') && lower.includes(' enoent')) ||
+    lower.includes('eacces') ||
+    lower.includes('enoexec') ||
+    lower.includes('bad cpu type in executable') ||
+    lower.includes('image not found')
   );
 }
 
@@ -2304,8 +2429,8 @@ export class TeamProvisioningService {
   async warmup(): Promise<void> {
     try {
       const cwd = process.cwd();
-      if (this.getFreshCachedProbeResult(cwd)) return;
-      const result = await this.getCachedOrProbeResult(cwd);
+      if (this.getFreshCachedProbeResult(cwd, 'anthropic')) return;
+      const result = await this.getCachedOrProbeResult(cwd, 'anthropic');
       if (!result) return;
       logger.info('CLI warmup completed');
     } catch (error) {
@@ -2315,32 +2440,26 @@ export class TeamProvisioningService {
 
   async prepareForProvisioning(
     cwd?: string,
-    opts?: { forceFresh?: boolean }
+    opts?: { forceFresh?: boolean; providerId?: TeamProviderId; providerIds?: TeamProviderId[] }
   ): Promise<TeamProvisioningPrepareResult> {
     const targetCwdForValidation = cwd?.trim() || process.cwd();
     await this.validatePrepareCwd(targetCwdForValidation);
+    const providerIds = Array.from(
+      new Set(
+        [opts?.providerId, ...(opts?.providerIds ?? [])]
+          .map((providerId) => resolveTeamProviderId(providerId))
+          .filter((providerId): providerId is TeamProviderId => Boolean(providerId))
+      )
+    );
+    if (providerIds.length === 0) {
+      providerIds.push('anthropic');
+    }
 
     // Allow callers (e.g. scheduler warm-up) to bypass the 36h probe cache
     if (opts?.forceFresh) {
-      this.clearProbeCache(targetCwdForValidation);
-    }
-
-    const cached = this.getFreshCachedProbeResult(targetCwdForValidation);
-    if (cached) {
-      const { warning, authSource } = cached;
-      const warnings: string[] = [];
-      if (warning) warnings.push(warning);
-      const isAuthFailure = warning ? this.isAuthFailureWarning(warning, 'probe') : false;
-      const ready = !warning || authSource !== 'none' || !isAuthFailure;
-      return {
-        ready,
-        message: ready
-          ? warnings.length > 0
-            ? 'CLI is ready to launch (see notes)'
-            : 'CLI is warmed up and ready to launch'
-          : warning || 'CLI is not ready',
-        warnings: warnings.length > 0 ? warnings : undefined,
-      };
+      for (const providerId of providerIds) {
+        this.clearProbeCache(targetCwdForValidation, providerId);
+      }
     }
 
     const targetCwd = cwd?.trim() || process.cwd();
@@ -2349,45 +2468,77 @@ export class TeamProvisioningService {
     }
 
     const warnings: string[] = [];
+    const blockingMessages: string[] = [];
 
-    const probeResult = await this.getCachedOrProbeResult(targetCwd);
-    if (!probeResult?.claudePath) {
-      throw new Error('Claude CLI not found; install it or provide a valid path');
-    }
-
-    const { authSource } = probeResult;
-    if (authSource === 'anthropic_api_key') {
-      logger.info('Auth: using explicit ANTHROPIC_API_KEY');
-    } else if (authSource === 'anthropic_auth_token') {
-      logger.info('Auth: using ANTHROPIC_AUTH_TOKEN mapped to ANTHROPIC_API_KEY');
-    }
-
-    if (probeResult.warning) {
-      const isAuthFailure = this.isAuthFailureWarning(probeResult.warning, 'probe');
-      if (authSource === 'none' && isAuthFailure) {
-        // No auth source + preflight indicates auth failure — block to avoid a confusing hang later.
-        return {
-          ready: false,
-          message: probeResult.warning,
-          warnings: warnings.length > 0 ? warnings : undefined,
-        };
+    for (const providerId of providerIds) {
+      const cached = this.getFreshCachedProbeResult(targetCwdForValidation, providerId);
+      const probeResult = cached ?? (await this.getCachedOrProbeResult(targetCwd, providerId));
+      if (!probeResult?.claudePath) {
+        throw new Error('Claude CLI not found; install it or provide a valid path');
       }
-      // Preflight warnings (including timeouts) should not block provisioning.
-      warnings.push(probeResult.warning);
+
+      const providerLabel = getTeamProviderLabel(providerId);
+      const { authSource } = probeResult;
+      if (authSource === 'anthropic_api_key') {
+        logger.info(`Auth: using explicit ANTHROPIC_API_KEY for ${providerLabel}`);
+      } else if (authSource === 'anthropic_auth_token') {
+        logger.info(
+          `Auth: using ANTHROPIC_AUTH_TOKEN mapped to ANTHROPIC_API_KEY for ${providerLabel}`
+        );
+      }
+
+      if (!probeResult.warning) {
+        continue;
+      }
+
+      const prefixedWarning =
+        providerIds.length > 1 ? `${providerLabel}: ${probeResult.warning}` : probeResult.warning;
+      const isAuthFailure = this.isAuthFailureWarning(probeResult.warning, 'probe');
+      if (
+        (authSource === 'none' ||
+          authSource === 'codex_runtime' ||
+          authSource === 'gemini_runtime') &&
+        isAuthFailure
+      ) {
+        blockingMessages.push(prefixedWarning);
+      } else if (isBinaryProbeWarning(probeResult.warning)) {
+        blockingMessages.push(prefixedWarning);
+      } else {
+        // Preflight warnings (including timeouts) should not block provisioning.
+        warnings.push(prefixedWarning);
+      }
+    }
+
+    if (blockingMessages.length > 0) {
+      return {
+        ready: false,
+        message:
+          blockingMessages.length === 1
+            ? blockingMessages[0]!
+            : 'Some provider runtimes are not ready',
+        warnings: blockingMessages.length > 1 ? blockingMessages : undefined,
+      };
     }
 
     return {
       ready: true,
       message:
-        warnings.length > 0
-          ? 'CLI is ready to launch (see notes)'
-          : 'CLI is warmed up and ready to launch',
+        providerIds.length > 1
+          ? warnings.length > 0
+            ? `Validated ${providerIds.length}/${providerIds.length} provider runtimes (see notes)`
+            : `Validated ${providerIds.length}/${providerIds.length} provider runtimes`
+          : warnings.length > 0
+            ? 'CLI is ready to launch (see notes)'
+            : 'CLI is warmed up and ready to launch',
       warnings: warnings.length > 0 ? warnings : undefined,
     };
   }
 
-  private getFreshCachedProbeResult(cwd: string): CachedProbeResult | null {
-    const cacheKey = createProbeCacheKey(cwd);
+  private getFreshCachedProbeResult(
+    cwd: string,
+    providerId: TeamProviderId | undefined
+  ): CachedProbeResult | null {
+    const cacheKey = createProbeCacheKey(cwd, providerId);
     const cached = cachedProbeResults.get(cacheKey);
     if (!cached) return null;
     const ageMs = Date.now() - cached.cachedAtMs;
@@ -2398,8 +2549,8 @@ export class TeamProvisioningService {
     return cached;
   }
 
-  private clearProbeCache(cwd: string): void {
-    cachedProbeResults.delete(createProbeCacheKey(cwd));
+  private clearProbeCache(cwd: string, providerId: TeamProviderId | undefined): void {
+    cachedProbeResults.delete(createProbeCacheKey(cwd, providerId));
   }
 
   private async validatePrepareCwd(cwd: string): Promise<void> {
@@ -2414,15 +2565,18 @@ export class TeamProvisioningService {
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return;
+        throw new Error(`Working directory does not exist: ${cwd}`);
       }
       throw error;
     }
   }
 
-  private async getCachedOrProbeResult(cwd: string): Promise<ProbeResult | null> {
-    const cacheKey = createProbeCacheKey(cwd);
-    const cached = this.getFreshCachedProbeResult(cwd);
+  private async getCachedOrProbeResult(
+    cwd: string,
+    providerId: TeamProviderId | undefined
+  ): Promise<ProbeResult | null> {
+    const cacheKey = createProbeCacheKey(cwd, providerId);
+    const cached = this.getFreshCachedProbeResult(cwd, providerId);
     if (cached) {
       return {
         claudePath: cached.claudePath,
@@ -2440,8 +2594,8 @@ export class TeamProvisioningService {
       const claudePath = await ClaudeBinaryResolver.resolve();
       if (!claudePath) return null;
 
-      const { env, authSource } = await this.buildProvisioningEnv();
-      const probe = await this.probeClaudeRuntime(claudePath, cwd, env);
+      const { env, authSource } = await this.buildProvisioningEnv(providerId);
+      const probe = await this.probeClaudeRuntime(claudePath, cwd, env, providerId);
       const result = {
         claudePath,
         authSource,
@@ -2451,7 +2605,8 @@ export class TeamProvisioningService {
       const shouldCache =
         !probe.warning ||
         (!this.isAuthFailureWarning(probe.warning, 'probe') &&
-          !isTransientProbeWarning(probe.warning));
+          !isTransientProbeWarning(probe.warning) &&
+          !isBinaryProbeWarning(probe.warning));
 
       if (shouldCache) {
         cachedProbeResults.set(cacheKey, { cacheKey, ...result, cachedAtMs: Date.now() });
@@ -2480,8 +2635,14 @@ export class TeamProvisioningService {
       lower.includes('missing api key') ||
       lower.includes('invalid api key') ||
       lower.includes('authentication failed') ||
+      lower.includes('not configured for runtime use') ||
+      lower.includes('set gemini_api_key') ||
+      lower.includes('google adc credentials') ||
+      lower.includes('google_cloud_project') ||
+      lower.includes('codex provider is not authenticated') ||
       lower.includes('run `claude auth login`') ||
-      lower.includes('claude auth login');
+      lower.includes('claude auth login') ||
+      lower.includes('claude-multimodel auth login');
 
     if (hasExplicitCliAuthSignal) {
       return true;
@@ -2513,6 +2674,56 @@ export class TeamProvisioningService {
     // Preserve newlines/tabs for readability.
     // eslint-disable-next-line no-control-regex, sonarjs/no-control-regex -- intentionally stripping control chars
     return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  }
+
+  private normalizeApiRetryErrorMessage(text: string): string {
+    const sanitized = this.sanitizeCliSnippet(text).trim();
+    if (!sanitized) {
+      return sanitized;
+    }
+
+    const jsonMatch = sanitized.match(/^\d{3}\s+(\{[\s\S]*\})$/);
+    const jsonCandidate = jsonMatch?.[1] ?? (sanitized.startsWith('{') ? sanitized : null);
+    if (jsonCandidate) {
+      try {
+        const parsed = JSON.parse(jsonCandidate) as {
+          error?: { message?: unknown };
+          message?: unknown;
+        };
+        const nestedMessage =
+          typeof parsed.error?.message === 'string'
+            ? parsed.error.message
+            : typeof parsed.message === 'string'
+              ? parsed.message
+              : null;
+        if (nestedMessage) {
+          return this.normalizeApiRetryErrorMessage(nestedMessage);
+        }
+      } catch {
+        // Fall through to raw sanitized text.
+      }
+    }
+
+    return sanitized
+      .replace(/^gemini cli backend error:\s*/i, '')
+      .replace(/^gemini api backend error:\s*/i, '')
+      .replace(/^api error:\s*\d+\s*/i, '')
+      .trim();
+  }
+
+  private isQuotaRetryMessage(text: string | undefined): boolean {
+    const lower = (text ?? '').toLowerCase();
+    return (
+      lower.includes('quota will reset after') ||
+      lower.includes('exhausted your capacity on this model') ||
+      lower.includes('resource exhausted') ||
+      lower.includes('rate limit') ||
+      lower.includes('rate_limit')
+    );
+  }
+
+  private toMarkdownCodeSafe(text: string): string {
+    return this.sanitizeCliSnippet(text).replace(/```/g, '``\\`');
   }
 
   private extractApiErrorSnippet(text: string): string | null {
@@ -3114,6 +3325,7 @@ export class TeamProvisioningService {
         stallWarningIndex: null,
         preStallMessage: null,
         lastRetryAt: 0,
+        apiRetryWarningIndex: null,
         apiErrorWarningEmitted: false,
         waitingTasksSince: null,
         provisioningComplete: false,
@@ -3162,7 +3374,7 @@ export class TeamProvisioningService {
 
       const prompt = buildProvisioningPrompt(request);
       let child: ReturnType<typeof spawn>;
-      const { env: shellEnv } = await this.buildProvisioningEnv();
+      const { env: shellEnv } = await this.buildProvisioningEnv(request.providerId);
       let mcpConfigPath: string;
       try {
         mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(request.cwd);
@@ -3207,6 +3419,7 @@ export class TeamProvisioningService {
           color: request.color,
           cwd: request.cwd,
           prompt: request.prompt,
+          providerId: request.providerId,
           model: request.model,
           effort: request.effort,
           skipPermissions: request.skipPermissions,
@@ -3510,6 +3723,7 @@ export class TeamProvisioningService {
         teamName: request.teamName,
         members: expectedMemberSpecs,
         cwd: request.cwd,
+        providerId: request.providerId,
         skipPermissions: request.skipPermissions,
       };
 
@@ -3557,6 +3771,7 @@ export class TeamProvisioningService {
         stallWarningIndex: null,
         preStallMessage: null,
         lastRetryAt: 0,
+        apiRetryWarningIndex: null,
         apiErrorWarningEmitted: false,
         waitingTasksSince: null,
         provisioningComplete: false,
@@ -3627,7 +3842,7 @@ export class TeamProvisioningService {
         Boolean(previousSessionId)
       );
       let child: ReturnType<typeof spawn>;
-      const { env: shellEnv } = await this.buildProvisioningEnv();
+      const { env: shellEnv } = await this.buildProvisioningEnv(request.providerId);
       let mcpConfigPath: string;
       try {
         mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(request.cwd);
@@ -4674,6 +4889,13 @@ export class TeamProvisioningService {
       const inp = input as Record<string, unknown>;
       const teamName = typeof inp.team_name === 'string' ? inp.team_name.trim() : '';
       const memberName = typeof inp.name === 'string' ? inp.name.trim() : '';
+      if (teamName && !memberName) {
+        logger.warn(
+          `[captureTeamSpawnEvents] Agent call for team "${run.teamName}" is missing name — ` +
+            `runtime will spawn an ephemeral subagent instead of a persistent teammate`
+        );
+        continue;
+      }
       if (!memberName) continue;
       if (!teamName) {
         logger.warn(
@@ -5577,21 +5799,45 @@ export class TeamProvisioningService {
         const errorStatus = typeof msg.error_status === 'number' ? msg.error_status : undefined;
         const errorLabel = typeof msg.error === 'string' ? msg.error.replace(/_/g, ' ') : undefined;
         const retryDelay = typeof msg.retry_delay_ms === 'number' ? msg.retry_delay_ms : undefined;
+        const errorMessage =
+          typeof msg.error_message === 'string' && msg.error_message.trim().length > 0
+            ? this.normalizeApiRetryErrorMessage(msg.error_message.trim())
+            : undefined;
+        const looksLikeQuotaRetry =
+          errorLabel === 'rate limit' || this.isQuotaRetryMessage(errorMessage);
 
-        // Use CLI's own error label (e.g. "rate limit") with status code
-        const statusLabel = errorLabel
-          ? `${errorLabel}${errorStatus ? ` (${errorStatus})` : ''}`
-          : `error ${errorStatus ?? 'unknown'}`;
+        // Use a human label for known quota/rate-limit retries instead of a misleading 500 bucket.
+        const statusLabel = looksLikeQuotaRetry
+          ? 'rate limited'
+          : errorLabel
+            ? `${errorLabel}${errorStatus ? ` (${errorStatus})` : ''}`
+            : `error ${errorStatus ?? 'unknown'}`;
         const delayLabel = retryDelay ? ` — next retry in ${Math.round(retryDelay / 1000)}s` : '';
-        const retryText = `API retry ${attempt}/${maxRetries}: ${statusLabel}${delayLabel}`;
+        const retryText = `API retry ${attempt}/${maxRetries}: ${statusLabel}${
+          errorMessage ? ` — ${errorMessage}` : ''
+        }${delayLabel}`;
 
         if (!run.provisioningComplete) {
+          const warningText = errorMessage
+            ? `**API retry ${attempt}/${maxRetries}: ${statusLabel}**\n\n\`\`\`\n${this.toMarkdownCodeSafe(
+                errorMessage
+              )}\n\`\`\`\n\n${retryDelay ? `Next retry in ${Math.round(retryDelay / 1000)}s.` : 'Retrying...'}`
+            : `**API retry ${attempt}/${maxRetries}: ${statusLabel}**\n\n${
+                retryDelay ? `Next retry in ${Math.round(retryDelay / 1000)}s.` : 'Retrying...'
+              }`;
+          if (run.apiRetryWarningIndex != null) {
+            run.provisioningOutputParts[run.apiRetryWarningIndex] = warningText;
+          } else {
+            run.apiRetryWarningIndex = run.provisioningOutputParts.length;
+            run.provisioningOutputParts.push(warningText);
+          }
           run.lastRetryAt = Date.now();
           run.progress = {
             ...run.progress,
             updatedAt: nowIso(),
             message: retryText,
             messageSeverity: 'error' as const,
+            assistantOutput: run.provisioningOutputParts.join('\n\n'),
           };
           run.onProgress(run.progress);
         }
@@ -7563,7 +7809,9 @@ export class TeamProvisioningService {
     }
   }
 
-  private async buildProvisioningEnv(): Promise<ProvisioningEnvResolution> {
+  private async buildProvisioningEnv(
+    providerId: TeamProviderId | undefined = 'anthropic'
+  ): Promise<ProvisioningEnvResolution> {
     const shellEnv = await resolveInteractiveShellEnv();
     // getHomeDir() uses Electron's app.getPath('home') which handles Unicode
     // correctly on Windows. Prefer it over process.env which may be garbled.
@@ -7605,6 +7853,7 @@ export class TeamProvisioningService {
         : {}),
       CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: '1',
     };
+    applyProviderRuntimeEnv(env, providerId);
 
     const controlApiBaseUrl = await this.resolveControlApiBaseUrl();
     if (controlApiBaseUrl) {
@@ -7629,6 +7878,14 @@ export class TeamProvisioningService {
         `${home}/.local/state`;
       env.XDG_CONFIG_HOME = xdgConfigHome;
       env.XDG_STATE_HOME = xdgStateHome;
+    }
+
+    if (resolveTeamProviderId(providerId) === 'codex') {
+      return { env, authSource: 'codex_runtime' };
+    }
+
+    if (resolveTeamProviderId(providerId) === 'gemini') {
+      return { env, authSource: 'gemini_runtime' };
     }
 
     // 1. Explicit ANTHROPIC_API_KEY — works with `-p` mode directly
@@ -8300,6 +8557,15 @@ export class TeamProvisioningService {
           name: member.name.trim(),
           role: member.role?.trim() || undefined,
           workflow: member.workflow?.trim() || undefined,
+          providerId:
+            member.providerId === 'codex' || member.providerId === 'gemini'
+              ? member.providerId
+              : undefined,
+          model: member.model?.trim() || undefined,
+          effort:
+            member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
+              ? member.effort
+              : undefined,
           agentType: 'general-purpose',
           color: getMemberColorByName(member.name.trim()),
           joinedAt,
@@ -8337,14 +8603,27 @@ export class TeamProvisioningService {
         const role = typeof member.role === 'string' ? member.role.trim() || undefined : undefined;
         const workflow =
           typeof member.workflow === 'string' ? member.workflow.trim() || undefined : undefined;
+        const providerId =
+          member.providerId === 'codex' || member.providerId === 'gemini'
+            ? member.providerId
+            : undefined;
+        const model =
+          typeof member.model === 'string' ? member.model.trim() || undefined : undefined;
+        const effort =
+          member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
+            ? member.effort
+            : undefined;
         const prev = byName.get(name);
         if (!prev) {
-          byName.set(name, { name, role, workflow });
+          byName.set(name, { name, role, workflow, providerId, model, effort });
         } else {
           byName.set(name, {
             ...prev,
             role: prev.role || role,
             workflow: prev.workflow || workflow,
+            providerId: prev.providerId || providerId,
+            model: prev.model || model,
+            effort: prev.effort || effort,
           });
         }
       }
@@ -8392,8 +8671,35 @@ export class TeamProvisioningService {
           return !inboxNameSetLower.has(match[1].toLowerCase());
         });
       if (inboxNames.length > 0) {
-        const members = inboxNames.map((name) => ({ name }));
-        return { members, source: 'inboxes' };
+        const configMembers = this.extractTeammateSpecsFromConfig(teamName, configRaw);
+        const configMembersByName = new Map(
+          configMembers.map((member) => [member.name.toLowerCase(), member] as const)
+        );
+        const members = inboxNames.map((name) => {
+          const configMember = configMembersByName.get(name.toLowerCase());
+          return {
+            name,
+            role: configMember?.role,
+            workflow: configMember?.workflow,
+            providerId: configMember?.providerId,
+            model: configMember?.model,
+            effort: configMember?.effort,
+          };
+        });
+        const memberOverridesUsed = members.some(
+          (member) => member.providerId || member.model || member.effort
+        );
+        return {
+          members,
+          source: 'inboxes',
+          ...(memberOverridesUsed
+            ? {
+                warning:
+                  'Launch roster was recovered from inboxes and merged with config.json provider/model/effort overrides. ' +
+                  'Multimodel reconnect is best-effort in this fallback path.',
+              }
+            : {}),
+        };
       }
     } catch (error) {
       logger.warn(
@@ -8439,7 +8745,17 @@ export class TeamProvisioningService {
     configRaw: string
   ): TeamCreateRequest['members'] {
     try {
-      const parsed = JSON.parse(configRaw) as { members?: { name?: string; agentType?: string }[] };
+      const parsed = JSON.parse(configRaw) as {
+        members?: {
+          name?: string;
+          role?: string;
+          workflow?: string;
+          agentType?: string;
+          provider?: string;
+          model?: string;
+          effort?: string;
+        }[];
+      };
       if (!Array.isArray(parsed.members)) {
         return [];
       }
@@ -8450,7 +8766,21 @@ export class TeamProvisioningService {
         if (!member || isLeadMember(member) || lower === 'user') continue;
         const name = rawName;
         if (!name) continue;
-        byName.set(name, { name });
+        byName.set(name, {
+          name,
+          role: typeof member.role === 'string' ? member.role.trim() || undefined : undefined,
+          workflow:
+            typeof member.workflow === 'string' ? member.workflow.trim() || undefined : undefined,
+          providerId:
+            member.provider === 'codex' || member.provider === 'gemini'
+              ? member.provider
+              : undefined,
+          model: typeof member.model === 'string' ? member.model.trim() || undefined : undefined,
+          effort:
+            member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
+              ? member.effort
+              : undefined,
+        });
       }
       // Defense: ignore CLI auto-suffixed duplicates (alice-2) when base name exists.
       const allNames = Array.from(byName.keys());
@@ -8478,8 +8808,50 @@ export class TeamProvisioningService {
   private async probeClaudeRuntime(
     claudePath: string,
     cwd: string,
-    env: NodeJS.ProcessEnv
+    env: NodeJS.ProcessEnv,
+    providerId: TeamProviderId | undefined = 'anthropic'
   ): Promise<{ warning?: string }> {
+    const resolvedProviderId = resolveTeamProviderId(providerId);
+    try {
+      const versionProbe = await this.spawnProbe(
+        claudePath,
+        ['--version'],
+        cwd,
+        env,
+        PREFLIGHT_BINARY_TIMEOUT_MS
+      );
+      if (versionProbe.exitCode !== 0) {
+        const errorText =
+          buildCombinedLogs(versionProbe.stdout, versionProbe.stderr) ||
+          `Claude CLI exited with code ${versionProbe.exitCode ?? 'unknown'} during warm-up`;
+        return {
+          warning: `Claude CLI binary failed to start correctly. Details: ${errorText}`,
+        };
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (isMissingCwdSpawnError(message)) {
+        return {
+          warning: `Working directory does not exist: ${cwd}`,
+        };
+      }
+      return {
+        warning: `Claude CLI binary failed to start. Details: ${message}`,
+      };
+    }
+
+    if (resolvedProviderId === 'gemini') {
+      const authState = await resolveGeminiRuntimeAuth(env);
+      if (authState.authenticated) {
+        return {};
+      }
+      return {
+        warning:
+          authState.statusMessage ??
+          'Gemini provider is not configured for runtime use. Set GEMINI_API_KEY or Google ADC credentials (plus GOOGLE_CLOUD_PROJECT when needed) and retry.',
+      };
+    }
+
     // Stage 1: verify binary works (awaited first for clearer errors)
     // Important: keep this sequential with Stage 2 to avoid auth/credential-store races
     // when multiple `claude` processes start simultaneously (most visible on Windows).
@@ -8503,10 +8875,10 @@ export class TeamProvisioningService {
       try {
         pingProbe = await this.spawnProbe(
           claudePath,
-          [...PREFLIGHT_PING_ARGS],
+          getPreflightPingArgs(providerId),
           cwd,
           env,
-          PREFLIGHT_TIMEOUT_MS,
+          getPreflightTimeoutMs(providerId),
           {
             resolveOnOutputMatch: ({ stdout, stderr }) => {
               const combined = `${stdout}\n${stderr}`.trim();
@@ -8516,7 +8888,7 @@ export class TeamProvisioningService {
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        if (attempt < PREFLIGHT_AUTH_MAX_RETRIES) {
+        if (!isProbeTimeoutMessage(message) && attempt < PREFLIGHT_AUTH_MAX_RETRIES) {
           logger.warn(
             `Preflight ping failed (attempt ${attempt}/${PREFLIGHT_AUTH_MAX_RETRIES}), ` +
               `retrying in ${PREFLIGHT_AUTH_RETRY_DELAY_MS}ms: ${message}`
@@ -8532,12 +8904,7 @@ export class TeamProvisioningService {
       }
 
       const combinedOutput = buildCombinedLogs(pingProbe.stdout, pingProbe.stderr);
-      const lowerOutput = combinedOutput.toLowerCase();
-      const isAuthFailure =
-        lowerOutput.includes('not logged in') ||
-        lowerOutput.includes('please run /login') ||
-        lowerOutput.includes('missing api key') ||
-        lowerOutput.includes('invalid api key');
+      const isAuthFailure = this.isAuthFailureWarning(combinedOutput, 'probe');
 
       if (isAuthFailure && attempt < PREFLIGHT_AUTH_MAX_RETRIES) {
         logger.warn(
@@ -8550,10 +8917,14 @@ export class TeamProvisioningService {
 
       if (isAuthFailure || pingProbe.exitCode !== 0) {
         const hint = isAuthFailure
-          ? 'Claude CLI `-p` mode is not authenticated. ' +
-            'Run `claude auth login` (or start `claude` and run `/login`) to authenticate. ' +
-            'For automation/headless use, set ANTHROPIC_API_KEY.' +
-            (attempt > 1 ? ` (failed after ${attempt} attempts)` : '')
+          ? resolvedProviderId === 'codex'
+            ? 'Codex provider is not authenticated for `-p` mode. ' +
+              'Run `claude-multimodel auth login --provider codex` and retry.' +
+              (attempt > 1 ? ` (failed after ${attempt} attempts)` : '')
+            : 'Claude CLI `-p` mode is not authenticated. ' +
+              'Run `claude auth login` (or start `claude` and run `/login`) to authenticate. ' +
+              'For automation/headless use, set ANTHROPIC_API_KEY.' +
+              (attempt > 1 ? ` (failed after ${attempt} attempts)` : '')
           : `Claude CLI preflight check failed (exit code ${pingProbe.exitCode ?? 'unknown'}).`;
         return { warning: hint };
       }
@@ -8591,7 +8962,7 @@ export class TeamProvisioningService {
       return this.helpOutputCache;
     }
     const targetCwd = cwd ?? process.cwd();
-    const probeResult = await this.getCachedOrProbeResult(targetCwd);
+    const probeResult = await this.getCachedOrProbeResult(targetCwd, 'anthropic');
     if (!probeResult?.claudePath) {
       throw new Error('Claude CLI not found');
     }

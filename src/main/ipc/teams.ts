@@ -101,6 +101,10 @@ import { TeamMembersMetaStore } from '../services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../services/team/TeamMetaStore';
 import { buildAddMemberSpawnMessage } from '../services/team/TeamProvisioningService';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
+import {
+  buildReplaceMembersDiff,
+  buildReplaceMembersSummaryMessage,
+} from '../services/team/memberUpdateNotifications';
 
 import {
   validateFromField,
@@ -534,25 +538,30 @@ async function handleGetData(
   const tn = validated.value!;
   const startedAt = Date.now();
   let data: TeamData;
+  setCurrentMainOp('team:getData');
   try {
-    data = await getTeamDataService().getTeamData(tn);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (
-      message === `Team not found: ${tn}` &&
-      getTeamProvisioningService().hasProvisioningRun(tn)
-    ) {
-      return { success: false, error: 'TEAM_PROVISIONING' };
-    }
-    // Draft team: team.meta.json exists but config.json doesn't (provisioning failed before TeamCreate)
-    if (message === `Team not found: ${tn}`) {
-      const meta = await teamMetaStore.getMeta(tn);
-      if (meta) {
-        return { success: false, error: 'TEAM_DRAFT' };
+    try {
+      data = await getTeamDataService().getTeamData(tn);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (
+        message === `Team not found: ${tn}` &&
+        getTeamProvisioningService().hasProvisioningRun(tn)
+      ) {
+        return { success: false, error: 'TEAM_PROVISIONING' };
       }
+      // Draft team: team.meta.json exists but config.json doesn't (provisioning failed before TeamCreate)
+      if (message === `Team not found: ${tn}`) {
+        const meta = await teamMetaStore.getMeta(tn);
+        if (meta) {
+          return { success: false, error: 'TEAM_DRAFT' };
+        }
+      }
+      logger.error(`[teams:getData] ${message}`);
+      return { success: false, error: message };
     }
-    logger.error(`[teams:getData] ${message}`);
-    return { success: false, error: message };
+  } finally {
+    setCurrentMainOp(null);
   }
   const getDataMs = Date.now() - startedAt;
   if (getDataMs >= 1500) {
@@ -833,6 +842,32 @@ function isValidEffort(value: unknown): value is EffortLevel {
   return typeof value === 'string' && VALID_EFFORT_LEVELS.includes(value);
 }
 
+function parseOptionalMemberProviderId(
+  value: unknown
+):
+  | { valid: true; value: 'anthropic' | 'codex' | 'gemini' | undefined }
+  | { valid: false; error: string } {
+  if (value === undefined || value === null || value === '') {
+    return { valid: true, value: undefined };
+  }
+  if (value === 'anthropic' || value === 'codex' || value === 'gemini') {
+    return { valid: true, value };
+  }
+  return { valid: false, error: 'member providerId must be anthropic, codex, or gemini' };
+}
+
+function parseOptionalMemberEffort(
+  value: unknown
+): { valid: true; value: EffortLevel | undefined } | { valid: false; error: string } {
+  if (value === undefined || value === null || value === '') {
+    return { valid: true, value: undefined };
+  }
+  if (isValidEffort(value)) {
+    return { valid: true, value };
+  }
+  return { valid: false, error: 'member effort must be low, medium, or high' };
+}
+
 async function validateProvisioningRequest(
   request: unknown
 ): Promise<{ valid: true; value: TeamCreateRequest } | { valid: false; error: string }> {
@@ -884,10 +919,22 @@ async function validateProvisioningRequest(
     if (workflow !== undefined && typeof workflow !== 'string') {
       return { valid: false, error: 'member workflow must be string' };
     }
+    const providerValidation = parseOptionalMemberProviderId(
+      (member as { providerId?: unknown }).providerId
+    );
+    if (!providerValidation.valid) {
+      return { valid: false, error: providerValidation.error };
+    }
+    const model = (member as { model?: unknown }).model;
+    if (model !== undefined && typeof model !== 'string') {
+      return { valid: false, error: 'member model must be string' };
+    }
     members.push({
       name: memberName,
       role: typeof role === 'string' ? role.trim() : undefined,
       workflow: typeof workflow === 'string' ? workflow.trim() : undefined,
+      providerId: providerValidation.value,
+      model: typeof model === 'string' ? model.trim() || undefined : undefined,
     });
   }
 
@@ -953,6 +1000,12 @@ async function validateProvisioningRequest(
       members,
       cwd,
       prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
+      providerId:
+        payload.providerId === 'codex'
+          ? 'codex'
+          : payload.providerId === 'gemini'
+            ? 'gemini'
+            : 'anthropic',
       model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
       effort: isValidEffort(payload.effort) ? payload.effort : undefined,
       skipPermissions:
@@ -1089,6 +1142,16 @@ async function handleLaunchTeam(
       color: meta?.color,
       cwd,
       prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
+      providerId:
+        payload.providerId === 'codex'
+          ? 'codex'
+          : payload.providerId === 'gemini'
+            ? 'gemini'
+            : meta?.providerId === 'codex'
+              ? 'codex'
+              : meta?.providerId === 'gemini'
+                ? 'gemini'
+                : 'anthropic',
       model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
       effort: isValidEffort(payload.effort) ? payload.effort : undefined,
       limitContext: typeof payload.limitContext === 'boolean' ? payload.limitContext : undefined,
@@ -1100,7 +1163,14 @@ async function handleLaunchTeam(
         typeof payload.extraCliArgs === 'string'
           ? payload.extraCliArgs.trim() || undefined
           : undefined,
-      members: members.map((m) => ({ name: m.name, role: m.role, workflow: m.workflow })),
+      members: members.map((m) => ({
+        name: m.name,
+        role: m.role,
+        workflow: m.workflow,
+        providerId: m.providerId,
+        model: m.model,
+        effort: m.effort,
+      })),
     };
 
     return wrapTeamHandler('create', () =>
@@ -1122,6 +1192,12 @@ async function handleLaunchTeam(
         teamName: validatedTeamName.value!,
         cwd,
         prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
+        providerId:
+          payload.providerId === 'codex'
+            ? 'codex'
+            : payload.providerId === 'gemini'
+              ? 'gemini'
+              : 'anthropic',
         model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
         effort: isValidEffort(payload.effort) ? payload.effort : undefined,
         clearContext: payload.clearContext === true ? true : undefined,
@@ -1174,9 +1250,13 @@ async function handleValidateCliArgs(
 
 async function handlePrepareProvisioning(
   _event: IpcMainInvokeEvent,
-  cwd: unknown
+  cwd: unknown,
+  providerId: unknown,
+  providerIds: unknown
 ): Promise<IpcResult<TeamProvisioningPrepareResult>> {
   let validatedCwd: string | undefined;
+  let validatedProviderId: TeamLaunchRequest['providerId'];
+  let validatedProviderIds: Array<'anthropic' | 'codex' | 'gemini'> | undefined;
   if (cwd !== undefined) {
     if (typeof cwd !== 'string' || cwd.trim().length === 0) {
       return { success: false, error: 'cwd must be a non-empty string' };
@@ -1186,8 +1266,32 @@ async function handlePrepareProvisioning(
       return { success: false, error: 'cwd must be an absolute path' };
     }
   }
+  if (providerId !== undefined) {
+    if (providerId !== 'anthropic' && providerId !== 'codex' && providerId !== 'gemini') {
+      return { success: false, error: 'providerId must be anthropic, codex, or gemini' };
+    }
+    validatedProviderId = providerId;
+  }
+  if (providerIds !== undefined) {
+    if (!Array.isArray(providerIds)) {
+      return { success: false, error: 'providerIds must be an array when provided' };
+    }
+    const normalized: Array<'anthropic' | 'codex' | 'gemini'> = [];
+    for (const entry of providerIds) {
+      if (entry !== 'anthropic' && entry !== 'codex' && entry !== 'gemini') {
+        return { success: false, error: 'providerIds entries must be anthropic, codex, or gemini' };
+      }
+      if (!normalized.includes(entry)) {
+        normalized.push(entry);
+      }
+    }
+    validatedProviderIds = normalized;
+  }
   return wrapTeamHandler('prepareProvisioning', () =>
-    getTeamProvisioningService().prepareForProvisioning(validatedCwd)
+    getTeamProvisioningService().prepareForProvisioning(validatedCwd, {
+      providerId: validatedProviderId,
+      providerIds: validatedProviderIds,
+    })
   );
 }
 
@@ -2057,10 +2161,27 @@ async function handleCreateConfig(
     if (workflow !== undefined && typeof workflow !== 'string') {
       return { success: false, error: 'member workflow must be string' };
     }
+    const providerValidation = parseOptionalMemberProviderId(
+      (member as { providerId?: unknown }).providerId
+    );
+    if (!providerValidation.valid) {
+      return { success: false, error: providerValidation.error };
+    }
+    const model = (member as { model?: unknown }).model;
+    if (model !== undefined && typeof model !== 'string') {
+      return { success: false, error: 'member model must be string' };
+    }
+    const effortValidation = parseOptionalMemberEffort((member as { effort?: unknown }).effort);
+    if (!effortValidation.valid) {
+      return { success: false, error: effortValidation.error };
+    }
     members.push({
       name: memberName,
       role: typeof role === 'string' ? role.trim() : undefined,
       workflow: typeof workflow === 'string' ? workflow.trim() : undefined,
+      providerId: providerValidation.value,
+      model: typeof model === 'string' ? model.trim() || undefined : undefined,
+      effort: effortValidation.value,
     });
   }
 
@@ -2286,10 +2407,13 @@ async function handleAddMember(
   if (!payload || typeof payload !== 'object') {
     return { success: false, error: 'Invalid payload' };
   }
-  const { name, role, workflow } = payload as {
+  const { name, role, workflow, providerId, model } = payload as {
     name?: unknown;
     role?: unknown;
     workflow?: unknown;
+    providerId?: unknown;
+    model?: unknown;
+    effort?: unknown;
   };
   const vName = validateTeammateName(name);
   if (!vName.valid) return { success: false, error: vName.error ?? 'Invalid member name' };
@@ -2299,6 +2423,17 @@ async function handleAddMember(
   if (workflow !== undefined && typeof workflow !== 'string') {
     return { success: false, error: 'workflow must be a string' };
   }
+  const providerValidation = parseOptionalMemberProviderId(providerId);
+  if (!providerValidation.valid) {
+    return { success: false, error: providerValidation.error };
+  }
+  if (model !== undefined && typeof model !== 'string') {
+    return { success: false, error: 'model must be a string' };
+  }
+  const effortValidation = parseOptionalMemberEffort((payload as { effort?: unknown }).effort);
+  if (!effortValidation.valid) {
+    return { success: false, error: effortValidation.error };
+  }
 
   return wrapTeamHandler('addMember', async () => {
     const tn = vTeam.value!;
@@ -2307,6 +2442,9 @@ async function handleAddMember(
       name: memberName,
       role: role,
       workflow: typeof workflow === 'string' ? workflow.trim() || undefined : undefined,
+      providerId: providerValidation.value,
+      model: typeof model === 'string' ? model.trim() || undefined : undefined,
+      effort: effortValidation.value,
     });
 
     // If team is alive, notify the lead to spawn the new teammate
@@ -2329,6 +2467,9 @@ async function handleAddMember(
         name: memberName,
         ...(typeof role === 'string' ? { role } : {}),
         ...(typeof workflow === 'string' ? { workflow } : {}),
+        ...(providerValidation.value ? { providerId: providerValidation.value } : {}),
+        ...(typeof model === 'string' && model.trim() ? { model: model.trim() } : {}),
+        ...(effortValidation.value ? { effort: effortValidation.value } : {}),
       });
       try {
         await provisioning.sendMessageToTeam(tn, spawnMessage);
@@ -2355,12 +2496,26 @@ async function handleReplaceMembers(
     return { success: false, error: 'members must be an array' };
   }
   const seenNames = new Set<string>();
-  const members: { name: string; role?: string; workflow?: string }[] = [];
+  const members: {
+    name: string;
+    role?: string;
+    workflow?: string;
+    providerId?: 'anthropic' | 'codex' | 'gemini';
+    model?: string;
+    effort?: 'low' | 'medium' | 'high';
+  }[] = [];
   for (const item of payload.members) {
     if (!item || typeof item !== 'object') {
       return { success: false, error: 'member must be object' };
     }
-    const m = item as { name?: unknown; role?: unknown; workflow?: unknown };
+    const m = item as {
+      name?: unknown;
+      role?: unknown;
+      workflow?: unknown;
+      providerId?: unknown;
+      model?: unknown;
+      effort?: unknown;
+    };
     const vName = validateTeammateName(m.name);
     if (!vName.valid) return { success: false, error: vName.error ?? 'Invalid member name' };
     const name = vName.value!;
@@ -2372,15 +2527,73 @@ async function handleReplaceMembers(
     if (m.workflow !== undefined && typeof m.workflow !== 'string') {
       return { success: false, error: 'member workflow must be string' };
     }
+    const providerValidation = parseOptionalMemberProviderId(
+      (m as { providerId?: unknown }).providerId
+    );
+    if (!providerValidation.valid) {
+      return { success: false, error: providerValidation.error };
+    }
+    if (m.model !== undefined && typeof m.model !== 'string') {
+      return { success: false, error: 'member model must be string' };
+    }
+    const effortValidation = parseOptionalMemberEffort((m as { effort?: unknown }).effort);
+    if (!effortValidation.valid) {
+      return { success: false, error: effortValidation.error };
+    }
     members.push({
       name,
       role: typeof m.role === 'string' ? m.role.trim() : undefined,
       workflow: typeof m.workflow === 'string' ? m.workflow.trim() : undefined,
+      providerId: providerValidation.value,
+      model: typeof m.model === 'string' ? m.model.trim() || undefined : undefined,
+      effort: effortValidation.value,
     });
   }
 
   return wrapTeamHandler('replaceMembers', async () => {
-    await getTeamDataService().replaceMembers(vTeam.value!, { members });
+    const tn = vTeam.value!;
+    const teamDataService = getTeamDataService();
+    const previousMembers = (await teamDataService.getTeamData(tn)).members;
+    const diff = buildReplaceMembersDiff(previousMembers, members);
+
+    await teamDataService.replaceMembers(tn, { members });
+
+    const provisioning = getTeamProvisioningService();
+    if (!provisioning.isTeamAlive(tn)) {
+      return;
+    }
+
+    let leadName = 'team-lead';
+    let displayName = tn;
+    try {
+      const [resolvedLeadName, resolvedDisplayName] = await Promise.all([
+        teamDataService.getLeadMemberName(tn),
+        teamDataService.getTeamDisplayName(tn),
+      ]);
+      leadName = resolvedLeadName || 'team-lead';
+      displayName = resolvedDisplayName || tn;
+    } catch {
+      // Best-effort: fall back to default lead and team names
+    }
+
+    for (const addedMember of diff.added) {
+      const spawnMessage = buildAddMemberSpawnMessage(tn, displayName, leadName, addedMember);
+      try {
+        await provisioning.sendMessageToTeam(tn, spawnMessage);
+      } catch {
+        logger.warn(`Failed to notify lead about new member "${addedMember.name}" in ${tn}`);
+      }
+    }
+
+    const summaryMessage = buildReplaceMembersSummaryMessage(diff);
+    if (!summaryMessage) {
+      return;
+    }
+    try {
+      await provisioning.sendMessageToTeam(tn, summaryMessage);
+    } catch {
+      logger.warn(`Failed to notify lead about member updates in ${tn}`);
+    }
   });
 }
 
@@ -3088,6 +3301,7 @@ async function handleGetSavedRequest(
       color: meta.color,
       cwd: meta.cwd,
       prompt: meta.prompt,
+      providerId: meta.providerId ?? 'anthropic',
       model: meta.model,
       effort: meta.effort as TeamCreateRequest['effort'],
       skipPermissions: meta.skipPermissions,
@@ -3098,6 +3312,9 @@ async function handleGetSavedRequest(
         name: m.name,
         role: m.role,
         workflow: m.workflow,
+        providerId: m.providerId,
+        model: m.model,
+        effort: m.effort,
       })),
     },
   };

@@ -5,6 +5,9 @@ export interface TeamMember {
   role?: string;
   /** Per-agent workflow/instructions injected into spawn prompt. */
   workflow?: string;
+  providerId?: TeamProviderId;
+  model?: string;
+  effort?: EffortLevel;
   color?: string;
   joinedAt?: number;
   cwd?: string;
@@ -471,6 +474,9 @@ export interface ResolvedTeamMember {
   agentType?: string;
   role?: string;
   workflow?: string;
+  providerId?: TeamProviderId;
+  model?: string;
+  effort?: EffortLevel;
   cwd?: string;
   /** Set only when member's git branch differs from the lead's branch. */
   gitBranch?: string;
@@ -503,11 +509,13 @@ export interface TeamData {
 }
 
 export type EffortLevel = 'low' | 'medium' | 'high';
+export type TeamProviderId = 'anthropic' | 'codex' | 'gemini';
 
 export interface TeamLaunchRequest {
   teamName: string;
   cwd: string;
   prompt?: string;
+  providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
   /** When true, context window is limited to 200K tokens instead of the default. */
@@ -633,6 +641,9 @@ export interface TeamProvisioningMemberInput {
   role?: string;
   /** Per-agent workflow/instructions injected into spawn prompt. */
   workflow?: string;
+  providerId?: TeamProviderId;
+  model?: string;
+  effort?: EffortLevel;
 }
 
 export interface TeamCreateRequest {
@@ -643,6 +654,7 @@ export interface TeamCreateRequest {
   members: TeamProvisioningMemberInput[];
   cwd: string;
   prompt?: string;
+  providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
   /** When true, context window is limited to 200K tokens instead of the default. */
@@ -780,6 +792,9 @@ export interface AddMemberRequest {
   name: string;
   role?: string;
   workflow?: string;
+  providerId?: TeamProviderId;
+  model?: string;
+  effort?: EffortLevel;
 }
 
 export interface RemoveMemberRequest {

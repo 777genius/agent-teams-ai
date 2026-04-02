@@ -702,7 +702,11 @@ export class HttpAPIClient implements ElectronAPI {
     deleteDraft: async (_teamName: string): Promise<void> => {
       throw new Error('Draft team deletion is not available in browser mode');
     },
-    prepareProvisioning: async (_cwd?: string): Promise<TeamProvisioningPrepareResult> => {
+    prepareProvisioning: async (
+      _cwd?: string,
+      _providerId?: TeamLaunchRequest['providerId'],
+      _providerIds?: TeamLaunchRequest['providerId'][]
+    ): Promise<TeamProvisioningPrepareResult> => {
       throw new Error('Team provisioning is not available in browser mode');
     },
     createTeam: async (_request: TeamCreateRequest): Promise<TeamCreateResponse> => {
@@ -1057,6 +1061,11 @@ export class HttpAPIClient implements ElectronAPI {
 
   cliInstaller: CliInstallerAPI = {
     getStatus: async () => ({
+      flavor: 'claude',
+      displayName: 'Claude CLI',
+      supportsSelfUpdate: true,
+      showVersionDetails: true,
+      showBinaryPath: true,
       installed: false,
       installedVersion: null,
       binaryPath: null,
@@ -1064,6 +1073,7 @@ export class HttpAPIClient implements ElectronAPI {
       updateAvailable: false,
       authLoggedIn: false,
       authMethod: null,
+      providers: [],
     }),
     install: async (): Promise<void> => {
       console.warn('[HttpAPIClient] CLI installer not available in browser mode');

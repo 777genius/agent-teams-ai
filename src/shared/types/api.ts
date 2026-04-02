@@ -427,7 +427,11 @@ export interface TeamsAPI {
   permanentlyDeleteTeam: (teamName: string) => Promise<void>;
   getSavedRequest: (teamName: string) => Promise<TeamCreateRequest | null>;
   deleteDraft: (teamName: string) => Promise<void>;
-  prepareProvisioning: (cwd?: string) => Promise<TeamProvisioningPrepareResult>;
+  prepareProvisioning: (
+    cwd?: string,
+    providerId?: TeamLaunchRequest['providerId'],
+    providerIds?: TeamLaunchRequest['providerId'][]
+  ) => Promise<TeamProvisioningPrepareResult>;
   createTeam: (request: TeamCreateRequest) => Promise<TeamCreateResponse>;
   getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;
   cancelProvisioning: (runId: string) => Promise<void>;

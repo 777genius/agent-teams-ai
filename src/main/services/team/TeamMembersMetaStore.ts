@@ -24,6 +24,15 @@ function normalizeMember(member: TeamMember): TeamMember | null {
     name: trimmedName,
     role: typeof member.role === 'string' ? member.role.trim() || undefined : undefined,
     workflow: typeof member.workflow === 'string' ? member.workflow.trim() || undefined : undefined,
+    providerId:
+      member.providerId === 'codex' || member.providerId === 'gemini'
+        ? member.providerId
+        : undefined,
+    model: typeof member.model === 'string' ? member.model.trim() || undefined : undefined,
+    effort:
+      member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
+        ? member.effort
+        : undefined,
     agentType:
       typeof member.agentType === 'string' ? member.agentType.trim() || undefined : undefined,
     color: typeof member.color === 'string' ? member.color.trim() || undefined : undefined,

@@ -26,6 +26,7 @@ import type {
 interface MemberCardProps {
   member: ResolvedTeamMember;
   memberColor: string;
+  runtimeSummary?: string;
   taskCounts?: TaskStatusCounts | null;
   isTeamAlive?: boolean;
   isTeamProvisioning?: boolean;
@@ -46,6 +47,7 @@ interface MemberCardProps {
 export const MemberCard = ({
   member,
   memberColor,
+  runtimeSummary,
   taskCounts,
   isTeamAlive,
   isTeamProvisioning,
@@ -131,42 +133,49 @@ export const MemberCard = ({
               aria-label={presenceLabel}
             />
           </div>
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm">
-            <span className="shrink-0 font-medium text-[var(--color-text)]">
-              {displayMemberName(member.name)}
-            </span>
-            {member.gitBranch ? (
-              <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-[var(--color-text-muted)]">
-                <GitBranch size={10} />
-                {member.gitBranch}
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-1.5 truncate text-sm">
+              <span className="shrink-0 font-medium text-[var(--color-text)]">
+                {displayMemberName(member.name)}
               </span>
-            ) : null}
-            {currentTask ? (
-              <CurrentTaskIndicator
-                task={currentTask}
-                borderColor={colors.border}
-                activityLabel="working on"
-                onOpenTask={onOpenTask}
-              />
-            ) : null}
-            {reviewTask ? (
-              <CurrentTaskIndicator
-                task={reviewTask}
-                borderColor={colors.border}
-                activityLabel="reviewing"
-                onOpenTask={onOpenReviewTask}
-              />
-            ) : null}
-            {!activityTask && isAwaitingReply ? (
-              <>
-                <Loader2
-                  className="size-3 shrink-0 animate-spin"
-                  style={{ color: colors.border }}
-                />
-                <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                  awaiting reply
+              {member.gitBranch ? (
+                <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-[var(--color-text-muted)]">
+                  <GitBranch size={10} />
+                  {member.gitBranch}
                 </span>
-              </>
+              ) : null}
+              {currentTask ? (
+                <CurrentTaskIndicator
+                  task={currentTask}
+                  borderColor={colors.border}
+                  activityLabel="working on"
+                  onOpenTask={onOpenTask}
+                />
+              ) : null}
+              {reviewTask ? (
+                <CurrentTaskIndicator
+                  task={reviewTask}
+                  borderColor={colors.border}
+                  activityLabel="reviewing"
+                  onOpenTask={onOpenReviewTask}
+                />
+              ) : null}
+              {!activityTask && isAwaitingReply ? (
+                <>
+                  <Loader2
+                    className="size-3 shrink-0 animate-spin"
+                    style={{ color: colors.border }}
+                  />
+                  <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
+                    awaiting reply
+                  </span>
+                </>
+              ) : null}
+            </div>
+            {runtimeSummary ? (
+              <div className="mt-0.5 text-[10px] font-medium text-[var(--color-text-muted)]">
+                {runtimeSummary}
+              </div>
             ) : null}
           </div>
           {(() => {

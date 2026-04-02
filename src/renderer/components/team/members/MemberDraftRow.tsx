@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
+import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
+import {
+  getTeamModelLabel,
+  TeamModelSelector,
+} from '@renderer/components/team/dialogs/TeamModelSelector';
 import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
@@ -16,6 +20,7 @@ import { ChevronDown, ChevronRight, Info, Trash2 } from 'lucide-react';
 import type { MemberDraft } from './membersEditorTypes';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
+import type { EffortLevel, TeamProviderId } from '@shared/types';
 
 interface MemberDraftRowProps {
   member: MemberDraft;
@@ -29,11 +34,20 @@ interface MemberDraftRowProps {
   showWorkflow?: boolean;
   onWorkflowChange?: (id: string, workflow: string) => void;
   onWorkflowChipsChange?: (id: string, chips: InlineChip[]) => void;
+  onProviderChange: (id: string, providerId: TeamProviderId) => void;
+  onModelChange: (id: string, model: string) => void;
+  onEffortChange: (id: string, effort: string) => void;
+  inheritedProviderId?: TeamProviderId;
+  inheritedModel?: string;
+  inheritedEffort?: EffortLevel;
   draftKeyPrefix?: string;
   projectPath?: string | null;
   mentionSuggestions?: MentionSuggestion[];
   taskSuggestions?: MentionSuggestion[];
   teamSuggestions?: MentionSuggestion[];
+  lockProviderModel?: boolean;
+  forceInheritedModelSettings?: boolean;
+  modelLockReason?: string;
 }
 
 export const MemberDraftRow = ({
@@ -48,11 +62,20 @@ export const MemberDraftRow = ({
   showWorkflow = false,
   onWorkflowChange,
   onWorkflowChipsChange,
+  onProviderChange,
+  onModelChange,
+  onEffortChange,
+  inheritedProviderId = 'anthropic',
+  inheritedModel = '',
+  inheritedEffort,
   draftKeyPrefix,
   projectPath,
   mentionSuggestions = [],
   taskSuggestions,
   teamSuggestions,
+  lockProviderModel = false,
+  forceInheritedModelSettings = false,
+  modelLockReason,
 }: MemberDraftRowProps): React.JSX.Element => {
   const { isLight } = useTheme();
   const memberColorSet = getTeamColorSet(
@@ -122,10 +145,22 @@ export const MemberDraftRow = ({
   const suggestionsExcludingSelf = mentionSuggestions.filter(
     (s) => s.name.toLowerCase() !== member.name.trim().toLowerCase()
   );
+  const effectiveProviderId = forceInheritedModelSettings
+    ? inheritedProviderId
+    : (member.providerId ?? inheritedProviderId);
+  const effectiveModel = forceInheritedModelSettings
+    ? inheritedModel
+    : (member.model ?? inheritedModel);
+  const effectiveEffort = forceInheritedModelSettings
+    ? inheritedEffort
+    : (member.effort ?? inheritedEffort);
+  const modelButtonLabel = effectiveModel?.trim()
+    ? getTeamModelLabel(effectiveModel.trim())
+    : 'Default';
 
   return (
     <div
-      className="relative grid grid-cols-1 gap-2 rounded-md p-2 shadow-sm md:grid-cols-[1fr_220px_auto]"
+      className="relative grid grid-cols-1 gap-2 rounded-md p-2 shadow-sm md:grid-cols-[1fr_180px_auto]"
       style={{
         backgroundColor: isLight
           ? 'color-mix(in srgb, var(--color-surface-raised) 22%, white 78%)'
@@ -165,48 +200,54 @@ export const MemberDraftRow = ({
           inputClassName="h-8 text-xs"
         />
       </div>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        {showWorkflow && onWorkflowChange ? (
+      <div className="space-y-1">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+          {showWorkflow && onWorkflowChange ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="relative h-8 shrink-0 gap-1"
+              onClick={() => setWorkflowExpanded((prev) => !prev)}
+            >
+              {workflowExpanded ? (
+                <ChevronDown className="size-3.5" />
+              ) : (
+                <ChevronRight className="size-3.5" />
+              )}
+              Workflow
+              {!workflowExpanded && workflowDraft.value.trim() ? (
+                <span className="absolute -right-1 -top-1 size-2 rounded-full bg-blue-500" />
+              ) : null}
+            </Button>
+          ) : null}
+          <div className="min-w-0 space-y-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 max-w-[190px] shrink-0 justify-start gap-1 overflow-hidden text-left"
+              disabled={lockProviderModel}
+              title={lockProviderModel ? modelLockReason : undefined}
+              onClick={() => setModelExpanded((prev) => !prev)}
+            >
+              {modelExpanded ? (
+                <ChevronDown className="size-3.5" />
+              ) : (
+                <ChevronRight className="size-3.5" />
+              )}
+              <span className="truncate">Model: {modelButtonLabel}</span>
+            </Button>
+          </div>
           <Button
             variant="outline"
             size="sm"
-            className="relative h-8 shrink-0 gap-1"
-            onClick={() => setWorkflowExpanded((prev) => !prev)}
+            className="size-8 shrink-0 border-red-500/40 px-0 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+            aria-label={`Remove ${member.name || `member ${index + 1}`}`}
+            title="Remove member"
+            onClick={() => onRemove(member.id)}
           >
-            {workflowExpanded ? (
-              <ChevronDown className="size-3.5" />
-            ) : (
-              <ChevronRight className="size-3.5" />
-            )}
-            Workflow
-            {!workflowExpanded && workflowDraft.value.trim() ? (
-              <span className="absolute -right-1 -top-1 size-2 rounded-full bg-blue-500" />
-            ) : null}
+            <Trash2 className="size-3.5" />
           </Button>
-        ) : null}
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 shrink-0 gap-1"
-          onClick={() => setModelExpanded((prev) => !prev)}
-        >
-          {modelExpanded ? (
-            <ChevronDown className="size-3.5" />
-          ) : (
-            <ChevronRight className="size-3.5" />
-          )}
-          Model
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="size-8 shrink-0 border-red-500/40 px-0 text-red-300 hover:bg-red-500/10 hover:text-red-200"
-          aria-label={`Remove ${member.name || `member ${index + 1}`}`}
-          title="Remove member"
-          onClick={() => onRemove(member.id)}
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
+        </div>
       </div>
       {showWorkflow && onWorkflowChange && workflowExpanded ? (
         <div className="space-y-0.5 md:col-span-3">
@@ -241,14 +282,38 @@ export const MemberDraftRow = ({
       ) : null}
       {modelExpanded && (
         <div className="space-y-2 md:col-span-3">
-          <div className="pointer-events-none opacity-40">
-            <TeamModelSelector value="" onValueChange={() => {}} />
-          </div>
+          <TeamModelSelector
+            providerId={effectiveProviderId}
+            onProviderChange={(providerId) => {
+              if (lockProviderModel) return;
+              onProviderChange(member.id, providerId);
+            }}
+            value={effectiveModel ?? ''}
+            onValueChange={(value) => {
+              if (lockProviderModel) return;
+              onModelChange(member.id, value);
+            }}
+            id={`member-${member.id}-model`}
+          />
+          <EffortLevelSelector
+            value={effectiveEffort ?? ''}
+            onValueChange={(value) => {
+              if (lockProviderModel) return;
+              onEffortChange(member.id, value);
+            }}
+            id={`member-${member.id}-effort`}
+          />
+          {lockProviderModel && (
+            <p className="text-[11px] text-amber-300">
+              {modelLockReason ??
+                'Provider, model, and effort changes are disabled while the team is live. Reconnect the team to apply them safely.'}
+            </p>
+          )}
           <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
             <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
             <p className="text-[11px] leading-relaxed text-sky-300">
-              Claude Code doesn&apos;t support per-member model selection yet &mdash; all teammates
-              inherit the team launch model. We plan to solve this via a local proxy.
+              If this teammate uses a different provider than the lead, they will be started in a
+              separate process automatically.
             </p>
           </div>
         </div>

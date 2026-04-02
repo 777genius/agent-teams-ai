@@ -33,6 +33,8 @@ export interface UseCreateTeamDraftResult {
   setTeamName: (v: string) => void;
   members: MemberDraft[];
   setMembers: (v: MemberDraft[]) => void;
+  syncModelsWithLead: boolean;
+  setSyncModelsWithLead: (v: boolean) => void;
   cwdMode: 'project' | 'custom';
   setCwdMode: (v: 'project' | 'custom') => void;
   selectedProjectPath: string;
@@ -63,13 +65,18 @@ const DEBOUNCE_MS = 400;
 // ---------------------------------------------------------------------------
 
 function serializeMembers(members: MemberDraft[]): SerializedMemberDraft[] {
-  return members.map(({ id, name, roleSelection, customRole, workflow }) => ({
-    id,
-    name,
-    roleSelection,
-    customRole,
-    workflow,
-  }));
+  return members.map(
+    ({ id, name, roleSelection, customRole, workflow, providerId, model, effort }) => ({
+      id,
+      name,
+      roleSelection,
+      customRole,
+      workflow,
+      providerId,
+      model,
+      effort,
+    })
+  );
 }
 
 function deserializeMembers(serialized: SerializedMemberDraft[]): MemberDraft[] {
@@ -80,6 +87,9 @@ function deserializeMembers(serialized: SerializedMemberDraft[]): MemberDraft[] 
       roleSelection: m.roleSelection,
       customRole: m.customRole,
       workflow: m.workflow,
+      providerId: m.providerId,
+      model: m.model,
+      effort: m.effort,
     })
   );
 }
@@ -92,6 +102,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   // ── State ──────────────────────────────────────────────────────────────
   const [teamName, setTeamNameState] = useState('');
   const [members, setMembersState] = useState<MemberDraft[]>([]);
+  const [syncModelsWithLead, setSyncModelsWithLeadState] = useState(true);
   const [cwdMode, setCwdModeState] = useState<'project' | 'custom'>('project');
   const [selectedProjectPath, setSelectedProjectPathState] = useState('');
   const [customCwd, setCustomCwdState] = useState('');
@@ -103,6 +114,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   // ── Refs (latest values for debounced callbacks) ───────────────────────
   const teamNameRef = useRef('');
   const membersRef = useRef<MemberDraft[]>([]);
+  const syncModelsWithLeadRef = useRef(true);
   const cwdModeRef = useRef<'project' | 'custom'>('project');
   const selectedProjectPathRef = useRef('');
   const customCwdRef = useRef('');
@@ -128,6 +140,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
       version: 1,
       teamName: teamNameRef.current,
       members: serializeMembers(membersRef.current),
+      syncModelsWithLead: syncModelsWithLeadRef.current,
       cwdMode: cwdModeRef.current,
       selectedProjectPath: selectedProjectPathRef.current,
       customCwd: customCwdRef.current,
@@ -187,6 +200,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
 
     teamNameRef.current = snap.teamName;
     membersRef.current = deserialized;
+    syncModelsWithLeadRef.current = snap.syncModelsWithLead ?? true;
     cwdModeRef.current = snap.cwdMode;
     selectedProjectPathRef.current = snap.selectedProjectPath;
     customCwdRef.current = snap.customCwd;
@@ -196,6 +210,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
 
     setTeamNameState(snap.teamName);
     setMembersState(deserialized);
+    setSyncModelsWithLeadState(snap.syncModelsWithLead ?? true);
     setCwdModeState(snap.cwdMode);
     setSelectedProjectPathState(snap.selectedProjectPath);
     setCustomCwdState(snap.customCwd);
@@ -255,6 +270,16 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
       userTouchedRef.current = true;
       membersRef.current = v;
       setMembersState(v);
+      scheduleSave();
+    },
+    [scheduleSave]
+  );
+
+  const setSyncModelsWithLead = useCallback(
+    (v: boolean) => {
+      userTouchedRef.current = true;
+      syncModelsWithLeadRef.current = v;
+      setSyncModelsWithLeadState(v);
       scheduleSave();
     },
     [scheduleSave]
@@ -334,6 +359,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
 
     teamNameRef.current = '';
     membersRef.current = [];
+    syncModelsWithLeadRef.current = true;
     cwdModeRef.current = 'project';
     selectedProjectPathRef.current = '';
     customCwdRef.current = '';
@@ -343,6 +369,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
 
     setTeamNameState('');
     setMembersState([]);
+    setSyncModelsWithLeadState(true);
     setCwdModeState('project');
     setSelectedProjectPathState('');
     setCustomCwdState('');
@@ -358,6 +385,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     setTeamName,
     members,
     setMembers,
+    syncModelsWithLead,
+    setSyncModelsWithLead,
     cwdMode,
     setCwdMode,
     selectedProjectPath,

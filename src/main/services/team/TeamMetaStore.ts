@@ -18,6 +18,7 @@ export interface TeamMetaFile {
   color?: string;
   cwd: string;
   prompt?: string;
+  providerId?: 'anthropic' | 'codex' | 'gemini';
   model?: string;
   effort?: string;
   skipPermissions?: boolean;
@@ -82,6 +83,12 @@ export class TeamMetaStore {
       color: typeof file.color === 'string' ? file.color.trim() || undefined : undefined,
       cwd: file.cwd.trim(),
       prompt: typeof file.prompt === 'string' ? file.prompt.trim() || undefined : undefined,
+      providerId:
+        file.providerId === 'anthropic' ||
+        file.providerId === 'codex' ||
+        file.providerId === 'gemini'
+          ? file.providerId
+          : undefined,
       model: typeof file.model === 'string' ? file.model.trim() || undefined : undefined,
       effort: typeof file.effort === 'string' ? file.effort.trim() || undefined : undefined,
       skipPermissions: typeof file.skipPermissions === 'boolean' ? file.skipPermissions : undefined,
@@ -101,6 +108,7 @@ export class TeamMetaStore {
       color: data.color?.trim() || undefined,
       cwd: data.cwd.trim(),
       prompt: data.prompt?.trim() || undefined,
+      providerId: data.providerId,
       model: data.model?.trim() || undefined,
       effort: data.effort?.trim() || undefined,
       skipPermissions: data.skipPermissions,

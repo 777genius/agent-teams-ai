@@ -91,6 +91,28 @@ describe('TeamMemberResolver', () => {
     expect(names).not.toContain('dream-team.team-lead');
   });
 
+  it('ignores leaked generated agent ids from inbox file names', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [{ name: 'team-lead', agentType: 'team-lead', role: 'lead' }],
+    };
+    const metaMembers: TeamConfig['members'] = [
+      { name: 'alice', agentType: 'general-purpose' },
+      { name: 'bob', agentType: 'general-purpose' },
+    ];
+    const inboxNames = ['a3975f80d37fbcea1', 'alice', 'a68a8f6a643e59bfd'];
+
+    const members = resolver.resolveMembers(config, metaMembers, inboxNames, [], []);
+    const names = members.map((m) => m.name);
+
+    expect(names).toContain('alice');
+    expect(names).toContain('bob');
+    expect(names).toContain('team-lead');
+    expect(names).not.toContain('a3975f80d37fbcea1');
+    expect(names).not.toContain('a68a8f6a643e59bfd');
+  });
+
   it('keeps dotted names when they are explicitly configured members', () => {
     const resolver = new TeamMemberResolver();
     const config: TeamConfig = {

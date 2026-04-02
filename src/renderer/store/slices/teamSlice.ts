@@ -559,6 +559,7 @@ export interface GlobalTaskDetailState {
 
 /** Per-team launch parameters shown in the header badge. */
 export interface TeamLaunchParams {
+  providerId?: 'anthropic' | 'codex' | 'gemini';
   model?: string; // 'opus' | 'sonnet' | 'haiku'
   effort?: EffortLevel;
   limitContext?: boolean;
@@ -1949,6 +1950,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       // Persist per-team launch params (model, effort, limit context)
       const baseModel = extractBaseModel(request.model);
       const params: TeamLaunchParams = {
+        providerId: request.providerId ?? 'anthropic',
         model: baseModel || 'default',
         effort: request.effort,
         limitContext: request.limitContext ?? false,
@@ -2125,6 +2127,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       // Persist per-team launch params (model, effort, limit context)
       const baseModel = extractBaseModel(request.model);
       const params: TeamLaunchParams = {
+        providerId: request.providerId ?? 'anthropic',
         model: baseModel || 'default',
         effort: request.effort,
         limitContext: request.limitContext ?? false,
