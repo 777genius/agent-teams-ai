@@ -150,6 +150,7 @@ import {
   TEAM_RESTORE_TASK,
   TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SEND_MESSAGE,
+  TEAM_GET_MESSAGES_PAGE,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
   TEAM_SET_PROJECT_BRANCH_TRACKING,
   TEAM_SET_TASK_CLARIFICATION,
@@ -258,6 +259,7 @@ import type {
   ScheduleRun,
   SendMessageRequest,
   SendMessageResult,
+  MessagesPage,
   SessionsByIdsOptions,
   SessionsPaginationOptions,
   SnippetDiff,
@@ -854,6 +856,12 @@ const electronAPI: ElectronAPI = {
     },
     sendMessage: async (teamName: string, request: SendMessageRequest) => {
       return invokeIpcWithResult<SendMessageResult>(TEAM_SEND_MESSAGE, teamName, request);
+    },
+    getMessagesPage: async (
+      teamName: string,
+      options?: { beforeTimestamp?: string; limit?: number }
+    ) => {
+      return invokeIpcWithResult<MessagesPage>(TEAM_GET_MESSAGES_PAGE, teamName, options);
     },
     createTask: async (teamName: string, request: CreateTaskRequest) => {
       return invokeIpcWithResult<TeamTask>(TEAM_CREATE_TASK, teamName, request);

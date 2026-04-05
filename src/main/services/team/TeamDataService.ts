@@ -51,6 +51,7 @@ import type {
   CreateTaskRequest,
   GlobalTask,
   InboxMessage,
+  MessagesPage,
   KanbanColumnId,
   KanbanState,
   ResolvedTeamMember,
@@ -722,23 +723,76 @@ export class TeamDataService {
       this.processHealthTeams.delete(teamName);
     }
 
-    // Cap messages to keep IPC/postMessage payloads under ~300KB.
-    // Without this, teams with 2000+ messages produce 3MB+ payloads that
-    // stall Chromium's IPC serialization for ~1 second per transfer.
-    const MAX_RETURN_MESSAGES = 200;
-    const cappedMessages =
-      messages.length > MAX_RETURN_MESSAGES ? messages.slice(0, MAX_RETURN_MESSAGES) : messages;
-
+    // Messages are now served separately via getMessagesPage() for pagination.
+    // Sending an empty array here keeps the TeamData shape unchanged while
+    // eliminating the ~1MB messages payload from every getTeamData refresh.
     return {
       teamName,
       config,
       tasks: tasksWithKanban,
       members,
-      messages: cappedMessages,
+      messages: [],
       kanbanState,
       processes,
       warnings: warnings.length > 0 ? warnings : undefined,
     };
+  }
+
+  /**
+   * Paginated message retrieval for the messages panel.
+   * Uses cursor-based pagination by timestamp to handle live message insertion.
+   */
+  async getMessagesPage(
+    teamName: string,
+    options: { beforeTimestamp?: string; limit: number }
+  ): Promise<MessagesPage> {
+    const config = await this.configReader.getConfig(teamName);
+    if (!config) {
+      return { messages: [], nextCursor: null, hasMore: false };
+    }
+
+    // Collect all messages from the same sources as getTeamData
+    let messages: InboxMessage[] = [];
+
+    const [inboxMessages, leadTexts, sentMessages] = await Promise.all([
+      this.inboxReader.getMessages(teamName).catch(() => [] as InboxMessage[]),
+      this.extractLeadSessionTexts(config).catch(() => [] as InboxMessage[]),
+      this.sentMessagesStore.readMessages(teamName).catch(() => [] as InboxMessage[]),
+    ]);
+
+    messages = [...inboxMessages, ...leadTexts, ...sentMessages];
+
+    // Dedup lead_session vs lead_process (same logic as getTeamData)
+    if (leadTexts.length > 0) {
+      const normalizeText = (text: string): string => text.trim().replace(/\r\n/g, '\n');
+      const getFingerprint = (msg: Pick<InboxMessage, 'from' | 'text' | 'leadSessionId'>) =>
+        `${msg.leadSessionId ?? ''}\0${msg.from}\0${normalizeText(msg.text ?? '')}`;
+      const leadSessionFingerprints = new Set<string>();
+      for (const msg of leadTexts) {
+        if (msg.source === 'lead_session') leadSessionFingerprints.add(getFingerprint(msg));
+      }
+      messages = messages.filter((m) => {
+        if (m.source !== 'lead_process') return true;
+        if (m.to) return true;
+        return !leadSessionFingerprints.has(getFingerprint(m));
+      });
+    }
+
+    // Sort newest-first
+    messages.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+
+    // Apply cursor filter
+    if (options.beforeTimestamp) {
+      const cursorMs = Date.parse(options.beforeTimestamp);
+      messages = messages.filter((m) => Date.parse(m.timestamp) < cursorMs);
+    }
+
+    // Paginate
+    const hasMore = messages.length > options.limit;
+    const page = messages.slice(0, options.limit);
+    const nextCursor = hasMore && page.length > 0 ? page[page.length - 1].timestamp : null;
+
+    return { messages: page, nextCursor, hasMore };
   }
 
   startProcessHealthPolling(): void {

@@ -386,6 +386,14 @@ export interface InboxMessage {
   commandOutput?: CommandOutputMeta;
 }
 
+/** Cursor-based paginated messages response. */
+export interface MessagesPage {
+  messages: InboxMessage[];
+  /** ISO timestamp cursor for fetching older messages. Null when no more pages. */
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
 export type AgentActionMode = 'do' | 'ask' | 'delegate';
 
 export interface SendMessageRequest {

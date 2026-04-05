@@ -55,6 +55,7 @@ import type {
   ReplaceMembersRequest,
   SendMessageRequest,
   SendMessageResult,
+  MessagesPage,
   TaskAttachmentMeta,
   TaskChangePresenceState,
   TaskComment,
@@ -432,6 +433,10 @@ export interface TeamsAPI {
   getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;
   cancelProvisioning: (runId: string) => Promise<void>;
   sendMessage: (teamName: string, request: SendMessageRequest) => Promise<SendMessageResult>;
+  getMessagesPage: (
+    teamName: string,
+    options?: { beforeTimestamp?: string; limit?: number }
+  ) => Promise<MessagesPage>;
   createTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
   updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;

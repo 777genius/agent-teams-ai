@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import { api } from '@renderer/api';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -126,6 +127,84 @@ export const MessagesPanel = memo(function MessagesPanel({
     }))
   );
 
+  // ── Paginated message fetching ──
+  // Messages are now fetched via getMessagesPage API instead of coming
+  // from getTeamData. The `messages` prop is used as initial seed if non-empty.
+  const PAGE_SIZE = 50;
+  const [fetchedMessages, setFetchedMessages] = useState<InboxMessage[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const fetchIdRef = useRef(0);
+
+  // Initial fetch on mount or team change
+  useEffect(() => {
+    const id = ++fetchIdRef.current;
+    setMessagesLoading(true);
+    void (async () => {
+      try {
+        const page = await api.teams.getMessagesPage(teamName, { limit: PAGE_SIZE });
+        if (fetchIdRef.current !== id) return;
+        setFetchedMessages(page.messages);
+        setNextCursor(page.nextCursor);
+        setHasMore(page.hasMore);
+      } catch {
+        // Fallback: use prop messages if API fails
+        if (fetchIdRef.current === id && messages.length > 0) {
+          setFetchedMessages(messages);
+        }
+      } finally {
+        if (fetchIdRef.current === id) setMessagesLoading(false);
+      }
+    })();
+  }, [teamName]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally only on teamName change
+
+  // Auto-refresh: poll for new messages (newest page only)
+  useEffect(() => {
+    if (!isTeamAlive && leadActivity !== 'active') return;
+    const interval = setInterval(async () => {
+      try {
+        const page = await api.teams.getMessagesPage(teamName, { limit: PAGE_SIZE });
+        setFetchedMessages((prev) => {
+          // Merge: keep older messages that aren't in the new page
+          const newIds = new Set(page.messages.map((m) => m.messageId ?? m.timestamp));
+          const older = prev.filter(
+            (m) =>
+              !newIds.has(m.messageId ?? m.timestamp) &&
+              !page.messages.some((n) => n.timestamp === m.timestamp && n.from === m.from)
+          );
+          return [...page.messages, ...older];
+        });
+        setNextCursor(page.nextCursor);
+        setHasMore(page.hasMore);
+      } catch {
+        // best-effort
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [teamName, isTeamAlive, leadActivity]);
+
+  const loadOlderMessages = useCallback(async () => {
+    if (!nextCursor || messagesLoading) return;
+    setMessagesLoading(true);
+    try {
+      const page = await api.teams.getMessagesPage(teamName, {
+        beforeTimestamp: nextCursor,
+        limit: PAGE_SIZE,
+      });
+      setFetchedMessages((prev) => [...prev, ...page.messages]);
+      setNextCursor(page.nextCursor);
+      setHasMore(page.hasMore);
+    } catch {
+      // best-effort
+    } finally {
+      setMessagesLoading(false);
+    }
+  }, [teamName, nextCursor, messagesLoading]);
+
+  // Use fetched messages, fall back to prop messages during initial load
+  const effectiveMessages = fetchedMessages.length > 0 ? fetchedMessages : messages;
+
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
   const handleExpandContent = useCallback(() => {
@@ -195,12 +274,12 @@ export const MessagesPanel = memo(function MessagesPanel({
   }, [position, sidebarScrollTop]);
 
   const filteredMessages = useMemo(() => {
-    return filterTeamMessages(messages, {
+    return filterTeamMessages(effectiveMessages, {
       timeWindow,
       filter: messagesFilter,
       searchQuery: messagesSearchQuery,
     });
-  }, [messages, timeWindow, messagesFilter, messagesSearchQuery]);
+  }, [effectiveMessages, timeWindow, messagesFilter, messagesSearchQuery]);
 
   // Resolve the expanded item from filtered messages
   const expandedItem = useMemo<TimelineItem | null>(() => {
@@ -263,7 +342,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     const next = { ...pendingRepliesByMember };
     let changed = false;
     for (const [memberName, sentAtMs] of Object.entries(pendingRepliesByMember)) {
-      const hasReply = messages.some((m) => {
+      const hasReply = effectiveMessages.some((m) => {
         if (m.from !== memberName) return false;
         const ts = Date.parse(m.timestamp);
         return Number.isFinite(ts) && ts > sentAtMs;
@@ -274,7 +353,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       }
     }
     if (changed) onPendingReplyChange(() => next);
-  }, [messages, pendingRepliesByMember, onPendingReplyChange]);
+  }, [effectiveMessages, pendingRepliesByMember, onPendingReplyChange]);
 
   const handleSend = useCallback(
     (
@@ -434,6 +513,19 @@ export const MessagesPanel = memo(function MessagesPanel({
         onExpandItem={handleExpandItem}
         onExpandContent={handleExpandContent}
       />
+      {hasMore && (
+        <div className="flex justify-center py-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-text-muted"
+            disabled={messagesLoading}
+            onClick={() => void loadOlderMessages()}
+          >
+            {messagesLoading ? 'Loading...' : 'Load older messages'}
+          </Button>
+        </div>
+      )}
       <MessageExpandDialog
         expandedItem={expandedItem}
         open={expandedItemKey !== null}
@@ -600,6 +692,19 @@ export const MessagesPanel = memo(function MessagesPanel({
             onExpandItem={handleExpandItem}
             onExpandContent={handleExpandContent}
           />
+          {hasMore && (
+            <div className="flex justify-center py-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-text-muted"
+                disabled={messagesLoading}
+                onClick={() => void loadOlderMessages()}
+              >
+                {messagesLoading ? 'Loading...' : 'Load older messages'}
+              </Button>
+            </div>
+          )}
           <MessageExpandDialog
             expandedItem={expandedItem}
             open={expandedItemKey !== null}

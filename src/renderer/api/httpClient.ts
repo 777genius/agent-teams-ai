@@ -723,6 +723,9 @@ export class HttpAPIClient implements ElectronAPI {
     ): Promise<SendMessageResult> => {
       throw new Error('Team messaging is not available in browser mode');
     },
+    getMessagesPage: async () => {
+      return { messages: [], nextCursor: null, hasMore: false };
+    },
     createTask: async (_teamName: string, _request: CreateTaskRequest): Promise<TeamTask> => {
       throw new Error('Team task creation is not available in browser mode');
     },

@@ -231,6 +231,9 @@ export const TEAM_UPDATE_KANBAN_COLUMN_ORDER = 'team:updateKanbanColumnOrder';
 /** Send inbox message to team member */
 export const TEAM_SEND_MESSAGE = 'team:sendMessage';
 
+/** Paginated messages for timeline/messages panel */
+export const TEAM_GET_MESSAGES_PAGE = 'team:getMessagesPage';
+
 /** Request review for task */
 export const TEAM_REQUEST_REVIEW = 'team:requestReview';
 
