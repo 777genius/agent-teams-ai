@@ -5,6 +5,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { AlertTriangle, BookOpen, Info, Key, Plus, Puzzle, RefreshCw, Server } from 'lucide-react';
 
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
@@ -18,8 +20,6 @@ import {
 import { useTabIdOptional } from '@renderer/contexts/useTabUIContext';
 import { useExtensionsTabState } from '@renderer/hooks/useExtensionsTabState';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
-import { AlertTriangle, BookOpen, Info, Key, Plus, Puzzle, RefreshCw, Server } from 'lucide-react';
 
 import { ApiKeysPanel } from './apikeys/ApiKeysPanel';
 import { CustomMcpServerDialog } from './mcp/CustomMcpServerDialog';
