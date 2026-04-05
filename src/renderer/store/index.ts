@@ -175,19 +175,6 @@ export function initializeNotificationListeners(): () => void {
   const TEAM_PRESENCE_REFRESH_THROTTLE_MS = 400;
   const TEAM_LIST_REFRESH_THROTTLE_MS = 2000;
   const GLOBAL_TASKS_REFRESH_THROTTLE_MS = 500;
-  /** Cap a Map at maxSize by clearing oldest entries (FIFO via insertion order). */
-  const capTimerMap = (map: Map<string, ReturnType<typeof setTimeout>>, maxSize: number): void => {
-    if (map.size <= maxSize) return;
-    const excess = map.size - maxSize;
-    let cleared = 0;
-    for (const [key, value] of map) {
-      if (cleared >= excess) break;
-      clearTimeout(value);
-      map.delete(key);
-      cleared++;
-    }
-  };
-
   const buildToolActivityTimerKey = (
     teamName: string,
     memberName: string,
@@ -222,7 +209,6 @@ export function initializeNotificationListeners(): () => void {
       cb();
     }, delayMs);
     toolActivityTimers.set(key, timer);
-    capTimerMap(toolActivityTimers, 200);
   };
   const clearToolActivityTimersForTeam = (teamName: string): void => {
     for (const [key, timer] of toolActivityTimers.entries()) {
@@ -400,7 +386,6 @@ export function initializeNotificationListeners(): () => void {
       void state.refreshSessionInPlace(projectId, sessionId);
     }, SESSION_REFRESH_DEBOUNCE_MS);
     pendingSessionRefreshTimers.set(key, timer);
-    capTimerMap(pendingSessionRefreshTimers, 50);
   };
 
   const scheduleProjectRefresh = (projectId: string): void => {
@@ -414,7 +399,6 @@ export function initializeNotificationListeners(): () => void {
       void state.refreshSessionsInPlace(projectId);
     }, PROJECT_REFRESH_DEBOUNCE_MS);
     pendingProjectRefreshTimers.set(projectId, timer);
-    capTimerMap(pendingProjectRefreshTimers, 20);
   };
 
   // Listen for new notifications from main process
@@ -959,7 +943,6 @@ export function initializeNotificationListeners(): () => void {
           void current.refreshTeamData(event.teamName);
         }, TEAM_REFRESH_THROTTLE_MS);
         teamRefreshTimers.set(event.teamName, timer);
-        capTimerMap(teamRefreshTimers, 20);
         return;
       }
 
@@ -976,7 +959,6 @@ export function initializeNotificationListeners(): () => void {
           void current.refreshSelectedTeamChangePresence(event.teamName);
         }, TEAM_PRESENCE_REFRESH_THROTTLE_MS);
         teamPresenceRefreshTimers.set(event.teamName, timer);
-        capTimerMap(teamPresenceRefreshTimers, 20);
         return;
       }
 
@@ -1012,7 +994,6 @@ export function initializeNotificationListeners(): () => void {
         void current.refreshTeamData(event.teamName);
       }, TEAM_REFRESH_THROTTLE_MS);
       teamRefreshTimers.set(event.teamName, timer);
-      capTimerMap(teamRefreshTimers, 20);
     });
 
     if (typeof cleanup === 'function') {
