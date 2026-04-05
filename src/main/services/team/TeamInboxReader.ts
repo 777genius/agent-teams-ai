@@ -42,14 +42,10 @@ export class TeamInboxReader {
       throw error;
     }
 
-    // Exclude broadcast inbox (*.json) and user inbox (user.json) — these are
-    // system inboxes, not real team members. Without this filter, '*' appears
-    // as a phantom member in the UI that can't be removed.
-    const SYSTEM_INBOX_NAMES = new Set(['*', 'user']);
     return entries
       .filter((name) => name.endsWith('.json') && !name.startsWith('.'))
       .map((name) => name.replace(/\.json$/, ''))
-      .filter((name) => !SYSTEM_INBOX_NAMES.has(name));
+      .filter((name) => name !== '*');
   }
 
   async getMessagesFor(teamName: string, member: string): Promise<InboxMessage[]> {
