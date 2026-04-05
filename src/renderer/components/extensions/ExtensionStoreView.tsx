@@ -32,6 +32,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
   const tabId = useTabIdOptional();
   const {
     fetchPluginCatalog,
+    fetchCliStatus,
     fetchApiKeys,
     fetchSkillsCatalog,
     mcpBrowse,
@@ -40,11 +41,14 @@ export const ExtensionStoreView = (): React.JSX.Element => {
     mcpBrowseLoading,
     skillsLoading,
     cliStatus,
+    cliStatusLoading,
+    openDashboard,
     sessions,
     projects,
   } = useStore(
     useShallow((s) => ({
       fetchPluginCatalog: s.fetchPluginCatalog,
+      fetchCliStatus: s.fetchCliStatus,
       fetchApiKeys: s.fetchApiKeys,
       fetchSkillsCatalog: s.fetchSkillsCatalog,
       mcpBrowse: s.mcpBrowse,
@@ -53,6 +57,8 @@ export const ExtensionStoreView = (): React.JSX.Element => {
       mcpBrowseLoading: s.mcpBrowseLoading,
       skillsLoading: s.skillsLoading,
       cliStatus: s.cliStatus,
+      cliStatusLoading: s.cliStatusLoading,
+      openDashboard: s.openDashboard,
       sessions: s.sessions,
       projects: s.projects,
     }))
@@ -115,6 +121,10 @@ export const ExtensionStoreView = (): React.JSX.Element => {
     void fetchPluginCatalog(projectPath ?? undefined);
   }, [fetchPluginCatalog, projectPath]);
 
+  useEffect(() => {
+    void fetchCliStatus();
+  }, [fetchCliStatus]);
+
   // Fetch MCP installed state on mount
   useEffect(() => {
     void mcpFetchInstalled(projectPath ?? undefined);
@@ -139,6 +149,71 @@ export const ExtensionStoreView = (): React.JSX.Element => {
   }, [fetchPluginCatalog, fetchSkillsCatalog, mcpBrowse, mcpFetchInstalled, projectPath]);
 
   const isRefreshing = pluginCatalogLoading || mcpBrowseLoading || skillsLoading;
+  const cliStatusBanner = useMemo(() => {
+    if (cliStatusLoading || cliStatus === null) {
+      return (
+        <div className="bg-surface/70 mx-4 mt-3 flex items-start gap-3 rounded-md border border-border px-4 py-3">
+          <Info className="mt-0.5 size-4 shrink-0 text-text-secondary" />
+          <div>
+            <p className="text-sm font-medium text-text">Checking Claude CLI availability</p>
+            <p className="mt-0.5 text-xs text-text-muted">
+              Extensions need Claude CLI to install plugins, run MCP servers, and validate auth.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (!cliStatus.installed) {
+      return (
+        <div className="mx-4 mt-3 flex items-start gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-amber-300">Claude CLI is not available</p>
+            <p className="mt-0.5 text-xs text-text-muted">
+              Plugin installs are disabled until Claude CLI is installed. Open the Dashboard to
+              install it and retry.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={openDashboard}>
+            Open Dashboard
+          </Button>
+        </div>
+      );
+    }
+
+    if (!cliStatus.authLoggedIn) {
+      return (
+        <div className="mx-4 mt-3 flex items-start gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-amber-300">Claude CLI needs sign-in</p>
+            <p className="mt-0.5 text-xs text-text-muted">
+              Claude CLI was found
+              {cliStatus.installedVersion ? ` (${cliStatus.installedVersion})` : ''}, but plugin
+              installs are disabled until you sign in from the Dashboard.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={openDashboard}>
+            Open Dashboard
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mx-4 mt-3 flex items-start gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
+        <Info className="mt-0.5 size-4 shrink-0 text-emerald-300" />
+        <div>
+          <p className="text-sm font-medium text-emerald-300">Claude CLI is ready</p>
+          <p className="mt-0.5 text-xs text-text-muted">
+            Plugins can be installed from this page
+            {cliStatus.installedVersion ? ` using Claude CLI ${cliStatus.installedVersion}` : ''}.
+          </p>
+        </div>
+      </div>
+    );
+  }, [cliStatus, cliStatusLoading, openDashboard]);
 
   // Browser mode guard
   if (!api.plugins && !api.mcpRegistry && !api.skills) {
@@ -156,6 +231,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
   return (
     <TooltipProvider>
       <div className="flex flex-1 flex-col overflow-hidden">
+        {cliStatusBanner}
         <div className="flex-1 overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4">

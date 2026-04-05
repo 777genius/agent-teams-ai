@@ -262,6 +262,17 @@ describe('extensionsSlice', () => {
 
   describe('installPlugin', () => {
     it('sets progress to pending then success', async () => {
+      store.setState({
+        cliStatus: {
+          installed: true,
+          installedVersion: '1.0.0',
+          binaryPath: '/usr/local/bin/claude',
+          latestVersion: '1.0.0',
+          updateAvailable: false,
+          authLoggedIn: true,
+          authMethod: 'oauth_token',
+        },
+      });
       const plugins = [makePlugin({ pluginId: 'a@m' })];
       (api.plugins!.getAll as ReturnType<typeof vi.fn>).mockResolvedValue(plugins);
       (api.plugins!.install as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'success' });
@@ -276,6 +287,17 @@ describe('extensionsSlice', () => {
     });
 
     it('sets progress to error on failure', async () => {
+      store.setState({
+        cliStatus: {
+          installed: true,
+          installedVersion: '1.0.0',
+          binaryPath: '/usr/local/bin/claude',
+          latestVersion: '1.0.0',
+          updateAvailable: false,
+          authLoggedIn: true,
+          authMethod: 'oauth_token',
+        },
+      });
       (api.plugins!.install as ReturnType<typeof vi.fn>).mockResolvedValue({
         state: 'error',
         error: 'Not found',

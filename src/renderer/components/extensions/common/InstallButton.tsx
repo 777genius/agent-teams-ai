@@ -37,9 +37,25 @@ export const InstallButton = ({
   size = 'sm',
   errorMessage,
 }: InstallButtonProps) => {
-  const cliStatus = useStore(useShallow((s) => s.cliStatus));
-  const cliMissing = cliStatus !== null && !cliStatus.installed;
-  const isDisabled = disabled || cliMissing;
+  const { cliStatus, cliStatusLoading } = useStore(
+    useShallow((s) => ({
+      cliStatus: s.cliStatus,
+      cliStatusLoading: s.cliStatusLoading,
+    }))
+  );
+  const cliUnknown = cliStatus === null;
+  const cliMissing = cliStatus?.installed === false;
+  const authMissing = cliStatus?.installed === true && !cliStatus.authLoggedIn;
+  const disableReason = cliStatusLoading
+    ? 'Checking Claude CLI status...'
+    : cliUnknown
+      ? 'Checking Claude CLI availability...'
+      : cliMissing
+        ? 'Claude CLI required. Install it from the Dashboard.'
+        : authMissing
+          ? 'Claude CLI is installed but not signed in. Open the Dashboard to sign in.'
+          : null;
+  const isDisabled = disabled || Boolean(disableReason);
   const [lastAction, setLastAction] = useState<'install' | 'uninstall' | null>(null);
 
   useEffect(() => {
@@ -92,23 +108,30 @@ export const InstallButton = ({
       </Button>
     );
 
-    if (errorMessage) {
+    const tooltipMessage = disableReason ?? errorMessage;
+
+    if (tooltipMessage) {
       return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0}>{retryButton}</span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-64 text-red-300">{errorMessage}</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <div className="flex max-w-64 flex-col items-end gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>{retryButton}</span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64 text-red-300">{tooltipMessage}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {errorMessage && !disableReason ? (
+            <p className="text-right text-[11px] leading-4 text-red-300">{errorMessage}</p>
+          ) : null}
+        </div>
       );
     }
 
     return retryButton;
   }
 
-  // idle — wrap in tooltip when CLI missing
+  // idle — wrap in tooltip when install is unavailable
   const button = isInstalled ? (
     <Button
       size={size}
@@ -139,14 +162,14 @@ export const InstallButton = ({
     </Button>
   );
 
-  if (cliMissing) {
+  if (disableReason) {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <span tabIndex={0}>{button}</span>
           </TooltipTrigger>
-          <TooltipContent>Claude CLI required</TooltipContent>
+          <TooltipContent className="max-w-64">{disableReason}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );

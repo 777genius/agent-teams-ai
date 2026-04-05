@@ -98,7 +98,7 @@ export const PluginCard = ({ plugin, index, onClick }: PluginCardProps): React.J
       </p>
 
       {/* Footer: author + version + install button */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-3 text-xs text-text-muted">
           <span className="truncate">{plugin.author?.name ?? 'Unknown author'}</span>
           {plugin.version && (

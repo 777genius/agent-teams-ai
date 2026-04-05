@@ -44,7 +44,8 @@ export class TeamInboxReader {
 
     return entries
       .filter((name) => name.endsWith('.json') && !name.startsWith('.'))
-      .map((name) => name.replace(/\.json$/, ''));
+      .map((name) => name.replace(/\.json$/, ''))
+      .filter((name) => name !== '*');
   }
 
   async getMessagesFor(teamName: string, member: string): Promise<InboxMessage[]> {

@@ -4,6 +4,7 @@
  */
 
 import { api } from '@renderer/api';
+import { CLI_NOT_FOUND_MESSAGE } from '@shared/constants/cli';
 
 import type { AppState } from '../types';
 import type {
@@ -143,6 +144,10 @@ function getSkillsCatalogKey(projectPath?: string): string {
 
 /** Duration to show "success" state before returning to idle */
 const SUCCESS_DISPLAY_MS = 2_000;
+const CLI_AUTH_REQUIRED_MESSAGE =
+  'Claude CLI is installed but not signed in. Go to the Dashboard and sign in to enable plugin installs.';
+const CLI_STATUS_UNKNOWN_MESSAGE =
+  'Unable to verify Claude CLI status. Open the Dashboard and check the CLI before retrying.';
 
 export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSlice> = (
   set,
@@ -552,8 +557,36 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   installPlugin: async (request: PluginInstallRequest) => {
     if (!api.plugins) return;
 
+    const preflightState = get();
+    if (preflightState.cliStatus === null || preflightState.cliStatusLoading) {
+      try {
+        await preflightState.fetchCliStatus();
+      } catch {
+        // fetchCliStatus stores the error in cliStatusError; map to a user-facing install error below.
+      }
+    }
+
+    const cliStatus = get().cliStatus;
+    const preflightError =
+      cliStatus === null
+        ? CLI_STATUS_UNKNOWN_MESSAGE
+        : !cliStatus.installed
+          ? CLI_NOT_FOUND_MESSAGE
+          : !cliStatus.authLoggedIn
+            ? CLI_AUTH_REQUIRED_MESSAGE
+            : null;
+
+    if (preflightError) {
+      set((prev) => ({
+        pluginInstallProgress: { ...prev.pluginInstallProgress, [request.pluginId]: 'error' },
+        installErrors: { ...prev.installErrors, [request.pluginId]: preflightError },
+      }));
+      return;
+    }
+
     set((prev) => ({
       pluginInstallProgress: { ...prev.pluginInstallProgress, [request.pluginId]: 'pending' },
+      installErrors: { ...prev.installErrors, [request.pluginId]: '' },
     }));
 
     try {
