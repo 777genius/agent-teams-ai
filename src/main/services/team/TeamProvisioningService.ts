@@ -1250,12 +1250,8 @@ type RuntimeBootstrapSpec = {
     cwd: string;
   };
   lead: {
-    providerId?: TeamProviderId;
-    model?: string;
-    effort?: EffortLevel;
     agentLanguage?: string;
-    worktree?: string | null;
-    extraCliArgs?: string[];
+    permissionSeedTools?: string[];
   };
   members: RuntimeBootstrapMemberSpec[];
   launch?: {
@@ -1288,9 +1284,6 @@ function buildDeterministicCreateBootstrapSpec(
       cwd: request.cwd,
     },
     lead: {
-      ...(request.providerId ? { providerId: request.providerId } : {}),
-      ...(request.model?.trim() ? { model: request.model.trim() } : {}),
-      ...(request.effort ? { effort: request.effort } : {}),
       agentLanguage: getConfiguredAgentLanguageName(),
       ...(request.skipPermissions === false
         ? {
@@ -1302,8 +1295,6 @@ function buildDeterministicCreateBootstrapSpec(
             ],
           }
         : {}),
-      ...(request.worktree ? { worktree: request.worktree } : {}),
-      ...(request.extraCliArgs ? { extraCliArgs: parseCliArgs(request.extraCliArgs) } : {}),
     },
     members: effectiveMembers.map((member) => ({
       name: member.name,
@@ -1342,9 +1333,6 @@ function buildDeterministicLaunchBootstrapSpec(
       cwd: request.cwd,
     },
     lead: {
-      ...(request.providerId ? { providerId: request.providerId } : {}),
-      ...(request.model?.trim() ? { model: request.model.trim() } : {}),
-      ...(request.effort ? { effort: request.effort } : {}),
       agentLanguage: getConfiguredAgentLanguageName(),
       ...(request.skipPermissions === false
         ? {
@@ -1356,8 +1344,6 @@ function buildDeterministicLaunchBootstrapSpec(
             ],
           }
         : {}),
-      ...(request.worktree ? { worktree: request.worktree } : {}),
-      ...(request.extraCliArgs ? { extraCliArgs: parseCliArgs(request.extraCliArgs) } : {}),
     },
     members: effectiveMembers.map((member) => ({
       name: member.name,
