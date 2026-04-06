@@ -193,6 +193,47 @@ const PREFLIGHT_EXPECTED = 'PONG';
 const PREFLIGHT_CODEX_MODEL = 'gpt-5.4-mini';
 const PREFLIGHT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
 
+function assertAppDeterministicBootstrapEnabled(): void {
+  if (process.env.CLAUDE_APP_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP === '1') {
+    throw new Error(
+      'Deterministic team bootstrap is disabled by the app rollout flag (CLAUDE_APP_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP=1).'
+    );
+  }
+  if (process.env.CLAUDE_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP === '1') {
+    throw new Error(
+      'Deterministic team bootstrap is disabled by the runtime kill switch (CLAUDE_DISABLE_DETERMINISTIC_TEAM_BOOTSTRAP=1).'
+    );
+  }
+}
+
+function classifyDeterministicBootstrapFailure(reason: string): {
+  title: string;
+  normalizedReason: string;
+} {
+  const normalizedReason = reason.trim();
+  const lower = normalizedReason.toLowerCase();
+  if (lower.includes('disabled by kill switch')) {
+    return {
+      title: 'Deterministic bootstrap disabled',
+      normalizedReason,
+    };
+  }
+  if (
+    lower.includes('requires claude_enable_deterministic_team_bootstrap=1') ||
+    lower.includes('unsupported schema version') ||
+    lower.includes('regular file and must not be a symlink')
+  ) {
+    return {
+      title: 'Deterministic bootstrap compatibility failure',
+      normalizedReason,
+    };
+  }
+  return {
+    title: 'Deterministic bootstrap failed',
+    normalizedReason,
+  };
+}
+
 function getPreflightPingModel(providerId: TeamProviderId | undefined): string {
   switch (resolveTeamProviderId(providerId)) {
     case 'codex':
@@ -1452,7 +1493,7 @@ function buildTeamCtlOpsInstructions(teamName: string, leadName: string): string
  * Builds the durable lead context — constraints, communication protocol, board MCP ops,
  * and agent block policy — that must survive context compaction.
  *
- * Used by: buildProvisioningPrompt, deterministic launch hydration, and post-compact reinjection.
+ * Used by: deterministic launch hydration and post-compact reinjection.
  */
 function buildPersistentLeadContext(opts: {
   teamName: string;
@@ -1625,178 +1666,6 @@ function buildTaskBoardSnapshot(tasks: TeamTask[]): string {
     return `  - ${formatTaskDisplayLabel(t)} (taskId: ${t.id}) [${t.status}]${owner} ${t.subject}${deps}${desc}`;
   });
   return `\nCurrent task board (in_progress/pending):\n${lines.join('\n')}\n`;
-}
-
-function buildProvisioningPrompt(
-  request: TeamCreateRequest,
-  effectiveMembers: TeamCreateRequest['members']
-): string {
-  if (shouldUseGeminiStagedLaunch(request.providerId)) {
-    return buildGeminiProvisioningPrompt(request, effectiveMembers);
-  }
-
-  const displayName = request.displayName?.trim() || request.teamName;
-  const userPromptBlock = request.prompt?.trim()
-    ? `\nAdditional instructions from the user:\n${request.prompt.trim()}\n`
-    : '';
-
-  const leadName =
-    effectiveMembers.find((m) => m.role?.toLowerCase().includes('lead'))?.name || 'team-lead';
-  const projectName = path.basename(request.cwd);
-
-  const isSolo = effectiveMembers.length === 0;
-
-  const step3Block = isSolo
-    ? `3) If user instructions describe work to be done — create tasks on the team board and assign each task to yourself (“${leadName}”) as owner.\n` +
-      `   - Prefer fewer, broader tasks over many micro-tasks.\n` +
-      `   - Every substantial item that may be worked later must exist on the board; do NOT keep implicit/off-board work.\n` +
-      `   - CRITICAL: Do NOT start working on the tasks now. Provisioning is ONLY for setting up the team structure.\n` +
-      `   - The tasks will be executed after the team is launched separately.`
-    : `3) If user instructions explicitly ask to create tasks OR describe substantial/assigned work that should be tracked — create tasks on the team board.
-   - PRIORITY (delegation-first): your default behavior is to translate user requests into a task plan, create the tasks, and delegate them to teammates.
-     - Do NOT start executing/implementing tasks yourself in this turn.
-     - Do NOT “block” on doing the work before creating/assigning tasks — keep this turn fast so the user can send more instructions.
-     - Exception: only if the team is truly SOLO (no teammates) may you execute tasks yourself. This is NOT the case here.
-   - Decompose the request into a small set of clear, outcome-based tasks (prefer fewer, broader tasks over many micro-tasks).
-   - Assign each created task to an appropriate teammate as owner (NOT to yourself), based on role/workflow and current load.
-    - If ownership or scope is unclear, do NOT block on researching the code yourself first.
-      Pick the best default owner, create an investigation/triage task for that teammate immediately, and note assumptions in the task description or a task comment.
-      That teammate should inspect the codebase, refine scope, and create follow-up tasks if needed.
-     - If that teammate already has another in_progress task, create/keep the new task in pending/TODO. Do NOT mark it in_progress for them yet.
-   - Avoid duplicate notifications for the same assignment (one message per member per topic is enough). When skipping a message, stay silent — never output meta-commentary about skipped or already-delivered messages.
-  - When tasks have natural ordering (e.g. setup -> implementation -> testing), use blockedBy relationships.
-  - If a task is blocked (uses blockedBy), it MUST be created as pending (for example with task_create + startImmediately: false). Do NOT mark blocked tasks in_progress.
-     - Review guidance:
-      - Prefer NOT creating a separate "review task". Our workflow reviews the work task itself: call review_start when beginning review, then review_approve/review_request_changes on the implementation task #X.
-      - CRITICAL: Text comments ("approved", "LGTM") do NOT move the task on the kanban board. You MUST call the MCP tool review_approve to move from REVIEW to APPROVED. Without the tool call, the task stays stuck in REVIEW.
-      - Call review_approve EXACTLY ONCE per review. Include your review feedback in the "note" field of that single call. Do NOT call it a second time to add a note — one call does everything (moves kanban + creates comment from note).
-       - If you MUST create a separate review reminder/assignment task, create it as pending and link it to the work task:
-        - Use related to connect it to #X (non-blocking link).
-        - If the review truly cannot start until #X is done, ALSO add blockedBy #X.
-      - There is no automatic status transition when dependencies resolve — the owner must explicitly start it (task_start / task_set_status in_progress) when ready.
-  - Use related to connect tasks working on the same feature without blocking.`;
-
-  const step2Block = isSolo
-    ? '2) Skip — this is a solo team with no teammates to spawn.'
-    : `2) Spawn each member as a live teammate using the **Agent** tool:
-   CRITICAL: Every Agent call MUST include team_name=”${request.teamName}”. Without team_name the agent becomes an ephemeral subagent that exits immediately instead of a persistent teammate.
-   - team_name: “${request.teamName}”  ← MANDATORY, never omit
-   - name: the member's name (see per-member list below)
-   - subagent_type: “general-purpose”
-   - IMPORTANT: Use the exact prompt shown for each member.
-     With member_briefing bootstrap enabled, the teammate will fetch durable rules after spawn.
-
-   Per-member spawn instructions:
-${effectiveMembers
-  .map((m) => {
-    const providerLine =
-      m.providerId && m.providerId !== 'anthropic' ? `   - provider: “${m.providerId}”\n` : '';
-    const modelLine = m.model?.trim() ? `   - model: “${m.model.trim()}”\n` : '';
-    const effortLine = m.effort ? `   - effort: “${m.effort}”\n` : '';
-    return `   For “${m.name}”:
-   - name: “${m.name}”
-${providerLine}${modelLine}${effortLine}   - prompt:
-${buildMemberSpawnPrompt(m, displayName, request.teamName, leadName)
-  .split('\n')
-  .map((line) => `     ${line}`)
-  .join('\n')}`;
-  })
-  .join('\n\n')}`;
-
-  const persistentContext = buildPersistentLeadContext({
-    teamName: request.teamName,
-    leadName,
-    isSolo,
-    members: effectiveMembers,
-  });
-
-  return `agent_teams_ui [Agent Team: “${request.teamName}” | Project: “${projectName}” | Lead: “${leadName}”] — team does NOT exist yet. You must create it.
-
-You are running in a non-interactive CLI session. Do not ask questions. Do everything in a single turn.
-CRITICAL: Execute ALL steps directly yourself in sequence. Do NOT delegate any step to a sub-agent via the Agent tool. The ONLY valid use of the Agent tool is spawning individual teammates in step 2.
-CRITICAL: For step 1, use the BUILT-IN TeamCreate tool — NOT any mcp__agent-teams__* MCP tool. Do NOT call mcp__agent-teams__team_launch, mcp__agent-teams__team_stop, or any other mcp__agent-teams__ runtime tool during provisioning. MCP board tools (task_create, task_set_status, etc.) are allowed only in step 3.
-You are “${leadName}”, the team lead.
-
-Goal: Create and provision a NEW Claude Code agent team${request.members.length === 0 ? ' (solo — lead only)' : ' with live teammates'}.
-The team does NOT exist yet — no config, no state, nothing. Step 1 is MANDATORY.
-${userPromptBlock}
-${persistentContext}
-
-Steps (execute in this exact order — do NOT skip any step):
-
-1) MANDATORY FIRST STEP: Call the BUILT-IN TeamCreate tool (not any MCP tool) with team_name=”${request.teamName}”. This creates the team config and in-memory state. Without this step, teammate spawns will FAIL. Do NOT assume the team already exists.
-
-${step2Block}
-
-${step3Block}
-
-${isSolo ? '3' : '4'}) After all steps, output a short summary.
-CRITICAL: If any Agent teammate spawn returns an error, that teammate is NOT online. Do NOT claim they were spawned successfully. In your final summary, explicitly list which teammate names failed to start.
-CRITICAL: Do NOT call a teammate "online", "ready", "confirmed alive", or "without launch errors" solely because Agent returned "Spawned successfully". Use that wording only after the teammate has actually completed bootstrap or sent a real post-bootstrap confirmation message. If a teammate runtime is alive but bootstrap is still pending, say exactly that.
-CRITICAL: If a teammate reports that member_briefing is unavailable, do NOT tell them to skip bootstrap and do NOT improvise a workaround. Treat that as a real bootstrap error, ask them to send the exact error text, and keep that teammate in bootstrap-pending or failed state until the error is resolved.
-CRITICAL: In the user-facing final summary, do NOT mention internal tool names like "member_briefing" unless that tool actually failed. Describe pending bootstrap in plain language such as "runtime started, waiting for bootstrap confirmation" or "waiting for first heartbeat".
-CRITICAL: If no teammates failed to start, say that plainly. Do NOT write awkward forms like "failed: none", "Не удалось запустить: нет", or similar pseudo-error phrasing.
-CRITICAL: If zero teammates have confirmed bootstrap yet and there are no launch errors, keep the summary brief. Say that runtimes started and initialization is continuing. Do NOT add a second sentence just to restate that no bootstrap confirmations arrived yet.
-`;
-}
-
-function buildGeminiProvisioningPrompt(
-  request: TeamCreateRequest,
-  effectiveMembers: TeamCreateRequest['members']
-): string {
-  const displayName = request.displayName?.trim() || request.teamName;
-  const userPromptBlock = request.prompt?.trim()
-    ? `\nAdditional user instructions (apply AFTER launch is stable):\n${request.prompt.trim()}\n`
-    : '';
-  const leadName =
-    effectiveMembers.find((m) => m.role?.toLowerCase().includes('lead'))?.name || 'team-lead';
-  const projectName = path.basename(request.cwd);
-  const isSolo = effectiveMembers.length === 0;
-
-  const spawnBlock = isSolo
-    ? '2) Skip teammate spawning — this is a solo team.'
-    : `2) Spawn each teammate using the BUILT-IN Agent tool with team_name="${request.teamName}", subagent_type="general-purpose", and the exact prompt shown below.
-Do NOT use Agent for anything except spawning these persistent teammates in this turn.
-
-Per-member spawn instructions:
-${effectiveMembers
-  .map((m) => {
-    const providerLine =
-      m.providerId && m.providerId !== 'anthropic' ? `   - provider: "${m.providerId}"\n` : '';
-    const modelLine = m.model?.trim() ? `   - model: "${m.model.trim()}"\n` : '';
-    const effortLine = m.effort ? `   - effort: "${m.effort}"\n` : '';
-    return `   For "${m.name}":
-   - name: "${m.name}"
-${providerLine}${modelLine}${effortLine}   - prompt:
-${buildGeminiMemberSpawnPrompt(m, displayName, request.teamName, leadName)
-  .split('\n')
-  .map((line) => `     ${line}`)
-  .join('\n')}`;
-  })
-  .join('\n\n')}`;
-
-  return `agent_teams_ui [Gemini launch phase 1 | Team: "${request.teamName}" | Project: "${projectName}" | Lead: "${leadName}"]
-
-You are running headless in a non-interactive CLI session. Do not ask questions.
-This is PHASE 1 only: create the team and start teammate runtimes. A second follow-up message with the full operating rules will arrive automatically after this launch turn completes successfully.
-You are "${leadName}", the team lead.
-${getAgentLanguageInstruction()}${userPromptBlock}
-
-Execute exactly these steps:
-1) Call the BUILT-IN TeamCreate tool with team_name="${request.teamName}".
-
-${spawnBlock}
-
-${isSolo ? '3' : '3'}) Do NOT create tasks, do NOT review code, do NOT inspect files, and do NOT start implementation work in this turn. Focus only on launch.
-
-4) Output a short summary that distinguishes these states precisely:
-- "runtime started, bootstrap pending"
-- "bootstrap confirmed"
-- "failed to start"
-Do NOT call a teammate online/ready/confirmed alive unless the teammate has actually completed bootstrap or sent a real post-bootstrap confirmation message.
-In the user-facing summary, do NOT mention internal tool names like "member_briefing" unless that tool actually failed.
-If no teammates failed to start, say that plainly. Do NOT write awkward forms like "failed: none" or "Не удалось запустить: нет".
-If zero teammates have confirmed bootstrap yet and there are no launch errors, keep the summary brief. Say that runtimes started and initialization is continuing. Do NOT add a second sentence just to restate that no bootstrap confirmations arrived yet.`;
 }
 
 function buildDeterministicLaunchHydrationPrompt(
@@ -4433,6 +4302,7 @@ export class TeamProvisioningService {
     if (existingProvisioningRunId) {
       return { runId: existingProvisioningRunId };
     }
+    assertAppDeterministicBootstrapEnabled();
 
     // Set immediately to prevent TOCTOU (defense in depth alongside withTeamLock)
     const pendingKey = `pending-${randomUUID()}`;
@@ -4789,6 +4659,7 @@ export class TeamProvisioningService {
     if (existingProvisioningRunId) {
       return { runId: existingProvisioningRunId };
     }
+    assertAppDeterministicBootstrapEnabled();
 
     // Set immediately to prevent TOCTOU (defense in depth alongside withTeamLock)
     const pendingKey = `pending-${randomUUID()}`;
@@ -7342,8 +7213,9 @@ export class TeamProvisioningService {
         typeof msg.reason === 'string' && msg.reason.trim().length > 0
           ? msg.reason.trim()
           : 'Deterministic bootstrap failed.';
-      const progress = updateProgress(run, 'failed', 'Deterministic bootstrap failed', {
-        error: reason,
+      const classification = classifyDeterministicBootstrapFailure(reason);
+      const progress = updateProgress(run, 'failed', classification.title, {
+        error: classification.normalizedReason,
         cliLogsTail: extractCliLogsFromRun(run),
       });
       run.onProgress(progress);
