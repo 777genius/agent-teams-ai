@@ -4391,9 +4391,6 @@ export class TeamProvisioningService {
         ...(request.model ? ['--model', request.model] : []),
         ...(request.effort ? ['--effort', request.effort] : []),
         ...(request.worktree ? ['--worktree', request.worktree] : []),
-        ...(teammateModeDecision.injectedTeammateMode
-          ? ['--teammate-mode', teammateModeDecision.injectedTeammateMode]
-          : []),
         ...parseCliArgs(request.extraCliArgs),
       ];
       const runtimeWarning = buildRuntimeLaunchWarning(request, shellEnv, {
@@ -4914,9 +4911,6 @@ export class TeamProvisioningService {
       }
       if (request.worktree) {
         launchArgs.push('--worktree', request.worktree);
-      }
-      if (teammateModeDecision.injectedTeammateMode) {
-        launchArgs.push('--teammate-mode', teammateModeDecision.injectedTeammateMode);
       }
       launchArgs.push(...parseCliArgs(request.extraCliArgs));
       const runtimeWarning = buildRuntimeLaunchWarning(request, shellEnv, {

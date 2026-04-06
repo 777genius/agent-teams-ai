@@ -76,13 +76,6 @@ async function isTmuxAvailable(): Promise<boolean> {
 export async function resolveDesktopTeammateModeDecision(
   rawExtraCliArgs: string | undefined
 ): Promise<DesktopTeammateModeDecision> {
-  if (process.platform === 'win32') {
-    return {
-      injectedTeammateMode: null,
-      forceProcessTeammates: false,
-    };
-  }
-
   const explicitMode = getExplicitTeammateMode(rawExtraCliArgs);
   if (explicitMode === 'tmux') {
     return {
@@ -92,6 +85,13 @@ export async function resolveDesktopTeammateModeDecision(
   }
 
   if (explicitMode === 'auto' || explicitMode === 'in-process') {
+    return {
+      injectedTeammateMode: null,
+      forceProcessTeammates: false,
+    };
+  }
+
+  if (process.platform === 'win32') {
     return {
       injectedTeammateMode: null,
       forceProcessTeammates: false,
