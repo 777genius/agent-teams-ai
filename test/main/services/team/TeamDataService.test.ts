@@ -1505,6 +1505,13 @@ describe('TeamDataService', () => {
                 createdAt: '2026-03-14T10:04:00.000Z',
                 type: 'review_approved',
               },
+              {
+                id: 'comment-ack',
+                author: 'alice',
+                text: 'Принято, остаюсь на связи.',
+                createdAt: '2026-03-14T10:05:00.000Z',
+                type: 'regular',
+              },
             ],
           },
         ],

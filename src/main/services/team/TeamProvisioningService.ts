@@ -1474,8 +1474,9 @@ function buildTeamCtlOpsInstructions(teamName: string, leadName: string): string
       `- Task assignment notifications are handled by the board runtime, so do NOT send a separate SendMessage for the same assignment unless you have extra context that is not already on the task.`,
       `- Review requests are also handled by the board runtime: review_request already notifies the reviewer, so do NOT send a second manual SendMessage for the same review request unless you are adding materially new context that is not already on the task.`,
       `- When beginning a review, always call review_start first to move the task into the REVIEW column on the kanban board.`,
-      `- If you receive a task-scoped system notification like "Comment on #...", treat it as requiring an on-task reply. Reply via task_add_comment on that task; do NOT continue the same discussion only in direct messages.`,
-      `- Teammate task comments are auto-forwarded to you. When that happens, you MUST reply on-task first. Direct messages are allowed only as an additional urgent wake-up ping or clearly non-task coordination, never as the only reply to the task comment.`,
+      `- If you receive a task-scoped system notification like "Comment on #...", reply on-task only when you have a substantive update: a decision, blocker, clarification answer, review result, or a concrete next-step change that belongs on the board.`,
+      `- Do NOT post acknowledgement-only task comments such as "Принято", "Ок", "На связи", "Жду", or similar low-signal echoes. If the notification is FYI and no durable update is needed, say nothing and write nothing.`,
+      `- Teammate task comments are auto-forwarded to you. When that happens, reply on-task first only if the task actually needs a durable board update. Direct messages are allowed only as an additional urgent wake-up ping or clearly non-task coordination, never as a substitute for a substantive task comment.`,
       `- When you skip sending a message because it would be a duplicate or was already delivered, produce NO text output about it. Do not write meta-commentary like "(Already relayed…)", "(No additional relay needed…)", or similar. Just silently move on.`,
       `- Ownership must reflect the person actually doing the implementation/fix work. If someone takes over execution, update the owner immediately before they start. Do NOT leave the lead/planner as owner when another member is doing the work.`,
       `- Set createdBy when creating tasks so workflow history shows who created the task.`,
@@ -2624,11 +2625,12 @@ export class TeamProvisioningService {
     }
 
     const runStartedAtMs = Date.parse(run.startedAt);
+    const expectedMembers = Array.isArray(run.expectedMembers) ? run.expectedMembers : [];
     const teammateMessages = leadInboxMessages
       .filter((message) => {
         const from = typeof message.from === 'string' ? message.from.trim() : '';
         if (!from || from === leadName || from === 'user' || from === 'system') return false;
-        if (!run.expectedMembers.includes(from)) return false;
+        if (!expectedMembers.includes(from)) return false;
         const messageTs = Date.parse(message.timestamp);
         if (
           Number.isFinite(messageTs) &&
@@ -5740,7 +5742,8 @@ export class TeamProvisioningService {
         AGENT_BLOCK_OPEN,
         `Internal note: for task assignments, prefer task_create and rely on the board/runtime notification path instead of sending a separate SendMessage for the same assignment.`,
         `When creating a task from a user message that has a MessageId field, prefer task_create_from_message with that exact messageId for reliable provenance. Only use task_create_from_message when you have an explicit MessageId — never guess or fabricate one.`,
-        `If a message below is marked Source: system_notification and its summary looks like "Comment on #...", treat it as a task-comment notification that REQUIRES an on-task reply via task_add_comment. Do NOT treat a direct message as a sufficient substitute.`,
+        `If a message below is marked Source: system_notification and its summary looks like "Comment on #...", reply via task_add_comment only when you have a substantive board update (decision, blocker, clarification answer, review result, or concrete next-step change).`,
+        `Do NOT post acknowledgement-only task comments such as "Принято", "Ок", "На связи", "Жду", or similar low-signal echoes. If the task comment notification is FYI and no durable update is needed, say nothing.`,
         `If a message below is marked Source: cross_team, CALL the MCP tool named cross_team_send. Do NOT use SendMessage or message_send for cross-team replies.`,
         `NEVER set recipient="cross_team_send" or to="cross_team_send". "cross_team_send" is a tool name, not a teammate.`,
         AGENT_BLOCK_CLOSE,

@@ -307,7 +307,7 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     }
   });
 
-  it('adds task-first reply guidance for task comment notifications in lead relay prompts', async () => {
+  it('adds substantive-only task comment guidance for lead relay prompts', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
     seedConfig(teamName);
@@ -331,7 +331,8 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     const payload = String(writeSpy.mock.calls[0]?.[0] ?? '');
     expect(payload).toContain('Source: system_notification');
     expect(payload).toContain('summary looks like \\"Comment on #...\\"');
-    expect(payload).toContain('REQUIRES an on-task reply via task_add_comment');
+    expect(payload).toContain('reply via task_add_comment only when you have a substantive board update');
+    expect(payload).toContain('Do NOT post acknowledgement-only task comments');
 
     (service as any).handleStreamJsonMessage(run, {
       type: 'assistant',
@@ -694,7 +695,7 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(writeSpy).toHaveBeenCalledTimes(1);
     const payload = String(writeSpy.mock.calls[0]?.[0] ?? '');
     expect(payload).toContain('"type":"user"');
-    expect(payload).toContain('recipient=\\"alice\\"');
+    expect(payload).toContain('to=\\"alice\\"');
     expect(payload).toContain('Source: system_notification');
     expect(payload).toContain('forward that notification exactly once without paraphrasing');
     expect(payload).toContain('Please retry with logging enabled.');
