@@ -789,7 +789,9 @@ export const TeamListView = (): React.JSX.Element => {
     }
 
     if (teamsWithProvisioning.length === 0) {
-      return <TeamEmptyState />;
+      return (
+        <TeamEmptyState canCreate={canCreate} onCreateTeam={() => setShowCreateDialog(true)} />
+      );
     }
 
     const hasActiveFilters = filter.selectedStatuses.size > 0 || filter.selectedProjects.size > 0;
