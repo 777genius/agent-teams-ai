@@ -1,6 +1,8 @@
 import {
   getSpawnAwareDotClass,
   getSpawnAwarePresenceLabel,
+  getMemberRuntimeAdvisoryLabel,
+  getMemberRuntimeAdvisoryTitle,
 } from '@renderer/utils/memberHelpers';
 
 import type { ResolvedTeamMember } from '@shared/types';
@@ -58,5 +60,30 @@ describe('memberHelpers spawn-aware presence', () => {
         undefined
       )
     ).toBe('starting');
+  });
+
+  it('renders unified retry advisory labels for provider retries', () => {
+    expect(
+      getMemberRuntimeAdvisoryLabel(
+        {
+          kind: 'sdk_retrying',
+          observedAt: '2026-04-07T09:00:00.000Z',
+          retryUntil: '2026-04-07T09:00:45.000Z',
+          retryDelayMs: 45_000,
+          message: 'Gemini cli backend error: capacity exceeded.',
+        },
+        Date.parse('2026-04-07T09:00:00.000Z')
+      )
+    ).toBe('retrying now · 45s');
+
+    expect(
+      getMemberRuntimeAdvisoryTitle({
+        kind: 'sdk_retrying',
+        observedAt: '2026-04-07T09:00:00.000Z',
+        retryUntil: '2026-04-07T09:00:45.000Z',
+        retryDelayMs: 45_000,
+        message: 'Gemini cli backend error: capacity exceeded.',
+      })
+    ).toContain('capacity exceeded');
   });
 });

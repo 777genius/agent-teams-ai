@@ -214,13 +214,13 @@ export function getMemberRuntimeAdvisoryLabel(
   }
   const retryUntilMs = Date.parse(advisory.retryUntil);
   if (!Number.isFinite(retryUntilMs)) {
-    return 'SDK retrying';
+    return 'retrying now';
   }
   const remainingMs = retryUntilMs - nowMs;
   if (remainingMs <= 0) {
-    return 'SDK retrying';
+    return 'retrying now';
   }
-  return `SDK retrying · ${formatRetryCountdown(remainingMs)}`;
+  return `retrying now · ${formatRetryCountdown(remainingMs)}`;
 }
 
 export function getMemberRuntimeAdvisoryTitle(
@@ -229,7 +229,10 @@ export function getMemberRuntimeAdvisoryTitle(
   if (!advisory || advisory.kind !== 'sdk_retrying') {
     return undefined;
   }
-  return advisory.message?.trim() || 'The SDK is retrying after a provider error.';
+  return (
+    advisory.message?.trim() ||
+    'The SDK is retrying this request after a provider or backend error.'
+  );
 }
 
 export const TASK_STATUS_STYLES: Record<TeamTaskStatus, { bg: string; text: string }> = {

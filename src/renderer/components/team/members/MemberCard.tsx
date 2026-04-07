@@ -179,11 +179,11 @@ export const MemberCard = ({
               {!activityTask && isAwaitingReply ? (
                 <>
                   <Loader2
-                    className="size-3 shrink-0 animate-spin"
-                    style={{ color: colors.border }}
+                    className={`size-3 shrink-0 animate-spin ${runtimeAdvisoryLabel ? 'text-amber-400' : ''}`}
+                    style={runtimeAdvisoryLabel ? undefined : { color: colors.border }}
                   />
                   <span
-                    className="shrink-0 text-[10px] text-[var(--color-text-muted)]"
+                    className={`shrink-0 text-[10px] ${runtimeAdvisoryLabel ? 'text-amber-300' : 'text-[var(--color-text-muted)]'}`}
                     title={runtimeAdvisoryTitle ?? 'Message sent, awaiting reply'}
                   >
                     {runtimeAdvisoryLabel ?? 'awaiting reply'}
