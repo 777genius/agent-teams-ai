@@ -178,6 +178,84 @@ const logger = createLogger('IPC:teams');
 const seenRateLimitKeys = new Set<string>();
 const SEEN_RATE_LIMIT_KEYS_MAX = 500;
 
+async function getDurableLeadTeammateRoster(
+  teamName: string,
+  leadName: string
+): Promise<Array<{ name: string; role?: string }>> {
+  const normalize = (name: string | undefined | null): string => name?.trim().toLowerCase() ?? '';
+  const leadLower = normalize(leadName);
+  const reserved = new Set(['team-lead', 'user', leadLower].filter((value) => value.length > 0));
+
+  try {
+    const members = await new TeamMembersMetaStore().getMembers(teamName);
+    const teammates = members
+      .filter((member) => !member.removedAt)
+      .filter((member) => {
+        const lower = normalize(member.name);
+        return lower.length > 0 && !reserved.has(lower);
+      })
+      .map((member) => ({
+        name: member.name.trim(),
+        role:
+          typeof member.role === 'string' && member.role.trim().length > 0
+            ? member.role.trim()
+            : undefined,
+      }));
+    if (teammates.length > 0) return teammates;
+  } catch (error) {
+    logger.debug(
+      `[teams:sendMessage] Failed to read members.meta roster for "${teamName}": ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
+
+  try {
+    const data = await getTeamDataService().getTeamData(teamName);
+    return data.members
+      .filter((member) => !member.removedAt)
+      .filter((member) => {
+        const lower = normalize(member.name);
+        return lower.length > 0 && !reserved.has(lower);
+      })
+      .map((member) => ({
+        name: member.name.trim(),
+        role:
+          typeof member.role === 'string' && member.role.trim().length > 0
+            ? member.role.trim()
+            : undefined,
+      }));
+  } catch (error) {
+    logger.debug(
+      `[teams:sendMessage] Failed to read fallback team roster for "${teamName}": ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    return [];
+  }
+}
+
+function buildLeadRosterContextBlock(
+  teamName: string,
+  leadName: string,
+  teammates: Array<{ name: string; role?: string }>
+): string | null {
+  if (teammates.length === 0) return null;
+
+  const summary = teammates
+    .map((member) => (member.role ? `${member.name} (${member.role})` : member.name))
+    .join(', ');
+
+  return [
+    `Current durable team context:`,
+    `- Team name: ${teamName}`,
+    `- You are the live team lead "${leadName}"`,
+    `- Persistent teammates currently configured: ${summary}`,
+    `- This team is NOT in solo mode`,
+    `- If the user asks who is on the team, answer from this durable roster unless newer durable state explicitly says otherwise.`,
+  ].join('\n');
+}
+
 /**
  * In-memory set of API error message keys already processed.
  * Independent of NotificationManager storage — survives notification deletion/pruning.
@@ -1596,6 +1674,8 @@ async function handleSendMessage(
     // Smart routing: lead + alive → stdin direct, else → inbox
     if (isLeadRecipient && isAlive) {
       const resolvedLeadName = leadName ?? memberName;
+      const teammateRoster = await getDurableLeadTeammateRoster(tn, resolvedLeadName);
+      const rosterContextBlock = buildLeadRosterContextBlock(tn, resolvedLeadName, teammateRoster);
       // Pre-generate stable messageId so both stdin and persistence use the same identity.
       // This allows the lead to call task_create_from_message with the exact messageId.
       const preGeneratedMessageId = crypto.randomUUID();
@@ -1613,6 +1693,7 @@ async function handleSendMessage(
         : [
             `You received a direct message from the user.`,
             `IMPORTANT: Your text response here is shown to the user in the Messages panel. Always include a brief human-readable reply. Do NOT respond with only an agent-only block.`,
+            ...(rosterContextBlock ? [rosterContextBlock] : []),
             AGENT_BLOCK_OPEN,
             `MessageId: ${preGeneratedMessageId}`,
             `When creating a task from this user message, prefer task_create_from_message with messageId="${preGeneratedMessageId}" for reliable provenance. Only use this exact messageId — never guess or fabricate one.`,

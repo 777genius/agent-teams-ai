@@ -18,12 +18,20 @@ vi.mock('@preload/constants/ipcChannels', async (importOriginal) => {
 const { mockAddTeamNotification } = vi.hoisted(() => ({
   mockAddTeamNotification: vi.fn().mockResolvedValue({ id: 'n1', isRead: false, createdAt: Date.now() }),
 }));
+const { mockGetMembersMeta } = vi.hoisted(() => ({
+  mockGetMembersMeta: vi.fn(),
+}));
 vi.mock('@main/services/infrastructure/NotificationManager', () => ({
   NotificationManager: {
     getInstance: vi.fn().mockReturnValue({
       addTeamNotification: mockAddTeamNotification,
     }),
   },
+}));
+vi.mock('@main/services/team/TeamMembersMetaStore', () => ({
+  TeamMembersMetaStore: vi.fn().mockImplementation(() => ({
+    getMembers: mockGetMembersMeta,
+  })),
 }));
 
 import {
@@ -172,6 +180,8 @@ describe('ipc teams handlers', () => {
   beforeEach(() => {
     handlers.clear();
     vi.clearAllMocks();
+    mockGetMembersMeta.mockReset();
+    mockGetMembersMeta.mockResolvedValue([]);
     initializeTeamHandlers(service as never, provisioningService as never);
     registerTeamHandlers(ipcMain as never);
   });
@@ -298,6 +308,64 @@ describe('ipc teams handlers', () => {
     );
   });
 
+  it('injects durable teammate roster context into the first live lead direct-message wrapper', async () => {
+    mockGetMembersMeta.mockResolvedValueOnce([
+      { name: 'team-lead', role: 'lead' },
+      { name: 'alice', role: 'reviewer' },
+      { name: 'jack', role: 'developer' },
+    ]);
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'team-lead',
+      text: 'Who is on the team right now?',
+    })) as { success: boolean };
+
+    expect(result.success).toBe(true);
+    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+      'my-team',
+      expect.stringContaining('Current durable team context:'),
+      undefined
+    );
+    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+      'my-team',
+      expect.stringContaining('Persistent teammates currently configured: alice (reviewer), jack (developer)'),
+      undefined
+    );
+    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+      'my-team',
+      expect.stringContaining('This team is NOT in solo mode'),
+      undefined
+    );
+  });
+
+  it('omits roster context when durable teammate roster is empty', async () => {
+    mockGetMembersMeta.mockResolvedValueOnce([]);
+    service.getTeamData.mockResolvedValueOnce({
+      teamName: 'my-team',
+      config: { name: 'My Team' },
+      tasks: [],
+      members: [],
+      messages: [] as InboxMessage[],
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
+    });
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'team-lead',
+      text: 'Who is on the team right now?',
+    })) as { success: boolean };
+
+    expect(result.success).toBe(true);
+    const stdinCall = vi.mocked(provisioningService.sendMessageToTeam).mock.calls[0] as
+      | unknown[]
+      | undefined;
+    expect(String(stdinCall?.[1] ?? '')).not.toContain('Current durable team context:');
+  });
+
   it('sends standalone slash commands to lead stdin without the UI routing wrapper', async () => {
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();
@@ -316,6 +384,7 @@ describe('ipc teams handlers', () => {
     const compactCall = vi.mocked(provisioningService.sendMessageToTeam).mock
       .calls as unknown[][];
     expect(String(compactCall[0]?.[1] ?? '')).not.toContain('You received a direct message from the user');
+    expect(String(compactCall[0]?.[1] ?? '')).not.toContain('Current durable team context:');
     expect(service.sendDirectToLead).toHaveBeenCalledWith(
       'my-team',
       'team-lead',
@@ -347,6 +416,7 @@ describe('ipc teams handlers', () => {
     expect(String(unknownSlashCall[0]?.[1] ?? '')).not.toContain(
       'You received a direct message from the user'
     );
+    expect(String(unknownSlashCall[0]?.[1] ?? '')).not.toContain('Current durable team context:');
     expect(service.sendDirectToLead).toHaveBeenCalledWith(
       'my-team',
       'team-lead',
