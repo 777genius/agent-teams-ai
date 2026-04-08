@@ -517,6 +517,62 @@ export class TeamDataService {
     mark('config');
 
     const warnings: string[] = [];
+    interface StepResult<T> {
+      value: T;
+      warning?: string;
+      completedAt: number;
+    }
+    const startReadStep = <T>(options: {
+      label: string;
+      createFallback: () => T;
+      warningText?: string;
+      load: () => Promise<T>;
+    }): Promise<StepResult<T>> => {
+      const { label, createFallback, warningText, load } = options;
+      void label;
+      return (async () => {
+        try {
+          const value = await load();
+          return {
+            value,
+            completedAt: Date.now(),
+          };
+        } catch {
+          return {
+            value: createFallback(),
+            warning: warningText,
+            completedAt: Date.now(),
+          };
+        }
+      })();
+    };
+    const runWithConcurrencyLimit = (() => {
+      const limit = 2;
+      let active = 0;
+      const queue: Array<() => void> = [];
+      const releaseNext = (): void => {
+        if (active >= limit) return;
+        const next = queue.shift();
+        if (next) next();
+      };
+      return <T>(start: () => Promise<T>): Promise<T> =>
+        new Promise<T>((resolve, reject) => {
+          const run = (): void => {
+            active += 1;
+            void start()
+              .then(resolve, reject)
+              .finally(() => {
+                active = Math.max(0, active - 1);
+                releaseNext();
+              });
+          };
+          if (active < limit) {
+            run();
+            return;
+          }
+          queue.push(run);
+        });
+    })();
     const changePresenceEnabled =
       this.taskChangePresenceRepository !== null && this.teamLogSourceTracker !== null;
     const logSourceSnapshot: TaskChangeLogSourceSnapshot | null =
@@ -536,51 +592,109 @@ export class TeamDataService {
         ? this.taskChangePresenceRepository!.load(teamName)
         : Promise.resolve(null);
 
-    let tasks: TeamTask[] = [];
-    try {
-      tasks = await this.taskReader.getTasks(teamName);
-    } catch {
-      warnings.push('Tasks failed to load');
-    }
-    mark('tasks');
+    const inboxNamesStep = startReadStep({
+      label: 'inboxNames',
+      createFallback: () => [],
+      warningText: 'Inboxes failed to load',
+      load: () => this.inboxReader.listInboxNames(teamName),
+    });
+    const sentMessagesStep = startReadStep({
+      label: 'sentMessages',
+      createFallback: () => [],
+      warningText: 'Sent messages failed to load',
+      load: () => this.sentMessagesStore.readMessages(teamName),
+    });
+    const metaMembersStep = startReadStep({
+      label: 'metaMembers',
+      createFallback: () => [],
+      warningText: 'Member metadata failed to load',
+      load: () => this.membersMetaStore.getMembers(teamName),
+    });
+    const kanbanStateStep = startReadStep({
+      label: 'kanbanState',
+      createFallback: (): KanbanState => ({
+        teamName,
+        reviewers: [],
+        tasks: {},
+      }),
+      warningText: 'Kanban state failed to load',
+      load: () => this.kanbanManager.getState(teamName),
+    });
+    const tasksStep = runWithConcurrencyLimit(() =>
+      startReadStep({
+        label: 'tasks',
+        createFallback: () => [],
+        warningText: 'Tasks failed to load',
+        load: () => this.taskReader.getTasks(teamName),
+      })
+    );
+    const messagesStep = runWithConcurrencyLimit(() =>
+      startReadStep({
+        label: 'messages',
+        createFallback: () => [],
+        warningText: 'Messages failed to load',
+        load: () => this.inboxReader.getMessages(teamName),
+      })
+    );
+    const leadTextsStep = runWithConcurrencyLimit(() =>
+      startReadStep({
+        label: 'leadTexts',
+        createFallback: () => [],
+        warningText: 'Lead session texts failed to load',
+        load: () => this.extractLeadSessionTexts(config),
+      })
+    );
 
-    let inboxNames: string[] = [];
-    try {
-      inboxNames = await this.inboxReader.listInboxNames(teamName);
-    } catch {
-      warnings.push('Inboxes failed to load');
-    }
-    mark('inboxNames');
+    const [
+      tasksStepResult,
+      inboxNamesStepResult,
+      messagesStepResult,
+      leadTextsStepResult,
+      sentMessagesStepResult,
+      metaMembersStepResult,
+      kanbanStateStepResult,
+    ] = await Promise.all([
+      tasksStep,
+      inboxNamesStep,
+      messagesStep,
+      leadTextsStep,
+      sentMessagesStep,
+      metaMembersStep,
+      kanbanStateStep,
+    ]);
 
-    let messages: InboxMessage[] = [];
-    try {
-      messages = await this.inboxReader.getMessages(teamName);
-    } catch {
-      warnings.push('Messages failed to load');
-    }
-    mark('messages');
+    // After parallelizing the top read phase, these marks no longer represent
+    // serial stage boundaries. They now capture the actual completion time for
+    // each async read relative to getTeamData() start, which keeps slow-log
+    // diagnostics useful without mutating marks from concurrent branches.
+    marks.tasks = tasksStepResult.completedAt;
+    marks.inboxNames = inboxNamesStepResult.completedAt;
+    marks.messages = messagesStepResult.completedAt;
+    marks.leadTexts = leadTextsStepResult.completedAt;
+    marks.sentMessages = sentMessagesStepResult.completedAt;
+    marks.metaMembers = metaMembersStepResult.completedAt;
+    marks.kanbanState = kanbanStateStepResult.completedAt;
 
-    let leadTexts: InboxMessage[] = [];
-    try {
-      leadTexts = await this.extractLeadSessionTexts(config);
-      if (leadTexts.length > 0) {
-        messages = [...messages, ...leadTexts];
-      }
-    } catch {
-      warnings.push('Lead session texts failed to load');
-    }
-    mark('leadTexts');
+    if (tasksStepResult.warning) warnings.push(tasksStepResult.warning);
+    if (inboxNamesStepResult.warning) warnings.push(inboxNamesStepResult.warning);
+    if (messagesStepResult.warning) warnings.push(messagesStepResult.warning);
+    if (leadTextsStepResult.warning) warnings.push(leadTextsStepResult.warning);
+    if (sentMessagesStepResult.warning) warnings.push(sentMessagesStepResult.warning);
+    if (metaMembersStepResult.warning) warnings.push(metaMembersStepResult.warning);
+    if (kanbanStateStepResult.warning) warnings.push(kanbanStateStepResult.warning);
 
-    let sentMessages: InboxMessage[] = [];
-    try {
-      sentMessages = await this.sentMessagesStore.readMessages(teamName);
-      if (sentMessages.length > 0) {
-        messages = [...messages, ...sentMessages];
-      }
-    } catch {
-      warnings.push('Sent messages failed to load');
+    let tasks: TeamTask[] = tasksStepResult.value;
+    let inboxNames: string[] = inboxNamesStepResult.value;
+    let messages: InboxMessage[] = messagesStepResult.value;
+    const leadTexts: InboxMessage[] = leadTextsStepResult.value;
+    const sentMessages: InboxMessage[] = sentMessagesStepResult.value;
+
+    if (leadTexts.length > 0) {
+      messages = [...messages, ...leadTexts];
     }
-    mark('sentMessages');
+    if (sentMessages.length > 0) {
+      messages = [...messages, ...sentMessages];
+    }
 
     // Dedup: if a lead_process message text is also present in lead_session, prefer lead_session.
     // This avoids double-rendering when we persist lead process messages and later load the lead JSONL.
@@ -718,25 +832,8 @@ export class TeamDataService {
 
     messages.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 
-    let metaMembers: TeamConfig['members'] = [];
-    try {
-      metaMembers = await this.membersMetaStore.getMembers(teamName);
-    } catch {
-      warnings.push('Member metadata failed to load');
-    }
-    mark('metaMembers');
-
-    let kanbanState: KanbanState = {
-      teamName,
-      reviewers: [],
-      tasks: {},
-    };
-    try {
-      kanbanState = await this.kanbanManager.getState(teamName);
-    } catch {
-      warnings.push('Kanban state failed to load');
-    }
-    mark('kanbanState');
+    const metaMembers: TeamConfig['members'] = metaMembersStepResult.value;
+    const kanbanState: KanbanState = kanbanStateStepResult.value;
 
     mark('kanbanGc');
 

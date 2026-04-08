@@ -8,7 +8,14 @@ import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecode
 import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 
-import type { TeamTask } from '../../../../src/shared/types/team';
+import type {
+  InboxMessage,
+  KanbanState,
+  TeamConfig,
+  TeamData,
+  TeamTask,
+  TeamTaskWithKanban,
+} from '../../../../src/shared/types/team';
 
 const TASK_COMMENT_FORWARDING_ENV = 'CLAUDE_TEAM_TASK_COMMENT_FORWARDING';
 const tempPaths: string[] = [];
@@ -187,6 +194,161 @@ function createTaskCommentForwardingService(options: {
   );
 
   return { service, inboxWriter, journal };
+}
+
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason?: unknown) => void;
+}
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+async function flushMicrotasks(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
+function buildDefaultTeamConfig(overrides: Partial<TeamConfig> = {}): TeamConfig {
+  return {
+    name: 'My team',
+    members: [{ name: 'team-lead', role: 'Lead' }],
+    leadSessionId: 'lead-1',
+    ...overrides,
+  };
+}
+
+function createGetTeamDataHarness(options: {
+  config?: TeamConfig | null;
+  getTasks?: () => Promise<TeamTask[]>;
+  listInboxNames?: () => Promise<string[]>;
+  getMessages?: () => Promise<InboxMessage[]>;
+  getMembers?: () => Promise<TeamConfig['members']>;
+  getState?: () => Promise<KanbanState>;
+  readMessages?: () => Promise<InboxMessage[]>;
+  resolveMembers?: (
+    config: TeamConfig,
+    metaMembers: TeamConfig['members'],
+    inboxNames: string[],
+    tasks: TeamTaskWithKanban[],
+    messages: InboxMessage[]
+  ) => TeamData['members'];
+  listProcesses?: () => TeamData['processes'];
+  getMemberAdvisories?: () => Promise<Map<string, unknown>>;
+} = {}) {
+  const getConfig = vi.fn(async () =>
+    options.config === undefined ? buildDefaultTeamConfig() : options.config
+  );
+  const getTasks =
+    options.getTasks ??
+    (async () => {
+      return [] as TeamTask[];
+    });
+  const listInboxNames =
+    options.listInboxNames ??
+    (async () => {
+      return [] as string[];
+    });
+  const getMessages =
+    options.getMessages ??
+    (async () => {
+      return [] as InboxMessage[];
+    });
+  const getMembers =
+    options.getMembers ??
+    (async () => {
+      return [] as TeamConfig['members'];
+    });
+  const getState =
+    options.getState ??
+    (async () => {
+      return { teamName: 'my-team', reviewers: [], tasks: {} } as KanbanState;
+    });
+  const readMessages =
+    options.readMessages ??
+    (async () => {
+      return [] as InboxMessage[];
+    });
+  const resolveMembers = options.resolveMembers ?? (() => []);
+  const listProcesses = options.listProcesses ?? (() => []);
+  const getMemberAdvisories =
+    options.getMemberAdvisories ??
+    (async () => {
+      return new Map<string, unknown>();
+    });
+
+  const taskReader = {
+    getTasks: vi.fn(getTasks),
+  };
+  const inboxReader = {
+    listInboxNames: vi.fn(listInboxNames),
+    getMessages: vi.fn(getMessages),
+  };
+  const membersMetaStore = {
+    getMembers: vi.fn(getMembers),
+  };
+  const sentMessagesStore = {
+    readMessages: vi.fn(readMessages),
+  };
+  const resolveMembersSpy = vi.fn(resolveMembers);
+  const kanbanManager = {
+    getState: vi.fn(getState),
+    garbageCollect: vi.fn(async () => undefined),
+  };
+  const listProcessesSpy = vi.fn(listProcesses);
+  const advisoryService = {
+    getMemberAdvisories: vi.fn(getMemberAdvisories),
+  };
+
+  const service = new TeamDataService(
+    {
+      listTeams: vi.fn(),
+      getConfig,
+    } as never,
+    taskReader as never,
+    inboxReader as never,
+    {} as never,
+    {} as never,
+    {
+      resolveMembers: resolveMembersSpy,
+    } as never,
+    kanbanManager as never,
+    {} as never,
+    membersMetaStore as never,
+    sentMessagesStore as never,
+    (() =>
+      ({
+        processes: {
+          listProcesses: listProcessesSpy,
+        },
+      }) as never) as never,
+    {} as never,
+    {} as never,
+    advisoryService as never
+  );
+
+  return {
+    service,
+    getConfig,
+    taskReader,
+    inboxReader,
+    membersMetaStore,
+    sentMessagesStore,
+    resolveMembersSpy,
+    kanbanManager,
+    listProcessesSpy,
+    advisoryService,
+  };
 }
 
 describe('TeamDataService', () => {
@@ -2823,5 +2985,426 @@ describe('TeamDataService', () => {
 
     expect(firstSpy).toHaveBeenCalledTimes(1);
     expect(secondSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails fast when config is missing before any read-phase step starts', async () => {
+    const harness = createGetTeamDataHarness({
+      config: null,
+    });
+
+    await expect(harness.service.getTeamData('missing-team')).rejects.toThrow(
+      'Team not found: missing-team'
+    );
+
+    expect(harness.taskReader.getTasks).not.toHaveBeenCalled();
+    expect(harness.inboxReader.listInboxNames).not.toHaveBeenCalled();
+    expect(harness.inboxReader.getMessages).not.toHaveBeenCalled();
+    expect(harness.membersMetaStore.getMembers).not.toHaveBeenCalled();
+    expect(harness.sentMessagesStore.readMessages).not.toHaveBeenCalled();
+    expect(harness.kanbanManager.getState).not.toHaveBeenCalled();
+    expect(harness.listProcessesSpy).not.toHaveBeenCalled();
+  });
+
+  it('starts light reads immediately, bounds heavy reads, and keeps processes outside the parallel phase', async () => {
+    const order: string[] = [];
+    const tasksDeferred = createDeferred<TeamTask[]>();
+    const messagesDeferred = createDeferred<InboxMessage[]>();
+    const leadTextsDeferred = createDeferred<InboxMessage[]>();
+
+    const harness = createGetTeamDataHarness({
+      getTasks: async () => {
+        order.push('tasks:start');
+        return tasksDeferred.promise;
+      },
+      listInboxNames: async () => {
+        order.push('inboxNames:start');
+        return [];
+      },
+      getMessages: async () => {
+        order.push('messages:start');
+        return messagesDeferred.promise;
+      },
+      getMembers: async () => {
+        order.push('meta:start');
+        return [];
+      },
+      getState: async () => {
+        order.push('kanban:start');
+        return { teamName: 'my-team', reviewers: [], tasks: {} };
+      },
+      readMessages: async () => {
+        order.push('sent:start');
+        return [];
+      },
+      resolveMembers: () => {
+        order.push('resolveMembers');
+        return [];
+      },
+      listProcesses: () => {
+        order.push('processes:start');
+        return [
+          {
+            id: 'proc-1',
+            label: 'Lead',
+            pid: 101,
+            registeredAt: '2026-04-08T12:00:00.000Z',
+          },
+        ];
+      },
+      getMemberAdvisories: async () => {
+        order.push('runtimeAdvisories');
+        return new Map();
+      },
+    });
+
+    vi.spyOn(harness.service as never, 'extractLeadSessionTexts' as never).mockImplementation(
+      async () => {
+        order.push('leadTexts:start');
+        return leadTextsDeferred.promise;
+      }
+    );
+
+    const pending = harness.service.getTeamData('my-team');
+    await flushMicrotasks();
+
+    expect(order).toEqual(
+      expect.arrayContaining([
+        'inboxNames:start',
+        'sent:start',
+        'meta:start',
+        'kanban:start',
+        'tasks:start',
+        'messages:start',
+      ])
+    );
+    expect(order).not.toContain('leadTexts:start');
+    expect(order).not.toContain('processes:start');
+
+    tasksDeferred.resolve([]);
+    await flushMicrotasks();
+
+    expect(order).toContain('leadTexts:start');
+    expect(order.indexOf('tasks:start')).toBeLessThan(order.indexOf('messages:start'));
+    expect(order.indexOf('messages:start')).toBeLessThan(order.indexOf('leadTexts:start'));
+    expect(order).not.toContain('processes:start');
+
+    messagesDeferred.resolve([]);
+    leadTextsDeferred.resolve([]);
+
+    const data = await pending;
+
+    expect(data.processes).toEqual([
+      expect.objectContaining({
+        id: 'proc-1',
+        pid: 101,
+      }),
+    ]);
+    expect(order.indexOf('leadTexts:start')).toBeLessThan(order.indexOf('processes:start'));
+    expect(order.indexOf('resolveMembers')).toBeLessThan(order.indexOf('processes:start'));
+  });
+
+  it('keeps warning order deterministic even when read failures settle out of order', async () => {
+    const tasksDeferred = createDeferred<TeamTask[]>();
+    const inboxDeferred = createDeferred<string[]>();
+    const messagesDeferred = createDeferred<InboxMessage[]>();
+    const leadTextsDeferred = createDeferred<InboxMessage[]>();
+    const sentDeferred = createDeferred<InboxMessage[]>();
+    const metaDeferred = createDeferred<TeamConfig['members']>();
+    const kanbanDeferred = createDeferred<KanbanState>();
+
+    const harness = createGetTeamDataHarness({
+      getTasks: async () => tasksDeferred.promise,
+      listInboxNames: async () => inboxDeferred.promise,
+      getMessages: async () => messagesDeferred.promise,
+      getMembers: async () => metaDeferred.promise,
+      getState: async () => kanbanDeferred.promise,
+      readMessages: async () => sentDeferred.promise,
+    });
+
+    vi.spyOn(harness.service as never, 'extractLeadSessionTexts' as never).mockImplementation(
+      async () => leadTextsDeferred.promise
+    );
+
+    const pending = harness.service.getTeamData('my-team');
+    await flushMicrotasks();
+
+    sentDeferred.reject(new Error('sent failed'));
+    kanbanDeferred.reject(new Error('kanban failed'));
+    tasksDeferred.reject(new Error('tasks failed'));
+    metaDeferred.reject(new Error('meta failed'));
+    inboxDeferred.reject(new Error('inbox failed'));
+    leadTextsDeferred.reject(new Error('lead failed'));
+    messagesDeferred.reject(new Error('messages failed'));
+
+    const data = await pending;
+
+    expect(data.warnings).toEqual([
+      'Tasks failed to load',
+      'Inboxes failed to load',
+      'Messages failed to load',
+      'Lead session texts failed to load',
+      'Sent messages failed to load',
+      'Member metadata failed to load',
+      'Kanban state failed to load',
+    ]);
+  });
+
+  it('preserves message assembly order across inbox, lead texts, and sent messages', async () => {
+    const harness = createGetTeamDataHarness({
+      getMessages: async () => [
+        {
+          from: 'alice',
+          to: 'team-lead',
+          text: 'Inbox update',
+          timestamp: '2026-04-08T12:00:01.000Z',
+          read: true,
+          source: 'inbox',
+          messageId: 'inbox-1',
+        },
+      ],
+      readMessages: async () => [
+        {
+          from: 'user',
+          to: 'team-lead',
+          text: '/status',
+          timestamp: '2026-04-08T12:00:03.000Z',
+          read: true,
+          source: 'user_sent',
+          messageId: 'sent-1',
+        },
+      ],
+    });
+
+    vi.spyOn(harness.service as never, 'extractLeadSessionTexts' as never).mockResolvedValue([
+      {
+        from: 'team-lead',
+        text: 'Lead summary',
+        timestamp: '2026-04-08T12:00:02.000Z',
+        read: true,
+        source: 'lead_session',
+        leadSessionId: 'lead-1',
+        messageId: 'lead-1',
+      },
+    ]);
+
+    const data = await harness.service.getTeamData('my-team');
+
+    expect(data.messages.map((message) => message.messageId)).toEqual(['sent-1', 'lead-1', 'inbox-1']);
+  });
+
+  it('preserves assembled messages and resolver inputs when inbox messages fail', async () => {
+    const task: TeamTask = {
+      id: 'task-1',
+      subject: 'Investigate rollout',
+      status: 'pending',
+    };
+    const metaMembers = [{ name: 'alice' }];
+    const inboxNames = ['alice'];
+    const resolveMembersSpy = vi.fn(() => []);
+    const harness = createGetTeamDataHarness({
+      getTasks: async () => [task],
+      listInboxNames: async () => inboxNames,
+      getMessages: async () => {
+        throw new Error('messages failed');
+      },
+      getMembers: async () => metaMembers,
+      getState: async () => {
+        throw new Error('kanban failed');
+      },
+      readMessages: async () => [
+        {
+          from: 'user',
+          to: 'team-lead',
+          text: '/status',
+          timestamp: '2026-04-08T12:00:03.000Z',
+          read: true,
+          source: 'user_sent',
+          messageId: 'sent-1',
+        },
+      ],
+      resolveMembers: resolveMembersSpy,
+    });
+
+    vi.spyOn(harness.service as never, 'extractLeadSessionTexts' as never).mockResolvedValue([
+      {
+        from: 'team-lead',
+        text: 'Lead summary',
+        timestamp: '2026-04-08T12:00:02.000Z',
+        read: true,
+        source: 'lead_session',
+        leadSessionId: 'lead-1',
+        messageId: 'lead-1',
+      },
+    ]);
+
+    const data = await harness.service.getTeamData('my-team');
+
+    expect(data.warnings).toEqual(
+      expect.arrayContaining(['Messages failed to load', 'Kanban state failed to load'])
+    );
+    expect(data.messages.map((message) => message.messageId)).toEqual(['sent-1', 'lead-1']);
+    expect(resolveMembersSpy).toHaveBeenCalledWith(
+      buildDefaultTeamConfig(),
+      metaMembers,
+      inboxNames,
+      [
+        expect.objectContaining({
+          id: 'task-1',
+          subject: 'Investigate rollout',
+        }),
+      ],
+      [
+        expect.objectContaining({ messageId: 'sent-1' }),
+        expect.objectContaining({ messageId: 'lead-1' }),
+      ]
+    );
+  });
+
+  it('keeps task assembly safe when kanban loading fails', async () => {
+    const harness = createGetTeamDataHarness({
+      getTasks: async () => [
+        {
+          id: 'task-1',
+          subject: 'Investigate rollout',
+          status: 'pending',
+        },
+      ],
+      getState: async () => {
+        throw new Error('kanban failed');
+      },
+    });
+
+    const data = await harness.service.getTeamData('my-team');
+
+    expect(data.tasks).toEqual([
+      expect.objectContaining({
+        id: 'task-1',
+        subject: 'Investigate rollout',
+        status: 'pending',
+      }),
+    ]);
+    expect(data.kanbanState).toEqual({
+      teamName: 'my-team',
+      reviewers: [],
+      tasks: {},
+    });
+    expect(data.warnings).toEqual(expect.arrayContaining(['Kanban state failed to load']));
+  });
+
+  it('degrades a queued heavy sync throw to warning and still completes the snapshot', async () => {
+    const order: string[] = [];
+    const tasksDeferred = createDeferred<TeamTask[]>();
+    const messagesDeferred = createDeferred<InboxMessage[]>();
+    const harness = createGetTeamDataHarness({
+      getTasks: async () => {
+        order.push('tasks:start');
+        return tasksDeferred.promise;
+      },
+      getMessages: async () => {
+        order.push('messages:start');
+        return messagesDeferred.promise;
+      },
+      listProcesses: () => {
+        order.push('processes:start');
+        return [];
+      },
+    });
+
+    vi.spyOn(harness.service as never, 'extractLeadSessionTexts' as never).mockImplementation(() => {
+      order.push('leadTexts:start');
+      throw new Error('lead sync fail');
+    });
+
+    const pending = harness.service.getTeamData('my-team');
+    await flushMicrotasks();
+
+    expect(order).not.toContain('leadTexts:start');
+
+    tasksDeferred.resolve([]);
+    await flushMicrotasks();
+
+    expect(order).toContain('leadTexts:start');
+
+    messagesDeferred.resolve([]);
+    const data = await pending;
+
+    expect(data.warnings).toEqual(expect.arrayContaining(['Lead session texts failed to load']));
+    expect(order).toContain('processes:start');
+  });
+
+  it('preserves presenceIndex rejection semantics and rejects before resolveMembers', async () => {
+    const task: TeamTask = {
+      id: 'task-1',
+      subject: 'Check change presence',
+      status: 'pending',
+    };
+    const harness = createGetTeamDataHarness({
+      config: buildDefaultTeamConfig({ projectPath: '/repo' }),
+      getTasks: async () => [task],
+    });
+    const loadDeferred = createDeferred<null>();
+    const load = vi.fn(() => loadDeferred.promise);
+
+    harness.service.setTaskChangePresenceServices(
+      {
+        load,
+      } as never,
+      {
+        getSnapshot: vi.fn(() => ({
+          projectFingerprint: 'project-fingerprint',
+          logSourceGeneration: 'log-generation',
+        })),
+      } as never
+    );
+
+    const pending = harness.service.getTeamData('my-team');
+    await flushMicrotasks();
+    loadDeferred.reject(new Error('presence failed'));
+
+    await expect(pending).rejects.toThrow('presence failed');
+    expect(load).toHaveBeenCalledWith('my-team');
+    expect(harness.resolveMembersSpy).not.toHaveBeenCalled();
+  });
+
+  it('handles a synchronous light-step failure with the same degraded warning behavior', async () => {
+    const harness = createGetTeamDataHarness({
+      getMembers: (() => {
+        throw new Error('meta sync fail');
+      }) as never,
+    });
+
+    const data = await harness.service.getTeamData('my-team');
+
+    expect(data.warnings).toEqual(expect.arrayContaining(['Member metadata failed to load']));
+    expect(data.members).toEqual([]);
+  });
+
+  it('surfaces orchestration errors that happen after the read phase and outside step wrappers', async () => {
+    const harness = createGetTeamDataHarness({
+      resolveMembers: () => {
+        throw new Error('resolver exploded');
+      },
+    });
+
+    await expect(harness.service.getTeamData('my-team')).rejects.toThrow('resolver exploded');
+  });
+
+  it('does not crash in the slow-log path when marks come from async step completion times', async () => {
+    const harness = createGetTeamDataHarness();
+    let now = 0;
+    const dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => {
+      now += 200;
+      return now;
+    });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    try {
+      const data = await harness.service.getTeamData('my-team');
+      expect(data.teamName).toBe('my-team');
+      expect(warnSpy).toHaveBeenCalled();
+    } finally {
+      dateNowSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
   });
 });
