@@ -31,6 +31,12 @@ import * as path from 'path';
 import { gitIdentityResolver } from '../parsing/GitIdentityResolver';
 
 import { atomicWriteAsync } from './atomicWrite';
+import {
+  areLeadSessionFileSignaturesEqual,
+  LeadSessionParseCache,
+  type LeadSessionFileSignature,
+  type LeadSessionParseCacheKey,
+} from './cache/LeadSessionParseCache';
 import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
 import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
 import { TeamConfigReader } from './TeamConfigReader';
@@ -84,6 +90,7 @@ const logger = createLogger('Service:TeamDataService');
 
 const MIN_TEXT_LENGTH = 30;
 const MAX_LEAD_TEXTS = 150;
+const LEAD_SESSION_PARSE_CACHE_SCHEMA_VERSION = 'combined-v1';
 const PROCESS_HEALTH_INTERVAL_MS = 2_000;
 const TASK_MAP_YIELD_EVERY = 250;
 const TASK_COMMENT_NOTIFICATION_SOURCE = 'system_notification';
@@ -133,7 +140,8 @@ export class TeamDataService {
       }),
     private readonly taskCommentNotificationJournal: TeamTaskCommentNotificationJournal = new TeamTaskCommentNotificationJournal(),
     private readonly teamMetaStore: TeamMetaStore = new TeamMetaStore(),
-    private memberRuntimeAdvisoryService: TeamMemberRuntimeAdvisoryService = new TeamMemberRuntimeAdvisoryService()
+    private memberRuntimeAdvisoryService: TeamMemberRuntimeAdvisoryService = new TeamMemberRuntimeAdvisoryService(),
+    private readonly leadSessionParseCache: LeadSessionParseCache = new LeadSessionParseCache()
   ) {}
 
   private getController(teamName: string): AgentTeamsController {
@@ -2327,19 +2335,85 @@ export class TeamDataService {
     leadSessionId: string,
     maxTexts: number
   ): Promise<InboxMessage[]> {
-    const [assistantTexts, commandResults] = await Promise.all([
-      this.extractLeadAssistantTextsFromJsonl(jsonlPath, leadName, leadSessionId, maxTexts),
-      extractLeadSessionMessagesFromJsonl({
-        jsonlPath,
-        leadName,
-        leadSessionId,
-        maxMessages: maxTexts,
-      }),
-    ]);
+    const cacheKey: LeadSessionParseCacheKey = {
+      jsonlPath,
+      leadName,
+      leadSessionId,
+      maxTexts,
+      schemaVersion: LEAD_SESSION_PARSE_CACHE_SCHEMA_VERSION,
+    };
+    const preParseSignature = await this.getLeadSessionFileSignature(jsonlPath);
+    if (preParseSignature) {
+      const cached = this.leadSessionParseCache.getIfFresh(cacheKey, preParseSignature);
+      if (cached) {
+        return cached;
+      }
 
-    const combined = [...assistantTexts, ...commandResults];
-    combined.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
-    return combined.length > maxTexts ? combined.slice(-maxTexts) : combined;
+      const inFlight = this.leadSessionParseCache.getInFlight(cacheKey, preParseSignature);
+      if (inFlight) {
+        return inFlight;
+      }
+    }
+
+    const parse = async (): Promise<InboxMessage[]> => {
+      const [assistantTexts, commandResults] = await Promise.all([
+        this.extractLeadAssistantTextsFromJsonl(jsonlPath, leadName, leadSessionId, maxTexts),
+        extractLeadSessionMessagesFromJsonl({
+          jsonlPath,
+          leadName,
+          leadSessionId,
+          maxMessages: maxTexts,
+        }),
+      ]);
+      const combined = [...assistantTexts, ...commandResults];
+      combined.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+      return combined.length > maxTexts ? combined.slice(-maxTexts) : combined;
+    };
+
+    if (!preParseSignature) {
+      return parse();
+    }
+
+    let resolveInFlight!: (messages: InboxMessage[]) => void;
+    let rejectInFlight!: (error: unknown) => void;
+    const parsePromise = new Promise<InboxMessage[]>((resolve, reject) => {
+      resolveInFlight = resolve;
+      rejectInFlight = reject;
+    });
+    this.leadSessionParseCache.setInFlight(cacheKey, preParseSignature, parsePromise);
+    void parse().then(resolveInFlight, rejectInFlight);
+
+    try {
+      const combined = await parsePromise;
+      const postParseSignature = await this.getLeadSessionFileSignature(jsonlPath);
+      if (
+        postParseSignature &&
+        areLeadSessionFileSignaturesEqual(preParseSignature, postParseSignature)
+      ) {
+        this.leadSessionParseCache.set(cacheKey, postParseSignature, combined);
+      }
+      return combined;
+    } finally {
+      this.leadSessionParseCache.clearInFlight(cacheKey, preParseSignature);
+    }
+  }
+
+  private async getLeadSessionFileSignature(
+    jsonlPath: string
+  ): Promise<LeadSessionFileSignature | null> {
+    try {
+      const stat = await fs.promises.stat(jsonlPath);
+      if (!stat.isFile()) {
+        return null;
+      }
+      return {
+        size: stat.size,
+        mtimeMs: stat.mtimeMs,
+        ...(Number.isFinite(stat.ctimeMs) ? { ctimeMs: stat.ctimeMs } : {}),
+      };
+    } catch {
+      return null;
+    }
   }
 
   private async extractLeadSessionTexts(config: TeamConfig): Promise<InboxMessage[]> {

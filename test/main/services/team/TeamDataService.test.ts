@@ -1,11 +1,134 @@
-import { describe, expect, it, vi } from 'vitest';
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 
 import type { TeamTask } from '../../../../src/shared/types/team';
 
 const TASK_COMMENT_FORWARDING_ENV = 'CLAUDE_TEAM_TASK_COMMENT_FORWARDING';
+const tempPaths: string[] = [];
+
+function createLeadAssistantEntry(
+  uuid: string,
+  timestamp: string,
+  text: string
+): Record<string, unknown> {
+  return {
+    uuid,
+    parentUuid: null,
+    type: 'assistant',
+    timestamp,
+    isSidechain: false,
+    userType: 'external',
+    cwd: '/repo',
+    sessionId: 'lead-1',
+    version: '1.0.0',
+    gitBranch: 'main',
+    requestId: `req-${uuid}`,
+    message: {
+      role: 'assistant',
+      model: 'claude-sonnet',
+      id: `msg-${uuid}`,
+      type: 'message',
+      stop_reason: 'end_turn',
+      stop_sequence: null,
+      usage: {
+        input_tokens: 1,
+        output_tokens: 1,
+      },
+      content: [{ type: 'text', text }],
+    },
+  };
+}
+
+async function createTempJsonl(entries: Record<string, unknown>[]): Promise<string> {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-lead-session-'));
+  tempPaths.push(dir);
+  const jsonlPath = path.join(dir, 'lead-1.jsonl');
+  await fs.writeFile(
+    jsonlPath,
+    `${entries.map((entry) => JSON.stringify(entry)).join('\n')}\n`,
+    'utf8'
+  );
+  return jsonlPath;
+}
+
+async function createTempJsonlInNamedDir(
+  dirName: string,
+  entries: Record<string, unknown>[]
+): Promise<string> {
+  const dir = path.join(os.tmpdir(), dirName);
+  await fs.mkdir(dir, { recursive: true });
+  tempPaths.push(dir);
+  const jsonlPath = path.join(dir, 'lead-1.jsonl');
+  await fs.writeFile(
+    jsonlPath,
+    `${entries.map((entry) => JSON.stringify(entry)).join('\n')}\n`,
+    'utf8'
+  );
+  return jsonlPath;
+}
+
+function createLeadSessionCachingService(): TeamDataService {
+  return new TeamDataService(
+    {
+      listTeams: vi.fn(),
+      getConfig: vi.fn(async () => ({
+        name: 'My team',
+        members: [{ name: 'team-lead', role: 'Lead' }],
+        leadSessionId: 'lead-1',
+      })),
+    } as never,
+    {
+      getTasks: vi.fn(async () => []),
+    } as never,
+    {
+      listInboxNames: vi.fn(async () => []),
+      getMessages: vi.fn(async () => []),
+    } as never,
+    {} as never,
+    {} as never,
+    {
+      resolveMembers: vi.fn(() => []),
+    } as never,
+    {
+      getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
+    } as never,
+    {} as never,
+    {
+      getMembers: vi.fn(async () => []),
+    } as never,
+    {
+      readMessages: vi.fn(async () => []),
+    } as never,
+    (() =>
+      ({
+        processes: {
+          listProcesses: vi.fn(() => []),
+        },
+      }) as never) as never,
+    {} as never,
+    {} as never,
+    {
+      getMemberAdvisories: vi.fn(async () => new Map()),
+    } as never
+  );
+}
+
+afterEach(async () => {
+  setClaudeBasePathOverride(null);
+  vi.restoreAllMocks();
+  await Promise.all(
+    tempPaths.splice(0).map(async (tempPath) => {
+      await fs.rm(tempPath, { recursive: true, force: true });
+    })
+  );
+});
 
 function createForwardingJournalStore(initialEntries: Array<Record<string, unknown>> = []) {
   const journalEntries = initialEntries;
@@ -2151,5 +2274,485 @@ describe('TeamDataService', () => {
         commandLabel: '/cost',
       },
     });
+  });
+
+  it('caches unchanged lead-session extraction results and returns defensive clones', async () => {
+    const service = createLeadSessionCachingService();
+    const jsonlPath = await createTempJsonl([
+      createLeadAssistantEntry(
+        'assistant-1',
+        '2026-03-27T22:17:01.000Z',
+        'This is a sufficiently long assistant thought for cache validation.'
+      ),
+    ]);
+
+    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never);
+    const extract = (
+      service as unknown as {
+        extractLeadSessionTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadSessionTextsFromJsonl.bind(service);
+
+    const first = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
+    first[0]!.text = 'mutated locally';
+
+    const second = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
+
+    expect(assistantSpy).toHaveBeenCalledTimes(1);
+    expect(second[0]?.text).toBe(
+      'This is a sufficiently long assistant thought for cache validation.'
+    );
+  });
+
+  it('coalesces concurrent lead-session parses for the same file signature', async () => {
+    const service = createLeadSessionCachingService();
+    const jsonlPath = await createTempJsonl([
+      createLeadAssistantEntry(
+        'assistant-1',
+        '2026-03-27T22:17:01.000Z',
+        'This is a sufficiently long assistant thought for in-flight coalescing.'
+      ),
+    ]);
+
+    const originalExtract = (
+      service as unknown as {
+        extractLeadAssistantTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadAssistantTextsFromJsonl.bind(service);
+    const assistantSpy = vi
+      .spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never)
+      .mockImplementation(async (...args: unknown[]) => {
+        const [targetPath, leadName, leadSessionId, maxTexts] = args as [
+          string,
+          string,
+          string,
+          number,
+        ];
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        return originalExtract(targetPath, leadName, leadSessionId, maxTexts);
+      });
+    const extract = (
+      service as unknown as {
+        extractLeadSessionTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadSessionTextsFromJsonl.bind(service);
+
+    const [first, second] = await Promise.all([
+      extract(jsonlPath, 'team-lead', 'lead-1', 150),
+      extract(jsonlPath, 'team-lead', 'lead-1', 150),
+    ]);
+
+    expect(assistantSpy).toHaveBeenCalledTimes(1);
+    expect(first[0]?.text).toBe(second[0]?.text);
+  });
+
+  it('does not populate the fulfilled cache when the file changes during parse', async () => {
+    const service = createLeadSessionCachingService();
+    const jsonlPath = await createTempJsonl([
+      createLeadAssistantEntry(
+        'assistant-1',
+        '2026-03-27T22:17:01.000Z',
+        'This is a sufficiently long assistant thought before mutation.'
+      ),
+    ]);
+
+    const originalExtract = (
+      service as unknown as {
+        extractLeadAssistantTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadAssistantTextsFromJsonl.bind(service);
+    let appended = false;
+    const assistantSpy = vi
+      .spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never)
+      .mockImplementation(async (...args: unknown[]) => {
+        const [targetPath, leadName, leadSessionId, maxTexts] = args as [
+          string,
+          string,
+          string,
+          number,
+        ];
+        if (!appended) {
+          appended = true;
+          await fs.appendFile(
+            targetPath,
+            `${JSON.stringify(
+              createLeadAssistantEntry(
+                'assistant-2',
+                '2026-03-27T22:17:02.000Z',
+                'This is a sufficiently long assistant thought appended during parse.'
+              )
+            )}\n`,
+            'utf8'
+          );
+        }
+        return originalExtract(targetPath, leadName, leadSessionId, maxTexts);
+      });
+    const extract = (
+      service as unknown as {
+        extractLeadSessionTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadSessionTextsFromJsonl.bind(service);
+
+    const first = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
+    const second = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
+
+    expect(assistantSpy).toHaveBeenCalledTimes(2);
+    expect(first).toHaveLength(2);
+    expect(second).toHaveLength(2);
+  });
+
+  it('does not reuse an older in-flight parse after the file signature changes', async () => {
+    const service = createLeadSessionCachingService();
+    const jsonlPath = await createTempJsonl([
+      createLeadAssistantEntry(
+        'assistant-1',
+        '2026-03-27T22:17:01.000Z',
+        'This is a sufficiently long assistant thought before concurrent signature change.'
+      ),
+    ]);
+
+    const originalExtract = (
+      service as unknown as {
+        extractLeadAssistantTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadAssistantTextsFromJsonl.bind(service);
+    let releaseFirstInvocation = () => {};
+    let firstInvocationStartedResolve: (() => void) | null = null;
+    const firstInvocationStarted = new Promise<void>((resolve) => {
+      firstInvocationStartedResolve = resolve;
+    });
+    const assistantSpy = vi
+      .spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never)
+      .mockImplementation(async (...args: unknown[]) => {
+        const [targetPath, leadName, leadSessionId, maxTexts] = args as [
+          string,
+          string,
+          string,
+          number,
+        ];
+        if (assistantSpy.mock.calls.length === 1) {
+          firstInvocationStartedResolve?.();
+          await new Promise<void>((resolve) => {
+            releaseFirstInvocation = () => resolve();
+          });
+        }
+        return originalExtract(targetPath, leadName, leadSessionId, maxTexts);
+      });
+    const extract = (
+      service as unknown as {
+        extractLeadSessionTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadSessionTextsFromJsonl.bind(service);
+
+    const firstPromise = extract(jsonlPath, 'team-lead', 'lead-1', 150);
+    await firstInvocationStarted;
+    await fs.appendFile(
+      jsonlPath,
+      `${JSON.stringify(
+        createLeadAssistantEntry(
+          'assistant-2',
+          '2026-03-27T22:17:02.000Z',
+          'This is a sufficiently long assistant thought appended before the second caller.'
+        )
+      )}\n`,
+      'utf8'
+    );
+
+    const secondPromise = extract(jsonlPath, 'team-lead', 'lead-1', 150);
+    releaseFirstInvocation();
+
+    const [first, second] = await Promise.all([firstPromise, secondPromise]);
+
+    expect(assistantSpy).toHaveBeenCalledTimes(2);
+    expect(first.length).toBeGreaterThan(0);
+    expect(second.length).toBeGreaterThan(0);
+  });
+
+  it('keeps leadName and maxTexts in the cache identity', async () => {
+    const service = createLeadSessionCachingService();
+    const jsonlPath = await createTempJsonl([
+      createLeadAssistantEntry(
+        'assistant-1',
+        '2026-03-27T22:17:01.000Z',
+        'This is a sufficiently long assistant thought for keying behavior one.'
+      ),
+      createLeadAssistantEntry(
+        'assistant-2',
+        '2026-03-27T22:17:02.000Z',
+        'This is a sufficiently long assistant thought for keying behavior two.'
+      ),
+    ]);
+
+    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never);
+    const extract = (
+      service as unknown as {
+        extractLeadSessionTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ from: string; text: string }>>;
+      }
+    ).extractLeadSessionTextsFromJsonl.bind(service);
+
+    const firstLead = await extract(jsonlPath, 'team-lead', 'lead-1', 1);
+    const secondLeadSameKey = await extract(jsonlPath, 'team-lead', 'lead-1', 1);
+    const renamedLead = await extract(jsonlPath, 'captain', 'lead-1', 1);
+    const widerSlice = await extract(jsonlPath, 'team-lead', 'lead-1', 2);
+
+    expect(firstLead).toHaveLength(1);
+    expect(secondLeadSameKey).toHaveLength(1);
+    expect(renamedLead[0]?.from).toBe('captain');
+    expect(widerSlice).toHaveLength(2);
+    expect(assistantSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not return stale cached content when the jsonl file is deleted', async () => {
+    const service = createLeadSessionCachingService();
+    const jsonlPath = await createTempJsonl([
+      createLeadAssistantEntry(
+        'assistant-1',
+        '2026-03-27T22:17:01.000Z',
+        'This is a sufficiently long assistant thought before file deletion.'
+      ),
+    ]);
+
+    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never);
+    const extract = (
+      service as unknown as {
+        extractLeadSessionTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadSessionTextsFromJsonl.bind(service);
+
+    const first = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
+    await fs.rm(jsonlPath, { force: true });
+
+    await expect(extract(jsonlPath, 'team-lead', 'lead-1', 150)).rejects.toThrow();
+
+    expect(first).toHaveLength(1);
+    expect(assistantSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('tolerates a partial trailing line and does not keep a sticky stale result after the file is fixed', async () => {
+    const service = createLeadSessionCachingService();
+    const jsonlPath = await createTempJsonl([
+      createLeadAssistantEntry(
+        'assistant-1',
+        '2026-03-27T22:17:01.000Z',
+        'This is a sufficiently long assistant thought before partial trailing data.'
+      ),
+    ]);
+    await fs.appendFile(jsonlPath, '{"type":"assistant"', 'utf8');
+
+    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never);
+    const extract = (
+      service as unknown as {
+        extractLeadSessionTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadSessionTextsFromJsonl.bind(service);
+
+    const partialRead = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
+    await fs.writeFile(
+      jsonlPath,
+      `${JSON.stringify(
+        createLeadAssistantEntry(
+          'assistant-1',
+          '2026-03-27T22:17:01.000Z',
+          'This is a sufficiently long assistant thought before partial trailing data.'
+        )
+      )}\n${JSON.stringify(
+        createLeadAssistantEntry(
+          'assistant-2',
+          '2026-03-27T22:17:02.000Z',
+          'This is a sufficiently long assistant thought after the file was fixed.'
+        )
+      )}\n`,
+      'utf8'
+    );
+
+    const repairedRead = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
+
+    expect(partialRead).toHaveLength(1);
+    expect(repairedRead).toHaveLength(2);
+    expect(assistantSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('works for resolved jsonl paths that contain both dashes and underscores', async () => {
+    const service = createLeadSessionCachingService();
+    const jsonlPath = await createTempJsonlInNamedDir('team_data-lead-session-cache-check', [
+      createLeadAssistantEntry(
+        'assistant-1',
+        '2026-03-27T22:17:01.000Z',
+        'This is a sufficiently long assistant thought for mixed path characters.'
+      ),
+    ]);
+
+    const assistantSpy = vi.spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never);
+    const extract = (
+      service as unknown as {
+        extractLeadSessionTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadSessionTextsFromJsonl.bind(service);
+
+    const first = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
+    const second = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
+
+    expect(first).toHaveLength(1);
+    expect(second).toHaveLength(1);
+    expect(assistantSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not keep a rejected in-flight parse sticky across retries', async () => {
+    const service = createLeadSessionCachingService();
+    const jsonlPath = await createTempJsonl([
+      createLeadAssistantEntry(
+        'assistant-1',
+        '2026-03-27T22:17:01.000Z',
+        'This is a sufficiently long assistant thought before retry after failure.'
+      ),
+    ]);
+
+    const originalExtract = (
+      service as unknown as {
+        extractLeadAssistantTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadAssistantTextsFromJsonl.bind(service);
+    let shouldFail = true;
+    const assistantSpy = vi
+      .spyOn(service as never, 'extractLeadAssistantTextsFromJsonl' as never)
+      .mockImplementation(async (...args: unknown[]) => {
+        const [targetPath, leadName, leadSessionId, maxTexts] = args as [
+          string,
+          string,
+          string,
+          number,
+        ];
+        if (shouldFail) {
+          throw new Error('transient parse failure');
+        }
+        return originalExtract(targetPath, leadName, leadSessionId, maxTexts);
+      });
+    const extract = (
+      service as unknown as {
+        extractLeadSessionTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadSessionTextsFromJsonl.bind(service);
+
+    await expect(extract(jsonlPath, 'team-lead', 'lead-1', 150)).rejects.toThrow(
+      'transient parse failure'
+    );
+
+    shouldFail = false;
+    const retryResult = await extract(jsonlPath, 'team-lead', 'lead-1', 150);
+
+    expect(retryResult).toHaveLength(1);
+    expect(assistantSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not share cache state across fresh TeamDataService instances', async () => {
+    const firstService = createLeadSessionCachingService();
+    const secondService = createLeadSessionCachingService();
+    const jsonlPath = await createTempJsonl([
+      createLeadAssistantEntry(
+        'assistant-1',
+        '2026-03-27T22:17:01.000Z',
+        'This is a sufficiently long assistant thought for service instance isolation.'
+      ),
+    ]);
+
+    const firstSpy = vi.spyOn(
+      firstService as never,
+      'extractLeadAssistantTextsFromJsonl' as never
+    );
+    const secondSpy = vi.spyOn(
+      secondService as never,
+      'extractLeadAssistantTextsFromJsonl' as never
+    );
+    const firstExtract = (
+      firstService as unknown as {
+        extractLeadSessionTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadSessionTextsFromJsonl.bind(firstService);
+    const secondExtract = (
+      secondService as unknown as {
+        extractLeadSessionTextsFromJsonl: (
+          jsonlPath: string,
+          leadName: string,
+          leadSessionId: string,
+          maxTexts: number
+        ) => Promise<Array<{ text: string }>>;
+      }
+    ).extractLeadSessionTextsFromJsonl.bind(secondService);
+
+    await firstExtract(jsonlPath, 'team-lead', 'lead-1', 150);
+    await secondExtract(jsonlPath, 'team-lead', 'lead-1', 150);
+
+    expect(firstSpy).toHaveBeenCalledTimes(1);
+    expect(secondSpy).toHaveBeenCalledTimes(1);
   });
 });
