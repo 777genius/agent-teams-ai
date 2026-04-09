@@ -351,6 +351,17 @@ function createGetTeamDataHarness(options: {
   };
 }
 
+function buildResolvedMember(name: string): TeamData['members'][number] {
+  return {
+    name,
+    status: 'unknown',
+    currentTaskId: null,
+    taskCount: 0,
+    lastActiveAt: null,
+    messageCount: 0,
+  };
+}
+
 describe('TeamDataService', () => {
   it('keeps getTeamData read-only and skips kanban garbage-collect', async () => {
     const order: string[] = [];
@@ -3101,6 +3112,47 @@ describe('TeamDataService', () => {
     ]);
     expect(order.indexOf('leadTexts:start')).toBeLessThan(order.indexOf('processes:start'));
     expect(order.indexOf('resolveMembers')).toBeLessThan(order.indexOf('processes:start'));
+  });
+
+  it('attaches runtime advisories during the same snapshot refresh', async () => {
+    const advisory = {
+      kind: 'sdk_retrying' as const,
+      observedAt: '2026-04-09T10:00:00.000Z',
+      retryUntil: '2026-04-09T10:01:00.000Z',
+      retryDelayMs: 60_000,
+      message: 'capacity retry',
+    };
+    const harness = createGetTeamDataHarness({
+      resolveMembers: () => [buildResolvedMember('alice')],
+      getMemberAdvisories: async () => new Map([['alice', advisory]]),
+    });
+
+    const data = await harness.service.getTeamData('my-team');
+
+    expect(harness.advisoryService.getMemberAdvisories).toHaveBeenCalledTimes(1);
+    expect(data.members).toEqual([
+      expect.objectContaining({
+        name: 'alice',
+        runtimeAdvisory: advisory,
+      }),
+    ]);
+  });
+
+  it('degrades advisory lookup failure to warning and still completes the snapshot', async () => {
+    const harness = createGetTeamDataHarness({
+      resolveMembers: () => [buildResolvedMember('alice')],
+      getMemberAdvisories: async () => {
+        throw new Error('advisory failed');
+      },
+    });
+
+    const data = await harness.service.getTeamData('my-team');
+
+    expect(data.members).toEqual([expect.objectContaining({ name: 'alice' })]);
+    expect(data.members[0]?.runtimeAdvisory).toBeUndefined();
+    expect(data.warnings).toEqual(
+      expect.arrayContaining(['Member runtime advisories failed to load'])
+    );
   });
 
   it('keeps warning order deterministic even when read failures settle out of order', async () => {

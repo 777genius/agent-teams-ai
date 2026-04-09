@@ -80,6 +80,8 @@ async function setupRunningTeam(teamName: string) {
   (svc as any).updateConfigProjectPath = vi.fn(async () => {});
   (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
   (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+  (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+  (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
   (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
     members: [{ name: 'alice', role: 'developer' }],
     source: 'config-fallback',

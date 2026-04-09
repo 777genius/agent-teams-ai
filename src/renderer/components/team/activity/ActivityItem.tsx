@@ -306,6 +306,7 @@ const NoiseRow = ({
 );
 
 const BootstrapSystemRow = ({
+  teamName,
   senderName,
   recipientName,
   runtime,
@@ -314,6 +315,7 @@ const BootstrapSystemRow = ({
   timestamp,
   onMemberNameClick,
 }: {
+  teamName: string;
   senderName: string;
   recipientName: string;
   runtime?: string;
@@ -326,11 +328,18 @@ const BootstrapSystemRow = ({
     <span className="bg-sky-500/12 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-300">
       start
     </span>
-    <MemberBadge name={senderName} color={senderColor} hideAvatar onClick={onMemberNameClick} />
+    <MemberBadge
+      name={senderName}
+      color={senderColor}
+      teamName={teamName}
+      hideAvatar
+      onClick={onMemberNameClick}
+    />
     <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
     <MemberBadge
       name={recipientName}
       color={recipientColor}
+      teamName={teamName}
       hideAvatar
       onClick={onMemberNameClick}
     />
@@ -344,6 +353,7 @@ const BootstrapSystemRow = ({
 );
 
 const BootstrapAcknowledgementRow = ({
+  teamName,
   senderName,
   recipientName,
   senderColor,
@@ -351,6 +361,7 @@ const BootstrapAcknowledgementRow = ({
   timestamp,
   onMemberNameClick,
 }: {
+  teamName: string;
   senderName: string;
   recipientName: string;
   senderColor?: string;
@@ -362,11 +373,18 @@ const BootstrapAcknowledgementRow = ({
     <span className="bg-emerald-500/12 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-300">
       bootstrap
     </span>
-    <MemberBadge name={senderName} color={senderColor} hideAvatar onClick={onMemberNameClick} />
+    <MemberBadge
+      name={senderName}
+      color={senderColor}
+      teamName={teamName}
+      hideAvatar
+      onClick={onMemberNameClick}
+    />
     <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
     <MemberBadge
       name={recipientName}
       color={recipientColor}
+      teamName={teamName}
       hideAvatar
       onClick={onMemberNameClick}
     />
@@ -736,6 +754,7 @@ export const ActivityItem = memo(
     if (bootstrapDisplay) {
       return (
         <BootstrapSystemRow
+          teamName={teamName}
           senderName={senderName}
           recipientName={bootstrapDisplay.teammateName ?? message.to ?? 'teammate'}
           runtime={bootstrapDisplay.runtime}
@@ -750,6 +769,7 @@ export const ActivityItem = memo(
     if (bootstrapAcknowledgement) {
       return (
         <BootstrapAcknowledgementRow
+          teamName={teamName}
           senderName={senderName}
           recipientName={message.to ?? 'lead'}
           senderColor={senderColor}
@@ -875,6 +895,7 @@ export const ActivityItem = memo(
             <MemberBadge
               name={senderName}
               color={senderColor}
+              teamName={teamName}
               hideAvatar={senderHideAvatar || compactHeader}
               onClick={onMemberNameClick}
               disableHoverCard={crossTeamOrigin != null}
@@ -962,6 +983,7 @@ export const ActivityItem = memo(
                 <MemberBadge
                   name={crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to}
                   color={crossTeamTarget ? undefined : recipientColor}
+                  teamName={crossTeamTarget ? undefined : teamName}
                   hideAvatar={
                     compactHeader ||
                     (crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to) ===

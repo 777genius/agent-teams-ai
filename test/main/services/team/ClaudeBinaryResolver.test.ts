@@ -11,7 +11,6 @@ const accessMock = vi.fn<(filePath: PathLike, mode?: number) => Promise<void>>()
 const statMock = vi.fn<
   (filePath: PathLike) => Promise<{ isFile: () => boolean }>
 >();
-const readdirMock = vi.fn<(filePath: PathLike) => Promise<string[]>>();
 
 vi.mock('@main/utils/cliPathMerge', () => ({
   buildMergedCliPath: (binaryPath: string | null) => mockBuildMergedCliPath(binaryPath),
@@ -32,14 +31,12 @@ vi.mock('fs', () => ({
     promises: {
       access: (filePath: PathLike, mode?: number) => accessMock(filePath, mode),
       stat: (filePath: PathLike) => statMock(filePath),
-      readdir: (filePath: PathLike) => readdirMock(filePath),
     },
   },
   constants: { X_OK: 1 },
   promises: {
     access: (filePath: PathLike, mode?: number) => accessMock(filePath, mode),
     stat: (filePath: PathLike) => statMock(filePath),
-    readdir: (filePath: PathLike) => readdirMock(filePath),
   },
 }));
 
@@ -55,7 +52,6 @@ describe('ClaudeBinaryResolver', () => {
     mockGetShellPreferredHome.mockReturnValue('/Users/tester');
     mockResolveInteractiveShellEnv.mockResolvedValue({});
     mockGetConfiguredCliFlavor.mockReturnValue('free-code');
-    readdirMock.mockResolvedValue([]);
     Object.defineProperty(process, 'platform', {
       value: 'darwin',
       configurable: true,
@@ -75,8 +71,26 @@ describe('ClaudeBinaryResolver', () => {
     vi.unstubAllEnvs();
   });
 
-  it('resolves free-code runtime from the free-code-gemini-research sibling repo', async () => {
-    const expectedBinary = '/Users/belief/dev/projects/claude/free-code-gemini-research/cli';
+  it('resolves free-code runtime from an explicit CLAUDE_CLI_PATH override', async () => {
+    const expectedBinary = '/Users/belief/dev/projects/claude/free-code-gemini-research/cli-dev';
+    process.env.CLAUDE_CLI_PATH = expectedBinary;
+
+    accessMock.mockImplementation(async (filePath) => {
+      if (filePath === expectedBinary) {
+        return;
+      }
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    });
+
+    const { ClaudeBinaryResolver } = await import('@main/services/team/ClaudeBinaryResolver');
+    ClaudeBinaryResolver.clearCache();
+
+    await expect(ClaudeBinaryResolver.resolve()).resolves.toBe(expectedBinary);
+    expect(accessMock).toHaveBeenCalledWith(expectedBinary, 1);
+  });
+
+  it('falls back to claude-multimodel on PATH for free-code runtime', async () => {
+    const expectedBinary = '/usr/local/bin/claude-multimodel';
 
     accessMock.mockImplementation(async (filePath) => {
       if (filePath === expectedBinary) {

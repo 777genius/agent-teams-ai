@@ -174,8 +174,13 @@ export const MessageComposer = ({
     }
   }, [members, recipient]);
 
-  const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
+  const projectPath = useStore((s) =>
+    s.selectedTeamName === teamName ? (s.selectedTeamData?.config.projectPath ?? null) : null
+  );
   const currentTeamColor = useStore((s) => {
+    if (s.selectedTeamName !== teamName) {
+      return nameColorSet(teamName).border;
+    }
     const configColor = s.selectedTeamData?.config.color;
     if (configColor) return getTeamColorSet(configColor).border;
     const displayName = s.selectedTeamData?.config.name ?? teamName;

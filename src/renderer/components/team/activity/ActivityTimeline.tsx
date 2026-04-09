@@ -6,6 +6,7 @@ import {
   areStringMapsEqual,
 } from '@renderer/utils/messageRenderEquality';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
+import { createLogger } from '@shared/utils/logger';
 import { Layers } from 'lucide-react';
 
 import { ActivityItem, isNoiseMessage } from './ActivityItem';
@@ -80,6 +81,9 @@ const COMPACT_MESSAGES_WIDTH_PX = 400;
 const EMPTY_TEAM_NAMES: string[] = [];
 const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
 const DEFAULT_COLLAPSE_MODE = 'default' as const;
+const logger = createLogger('Component:ActivityTimeline');
+const ACTIVITY_TIMELINE_SLICE_WARN_MS = 6;
+const ACTIVITY_TIMELINE_GROUP_WARN_MS = 8;
 
 interface ItemCollapseProps {
   collapseMode: 'default' | 'managed';
@@ -335,6 +339,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   // Pagination counts only significant (non-thought) messages so that lead thoughts
   // don't consume the page limit — they collapse into a single visual group anyway.
   const { visibleMessages, hiddenCount } = useMemo(() => {
+    const startedAt = performance.now();
     const total = messages.length;
     if (total === 0) return { visibleMessages: messages, hiddenCount: 0 };
 
@@ -354,14 +359,31 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
       significantSeen +
       (cutoff < total ? messages.slice(cutoff).filter((m) => !isLeadThought(m)).length : 0);
     const hidden = Math.max(0, significantTotal - visibleCount);
-    return {
+    const result = {
       visibleMessages: cutoff < total ? messages.slice(0, cutoff) : messages,
       hiddenCount: hidden,
     };
+    const ms = performance.now() - startedAt;
+    if (ms >= ACTIVITY_TIMELINE_SLICE_WARN_MS) {
+      logger.warn(
+        `[perf] paginate team=${teamName} ms=${ms.toFixed(1)} total=${messages.length} visible=${result.visibleMessages.length} hidden=${result.hiddenCount} pageSize=${visibleCount}`
+      );
+    }
+    return result;
   }, [messages, visibleCount]);
 
   // Group consecutive lead thoughts into collapsible blocks.
-  const timelineItems = useMemo(() => groupTimelineItems(visibleMessages), [visibleMessages]);
+  const timelineItems = useMemo(() => {
+    const startedAt = performance.now();
+    const result = groupTimelineItems(visibleMessages);
+    const ms = performance.now() - startedAt;
+    if (ms >= ACTIVITY_TIMELINE_GROUP_WARN_MS) {
+      logger.warn(
+        `[perf] groupTimeline team=${teamName} ms=${ms.toFixed(1)} visibleMessages=${visibleMessages.length} groups=${result.length}`
+      );
+    }
+    return result;
+  }, [teamName, visibleMessages]);
 
   // Zebra striping is anchored from the bottom of the visible list so prepending
   // new live messages at the top does not recolor every existing card.

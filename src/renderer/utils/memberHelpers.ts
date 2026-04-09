@@ -107,6 +107,20 @@ export const SPAWN_PRESENCE_LABELS: Record<MemberSpawnStatus, string> = {
   error: 'spawn failed',
 };
 
+function isLaunchStillStarting(
+  spawnStatus: MemberSpawnStatus | undefined,
+  spawnLaunchState: MemberLaunchState | undefined,
+  runtimeAlive: boolean | undefined
+): boolean {
+  if (spawnLaunchState === 'failed_to_start') {
+    return false;
+  }
+  if (spawnLaunchState === 'runtime_pending_bootstrap' && runtimeAlive) {
+    return false;
+  }
+  return spawnLaunchState === 'starting' || spawnStatus === 'waiting' || spawnStatus === 'spawning';
+}
+
 /**
  * Returns dot class for a member during provisioning, respecting spawn status.
  * Falls back to the existing `getMemberDotClass` when no spawn status is available.
@@ -115,12 +129,19 @@ export function getSpawnAwareDotClass(
   member: ResolvedTeamMember,
   spawnStatus: MemberSpawnStatus | undefined,
   spawnLaunchState: MemberLaunchState | undefined,
+  runtimeAlive: boolean | undefined,
   isTeamAlive?: boolean,
   isTeamProvisioning?: boolean,
   leadActivity?: LeadActivityState
 ): string {
+  if (isTeamAlive === false && !isTeamProvisioning) {
+    return STATUS_DOT_COLORS.terminated;
+  }
   if (spawnLaunchState === 'failed_to_start' || spawnStatus === 'error') {
     return SPAWN_DOT_COLORS.error;
+  }
+  if (isLaunchStillStarting(spawnStatus, spawnLaunchState, runtimeAlive)) {
+    return spawnStatus === 'spawning' ? SPAWN_DOT_COLORS.spawning : SPAWN_DOT_COLORS.waiting;
   }
   if (spawnLaunchState === 'runtime_pending_bootstrap' && spawnStatus === 'online') {
     return SPAWN_DOT_COLORS.online;
@@ -153,17 +174,17 @@ export function getSpawnAwarePresenceLabel(
   isTeamProvisioning?: boolean,
   leadActivity?: LeadActivityState
 ): string {
+  if (isTeamAlive === false && !isTeamProvisioning) {
+    return 'offline';
+  }
   if (spawnLaunchState === 'failed_to_start' || spawnStatus === 'error') {
     return SPAWN_PRESENCE_LABELS.error;
-  }
-  if (spawnStatus === 'offline' && isTeamProvisioning) {
-    return 'waiting for Agent';
   }
   if (spawnLaunchState === 'runtime_pending_bootstrap' && runtimeAlive) {
     return 'online';
   }
-  if (spawnStatus === 'waiting') {
-    return SPAWN_PRESENCE_LABELS.waiting;
+  if (isLaunchStillStarting(spawnStatus, spawnLaunchState, runtimeAlive)) {
+    return 'starting';
   }
   if (spawnStatus === 'online' && livenessSource === 'process') {
     return 'online';
@@ -178,20 +199,31 @@ export function getSpawnAwarePresenceLabel(
  * Card container CSS classes based on spawn status (opacity + animation).
  * Used by MemberCard wrapper for fade-in transitions.
  */
-export function getSpawnCardClass(spawnStatus: MemberSpawnStatus | undefined): string {
+export function getSpawnCardClass(
+  spawnStatus: MemberSpawnStatus | undefined,
+  spawnLaunchState?: MemberLaunchState,
+  runtimeAlive?: boolean,
+  isTeamAlive?: boolean,
+  isTeamProvisioning?: boolean
+): string {
+  if (isTeamAlive === false && !isTeamProvisioning) {
+    return 'opacity-40';
+  }
   switch (spawnStatus) {
     case 'offline':
-      return 'opacity-40';
+      return spawnLaunchState === 'starting' ? 'member-waiting-shimmer opacity-75' : 'opacity-40';
     case 'waiting':
       return 'member-waiting-shimmer';
     case 'spawning':
-      return '';
+      return 'member-waiting-shimmer';
     case 'online':
       return 'animate-[member-fade-in_0.4s_ease-out]';
     case 'error':
       return 'opacity-80';
     default:
-      return '';
+      return isLaunchStillStarting(spawnStatus, spawnLaunchState, runtimeAlive)
+        ? 'member-waiting-shimmer'
+        : '';
   }
 }
 
@@ -232,6 +264,36 @@ export function getMemberRuntimeAdvisoryTitle(
   return (
     advisory.message?.trim() ||
     'The SDK is retrying this request after a provider or backend error.'
+  );
+}
+
+export function getLaunchAwarePresenceLabel(
+  member: ResolvedTeamMember,
+  spawnStatus: MemberSpawnStatus | undefined,
+  spawnLaunchState: MemberLaunchState | undefined,
+  livenessSource: MemberSpawnLivenessSource | undefined,
+  runtimeAlive: boolean | undefined,
+  runtimeAdvisory: MemberRuntimeAdvisory | undefined,
+  isTeamAlive?: boolean,
+  isTeamProvisioning?: boolean,
+  leadActivity?: LeadActivityState
+): string {
+  const advisoryLabel =
+    spawnLaunchState === 'runtime_pending_bootstrap' && runtimeAlive
+      ? getMemberRuntimeAdvisoryLabel(runtimeAdvisory)
+      : null;
+  if (advisoryLabel) {
+    return advisoryLabel;
+  }
+  return getSpawnAwarePresenceLabel(
+    member,
+    spawnStatus,
+    spawnLaunchState,
+    livenessSource,
+    runtimeAlive,
+    isTeamAlive,
+    isTeamProvisioning,
+    leadActivity
   );
 }
 

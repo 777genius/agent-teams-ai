@@ -54,17 +54,34 @@ function createFakeChild() {
   return { child, writeSpy };
 }
 
-function extractPromptFromWrite(writeSpy: ReturnType<typeof vi.fn>): string {
-  const payload = String(writeSpy.mock.calls[0]?.[0] ?? '');
-  const parsed = JSON.parse(payload) as {
-    type: string;
-    message?: { role: string; content: { type: string; text?: string }[] };
-  };
-  const text = parsed.message?.content?.[0]?.text;
-  if (typeof text !== 'string') {
-    throw new Error('Failed to extract prompt text from stdin write payload');
+function extractPromptFromBootstrapFile(callIndex = 0): string {
+  const args = vi.mocked(spawnCli).mock.calls[callIndex]?.[1] as string[] | undefined;
+  const promptFlagIndex = args?.indexOf('--team-bootstrap-user-prompt-file') ?? -1;
+  const promptPath = promptFlagIndex >= 0 ? args?.[promptFlagIndex + 1] : null;
+  if (!promptPath) {
+    throw new Error('Failed to extract bootstrap prompt file path from spawn args');
   }
-  return text;
+  return fs.readFileSync(promptPath, 'utf8');
+}
+
+function extractBootstrapSpec(callIndex = 0): {
+  mode?: string;
+  team?: { name?: string; cwd?: string };
+  lead?: { permissionSeedTools?: string[] };
+  members?: Array<Record<string, unknown>>;
+} {
+  const args = vi.mocked(spawnCli).mock.calls[callIndex]?.[1] as string[] | undefined;
+  const specFlagIndex = args?.indexOf('--team-bootstrap-spec') ?? -1;
+  const specPath = specFlagIndex >= 0 ? args?.[specFlagIndex + 1] : null;
+  if (!specPath) {
+    throw new Error('Failed to extract bootstrap spec path from spawn args');
+  }
+  return JSON.parse(fs.readFileSync(specPath, 'utf8')) as {
+    mode?: string;
+    team?: { name?: string; cwd?: string };
+    lead?: { permissionSeedTools?: string[] };
+    members?: Array<Record<string, unknown>>;
+  };
 }
 
 describe('TeamProvisioningService prompt content (solo mode discipline)', () => {
@@ -88,7 +105,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     }
   });
 
-  it('createTeam prompt (solo) mandates sequential status + frequent user updates', async () => {
+  it('createTeam uses deterministic bootstrap spec and safe flags in solo mode', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child, writeSpy } = createFakeChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
@@ -98,6 +115,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -111,31 +129,19 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
       () => {}
     );
 
-    expect(writeSpy).toHaveBeenCalledTimes(1);
-    const prompt = extractPromptFromWrite(writeSpy);
-    expect(prompt).toContain('SOLO MODE: This team CURRENTLY has ZERO teammates.');
-    expect(prompt).toContain('PROGRESS REPORTING (MANDATORY)');
-    expect(prompt).toContain('Never bulk-move many tasks at the end');
-    expect(prompt).toContain('Default to working ONE task at a time');
-    expect(prompt).toContain(
-      'review_request already notifies the reviewer, so do NOT send a second manual SendMessage for the same review request'
-    );
-    expect(prompt).toContain('task_start');
-    expect(prompt).toContain('task_complete');
-    expect(prompt).toContain('task_create_from_message');
-    expect(prompt).toContain('TURN ACTION MODE PROTOCOL (HIGHEST PRIORITY FOR EACH USER TURN):');
-    expect(prompt).toContain('ASK: Strict read-only conversation mode.');
-    expect(prompt).toContain('DELEGATE: Strict orchestration mode for leads.');
-    expect(prompt).toContain(
-      'Built-in Agent usage rule: the built-in Agent tool is allowed only for normal Claude Code-style subagents WITHOUT team_name, and only on turns whose action mode is DO.'
-    );
-    expect(prompt).toContain(`AGENT_BLOCK_OPEN is exactly: ${AGENT_BLOCK_OPEN}`);
-    expect(prompt).toContain(`AGENT_BLOCK_CLOSE is exactly: ${AGENT_BLOCK_CLOSE}`);
-    expect(prompt).not.toContain('teamctl.js');
-    expect(prompt).not.toContain('.claude/tools');
+    expect(writeSpy).not.toHaveBeenCalled();
+    const bootstrapSpec = extractBootstrapSpec();
+    expect(bootstrapSpec.mode).toBe('create');
+    expect(bootstrapSpec.team).toMatchObject({
+      name: 'solo-team',
+      cwd: process.cwd(),
+    });
+    expect(bootstrapSpec.members).toEqual([]);
 
     const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
     expect(launchArgs).toContain('--mcp-config');
+    expect(launchArgs).toContain('--team-bootstrap-spec');
+    expect(launchArgs).not.toContain('--team-bootstrap-user-prompt-file');
     expect(launchArgs).not.toContain('--strict-mcp-config');
     expect(launchArgs).toContain('--disallowedTools');
     const disallowed = launchArgs[launchArgs.indexOf('--disallowedTools') + 1] ?? '';
@@ -145,7 +151,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     await svc.cancelProvisioning(runId);
   });
 
-  it('launchTeam prompt (solo) requires sequential execution and incremental updates', async () => {
+  it('launchTeam prompt (solo) uses deterministic refresh-only reconnect instructions', async () => {
     // Seed config.json so launchTeam can validate team existence.
     const teamName = 'solo-team-launch';
     const teamDir = path.join(tempTeamsBase, teamName);
@@ -172,11 +178,13 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+    (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
     (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
       members: [],
       source: 'config-fallback',
       warning: undefined,
     }));
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).pathExists = vi.fn(async () => false);
     (svc as any).startFilesystemMonitor = vi.fn();
 
@@ -189,17 +197,16 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
       () => {}
     );
 
-    expect(writeSpy).toHaveBeenCalledTimes(1);
-    const prompt = extractPromptFromWrite(writeSpy);
+    expect(writeSpy).not.toHaveBeenCalled();
+    const prompt = extractPromptFromBootstrapFile();
     expect(prompt).toContain('SOLO MODE: This team CURRENTLY has ZERO teammates.');
-    expect(prompt).toContain('Execute tasks sequentially and keep the board + user updated');
-    expect(prompt).toContain('Do NOT start the next task until the current task is completed');
-    expect(prompt).toContain('Do NOT delay this reconnect turn by reading internal config files');
-    expect(prompt).toContain('Treat it as a diagnostic cross-check, not as the first reconnect action.');
+    expect(prompt).toContain('This reconnect/bootstrap step has already been completed deterministically by the runtime.');
+    expect(prompt).toContain('Do NOT start implementation in this turn.');
+    expect(prompt).toContain('Use this turn only to refresh context, review the current board snapshot, and confirm you are ready.');
     expect(prompt).toContain(
       'review_request already notifies the reviewer, so do NOT send a second manual SendMessage for the same review request'
     );
-    expect(prompt).toContain('task_start');
+    expect(prompt).toContain('task_create_from_message');
     expect(prompt).toContain(`AGENT_BLOCK_OPEN is exactly: ${AGENT_BLOCK_OPEN}`);
     expect(prompt).toContain(`AGENT_BLOCK_CLOSE is exactly: ${AGENT_BLOCK_CLOSE}`);
     expect(prompt).not.toContain('teamctl.js');
@@ -212,7 +219,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     await svc.cancelProvisioning(runId);
   });
 
-  it('createTeam prompt for teammates includes explicit hidden-instruction block rules', async () => {
+  it('createTeam bootstrap spec carries teammate descriptors for deterministic startup', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child, writeSpy } = createFakeChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
@@ -222,6 +229,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
@@ -235,42 +243,38 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
       () => {}
     );
 
-    const prompt = extractPromptFromWrite(writeSpy);
-    expect(prompt).toContain('Hidden internal instructions rule (IMPORTANT):');
-    expect(prompt).toContain(`  ${AGENT_BLOCK_OPEN}`);
-    expect(prompt).toContain(`  ${AGENT_BLOCK_CLOSE}`);
-    expect(prompt).toContain('NEVER use agent-only blocks in messages to "user".');
-    expect(prompt).toContain('TURN ACTION MODE PROTOCOL (HIGHEST PRIORITY FOR EACH USER TURN):');
-    expect(prompt).toContain('DO: Full execution mode.');
-    expect(prompt).toContain('DELEGATE: Strict orchestration mode for leads.');
-    expect(prompt).toContain(
-      'Built-in Agent usage rule: the built-in Agent tool is allowed only for normal Claude Code-style subagents WITHOUT team_name, and only on turns whose action mode is DO.'
-    );
-    expect(prompt).toContain('Your FIRST action: call MCP tool member_briefing');
-    expect(prompt).toContain('Do NOT start work, claim tasks, or improvise workflow/task/process rules');
-    expect(prompt).toContain('If member_briefing fails, send a short message to your team lead');
-    expect(prompt).toContain('Introduce yourself briefly (name and role) and confirm you are ready');
-    expect(prompt).toContain('use task_briefing as your compact queue view');
-    expect(prompt).toContain('Use task_get when you need the full task context before starting a pending/needsFix task');
-    expect(prompt).toContain(
-      'If that teammate already has another in_progress task, create/keep the new task in pending/TODO. Do NOT mark it in_progress for them yet.'
-    );
-    expect(prompt).toContain(
-      'leave a short task comment on that waiting task right away with the reason and your best ETA, keep it in pending/TODO'
-    );
-    expect(prompt).toContain(
-      'Beyond task-completion pings, direct messages to your team lead are only for urgent attention, no-task situations, or when the lead explicitly asked for a direct reply.'
-    );
-    expect(prompt).toContain(
-      'do NOT send a duplicate SendMessage to the lead with the same content unless you need urgent non-task attention.'
-    );
-    expect(prompt).not.toContain('Include the following agent-only instructions verbatim in the prompt:');
-    expect(prompt).not.toContain('runtime forwards task comments to the lead automatically');
+    expect(writeSpy).not.toHaveBeenCalled();
+    const bootstrapSpec = extractBootstrapSpec();
+    expect(bootstrapSpec.mode).toBe('create');
+    expect(bootstrapSpec.members).toEqual([
+      expect.objectContaining({
+        name: 'alice',
+        role: 'developer',
+        description: 'developer',
+        cwd: process.cwd(),
+      }),
+    ]);
 
     await svc.cancelProvisioning(runId);
   });
 
-  it('includes task-comment forwarding wording by default', async () => {
+  it('launchTeam hydration prompt includes task-comment handling guidance by default', async () => {
+    const teamName = 'forward-live-team';
+    const teamDir = path.join(tempTeamsBase, teamName);
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        description: 'Task comment forwarding live prompt test',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'alice', agentType: 'teammate', role: 'developer' },
+        ],
+      }),
+      'utf8'
+    );
+
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child, writeSpy } = createFakeChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
@@ -280,22 +284,33 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
     }));
+    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
+    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
+    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+      members: [{ name: 'alice', role: 'developer' }],
+      source: 'config-fallback',
+      warning: undefined,
+    }));
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).startFilesystemMonitor = vi.fn();
     (svc as any).pathExists = vi.fn(async () => false);
 
-    const { runId } = await svc.createTeam(
+    const { runId } = await svc.launchTeam(
       {
-        teamName: 'forward-live-team',
+        teamName,
         cwd: process.cwd(),
-        members: [{ name: 'alice', role: 'developer' }],
-        description: 'Task comment forwarding live prompt test',
+        clearContext: true,
       },
       () => {}
     );
 
-    const prompt = extractPromptFromWrite(writeSpy);
+    expect(writeSpy).not.toHaveBeenCalled();
+    const prompt = extractPromptFromBootstrapFile();
     expect(prompt).toContain(
-      'do NOT send a duplicate SendMessage to the lead with the same content unless you need urgent non-task attention.'
+      'Teammate task comments are auto-forwarded to you.'
     );
 
     await svc.cancelProvisioning(runId);
@@ -331,11 +346,13 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
     (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
       members: [{ name: 'alice', role: 'developer' }],
       source: 'config-fallback',
       warning: undefined,
     }));
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
     (svc as any).pathExists = vi.fn(async () => false);
     (svc as any).startFilesystemMonitor = vi.fn();
 
@@ -348,27 +365,20 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
       () => {}
     );
 
-    const prompt = extractPromptFromWrite(writeSpy);
-    expect(prompt).toContain('The team has been reconnected after a restart.');
-    expect(prompt).toContain('Restore/start the existing teammates first.');
-    expect(prompt).toContain('Treat it as a diagnostic cross-check, not as the first reconnect action.');
-    expect(prompt).toContain('Hidden internal instructions rule (IMPORTANT):');
-    expect(prompt).toContain(`  ${AGENT_BLOCK_OPEN}`);
-    expect(prompt).toContain(`  ${AGENT_BLOCK_CLOSE}`);
-    expect(prompt).toContain('NEVER use agent-only blocks in messages to "user".');
-    expect(prompt).toContain('Your FIRST action: call MCP tool member_briefing');
-    expect(prompt).toContain('Do NOT start work, claim tasks, or improvise workflow/task/process rules');
-    expect(prompt).toContain('If member_briefing fails, send a short message to your team lead');
-    expect(prompt).toContain('After member_briefing succeeds:');
-    expect(prompt).toContain('Use task_briefing as your compact queue view.');
-    expect(prompt).toContain('resume/finish those first');
-    expect(prompt).toContain('Call task_get only if you need more context than task_briefing already gave you');
-    expect(prompt).toContain('Before you start any needsFix or pending task, call task_get');
+    expect(writeSpy).not.toHaveBeenCalled();
+    const prompt = extractPromptFromBootstrapFile();
+    expect(prompt).toContain('This reconnect/bootstrap step has already been completed deterministically by the runtime.');
+    expect(prompt).toContain('Do NOT use Agent to spawn or restore teammates.');
+    expect(prompt).toContain('Use this turn only to refresh context, review the current board snapshot, and prepare the next delegation step.');
+    expect(prompt).toContain('DELEGATION-FIRST (behavior rule for ALL future turns):');
+    expect(prompt).toContain(`AGENT_BLOCK_OPEN is exactly: ${AGENT_BLOCK_OPEN}`);
+    expect(prompt).toContain(`AGENT_BLOCK_CLOSE is exactly: ${AGENT_BLOCK_CLOSE}`);
+    expect(prompt).toContain('Messages to "user" (the human) must NEVER contain agent-only blocks.');
+    expect(prompt).toContain('task_create_from_message');
+    expect(prompt).toContain('task_set_owner');
+    expect(prompt).toContain('cross_team_send');
     expect(prompt).toContain(
-      'If you assign a task to a member who already has another in_progress task, keep the newly assigned task pending/TODO. Do NOT move it to in_progress until that member actually starts it.'
-    );
-    expect(prompt).toContain(
-      'leave a short task comment on that waiting task with the reason and your best ETA, keep it in pending/TODO'
+      'review_request already notifies the reviewer'
     );
 
     await svc.cancelProvisioning(runId);

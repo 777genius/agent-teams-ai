@@ -340,6 +340,29 @@ describe('ipc teams handlers', () => {
     );
   });
 
+  it('adds a visible-first acknowledgement contract for live lead delegate turns', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = (await sendHandler!({} as never, 'my-team', {
+      member: 'team-lead',
+      text: 'Delegate this work',
+      actionMode: 'delegate',
+    })) as { success: boolean };
+
+    expect(result.success).toBe(true);
+    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+      'my-team',
+      expect.stringContaining('DELEGATE MODE USER ACK CONTRACT:'),
+      undefined
+    );
+    expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+      'my-team',
+      expect.stringContaining('Make the acknowledgement at least 40 characters so it is preserved in the Messages panel.'),
+      undefined
+    );
+  });
+
   it('omits roster context when durable teammate roster is empty', async () => {
     mockGetMembersMeta.mockResolvedValueOnce([]);
     service.getTeamData.mockResolvedValueOnce({

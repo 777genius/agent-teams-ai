@@ -44,6 +44,13 @@ function formatToolPreview(preview: string | undefined): string | undefined {
   return preview.length > 50 ? preview.slice(0, 50) + '...' : preview;
 }
 
+function getSpawnStatusBadgeLabel(spawnStatus: GraphNode['spawnStatus']): string {
+  if (spawnStatus === 'waiting' || spawnStatus === 'spawning') {
+    return 'starting';
+  }
+  return spawnStatus ?? '';
+}
+
 interface GraphNodePopoverProps {
   node: GraphNode;
   teamName: string;
@@ -246,7 +253,7 @@ const MemberPopoverContent = ({
             variant="outline"
             className="border-amber-500/30 px-1.5 py-0 text-[10px] text-amber-400"
           >
-            {node.spawnStatus}
+            {getSpawnStatusBadgeLabel(node.spawnStatus)}
           </Badge>
         )}
       </div>

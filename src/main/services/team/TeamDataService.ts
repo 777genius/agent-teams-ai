@@ -112,6 +112,18 @@ interface TaskChangeLogSourceSnapshot {
   logSourceGeneration: string | null;
 }
 
+interface FileWatchReconcileDiagnostics {
+  inFlight: number;
+  burstCount: number;
+  windowStartedAt: number;
+  lastPressureLogAt: number;
+}
+
+interface FileWatchReconcileTrigger {
+  source: 'inbox' | 'task';
+  detail?: string;
+}
+
 export class TeamDataService {
   private processHealthTimer: ReturnType<typeof setInterval> | null = null;
   private processHealthTeams = new Set<string>();
@@ -121,6 +133,7 @@ export class TeamDataService {
   private taskCommentNotificationInFlight = new Set<string>();
   private taskChangePresenceRepository: TaskChangePresenceRepository | null = null;
   private teamLogSourceTracker: TeamLogSourceTracker | null = null;
+  private fileWatchReconcileDiagnostics = new Map<string, FileWatchReconcileDiagnostics>();
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -509,6 +522,11 @@ export class TeamDataService {
       const t = marks[label];
       return typeof t === 'number' ? t - startedAt : -1;
     };
+    const msBetween = (from: string, to: string): number => {
+      const fromTs = marks[from];
+      const toTs = marks[to];
+      return typeof fromTs === 'number' && typeof toTs === 'number' ? toTs - fromTs : -1;
+    };
 
     const config = await this.configReader.getConfig(teamName);
     if (!config) {
@@ -688,6 +706,7 @@ export class TeamDataService {
     let messages: InboxMessage[] = messagesStepResult.value;
     const leadTexts: InboxMessage[] = leadTextsStepResult.value;
     const sentMessages: InboxMessage[] = sentMessagesStepResult.value;
+    mark('postStart');
 
     if (leadTexts.length > 0) {
       messages = [...messages, ...leadTexts];
@@ -695,6 +714,7 @@ export class TeamDataService {
     if (sentMessages.length > 0) {
       messages = [...messages, ...sentMessages];
     }
+    mark('mergeMessages');
 
     // Dedup: if a lead_process message text is also present in lead_session, prefer lead_session.
     // This avoids double-rendering when we persist lead process messages and later load the lead JSONL.
@@ -717,6 +737,7 @@ export class TeamDataService {
         return !leadSessionFingerprints.has(fp);
       });
     }
+    mark('dedupLeadTexts');
 
     // Dedup exact message copies that can appear as both live lead_process rows and
     // their persisted inbox/sent-message counterpart. If the messageId is identical,
@@ -779,6 +800,7 @@ export class TeamDataService {
       }
       messages = [...dedupedWithoutId, ...dedupedById.values()];
     }
+    mark('dedupMessageIds');
 
     // Enrich inbox messages without leadSessionId by assigning the nearest neighbor's
     // session ID (by timestamp). This avoids the old forward-only propagation bug.
@@ -826,11 +848,13 @@ export class TeamDataService {
         }
       }
     }
+    mark('attachLeadSessionIds');
 
     messages.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
     this.annotateSlashCommandResponses(messages);
 
     messages.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+    mark('normalizeMessages');
 
     const metaMembers: TeamConfig['members'] = metaMembersStepResult.value;
     const kanbanState: KanbanState = kanbanStateStepResult.value;
@@ -840,8 +864,10 @@ export class TeamDataService {
     const tasksWithKanbanBase: TeamTaskWithKanban[] = tasks.map((task) =>
       this.attachKanbanCompatibility(task, kanbanState.tasks[task.id])
     );
+    mark('attachKanban');
 
     const presenceIndex = await presenceIndexPromise;
+    mark('loadPresenceIndex');
 
     const taskChangePresenceById = this.resolveTaskChangePresenceMap(
       tasksWithKanbanBase,
@@ -855,6 +881,7 @@ export class TeamDataService {
           changePresence: taskChangePresenceById[task.id] ?? 'unknown',
         }))
       : tasksWithKanbanBase;
+    mark('changePresence');
 
     const members = this.memberResolver.resolveMembers(
       config,
@@ -897,18 +924,45 @@ export class TeamDataService {
 
     const totalMs = Date.now() - startedAt;
     if (totalMs >= 1500) {
+      const counts = `counts=tasks:${tasks.length},messages:${messages.length},inboxNames:${inboxNames.length},leadTexts:${leadTexts.length},sent:${sentMessages.length},members:${members.length},processes:${processes.length}`;
       logger.warn(
         `getTeamData team=${teamName} slow total=${totalMs}ms config=${msSince('config')} tasks=${msSince('tasks')} inboxNames=${msSince(
           'inboxNames'
         )} messages=${msSince('messages')} leadTexts=${msSince('leadTexts')} sent=${msSince(
           'sentMessages'
-        )} membersMeta=${msSince('metaMembers')} kanban=${msSince('kanbanState')} kanbanGc=${msSince(
-          'kanbanGc'
-        )} resolveMembers=${msSince('resolveMembers')} runtimeAdvisories=${msSince(
+        )} membersMeta=${msSince('metaMembers')} kanban=${msSince('kanbanState')} post=${msBetween(
+          'postStart',
+          'mergeMessages'
+        )}/dedupLead=${msBetween('mergeMessages', 'dedupLeadTexts')}/dedupIds=${msBetween(
+          'dedupLeadTexts',
+          'dedupMessageIds'
+        )}/attachLeadSession=${msBetween(
+          'dedupMessageIds',
+          'attachLeadSessionIds'
+        )}/normalizeMessages=${msBetween(
+          'attachLeadSessionIds',
+          'normalizeMessages'
+        )}/attachKanban=${msBetween(
+          'normalizeMessages',
+          'attachKanban'
+        )}/loadPresenceIndex=${msBetween(
+          'attachKanban',
+          'loadPresenceIndex'
+        )}/changePresence=${msBetween(
+          'loadPresenceIndex',
+          'changePresence'
+        )}/resolveMembers=${msBetween(
+          'changePresence',
+          'resolveMembers'
+        )}/runtimeAdvisories=${msBetween(
+          'resolveMembers',
           'runtimeAdvisories'
-        )} enrichBranches=${msSince(
+        )}/enrichBranches=${msBetween(
+          'runtimeAdvisories',
           'enrichBranches'
-        )} syncComments=${msSince('syncComments')} processes=${msSince('processes')}`
+        )}/processes=${msBetween('syncComments', 'processes')} ${counts}${
+          warnings.length > 0 ? ` warnings=${warnings.join('|')}` : ''
+        }`
       );
     }
 
@@ -2231,10 +2285,79 @@ export class TeamDataService {
     );
   }
 
-  async reconcileTeamArtifacts(teamName: string): Promise<void> {
-    this.getController(teamName).maintenance.reconcileArtifacts({
-      reason: 'file-watch',
-    });
+  async reconcileTeamArtifacts(
+    teamName: string,
+    trigger?: FileWatchReconcileTrigger
+  ): Promise<void> {
+    const now = Date.now();
+    const diagnostics = this.fileWatchReconcileDiagnostics.get(teamName) ?? {
+      inFlight: 0,
+      burstCount: 0,
+      windowStartedAt: now,
+      lastPressureLogAt: 0,
+    };
+    const triggerSource = trigger?.source ?? 'unknown';
+    const triggerDetail =
+      typeof trigger?.detail === 'string' && trigger.detail.trim().length > 0
+        ? ` detail=${trigger.detail.trim()}`
+        : '';
+    if (now - diagnostics.windowStartedAt > 5_000) {
+      diagnostics.windowStartedAt = now;
+      diagnostics.burstCount = 0;
+    }
+    diagnostics.burstCount += 1;
+    diagnostics.inFlight += 1;
+    this.fileWatchReconcileDiagnostics.set(teamName, diagnostics);
+
+    const concurrentAtStart = diagnostics.inFlight;
+    const shouldLogPressure =
+      concurrentAtStart > 1 || diagnostics.burstCount >= 8 || diagnostics.burstCount === 1;
+    if (shouldLogPressure && now - diagnostics.lastPressureLogAt >= 2_000) {
+      diagnostics.lastPressureLogAt = now;
+      logger.warn(
+        `[reconcileTeamArtifacts] team=${teamName} reason=file-watch source=${triggerSource}${triggerDetail} inFlight=${concurrentAtStart} burst=${diagnostics.burstCount}`
+      );
+    }
+
+    const startedAt = Date.now();
+    try {
+      const rawResult = this.getController(teamName).maintenance.reconcileArtifacts({
+        reason: 'file-watch',
+      }) as
+        | {
+            staleKanbanEntriesRemoved?: number;
+            staleColumnOrderRefsRemoved?: number;
+            linkedCommentsCreated?: number;
+          }
+        | undefined;
+      const result = (rawResult ?? {}) as {
+        staleKanbanEntriesRemoved?: number;
+        staleColumnOrderRefsRemoved?: number;
+        linkedCommentsCreated?: number;
+      };
+      const durationMs = Date.now() - startedAt;
+      if (
+        durationMs >= 100 ||
+        concurrentAtStart > 1 ||
+        diagnostics.burstCount >= 8 ||
+        (result.linkedCommentsCreated ?? 0) > 0 ||
+        (result.staleKanbanEntriesRemoved ?? 0) > 0 ||
+        (result.staleColumnOrderRefsRemoved ?? 0) > 0
+      ) {
+        logger.warn(
+          `[reconcileTeamArtifacts] completed team=${teamName} reason=file-watch source=${triggerSource}${triggerDetail} durationMs=${durationMs} inFlightAtStart=${concurrentAtStart} burst=${diagnostics.burstCount} linkedCommentsCreated=${result.linkedCommentsCreated ?? 0} staleKanbanEntriesRemoved=${result.staleKanbanEntriesRemoved ?? 0} staleColumnOrderRefsRemoved=${result.staleColumnOrderRefsRemoved ?? 0}`
+        );
+      }
+    } finally {
+      const current = this.fileWatchReconcileDiagnostics.get(teamName);
+      if (!current) {
+        return;
+      }
+      current.inFlight = Math.max(0, current.inFlight - 1);
+      if (current.inFlight === 0 && Date.now() - current.windowStartedAt > 30_000) {
+        this.fileWatchReconcileDiagnostics.delete(teamName);
+      }
+    }
   }
 
   private getLeadProjectDirCandidates(projectPath: string): string[] {

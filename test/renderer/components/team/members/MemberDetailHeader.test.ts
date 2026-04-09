@@ -1,0 +1,71 @@
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import type { ResolvedTeamMember } from '@shared/types';
+
+vi.mock('@renderer/components/ui/badge', () => ({
+  Badge: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('span', null, children),
+}));
+
+vi.mock('@renderer/components/ui/dialog', () => ({
+  DialogTitle: ({ children }: { children: React.ReactNode }) => React.createElement('div', null, children),
+  DialogDescription: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', null, children),
+}));
+
+vi.mock('@renderer/components/team/members/MemberRoleEditor', () => ({
+  MemberRoleEditor: () => null,
+}));
+
+import { MemberDetailHeader } from '@renderer/components/team/members/MemberDetailHeader';
+
+const member: ResolvedTeamMember = {
+  name: 'alice',
+  status: 'unknown',
+  taskCount: 0,
+  currentTaskId: null,
+  lastActiveAt: null,
+  messageCount: 0,
+  color: 'blue',
+  agentType: 'reviewer',
+  role: 'Reviewer',
+  removedAt: undefined,
+};
+
+describe('MemberDetailHeader spawn-aware presence', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.unstubAllGlobals();
+  });
+
+  it('shows starting from spawn props even when coarse team state would read as idle', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberDetailHeader, {
+          member,
+          isTeamAlive: true,
+          isTeamProvisioning: false,
+          spawnStatus: 'spawning',
+          spawnLaunchState: 'starting',
+          spawnRuntimeAlive: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('starting');
+    expect(host.textContent).not.toContain('idle');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+});

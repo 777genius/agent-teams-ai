@@ -1,20 +1,35 @@
 import * as fs from 'fs/promises';
 
 import type { MemberRuntimeAdvisory, ResolvedTeamMember } from '@shared/types';
+import { createLogger } from '@shared/utils/logger';
 
 import { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 
 const LOOKBACK_MS = 10 * 60 * 1000;
 const CACHE_TTL_MS = 5_000;
 const TAIL_BYTES = 64 * 1024;
+const BATCH_WARN_MS = 200;
+
+const logger = createLogger('Service:TeamMemberRuntimeAdvisory');
 
 interface CachedRuntimeAdvisory {
   value: MemberRuntimeAdvisory | null;
   expiresAt: number;
 }
 
+interface CachedTeamBatchAdvisories {
+  membersSignature: string;
+  value: Map<string, MemberRuntimeAdvisory>;
+  expiresAt: number;
+}
+
 export class TeamMemberRuntimeAdvisoryService {
-  private readonly cache = new Map<string, CachedRuntimeAdvisory>();
+  private readonly memberCache = new Map<string, CachedRuntimeAdvisory>();
+  private readonly teamBatchCacheByTeam = new Map<string, CachedTeamBatchAdvisories>();
+  private readonly inFlightBatchRequests = new Map<
+    string,
+    Promise<Map<string, MemberRuntimeAdvisory>>
+  >();
 
   constructor(private readonly logsFinder: TeamMemberLogsFinder = new TeamMemberLogsFinder()) {}
 
@@ -22,38 +37,162 @@ export class TeamMemberRuntimeAdvisoryService {
     teamName: string,
     members: readonly Pick<ResolvedTeamMember, 'name' | 'removedAt'>[]
   ): Promise<Map<string, MemberRuntimeAdvisory>> {
-    const advisoryEntries = await Promise.all(
-      members
-        .filter((member) => !member.removedAt)
-        .map(async (member) => {
-          const advisory = await this.getMemberAdvisory(teamName, member.name);
-          return advisory ? ([member.name, advisory] as const) : null;
-        })
-    );
+    const activeMembers = members.filter((member) => !member.removedAt);
+    if (activeMembers.length === 0) {
+      return new Map();
+    }
 
-    return new Map(
-      advisoryEntries.filter(
-        (entry): entry is readonly [string, MemberRuntimeAdvisory] => entry !== null
-      )
-    );
+    const teamKey = this.normalizeToken(teamName);
+    const membersSignature = this.buildMembersSignature(activeMembers);
+    const now = Date.now();
+    const cachedBatch = this.teamBatchCacheByTeam.get(teamKey);
+    if (
+      cachedBatch &&
+      cachedBatch.membersSignature === membersSignature &&
+      cachedBatch.expiresAt > now
+    ) {
+      return this.materializeBatchAdvisories(activeMembers, cachedBatch.value);
+    }
+
+    const inFlightKey = `${teamKey}::${membersSignature}`;
+    const existingRequest = this.inFlightBatchRequests.get(inFlightKey);
+    if (existingRequest) {
+      return this.materializeBatchAdvisories(activeMembers, await existingRequest);
+    }
+
+    const request = this.loadBatchAdvisories(teamName, teamKey, activeMembers, membersSignature);
+    this.inFlightBatchRequests.set(inFlightKey, request);
+
+    try {
+      return this.materializeBatchAdvisories(activeMembers, await request);
+    } finally {
+      if (this.inFlightBatchRequests.get(inFlightKey) === request) {
+        this.inFlightBatchRequests.delete(inFlightKey);
+      }
+    }
   }
 
   async getMemberAdvisory(
     teamName: string,
     memberName: string
   ): Promise<MemberRuntimeAdvisory | null> {
-    const cacheKey = `${teamName.toLowerCase()}::${memberName.toLowerCase()}`;
-    const cached = this.cache.get(cacheKey);
+    const cacheKey = this.getMemberCacheKey(teamName, memberName);
+    const cached = this.memberCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
-      return cached.value;
+      return cached.value ? this.cloneAdvisory(cached.value) : null;
     }
 
     const advisory = await this.findRecentMemberAdvisory(teamName, memberName);
-    this.cache.set(cacheKey, {
+    this.memberCache.set(cacheKey, {
       value: advisory,
       expiresAt: Date.now() + CACHE_TTL_MS,
     });
-    return advisory;
+    return advisory ? this.cloneAdvisory(advisory) : null;
+  }
+
+  private async loadBatchAdvisories(
+    teamName: string,
+    teamKey: string,
+    activeMembers: readonly Pick<ResolvedTeamMember, 'name'>[],
+    membersSignature: string
+  ): Promise<Map<string, MemberRuntimeAdvisory>> {
+    const startedAt = performance.now();
+    const now = Date.now();
+    const result = new Map<string, MemberRuntimeAdvisory>();
+    const membersToFetch: string[] = [];
+    let memberCacheHits = 0;
+    let memberCacheMisses = 0;
+
+    for (const member of activeMembers) {
+      const normalizedMemberName = this.normalizeToken(member.name);
+      const cacheKey = `${teamKey}::${normalizedMemberName}`;
+      const cached = this.memberCache.get(cacheKey);
+      if (cached && cached.expiresAt > now) {
+        memberCacheHits += 1;
+        if (cached.value) {
+          result.set(normalizedMemberName, this.cloneAdvisory(cached.value));
+        }
+        continue;
+      }
+
+      memberCacheMisses += 1;
+      membersToFetch.push(member.name);
+    }
+
+    if (membersToFetch.length > 0) {
+      const fetched = await Promise.all(
+        membersToFetch.map(async (memberName) => {
+          const advisory = await this.findRecentMemberAdvisory(teamName, memberName);
+          return [memberName, advisory] as const;
+        })
+      );
+      const fetchedAt = Date.now();
+      for (const [memberName, advisory] of fetched) {
+        const normalizedMemberName = this.normalizeToken(memberName);
+        this.memberCache.set(`${teamKey}::${normalizedMemberName}`, {
+          value: advisory,
+          expiresAt: fetchedAt + CACHE_TTL_MS,
+        });
+        if (advisory) {
+          result.set(normalizedMemberName, this.cloneAdvisory(advisory));
+        }
+      }
+    }
+
+    this.teamBatchCacheByTeam.set(teamKey, {
+      membersSignature,
+      value: this.cloneNormalizedAdvisories(result),
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    });
+
+    const totalMs = performance.now() - startedAt;
+    if (totalMs >= BATCH_WARN_MS) {
+      logger.warn(
+        `[perf] getMemberAdvisories slow team=${teamName} activeMembers=${activeMembers.length} signatureMembers=${activeMembers.length} batchCache=miss memberCacheHits=${memberCacheHits} memberCacheMisses=${memberCacheMisses} fetchedMembers=${membersToFetch.length} total=${totalMs.toFixed(1)}ms`
+      );
+    }
+
+    return result;
+  }
+
+  private getMemberCacheKey(teamName: string, memberName: string): string {
+    return `${this.normalizeToken(teamName)}::${this.normalizeToken(memberName)}`;
+  }
+
+  private buildMembersSignature(members: readonly Pick<ResolvedTeamMember, 'name'>[]): string {
+    return Array.from(new Set(members.map((member) => this.normalizeToken(member.name))))
+      .sort()
+      .join('|');
+  }
+
+  private normalizeToken(value: string): string {
+    return value.trim().toLowerCase();
+  }
+
+  private cloneAdvisory(advisory: MemberRuntimeAdvisory): MemberRuntimeAdvisory {
+    return { ...advisory };
+  }
+
+  private cloneNormalizedAdvisories(
+    advisories: ReadonlyMap<string, MemberRuntimeAdvisory>
+  ): Map<string, MemberRuntimeAdvisory> {
+    return new Map(
+      Array.from(advisories, ([memberName, advisory]) => [memberName, this.cloneAdvisory(advisory)])
+    );
+  }
+
+  private materializeBatchAdvisories(
+    activeMembers: readonly Pick<ResolvedTeamMember, 'name'>[],
+    advisories: ReadonlyMap<string, MemberRuntimeAdvisory>
+  ): Map<string, MemberRuntimeAdvisory> {
+    const materialized = new Map<string, MemberRuntimeAdvisory>();
+    for (const member of activeMembers) {
+      const advisory = advisories.get(this.normalizeToken(member.name));
+      if (advisory) {
+        materialized.set(member.name, this.cloneAdvisory(advisory));
+      }
+    }
+    return materialized;
   }
 
   private async findRecentMemberAdvisory(

@@ -9,6 +9,7 @@ import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { useStore } from '@renderer/store';
 import { filterTeamMessages } from '@renderer/utils/teamMessageFiltering';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
+import { createLogger } from '@shared/utils/logger';
 import { shouldExcludeInboxTextFromReplyCandidates } from '@shared/utils/idleNotificationSemantics';
 import {
   CheckCheck,
@@ -43,6 +44,10 @@ interface TimeWindow {
   start: number;
   end: number;
 }
+
+const logger = createLogger('Component:MessagesPanel');
+const MESSAGES_PANEL_FILTER_WARN_MS = 8;
+const MESSAGES_PANEL_EXPANDED_ITEM_WARN_MS = 6;
 
 interface MessagesPanelProps {
   teamName: string;
@@ -183,20 +188,40 @@ export const MessagesPanel = memo(function MessagesPanel({
   }, [position, sidebarScrollTop]);
 
   const filteredMessages = useMemo(() => {
-    return filterTeamMessages(messages, {
+    const startedAt = performance.now();
+    const result = filterTeamMessages(messages, {
       timeWindow,
       filter: messagesFilter,
       searchQuery: messagesSearchQuery,
     });
+    const ms = performance.now() - startedAt;
+    if (ms >= MESSAGES_PANEL_FILTER_WARN_MS) {
+      logger.warn(
+        `[perf] filter team=${teamName} stage=messages ms=${ms.toFixed(1)} input=${messages.length} output=${result.length} searchLen=${messagesSearchQuery.trim().length} noise=${
+          messagesFilter.showNoise ? 'on' : 'off'
+        }`
+      );
+    }
+    return result;
   }, [messages, timeWindow, messagesFilter, messagesSearchQuery]);
 
   const activityTimelineMessages = useMemo(() => {
-    return filterTeamMessages(messages, {
+    const startedAt = performance.now();
+    const result = filterTeamMessages(messages, {
       includePassiveIdlePeerSummariesWhenNoiseHidden: true,
       timeWindow,
       filter: messagesFilter,
       searchQuery: messagesSearchQuery,
     });
+    const ms = performance.now() - startedAt;
+    if (ms >= MESSAGES_PANEL_FILTER_WARN_MS) {
+      logger.warn(
+        `[perf] filter team=${teamName} stage=timeline ms=${ms.toFixed(1)} input=${messages.length} output=${result.length} searchLen=${messagesSearchQuery.trim().length} noise=${
+          messagesFilter.showNoise ? 'on' : 'off'
+        }`
+      );
+    }
+    return result;
   }, [messages, timeWindow, messagesFilter, messagesSearchQuery]);
 
   const replyCandidateMessages = useMemo(
@@ -211,18 +236,32 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   // Resolve the expanded item from filtered messages
   const expandedItem = useMemo<TimelineItem | null>(() => {
+    const startedAt = performance.now();
     if (!expandedItemKey) return null;
     if (!expandedItemKey.startsWith('thoughts-')) {
       const msg = activityTimelineMessages.find((m) => toMessageKey(m) === expandedItemKey);
-      return msg ? { type: 'message', message: msg } : null;
+      const result: TimelineItem | null = msg ? { type: 'message', message: msg } : null;
+      const ms = performance.now() - startedAt;
+      if (ms >= MESSAGES_PANEL_EXPANDED_ITEM_WARN_MS) {
+        logger.warn(
+          `[perf] expandedItem team=${teamName} ms=${ms.toFixed(1)} mode=message timelineMessages=${activityTimelineMessages.length}`
+        );
+      }
+      return result;
     }
     const allItems = groupTimelineItems(activityTimelineMessages);
-    return (
+    const result =
       allItems.find(
         (item) =>
           item.type === 'lead-thoughts' && getThoughtGroupKey(item.group) === expandedItemKey
-      ) ?? null
-    );
+      ) ?? null;
+    const ms = performance.now() - startedAt;
+    if (ms >= MESSAGES_PANEL_EXPANDED_ITEM_WARN_MS) {
+      logger.warn(
+        `[perf] expandedItem team=${teamName} ms=${ms.toFixed(1)} mode=thoughts timelineMessages=${activityTimelineMessages.length} groups=${allItems.length}`
+      );
+    }
+    return result;
   }, [expandedItemKey, activityTimelineMessages]);
 
   // Auto-clear stale expanded key
@@ -361,6 +400,8 @@ export const MessagesPanel = memo(function MessagesPanel({
         )}
       </div>
       <MessagesFilterPopover
+        teamName={teamName}
+        members={members}
         filter={messagesFilter}
         messages={messages}
         open={messagesFilterOpen}

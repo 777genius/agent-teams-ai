@@ -10,7 +10,7 @@ import { createLogger } from '@shared/utils/logger';
 import type { CliProviderId, CliProviderStatus } from '@shared/types';
 import { configManager } from '../infrastructure/ConfigManager';
 import { resolveGeminiRuntimeAuth } from './geminiRuntimeAuth';
-import { applyConfiguredRuntimeBackendsEnv } from './providerRuntimeEnv';
+import { applyConfiguredRuntimeBackendsEnv, applyProviderRuntimeEnv } from './providerRuntimeEnv';
 
 const logger = createLogger('ClaudeMultimodelBridgeService');
 
@@ -174,21 +174,7 @@ export class ClaudeMultimodelBridgeService {
   }
 
   private buildProviderCliEnv(binaryPath: string, providerId: CliProviderId): NodeJS.ProcessEnv {
-    const env = { ...this.buildCliEnv(binaryPath) };
-    delete env.CLAUDE_CODE_ENTRY_PROVIDER;
-    delete env.CLAUDE_CODE_USE_OPENAI;
-    delete env.CLAUDE_CODE_USE_BEDROCK;
-    delete env.CLAUDE_CODE_USE_VERTEX;
-    delete env.CLAUDE_CODE_USE_FOUNDRY;
-    delete env.CLAUDE_CODE_USE_GEMINI;
-
-    if (providerId === 'codex') {
-      env.CLAUDE_CODE_ENTRY_PROVIDER = 'codex';
-    } else if (providerId === 'gemini') {
-      env.CLAUDE_CODE_ENTRY_PROVIDER = 'gemini';
-    }
-
-    return env;
+    return applyProviderRuntimeEnv({ ...this.buildCliEnv(binaryPath) }, providerId);
   }
 
   private isUnifiedRuntimeUnsupported(error: unknown): boolean {

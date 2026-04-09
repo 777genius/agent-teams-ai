@@ -2,7 +2,8 @@ import type { TeamProviderId } from '@shared/types';
 
 import { ConfigManager } from '../infrastructure/ConfigManager';
 
-const THIRD_PARTY_PROVIDER_ENV_KEYS = [
+const PROVIDER_ROUTING_ENV_KEYS = [
+  'CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST',
   'CLAUDE_CODE_ENTRY_PROVIDER',
   'CLAUDE_CODE_USE_OPENAI',
   'CLAUDE_CODE_USE_BEDROCK',
@@ -36,15 +37,17 @@ export function applyProviderRuntimeEnv(
   const resolvedProvider: TeamProviderId =
     providerId === 'codex' || providerId === 'gemini' ? providerId : 'anthropic';
 
-  for (const key of THIRD_PARTY_PROVIDER_ENV_KEYS) {
+  for (const key of PROVIDER_ROUTING_ENV_KEYS) {
     env[key] = undefined;
   }
 
-  if (resolvedProvider === 'codex') {
-    env.CLAUDE_CODE_ENTRY_PROVIDER = 'codex';
-  } else if (resolvedProvider === 'gemini') {
-    env.CLAUDE_CODE_ENTRY_PROVIDER = 'gemini';
-  }
+  // Provider overrides must be positive pins. In dev and multimodel desktop
+  // flows the host process can already be routed to codex or gemini, and the
+  // child runtime reapplies settings.env after trust. Mark the env as
+  // host-managed and set the exact entry provider so anthropic teammates do not
+  // silently fall back into the host's current routing world.
+  env.CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST = '1';
+  env.CLAUDE_CODE_ENTRY_PROVIDER = resolvedProvider;
 
   return env;
 }

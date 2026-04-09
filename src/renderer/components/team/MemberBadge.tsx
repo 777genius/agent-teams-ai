@@ -12,6 +12,8 @@ import { MemberHoverCard } from './members/MemberHoverCard';
 interface MemberBadgeProps {
   name: string;
   color?: string;
+  /** Owning team context for hover-card store lookups. */
+  teamName?: string;
   /** Avatar + badge size variant */
   size?: 'xs' | 'sm' | 'md';
   /** Hide the avatar icon, show only the name badge */
@@ -30,6 +32,7 @@ interface MemberBadgeProps {
 export const MemberBadge = ({
   name,
   color,
+  teamName,
   size = 'sm',
   hideAvatar,
   onClick,
@@ -93,7 +96,7 @@ export const MemberBadge = ({
   }
 
   return (
-    <MemberHoverCard name={name} color={color}>
+    <MemberHoverCard name={name} color={color} teamName={teamName}>
       {content}
     </MemberHoverCard>
   );

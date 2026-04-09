@@ -6,10 +6,10 @@ import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import {
   agentAvatarUrl,
   displayMemberName,
+  getLaunchAwarePresenceLabel,
   getMemberRuntimeAdvisoryLabel,
   getMemberRuntimeAdvisoryTitle,
   getSpawnAwareDotClass,
-  getSpawnAwarePresenceLabel,
   getSpawnCardClass,
 } from '@renderer/utils/memberHelpers';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
@@ -83,23 +83,31 @@ export const MemberCard = ({
     member,
     spawnStatus,
     spawnLaunchState,
+    spawnRuntimeAlive,
     isTeamAlive,
     isTeamProvisioning,
     leadActivity
   );
   const runtimeAdvisoryLabel = getMemberRuntimeAdvisoryLabel(member.runtimeAdvisory);
   const runtimeAdvisoryTitle = getMemberRuntimeAdvisoryTitle(member.runtimeAdvisory);
-  const presenceLabel = getSpawnAwarePresenceLabel(
+  const presenceLabel = getLaunchAwarePresenceLabel(
     member,
     spawnStatus,
     spawnLaunchState,
     spawnLivenessSource,
     spawnRuntimeAlive,
+    member.runtimeAdvisory,
     isTeamAlive,
     isTeamProvisioning,
     leadActivity
   );
-  const spawnCardClass = isTeamProvisioning ? getSpawnCardClass(spawnStatus) : '';
+  const spawnCardClass = getSpawnCardClass(
+    spawnStatus,
+    spawnLaunchState,
+    spawnRuntimeAlive,
+    isTeamAlive,
+    isTeamProvisioning
+  );
   const colors = getTeamColorSet(memberColor);
   const { isLight } = useTheme();
   const pending = taskCounts?.pending ?? 0;
@@ -113,6 +121,12 @@ export const MemberCard = ({
     : reviewTask
       ? `Reviewing task: #${deriveTaskDisplayId(reviewTask.id)}`
       : undefined;
+  const showStartingSkeleton =
+    !isRemoved &&
+    presenceLabel === 'starting' &&
+    spawnLaunchState !== 'failed_to_start' &&
+    !activityTask;
+  const showStartingBadge = !isRemoved && presenceLabel === 'starting' && !activityTask;
 
   return (
     <div
@@ -191,7 +205,18 @@ export const MemberCard = ({
                 </>
               ) : null}
             </div>
-            {runtimeSummary ? (
+            {showStartingSkeleton ? (
+              <div className="mt-1 flex items-center gap-1.5" aria-hidden="true">
+                <div
+                  className="skeleton-shimmer h-2 w-24 rounded-sm"
+                  style={{ backgroundColor: 'var(--skeleton-base-dim)' }}
+                />
+                <div
+                  className="skeleton-shimmer h-2 w-16 rounded-sm"
+                  style={{ backgroundColor: 'var(--skeleton-base)' }}
+                />
+              </div>
+            ) : runtimeSummary ? (
               <div className="mt-0.5 text-[10px] font-medium text-[var(--color-text-muted)]">
                 {runtimeSummary}
               </div>
@@ -205,7 +230,20 @@ export const MemberCard = ({
               </span>
             ) : null;
           })()}
-          {presenceLabel === 'connecting' || spawnStatus === 'spawning' ? (
+          {showStartingBadge ? (
+            <span className="flex shrink-0 items-center gap-1">
+              <Loader2
+                className="size-3.5 shrink-0 animate-spin text-[var(--color-text-muted)]"
+                aria-label="starting"
+              />
+              <Badge
+                variant="secondary"
+                className="shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none text-[var(--color-text-muted)]"
+              >
+                starting
+              </Badge>
+            </span>
+          ) : presenceLabel === 'connecting' ? (
             !isRemoved ? (
               <Loader2
                 className="size-3.5 shrink-0 animate-spin text-[var(--color-text-muted)]"
@@ -236,26 +274,42 @@ export const MemberCard = ({
               {isRemoved ? 'removed' : presenceLabel}
             </Badge>
           ) : null}
-          <div
-            className="shrink-0"
-            title={totalTasks > 0 ? `${completed}/${totalTasks} completed` : undefined}
-          >
-            <Badge
-              variant="secondary"
-              className="shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none"
+          {showStartingSkeleton ? (
+            <div className="shrink-0" aria-hidden="true">
+              <div
+                className="skeleton-shimmer h-[18px] w-[62px] rounded-full border"
+                style={{
+                  backgroundColor: 'var(--skeleton-base-dim)',
+                  borderColor: 'var(--color-border)',
+                }}
+              />
+              <div
+                className="skeleton-shimmer mx-1 mt-1 h-[2px] w-10 rounded-full"
+                style={{ backgroundColor: 'var(--skeleton-base)' }}
+              />
+            </div>
+          ) : (
+            <div
+              className="shrink-0"
+              title={totalTasks > 0 ? `${completed}/${totalTasks} completed` : undefined}
             >
-              {member.taskCount} {member.taskCount === 1 ? 'task' : 'tasks'}
-            </Badge>
-            {totalTasks > 0 && (
-              <div className="mx-0.5 mt-0.5 h-[2px] rounded-full bg-[var(--color-border)]">
-                <div
-                  className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-            )}
-            {/* NOTE: lead context bar disabled — usage formula is inaccurate */}
-          </div>
+              <Badge
+                variant="secondary"
+                className="shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none"
+              >
+                {member.taskCount} {member.taskCount === 1 ? 'task' : 'tasks'}
+              </Badge>
+              {totalTasks > 0 && (
+                <div className="mx-0.5 mt-0.5 h-[2px] rounded-full bg-[var(--color-border)]">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              )}
+              {/* NOTE: lead context bar disabled — usage formula is inaccurate */}
+            </div>
+          )}
           {!isRemoved && (
             <div className="flex shrink-0 items-center gap-0.5">
               <Tooltip>

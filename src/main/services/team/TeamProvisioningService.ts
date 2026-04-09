@@ -719,6 +719,38 @@ interface PromptSizeSummary {
 
 const MEMBER_LAUNCH_GRACE_MS = 90_000;
 
+export function shouldWarnOnUnreadableMemberAuditConfig(params: {
+  nowMs: number;
+  lastWarnAt: number;
+  expectedMembers: readonly string[];
+  memberSpawnStatuses: ReadonlyMap<
+    string,
+    Pick<MemberSpawnStatusEntry, 'agentToolAccepted' | 'firstSpawnAcceptedAt'> | undefined
+  >;
+}): boolean {
+  const { nowMs, lastWarnAt, expectedMembers, memberSpawnStatuses } = params;
+  if (nowMs - lastWarnAt < MEMBER_SPAWN_AUDIT_WARNING_THROTTLE_MS) {
+    return false;
+  }
+  return expectedMembers.some((memberName) => {
+    const current = memberSpawnStatuses.get(memberName);
+    if (!current?.agentToolAccepted || typeof current.firstSpawnAcceptedAt !== 'string') {
+      return false;
+    }
+    const acceptedAtMs = Date.parse(current.firstSpawnAcceptedAt);
+    return Number.isFinite(acceptedAtMs) && nowMs - acceptedAtMs >= MEMBER_LAUNCH_GRACE_MS;
+  });
+}
+
+export function shouldWarnOnMissingRegisteredMember(params: {
+  nowMs: number;
+  lastWarnAt: number;
+  graceExpired: boolean;
+}): boolean {
+  const { nowMs, lastWarnAt, graceExpired } = params;
+  return graceExpired && nowMs - lastWarnAt >= MEMBER_SPAWN_AUDIT_WARNING_THROTTLE_MS;
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -3557,7 +3589,9 @@ export class TeamProvisioningService {
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        throw new Error(`Working directory does not exist: ${cwd}`);
+        // Allow the runtime probe to degrade a missing cwd into a warning.
+        // This keeps prepareForProvisioning side-effect free for future/missing paths.
+        return;
       }
       throw error;
     }
@@ -6258,8 +6292,12 @@ export class TeamProvisioningService {
     if (!registeredNames) {
       const now = Date.now();
       if (
-        now - run.lastMemberSpawnAuditConfigReadWarningAt >=
-        MEMBER_SPAWN_AUDIT_WARNING_THROTTLE_MS
+        shouldWarnOnUnreadableMemberAuditConfig({
+          nowMs: now,
+          lastWarnAt: run.lastMemberSpawnAuditConfigReadWarningAt,
+          expectedMembers: run.expectedMembers,
+          memberSpawnStatuses: run.memberSpawnStatuses,
+        })
       ) {
         run.lastMemberSpawnAuditConfigReadWarningAt = now;
         logger.warn(`[${run.teamName}] auditMemberSpawnStatuses: config.json not readable`);
@@ -6318,7 +6356,13 @@ export class TeamProvisioningService {
 
       const now = Date.now();
       const lastWarnAt = run.lastMemberSpawnAuditMissingWarningAt.get(expected) ?? 0;
-      if (now - lastWarnAt >= MEMBER_SPAWN_AUDIT_WARNING_THROTTLE_MS) {
+      if (
+        shouldWarnOnMissingRegisteredMember({
+          nowMs: now,
+          lastWarnAt,
+          graceExpired,
+        })
+      ) {
         run.lastMemberSpawnAuditMissingWarningAt.set(expected, now);
         logger.warn(
           `[${run.teamName}] Member "${expected}" not found in config.json members after provisioning`
@@ -6413,7 +6457,8 @@ export class TeamProvisioningService {
   private getFailedSpawnMembers(
     run: ProvisioningRun
   ): { name: string; error?: string; updatedAt: string }[] {
-    return [...run.memberSpawnStatuses.entries()]
+    const memberSpawnStatuses = run.memberSpawnStatuses ?? new Map();
+    return [...memberSpawnStatuses.entries()]
       .filter(([, entry]) => entry.launchState === 'failed_to_start')
       .map(([name, entry]) => ({
         name,
@@ -6429,12 +6474,14 @@ export class TeamProvisioningService {
     failedCount: number;
     runtimeAlivePendingCount: number;
   } {
+    const expectedMembers = run.expectedMembers ?? [];
+    const memberSpawnStatuses = run.memberSpawnStatuses ?? new Map();
     let confirmedCount = 0;
     let pendingCount = 0;
     let failedCount = 0;
     let runtimeAlivePendingCount = 0;
-    for (const expected of run.expectedMembers) {
-      const entry = run.memberSpawnStatuses.get(expected) ?? createInitialMemberSpawnStatusEntry();
+    for (const expected of expectedMembers) {
+      const entry = memberSpawnStatuses.get(expected) ?? createInitialMemberSpawnStatusEntry();
       if (entry.launchState === 'confirmed_alive') {
         confirmedCount += 1;
         continue;
@@ -9093,7 +9140,7 @@ export class TeamProvisioningService {
         launchSummary.pendingCount - launchSummary.runtimeAlivePendingCount
       );
       const hasPendingBootstrap =
-        !hasSpawnFailures && stillStartingCount > 0 && run.expectedMembers.length > 0;
+        !hasSpawnFailures && stillStartingCount > 0 && (run.expectedMembers?.length ?? 0) > 0;
       const readyMessage = hasSpawnFailures
         ? `Launch completed with teammate errors — ${failedSpawnMembers
             .map((member) => member.name)

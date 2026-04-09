@@ -159,7 +159,7 @@ describe('TeamMcpConfigBuilder', () => {
     );
   });
 
-  it('prefers the source MCP entry when workspace source is available', async () => {
+  it('prefers the built workspace MCP entry when available', async () => {
     const builder = new TeamMcpConfigBuilder();
 
     const configPath = await builder.writeConfigFile();
@@ -171,14 +171,7 @@ describe('TeamMcpConfigBuilder', () => {
     };
 
     const server = parsed.mcpServers?.['agent-teams'];
-    expect(server?.command).toBe('pnpm');
-    expect(server?.args).toEqual([
-      '--dir',
-      path.join(process.cwd(), 'mcp-server'),
-      'exec',
-      'tsx',
-      path.join(process.cwd(), 'mcp-server', 'src', 'index.ts'),
-    ]);
+    expectNodeEntry(server, path.join(process.cwd(), 'mcp-server', 'dist', 'index.js'));
   });
 
   it('keeps generated team MCP config minimal and does not inline top-level user MCP', async () => {
@@ -286,16 +279,7 @@ describe('TeamMcpConfigBuilder', () => {
       mcpServers: Record<string, { command?: string; args?: string[] }>;
     };
 
-    expect(parsed.mcpServers['agent-teams']).toMatchObject({
-      command: 'pnpm',
-      args: [
-        '--dir',
-        path.join(process.cwd(), 'mcp-server'),
-        'exec',
-        'tsx',
-        path.join(process.cwd(), 'mcp-server', 'src', 'index.ts'),
-      ],
-    });
+    expectNodeEntry(parsed.mcpServers['agent-teams'], path.join(process.cwd(), 'mcp-server', 'dist', 'index.js'));
   });
 
   it('ignores malformed user MCP file', async () => {
@@ -500,7 +484,7 @@ describe('TeamMcpConfigBuilder', () => {
     expectNodeEntry(readGeneratedServer(configPath), path.join(stableDir, 'index.js'));
   });
 
-  it('packaged mode falls back to workspace source when resourcesPath bundle is missing', async () => {
+  it('packaged mode falls back to the built workspace MCP entry when resourcesPath bundle is missing', async () => {
     setPackagedMode(true, '6.0.0');
     const resourcesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'team-mcp-resources-'));
     createdDirs.push(resourcesDir);
@@ -510,15 +494,6 @@ describe('TeamMcpConfigBuilder', () => {
     const configPath = await builder.writeConfigFile();
     createdPaths.push(configPath);
 
-    expect(readGeneratedServer(configPath)).toEqual({
-      command: 'pnpm',
-      args: [
-        '--dir',
-        path.join(process.cwd(), 'mcp-server'),
-        'exec',
-        'tsx',
-        path.join(process.cwd(), 'mcp-server', 'src', 'index.ts'),
-      ],
-    });
+    expectNodeEntry(readGeneratedServer(configPath), path.join(process.cwd(), 'mcp-server', 'dist', 'index.js'));
   });
 });

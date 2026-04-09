@@ -17,6 +17,7 @@ import { MemberTasksTab } from './MemberTasksTab';
 import type {
   InboxMessage,
   LeadActivityState,
+  MemberSpawnStatusEntry,
   ResolvedTeamMember,
   TeamTaskWithKanban,
 } from '@shared/types';
@@ -30,6 +31,7 @@ interface MemberDetailDialogProps {
   isTeamAlive?: boolean;
   isTeamProvisioning?: boolean;
   leadActivity?: LeadActivityState;
+  spawnEntry?: MemberSpawnStatusEntry;
   onClose: () => void;
   onSendMessage: () => void;
   onAssignTask: () => void;
@@ -49,6 +51,7 @@ export const MemberDetailDialog = ({
   isTeamAlive,
   isTeamProvisioning,
   leadActivity,
+  spawnEntry,
   onClose,
   onSendMessage,
   onAssignTask,
@@ -100,6 +103,10 @@ export const MemberDetailDialog = ({
               isTeamAlive={isTeamAlive}
               isTeamProvisioning={isTeamProvisioning}
               leadActivity={isLeadMember(member) ? leadActivity : undefined}
+              spawnStatus={spawnEntry?.status}
+              spawnLaunchState={spawnEntry?.launchState}
+              spawnLivenessSource={spawnEntry?.livenessSource}
+              spawnRuntimeAlive={spawnEntry?.runtimeAlive}
               onUpdateRole={
                 onUpdateRole ? (newRole) => onUpdateRole(member.name, newRole) : undefined
               }

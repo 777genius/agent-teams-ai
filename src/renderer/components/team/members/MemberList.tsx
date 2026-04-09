@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   formatTeamModelSummary,
@@ -33,10 +33,165 @@ interface MemberListProps {
   onMemberClick?: (member: ResolvedTeamMember) => void;
   onSendMessage?: (member: ResolvedTeamMember) => void;
   onAssignTask?: (member: ResolvedTeamMember) => void;
-  onOpenTask?: (task: TeamTaskWithKanban) => void;
+  onOpenTask?: (taskId: string) => void;
 }
 
-export const MemberList = ({
+function areResolvedMembersEquivalent(
+  left: readonly ResolvedTeamMember[],
+  right: readonly ResolvedTeamMember[]
+): boolean {
+  if (left === right) return true;
+  if (left.length !== right.length) return false;
+
+  for (let index = 0; index < left.length; index += 1) {
+    const leftMember = left[index];
+    const rightMember = right[index];
+    if (
+      leftMember.name !== rightMember.name ||
+      leftMember.status !== rightMember.status ||
+      leftMember.currentTaskId !== rightMember.currentTaskId ||
+      leftMember.taskCount !== rightMember.taskCount ||
+      leftMember.color !== rightMember.color ||
+      leftMember.agentType !== rightMember.agentType ||
+      leftMember.role !== rightMember.role ||
+      leftMember.workflow !== rightMember.workflow ||
+      leftMember.providerId !== rightMember.providerId ||
+      leftMember.model !== rightMember.model ||
+      leftMember.effort !== rightMember.effort ||
+      leftMember.cwd !== rightMember.cwd ||
+      leftMember.gitBranch !== rightMember.gitBranch ||
+      leftMember.removedAt !== rightMember.removedAt ||
+      leftMember.runtimeAdvisory?.kind !== rightMember.runtimeAdvisory?.kind ||
+      leftMember.runtimeAdvisory?.observedAt !== rightMember.runtimeAdvisory?.observedAt ||
+      leftMember.runtimeAdvisory?.retryUntil !== rightMember.runtimeAdvisory?.retryUntil ||
+      leftMember.runtimeAdvisory?.retryDelayMs !== rightMember.runtimeAdvisory?.retryDelayMs ||
+      leftMember.runtimeAdvisory?.message !== rightMember.runtimeAdvisory?.message
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function areTaskStatusCountsMapsEquivalent(
+  left: Map<string, TaskStatusCounts> | undefined,
+  right: Map<string, TaskStatusCounts> | undefined
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+  if (left.size !== right.size) return false;
+  for (const [key, leftCounts] of left) {
+    const rightCounts = right.get(key);
+    if (
+      !rightCounts ||
+      leftCounts.pending !== rightCounts.pending ||
+      leftCounts.inProgress !== rightCounts.inProgress ||
+      leftCounts.completed !== rightCounts.completed
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function areMemberTaskMapsEquivalent(
+  left: Map<string, TeamTaskWithKanban> | undefined,
+  right: Map<string, TeamTaskWithKanban> | undefined
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+  if (left.size !== right.size) return false;
+  for (const [key, leftTask] of left) {
+    const rightTask = right.get(key);
+    if (
+      !rightTask ||
+      leftTask.id !== rightTask.id ||
+      leftTask.displayId !== rightTask.displayId ||
+      leftTask.subject !== rightTask.subject ||
+      leftTask.owner !== rightTask.owner ||
+      leftTask.status !== rightTask.status ||
+      leftTask.reviewer !== rightTask.reviewer ||
+      leftTask.reviewState !== rightTask.reviewState ||
+      leftTask.kanbanColumn !== rightTask.kanbanColumn
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function arePendingRepliesEquivalent(
+  left: Record<string, number> | undefined,
+  right: Record<string, number> | undefined
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+  for (const key of leftKeys) {
+    if (left[key] !== right[key]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function areMemberSpawnStatusesEquivalent(
+  left: Map<string, MemberSpawnStatusEntry> | undefined,
+  right: Map<string, MemberSpawnStatusEntry> | undefined
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+  if (left.size !== right.size) return false;
+  for (const [key, leftEntry] of left) {
+    const rightEntry = right.get(key);
+    if (
+      !rightEntry ||
+      leftEntry.status !== rightEntry.status ||
+      leftEntry.launchState !== rightEntry.launchState ||
+      leftEntry.error !== rightEntry.error ||
+      leftEntry.livenessSource !== rightEntry.livenessSource ||
+      leftEntry.runtimeAlive !== rightEntry.runtimeAlive
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function areLaunchParamsEquivalent(
+  left: TeamLaunchParams | undefined,
+  right: TeamLaunchParams | undefined
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+  return (
+    left.providerId === right.providerId &&
+    left.model === right.model &&
+    left.effort === right.effort
+  );
+}
+
+function areMemberListPropsEqual(
+  prev: Readonly<MemberListProps>,
+  next: Readonly<MemberListProps>
+): boolean {
+  return (
+    areResolvedMembersEquivalent(prev.members, next.members) &&
+    areTaskStatusCountsMapsEquivalent(prev.memberTaskCounts, next.memberTaskCounts) &&
+    areMemberTaskMapsEquivalent(prev.taskMap, next.taskMap) &&
+    arePendingRepliesEquivalent(prev.pendingRepliesByMember, next.pendingRepliesByMember) &&
+    areMemberSpawnStatusesEquivalent(prev.memberSpawnStatuses, next.memberSpawnStatuses) &&
+    prev.isTeamAlive === next.isTeamAlive &&
+    prev.isTeamProvisioning === next.isTeamProvisioning &&
+    prev.leadActivity === next.leadActivity &&
+    areLaunchParamsEquivalent(prev.launchParams, next.launchParams)
+  );
+}
+
+export const MemberList = memo(function MemberList({
   members,
   memberTaskCounts,
   taskMap,
@@ -50,7 +205,7 @@ export const MemberList = ({
   onSendMessage,
   onAssignTask,
   onOpenTask,
-}: MemberListProps): React.JSX.Element => {
+}: MemberListProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isWide, setIsWide] = useState(false);
 
@@ -111,7 +266,7 @@ export const MemberList = ({
             (task.reviewState === 'review' || task.kanbanColumn === 'review')
         ) ?? null)
       : null;
-    const awaitingReply = Boolean(pendingRepliesByMember?.[member.name]);
+    const awaitingReply = isTeamAlive !== false && Boolean(pendingRepliesByMember?.[member.name]);
     const spawnEntry = memberSpawnStatuses?.get(member.name);
     return (
       <MemberCard
@@ -132,8 +287,8 @@ export const MemberList = ({
         spawnLivenessSource={isRemoved ? undefined : spawnEntry?.livenessSource}
         spawnLaunchState={isRemoved ? undefined : spawnEntry?.launchState}
         spawnRuntimeAlive={isRemoved ? undefined : spawnEntry?.runtimeAlive}
-        onOpenTask={!isRemoved && currentTask ? () => onOpenTask?.(currentTask) : undefined}
-        onOpenReviewTask={!isRemoved && reviewTask ? () => onOpenTask?.(reviewTask) : undefined}
+        onOpenTask={!isRemoved && currentTask ? () => onOpenTask?.(currentTask.id) : undefined}
+        onOpenReviewTask={!isRemoved && reviewTask ? () => onOpenTask?.(reviewTask.id) : undefined}
         onClick={() => onMemberClick?.(member)}
         onSendMessage={() => onSendMessage?.(member)}
         onAssignTask={() => onAssignTask?.(member)}
@@ -156,4 +311,4 @@ export const MemberList = ({
       )}
     </div>
   );
-};
+}, areMemberListPropsEqual);

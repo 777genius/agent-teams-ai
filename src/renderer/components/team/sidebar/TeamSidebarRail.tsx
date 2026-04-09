@@ -1,7 +1,7 @@
+import { memo, useState } from 'react';
+
 import { ClaudeLogsSection } from '../ClaudeLogsSection';
 import { MessagesPanel } from '../messages/MessagesPanel';
-
-import { useState } from 'react';
 import type { MouseEventHandler } from 'react';
 import type { ComponentProps } from 'react';
 
@@ -17,7 +17,7 @@ interface TeamSidebarRailProps {
   onLogsResizeMouseDown: MouseEventHandler<HTMLDivElement>;
 }
 
-export const TeamSidebarRail = ({
+export const TeamSidebarRail = memo(function TeamSidebarRail({
   teamName,
   messagesPanelProps,
   isResizing,
@@ -25,7 +25,7 @@ export const TeamSidebarRail = ({
   logsHeight,
   isLogsResizing,
   onLogsResizeMouseDown,
-}: TeamSidebarRailProps): React.JSX.Element => {
+}: TeamSidebarRailProps): React.JSX.Element {
   const [logsOpen, setLogsOpen] = useState(false);
   const logsSeparator = logsOpen ? (
     <div
@@ -64,4 +64,4 @@ export const TeamSidebarRail = ({
       />
     </div>
   );
-};
+});

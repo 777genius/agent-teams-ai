@@ -176,21 +176,6 @@ async function resolveFromCandidateList(candidates: string[]): Promise<string | 
   return null;
 }
 
-function getRepoLocalCliCandidates(): string[] {
-  if (process.platform === 'win32') {
-    return [];
-  }
-
-  const repoRoot = process.cwd();
-  return [
-    // Prefer an already compiled repo-local binary when available.
-    path.resolve(repoRoot, '..', 'free-code-gemini-research', 'dist', 'cli'),
-    // Fall back to launcher scripts for normal local development.
-    path.resolve(repoRoot, '..', 'free-code-gemini-research', 'cli'),
-    path.resolve(repoRoot, '..', 'free-code-gemini-research', 'cli-dev'),
-  ];
-}
-
 let cachedPath: string | null | undefined;
 
 /** Timestamp of last successful cache verification (ms). */
@@ -257,9 +242,13 @@ export class ClaudeBinaryResolver {
     }
 
     if (flavor === 'free-code') {
-      const repoLocalCli = await resolveFromCandidateList(getRepoLocalCliCandidates());
-      if (repoLocalCli) {
-        cachedPath = repoLocalCli;
+      // Keep free-code resolution generic. Dev flows should inject an explicit
+      // CLAUDE_CLI_PATH, while non-dev setups can expose claude-multimodel on
+      // PATH without making this resolver guess a sibling repo name or folder.
+      const freeCodeBinaryName = 'claude-multimodel';
+      const fromPath = await resolveFromPathEnv(freeCodeBinaryName, enrichedPath);
+      if (fromPath) {
+        cachedPath = fromPath;
         cacheVerifiedAt = Date.now();
         return cachedPath;
       }

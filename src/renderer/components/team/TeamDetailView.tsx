@@ -32,6 +32,7 @@ import {
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
+import { createLogger } from '@shared/utils/logger';
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
@@ -87,6 +88,10 @@ import { TeamSidebarRail } from './sidebar/TeamSidebarRail';
 import { ClaudeLogsSection } from './ClaudeLogsSection';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 import { ProcessesSection } from './ProcessesSection';
+import {
+  isLeadSessionMissing,
+  shouldSuppressMissingLeadSessionFetch,
+} from './teamSessionFetchGuards';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { TeamSessionsSection } from './TeamSessionsSection';
 
@@ -117,6 +122,13 @@ interface CreateTaskDialogState {
   defaultChip?: InlineChip;
 }
 
+const logger = createLogger('Component:TeamDetailView');
+const TEAM_DETAIL_COMMIT_WARN_MS = 32;
+const TEAM_DETAIL_RENDER_BURST_WINDOW_MS = 4_000;
+const TEAM_DETAIL_RENDER_BURST_WARN_COUNT = 8;
+const TEAM_DETAIL_RENDER_WARN_THROTTLE_MS = 2_000;
+const TEAM_PENDING_REPLY_REFRESH_DELAY_MS = 10_000;
+
 function areResolvedMembersEqual(
   prev: readonly ResolvedTeamMember[],
   next: readonly ResolvedTeamMember[]
@@ -140,7 +152,12 @@ function areResolvedMembersEqual(
       prevMember.effort !== nextMember.effort ||
       prevMember.cwd !== nextMember.cwd ||
       prevMember.gitBranch !== nextMember.gitBranch ||
-      prevMember.removedAt !== nextMember.removedAt
+      prevMember.removedAt !== nextMember.removedAt ||
+      prevMember.runtimeAdvisory?.kind !== nextMember.runtimeAdvisory?.kind ||
+      prevMember.runtimeAdvisory?.observedAt !== nextMember.runtimeAdvisory?.observedAt ||
+      prevMember.runtimeAdvisory?.retryUntil !== nextMember.runtimeAdvisory?.retryUntil ||
+      prevMember.runtimeAdvisory?.retryDelayMs !== nextMember.runtimeAdvisory?.retryDelayMs ||
+      prevMember.runtimeAdvisory?.message !== nextMember.runtimeAdvisory?.message
     ) {
       return false;
     }
@@ -189,6 +206,13 @@ export const TeamDetailView = ({
   teamName,
   isPaneFocused = false,
 }: TeamDetailViewProps): React.JSX.Element => {
+  const renderStartedAtRef = useRef(performance.now());
+  const renderDiagnosticsRef = useRef({
+    windowStartedAt: Date.now(),
+    count: 0,
+    lastWarnAt: 0,
+  });
+  renderStartedAtRef.current = performance.now();
   const { isLight } = useTheme();
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<TeamTaskWithKanban | null>(null);
@@ -212,6 +236,7 @@ export const TeamDetailView = ({
   const contentRef = useRef<HTMLDivElement>(null);
   const provisioningBannerRef = useRef<HTMLDivElement>(null);
   const wasProvisioningRef = useRef(false);
+  const pendingReplyRefreshTimerRef = useRef<number | null>(null);
 
   // Set inert on background content when editor/graph overlay is open (a11y focus trap)
   useEffect(() => {
@@ -405,6 +430,7 @@ export const TeamDetailView = ({
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const missingLeadSessionFetchKeyRef = useRef<string | null>(null);
   const [kanbanFilter, setKanbanFilter] = useState<KanbanFilterState>({
     sessionId: null,
     selectedOwners: new Set(),
@@ -418,7 +444,6 @@ export const TeamDetailView = ({
     error,
     projects,
     repositoryGroups,
-    teams,
     fetchSessionDetail,
     initTabUIState,
     selectTeam,
@@ -444,7 +469,7 @@ export const TeamDetailView = ({
     provisioningError,
     clearProvisioningError,
     isTeamProvisioning,
-    leadActivityByTeam,
+    leadActivity,
     leadContextUpdatedAt,
     memberSpawnStatuses,
     fetchMemberSpawnStatuses,
@@ -464,12 +489,8 @@ export const TeamDetailView = ({
     setSidebarLogsHeight,
   } = useStore(
     useShallow((s) => ({
-      data: s.selectedTeamData,
-      loading: s.selectedTeamLoading,
-      error: s.selectedTeamError,
       projects: s.projects,
       repositoryGroups: s.repositoryGroups,
-      teams: s.teams,
       fetchSessionDetail: s.fetchSessionDetail,
       initTabUIState: s.initTabUIState,
       selectTeam: s.selectTeam,
@@ -495,7 +516,10 @@ export const TeamDetailView = ({
       provisioningError: teamName ? (s.provisioningErrorByTeam[teamName] ?? null) : null,
       clearProvisioningError: s.clearProvisioningError,
       isTeamProvisioning: teamName ? isTeamProvisioningActive(s, teamName) : false,
-      leadActivityByTeam: s.leadActivityByTeam,
+      data: s.selectedTeamName === teamName ? s.selectedTeamData : null,
+      loading: s.selectedTeamName === teamName ? s.selectedTeamLoading : false,
+      error: s.selectedTeamName === teamName ? s.selectedTeamError : null,
+      leadActivity: teamName ? s.leadActivityByTeam[teamName] : undefined,
       leadContextUpdatedAt: teamName ? s.leadContextByTeam[teamName]?.updatedAt : undefined,
       memberSpawnStatuses: teamName ? s.memberSpawnStatusesByTeam[teamName] : undefined,
       fetchMemberSpawnStatuses: s.fetchMemberSpawnStatuses,
@@ -527,6 +551,39 @@ export const TeamDetailView = ({
   const activeTabId = useStore((s) => s.activeTabId);
   const isThisTabActive = tabId ? activeTabId === tabId : false;
   const [isContextButtonHovered, setIsContextButtonHovered] = useState(false);
+
+  useEffect(() => {
+    const now = Date.now();
+    const diagnostic = renderDiagnosticsRef.current;
+    if (now - diagnostic.windowStartedAt > TEAM_DETAIL_RENDER_BURST_WINDOW_MS) {
+      diagnostic.windowStartedAt = now;
+      diagnostic.count = 0;
+    }
+    diagnostic.count += 1;
+
+    const commitMs = performance.now() - renderStartedAtRef.current;
+    const messagesCount = data?.messages.length ?? 0;
+    const tasksCount = data?.tasks.length ?? 0;
+    const membersCount = data?.members.length ?? 0;
+    const processesCount = data?.processes.length ?? 0;
+    const shouldWarnSlow = commitMs >= TEAM_DETAIL_COMMIT_WARN_MS;
+    const shouldWarnBurst = diagnostic.count >= TEAM_DETAIL_RENDER_BURST_WARN_COUNT;
+    const shouldWarnLarge = messagesCount >= 150 || tasksCount >= 80;
+
+    if (
+      (shouldWarnSlow || shouldWarnBurst || shouldWarnLarge) &&
+      now - diagnostic.lastWarnAt >= TEAM_DETAIL_RENDER_WARN_THROTTLE_MS
+    ) {
+      diagnostic.lastWarnAt = now;
+      logger.warn(
+        `[perf] commit team=${teamName} ms=${commitMs.toFixed(1)} renders=${diagnostic.count} windowMs=${
+          now - diagnostic.windowStartedAt
+        } activeTab=${isThisTabActive ? 'yes' : 'no'} paneFocused=${isPaneFocused ? 'yes' : 'no'} loading=${
+          loading ? 'yes' : 'no'
+        } messages=${messagesCount} tasks=${tasksCount} members=${membersCount} processes=${processesCount} panel=${messagesPanelMode}`
+      );
+    }
+  });
 
   // Messages panel resize
   const { isResizing: isMessagesPanelResizing, handleProps: messagesPanelHandleProps } =
@@ -565,7 +622,6 @@ export const TeamDetailView = ({
 
   // Fetch initial spawn statuses when provisioning starts
   useEffect(() => {
-    const leadActivity = teamName ? leadActivityByTeam[teamName] : undefined;
     const shouldFetchSpawnStatuses =
       Boolean(teamName) &&
       (isTeamProvisioning ||
@@ -578,7 +634,7 @@ export const TeamDetailView = ({
     data?.isAlive,
     fetchMemberSpawnStatuses,
     isTeamProvisioning,
-    leadActivityByTeam,
+    leadActivity,
     memberSpawnStatuses,
     teamName,
   ]);
@@ -644,12 +700,13 @@ export const TeamDetailView = ({
   useEffect(() => {
     if (!launchDialogOpen) return;
     let cancelled = false;
+    const teamsSnapshot = useStore.getState().teams;
     void (async () => {
       try {
         const aliveList = await api.teams.aliveList();
         if (cancelled) return;
         const aliveSet = new Set(aliveList);
-        const refs = teams
+        const refs = teamsSnapshot
           .filter((t) => aliveSet.has(t.teamName) && t.projectPath)
           .map((t) => ({
             teamName: t.teamName,
@@ -664,7 +721,7 @@ export const TeamDetailView = ({
     return () => {
       cancelled = true;
     };
-  }, [launchDialogOpen, teams]);
+  }, [launchDialogOpen]);
 
   useEffect(() => {
     if (kanbanFilterQuery) {
@@ -673,9 +730,22 @@ export const TeamDetailView = ({
     }
   }, [kanbanFilterQuery, clearKanbanFilter]);
 
-  const currentTeamSummary = useMemo(
-    () => teams.find((team) => team.teamName === teamName) ?? null,
-    [teams, teamName]
+  const currentTeamSummary = useStore(
+    useShallow((s) => {
+      const team = teamName ? s.teamByName[teamName] : undefined;
+      if (!team) return null;
+      return {
+        displayName: team.displayName,
+        projectPath: team.projectPath,
+        memberCount: team.memberCount,
+        expectedMemberCount: team.expectedMemberCount,
+        confirmedCount: team.confirmedCount,
+        runtimeAlivePendingCount: team.runtimeAlivePendingCount,
+        teamLaunchState: team.teamLaunchState,
+        partialLaunchFailure: team.partialLaunchFailure,
+        missingMemberCount: team.missingMembers?.length ?? 0,
+      };
+    })
   );
 
   // Load sessions for the team's project
@@ -694,6 +764,14 @@ export const TeamDetailView = ({
   const leadSessionLoading = leadTabData?.sessionDetailLoading ?? false;
   const leadSessionLoaded = Boolean(
     leadSessionId && leadSessionDetail?.session?.id === leadSessionId
+  );
+  const sessionHistoryKey = useMemo(
+    () => (data?.config.sessionHistory ?? []).join('|'),
+    [data?.config.sessionHistory]
+  );
+  const missingLeadSessionFetchKey = useMemo(
+    () => `${teamName}:${projectId ?? ''}:${leadSessionId ?? ''}:${sessionHistoryKey}`,
+    [teamName, projectId, leadSessionId, sessionHistoryKey]
   );
 
   const leadSubagentCostUsd = useMemo(() => {
@@ -773,6 +851,10 @@ export const TeamDetailView = ({
     [visibleContextTokens, lastAiGroupTotalTokens]
   );
 
+  useEffect(() => {
+    missingLeadSessionFetchKeyRef.current = null;
+  }, [missingLeadSessionFetchKey]);
+
   // Keep lead-session context fresh in the background while the team tab is active.
   // This keeps the button value current even when the panel is closed.
   // For offline teams: fetch once on mount so the percentage shows immediately.
@@ -781,32 +863,76 @@ export const TeamDetailView = ({
     if (!isThisTabActive) return;
     if (!tabId || !projectId || !leadSessionId) return;
 
-    void fetchSessionDetail(projectId, leadSessionId, tabId, { silent: true });
+    const leadSessionMissing = isLeadSessionMissing({
+      leadSessionId,
+      projectId,
+      sessionsLoading,
+      knownSessions: sessions,
+    });
+    if (leadSessionMissing) {
+      missingLeadSessionFetchKeyRef.current = missingLeadSessionFetchKey;
+      return;
+    }
+
+    const fetchLeadSessionDetail = () => {
+      const suppressRepeatedFetch = shouldSuppressMissingLeadSessionFetch({
+        leadSessionId,
+        projectId,
+        sessionsLoading,
+        knownSessions: sessions,
+        suppressionKey: missingLeadSessionFetchKeyRef.current,
+        currentKey: missingLeadSessionFetchKey,
+      });
+      if (suppressRepeatedFetch) {
+        return;
+      }
+      void fetchSessionDetail(projectId, leadSessionId, tabId, { silent: true });
+    };
+
+    fetchLeadSessionDetail();
 
     if (!data?.isAlive) return;
 
     const id = window.setInterval(() => {
-      void fetchSessionDetail(projectId, leadSessionId, tabId, { silent: true });
+      fetchLeadSessionDetail();
     }, 10_000);
     return () => window.clearInterval(id);
-  }, [isThisTabActive, tabId, projectId, leadSessionId, data?.isAlive, fetchSessionDetail]);
+  }, [
+    isThisTabActive,
+    tabId,
+    projectId,
+    leadSessionId,
+    data?.isAlive,
+    fetchSessionDetail,
+    sessions,
+    sessionsLoading,
+    missingLeadSessionFetchKey,
+  ]);
 
   // Keep team message state fresh while we are explicitly waiting for a reply.
-  // Direct lead replies land in the lead session JSONL first; without a light
-  // refresh loop here, the Messages panel can keep showing stale "awaiting reply"
-  // state even though the lead has already answered.
+  // Use a delayed single-shot refresh instead of a tight polling loop so we
+  // don't keep rewriting the whole team snapshot every 2 seconds.
   useEffect(() => {
+    if (pendingReplyRefreshTimerRef.current != null) {
+      window.clearTimeout(pendingReplyRefreshTimerRef.current);
+      pendingReplyRefreshTimerRef.current = null;
+    }
+
     if (!isThisTabActive) return;
-    if (!data) return;
+    if (!data?.isAlive) return;
     if (Object.keys(pendingRepliesByMember).length === 0) return;
 
-    void refreshTeamData(teamName);
+    pendingReplyRefreshTimerRef.current = window.setTimeout(() => {
+      pendingReplyRefreshTimerRef.current = null;
+      void refreshTeamData(teamName, { withDedup: true });
+    }, TEAM_PENDING_REPLY_REFRESH_DELAY_MS);
 
-    const id = window.setInterval(() => {
-      void refreshTeamData(teamName);
-    }, 2_000);
-
-    return () => window.clearInterval(id);
+    return () => {
+      if (pendingReplyRefreshTimerRef.current != null) {
+        window.clearTimeout(pendingReplyRefreshTimerRef.current);
+        pendingReplyRefreshTimerRef.current = null;
+      }
+    };
   }, [isThisTabActive, data, pendingRepliesByMember, refreshTeamData, teamName]);
 
   useEffect(() => {
@@ -933,25 +1059,25 @@ export const TeamDetailView = ({
   );
 
   const taskMap = useMemo(() => new Map((data?.tasks ?? []).map((t) => [t.id, t])), [data?.tasks]);
+  const taskMapRef = useRef(taskMap);
+  taskMapRef.current = taskMap;
 
   const memberTaskCounts = useMemo(() => buildTaskCountsByOwner(data?.tasks ?? []), [data?.tasks]);
 
-  const openCreateTaskDialog = (
-    subject = '',
-    description = '',
-    owner = '',
-    startImmediately?: boolean
-  ): void => {
-    setCreateTaskDialog({
-      open: true,
-      defaultSubject: subject,
-      defaultDescription: description,
-      defaultOwner: owner,
-      defaultStartImmediately: startImmediately,
-    });
-  };
+  const openCreateTaskDialog = useCallback(
+    (subject = '', description = '', owner = '', startImmediately?: boolean): void => {
+      setCreateTaskDialog({
+        open: true,
+        defaultSubject: subject,
+        defaultDescription: description,
+        defaultOwner: owner,
+        defaultStartImmediately: startImmediately,
+      });
+    },
+    []
+  );
 
-  const closeCreateTaskDialog = (): void => {
+  const closeCreateTaskDialog = useCallback((): void => {
     setCreateTaskDialog({
       open: false,
       defaultSubject: '',
@@ -959,7 +1085,7 @@ export const TeamDetailView = ({
       defaultOwner: '',
       defaultStartImmediately: undefined,
     });
-  };
+  }, []);
 
   const handleCreateTaskFromMessage = useCallback((subject: string, description: string) => {
     openCreateTaskDialog(subject, description);
@@ -975,6 +1101,36 @@ export const TeamDetailView = ({
 
   const handleRestartTeam = useCallback(() => {
     setLaunchDialogOpen(true);
+  }, []);
+
+  const handleSelectMember = useCallback((member: ResolvedTeamMember) => {
+    setSelectedMember(member);
+  }, []);
+
+  const handleSendMessageToMember = useCallback((member: ResolvedTeamMember) => {
+    setSendDialogRecipient(member.name);
+    setSendDialogDefaultText(undefined);
+    setSendDialogDefaultChip(undefined);
+    setReplyQuote(undefined);
+    setSendDialogOpen(true);
+  }, []);
+
+  const handleAssignTaskToMember = useCallback(
+    (member: ResolvedTeamMember) => {
+      openCreateTaskDialog('', '', member.name);
+    },
+    [openCreateTaskDialog]
+  );
+
+  const handleOpenTaskById = useCallback((taskId: string) => {
+    const task = taskMapRef.current.get(taskId);
+    if (task) {
+      setSelectedTask(task);
+    }
+  }, []);
+
+  const handleOpenTask = useCallback((task: TeamTaskWithKanban) => {
+    setSelectedTask(task);
   }, []);
 
   const handleTaskIdClick = useCallback(
@@ -1172,6 +1328,50 @@ export const TeamDetailView = ({
     })();
   };
 
+  const sharedMessagesPanelProps = useMemo(
+    () => ({
+      teamName,
+      onTogglePosition: toggleMessagesPanelMode,
+      members: activeMembers,
+      tasks: data?.tasks ?? [],
+      messages: data?.messages ?? [],
+      isTeamAlive: data?.isAlive,
+      leadActivity,
+      leadContextUpdatedAt,
+      timeWindow,
+      teamSessionIds,
+      currentLeadSessionId: data?.config.leadSessionId,
+      pendingRepliesByMember,
+      onPendingReplyChange: setPendingRepliesByMember,
+      onMemberClick: handleSelectMember,
+      onTaskClick: handleOpenTask,
+      onCreateTaskFromMessage: handleCreateTaskFromMessage,
+      onReplyToMessage: handleReplyToMessage,
+      onRestartTeam: handleRestartTeam,
+      onTaskIdClick: handleTaskIdClick,
+    }),
+    [
+      activeMembers,
+      data?.config.leadSessionId,
+      data?.isAlive,
+      data?.messages,
+      data?.tasks,
+      handleCreateTaskFromMessage,
+      handleOpenTask,
+      handleReplyToMessage,
+      handleRestartTeam,
+      handleSelectMember,
+      handleTaskIdClick,
+      leadActivity,
+      leadContextUpdatedAt,
+      pendingRepliesByMember,
+      teamName,
+      teamSessionIds,
+      timeWindow,
+      toggleMessagesPanelMode,
+    ]
+  );
+
   if (!teamName) {
     return (
       <div className="flex size-full items-center justify-center p-6 text-sm text-red-400">
@@ -1197,7 +1397,6 @@ export const TeamDetailView = ({
   }
 
   if (error === 'TEAM_DRAFT') {
-    const teamSummary = teams.find((t) => t.teamName === teamName);
     return (
       <>
         <div className="size-full overflow-auto p-6">
@@ -1208,10 +1407,11 @@ export const TeamDetailView = ({
             <div className="max-w-md text-center">
               <p className="text-sm font-medium text-text">Team not launched yet</p>
               <p className="mt-2 text-xs text-text-secondary">
-                This is a draft team — <strong>{teamSummary?.displayName || teamName}</strong> has
-                been configured with {teamSummary?.memberCount ?? 0} member
-                {teamSummary?.memberCount === 1 ? '' : 's'} but hasn&apos;t been provisioned by CLI
-                yet. Click Launch to select a model and start the team.
+                This is a draft team —{' '}
+                <strong>{currentTeamSummary?.displayName || teamName}</strong> has been configured
+                with {currentTeamSummary?.memberCount ?? 0} member
+                {currentTeamSummary?.memberCount === 1 ? '' : 's'} but hasn&apos;t been provisioned
+                by CLI yet. Click Launch to select a model and start the team.
               </p>
               <div className="mt-4 flex justify-center gap-2">
                 <button
@@ -1237,7 +1437,7 @@ export const TeamDetailView = ({
           open={launchDialogOpen}
           teamName={teamName}
           members={[]}
-          defaultProjectPath={teamSummary?.projectPath}
+          defaultProjectPath={currentTeamSummary?.projectPath}
           provisioningError={provisioningError}
           clearProvisioningError={clearProvisioningError}
           onClose={() => setLaunchDialogOpen(false)}
@@ -1276,27 +1476,6 @@ export const TeamDetailView = ({
   const headerColorSet = data.config.color
     ? getTeamColorSet(data.config.color)
     : nameColorSet(data.config.name);
-  const sharedMessagesPanelProps = {
-    teamName,
-    onTogglePosition: toggleMessagesPanelMode,
-    members: activeMembers,
-    tasks: data.tasks,
-    messages: data.messages,
-    isTeamAlive: data.isAlive,
-    leadActivity: leadActivityByTeam[teamName],
-    leadContextUpdatedAt,
-    timeWindow,
-    teamSessionIds,
-    currentLeadSessionId: data.config.leadSessionId,
-    pendingRepliesByMember,
-    onPendingReplyChange: setPendingRepliesByMember,
-    onMemberClick: setSelectedMember,
-    onTaskClick: setSelectedTask,
-    onCreateTaskFromMessage: handleCreateTaskFromMessage,
-    onReplyToMessage: handleReplyToMessage,
-    onRestartTeam: handleRestartTeam,
-    onTaskIdClick: handleTaskIdClick,
-  };
 
   return (
     <>
@@ -1594,8 +1773,8 @@ export const TeamDetailView = ({
                     ? `Last launch is still reconciling — ${currentTeamSummary.confirmedCount ?? 0}/${currentTeamSummary.expectedMemberCount ?? currentTeamSummary.memberCount} teammates confirmed alive, ${currentTeamSummary.runtimeAlivePendingCount} runtime${currentTeamSummary.runtimeAlivePendingCount === 1 ? '' : 's'} pending bootstrap`
                     : 'Last launch is still reconciling'
                   : currentTeamSummary?.partialLaunchFailure
-                    ? currentTeamSummary.missingMembers?.length
-                      ? `Last launch failed partway — ${currentTeamSummary.missingMembers.length}/${currentTeamSummary.expectedMemberCount ?? currentTeamSummary.missingMembers.length} teammates did not join`
+                    ? currentTeamSummary.missingMemberCount > 0
+                      ? `Last launch failed partway — ${currentTeamSummary.missingMemberCount}/${currentTeamSummary.expectedMemberCount ?? currentTeamSummary.missingMemberCount} teammates did not join`
                       : 'Last launch failed partway'
                     : 'Team is offline'}
               </span>
@@ -1678,20 +1857,12 @@ export const TeamDetailView = ({
               memberSpawnStatuses={memberSpawnStatusMap}
               isTeamAlive={data.isAlive}
               isTeamProvisioning={isTeamProvisioning}
-              leadActivity={leadActivityByTeam[teamName]}
+              leadActivity={leadActivity}
               launchParams={launchParams}
-              onMemberClick={setSelectedMember}
-              onSendMessage={(member) => {
-                setSendDialogRecipient(member.name);
-                setSendDialogDefaultText(undefined);
-                setSendDialogDefaultChip(undefined);
-                setReplyQuote(undefined);
-                setSendDialogOpen(true);
-              }}
-              onAssignTask={(member) => {
-                openCreateTaskDialog('', '', member.name);
-              }}
-              onOpenTask={(task) => setSelectedTask(task)}
+              onMemberClick={handleSelectMember}
+              onSendMessage={handleSendMessageToMember}
+              onAssignTask={handleAssignTaskToMember}
+              onOpenTask={handleOpenTaskById}
             />
           </CollapsibleTeamSection>
 
@@ -1922,7 +2093,11 @@ export const TeamDetailView = ({
               }
               defaultOpen
             >
-              <ProcessesSection />
+              <ProcessesSection
+                teamName={teamName}
+                members={data.members}
+                processes={data.processes}
+              />
             </CollapsibleTeamSection>
           )}
 
@@ -1965,7 +2140,8 @@ export const TeamDetailView = ({
             messages={data.messages}
             isTeamAlive={data.isAlive}
             isTeamProvisioning={isTeamProvisioning}
-            leadActivity={leadActivityByTeam[teamName]}
+            leadActivity={leadActivity}
+            spawnEntry={selectedMember ? memberSpawnStatusMap?.get(selectedMember.name) : undefined}
             onClose={() => setSelectedMember(null)}
             onSendMessage={() => {
               const name = selectedMember?.name ?? '';

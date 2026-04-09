@@ -12,10 +12,10 @@ import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import {
   agentAvatarUrl,
   displayMemberName,
-  getMemberDotClass,
-  getPresenceLabel,
+  getLaunchAwarePresenceLabel,
+  getSpawnAwareDotClass,
 } from '@renderer/utils/memberHelpers';
-import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { ExternalLink } from 'lucide-react';
 
 import { CurrentTaskIndicator } from './CurrentTaskIndicator';
@@ -27,6 +27,8 @@ interface MemberHoverCardProps {
   name: string;
   /** Color key for the member */
   color?: string;
+  /** Owning team context for store lookups. */
+  teamName?: string;
   /** Called when user clicks on the current task */
   onOpenTask?: (task: TeamTaskWithKanban) => void;
   children: React.ReactNode;
@@ -40,18 +42,34 @@ interface MemberHoverCardProps {
 export const MemberHoverCard = ({
   name,
   color,
+  teamName,
   onOpenTask,
   children,
 }: MemberHoverCardProps): React.JSX.Element => {
   const { isLight } = useTheme();
-  const member = useStore((s) => s.selectedTeamData?.members.find((m) => m.name === name) ?? null);
-  const isTeamAlive = useStore((s) => s.selectedTeamData?.isAlive);
-  const teamName = useStore((s) => s.selectedTeamName);
+  const selectedTeamName = useStore((s) => s.selectedTeamName);
+  const effectiveTeamName = teamName ?? selectedTeamName;
+  const member = useStore((s) => {
+    if (!effectiveTeamName || s.selectedTeamName !== effectiveTeamName) return null;
+    return s.selectedTeamData?.members.find((m) => m.name === name) ?? null;
+  });
+  const isTeamAlive = useStore((s) =>
+    effectiveTeamName && s.selectedTeamName === effectiveTeamName
+      ? s.selectedTeamData?.isAlive
+      : undefined
+  );
+  const spawnEntry = useStore((s) =>
+    effectiveTeamName ? s.memberSpawnStatusesByTeam[effectiveTeamName]?.[name] : undefined
+  );
   const leadActivity: LeadActivityState | undefined = useStore((s) =>
-    teamName ? s.leadActivityByTeam[teamName] : undefined
+    effectiveTeamName ? s.leadActivityByTeam[effectiveTeamName] : undefined
   );
   const openMemberProfile = useStore((s) => s.openMemberProfile);
-  const tasks = useStore((s) => s.selectedTeamData?.tasks);
+  const tasks = useStore((s) =>
+    effectiveTeamName && s.selectedTeamName === effectiveTeamName
+      ? s.selectedTeamData?.tasks
+      : undefined
+  );
 
   if (!member) {
     return <>{children}</>;
@@ -59,14 +77,22 @@ export const MemberHoverCard = ({
 
   const colors = getTeamColorSet(color ?? member.color ?? '');
   const roleLabel = formatAgentRole(member.role) ?? formatAgentRole(member.agentType);
-  const presenceLabel = getPresenceLabel(
+  const presenceLabel = getLaunchAwarePresenceLabel(
     member,
+    spawnEntry?.status,
+    spawnEntry?.launchState,
+    spawnEntry?.livenessSource,
+    spawnEntry?.runtimeAlive,
+    member.runtimeAdvisory,
     isTeamAlive,
     false,
     isLeadMember(member) ? leadActivity : undefined
   );
-  const dotClass = getMemberDotClass(
+  const dotClass = getSpawnAwareDotClass(
     member,
+    spawnEntry?.status,
+    spawnEntry?.launchState,
+    spawnEntry?.runtimeAlive,
     isTeamAlive,
     false,
     isLeadMember(member) ? leadActivity : undefined

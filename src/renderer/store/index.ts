@@ -11,6 +11,7 @@ import {
   buildTaskChangeRequestOptions,
   canDisplayTaskChangesForOptions,
 } from '@renderer/utils/taskChangeRequest';
+import { createLogger } from '@shared/utils/logger';
 import { isVersionOlder, normalizeVersion } from '@shared/utils/version';
 import { create } from 'zustand';
 
@@ -32,7 +33,11 @@ import { createSessionSlice } from './slices/sessionSlice';
 import { createSubagentSlice } from './slices/subagentSlice';
 import { createTabSlice } from './slices/tabSlice';
 import { createTabUISlice } from './slices/tabUISlice';
-import { createTeamSlice } from './slices/teamSlice';
+import {
+  createTeamSlice,
+  getLastResolvedTeamDataRefreshAt,
+  isTeamDataRefreshPending,
+} from './slices/teamSlice';
 import { createUISlice } from './slices/uiSlice';
 import { createUpdateSlice } from './slices/updateSlice';
 
@@ -54,8 +59,72 @@ const ENABLE_AUTO_TEAM_CHANGE_PRESENCE_TRACKING = false;
 const IN_PROGRESS_CHANGE_PRESENCE_POLL_MS = 10_000;
 const FINISHED_TOOL_DISPLAY_MS = 1_500;
 const MAX_TOOL_HISTORY_PER_MEMBER = 6;
+const TEAM_CHANGE_EVENT_BURST_WINDOW_MS = 4_000;
+const TEAM_CHANGE_EVENT_BURST_WARN_COUNT = 8;
+const TEAM_CHANGE_EVENT_WARN_THROTTLE_MS = 2_000;
+const TEAM_VISIBLE_IDLE_WATCHDOG_POLL_MS = 10_000;
+const TEAM_VISIBLE_IDLE_WATCHDOG_STALE_MS = 30_000;
 const CURRENT_APP_VERSION =
   typeof __APP_VERSION__ === 'string' ? normalizeVersion(__APP_VERSION__) : '0.0.0';
+const logger = createLogger('Store:index');
+const RELEVANT_TEAM_CHANGE_EVENT_TYPES = new Set<TeamChangeEvent['type']>([
+  'task',
+  'config',
+  'inbox',
+  'lead-message',
+  'lead-context',
+  'lead-activity',
+  'process',
+  'member-spawn',
+]);
+const teamChangeEventDiagnostics = new Map<
+  string,
+  {
+    windowStartedAt: number;
+    count: number;
+    lastWarnAt: number;
+    countsByType: Record<string, number>;
+  }
+>();
+
+function noteTeamChangeEventBurst(teamName: string, eventType: string, visible: boolean): void {
+  if (!visible) return;
+
+  const now = Date.now();
+  const diagnostic = teamChangeEventDiagnostics.get(teamName) ?? {
+    windowStartedAt: now,
+    count: 0,
+    lastWarnAt: 0,
+    countsByType: {},
+  };
+
+  if (now - diagnostic.windowStartedAt > TEAM_CHANGE_EVENT_BURST_WINDOW_MS) {
+    diagnostic.windowStartedAt = now;
+    diagnostic.count = 0;
+    diagnostic.countsByType = {};
+  }
+
+  diagnostic.count += 1;
+  diagnostic.countsByType[eventType] = (diagnostic.countsByType[eventType] ?? 0) + 1;
+
+  if (
+    diagnostic.count >= TEAM_CHANGE_EVENT_BURST_WARN_COUNT &&
+    now - diagnostic.lastWarnAt >= TEAM_CHANGE_EVENT_WARN_THROTTLE_MS
+  ) {
+    diagnostic.lastWarnAt = now;
+    const typeSummary = Object.entries(diagnostic.countsByType)
+      .sort((a, b) => b[1] - a[1])
+      .map(([type, count]) => `${type}:${count}`)
+      .join(',');
+    logger.warn(
+      `[perf] team-change burst team=${teamName} total=${diagnostic.count} windowMs=${
+        now - diagnostic.windowStartedAt
+      } types=${typeSummary}`
+    );
+  }
+
+  teamChangeEventDiagnostics.set(teamName, diagnostic);
+}
 
 // =============================================================================
 // Store Creation
@@ -166,6 +235,8 @@ export function initializeNotificationListeners(): () => void {
   });
   const pendingSessionRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const pendingProjectRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const teamLastRelevantActivityAt = new Map<string, number>();
+  const teamLastIdleWatchdogRefreshAt = new Map<string, number>();
   let teamRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let teamPresenceRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let memberSpawnRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -182,6 +253,19 @@ export function initializeNotificationListeners(): () => void {
   const TEAM_MEMBER_SPAWN_REFRESH_THROTTLE_MS = 500;
   const TEAM_LIST_REFRESH_THROTTLE_MS = 2000;
   const GLOBAL_TASKS_REFRESH_THROTTLE_MS = 500;
+  const scheduleMemberSpawnStatusesRefresh = (teamName: string | null | undefined): void => {
+    if (!teamName || !isTeamVisibleInAnyPane(teamName)) {
+      return;
+    }
+    if (memberSpawnRefreshTimers.has(teamName)) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      memberSpawnRefreshTimers.delete(teamName);
+      void useStore.getState().fetchMemberSpawnStatuses(teamName);
+    }, TEAM_MEMBER_SPAWN_REFRESH_THROTTLE_MS);
+    memberSpawnRefreshTimers.set(teamName, timer);
+  };
   const buildToolActivityTimerKey = (
     teamName: string,
     memberName: string,
@@ -500,6 +584,83 @@ export function initializeNotificationListeners(): () => void {
     return tracked;
   };
 
+  const noteRelevantTeamActivity = (teamName: string, timestamp = Date.now()): void => {
+    teamLastRelevantActivityAt.set(teamName, timestamp);
+  };
+
+  const getFocusedVisibleTeamName = (): string | null => {
+    const state = useStore.getState();
+    const focusedPane = state.paneLayout.panes.find(
+      (pane) => pane.id === state.paneLayout.focusedPaneId
+    );
+    if (!focusedPane?.activeTabId) {
+      return null;
+    }
+
+    const activeTab = focusedPane.tabs.find((tab) => tab.id === focusedPane.activeTabId);
+    if (activeTab?.type !== 'team' || !activeTab.teamName) {
+      return null;
+    }
+
+    if (state.selectedTeamName !== activeTab.teamName) {
+      return null;
+    }
+
+    if (state.selectedTeamData?.teamName !== activeTab.teamName) {
+      return null;
+    }
+
+    return activeTab.teamName;
+  };
+
+  const pollFocusedVisibleTeamIdleWatchdog = async (): Promise<void> => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return;
+    }
+
+    const current = useStore.getState();
+    const teamName = getFocusedVisibleTeamName();
+    if (!teamName || !isTeamVisibleInAnyPane(teamName)) {
+      return;
+    }
+
+    if (current.selectedTeamLoading) {
+      return;
+    }
+
+    if (isTeamDataRefreshPending(teamName)) {
+      return;
+    }
+
+    const lastRelevantActivityAt = teamLastRelevantActivityAt.get(teamName) ?? 0;
+    const lastResolvedRefreshAt = getLastResolvedTeamDataRefreshAt(teamName) ?? 0;
+    const idleBaselineAt = Math.max(lastRelevantActivityAt, lastResolvedRefreshAt);
+    if (idleBaselineAt === 0) {
+      return;
+    }
+
+    const now = Date.now();
+    if (now - idleBaselineAt < TEAM_VISIBLE_IDLE_WATCHDOG_STALE_MS) {
+      return;
+    }
+
+    const lastWatchdogRefreshAt = teamLastIdleWatchdogRefreshAt.get(teamName) ?? 0;
+    if (lastWatchdogRefreshAt >= idleBaselineAt) {
+      return;
+    }
+
+    logger.warn(`[perf] idle-watchdog refresh team=${teamName} idleMs=${now - idleBaselineAt}`);
+
+    try {
+      await current.refreshTeamData(teamName, { withDedup: true });
+    } finally {
+      teamLastIdleWatchdogRefreshAt.set(
+        teamName,
+        Math.max(getLastResolvedTeamDataRefreshAt(teamName) ?? 0, idleBaselineAt, Date.now())
+      );
+    }
+  };
+
   if (ENABLE_AUTO_TEAM_CHANGE_PRESENCE_TRACKING && api.teams?.setChangePresenceTracking) {
     let trackedTeamNames = new Set<string>();
     const syncVisibleTeamTracking = (): void => {
@@ -681,8 +842,18 @@ export function initializeNotificationListeners(): () => void {
     }
   }
 
+  const teamIdleWatchdogTimer = setInterval(() => {
+    void pollFocusedVisibleTeamIdleWatchdog();
+  }, TEAM_VISIBLE_IDLE_WATCHDOG_POLL_MS);
+  cleanupFns.push(() => {
+    clearInterval(teamIdleWatchdogTimer);
+  });
+
   if (api.teams?.onTeamChange) {
     const cleanup = api.teams.onTeamChange((_event: unknown, event: TeamChangeEvent) => {
+      const visibleTeam = Boolean(event.teamName) && isTeamVisibleInAnyPane(event.teamName);
+      noteTeamChangeEventBurst(event.teamName, event.type, visibleTeam);
+
       const isIgnoredRuntimeRun = (() => {
         if (!event.runId) return false;
         const state = useStore.getState();
@@ -718,6 +889,10 @@ export function initializeNotificationListeners(): () => void {
           }));
         }
       };
+
+      if (RELEVANT_TEAM_CHANGE_EVENT_TYPES.has(event.type) && !isStaleRuntimeEvent) {
+        noteRelevantTeamActivity(event.teamName);
+      }
 
       // Immediate in-memory update for lead activity — no filesystem refresh needed
       if (event.type === 'lead-activity' && event.detail) {
@@ -917,22 +1092,12 @@ export function initializeNotificationListeners(): () => void {
           return;
         }
         seedCurrentRunIdIfMissing();
-        void useStore.getState().fetchMemberSpawnStatuses(event.teamName);
+        scheduleMemberSpawnStatusesRefresh(event.teamName);
         return;
       }
 
       if (event.type === 'inbox' || event.type === 'config' || event.type === 'process') {
-        if (!event?.teamName || !isTeamVisibleInAnyPane(event.teamName)) {
-          return;
-        }
-        if (memberSpawnRefreshTimers.has(event.teamName)) {
-          return;
-        }
-        const timer = setTimeout(() => {
-          memberSpawnRefreshTimers.delete(event.teamName);
-          void useStore.getState().fetchMemberSpawnStatuses(event.teamName);
-        }, TEAM_MEMBER_SPAWN_REFRESH_THROTTLE_MS);
-        memberSpawnRefreshTimers.set(event.teamName, timer);
+        scheduleMemberSpawnStatusesRefresh(event.teamName);
       }
 
       // Live lead-message events: only refresh the visible team detail, not team/task lists.
@@ -951,7 +1116,7 @@ export function initializeNotificationListeners(): () => void {
         const timer = setTimeout(() => {
           teamRefreshTimers.delete(event.teamName);
           const current = useStore.getState();
-          void current.refreshTeamData(event.teamName);
+          void current.refreshTeamData(event.teamName, { withDedup: true });
         }, TEAM_REFRESH_THROTTLE_MS);
         teamRefreshTimers.set(event.teamName, timer);
         return;
@@ -981,8 +1146,10 @@ export function initializeNotificationListeners(): () => void {
         }, TEAM_LIST_REFRESH_THROTTLE_MS);
       }
 
+      const shouldRefreshGlobalTasks = event.type === 'task' || event.type === 'config';
+
       // Throttled refresh of global tasks list for sidebar.
-      if (!globalTasksRefreshTimer) {
+      if (shouldRefreshGlobalTasks && !globalTasksRefreshTimer) {
         globalTasksRefreshTimer = setTimeout(() => {
           globalTasksRefreshTimer = null;
           void useStore.getState().fetchAllTasks();
@@ -1002,7 +1169,7 @@ export function initializeNotificationListeners(): () => void {
       const timer = setTimeout(() => {
         teamRefreshTimers.delete(event.teamName);
         const current = useStore.getState();
-        void current.refreshTeamData(event.teamName);
+        void current.refreshTeamData(event.teamName, { withDedup: true });
       }, TEAM_REFRESH_THROTTLE_MS);
       teamRefreshTimers.set(event.teamName, timer);
     });
@@ -1018,6 +1185,8 @@ export function initializeNotificationListeners(): () => void {
         memberSpawnRefreshTimers = new Map();
         for (const t of toolActivityTimers.values()) clearTimeout(t);
         toolActivityTimers = new Map();
+        teamLastRelevantActivityAt.clear();
+        teamLastIdleWatchdogRefreshAt.clear();
         if (teamListRefreshTimer) {
           clearTimeout(teamListRefreshTimer);
           teamListRefreshTimer = null;

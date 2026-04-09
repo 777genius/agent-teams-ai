@@ -380,7 +380,9 @@ function createDefaultViewerState(): ClaudeLogsViewerState {
 // =============================================================================
 
 export function useClaudeLogsController(teamName: string): ClaudeLogsController {
-  const isAlive = useStore((s) => s.selectedTeamData?.isAlive ?? false);
+  const isAlive = useStore((s) =>
+    s.selectedTeamName === teamName ? (s.selectedTeamData?.isAlive ?? false) : false
+  );
 
   // ── Data state ────────────────────────────────────────────────────────
   const [loadedCount, setLoadedCount] = useState(PAGE_SIZE);

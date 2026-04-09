@@ -87,6 +87,10 @@ import {
 } from './services/team/TeamControlApiState';
 import { TeamInboxReader } from './services/team/TeamInboxReader';
 import { TeamMemberRuntimeAdvisoryService } from './services/team/TeamMemberRuntimeAdvisoryService';
+import {
+  createTeamReconcileDrainScheduler,
+  type TeamReconcileTrigger,
+} from './services/team/TeamReconcileDrainScheduler';
 import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
 import { getAppIconPath } from './utils/appIcon';
 import { getProjectsBasePath, getTeamsBasePath, getTodosBasePath } from './utils/pathDecoder';
@@ -510,6 +514,27 @@ function wireFileWatcherEvents(context: ServiceContext): void {
   context.fileWatcher.on('todo-change', todoChangeHandler);
   todoChangeCleanup = () => context.fileWatcher.off('todo-change', todoChangeHandler);
 
+  const reconcileScheduler = teamDataService
+    ? createTeamReconcileDrainScheduler({
+        run: async (teamName: string, trigger: TeamReconcileTrigger) => {
+          try {
+            await teamDataService.reconcileTeamArtifacts(teamName, trigger);
+          } catch (e) {
+            if (trigger.source === 'task') {
+              logger.warn(
+                `[FileWatcher] task reconcile failed for ${teamName} detail=${trigger.detail}: ${String(e)}`
+              );
+            } else {
+              logger.warn(
+                `[FileWatcher] reconcile failed for ${teamName} source=${trigger.source} detail=${trigger.detail}: ${String(e)}`
+              );
+            }
+            throw e;
+          }
+        },
+      })
+    : null;
+
   // Forward team-change events to renderer and HTTP SSE
   const teamChangeHandler = (event: unknown): void => {
     safeSendToRenderer(mainWindow, TEAM_CHANGE, event);
@@ -525,12 +550,8 @@ function wireFileWatcherEvents(context: ServiceContext): void {
 
       // --- Inbox change events: relay to lead + native OS notifications ---
       if (row.type === 'inbox') {
-        if (teamDataService) {
-          void teamDataService
-            .reconcileTeamArtifacts(teamName)
-            .catch((e: unknown) =>
-              logger.warn(`[FileWatcher] reconcile failed for ${teamName}: ${String(e)}`)
-            );
+        if (reconcileScheduler) {
+          reconcileScheduler.schedule(teamName, { source: 'inbox', detail });
         }
 
         // Relay inbox changes into active runtime recipients.
@@ -588,11 +609,7 @@ function wireFileWatcherEvents(context: ServiceContext): void {
 
       // --- Task change events: notify lead when teammate starts a task via CLI ---
       if (row.type === 'task' && detail.endsWith('.json') && teamDataService) {
-        void teamDataService
-          .reconcileTeamArtifacts(teamName)
-          .catch((e: unknown) =>
-            logger.warn(`[FileWatcher] task reconcile failed for ${teamName}: ${String(e)}`)
-          );
+        reconcileScheduler?.schedule(teamName, { source: 'task', detail });
 
         const taskId = detail.replace('.json', '');
         void teamDataService
@@ -625,7 +642,10 @@ function wireFileWatcherEvents(context: ServiceContext): void {
     }
   };
   context.fileWatcher.on('team-change', teamChangeHandler);
-  teamChangeCleanup = () => context.fileWatcher.off('team-change', teamChangeHandler);
+  teamChangeCleanup = () => {
+    context.fileWatcher.off('team-change', teamChangeHandler);
+    reconcileScheduler?.dispose();
+  };
 
   logger.info(`FileWatcher events wired for context: ${context.id}`);
 }

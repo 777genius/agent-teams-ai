@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -69,12 +69,12 @@ const LogPreviewInline = ({ preview }: { preview: LastLogPreview }): React.JSX.E
 // Main component
 // =============================================================================
 
-export const ClaudeLogsSection = ({
+export const ClaudeLogsSection = memo(function ClaudeLogsSection({
   teamName,
   position = 'inline',
   sidebarViewerMaxHeight,
   onOpenChange,
-}: ClaudeLogsSectionProps): React.JSX.Element => {
+}: ClaudeLogsSectionProps): React.JSX.Element {
   const ctrl = useClaudeLogsController(teamName);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -151,4 +151,4 @@ export const ClaudeLogsSection = ({
       <ClaudeLogsDialog open={dialogOpen} onOpenChange={setDialogOpen} ctrl={ctrl} />
     </>
   );
-};
+});

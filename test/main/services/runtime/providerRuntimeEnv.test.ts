@@ -7,7 +7,7 @@ import {
 } from '@main/services/runtime/providerRuntimeEnv';
 
 describe('providerRuntimeEnv', () => {
-  it('enables Gemini runtime mode and clears other third-party provider flags', () => {
+  it('pins gemini runtime mode and marks provider routing as host-managed', () => {
     const env: NodeJS.ProcessEnv = {
       CLAUDE_CODE_USE_OPENAI: '1',
       CLAUDE_CODE_USE_GEMINI: undefined,
@@ -16,9 +16,23 @@ describe('providerRuntimeEnv', () => {
 
     const result = applyProviderRuntimeEnv(env, 'gemini');
 
-    expect(result.CLAUDE_CODE_USE_GEMINI).toBe('1');
+    expect(result.CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST).toBe('1');
+    expect(result.CLAUDE_CODE_ENTRY_PROVIDER).toBe('gemini');
     expect(result.CLAUDE_CODE_USE_OPENAI).toBeUndefined();
     expect(result.CLAUDE_CODE_USE_BEDROCK).toBeUndefined();
+  });
+
+  it('pins anthropic explicitly instead of relying on default provider fallback', () => {
+    const env: NodeJS.ProcessEnv = {
+      CLAUDE_CODE_ENTRY_PROVIDER: 'codex',
+      CLAUDE_CODE_USE_OPENAI: '1',
+    };
+
+    const result = applyProviderRuntimeEnv(env, 'anthropic');
+
+    expect(result.CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST).toBe('1');
+    expect(result.CLAUDE_CODE_ENTRY_PROVIDER).toBe('anthropic');
+    expect(result.CLAUDE_CODE_USE_OPENAI).toBeUndefined();
   });
 
   it('preserves gemini as a valid team provider id', () => {

@@ -70,7 +70,12 @@ export const TaskTooltip = ({
   side = 'top',
 }: TaskTooltipProps): React.JSX.Element => {
   const selectedTeamName = useStore((s) => s.selectedTeamName);
-  const selectedTeamData = useStore((s) => s.selectedTeamData);
+  const selectedTeamData = useStore((s) => {
+    if (teamName) {
+      return s.selectedTeamName === teamName ? s.selectedTeamData : null;
+    }
+    return s.selectedTeamData;
+  });
   const globalTasks = useStore((s) => s.globalTasks);
   const teamByName = useStore((s) => s.teamByName);
 
@@ -161,7 +166,11 @@ export const TaskTooltip = ({
 
           {/* Owner */}
           {task.owner && members.length > 0 ? (
-            <MemberBadge name={task.owner} color={colorMap.get(task.owner)} />
+            <MemberBadge
+              name={task.owner}
+              color={colorMap.get(task.owner)}
+              teamName={resolvedTeamName}
+            />
           ) : task.owner ? (
             <span className="text-[10px] text-[var(--color-text-secondary)]">{task.owner}</span>
           ) : (

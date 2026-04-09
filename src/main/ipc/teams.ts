@@ -69,7 +69,7 @@ import {
   TEAM_VALIDATE_CLI_ARGS,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants are shared between main and preload by design
 } from '@preload/constants/ipcChannels';
-import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN } from '@shared/constants/agentBlocks';
+import { AGENT_BLOCK_CLOSE, AGENT_BLOCK_OPEN, wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import { isApiErrorMessage } from '@shared/utils/apiErrorDetector';
@@ -254,6 +254,20 @@ function buildLeadRosterContextBlock(
     `- This team is NOT in solo mode`,
     `- If the user asks who is on the team, answer from this durable roster unless newer durable state explicitly says otherwise.`,
   ].join('\n');
+}
+
+function buildLeadDirectDelegateAckBlock(actionMode?: AgentActionMode): string | null {
+  if (actionMode !== 'delegate') return null;
+
+  return wrapAgentBlock(
+    [
+      'DELEGATE MODE USER ACK CONTRACT:',
+      'Before any task creation, delegation, or other tool use, begin your next assistant response with one short human-readable acknowledgement to the user.',
+      'That acknowledgement must be visible plain text, not only an agent-only block.',
+      'Make the acknowledgement at least 40 characters so it is preserved in the Messages panel.',
+      'After that visible acknowledgement, continue with delegation/orchestration in the same turn.',
+    ].join('\n')
+  );
 }
 
 /**
@@ -1676,6 +1690,7 @@ async function handleSendMessage(
       const resolvedLeadName = leadName ?? memberName;
       const teammateRoster = await getDurableLeadTeammateRoster(tn, resolvedLeadName);
       const rosterContextBlock = buildLeadRosterContextBlock(tn, resolvedLeadName, teammateRoster);
+      const delegateAckBlock = buildLeadDirectDelegateAckBlock(actionMode);
       // Pre-generate stable messageId so both stdin and persistence use the same identity.
       // This allows the lead to call task_create_from_message with the exact messageId.
       const preGeneratedMessageId = crypto.randomUUID();
@@ -1694,6 +1709,7 @@ async function handleSendMessage(
             `You received a direct message from the user.`,
             `IMPORTANT: Your text response here is shown to the user in the Messages panel. Always include a brief human-readable reply. Do NOT respond with only an agent-only block.`,
             ...(rosterContextBlock ? [rosterContextBlock] : []),
+            ...(delegateAckBlock ? [delegateAckBlock] : []),
             AGENT_BLOCK_OPEN,
             `MessageId: ${preGeneratedMessageId}`,
             `When creating a task from this user message, prefer task_create_from_message with messageId="${preGeneratedMessageId}" for reliable provenance. Only use this exact messageId — never guess or fabricate one.`,
