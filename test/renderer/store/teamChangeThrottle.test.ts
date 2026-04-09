@@ -102,6 +102,7 @@ describe('team change throttling', () => {
   afterEach(() => {
     cleanup?.();
     cleanup = null;
+    vi.mocked(console.warn).mockClear();
     vi.useRealTimers();
   });
 
@@ -125,7 +126,7 @@ describe('team change throttling', () => {
 
     await vi.advanceTimersByTimeAsync(1);
     expect(refreshTeamDataSpy).toHaveBeenCalledTimes(1);
-    expect(refreshTeamDataSpy).toHaveBeenCalledWith('my-team');
+    expect(refreshTeamDataSpy).toHaveBeenCalledWith('my-team', { withDedup: true });
 
     // List refresh fires at 2000ms
     expect(fetchTeamsSpy).not.toHaveBeenCalled();
@@ -161,7 +162,7 @@ describe('team change throttling', () => {
 
     // Should trigger refreshTeamData at 800ms
     expect(refreshTeamDataSpy).toHaveBeenCalledTimes(1);
-    expect(refreshTeamDataSpy).toHaveBeenCalledWith('my-team');
+    expect(refreshTeamDataSpy).toHaveBeenCalledWith('my-team', { withDedup: true });
   });
 
   it('lead-message does not call fetchAllTasks', async () => {
@@ -303,8 +304,8 @@ describe('team change throttling', () => {
 
     // Both teams should get exactly 1 refresh each
     expect(refreshTeamDataSpy).toHaveBeenCalledTimes(2);
-    expect(refreshTeamDataSpy).toHaveBeenCalledWith('my-team');
-    expect(refreshTeamDataSpy).toHaveBeenCalledWith('other-team');
+    expect(refreshTeamDataSpy).toHaveBeenCalledWith('my-team', { withDedup: true });
+    expect(refreshTeamDataSpy).toHaveBeenCalledWith('other-team', { withDedup: true });
   });
 
   it('keeps auto change presence tracking disabled even after selected team data is hydrated', async () => {

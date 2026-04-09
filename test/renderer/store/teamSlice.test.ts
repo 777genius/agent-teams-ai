@@ -77,6 +77,44 @@ function createSliceStore() {
   }));
 }
 
+function createMemberSpawnStatus(overrides: Record<string, unknown> = {}) {
+  return {
+    status: 'online',
+    launchState: 'confirmed_alive',
+    error: undefined,
+    updatedAt: '2026-03-12T10:00:00.000Z',
+    runtimeAlive: true,
+    livenessSource: 'heartbeat',
+    bootstrapConfirmed: true,
+    hardFailure: false,
+    firstSpawnAcceptedAt: '2026-03-12T09:59:30.000Z',
+    lastHeartbeatAt: '2026-03-12T10:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function createMemberSpawnSnapshot(overrides: Record<string, unknown> = {}) {
+  const typedOverrides = overrides as {
+    statuses?: Record<string, ReturnType<typeof createMemberSpawnStatus>>;
+  };
+  return {
+    runId: 'runtime-run',
+    teamLaunchState: 'clean_success',
+    launchPhase: 'finished',
+    expectedMembers: ['alice'],
+    updatedAt: '2026-03-12T10:00:00.000Z',
+    summary: {
+      confirmedCount: 1,
+      pendingCount: 0,
+      failedCount: 0,
+      runtimeAlivePendingCount: 0,
+    },
+    source: 'merged',
+    statuses: typedOverrides.statuses ?? { alice: createMemberSpawnStatus() },
+    ...overrides,
+  };
+}
+
 describe('teamSlice actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -88,6 +126,7 @@ describe('teamSlice actions', () => {
       members: [],
       messages: [],
       kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
     });
     hoisted.sendMessage.mockResolvedValue({ deliveredToInbox: true, messageId: 'm1' });
     hoisted.requestReview.mockResolvedValue(undefined);
@@ -336,6 +375,7 @@ describe('teamSlice actions', () => {
           members: [],
           messages: [],
           kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+          processes: [],
         },
       });
 
@@ -385,6 +425,7 @@ describe('teamSlice actions', () => {
         members: [],
         messages: [],
         kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
       });
 
       await store.getState().refreshTeamData('my-team');
@@ -419,6 +460,7 @@ describe('teamSlice actions', () => {
           members: [],
           messages: [],
           kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+          processes: [],
         },
       });
 
@@ -443,6 +485,7 @@ describe('teamSlice actions', () => {
         members: [],
         messages: [{ from: 'team-lead', text: 'Ping', timestamp: '2026-03-01T10:10:00.000Z' }],
         kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
       });
 
       await store.getState().refreshTeamData('my-team');
@@ -626,6 +669,295 @@ describe('teamSlice actions', () => {
       expect(store.getState().memberSpawnStatusesByTeam['my-team']).toEqual({
         alice: { status: 'spawning', updatedAt: '2026-03-12T10:00:00.000Z' },
       });
+    });
+
+    it('suppresses renderer rewrites when only lastHeartbeatAt changes', async () => {
+      const store = createSliceStore();
+      const previousSnapshot = createMemberSpawnSnapshot();
+      const previousStatuses = previousSnapshot.statuses;
+
+      store.setState({
+        currentRuntimeRunIdByTeam: {
+          'my-team': 'runtime-run',
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': previousStatuses,
+        },
+        memberSpawnSnapshotsByTeam: {
+          'my-team': previousSnapshot,
+        },
+      });
+
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(
+        createMemberSpawnSnapshot({
+          statuses: {
+            alice: createMemberSpawnStatus({
+              lastHeartbeatAt: '2026-03-12T10:00:09.000Z',
+            }),
+          },
+        })
+      );
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toBe(previousStatuses);
+      expect(store.getState().memberSpawnSnapshotsByTeam['my-team']).toBe(previousSnapshot);
+    });
+
+    it('suppresses renderer rewrites when only firstSpawnAcceptedAt changes', async () => {
+      const store = createSliceStore();
+      const previousSnapshot = createMemberSpawnSnapshot();
+      const previousStatuses = previousSnapshot.statuses;
+
+      store.setState({
+        currentRuntimeRunIdByTeam: {
+          'my-team': 'runtime-run',
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': previousStatuses,
+        },
+        memberSpawnSnapshotsByTeam: {
+          'my-team': previousSnapshot,
+        },
+      });
+
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(
+        createMemberSpawnSnapshot({
+          statuses: {
+            alice: createMemberSpawnStatus({
+              firstSpawnAcceptedAt: '2026-03-12T09:59:35.000Z',
+            }),
+          },
+        })
+      );
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toBe(previousStatuses);
+      expect(store.getState().memberSpawnSnapshotsByTeam['my-team']).toBe(previousSnapshot);
+    });
+
+    it('suppresses renderer rewrites when only updatedAt changes', async () => {
+      const store = createSliceStore();
+      const previousSnapshot = createMemberSpawnSnapshot();
+      const previousStatuses = previousSnapshot.statuses;
+
+      store.setState({
+        currentRuntimeRunIdByTeam: {
+          'my-team': 'runtime-run',
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': previousStatuses,
+        },
+        memberSpawnSnapshotsByTeam: {
+          'my-team': previousSnapshot,
+        },
+      });
+
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(
+        createMemberSpawnSnapshot({
+          updatedAt: '2026-03-12T10:00:11.000Z',
+          statuses: {
+            alice: createMemberSpawnStatus({
+              updatedAt: '2026-03-12T10:00:11.000Z',
+            }),
+          },
+        })
+      );
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toBe(previousStatuses);
+      expect(store.getState().memberSpawnSnapshotsByTeam['my-team']).toBe(previousSnapshot);
+    });
+
+    it('rewrites renderer state when runtimeAlive changes', async () => {
+      const store = createSliceStore();
+      const previousSnapshot = createMemberSpawnSnapshot({
+        statuses: {
+          alice: createMemberSpawnStatus({
+            launchState: 'runtime_pending_bootstrap',
+            livenessSource: 'process',
+            bootstrapConfirmed: false,
+          }),
+        },
+        teamLaunchState: 'partial_pending',
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 1,
+        },
+      });
+      const previousStatuses = previousSnapshot.statuses;
+
+      store.setState({
+        currentRuntimeRunIdByTeam: {
+          'my-team': 'runtime-run',
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': previousStatuses,
+        },
+        memberSpawnSnapshotsByTeam: {
+          'my-team': previousSnapshot,
+        },
+      });
+
+      const nextSnapshot = createMemberSpawnSnapshot();
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(nextSnapshot);
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).not.toBe(previousStatuses);
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toEqual(nextSnapshot.statuses);
+      expect(store.getState().memberSpawnSnapshotsByTeam['my-team']).toEqual(nextSnapshot);
+    });
+
+    it('rewrites renderer state when error semantics change', async () => {
+      const store = createSliceStore();
+      const previousSnapshot = createMemberSpawnSnapshot({
+        statuses: {
+          alice: createMemberSpawnStatus({
+            status: 'waiting',
+            launchState: 'runtime_pending_bootstrap',
+            runtimeAlive: false,
+            livenessSource: undefined,
+            bootstrapConfirmed: false,
+          }),
+        },
+        teamLaunchState: 'partial_pending',
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 0,
+        },
+      });
+      const previousStatuses = previousSnapshot.statuses;
+
+      store.setState({
+        currentRuntimeRunIdByTeam: {
+          'my-team': 'runtime-run',
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': previousStatuses,
+        },
+        memberSpawnSnapshotsByTeam: {
+          'my-team': previousSnapshot,
+        },
+      });
+
+      const nextSnapshot = createMemberSpawnSnapshot({
+        teamLaunchState: 'partial_failure',
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 0,
+          failedCount: 1,
+          runtimeAlivePendingCount: 0,
+        },
+        statuses: {
+          alice: createMemberSpawnStatus({
+            status: 'error',
+            launchState: 'failed_to_start',
+            error: 'bootstrap failed',
+            runtimeAlive: false,
+            livenessSource: undefined,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+          }),
+        },
+      });
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(nextSnapshot);
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).not.toBe(previousStatuses);
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toEqual(nextSnapshot.statuses);
+      expect(store.getState().memberSpawnSnapshotsByTeam['my-team']).toEqual(nextSnapshot);
+    });
+
+    it('rewrites renderer state when top-level launch summary changes', async () => {
+      const store = createSliceStore();
+      const previousSnapshot = createMemberSpawnSnapshot({
+        teamLaunchState: 'partial_pending',
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 1,
+        },
+        statuses: {
+          alice: createMemberSpawnStatus({
+            launchState: 'runtime_pending_bootstrap',
+            livenessSource: 'process',
+            bootstrapConfirmed: false,
+          }),
+        },
+      });
+      const previousStatuses = previousSnapshot.statuses;
+
+      store.setState({
+        currentRuntimeRunIdByTeam: {
+          'my-team': 'runtime-run',
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': previousStatuses,
+        },
+        memberSpawnSnapshotsByTeam: {
+          'my-team': previousSnapshot,
+        },
+      });
+
+      const nextSnapshot = createMemberSpawnSnapshot({
+        teamLaunchState: 'clean_success',
+        summary: {
+          confirmedCount: 1,
+          pendingCount: 0,
+          failedCount: 0,
+          runtimeAlivePendingCount: 0,
+        },
+      });
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(nextSnapshot);
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).not.toBe(previousStatuses);
+      expect(store.getState().memberSpawnSnapshotsByTeam['my-team']).toEqual(nextSnapshot);
+    });
+
+    it('preserves spawn snapshot references while still updating bookkeeping on suppressed snapshots', async () => {
+      const store = createSliceStore();
+      const previousSnapshot = createMemberSpawnSnapshot();
+      const previousStatuses = previousSnapshot.statuses;
+
+      store.setState({
+        ignoredRuntimeRunIds: {
+          'runtime-old': 'my-team',
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': previousStatuses,
+        },
+        memberSpawnSnapshotsByTeam: {
+          'my-team': previousSnapshot,
+        },
+      });
+
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(
+        createMemberSpawnSnapshot({
+          statuses: {
+            alice: createMemberSpawnStatus({
+              lastHeartbeatAt: '2026-03-12T10:00:09.000Z',
+            }),
+          },
+        })
+      );
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('runtime-run');
+      expect(store.getState().ignoredRuntimeRunIds['runtime-old']).toBeUndefined();
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toBe(previousStatuses);
+      expect(store.getState().memberSpawnSnapshotsByTeam['my-team']).toBe(previousSnapshot);
     });
 
     it('ignores stale spawn-status fetches after runtime already went offline', async () => {
