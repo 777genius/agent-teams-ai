@@ -29,6 +29,7 @@ interface LeadModelRowProps {
   syncModelsWithTeammates: boolean;
   onSyncModelsWithTeammatesChange: (value: boolean) => void;
   warningText?: string | null;
+  disableGeminiOption?: boolean;
 }
 
 export const LeadModelRow = ({
@@ -43,6 +44,7 @@ export const LeadModelRow = ({
   syncModelsWithTeammates,
   onSyncModelsWithTeammatesChange,
   warningText,
+  disableGeminiOption = false,
 }: LeadModelRowProps): React.JSX.Element => {
   const { isLight } = useTheme();
   const [modelExpanded, setModelExpanded] = useState(false);
@@ -120,6 +122,7 @@ export const LeadModelRow = ({
             value={model}
             onValueChange={onModelChange}
             id="lead-model"
+            disableGeminiOption={disableGeminiOption}
           />
           <EffortLevelSelector
             value={effort ?? ''}

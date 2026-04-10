@@ -36,7 +36,12 @@ import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import {
+  isGeminiUiFrozen,
+  normalizeCreateLaunchProviderForUi,
+} from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
+import { normalizeTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 
@@ -81,7 +86,11 @@ import type {
 
 function getStoredTeamProvider(): TeamProviderId {
   const stored = localStorage.getItem('team:lastSelectedProvider');
-  return stored === 'codex' || stored === 'gemini' ? stored : 'anthropic';
+  // return stored === 'codex' || stored === 'gemini' ? stored : 'anthropic';
+  return normalizeCreateLaunchProviderForUi(
+    stored === 'codex' || stored === 'gemini' ? stored : 'anthropic',
+    true
+  );
 }
 
 function getStoredTeamModel(providerId: TeamProviderId): string {
@@ -89,7 +98,7 @@ function getStoredTeamModel(providerId: TeamProviderId): string {
   if (stored === null) {
     return providerId === 'anthropic' ? 'opus' : '';
   }
-  return stored === '__default__' ? '' : stored;
+  return normalizeTeamModelForUi(providerId, stored === '__default__' ? '' : stored);
 }
 
 function isEphemeralRenderedProjectPath(projectPath: string | null | undefined): boolean {
@@ -368,8 +377,9 @@ export const CreateTeamDialog = ({
   }, [advancedKey]);
 
   const setSelectedModel = (value: string): void => {
-    setSelectedModelRaw(value);
-    localStorage.setItem(`team:lastSelectedModel:${selectedProviderId}`, value);
+    const normalizedValue = normalizeTeamModelForUi(selectedProviderId, value);
+    setSelectedModelRaw(normalizedValue);
+    localStorage.setItem(`team:lastSelectedModel:${selectedProviderId}`, normalizedValue);
   };
 
   const setSelectedProviderId = (value: TeamProviderId): void => {
@@ -1160,6 +1170,7 @@ export const CreateTeamDialog = ({
               onLimitContextChange={setLimitContext}
               syncModelsWithTeammates={syncModelsWithLead}
               onSyncModelsWithTeammatesChange={handleSyncModelsWithLeadChange}
+              disableGeminiOption={isGeminiUiFrozen()}
               headerTop={
                 <div className="flex items-center gap-2">
                   <Checkbox

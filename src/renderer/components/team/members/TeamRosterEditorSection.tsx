@@ -43,6 +43,7 @@ interface TeamRosterEditorSectionProps {
   softDeleteMembers?: boolean;
   leadWarningText?: string | null;
   memberWarningById?: Record<string, string | null | undefined>;
+  disableGeminiOption?: boolean;
 }
 
 export const TeamRosterEditorSection = ({
@@ -81,6 +82,7 @@ export const TeamRosterEditorSection = ({
   softDeleteMembers = false,
   leadWarningText,
   memberWarningById,
+  disableGeminiOption = false,
 }: TeamRosterEditorSectionProps): React.JSX.Element => {
   return (
     <MembersEditorSection
@@ -105,6 +107,7 @@ export const TeamRosterEditorSection = ({
       forceInheritedModelSettings={forceInheritedModelSettings}
       modelLockReason={modelLockReason}
       softDeleteMembers={softDeleteMembers}
+      disableGeminiOption={disableGeminiOption}
       headerExtra={
         <div className="space-y-3">
           {headerTop}
@@ -120,6 +123,7 @@ export const TeamRosterEditorSection = ({
             syncModelsWithTeammates={syncModelsWithTeammates}
             onSyncModelsWithTeammatesChange={onSyncModelsWithTeammatesChange}
             warningText={leadWarningText}
+            disableGeminiOption={disableGeminiOption}
           />
           {headerBottom}
         </div>

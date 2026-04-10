@@ -1,4 +1,6 @@
 import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
+import { normalizeCreateLaunchProviderForUi } from '@renderer/utils/geminiUiFreeze';
+import { normalizeTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
@@ -28,14 +30,15 @@ function newDraftId(): string {
 }
 
 export function createMemberDraft(initial?: Partial<MemberDraft>): MemberDraft {
+  const providerId = initial?.providerId;
   return {
     id: initial?.id ?? newDraftId(),
     name: initial?.name ?? '',
     roleSelection: initial?.roleSelection ?? '',
     customRole: initial?.customRole ?? '',
     workflow: initial?.workflow,
-    providerId: initial?.providerId,
-    model: initial?.model ?? '',
+    providerId,
+    model: normalizeTeamModelForUi(providerId, initial?.model ?? ''),
     effort: initial?.effort,
     removedAt: initial?.removedAt,
   };
@@ -84,23 +87,30 @@ export function normalizeProviderForMode(
   providerId: TeamProviderId | undefined,
   multimodelEnabled: boolean
 ): TeamProviderId {
-  if (multimodelEnabled && (providerId === 'codex' || providerId === 'gemini')) {
-    return providerId;
-  }
-  return 'anthropic';
+  return normalizeCreateLaunchProviderForUi(providerId, multimodelEnabled);
 }
 
 export function normalizeMemberDraftForProviderMode(
   member: MemberDraft,
   multimodelEnabled: boolean
 ): MemberDraft {
-  if (multimodelEnabled) {
+  const normalizedProviderId =
+    member.providerId == null
+      ? undefined
+      : normalizeCreateLaunchProviderForUi(member.providerId, multimodelEnabled);
+
+  if (normalizedProviderId === member.providerId) {
     return member;
   }
-  if (member.providerId === 'codex' || member.providerId === 'gemini') {
+
+  if (
+    member.providerId === 'codex' ||
+    member.providerId === 'gemini' ||
+    normalizedProviderId !== member.providerId
+  ) {
     return {
       ...member,
-      providerId: 'anthropic',
+      providerId: normalizedProviderId,
       model: '',
     };
   }
@@ -200,7 +210,7 @@ export function buildMembersFromDrafts(members: MemberDraft[]): TeamProvisioning
       }
       const model = member.model?.trim();
       if (model) {
-        result.model = model;
+        result.model = normalizeTeamModelForUi(providerId, model);
       }
       const effort = normalizeDraftEffort(member.effort);
       if (effort) {

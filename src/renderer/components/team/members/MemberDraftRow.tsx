@@ -52,6 +52,7 @@ interface MemberDraftRowProps {
   isRemoved?: boolean;
   onRestore?: (id: string) => void;
   warningText?: string | null;
+  disableGeminiOption?: boolean;
 }
 
 export const MemberDraftRow = ({
@@ -83,6 +84,7 @@ export const MemberDraftRow = ({
   isRemoved = false,
   onRestore,
   warningText,
+  disableGeminiOption = false,
 }: MemberDraftRowProps): React.JSX.Element => {
   const { isLight } = useTheme();
   const memberColorSet = getTeamColorSet(
@@ -344,6 +346,7 @@ export const MemberDraftRow = ({
               onModelChange(member.id, value);
             }}
             id={`member-${member.id}-model`}
+            disableGeminiOption={disableGeminiOption}
           />
           <EffortLevelSelector
             value={effectiveEffort ?? ''}

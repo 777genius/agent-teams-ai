@@ -20,6 +20,7 @@ import { TerminalModal } from '@renderer/components/terminal/TerminalModal';
 import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
 import { useStore } from '@renderer/store';
 import { formatBytes } from '@renderer/utils/formatters';
+import { filterMainScreenCliProviders } from '@renderer/utils/geminiUiFreeze';
 import {
   AlertTriangle,
   CheckCircle,
@@ -338,18 +339,19 @@ function formatRuntimeLabel(
 }
 
 function formatRuntimeAuthSummary(
-  cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>
+  cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>,
+  visibleProviders: readonly CliProviderStatus[]
 ): string | null {
-  if (cliStatus.flavor === 'free-code' && cliStatus.providers.length > 0) {
+  if (cliStatus.flavor === 'free-code' && visibleProviders.length > 0) {
     if (
-      cliStatus.providers.every(
+      visibleProviders.every(
         (provider) => provider.statusMessage === 'Checking...' && !provider.authenticated
       )
     ) {
       return 'Checking providers...';
     }
-    const denominator = cliStatus.providers.length;
-    const connected = cliStatus.providers.filter((provider) => provider.authenticated).length;
+    const denominator = visibleProviders.length;
+    const connected = visibleProviders.filter((provider) => provider.authenticated).length;
 
     return `Providers: ${connected}/${denominator} connected`;
   }
@@ -366,12 +368,13 @@ function formatRuntimeAuthSummary(
 }
 
 function isCheckingMultimodelStatus(
-  cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>
+  cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>,
+  visibleProviders: readonly CliProviderStatus[]
 ): boolean {
   return (
     cliStatus.flavor === 'free-code' &&
-    cliStatus.providers.length > 0 &&
-    cliStatus.providers.every(
+    visibleProviders.length > 0 &&
+    visibleProviders.every(
       (provider) => provider.statusMessage === 'Checking...' && !provider.authenticated
     )
   );
@@ -396,8 +399,12 @@ const InstalledBanner = ({
 }: InstalledBannerProps): React.JSX.Element => {
   const openExtensionsTab = useStore((s) => s.openExtensionsTab);
   const styles = VARIANT_STYLES[variant];
+  const visibleProviders = useMemo(
+    () => filterMainScreenCliProviders(cliStatus.providers),
+    [cliStatus.providers]
+  );
   const runtimeLabel = formatRuntimeLabel(cliStatus);
-  const runtimeAuthSummary = formatRuntimeAuthSummary(cliStatus);
+  const runtimeAuthSummary = formatRuntimeAuthSummary(cliStatus, visibleProviders);
 
   return (
     <div
@@ -498,12 +505,12 @@ const InstalledBanner = ({
           Failed to check for updates. Check your network connection and try again.
         </p>
       )}
-      {cliStatus.providers.length > 0 && (
+      {visibleProviders.length > 0 && (
         <div
           className="mt-3 space-y-2 border-t pt-3"
           style={{ borderColor: 'var(--color-border-subtle)' }}
         >
-          {cliStatus.providers.map((provider) => {
+          {visibleProviders.map((provider) => {
             const statusText = formatProviderStatus(provider);
             const actionDisabled = isBusy || !cliStatus.binaryPath;
             const runtimeSummary = getProviderRuntimeBackendSummary(provider);
@@ -661,12 +668,16 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
     providerId: CliProviderId;
     action: 'login' | 'logout';
   } | null>(null);
-  const [manageProviderId, setManageProviderId] = useState<CliProviderId>('gemini');
+  const [manageProviderId, setManageProviderId] = useState<CliProviderId>('anthropic');
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [isVerifyingAuth, setIsVerifyingAuth] = useState(false);
   const [isSwitchingFlavor, setIsSwitchingFlavor] = useState(false);
   const [showTroubleshoot, setShowTroubleshoot] = useState(false);
   const multimodelEnabled = appConfig?.general?.multimodelEnabled ?? true;
+  const visibleCliProviders = useMemo(
+    () => filterMainScreenCliProviders(cliStatus?.providers ?? []),
+    [cliStatus?.providers]
+  );
 
   useEffect(() => {
     if (!isElectron) return;
@@ -799,7 +810,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
     if (installerState === 'completed') return 'success';
     if (installerState !== 'idle') return 'info';
     if (!cliStatus) return 'loading';
-    if (isCheckingMultimodelStatus(cliStatus)) return 'info';
+    if (isCheckingMultimodelStatus(cliStatus, visibleCliProviders)) return 'info';
     if (cliStatus.authStatusChecking) return 'info';
     if (!cliStatus.installed) return 'error';
     if (cliStatus.installed && !cliStatus.authLoggedIn) return 'warning';
@@ -1293,8 +1304,12 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         <ProviderRuntimeSettingsDialog
           open={manageDialogOpen}
           onOpenChange={setManageDialogOpen}
-          providers={cliStatus.providers}
-          initialProviderId={manageProviderId}
+          providers={visibleCliProviders}
+          initialProviderId={
+            visibleCliProviders.some((provider) => provider.providerId === manageProviderId)
+              ? manageProviderId
+              : (visibleCliProviders[0]?.providerId ?? 'anthropic')
+          }
           providerStatusLoading={cliProviderStatusLoading}
           disabled={isBusy || cliStatusLoading || !cliStatus.binaryPath}
           onSelectBackend={(providerId, backendId) => {

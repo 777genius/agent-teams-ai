@@ -36,6 +36,11 @@ import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import {
+  isGeminiUiFrozen,
+  normalizeCreateLaunchProviderForUi,
+} from '@renderer/utils/geminiUiFreeze';
+import { normalizeTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import {
   getCurrentProvisioningProgressForTeam,
@@ -140,7 +145,11 @@ function getLocalTimezone(): string {
 
 function getStoredTeamProvider(): TeamProviderId {
   const stored = localStorage.getItem('team:lastSelectedProvider');
-  return stored === 'codex' || stored === 'gemini' ? stored : 'anthropic';
+  // return stored === 'codex' || stored === 'gemini' ? stored : 'anthropic';
+  return normalizeCreateLaunchProviderForUi(
+    stored === 'codex' || stored === 'gemini' ? stored : 'anthropic',
+    true
+  );
 }
 
 function getStoredTeamModel(providerId: TeamProviderId): string {
@@ -148,7 +157,7 @@ function getStoredTeamModel(providerId: TeamProviderId): string {
   if (stored === null) {
     return providerId === 'anthropic' ? 'opus' : '';
   }
-  return stored === '__default__' ? '' : stored;
+  return normalizeTeamModelForUi(providerId, stored === '__default__' ? '' : stored);
 }
 
 function getProviderLabel(providerId: TeamProviderId): string {
@@ -401,8 +410,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setSelectedModel = (value: string): void => {
-    setSelectedModelRaw(value);
-    localStorage.setItem(`team:lastSelectedModel:${selectedProviderId}`, value);
+    const normalizedValue = normalizeTeamModelForUi(selectedProviderId, value);
+    setSelectedModelRaw(normalizedValue);
+    localStorage.setItem(`team:lastSelectedModel:${selectedProviderId}`, normalizedValue);
   };
 
   const setLimitContext = (value: boolean): void => {
@@ -496,7 +506,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       );
       setSelectedProviderIdRaw(scheduleProviderId);
       setSelectedModelRaw(
-        scheduleProviderId === normalizeProviderForMode(schedule.launchConfig.providerId, true)
+        schedule.launchConfig.providerId !== 'gemini' &&
+          scheduleProviderId === normalizeProviderForMode(schedule.launchConfig.providerId, true)
           ? (schedule.launchConfig.model ?? '')
           : getStoredTeamModel('anthropic')
       );
@@ -576,6 +587,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       );
       setSelectedModelRaw(
         typeof savedRequest?.model === 'string' &&
+          rawNextProviderId !== 'gemini' &&
           nextProviderId === normalizeProviderForMode(rawNextProviderId, true)
           ? savedRequest.model
           : getStoredTeamModel(
@@ -1539,6 +1551,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   leadWarningText={leadRuntimeWarningText}
                   memberWarningById={memberRuntimeWarningById}
                   softDeleteMembers
+                  disableGeminiOption={isGeminiUiFrozen()}
                 />
 
                 <div className="space-y-1.5">
@@ -1678,6 +1691,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   value={selectedModel}
                   onValueChange={setSelectedModel}
                   id="dialog-model"
+                  disableGeminiOption={isGeminiUiFrozen()}
                 />
                 <EffortLevelSelector
                   value={selectedEffort}

@@ -9,6 +9,16 @@ import {
 } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import {
+  GEMINI_UI_DISABLED_BADGE_LABEL,
+  GEMINI_UI_DISABLED_REASON,
+  isGeminiUiFrozen,
+} from '@renderer/utils/geminiUiFreeze';
+import {
+  getTeamModelUiDisabledReason,
+  normalizeTeamModelForUi,
+  TEAM_MODEL_UI_DISABLED_BADGE_LABEL,
+} from '@renderer/utils/teamModelAvailability';
 import { Check, ChevronDown, Info } from 'lucide-react';
 
 // --- Provider SVG Icons (real brand logos from Simple Icons, monochrome currentColor) ---
@@ -45,6 +55,7 @@ interface ProviderDef {
 const PROVIDERS: ProviderDef[] = [
   { id: 'anthropic', label: 'Anthropic', icon: AnthropicIcon, comingSoon: false },
   { id: 'codex', label: 'Codex', icon: OpenAIIcon, comingSoon: false },
+  // { id: 'gemini', label: 'Gemini', icon: GoogleGeminiIcon, comingSoon: false },
   { id: 'gemini', label: 'Gemini', icon: GoogleGeminiIcon, comingSoon: false },
 ];
 
@@ -170,6 +181,7 @@ export interface TeamModelSelectorProps {
   value: string;
   onValueChange: (value: string) => void;
   id?: string;
+  disableGeminiOption?: boolean;
 }
 
 export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
@@ -178,6 +190,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   value,
   onValueChange,
   id,
+  disableGeminiOption = false,
 }) => {
   const cliStatus = useStore((s) => s.cliStatus);
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
@@ -199,27 +212,42 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownOpen]);
 
-  const activeProvider = PROVIDERS.find((provider) => provider.id === providerId) ?? PROVIDERS[0];
+  const effectiveProviderId =
+    disableGeminiOption && isGeminiUiFrozen() && providerId === 'gemini' ? 'anthropic' : providerId;
+  const activeProvider =
+    PROVIDERS.find((provider) => provider.id === effectiveProviderId) ?? PROVIDERS[0];
   const ProviderIcon = activeProvider.icon;
   const defaultModelTooltip = useMemo(() => {
-    if (providerId === 'anthropic') {
+    if (effectiveProviderId === 'anthropic') {
       return 'Default model from Claude CLI (/model).\nUses the runtime default for the selected provider.';
     }
     return 'Uses the runtime default for the selected provider.';
-  }, [providerId]);
+  }, [effectiveProviderId]);
+  const isProviderTemporarilyDisabled = (candidateProviderId: string): boolean =>
+    disableGeminiOption && isGeminiUiFrozen() && candidateProviderId === 'gemini';
   const isProviderSelectable = (candidateProviderId: string): boolean =>
-    multimodelAvailable || candidateProviderId === 'anthropic';
-  const activeProviderSelectable = isProviderSelectable(providerId);
+    !isProviderTemporarilyDisabled(candidateProviderId) &&
+    (multimodelAvailable || candidateProviderId === 'anthropic');
+  const activeProviderSelectable = isProviderSelectable(effectiveProviderId);
   const runtimeModels =
-    cliStatus?.providers.find((provider) => provider.providerId === providerId)?.models ?? [];
+    cliStatus?.providers.find((provider) => provider.providerId === effectiveProviderId)?.models ??
+    [];
+  const normalizedValue = normalizeTeamModelForUi(effectiveProviderId, value);
+
+  useEffect(() => {
+    if (normalizedValue !== value) {
+      onValueChange(normalizedValue);
+    }
+  }, [normalizedValue, onValueChange, value]);
+
   const modelOptions = useMemo(() => {
     const fallback =
-      providerId === 'codex'
+      effectiveProviderId === 'codex'
         ? CODEX_MODEL_OPTIONS
-        : providerId === 'gemini'
+        : effectiveProviderId === 'gemini'
           ? GEMINI_MODEL_OPTIONS
           : ANTHROPIC_MODEL_OPTIONS;
-    if (providerId === 'anthropic' || runtimeModels.length === 0) {
+    if (effectiveProviderId === 'anthropic' || runtimeModels.length === 0) {
       return [...fallback];
     }
     const dynamicOptions = runtimeModels.map((model) => ({
@@ -227,7 +255,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       label: getTeamModelLabel(model),
     }));
     return [{ value: '', label: 'Default' }, ...dynamicOptions];
-  }, [providerId, runtimeModels]);
+  }, [effectiveProviderId, runtimeModels]);
 
   return (
     <div className="mb-5">
@@ -317,11 +345,21 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                           Coming Soon
                         </span>
                       )}
-                      {!provider.comingSoon && !isProviderSelectable(provider.id) && (
-                        <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)]">
-                          Multimodel off
+                      {!provider.comingSoon && isProviderTemporarilyDisabled(provider.id) && (
+                        <span
+                          className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)]"
+                          title={GEMINI_UI_DISABLED_REASON}
+                        >
+                          {GEMINI_UI_DISABLED_BADGE_LABEL}
                         </span>
                       )}
+                      {!provider.comingSoon &&
+                        !isProviderTemporarilyDisabled(provider.id) &&
+                        !isProviderSelectable(provider.id) && (
+                          <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)]">
+                            Multimodel off
+                          </span>
+                        )}
                       {isActive && <Check className="size-3.5 shrink-0" />}
                     </button>
                   </React.Fragment>
@@ -335,52 +373,97 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             Codex and Gemini require Multimodel mode.
           </p>
         )}
+        {disableGeminiOption && isGeminiUiFrozen() && (
+          <p className="text-[11px] text-[var(--color-text-muted)]">{GEMINI_UI_DISABLED_REASON}.</p>
+        )}
 
         <div
           className="grid gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5"
           style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
         >
-          {modelOptions.map((opt) => (
-            <button
-              key={opt.value || '__default__'}
-              type="button"
-              id={opt.value === value ? id : undefined}
-              className={cn(
-                'flex min-h-[44px] items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-center text-xs font-medium transition-colors',
-                value === opt.value
-                  ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
-                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]',
-                !activeProviderSelectable && 'cursor-not-allowed opacity-45'
-              )}
-              style={{
-                borderColor: value === opt.value ? 'var(--color-border-emphasis)' : 'transparent',
-              }}
-              disabled={!activeProviderSelectable}
-              onClick={() => {
-                if (!activeProviderSelectable) return;
-                onValueChange(opt.value);
-              }}
-            >
-              <span className="leading-tight">{opt.label}</span>
-              {opt.value === '' && (
-                <TooltipProvider delayDuration={200}>
-                  <Tooltip>
-                    <TooltipTrigger asChild onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                      <Info className="size-3 shrink-0 opacity-40 transition-opacity hover:opacity-70" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[240px] text-xs">
-                      {defaultModelTooltip.split('\n').map((line, index) => (
-                        <React.Fragment key={line}>
-                          {index > 0 ? <br /> : null}
-                          {line}
-                        </React.Fragment>
-                      ))}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </button>
-          ))}
+          {modelOptions.map((opt) =>
+            (() => {
+              const modelDisabledReason = getTeamModelUiDisabledReason(
+                effectiveProviderId,
+                opt.value
+              );
+              const modelSelectable = activeProviderSelectable && !modelDisabledReason;
+
+              return (
+                <button
+                  key={opt.value || '__default__'}
+                  type="button"
+                  id={opt.value === normalizedValue ? id : undefined}
+                  aria-disabled={!modelSelectable}
+                  className={cn(
+                    'flex min-h-[44px] items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-center text-xs font-medium transition-colors',
+                    normalizedValue === opt.value
+                      ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
+                      : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]',
+                    !modelSelectable && 'cursor-not-allowed opacity-45',
+                    !modelDisabledReason && !activeProviderSelectable && 'pointer-events-none'
+                  )}
+                  style={{
+                    borderColor:
+                      normalizedValue === opt.value
+                        ? 'var(--color-border-emphasis)'
+                        : 'transparent',
+                  }}
+                  onClick={() => {
+                    if (!modelSelectable) return;
+                    onValueChange(opt.value);
+                  }}
+                >
+                  <span className="flex flex-col items-center justify-center gap-0.5">
+                    <span className="leading-tight">{opt.label}</span>
+                    {opt.value === '' && (
+                      <span className="flex items-center justify-center gap-1">
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger
+                              asChild
+                              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                            >
+                              <Info className="size-3 shrink-0 opacity-40 transition-opacity hover:opacity-70" />
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[240px] text-xs">
+                              {defaultModelTooltip.split('\n').map((line, index) => (
+                                <React.Fragment key={line}>
+                                  {index > 0 ? <br /> : null}
+                                  {line}
+                                </React.Fragment>
+                              ))}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
+                    )}
+                    {modelDisabledReason && (
+                      <span
+                        className="flex items-center justify-center gap-1 text-[10px] font-normal text-[var(--color-text-muted)]"
+                        title={modelDisabledReason}
+                      >
+                        <span>{TEAM_MODEL_UI_DISABLED_BADGE_LABEL}</span>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger
+                              asChild
+                              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                            >
+                              <Info className="size-3 shrink-0 opacity-40 transition-opacity hover:opacity-70" />
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[240px] text-xs">
+                              {modelDisabledReason}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
+                    )}
+                  </span>
+                </button>
+              );
+            })()
+          )}
         </div>
       </div>
     </div>
