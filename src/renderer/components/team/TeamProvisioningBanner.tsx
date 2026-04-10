@@ -151,10 +151,10 @@ export const TeamProvisioningBanner = memo(function TeamProvisioningBanner({
           : allTeammatesConfirmedAlive
             ? `Team provisioned - all ${fallbackTeammateCount} teammates joined`
             : hasMembersStillJoining
-              ? `Waiting for ${joiningPhrase.replace('still joining', 'to finish joining')}`
+              ? joiningPhrase
               : 'Team provisioned - teammates are still joining';
     const readyDetailSeverity =
-      failedSpawnCount > 0 || hasMembersStillJoining ? 'warning' : undefined;
+      failedSpawnCount > 0 ? 'warning' : hasMembersStillJoining ? 'info' : undefined;
     const readyMessage =
       failedSpawnCount > 0
         ? `Launch finished with errors - ${failedSpawnCount}/${Math.max(fallbackTeammateCount, failedSpawnCount)} teammates failed to start`
@@ -163,8 +163,8 @@ export const TeamProvisioningBanner = memo(function TeamProvisioningBanner({
           : allTeammatesConfirmedAlive
             ? `Team launched - all ${fallbackTeammateCount} teammates joined`
             : hasMembersStillJoining
-              ? `Team launched - ${joiningPhrase}`
-              : 'Team launched - teammates are still joining';
+              ? 'Finishing launch'
+              : 'Finishing launch';
     const readyStepIndex = hasMembersStillJoining ? 2 : DISPLAY_COMPLETE_STEP_INDEX;
 
     return (
@@ -183,7 +183,7 @@ export const TeamProvisioningBanner = memo(function TeamProvisioningBanner({
           onCancel={null}
           successMessage={readyMessage}
           successMessageSeverity={
-            failedSpawnCount > 0 || hasMembersStillJoining ? 'warning' : 'success'
+            failedSpawnCount > 0 ? 'warning' : hasMembersStillJoining ? 'info' : 'success'
           }
           onDismiss={() => setDismissed(true)}
         />

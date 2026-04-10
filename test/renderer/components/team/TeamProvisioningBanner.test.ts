@@ -40,10 +40,12 @@ vi.mock('@renderer/components/ui/button', () => ({
 vi.mock('@renderer/components/team/ProvisioningProgressBlock', () => ({
   ProvisioningProgressBlock: ({
     currentStepIndex,
+    message,
     successMessage,
     successMessageSeverity,
   }: {
     currentStepIndex: number;
+    message?: string | null;
     successMessage?: string | null;
     successMessageSeverity?: string;
   }) =>
@@ -54,7 +56,7 @@ vi.mock('@renderer/components/team/ProvisioningProgressBlock', () => ({
         'data-current-step-index': String(currentStepIndex),
         'data-success-severity': successMessageSeverity ?? '',
       },
-      successMessage ?? ''
+      [successMessage, message].filter(Boolean).join(' ')
     ),
 }));
 
@@ -112,6 +114,7 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
 
     const block = host.querySelector('[data-testid="progress-block"]');
     expect(block?.getAttribute('data-current-step-index')).toBe('2');
+    expect(block?.textContent).toContain('Finishing launch');
     expect(block?.textContent).toContain('3 teammates still joining');
 
     await act(async () => {
@@ -264,7 +267,7 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
     });
   });
 
-  it('keeps warning severity while runtimes are online but teammate contact is still pending', async () => {
+  it('uses info severity while runtimes are online but teammate contact is still pending', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.memberSpawnSnapshotsByTeam['northstar-core'] = {
       runId: 'run-1',
@@ -290,7 +293,8 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
 
     const block = host.querySelector('[data-testid="progress-block"]');
     expect(block?.getAttribute('data-current-step-index')).toBe('2');
-    expect(block?.getAttribute('data-success-severity')).toBe('warning');
+    expect(block?.getAttribute('data-success-severity')).toBe('info');
+    expect(block?.textContent).toContain('Finishing launch');
     expect(block?.textContent).toContain('3 teammates still joining');
 
     await act(async () => {
@@ -377,8 +381,9 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
     });
 
     const block = host.querySelector('[data-testid="progress-block"]');
+    expect(block?.textContent).toContain('Finishing launch');
     expect(block?.textContent).toContain('2 teammates still joining');
-    expect(block?.getAttribute('data-success-severity')).toBe('warning');
+    expect(block?.getAttribute('data-success-severity')).toBe('info');
 
     await act(async () => {
       root.unmount();

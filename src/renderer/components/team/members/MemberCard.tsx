@@ -138,6 +138,12 @@ export const MemberCard = ({
     spawnLaunchState !== 'failed_to_start' &&
     !activityTask;
   const showStartingBadge = !isRemoved && presenceLabel === 'starting' && !activityTask;
+  const showRuntimeAdvisoryBadge =
+    !isRemoved &&
+    Boolean(runtimeAdvisoryLabel) &&
+    !showStartingBadge &&
+    spawnStatus !== 'error' &&
+    (Boolean(activityTask) || !isAwaitingReply);
   const cardTint = scaleColorAlpha(getThemedBadge(colors, isLight), 0.5);
 
   return (
@@ -276,6 +282,24 @@ export const MemberCard = ({
                 </span>
               </TooltipTrigger>
               <TooltipContent side="bottom">{spawnError ?? 'Spawn failed'}</TooltipContent>
+            </Tooltip>
+          ) : showRuntimeAdvisoryBadge ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex shrink-0 items-center gap-1">
+                  <AlertTriangle className="size-3.5 shrink-0 text-amber-400" />
+                  <Badge
+                    variant="secondary"
+                    className="shrink-0 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-normal leading-none text-amber-300"
+                    title={runtimeAdvisoryTitle}
+                  >
+                    {runtimeAdvisoryLabel}
+                  </Badge>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {runtimeAdvisoryTitle ?? runtimeAdvisoryLabel}
+              </TooltipContent>
             </Tooltip>
           ) : !activityTask ? (
             <Badge

@@ -102,7 +102,7 @@ function getStatusLabel(status: ProvisioningProviderCheckStatus): string {
       return 'ERR';
     case 'pending':
     default:
-      return 'queued';
+      return 'waiting';
   }
 }
 

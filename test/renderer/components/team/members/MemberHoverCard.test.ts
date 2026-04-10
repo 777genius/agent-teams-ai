@@ -12,6 +12,7 @@ const member: ResolvedTeamMember = {
   lastActiveAt: null,
   messageCount: 0,
   color: 'blue',
+  providerId: 'gemini',
   agentType: 'reviewer',
   role: 'Reviewer',
   removedAt: undefined,
@@ -179,6 +180,52 @@ describe('MemberHoverCard spawn-aware presence', () => {
 
     expect(host.textContent).toContain('starting');
     expect(host.textContent).not.toContain('online');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('surfaces runtime retry state in the hover card after the teammate has already joined', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.selectedTeamData.members = [
+      {
+        ...member,
+        runtimeAdvisory: {
+          kind: 'sdk_retrying',
+          observedAt: '2026-04-09T10:00:00.000Z',
+          retryUntil: '2099-04-09T10:00:45.000Z',
+          retryDelayMs: 45_000,
+          reasonCode: 'quota_exhausted',
+          message: 'Gemini cli backend error: capacity exceeded.',
+        },
+      },
+    ];
+    storeState.memberSpawnStatusesByTeam['northstar-core'].alice = {
+      status: 'online',
+      launchState: 'confirmed_alive',
+      updatedAt: '2026-04-09T10:00:00.000Z',
+      runtimeAlive: true,
+      livenessSource: 'heartbeat',
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberHoverCard, {
+          name: 'alice',
+          children: React.createElement('button', { type: 'button' }, 'alice'),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Gemini quota retry');
+    expect(host.textContent).not.toContain('idle');
 
     await act(async () => {
       root.unmount();

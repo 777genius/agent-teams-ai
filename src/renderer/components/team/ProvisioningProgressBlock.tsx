@@ -2,7 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
 import { cn } from '@renderer/lib/utils';
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Loader2, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Info,
+  Loader2,
+  X,
+} from 'lucide-react';
 
 import { MarkdownViewer } from '../chat/viewers/MarkdownViewer';
 
@@ -24,7 +32,7 @@ export interface ProvisioningProgressBlockProps {
   /** Optional status message */
   message?: string | null;
   /** Visual severity for the message subtitle */
-  messageSeverity?: 'error' | 'warning';
+  messageSeverity?: 'error' | 'warning' | 'info';
   /** Visual tone (e.g. highlight errors) */
   tone?: 'default' | 'error';
   /** Whether Live output is expanded by default */
@@ -40,7 +48,7 @@ export interface ProvisioningProgressBlockProps {
   /** Success message shown inside the block header (e.g. "Team launched — all N teammates online") */
   successMessage?: string | null;
   /** Visual tone for the status banner above the block. */
-  successMessageSeverity?: 'success' | 'warning';
+  successMessageSeverity?: 'success' | 'warning' | 'info';
   /** Dismiss handler — renders an X button in the block header top-right */
   onDismiss?: (() => void) | null;
   /** ISO timestamp when provisioning started */
@@ -204,6 +212,8 @@ export const ProvisioningProgressBlock = ({
         <div className="mb-1.5 flex items-center gap-2">
           {successMessageSeverity === 'warning' ? (
             <AlertTriangle size={14} className="shrink-0 text-amber-400" />
+          ) : successMessageSeverity === 'info' ? (
+            <Info size={14} className="shrink-0 text-sky-400" />
           ) : (
             <CheckCircle2 size={14} className="shrink-0 text-[var(--step-done-text)]" />
           )}
@@ -212,7 +222,9 @@ export const ProvisioningProgressBlock = ({
               'flex-1 text-xs',
               successMessageSeverity === 'warning'
                 ? 'text-amber-400'
-                : 'text-[var(--step-success-text)]'
+                : successMessageSeverity === 'info'
+                  ? 'text-sky-400'
+                  : 'text-[var(--step-success-text)]'
             )}
           >
             {successMessage}
@@ -274,7 +286,9 @@ export const ProvisioningProgressBlock = ({
               ? 'text-red-400'
               : messageSeverity === 'warning'
                 ? 'text-amber-400'
-                : 'text-[var(--color-text-muted)]'
+                : messageSeverity === 'info'
+                  ? 'text-sky-400'
+                  : 'text-[var(--color-text-muted)]'
           )}
         >
           {message}

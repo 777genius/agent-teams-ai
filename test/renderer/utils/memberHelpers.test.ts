@@ -300,4 +300,28 @@ describe('memberHelpers spawn-aware presence', () => {
       )
     ).toBe('starting');
   });
+
+  it('keeps retry advisory visible after contact when the teammate is otherwise just idle or ready', () => {
+    expect(
+      getLaunchAwarePresenceLabel(
+        member,
+        'online',
+        'confirmed_alive',
+        'heartbeat',
+        true,
+        {
+          kind: 'sdk_retrying',
+          observedAt: '2026-04-07T09:00:00.000Z',
+          retryUntil: '2099-04-07T09:00:45.000Z',
+          retryDelayMs: 45_000,
+          reasonCode: 'quota_exhausted',
+          message: 'Gemini cli backend error: capacity exceeded.',
+        },
+        false,
+        true,
+        false,
+        undefined
+      )
+    ).toContain('Gemini quota retry');
+  });
 });

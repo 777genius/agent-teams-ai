@@ -384,15 +384,7 @@ export function getLaunchAwarePresenceLabel(
   isTeamProvisioning?: boolean,
   leadActivity?: LeadActivityState
 ): string {
-  const keepLaunchSettlingVisuals = isTeamProvisioning === true || isLaunchSettling;
-  const advisoryLabel =
-    !keepLaunchSettlingVisuals && spawnLaunchState === 'runtime_pending_bootstrap' && runtimeAlive
-      ? getMemberRuntimeAdvisoryLabel(runtimeAdvisory, member.providerId)
-      : null;
-  if (advisoryLabel) {
-    return advisoryLabel;
-  }
-  return getSpawnAwarePresenceLabel(
+  const basePresenceLabel = getSpawnAwarePresenceLabel(
     member,
     spawnStatus,
     spawnLaunchState,
@@ -403,6 +395,17 @@ export function getLaunchAwarePresenceLabel(
     isTeamProvisioning,
     leadActivity
   );
+  if (
+    basePresenceLabel === 'starting' ||
+    basePresenceLabel === 'connecting' ||
+    basePresenceLabel === 'spawn failed' ||
+    basePresenceLabel === 'offline' ||
+    basePresenceLabel === 'terminated'
+  ) {
+    return basePresenceLabel;
+  }
+  const advisoryLabel = getMemberRuntimeAdvisoryLabel(runtimeAdvisory, member.providerId);
+  return advisoryLabel ?? basePresenceLabel;
 }
 
 export const TASK_STATUS_STYLES: Record<TeamTaskStatus, { bg: string; text: string }> = {

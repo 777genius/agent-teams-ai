@@ -8,6 +8,7 @@ import {
   agentAvatarUrl,
   displayMemberName,
   getLaunchAwarePresenceLabel,
+  getMemberRuntimeAdvisoryTitle,
   getSpawnAwareDotClass,
 } from '@renderer/utils/memberHelpers';
 import { isLeadMember } from '@shared/utils/leadDetection';
@@ -82,6 +83,10 @@ export const MemberDetailHeader = ({
     isTeamProvisioning,
     leadActivity
   );
+  const runtimeAdvisoryTitle = getMemberRuntimeAdvisoryTitle(
+    member.runtimeAdvisory,
+    member.providerId
+  );
 
   const canEditRole =
     !isLeadMember(member) && !member.removedAt && !isTeamProvisioning && !!onUpdateRole;
@@ -140,6 +145,7 @@ export const MemberDetailHeader = ({
                 <Badge
                   variant="secondary"
                   className="px-1.5 py-0.5 text-[10px] font-normal leading-none text-[var(--color-text-muted)]"
+                  title={runtimeAdvisoryTitle}
                 >
                   {presenceLabel}
                 </Badge>

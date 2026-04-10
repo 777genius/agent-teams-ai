@@ -14,6 +14,7 @@ import {
   agentAvatarUrl,
   displayMemberName,
   getLaunchAwarePresenceLabel,
+  getMemberRuntimeAdvisoryTitle,
   getSpawnAwareDotClass,
 } from '@renderer/utils/memberHelpers';
 import { isLeadMember } from '@shared/utils/leadDetection';
@@ -124,6 +125,10 @@ export const MemberHoverCard = ({
     false,
     isLeadMember(member) ? leadActivity : undefined
   );
+  const runtimeAdvisoryTitle = getMemberRuntimeAdvisoryTitle(
+    member.runtimeAdvisory,
+    member.providerId
+  );
   const currentTask: TeamTaskWithKanban | null =
     member.currentTaskId && tasks
       ? (tasks.find((t) => t.id === member.currentTaskId) ?? null)
@@ -167,6 +172,7 @@ export const MemberHoverCard = ({
                 <Badge
                   variant="secondary"
                   className="shrink-0 px-1.5 py-0 text-[10px] font-normal leading-tight"
+                  title={runtimeAdvisoryTitle}
                   style={{
                     backgroundColor: getThemedBadge(colors, isLight),
                     color: getThemedText(colors, isLight),

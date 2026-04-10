@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { ResolvedTeamMember } from '@shared/types';
+import type { ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
 vi.mock('@renderer/components/ui/badge', () => ({
   Badge: ({
@@ -48,6 +48,13 @@ const member: ResolvedTeamMember = {
   providerId: 'gemini',
   removedAt: undefined,
 };
+
+const currentTask: TeamTaskWithKanban = {
+  id: 'task-1',
+  displayId: 'abc12345',
+  subject: 'Build calculator UI',
+  status: 'in_progress',
+} as unknown as TeamTaskWithKanban;
 
 describe('MemberCard starting-state visuals', () => {
   afterEach(() => {
@@ -118,6 +125,47 @@ describe('MemberCard starting-state visuals', () => {
 
     expect(host.textContent).toContain('Gemini quota retry');
     expect(host.textContent).not.toContain('online');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps runtime retry visible even while the teammate already has an active task', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberCard, {
+          member: {
+            ...member,
+            currentTaskId: currentTask.id,
+            runtimeAdvisory: {
+              kind: 'sdk_retrying',
+              observedAt: '2026-04-07T09:00:00.000Z',
+              retryUntil: '2099-04-07T09:00:45.000Z',
+              retryDelayMs: 45_000,
+              reasonCode: 'quota_exhausted',
+              message: 'Gemini cli backend error: capacity exceeded.',
+            },
+          },
+          memberColor: 'blue',
+          currentTask,
+          isTeamAlive: true,
+          isTeamProvisioning: false,
+          spawnStatus: 'online',
+          spawnLaunchState: 'confirmed_alive',
+          spawnRuntimeAlive: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Gemini quota retry');
 
     await act(async () => {
       root.unmount();
