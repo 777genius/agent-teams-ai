@@ -19,7 +19,6 @@ import {
   setTeamClaudeLogsSidebarUiState,
 } from './sidebar/teamSidebarUiState';
 import { DEFAULT_CLAUDE_LOGS_FILTER } from './ClaudeLogsFilterPopover';
-import { parseStreamJsonToGroups } from '@renderer/utils/streamJsonParser';
 
 import type { ClaudeLogsFilterState } from './ClaudeLogsFilterPopover';
 import type { ClaudeLogsViewerState } from './CliLogsRichView';
@@ -60,8 +59,6 @@ export interface ClaudeLogsController {
   filteredText: string;
   online: boolean;
   badge: number | undefined;
-  totalGroupCount: number;
-  filteredGroupCount: number;
   showMoreVisible: boolean;
   lastLogPreview: LastLogPreview | null;
 
@@ -611,15 +608,7 @@ export function useClaudeLogsController(teamName: string): ClaudeLogsController 
     return filterStreamJsonText(data.lines, searchQuery, filter);
   }, [data.lines, normalizedText, searchQuery, filter]);
 
-  const totalGroupCount = useMemo(
-    () => parseStreamJsonToGroups(normalizedText).length,
-    [normalizedText]
-  );
-  const filteredGroupCount = useMemo(
-    () => parseStreamJsonToGroups(filteredText).length,
-    [filteredText]
-  );
-  const badge = totalGroupCount > 0 ? totalGroupCount : undefined;
+  const badge = data.total > 0 ? data.total : undefined;
 
   // ── Container ref callback ────────────────────────────────────────────
   const containerRefCallback = useCallback((el: HTMLDivElement | null) => {
@@ -661,8 +650,6 @@ export function useClaudeLogsController(teamName: string): ClaudeLogsController 
     filteredText,
     online,
     badge,
-    totalGroupCount,
-    filteredGroupCount,
     showMoreVisible,
     lastLogPreview,
     searchQuery,

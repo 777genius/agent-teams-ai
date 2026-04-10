@@ -70,6 +70,21 @@ const DetailLine = ({ text }: { text: string | null }): React.JSX.Element | null
   );
 };
 
+const InstallCompletedNotice = ({ version }: { version: string | null }): React.JSX.Element => (
+  <div
+    className={`mb-6 flex items-center gap-3 rounded-lg border-l-4 px-4 py-3 ${BANNER_MIN_H}`}
+    style={{
+      borderColor: VARIANT_STYLES.success.border,
+      backgroundColor: VARIANT_STYLES.success.bg,
+    }}
+  >
+    <CheckCircle className="size-4 shrink-0" style={{ color: '#4ade80' }} />
+    <span className="text-sm" style={{ color: '#4ade80' }}>
+      Successfully installed Claude CLI v{version ?? 'latest'}
+    </span>
+  </div>
+);
+
 /** Error display with multi-line support */
 const ErrorDisplay = ({
   error,
@@ -831,6 +846,51 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         ? getProviderTerminalCommand(activeTerminalProvider)
         : getProviderTerminalLogoutCommand(activeTerminalProvider)
       : null;
+  const installedAuxiliaryUi =
+    cliStatus !== null ? (
+      <>
+        <ProviderRuntimeSettingsDialog
+          open={manageDialogOpen}
+          onOpenChange={setManageDialogOpen}
+          providers={visibleCliProviders}
+          initialProviderId={
+            visibleCliProviders.some((provider) => provider.providerId === manageProviderId)
+              ? manageProviderId
+              : (visibleCliProviders[0]?.providerId ?? 'anthropic')
+          }
+          providerStatusLoading={cliProviderStatusLoading}
+          disabled={isBusy || cliStatusLoading || !cliStatus.binaryPath}
+          onSelectBackend={(providerId, backendId) => {
+            void handleProviderBackendChange(providerId, backendId);
+          }}
+          onRefreshProvider={(providerId) => fetchCliProviderStatus(providerId)}
+        />
+        {providerTerminal && cliStatus.binaryPath && (
+          <TerminalModal
+            title={`${cliStatus.displayName} ${providerTerminal.action === 'login' ? 'Login' : 'Logout'}: ${getProviderLabel(
+              providerTerminal.providerId
+            )}`}
+            command={cliStatus.binaryPath}
+            args={providerTerminalCommand?.args}
+            env={providerTerminalCommand?.env}
+            onClose={() => {
+              setProviderTerminal(null);
+              recheckAuthState();
+            }}
+            onExit={() => {
+              recheckAuthState();
+            }}
+            autoCloseOnSuccessMs={3000}
+            successMessage={
+              providerTerminal.action === 'login' ? 'Authentication updated' : 'Provider logged out'
+            }
+            failureMessage={
+              providerTerminal.action === 'login' ? 'Authentication failed' : 'Logout failed'
+            }
+          />
+        )}
+      </>
+    ) : null;
 
   // ── Loading / fetch error state ────────────────────────────────────────
   if (!cliStatus && installerState === 'idle') {
@@ -998,18 +1058,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
   }
 
   // ── Completed ──────────────────────────────────────────────────────────
-  if (installerState === 'completed') {
-    return (
-      <div
-        className={`mb-6 flex items-center gap-3 rounded-lg border-l-4 px-4 py-3 ${BANNER_MIN_H}`}
-        style={{ borderColor: styles.border, backgroundColor: styles.bg }}
-      >
-        <CheckCircle className="size-4 shrink-0" style={{ color: '#4ade80' }} />
-        <span className="text-sm" style={{ color: '#4ade80' }}>
-          Successfully installed Claude CLI v{completedVersion ?? 'latest'}
-        </span>
-      </div>
-    );
+  if (installerState === 'completed' && (!cliStatus || !cliStatus.installed)) {
+    return <InstallCompletedNotice version={completedVersion} />;
   }
 
   // ── Error ──────────────────────────────────────────────────────────────
@@ -1075,18 +1125,26 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
   ) {
     if (cliStatus.authStatusChecking || isVerifyingAuth) {
       return (
-        <div
-          className="mb-6 flex items-center gap-3 rounded-lg border-l-4 p-4"
-          style={{
-            borderColor: VARIANT_STYLES.info.border,
-            backgroundColor: VARIANT_STYLES.info.bg,
-          }}
-        >
-          <RefreshCw className="size-4 animate-spin" style={{ color: 'var(--color-text-muted)' }} />
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            Verifying authentication...
-          </p>
-        </div>
+        <>
+          <InstalledBanner
+            cliStatus={cliStatus}
+            cliStatusLoading={cliStatusLoading}
+            cliProviderStatusLoading={cliProviderStatusLoading}
+            cliStatusError={cliStatusError ?? null}
+            isBusy={isBusy}
+            multimodelEnabled={multimodelEnabled}
+            multimodelBusy={isSwitchingFlavor}
+            onInstall={handleInstall}
+            onRefresh={handleRefresh}
+            onMultimodelToggle={(enabled) => void handleMultimodelToggle(enabled)}
+            onProviderLogin={handleProviderLogin}
+            onProviderLogout={handleProviderLogout}
+            onProviderManage={handleProviderManage}
+            onProviderRefresh={handleProviderRefresh}
+            variant={variant}
+          />
+          {installedAuxiliaryUi}
+        </>
       );
     }
   }
@@ -1099,6 +1157,23 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
   ) {
     return (
       <>
+        <InstalledBanner
+          cliStatus={cliStatus}
+          cliStatusLoading={cliStatusLoading}
+          cliProviderStatusLoading={cliProviderStatusLoading}
+          cliStatusError={cliStatusError ?? null}
+          isBusy={isBusy}
+          multimodelEnabled={multimodelEnabled}
+          multimodelBusy={isSwitchingFlavor}
+          onInstall={handleInstall}
+          onRefresh={handleRefresh}
+          onMultimodelToggle={(enabled) => void handleMultimodelToggle(enabled)}
+          onProviderLogin={handleProviderLogin}
+          onProviderLogout={handleProviderLogout}
+          onProviderManage={handleProviderManage}
+          onProviderRefresh={handleProviderRefresh}
+          variant={variant}
+        />
         <div
           className="mb-6 rounded-lg border-l-4 p-4"
           style={{
@@ -1235,6 +1310,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
             </div>
           )}
         </div>
+        {installedAuxiliaryUi}
         {showLoginTerminal && cliStatus.binaryPath && (
           <TerminalModal
             title={`${cliStatus.displayName} Login`}
@@ -1300,48 +1376,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         onProviderRefresh={handleProviderRefresh}
         variant={variant}
       />
-      {cliStatus && (
-        <ProviderRuntimeSettingsDialog
-          open={manageDialogOpen}
-          onOpenChange={setManageDialogOpen}
-          providers={visibleCliProviders}
-          initialProviderId={
-            visibleCliProviders.some((provider) => provider.providerId === manageProviderId)
-              ? manageProviderId
-              : (visibleCliProviders[0]?.providerId ?? 'anthropic')
-          }
-          providerStatusLoading={cliProviderStatusLoading}
-          disabled={isBusy || cliStatusLoading || !cliStatus.binaryPath}
-          onSelectBackend={(providerId, backendId) => {
-            void handleProviderBackendChange(providerId, backendId);
-          }}
-          onRefreshProvider={(providerId) => fetchCliProviderStatus(providerId)}
-        />
-      )}
-      {providerTerminal && cliStatus.binaryPath && (
-        <TerminalModal
-          title={`${cliStatus.displayName} ${providerTerminal.action === 'login' ? 'Login' : 'Logout'}: ${getProviderLabel(
-            providerTerminal.providerId
-          )}`}
-          command={cliStatus.binaryPath}
-          args={providerTerminalCommand?.args}
-          env={providerTerminalCommand?.env}
-          onClose={() => {
-            setProviderTerminal(null);
-            recheckAuthState();
-          }}
-          onExit={() => {
-            recheckAuthState();
-          }}
-          autoCloseOnSuccessMs={3000}
-          successMessage={
-            providerTerminal.action === 'login' ? 'Authentication updated' : 'Provider logged out'
-          }
-          failureMessage={
-            providerTerminal.action === 'login' ? 'Authentication failed' : 'Logout failed'
-          }
-        />
-      )}
+      {installedAuxiliaryUi}
     </>
   );
 };

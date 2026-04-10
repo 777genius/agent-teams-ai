@@ -141,37 +141,51 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       cliStatusError: null,
     });
 
-    void (async () => {
-      try {
-        const metadata = await api.cliInstaller.getStatus();
+    try {
+      const metadata = await api.cliInstaller.getStatus();
+      if (metadata.flavor !== 'free-code') {
         set((state) => {
-          if (epoch !== cliStatusEpoch || !state.cliStatus) {
+          if (epoch !== cliStatusEpoch) {
             return {};
           }
 
           return {
-            cliStatus: {
-              ...state.cliStatus,
-              flavor: metadata.flavor,
-              displayName: metadata.displayName,
-              supportsSelfUpdate: metadata.supportsSelfUpdate,
-              showVersionDetails: metadata.showVersionDetails,
-              showBinaryPath: metadata.showBinaryPath,
-              installed: metadata.installed,
-              installedVersion: metadata.installedVersion,
-              binaryPath: metadata.binaryPath,
-              latestVersion: metadata.latestVersion,
-              updateAvailable: metadata.updateAvailable,
-              authStatusChecking: state.cliStatus.providers.some(
-                (provider) => provider.statusMessage === 'Checking...'
-              ),
-            },
+            cliStatus: metadata,
+            cliStatusLoading: false,
+            cliProviderStatusLoading: {},
+            cliStatusError: state.cliStatusError,
           };
         });
-      } catch (error) {
-        logger.warn('Failed to hydrate CLI metadata during provider-first bootstrap:', error);
+        return;
       }
-    })();
+
+      set((state) => {
+        if (epoch !== cliStatusEpoch || !state.cliStatus) {
+          return {};
+        }
+
+        return {
+          cliStatus: {
+            ...state.cliStatus,
+            flavor: metadata.flavor,
+            displayName: metadata.displayName,
+            supportsSelfUpdate: metadata.supportsSelfUpdate,
+            showVersionDetails: metadata.showVersionDetails,
+            showBinaryPath: metadata.showBinaryPath,
+            installed: metadata.installed,
+            installedVersion: metadata.installedVersion,
+            binaryPath: metadata.binaryPath,
+            latestVersion: metadata.latestVersion,
+            updateAvailable: metadata.updateAvailable,
+            authStatusChecking: state.cliStatus.providers.some(
+              (provider) => provider.statusMessage === 'Checking...'
+            ),
+          },
+        };
+      });
+    } catch (error) {
+      logger.warn('Failed to hydrate CLI metadata during provider-first bootstrap:', error);
+    }
 
     try {
       await Promise.allSettled(

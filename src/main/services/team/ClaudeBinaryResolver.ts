@@ -226,7 +226,10 @@ export class ClaudeBinaryResolver {
     const enrichedPath = buildMergedCliPath(null);
     const flavor = getConfiguredCliFlavor();
 
-    const overrideRaw = process.env.CLAUDE_CLI_PATH?.trim();
+    const overrideRaw =
+      flavor === 'free-code'
+        ? (process.env.CLAUDE_FREE_CODE_CLI_PATH?.trim() ?? process.env.CLAUDE_CLI_PATH?.trim())
+        : process.env.CLAUDE_CLI_PATH?.trim();
     if (overrideRaw) {
       const looksLikePath =
         path.isAbsolute(overrideRaw) || overrideRaw.includes('\\') || overrideRaw.includes('/');

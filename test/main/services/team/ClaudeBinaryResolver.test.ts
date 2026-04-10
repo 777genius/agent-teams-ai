@@ -8,9 +8,7 @@ const mockResolveInteractiveShellEnv = vi.fn<() => Promise<NodeJS.ProcessEnv>>()
 const mockGetConfiguredCliFlavor = vi.fn<() => 'claude' | 'free-code'>();
 
 const accessMock = vi.fn<(filePath: PathLike, mode?: number) => Promise<void>>();
-const statMock = vi.fn<
-  (filePath: PathLike) => Promise<{ isFile: () => boolean }>
->();
+const statMock = vi.fn<(filePath: PathLike) => Promise<{ isFile: () => boolean }>>();
 
 vi.mock('@main/utils/cliPathMerge', () => ({
   buildMergedCliPath: (binaryPath: string | null) => mockBuildMergedCliPath(binaryPath),
@@ -59,6 +57,7 @@ describe('ClaudeBinaryResolver', () => {
     });
     process.cwd = vi.fn(() => workspaceRoot);
     delete process.env.CLAUDE_CLI_PATH;
+    delete process.env.CLAUDE_FREE_CODE_CLI_PATH;
   });
 
   afterEach(() => {
@@ -74,6 +73,44 @@ describe('ClaudeBinaryResolver', () => {
   it('resolves free-code runtime from an explicit CLAUDE_CLI_PATH override', async () => {
     const expectedBinary = '/Users/belief/dev/projects/claude/free-code-gemini-research/cli-dev';
     process.env.CLAUDE_CLI_PATH = expectedBinary;
+
+    accessMock.mockImplementation(async (filePath) => {
+      if (filePath === expectedBinary) {
+        return;
+      }
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    });
+
+    const { ClaudeBinaryResolver } = await import('@main/services/team/ClaudeBinaryResolver');
+    ClaudeBinaryResolver.clearCache();
+
+    await expect(ClaudeBinaryResolver.resolve()).resolves.toBe(expectedBinary);
+    expect(accessMock).toHaveBeenCalledWith(expectedBinary, 1);
+  });
+
+  it('prefers the dedicated CLAUDE_FREE_CODE_CLI_PATH override in free-code mode', async () => {
+    const expectedBinary = '/Users/belief/dev/projects/claude/free-code-gemini-research/cli-dev';
+    process.env.CLAUDE_FREE_CODE_CLI_PATH = expectedBinary;
+
+    accessMock.mockImplementation(async (filePath) => {
+      if (filePath === expectedBinary) {
+        return;
+      }
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    });
+
+    const { ClaudeBinaryResolver } = await import('@main/services/team/ClaudeBinaryResolver');
+    ClaudeBinaryResolver.clearCache();
+
+    await expect(ClaudeBinaryResolver.resolve()).resolves.toBe(expectedBinary);
+    expect(accessMock).toHaveBeenCalledWith(expectedBinary, 1);
+  });
+
+  it('ignores CLAUDE_FREE_CODE_CLI_PATH when Claude flavor is selected', async () => {
+    process.env.CLAUDE_FREE_CODE_CLI_PATH =
+      '/Users/belief/dev/projects/claude/free-code-gemini-research/cli-dev';
+    mockGetConfiguredCliFlavor.mockReturnValue('claude');
+    const expectedBinary = '/usr/local/bin/claude';
 
     accessMock.mockImplementation(async (filePath) => {
       if (filePath === expectedBinary) {

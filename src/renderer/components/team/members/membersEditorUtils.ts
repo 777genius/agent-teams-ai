@@ -3,6 +3,7 @@ import { normalizeCreateLaunchProviderForUi } from '@renderer/utils/geminiUiFree
 import { normalizeTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type { MemberDraft } from './membersEditorTypes';
@@ -47,6 +48,7 @@ export function createMemberDraft(initial?: Partial<MemberDraft>): MemberDraft {
 export function createMemberDraftsFromInputs(
   members: readonly {
     name: string;
+    agentType?: string;
     role?: string;
     workflow?: string;
     providerId?: TeamProviderId;
@@ -72,6 +74,12 @@ export function createMemberDraftsFromInputs(
         removedAt: member.removedAt,
       });
     });
+}
+
+export function filterEditableMemberInputs<T extends { name?: unknown; agentType?: unknown }>(
+  members: readonly T[]
+): T[] {
+  return members.filter((member) => !isLeadMember(member));
 }
 
 export function clearMemberModelOverrides(member: MemberDraft): MemberDraft {

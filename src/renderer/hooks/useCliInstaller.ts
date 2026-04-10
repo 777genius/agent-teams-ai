@@ -57,7 +57,8 @@ export function useCliInstaller(): {
   const invalidateCliStatus = useStore((s) => s.invalidateCliStatus);
   const installCli = useStore((s) => s.installCli);
 
-  const isBusy = installerState !== 'idle' && installerState !== 'error';
+  const isBusy =
+    installerState !== 'idle' && installerState !== 'error' && installerState !== 'completed';
 
   return {
     cliStatus,

@@ -5,6 +5,8 @@ vi.mock('@renderer/api', () => ({
   api: {
     cliInstaller: {
       getStatus: vi.fn(),
+      getProviderStatus: vi.fn(),
+      invalidateStatus: vi.fn(),
       install: vi.fn(),
       onProgress: vi.fn(() => vi.fn()),
     },
@@ -136,6 +138,34 @@ describe('cliInstallerSlice', () => {
       await useStore.getState().fetchCliStatus();
 
       expect(useStore.getState().cliStatus?.updateAvailable).toBe(true);
+    });
+  });
+
+  describe('bootstrapCliStatus', () => {
+    it('falls back to the full Claude status if multimodel bootstrap resolves a claude flavor', async () => {
+      const mockStatus: CliInstallationStatus = {
+        flavor: 'claude',
+        displayName: 'Claude CLI',
+        supportsSelfUpdate: true,
+        showVersionDetails: true,
+        showBinaryPath: true,
+        installed: true,
+        installedVersion: '2.1.100',
+        binaryPath: '/Users/belief/.local/bin/claude',
+        latestVersion: '2.1.100',
+        updateAvailable: false,
+        authLoggedIn: true,
+        authStatusChecking: false,
+        authMethod: 'oauth_token',
+        providers: [],
+      };
+      vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(mockStatus);
+
+      await useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
+
+      expect(useStore.getState().cliStatus).toEqual(mockStatus);
+      expect(useStore.getState().cliStatusLoading).toBe(false);
+      expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
     });
   });
 

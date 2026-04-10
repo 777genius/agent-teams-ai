@@ -7,12 +7,12 @@ import {
   buildMembersFromDrafts,
   clearMemberModelOverrides,
   createMemberDraftsFromInputs,
+  filterEditableMemberInputs,
   normalizeMemberDraftForProviderMode,
   normalizeProviderForMode,
   validateMemberNameInline,
 } from '@renderer/components/team/members/MembersEditorSection';
 import { TeamRosterEditorSection } from '@renderer/components/team/members/TeamRosterEditorSection';
-import { TeamProvisioningBanner } from '@renderer/components/team/TeamProvisioningBanner';
 import { SkipPermissionsCheckbox } from '@renderer/components/team/dialogs/SkipPermissionsCheckbox';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
@@ -42,10 +42,7 @@ import {
 } from '@renderer/utils/geminiUiFreeze';
 import { normalizeTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
-import {
-  getCurrentProvisioningProgressForTeam,
-  isTeamProvisioningActive,
-} from '@renderer/store/slices/teamSlice';
+import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import {
@@ -75,6 +72,7 @@ import {
   type ProvisioningProviderCheck,
 } from './ProvisioningProviderStatusList';
 import { ProjectPathSelector } from './ProjectPathSelector';
+import { resolveLaunchDialogPrefill } from './launchDialogPrefill';
 import {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
@@ -219,6 +217,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [selectedTeamName, setSelectedTeamName] = useState('');
   const teamByName = useStore((s) => s.teamByName);
   const openDashboard = useStore((s) => s.openDashboard);
+  const openTeamTab = useStore((s) => s.openTeamTab);
   const teamOptions = useMemo(
     () =>
       Object.values(teamByName)
@@ -485,6 +484,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setMaxBudgetUsd('');
   };
 
+  const closeDialog = (): void => {
+    if (isLaunch) {
+      resetFormState();
+    }
+    onClose();
+  };
+
   // Populate form in schedule edit mode
   useEffect(() => {
     if (!open || !isSchedule) return;
@@ -551,18 +557,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       }
       if (cancelled) return;
 
-      const rawNextProviderId =
-        savedRequest?.providerId === 'codex' || savedRequest?.providerId === 'gemini'
-          ? savedRequest.providerId
-          : 'anthropic';
-      const nextProviderId = normalizeProviderForMode(rawNextProviderId, multimodelEnabled);
-      const providerFromSaved = Boolean(savedRequest?.providerId);
       const nextMembersSource =
         members.length > 0
           ? members
           : savedRequest?.members && savedRequest.members.length > 0
             ? savedRequest.members
             : [];
+      const editableMembersSource = filterEditableMemberInputs(nextMembersSource);
       const storedEffort = localStorage.getItem('team:lastSelectedEffort');
       const savedProviderId =
         savedRequest?.providerId === 'codex' || savedRequest?.providerId === 'gemini'
@@ -570,35 +571,29 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           : savedRequest?.providerId === 'anthropic'
             ? 'anthropic'
             : null;
+      const storedProviderId = normalizeProviderForMode(getStoredTeamProvider(), multimodelEnabled);
+      const launchPrefill = resolveLaunchDialogPrefill({
+        members,
+        savedRequest,
+        previousLaunchParams,
+        multimodelEnabled,
+        storedProviderId,
+        storedEffort: storedEffort === null ? 'medium' : storedEffort,
+        getStoredModel: getStoredTeamModel,
+      });
       setSavedLaunchProviderId(savedProviderId);
 
       setMembersDrafts(
-        createMemberDraftsFromInputs(nextMembersSource).map((member) =>
+        createMemberDraftsFromInputs(editableMembersSource).map((member) =>
           normalizeMemberDraftForProviderMode(member, multimodelEnabled)
         )
       );
       setSyncModelsWithLead(
-        !nextMembersSource.some((member) => member.providerId || member.model || member.effort)
+        !editableMembersSource.some((member) => member.providerId || member.model || member.effort)
       );
-      setSelectedProviderIdRaw(
-        providerFromSaved
-          ? nextProviderId
-          : normalizeProviderForMode(getStoredTeamProvider(), multimodelEnabled)
-      );
-      setSelectedModelRaw(
-        typeof savedRequest?.model === 'string' &&
-          rawNextProviderId !== 'gemini' &&
-          nextProviderId === normalizeProviderForMode(rawNextProviderId, true)
-          ? savedRequest.model
-          : getStoredTeamModel(
-              providerFromSaved
-                ? nextProviderId
-                : normalizeProviderForMode(getStoredTeamProvider(), multimodelEnabled)
-            )
-      );
-      setSelectedEffortRaw(
-        savedRequest?.effort ?? (storedEffort === null ? 'medium' : storedEffort)
-      );
+      setSelectedProviderIdRaw(launchPrefill.providerId);
+      setSelectedModelRaw(launchPrefill.model);
+      setSelectedEffortRaw(launchPrefill.effort);
       setLimitContextRaw(
         savedRequest?.limitContext === true ||
           localStorage.getItem('team:lastLimitContext') === 'true'
@@ -612,7 +607,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return () => {
       cancelled = true;
     };
-  }, [open, isLaunch, effectiveTeamName, members, multimodelEnabled]);
+  }, [open, isLaunch, effectiveTeamName, members, multimodelEnabled, previousLaunchParams]);
 
   const previousProviderId = useMemo<TeamProviderId | null>(() => {
     if (!isLaunch) {
@@ -1099,14 +1094,27 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const provisioningError = isLaunch ? props.provisioningError : null;
   const activeError = localError ?? provisioningError;
-  const currentProvisioning = useStore((s) =>
-    isLaunch && effectiveTeamName
-      ? getCurrentProvisioningProgressForTeam(s, effectiveTeamName)
-      : null
-  );
   const launchInFlight = useStore((s) =>
     isLaunch && effectiveTeamName ? isTeamProvisioningActive(s, effectiveTeamName) : false
   );
+
+  useEffect(() => {
+    if (!open || !isLaunch || !effectiveTeamName || !launchInFlight) {
+      return;
+    }
+
+    openTeamTab(effectiveTeamName, effectiveCwd || defaultProjectPath);
+    closeDialog();
+  }, [
+    closeDialog,
+    defaultProjectPath,
+    effectiveCwd,
+    effectiveTeamName,
+    isLaunch,
+    launchInFlight,
+    open,
+    openTeamTab,
+  ]);
 
   // ---------------------------------------------------------------------------
   // Submit
@@ -1161,6 +1169,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             worktree: worktreeEnabled && worktreeName.trim() ? worktreeName.trim() : undefined,
             extraCliArgs: customArgs.trim() || undefined,
           });
+          openTeamTab(effectiveTeamName, effectiveCwd || defaultProjectPath);
+          closeDialog();
         } else {
           // Schedule mode: create or update
           const parsedBudget = maxBudgetUsd ? parseFloat(maxBudgetUsd) : undefined;
@@ -1197,7 +1207,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             };
             await createSchedule(input);
           }
-          onClose();
+          closeDialog();
         }
       } catch (err) {
         const message =
@@ -1266,8 +1276,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       open={open}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) {
-          if (isLaunch) resetFormState();
-          onClose();
+          closeDialog();
         }
       }}
     >
@@ -1359,7 +1368,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                       type="button"
                       className="shrink-0 rounded bg-blue-600 px-2 py-0.5 text-[11px] font-medium text-white transition-colors hover:bg-blue-500"
                       onClick={() => {
-                        onClose();
+                        closeDialog();
                         openDashboard();
                       }}
                     >
@@ -1760,12 +1769,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           </div>
         ) : null}
 
-        {isLaunch && effectiveTeamName && (currentProvisioning || provisioningError) ? (
-          <div className="pt-1">
-            <TeamProvisioningBanner teamName={effectiveTeamName} />
-          </div>
-        ) : null}
-
         <DialogFooter className={isLaunch ? 'pt-4 sm:justify-between' : 'pt-4'}>
           {/* Launch-only: CLI warm-up status */}
           {isLaunch ? (
@@ -1824,7 +1827,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           ) : null}
 
           <div className="flex shrink-0 items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onClose}>
+            <Button variant="outline" size="sm" onClick={closeDialog}>
               {isLaunch ? 'Close' : 'Cancel'}
             </Button>
             <Button

@@ -169,6 +169,7 @@ export const useStore = create<AppState>()((...args) => ({
 export function initializeNotificationListeners(): () => void {
   void cleanupCommentReadState();
   const cleanupFns: (() => void)[] = [];
+  let cliStatusTimer: ReturnType<typeof setTimeout> | null = null;
   useStore.getState().subscribeProvisioningProgress();
   cleanupFns.push(() => {
     useStore.getState().unsubscribeProvisioningProgress();
@@ -186,6 +187,29 @@ export function initializeNotificationListeners(): () => void {
     const loadedConfig = useStore.getState().appConfig;
     syncRendererTelemetry(loadedConfig?.general?.telemetryEnabled ?? true);
 
+    if (api.cliInstaller) {
+      // Resolve the configured CLI flavor after config has loaded to avoid
+      // bootstrapping multimodel placeholder state in Claude-only mode.
+      type NavigatorWithUserAgentData = Navigator & { userAgentData?: { platform?: string } };
+      const nav: NavigatorWithUserAgentData | null =
+        typeof navigator !== 'undefined' ? (navigator as NavigatorWithUserAgentData) : null;
+      // Prefer UA-CH when available; fall back to deprecated-but-still-supported navigator.platform.
+      // eslint-disable-next-line sonarjs/deprecation -- navigator.platform is deprecated but needed as fallback
+      const platform: string =
+        nav?.userAgentData?.platform ?? nav?.platform ?? nav?.userAgent ?? '';
+      const isWindows = platform.toLowerCase().includes('win');
+      const delayMs = isWindows ? 3000 : 0;
+      cliStatusTimer = setTimeout(() => {
+        const multimodelEnabled = useStore.getState().appConfig?.general?.multimodelEnabled ?? true;
+        if (multimodelEnabled) {
+          void useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
+        } else {
+          void useStore.getState().fetchCliStatus();
+        }
+        cliStatusTimer = null;
+      }, delayMs);
+    }
+
     // Remaining fetches have no data dependency on each other — run in parallel
     // to avoid blocking teams/notifications behind a slow repository scan.
     await Promise.all([
@@ -196,32 +220,6 @@ export function initializeNotificationListeners(): () => void {
       useStore.getState().fetchSchedules(),
     ]);
   })();
-
-  // CLI status check is non-critical for initial render (spawns child processes
-  // + iterates PATH directories with stat() calls — heavy on Windows).
-  // Defer on Windows; run immediately elsewhere so status is available quickly.
-  let cliStatusTimer: ReturnType<typeof setTimeout> | null = null;
-  if (api.cliInstaller) {
-    // On macOS/Linux, run immediately so the Dashboard can render status fast.
-    // On Windows, keep the existing defer to avoid competing with initial scans.
-    type NavigatorWithUserAgentData = Navigator & { userAgentData?: { platform?: string } };
-    const nav: NavigatorWithUserAgentData | null =
-      typeof navigator !== 'undefined' ? (navigator as NavigatorWithUserAgentData) : null;
-    // Prefer UA-CH when available; fall back to deprecated-but-still-supported navigator.platform.
-    // eslint-disable-next-line sonarjs/deprecation -- navigator.platform is deprecated but needed as fallback
-    const platform: string = nav?.userAgentData?.platform ?? nav?.platform ?? nav?.userAgent ?? '';
-    const isWindows = platform.toLowerCase().includes('win');
-    const delayMs = isWindows ? 3000 : 0;
-    cliStatusTimer = setTimeout(() => {
-      const multimodelEnabled = useStore.getState().appConfig?.general?.multimodelEnabled ?? true;
-      if (multimodelEnabled) {
-        void useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
-      } else {
-        void useStore.getState().fetchCliStatus();
-      }
-      cliStatusTimer = null;
-    }, delayMs);
-  }
   cleanupFns.push(() => {
     if (cliStatusTimer) clearTimeout(cliStatusTimer);
   });

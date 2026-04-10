@@ -43,6 +43,89 @@ const GoogleGeminiIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+const OpenCodeIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className}>
+    <defs>
+      <linearGradient id="opencode-bg" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stopColor="#303030" />
+        <stop offset="1" stopColor="#161616" />
+      </linearGradient>
+      <linearGradient
+        id="opencode-frame"
+        x1="7"
+        y1="4.5"
+        x2="17"
+        y2="19.5"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset="0" stopColor="#f4f4f4" />
+        <stop offset="0.35" stopColor="#d9d9d9" />
+        <stop offset="0.68" stopColor="#a8a8a8" />
+        <stop offset="1" stopColor="#ececec" />
+      </linearGradient>
+      <linearGradient
+        id="opencode-frame-stroke"
+        x1="7"
+        y1="4.5"
+        x2="17"
+        y2="19.5"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset="0" stopColor="#ffffff" stopOpacity="0.9" />
+        <stop offset="1" stopColor="#5a5a5a" stopOpacity="0.9" />
+      </linearGradient>
+      <linearGradient
+        id="opencode-core"
+        x1="12"
+        y1="7"
+        x2="12"
+        y2="17"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset="0" stopColor="#121212" />
+        <stop offset="0.42" stopColor="#3e3b33" />
+        <stop offset="1" stopColor="#16140f" />
+      </linearGradient>
+      <linearGradient
+        id="opencode-core-stroke"
+        x1="9"
+        y1="7"
+        x2="15"
+        y2="17"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset="0" stopColor="#f2f2f2" stopOpacity="0.95" />
+        <stop offset="1" stopColor="#6e6e6e" stopOpacity="0.85" />
+      </linearGradient>
+      <filter id="opencode-shadow" x="0" y="0" width="24" height="24" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="0" dy="1.2" stdDeviation="1.2" floodColor="#000000" floodOpacity="0.42" />
+      </filter>
+    </defs>
+    <rect x="1.5" y="1.5" width="21" height="21" rx="5.2" fill="url(#opencode-bg)" />
+    <g filter="url(#opencode-shadow)">
+      <path
+        d="M7 4.25h10c.3 0 .55.25.55.55v14.4c0 .3-.25.55-.55.55H7c-.3 0-.55-.25-.55-.55V4.8c0-.3.25-.55.55-.55Z"
+        fill="url(#opencode-frame)"
+        stroke="url(#opencode-frame-stroke)"
+        strokeWidth="0.55"
+      />
+      <path
+        d="M8.95 7.25h6.1c.22 0 .4.18.4.4v8.7c0 .22-.18.4-.4.4h-6.1a.4.4 0 0 1-.4-.4v-8.7c0-.22.18-.4.4-.4Z"
+        fill="url(#opencode-core)"
+        stroke="url(#opencode-core-stroke)"
+        strokeWidth="0.45"
+      />
+      <path
+        d="M9.25 7.6h5.5"
+        stroke="#ffffff"
+        strokeOpacity="0.18"
+        strokeWidth="0.45"
+        strokeLinecap="round"
+      />
+    </g>
+  </svg>
+);
+
 // --- Provider definitions ---
 
 interface ProviderDef {
@@ -57,7 +140,10 @@ const PROVIDERS: ProviderDef[] = [
   { id: 'codex', label: 'Codex', icon: OpenAIIcon, comingSoon: false },
   // { id: 'gemini', label: 'Gemini', icon: GoogleGeminiIcon, comingSoon: false },
   { id: 'gemini', label: 'Gemini', icon: GoogleGeminiIcon, comingSoon: false },
+  { id: 'opencode', label: 'OpenCode', icon: OpenCodeIcon, comingSoon: false },
 ];
+
+const OPENCODE_UI_DISABLED_REASON = 'OpenCode in development';
 
 const ANTHROPIC_MODEL_OPTIONS = [
   { value: '', label: 'Default' },
@@ -223,8 +309,17 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     return 'Uses the runtime default for the selected provider.';
   }, [effectiveProviderId]);
+  const getProviderDisabledReason = (candidateProviderId: string): string | null => {
+    if (candidateProviderId === 'opencode') {
+      return OPENCODE_UI_DISABLED_REASON;
+    }
+    if (disableGeminiOption && isGeminiUiFrozen() && candidateProviderId === 'gemini') {
+      return GEMINI_UI_DISABLED_REASON;
+    }
+    return null;
+  };
   const isProviderTemporarilyDisabled = (candidateProviderId: string): boolean =>
-    disableGeminiOption && isGeminiUiFrozen() && candidateProviderId === 'gemini';
+    getProviderDisabledReason(candidateProviderId) !== null;
   const isProviderSelectable = (candidateProviderId: string): boolean =>
     !isProviderTemporarilyDisabled(candidateProviderId) &&
     (multimodelAvailable || candidateProviderId === 'anthropic');
@@ -304,6 +399,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 const isActive = provider.id === activeProvider.id;
                 const isFirst = index === 0;
                 const prevWasActive = index > 0 && !PROVIDERS[index - 1].comingSoon;
+                const providerDisabledReason = getProviderDisabledReason(provider.id);
 
                 return (
                   <React.Fragment key={provider.id}>
@@ -345,16 +441,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                           Coming Soon
                         </span>
                       )}
-                      {!provider.comingSoon && isProviderTemporarilyDisabled(provider.id) && (
+                      {!provider.comingSoon && providerDisabledReason && (
                         <span
                           className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)]"
-                          title={GEMINI_UI_DISABLED_REASON}
+                          title={providerDisabledReason}
                         >
                           {GEMINI_UI_DISABLED_BADGE_LABEL}
                         </span>
                       )}
                       {!provider.comingSoon &&
-                        !isProviderTemporarilyDisabled(provider.id) &&
+                        !providerDisabledReason &&
                         !isProviderSelectable(provider.id) && (
                           <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)]">
                             Multimodel off

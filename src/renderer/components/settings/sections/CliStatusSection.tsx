@@ -159,6 +159,7 @@ function getProviderTerminalLogoutCommand(provider: CliProviderStatus): {
 export const CliStatusSection = (): React.JSX.Element | null => {
   const isElectron = useMemo(() => isElectronMode(), []);
   const appConfig = useStore((s) => s.appConfig);
+  const openExtensionsTab = useStore((s) => s.openExtensionsTab);
   const updateConfig = useStore((s) => s.updateConfig);
   const {
     cliStatus,
@@ -189,6 +190,10 @@ export const CliStatusSection = (): React.JSX.Element | null => {
     !cliStatus && cliStatusLoading && multimodelEnabled
       ? createLoadingMultimodelCliStatus()
       : cliStatus;
+  const showInstalledControls =
+    effectiveCliStatus !== null &&
+    (installerState === 'idle' ||
+      (installerState === 'completed' && effectiveCliStatus.installed === true));
 
   useEffect(() => {
     if (isElectron) {
@@ -325,7 +330,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
         )}
 
         {/* Status display */}
-        {effectiveCliStatus && installerState === 'idle' && (
+        {showInstalledControls && effectiveCliStatus && (
           <div className="space-y-2">
             {effectiveCliStatus.installed ? (
               <div className="space-y-1">
@@ -397,18 +402,20 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                     </button>
                   ) : null}
                   {/* Extensions button — right-aligned */}
-                  <button
-                    type="button"
-                    onClick={() => {}}
-                    className="ml-auto flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-white/5"
-                    style={{
-                      borderColor: 'var(--color-border)',
-                      color: 'var(--color-text-secondary)',
-                    }}
-                  >
-                    <Puzzle className="size-3.5" />
-                    Extensions
-                  </button>
+                  {effectiveCliStatus.authLoggedIn && (
+                    <button
+                      type="button"
+                      onClick={openExtensionsTab}
+                      className="ml-auto flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-white/5"
+                      style={{
+                        borderColor: 'var(--color-border)',
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      <Puzzle className="size-3.5" />
+                      Extensions
+                    </button>
+                  )}
                 </div>
                 {effectiveCliStatus.showBinaryPath && effectiveCliStatus.binaryPath && (
                   <p

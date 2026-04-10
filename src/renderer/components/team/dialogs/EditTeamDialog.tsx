@@ -4,6 +4,7 @@ import { api } from '@renderer/api';
 import {
   buildMembersFromDrafts,
   createMemberDraftsFromInputs,
+  filterEditableMemberInputs,
   MembersEditorSection,
   validateMemberNameInline,
 } from '@renderer/components/team/members/MembersEditorSection';
@@ -49,7 +50,7 @@ interface EditTeamDialogProps {
 }
 
 function membersToDrafts(members: ResolvedTeamMember[]) {
-  return createMemberDraftsFromInputs(members);
+  return createMemberDraftsFromInputs(filterEditableMemberInputs(members));
 }
 
 export const EditTeamDialog = ({
