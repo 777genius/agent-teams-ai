@@ -1,18 +1,28 @@
 import React from 'react';
 
+import { CopyButton } from '@renderer/components/common/CopyButton';
 import { PROSE_BODY } from '@renderer/constants/cssVariables';
 
-import { FileLink, isRelativeUrl } from './viewers/FileLink';
+import { extractTextFromReactNode } from './markdownCopyUtils';
 import { highlightSearchInChildren, type SearchContext } from './searchHighlightUtils';
+import { FileLink, isRelativeUrl } from './viewers/FileLink';
 
 import type { Components } from 'react-markdown';
+
+interface MarkdownComponentOptions {
+  copyCodeBlocks?: boolean;
+}
 
 /**
  * Create inline markdown components for rendering prose content.
  * When searchCtx is provided, search term highlighting is applied
  * to text nodes while preserving full markdown rendering.
  */
-export function createMarkdownComponents(searchCtx: SearchContext | null): Components {
+export function createMarkdownComponents(
+  searchCtx: SearchContext | null,
+  options: MarkdownComponentOptions = {}
+): Components {
+  const { copyCodeBlocks = false } = options;
   const hl = (children: React.ReactNode): React.ReactNode =>
     searchCtx ? highlightSearchInChildren(children, searchCtx) : children;
 
@@ -148,18 +158,23 @@ export function createMarkdownComponents(searchCtx: SearchContext | null): Compo
     },
 
     // Code blocks
-    pre: ({ children }) => (
-      <pre
-        className="my-3 overflow-x-auto rounded-lg p-3 font-mono text-xs leading-relaxed"
-        style={{
-          backgroundColor: 'var(--prose-pre-bg)',
-          border: '1px solid var(--prose-pre-border)',
-          color: 'var(--color-text)',
-        }}
-      >
-        {children}
-      </pre>
-    ),
+    pre: ({ children }) => {
+      const codeText = copyCodeBlocks ? extractTextFromReactNode(children).trim() : '';
+
+      return (
+        <pre
+          className={`my-3 overflow-x-auto rounded-lg p-3 font-mono text-xs leading-relaxed ${codeText ? 'group relative' : ''}`.trim()}
+          style={{
+            backgroundColor: 'var(--prose-pre-bg)',
+            border: '1px solid var(--prose-pre-border)',
+            color: 'var(--color-text)',
+          }}
+        >
+          {codeText ? <CopyButton text={codeText} /> : null}
+          {children}
+        </pre>
+      );
+    },
 
     // Blockquotes
     blockquote: ({ children }) => (
@@ -235,3 +250,8 @@ export function createMarkdownComponents(searchCtx: SearchContext | null): Compo
 
 /** Default markdown components without search highlighting (used by CompactBoundary) */
 export const markdownComponents: Components = createMarkdownComponents(null);
+
+/** Markdown components for message-style content with both whole-message and code-block copy */
+export const markdownComponentsWithCodeCopy: Components = createMarkdownComponents(null, {
+  copyCodeBlocks: true,
+});

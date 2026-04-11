@@ -10,7 +10,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { CopyButton } from '../common/CopyButton';
 import { OngoingBanner } from '../common/OngoingIndicator';
 
-import { createMarkdownComponents, markdownComponents } from './markdownComponents';
+import { createMarkdownComponents, markdownComponentsWithCodeCopy } from './markdownComponents';
 import { createSearchContext, EMPTY_SEARCH_MATCHES } from './searchHighlightUtils';
 
 import type { AIGroupLastOutput } from '@renderer/types/groups';
@@ -63,7 +63,9 @@ export const LastOutputDisplay = ({
   // Create markdown components with optional search highlighting
   // When search is active, create fresh each render (match counter is stateful and must start at 0)
   // useMemo would cache stale closures when parent re-renders without search deps changing
-  const mdComponents = searchCtx ? createMarkdownComponents(searchCtx) : markdownComponents;
+  const mdComponents = searchCtx
+    ? createMarkdownComponents(searchCtx, { copyCodeBlocks: true })
+    : markdownComponentsWithCodeCopy;
 
   // Show ongoing banner if this is the last AI group and session is ongoing
   // This uses the same source (sessions array) as the sidebar green dot for consistency

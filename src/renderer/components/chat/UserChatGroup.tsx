@@ -18,7 +18,7 @@ import remarkGfm from 'remark-gfm';
 import { useShallow } from 'zustand/react/shallow';
 
 import { CopyButton } from '../common/CopyButton';
-
+import { extractTextFromReactNode } from './markdownCopyUtils';
 import {
   createSearchContext,
   EMPTY_SEARCH_MATCHES,
@@ -284,18 +284,23 @@ function createUserMarkdownComponents(
       );
     },
 
-    pre: ({ children }) => (
-      <pre
-        className="my-3 overflow-x-auto rounded-lg p-3 font-mono text-xs leading-relaxed"
-        style={{
-          backgroundColor: 'rgba(0, 0, 0, 0.15)',
-          border: '1px solid var(--chat-user-tag-border)',
-          color: userTextColor,
-        }}
-      >
-        {children}
-      </pre>
-    ),
+    pre: ({ children }) => {
+      const codeText = extractTextFromReactNode(children).trim();
+
+      return (
+        <pre
+          className={`my-3 overflow-x-auto rounded-lg p-3 font-mono text-xs leading-relaxed ${codeText ? 'group relative' : ''}`.trim()}
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.15)',
+            border: '1px solid var(--chat-user-tag-border)',
+            color: userTextColor,
+          }}
+        >
+          {codeText ? <CopyButton text={codeText} bgColor="var(--chat-user-bg)" /> : null}
+          {children}
+        </pre>
+      );
+    },
 
     blockquote: ({ children }) => (
       <blockquote

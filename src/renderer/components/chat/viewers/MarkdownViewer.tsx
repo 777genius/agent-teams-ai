@@ -34,6 +34,7 @@ import { FileText, UsersRound } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 import { useShallow } from 'zustand/react/shallow';
 
+import { extractTextFromReactNode } from '../markdownCopyUtils';
 import {
   createSearchContext,
   EMPTY_SEARCH_MATCHES,
@@ -41,7 +42,6 @@ import {
   type SearchContext,
 } from '../searchHighlightUtils';
 import { highlightLine } from '../viewers/syntaxHighlighter';
-
 import { FileLink, isRelativeUrl } from './FileLink';
 import { MermaidDiagram } from './MermaidDiagram';
 
@@ -320,7 +320,8 @@ function createViewerMarkdownComponents(
   searchCtx: SearchContext | null,
   isLight = false,
   teamColorByName: ReadonlyMap<string, string> = new Map(),
-  onTeamClick?: (teamName: string) => void
+  onTeamClick?: (teamName: string) => void,
+  copyCodeBlocks: boolean = false
 ): Components {
   const hl = (children: React.ReactNode): React.ReactNode =>
     searchCtx ? highlightSearchInChildren(children, searchCtx) : children;
@@ -577,14 +578,17 @@ function createViewerMarkdownComponents(
         }
       }
 
+      const codeText = copyCodeBlocks ? extractTextFromReactNode(children).trim() : '';
+
       return (
         <pre
-          className="my-3 max-w-full overflow-x-auto rounded-lg p-3 text-xs leading-relaxed"
+          className={`my-3 max-w-full overflow-x-auto rounded-lg p-3 text-xs leading-relaxed ${codeText ? 'group relative' : ''}`.trim()}
           style={{
             backgroundColor: PROSE_PRE_BG,
             border: `1px solid ${PROSE_PRE_BORDER}`,
           }}
         >
+          {codeText ? <CopyButton text={codeText} /> : null}
           {children}
         </pre>
       );
@@ -863,10 +867,10 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   // When search is active, create fresh each render (match counter is stateful and must start at 0)
   // useMemo would cache stale closures when parent re-renders without search deps changing
   const baseComponents = searchCtx
-    ? createViewerMarkdownComponents(searchCtx, isLight, teamColorByName, onTeamClick)
+    ? createViewerMarkdownComponents(searchCtx, isLight, teamColorByName, onTeamClick, copyable)
     : isLight
-      ? createViewerMarkdownComponents(null, true, teamColorByName, onTeamClick)
-      : createViewerMarkdownComponents(null, false, teamColorByName, onTeamClick);
+      ? createViewerMarkdownComponents(null, true, teamColorByName, onTeamClick, copyable)
+      : createViewerMarkdownComponents(null, false, teamColorByName, onTeamClick, copyable);
 
   // When baseDir is set (editor preview), override img to load local files via IPC
   const components = baseDir
