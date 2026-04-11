@@ -11,9 +11,10 @@ import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
+import { parseTaskNotifications } from '@shared/utils/contentSanitizer';
 import { createLogger } from '@shared/utils/logger';
 import { format } from 'date-fns';
-import { ChevronDown, ChevronUp, User } from 'lucide-react';
+import { CheckCircle, ChevronDown, ChevronUp, Circle, FileText, User, XCircle } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -427,6 +428,29 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
   const stripped = useMemo(() => stripAgentBlocks(textContent), [textContent]);
   const isLongContent = stripped.length > 500;
 
+  const taskNotifications = useMemo(() => {
+    const rawContent =
+      typeof userGroup.message.content === 'string'
+        ? userGroup.message.content
+        : Array.isArray(userGroup.message.content)
+          ? userGroup.message.content
+              .filter((block): block is { type: 'text'; text: string } => {
+                return (
+                  typeof block === 'object' &&
+                  block !== null &&
+                  'type' in block &&
+                  'text' in block &&
+                  (block as { type?: unknown }).type === 'text' &&
+                  typeof (block as { text?: unknown }).text === 'string'
+                );
+              })
+              .map((block) => block.text)
+              .join('')
+          : '';
+
+    return parseTaskNotifications(rawContent);
+  }, [userGroup.message.content]);
+
   // Extract @path mentions from text
   const pathMentions = useMemo(() => {
     if (!textContent) return [];
@@ -577,6 +601,59 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
             </button>
           </div>
         ) : null}
+
+        {taskNotifications.length > 0 &&
+          taskNotifications.map((notification) => {
+            const isCompleted = notification.status === 'completed';
+            const isFailed = notification.status === 'failed' || notification.status === 'error';
+            const StatusIcon = isFailed ? XCircle : isCompleted ? CheckCircle : Circle;
+            const statusColor = isFailed
+              ? 'var(--error-highlight-text, #ef4444)'
+              : isCompleted
+                ? 'var(--badge-success-text, #22c55e)'
+                : 'var(--color-text-muted)';
+            const commandMatch = /"([^"]+)"/.exec(notification.summary);
+            const commandName =
+              commandMatch?.[1] ?? notification.summary.trim() ?? 'Background task';
+            const exitCodeMatch = /\(exit code (\d+)\)/.exec(notification.summary);
+            const outputFileName = notification.outputFile
+              ? (notification.outputFile.split(/[\\/]/).pop() ?? notification.outputFile)
+              : null;
+
+            return (
+              <div
+                key={notification.taskId || `${groupId}-${notification.summary}`}
+                className="flex items-start gap-2.5 rounded-lg px-3 py-2"
+                style={{
+                  backgroundColor: 'var(--card-bg)',
+                  border: '1px solid var(--card-border)',
+                }}
+              >
+                <StatusIcon className="mt-0.5 size-3.5 shrink-0" style={{ color: statusColor }} />
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div
+                    className="text-xs font-medium leading-snug"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    {commandName || 'Background task'}
+                  </div>
+                  <div
+                    className="flex items-center gap-2 text-[10px]"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  >
+                    <span className="capitalize">{notification.status || 'unknown'}</span>
+                    {exitCodeMatch?.[1] ? <span>exit {exitCodeMatch[1]}</span> : null}
+                    {outputFileName ? (
+                      <span className="flex min-w-0 items-center gap-0.5 truncate">
+                        <FileText className="size-2.5 shrink-0" />
+                        <span className="truncate">{outputFileName}</span>
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
 
         {/* Images indicator */}
         {hasImages && (
