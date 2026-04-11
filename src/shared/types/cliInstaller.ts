@@ -112,7 +112,7 @@ export interface CliInstallationStatus {
   showBinaryPath: boolean;
   /** Whether the CLI was found and passed the startup health check (`--version`) */
   installed: boolean;
-  /** Installed version string (e.g. "2.1.59"), null if not installed */
+  /** Installed version string (e.g. "2.1.59"), null if unavailable or not installed */
   installedVersion: string | null;
   /** Absolute path to the resolved binary candidate, null if not found */
   binaryPath: string | null;

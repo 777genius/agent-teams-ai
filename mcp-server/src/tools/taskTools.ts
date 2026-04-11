@@ -1,4 +1,6 @@
 import type { FastMCP } from 'fastmcp';
+import fs from 'node:fs';
+import path from 'node:path';
 import { z } from 'zod';
 
 import { agentBlocks, getController } from '../controller';
@@ -56,6 +58,42 @@ function buildCreateTaskPayload(params: {
   };
 }
 
+function resolveConfigPath(teamName: string, claudeDir?: string): string {
+  const controller = getController(teamName, claudeDir) as {
+    context?: { paths?: { teamDir?: string } };
+  };
+  const teamDir = controller.context?.paths?.teamDir;
+  if (typeof teamDir !== 'string' || teamDir.trim().length === 0) {
+    throw new Error(
+      `Unknown team "${teamName}". Board tools require an existing configured team with config.json. Use the real board teamName from durable team context - never use a member or lead name as teamName.`
+    );
+  }
+  return path.join(teamDir, 'config.json');
+}
+
+function assertConfiguredTeam(teamName: string, claudeDir?: string): void {
+  const configPath = resolveConfigPath(teamName, claudeDir);
+  let raw = '';
+  try {
+    raw = fs.readFileSync(configPath, 'utf8');
+  } catch {
+    throw new Error(
+      `Unknown team "${teamName}". Board tools require an existing configured team with config.json. Use the real board teamName from durable team context - never use a member or lead name as teamName.`
+    );
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as { name?: unknown };
+    if (typeof parsed?.name !== 'string' || parsed.name.trim().length === 0) {
+      throw new Error('invalid');
+    }
+  } catch {
+    throw new Error(
+      `Unknown team "${teamName}". Board tools require an existing configured team with config.json. Use the real board teamName from durable team context - never use a member or lead name as teamName.`
+    );
+  }
+}
+
 export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'task_create',
@@ -85,6 +123,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       prompt,
       startImmediately,
     }) => {
+      assertConfiguredTeam(teamName, claudeDir);
       const controller = getController(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
@@ -143,23 +182,34 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       prompt,
       startImmediately,
     }) => {
+      assertConfiguredTeam(teamName, claudeDir);
       const controller = getController(teamName, claudeDir);
 
       // 1. Lookup message by exact messageId
-      const { message } = controller.messages.lookupMessage(messageId);
+      let message: Record<string, unknown>;
+      try {
+        ({ message } = controller.messages.lookupMessage(messageId));
+      } catch (error) {
+        if (error instanceof Error && error.message.startsWith('Message not found:')) {
+          throw new Error(
+            `${error.message}. task_create_from_message only works with the explicit User MessageId shown in the relay prompt for a user_sent message. Do not use teammate inbox ids or guessed ids.`
+          );
+        }
+        throw error;
+      }
 
       // 2. Reject if message source is not user-originated
       const source = typeof message.source === 'string' ? message.source : '';
       if (!USER_ORIGINATED_SOURCES.has(source)) {
         throw new Error(
-          `Message source "${source}" is not user-originated. Only user_sent messages are eligible.`
+          `Message source "${source}" is not user-originated. task_create_from_message only accepts explicit user_sent messages from the relay prompt. For teammate, system, or cross-team messages, use task_create instead.`
         );
       }
 
       // 3. Reject relay copies explicitly
       if (typeof message.relayOfMessageId === 'string' && message.relayOfMessageId.trim()) {
         throw new Error(
-          'Cannot create task from a relay copy. Use the original message instead.'
+          'Cannot create task from a relay copy. Use the original user_sent message and its explicit User MessageId from the relay prompt instead.'
         );
       }
 

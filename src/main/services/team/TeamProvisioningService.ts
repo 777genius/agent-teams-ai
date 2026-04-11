@@ -1574,6 +1574,27 @@ function buildTeamCtlOpsInstructions(teamName: string, leadName: string): string
   );
 }
 
+function buildLeadRosterContextBlock(
+  teamName: string,
+  leadName: string,
+  teammates: Array<{ name: string; role?: string }>
+): string | null {
+  if (teammates.length === 0) return null;
+
+  const summary = teammates
+    .map((member) => (member.role ? `${member.name} (${member.role})` : member.name))
+    .join(', ');
+
+  return [
+    `Current durable team context:`,
+    `- Team name: ${teamName}`,
+    `- You are the live team lead "${leadName}"`,
+    `- Persistent teammates currently configured: ${summary}`,
+    `- This team is NOT in solo mode`,
+    `- If the user asks who is on the team, answer from this durable roster unless newer durable state explicitly says otherwise.`,
+  ].join('\n');
+}
+
 /**
  * Builds the durable lead context — constraints, communication protocol, board MCP ops,
  * and agent block policy — that must survive context compaction.
@@ -5860,6 +5881,16 @@ export class TeamProvisioningService {
 
       const MAX_RELAY = 10;
       const batch = actionableUnread.slice(0, MAX_RELAY);
+      const teammateRoster = (config.members ?? [])
+        .filter((member) => {
+          const name = member.name?.trim();
+          return name && name !== leadName;
+        })
+        .map((member) => ({
+          name: member.name.trim(),
+          ...(member.role?.trim() ? { role: member.role.trim() } : {}),
+        }));
+      const rosterContextBlock = buildLeadRosterContextBlock(teamName, leadName, teammateRoster);
       run.activeCrossTeamReplyHints = batch.flatMap((m) => {
         if (m.source !== 'cross_team') return [];
         const sourceTeam = m.from.includes('.') ? m.from.split('.', 1)[0] : '';
@@ -5877,9 +5908,11 @@ export class TeamProvisioningService {
         `If there is no action to take, produce ZERO text output. Do NOT write "No action needed.", status echoes, or any other no-op summary.`,
         `For pure system notifications, comment notifications, or routine teammate availability updates that require no reply/comment/action, say nothing.`,
         `Do NOT respond with only an agent-only block.`,
+        ...(rosterContextBlock ? [rosterContextBlock] : []),
         AGENT_BLOCK_OPEN,
         `Internal note: for task assignments, prefer task_create and rely on the board/runtime notification path instead of sending a separate SendMessage for the same assignment.`,
-        `When creating a task from a user message that has a MessageId field, prefer task_create_from_message with that exact messageId for reliable provenance. Only use task_create_from_message when you have an explicit MessageId — never guess or fabricate one.`,
+        `For any MCP board tool call in this turn, teamName MUST be "${teamName}". Never use the lead/member name "${leadName}" as teamName.`,
+        `Use task_create_from_message only for messages below that explicitly say "Eligible for task_create_from_message: yes" and provide a User MessageId. Never use task_create_from_message for teammate messages, system notifications, cross-team messages, or any inbox row that is not explicitly marked eligible.`,
         `If a message below is marked Source: system_notification and its summary looks like "Comment on #...", reply via task_add_comment only when you have a substantive board update (decision, blocker, clarification answer, review result, or concrete next-step change).`,
         `Do NOT post acknowledgement-only task comments such as "Принято", "Ок", "На связи", "Жду", or similar low-signal echoes. If the task comment notification is FYI and no durable update is needed, say nothing.`,
         `If a message below is marked Source: cross_team, CALL the MCP tool named cross_team_send. Do NOT use SendMessage or message_send for cross-team replies.`,
@@ -5889,6 +5922,10 @@ export class TeamProvisioningService {
         `Messages:`,
         ...batch.flatMap((m, idx) => {
           const summaryLine = m.summary?.trim() ? `Summary: ${m.summary.trim()}` : null;
+          const isTaskCreateFromMessageEligible = m.source === 'user_sent';
+          const provenanceLines = isTaskCreateFromMessageEligible
+            ? [`   Eligible for task_create_from_message: yes`, `   User MessageId: ${m.messageId}`]
+            : [`   Eligible for task_create_from_message: no`];
           const crossTeamMeta =
             m.source === 'cross_team'
               ? {
@@ -5910,11 +5947,11 @@ export class TeamProvisioningService {
           return [
             `${idx + 1}) From: ${m.from || 'unknown'}`,
             `   Timestamp: ${m.timestamp}`,
-            `   MessageId: ${m.messageId}`,
             ...(summaryLine ? [`   ${summaryLine}`] : []),
             ...(typeof m.source === 'string' && m.source.trim()
               ? [`   Source: ${m.source.trim()}`]
               : []),
+            ...provenanceLines,
             ...replyInstructions,
             `   Text:`,
             ...m.text.split('\n').map((line) => `   ${line}`),

@@ -854,7 +854,7 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(writeSpy).toHaveBeenCalledTimes(0);
   });
 
-  it('includes MessageId in lead inbox relay prompt for provenance', async () => {
+  it('includes user message provenance in lead inbox relay prompt', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
     seedConfig(teamName);
@@ -881,7 +881,8 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     await relayPromise;
 
     const payload = String(writeSpy.mock.calls[0]?.[0] ?? '');
-    expect(payload).toContain('MessageId: msg-provenance-001');
+    expect(payload).toContain('Eligible for task_create_from_message: yes');
+    expect(payload).toContain('User MessageId: msg-provenance-001');
     expect(payload).toContain('Build the authentication module');
   });
 
@@ -1183,7 +1184,16 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
   it('lead inbox relay prompt mentions task_create_from_message for user messages with messageId', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
-    seedConfig(teamName);
+    hoisted.files.set(
+      `/mock/teams/${teamName}/config.json`,
+      JSON.stringify({
+        name: 'My Team',
+        members: [
+          { name: 'team-lead', agentType: 'team-lead' },
+          { name: 'alice', role: 'developer' },
+        ],
+      })
+    );
     seedLeadInbox(teamName, [
       {
         from: 'user',
@@ -1208,7 +1218,41 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
 
     const payload = String(writeSpy.mock.calls[0]?.[0] ?? '');
     expect(payload).toContain('task_create_from_message');
-    expect(payload).toContain('MessageId');
+    expect(payload).toContain('Current durable team context:');
+    expect(payload).toContain(`- Team name: ${teamName}`);
+    expect(payload).toContain(`teamName MUST be \\"${teamName}\\"`);
+    expect(payload).toContain('Eligible for task_create_from_message: yes');
+    expect(payload).toContain('User MessageId: msg-task-pref-001');
+  });
+
+  it('does not present teammate inbox message ids as task_create_from_message provenance', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedLeadInbox(teamName, [
+      {
+        from: 'jack',
+        text: 'Могу начать с проверки массовых удалений в docs-site.',
+        timestamp: '2026-02-23T16:05:00.000Z',
+        read: false,
+        summary: 'Нет назначенных задач для jack',
+        messageId: 'inbox-jack-001',
+      },
+    ]);
+
+    const { writeSpy } = attachAliveRun(service, teamName);
+    const relayPromise = service.relayLeadInboxMessages(teamName);
+    const run = await waitForCapture(service);
+    (service as any).handleStreamJsonMessage(run, {
+      type: 'assistant',
+      content: [{ type: 'text', text: 'Понял.' }],
+    });
+    (service as any).handleStreamJsonMessage(run, { type: 'result', subtype: 'success' });
+    await relayPromise;
+
+    const payload = String(writeSpy.mock.calls[0]?.[0] ?? '');
+    expect(payload).toContain('Eligible for task_create_from_message: no');
+    expect(payload).not.toContain('User MessageId: inbox-jack-001');
   });
 
   it('marks pure lead heartbeat idle as read without relaying it', async () => {

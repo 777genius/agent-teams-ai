@@ -250,6 +250,10 @@ export function normalizeVersion(raw: string): string {
   return match ? match[0] : raw.trim();
 }
 
+function isSemverVersion(value: string | null | undefined): value is string {
+  return typeof value === 'string' && /^\d{1,10}\.\d{1,10}\.\d{1,10}$/.test(value);
+}
+
 /**
  * Compare two semver strings numerically.
  * Returns true if `installed` is strictly older than `latest`.
@@ -579,7 +583,7 @@ export class CliInstallerService {
 
   private async probeCliVersion(
     binaryPath: string
-  ): Promise<{ ok: true; version: string } | { ok: false; error: string }> {
+  ): Promise<{ ok: true; version: string | null } | { ok: false; error: string }> {
     try {
       const { stdout } = await execCli(binaryPath, ['--version'], {
         timeout: VERSION_TIMEOUT_MS,
@@ -589,10 +593,41 @@ export class CliInstallerService {
       if (!version) {
         return { ok: false, error: 'CLI returned an empty version string.' };
       }
-      logger.info(`Installed CLI version: "${stdout.trim()}" → normalized: "${version}"`);
-      return { ok: true, version };
+
+      if (isSemverVersion(version)) {
+        logger.info(`Installed CLI version: "${stdout.trim()}" → normalized: "${version}"`);
+        return { ok: true, version };
+      }
+
+      const inferredVersion = await this.inferInstalledCliVersionFromPath(binaryPath);
+      if (inferredVersion) {
+        logger.info(
+          `Installed CLI version was inferred from installer path: "${stdout.trim()}" → "${inferredVersion}"`
+        );
+        return { ok: true, version: inferredVersion };
+      }
+
+      logger.warn(
+        `Installed CLI returned a non-semver version string: "${stdout.trim()}". ` +
+          'Treating the binary as healthy, but omitting version details.'
+      );
+      return { ok: true, version: null };
     } catch (err) {
       return { ok: false, error: getErrorMessage(err) };
+    }
+  }
+
+  private async inferInstalledCliVersionFromPath(binaryPath: string): Promise<string | null> {
+    try {
+      const resolvedPath = await fsp.realpath(binaryPath);
+      if (!/[\\/]+versions[\\/]+/.test(resolvedPath)) {
+        return null;
+      }
+
+      const inferredVersion = normalizeVersion(resolvedPath);
+      return isSemverVersion(inferredVersion) ? inferredVersion : null;
+    } catch {
+      return null;
     }
   }
 

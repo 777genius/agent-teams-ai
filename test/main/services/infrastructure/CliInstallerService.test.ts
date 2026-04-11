@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const { realpathMock } = vi.hoisted(() => ({
+  realpathMock: vi.fn(async (value: string) => value),
+}));
+
 // Mock dependencies before importing service
 vi.mock('@main/utils/childProcess', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@main/utils/childProcess')>();
@@ -23,6 +27,7 @@ vi.mock('fs', async (importOriginal) => {
     promises: {
       ...actual.promises,
       chmod: vi.fn(),
+      realpath: realpathMock,
       unlink: vi.fn(),
     },
   };
@@ -57,6 +62,16 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   },
 }));
 
+vi.mock('@main/services/team/cliFlavor', () => ({
+  getConfiguredCliFlavor: vi.fn(() => 'claude'),
+  getCliFlavorUiOptions: vi.fn(() => ({
+    displayName: 'Claude CLI',
+    supportsSelfUpdate: true,
+    showVersionDetails: true,
+    showBinaryPath: true,
+  })),
+}));
+
 import {
   CliInstallerService,
   isVersionOlder,
@@ -79,6 +94,8 @@ describe('CliInstallerService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    realpathMock.mockReset();
+    realpathMock.mockImplementation(async (value: string) => value);
     service = new CliInstallerService();
   });
 
@@ -95,16 +112,15 @@ describe('CliInstallerService', () => {
       expect(status.updateAvailable).toBe(false);
     });
 
-    it('returns installed when binary exists', async () => {
+    it('does not mark the CLI installed when the version probe cannot confirm the binary', async () => {
       allowConsoleLogs();
       vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
 
       const status = await service.getStatus();
 
-      expect(status.installed).toBe(true);
+      expect(status.installed).toBe(false);
       expect(status.binaryPath).toBe('/usr/local/bin/claude');
-      // Version will be null because execFile is mocked to no-op
-      // and latestVersion will be null because fetch is mocked
+      expect(status.installedVersion).toBeNull();
     });
 
     it('handles spawn EINVAL when binary path contains non-ASCII by falling back', async () => {
@@ -141,6 +157,24 @@ describe('CliInstallerService', () => {
       const status = await service.getStatus();
       expect(status.authLoggedIn).toBe(true);
       expect(status.authMethod).toBe('oauth_token');
+    });
+
+    it('falls back to the installed launcher path when --version reports unknown', async () => {
+      allowConsoleLogs();
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/Users/tester/.local/bin/claude');
+      vi.spyOn(service as never, 'inferInstalledCliVersionFromPath').mockResolvedValue('2.1.101');
+      vi.mocked(execCli)
+        .mockResolvedValueOnce({ stdout: 'unknown', stderr: '' })
+        .mockResolvedValueOnce({
+          stdout: '{"loggedIn":true,"authMethod":"oauth_token"}',
+          stderr: '',
+        });
+
+      const status = await service.getStatus();
+
+      expect(status.installed).toBe(true);
+      expect(status.installedVersion).toBe('2.1.101');
+      expect(status.authLoggedIn).toBe(true);
     });
   });
 

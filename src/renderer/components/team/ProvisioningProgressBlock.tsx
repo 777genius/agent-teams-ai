@@ -59,6 +59,8 @@ export interface ProvisioningProgressBlockProps {
   cliLogsTail?: string;
   /** Accumulated assistant text output for live preview */
   assistantOutput?: string;
+  /** Visual surface chrome for the outer block */
+  surface?: 'raised' | 'flat';
   className?: string;
 }
 
@@ -148,6 +150,7 @@ export const ProvisioningProgressBlock = ({
   pid,
   cliLogsTail,
   assistantOutput,
+  surface = 'raised',
   className,
 }: ProvisioningProgressBlockProps): React.JSX.Element => {
   const elapsed = useElapsedTimer(startedAt, loading);
@@ -203,7 +206,9 @@ export const ProvisioningProgressBlock = ({
   return (
     <div
       className={cn(
-        'rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2',
+        surface === 'flat'
+          ? 'rounded-none border-0 bg-transparent px-0 py-0'
+          : 'rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2',
         isError && 'border-red-500/40 bg-red-500/10',
         className
       )}

@@ -19,7 +19,6 @@
   "main": "dist-electron/main/index.cjs",
   "scripts": {
     "dev": "node ./scripts/dev-with-runtime.mjs",
-    "dev:ui": "electron-vite dev",
     "dev:kill": "node bin/kill-dev.js",
     "prebuild": "tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
     "build": "electron-vite build",

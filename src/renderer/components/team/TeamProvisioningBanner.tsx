@@ -125,6 +125,7 @@ export const TeamProvisioningBanner = memo(function TeamProvisioningBanner({
           title="Launch failed"
           message={progress.error ?? null}
           tone="error"
+          surface="flat"
           currentStepIndex={lastActiveStepRef.current}
           errorStepIndex={lastActiveStepRef.current >= 0 ? lastActiveStepRef.current : 0}
           startedAt={progress.startedAt}
@@ -174,6 +175,7 @@ export const TeamProvisioningBanner = memo(function TeamProvisioningBanner({
           title="Launch details"
           message={failedSpawnCount > 0 || hasMembersStillJoining ? readyDetailMessage : null}
           messageSeverity={readyDetailSeverity}
+          surface="flat"
           currentStepIndex={readyStepIndex}
           startedAt={progress.startedAt}
           pid={progress.pid}
@@ -199,6 +201,7 @@ export const TeamProvisioningBanner = memo(function TeamProvisioningBanner({
           title="Launching team"
           message={progress.message}
           messageSeverity={progress.messageSeverity}
+          surface="flat"
           currentStepIndex={progressStepIndex >= 0 ? progressStepIndex : -1}
           loading
           startedAt={progress.startedAt}

@@ -665,6 +665,13 @@ describe('agent-teams-mcp tools', () => {
   it('covers review_request_changes and full process lifecycle tools', async () => {
     const claudeDir = makeClaudeDir();
     const teamName = 'beta';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'alice', role: 'reviewer' },
+        { name: 'bob', role: 'developer' },
+      ],
+    });
 
     const createdTask = parseJsonToolResult(
       await getTool('task_create').execute({
@@ -861,6 +868,12 @@ describe('agent-teams-mcp tools', () => {
   it('task_add_comment succeeds even when owner inbox write fails', async () => {
     const claudeDir = makeClaudeDir();
     const teamName = 'resilience';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'alice', role: 'developer' },
+      ],
+    });
 
     const task = parseJsonToolResult(
       await getTool('task_create').execute({
@@ -1109,7 +1122,9 @@ describe('agent-teams-mcp tools', () => {
           messageId: 'nonexistent-msg',
           subject: 'Should fail',
         })
-      ).rejects.toThrow('Message not found: nonexistent-msg');
+      ).rejects.toThrow(
+        'Message not found: nonexistent-msg. task_create_from_message only works with the explicit User MessageId'
+      );
     });
 
     it('rejects non-user-originated message sources', async () => {
@@ -1136,7 +1151,9 @@ describe('agent-teams-mcp tools', () => {
           messageId,
           subject: 'Should fail',
         })
-      ).rejects.toThrow('not user-originated');
+      ).rejects.toThrow(
+        'task_create_from_message only accepts explicit user_sent messages from the relay prompt'
+      );
     });
 
     it('rejects lead_process and cross_team sources explicitly', async () => {
@@ -1170,7 +1187,9 @@ describe('agent-teams-mcp tools', () => {
           messageId: 'msg-lead-001',
           subject: 'Should fail',
         })
-      ).rejects.toThrow('not user-originated');
+      ).rejects.toThrow(
+        'task_create_from_message only accepts explicit user_sent messages from the relay prompt'
+      );
 
       await expect(
         getTool('task_create_from_message').execute({
@@ -1179,7 +1198,9 @@ describe('agent-teams-mcp tools', () => {
           messageId: 'msg-cross-001',
           subject: 'Should fail',
         })
-      ).rejects.toThrow('not user-originated');
+      ).rejects.toThrow(
+        'task_create_from_message only accepts explicit user_sent messages from the relay prompt'
+      );
     });
 
     it('rejects messages without an explicit source field (fail closed)', async () => {
@@ -1205,7 +1226,9 @@ describe('agent-teams-mcp tools', () => {
           messageId: 'msg-no-source',
           subject: 'Should fail',
         })
-      ).rejects.toThrow('not user-originated');
+      ).rejects.toThrow(
+        'task_create_from_message only accepts explicit user_sent messages from the relay prompt'
+      );
     });
 
     it('rejects relay copies', async () => {
@@ -1233,7 +1256,9 @@ describe('agent-teams-mcp tools', () => {
           messageId,
           subject: 'Should fail',
         })
-      ).rejects.toThrow('relay copy');
+      ).rejects.toThrow(
+        'Cannot create task from a relay copy. Use the original user_sent message and its explicit User MessageId from the relay prompt instead.'
+      );
     });
 
     it('preserves attachment metadata without blob copying', async () => {
@@ -1429,5 +1454,34 @@ describe('agent-teams-mcp tools', () => {
         }).success
       ).toBe(true);
     });
+  });
+
+  it('fails closed for task_create when team config does not exist', async () => {
+    const claudeDir = makeClaudeDir();
+
+    await expect(
+      getTool('task_create').execute({
+        claudeDir,
+        teamName: 'team-lead',
+        subject: 'Phantom task should fail',
+      })
+    ).rejects.toThrow(
+      'Unknown team "team-lead". Board tools require an existing configured team with config.json.'
+    );
+  });
+
+  it('fails closed for task_create_from_message when team config does not exist', async () => {
+    const claudeDir = makeClaudeDir();
+
+    await expect(
+      getTool('task_create_from_message').execute({
+        claudeDir,
+        teamName: 'team-lead',
+        messageId: 'msg-1',
+        subject: 'Phantom task should fail',
+      })
+    ).rejects.toThrow(
+      'Unknown team "team-lead". Board tools require an existing configured team with config.json.'
+    );
   });
 });
