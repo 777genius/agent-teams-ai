@@ -1,5 +1,6 @@
 // @vitest-environment node
 import type { PathLike } from 'fs';
+import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockBuildMergedCliPath = vi.fn<(binaryPath: string | null) => string>();
@@ -133,7 +134,7 @@ describe('ClaudeBinaryResolver', () => {
     process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH =
       '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-dev';
     mockGetConfiguredCliFlavor.mockReturnValue('claude');
-    const expectedBinary = '/usr/local/bin/claude';
+    const expectedBinary = path.join('/usr/local/bin', 'claude');
 
     accessMock.mockImplementation((filePath) => {
       if (filePath === expectedBinary) {
@@ -150,7 +151,7 @@ describe('ClaudeBinaryResolver', () => {
   });
 
   it('falls back to claude-multimodel on PATH for agent_teams_orchestrator runtime', async () => {
-    const expectedBinary = '/usr/local/bin/claude-multimodel';
+    const expectedBinary = path.join('/usr/local/bin', 'claude-multimodel');
 
     accessMock.mockImplementation((filePath) => {
       if (filePath === expectedBinary) {
@@ -167,8 +168,11 @@ describe('ClaudeBinaryResolver', () => {
   });
 
   it('prefers the bundled runtime binary for packaged agent_teams_orchestrator builds', async () => {
-    const expectedBinary =
-      '/Applications/Claude Agent Teams UI.app/Contents/Resources/runtime/claude-multimodel';
+    const expectedBinary = path.join(
+      '/Applications/Claude Agent Teams UI.app/Contents/Resources',
+      'runtime',
+      'claude-multimodel'
+    );
 
     accessMock.mockImplementation((filePath) => {
       if (filePath === expectedBinary) {
@@ -186,7 +190,13 @@ describe('ClaudeBinaryResolver', () => {
 
   it('finds npm-local Claude install in the vendor bin directory', async () => {
     mockGetConfiguredCliFlavor.mockReturnValue('claude');
-    const expectedBinary = '/Users/tester/.claude/local/node_modules/.bin/claude';
+    const expectedBinary = path.join(
+      '/Users/tester/.claude',
+      'local',
+      'node_modules',
+      '.bin',
+      'claude'
+    );
 
     accessMock.mockImplementation((filePath) => {
       if (filePath === expectedBinary) {

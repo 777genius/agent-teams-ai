@@ -1,5 +1,6 @@
 // @vitest-environment node
 import type { PathLike } from 'fs';
+import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const execCliMock = vi.fn();
@@ -61,7 +62,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     getShellPreferredHomeMock.mockReturnValue('/Users/tester');
     resolveInteractiveShellEnvMock.mockResolvedValue({});
     readFileMock.mockImplementation((filePath) => {
-      if (String(filePath) === '/Users/tester/.claude.json') {
+      if (String(filePath) === path.join('/Users/tester', '.claude.json')) {
         return Promise.resolve(
           JSON.stringify({
             geminiResolvedBackend: 'cli',
