@@ -39,11 +39,7 @@ import {
   type SessionsPaginationOptions,
   type WorktreeSource,
 } from '@main/types';
-import {
-  analyzeSessionFileMetadata,
-  extractCwd,
-  extractFirstUserMessagePreview,
-} from '@main/utils/jsonl';
+import { analyzeSessionFileMetadata, extractCwd } from '@main/utils/jsonl';
 import {
   buildSessionPath,
   buildSubagentsPath,
@@ -1035,20 +1031,30 @@ export class ProjectScanner {
     const effectiveMtime = prefetchedMtimeMs ?? stats?.mtimeMs ?? Date.now();
     const effectiveSize = prefetchedSize ?? stats?.size ?? -1;
     const birthtimeMs = prefetchedBirthtimeMs ?? stats?.birthtimeMs ?? effectiveMtime;
-    const cachedPreview = this.sessionPreviewCache.get(filePath);
-    const preview =
-      cachedPreview?.mtimeMs === effectiveMtime && cachedPreview.size === effectiveSize
-        ? cachedPreview.preview
-        : await this.extractLightPreviewWithRetry(filePath);
-    if (cachedPreview?.mtimeMs !== effectiveMtime || cachedPreview.size !== effectiveSize) {
-      this.sessionPreviewCache.set(filePath, {
-        mtimeMs: effectiveMtime,
-        size: effectiveSize,
-        preview,
-      });
+    let metadata: Awaited<ReturnType<typeof analyzeSessionFileMetadata>>;
+    const cachedMetadata = this.sessionMetadataCache.get(filePath);
+    if (cachedMetadata?.mtimeMs === effectiveMtime && cachedMetadata.size === effectiveSize) {
+      metadata = cachedMetadata.metadata;
+    } else {
+      try {
+        metadata = await analyzeSessionFileMetadata(filePath, this.fsProvider);
+        this.sessionMetadataCache.set(filePath, {
+          mtimeMs: effectiveMtime,
+          size: effectiveSize,
+          metadata,
+        });
+      } catch (error) {
+        logger.debug(`Failed to analyze session metadata for ${filePath}:`, error);
+        metadata = {
+          firstUserMessage: null,
+          messageCount: 0,
+          isOngoing: false,
+          gitBranch: null,
+        };
+      }
     }
     const metadataLevel: SessionMetadataLevel = 'light';
-    const previewTimestampMs = this.parseTimestampMs(preview?.timestamp);
+    const previewTimestampMs = this.parseTimestampMs(metadata.firstUserMessage?.timestamp);
     const createdAt =
       previewTimestampMs !== null && Number.isFinite(previewTimestampMs)
         ? previewTimestampMs
@@ -1059,10 +1065,10 @@ export class ProjectScanner {
       projectId,
       projectPath,
       createdAt: Math.floor(createdAt),
-      firstMessage: preview?.text,
-      messageTimestamp: preview?.timestamp,
+      firstMessage: metadata.firstUserMessage?.text,
+      messageTimestamp: metadata.firstUserMessage?.timestamp,
       hasSubagents: false,
-      messageCount: 0,
+      messageCount: metadata.messageCount,
       metadataLevel,
     };
   }
@@ -1457,31 +1463,6 @@ export class ProjectScanner {
     }
 
     return results;
-  }
-
-  private async extractLightPreviewWithRetry(
-    filePath: string
-  ): Promise<{ text: string; timestamp: string } | null> {
-    const maxAttempts = this.fsProvider.type === 'ssh' ? 3 : 1;
-    let lastError: unknown;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        return await extractFirstUserMessagePreview(filePath, this.fsProvider);
-      } catch (error) {
-        lastError = error;
-        if (attempt < maxAttempts && this.isTransientFsError(error)) {
-          await this.sleep(50 * attempt);
-          continue;
-        }
-        break;
-      }
-    }
-
-    if (lastError) {
-      logger.debug(`Failed to extract light preview for ${filePath}:`, lastError);
-    }
-    return null;
   }
 
   private getErrorCode(error: unknown): string {
