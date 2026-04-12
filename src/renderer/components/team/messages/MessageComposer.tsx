@@ -41,6 +41,7 @@ import type {
 interface MessageComposerProps {
   teamName: string;
   members: ResolvedTeamMember[];
+  layout?: 'default' | 'compact';
   isTeamAlive?: boolean;
   sending: boolean;
   sendError: string | null;
@@ -67,6 +68,7 @@ interface MessageComposerProps {
 export const MessageComposer = ({
   teamName,
   members,
+  layout = 'default',
   isTeamAlive,
   sending,
   sendError,
@@ -443,10 +445,27 @@ export const MessageComposer = ({
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const hasAttachmentPreviewContent =
     draft.attachments.length > 0 || Boolean(draft.attachmentError ?? fileRestrictionError);
+  const isCompactLayout = layout === 'compact';
+  const compactFooterNotice = slashCommandRestrictionReason ? (
+    <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
+      <AlertCircle size={10} className="shrink-0" />
+      {slashCommandRestrictionReason}
+    </span>
+  ) : sendError ? (
+    <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">
+      <AlertCircle size={10} className="shrink-0" />
+      {sendError}
+    </span>
+  ) : lastResult?.deduplicated ? (
+    <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
+      <Check size={10} className="shrink-0" />
+      Reused recent cross-team request
+    </span>
+  ) : null;
 
   return (
     <div
-      className="relative mb-3 pb-3"
+      className={cn('relative', isCompactLayout ? 'pb-1' : 'mb-3 pb-3')}
       role="group"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -454,7 +473,7 @@ export const MessageComposer = ({
       onDrop={handleDropWrapper}
       onPaste={handlePasteWrapper}
     >
-      <div className="mb-1 space-y-2">
+      <div className={cn('mb-1', isCompactLayout ? 'space-y-1.5' : 'space-y-2')}>
         <div className="flex items-center gap-2">
           {isLeadRecipient ? (
             <>
@@ -807,11 +826,17 @@ export const MessageComposer = ({
           onShiftTab={handleCycleActionMode}
           dismissMentionsRef={dismissMentionsRef}
           extraTips={['Tip: You can use "/" to run any Claude commands.']}
-          minRows={2}
+          surfaceClassName="message-composer-shell message-composer-orbit-surface border border-transparent bg-[var(--color-surface-raised)] shadow-[0_8px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.03)]"
+          surfaceDecoration="orbit-border"
+          surfaceFadeColor="var(--color-surface-raised)"
+          className="border-transparent shadow-none"
+          minRows={isCompactLayout ? 1 : 2}
           maxRows={6}
           maxLength={MAX_TEXT_LENGTH}
           disabled={sending}
           hintText={crossTeamHintText}
+          showHint={!isCompactLayout}
+          cornerActionInset={isCompactLayout ? 'compact' : 'default'}
           cornerActionLeft={
             <ActionModeSelector
               value={actionMode}
@@ -859,34 +884,23 @@ export const MessageComposer = ({
             </div>
           }
           footerRight={
-            <div className="flex items-center gap-2">
-              {slashCommandRestrictionReason ? (
-                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
-                  <AlertCircle size={10} className="shrink-0" />
-                  {slashCommandRestrictionReason}
-                </span>
-              ) : sendError ? (
-                <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">
-                  <AlertCircle size={10} className="shrink-0" />
-                  {sendError}
-                </span>
-              ) : lastResult?.deduplicated ? (
-                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
-                  <Check size={10} className="shrink-0" />
-                  Reused recent cross-team request
-                </span>
-              ) : null}
-              {remaining < 200 ? (
-                <span
-                  className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
-                >
-                  {remaining} chars left
-                </span>
-              ) : null}
-              {draft.isSaved ? (
-                <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
-              ) : null}
-            </div>
+            isCompactLayout ? (
+              compactFooterNotice
+            ) : (
+              <div className="flex items-center gap-2">
+                {compactFooterNotice}
+                {remaining < 200 ? (
+                  <span
+                    className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
+                  >
+                    {remaining} chars left
+                  </span>
+                ) : null}
+                {draft.isSaved ? (
+                  <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
+                ) : null}
+              </div>
+            )
           }
         />
       </div>

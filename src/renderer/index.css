@@ -1323,3 +1323,104 @@ body.theme-transitioning {
     opacity: 0;
   }
 }
+
+@keyframes composer-orbit-border {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -100;
+  }
+}
+
+.message-composer-orbit-surface {
+  isolation: isolate;
+  --message-composer-orbit-stroke: rgba(129, 140, 248, 0.92);
+  --message-composer-orbit-glow-stroke: rgba(96, 165, 250, 0.62);
+}
+
+.message-composer-shell {
+  background-color: var(--color-surface-raised);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.message-composer-orbit-svg {
+  overflow: visible;
+}
+
+.message-composer-orbit-track,
+.message-composer-orbit-path,
+.message-composer-orbit-glow {
+  vector-effect: non-scaling-stroke;
+}
+
+.message-composer-orbit-track {
+  stroke: var(--color-border-emphasis);
+  opacity: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.message-composer-orbit-path,
+.message-composer-orbit-glow {
+  stroke-dasharray: 9 91;
+  animation: composer-orbit-border 19s linear infinite;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  will-change: stroke-dashoffset;
+}
+
+.message-composer-orbit-path {
+  stroke-width: 1.35px;
+  stroke: var(--message-composer-orbit-stroke);
+  opacity: 0.48;
+}
+
+.message-composer-orbit-glow {
+  stroke-width: 3px;
+  stroke: var(--message-composer-orbit-glow-stroke);
+  opacity: 0.28;
+}
+
+.message-composer-orbit-path-secondary,
+.message-composer-orbit-glow-secondary {
+  animation-delay: -9.5s;
+}
+
+.message-composer-orbit-surface:focus-within .message-composer-orbit-path,
+.message-composer-orbit-surface:focus-within .message-composer-orbit-glow {
+  animation-duration: 14.5s;
+}
+
+.message-composer-orbit-surface:focus-within .message-composer-orbit-path {
+  opacity: 0.62;
+}
+
+.message-composer-orbit-surface:focus-within .message-composer-orbit-glow {
+  opacity: 0.36;
+}
+
+:root.light .message-composer-shell {
+  background-color: #dfdbd4;
+  box-shadow:
+    0 10px 24px rgba(113, 104, 92, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+:root.light .message-composer-orbit-surface {
+  --message-composer-orbit-stroke: rgba(79, 70, 229, 0.76);
+  --message-composer-orbit-glow-stroke: rgba(96, 165, 250, 0.46);
+}
+
+:root.light .message-composer-orbit-track {
+  stroke: rgba(138, 130, 118, 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message-composer-orbit-path,
+  .message-composer-orbit-glow {
+    animation: none;
+  }
+}

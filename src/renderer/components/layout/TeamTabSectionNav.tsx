@@ -29,10 +29,15 @@ export const TeamTabSectionNav = ({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 0 });
-  const visibleSections = SECTIONS.filter(
-    (section) =>
-      messagesPanelMode !== 'sidebar' || (section.id !== 'messages' && section.id !== 'claude-logs')
-  );
+  const visibleSections = SECTIONS.filter((section) => {
+    if (messagesPanelMode === 'sidebar') {
+      return section.id !== 'messages' && section.id !== 'claude-logs';
+    }
+    if (messagesPanelMode === 'bottom-sheet') {
+      return section.id !== 'messages';
+    }
+    return true;
+  });
 
   const handleNavigate = useCallback(
     (sectionId: string) => {

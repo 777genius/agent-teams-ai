@@ -9,9 +9,10 @@ export interface TeamMessagesSidebarUiState {
   messagesFilter: MessagesFilterState;
   messagesFilterOpen: boolean;
   messagesCollapsed: boolean;
-  sidebarSearchVisible: boolean;
+  messagesSearchBarVisible: boolean;
   expandedItemKey: string | null;
-  sidebarScrollTop: number;
+  messagesScrollTop: number;
+  bottomSheetSnapIndex: number;
 }
 
 export interface TeamClaudeLogsSidebarUiState {
@@ -58,9 +59,10 @@ export function createDefaultMessagesSidebarUiState(): TeamMessagesSidebarUiStat
     },
     messagesFilterOpen: false,
     messagesCollapsed: true,
-    sidebarSearchVisible: false,
+    messagesSearchBarVisible: false,
     expandedItemKey: null,
-    sidebarScrollTop: 0,
+    messagesScrollTop: 0,
+    bottomSheetSnapIndex: 2,
   };
 }
 

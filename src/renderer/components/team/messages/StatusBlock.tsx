@@ -15,6 +15,8 @@ interface StatusBlockProps {
   pendingRepliesByMember: Record<string, number>;
   /** Where the Messages panel is rendered — 'sidebar' hides "In progress" (already visible in MemberList). */
   position?: 'sidebar' | 'inline';
+  /** Overlay keeps the toggle hovering over the previous section, flow keeps it in normal layout. */
+  layout?: 'overlay' | 'flow';
   onMemberClick?: (member: ResolvedTeamMember) => void;
   onTaskClick?: (task: TeamTaskWithKanban) => void;
 }
@@ -31,6 +33,7 @@ export const StatusBlock = ({
   messages,
   pendingRepliesByMember,
   position,
+  layout = 'overlay',
   onMemberClick,
   onTaskClick,
 }: StatusBlockProps): React.JSX.Element | null => {
@@ -68,24 +71,32 @@ export const StatusBlock = ({
 
   if (!hasItems) return null;
 
+  const toggleButton = (
+    <button
+      type="button"
+      className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
+      onClick={() => setCollapsed((prev) => !prev)}
+      aria-label={collapsed ? 'Expand status' : 'Collapse status'}
+    >
+      <ChevronRight
+        size={12}
+        className={`shrink-0 transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
+      />
+      Status
+    </button>
+  );
+
   return (
     <>
-      <div className="relative h-0">
-        <button
-          type="button"
-          className="absolute -top-[19px] right-0 z-10 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
-          onClick={() => setCollapsed((prev) => !prev)}
-          aria-label={collapsed ? 'Expand status' : 'Collapse status'}
-        >
-          <ChevronRight
-            size={12}
-            className={`shrink-0 transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
-          />
-          Status
-        </button>
-      </div>
+      {layout === 'overlay' ? (
+        <div className="relative h-0">
+          <div className="absolute -top-[19px] right-0 z-10">{toggleButton}</div>
+        </div>
+      ) : (
+        <div className="mb-2 flex justify-end">{toggleButton}</div>
+      )}
       {!collapsed && (
-        <div className="mt-5">
+        <div className={layout === 'overlay' ? 'mt-5' : ''}>
           <PendingRepliesBlock
             members={members}
             pendingRepliesByMember={pendingRepliesByMember}

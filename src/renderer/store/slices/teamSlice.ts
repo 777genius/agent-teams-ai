@@ -14,6 +14,8 @@ import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 
 import { getWorktreeNavigationState } from '../utils/stateResetHelpers';
 
+import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
+
 const logger = createLogger('teamSlice');
 
 const TEAM_GET_DATA_TIMEOUT_MS = 30_000;
@@ -1159,10 +1161,10 @@ export interface TeamSlice {
   ) => Promise<void>;
 
   // Messages panel UI state
-  messagesPanelMode: 'sidebar' | 'inline';
+  messagesPanelMode: TeamMessagesPanelMode;
   messagesPanelWidth: number;
   sidebarLogsHeight: number;
-  setMessagesPanelMode: (mode: 'sidebar' | 'inline') => void;
+  setMessagesPanelMode: (mode: TeamMessagesPanelMode) => void;
   setMessagesPanelWidth: (width: number) => void;
   setSidebarLogsHeight: (height: number) => void;
 }
@@ -1444,7 +1446,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   messagesPanelMode: 'sidebar' as const,
   messagesPanelWidth: 340,
   sidebarLogsHeight: 213,
-  setMessagesPanelMode: (mode: 'sidebar' | 'inline') => set({ messagesPanelMode: mode }),
+  setMessagesPanelMode: (mode: TeamMessagesPanelMode) => set({ messagesPanelMode: mode }),
   setMessagesPanelWidth: (width: number) => set({ messagesPanelWidth: width }),
   setSidebarLogsHeight: (height: number) => set({ sidebarLogsHeight: height }),
 
