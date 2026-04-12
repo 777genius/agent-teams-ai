@@ -176,7 +176,7 @@ A new approach to task management with AI agent teams.
 | **Per-task code review** | ✅ Accept / reject / comment | ⚠️ PR-level only | ⚠️ File-level only | ✅ BugBot on PRs | ❌ |
 | **Flexible autonomy** | ✅ Granular settings, per-action approval, notifications | ❌ | ⚠️ Plan approval only | ✅ | ✅ |
 | **Git worktree isolation** | ✅ Optional | ⚠️ Mandatory | ⚠️ Mandatory | ✅ | ✅ |
-| **Multi-agent backend** | 🗓️ [In development](https://github.com/Alishahryar1/free-claude-code) | ✅ 6+ agents | ✅ 11 providers | ✅ Multi-model | — |
+| **Multi-agent backend** | ✅ Claude, Codex, more coming soon | ✅ 6+ agents | ✅ 11 providers | ✅ Multi-model | — |
 | **Price** | **Free** | Free / $30 user/mo | Free | $0–$200/mo | Claude subscription |
 
 ---
