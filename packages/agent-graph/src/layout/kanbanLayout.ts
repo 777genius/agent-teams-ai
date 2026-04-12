@@ -94,7 +94,7 @@ export class KanbanLayoutEngine {
   // ─── Private ──────────────────────────────────────────────────────────────
 
   static #layoutZone(tasks: GraphNode[], ownerX: number, ownerY: number, ownerId: string): KanbanZoneInfo | null {
-    const { columnWidth, rowHeight, offsetY, columns, maxVisibleRows } = KANBAN_ZONE;
+    const { columnWidth, rowHeight, offsetY, columns } = KANBAN_ZONE;
     const headerHeight = 20; // space for column header label
     const baseY = ownerY + offsetY;
 
@@ -129,8 +129,8 @@ export class KanbanLayoutEngine {
     for (const [colIdx, col] of activeColumns.entries()) {
       const colX = baseX + colIdx * columnWidth;
       const config = COLUMN_LABELS[col.name] ?? { label: col.name, color: '#888' };
-      const overflow = Math.max(0, col.tasks.length - maxVisibleRows);
-      const visibleCount = Math.min(col.tasks.length, maxVisibleRows);
+      const overflow = col.tasks.find((task) => task.isOverflowStack)?.overflowCount ?? 0;
+      const visibleCount = col.tasks.length;
 
       // Column header — centered over pill area (pill center = colX since drawTaskPill translates to x,y)
       headers.push({
@@ -144,13 +144,6 @@ export class KanbanLayoutEngine {
 
       // Position tasks below header
       for (const [rowIdx, task] of col.tasks.entries()) {
-        if (rowIdx >= maxVisibleRows) {
-          task.x = -99999;
-          task.y = -99999;
-          task.fx = task.x;
-          task.fy = task.y;
-          continue;
-        }
         const targetX = colX;
         const targetY = baseY + headerHeight + rowIdx * rowHeight;
         task.x = task.x != null ? task.x + (targetX - task.x) * 0.15 : targetX;
@@ -207,6 +200,7 @@ export class KanbanLayoutEngine {
 
     // Add zone header for unassigned section
     if (tasks.length > 0) {
+      const overflowCount = tasks.reduce((sum, task) => sum + (task.overflowCount ?? 0), 0);
       this.zones.push({
         ownerId: '__unassigned__',
         ownerX: centerX,
@@ -216,7 +210,7 @@ export class KanbanLayoutEngine {
           x: centerX,
           y: baseY - 10,
           color: COLORS.taskPending,
-          overflowCount: Math.max(0, tasks.length - cols * KANBAN_ZONE.maxVisibleRows),
+          overflowCount,
           overflowY: baseY + KANBAN_ZONE.maxVisibleRows * rowHeight,
         }],
       });

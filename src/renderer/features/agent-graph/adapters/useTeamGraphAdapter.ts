@@ -7,6 +7,7 @@ import { useMemo, useRef, useSyncExternalStore } from 'react';
 
 import { getSnapshot, subscribe } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
+import { selectTeamDataForName } from '@renderer/store/slices/teamSlice';
 import { useShallow } from 'zustand/react/shallow';
 
 import { TeamGraphAdapter } from './TeamGraphAdapter';
@@ -19,6 +20,7 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
   const {
     teamData,
     spawnStatuses,
+    leadActivity,
     leadContext,
     pendingApprovals,
     activeTools,
@@ -26,8 +28,9 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
     toolHistory,
   } = useStore(
     useShallow((s) => ({
-      teamData: s.selectedTeamData,
+      teamData: selectTeamDataForName(s, teamName),
       spawnStatuses: teamName ? s.memberSpawnStatusesByTeam[teamName] : undefined,
+      leadActivity: teamName ? s.leadActivityByTeam[teamName] : undefined,
       leadContext: teamName ? s.leadContextByTeam[teamName] : undefined,
       pendingApprovals: s.pendingApprovals,
       activeTools: teamName ? s.activeToolsByTeam[teamName] : undefined,
@@ -39,10 +42,12 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
   const pendingApprovalAgents = useMemo(() => {
     const agents = new Set<string>();
     for (const a of pendingApprovals) {
-      if (a.source !== 'lead') agents.add(a.source);
+      if (a.teamName === teamName) {
+        agents.add(a.source);
+      }
     }
     return agents;
-  }, [pendingApprovals]);
+  }, [pendingApprovals, teamName]);
 
   const commentReadState = useSyncExternalStore(subscribe, getSnapshot);
 
@@ -52,6 +57,7 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
         teamData,
         teamName,
         spawnStatuses,
+        leadActivity,
         leadContext,
         pendingApprovalAgents,
         activeTools,
@@ -63,6 +69,7 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
       teamData,
       teamName,
       spawnStatuses,
+      leadActivity,
       leadContext,
       pendingApprovalAgents,
       activeTools,

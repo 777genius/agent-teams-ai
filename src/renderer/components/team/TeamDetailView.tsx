@@ -1,5 +1,4 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ComponentProps } from 'react';
 
 import { api } from '@renderer/api';
 import { SessionContextPanel } from '@renderer/components/chat/SessionContextPanel/index';
@@ -36,8 +35,8 @@ import {
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
-import { createLogger } from '@shared/utils/logger';
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
+import { createLogger } from '@shared/utils/logger';
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   AlertTriangle,
@@ -73,6 +72,7 @@ import { TrashDialog } from './kanban/TrashDialog';
 import { MemberDetailDialog } from './members/MemberDetailDialog';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
+import type { ComponentProps } from 'react';
 
 const ProjectEditorOverlay = lazy(() =>
   import('./editor/ProjectEditorOverlay').then((m) => ({ default: m.ProjectEditorOverlay }))
@@ -92,13 +92,13 @@ import { TeamSidebarRail } from './sidebar/TeamSidebarRail';
 import { ClaudeLogsSection } from './ClaudeLogsSection';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 import { ProcessesSection } from './ProcessesSection';
+import { getLaunchJoinMilestonesFromMembers, getLaunchJoinState } from './provisioningSteps';
+import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import {
   isLeadSessionMissing,
   shouldSuppressMissingLeadSessionFetch,
 } from './teamSessionFetchGuards';
-import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { TeamSessionsSection } from './TeamSessionsSection';
-import { getLaunchJoinMilestonesFromMembers, getLaunchJoinState } from './provisioningSteps';
 
 import type { KanbanFilterState } from './kanban/KanbanFilterPopover';
 import type { KanbanSortState } from './kanban/KanbanSortPopover';
@@ -2781,10 +2781,10 @@ export const TeamDetailView = ({
                 if (task) setSelectedTask(task);
               }}
               onOpenMemberProfile={(memberName) => {
-                setSendDialogRecipient(memberName);
-                setSendDialogDefaultText(undefined);
-                setSendDialogDefaultChip(undefined);
-                setSendDialogOpen(true);
+                const member = data.members.find((m) => m.name === memberName);
+                if (member) {
+                  setSelectedMember(member);
+                }
               }}
             />
           </Suspense>

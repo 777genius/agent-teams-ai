@@ -6,12 +6,16 @@
 
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
+import { useStore } from '@renderer/store';
+import { selectTeamDataForName } from '@renderer/store/slices/teamSlice';
 import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
 import { ExternalLink, Loader2, MessageSquare, Plus, User } from 'lucide-react';
 
-import type { GraphNode } from '@claude-teams/agent-graph';
-
 import { GraphTaskCard } from './GraphTaskCard';
+import { isTaskInReviewCycle, resolveTaskReviewer } from '../utils/taskGraphSemantics';
+
+import type { GraphNode } from '@claude-teams/agent-graph';
+import type { TeamTaskWithKanban } from '@shared/types';
 
 // ─── Tool name/preview formatters ───────────────────────────────────────────
 
@@ -37,7 +41,7 @@ function formatToolPreview(preview: string | undefined): string | undefined {
       );
     } catch {
       // Truncated JSON — extract first quoted value
-      const match = preview.match(/"(?:subject|name|label|path|query)":\s*"([^"]{1,60})"/);
+      const match = /"(?:subject|name|label|path|query)":\s*"([^"]{1,60})"/.exec(preview);
       if (match) return match[1];
     }
   }
@@ -100,6 +104,16 @@ export const GraphNodePopover = ({
   }
 
   if (node.kind === 'task') {
+    if (node.isOverflowStack || node.domainRef.kind === 'task_overflow') {
+      return (
+        <OverflowPopoverContent
+          node={node}
+          teamName={teamName}
+          onClose={onClose}
+          onOpenTaskDetail={onOpenTaskDetail}
+        />
+      );
+    }
     return (
       <GraphTaskCard
         node={node}
@@ -151,6 +165,18 @@ export const GraphNodePopover = ({
         {node.processRegisteredAt && (
           <div>At: {new Date(node.processRegisteredAt).toLocaleTimeString()}</div>
         )}
+        {node.exceptionLabel && (
+          <Badge
+            variant="outline"
+            className={`px-1.5 py-0 text-[10px] ${
+              node.exceptionTone === 'error'
+                ? 'border-red-500/30 text-red-400'
+                : 'border-amber-500/30 text-amber-400'
+            }`}
+          >
+            {node.exceptionLabel}
+          </Badge>
+        )}
       </div>
       {node.processUrl && (
         <a
@@ -162,6 +188,74 @@ export const GraphNodePopover = ({
           <ExternalLink size={12} /> Open URL
         </a>
       )}
+    </div>
+  );
+};
+
+const OverflowPopoverContent = ({
+  node,
+  teamName,
+  onClose,
+  onOpenTaskDetail,
+}: {
+  node: GraphNode;
+  teamName: string;
+  onClose: () => void;
+  onOpenTaskDetail?: (taskId: string) => void;
+}): React.JSX.Element => {
+  const teamData = useStore((state) => selectTeamDataForName(state, teamName));
+  const tasksById = new Map((teamData?.tasks ?? []).map((task) => [task.id, task]));
+  const hiddenTasks = (node.overflowTaskIds ?? [])
+    .map((taskId) => tasksById.get(taskId) ?? null)
+    .filter((task): task is TeamTaskWithKanban => task != null);
+
+  return (
+    <div className="min-w-[240px] max-w-[320px] rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3 shadow-xl">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-semibold text-[var(--color-text)]">Hidden tasks</div>
+        <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+          {node.overflowCount ?? hiddenTasks.length}
+        </Badge>
+      </div>
+      <div className="mt-2 max-h-[260px] space-y-1 overflow-y-auto pr-1">
+        {hiddenTasks.length === 0 ? (
+          <div className="text-xs text-[var(--color-text-muted)]">No hidden tasks available.</div>
+        ) : (
+          hiddenTasks.map((task) => {
+            const reviewer = resolveTaskReviewer(task, teamData?.kanbanState.tasks[task.id]);
+            return (
+              <button
+                key={task.id}
+                type="button"
+                className="flex w-full items-start justify-between gap-2 rounded border border-[var(--color-border)] bg-[var(--color-surface-secondary)] px-2 py-2 text-left transition-colors hover:border-[var(--color-border-emphasis)]"
+                onClick={() => {
+                  onOpenTaskDetail?.(task.id);
+                  onClose();
+                }}
+              >
+                <div className="min-w-0">
+                  <div className="font-mono text-[10px] text-[var(--color-text-muted)]">
+                    {task.displayId ?? `#${task.id.slice(0, 6)}`}
+                  </div>
+                  <div className="truncate text-xs text-[var(--color-text)]">{task.subject}</div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  {task.owner && (
+                    <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                      {task.owner}
+                    </Badge>
+                  )}
+                  {isTaskInReviewCycle(task) && (
+                    <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                      {reviewer ?? 'REV'}
+                    </Badge>
+                  )}
+                </div>
+              </button>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 };
@@ -259,6 +353,18 @@ const MemberPopoverContent = ({
             className="border-amber-500/30 px-1.5 py-0 text-[10px] text-amber-400"
           >
             {getSpawnStatusBadgeLabel(node.spawnStatus)}
+          </Badge>
+        )}
+        {node.exceptionLabel && (
+          <Badge
+            variant="outline"
+            className={`px-1.5 py-0 text-[10px] ${
+              node.exceptionTone === 'error'
+                ? 'border-red-500/30 text-red-400'
+                : 'border-amber-500/30 text-amber-400'
+            }`}
+          >
+            {node.exceptionLabel}
           </Badge>
         )}
       </div>

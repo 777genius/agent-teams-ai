@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { TeamGraphAdapter } from '@renderer/features/agent-graph/adapters/TeamGraphAdapter';
 
 import type { InboxMessage, TeamData, TeamTaskWithKanban } from '@shared/types/team';
+import type { GraphDataPort } from '@claude-teams/agent-graph';
 
 function createBaseTeamData(
   overrides?: Partial<TeamData> & {
@@ -51,6 +52,10 @@ function createBaseTeamData(
     isAlive: true,
     ...overrides,
   };
+}
+
+function findNode(graph: GraphDataPort, nodeId: string) {
+  return graph.nodes.find((node) => node.id === nodeId);
 }
 
 describe('TeamGraphAdapter particles', () => {
@@ -500,6 +505,215 @@ describe('TeamGraphAdapter particles', () => {
 
     const alice = graph.nodes.find((node) => node.id === 'member:my-team:alice');
     expect(alice?.state).toBe('idle');
+  });
+
+  it('refreshes lead state and exception metadata when lead activity changes without team-data changes', () => {
+    const adapter = TeamGraphAdapter.create();
+    const teamData = createBaseTeamData();
+
+    adapter.adapt(teamData, 'my-team', undefined, 'active');
+
+    const graph = adapter.adapt(
+      teamData,
+      'my-team',
+      undefined,
+      'offline',
+      undefined,
+      new Set(['team-lead'])
+    );
+
+    expect(findNode(graph, 'lead:my-team')).toMatchObject({
+      state: 'terminated',
+      pendingApproval: true,
+      exceptionTone: 'error',
+      exceptionLabel: 'offline',
+    });
+  });
+
+  it('treats literal lead approval sources as lead-node pending approvals', () => {
+    const adapter = TeamGraphAdapter.create();
+    const graph = adapter.adapt(
+      createBaseTeamData(),
+      'my-team',
+      undefined,
+      'active',
+      undefined,
+      new Set(['lead'])
+    );
+
+    expect(findNode(graph, 'lead:my-team')).toMatchObject({
+      pendingApproval: true,
+      exceptionTone: 'warning',
+      exceptionLabel: 'awaiting approval',
+    });
+  });
+
+  it('refreshes member exception state when spawn status changes without team-data changes', () => {
+    const adapter = TeamGraphAdapter.create();
+    const teamData = createBaseTeamData();
+
+    adapter.adapt(teamData, 'my-team');
+
+    const graph = adapter.adapt(teamData, 'my-team', {
+      alice: {
+        status: 'waiting',
+        launchState: 'starting',
+        updatedAt: '2026-04-08T20:00:00.000Z',
+      },
+    });
+
+    expect(findNode(graph, 'member:my-team:alice')).toMatchObject({
+      state: 'waiting',
+      spawnStatus: 'waiting',
+      exceptionTone: 'warning',
+      exceptionLabel: 'starting',
+    });
+  });
+
+  it('refreshes unread comment badges when comment read state changes without task changes', () => {
+    const adapter = TeamGraphAdapter.create();
+    const teamData = createBaseTeamData({
+      tasks: [
+        {
+          id: 'task-comments',
+          displayId: '#8',
+          subject: 'Review unread badge',
+          owner: 'alice',
+          status: 'in_progress',
+          comments: [
+            {
+              id: 'comment-1',
+              author: 'alice',
+              text: 'Need a quick read receipt here',
+              createdAt: '2026-03-28T19:00:02.000Z',
+              type: 'regular',
+            },
+          ],
+          reviewState: 'none',
+        } as TeamTaskWithKanban,
+      ],
+    });
+
+    const unreadGraph = adapter.adapt(
+      teamData,
+      'my-team',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {}
+    );
+    const readGraph = adapter.adapt(
+      teamData,
+      'my-team',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        'my-team/task-comments': {
+          readIds: ['comment-1'],
+          lastUpdated: Date.now(),
+        },
+      }
+    );
+
+    expect(findNode(unreadGraph, 'task:my-team:task-comments')?.unreadCommentCount).toBe(1);
+    expect(findNode(readGraph, 'task:my-team:task-comments')?.unreadCommentCount).toBeUndefined();
+  });
+
+  it('dedupes symmetric blocking links and ignores completed blockers for blocked state', () => {
+    const adapter = TeamGraphAdapter.create();
+    const inProgressGraph = adapter.adapt(
+      createBaseTeamData({
+        tasks: [
+          {
+            id: 'task-a',
+            displayId: '#1',
+            subject: 'Blocker',
+            owner: 'alice',
+            status: 'in_progress',
+            blocks: ['task-b'],
+            reviewState: 'none',
+          } as TeamTaskWithKanban,
+          {
+            id: 'task-b',
+            displayId: '#2',
+            subject: 'Blocked task',
+            owner: 'bob',
+            status: 'pending',
+            blockedBy: ['task-a'],
+            reviewState: 'none',
+          } as TeamTaskWithKanban,
+        ],
+      }),
+      'my-team'
+    );
+
+    const completedGraph = adapter.adapt(
+      createBaseTeamData({
+        tasks: [
+          {
+            id: 'task-a',
+            displayId: '#1',
+            subject: 'Blocker',
+            owner: 'alice',
+            status: 'completed',
+            blocks: ['task-b'],
+            reviewState: 'none',
+          } as TeamTaskWithKanban,
+          {
+            id: 'task-b',
+            displayId: '#2',
+            subject: 'Blocked task',
+            owner: 'bob',
+            status: 'pending',
+            blockedBy: ['task-a'],
+            reviewState: 'none',
+          } as TeamTaskWithKanban,
+        ],
+      }),
+      'my-team'
+    );
+
+    expect(inProgressGraph.edges.filter((edge) => edge.type === 'blocking')).toHaveLength(1);
+    expect(findNode(inProgressGraph, 'task:my-team:task-b')?.isBlocked).toBe(true);
+    expect(findNode(completedGraph, 'task:my-team:task-b')?.isBlocked).toBe(false);
+  });
+
+  it('adds compact review handoff metadata for active review tasks', () => {
+    const adapter = TeamGraphAdapter.create();
+    const graph = adapter.adapt(
+      createBaseTeamData({
+        tasks: [
+          {
+            id: 'task-review',
+            displayId: '#5',
+            subject: 'Review this change',
+            owner: 'alice',
+            reviewer: 'bob',
+            status: 'in_progress',
+            reviewState: 'review',
+            changePresence: 'has_changes',
+            kanbanColumn: 'review',
+          } as TeamTaskWithKanban,
+        ],
+      }),
+      'my-team'
+    );
+
+    expect(findNode(graph, 'task:my-team:task-review')).toMatchObject({
+      reviewerName: 'bob',
+      reviewMode: 'assigned',
+      changePresence: 'has_changes',
+      reviewState: 'review',
+    });
   });
 
   it('adds compact runtime labels for lead and members and refreshes when runtime changes', () => {

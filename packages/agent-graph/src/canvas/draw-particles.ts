@@ -27,8 +27,10 @@ export function drawParticles(
   edgeMap: Map<string, GraphEdge>,
   nodeMap: Map<string, GraphNode>,
   time: number,
+  focusEdgeIds?: ReadonlySet<string> | null,
 ): void {
   for (const p of particles) {
+    if (focusEdgeIds && !focusEdgeIds.has(p.edgeId)) continue;
     const edge = edgeMap.get(p.edgeId);
     if (!edge) continue;
 

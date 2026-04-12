@@ -78,6 +78,10 @@ export interface GraphNode {
     resultPreview?: string;
     source: 'runtime' | 'member_log' | 'inbox';
   }>;
+  /** Compact abnormal-state indicator */
+  exceptionTone?: 'warning' | 'error';
+  /** Short human-readable abnormal-state label */
+  exceptionLabel?: string;
 
   // ─── Task-specific ─────────────────────────────────────────────────────
   /** Short display ID (e.g., "#3") */
@@ -90,6 +94,14 @@ export interface GraphNode {
   taskStatus?: 'pending' | 'in_progress' | 'completed' | 'deleted';
   /** Review state overlay */
   reviewState?: 'none' | 'review' | 'needsFix' | 'approved';
+  /** Reviewer shown as a compact handoff chip for active review cycles */
+  reviewerName?: string | null;
+  /** Reviewer chip mode */
+  reviewMode?: 'assigned' | 'manual';
+  /** Reviewer color override for compact review chip */
+  reviewerColor?: string;
+  /** Cheap persisted change-presence state used only for active review chips */
+  changePresence?: 'has_changes' | 'no_changes' | 'unknown';
   /** Requires clarification indicator */
   needsClarification?: 'lead' | 'user' | null;
   /** Task is blocked by other tasks */
@@ -102,6 +114,12 @@ export interface GraphNode {
   totalCommentCount?: number;
   /** Unread comment count on this task */
   unreadCommentCount?: number;
+  /** Synthetic overflow stack node instead of hidden task tails */
+  isOverflowStack?: boolean;
+  /** Number of hidden tasks behind this overflow stack */
+  overflowCount?: number;
+  /** Raw task IDs hidden behind this overflow stack */
+  overflowTaskIds?: string[];
 
   // ─── Process-specific ──────────────────────────────────────────────────
   /** Clickable URL for process */
@@ -163,5 +181,11 @@ export type GraphDomainRef =
   | { kind: 'lead'; teamName: string; memberName: string }
   | { kind: 'member'; teamName: string; memberName: string }
   | { kind: 'task'; teamName: string; taskId: string }
+  | {
+      kind: 'task_overflow';
+      teamName: string;
+      ownerMemberName?: string | null;
+      columnKey: string;
+    }
   | { kind: 'process'; teamName: string; processId: string }
   | { kind: 'crossteam'; teamName: string; externalTeamName: string };

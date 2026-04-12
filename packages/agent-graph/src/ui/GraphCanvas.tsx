@@ -30,6 +30,8 @@ export interface GraphDrawState {
   camera: CameraTransform;
   selectedNodeId: string | null;
   hoveredNodeId: string | null;
+  focusNodeIds: ReadonlySet<string> | null;
+  focusEdgeIds: ReadonlySet<string> | null;
 }
 
 export interface GraphCanvasHandle {
@@ -199,20 +201,48 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           visibleEdges.push(e);
         }
       }
-      drawEdges(ctx, visibleEdges, nodeMap, state.time, activeParticleEdges);
+      drawEdges(ctx, visibleEdges, nodeMap, state.time, activeParticleEdges, state.focusEdgeIds);
 
       // 2b. Particles (cap at 100 for performance)
       const cappedParticles = state.particles.length > 100
         ? state.particles.slice(-100)
         : state.particles;
-      drawParticles(ctx, cappedParticles, edgeMap, nodeMap, state.time);
+      drawParticles(ctx, cappedParticles, edgeMap, nodeMap, state.time, state.focusEdgeIds);
 
       // 2c. Visible nodes only (back to front: process → task → member/lead)
-      drawProcesses(ctx, visibleNodes, state.time, state.selectedNodeId, state.hoveredNodeId);
-      drawCrossTeamNodes(ctx, visibleNodes, state.time, state.selectedNodeId, state.hoveredNodeId);
+      drawProcesses(
+        ctx,
+        visibleNodes,
+        state.time,
+        state.selectedNodeId,
+        state.hoveredNodeId,
+        state.focusNodeIds
+      );
+      drawCrossTeamNodes(
+        ctx,
+        visibleNodes,
+        state.time,
+        state.selectedNodeId,
+        state.hoveredNodeId,
+        state.focusNodeIds
+      );
       drawColumnHeaders(ctx, KanbanLayoutEngine.zones);
-      drawTasks(ctx, visibleNodes, state.time, state.selectedNodeId, state.hoveredNodeId);
-      drawAgents(ctx, visibleNodes, state.time, state.selectedNodeId, state.hoveredNodeId);
+      drawTasks(
+        ctx,
+        visibleNodes,
+        state.time,
+        state.selectedNodeId,
+        state.hoveredNodeId,
+        state.focusNodeIds
+      );
+      drawAgents(
+        ctx,
+        visibleNodes,
+        state.time,
+        state.selectedNodeId,
+        state.hoveredNodeId,
+        state.focusNodeIds
+      );
 
       // 2d. Effects
       drawEffects(ctx, state.effects);

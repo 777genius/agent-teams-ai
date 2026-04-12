@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
 
 import {
+  __resetTeamSliceModuleStateForTests,
   createTeamSlice,
   getCurrentProvisioningProgressForTeam,
 } from '../../../src/renderer/store/slices/teamSlice';
@@ -13,6 +14,9 @@ const hoisted = vi.hoisted(() => ({
   getProvisioningStatus: vi.fn(),
   getMemberSpawnStatuses: vi.fn(),
   cancelProvisioning: vi.fn(),
+  deleteTeam: vi.fn(),
+  restoreTeam: vi.fn(),
+  permanentlyDeleteTeam: vi.fn(),
   sendMessage: vi.fn(),
   requestReview: vi.fn(),
   updateKanban: vi.fn(),
@@ -29,6 +33,9 @@ vi.mock('@renderer/api', () => ({
       getProvisioningStatus: hoisted.getProvisioningStatus,
       getMemberSpawnStatuses: hoisted.getMemberSpawnStatuses,
       cancelProvisioning: hoisted.cancelProvisioning,
+      deleteTeam: hoisted.deleteTeam,
+      restoreTeam: hoisted.restoreTeam,
+      permanentlyDeleteTeam: hoisted.permanentlyDeleteTeam,
       sendMessage: hoisted.sendMessage,
       requestReview: hoisted.requestReview,
       updateKanban: hoisted.updateKanban,
@@ -74,6 +81,8 @@ function createSliceStore() {
     getAllPaneTabs: vi.fn(() => []),
     warmTaskChangeSummaries: vi.fn(async () => undefined),
     invalidateTaskChangePresence: vi.fn(),
+    fetchTeams: vi.fn(async () => undefined),
+    fetchAllTasks: vi.fn(async () => undefined),
   }));
 }
 
@@ -118,6 +127,7 @@ function createMemberSpawnSnapshot(overrides: Record<string, unknown> = {}) {
 describe('teamSlice actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    __resetTeamSliceModuleStateForTests();
     hoisted.list.mockResolvedValue([]);
     hoisted.getData.mockResolvedValue({
       teamName: 'my-team',
@@ -143,6 +153,9 @@ describe('teamSlice actions', () => {
     });
     hoisted.getMemberSpawnStatuses.mockResolvedValue({ statuses: {}, runId: null });
     hoisted.cancelProvisioning.mockResolvedValue(undefined);
+    hoisted.deleteTeam.mockResolvedValue(undefined);
+    hoisted.restoreTeam.mockResolvedValue(undefined);
+    hoisted.permanentlyDeleteTeam.mockResolvedValue(undefined);
   });
 
   it('maps inbox verify failure to user-friendly text', async () => {
@@ -207,6 +220,104 @@ describe('teamSlice actions', () => {
     expect(store.getState().warmTaskChangeSummaries).not.toHaveBeenCalled();
   });
 
+  it('removes non-selected team cache entries on permanent delete', async () => {
+    const store = createSliceStore();
+    store.setState({
+      selectedTeamName: 'other-team',
+      selectedTeamData: {
+        teamName: 'other-team',
+        config: { name: 'Other Team' },
+        tasks: [],
+        members: [],
+        messages: [],
+        kanbanState: { teamName: 'other-team', reviewers: [], tasks: {} },
+        processes: [],
+      },
+      teamDataCacheByName: {
+        'my-team': {
+          teamName: 'my-team',
+          config: { name: 'My Team' },
+          tasks: [],
+          members: [],
+          messages: [],
+          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+          processes: [],
+        },
+        'other-team': {
+          teamName: 'other-team',
+          config: { name: 'Other Team' },
+          tasks: [],
+          members: [],
+          messages: [],
+          kanbanState: { teamName: 'other-team', reviewers: [], tasks: {} },
+          processes: [],
+        },
+      },
+    });
+
+    await store.getState().permanentlyDeleteTeam('my-team');
+
+    expect(hoisted.permanentlyDeleteTeam).toHaveBeenCalledWith('my-team');
+    expect(store.getState().teamDataCacheByName['my-team']).toBeUndefined();
+    expect(store.getState().teamDataCacheByName['other-team']).toBeDefined();
+  });
+
+  it('clears selected team state and cache on soft delete', async () => {
+    const store = createSliceStore();
+    store.setState({
+      selectedTeamName: 'my-team',
+      selectedTeamData: {
+        teamName: 'my-team',
+        config: { name: 'My Team' },
+        tasks: [],
+        members: [],
+        messages: [],
+        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+        processes: [],
+      },
+      teamDataCacheByName: {
+        'my-team': {
+          teamName: 'my-team',
+          config: { name: 'My Team' },
+          tasks: [],
+          members: [],
+          messages: [],
+          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+          processes: [],
+        },
+      },
+    });
+
+    await store.getState().deleteTeam('my-team');
+
+    expect(hoisted.deleteTeam).toHaveBeenCalledWith('my-team');
+    expect(store.getState().selectedTeamName).toBeNull();
+    expect(store.getState().selectedTeamData).toBeNull();
+    expect(store.getState().teamDataCacheByName['my-team']).toBeUndefined();
+  });
+
+  it('drops stale cache on restore so the next open refetches fresh data', async () => {
+    const store = createSliceStore();
+    store.setState({
+      teamDataCacheByName: {
+        'my-team': {
+          teamName: 'my-team',
+          config: { name: 'My Team' },
+          tasks: [],
+          members: [],
+          messages: [],
+          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+          processes: [],
+        },
+      },
+    });
+
+    await store.getState().restoreTeam('my-team');
+
+    expect(hoisted.restoreTeam).toHaveBeenCalledWith('my-team');
+    expect(store.getState().teamDataCacheByName['my-team']).toBeUndefined();
+  });
+
   describe('refreshTeamData provisioning safety', () => {
     it('does not set fatal error on TEAM_PROVISIONING', async () => {
       const store = createSliceStore();
@@ -259,6 +370,74 @@ describe('teamSlice actions', () => {
       // Should NOT replace data with error — preserve existing data
       expect(store.getState().selectedTeamError).toBeNull();
       expect(store.getState().selectedTeamData).toEqual(existingData);
+    });
+
+    it('clears non-selected cache on TEAM_DRAFT refresh failure', async () => {
+      const store = createSliceStore();
+      store.setState({
+        selectedTeamName: 'other-team',
+        selectedTeamData: {
+          teamName: 'other-team',
+          config: { name: 'Other Team' },
+          tasks: [],
+          members: [],
+          messages: [],
+          kanbanState: { teamName: 'other-team', reviewers: [], tasks: {} },
+          processes: [],
+        },
+        teamDataCacheByName: {
+          'my-team': {
+            teamName: 'my-team',
+            config: { name: 'My Team' },
+            tasks: [],
+            members: [],
+            messages: [],
+            kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+            processes: [],
+          },
+        },
+      });
+
+      hoisted.getData.mockRejectedValue(new Error('TEAM_DRAFT'));
+
+      await store.getState().refreshTeamData('my-team');
+
+      expect(store.getState().teamDataCacheByName['my-team']).toBeUndefined();
+      expect(store.getState().selectedTeamData?.teamName).toBe('other-team');
+    });
+
+    it('clears non-selected cache when the team no longer exists', async () => {
+      const store = createSliceStore();
+      store.setState({
+        selectedTeamName: 'other-team',
+        selectedTeamData: {
+          teamName: 'other-team',
+          config: { name: 'Other Team' },
+          tasks: [],
+          members: [],
+          messages: [],
+          kanbanState: { teamName: 'other-team', reviewers: [], tasks: {} },
+          processes: [],
+        },
+        teamDataCacheByName: {
+          'my-team': {
+            teamName: 'my-team',
+            config: { name: 'My Team' },
+            tasks: [],
+            members: [],
+            messages: [],
+            kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+            processes: [],
+          },
+        },
+      });
+
+      hoisted.getData.mockRejectedValue(new Error('Team not found: my-team'));
+
+      await store.getState().refreshTeamData('my-team');
+
+      expect(store.getState().teamDataCacheByName['my-team']).toBeUndefined();
+      expect(store.getState().selectedTeamData?.teamName).toBe('other-team');
     });
 
     it('clears stale selectedTeamError when TEAM_PROVISIONING with existing data', async () => {
@@ -510,6 +689,97 @@ describe('teamSlice actions', () => {
       expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
       expect(Object.values(store.getState().provisioningRuns)).toHaveLength(0);
       expect(store.getState().provisioningErrorByTeam['my-team']).toBe('create failed');
+    });
+
+    it('hydrates visible non-selected graph tabs when config becomes ready', () => {
+      const store = createSliceStore();
+      store.setState({
+        selectedTeamName: 'other-team',
+        selectedTeamData: {
+          teamName: 'other-team',
+          config: { name: 'Other Team' },
+          tasks: [],
+          members: [],
+          messages: [],
+          kanbanState: { teamName: 'other-team', reviewers: [], tasks: {} },
+          processes: [],
+        },
+        paneLayout: {
+          focusedPaneId: 'pane-default',
+          panes: [
+            {
+              id: 'pane-default',
+              widthFraction: 1,
+              tabs: [{ id: 'graph-1', type: 'graph', teamName: 'my-team', label: 'My Team' }],
+              activeTabId: 'graph-1',
+            },
+          ],
+        },
+        currentProvisioningRunIdByTeam: {
+          'my-team': 'run-current',
+        },
+      });
+
+      const refreshTeamDataSpy = vi.spyOn(store.getState(), 'refreshTeamData');
+      const selectTeamSpy = vi.spyOn(store.getState(), 'selectTeam');
+
+      store.getState().onProvisioningProgress({
+        runId: 'run-current',
+        teamName: 'my-team',
+        state: 'assembling',
+        configReady: true,
+        message: 'Config written',
+        startedAt: '2026-03-12T10:00:00.000Z',
+        updatedAt: '2026-03-12T10:00:01.000Z',
+      });
+
+      expect(refreshTeamDataSpy).toHaveBeenCalledWith('my-team', { withDedup: true });
+      expect(selectTeamSpy).not.toHaveBeenCalled();
+    });
+
+    it('refreshes visible non-selected graph tabs when the canonical run reaches ready', () => {
+      const store = createSliceStore();
+      store.setState({
+        selectedTeamName: 'other-team',
+        selectedTeamData: {
+          teamName: 'other-team',
+          config: { name: 'Other Team' },
+          tasks: [],
+          members: [],
+          messages: [],
+          kanbanState: { teamName: 'other-team', reviewers: [], tasks: {} },
+          processes: [],
+        },
+        paneLayout: {
+          focusedPaneId: 'pane-default',
+          panes: [
+            {
+              id: 'pane-default',
+              widthFraction: 1,
+              tabs: [{ id: 'graph-1', type: 'graph', teamName: 'my-team', label: 'My Team' }],
+              activeTabId: 'graph-1',
+            },
+          ],
+        },
+        currentProvisioningRunIdByTeam: {
+          'my-team': 'run-current',
+        },
+      });
+
+      const refreshTeamDataSpy = vi.spyOn(store.getState(), 'refreshTeamData');
+      const selectTeamSpy = vi.spyOn(store.getState(), 'selectTeam');
+
+      store.getState().onProvisioningProgress({
+        runId: 'run-current',
+        teamName: 'my-team',
+        state: 'ready',
+        message: 'Ready',
+        startedAt: '2026-03-12T10:00:00.000Z',
+        updatedAt: '2026-03-12T10:00:02.000Z',
+      });
+
+      expect(refreshTeamDataSpy).toHaveBeenCalledWith('my-team', { withDedup: true });
+      expect(selectTeamSpy).not.toHaveBeenCalled();
     });
 
     it('keeps the current run pinned when stale progress from another run arrives', () => {

@@ -74,6 +74,7 @@ export function drawEdges(
   nodeMap: Map<string, GraphNode>,
   _time: number,
   hasActiveParticles: Set<string>,
+  focusEdgeIds?: ReadonlySet<string> | null,
 ): void {
   for (const edge of edges) {
     const source = nodeMap.get(edge.source);
@@ -87,13 +88,14 @@ export function drawEdges(
     const alpha = isActive
       ? BEAM.activeAlpha + 0.2 * Math.sin(_time * 6)
       : BEAM.idleAlpha;
+    const focusAlpha = focusEdgeIds && !focusEdgeIds.has(edge.id) ? 0.1 : 1;
 
-    if (alpha < MIN_VISIBLE_OPACITY) continue;
+    if (alpha * focusAlpha < MIN_VISIBLE_OPACITY) continue;
 
     const cp = computeControlPoints(source.x, source.y, target.x, target.y);
 
     ctx.save();
-    ctx.globalAlpha = alpha;
+    ctx.globalAlpha = alpha * focusAlpha;
 
     // Subtle glow pass when edge has active particles
     if (isActive) {

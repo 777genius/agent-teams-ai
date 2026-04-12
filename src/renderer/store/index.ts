@@ -37,6 +37,7 @@ import {
   createTeamSlice,
   getLastResolvedTeamDataRefreshAt,
   isTeamDataRefreshPending,
+  selectTeamDataForName,
 } from './slices/teamSlice';
 import { createUISlice } from './slices/uiSlice';
 import { createUpdateSlice } from './slices/updateSlice';
@@ -397,13 +398,8 @@ export function initializeNotificationListeners(): () => void {
     }
 
     const state = useStore.getState();
-    const selectedTeamName = state.selectedTeamName;
-    const selectedTeamData = state.selectedTeamData;
-    if (
-      !selectedTeamName ||
-      selectedTeamData?.teamName !== selectedTeamName ||
-      !isTeamVisibleInAnyPane(selectedTeamName)
-    ) {
+    const visibleTeamNames = Array.from(getVisibleTeamNamesInAnyPane(state));
+    if (visibleTeamNames.length === 0) {
       return;
     }
 
@@ -417,44 +413,58 @@ export function initializeNotificationListeners(): () => void {
       }
     }
 
-    const candidateTasks = selectedTeamData.tasks.filter((task) => {
-      if (task.status !== 'in_progress') {
-        return false;
-      }
-      return canDisplayTaskChangesForOptions(buildTaskChangeRequestOptions(task));
-    });
-    if (candidateTasks.length === 0) {
-      inProgressChangePresenceCursorByTeam.delete(selectedTeamName);
-      return;
-    }
-
     inProgressChangePresencePollInFlight = true;
     try {
-      const cursor = inProgressChangePresenceCursorByTeam.get(selectedTeamName) ?? 0;
-      const unknownTasks = candidateTasks.filter((task) => task.changePresence === 'unknown');
-      const sourceTasks = unknownTasks.length > 0 ? unknownTasks : candidateTasks;
-      const nextTask = sourceTasks[cursor % sourceTasks.length];
+      for (const teamName of visibleTeamNames) {
+        const teamData = selectTeamDataForName(state, teamName);
+        if (teamData?.teamName !== teamName) {
+          if (!isTeamDataRefreshPending(teamName)) {
+            void state.refreshTeamData(teamName, { withDedup: true });
+          }
+          continue;
+        }
 
-      inProgressChangePresenceCursorByTeam.set(selectedTeamName, (cursor + 1) % sourceTasks.length);
+        const candidateTasks = teamData.tasks.filter((task) => {
+          if (task.status !== 'in_progress') {
+            return false;
+          }
+          return canDisplayTaskChangesForOptions(buildTaskChangeRequestOptions(task));
+        });
+        if (candidateTasks.length === 0) {
+          inProgressChangePresenceCursorByTeam.delete(teamName);
+          continue;
+        }
 
-      const current = useStore.getState();
-      if (
-        current.selectedTeamName !== selectedTeamName ||
-        current.selectedTeamData?.teamName !== selectedTeamName ||
-        !isTeamVisibleInAnyPane(selectedTeamName)
-      ) {
-        return;
+        const cursor = inProgressChangePresenceCursorByTeam.get(teamName) ?? 0;
+        const unknownTasks = candidateTasks.filter((task) => task.changePresence === 'unknown');
+        const sourceTasks = unknownTasks.length > 0 ? unknownTasks : candidateTasks;
+        const nextTask = sourceTasks[cursor % sourceTasks.length];
+
+        inProgressChangePresenceCursorByTeam.set(teamName, (cursor + 1) % sourceTasks.length);
+
+        const current = useStore.getState();
+        if (!isTeamVisibleInAnyPane(teamName)) {
+          continue;
+        }
+
+        const currentTeamData = selectTeamDataForName(current, teamName);
+        if (currentTeamData?.teamName !== teamName) {
+          if (!isTeamDataRefreshPending(teamName)) {
+            void current.refreshTeamData(teamName, { withDedup: true });
+          }
+          continue;
+        }
+
+        const currentTask = currentTeamData.tasks.find((task) => task.id === nextTask.id);
+        if (currentTask?.status !== 'in_progress') {
+          continue;
+        }
+
+        const requestOptions = buildTaskChangeRequestOptions(currentTask);
+        const cacheKey = buildTaskChangePresenceKey(teamName, currentTask.id, requestOptions);
+        current.invalidateTaskChangePresence([cacheKey]);
+        await current.checkTaskHasChanges(teamName, currentTask.id, requestOptions);
       }
-
-      const currentTask = current.selectedTeamData.tasks.find((task) => task.id === nextTask.id);
-      if (currentTask?.status !== 'in_progress') {
-        return;
-      }
-
-      const requestOptions = buildTaskChangeRequestOptions(currentTask);
-      const cacheKey = buildTaskChangePresenceKey(selectedTeamName, currentTask.id, requestOptions);
-      current.invalidateTaskChangePresence([cacheKey]);
-      await current.checkTaskHasChanges(selectedTeamName, currentTask.id, requestOptions);
     } catch {
       // Best-effort polling for in-progress tasks only.
     } finally {
@@ -557,39 +567,39 @@ export function initializeNotificationListeners(): () => void {
     );
   };
 
-  const isTeamVisibleInAnyPane = (teamName: string): boolean => {
-    const { paneLayout } = useStore.getState();
-    return paneLayout.panes.some((pane) => {
-      if (!pane.activeTabId) return false;
-      return pane.tabs.some(
-        (tab) => tab.id === pane.activeTabId && tab.type === 'team' && tab.teamName === teamName
-      );
-    });
-  };
-
-  const getTrackedChangePresenceTeams = (): Set<string> => {
-    const { selectedTeamName, selectedTeamData } = useStore.getState();
-    if (
-      !selectedTeamName ||
-      selectedTeamData?.teamName !== selectedTeamName ||
-      !isTeamVisibleInAnyPane(selectedTeamName)
-    ) {
-      return new Set<string>();
-    }
-    return new Set([selectedTeamName]);
-  };
-
-  const getTrackedToolActivityTeams = (): Set<string> => {
-    const { paneLayout } = useStore.getState();
-    const tracked = new Set<string>();
+  const getVisibleTeamNamesInAnyPane = (state = useStore.getState()): Set<string> => {
+    const { paneLayout } = state;
+    const visibleTeamNames = new Set<string>();
     for (const pane of paneLayout.panes) {
       if (!pane.activeTabId) continue;
       const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
-      if (activeTab?.type === 'team' && activeTab.teamName) {
-        tracked.add(activeTab.teamName);
+      if (
+        (activeTab?.type === 'team' || activeTab?.type === 'graph') &&
+        activeTab.teamName != null
+      ) {
+        visibleTeamNames.add(activeTab.teamName);
+      }
+    }
+    return visibleTeamNames;
+  };
+
+  const isTeamVisibleInAnyPane = (teamName: string): boolean => {
+    return getVisibleTeamNamesInAnyPane().has(teamName);
+  };
+
+  const getTrackedChangePresenceTeams = (): Set<string> => {
+    const state = useStore.getState();
+    const tracked = new Set<string>();
+    for (const teamName of getVisibleTeamNamesInAnyPane(state)) {
+      if (selectTeamDataForName(state, teamName)) {
+        tracked.add(teamName);
       }
     }
     return tracked;
+  };
+
+  const getTrackedToolActivityTeams = (): Set<string> => {
+    return getVisibleTeamNamesInAnyPane();
   };
 
   const noteRelevantTeamActivity = (teamName: string, timestamp = Date.now()): void => {
@@ -606,15 +616,11 @@ export function initializeNotificationListeners(): () => void {
     }
 
     const activeTab = focusedPane.tabs.find((tab) => tab.id === focusedPane.activeTabId);
-    if (activeTab?.type !== 'team' || !activeTab.teamName) {
+    if ((activeTab?.type !== 'team' && activeTab?.type !== 'graph') || !activeTab.teamName) {
       return null;
     }
 
-    if (state.selectedTeamName !== activeTab.teamName) {
-      return null;
-    }
-
-    if (state.selectedTeamData?.teamName !== activeTab.teamName) {
+    if (!selectTeamDataForName(state, activeTab.teamName)) {
       return null;
     }
 
@@ -632,7 +638,7 @@ export function initializeNotificationListeners(): () => void {
       return;
     }
 
-    if (current.selectedTeamLoading) {
+    if (current.selectedTeamName === teamName && current.selectedTeamLoading) {
       return;
     }
 
@@ -695,7 +701,8 @@ export function initializeNotificationListeners(): () => void {
       if (
         state.paneLayout === prevState.paneLayout &&
         state.selectedTeamName === prevState.selectedTeamName &&
-        state.selectedTeamData === prevState.selectedTeamData
+        state.selectedTeamData === prevState.selectedTeamData &&
+        state.teamDataCacheByName === prevState.teamDataCacheByName
       ) {
         return;
       }
@@ -916,6 +923,17 @@ export function initializeNotificationListeners(): () => void {
               [event.teamName]: nextActivity,
             },
           };
+
+          const cachedTeamData = prev.teamDataCacheByName[event.teamName];
+          if (cachedTeamData) {
+            nextState.teamDataCacheByName = {
+              ...prev.teamDataCacheByName,
+              [event.teamName]: {
+                ...cachedTeamData,
+                isAlive: nextActivity !== 'offline',
+              },
+            };
+          }
 
           // Keep TeamDetailView in sync: it historically relied on selectedTeamData.isAlive,
           // which isn't refreshed for lead-activity events.
@@ -1140,7 +1158,7 @@ export function initializeNotificationListeners(): () => void {
         const timer = setTimeout(() => {
           teamPresenceRefreshTimers.delete(event.teamName);
           const current = useStore.getState();
-          void current.refreshSelectedTeamChangePresence(event.teamName);
+          void current.refreshTeamChangePresence(event.teamName);
         }, TEAM_PRESENCE_REFRESH_THROTTLE_MS);
         teamPresenceRefreshTimers.set(event.teamName, timer);
         return;

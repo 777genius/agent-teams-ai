@@ -10,7 +10,7 @@
  * ALL animation state (positions, particles, effects, time) lives in refs.
  */
 
-import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 import type { GraphDataPort } from '../ports/GraphDataPort';
 import type { GraphEventPort } from '../ports/GraphEventPort';
@@ -19,6 +19,7 @@ import type { GraphNode } from '../ports/types';
 import { GraphCanvas, type GraphCanvasHandle, type GraphDrawState } from './GraphCanvas';
 import { GraphControls, type GraphFilterState } from './GraphControls';
 import { GraphOverlay } from './GraphOverlay';
+import { buildFocusState } from './buildFocusState';
 import { useGraphSimulation } from '../hooks/useGraphSimulation';
 import { useGraphCamera } from '../hooks/useGraphCamera';
 import { useGraphInteraction } from '../hooks/useGraphInteraction';
@@ -114,6 +115,10 @@ export function GraphView({
 
   // ─── UNIFIED RAF LOOP: tick simulation + draw canvas ────────────────────
   const idleFrameSkip = useRef(0);
+  const focusState = useMemo(
+    () => buildFocusState(selectedNodeId, data.nodes, data.edges),
+    [selectedNodeId, data.edges, data.nodes]
+  );
 
   const animate = useCallback(() => {
     if (!runningRef.current) return;
@@ -154,11 +159,13 @@ export function GraphView({
       camera: cameraRef.current.transformRef.current,
       selectedNodeId: selectedNodeIdRef.current,
       hoveredNodeId: interaction.hoveredNodeId.current,
+      focusNodeIds: focusState.focusNodeIds,
+      focusEdgeIds: focusState.focusEdgeIds,
     });
 
     rafRef.current = requestAnimationFrame(animate);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- all data read from .current refs
-  }, []);
+  }, [focusState.focusEdgeIds, focusState.focusNodeIds, interaction.hoveredNodeId]);
 
   // Start/stop RAF
   useEffect(() => {

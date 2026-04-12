@@ -24,11 +24,12 @@ export function drawAgents(
   nodes: GraphNode[],
   time: number,
   selectedId: string | null,
-  hoveredId: string | null
+  hoveredId: string | null,
+  focusNodeIds?: ReadonlySet<string> | null
 ): void {
   for (const node of nodes) {
     if (node.kind !== 'member' && node.kind !== 'lead') continue;
-    const opacity = getNodeOpacity(node);
+    const opacity = getNodeOpacity(node) * getFocusOpacity(node.id, focusNodeIds);
     if (opacity < MIN_VISIBLE_OPACITY) continue;
 
     const x = node.x ?? 0;
@@ -95,6 +96,10 @@ export function drawAgents(
       drawToolCard(ctx, x, y, r, node.activeTool, time);
     }
 
+    if (node.exceptionTone) {
+      drawExceptionPip(ctx, x, y, r, node.exceptionTone);
+    }
+
     // Name + role label (single line: "jack · developer")
     const labelText = node.role ? `${node.label} · ${node.role}` : node.label;
     drawLabel(ctx, x, y, r, labelText, color, node.runtimeLabel);
@@ -123,7 +128,8 @@ export function drawCrossTeamNodes(
   nodes: GraphNode[],
   time: number,
   selectedId: string | null,
-  hoveredId: string | null
+  hoveredId: string | null,
+  focusNodeIds?: ReadonlySet<string> | null
 ): void {
   for (const node of nodes) {
     if (node.kind !== 'crossteam') continue;
@@ -136,7 +142,7 @@ export function drawCrossTeamNodes(
     const isHovered = node.id === hoveredId;
 
     ctx.save();
-    ctx.globalAlpha = isHovered ? 0.7 : 0.5;
+    ctx.globalAlpha = (isHovered ? 0.7 : 0.5) * getFocusOpacity(node.id, focusNodeIds);
 
     // Subtle glow
     const glowR = r + AGENT_DRAW.glowPadding;
@@ -186,6 +192,35 @@ function getNodeOpacity(node: GraphNode): number {
   if (node.spawnStatus === 'waiting') return 0.7;
   if (node.spawnStatus === 'offline') return 0;
   return 1;
+}
+
+function getFocusOpacity(
+  nodeId: string,
+  focusNodeIds?: ReadonlySet<string> | null
+): number {
+  return focusNodeIds && !focusNodeIds.has(nodeId) ? 0.25 : 1;
+}
+
+function drawExceptionPip(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  tone: NonNullable<GraphNode['exceptionTone']>
+): void {
+  const pipX = x + r * 0.58;
+  const pipY = y - r * 0.58;
+  const pipColor = tone === 'error' ? '#ef4444' : '#f59e0b';
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(pipX, pipY, 4.5, 0, Math.PI * 2);
+  ctx.fillStyle = pipColor;
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#050510';
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawDepthShadow(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {

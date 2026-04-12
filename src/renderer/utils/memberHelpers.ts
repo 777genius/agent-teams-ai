@@ -347,7 +347,7 @@ export function getMemberRuntimeAdvisoryLabel(
   providerId?: TeamProviderId,
   nowMs = Date.now()
 ): string | null {
-  if (!advisory || advisory.kind !== 'sdk_retrying') {
+  if (advisory?.kind !== 'sdk_retrying') {
     return null;
   }
   const baseLabel = formatRuntimeAdvisoryBaseLabel(advisory, providerId);
@@ -366,7 +366,7 @@ export function getMemberRuntimeAdvisoryTitle(
   advisory: MemberRuntimeAdvisory | undefined,
   providerId?: TeamProviderId
 ): string | undefined {
-  if (!advisory || advisory.kind !== 'sdk_retrying') {
+  if (advisory?.kind !== 'sdk_retrying') {
     return undefined;
   }
   return formatRuntimeAdvisoryTitle(advisory, providerId);

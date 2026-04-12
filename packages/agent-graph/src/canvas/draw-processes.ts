@@ -17,6 +17,7 @@ export function drawProcesses(
   time: number,
   selectedId: string | null,
   hoveredId: string | null,
+  focusNodeIds?: ReadonlySet<string> | null,
 ): void {
   for (const node of nodes) {
     if (node.kind !== 'process') continue;
@@ -26,9 +27,10 @@ export function drawProcesses(
     const r = NODE.radiusProcess;
     const isSelected = node.id === selectedId;
     const isHovered = node.id === hoveredId;
+    const focusOpacity = focusNodeIds && !focusNodeIds.has(node.id) ? 0.25 : 1;
 
     ctx.save();
-    ctx.globalAlpha = 0.8;
+    ctx.globalAlpha = 0.8 * focusOpacity;
 
     // Glow — use cached sprite instead of createRadialGradient per frame
     const procColor = node.color ?? COLORS.tool_calling;
