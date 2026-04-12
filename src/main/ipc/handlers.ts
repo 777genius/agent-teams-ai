@@ -90,6 +90,10 @@ import { registerWindowHandlers, removeWindowHandlers } from './window';
 
 import type {
   BranchStatusService,
+  BoardTaskActivityService,
+  BoardTaskLogStreamService,
+  BoardTaskExactLogDetailService,
+  BoardTaskExactLogsService,
   ChangeExtractorService,
   CliInstallerService,
   FileContentResolver,
@@ -130,6 +134,10 @@ export function initializeIpcHandlers(
   teamProvisioningService: TeamProvisioningService,
   teamMemberLogsFinder: TeamMemberLogsFinder,
   memberStatsComputer: MemberStatsComputer,
+  boardTaskActivityService: BoardTaskActivityService,
+  boardTaskLogStreamService: BoardTaskLogStreamService,
+  boardTaskExactLogsService: BoardTaskExactLogsService,
+  boardTaskExactLogDetailService: BoardTaskExactLogDetailService,
   teammateToolTracker: TeammateToolTracker | undefined,
   branchStatusService: BranchStatusService | undefined,
   contextCallbacks: {
@@ -174,7 +182,11 @@ export function initializeIpcHandlers(
     memberStatsComputer,
     teamBackupService,
     teammateToolTracker,
-    branchStatusService
+    branchStatusService,
+    boardTaskActivityService,
+    boardTaskLogStreamService,
+    boardTaskExactLogsService,
+    boardTaskExactLogDetailService
   );
   initializeConfigHandlers({
     onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,

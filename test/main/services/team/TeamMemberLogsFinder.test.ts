@@ -867,6 +867,34 @@ describe('TeamMemberLogsFinder', () => {
     await expect(finder.hasTaskUpdateMarker(noisePath, 'task-42')).resolves.toBe(false);
   });
 
+  it('detects fully-qualified agent-teams task markers in JSONL', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-markers-'));
+    const qualifiedPath = path.join(tmpDir, 'qualified.jsonl');
+
+    await fs.writeFile(
+      qualifiedPath,
+      JSON.stringify({
+        timestamp: '2026-01-01T00:00:00.000Z',
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              name: 'mcp__agent-teams__task_start',
+              input: { teamName: 'demo', taskId: 'task-42' },
+            },
+          ],
+        },
+      }) + '\n',
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+
+    await expect(finder.hasTaskUpdateMarker(qualifiedPath, 'task-42')).resolves.toBe(true);
+  });
+
   it('findLogFileRefsForTask returns correct refs for a task', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-refs-'));
     setClaudeBasePathOverride(tmpDir);

@@ -9,7 +9,7 @@ import {
 import { CollapsibleTeamSection } from '@renderer/components/team/CollapsibleTeamSection';
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
-import { MemberLogsTab } from '@renderer/components/team/members/MemberLogsTab';
+import { TaskLogsPanel } from '@renderer/components/team/taskLogs/TaskLogsPanel';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -1256,29 +1256,8 @@ export const TaskDetailDialog = ({
             {variant === 'team' ? (
               <CollapsibleTeamSection
                 key={`task-logs:${currentTask.id}`}
-                title="Execution Logs"
+                title="Task Logs"
                 icon={<ScrollText size={14} />}
-                headerExtra={
-                  logsRefreshing || executionPreviewOnline ? (
-                    <span className="flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
-                      {executionPreviewOnline ? (
-                        <span
-                          className="pointer-events-none relative inline-flex size-2 shrink-0"
-                          title="Online"
-                        >
-                          <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-50" />
-                          <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
-                        </span>
-                      ) : null}
-                      {logsRefreshing ? (
-                        <span className="flex items-center gap-1">
-                          <Loader2 size={10} className="animate-spin" />
-                          Updating...
-                        </span>
-                      ) : null}
-                    </span>
-                  ) : null
-                }
                 contentClassName="pl-2.5 overflow-visible"
                 headerClassName="-mx-6 w-[calc(100%+3rem)]"
                 headerContentClassName="pl-6"
@@ -1286,19 +1265,14 @@ export const TaskDetailDialog = ({
                 keepMounted
               >
                 <div className="min-w-0">
-                  <MemberLogsTab
+                  <TaskLogsPanel
                     teamName={teamName}
-                    taskId={currentTask.id}
-                    taskOwner={currentTask.owner}
-                    taskStatus={currentTask.status}
-                    taskWorkIntervals={currentTask.workIntervals}
+                    task={currentTask}
                     taskSince={taskSince}
+                    isExecutionRefreshing={logsRefreshing}
+                    isExecutionPreviewOnline={executionPreviewOnline}
                     onRefreshingChange={setLogsRefreshing}
-                    // Only show a "latest messages" preview when this task is owned by a subagent.
-                    // For lead-owned tasks, the lead session is a mixed stream (lead + multiple agents),
-                    // so filtering to "just the member messages" is unreliable and easy to mislead.
                     showSubagentPreview={Boolean(currentTask.owner) && !isLeadOwnedTask}
-                    // Temporary debug option: for lead-owned tasks, show quick preview from lead session.
                     showLeadPreview={allowLeadExecutionPreview && isLeadOwnedTask}
                     onPreviewOnlineChange={setExecutionPreviewOnline}
                   />

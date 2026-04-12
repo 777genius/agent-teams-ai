@@ -9,6 +9,9 @@
 import type {
   AppConfig,
   AttachmentFileData,
+  BoardTaskLogStreamResponse,
+  BoardTaskExactLogDetailResult,
+  BoardTaskExactLogSummariesResponse,
   ClaudeMdFileInfo,
   ClaudeRootFolderSelection,
   ClaudeRootInfo,
@@ -803,6 +806,26 @@ export class HttpAPIClient implements ElectronAPI {
     },
     getLogsForTask: async () => {
       return [];
+    },
+    getTaskActivity: async () => {
+      console.warn('[HttpAPIClient] getTaskActivity is not available in browser mode');
+      return [];
+    },
+    getTaskLogStream: async (): Promise<BoardTaskLogStreamResponse> => {
+      console.warn('[HttpAPIClient] getTaskLogStream is not available in browser mode');
+      return {
+        participants: [],
+        defaultFilter: 'all',
+        segments: [],
+      };
+    },
+    getTaskExactLogSummaries: async (): Promise<BoardTaskExactLogSummariesResponse> => {
+      console.warn('[HttpAPIClient] getTaskExactLogSummaries is not available in browser mode');
+      return { items: [] };
+    },
+    getTaskExactLogDetail: async (): Promise<BoardTaskExactLogDetailResult> => {
+      console.warn('[HttpAPIClient] getTaskExactLogDetail is not available in browser mode');
+      return { status: 'missing' };
     },
     getMemberStats: async () => {
       console.warn('[HttpAPIClient] getMemberStats is not available in browser mode');

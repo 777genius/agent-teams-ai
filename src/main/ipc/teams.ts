@@ -21,10 +21,14 @@ import {
   TEAM_GET_CLAUDE_LOGS,
   TEAM_GET_DATA,
   TEAM_GET_DELETED_TASKS,
-  TEAM_GET_MESSAGES_PAGE,
   TEAM_GET_LOGS_FOR_TASK,
+  TEAM_GET_TASK_ACTIVITY,
+  TEAM_GET_TASK_LOG_STREAM,
+  TEAM_GET_TASK_EXACT_LOG_DETAIL,
+  TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
   TEAM_GET_MEMBER_LOGS,
   TEAM_GET_MEMBER_STATS,
+  TEAM_GET_MESSAGES_PAGE,
   TEAM_GET_PROJECT_BRANCH,
   TEAM_GET_SAVED_REQUEST,
   TEAM_GET_TASK_ATTACHMENT,
@@ -98,15 +102,15 @@ import {
   buildActionModeAgentBlock,
   isAgentActionMode,
 } from '../services/team/actionModeInstructions';
+import {
+  buildReplaceMembersDiff,
+  buildReplaceMembersSummaryMessage,
+} from '../services/team/memberUpdateNotifications';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamMembersMetaStore } from '../services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../services/team/TeamMetaStore';
 import { buildAddMemberSpawnMessage } from '../services/team/TeamProvisioningService';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
-import {
-  buildReplaceMembersDiff,
-  buildReplaceMembersSummaryMessage,
-} from '../services/team/memberUpdateNotifications';
 
 import {
   validateFromField,
@@ -118,6 +122,10 @@ import {
 
 import type {
   BranchStatusService,
+  BoardTaskActivityService,
+  BoardTaskLogStreamService,
+  BoardTaskExactLogDetailService,
+  BoardTaskExactLogsService,
   MemberStatsComputer,
   TeamDataService,
   TeammateToolTracker,
@@ -131,6 +139,10 @@ import type {
   AttachmentFileData,
   AttachmentMeta,
   AttachmentPayload,
+  BoardTaskActivityEntry,
+  BoardTaskLogStreamResponse,
+  BoardTaskExactLogDetailResult,
+  BoardTaskExactLogSummariesResponse,
   CreateTaskRequest,
   EffortLevel,
   GlobalTask,
@@ -143,6 +155,7 @@ import type {
   MemberLogSummary,
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
+  MessagesPage,
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
@@ -155,7 +168,6 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamData,
-  MessagesPage,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamMessageNotificationData,
@@ -184,7 +196,7 @@ const SEEN_RATE_LIMIT_KEYS_MAX = 500;
 async function getDurableLeadTeammateRoster(
   teamName: string,
   leadName: string
-): Promise<Array<{ name: string; role?: string }>> {
+): Promise<{ name: string; role?: string }[]> {
   const normalize = (name: string | undefined | null): string => name?.trim().toLowerCase() ?? '';
   const leadLower = normalize(leadName);
   const reserved = new Set(['team-lead', 'user', leadLower].filter((value) => value.length > 0));
@@ -241,7 +253,7 @@ async function getDurableLeadTeammateRoster(
 function buildLeadRosterContextBlock(
   teamName: string,
   leadName: string,
-  teammates: Array<{ name: string; role?: string }>
+  teammates: { name: string; role?: string }[]
 ): string | null {
   if (teammates.length === 0) return null;
 
@@ -377,6 +389,10 @@ let memberStatsComputer: MemberStatsComputer | null = null;
 let teamBackupService: TeamBackupService | null = null;
 let teammateToolTracker: TeammateToolTracker | null = null;
 let branchStatusService: BranchStatusService | null = null;
+let boardTaskActivityService: BoardTaskActivityService | null = null;
+let boardTaskLogStreamService: BoardTaskLogStreamService | null = null;
+let boardTaskExactLogsService: BoardTaskExactLogsService | null = null;
+let boardTaskExactLogDetailService: BoardTaskExactLogDetailService | null = null;
 
 const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
@@ -407,7 +423,11 @@ export function initializeTeamHandlers(
   statsComputer?: MemberStatsComputer,
   backupService?: TeamBackupService,
   toolTracker?: TeammateToolTracker,
-  branchTracker?: BranchStatusService
+  branchTracker?: BranchStatusService,
+  taskActivityService?: BoardTaskActivityService,
+  taskLogStreamService?: BoardTaskLogStreamService,
+  taskExactLogsService?: BoardTaskExactLogsService,
+  taskExactLogDetailService?: BoardTaskExactLogDetailService
 ): void {
   teamDataService = service;
   teamProvisioningService = provisioningService;
@@ -416,6 +436,10 @@ export function initializeTeamHandlers(
   teamBackupService = backupService ?? null;
   teammateToolTracker = toolTracker ?? null;
   branchStatusService = branchTracker ?? null;
+  boardTaskActivityService = taskActivityService ?? null;
+  boardTaskLogStreamService = taskLogStreamService ?? null;
+  boardTaskExactLogsService = taskExactLogsService ?? null;
+  boardTaskExactLogDetailService = taskExactLogDetailService ?? null;
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
@@ -450,6 +474,10 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_CREATE_CONFIG, handleCreateConfig);
   ipcMain.handle(TEAM_GET_MEMBER_LOGS, handleGetMemberLogs);
   ipcMain.handle(TEAM_GET_LOGS_FOR_TASK, handleGetLogsForTask);
+  ipcMain.handle(TEAM_GET_TASK_ACTIVITY, handleGetTaskActivity);
+  ipcMain.handle(TEAM_GET_TASK_LOG_STREAM, handleGetTaskLogStream);
+  ipcMain.handle(TEAM_GET_TASK_EXACT_LOG_SUMMARIES, handleGetTaskExactLogSummaries);
+  ipcMain.handle(TEAM_GET_TASK_EXACT_LOG_DETAIL, handleGetTaskExactLogDetail);
   ipcMain.handle(TEAM_GET_MEMBER_STATS, handleGetMemberStats);
   ipcMain.handle(TEAM_UPDATE_CONFIG, handleUpdateConfig);
   ipcMain.handle(TEAM_START_TASK, handleStartTask);
@@ -517,6 +545,10 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_CREATE_CONFIG);
   ipcMain.removeHandler(TEAM_GET_MEMBER_LOGS);
   ipcMain.removeHandler(TEAM_GET_LOGS_FOR_TASK);
+  ipcMain.removeHandler(TEAM_GET_TASK_ACTIVITY);
+  ipcMain.removeHandler(TEAM_GET_TASK_LOG_STREAM);
+  ipcMain.removeHandler(TEAM_GET_TASK_EXACT_LOG_SUMMARIES);
+  ipcMain.removeHandler(TEAM_GET_TASK_EXACT_LOG_DETAIL);
   ipcMain.removeHandler(TEAM_GET_MEMBER_STATS);
   ipcMain.removeHandler(TEAM_UPDATE_CONFIG);
   ipcMain.removeHandler(TEAM_START_TASK);
@@ -577,6 +609,34 @@ function getBranchStatusService(): BranchStatusService {
     throw new Error('Branch status service is not initialized');
   }
   return branchStatusService;
+}
+
+function getBoardTaskActivityService(): BoardTaskActivityService {
+  if (!boardTaskActivityService) {
+    throw new Error('Board task activity service is not initialized');
+  }
+  return boardTaskActivityService;
+}
+
+function getBoardTaskLogStreamService(): BoardTaskLogStreamService {
+  if (!boardTaskLogStreamService) {
+    throw new Error('Board task log stream service is not initialized');
+  }
+  return boardTaskLogStreamService;
+}
+
+function getBoardTaskExactLogsService(): BoardTaskExactLogsService {
+  if (!boardTaskExactLogsService) {
+    throw new Error('Board task exact logs service is not initialized');
+  }
+  return boardTaskExactLogsService;
+}
+
+function getBoardTaskExactLogDetailService(): BoardTaskExactLogDetailService {
+  if (!boardTaskExactLogDetailService) {
+    throw new Error('Board task exact log detail service is not initialized');
+  }
+  return boardTaskExactLogDetailService;
 }
 
 async function wrapTeamHandler<T>(
@@ -1371,7 +1431,7 @@ async function handlePrepareProvisioning(
 ): Promise<IpcResult<TeamProvisioningPrepareResult>> {
   let validatedCwd: string | undefined;
   let validatedProviderId: TeamLaunchRequest['providerId'];
-  let validatedProviderIds: Array<'anthropic' | 'codex' | 'gemini'> | undefined;
+  let validatedProviderIds: ('anthropic' | 'codex' | 'gemini')[] | undefined;
   if (cwd !== undefined) {
     if (typeof cwd !== 'string' || cwd.trim().length === 0) {
       return { success: false, error: 'cwd must be a non-empty string' };
@@ -1391,7 +1451,7 @@ async function handlePrepareProvisioning(
     if (!Array.isArray(providerIds)) {
       return { success: false, error: 'providerIds must be an array when provided' };
     }
-    const normalized: Array<'anthropic' | 'codex' | 'gemini'> = [];
+    const normalized: ('anthropic' | 'codex' | 'gemini')[] = [];
     for (const entry of providerIds) {
       if (entry !== 'anthropic' && entry !== 'codex' && entry !== 'gemini') {
         return { success: false, error: 'providerIds entries must be anthropic, codex, or gemini' };
@@ -2437,6 +2497,94 @@ async function handleGetLogsForTask(
   }
   return wrapTeamHandler('getLogsForTask', () =>
     getTeamMemberLogsFinder().findLogsForTask(vTeam.value!, vTask.value!, opts)
+  );
+}
+
+async function handleGetTaskActivity(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown
+): Promise<IpcResult<BoardTaskActivityEntry[]>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) {
+    return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  }
+  const vTask = validateTaskId(taskId);
+  if (!vTask.valid) {
+    return { success: false, error: vTask.error ?? 'Invalid taskId' };
+  }
+  return wrapTeamHandler('getTaskActivity', () =>
+    getBoardTaskActivityService().getTaskActivity(vTeam.value!, vTask.value!)
+  );
+}
+
+async function handleGetTaskLogStream(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown
+): Promise<IpcResult<BoardTaskLogStreamResponse>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) {
+    return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  }
+  const vTask = validateTaskId(taskId);
+  if (!vTask.valid) {
+    return { success: false, error: vTask.error ?? 'Invalid taskId' };
+  }
+  return wrapTeamHandler('getTaskLogStream', () =>
+    getBoardTaskLogStreamService().getTaskLogStream(vTeam.value!, vTask.value!)
+  );
+}
+
+async function handleGetTaskExactLogSummaries(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown
+): Promise<IpcResult<BoardTaskExactLogSummariesResponse>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) {
+    return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  }
+  const vTask = validateTaskId(taskId);
+  if (!vTask.valid) {
+    return { success: false, error: vTask.error ?? 'Invalid taskId' };
+  }
+  return wrapTeamHandler('getTaskExactLogSummaries', () =>
+    getBoardTaskExactLogsService().getTaskExactLogSummaries(vTeam.value!, vTask.value!)
+  );
+}
+
+async function handleGetTaskExactLogDetail(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  taskId: unknown,
+  exactLogId: unknown,
+  expectedSourceGeneration: unknown
+): Promise<IpcResult<BoardTaskExactLogDetailResult>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) {
+    return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  }
+  const vTask = validateTaskId(taskId);
+  if (!vTask.valid) {
+    return { success: false, error: vTask.error ?? 'Invalid taskId' };
+  }
+  if (typeof exactLogId !== 'string' || exactLogId.trim().length === 0) {
+    return { success: false, error: 'exactLogId must be a non-empty string' };
+  }
+  if (
+    typeof expectedSourceGeneration !== 'string' ||
+    expectedSourceGeneration.trim().length === 0
+  ) {
+    return { success: false, error: 'expectedSourceGeneration must be a non-empty string' };
+  }
+  return wrapTeamHandler('getTaskExactLogDetail', () =>
+    getBoardTaskExactLogDetailService().getTaskExactLogDetail(
+      vTeam.value!,
+      vTask.value!,
+      exactLogId.trim(),
+      expectedSourceGeneration.trim()
+    )
   );
 }
 

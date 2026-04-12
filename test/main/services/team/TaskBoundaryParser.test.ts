@@ -64,6 +64,53 @@ describe('TaskBoundaryParser', () => {
     expect(result.boundaries.every((entry) => entry.mechanism === 'mcp')).toBe(true);
   });
 
+  it('detects fully-qualified agent-teams MCP task boundaries', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-boundary-parser-'));
+    const jsonlPath = path.join(tmpDir, 'mcp-qualified.jsonl');
+    await fs.writeFile(
+      jsonlPath,
+      [
+        JSON.stringify({
+          timestamp: '2026-03-01T10:00:00.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                id: 'tool-1',
+                name: 'mcp__agent-teams__task_start',
+                input: { taskId: 'task-123', teamName: 'demo' },
+              },
+            ],
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-03-01T10:10:00.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                id: 'tool-2',
+                name: 'mcp__agent_teams__task_complete',
+                input: { taskId: 'task-123', teamName: 'demo' },
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const result = await new TaskBoundaryParser().parseBoundaries(jsonlPath);
+
+    expect(result.detectedMechanism).toBe('mcp');
+    expect(result.boundaries).toHaveLength(2);
+    expect(result.boundaries.map((entry) => entry.event)).toEqual(['start', 'complete']);
+  });
+
   it('ignores legacy teamctl bash markers and keeps modern MCP markers only', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-boundary-parser-'));
     const jsonlPath = path.join(tmpDir, 'mixed.jsonl');

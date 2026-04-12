@@ -1,4 +1,9 @@
 export { BranchStatusService } from './BranchStatusService';
+export { BoardTaskActivityRecordSource } from './taskLogs/activity/BoardTaskActivityRecordSource';
+export { BoardTaskActivityService } from './taskLogs/activity/BoardTaskActivityService';
+export { BoardTaskExactLogsService } from './taskLogs/exact/BoardTaskExactLogsService';
+export { BoardTaskExactLogDetailService } from './taskLogs/exact/BoardTaskExactLogDetailService';
+export { BoardTaskLogStreamService } from './taskLogs/stream/BoardTaskLogStreamService';
 export { CascadeGuard } from './CascadeGuard';
 export { ChangeExtractorService } from './ChangeExtractorService';
 export { ClaudeBinaryResolver } from './ClaudeBinaryResolver';
