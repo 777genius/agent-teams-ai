@@ -410,7 +410,7 @@ describe('BoardTaskLogStreamService', () => {
     expect(response.segments.map((segment) => segment.participantKey)).toEqual(['member:tom']);
   });
 
-  it('sanitizes json-like tool_result payload text while preserving the tool result message', async () => {
+  it('drops empty json-like task_get tool result messages after sanitization', async () => {
     const tom = {
       memberName: 'tom',
       role: 'member' as const,
@@ -489,14 +489,8 @@ describe('BoardTaskLogStreamService', () => {
 
     const mergedMessages = buildBundleChunks.mock.calls[0]?.[0] as ParsedMessage[];
     const toolResultMessage = mergedMessages.find((message) => message.uuid === 'user-result');
-    expect(toolResultMessage).toBeDefined();
-    const content = Array.isArray(toolResultMessage?.content) ? toolResultMessage.content : [];
-    expect(content[0]).toMatchObject({
-      type: 'tool_result',
-      tool_use_id: 'tool-1',
-      content: '',
-    });
-    expect(toolResultMessage?.toolUseResult).toEqual({ toolUseId: 'tool-1', content: '' });
+    expect(toolResultMessage).toBeUndefined();
+    expect(mergedMessages.map((message) => message.uuid)).toEqual(['assistant-tool']);
   });
 
   it('drops read-only slices when the same participant has more meaningful task logs', async () => {
