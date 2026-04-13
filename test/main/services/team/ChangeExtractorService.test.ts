@@ -634,11 +634,15 @@ describe('ChangeExtractorService', () => {
     await writeTaskFile(tmpDir);
 
     const first = deferred<ReturnType<typeof makeTaskChangeResult>>();
+    const firstStarted = deferred<void>();
     const worker = {
       isAvailable: vi.fn(() => true),
       computeTaskChanges: vi
         .fn()
-        .mockImplementationOnce(() => first.promise)
+        .mockImplementationOnce(() => {
+          firstStarted.resolve();
+          return first.promise;
+        })
         .mockImplementationOnce(async () =>
           makeTaskChangeResult(TASK_ID, { filePath: '/repo/src/newer.ts' })
         ),
@@ -649,6 +653,7 @@ describe('ChangeExtractorService', () => {
     });
 
     const stalePromise = service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+    await firstStarted.promise;
     await service.invalidateTaskChangeSummaries(TEAM_NAME, [TASK_ID], { deletePersisted: true });
     const freshPromise = service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
     // Flush microtasks so freshPromise advances past its internal awaits
