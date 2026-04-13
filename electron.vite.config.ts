@@ -131,7 +131,8 @@ export default defineConfig({
   },
   renderer: {
     optimizeDeps: {
-      include: ['@codemirror/language-data']
+      include: ['@codemirror/language-data'],
+      exclude: ['@claude-teams/agent-graph']
     },
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
@@ -142,7 +143,8 @@ export default defineConfig({
       alias: {
         '@renderer': resolve(__dirname, 'src/renderer'),
         '@shared': resolve(__dirname, 'src/shared'),
-        '@main': resolve(__dirname, 'src/main')
+        '@main': resolve(__dirname, 'src/main'),
+        '@claude-teams/agent-graph': resolve(__dirname, 'packages/agent-graph/src/index.ts')
       }
     },
     plugins: [react(), ...sentryPlugins],

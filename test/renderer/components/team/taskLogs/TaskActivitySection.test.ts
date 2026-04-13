@@ -15,6 +15,10 @@ const apiState = {
     >(),
 };
 
+const renderabilityState = {
+  hasDisplayItems: true,
+};
+
 vi.mock('@renderer/api', () => ({
   api: {
     teams: {
@@ -43,6 +47,18 @@ vi.mock('@renderer/components/team/members/MemberExecutionLog', () => ({
 
 vi.mock('@renderer/types/data', () => ({
   asEnhancedChunkArray: (value: unknown) => value,
+}));
+
+vi.mock('@renderer/utils/groupTransformer', () => ({
+  transformChunksToConversation: () => ({
+    items: [{ type: 'ai', group: { id: 'ai-group' } }],
+  }),
+}));
+
+vi.mock('@renderer/utils/aiGroupEnhancer', () => ({
+  enhanceAIGroup: () => ({
+    displayItems: renderabilityState.hasDisplayItems ? [{ id: 'tool-1' }] : [],
+  }),
 }));
 
 vi.mock('@shared/utils/boardTaskActivityPresentation', () => ({
@@ -126,6 +142,7 @@ describe('TaskActivitySection', () => {
     document.body.innerHTML = '';
     apiState.getTaskActivity.mockReset();
     apiState.getTaskActivityDetail.mockReset();
+    renderabilityState.hasDisplayItems = true;
     vi.unstubAllGlobals();
   });
 
@@ -293,12 +310,208 @@ describe('TaskActivitySection', () => {
     expect(host.textContent).toContain('42');
     expect(host.textContent).toContain('while working on #peer12345');
     expect(host.querySelector('[data-testid="member-execution-log"]')?.textContent).toBe('bob:1');
+    expect(host.textContent?.match(/Added a comment/g)?.length).toBe(1);
 
     await act(async () => {
       button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await flushMicrotasks();
     });
 
+    expect(host.querySelector('[data-testid="member-execution-log"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('shows metadata-only detail for read activity without embedding a linked tool log', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    apiState.getTaskActivity.mockResolvedValue([
+      makeEntry({
+        id: 'view-1',
+        timestamp: '2026-04-13T10:36:00.000Z',
+        linkKind: 'board_action',
+        action: {
+          canonicalToolName: 'task_get',
+          category: 'read',
+          toolUseId: 'tool-read',
+        },
+        source: {
+          messageUuid: 'view-1-message',
+          filePath: '/tmp/transcript.jsonl',
+          toolUseId: 'tool-read',
+          sourceOrder: 6,
+        },
+      }),
+    ]);
+    apiState.getTaskActivityDetail.mockResolvedValue({
+      status: 'ok',
+      detail: {
+        entryId: 'view-1',
+        summaryLabel: 'Viewed task',
+        actorLabel: 'bob',
+        timestamp: '2026-04-13T10:36:00.000Z',
+        contextLines: ['without an active task scope'],
+        metadataRows: [
+          { label: 'Task', value: '#abc12345' },
+          { label: 'Tool', value: 'task_get' },
+        ],
+      },
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TaskActivitySection, { teamName: 'demo', taskId: 'task-a' }));
+      await flushMicrotasks();
+    });
+
+    const button = host.querySelector('button');
+    expect(button).not.toBeNull();
+
+    await act(async () => {
+      button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushMicrotasks();
+    });
+
+    expect(host.textContent).toContain('Viewed task');
+    expect(host.textContent).toContain('task_get');
+    expect(host.querySelector('[data-testid="member-execution-log"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('hides embedded linked tool detail when the shared execution-log pipeline finds no display items', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    renderabilityState.hasDisplayItems = false;
+    apiState.getTaskActivity.mockResolvedValue([
+      makeEntry({
+        id: 'comment-quiet',
+        timestamp: '2026-04-13T10:38:00.000Z',
+        linkKind: 'board_action',
+        action: {
+          canonicalToolName: 'task_add_comment',
+          category: 'comment',
+          toolUseId: 'tool-quiet',
+          details: {
+            commentId: '7',
+          },
+        },
+        source: {
+          messageUuid: 'comment-quiet-message',
+          filePath: '/tmp/transcript.jsonl',
+          toolUseId: 'tool-quiet',
+          sourceOrder: 8,
+        },
+      }),
+    ]);
+    apiState.getTaskActivityDetail.mockResolvedValue({
+      status: 'ok',
+      detail: {
+        entryId: 'comment-quiet',
+        summaryLabel: 'Added a comment',
+        actorLabel: 'bob',
+        timestamp: '2026-04-13T10:38:00.000Z',
+        contextLines: ['without an active task scope'],
+        metadataRows: [
+          { label: 'Task', value: '#abc12345' },
+          { label: 'Tool', value: 'task_add_comment' },
+          { label: 'Comment', value: '7' },
+        ],
+        logDetail: {
+          id: 'activity:comment-quiet',
+          chunks: [{ id: 'chunk-quiet' }] as never,
+        },
+      },
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TaskActivitySection, { teamName: 'demo', taskId: 'task-a' }));
+      await flushMicrotasks();
+    });
+
+    const button = host.querySelector('button');
+    expect(button).not.toBeNull();
+
+    await act(async () => {
+      button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushMicrotasks();
+    });
+
+    expect(host.textContent).toContain('task_add_comment');
+    expect(host.querySelector('[data-testid="member-execution-log"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('keeps lifecycle activity metadata-only when the focused detail has no linked tool execution', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    apiState.getTaskActivity.mockResolvedValue([
+      makeEntry({
+        id: 'start-1',
+        timestamp: '2026-04-13T10:37:00.000Z',
+        linkKind: 'lifecycle',
+        action: {
+          canonicalToolName: 'task_start',
+          category: 'status',
+          toolUseId: 'tool-start',
+        },
+        source: {
+          messageUuid: 'start-1-message',
+          filePath: '/tmp/transcript.jsonl',
+          toolUseId: 'tool-start',
+          sourceOrder: 7,
+        },
+      }),
+    ]);
+    apiState.getTaskActivityDetail.mockResolvedValue({
+      status: 'ok',
+      detail: {
+        entryId: 'start-1',
+        summaryLabel: 'Started work',
+        actorLabel: 'bob',
+        timestamp: '2026-04-13T10:37:00.000Z',
+        contextLines: ['without an active task scope'],
+        metadataRows: [
+          { label: 'Task', value: '#abc12345' },
+          { label: 'Tool', value: 'task_start' },
+          { label: 'Scope', value: 'idle' },
+        ],
+      },
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TaskActivitySection, { teamName: 'demo', taskId: 'task-a' }));
+      await flushMicrotasks();
+    });
+
+    const button = host.querySelector('button');
+    expect(button).not.toBeNull();
+
+    await act(async () => {
+      button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushMicrotasks();
+    });
+
+    expect(host.textContent).toContain('Started work');
+    expect(host.textContent).toContain('task_start');
     expect(host.querySelector('[data-testid="member-execution-log"]')).toBeNull();
 
     await act(async () => {

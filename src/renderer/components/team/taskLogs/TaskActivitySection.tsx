@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { MemberExecutionLog } from '@renderer/components/team/members/MemberExecutionLog';
 import { asEnhancedChunkArray } from '@renderer/types/data';
+import { enhanceAIGroup } from '@renderer/utils/aiGroupEnhancer';
+import { transformChunksToConversation } from '@renderer/utils/groupTransformer';
 import {
   describeBoardTaskActivityLabel,
   formatBoardTaskActivityTaskLabel,
@@ -90,6 +92,20 @@ function normalizeDetail(detail: BoardTaskActivityDetail): BoardTaskActivityDeta
   };
 }
 
+function hasRenderableLinkedTool(detail: BoardTaskActivityDetail): boolean {
+  if (!detail.logDetail || detail.logDetail.chunks.length === 0) {
+    return false;
+  }
+
+  const conversation = transformChunksToConversation(detail.logDetail.chunks, [], false);
+  return conversation.items.some((item) => {
+    if (item.type !== 'ai') {
+      return false;
+    }
+    return enhanceAIGroup(item.group).displayItems.length > 0;
+  });
+}
+
 function ActivityMetadata({
   detail,
 }: {
@@ -115,17 +131,14 @@ function ActivityMetadata({
       ) : null}
 
       {hasMetadata ? (
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-x-4 gap-y-2 sm:grid-cols-[max-content_1fr] sm:items-start">
           {detail.metadataRows.map((row) => (
-            <div
-              key={`${row.label}:${row.value}`}
-              className="border-[var(--color-border-muted)]/50 bg-[var(--color-bg-elevated)]/30 rounded-md border px-2.5 py-2"
-            >
+            <Fragment key={`${row.label}:${row.value}`}>
               <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
                 {row.label}
               </div>
-              <div className="mt-1 text-xs text-[var(--color-text)]">{row.value}</div>
-            </div>
+              <div className="text-sm text-[var(--color-text)]">{row.value}</div>
+            </Fragment>
           ))}
         </div>
       ) : null}
@@ -169,26 +182,14 @@ function ActivityDetailPanel({
   }
 
   const { detail } = detailState;
+  const hasRenderableLog = hasRenderableLinkedTool(detail);
 
   return (
-    <div className="border-[var(--color-border-muted)]/50 bg-[var(--color-bg-elevated)]/25 space-y-3 rounded-md border px-3 py-3">
-      <div className="border-[var(--color-border-muted)]/50 bg-[var(--color-bg-elevated)]/35 rounded-md border px-3 py-2">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0 text-sm text-[var(--color-text)]">
-            <span className="font-medium">{detail.actorLabel}</span>
-            <span className="text-[var(--color-text-muted)]"> - </span>
-            <span>{detail.summaryLabel}</span>
-          </div>
-          <div className="shrink-0 text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
-            {formatEntryTime(detail.timestamp)}
-          </div>
-        </div>
-      </div>
-
+    <div className="border-[var(--color-border-muted)]/50 space-y-3 border-t pt-3">
       <ActivityMetadata detail={detail} />
 
-      {detail.logDetail ? (
-        <div className="border-[var(--chat-ai-border)]/50 border-l-2 pl-3">
+      {detail.logDetail && hasRenderableLog ? (
+        <div className="pt-1">
           <MemberExecutionLog
             chunks={detail.logDetail.chunks}
             memberName={detail.actorLabel === 'lead session' ? undefined : detail.actorLabel}

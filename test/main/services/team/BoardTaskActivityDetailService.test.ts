@@ -67,14 +67,47 @@ describe('BoardTaskActivityDetailService', () => {
       actor: record.actor,
       source: record.source,
       records: [record],
-      filteredMessages: [],
+      filteredMessages: [
+        {
+          uuid: 'msg-1',
+          parentUuid: null,
+          type: 'user',
+          timestamp: new Date(record.timestamp),
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'tool-1', content: 'Posted comment' }],
+          isSidechain: true,
+          isMeta: true,
+          toolCalls: [],
+          toolResults: [{ toolUseId: 'tool-1', content: 'Posted comment', isError: false }],
+          toolUseResult: { content: 'Posted comment' },
+        } as never,
+      ],
     };
 
     const service = new BoardTaskActivityDetailService(
       { getTaskRecords: vi.fn(async () => [record]) } as never,
       { parseFiles: vi.fn(async () => new Map([['/tmp/task.jsonl', []]])) } as never,
       { selectDetail: vi.fn(() => detailCandidate) } as never,
-      { buildBundleChunks: vi.fn(() => [{ id: 'chunk-1' }]) } as never
+      {
+        buildBundleChunks: vi.fn(() => [
+          {
+            id: 'chunk-1',
+            chunkType: 'ai',
+            toolExecutions: [
+              {
+                toolCall: {
+                  id: 'tool-1',
+                  name: 'task_add_comment',
+                  input: {},
+                  isTask: false,
+                },
+                startTime: new Date(record.timestamp),
+              },
+            ],
+            semanticSteps: [{ id: 'step-1', type: 'tool_call' }],
+          },
+        ]),
+      } as never
     );
 
     const result = await service.getTaskActivityDetail('demo', 'task-a', 'record-1');
@@ -93,7 +126,14 @@ describe('BoardTaskActivityDetailService', () => {
         { label: 'Comment', value: '42' },
       ])
     );
-    expect(result.detail.logDetail?.chunks).toEqual([{ id: 'chunk-1' }]);
+    expect(result.detail.logDetail?.chunks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'chunk-1',
+          chunkType: 'ai',
+        }),
+      ])
+    );
   });
 
   it('returns metadata only for non-tool-backed activity without parsing transcript content', async () => {
@@ -131,6 +171,132 @@ describe('BoardTaskActivityDetailService', () => {
     );
     expect(result.detail.logDetail).toBeUndefined();
     expect(strictParser.parseFiles).not.toHaveBeenCalled();
+  });
+
+  it('keeps read-only task activity metadata-only even when toolUseId exists', async () => {
+    const record = makeRecord({
+      id: 'record-read',
+      action: {
+        canonicalToolName: 'task_get',
+        category: 'read',
+      },
+      source: {
+        filePath: '/tmp/task.jsonl',
+        messageUuid: 'msg-read',
+        toolUseId: 'tool-read',
+        sourceOrder: 3,
+      },
+    });
+    const strictParser = { parseFiles: vi.fn(async () => new Map()) };
+    const service = new BoardTaskActivityDetailService(
+      { getTaskRecords: vi.fn(async () => [record]) } as never,
+      strictParser as never,
+      { selectDetail: vi.fn() } as never,
+      { buildBundleChunks: vi.fn() } as never
+    );
+
+    const result = await service.getTaskActivityDetail('demo', 'task-a', 'record-read');
+
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') {
+      throw new Error('expected ok detail');
+    }
+    expect(result.detail.summaryLabel).toBe('Viewed task');
+    expect(result.detail.logDetail).toBeUndefined();
+    expect(strictParser.parseFiles).not.toHaveBeenCalled();
+  });
+
+  it('drops log detail when focused chunks degrade into empty success snapshots', async () => {
+    const record = makeRecord({
+      id: 'record-start',
+      action: {
+        canonicalToolName: 'task_start',
+        category: 'status',
+      },
+      source: {
+        filePath: '/tmp/task.jsonl',
+        messageUuid: 'msg-start',
+        toolUseId: 'tool-start',
+        sourceOrder: 4,
+      },
+    });
+
+    const service = new BoardTaskActivityDetailService(
+      { getTaskRecords: vi.fn(async () => [record]) } as never,
+      { parseFiles: vi.fn(async () => new Map([['/tmp/task.jsonl', []]])) } as never,
+      {
+        selectDetail: vi.fn(() => ({
+          id: 'activity:record-start',
+          timestamp: record.timestamp,
+          actor: record.actor,
+          source: record.source,
+          records: [record],
+          filteredMessages: [
+            {
+              uuid: 'msg-start-assistant',
+              parentUuid: null,
+              type: 'assistant',
+              timestamp: new Date(record.timestamp),
+              role: 'assistant',
+              content: [{ type: 'tool_use', id: 'tool-start', name: 'task_start', input: {} }],
+              isSidechain: true,
+              isMeta: false,
+              toolCalls: [{ id: 'tool-start', name: 'task_start', input: {}, isTask: false }],
+              toolResults: [],
+              sourceToolUseID: 'tool-start',
+            } as never,
+            {
+              uuid: 'msg-start-user',
+              parentUuid: 'msg-start-assistant',
+              type: 'user',
+              timestamp: new Date(record.timestamp),
+              role: 'user',
+              content: [
+                {
+                  type: 'tool_result',
+                  tool_use_id: 'tool-start',
+                  content:
+                    '[{\"type\":\"text\",\"text\":\"{\\n  \\\"id\\\": \\\"task-a\\\",\\n  \\\"status\\\": \\\"in_progress\\\"\\n}\"}]',
+                },
+              ],
+              isSidechain: true,
+              isMeta: true,
+              toolCalls: [],
+              toolResults: [
+                {
+                  toolUseId: 'tool-start',
+                  content:
+                    '[{\"type\":\"text\",\"text\":\"{\\n  \\\"id\\\": \\\"task-a\\\",\\n  \\\"status\\\": \\\"in_progress\\\"\\n}\"}]',
+                  isError: false,
+                },
+              ],
+              toolUseResult: {
+                content:
+                  '[{\"type\":\"text\",\"text\":\"{\\n  \\\"id\\\": \\\"task-a\\\",\\n  \\\"status\\\": \\\"in_progress\\\"\\n}\"}]',
+              },
+            } as never,
+          ],
+        })),
+      } as never,
+      {
+        buildBundleChunks: vi.fn(() => [
+          {
+            chunkType: 'ai',
+            toolExecutions: [],
+            semanticSteps: [],
+          },
+        ]),
+      } as never
+    );
+
+    const result = await service.getTaskActivityDetail('demo', 'task-a', 'record-start');
+
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') {
+      throw new Error('expected ok detail');
+    }
+    expect(result.detail.summaryLabel).toBe('Started work');
+    expect(result.detail.logDetail).toBeUndefined();
   });
 
   it('returns missing when the activity id does not exist', async () => {
