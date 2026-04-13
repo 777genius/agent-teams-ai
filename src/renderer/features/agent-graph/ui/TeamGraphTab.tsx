@@ -7,6 +7,10 @@ import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
 import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
+import type {
+  MemberActivityFilter,
+  MemberDetailTab,
+} from '@renderer/components/team/members/memberDetailTypes';
 
 import { useTeamGraphAdapter } from '../adapters/useTeamGraphAdapter';
 
@@ -26,6 +30,11 @@ export interface TeamGraphTabProps {
   isActive?: boolean;
   isPaneFocused?: boolean;
 }
+
+type OpenProfileOptions = {
+  initialTab?: MemberDetailTab;
+  initialActivityFilter?: MemberActivityFilter;
+};
 
 export const TeamGraphTab = ({
   teamName,
@@ -53,9 +62,11 @@ export const TeamGraphTab = ({
     [teamName]
   );
   const dispatchOpenProfile = useCallback(
-    (memberName: string) =>
+    (memberName: string, options?: OpenProfileOptions) =>
       window.dispatchEvent(
-        new CustomEvent('graph:open-profile', { detail: { teamName, memberName } })
+        new CustomEvent('graph:open-profile', {
+          detail: { teamName, memberName, ...options },
+        })
       ),
     [teamName]
   );
@@ -105,7 +116,12 @@ export const TeamGraphTab = ({
     ),
     onSendMessage: dispatchSendMessage,
     onOpenTaskDetail: dispatchOpenTask,
-    onOpenMemberProfile: dispatchOpenProfile,
+    onOpenMemberProfile: useCallback(
+      (memberName: string) => {
+        dispatchOpenProfile(memberName);
+      },
+      [dispatchOpenProfile]
+    ),
   };
 
   return (

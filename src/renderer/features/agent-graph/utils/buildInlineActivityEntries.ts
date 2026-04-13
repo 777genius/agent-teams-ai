@@ -10,8 +10,8 @@ import type {
   TaskAttachmentMeta,
   TaskComment,
   TaskRef,
-  TeamData,
   TeamTaskWithKanban,
+  ResolvedTeamMember,
 } from '@shared/types/team';
 
 export interface InlineActivityEntry {
@@ -20,15 +20,24 @@ export interface InlineActivityEntry {
   message: InboxMessage;
 }
 
+export interface ActivityEntrySourceData {
+  members: ResolvedTeamMember[];
+  tasks: readonly TeamTaskWithKanban[];
+  messages: readonly InboxMessage[];
+}
+
 export interface BuildInlineActivityEntriesArgs {
-  data: TeamData;
+  data: ActivityEntrySourceData;
   teamName: string;
   leadId: string;
   leadName: string;
   ownerNodeIds: ReadonlySet<string>;
 }
 
-export function getGraphLeadMemberName(data: TeamData, teamName: string): string {
+export function getGraphLeadMemberName(
+  data: Pick<ActivityEntrySourceData, 'members'>,
+  teamName: string
+): string {
   return data.members.find((member) => isLeadMember(member))?.name ?? `${teamName}-lead`;
 }
 

@@ -575,6 +575,50 @@ function renderInlineBoldSummary(
   });
 }
 
+function TaskRecipientBadge({
+  taskId,
+  displayId,
+  teamName,
+  onTaskIdClick,
+}: {
+  taskId: string;
+  displayId: string;
+  teamName?: string;
+  onTaskIdClick?: (taskId: string) => void;
+}): React.JSX.Element {
+  const content = (
+    <span
+      className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide"
+      style={{
+        backgroundColor: 'rgba(96, 165, 250, 0.14)',
+        color: '#60a5fa',
+        border: '1px solid rgba(96, 165, 250, 0.3)',
+      }}
+    >
+      {displayId}
+    </span>
+  );
+
+  if (!onTaskIdClick) {
+    return content;
+  }
+
+  return (
+    <TaskTooltip taskId={taskId} teamName={teamName}>
+      <button
+        type="button"
+        className="inline-flex rounded transition-opacity hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-[var(--color-border)]"
+        onClick={(e) => {
+          e.stopPropagation();
+          onTaskIdClick(taskId);
+        }}
+      >
+        {content}
+      </button>
+    </TaskTooltip>
+  );
+}
+
 export const ActivityItem = memo(
   function ActivityItem({
     message,
@@ -784,6 +828,11 @@ export const ActivityItem = memo(
       structured,
     ]);
     const summaryText = useMemo(() => extractMarkdownPlainText(rawSummary), [rawSummary]);
+    const commentTaskRef =
+      message.messageKind === 'task_comment_notification' ? (message.taskRefs?.[0] ?? null) : null;
+    const commentTaskDisplayId =
+      commentTaskRef?.displayId ??
+      (commentTaskRef?.taskId ? `#${commentTaskRef.taskId.slice(0, 6)}` : null);
 
     // Permission request status icon (check/x/clock)
     const pendingApprovals = useStore(useShallow((s) => s.pendingApprovals));
@@ -902,6 +951,10 @@ export const ActivityItem = memo(
       <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
         {systemLabel}
       </span>
+    ) : commentTaskRef ? (
+      <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+        Comment
+      </span>
     ) : isSlashCommandResult && message.commandOutput ? (
       <span
         className={[
@@ -943,7 +996,17 @@ export const ActivityItem = memo(
     ) : null;
 
     const recipientBadge =
-      message.to && message.to !== message.from ? (
+      commentTaskRef && commentTaskDisplayId ? (
+        <>
+          <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
+          <TaskRecipientBadge
+            taskId={commentTaskRef.taskId}
+            displayId={commentTaskDisplayId}
+            teamName={commentTaskRef.teamName}
+            onTaskIdClick={onTaskIdClick}
+          />
+        </>
+      ) : message.to && message.to !== message.from ? (
         <>
           <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
           {crossTeamTarget ? (

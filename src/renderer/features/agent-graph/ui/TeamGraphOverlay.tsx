@@ -7,6 +7,10 @@ import { useCallback, useMemo } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
 import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
+import type {
+  MemberActivityFilter,
+  MemberDetailTab,
+} from '@renderer/components/team/members/memberDetailTypes';
 
 import { useTeamGraphAdapter } from '../adapters/useTeamGraphAdapter';
 
@@ -23,7 +27,13 @@ export interface TeamGraphOverlayProps {
   onPinAsTab?: () => void;
   onSendMessage?: (memberName: string) => void;
   onOpenTaskDetail?: (taskId: string) => void;
-  onOpenMemberProfile?: (memberName: string) => void;
+  onOpenMemberProfile?: (
+    memberName: string,
+    options?: {
+      initialTab?: MemberDetailTab;
+      initialActivityFilter?: MemberActivityFilter;
+    }
+  ) => void;
 }
 
 export const TeamGraphOverlay = ({

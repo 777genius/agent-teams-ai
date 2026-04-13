@@ -20,6 +20,10 @@ import {
 } from '../utils/buildInlineActivityEntries';
 
 import type { TimelineItem } from '@renderer/components/team/activity/LeadThoughtsGroup';
+import type {
+  MemberActivityFilter,
+  MemberDetailTab,
+} from '@renderer/components/team/members/memberDetailTypes';
 import type { GraphNode } from '@claude-teams/agent-graph';
 import type { ResolvedTeamMember } from '@shared/types/team';
 
@@ -32,7 +36,13 @@ interface GraphActivityHudProps {
   focusNodeIds: ReadonlySet<string> | null;
   enabled?: boolean;
   onOpenTaskDetail?: (taskId: string) => void;
-  onOpenMemberProfile?: (memberName: string) => void;
+  onOpenMemberProfile?: (
+    memberName: string,
+    options?: {
+      initialTab?: MemberDetailTab;
+      initialActivityFilter?: MemberActivityFilter;
+    }
+  ) => void;
 }
 
 export function GraphActivityHud({
@@ -186,6 +196,19 @@ export function GraphActivityHud({
     [onOpenMemberProfile]
   );
 
+  const handleOpenOwnerActivity = useCallback(
+    (node: GraphNode & { kind: 'lead' | 'member' }) => {
+      if (node.domainRef.kind !== 'lead' && node.domainRef.kind !== 'member') {
+        return;
+      }
+      onOpenMemberProfile?.(node.domainRef.memberName, {
+        initialTab: 'activity',
+        initialActivityFilter: 'all',
+      });
+    },
+    [onOpenMemberProfile]
+  );
+
   if (!enabled || !teamData || visibleLanes.length === 0) {
     return null;
   }
@@ -250,9 +273,13 @@ export function GraphActivityHud({
             })}
 
             {lane.overflowCount > 0 ? (
-              <div className="rounded-md border border-white/10 bg-[rgba(8,14,28,0.64)] px-3 py-1 text-center text-[11px] font-medium text-slate-300">
+              <button
+                type="button"
+                className="w-full rounded-md border border-white/10 bg-[rgba(8,14,28,0.64)] px-3 py-1 text-center text-[11px] font-medium text-slate-300 transition-colors hover:border-white/20 hover:bg-[rgba(12,20,40,0.78)]"
+                onClick={() => handleOpenOwnerActivity(lane.node)}
+              >
                 +{lane.overflowCount} more
-              </div>
+              </button>
             ) : null}
           </div>
         </div>

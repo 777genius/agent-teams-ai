@@ -70,6 +70,7 @@ import { UNASSIGNED_OWNER } from './kanban/KanbanFilterPopover';
 import { KanbanSearchInput } from './kanban/KanbanSearchInput';
 import { TrashDialog } from './kanban/TrashDialog';
 import { MemberDetailDialog } from './members/MemberDetailDialog';
+import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
@@ -737,29 +738,35 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
   member,
   ...props
 }: TeamMemberDetailDialogBridgeProps): React.JSX.Element | null {
-  const { leadActivity, progress, members, memberSpawnStatuses, memberSpawnSnapshot, spawnEntry } =
-    useStore(
-      useShallow((s) => ({
-        leadActivity: s.leadActivityByTeam[teamName],
-        progress: getCurrentProvisioningProgressForTeam(s, teamName),
-        members: s.selectedTeamName === teamName ? (s.selectedTeamData?.members ?? []) : [],
-        memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
-        memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
-        spawnEntry: member ? s.memberSpawnStatusesByTeam[teamName]?.[member.name] : undefined,
-      }))
-    );
+  const {
+    leadActivity,
+    progress,
+    members: launchMembers,
+    memberSpawnStatuses,
+    memberSpawnSnapshot,
+    spawnEntry,
+  } = useStore(
+    useShallow((s) => ({
+      leadActivity: s.leadActivityByTeam[teamName],
+      progress: getCurrentProvisioningProgressForTeam(s, teamName),
+      members: s.selectedTeamName === teamName ? (s.selectedTeamData?.members ?? []) : [],
+      memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
+      memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
+      spawnEntry: member ? s.memberSpawnStatusesByTeam[teamName]?.[member.name] : undefined,
+    }))
+  );
   const isLaunchSettling = useMemo(() => {
     if (progress?.state !== 'ready') {
       return false;
     }
     return getLaunchJoinState(
       getLaunchJoinMilestonesFromMembers({
-        members,
+        members: launchMembers,
         memberSpawnStatuses,
         memberSpawnSnapshot,
       })
     ).hasMembersStillJoining;
-  }, [memberSpawnSnapshot, memberSpawnStatuses, members, progress?.state]);
+  }, [launchMembers, memberSpawnSnapshot, memberSpawnStatuses, progress?.state]);
 
   return (
     <MemberDetailDialog
@@ -788,6 +795,10 @@ export const TeamDetailView = ({
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<TeamTaskWithKanban | null>(null);
   const [selectedMember, setSelectedMember] = useState<ResolvedTeamMember | null>(null);
+  const [selectedMemberView, setSelectedMemberView] = useState<{
+    initialTab?: MemberDetailTab;
+    initialActivityFilter?: MemberActivityFilter;
+  } | null>(null);
   const [pendingRepliesByMember, setPendingRepliesByMember] = useState<Record<string, number>>({});
   const [createTaskDialog, setCreateTaskDialog] = useState<CreateTaskDialogState>({
     open: false,
@@ -858,10 +869,21 @@ export const TeamDetailView = ({
       setSendDialogOpen(true);
     };
     const onOpenProfile = (e: Event) => {
-      const { teamName: tn, memberName } = (e as CustomEvent).detail ?? {};
+      const {
+        teamName: tn,
+        memberName,
+        initialTab,
+        initialActivityFilter,
+      } = (e as CustomEvent).detail ?? {};
       if (tn !== teamName || !data) return;
       const member = data.members.find((m: { name: string }) => m.name === memberName);
-      if (member) setSelectedMember(member);
+      if (member) {
+        setSelectedMember(member);
+        setSelectedMemberView({
+          initialTab,
+          initialActivityFilter,
+        });
+      }
     };
     const onCreateTask = (e: Event) => {
       const { teamName: tn, owner } = (e as CustomEvent).detail ?? {};
@@ -1510,6 +1532,12 @@ export const TeamDetailView = ({
 
   const handleSelectMember = useCallback((member: ResolvedTeamMember) => {
     setSelectedMember(member);
+    setSelectedMemberView(null);
+  }, []);
+
+  const closeSelectedMemberDialog = useCallback(() => {
+    setSelectedMember(null);
+    setSelectedMemberView(null);
   }, []);
 
   const handleSendMessageToMember = useCallback((member: ResolvedTeamMember) => {
@@ -1612,6 +1640,7 @@ export const TeamDetailView = ({
     const member = membersWithLiveBranches.find((m) => m.name === pendingMemberProfile);
     if (member) {
       setSelectedMember(member);
+      setSelectedMemberView(null);
     }
     useStore.getState().closeMemberProfile();
   }, [pendingMemberProfile, membersWithLiveBranches]);
@@ -2456,14 +2485,17 @@ export const TeamDetailView = ({
                 open={selectedMember !== null}
                 member={selectedMember}
                 teamName={teamName}
+                members={membersWithLiveBranches}
                 tasks={data.tasks}
                 messages={data.messages}
+                initialTab={selectedMemberView?.initialTab}
+                initialActivityFilter={selectedMemberView?.initialActivityFilter}
                 isTeamAlive={data.isAlive}
                 isTeamProvisioning={isTeamProvisioning}
-                onClose={() => setSelectedMember(null)}
+                onClose={closeSelectedMemberDialog}
                 onSendMessage={() => {
                   const name = selectedMember?.name ?? '';
-                  setSelectedMember(null);
+                  closeSelectedMemberDialog();
                   setSendDialogRecipient(name || undefined);
                   setSendDialogDefaultText(undefined);
                   setSendDialogDefaultChip(undefined);
@@ -2472,11 +2504,11 @@ export const TeamDetailView = ({
                 }}
                 onAssignTask={() => {
                   const name = selectedMember?.name ?? '';
-                  setSelectedMember(null);
+                  closeSelectedMemberDialog();
                   openCreateTaskDialog('', '', name);
                 }}
                 onTaskClick={(task) => {
-                  setSelectedMember(null);
+                  closeSelectedMemberDialog();
                   setSelectedTask(task);
                 }}
                 onUpdateRole={async (memberName, role) => {
@@ -2501,7 +2533,7 @@ export const TeamDetailView = ({
                   setRemoveMemberConfirm(name);
                 }}
                 onViewMemberChanges={(memberName, filePath) => {
-                  setSelectedMember(null);
+                  closeSelectedMemberDialog();
                   setReviewDialogState({
                     open: true,
                     mode: 'agent',
@@ -2596,7 +2628,7 @@ export const TeamDetailView = ({
                       onClick={() => {
                         const name = removeMemberConfirm;
                         setRemoveMemberConfirm(null);
-                        setSelectedMember(null);
+                        closeSelectedMemberDialog();
                         if (name) void removeMember(teamName, name);
                       }}
                     >
@@ -2803,10 +2835,14 @@ export const TeamDetailView = ({
                 const task = data.tasks.find((t) => t.id === taskId);
                 if (task) setSelectedTask(task);
               }}
-              onOpenMemberProfile={(memberName) => {
+              onOpenMemberProfile={(memberName, options) => {
                 const member = data.members.find((m) => m.name === memberName);
                 if (member) {
                   setSelectedMember(member);
+                  setSelectedMemberView({
+                    initialTab: options?.initialTab,
+                    initialActivityFilter: options?.initialActivityFilter,
+                  });
                 }
               }}
             />
