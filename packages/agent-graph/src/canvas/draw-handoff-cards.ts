@@ -1,6 +1,7 @@
 import { COLORS } from '../constants/colors';
 import { HANDOFF_CARD, NODE, TASK_PILL, MIN_VISIBLE_OPACITY } from '../constants/canvas-constants';
 import type { CameraTransform } from '../hooks/useGraphCamera';
+import { getHandoffAnchorTarget } from '../layout/launchAnchor';
 import type { GraphNode } from '../ports/types';
 import type { TransientHandoffCard } from '../ui/transientHandoffs';
 import { truncateText } from './draw-misc';
@@ -75,8 +76,9 @@ function getCardPosition(params: {
   stackIndex: number;
 }): { x: number; y: number } | null {
   const { node, camera, viewport, height, stackIndex } = params;
-  const screenX = node.x! * camera.zoom + camera.x;
-  const screenY = node.y! * camera.zoom + camera.y;
+  const anchor = getCardAnchorPosition(node, camera.zoom);
+  const screenX = anchor.x * camera.zoom + camera.x;
+  const screenY = anchor.y * camera.zoom + camera.y;
 
   const visibleMargin = 80;
   if (
@@ -88,20 +90,19 @@ function getCardPosition(params: {
     return null;
   }
 
-  const anchorGap = getAnchorGap(node, camera.zoom);
   const stackOffset = stackIndex * (height + HANDOFF_CARD.stackGap);
-  let x = screenX + anchorGap.x;
-  let y = screenY + anchorGap.y - stackOffset;
+  let x = screenX - HANDOFF_CARD.width / 2;
+  let y = screenY - height / 2 - stackOffset;
 
   if (x + HANDOFF_CARD.width > viewport.width - HANDOFF_CARD.viewportPadding) {
-    x = screenX - HANDOFF_CARD.width - Math.abs(anchorGap.x);
+    x = viewport.width - HANDOFF_CARD.width - HANDOFF_CARD.viewportPadding;
   }
   if (x < HANDOFF_CARD.viewportPadding) {
     x = HANDOFF_CARD.viewportPadding;
   }
 
   if (y < HANDOFF_CARD.viewportPadding) {
-    y = screenY + Math.abs(anchorGap.y) + stackOffset;
+    y = HANDOFF_CARD.viewportPadding;
   }
   if (y + height > viewport.height - HANDOFF_CARD.viewportPadding) {
     y = Math.max(HANDOFF_CARD.viewportPadding, viewport.height - height - HANDOFF_CARD.viewportPadding);
@@ -110,32 +111,29 @@ function getCardPosition(params: {
   return { x, y };
 }
 
-function getAnchorGap(node: GraphNode, zoom: number): { x: number; y: number } {
+function getCardAnchorPosition(node: GraphNode, zoom: number): { x: number; y: number } {
   switch (node.kind) {
     case 'lead':
-      return {
-        x: NODE.radiusLead * zoom + HANDOFF_CARD.anchorGap,
-        y: -(NODE.radiusLead * zoom + HANDOFF_CARD.anchorGap),
-      };
     case 'member':
-      return {
-        x: NODE.radiusMember * zoom + HANDOFF_CARD.anchorGap,
-        y: -(NODE.radiusMember * zoom + HANDOFF_CARD.anchorGap),
-      };
+      return getHandoffAnchorTarget({
+        nodeX: node.x ?? 0,
+        nodeY: node.y ?? 0,
+        nodeKind: node.kind,
+      });
     case 'task':
       return {
-        x: TASK_PILL.width * zoom * 0.5 + HANDOFF_CARD.anchorGap,
-        y: -(TASK_PILL.height * zoom * 0.5 + HANDOFF_CARD.anchorGap),
+        x: (node.x ?? 0) + TASK_PILL.width * 0.5 + HANDOFF_CARD.anchorGap / zoom,
+        y: (node.y ?? 0) - (TASK_PILL.height * 0.5 + HANDOFF_CARD.anchorGap / zoom),
       };
     case 'process':
       return {
-        x: NODE.radiusProcess * zoom + HANDOFF_CARD.anchorGap,
-        y: -(NODE.radiusProcess * zoom + HANDOFF_CARD.anchorGap),
+        x: (node.x ?? 0) + NODE.radiusProcess + HANDOFF_CARD.anchorGap / zoom,
+        y: (node.y ?? 0) - (NODE.radiusProcess + HANDOFF_CARD.anchorGap / zoom),
       };
     case 'crossteam':
       return {
-        x: NODE.radiusCrossTeam * zoom + HANDOFF_CARD.anchorGap,
-        y: -(NODE.radiusCrossTeam * zoom + HANDOFF_CARD.anchorGap),
+        x: (node.x ?? 0) + NODE.radiusCrossTeam + HANDOFF_CARD.anchorGap / zoom,
+        y: (node.y ?? 0) - (NODE.radiusCrossTeam + HANDOFF_CARD.anchorGap / zoom),
       };
   }
 }

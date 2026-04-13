@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
 import {
   getProviderScopedTeamModelLabel,
+  getTeamProviderLabel,
   TeamModelSelector,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { RoleSelect } from '@renderer/components/team/RoleSelect';
@@ -169,6 +171,7 @@ export const MemberDraftRow = ({
   const modelButtonLabel = forceInheritedModelSettings
     ? `${modelButtonLabelBase} (lead)`
     : modelButtonLabelBase;
+  const modelButtonAriaLabel = `${getTeamProviderLabel(effectiveProviderId)} provider, ${modelButtonLabel}`;
   const modelTooltipText = forceInheritedModelSettings
     ? 'Provider, model, and effort are inherited from the lead while sync is enabled.'
     : modelLockReason;
@@ -246,6 +249,7 @@ export const MemberDraftRow = ({
                     variant="outline"
                     size="sm"
                     className="h-8 w-full justify-start gap-1 overflow-hidden text-left"
+                    aria-label={modelButtonAriaLabel}
                     disabled={lockProviderModel || isRemoved}
                     onClick={() => setModelExpanded((prev) => !prev)}
                   >
@@ -254,7 +258,11 @@ export const MemberDraftRow = ({
                     ) : (
                       <ChevronRight className="size-3.5" />
                     )}
-                    <span className="truncate">Model: {modelButtonLabel}</span>
+                    <ProviderBrandLogo
+                      providerId={effectiveProviderId}
+                      className="size-3.5 shrink-0"
+                    />
+                    <span className="truncate">{modelButtonLabel}</span>
                   </Button>
                 </span>
               </TooltipTrigger>

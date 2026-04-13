@@ -1,4 +1,5 @@
 import {
+  buildMemberLaunchPresentation,
   getLaunchAwarePresenceLabel,
   getSpawnAwareDotClass,
   getSpawnAwarePresenceLabel,
@@ -123,9 +124,7 @@ describe('memberHelpers spawn-aware presence', () => {
       )
     ).toContain('bg-red-400');
 
-    expect(getSpawnCardClass('spawning', 'starting', false, false, false, false)).toBe(
-      'opacity-40'
-    );
+    expect(getSpawnCardClass('spawning', 'starting', false, false, false, false)).toBe('');
   });
 
   it('keeps runtime-pending teammates in starting state while launch is still settling', () => {
@@ -175,6 +174,36 @@ describe('memberHelpers spawn-aware presence', () => {
         undefined
       )
     ).toBe('ready');
+  });
+
+  it('derives runtime-pending and settling visual states from the same launch inputs', () => {
+    expect(
+      buildMemberLaunchPresentation({
+        member,
+        spawnStatus: 'online',
+        spawnLaunchState: 'runtime_pending_bootstrap',
+        spawnLivenessSource: 'process',
+        spawnRuntimeAlive: true,
+        runtimeAdvisory: undefined,
+        isLaunchSettling: false,
+        isTeamAlive: true,
+        isTeamProvisioning: false,
+      }).launchVisualState
+    ).toBe('runtime_pending');
+
+    expect(
+      buildMemberLaunchPresentation({
+        member,
+        spawnStatus: 'online',
+        spawnLaunchState: 'confirmed_alive',
+        spawnLivenessSource: 'heartbeat',
+        spawnRuntimeAlive: true,
+        runtimeAdvisory: undefined,
+        isLaunchSettling: true,
+        isTeamAlive: true,
+        isTeamProvisioning: false,
+      }).launchVisualState
+    ).toBe('settling');
   });
 
   it('renders unified retry advisory labels for provider retries', () => {

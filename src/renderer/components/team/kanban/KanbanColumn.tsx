@@ -32,11 +32,7 @@ export const KanbanColumn = memo(function KanbanColumn({
 }: KanbanColumnProps): React.JSX.Element {
   return (
     <section
-      className={cn(
-        'relative rounded-md border border-[var(--color-border)]',
-        className,
-        !bodyBg && 'bg-[var(--color-surface)]'
-      )}
+      className={cn('relative rounded-md', className, !bodyBg && 'bg-[var(--color-surface)]')}
       style={bodyBg ? { backgroundColor: bodyBg } : undefined}
     >
       {count > 0 && (
@@ -48,11 +44,7 @@ export const KanbanColumn = memo(function KanbanColumn({
         </Badge>
       )}
       <header
-        className={cn(
-          'rounded-t-md border-b border-[var(--color-border)] px-3 py-2',
-          headerClassName,
-          headerDragClassName
-        )}
+        className={cn('rounded-t-md px-3 py-2', headerClassName, headerDragClassName)}
         style={headerBg ? { backgroundColor: headerBg } : undefined}
       >
         <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]">

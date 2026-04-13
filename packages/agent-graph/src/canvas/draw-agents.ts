@@ -25,8 +25,10 @@ export function drawAgents(
   time: number,
   selectedId: string | null,
   hoveredId: string | null,
-  focusNodeIds?: ReadonlySet<string> | null
+  focusNodeIds?: ReadonlySet<string> | null,
+  zoom = 1
 ): void {
+  const simplify = zoom < 0.19;
   for (const node of nodes) {
     if (node.kind !== 'member' && node.kind !== 'lead') continue;
     const opacity = getNodeOpacity(node) * getFocusOpacity(node.id, focusNodeIds);
@@ -42,23 +44,39 @@ export function drawAgents(
     ctx.save();
     ctx.globalAlpha = opacity;
 
-    // Depth shadow
-    drawDepthShadow(ctx, x, y, r);
+    if (simplify) {
+      drawHexagon(ctx, x, y, r);
+      ctx.fillStyle = isSelected ? 'rgba(100, 200, 255, 0.15)' : COLORS.nodeInterior;
+      ctx.fill();
+      drawHexagon(ctx, x, y, r);
+      ctx.strokeStyle = hexWithAlpha(color, isHovered ? 0.8 : 0.5);
+      ctx.lineWidth = isSelected ? 2 : 1;
+      ctx.stroke();
 
-    // Outer glow
-    drawGlow(ctx, x, y, r, color);
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(3, r * 0.16), 0, Math.PI * 2);
+      ctx.fillStyle = hexWithAlpha(color, 0.8);
+      ctx.fill();
+    } else {
+      // Depth shadow
+      drawDepthShadow(ctx, x, y, r);
 
-    // Hexagonal body with interior fill
-    drawHexBody(ctx, x, y, r, color, node.state, time, isSelected, isHovered);
+      // Outer glow
+      drawGlow(ctx, x, y, r, color);
 
-    // Avatar: robohash image or fallback letter
-    drawAvatar(ctx, x, y, r, node.label, color, node.kind === 'lead', node.avatarUrl);
+      // Hexagonal body with interior fill
+      drawHexBody(ctx, x, y, r, color, node.state, time, isSelected, isHovered);
 
-    // Breathing animation + spawn/waiting effects
-    drawBreathing(ctx, x, y, r, node.state, time, node.spawnStatus, node.runtimeLabel);
+      // Avatar: robohash image or fallback letter
+      drawAvatar(ctx, x, y, r, node.label, color, node.kind === 'lead', node.avatarUrl);
+
+      // Breathing animation + launch-stage effects
+      drawBreathing(ctx, x, y, r, node.state, time, node.spawnStatus, node.runtimeLabel);
+      drawLaunchStage(ctx, x, y, r, node.launchVisualState, time);
+    }
 
     // Pending approval indicator: pulsing amber ring
-    if (node.pendingApproval) {
+    if (!simplify && node.pendingApproval) {
       const pulseAlpha = 0.3 + 0.35 * Math.sin(time * 7);
       const ringR = r + 5;
       ctx.beginPath();
@@ -80,6 +98,7 @@ export function drawAgents(
 
     // Working indicator: subtle spinning arc when member has active task
     if (
+      !simplify &&
       node.currentTaskId &&
       (node.state === 'active' || node.state === 'thinking' || node.state === 'tool_calling')
     ) {
@@ -92,17 +111,19 @@ export function drawAgents(
       ctx.stroke();
     }
 
-    if (node.activeTool) {
+    if (!simplify && node.activeTool) {
       drawToolCard(ctx, x, y, r, node.activeTool, time);
     }
 
-    if (node.exceptionTone) {
+    if (!simplify && node.exceptionTone) {
       drawExceptionPip(ctx, x, y, r, node.exceptionTone);
     }
 
-    // Name + role label (single line: "jack · developer")
-    const labelText = node.role ? `${node.label} · ${node.role}` : node.label;
-    drawLabel(ctx, x, y, r, labelText, color, node.runtimeLabel);
+    if (!simplify) {
+      // Name + role label (single line: "jack · developer")
+      const labelText = node.role ? `${node.label} · ${node.role}` : node.label;
+      drawLabel(ctx, x, y, r, labelText, color, node.runtimeLabel);
+    }
 
     // TODO: Context ring disabled — LeadContextUsage.percent is unreliable
     // (jumps due to cache_read variance, contextWindow mismatch with actual model).
@@ -194,10 +215,7 @@ function getNodeOpacity(node: GraphNode): number {
   return 1;
 }
 
-function getFocusOpacity(
-  nodeId: string,
-  focusNodeIds?: ReadonlySet<string> | null
-): number {
+function getFocusOpacity(nodeId: string, focusNodeIds?: ReadonlySet<string> | null): number {
   return focusNodeIds && !focusNodeIds.has(nodeId) ? 0.25 : 1;
 }
 
@@ -220,6 +238,85 @@ function drawExceptionPip(
   ctx.lineWidth = 1.5;
   ctx.strokeStyle = '#050510';
   ctx.stroke();
+  ctx.restore();
+}
+
+function drawLaunchStage(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  visualState: GraphNode['launchVisualState'],
+  time: number
+): void {
+  if (!visualState) {
+    return;
+  }
+
+  ctx.save();
+  switch (visualState) {
+    case 'waiting': {
+      const ringR = r + 7 + Math.sin(time * 3.2) * 1.2;
+      const pulseAlpha = 0.16 + 0.12 * (0.5 + 0.5 * Math.sin(time * 3.2));
+      ctx.beginPath();
+      ctx.arc(x, y, ringR, 0, Math.PI * 2);
+      ctx.strokeStyle = hexWithAlpha('#d4d4d8', pulseAlpha);
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      break;
+    }
+    case 'spawning': {
+      const ringR = r + 7;
+      const rotation = time * 2.4;
+      ctx.beginPath();
+      ctx.arc(x, y, ringR, rotation, rotation + Math.PI * 1.15);
+      ctx.strokeStyle = hexWithAlpha('#f59e0b', 0.72);
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      break;
+    }
+    case 'runtime_pending': {
+      const ringR = r + 8;
+      ctx.beginPath();
+      ctx.arc(x, y, ringR, 0, Math.PI * 2);
+      ctx.strokeStyle = hexWithAlpha('#38bdf8', 0.4);
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      const orbit = time * 1.6;
+      const dotR = 2.2;
+      const dotX = x + Math.cos(orbit) * ringR;
+      const dotY = y + Math.sin(orbit) * ringR;
+      ctx.beginPath();
+      ctx.arc(dotX, dotY, dotR, 0, Math.PI * 2);
+      ctx.fillStyle = hexWithAlpha('#67e8f9', 0.9);
+      ctx.fill();
+      break;
+    }
+    case 'settling': {
+      const ringR = r + 6;
+      const arc = 0.65 + 0.08 * Math.sin(time * 2.2);
+      const rotation = time * 1.25;
+      ctx.beginPath();
+      ctx.arc(x, y, ringR, rotation, rotation + Math.PI * arc);
+      ctx.strokeStyle = hexWithAlpha('#22c55e', 0.55);
+      ctx.lineWidth = 1.75;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      break;
+    }
+    case 'error': {
+      const ringR = r + 7 + Math.sin(time * 4) * 0.8;
+      ctx.beginPath();
+      ctx.arc(x, y, ringR, Math.PI * 0.2, Math.PI * 1.15);
+      ctx.strokeStyle = hexWithAlpha('#ef4444', 0.6);
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      break;
+    }
+  }
   ctx.restore();
 }
 

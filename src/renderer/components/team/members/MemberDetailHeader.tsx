@@ -6,10 +6,8 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import {
   agentAvatarUrl,
+  buildMemberLaunchPresentation,
   displayMemberName,
-  getLaunchAwarePresenceLabel,
-  getMemberRuntimeAdvisoryTitle,
-  getSpawnAwareDotClass,
 } from '@renderer/utils/memberHelpers';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { Pencil } from 'lucide-react';
@@ -61,32 +59,21 @@ export const MemberDetailHeader = ({
 
   const colors = getTeamColorSet(member.color ?? '');
   const role = member.role || formatAgentRole(member.agentType);
-  const presenceLabel = getLaunchAwarePresenceLabel(
+  const launchPresentation = buildMemberLaunchPresentation({
     member,
     spawnStatus,
     spawnLaunchState,
     spawnLivenessSource,
     spawnRuntimeAlive,
-    member.runtimeAdvisory,
+    runtimeAdvisory: member.runtimeAdvisory,
     isLaunchSettling,
     isTeamAlive,
     isTeamProvisioning,
-    leadActivity
-  );
-  const dotClass = getSpawnAwareDotClass(
-    member,
-    spawnStatus,
-    spawnLaunchState,
-    spawnRuntimeAlive,
-    isLaunchSettling,
-    isTeamAlive,
-    isTeamProvisioning,
-    leadActivity
-  );
-  const runtimeAdvisoryTitle = getMemberRuntimeAdvisoryTitle(
-    member.runtimeAdvisory,
-    member.providerId
-  );
+    leadActivity,
+  });
+  const presenceLabel = launchPresentation.presenceLabel;
+  const dotClass = launchPresentation.dotClass;
+  const runtimeAdvisoryTitle = launchPresentation.runtimeAdvisoryTitle;
 
   const canEditRole =
     !isLeadMember(member) && !member.removedAt && !isTeamProvisioning && !!onUpdateRole;

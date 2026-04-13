@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getThemedText,
   getSubagentTypeColorSet,
   getTeamColorSet,
   scaleColorAlpha,
@@ -37,8 +38,11 @@ describe('getTeamColorSet', () => {
   it('generates a color set from hex strings', () => {
     const result = getTeamColorSet('#ff5500');
     expect(result.border).toBe('#ff5500');
-    expect(result.badge).toBe('#ff550026');
-    expect(result.text).toBe('#ff5500');
+    expect(result.badge).toBe('rgba(255, 85, 0, 0.15)');
+    expect(result.badgeLight).toBe('rgba(255, 85, 0, 0.12)');
+    expect(result.text).toBeTruthy();
+    expect(result.textLight).toBeTruthy();
+    expect(getThemedText(result, true)).not.toBe('#ff5500');
   });
 
   it('hashes unknown non-hex strings to a valid named color (not always blue)', () => {

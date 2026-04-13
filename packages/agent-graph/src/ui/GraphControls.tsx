@@ -93,7 +93,7 @@ export function GraphControls({
 
   return (
     <>
-      <div className="absolute left-20 top-3 z-10 flex items-center gap-3 pointer-events-none">
+      <div className="absolute left-20 top-3 z-20 flex items-center gap-3 pointer-events-none">
         <div
           className="pointer-events-auto flex items-center gap-2 rounded-lg px-3 py-1.5 backdrop-blur-sm"
           style={{
@@ -110,7 +110,7 @@ export function GraphControls({
         </div>
       </div>
 
-      <div className="absolute right-3 top-3 z-10 flex items-center gap-2 pointer-events-none">
+      <div className="absolute right-3 top-3 z-20 flex items-center gap-2 pointer-events-none">
         <div
           className="pointer-events-auto flex items-center rounded-lg px-1 py-0.5 backdrop-blur-sm"
           style={{
@@ -192,7 +192,7 @@ export function GraphControls({
         </div>
       </div>
 
-      <div className="absolute bottom-3 right-3 z-10 pointer-events-none">
+      <div className="absolute bottom-3 right-3 z-20 pointer-events-none">
         <div
           className="pointer-events-auto flex items-center gap-0.5 rounded-lg px-1 py-0.5 backdrop-blur-sm"
           style={{
@@ -207,7 +207,7 @@ export function GraphControls({
       </div>
 
       {showBlockingHint && (
-        <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
+        <div className="absolute bottom-3 left-3 z-20 pointer-events-none">
           <div
             className="pointer-events-auto rounded-lg px-2.5 py-1 text-[10px] font-mono backdrop-blur-sm"
             style={{

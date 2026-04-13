@@ -39,12 +39,12 @@
     {
       "id": "whatIsIt",
       "question": "¿Qué es Claude Agent Teams?",
-      "answer": "Una app de escritorio que te permite montar equipos de agentes IA con Claude Code. Cada agente tiene un rol, trabaja de forma autónoma y colabora con compañeros — todo gestionado desde un tablero kanban."
+      "answer": "Una app de escritorio para orquestar equipos de agentes IA con nuestra propia capa local de coordinación. Cada agente tiene un rol, trabaja de forma autónoma, colabora a través de un tablero kanban y puede ejecutarse con Anthropic o Codex."
     },
     {
       "id": "isFree",
       "question": "¿Es realmente gratis?",
-      "answer": "Sí. La app es 100% gratuita y de código abierto. Solo necesitas una suscripción a Claude (plan Max o Pro) — eso es todo. Claude Code se instala y configura automáticamente a través de nuestra app, sin necesidad de terminal."
+      "answer": "Sí. La app es 100% gratuita y de código abierto. La app no tiene un plan de pago propio. Para ejecutar agentes solo necesitas acceso a un proveedor/runtime compatible, como Anthropic o Codex."
     },
     {
       "id": "platforms",
@@ -64,7 +64,7 @@
     {
       "id": "requirements",
       "question": "¿Qué necesito para empezar?",
-      "answer": "Solo instala la app — incluye instalación y autenticación integrada de Claude Code. El onboarding sin configuración te pone en marcha en minutos."
+      "answer": "Solo instala la app - te guía en la detección del runtime y la autenticación del proveedor desde la interfaz. El onboarding sin configuración te pone en marcha en minutos."
     }
   ],
   "download": {

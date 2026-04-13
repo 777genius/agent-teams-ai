@@ -1936,8 +1936,12 @@ export const TeamDetailView = ({
             </TeamSidebarPortalSource>
           </TeamSidebarHost>
 
-          <div className="relative size-full flex-1">
-            <div ref={contentRef} className="size-full overflow-auto p-4" data-team-name={teamName}>
+          <div className="relative min-h-0 min-w-0 flex-1">
+            <div
+              ref={contentRef}
+              className="size-full min-w-0 overflow-y-auto overflow-x-hidden p-4"
+              data-team-name={teamName}
+            >
               <div className="relative -mx-4 -mt-4 mb-3 overflow-hidden border-b border-[var(--color-border)] px-4 py-3">
                 {headerColorSet ? (
                   <div
@@ -2202,7 +2206,6 @@ export const TeamDetailView = ({
                 badge={filteredTasks.length}
                 defaultOpen
                 forceOpen={kanbanSearch.trim().length > 0}
-                contentClassName="overflow-x-visible"
                 action={
                   <Button
                     variant="ghost"

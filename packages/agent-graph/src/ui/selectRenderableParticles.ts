@@ -9,6 +9,7 @@ export function computeAdaptiveParticleBudget(params: {
   visibleEdgeCount: number;
   frameTimeMs: number;
   hasFocusedEdges: boolean;
+  zoom?: number;
 }): number {
   const baseBudget = Math.max(
     MIN_PARTICLE_BUDGET,
@@ -16,12 +17,18 @@ export function computeAdaptiveParticleBudget(params: {
   );
 
   let adjustedBudget = baseBudget;
+  if ((params.zoom ?? 1) < 0.18) {
+    adjustedBudget = Math.floor(adjustedBudget * 0.45);
+  } else if ((params.zoom ?? 1) < 0.24) {
+    adjustedBudget = Math.floor(adjustedBudget * 0.7);
+  }
+
   if (params.frameTimeMs >= 24) {
-    adjustedBudget = Math.floor(baseBudget * 0.55);
+    adjustedBudget = Math.floor(adjustedBudget * 0.55);
   } else if (params.frameTimeMs >= 18) {
-    adjustedBudget = Math.floor(baseBudget * 0.72);
+    adjustedBudget = Math.floor(adjustedBudget * 0.72);
   } else if (params.frameTimeMs >= 14) {
-    adjustedBudget = Math.floor(baseBudget * 0.88);
+    adjustedBudget = Math.floor(adjustedBudget * 0.88);
   }
 
   if (params.hasFocusedEdges) {
@@ -66,9 +73,10 @@ export function selectRenderableParticles(params: {
   const focused = params.focusEdgeIds
     ? indexed.filter(({ particle }) => params.focusEdgeIds?.has(particle.edgeId))
     : [];
-  const nonFocused = focused.length === indexed.length
-    ? []
-    : indexed.filter(({ particle }) => !(params.focusEdgeIds?.has(particle.edgeId) ?? false));
+  const nonFocused =
+    focused.length === indexed.length
+      ? []
+      : indexed.filter(({ particle }) => !(params.focusEdgeIds?.has(particle.edgeId) ?? false));
 
   const selectedById = new Set<string>();
   const seenEdges = new Set<string>();

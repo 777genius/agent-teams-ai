@@ -259,7 +259,7 @@
 }
 
 .kanban-grid-layout {
-  min-height: 640px;
+  min-height: 0;
   overflow: visible;
   transition: none;
 }
@@ -357,11 +357,11 @@
 }
 
 .kanban-grid-resize-handle-n {
-  top: -3px;
+  top: 0;
 }
 
 .kanban-grid-resize-handle-s {
-  bottom: -3px;
+  bottom: 0;
 }
 
 .kanban-grid-resize-handle-e,
@@ -374,11 +374,11 @@
 }
 
 .kanban-grid-resize-handle-e {
-  right: -3px;
+  right: 0;
 }
 
 .kanban-grid-resize-handle-w {
-  left: -3px;
+  left: 0;
 }
 
 .kanban-grid-resize-handle-ne,
@@ -390,26 +390,26 @@
 }
 
 .kanban-grid-resize-handle-ne {
-  top: -4px;
-  right: -4px;
+  top: 0;
+  right: 0;
   cursor: nesw-resize;
 }
 
 .kanban-grid-resize-handle-nw {
-  top: -4px;
-  left: -4px;
+  top: 0;
+  left: 0;
   cursor: nwse-resize;
 }
 
 .kanban-grid-resize-handle-se {
-  right: -4px;
-  bottom: -4px;
+  right: 0;
+  bottom: 0;
   cursor: nwse-resize;
 }
 
 .kanban-grid-resize-handle-sw {
-  left: -4px;
-  bottom: -4px;
+  left: 0;
+  bottom: 0;
   cursor: nesw-resize;
 }
 

@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <sub>100% free, open source. No API keys. No configuration. Runs entirely locally. Not just coding agents.</sub>
+  <sub>100% free, open source. Auto-detects Claude/Codex. Use the provider access you already have - subscriptions/logins or API keys where supported. Not just coding agents.</sub>
 </p>
 
 <img width="1500" height="1065" alt="demo" src="https://github.com/user-attachments/assets/be19cfcb-93ff-403a-9a1e-8ff1a803c55e" />
@@ -48,7 +48,7 @@ https://github.com/user-attachments/assets/35e27989-726d-4059-8662-bae610e46b42
 
 ## Installation
 
-No prerequisites — Claude Code can be installed and configured directly from the app.
+No prerequisites - the app can detect supported runtimes/providers and guide setup from the UI.
 
 <table align="center">
 <tr>
@@ -105,8 +105,9 @@ No prerequisites — Claude Code can be installed and configured directly from t
 
 ## What is this
 
-A new approach to task management with AI agent teams.
+A local orchestration layer for AI agent teams across Claude and Codex.
 
+- **Claude + Codex orchestration** — auto-detect available Claude/Codex runtimes and use the provider access you already have - subscriptions/logins or API keys where supported
 - **Assemble your team** — create agent teams with different roles that work autonomously in parallel
 - **Agents talk to each other** — they communicate, create and manage their own tasks, review, leave comments
 - **Cross-team communication** — agents can fully communicate across different teams; you can configure or prompt them to collaborate and message each other between teams
@@ -114,7 +115,7 @@ A new approach to task management with AI agent teams.
 - **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment
 - **Built-in review workflow** — easily see how agents review each other's tasks to make sure everything went exactly as planned
 - **Full tool visibility** — inspect exactly which tools an agent used to complete each task
-- **Task-specific logs and messages** — clearly see all Claude logs and messages in isolation for each individual task, making it easy to trace what happened for any assignment
+- **Task-specific logs and messages** — clearly see agent/runtime logs and messages in isolation for each individual task, making it easy to trace what happened for any assignment
 - **Live process section** — see which agents are running processes and open URLs directly in the browser
 - **Stay in control** — send a direct message to any agent, drop a comment on a task, or pick a quick action right on the kanban card whenever you want to clarify something or add new work
 - **Flexible autonomy** — let agents run fully autonomous, or review and approve each action one by one (you'll get a notification) — configure the level of control that fits your security needs
@@ -125,15 +126,15 @@ A new approach to task management with AI agent teams.
 
 - **Task creation with attachments** — send a message to the team lead with any attached images. The lead will automatically create a fully described task and attach your files directly to the task for complete context.
 
-- **Deep session analysis** — detailed breakdown of what happened in each Claude session: bash commands, reasoning, subprocesses
+- **Deep session analysis** — detailed breakdown of what happened in each agent session: bash commands, reasoning, subprocesses
 
-- **Smart task-to-log/changes matching** — automatically links Claude session logs/changes to specific tasks
+- **Smart task-to-log/changes matching** — automatically links session logs/changes to specific tasks
 
 - **Advanced context monitoring system** — comprehensive breakdown of what consumes tokens at every step: user messages, Claude.md instructions, tool outputs, thinking text, and team coordination. Token usage, percentage of context window, and session cost are displayed for each category, with detailed views by category or size.
 
 - **Recent tasks across projects** — browse the latest completed tasks from all your projects in one place
 
-- **Zero-setup onboarding** — built-in Claude Code installation and authentication
+- **Zero-setup onboarding** — built-in runtime detection and provider authentication
 
 - **Built-in code editor** — edit project files with Git support without leaving the app
 
@@ -147,7 +148,7 @@ A new approach to task management with AI agent teams.
 
 - **MCP integration** — supports the built-in `mcp-server` (see [mcp-server folder](./mcp-server)) for integrating external tools and extensible agent plugins out of the box
 
-- **Post-compact context recovery** — when Claude compresses its context, the app restores the key team-management instructions so kanban/task-board coordination stays consistent and important operational context is not lost
+- **Post-compact context recovery** — when the active runtime compacts its context, the app restores the key team-management instructions so kanban/task-board coordination stays consistent and important operational context is not lost
 
 - **Task context is preserved** — thanks to task descriptions, comments, and attachments, all essential information about each task remains available for ongoing work and future reference
 
@@ -177,14 +178,14 @@ A new approach to task management with AI agent teams.
 | **Flexible autonomy** | ✅ Granular settings, per-action approval, notifications | ❌ | ⚠️ Plan approval only | ✅ | ✅ |
 | **Git worktree isolation** | ✅ Optional | ⚠️ Mandatory | ⚠️ Mandatory | ✅ | ✅ |
 | **Multi-agent backend** | ✅ Claude, Codex, more coming soon | ✅ 6+ agents | ✅ 11 providers | ✅ Multi-model | — |
-| **Price** | **Free** | Free / $30 user/mo | Free | $0–$200/mo | Claude subscription |
+| **Price** | **Free** | Free / $30 user/mo | Free | $0–$200/mo | Provider subscription |
 
 ---
 
 ## Quick start
 
 1. **Download** the app for your platform (see [Installation](#installation))
-2. **Launch** — On first run, the setup wizard will install and authenticate Claude Code
+2. **Launch** — On first run, the setup wizard will detect the runtime and guide provider authentication
 3. **Create a team** — Pick a project, define roles, write a provisioning prompt
 4. **Watch** — Agents spawn, create tasks, and work. You see it all on the kanban board
 
@@ -194,27 +195,27 @@ A new approach to task management with AI agent teams.
 ## FAQ
 
 <details>
-<summary><strong>Do I need to install Claude Code before using this app?</strong></summary>
+<summary><strong>Do I need to install a runtime before using this app?</strong></summary>
 <br />
-No. The app includes built-in installation and authentication — just launch and follow the setup wizard.
+No. The app guides runtime detection/setup and provider authentication from the UI - just launch and follow the setup wizard.
 </details>
 
 <details>
 <summary><strong>Does it read or upload my code?</strong></summary>
 <br />
-No. Everything runs locally. The app reads Claude Code's session logs from <code>~/.claude/</code> — your source code is never sent anywhere.
+No. Everything runs locally. The app reads local runtime/session data to power the UI - your source code is never sent anywhere.
 </details>
 
 <details>
 <summary><strong>Can agents communicate with each other?</strong></summary>
 <br />
-Yes. Agents send direct messages, create shared tasks, and leave comments — all coordinated through Claude Code's team protocol.
+Yes. Agents send direct messages, create shared tasks, and leave comments - all coordinated by the app's own orchestration layer.
 </details>
 
 <details>
 <summary><strong>Is it free?</strong></summary>
 <br />
-Yes, completely free and open source. The app requires no API keys or subscriptions. You only need a Claude Code plan from Anthropic to run agents.
+Yes, completely free and open source. The app has no paid tier of its own. To run agents, you only need access to a supported provider/runtime, such as Anthropic or Codex.
 </details>
 
 <details>
@@ -227,12 +228,6 @@ Yes. Every task shows a full diff view where you can accept, reject, or comment 
 <summary><strong>What happens if an agent gets stuck?</strong></summary>
 <br />
 Send a direct message to course-correct, or stop and restart from the process dashboard. If an agent needs your input, you'll get a notification and the task will show a distinct badge on the board.
-</details>
-
-<details>
-<summary><strong>Can I use it just to view past sessions without running agents?</strong></summary>
-<br />
-Yes. The app works as a session viewer — browse, search, and analyze any Claude Code session history.
 </details>
 
 <details>

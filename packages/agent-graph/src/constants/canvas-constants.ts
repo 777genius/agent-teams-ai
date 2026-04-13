@@ -244,7 +244,7 @@ export const HIT_DETECTION = {
 
 export const BACKGROUND = {
   /** Number of depth particles (stars) */
-  starCount: 80,
+  starCount: 320,
   /** Hex grid cell size */
   hexSize: 30,
   /** Hex grid max alpha */

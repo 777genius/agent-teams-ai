@@ -17,6 +17,13 @@ export type GraphNodeState =
   | 'error'
   | 'terminated';
 
+export type GraphLaunchVisualState =
+  | 'waiting'
+  | 'spawning'
+  | 'runtime_pending'
+  | 'settling'
+  | 'error';
+
 // ─── Edge & Particle Types ───────────────────────────────────────────────────
 
 export type GraphEdgeType = 'parent-child' | 'ownership' | 'blocking' | 'related' | 'message';
@@ -28,6 +35,18 @@ export type GraphParticleKind =
   | 'review_request'
   | 'review_response'
   | 'spawn';
+
+export interface GraphActivityItem {
+  id: string;
+  kind: Exclude<GraphParticleKind, 'spawn'>;
+  timestamp: string;
+  title: string;
+  preview?: string;
+  accentColor?: string;
+  taskId?: string;
+  taskDisplayId?: string;
+  authorLabel?: string;
+}
 
 // ─── Graph Node ──────────────────────────────────────────────────────────────
 
@@ -50,6 +69,8 @@ export interface GraphNode {
   avatarUrl?: string;
   /** Spawn lifecycle status */
   spawnStatus?: 'offline' | 'waiting' | 'spawning' | 'online' | 'error';
+  /** Shared launch-stage visual derived by the host app */
+  launchVisualState?: GraphLaunchVisualState;
   /** Context window usage ratio (0..1), available for lead only */
   contextUsage?: number;
   /** Current task ID this member is working on */
@@ -82,6 +103,10 @@ export interface GraphNode {
   exceptionTone?: 'warning' | 'error';
   /** Short human-readable abnormal-state label */
   exceptionLabel?: string;
+  /** Recent activity feed rendered inline beside the node */
+  activityItems?: GraphActivityItem[];
+  /** Count of older items hidden behind the visible activity window */
+  activityOverflowCount?: number;
 
   // ─── Task-specific ─────────────────────────────────────────────────────
   /** Short display ID (e.g., "#3") */

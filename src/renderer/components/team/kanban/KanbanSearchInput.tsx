@@ -122,7 +122,7 @@ export const KanbanSearchInput = ({
   );
 
   return (
-    <div ref={containerRef} className="relative max-w-[240px]">
+    <div ref={containerRef} className="relative w-full max-w-full">
       <Search
         size={14}
         className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
@@ -134,7 +134,7 @@ export const KanbanSearchInput = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="h-8 w-full min-w-[140px] max-w-[240px] rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-8 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
+        className="h-8 w-full min-w-[140px] rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-8 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
       />
       {value && (
         <Tooltip>
@@ -155,7 +155,7 @@ export const KanbanSearchInput = ({
       {showDropdown && suggestions.length > 0 && (
         <div
           ref={listRef}
-          className="absolute left-0 top-full z-50 mt-1 max-h-[280px] w-[360px] overflow-y-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface-overlay)] py-1 shadow-xl shadow-black/30"
+          className="absolute left-0 top-full z-50 mt-1 max-h-[280px] w-[360px] min-w-full max-w-[calc(100vw-2rem)] overflow-y-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface-overlay)] py-1 shadow-xl shadow-black/30"
         >
           <div className="flex items-center gap-1.5 px-3 py-1.5">
             <Hash size={10} className="text-[var(--color-text-muted)]" />

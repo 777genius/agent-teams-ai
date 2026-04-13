@@ -39,12 +39,12 @@
     {
       "id": "whatIsIt",
       "question": "Claude Agent Teams क्या है?",
-      "answer": "एक डेस्कटॉप ऐप जो Claude Code द्वारा संचालित AI एजेंट टीमें बनाने देता है। हर एजेंट की एक भूमिका है, स्वायत्त रूप से काम करता है, और साथियों के साथ सहयोग करता है — सब कानबन बोर्ड से मैनेज होता है।"
+      "answer": "यह एक डेस्कटॉप ऐप है जो हमारी अपनी लोकल coordination layer के साथ AI agent teams को orchestrate करता है। हर agent की एक भूमिका होती है, वह स्वायत्त रूप से काम करता है, kanban board पर सहयोग करता है, और Anthropic या Codex पर चल सकता है।"
     },
     {
       "id": "isFree",
       "question": "क्या यह सच में मुफ़्त है?",
-      "answer": "हाँ। ऐप खुद 100% मुफ़्त और ओपन सोर्स है। आपको बस Claude सब्सक्रिप्शन (Max या Pro प्लान) चाहिए — बस इतना ही। Claude Code हमारे ऐप के ज़रिए अपने आप इंस्टॉल और सेटअप हो जाता है, टर्मिनल की ज़रूरत नहीं।"
+      "answer": "हाँ। ऐप 100% मुफ़्त और ओपन सोर्स है। ऐप का अपना कोई paid plan नहीं है। agents चलाने के लिए आपको सिर्फ़ किसी supported provider/runtime, जैसे Anthropic या Codex, का access चाहिए।"
     },
     {
       "id": "platforms",
@@ -64,7 +64,7 @@
     {
       "id": "requirements",
       "question": "शुरू करने के लिए क्या चाहिए?",
-      "answer": "बस ऐप इंस्टॉल करें — इसमें Claude Code इंस्टॉलेशन और ऑथेंटिकेशन बिल्ट-इन है। शून्य-सेटअप ऑनबोर्डिंग से मिनटों में शुरू हो जाएँगे।"
+      "answer": "बस ऐप इंस्टॉल करें - यह UI से runtime detection और provider authentication में गाइड करता है। zero-setup onboarding आपको कुछ ही मिनटों में शुरू करा देता है।"
     }
   ],
   "download": {

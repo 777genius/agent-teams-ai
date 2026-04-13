@@ -1,7 +1,7 @@
 /**
  * MoreMenu - Dropdown menu behind a "..." icon for less-frequent toolbar actions.
  *
- * Groups: Search, Export (session-only), Analyze (session-only).
+ * Groups: Teams, Settings, Extensions, Search, Schedules, Export (session-only), Analyze (session-only).
  * Closes on outside click or Escape.
  */
 
@@ -10,7 +10,18 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from '@renderer/store';
 import { triggerDownload } from '@renderer/utils/sessionExporter';
 import { formatShortcut } from '@renderer/utils/stringUtils';
-import { Activity, Braces, Calendar, FileText, MoreHorizontal, Search, Type } from 'lucide-react';
+import {
+  Activity,
+  Braces,
+  Calendar,
+  FileText,
+  MoreHorizontal,
+  Puzzle,
+  Search,
+  Settings,
+  Type,
+  Users,
+} from 'lucide-react';
 
 import type { SessionDetail } from '@renderer/types/data';
 import type { Tab } from '@renderer/types/tabs';
@@ -41,8 +52,11 @@ export const MoreMenu = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const openCommandPalette = useStore((s) => s.openCommandPalette);
+  const openExtensionsTab = useStore((s) => s.openExtensionsTab);
   const openSessionReport = useStore((s) => s.openSessionReport);
   const openSchedulesTab = useStore((s) => s.openSchedulesTab);
+  const openSettingsTab = useStore((s) => s.openSettingsTab);
+  const openTeamsTab = useStore((s) => s.openTeamsTab);
 
   // Close on outside click
   useEffect(() => {
@@ -86,6 +100,33 @@ export const MoreMenu = ({
 
   // Build menu sections
   const topItems: MenuItem[] = [
+    {
+      id: 'teams',
+      label: 'Teams',
+      icon: Users,
+      onClick: () => {
+        openTeamsTab();
+        setIsOpen(false);
+      },
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: Settings,
+      onClick: () => {
+        openSettingsTab();
+        setIsOpen(false);
+      },
+    },
+    {
+      id: 'extensions',
+      label: 'Extensions',
+      icon: Puzzle,
+      onClick: () => {
+        openExtensionsTab();
+        setIsOpen(false);
+      },
+    },
     {
       id: 'search',
       label: 'Search',

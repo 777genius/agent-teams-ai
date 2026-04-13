@@ -23,12 +23,28 @@ import { getNodeStrategy } from '../strategies';
 import { createSpawnEffect, createCompleteEffect, type VisualEffect } from '../canvas/draw-effects';
 import { getStateColor } from '../constants/colors';
 import { KanbanLayoutEngine } from '../layout/kanbanLayout';
+import {
+  LAUNCH_ANCHOR_LAYOUT,
+  getActivityAnchorId,
+  getHandoffAnchorBounds,
+  getLaunchAnchorBounds,
+  getLaunchAnchorId,
+  getLaunchAnchorTarget,
+  isActivityAnchorId,
+  isLaunchAnchorId,
+  type WorldBounds,
+} from '../layout/launchAnchor';
+import { ACTIVITY_ANCHOR_LAYOUT, getActivityAnchorTarget } from '../layout/activityLane';
 
 // ─── Force Node/Link types (properly typed, no loose `string`) ──────────────
 
+type InternalNodeKind = GraphNodeKind | 'launch-anchor' | 'activity-anchor';
+
 interface ForceNode extends SimulationNodeDatum {
   id: string;
-  kind: GraphNodeKind;
+  kind: InternalNodeKind;
+  anchorForLeadId?: string;
+  anchorForNodeId?: string;
 }
 
 interface ForceLink extends SimulationLinkDatum<ForceNode> {
@@ -51,6 +67,10 @@ export interface UseGraphSimulationResult {
   updateData: (nodes: GraphNode[], edges: GraphEdge[], particles: GraphParticle[]) => void;
   /** Tick one simulation frame — called from parent's RAF loop */
   tick: (dt: number) => void;
+  setNodePosition: (nodeId: string, x: number, y: number) => void;
+  getLaunchAnchorWorldPosition: (leadNodeId: string) => { x: number; y: number } | null;
+  getActivityAnchorWorldPosition: (nodeId: string) => { x: number; y: number } | null;
+  getExtraWorldBounds: () => WorldBounds[];
 }
 
 // ─── Deterministic hash for stable initial positions ─────────────────────────
@@ -62,6 +82,70 @@ function deterministicPosition(id: string, seed: number): number {
     hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
   }
   return ((hash & 0x7fffffff) % 1000) / 1000 - 0.5;
+}
+
+function syncLaunchAnchors(forceNodes: ForceNode[]): void {
+  const forceNodeMap = new Map<string, ForceNode>();
+  for (const node of forceNodes) {
+    forceNodeMap.set(node.id, node);
+  }
+  const leadNode = forceNodes.find((node) => node.kind === 'lead');
+  const leadX = leadNode?.x ?? leadNode?.fx ?? null;
+
+  for (const node of forceNodes) {
+    let target: { x: number; y: number } | null = null;
+    if (node.kind === 'launch-anchor' && node.anchorForLeadId) {
+      const leadNode = forceNodeMap.get(node.anchorForLeadId);
+      if (!leadNode) continue;
+      target = getLaunchAnchorTarget(leadNode.x ?? 0, leadNode.y ?? 0);
+    } else if (node.kind === 'activity-anchor' && node.anchorForNodeId) {
+      const ownerNode = forceNodeMap.get(node.anchorForNodeId);
+      if (!ownerNode || (ownerNode.kind !== 'lead' && ownerNode.kind !== 'member')) continue;
+      target = getActivityAnchorTarget({
+        nodeX: ownerNode.x ?? 0,
+        nodeY: ownerNode.y ?? 0,
+        nodeKind: ownerNode.kind,
+        leadX,
+      });
+    } else {
+      continue;
+    }
+    if (!target) {
+      continue;
+    }
+
+    node.fx = target.x;
+    node.fy = target.y;
+    node.x = target.x;
+    node.y = target.y;
+    node.vx = 0;
+    node.vy = 0;
+  }
+}
+
+function updateLaunchAnchorCaches(
+  forceNodes: ForceNode[],
+  launchPositions: Map<string, { x: number; y: number }>,
+  activityPositions: Map<string, { x: number; y: number }>,
+  bounds: WorldBounds[]
+): void {
+  launchPositions.clear();
+  activityPositions.clear();
+  bounds.length = 0;
+
+  for (const node of forceNodes) {
+    const x = node.x ?? node.fx ?? 0;
+    const y = node.y ?? node.fy ?? 0;
+    if (node.kind === 'launch-anchor' && node.anchorForLeadId) {
+      launchPositions.set(node.anchorForLeadId, { x, y });
+      bounds.push(getLaunchAnchorBounds(x, y));
+      continue;
+    }
+    if (node.kind === 'activity-anchor' && node.anchorForNodeId) {
+      activityPositions.set(node.anchorForNodeId, { x, y });
+      bounds.push(getHandoffAnchorBounds(x, y));
+    }
+  }
 }
 
 // ─── Hook ───────────────────────────────────────────────────────────────────
@@ -76,6 +160,9 @@ export function useGraphSimulation(): UseGraphSimulationResult {
   });
 
   const simRef = useRef<Simulation<ForceNode, ForceLink> | null>(null);
+  const launchAnchorPositionsRef = useRef(new Map<string, { x: number; y: number }>());
+  const activityAnchorPositionsRef = useRef(new Map<string, { x: number; y: number }>());
+  const extraWorldBoundsRef = useRef<WorldBounds[]>([]);
 
   // Initialize d3-force simulation
   const initSimulation = useCallback(() => {
@@ -84,9 +171,18 @@ export function useGraphSimulation(): UseGraphSimulationResult {
     const sim = forceSimulation<ForceNode, ForceLink>([])
       .force('center', forceCenter(0, 0).strength(FORCE.centerStrength))
       .force('charge', forceManyBody<ForceNode>().strength((d) => {
+        if (d.kind === 'launch-anchor' || d.kind === 'activity-anchor') {
+          return 0;
+        }
         return getNodeStrategy(d.kind).getChargeStrength();
       }))
       .force('collide', forceCollide<ForceNode>().radius((d) => {
+        if (d.kind === 'launch-anchor') {
+          return LAUNCH_ANCHOR_LAYOUT.collisionRadius;
+        }
+        if (d.kind === 'activity-anchor') {
+          return ACTIVITY_ANCHOR_LAYOUT.collisionRadius;
+        }
         return getNodeStrategy(d.kind).getCollisionRadius();
       }))
       .force('link', forceLink<ForceNode, ForceLink>([]).id((d) => d.id).distance((d) => {
@@ -113,6 +209,15 @@ export function useGraphSimulation(): UseGraphSimulationResult {
     let sim = simRef.current;
     if (!sim) sim = initSimulation();
 
+    const prevInternalPositions = new Map<string, { x: number; y: number }>();
+    for (const forceNode of sim.nodes()) {
+      if (!isLaunchAnchorId(forceNode.id) && !isActivityAnchorId(forceNode.id)) continue;
+      prevInternalPositions.set(forceNode.id, {
+        x: forceNode.x ?? forceNode.fx ?? 0,
+        y: forceNode.y ?? forceNode.fy ?? 0,
+      });
+    }
+
     // Tasks excluded from d3-force — positioned by KanbanLayoutEngine
     const forceNodes: ForceNode[] = nodes
       .filter((n) => n.kind !== 'task')
@@ -127,6 +232,51 @@ export function useGraphSimulation(): UseGraphSimulationResult {
         fx: n.fx,
         fy: n.fy,
       }));
+
+    for (const leadNode of nodes.filter((node) => node.kind === 'lead')) {
+      const anchorId = getLaunchAnchorId(leadNode.id);
+      const cached = prevInternalPositions.get(anchorId);
+      const target = getLaunchAnchorTarget(leadNode.x ?? 0, leadNode.y ?? 0);
+      const position = cached ?? target;
+      forceNodes.push({
+        id: anchorId,
+        kind: 'launch-anchor',
+        anchorForLeadId: leadNode.id,
+        x: position.x,
+        y: position.y,
+        vx: 0,
+        vy: 0,
+        fx: target.x,
+        fy: target.y,
+      });
+    }
+
+    const leadNode = nodes.find((node) => node.kind === 'lead');
+    for (const ownerNode of nodes.filter(
+      (node): node is GraphNode & { kind: 'lead' | 'member' } =>
+        node.kind === 'lead' || node.kind === 'member'
+    )) {
+      const anchorId = getActivityAnchorId(ownerNode.id);
+      const cached = prevInternalPositions.get(anchorId);
+      const target = getActivityAnchorTarget({
+        nodeX: ownerNode.x ?? 0,
+        nodeY: ownerNode.y ?? 0,
+        nodeKind: ownerNode.kind,
+        leadX: leadNode?.x ?? null,
+      });
+      const position = cached ?? target;
+      forceNodes.push({
+        id: anchorId,
+        kind: 'activity-anchor',
+        anchorForNodeId: ownerNode.id,
+        x: position.x,
+        y: position.y,
+        vx: 0,
+        vy: 0,
+        fx: target.x,
+        fy: target.y,
+      });
+    }
 
     // Links only between non-task nodes (parent-child: lead↔member)
     const forceNodeIds = new Set(forceNodes.map((n) => n.id));
@@ -144,7 +294,10 @@ export function useGraphSimulation(): UseGraphSimulationResult {
     sim.alpha(1);
 
     // Run simulation to near-completion so nodes are settled on first render
-    for (let i = 0; i < 120; i++) sim.tick();
+    for (let i = 0; i < 120; i++) {
+      syncLaunchAnchors(sim.nodes());
+      sim.tick();
+    }
     sim.alpha(0); // fully settled — no more movement until new data
 
     // Copy settled positions BACK to GraphNode objects
@@ -162,6 +315,12 @@ export function useGraphSimulation(): UseGraphSimulationResult {
 
     // Position tasks in kanban zones relative to their owners
     KanbanLayoutEngine.layout(nodes);
+    updateLaunchAnchorCaches(
+      sim.nodes(),
+      launchAnchorPositionsRef.current,
+      activityAnchorPositionsRef.current,
+      extraWorldBoundsRef.current
+    );
   }, [initSimulation]);
 
   // Track previous node IDs and states for effect spawning
@@ -225,7 +384,49 @@ export function useGraphSimulation(): UseGraphSimulationResult {
 
   // Tick one frame (called by parent's RAF loop)
   const tick = useCallback((dt: number) => {
-    tickFrame(stateRef.current, simRef.current, dt);
+    tickFrame(
+      stateRef.current,
+      simRef.current,
+      dt,
+      launchAnchorPositionsRef.current,
+      activityAnchorPositionsRef.current,
+      extraWorldBoundsRef.current
+    );
+  }, []);
+
+  const setNodePosition = useCallback((nodeId: string, x: number, y: number) => {
+    const graphNode = stateRef.current.nodes.find((node) => node.id === nodeId);
+    if (graphNode) {
+      graphNode.fx = x;
+      graphNode.fy = y;
+      graphNode.x = x;
+      graphNode.y = y;
+      graphNode.vx = 0;
+      graphNode.vy = 0;
+    }
+
+    const sim = simRef.current;
+    if (!sim) {
+      return;
+    }
+
+    const simNode = sim.nodes().find((node) => node.id === nodeId);
+    if (simNode) {
+      simNode.fx = x;
+      simNode.fy = y;
+      simNode.x = x;
+      simNode.y = y;
+      simNode.vx = 0;
+      simNode.vy = 0;
+    }
+
+    syncLaunchAnchors(sim.nodes());
+    updateLaunchAnchorCaches(
+      sim.nodes(),
+      launchAnchorPositionsRef.current,
+      activityAnchorPositionsRef.current,
+      extraWorldBoundsRef.current
+    );
   }, []);
 
   // Cleanup
@@ -235,7 +436,24 @@ export function useGraphSimulation(): UseGraphSimulationResult {
     };
   }, []);
 
-  return { stateRef, updateData, tick };
+  const getLaunchAnchorWorldPosition = useCallback((leadNodeId: string) => {
+    return launchAnchorPositionsRef.current.get(leadNodeId) ?? null;
+  }, []);
+
+  const getExtraWorldBounds = useCallback(() => {
+    return extraWorldBoundsRef.current;
+  }, []);
+
+  return {
+    stateRef,
+    updateData,
+    tick,
+    setNodePosition,
+    getLaunchAnchorWorldPosition,
+    getActivityAnchorWorldPosition: (nodeId: string) =>
+      activityAnchorPositionsRef.current.get(nodeId) ?? null,
+    getExtraWorldBounds,
+  };
 }
 
 function mergeParticles(
@@ -261,11 +479,15 @@ function tickFrame(
   state: SimulationState,
   sim: Simulation<ForceNode, ForceLink> | null,
   dt: number,
+  launchAnchorPositions: Map<string, { x: number; y: number }>,
+  activityAnchorPositions: Map<string, { x: number; y: number }>,
+  extraWorldBounds: WorldBounds[],
 ): void {
   state.time += dt;
 
   // Tick d3-force (only when simulation is still active)
   if (sim && sim.alpha() > 0.001) {
+    syncLaunchAnchors(sim.nodes());
     sim.tick(1);
 
     const simNodes = sim.nodes();
@@ -281,6 +503,15 @@ function tickFrame(
         node.vy = sn.vy;
       }
     }
+    updateLaunchAnchorCaches(simNodes, launchAnchorPositions, activityAnchorPositions, extraWorldBounds);
+  } else if (sim) {
+    syncLaunchAnchors(sim.nodes());
+    updateLaunchAnchorCaches(
+      sim.nodes(),
+      launchAnchorPositions,
+      activityAnchorPositions,
+      extraWorldBounds
+    );
   }
 
   // Re-layout tasks in kanban zones — always run to handle new/moved tasks

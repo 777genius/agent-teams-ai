@@ -5,6 +5,7 @@ import { UnreadCommentsBadge } from '@renderer/components/team/UnreadCommentsBad
 import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { useTheme } from '@renderer/hooks/useTheme';
 import { useUnreadCommentCount } from '@renderer/hooks/useUnreadCommentCount';
 import { REVIEW_STATE_DISPLAY } from '@renderer/utils/memberHelpers';
 import {
@@ -238,11 +239,13 @@ export const KanbanTaskCard = memo(
     onViewChanges,
     onDeleteTask,
   }: KanbanTaskCardProps): React.JSX.Element {
+    const { isLight } = useTheme();
     const unreadCount = useUnreadCommentCount(teamName, task.id, task.comments);
     const blockedByIds = task.blockedBy?.filter((id) => id.length > 0) ?? [];
     const blocksIds = task.blocks?.filter((id) => id.length > 0) ?? [];
     const hasBlockedBy = blockedByIds.length > 0;
     const hasBlocks = blocksIds.length > 0;
+    const cardSurfaceClass = isLight ? 'bg-white' : 'bg-[var(--color-surface-raised)]';
 
     const taskChangeRequestOptions = useMemo(() => buildTaskChangeRequestOptions(task), [task]);
     const canDisplay = useMemo(
@@ -291,8 +294,8 @@ export const KanbanTaskCard = memo(
         data-task-id={task.id}
         className={`relative cursor-pointer rounded-md border px-1.5 py-3 transition-colors hover:border-[var(--color-border-emphasis)] ${
           hasBlockedBy
-            ? 'border-yellow-500/30 bg-[var(--color-surface-raised)]'
-            : 'border-[var(--color-border)] bg-[var(--color-surface-raised)]'
+            ? `border-yellow-500/30 ${cardSurfaceClass}`
+            : `border-[var(--color-border)] ${cardSurfaceClass}`
         }`}
         role="button"
         tabIndex={0}

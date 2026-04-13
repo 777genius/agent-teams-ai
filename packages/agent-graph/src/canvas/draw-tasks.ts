@@ -7,6 +7,7 @@ import type { GraphNode } from '../ports/types';
 import { COLORS, getTaskStatusColor, getReviewStateColor } from '../constants/colors';
 import { TASK_PILL, MIN_VISIBLE_OPACITY, ANIM } from '../constants/canvas-constants';
 import { truncateText } from './draw-misc';
+import { drawPillShell, drawPillStackLayer } from './draw-pill-shell';
 import { hexWithAlpha } from './render-cache';
 import type { KanbanZoneInfo } from '../layout/kanbanLayout';
 
@@ -19,8 +20,10 @@ export function drawTasks(
   time: number,
   selectedId: string | null,
   hoveredId: string | null,
-  focusNodeIds?: ReadonlySet<string> | null
+  focusNodeIds?: ReadonlySet<string> | null,
+  zoom = 1
 ): void {
+  const simplify = zoom < 0.2;
   for (const node of nodes) {
     if (node.kind !== 'task') continue;
 
@@ -35,7 +38,11 @@ export function drawTasks(
     ctx.save();
     ctx.globalAlpha = opacity;
 
-    drawTaskPill(ctx, x, y, node, time, isSelected, isHovered);
+    if (simplify) {
+      drawTaskPillLod(ctx, x, y, node, isSelected, isHovered);
+    } else {
+      drawTaskPill(ctx, x, y, node, time, isSelected, isHovered);
+    }
 
     ctx.restore();
   }
@@ -43,10 +50,7 @@ export function drawTasks(
 
 // ─── Private ────────────────────────────────────────────────────────────────
 
-function getTaskOpacity(
-  node: GraphNode,
-  focusNodeIds?: ReadonlySet<string> | null
-): number {
+function getTaskOpacity(node: GraphNode, focusNodeIds?: ReadonlySet<string> | null): number {
   if (node.taskStatus === 'deleted') return 0;
   if (focusNodeIds && !focusNodeIds.has(node.id)) return 0.25;
   return 1;
@@ -84,7 +88,7 @@ function drawTaskPill(
     (node.taskStatus === 'in_progress' && node.reviewState !== 'approved') ||
     node.reviewState === 'review' ||
     node.reviewState === 'needsFix' ||
-    (node.needsClarification != null);
+    node.needsClarification != null;
   const isFinished = node.taskStatus === 'completed' || node.reviewState === 'approved';
   const breathe =
     needsAttention && !isFinished
@@ -101,44 +105,31 @@ function drawTaskPill(
   ctx.shadowBlur = needsAttention || node.isBlocked ? 12 : 4;
 
   // Background fill
-  ctx.beginPath();
-  ctx.roundRect(-halfW, -halfH, w, h, r);
-  ctx.fillStyle = isSelected
-    ? COLORS.cardBgSelected
-    : isHovered
-      ? 'rgba(15, 20, 40, 0.7)'
-      : COLORS.cardBg;
-  ctx.fill();
-  ctx.shadowBlur = 0;
-
-  // Border — red for blocked tasks
-  ctx.beginPath();
-  ctx.roundRect(-halfW, -halfH, w, h, r);
-  if (node.isBlocked) {
-    ctx.strokeStyle = hexWithAlpha(COLORS.edgeBlocking, isSelected ? 0.9 : 0.7);
-    ctx.lineWidth = isSelected ? 2.5 : 1.8;
-  } else {
-    ctx.strokeStyle = hexWithAlpha(statusColor, isSelected ? 0.8 : 0.5);
-    ctx.lineWidth = isSelected ? 2 : 1;
-  }
-  ctx.stroke();
-
-  // Blocked indicator — red left stripe
-  if (node.isBlocked) {
-    ctx.fillStyle = hexWithAlpha(COLORS.edgeBlocking, 0.6);
-    ctx.beginPath();
-    ctx.roundRect(-halfW, -halfH, 4, h, [r, 0, 0, r]);
-    ctx.fill();
-  }
+  drawPillShell(ctx, {
+    width: w,
+    height: h,
+    radius: r,
+    fillStyle: isSelected
+      ? COLORS.cardBgSelected
+      : isHovered
+        ? 'rgba(15, 20, 40, 0.7)'
+        : COLORS.cardBg,
+    borderColor: node.isBlocked
+      ? hexWithAlpha(COLORS.edgeBlocking, isSelected ? 0.9 : 0.7)
+      : hexWithAlpha(statusColor, isSelected ? 0.8 : 0.5),
+    borderWidth: node.isBlocked ? (isSelected ? 2.5 : 1.8) : isSelected ? 2 : 1,
+    shadowColor: node.isBlocked
+      ? hexWithAlpha(COLORS.edgeBlocking, 0.3)
+      : hexWithAlpha(statusColor, 0.25),
+    shadowBlur: needsAttention || node.isBlocked ? 12 : 4,
+    accentColor: node.isBlocked ? hexWithAlpha(COLORS.edgeBlocking, 0.6) : undefined,
+  });
 
   // Review state overlay border — pulsing for review/needsFix, STATIC for approved
   if (reviewColor !== 'transparent') {
     ctx.beginPath();
     ctx.roundRect(-halfW - 1, -halfH - 1, w + 2, h + 2, r + 1);
-    const reviewAlpha =
-      node.reviewState === 'approved'
-        ? 0.6
-        : 0.5 + 0.3 * Math.sin(time * 3);
+    const reviewAlpha = node.reviewState === 'approved' ? 0.6 : 0.5 + 0.3 * Math.sin(time * 3);
     ctx.strokeStyle = hexWithAlpha(reviewColor, reviewAlpha);
     ctx.lineWidth = 1.5;
     ctx.stroke();
@@ -239,6 +230,55 @@ function drawTaskPill(
   ctx.restore();
 }
 
+function drawTaskPillLod(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  node: GraphNode,
+  isSelected: boolean,
+  isHovered: boolean
+): void {
+  const w = TASK_PILL.width;
+  const h = TASK_PILL.height;
+  const r = TASK_PILL.borderRadius;
+  const halfW = w / 2;
+  const halfH = h / 2;
+
+  const statusColor = getTaskStatusColor(node.taskStatus);
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  if (node.isOverflowStack) {
+    drawOverflowStack(ctx, halfW, halfH, r, node, isSelected, isHovered);
+    ctx.restore();
+    return;
+  }
+
+  ctx.beginPath();
+  ctx.roundRect(-halfW, -halfH, w, h, r);
+  ctx.fillStyle = isSelected
+    ? COLORS.cardBgSelected
+    : isHovered
+      ? 'rgba(15, 20, 40, 0.78)'
+      : COLORS.cardBg;
+  ctx.fill();
+  ctx.strokeStyle = node.isBlocked
+    ? hexWithAlpha(COLORS.edgeBlocking, isSelected ? 0.85 : 0.65)
+    : hexWithAlpha(statusColor, isSelected ? 0.8 : 0.55);
+  ctx.lineWidth = node.isBlocked ? (isSelected ? 2.2 : 1.5) : isSelected ? 2 : 1;
+  ctx.stroke();
+
+  if (node.isBlocked) {
+    ctx.fillStyle = hexWithAlpha(COLORS.edgeBlocking, 0.6);
+    ctx.beginPath();
+    ctx.roundRect(-halfW, -halfH, 4, h, [r, 0, 0, r]);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
 function drawOverflowStack(
   ctx: CanvasRenderingContext2D,
   halfW: number,
@@ -252,32 +292,32 @@ function drawOverflowStack(
     [6, 0.18],
     [3, 0.28],
   ] as const) {
-    ctx.beginPath();
-    ctx.roundRect(-halfW + offset, -halfH - offset, TASK_PILL.width, TASK_PILL.height, r);
-    ctx.fillStyle = hexWithAlpha('#334155', alpha);
-    ctx.fill();
+    drawPillStackLayer(ctx, {
+      width: TASK_PILL.width,
+      height: TASK_PILL.height,
+      radius: r,
+      offsetX: offset,
+      offsetY: -offset,
+      fillColor: '#334155',
+      fillAlpha: alpha,
+    });
   }
 
-  ctx.beginPath();
-  ctx.roundRect(-halfW, -halfH, TASK_PILL.width, TASK_PILL.height, r);
-  ctx.fillStyle = isSelected
-    ? COLORS.cardBgSelected
-    : isHovered
-      ? 'rgba(15, 20, 40, 0.78)'
-      : COLORS.cardBg;
-  ctx.fill();
-  ctx.strokeStyle = node.isBlocked
-    ? hexWithAlpha(COLORS.edgeBlocking, isSelected ? 0.85 : 0.65)
-    : hexWithAlpha(COLORS.taskPending, isSelected ? 0.85 : 0.55);
-  ctx.lineWidth = node.isBlocked ? (isSelected ? 2.4 : 1.5) : isSelected ? 2 : 1;
-  ctx.stroke();
-
-  if (node.isBlocked) {
-    ctx.fillStyle = hexWithAlpha(COLORS.edgeBlocking, 0.6);
-    ctx.beginPath();
-    ctx.roundRect(-halfW, -halfH, 4, TASK_PILL.height, [r, 0, 0, r]);
-    ctx.fill();
-  }
+  drawPillShell(ctx, {
+    width: TASK_PILL.width,
+    height: TASK_PILL.height,
+    radius: r,
+    fillStyle: isSelected
+      ? COLORS.cardBgSelected
+      : isHovered
+        ? 'rgba(15, 20, 40, 0.78)'
+        : COLORS.cardBg,
+    borderColor: node.isBlocked
+      ? hexWithAlpha(COLORS.edgeBlocking, isSelected ? 0.85 : 0.65)
+      : hexWithAlpha(COLORS.taskPending, isSelected ? 0.85 : 0.55),
+    borderWidth: node.isBlocked ? (isSelected ? 2.4 : 1.5) : isSelected ? 2 : 1,
+    accentColor: node.isBlocked ? hexWithAlpha(COLORS.edgeBlocking, 0.6) : undefined,
+  });
 
   ctx.font = 'bold 12px sans-serif';
   ctx.textAlign = 'left';
@@ -296,7 +336,7 @@ function drawReviewChip(
   halfH: number,
   node: GraphNode
 ): void {
-  const chipText = node.reviewMode === 'manual' ? 'REV' : node.reviewerName ?? 'REV';
+  const chipText = node.reviewMode === 'manual' ? 'REV' : (node.reviewerName ?? 'REV');
   const chipColor = node.reviewMode === 'manual' ? '#8b5cf6' : (node.reviewerColor ?? '#38bdf8');
   const chipX = halfW - 44;
   const chipY = halfH + 10;
@@ -334,8 +374,10 @@ function drawReviewChip(
  */
 export function drawColumnHeaders(
   ctx: CanvasRenderingContext2D,
-  zones: KanbanZoneInfo[]
+  zones: KanbanZoneInfo[],
+  zoom = 1
 ): void {
+  if (zoom < 0.22) return;
   for (const zone of zones) {
     // Section header for unassigned tasks — larger, centered above all columns
     if (zone.ownerId === '__unassigned__') {
