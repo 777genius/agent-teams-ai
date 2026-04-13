@@ -136,6 +136,72 @@ describe('GraphNodePopover spawn badge labels', () => {
     });
   });
 
+  it('reuses launch-aware presence semantics from cached team data', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    useStore.setState({
+      teamDataCacheByName: {
+        'northstar-core': {
+          teamName: 'northstar-core',
+          config: { name: 'Northstar', members: [], projectPath: '/repo' },
+          members: [
+            {
+              name: 'alice',
+              status: 'active',
+              currentTaskId: null,
+              taskCount: 0,
+              lastActiveAt: null,
+              messageCount: 0,
+              agentType: 'reviewer',
+              providerId: 'codex',
+            },
+          ],
+          tasks: [],
+          messages: [],
+          kanbanState: { teamName: 'northstar-core', reviewers: [], tasks: {} },
+          processes: [],
+          isAlive: true,
+        },
+      },
+      memberSpawnStatusesByTeam: {
+        'northstar-core': {
+          alice: {
+            status: 'online',
+            launchState: 'runtime_pending_bootstrap',
+            livenessSource: 'process',
+            runtimeAlive: true,
+          },
+        },
+      },
+      memberSpawnSnapshotsByTeam: {},
+      currentProvisioningRunIdByTeam: {},
+      provisioningRuns: {},
+      leadActivityByTeam: {},
+    } as never);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphNodePopover, {
+          node: makeMemberNode('online'),
+          teamName: 'northstar-core',
+          onClose: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('online');
+    expect(host.textContent).not.toContain('Idle');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('renders overflow stack contents instead of the task card and opens task detail from the list', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     useStore.setState({

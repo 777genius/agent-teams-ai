@@ -8,7 +8,12 @@
  */
 
 import { getUnreadCount } from '@renderer/services/commentReadStorage';
-import { agentAvatarUrl, getMemberRuntimeAdvisoryLabel } from '@renderer/utils/memberHelpers';
+import {
+  agentAvatarUrl,
+  buildMemberLaunchPresentation,
+  getMemberRuntimeAdvisoryLabel,
+} from '@renderer/utils/memberHelpers';
+import { buildTeamProvisioningPresentation } from '@renderer/utils/teamProvisioningPresentation';
 import { formatTeamRuntimeSummary } from '@renderer/utils/teamRuntimeSummary';
 import { stripCrossTeamPrefix } from '@shared/constants/crossTeam';
 import {
@@ -20,6 +25,10 @@ import { isLeadMember } from '@shared/utils/leadDetection';
 
 import { collapseOverflowStacksWithMeta } from '../utils/collapseOverflowStacks';
 import {
+  buildInlineActivityEntries,
+  getGraphLeadMemberName,
+} from '../utils/buildInlineActivityEntries';
+import {
   isTaskBlocked,
   isTaskInReviewCycle,
   resolveTaskReviewer,
@@ -27,6 +36,7 @@ import {
 
 import type {
   GraphDataPort,
+  GraphActivityItem,
   GraphEdge,
   GraphNode,
   GraphNodeState,
@@ -37,6 +47,8 @@ import type {
   InboxMessage,
   LeadActivityState,
   MemberSpawnStatusEntry,
+  MemberSpawnStatusesSnapshot,
+  TeamProvisioningProgress,
   TeamData,
 } from '@shared/types/team';
 import type { LeadContextUsage } from '@shared/types/team';
@@ -76,7 +88,9 @@ export class TeamGraphAdapter {
     activeTools?: Record<string, Record<string, ActiveToolCall>>,
     finishedVisible?: Record<string, Record<string, ActiveToolCall>>,
     toolHistory?: Record<string, ActiveToolCall[]>,
-    commentReadState?: Record<string, unknown>
+    commentReadState?: Record<string, unknown>,
+    provisioningProgress?: TeamProvisioningProgress | null,
+    memberSpawnSnapshot?: MemberSpawnStatusesSnapshot
   ): GraphDataPort {
     if (teamData?.teamName !== teamName) {
       return TeamGraphAdapter.#emptyResult(teamName);
@@ -101,6 +115,14 @@ export class TeamGraphAdapter {
 
     const leadId = `lead:${teamName}`;
     const leadName = TeamGraphAdapter.#getLeadMemberName(teamData, teamName);
+    const provisioningPresentation = buildTeamProvisioningPresentation({
+      progress: provisioningProgress,
+      members: teamData.members,
+      memberSpawnStatuses: spawnStatuses,
+      memberSpawnSnapshot,
+    });
+    const isTeamProvisioning = provisioningPresentation?.isActive ?? false;
+    const isLaunchSettling = provisioningPresentation?.hasMembersStillJoining ?? false;
 
     this.#buildLeadNode(
       nodes,
@@ -113,7 +135,8 @@ export class TeamGraphAdapter {
       leadContext,
       activeTools,
       finishedVisible,
-      toolHistory
+      toolHistory,
+      isTeamProvisioning
     );
     this.#buildMemberNodes(
       nodes,
@@ -125,10 +148,13 @@ export class TeamGraphAdapter {
       pendingApprovalAgents,
       activeTools,
       finishedVisible,
-      toolHistory
+      toolHistory,
+      isTeamProvisioning,
+      isLaunchSettling
     );
     this.#buildTaskNodes(nodes, edges, teamData, teamName, commentReadState);
     this.#buildProcessNodes(nodes, edges, teamData, teamName);
+    this.#attachActivityFeeds(nodes, teamData, teamName, leadId, leadName);
     this.#buildMessageParticles(
       particles,
       nodes,
@@ -166,7 +192,7 @@ export class TeamGraphAdapter {
   // ─── Private: node builders ──────────────────────────────────────────────
 
   static #getLeadMemberName(data: TeamData, teamName: string): string {
-    return data.members.find((member) => isLeadMember(member))?.name ?? `${teamName}-lead`;
+    return getGraphLeadMemberName(data, teamName);
   }
 
   static #isBeforeParticleCutoff(timestamp: string | undefined, cutoffMs: number | null): boolean {
@@ -209,7 +235,8 @@ export class TeamGraphAdapter {
     leadContext?: LeadContextUsage,
     activeTools?: Record<string, Record<string, ActiveToolCall>>,
     finishedVisible?: Record<string, Record<string, ActiveToolCall>>,
-    toolHistory?: Record<string, ActiveToolCall[]>
+    toolHistory?: Record<string, ActiveToolCall[]>,
+    isTeamProvisioning = false
   ): void {
     const percent = leadContext?.percent;
     const leadMember = data.members.find((member) => member.name === leadName);
@@ -220,6 +247,20 @@ export class TeamGraphAdapter {
     const hasRunningTool = Object.keys(activeTools?.[leadName] ?? {}).length > 0;
     const pendingApproval =
       pendingApprovalAgents?.has(leadName) || pendingApprovalAgents?.has('lead') || false;
+    const leadLaunchPresentation = leadMember
+      ? buildMemberLaunchPresentation({
+          member: leadMember,
+          spawnStatus: undefined,
+          spawnLaunchState: undefined,
+          spawnLivenessSource: undefined,
+          spawnRuntimeAlive: undefined,
+          runtimeAdvisory: leadMember.runtimeAdvisory,
+          isLaunchSettling: false,
+          isTeamAlive: data.isAlive,
+          isTeamProvisioning,
+          leadActivity,
+        })
+      : null;
     const leadState =
       leadActivity === 'offline'
         ? 'terminated'
@@ -245,6 +286,7 @@ export class TeamGraphAdapter {
         leadMember?.model,
         leadMember?.effort
       ),
+      launchVisualState: leadLaunchPresentation?.launchVisualState ?? undefined,
       contextUsage: percent != null ? Math.max(0, Math.min(1, percent / 100)) : undefined,
       avatarUrl: agentAvatarUrl(leadName, 64),
       pendingApproval,
@@ -286,7 +328,9 @@ export class TeamGraphAdapter {
     pendingApprovalAgents?: Set<string>,
     activeTools?: Record<string, Record<string, ActiveToolCall>>,
     finishedVisible?: Record<string, Record<string, ActiveToolCall>>,
-    toolHistory?: Record<string, ActiveToolCall[]>
+    toolHistory?: Record<string, ActiveToolCall[]>,
+    isTeamProvisioning = false,
+    isLaunchSettling = false
   ): void {
     for (const member of data.members) {
       if (member.removedAt) continue;
@@ -305,6 +349,17 @@ export class TeamGraphAdapter {
         spawn,
         pendingApprovalAgents?.has(member.name) ?? false
       );
+      const launchPresentation = buildMemberLaunchPresentation({
+        member,
+        spawnStatus: spawn?.status,
+        spawnLaunchState: spawn?.launchState,
+        spawnLivenessSource: spawn?.livenessSource,
+        spawnRuntimeAlive: spawn?.runtimeAlive,
+        runtimeAdvisory: member.runtimeAdvisory,
+        isLaunchSettling,
+        isTeamAlive: data.isAlive,
+        isTeamProvisioning,
+      });
 
       nodes.push({
         id: memberId,
@@ -321,6 +376,7 @@ export class TeamGraphAdapter {
           member.effort
         ),
         spawnStatus: spawn?.status,
+        launchVisualState: launchPresentation.launchVisualState ?? undefined,
         avatarUrl: agentAvatarUrl(member.name, 64),
         currentTaskId: member.currentTaskId ?? undefined,
         currentTaskSubject: member.currentTaskId
@@ -576,6 +632,44 @@ export class TeamGraphAdapter {
           type: 'ownership',
         });
       }
+    }
+  }
+
+  #attachActivityFeeds(
+    nodes: GraphNode[],
+    data: TeamData,
+    teamName: string,
+    leadId: string,
+    leadName: string
+  ): void {
+    const ownerNodeIds = new Set<string>();
+
+    for (const node of nodes) {
+      if (node.kind !== 'lead' && node.kind !== 'member') {
+        continue;
+      }
+      ownerNodeIds.add(node.id);
+      node.activityItems = [];
+      node.activityOverflowCount = 0;
+    }
+
+    const entriesByOwnerNodeId = buildInlineActivityEntries({
+      data,
+      teamName,
+      leadId,
+      leadName,
+      ownerNodeIds,
+    });
+
+    for (const node of nodes) {
+      if (node.kind !== 'lead' && node.kind !== 'member') {
+        continue;
+      }
+      const activityItems = (entriesByOwnerNodeId.get(node.id) ?? []).map(
+        (entry) => entry.graphItem
+      );
+      node.activityItems = activityItems;
+      node.activityOverflowCount = Math.max(0, activityItems.length - 3);
     }
   }
 

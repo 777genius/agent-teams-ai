@@ -7,7 +7,10 @@ import { useMemo, useRef, useSyncExternalStore } from 'react';
 
 import { getSnapshot, subscribe } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
-import { selectTeamDataForName } from '@renderer/store/slices/teamSlice';
+import {
+  getCurrentProvisioningProgressForTeam,
+  selectTeamDataForName,
+} from '@renderer/store/slices/teamSlice';
 import { useShallow } from 'zustand/react/shallow';
 
 import { TeamGraphAdapter } from './TeamGraphAdapter';
@@ -26,6 +29,8 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
     activeTools,
     finishedVisible,
     toolHistory,
+    provisioningProgress,
+    memberSpawnSnapshot,
   } = useStore(
     useShallow((s) => ({
       teamData: selectTeamDataForName(s, teamName),
@@ -36,6 +41,8 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
       activeTools: teamName ? s.activeToolsByTeam[teamName] : undefined,
       finishedVisible: teamName ? s.finishedVisibleByTeam[teamName] : undefined,
       toolHistory: teamName ? s.toolHistoryByTeam[teamName] : undefined,
+      provisioningProgress: teamName ? getCurrentProvisioningProgressForTeam(s, teamName) : null,
+      memberSpawnSnapshot: teamName ? s.memberSpawnSnapshotsByTeam[teamName] : undefined,
     }))
   );
 
@@ -63,7 +70,9 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
         activeTools,
         finishedVisible,
         toolHistory,
-        commentReadState
+        commentReadState,
+        provisioningProgress,
+        memberSpawnSnapshot
       ),
     [
       teamData,
@@ -76,6 +85,8 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
       finishedVisible,
       toolHistory,
       commentReadState,
+      provisioningProgress,
+      memberSpawnSnapshot,
     ]
   );
 }

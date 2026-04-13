@@ -7,12 +7,17 @@
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';
-import { selectTeamDataForName } from '@renderer/store/slices/teamSlice';
-import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
+import {
+  getCurrentProvisioningProgressForTeam,
+  selectTeamDataForName,
+} from '@renderer/store/slices/teamSlice';
+import { agentAvatarUrl, buildMemberLaunchPresentation } from '@renderer/utils/memberHelpers';
+import { buildTeamProvisioningPresentation } from '@renderer/utils/teamProvisioningPresentation';
 import { ExternalLink, Loader2, MessageSquare, Plus, User } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
-import { GraphTaskCard } from './GraphTaskCard';
 import { isTaskInReviewCycle, resolveTaskReviewer } from '../utils/taskGraphSemantics';
+import { GraphTaskCard } from './GraphTaskCard';
 
 import type { GraphNode } from '@claude-teams/agent-graph';
 import type { TeamTaskWithKanban } from '@shared/types';
@@ -46,13 +51,6 @@ function formatToolPreview(preview: string | undefined): string | undefined {
     }
   }
   return preview.length > 50 ? preview.slice(0, 50) + '...' : preview;
-}
-
-function getSpawnStatusBadgeLabel(spawnStatus: GraphNode['spawnStatus']): string {
-  if (spawnStatus === 'waiting' || spawnStatus === 'spawning') {
-    return 'starting';
-  }
-  return spawnStatus ?? '';
 }
 
 interface GraphNodePopoverProps {
@@ -281,26 +279,78 @@ const MemberPopoverContent = ({
     node.domainRef.kind === 'member' || node.domainRef.kind === 'lead'
       ? node.domainRef.memberName
       : 'team-lead';
+  const teamName =
+    node.domainRef.kind === 'member' || node.domainRef.kind === 'lead'
+      ? node.domainRef.teamName
+      : '';
   const avatarSrc = node.avatarUrl ?? agentAvatarUrl(memberName, 64);
+  const { teamData, spawnEntry, leadActivity, progress, memberSpawnSnapshot, memberSpawnStatuses } =
+    useStore(
+      useShallow((state) => ({
+        teamData: teamName ? selectTeamDataForName(state, teamName) : null,
+        spawnEntry: teamName ? state.memberSpawnStatusesByTeam[teamName]?.[memberName] : undefined,
+        leadActivity: teamName ? state.leadActivityByTeam[teamName] : undefined,
+        progress: teamName ? getCurrentProvisioningProgressForTeam(state, teamName) : null,
+        memberSpawnSnapshot: teamName ? state.memberSpawnSnapshotsByTeam[teamName] : undefined,
+        memberSpawnStatuses: teamName ? state.memberSpawnStatusesByTeam[teamName] : undefined,
+      }))
+    );
+  const member = teamData?.members.find((candidate) => candidate.name === memberName) ?? null;
+  const provisioningPresentation =
+    teamData && teamName
+      ? buildTeamProvisioningPresentation({
+          progress,
+          members: teamData.members,
+          memberSpawnStatuses,
+          memberSpawnSnapshot,
+        })
+      : null;
+  const launchPresentation = member
+    ? buildMemberLaunchPresentation({
+        member,
+        spawnStatus: spawnEntry?.status,
+        spawnLaunchState: spawnEntry?.launchState,
+        spawnLivenessSource: spawnEntry?.livenessSource,
+        spawnRuntimeAlive: spawnEntry?.runtimeAlive,
+        runtimeAdvisory: member.runtimeAdvisory,
+        isLaunchSettling: provisioningPresentation?.hasMembersStillJoining ?? false,
+        isTeamAlive: teamData?.isAlive,
+        isTeamProvisioning: provisioningPresentation?.isActive ?? false,
+        leadActivity: node.kind === 'lead' ? leadActivity : undefined,
+      })
+    : null;
+  const fallbackSpawnStatusLabel =
+    node.spawnStatus && node.spawnStatus !== 'online'
+      ? node.spawnStatus === 'waiting' || node.spawnStatus === 'spawning'
+        ? 'starting'
+        : node.spawnStatus
+      : null;
   const statusLabel =
-    node.state === 'active'
-      ? 'Active'
+    launchPresentation?.presenceLabel ??
+    fallbackSpawnStatusLabel ??
+    (node.state === 'active'
+      ? 'active'
       : node.state === 'idle'
-        ? 'Idle'
+        ? 'idle'
         : node.state === 'terminated'
-          ? 'Offline'
+          ? 'offline'
           : node.state === 'tool_calling'
-            ? 'Running tool'
-            : node.state;
-
-  const statusDotColor =
-    node.state === 'active' || node.state === 'thinking' || node.state === 'tool_calling'
-      ? 'bg-emerald-400'
-      : node.state === 'idle'
-        ? 'bg-zinc-400'
-        : node.state === 'error'
-          ? 'bg-red-400'
-          : 'bg-zinc-600';
+            ? 'running tool'
+            : node.state);
+  const statusDotClass =
+    launchPresentation?.dotClass ??
+    (node.spawnStatus === 'spawning'
+      ? 'bg-amber-400'
+      : node.spawnStatus === 'waiting'
+        ? 'bg-zinc-400 animate-pulse'
+        : node.state === 'active' || node.state === 'thinking' || node.state === 'tool_calling'
+          ? 'bg-emerald-400'
+          : node.state === 'idle'
+            ? 'bg-zinc-400'
+            : node.state === 'error'
+              ? 'bg-red-400'
+              : 'bg-zinc-600');
+  const showExceptionBadge = node.exceptionLabel && node.exceptionLabel !== statusLabel;
 
   return (
     <div className="min-w-[200px] max-w-[280px] rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3 shadow-xl">
@@ -313,7 +363,7 @@ const MemberPopoverContent = ({
             className="size-10 rounded-full border border-[var(--color-border)]"
           />
           <div
-            className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-[var(--color-surface-raised)] ${statusDotColor}`}
+            className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-[var(--color-surface-raised)] ${statusDotClass}`}
           />
         </div>
         <div className="min-w-0">
@@ -347,15 +397,16 @@ const MemberPopoverContent = ({
             Lead
           </Badge>
         )}
-        {node.spawnStatus && node.spawnStatus !== 'online' && (
-          <Badge
-            variant="outline"
-            className="border-amber-500/30 px-1.5 py-0 text-[10px] text-amber-400"
-          >
-            {getSpawnStatusBadgeLabel(node.spawnStatus)}
-          </Badge>
-        )}
-        {node.exceptionLabel && (
+        {(launchPresentation?.spawnBadgeLabel ?? fallbackSpawnStatusLabel) &&
+          (launchPresentation?.spawnBadgeLabel ?? fallbackSpawnStatusLabel) !== statusLabel && (
+            <Badge
+              variant="outline"
+              className="border-amber-500/30 px-1.5 py-0 text-[10px] text-amber-400"
+            >
+              {launchPresentation?.spawnBadgeLabel ?? fallbackSpawnStatusLabel}
+            </Badge>
+          )}
+        {showExceptionBadge && (
           <Badge
             variant="outline"
             className={`px-1.5 py-0 text-[10px] ${

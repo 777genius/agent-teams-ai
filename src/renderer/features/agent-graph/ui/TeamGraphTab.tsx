@@ -11,7 +11,9 @@ import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHo
 import { useTeamGraphAdapter } from '../adapters/useTeamGraphAdapter';
 
 import { GraphBlockingEdgePopover } from './GraphBlockingEdgePopover';
+import { GraphActivityHud } from './GraphActivityHud';
 import { GraphNodePopover } from './GraphNodePopover';
+import { GraphProvisioningHud } from './GraphProvisioningHud';
 
 import type { GraphDomainRef, GraphEventPort, GraphNode } from '@claude-teams/agent-graph';
 
@@ -31,6 +33,10 @@ export const TeamGraphTab = ({
   isPaneFocused = false,
 }: TeamGraphTabProps): React.JSX.Element => {
   const graphData = useTeamGraphAdapter(teamName);
+  const leadNodeId = useMemo(
+    () => graphData.nodes.find((node) => node.kind === 'lead')?.id ?? null,
+    [graphData.nodes]
+  );
   const [fullscreen, setFullscreen] = useState(false);
 
   // Typed event dispatchers (DRY — used in both events + renderOverlay)
@@ -117,6 +123,29 @@ export const TeamGraphTab = ({
           className="team-graph-view size-full"
           suspendAnimation={!isActive}
           onRequestFullscreen={() => setFullscreen(true)}
+          renderHud={({
+            getLaunchAnchorScreenPlacement,
+            getActivityAnchorScreenPlacement,
+            focusNodeIds,
+          }) => (
+            <>
+              <GraphActivityHud
+                teamName={teamName}
+                nodes={graphData.nodes}
+                getActivityAnchorScreenPlacement={getActivityAnchorScreenPlacement}
+                focusNodeIds={focusNodeIds}
+                enabled={isActive}
+                onOpenTaskDetail={dispatchOpenTask}
+                onOpenMemberProfile={dispatchOpenProfile}
+              />
+              <GraphProvisioningHud
+                teamName={teamName}
+                leadNodeId={leadNodeId}
+                getLaunchAnchorScreenPlacement={getLaunchAnchorScreenPlacement}
+                enabled={isActive}
+              />
+            </>
+          )}
           renderEdgeOverlay={({ edge, sourceNode, targetNode, onClose, onSelectNode }) => (
             <GraphBlockingEdgePopover
               teamName={teamName}

@@ -465,6 +465,125 @@ describe('TeamGraphAdapter particles', () => {
     ]);
   });
 
+  it('builds member activity feeds from inbox messages in newest-first order', () => {
+    const adapter = TeamGraphAdapter.create();
+
+    const graph = adapter.adapt(
+      createBaseTeamData({
+        messages: [
+          {
+            from: 'alice',
+            to: 'team-lead',
+            text: 'First update',
+            timestamp: '2026-03-28T19:00:01.000Z',
+            read: false,
+            messageId: 'msg-1',
+          },
+          {
+            from: 'team-lead',
+            to: 'alice',
+            text: 'Second update',
+            timestamp: '2026-03-28T19:00:02.000Z',
+            read: false,
+            messageId: 'msg-2',
+          },
+        ],
+      }),
+      'my-team'
+    );
+
+    expect(findNode(graph, 'member:my-team:alice')?.activityItems).toEqual([
+      expect.objectContaining({
+        id: 'activity:msg:my-team:msg-2',
+        title: 'team-lead -> alice',
+        preview: 'Second update',
+      }),
+      expect.objectContaining({
+        id: 'activity:msg:my-team:msg-1',
+        title: 'alice -> team-lead',
+        preview: 'First update',
+      }),
+    ]);
+  });
+
+  it('routes task comment activity to the task owner and keeps task detail metadata', () => {
+    const adapter = TeamGraphAdapter.create();
+
+    const graph = adapter.adapt(
+      createBaseTeamData({
+        tasks: [
+          {
+            id: 'task-comments',
+            displayId: '#8',
+            subject: 'Review API notes',
+            owner: 'bob',
+            status: 'in_progress',
+            comments: [
+              {
+                id: 'comment-1',
+                author: 'alice',
+                text: 'Please check the final API notes before merge',
+                createdAt: '2026-03-28T19:00:02.000Z',
+                type: 'regular',
+              },
+            ],
+            reviewState: 'none',
+          } as TeamTaskWithKanban,
+        ],
+      }),
+      'my-team'
+    );
+
+    expect(findNode(graph, 'member:my-team:bob')?.activityItems).toEqual([
+      expect.objectContaining({
+        id: 'activity:comment:my-team:task-comments:comment-1',
+        kind: 'task_comment',
+        title: '#8 Review API notes',
+        preview: 'Please check the final API notes before merge',
+        taskId: 'task-comments',
+        taskDisplayId: '#8',
+        authorLabel: 'alice',
+      }),
+    ]);
+  });
+
+  it('skips noisy idle inbox rows in the activity feed while keeping cross-team traffic on the lead lane', () => {
+    const adapter = TeamGraphAdapter.create();
+
+    const graph = adapter.adapt(
+      createBaseTeamData({
+        messages: [
+          {
+            from: 'alice',
+            to: 'team-lead',
+            text: JSON.stringify({ type: 'idle_notification' }),
+            timestamp: '2026-03-28T19:00:01.000Z',
+            read: true,
+            messageId: 'idle-generic',
+          },
+          {
+            from: 'team-b.alex',
+            text: '[cross-team] Need status update',
+            timestamp: '2026-03-28T19:00:02.000Z',
+            read: false,
+            messageId: 'cross-team-1',
+            source: 'cross_team',
+          },
+        ],
+      }),
+      'my-team'
+    );
+
+    expect(findNode(graph, 'member:my-team:alice')?.activityItems).toEqual([]);
+    expect(findNode(graph, 'lead:my-team')?.activityItems).toEqual([
+      expect.objectContaining({
+        id: 'activity:msg:my-team:cross-team-1',
+        title: 'team-b -> team-lead',
+        preview: 'Need status update',
+      }),
+    ]);
+  });
+
   it('creates inbox particles for all unseen messages, not only the newest 20', () => {
     const adapter = TeamGraphAdapter.create();
     adapter.adapt(createBaseTeamData(), 'my-team');
@@ -482,6 +601,88 @@ describe('TeamGraphAdapter particles', () => {
 
     expect(graph.particles).toHaveLength(25);
     expect(graph.particles.every((particle) => particle.kind === 'inbox_message')).toBe(true);
+  });
+
+  it('derives graph launch visuals from shared provisioning semantics', () => {
+    const adapter = TeamGraphAdapter.create();
+    const graph = adapter.adapt(
+      createBaseTeamData(),
+      'my-team',
+      {
+        alice: {
+          status: 'online',
+          launchState: 'runtime_pending_bootstrap',
+          livenessSource: 'process',
+          runtimeAlive: true,
+          updatedAt: '2026-03-28T19:00:01.000Z',
+        },
+      },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        runId: 'run-1',
+        teamName: 'my-team',
+        state: 'finalizing',
+        startedAt: '2026-03-28T19:00:00.000Z',
+        message: 'Waiting for bootstrap contact',
+        pid: 1234,
+        configReady: true,
+      } as never
+    );
+
+    expect(findNode(graph, 'member:my-team:alice')?.launchVisualState).toBe('runtime_pending');
+  });
+
+  it('keeps confirmed teammates in settling visuals while launch is still joining', () => {
+    const adapter = TeamGraphAdapter.create();
+    const graph = adapter.adapt(
+      createBaseTeamData(),
+      'my-team',
+      {
+        alice: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          livenessSource: 'heartbeat',
+          runtimeAlive: true,
+          updatedAt: '2026-03-28T19:00:01.000Z',
+        },
+      },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        runId: 'run-1',
+        teamName: 'my-team',
+        state: 'ready',
+        startedAt: '2026-03-28T19:00:00.000Z',
+        message: 'Finishing launch',
+        pid: 1234,
+        configReady: true,
+      } as never,
+      {
+        runId: 'run-1',
+        expectedMembers: ['alice', 'bob'],
+        statuses: {},
+        summary: {
+          confirmedCount: 1,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 0,
+        },
+        source: 'merged',
+      } as never
+    );
+
+    expect(findNode(graph, 'member:my-team:alice')?.launchVisualState).toBe('settling');
   });
 
   it('scopes inbox particle ids by team name to avoid cross-team collisions', () => {

@@ -11,7 +11,9 @@ import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHo
 import { useTeamGraphAdapter } from '../adapters/useTeamGraphAdapter';
 
 import { GraphBlockingEdgePopover } from './GraphBlockingEdgePopover';
+import { GraphActivityHud } from './GraphActivityHud';
 import { GraphNodePopover } from './GraphNodePopover';
+import { GraphProvisioningHud } from './GraphProvisioningHud';
 
 import type { GraphDomainRef, GraphEventPort } from '@claude-teams/agent-graph';
 
@@ -33,6 +35,10 @@ export const TeamGraphOverlay = ({
   onOpenMemberProfile,
 }: TeamGraphOverlayProps): React.JSX.Element => {
   const graphData = useTeamGraphAdapter(teamName);
+  const leadNodeId = useMemo(
+    () => graphData.nodes.find((node) => node.kind === 'lead')?.id ?? null,
+    [graphData.nodes]
+  );
 
   // Task action dispatchers (same pattern as TeamGraphTab)
   const dispatchTaskAction = useCallback(
@@ -85,6 +91,27 @@ export const TeamGraphOverlay = ({
         onRequestClose={onClose}
         onRequestPinAsTab={onPinAsTab}
         className="team-graph-view min-w-0 flex-1"
+        renderHud={({
+          getLaunchAnchorScreenPlacement,
+          getActivityAnchorScreenPlacement,
+          focusNodeIds,
+        }) => (
+          <>
+            <GraphActivityHud
+              teamName={teamName}
+              nodes={graphData.nodes}
+              getActivityAnchorScreenPlacement={getActivityAnchorScreenPlacement}
+              focusNodeIds={focusNodeIds}
+              onOpenTaskDetail={onOpenTaskDetail}
+              onOpenMemberProfile={onOpenMemberProfile}
+            />
+            <GraphProvisioningHud
+              teamName={teamName}
+              leadNodeId={leadNodeId}
+              getLaunchAnchorScreenPlacement={getLaunchAnchorScreenPlacement}
+            />
+          </>
+        )}
         renderEdgeOverlay={({ edge, sourceNode, targetNode, onClose: closeEdge, onSelectNode }) => (
           <GraphBlockingEdgePopover
             teamName={teamName}
