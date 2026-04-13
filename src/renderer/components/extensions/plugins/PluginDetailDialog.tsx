@@ -24,13 +24,13 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import {
   getCapabilityLabel,
   inferCapabilities,
   normalizeCategory,
 } from '@shared/utils/extensionNormalizers';
 import { ExternalLink, Loader2, Mail } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { InstallButton } from '../common/InstallButton';
 import { InstallCountBadge } from '../common/InstallCountBadge';

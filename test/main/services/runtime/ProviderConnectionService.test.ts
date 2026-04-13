@@ -119,6 +119,75 @@ describe('ProviderConnectionService', () => {
     expect(result.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
   });
 
+  it('reports a missing Anthropic API key when api_key mode is selected', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('api_key'),
+      } as never
+    );
+
+    const issue = await service.getConfiguredConnectionIssue({}, 'anthropic');
+
+    expect(issue).toContain('Anthropic API key mode is enabled');
+    expect(issue).toContain('ANTHROPIC_API_KEY');
+  });
+
+  it('does not report a missing Anthropic API key once env is populated', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('api_key'),
+      } as never
+    );
+
+    const issue = await service.getConfiguredConnectionIssue(
+      {
+        ANTHROPIC_API_KEY: 'env-key',
+      },
+      'anthropic'
+    );
+
+    expect(issue).toBeNull();
+  });
+
+  it('augments PTY env with stored Anthropic API key without stripping auth token', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'ANTHROPIC_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () => createConfig('api_key'),
+      } as never
+    );
+
+    const result = await service.augmentConfiguredConnectionEnv(
+      {
+        ANTHROPIC_AUTH_TOKEN: 'oauth-token',
+      },
+      'anthropic'
+    );
+
+    expect(result.ANTHROPIC_API_KEY).toBe('stored-key');
+    expect(result.ANTHROPIC_AUTH_TOKEN).toBe('oauth-token');
+  });
+
   it('prefers stored API key status over environment detection', async () => {
     getCachedShellEnvMock.mockReturnValue({
       ANTHROPIC_API_KEY: 'shell-key',
@@ -274,6 +343,70 @@ describe('ProviderConnectionService', () => {
     );
 
     expect(result.OPENAI_API_KEY).toBeUndefined();
+    expect(result.CLAUDE_CODE_CODEX_BACKEND).toBe('adapter');
+    expect(result.CLAUDE_CODE_CODEX_API_KEY_BETA).toBe('1');
+  });
+
+  it('reports a missing Codex API key when beta api_key mode is enabled', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => ({
+          providerConnections: {
+            anthropic: {
+              authMode: 'auto',
+            },
+            codex: {
+              apiKeyBetaEnabled: true,
+              authMode: 'api_key',
+            },
+          },
+        }),
+      } as never
+    );
+
+    const issue = await service.getConfiguredConnectionIssue({}, 'codex');
+
+    expect(issue).toContain('Codex API key mode is enabled');
+    expect(issue).toContain('OPENAI_API_KEY');
+  });
+
+  it('augments PTY env for Codex without deleting an existing OPENAI_API_KEY in oauth mode', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => ({
+          providerConnections: {
+            anthropic: {
+              authMode: 'auto',
+            },
+            codex: {
+              apiKeyBetaEnabled: true,
+              authMode: 'oauth',
+            },
+          },
+        }),
+      } as never
+    );
+
+    const result = await service.augmentConfiguredConnectionEnv(
+      {
+        OPENAI_API_KEY: 'shell-key',
+      },
+      'codex'
+    );
+
+    expect(result.OPENAI_API_KEY).toBe('shell-key');
     expect(result.CLAUDE_CODE_CODEX_BACKEND).toBe('adapter');
     expect(result.CLAUDE_CODE_CODEX_API_KEY_BETA).toBe('1');
   });

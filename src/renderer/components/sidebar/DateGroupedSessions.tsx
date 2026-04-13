@@ -14,7 +14,9 @@ import {
   groupSessionsByDate,
   separatePinnedSessions,
 } from '@renderer/utils/dateGrouping';
+import { parseSessionTitle } from '@renderer/utils/sessionTitleParser';
 import { truncateMiddle } from '@renderer/utils/stringUtils';
+import { inferTeamProviderIdFromModel } from '@shared/utils/teamProvider';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   ArrowDownWideNarrow,
@@ -28,6 +30,7 @@ import {
   Loader2,
   MessageSquareOff,
   Pin,
+  Search,
   X,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -35,10 +38,12 @@ import { useShallow } from 'zustand/react/shallow';
 import { WorktreeBadge } from '../common/WorktreeBadge';
 import { Combobox, type ComboboxOption } from '../ui/combobox';
 
+import { SESSION_PROVIDER_IDS, SessionFiltersPopover } from './SessionFiltersPopover';
 import { SessionItem } from './SessionItem';
 
 import type { Session, Worktree, WorktreeSource } from '@renderer/types/data';
 import type { DateCategory } from '@renderer/types/tabs';
+import type { TeamProviderId } from '@shared/types';
 
 // ---------------------------------------------------------------------------
 // Worktree grouping helpers (moved from SidebarHeader)
@@ -154,6 +159,29 @@ const SESSION_HEIGHT = 54; // Must match h-[54px] in SessionItem.tsx
 const LOADER_HEIGHT = 36;
 const OVERSCAN = 5;
 
+function matchesSessionSearch(session: Session, query: string): boolean {
+  if (!query) {
+    return true;
+  }
+
+  const parsedTitle = parseSessionTitle(session.firstMessage);
+  const providerId = inferTeamProviderIdFromModel(session.model);
+  const haystack = [
+    parsedTitle.displayText,
+    parsedTitle.projectName,
+    session.firstMessage,
+    session.projectPath,
+    session.gitBranch,
+    session.model,
+    providerId,
+  ]
+    .filter(Boolean)
+    .join('\n')
+    .toLowerCase();
+
+  return haystack.includes(query);
+}
+
 export const DateGroupedSessions = (): React.JSX.Element => {
   const {
     sessions,
@@ -233,8 +261,13 @@ export const DateGroupedSessions = (): React.JSX.Element => {
 
   const parentRef = useRef<HTMLDivElement>(null);
   const countRef = useRef<HTMLSpanElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [showCountTooltip, setShowCountTooltip] = useState(false);
   const [isWorktreeDropdownOpen, setIsWorktreeDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProviderIds, setSelectedProviderIds] = useState<Set<TeamProviderId>>(
+    () => new Set<TeamProviderId>(SESSION_PROVIDER_IDS)
+  );
   const worktreeDropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch project data on mount or when viewMode changes.
@@ -318,6 +351,9 @@ export const DateGroupedSessions = (): React.JSX.Element => {
 
   const hiddenSet = useMemo(() => new Set(hiddenSessionIds), [hiddenSessionIds]);
   const hasHiddenSessions = hiddenSessionIds.length > 0;
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const hasActiveProviderFilter = selectedProviderIds.size !== SESSION_PROVIDER_IDS.length;
+  const hasActiveSearch = normalizedSearchQuery.length > 0;
 
   // Filter out hidden sessions unless showHiddenSessions is on
   const visibleSessions = useMemo(() => {
@@ -325,10 +361,43 @@ export const DateGroupedSessions = (): React.JSX.Element => {
     return sessions.filter((s) => !hiddenSet.has(s.id));
   }, [sessions, hiddenSet, showHiddenSessions]);
 
+  const searchedSessions = useMemo(
+    () => visibleSessions.filter((session) => matchesSessionSearch(session, normalizedSearchQuery)),
+    [visibleSessions, normalizedSearchQuery]
+  );
+
+  const providerCounts = useMemo<Record<TeamProviderId, number>>(() => {
+    const counts: Record<TeamProviderId, number> = {
+      anthropic: 0,
+      codex: 0,
+      gemini: 0,
+    };
+
+    for (const session of searchedSessions) {
+      const providerId = inferTeamProviderIdFromModel(session.model);
+      if (providerId) {
+        counts[providerId] += 1;
+      }
+    }
+
+    return counts;
+  }, [searchedSessions]);
+
+  const filteredSessions = useMemo(() => {
+    if (!hasActiveProviderFilter) {
+      return searchedSessions;
+    }
+
+    return searchedSessions.filter((session) => {
+      const providerId = inferTeamProviderIdFromModel(session.model);
+      return providerId ? selectedProviderIds.has(providerId) : false;
+    });
+  }, [searchedSessions, hasActiveProviderFilter, selectedProviderIds]);
+
   // Separate pinned sessions from unpinned
   const { pinned: pinnedSessions, unpinned: unpinnedSessions } = useMemo(
-    () => separatePinnedSessions(visibleSessions, pinnedSessionIds),
-    [visibleSessions, pinnedSessionIds]
+    () => separatePinnedSessions(filteredSessions, pinnedSessionIds),
+    [filteredSessions, pinnedSessionIds]
   );
 
   // Group only unpinned sessions by date
@@ -343,10 +412,10 @@ export const DateGroupedSessions = (): React.JSX.Element => {
   // Sessions sorted by context consumption (for most-context sort mode)
   const contextSortedSessions = useMemo(() => {
     if (sessionSortMode !== 'most-context') return [];
-    return [...visibleSessions].sort(
+    return [...filteredSessions].sort(
       (a, b) => (b.contextConsumption ?? 0) - (a.contextConsumption ?? 0)
     );
-  }, [visibleSessions, sessionSortMode]);
+  }, [filteredSessions, sessionSortMode]);
 
   // Flatten sessions with date headers into virtual list items
   const virtualItems = useMemo((): VirtualItem[] => {
@@ -647,6 +716,39 @@ export const DateGroupedSessions = (): React.JSX.Element => {
           )}
         </div>
       )}
+
+      <div
+        className="mb-[5px] flex shrink-0 items-center gap-1.5 border-b px-2 py-1"
+        style={{ borderColor: 'var(--color-border)' }}
+      >
+        <Search className="size-3 shrink-0 text-text-muted" />
+        <input
+          ref={searchInputRef}
+          type="text"
+          placeholder="Search sessions..."
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          className="min-w-0 flex-1 bg-transparent text-[12px] text-text placeholder:text-text-muted focus:outline-none"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            className="shrink-0 text-text-muted hover:text-text-secondary"
+            onClick={() => {
+              setSearchQuery('');
+              searchInputRef.current?.focus();
+            }}
+            aria-label="Clear session search"
+          >
+            <X className="size-3" />
+          </button>
+        )}
+        <SessionFiltersPopover
+          selectedProviderIds={selectedProviderIds}
+          providerCounts={providerCounts}
+          onProviderIdsChange={setSelectedProviderIds}
+        />
+      </div>
     </div>
   );
 
@@ -733,26 +835,45 @@ export const DateGroupedSessions = (): React.JSX.Element => {
     );
   }
 
+  if (filteredSessions.length === 0 && !sessionsHasMore) {
+    return (
+      <div className="flex h-full flex-col">
+        {projectSelector}
+        <div className="flex flex-1 items-center justify-center p-4">
+          <div className="text-center text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            <Search className="mx-auto mb-2 size-8 opacity-50" />
+            <p className="mb-2">No matching sessions</p>
+            <p className="text-xs opacity-70">
+              {hasActiveSearch || hasActiveProviderFilter
+                ? 'Try another query or reset the provider filter.'
+                : 'This project has no matching sessions yet.'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {projectSelector}
       <div className="flex items-center gap-2 px-2 py-1.5">
         <Calendar className="size-3.5" style={{ color: 'var(--color-text-muted)' }} />
         <h2
-          className="text-[11px] uppercase tracking-wider"
-          style={{ color: 'var(--color-text-muted)' }}
+          className="text-[12px] font-semibold text-text-secondary"
+          style={{ color: 'var(--color-text-secondary)' }}
         >
           {sessionSortMode === 'most-context' ? 'By Context' : 'Sessions'}
         </h2>
         {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- tooltip trigger via hover, not interactive */}
         <span
           ref={countRef}
-          className="text-[11px]"
+          className="text-[10px]"
           style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}
           onMouseEnter={() => setShowCountTooltip(true)}
           onMouseLeave={() => setShowCountTooltip(false)}
         >
-          ({sessions.length}
+          ({filteredSessions.length}
           {sessionsHasMore ? '+' : ''})
         </span>
         {showCountTooltip &&
@@ -772,8 +893,10 @@ export const DateGroupedSessions = (): React.JSX.Element => {
                 color: 'var(--color-text-secondary)',
               }}
             >
-              {sessions.length} loaded so far — scroll down to load more. Context sorting only ranks
-              loaded sessions.
+              {filteredSessions.length} matching sessions loaded so far — scroll down to load more.
+              {sessionSortMode === 'most-context'
+                ? ' Context sorting only ranks loaded sessions.'
+                : ''}
             </div>,
             document.body
           )}
@@ -898,11 +1021,11 @@ export const DateGroupedSessions = (): React.JSX.Element => {
               >
                 {item.type === 'pinned-header' ? (
                   <div
-                    className="sticky top-0 flex h-full items-center gap-1.5 border-t px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider backdrop-blur-sm"
+                    className="sticky top-0 flex h-full items-center gap-1.5 border-t px-2 py-1.5 text-[11px] font-semibold text-text-secondary backdrop-blur-sm"
                     style={{
                       backgroundColor:
                         'color-mix(in srgb, var(--color-surface-sidebar) 95%, transparent)',
-                      color: 'var(--color-text-muted)',
+                      color: 'var(--color-text-secondary)',
                       borderColor: 'var(--color-border-emphasis)',
                     }}
                   >
@@ -911,11 +1034,11 @@ export const DateGroupedSessions = (): React.JSX.Element => {
                   </div>
                 ) : item.type === 'header' ? (
                   <div
-                    className="sticky top-0 flex h-full items-center border-t px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider backdrop-blur-sm"
+                    className="sticky top-0 flex h-full items-center border-t px-2 py-1.5 text-[11px] font-semibold text-text-secondary backdrop-blur-sm"
                     style={{
                       backgroundColor:
                         'color-mix(in srgb, var(--color-surface-sidebar) 95%, transparent)',
-                      color: 'var(--color-text-muted)',
+                      color: 'var(--color-text-secondary)',
                       borderColor: 'var(--color-border-emphasis)',
                     }}
                   >

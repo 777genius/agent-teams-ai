@@ -245,4 +245,38 @@ describe('ActivityItem legacy system message fallback', () => {
       await Promise.resolve();
     });
   });
+
+  it('renders task comments as comments addressed to a task, not a participant', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    const message: InboxMessage = {
+      from: 'jack',
+      to: 'team-lead',
+      text: 'Короткий отчёт по contributor/internal implementation navigation',
+      summary: '#8fdd6803 Короткий отчёт по contributor/internal implementation navigation',
+      timestamp: new Date('2026-04-13T13:35:00.000Z').toISOString(),
+      read: true,
+      source: 'inbox',
+      messageKind: 'task_comment_notification',
+      taskRefs: [{ taskId: 'task-1', displayId: '#8fdd6803', teamName: 'my-team' }],
+    };
+
+    await act(async () => {
+      root.render(React.createElement(ActivityItem, { message, teamName: 'my-team' }));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Comment');
+    expect(host.textContent).toContain('jack');
+    expect(host.textContent).toContain('#8fdd6803');
+    expect(host.textContent).not.toContain('team-lead');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
 });

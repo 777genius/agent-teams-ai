@@ -1,17 +1,10 @@
 import { execCli } from '@main/utils/childProcess';
-import { buildEnrichedEnv } from '@main/utils/cliEnv';
-import {
-  getCachedShellEnv,
-  getShellPreferredHome,
-  resolveInteractiveShellEnv,
-} from '@main/utils/shellEnv';
+import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
 
-import { configManager } from '../infrastructure/ConfigManager';
-
 import { resolveGeminiRuntimeAuth } from './geminiRuntimeAuth';
+import { buildProviderAwareCliEnv } from './providerAwareCliEnv';
 import { providerConnectionService } from './ProviderConnectionService';
-import { applyConfiguredRuntimeBackendsEnv, applyProviderRuntimeEnv } from './providerRuntimeEnv';
 
 import type { CliProviderId, CliProviderStatus } from '@shared/types';
 
@@ -151,38 +144,29 @@ function extractModelIds(
     return [];
   }
 
-  return models.flatMap((model) => {
+  return models.flatMap<string>((model) => {
     if (typeof model === 'string') {
-      return model;
+      return [model];
     }
     if (typeof model?.id === 'string' && model.id.trim().length > 0) {
-      return model.id.trim();
+      return [model.id.trim()];
     }
     return [];
   });
 }
 
 export class ClaudeMultimodelBridgeService {
-  private async buildCliEnv(binaryPath: string): Promise<NodeJS.ProcessEnv> {
-    const shellEnv = getCachedShellEnv() ?? {};
-    const home =
-      getShellPreferredHome() || shellEnv.HOME || process.env.HOME || process.env.USERPROFILE;
-    const env = {
-      ...buildEnrichedEnv(binaryPath),
-      ...shellEnv,
-    };
-    if (home) {
-      env.HOME = home;
-    }
-    applyConfiguredRuntimeBackendsEnv(env, configManager.getConfig().runtime);
-    return providerConnectionService.applyAllConfiguredConnectionEnv(env);
+  private async buildCliEnv(
+    binaryPath: string
+  ): Promise<Awaited<ReturnType<typeof buildProviderAwareCliEnv>>> {
+    return buildProviderAwareCliEnv({ binaryPath });
   }
 
   private async buildProviderCliEnv(
     binaryPath: string,
     providerId: CliProviderId
-  ): Promise<NodeJS.ProcessEnv> {
-    return applyProviderRuntimeEnv({ ...(await this.buildCliEnv(binaryPath)) }, providerId);
+  ): Promise<Awaited<ReturnType<typeof buildProviderAwareCliEnv>>> {
+    return buildProviderAwareCliEnv({ binaryPath, providerId });
   }
 
   private isUnifiedRuntimeUnsupported(error: unknown): boolean {
@@ -252,12 +236,38 @@ export class ClaudeMultimodelBridgeService {
     };
   }
 
+  private applyConnectionIssue(
+    provider: CliProviderStatus,
+    connectionIssues: Partial<Record<CliProviderId, string>>
+  ): CliProviderStatus {
+    const issue = connectionIssues[provider.providerId];
+    if (!issue) {
+      return provider;
+    }
+
+    return {
+      ...provider,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      statusMessage: issue,
+      backend: null,
+    };
+  }
+
+  private applyConnectionIssues(
+    providers: CliProviderStatus[],
+    connectionIssues: Partial<Record<CliProviderId, string>>
+  ): CliProviderStatus[] {
+    return providers.map((provider) => this.applyConnectionIssue(provider, connectionIssues));
+  }
+
   async getProviderStatus(
     binaryPath: string,
     providerId: CliProviderId
   ): Promise<CliProviderStatus> {
     await resolveInteractiveShellEnv();
-    const env = await this.buildCliEnv(binaryPath);
+    const { env, connectionIssues } = await this.buildCliEnv(binaryPath);
 
     try {
       const { stdout } = await execCli(
@@ -270,7 +280,10 @@ export class ClaudeMultimodelBridgeService {
       );
       const parsed = extractJsonObject<UnifiedRuntimeStatusResponse>(stdout);
       return providerConnectionService.enrichProviderStatus(
-        this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId])
+        this.applyConnectionIssue(
+          this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId]),
+          connectionIssues
+        )
       );
     } catch (error) {
       if (!this.isUnifiedRuntimeUnsupported(error)) {
@@ -291,7 +304,7 @@ export class ClaudeMultimodelBridgeService {
 
   private async buildGeminiStatus(binaryPath: string): Promise<CliProviderStatus> {
     const provider = createDefaultProviderStatus('gemini');
-    const env = await this.buildProviderCliEnv(binaryPath, 'gemini');
+    const { env } = await this.buildProviderCliEnv(binaryPath, 'gemini');
 
     try {
       const { stdout } = await execCli(
@@ -350,7 +363,7 @@ export class ClaudeMultimodelBridgeService {
     onUpdate?: (providers: CliProviderStatus[]) => void
   ): Promise<CliProviderStatus[]> {
     await resolveInteractiveShellEnv();
-    const env = await this.buildCliEnv(binaryPath);
+    const { env, connectionIssues } = await this.buildCliEnv(binaryPath);
 
     try {
       const { stdout } = await execCli(binaryPath, ['runtime', 'status', '--json'], {
@@ -359,8 +372,11 @@ export class ClaudeMultimodelBridgeService {
       });
       const parsed = extractJsonObject<UnifiedRuntimeStatusResponse>(stdout);
       const providers = await providerConnectionService.enrichProviderStatuses(
-        ORDERED_PROVIDER_IDS.map((providerId) =>
-          this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId])
+        this.applyConnectionIssues(
+          ORDERED_PROVIDER_IDS.map((providerId) =>
+            this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId])
+          ),
+          connectionIssues
         )
       );
       onUpdate?.(providers);
@@ -470,7 +486,10 @@ export class ClaudeMultimodelBridgeService {
     onUpdate?.(ORDERED_PROVIDER_IDS.map((id) => providers.get(id)!));
 
     const enrichedProviders = await providerConnectionService.enrichProviderStatuses(
-      ORDERED_PROVIDER_IDS.map((providerId) => providers.get(providerId)!)
+      this.applyConnectionIssues(
+        ORDERED_PROVIDER_IDS.map((providerId) => providers.get(providerId)!),
+        connectionIssues
+      )
     );
     onUpdate?.(enrichedProviders);
 

@@ -751,6 +751,13 @@ const LeadThoughtsGroupRowComponent = ({
     });
   }, []);
 
+  const timestampLabel =
+    formatTime(oldest.timestamp) === formatTime(newest.timestamp)
+      ? formatTime(oldest.timestamp)
+      : `${formatTime(oldest.timestamp)}–${formatTime(newest.timestamp)}`;
+  const useCompactCollapsedHeader = compactHeader && !isBodyVisible;
+  const compactPreviewText = headerTextPreview ?? totalToolSummary;
+
   return (
     <AnimatedHeightReveal animate={isNew} containerRef={ref} style={{ overflowAnchor: 'none' }}>
       <article
@@ -767,7 +774,9 @@ const LeadThoughtsGroupRowComponent = ({
           role={canToggleBodyVisibility ? 'button' : undefined}
           tabIndex={canToggleBodyVisibility ? 0 : undefined}
           className={[
-            'flex select-none items-center gap-2 px-3 py-1.5',
+            useCompactCollapsedHeader
+              ? 'select-none px-3 py-2'
+              : 'flex select-none items-center gap-2 px-3 py-1.5',
             canToggleBodyVisibility ? 'cursor-pointer' : '',
           ].join(' ')}
           style={hasApiError ? { backgroundColor: 'rgba(248, 113, 113, 0.08)' } : undefined}
@@ -783,101 +792,148 @@ const LeadThoughtsGroupRowComponent = ({
               : undefined
           }
         >
-          {/* Chevron for collapse mode */}
-          {canToggleBodyVisibility && !compactHeader ? (
-            <ChevronRight
-              className="size-3 shrink-0 transition-transform duration-150"
-              style={{
-                color: CARD_ICON_MUTED,
-                transform: isBodyVisible ? 'rotate(90deg)' : undefined,
-              }}
-            />
-          ) : null}
-          {/* Lead avatar with optional live indicator */}
-          {!compactHeader ? (
-            <div className="relative shrink-0">
-              <img
-                src={agentAvatarUrl(leadName, 24)}
-                alt=""
-                className="size-5 rounded-full bg-[var(--color-surface-raised)]"
-                loading="lazy"
-              />
-              <LiveThoughtStatusBadge
-                canBeLive={canBeLive}
-                isTeamAlive={isTeamAlive}
-                leadActivity={leadActivity}
-                leadContextUpdatedAt={leadContextUpdatedAt}
-                newestTimestamp={newest.timestamp}
-              />
-            </div>
-          ) : null}
-          <MemberBadge name={leadName} color={memberColor} hideAvatar />
-          <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-            {thoughts.length} thoughts
-          </span>
-          {!isBodyVisible && headerTextPreview ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  className="min-w-0 flex-1 cursor-default truncate text-[10px]"
-                  style={{ color: CARD_TEXT_LIGHT }}
+          {useCompactCollapsedHeader ? (
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                  <MemberBadge name={leadName} color={memberColor} hideAvatar />
+                  <span className="shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
+                    {thoughts.length} thoughts
+                  </span>
+                </div>
+                <div className="relative flex shrink-0 items-center">
+                  <span
+                    className={
+                      onExpand && expandItemKey
+                        ? 'text-[10px] transition-opacity group-hover:opacity-0'
+                        : 'text-[10px]'
+                    }
+                    style={{ color: CARD_ICON_MUTED }}
+                  >
+                    {timestampLabel}
+                  </span>
+                  {onExpand && expandItemKey && (
+                    <button
+                      type="button"
+                      aria-label="Expand thoughts"
+                      className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
+                      style={{ color: CARD_ICON_MUTED }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onExpand(expandItemKey);
+                      }}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <Maximize2 size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+              {compactPreviewText ? (
+                <div
+                  className="mt-1 min-w-0 truncate text-[11px]"
+                  style={{ color: headerTextPreview ? CARD_TEXT_LIGHT : CARD_ICON_MUTED }}
+                  title={compactPreviewText}
                 >
-                  {headerTextPreview}
-                </span>
-              </TooltipTrigger>
-              {totalToolSummary ? (
-                <TooltipContent side="bottom" className="max-w-[420px] font-mono text-[11px]">
-                  <ToolSummaryTooltipContent
-                    toolCalls={allToolCalls}
-                    toolSummary={totalToolSummary}
-                  />
-                </TooltipContent>
+                  {compactPreviewText}
+                </div>
               ) : null}
-            </Tooltip>
-          ) : totalToolSummary ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="cursor-default text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-                  {totalToolSummary}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-[420px] font-mono text-[11px]">
-                <ToolSummaryTooltipContent
-                  toolCalls={allToolCalls}
-                  toolSummary={totalToolSummary}
+            </div>
+          ) : (
+            <>
+              {canToggleBodyVisibility && !compactHeader ? (
+                <ChevronRight
+                  className="size-3 shrink-0 transition-transform duration-150"
+                  style={{
+                    color: CARD_ICON_MUTED,
+                    transform: isBodyVisible ? 'rotate(90deg)' : undefined,
+                  }}
                 />
-              </TooltipContent>
-            </Tooltip>
-          ) : null}
-          <div className="relative ml-auto flex shrink-0 items-center">
-            <span
-              className={
-                onExpand && expandItemKey
-                  ? 'text-[10px] transition-opacity group-hover:opacity-0'
-                  : 'text-[10px]'
-              }
-              style={{ color: CARD_ICON_MUTED }}
-            >
-              {formatTime(oldest.timestamp) === formatTime(newest.timestamp)
-                ? formatTime(oldest.timestamp)
-                : `${formatTime(oldest.timestamp)}–${formatTime(newest.timestamp)}`}
-            </span>
-            {onExpand && expandItemKey && (
-              <button
-                type="button"
-                aria-label="Expand thoughts"
-                className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
-                style={{ color: CARD_ICON_MUTED }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onExpand(expandItemKey);
-                }}
-                onKeyDown={(e) => e.stopPropagation()}
-              >
-                <Maximize2 size={12} />
-              </button>
-            )}
-          </div>
+              ) : null}
+              {!compactHeader ? (
+                <div className="relative shrink-0">
+                  <img
+                    src={agentAvatarUrl(leadName, 24)}
+                    alt=""
+                    className="size-5 rounded-full bg-[var(--color-surface-raised)]"
+                    loading="lazy"
+                  />
+                  <LiveThoughtStatusBadge
+                    canBeLive={canBeLive}
+                    isTeamAlive={isTeamAlive}
+                    leadActivity={leadActivity}
+                    leadContextUpdatedAt={leadContextUpdatedAt}
+                    newestTimestamp={newest.timestamp}
+                  />
+                </div>
+              ) : null}
+              <MemberBadge name={leadName} color={memberColor} hideAvatar />
+              <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
+                {thoughts.length} thoughts
+              </span>
+              {!isBodyVisible && headerTextPreview ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className="min-w-0 flex-1 cursor-default truncate text-[10px]"
+                      style={{ color: CARD_TEXT_LIGHT }}
+                    >
+                      {headerTextPreview}
+                    </span>
+                  </TooltipTrigger>
+                  {totalToolSummary ? (
+                    <TooltipContent side="bottom" className="max-w-[420px] font-mono text-[11px]">
+                      <ToolSummaryTooltipContent
+                        toolCalls={allToolCalls}
+                        toolSummary={totalToolSummary}
+                      />
+                    </TooltipContent>
+                  ) : null}
+                </Tooltip>
+              ) : totalToolSummary ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-default text-[10px]" style={{ color: CARD_ICON_MUTED }}>
+                      {totalToolSummary}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[420px] font-mono text-[11px]">
+                    <ToolSummaryTooltipContent
+                      toolCalls={allToolCalls}
+                      toolSummary={totalToolSummary}
+                    />
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
+              <div className="relative ml-auto flex shrink-0 items-center">
+                <span
+                  className={
+                    onExpand && expandItemKey
+                      ? 'text-[10px] transition-opacity group-hover:opacity-0'
+                      : 'text-[10px]'
+                  }
+                  style={{ color: CARD_ICON_MUTED }}
+                >
+                  {timestampLabel}
+                </span>
+                {onExpand && expandItemKey && (
+                  <button
+                    type="button"
+                    aria-label="Expand thoughts"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
+                    style={{ color: CARD_ICON_MUTED }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onExpand(expandItemKey);
+                    }}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    <Maximize2 size={12} />
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Scrollable body — live thoughts follow bottom unless user scrolls up */}

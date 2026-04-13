@@ -17,13 +17,13 @@ export const DISPLAY_STEPS = [
 
 export const DISPLAY_COMPLETE_STEP_INDEX = DISPLAY_STEPS.length;
 
-export type LaunchJoinMilestones = {
+export interface LaunchJoinMilestones {
   expectedTeammateCount: number;
   heartbeatConfirmedCount: number;
   processOnlyAliveCount: number;
   pendingSpawnCount: number;
   failedSpawnCount: number;
-};
+}
 
 type DisplayStepMilestones = LaunchJoinMilestones & {
   progress: Pick<TeamProvisioningProgress, 'configReady' | 'pid' | 'state'>;

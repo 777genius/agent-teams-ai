@@ -6,12 +6,12 @@ import {
   getTeamModelLabel,
   getTeamProviderLabel,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
-import type { TeamLaunchParams } from '@renderer/store/slices/teamSlice';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 
 import { MemberCard } from './MemberCard';
 
+import type { TeamLaunchParams } from '@renderer/store/slices/teamSlice';
 import type { TaskStatusCounts } from '@renderer/utils/pathNormalize';
 import type {
   LeadActivityState,
@@ -86,8 +86,7 @@ function areTaskStatusCountsMapsEquivalent(
   for (const [key, leftCounts] of left) {
     const rightCounts = right.get(key);
     if (
-      !rightCounts ||
-      leftCounts.pending !== rightCounts.pending ||
+      leftCounts.pending !== rightCounts?.pending ||
       leftCounts.inProgress !== rightCounts.inProgress ||
       leftCounts.completed !== rightCounts.completed
     ) {
@@ -107,8 +106,7 @@ function areMemberTaskMapsEquivalent(
   for (const [key, leftTask] of left) {
     const rightTask = right.get(key);
     if (
-      !rightTask ||
-      leftTask.id !== rightTask.id ||
+      leftTask.id !== rightTask?.id ||
       leftTask.displayId !== rightTask.displayId ||
       leftTask.subject !== rightTask.subject ||
       leftTask.owner !== rightTask.owner ||
@@ -150,8 +148,7 @@ function areMemberSpawnStatusesEquivalent(
   for (const [key, leftEntry] of left) {
     const rightEntry = right.get(key);
     if (
-      !rightEntry ||
-      leftEntry.status !== rightEntry.status ||
+      leftEntry.status !== rightEntry?.status ||
       leftEntry.launchState !== rightEntry.launchState ||
       leftEntry.error !== rightEntry.error ||
       leftEntry.livenessSource !== rightEntry.livenessSource ||

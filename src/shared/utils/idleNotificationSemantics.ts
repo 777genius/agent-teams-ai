@@ -1,6 +1,6 @@
 import { isInboxNoiseMessage, parseInboxJson } from './inboxNoise';
 
-export type IdleNotificationPayload = {
+export interface IdleNotificationPayload {
   type: 'idle_notification';
   from?: string;
   timestamp?: string;
@@ -9,17 +9,17 @@ export type IdleNotificationPayload = {
   completedTaskId?: string;
   completedStatus?: 'resolved' | 'blocked' | 'failed';
   failureReason?: string;
-};
+}
 
 export type IdleNotificationPrimaryKind = 'heartbeat' | 'interrupted' | 'task_terminal' | 'failure';
 
-export type ClassifiedIdleNotification = {
+export interface ClassifiedIdleNotification {
   payload: IdleNotificationPayload;
   primaryKind: IdleNotificationPrimaryKind;
   hasPeerSummary: boolean;
   peerSummary: string | null;
   countsAsBootstrapConfirmation: boolean;
-};
+}
 
 function getTrimmedOptionalString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;

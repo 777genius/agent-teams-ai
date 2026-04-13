@@ -326,6 +326,12 @@ interface MentionableTextareaProps extends Omit<
   value: string;
   onValueChange: (v: string) => void;
   suggestions: MentionSuggestion[];
+  /** Surface class applied behind the textarea/overlay content. */
+  surfaceClassName?: string;
+  /** Optional decorative treatment for the surface shell. */
+  surfaceDecoration?: 'none' | 'orbit-border';
+  /** Solid color used by the bottom fade behind corner actions. */
+  surfaceFadeColor?: string;
   hintText?: string;
   showHint?: boolean;
   /** Content rendered at the right side of the footer row (e.g. "Saved") */
@@ -334,6 +340,8 @@ interface MentionableTextareaProps extends Omit<
   cornerAction?: React.ReactNode;
   /** Content rendered in the bottom-left corner inside the textarea (e.g. mode selector) */
   cornerActionLeft?: React.ReactNode;
+  /** Density of the reserved bottom inset used by corner actions. */
+  cornerActionInset?: 'default' | 'compact';
   /** Inline code chips to display as badges */
   chips?: InlineChip[];
   /** Called when a chip is removed (by X button, backspace, or reconciliation) */
@@ -364,11 +372,15 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       value,
       onValueChange,
       suggestions,
+      surfaceClassName,
+      surfaceDecoration = 'none',
+      surfaceFadeColor = 'var(--color-surface-raised)',
       hintText,
       showHint = true,
       footerRight,
       cornerAction,
       cornerActionLeft,
+      cornerActionInset = 'default',
       chips = [],
       onChipRemove,
       projectPath,
@@ -388,8 +400,15 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
   ) => {
     const internalRef = React.useRef<HTMLTextAreaElement | null>(null);
     const backdropRef = React.useRef<HTMLDivElement>(null);
+    const surfaceShellRef = React.useRef<HTMLDivElement | null>(null);
     const [scrollTop, setScrollTop] = React.useState(0);
     const { isLight } = useTheme();
+    const orbitGlowId = React.useId();
+    const [surfaceShellMetrics, setSurfaceShellMetrics] = React.useState(() => ({
+      width: 0,
+      height: 0,
+      borderRadius: 6,
+    }));
 
     // --- File search activation ---
     const enableFiles = !!projectPath;
@@ -648,6 +667,39 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       backdrop.style.textTransform = cs.textTransform;
       backdrop.style.tabSize = cs.tabSize;
     }, [value]);
+
+    React.useLayoutEffect(() => {
+      if (surfaceDecoration !== 'orbit-border') return;
+      const shell = surfaceShellRef.current;
+      if (!shell) return;
+
+      const updateMetrics = () => {
+        const rect = shell.getBoundingClientRect();
+        const computedStyle = window.getComputedStyle(shell);
+        const borderRadius = Number.parseFloat(computedStyle.borderTopLeftRadius) || 6;
+        setSurfaceShellMetrics((prev) => {
+          if (
+            Math.abs(prev.width - rect.width) < 0.5 &&
+            Math.abs(prev.height - rect.height) < 0.5 &&
+            Math.abs(prev.borderRadius - borderRadius) < 0.5
+          ) {
+            return prev;
+          }
+          return {
+            width: rect.width,
+            height: rect.height,
+            borderRadius,
+          };
+        });
+      };
+
+      updateMetrics();
+      const resizeObserver = new ResizeObserver(() => {
+        updateMetrics();
+      });
+      resizeObserver.observe(shell);
+      return () => resizeObserver.disconnect();
+    }, [surfaceDecoration]);
 
     // --- Overlay activation ---
     const hasOverlay =
@@ -1043,17 +1095,99 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
         enableTaskSearch ||
         commandSuggestions.length > 0);
     const showFooter = showHintRow || footerRight;
+    const hasCornerActions = Boolean(cornerAction || cornerActionLeft);
+    const cornerInsetClass = cornerActionInset === 'compact' ? 'pb-10' : 'pb-12';
+    const cornerFadeHeight = cornerActionInset === 'compact' ? 40 : 48;
+    const cornerActionOffsetClass = cornerActionInset === 'compact' ? 'bottom-1.5' : 'bottom-2';
+    const orbitTrackWidth = 1;
+    const orbitStrokeWidth = 1.35;
+    const orbitGlowWidth = 3;
+    const orbitInset = 0;
+    const orbitWidth = Math.max(surfaceShellMetrics.width, 0);
+    const orbitHeight = Math.max(surfaceShellMetrics.height, 0);
+    const orbitRadius = Math.max(surfaceShellMetrics.borderRadius, 0);
+    const orbitRight = orbitInset + orbitWidth;
+    const orbitBottom = orbitInset + orbitHeight;
+    const orbitMidX = orbitInset + orbitWidth / 2;
+    const orbitPathData =
+      orbitWidth > 0 && orbitHeight > 0
+        ? [
+            `M ${orbitMidX} ${orbitInset}`,
+            `H ${orbitRight - orbitRadius}`,
+            `A ${orbitRadius} ${orbitRadius} 0 0 1 ${orbitRight} ${orbitInset + orbitRadius}`,
+            `V ${orbitBottom - orbitRadius}`,
+            `A ${orbitRadius} ${orbitRadius} 0 0 1 ${orbitRight - orbitRadius} ${orbitBottom}`,
+            `H ${orbitInset + orbitRadius}`,
+            `A ${orbitRadius} ${orbitRadius} 0 0 1 ${orbitInset} ${orbitBottom - orbitRadius}`,
+            `V ${orbitInset + orbitRadius}`,
+            `A ${orbitRadius} ${orbitRadius} 0 0 1 ${orbitInset + orbitRadius} ${orbitInset}`,
+            `H ${orbitMidX}`,
+            'Z',
+          ].join(' ')
+        : '';
 
     return (
       <div className="relative">
         {/* Inner wrapper for textarea + backdrop overlay */}
-        <div className="relative">
+        <div ref={surfaceShellRef} className={cn('relative rounded-md', surfaceClassName)}>
+          {surfaceDecoration === 'orbit-border' &&
+          surfaceShellMetrics.width > 0 &&
+          surfaceShellMetrics.height > 0 ? (
+            <svg
+              className="message-composer-orbit-svg pointer-events-none absolute inset-0 z-[16] size-full"
+              viewBox={`0 0 ${surfaceShellMetrics.width} ${surfaceShellMetrics.height}`}
+              aria-hidden="true"
+            >
+              <defs>
+                <filter id={orbitGlowId} x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="1.35" />
+                </filter>
+              </defs>
+              <path
+                className="message-composer-orbit-track"
+                d={orbitPathData}
+                pathLength="100"
+                fill="none"
+                strokeWidth={orbitTrackWidth}
+              />
+              <path
+                className="message-composer-orbit-glow"
+                d={orbitPathData}
+                pathLength="100"
+                fill="none"
+                filter={`url(#${orbitGlowId})`}
+                strokeWidth={orbitGlowWidth}
+              />
+              <path
+                className="message-composer-orbit-glow message-composer-orbit-glow-secondary"
+                d={orbitPathData}
+                pathLength="100"
+                fill="none"
+                filter={`url(#${orbitGlowId})`}
+                strokeWidth={orbitGlowWidth}
+              />
+              <path
+                className="message-composer-orbit-path"
+                d={orbitPathData}
+                pathLength="100"
+                fill="none"
+                strokeWidth={orbitStrokeWidth}
+              />
+              <path
+                className="message-composer-orbit-path message-composer-orbit-path-secondary"
+                d={orbitPathData}
+                pathLength="100"
+                fill="none"
+                strokeWidth={orbitStrokeWidth}
+              />
+            </svg>
+          ) : null}
           {hasOverlay ? (
             <div
               ref={backdropRef}
               className={cn(
                 'pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-md border border-transparent px-3 py-2 text-sm text-[var(--color-text)]',
-                (cornerAction || cornerActionLeft) && 'pb-12'
+                hasCornerActions && cornerInsetClass
               )}
               style={{
                 whiteSpace: 'pre-wrap',
@@ -1204,7 +1338,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
             onKeyDown={composedHandleKeyDown}
             onSelect={composedHandleSelect}
             {...textareaProps}
-            className={cn(className, (cornerAction || cornerActionLeft) && 'pb-12')}
+            className={cn(className, hasCornerActions && cornerInsetClass)}
             onScroll={handleScroll}
             style={textareaStyle}
           />
@@ -1220,25 +1354,34 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           ) : null}
 
           {/* Gradient fade overlay before corner action buttons */}
-          {cornerAction || cornerActionLeft ? (
+          {hasCornerActions ? (
             <div
               className="pointer-events-none absolute inset-x-0 bottom-0 z-[15] rounded-b-md"
               style={{
-                height: 48,
-                background:
-                  'linear-gradient(to bottom, transparent 0%, var(--color-surface-raised) 75%)',
+                height: cornerFadeHeight,
+                background: `linear-gradient(to bottom, transparent 0%, ${surfaceFadeColor} 75%)`,
               }}
             />
           ) : null}
 
           {cornerAction ? (
-            <div className="pointer-events-none absolute bottom-2 right-2 z-20 flex items-end justify-end">
+            <div
+              className={cn(
+                'pointer-events-none absolute right-2 z-20 flex items-end justify-end',
+                cornerActionOffsetClass
+              )}
+            >
               <div className="pointer-events-auto">{cornerAction}</div>
             </div>
           ) : null}
 
           {cornerActionLeft ? (
-            <div className="pointer-events-none absolute bottom-2 left-2 z-20 flex items-end justify-start">
+            <div
+              className={cn(
+                'pointer-events-none absolute left-2 z-20 flex items-end justify-start',
+                cornerActionOffsetClass
+              )}
+            >
               <div className="pointer-events-auto">{cornerActionLeft}</div>
             </div>
           ) : null}

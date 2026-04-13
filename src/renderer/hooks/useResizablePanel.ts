@@ -13,21 +13,21 @@ const DEFAULT_MAX_WIDTH = 500;
 const DEFAULT_MIN_HEIGHT = 120;
 const DEFAULT_MAX_HEIGHT = 520;
 
-type HorizontalResizeOptions = {
+interface HorizontalResizeOptions {
   width: number;
   onWidthChange: (width: number) => void;
   minWidth?: number;
   maxWidth?: number;
   side: 'left' | 'right';
-};
+}
 
-type VerticalResizeOptions = {
+interface VerticalResizeOptions {
   height: number;
   onHeightChange: (height: number) => void;
   minHeight?: number;
   maxHeight?: number;
   side: 'top' | 'bottom';
-};
+}
 
 type UseResizablePanelOptions = HorizontalResizeOptions | VerticalResizeOptions;
 

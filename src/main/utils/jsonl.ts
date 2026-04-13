@@ -34,6 +34,7 @@ import { extractToolCalls, extractToolResults } from './toolExtraction';
 
 import type { FileSystemProvider } from '../services/infrastructure/FileSystemProvider';
 import type { PhaseTokenBreakdown } from '../types/domain';
+import type { Readable } from 'stream';
 
 const logger = createLogger('Util:jsonl');
 
@@ -47,6 +48,12 @@ export { checkMessagesOngoing } from './sessionStateDetection';
 // Core Parsing Functions
 // =============================================================================
 
+export interface JsonlParseResult {
+  messages: ParsedMessage[];
+  parsedLineCount: number;
+  consumedBytes: number;
+}
+
 /**
  * Parse a JSONL file line by line using streaming.
  * This avoids loading the entire file into memory.
@@ -55,38 +62,130 @@ export async function parseJsonlFile(
   filePath: string,
   fsProvider: FileSystemProvider = defaultProvider
 ): Promise<ParsedMessage[]> {
-  const messages: ParsedMessage[] = [];
-
   if (!(await fsProvider.exists(filePath))) {
-    return messages;
+    return [];
   }
 
-  const fileStream = fsProvider.createReadStream(filePath, { encoding: 'utf8' });
-  const rl = readline.createInterface({
-    input: fileStream,
-    crlfDelay: Infinity,
-  });
+  const result = await parseJsonlStream(fsProvider.createReadStream(filePath), filePath);
+  return result.messages;
+}
 
-  let lineCount = 0;
-  for await (const line of rl) {
-    if (!line.trim()) continue;
+/**
+ * Parse a JSONL file and return byte accounting details for incremental readers.
+ */
+export async function parseJsonlFileWithStats(
+  filePath: string,
+  fsProvider: FileSystemProvider = defaultProvider
+): Promise<JsonlParseResult> {
+  if (!(await fsProvider.exists(filePath))) {
+    return { messages: [], parsedLineCount: 0, consumedBytes: 0 };
+  }
+
+  return parseJsonlStream(fsProvider.createReadStream(filePath), filePath);
+}
+
+/**
+ * Parse JSONL data from a readable stream while tracking how many bytes were
+ * safely consumed as complete lines.
+ */
+export async function parseJsonlStream(
+  stream: Readable,
+  filePath?: string
+): Promise<JsonlParseResult> {
+  const messages: ParsedMessage[] = [];
+  let pending = Buffer.alloc(0);
+  let parsedLineCount = 0;
+  let consumedBytes = 0;
+  let completeLineCount = 0;
+  let malformedLineCount = 0;
+  let skippedNonJsonCount = 0;
+
+  const processLine = (lineBuffer: Buffer): void => {
+    let effectiveBuffer = lineBuffer;
+    if (effectiveBuffer.length > 0 && effectiveBuffer[effectiveBuffer.length - 1] === 0x0d) {
+      effectiveBuffer = effectiveBuffer.subarray(0, -1);
+    }
+
+    const line = effectiveBuffer.toString('utf8');
+    if (!line.trim()) {
+      return;
+    }
+
+    const normalized = normalizeJsonlLine(line);
+    if (!looksLikeJsonObjectLine(normalized)) {
+      skippedNonJsonCount += 1;
+      return;
+    }
 
     try {
-      const parsed = parseJsonlLine(line);
+      const parsed = parseJsonlLine(normalized);
       if (parsed) {
         messages.push(parsed);
+        parsedLineCount += 1;
       }
-    } catch (error) {
-      logger.error(`Error parsing line in ${filePath}:`, error);
+    } catch {
+      malformedLineCount += 1;
     }
+  };
 
-    lineCount++;
-    if (lineCount % 250 === 0) {
-      await yieldToEventLoop();
+  for await (const chunk of stream) {
+    const chunkBuffer =
+      typeof chunk === 'string' ? Buffer.from(chunk, 'utf8') : Buffer.from(chunk as Uint8Array);
+    pending =
+      pending.length === 0
+        ? chunkBuffer
+        : Buffer.concat([pending, chunkBuffer], pending.length + chunkBuffer.length);
+
+    while (true) {
+      const newlineIndex = pending.indexOf(0x0a);
+      if (newlineIndex === -1) {
+        break;
+      }
+
+      const lineBuffer = pending.subarray(0, newlineIndex);
+      pending = pending.subarray(newlineIndex + 1);
+      consumedBytes += lineBuffer.length + 1;
+      completeLineCount += 1;
+      processLine(lineBuffer);
+
+      if (completeLineCount % 250 === 0) {
+        await yieldToEventLoop();
+      }
     }
   }
 
-  return messages;
+  if (pending.length > 0) {
+    try {
+      const trailingLine = pending.toString('utf8');
+      const normalized = normalizeJsonlLine(trailingLine);
+      if (looksLikeJsonObjectLine(normalized)) {
+        const parsed = parseJsonlLine(normalized);
+        if (parsed) {
+          messages.push(parsed);
+          parsedLineCount += 1;
+          consumedBytes += pending.length;
+        }
+      } else if (normalized.length > 0) {
+        // Treat non-JSON tail text as a complete malformed line and advance.
+        consumedBytes += pending.length;
+      }
+    } catch {
+      // Ignore trailing partial JSON. Callers should keep their offset pinned
+      // until the line is completed by a future append.
+    }
+  }
+
+  if (filePath && (malformedLineCount > 0 || skippedNonJsonCount > 0)) {
+    logger.debug(
+      `Skipped invalid JSONL lines in ${filePath} malformed=${malformedLineCount} nonJson=${skippedNonJsonCount}`
+    );
+  }
+
+  return {
+    messages,
+    parsedLineCount,
+    consumedBytes,
+  };
 }
 
 /**
@@ -94,12 +193,26 @@ export async function parseJsonlFile(
  * Returns null for invalid/unsupported lines.
  */
 export function parseJsonlLine(line: string): ParsedMessage | null {
-  if (!line.trim()) {
+  const normalized = normalizeJsonlLine(line);
+  if (!normalized) {
     return null;
   }
 
-  const entry = JSON.parse(line) as ChatHistoryEntry;
+  if (!looksLikeJsonObjectLine(normalized)) {
+    return null;
+  }
+
+  const entry = JSON.parse(normalized) as ChatHistoryEntry;
   return parseChatHistoryEntry(entry);
+}
+
+function normalizeJsonlLine(line: string): string {
+  const trimmed = line.trim();
+  return trimmed.charCodeAt(0) === 0xfeff ? trimmed.slice(1) : trimmed;
+}
+
+function looksLikeJsonObjectLine(line: string): boolean {
+  return line.startsWith('{');
 }
 
 // =============================================================================
@@ -367,6 +480,7 @@ export interface SessionFileMetadata {
   messageCount: number;
   isOngoing: boolean;
   gitBranch: string | null;
+  model?: string | null;
   /** Total context consumed (compaction-aware) */
   contextConsumption?: number;
   /** Number of compaction events */
@@ -389,6 +503,7 @@ export async function analyzeSessionFileMetadata(
       messageCount: 0,
       isOngoing: false,
       gitBranch: null,
+      model: null,
     };
   }
 
@@ -401,6 +516,7 @@ export async function analyzeSessionFileMetadata(
         messageCount: 0,
         isOngoing: false,
         gitBranch: null,
+        model: null,
       };
     }
     if (stat.size > MAX_DEEP_SCAN_BYTES) {
@@ -413,6 +529,7 @@ export async function analyzeSessionFileMetadata(
           messageCount: 0,
           isOngoing: false,
           gitBranch: null,
+          model: null,
         };
       } catch {
         return {
@@ -420,6 +537,7 @@ export async function analyzeSessionFileMetadata(
           messageCount: 0,
           isOngoing: false,
           gitBranch: null,
+          model: null,
         };
       }
     }
@@ -439,6 +557,7 @@ export async function analyzeSessionFileMetadata(
   // After a UserGroup, await the first main-thread assistant message to count the AIGroup
   let awaitingAIGroup = false;
   let gitBranch: string | null = null;
+  let model: string | null = null;
 
   let activityIndex = 0;
   let lastEndingIndex = -1;
@@ -492,6 +611,10 @@ export async function analyzeSessionFileMetadata(
 
     if (!gitBranch && 'gitBranch' in entry && entry.gitBranch) {
       gitBranch = entry.gitBranch;
+    }
+
+    if (parsed.type === 'assistant' && !parsed.isSidechain && parsed.model !== '<synthetic>') {
+      model = parsed.model ?? model;
     }
 
     if (!firstUserMessage && entry.type === 'user') {
@@ -690,6 +813,7 @@ export async function analyzeSessionFileMetadata(
     messageCount,
     isOngoing: lastEndingIndex === -1 ? hasAnyOngoingActivity : hasActivityAfterLastEnding,
     gitBranch,
+    model,
     contextConsumption,
     compactionCount: compactionPhases.length > 0 ? compactionPhases.length : undefined,
     phaseBreakdown,

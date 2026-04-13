@@ -530,6 +530,25 @@ describe('agent-teams-controller API', () => {
     expect(inbox[0].leadSessionId).toBe('lead-session-1');
   });
 
+  it('ignores mismatched leadSessionId placeholders on review_request and uses canonical config session', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.tasks.createTask({ subject: 'Review me', owner: 'bob' });
+
+    controller.kanban.addReviewer('alice');
+    controller.tasks.completeTask(task.id, 'bob');
+    controller.review.requestReview(task.id, {
+      from: 'team-lead',
+      leadSessionId: 'team-lead',
+    });
+
+    const reviewerInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
+    const inbox = JSON.parse(fs.readFileSync(reviewerInboxPath, 'utf8'));
+
+    expect(inbox).toHaveLength(1);
+    expect(inbox[0].leadSessionId).toBe('lead-session-1');
+  });
+
   it('starts review idempotently without requiring completed status', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
@@ -694,6 +713,47 @@ describe('agent-teams-controller API', () => {
     expect(rows.at(-1).summary).toContain('Fix request');
     expect(rows.at(-1).text).toContain('moved back to pending');
     expect(rows.at(-1).text).toContain('request review again');
+    expect(rows.at(-1).leadSessionId).toBe('lead-session-1');
+  });
+
+  it('ignores mismatched leadSessionId placeholders on review_approve owner notifications', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.tasks.createTask({ subject: 'Approve me', owner: 'bob' });
+
+    controller.kanban.addReviewer('alice');
+    controller.tasks.completeTask(task.id, 'bob');
+    controller.review.requestReview(task.id, { from: 'team-lead', reviewer: 'alice' });
+    controller.review.approveReview(task.id, {
+      from: 'team-lead',
+      note: 'Looks good.',
+      'notify-owner': true,
+      leadSessionId: 'team-lead',
+    });
+
+    const inboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'bob.json');
+    const rows = JSON.parse(fs.readFileSync(inboxPath, 'utf8'));
+    expect(rows.at(-1).summary).toContain('Approved');
+    expect(rows.at(-1).leadSessionId).toBe('lead-session-1');
+  });
+
+  it('ignores mismatched leadSessionId placeholders on review_request_changes owner notifications', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.tasks.createTask({ subject: 'Needs revision', owner: 'bob' });
+
+    controller.kanban.addReviewer('alice');
+    controller.tasks.completeTask(task.id, 'bob');
+    controller.review.requestReview(task.id, { from: 'team-lead', reviewer: 'alice' });
+    controller.review.requestChanges(task.id, {
+      from: 'alice',
+      comment: 'Please address review feedback.',
+      leadSessionId: 'team-lead',
+    });
+
+    const inboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'bob.json');
+    const rows = JSON.parse(fs.readFileSync(inboxPath, 'utf8'));
+    expect(rows.at(-1).summary).toContain('Fix request');
     expect(rows.at(-1).leadSessionId).toBe('lead-session-1');
   });
 

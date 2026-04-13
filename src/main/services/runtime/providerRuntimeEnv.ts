@@ -1,6 +1,6 @@
-import type { TeamProviderId } from '@shared/types';
-
 import { ConfigManager } from '../infrastructure/ConfigManager';
+
+import type { TeamProviderId } from '@shared/types';
 
 const PROVIDER_ROUTING_ENV_KEYS = [
   'CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST',

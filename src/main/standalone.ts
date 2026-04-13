@@ -18,12 +18,12 @@
 
 import { createLogger } from '@shared/utils/logger';
 
+import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
   getProjectsBasePath,
   getTodosBasePath,
   setClaudeBasePathOverride,
 } from './utils/pathDecoder';
-import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 
 import type { HttpServices } from './http';
 import type { HttpServer } from './services/infrastructure/HttpServer';

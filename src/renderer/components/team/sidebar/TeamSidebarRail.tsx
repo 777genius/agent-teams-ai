@@ -2,6 +2,7 @@ import { memo, useState } from 'react';
 
 import { ClaudeLogsSection } from '../ClaudeLogsSection';
 import { MessagesPanel } from '../messages/MessagesPanel';
+
 import type { MouseEventHandler } from 'react';
 import type { ComponentProps } from 'react';
 

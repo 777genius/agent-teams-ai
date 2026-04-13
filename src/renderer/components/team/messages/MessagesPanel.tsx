@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Sheet, type SheetRef } from 'react-modal-sheet';
 
 import { api } from '@renderer/api';
 import { Badge } from '@renderer/components/ui/badge';
@@ -9,21 +10,24 @@ import { useTeamMessagesExpanded } from '@renderer/hooks/useTeamMessagesExpanded
 import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { useStore } from '@renderer/store';
 import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
-import { useShallow } from 'zustand/react/shallow';
 import { filterTeamMessages } from '@renderer/utils/teamMessageFiltering';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
-import { createLogger } from '@shared/utils/logger';
 import { shouldExcludeInboxTextFromReplyCandidates } from '@shared/utils/idleNotificationSemantics';
+import { createLogger } from '@shared/utils/logger';
 import {
   CheckCheck,
   ChevronsDownUp,
   ChevronsUpDown,
   MessageSquare,
+  PanelBottom,
+  PanelBottomClose,
+  PanelBottomOpen,
   PanelLeft,
   PanelLeftClose,
   Search,
   X,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { ActivityTimeline } from '../activity/ActivityTimeline';
 import { getThoughtGroupKey, groupTimelineItems } from '../activity/LeadThoughtsGroup';
@@ -41,6 +45,7 @@ import { StatusBlock } from './StatusBlock';
 import type { TimelineItem } from '../activity/LeadThoughtsGroup';
 import type { ActionMode } from './ActionModeSelector';
 import type { MessagesFilterState } from './MessagesFilterPopover';
+import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { InboxMessage, ResolvedTeamMember, TaskRef, TeamTaskWithKanban } from '@shared/types';
 
 interface TimeWindow {
@@ -51,11 +56,16 @@ interface TimeWindow {
 const logger = createLogger('Component:MessagesPanel');
 const MESSAGES_PANEL_FILTER_WARN_MS = 8;
 const MESSAGES_PANEL_EXPANDED_ITEM_WARN_MS = 6;
+const BOTTOM_SHEET_HEADER_HEIGHT = 40;
+const BOTTOM_SHEET_COLLAPSED_SNAP_INDEX = 1;
+const BOTTOM_SHEET_COMPOSER_SNAP_INDEX = 2;
+const BOTTOM_SHEET_FULL_SNAP_INDEX = 4;
 
 interface MessagesPanelProps {
   teamName: string;
-  position: 'sidebar' | 'inline';
-  onTogglePosition: () => void;
+  position: TeamMessagesPanelMode;
+  onPositionChange: (position: TeamMessagesPanelMode) => void;
+  mountPoint?: Element | null;
   /** Active (non-removed) members. */
   members: ResolvedTeamMember[];
   /** All team tasks. */
@@ -95,7 +105,8 @@ interface MessagesPanelProps {
 export const MessagesPanel = memo(function MessagesPanel({
   teamName,
   position,
-  onTogglePosition,
+  onPositionChange,
+  mountPoint,
   members,
   tasks,
   messages,
@@ -207,6 +218,8 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
+  const bottomSheetRef = useRef<SheetRef>(null);
+  const bottomSheetStickyTopRef = useRef<HTMLDivElement | null>(null);
   const handleExpandContent = useCallback(() => {
     // no-op: user is reading expanded content, not composing
   }, []);
@@ -224,15 +237,20 @@ export const MessagesPanel = memo(function MessagesPanel({
   const [messagesCollapsed, setMessagesCollapsed] = useState(
     initialSidebarStateRef.current.messagesCollapsed
   );
-  const [sidebarSearchVisible, setSidebarSearchVisible] = useState(
-    initialSidebarStateRef.current.sidebarSearchVisible
+  const [messagesSearchBarVisible, setMessagesSearchBarVisible] = useState(
+    initialSidebarStateRef.current.messagesSearchBarVisible
   );
   const [expandedItemKey, setExpandedItemKey] = useState<string | null>(
     initialSidebarStateRef.current.expandedItemKey
   );
-  const [sidebarScrollTop, setSidebarScrollTop] = useState(
-    initialSidebarStateRef.current.sidebarScrollTop
+  const [messagesScrollTop, setMessagesScrollTop] = useState(
+    initialSidebarStateRef.current.messagesScrollTop
   );
+  const [bottomSheetSnapIndex, setBottomSheetSnapIndex] = useState(
+    initialSidebarStateRef.current.bottomSheetSnapIndex
+  );
+  const [bottomSheetStickyTopHeight, setBottomSheetStickyTopHeight] = useState(196);
+  const [bottomSheetMountHeight, setBottomSheetMountHeight] = useState(0);
 
   useEffect(() => {
     initialSidebarStateRef.current = getTeamMessagesSidebarUiState(teamName);
@@ -240,9 +258,10 @@ export const MessagesPanel = memo(function MessagesPanel({
     setMessagesFilter(initialSidebarStateRef.current.messagesFilter);
     setMessagesFilterOpen(initialSidebarStateRef.current.messagesFilterOpen);
     setMessagesCollapsed(initialSidebarStateRef.current.messagesCollapsed);
-    setSidebarSearchVisible(initialSidebarStateRef.current.sidebarSearchVisible);
+    setMessagesSearchBarVisible(initialSidebarStateRef.current.messagesSearchBarVisible);
     setExpandedItemKey(initialSidebarStateRef.current.expandedItemKey);
-    setSidebarScrollTop(initialSidebarStateRef.current.sidebarScrollTop);
+    setMessagesScrollTop(initialSidebarStateRef.current.messagesScrollTop);
+    setBottomSheetSnapIndex(initialSidebarStateRef.current.bottomSheetSnapIndex);
   }, [teamName]);
 
   useEffect(() => {
@@ -251,9 +270,10 @@ export const MessagesPanel = memo(function MessagesPanel({
       messagesFilter,
       messagesFilterOpen,
       messagesCollapsed,
-      sidebarSearchVisible,
+      messagesSearchBarVisible,
       expandedItemKey,
-      sidebarScrollTop,
+      messagesScrollTop,
+      bottomSheetSnapIndex,
     });
   }, [
     teamName,
@@ -261,17 +281,52 @@ export const MessagesPanel = memo(function MessagesPanel({
     messagesFilter,
     messagesFilterOpen,
     messagesCollapsed,
-    sidebarSearchVisible,
+    messagesSearchBarVisible,
     expandedItemKey,
-    sidebarScrollTop,
+    messagesScrollTop,
+    bottomSheetSnapIndex,
   ]);
 
   useLayoutEffect(() => {
     if (position !== 'sidebar') return;
     const el = sidebarScrollRef.current;
     if (!el) return;
-    el.scrollTop = sidebarScrollTop;
-  }, [position, sidebarScrollTop]);
+    el.scrollTop = messagesScrollTop;
+  }, [position, messagesScrollTop]);
+
+  useLayoutEffect(() => {
+    if (position !== 'bottom-sheet' || typeof ResizeObserver === 'undefined') return;
+
+    const mountPointElement = mountPoint instanceof HTMLElement ? mountPoint : null;
+    const observedEntries: [Element | null, (height: number) => void][] = [
+      [bottomSheetStickyTopRef.current, setBottomSheetStickyTopHeight],
+      [mountPointElement, setBottomSheetMountHeight],
+    ];
+    const observers: ResizeObserver[] = [];
+
+    for (const [element, setHeight] of observedEntries) {
+      if (!element) continue;
+
+      const updateHeight = () => {
+        const nextHeight = Math.ceil(element.getBoundingClientRect().height);
+        if (nextHeight > 0) {
+          setHeight(nextHeight);
+        }
+      };
+
+      updateHeight();
+
+      const observer = new ResizeObserver(() => {
+        updateHeight();
+      });
+      observer.observe(element);
+      observers.push(observer);
+    }
+
+    return () => {
+      observers.forEach((observer) => observer.disconnect());
+    };
+  }, [position, mountPoint]);
 
   const filteredMessages = useMemo(() => {
     const startedAt = performance.now();
@@ -348,7 +403,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       );
     }
     return result;
-  }, [expandedItemKey, activityTimelineMessages]);
+  }, [expandedItemKey, activityTimelineMessages, teamName]);
 
   // Auto-clear stale expanded key
   useEffect(() => {
@@ -461,6 +516,60 @@ export const MessagesPanel = memo(function MessagesPanel({
     [teamName, sendCrossTeamMessage]
   );
 
+  const moveToInline = useCallback(() => {
+    onPositionChange('inline');
+  }, [onPositionChange]);
+
+  const moveToSidebar = useCallback(() => {
+    onPositionChange('sidebar');
+  }, [onPositionChange]);
+
+  const moveToBottomSheet = useCallback(() => {
+    setBottomSheetSnapIndex(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
+    onPositionChange('bottom-sheet');
+  }, [onPositionChange]);
+
+  const snapBottomSheetTo = useCallback((snapIndex: number) => {
+    setBottomSheetSnapIndex(snapIndex);
+    bottomSheetRef.current?.snapTo(snapIndex);
+  }, []);
+
+  const toggleBottomSheetExpansion = useCallback(() => {
+    if (bottomSheetSnapIndex === BOTTOM_SHEET_COLLAPSED_SNAP_INDEX) {
+      snapBottomSheetTo(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
+      return;
+    }
+    snapBottomSheetTo(BOTTOM_SHEET_COLLAPSED_SNAP_INDEX);
+  }, [bottomSheetSnapIndex, snapBottomSheetTo]);
+
+  const bottomSheetSnapPoints = useMemo(() => {
+    const maxOpenHeight =
+      bottomSheetMountHeight > 0
+        ? Math.max(bottomSheetMountHeight - 1, 96)
+        : Number.POSITIVE_INFINITY;
+    const collapsedHeight = Math.min(BOTTOM_SHEET_HEADER_HEIGHT, maxOpenHeight);
+    const composerHeight = Math.min(
+      Math.max(collapsedHeight + bottomSheetStickyTopHeight, collapsedHeight + 120),
+      maxOpenHeight
+    );
+    const centeredHeight = Math.min(
+      Math.max(
+        bottomSheetMountHeight > 0 ? Math.round(bottomSheetMountHeight * 0.58) : 520,
+        composerHeight + 140
+      ),
+      maxOpenHeight
+    );
+
+    return [0, collapsedHeight, composerHeight, centeredHeight, 1];
+  }, [bottomSheetMountHeight, bottomSheetStickyTopHeight]);
+
+  const normalizedBottomSheetSnapIndex = useMemo(() => {
+    return Math.min(
+      Math.max(bottomSheetSnapIndex, BOTTOM_SHEET_COLLAPSED_SNAP_INDEX),
+      BOTTOM_SHEET_FULL_SNAP_INDEX
+    );
+  }, [bottomSheetSnapIndex]);
+
   // ---- Shared content (used in both modes) ----
   const searchAndFilterControls = (
     <div className="flex items-center gap-2">
@@ -539,6 +648,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         tasks={tasks}
         messages={effectiveMessages}
         pendingRepliesByMember={pendingRepliesByMember}
+        layout="flow"
         position="inline"
         onMemberClick={onMemberClick}
         onTaskClick={onTaskClick}
@@ -602,9 +712,9 @@ export const MessagesPanel = memo(function MessagesPanel({
   // ---- Sidebar mode ----
   if (position === 'sidebar') {
     return (
-      <div className="flex size-full flex-col overflow-hidden bg-[var(--color-surface)]">
+      <div className="flex size-full flex-col overflow-hidden bg-[var(--color-surface-sidebar)]">
         {/* Header */}
-        <div className="flex shrink-0 items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-section-bg)] px-3 py-2">
+        <div className="flex shrink-0 items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-3 py-2">
           <MessageSquare size={14} className="shrink-0 text-[var(--color-text-muted)]" />
           <span className="text-sm font-medium text-[var(--color-text)]">Messages</span>
           {filteredMessages.length > 0 && (
@@ -650,6 +760,7 @@ export const MessagesPanel = memo(function MessagesPanel({
                   size="sm"
                   className="size-7 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
                   onClick={() => setMessagesCollapsed((v) => !v)}
+                  aria-label={messagesCollapsed ? 'Expand all messages' : 'Collapse all messages'}
                 >
                   {messagesCollapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />}
                 </Button>
@@ -664,13 +775,16 @@ export const MessagesPanel = memo(function MessagesPanel({
                   variant="ghost"
                   size="sm"
                   className="size-7 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                  onClick={() => setSidebarSearchVisible((v) => !v)}
+                  onClick={() => setMessagesSearchBarVisible((v) => !v)}
+                  aria-label={
+                    messagesSearchBarVisible ? 'Hide message search' : 'Show message search'
+                  }
                 >
-                  {sidebarSearchVisible ? <X size={14} /> : <Search size={14} />}
+                  {messagesSearchBarVisible ? <X size={14} /> : <Search size={14} />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                {sidebarSearchVisible ? 'Hide search' : 'Search messages'}
+                {messagesSearchBarVisible ? 'Hide search' : 'Search messages'}
               </TooltipContent>
             </Tooltip>
             <Tooltip>
@@ -679,7 +793,8 @@ export const MessagesPanel = memo(function MessagesPanel({
                   variant="ghost"
                   size="sm"
                   className="size-7 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                  onClick={onTogglePosition}
+                  onClick={moveToInline}
+                  aria-label="Move messages to inline panel"
                 >
                   <PanelLeftClose size={14} />
                 </Button>
@@ -689,7 +804,7 @@ export const MessagesPanel = memo(function MessagesPanel({
           </div>
         </div>
         {/* Search & filter bar (toggleable) */}
-        {sidebarSearchVisible && (
+        {messagesSearchBarVisible && (
           <div className="shrink-0 border-b border-[var(--color-border)] px-3 py-1.5">
             {searchAndFilterControls}
           </div>
@@ -698,7 +813,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         <div
           ref={sidebarScrollRef}
           className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-14 pr-3 pt-2"
-          onScroll={(e) => setSidebarScrollTop(e.currentTarget.scrollTop)}
+          onScroll={(e) => setMessagesScrollTop(e.currentTarget.scrollTop)}
         >
           <div className="pl-3">
             <MessageComposer
@@ -717,6 +832,7 @@ export const MessagesPanel = memo(function MessagesPanel({
               tasks={tasks}
               messages={effectiveMessages}
               pendingRepliesByMember={pendingRepliesByMember}
+              layout="flow"
               position="sidebar"
               onMemberClick={onMemberClick}
               onTaskClick={onTaskClick}
@@ -780,6 +896,295 @@ export const MessagesPanel = memo(function MessagesPanel({
     );
   }
 
+  if (position === 'bottom-sheet') {
+    if (!mountPoint) {
+      return <div className="hidden" aria-hidden="true" />;
+    }
+
+    const isBottomSheetCollapsed =
+      normalizedBottomSheetSnapIndex === BOTTOM_SHEET_COLLAPSED_SNAP_INDEX;
+
+    return (
+      <Sheet
+        ref={bottomSheetRef}
+        isOpen
+        onClose={moveToInline}
+        mountPoint={mountPoint}
+        avoidKeyboard={false}
+        detent="full"
+        snapPoints={bottomSheetSnapPoints}
+        initialSnap={normalizedBottomSheetSnapIndex}
+        onSnap={setBottomSheetSnapIndex}
+        disableDismiss
+        disableScrollLocking
+        style={{ zIndex: 30 }}
+        className="!pointer-events-none !absolute !inset-0"
+        unstyled
+      >
+        <Sheet.Container
+          unstyled
+          className="flex max-h-full w-full flex-col overflow-hidden rounded-t-[20px] border border-[var(--color-border)] bg-[var(--color-surface-sidebar)] shadow-[0_-18px_48px_rgba(0,0,0,0.35)]"
+        >
+          <Sheet.Header
+            unstyled
+            className="shrink-0 cursor-grab select-none border-b border-[var(--color-border)] bg-[var(--color-surface-sidebar)] active:cursor-grabbing"
+          >
+            <div className="relative h-10 px-3">
+              <div className="pointer-events-none absolute inset-x-0 top-1 flex justify-center">
+                <Sheet.DragIndicator
+                  className="!h-1 !w-9 cursor-grab !rounded-full active:cursor-grabbing"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--color-text-muted) 45%, transparent)',
+                  }}
+                />
+              </div>
+              <div className="flex h-full items-center gap-1.5">
+                <MessageSquare size={13} className="shrink-0 text-[var(--color-text-muted)]" />
+                <span className="text-[13px] font-medium text-[var(--color-text)]">Messages</span>
+                {filteredMessages.length > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="px-1 py-0 text-[9px] font-normal leading-none"
+                  >
+                    {filteredMessages.length}
+                  </Badge>
+                )}
+                {messagesUnreadCount > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant="secondary"
+                        className="bg-blue-500/20 px-1 py-0 text-[9px] font-normal leading-none text-blue-600 dark:text-blue-400"
+                      >
+                        {messagesUnreadCount} new
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">{messagesUnreadCount} unread</TooltipContent>
+                  </Tooltip>
+                )}
+                <div
+                  className="ml-auto flex items-center gap-1"
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  {messagesUnreadCount > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="size-[22px] p-0 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
+                          onClick={handleMarkAllRead}
+                          aria-label="Mark all messages as read"
+                        >
+                          <CheckCheck size={13} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Mark all as read</TooltipContent>
+                    </Tooltip>
+                  )}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="size-[22px] p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                        onClick={() => setMessagesCollapsed((value) => !value)}
+                        aria-label={
+                          messagesCollapsed ? 'Expand all messages' : 'Collapse all messages'
+                        }
+                      >
+                        {messagesCollapsed ? (
+                          <ChevronsUpDown size={14} />
+                        ) : (
+                          <ChevronsDownUp size={14} />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {messagesCollapsed ? 'Expand all messages' : 'Collapse all messages'}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="size-[22px] p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                        onClick={() => setMessagesSearchBarVisible((value) => !value)}
+                        aria-label={
+                          messagesSearchBarVisible ? 'Hide message search' : 'Show message search'
+                        }
+                      >
+                        {messagesSearchBarVisible ? <X size={14} /> : <Search size={14} />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {messagesSearchBarVisible ? 'Hide search' : 'Search messages'}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="size-[22px] p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                        onClick={toggleBottomSheetExpansion}
+                        aria-label={
+                          isBottomSheetCollapsed
+                            ? 'Expand messages bottom sheet'
+                            : 'Collapse messages bottom sheet'
+                        }
+                      >
+                        {isBottomSheetCollapsed ? (
+                          <PanelBottomOpen size={14} />
+                        ) : (
+                          <PanelBottomClose size={14} />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {isBottomSheetCollapsed ? 'Expand sheet' : 'Collapse sheet'}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="size-[22px] p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                        onClick={moveToInline}
+                        aria-label="Move messages to inline panel"
+                      >
+                        <PanelBottom size={14} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Move to inline</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="size-[22px] p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                        onClick={moveToSidebar}
+                        aria-label="Move messages to sidebar"
+                      >
+                        <PanelLeft size={14} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Move to sidebar</TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+            </div>
+          </Sheet.Header>
+          {!isBottomSheetCollapsed && (
+            <Sheet.Content
+              className="min-h-0 bg-[var(--color-surface-sidebar)]"
+              scrollClassName="flex min-h-full flex-col"
+              disableDrag={(state) => state.scrollPosition !== 'top'}
+            >
+              <div
+                ref={bottomSheetStickyTopRef}
+                className="sticky top-0 z-[1] shrink-0 border-b border-[var(--color-border)] backdrop-blur"
+                style={{
+                  backgroundColor: 'var(--color-surface-sidebar)',
+                }}
+              >
+                {messagesSearchBarVisible && (
+                  <div className="border-b border-[var(--color-border)] px-3 py-2">
+                    {searchAndFilterControls}
+                  </div>
+                )}
+                <div className="p-3">
+                  <MessageComposer
+                    teamName={teamName}
+                    layout="compact"
+                    members={members}
+                    isTeamAlive={isTeamAlive}
+                    sending={sendingMessage}
+                    sendError={sendMessageError}
+                    lastResult={lastSendMessageResult}
+                    textareaRef={composerTextareaRef}
+                    onSend={handleSend}
+                    onCrossTeamSend={handleCrossTeamSend}
+                  />
+                </div>
+              </div>
+              <div className="shrink-0 px-3 pt-2">
+                <StatusBlock
+                  members={members}
+                  tasks={tasks}
+                  messages={effectiveMessages}
+                  pendingRepliesByMember={pendingRepliesByMember}
+                  layout="flow"
+                  position="inline"
+                  onMemberClick={onMemberClick}
+                  onTaskClick={onTaskClick}
+                />
+              </div>
+              <div className="flex-1 px-3 pb-4 pt-2">
+                <ActivityTimeline
+                  messages={activityTimelineMessages}
+                  teamName={teamName}
+                  members={members}
+                  readState={readState}
+                  allCollapsed={messagesCollapsed}
+                  expandOverrides={expandedSet}
+                  onToggleExpandOverride={toggleExpandOverride}
+                  teamSessionIds={teamSessionIds}
+                  currentLeadSessionId={currentLeadSessionId}
+                  isTeamAlive={isTeamAlive}
+                  leadActivity={leadActivity}
+                  leadContextUpdatedAt={leadContextUpdatedAt}
+                  teamNames={teamNames}
+                  teamColorByName={teamColorByName}
+                  onTeamClick={openTeamTab}
+                  onMemberClick={onMemberClick}
+                  onCreateTaskFromMessage={onCreateTaskFromMessage}
+                  onReplyToMessage={onReplyToMessage}
+                  onMessageVisible={handleMessageVisible}
+                  onRestartTeam={onRestartTeam}
+                  onTaskIdClick={onTaskIdClick}
+                  onExpandItem={handleExpandItem}
+                  onExpandContent={handleExpandContent}
+                />
+                {hasMore && (
+                  <div className="flex justify-center py-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-text-muted"
+                      disabled={messagesLoading}
+                      onClick={() => void loadOlderMessages()}
+                    >
+                      {messagesLoading ? 'Loading...' : 'Load older messages'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <MessageExpandDialog
+                expandedItem={expandedItem}
+                open={expandedItemKey !== null}
+                onOpenChange={handleExpandDialogChange}
+                teamName={teamName}
+                members={members}
+                onCreateTaskFromMessage={onCreateTaskFromMessage}
+                onReplyToMessage={onReplyToMessage}
+                onMemberClick={onMemberClick}
+                onTaskIdClick={onTaskIdClick}
+                onRestartTeam={onRestartTeam}
+                teamNames={teamNames}
+                teamColorByName={teamColorByName}
+                onTeamClick={openTeamTab}
+              />
+            </Sheet.Content>
+          )}
+        </Sheet.Container>
+      </Sheet>
+    );
+  }
+
   // ---- Inline mode (wrapped in CollapsibleTeamSection) ----
   return (
     <CollapsibleTeamSection
@@ -810,22 +1215,42 @@ export const MessagesPanel = memo(function MessagesPanel({
         ) : undefined
       }
       headerExtra={
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="pointer-events-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-              onClick={(e) => {
-                e.stopPropagation();
-                onTogglePosition();
-              }}
-            >
-              <PanelLeft size={14} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top">Move to sidebar</TooltipContent>
-        </Tooltip>
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="pointer-events-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  moveToBottomSheet();
+                }}
+                aria-label="Move messages to bottom sheet"
+              >
+                <PanelBottom size={14} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Move to bottom sheet</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="pointer-events-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  moveToSidebar();
+                }}
+                aria-label="Move messages to sidebar"
+              >
+                <PanelLeft size={14} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Move to sidebar</TooltipContent>
+          </Tooltip>
+        </div>
       }
       defaultOpen
       action={<div className="flex items-center gap-2 px-2">{searchAndFilterBar}</div>}

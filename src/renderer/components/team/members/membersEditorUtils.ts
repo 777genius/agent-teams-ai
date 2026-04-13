@@ -1,14 +1,14 @@
 import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
-import { normalizeCreateLaunchProviderForUi } from '@renderer/utils/geminiUiFreeze';
-import { normalizeTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
+import { normalizeCreateLaunchProviderForUi } from '@renderer/utils/geminiUiFreeze';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { normalizeTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type { MemberDraft } from './membersEditorTypes';
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { EffortLevel, TeamProvisioningMemberInput, TeamProviderId } from '@shared/types';
+import type { EffortLevel, TeamProviderId, TeamProvisioningMemberInput } from '@shared/types';
 
 function isValidMemberName(name: string): boolean {
   if (name.length < 1 || name.length > 128) return false;

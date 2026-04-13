@@ -5,9 +5,9 @@
 ## Что делает
 
 - Видеть состав команды и роли участников
-- Kanban-доска с 5 колонками (TODO → IN PROGRESS → DONE → REVIEW → APPROVED)
+- Kanban-доска с 5 колонками: TODO, IN PROGRESS, REVIEW, DONE, APPROVED
 - Отправка сообщений тиммейтам через inbox-файлы
-- Review flow: автоматическое назначение ревьюверов или ручное ревью
+- Review flow: запрос ревью, ручное ревью и прямое manual approval из DONE
 - Live updates через file watcher
 
 ## Документация
@@ -23,6 +23,8 @@
 
 ## Ключевые решения
 
+⚠️ `docs/iterations/*` - это исторические planning notes. Они полезны для контекста, но не являются source-of-truth для текущего поведения продукта. Актуальный контракт review flow описан в этом файле и в [kanban-design.md](./kanban-design.md).
+
 ### 1. Messaging: Inbox-файлы
 Единственный способ общаться с **запущенными** тиммейтами. SDK и CLI создают новые сессии, а не подключаются к существующим. Подробности: [research-messaging.md](./research-messaging.md)
 
@@ -36,8 +38,9 @@ Kanban-позиция (REVIEW, APPROVED) хранится в `kanban-state.json`
 
 ### 3. Review Flow: Approve / Request Changes
 - Есть ревьюверы в команде → автоматическое назначение через inbox
+- Юзер также может вручную одобрить задачу напрямую из `DONE` без отдельного захода в `REVIEW`
 - Нет ревьюверов → ручное ревью юзером (Approve / Request Changes в UI)
-- При Request Changes → юзер описывает проблему (опционально) → задача к исходному owner
+- При Request Changes → юзер описывает проблему (опционально) → задача возвращается owner'у в `pending` с `needsFix`
 
 ### 4. Atomic Write
 Все записи через tmp + rename для предотвращения corrupted JSON.
@@ -62,6 +65,10 @@ Kanban-позиция (REVIEW, APPROVED) хранится в `kanban-state.json`
 ### Review Flow: Approve / Request Changes
 - Кнопки переименованы: **Approve** (вместо OK) и **Request Changes** (вместо Error)
 - Комментарий при Request Changes — опционален
+- Manual UI допускает два valid path:
+  - `DONE -> REVIEW -> APPROVED`
+  - `DONE -> APPROVED` как быстрый manual approval
+- `Request Changes` снимает kanban-state запись и возвращает задачу в `pending` с `needsFix`
 - `reviewHistory` и round-robin балансировка → Phase 2, не MVP
 
 ### Members: полный список через union
@@ -75,8 +82,9 @@ Kanban-позиция (REVIEW, APPROVED) хранится в `kanban-state.json`
   - `IDLE`: idle > 5 минут
   - `TERMINATED`: получен `shutdown_response` с `approve: true`
 
-### @dnd-kit: click-to-move для MVP
-- MVP: выбор колонки через select/dropdown (click-to-move) — проще и надёжнее
+### @dnd-kit and review transitions
+- Переходы между review-колонками делаются через card actions в UI
+- `@dnd-kit` сейчас используется в первую очередь для перестановки задач внутри колонки
 - Phase 2: полноценный D&D через `@dnd-kit`
 
 ---

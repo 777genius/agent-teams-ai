@@ -14,6 +14,8 @@ import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 
 import { getWorktreeNavigationState } from '../utils/stateResetHelpers';
 
+import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
+
 const logger = createLogger('teamSlice');
 
 const TEAM_GET_DATA_TIMEOUT_MS = 30_000;
@@ -40,9 +42,9 @@ const teamRefreshBurstDiagnostics = new Map<
   { windowStartedAt: number; count: number; lastWarnAt: number }
 >();
 const memberSpawnUiEqualLastWarnAtByTeam = new Map<string, number>();
-type RefreshTeamDataOptions = {
+interface RefreshTeamDataOptions {
   withDedup?: boolean;
-};
+}
 
 export function isTeamDataRefreshPending(teamName: string): boolean {
   return (
@@ -54,6 +56,16 @@ export function isTeamDataRefreshPending(teamName: string): boolean {
 
 export function getLastResolvedTeamDataRefreshAt(teamName: string): number | undefined {
   return lastResolvedTeamDataRefreshAtByTeam.get(teamName);
+}
+
+export function __resetTeamSliceModuleStateForTests(): void {
+  inFlightTeamDataRequests.clear();
+  inFlightRefreshTeamDataCalls.clear();
+  pendingFreshTeamDataRefreshes.clear();
+  lastResolvedTeamDataRefreshAtByTeam.clear();
+  memberSpawnStatusesIpcBackoffUntilByTeam.clear();
+  teamRefreshBurstDiagnostics.clear();
+  memberSpawnUiEqualLastWarnAtByTeam.clear();
 }
 
 function nowIso(): string {
@@ -487,9 +499,9 @@ import type {
   KanbanColumnId,
   LeadActivityState,
   LeadContextUsage,
-  PersistedTeamLaunchSummary,
-  MemberSpawnStatusesSnapshot,
   MemberSpawnStatusEntry,
+  MemberSpawnStatusesSnapshot,
+  PersistedTeamLaunchSummary,
   SendMessageRequest,
   SendMessageResult,
   TaskChangePresenceState,
@@ -852,11 +864,7 @@ function preserveKnownTaskChangePresence(
     }
 
     const previousTask = prevTaskById.get(task.id);
-    if (
-      !previousTask ||
-      !previousTask.changePresence ||
-      previousTask.changePresence === 'unknown'
-    ) {
+    if (!previousTask?.changePresence || previousTask.changePresence === 'unknown') {
       return task;
     }
 
@@ -915,6 +923,46 @@ export interface TeamLaunchParams {
   limitContext?: boolean;
 }
 
+export function selectTeamDataForName(
+  state: Pick<TeamSlice, 'teamDataCacheByName' | 'selectedTeamName' | 'selectedTeamData'>,
+  teamName: string | null | undefined
+): TeamData | null {
+  if (!teamName) {
+    return null;
+  }
+  return (
+    state.teamDataCacheByName[teamName] ??
+    (state.selectedTeamName === teamName ? state.selectedTeamData : null)
+  );
+}
+
+function isVisibleInActiveTeamSurface(
+  state: Pick<AppState, 'paneLayout'>,
+  teamName: string | null | undefined
+): boolean {
+  if (!teamName) {
+    return false;
+  }
+  return state.paneLayout.panes.some((pane) => {
+    if (!pane.activeTabId) {
+      return false;
+    }
+    const activeTab = pane.tabs.find((tab) => tab.id === pane.activeTabId);
+    return (
+      (activeTab?.type === 'team' || activeTab?.type === 'graph') && activeTab.teamName === teamName
+    );
+  });
+}
+
+function shouldInvalidateCachedTeamDataForError(teamName: string, message: string): boolean {
+  return (
+    message === 'TEAM_DRAFT' ||
+    message.includes('TEAM_DRAFT') ||
+    message === `Team not found: ${teamName}` ||
+    message === 'Team config not found'
+  );
+}
+
 export interface TeamSlice {
   teams: TeamSummary[];
   /** O(1) lookup to avoid array scans in render-hot paths */
@@ -947,6 +995,8 @@ export interface TeamSlice {
   ) => void;
   selectedTeamName: string | null;
   selectedTeamData: TeamData | null;
+  /** Team-scoped detailed cache used by multi-pane views like agent graph. */
+  teamDataCacheByName: Record<string, TeamData>;
   selectedTeamLoading: boolean;
   selectedTeamLoadNonce: number;
   selectedTeamError: string | null;
@@ -994,7 +1044,7 @@ export interface TeamSlice {
     taskId: string,
     presence: TaskChangePresenceState
   ) => void;
-  refreshSelectedTeamChangePresence: (teamName: string) => Promise<void>;
+  refreshTeamChangePresence: (teamName: string) => Promise<void>;
   selectTeam: (
     teamName: string,
     opts?: { skipProjectAutoSelect?: boolean; allowReloadWhileProvisioning?: boolean }
@@ -1111,10 +1161,10 @@ export interface TeamSlice {
   ) => Promise<void>;
 
   // Messages panel UI state
-  messagesPanelMode: 'sidebar' | 'inline';
+  messagesPanelMode: TeamMessagesPanelMode;
   messagesPanelWidth: number;
   sidebarLogsHeight: number;
-  setMessagesPanelMode: (mode: 'sidebar' | 'inline') => void;
+  setMessagesPanelMode: (mode: TeamMessagesPanelMode) => void;
   setMessagesPanelWidth: (width: number) => void;
   setSidebarLogsHeight: (height: number) => void;
 }
@@ -1239,6 +1289,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   globalTasksError: null,
   selectedTeamName: null,
   selectedTeamData: null,
+  teamDataCacheByName: {},
   selectedTeamLoading: false,
   selectedTeamLoadNonce: 0,
   selectedTeamError: null,
@@ -1395,7 +1446,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   messagesPanelMode: 'sidebar' as const,
   messagesPanelWidth: 340,
   sidebarLogsHeight: 213,
-  setMessagesPanelMode: (mode: 'sidebar' | 'inline') => set({ messagesPanelMode: mode }),
+  setMessagesPanelMode: (mode: TeamMessagesPanelMode) => set({ messagesPanelMode: mode }),
   setMessagesPanelWidth: (width: number) => set({ messagesPanelWidth: width }),
   setSidebarLogsHeight: (height: number) => set({ sidebarLogsHeight: height }),
 
@@ -1660,20 +1711,20 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   setSelectedTeamTaskChangePresence: (teamName, taskId, presence) => {
     set((state) => {
-      let selectedChanged = false;
-      const nextSelectedTeamData =
-        state.selectedTeamName === teamName && state.selectedTeamData
-          ? {
-              ...state.selectedTeamData,
-              tasks: state.selectedTeamData.tasks.map((task) => {
-                if (task.id !== taskId || task.changePresence === presence) {
-                  return task;
-                }
-                selectedChanged = true;
-                return { ...task, changePresence: presence };
-              }),
-            }
-          : state.selectedTeamData;
+      const currentTeamData = selectTeamDataForName(state, teamName);
+      let cacheChanged = false;
+      const nextTeamData = currentTeamData
+        ? {
+            ...currentTeamData,
+            tasks: currentTeamData.tasks.map((task) => {
+              if (task.id !== taskId || task.changePresence === presence) {
+                return task;
+              }
+              cacheChanged = true;
+              return { ...task, changePresence: presence };
+            }),
+          }
+        : null;
 
       let globalChanged = false;
       const nextGlobalTasks = state.globalTasks.map((task) => {
@@ -1684,20 +1735,30 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         return { ...task, changePresence: presence };
       });
 
-      if (!selectedChanged && !globalChanged) {
+      if (!cacheChanged && !globalChanged) {
         return {};
       }
 
       return {
-        ...(selectedChanged ? { selectedTeamData: nextSelectedTeamData } : {}),
+        ...(cacheChanged && nextTeamData
+          ? {
+              teamDataCacheByName: {
+                ...state.teamDataCacheByName,
+                [teamName]: nextTeamData,
+              },
+            }
+          : {}),
+        ...(cacheChanged && state.selectedTeamName === teamName && nextTeamData
+          ? { selectedTeamData: nextTeamData }
+          : {}),
         ...(globalChanged ? { globalTasks: nextGlobalTasks } : {}),
       };
     });
   },
 
-  refreshSelectedTeamChangePresence: async (teamName: string) => {
-    const selected = get().selectedTeamData;
-    if (get().selectedTeamName !== teamName || !selected) {
+  refreshTeamChangePresence: async (teamName: string) => {
+    const currentTeamData = selectTeamDataForName(get(), teamName);
+    if (!currentTeamData) {
       return;
     }
 
@@ -1706,17 +1767,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         api.teams.getTaskChangePresence(teamName)
       );
 
-      if (get().selectedTeamName !== teamName || !get().selectedTeamData) {
-        return;
-      }
-
       set((state) => {
-        if (state.selectedTeamName !== teamName || !state.selectedTeamData) {
+        const teamData = selectTeamDataForName(state, teamName);
+        if (!teamData) {
           return {};
         }
 
         let changed = false;
-        const nextTasks = state.selectedTeamData.tasks.map((task) => {
+        const nextTasks = teamData.tasks.map((task) => {
           const nextPresence = presenceByTaskId[task.id] ?? 'unknown';
           if (task.changePresence === nextPresence) {
             return task;
@@ -1729,11 +1787,17 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           return {};
         }
 
+        const nextTeamData = {
+          ...teamData,
+          tasks: nextTasks,
+        };
+
         return {
-          selectedTeamData: {
-            ...state.selectedTeamData,
-            tasks: nextTasks,
+          teamDataCacheByName: {
+            ...state.teamDataCacheByName,
+            [teamName]: nextTeamData,
           },
+          ...(state.selectedTeamName === teamName ? { selectedTeamData: nextTeamData } : {}),
         };
       });
     } catch {
@@ -1754,8 +1818,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       return;
     }
     const requestNonce = get().selectedTeamLoadNonce + 1;
-    const previousSelectedTeamName = get().selectedTeamName;
-    const previousData = previousSelectedTeamName === teamName ? get().selectedTeamData : null;
+    const previousData = selectTeamDataForName(get(), teamName);
 
     // Stale-while-revalidate: keep previous data visible while loading new team.
     // Skeleton only shows on first load (when data is null).
@@ -1797,18 +1860,23 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         set({ teamByName: { ...prevByName, [teamName]: patched } });
       }
 
+      const nextTeamData = previousData
+        ? {
+            ...data,
+            tasks: preserveKnownTaskChangePresence(teamName, previousData.tasks, data.tasks),
+          }
+        : data;
       const setStartedAt = performance.now();
-      set({
+      set((state) => ({
         selectedTeamName: teamName,
-        selectedTeamData: previousData
-          ? {
-              ...data,
-              tasks: preserveKnownTaskChangePresence(teamName, previousData.tasks, data.tasks),
-            }
-          : data,
+        selectedTeamData: nextTeamData,
+        teamDataCacheByName: {
+          ...state.teamDataCacheByName,
+          [teamName]: nextTeamData,
+        },
         selectedTeamLoading: false,
         selectedTeamError: null,
-      });
+      }));
       lastResolvedTeamDataRefreshAtByTeam.set(teamName, Date.now());
       const setMs = performance.now() - setStartedAt;
       const postStartedAt = performance.now();
@@ -1837,9 +1905,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       // Sync tab label with the team's display name from config
       const displayName = data.config.name || teamName;
       const allTabs = get().getAllPaneTabs();
-      const teamTab = allTabs.find((tab) => tab.type === 'team' && tab.teamName === teamName);
-      if (teamTab && teamTab.label !== displayName) {
-        get().updateTabLabel(teamTab.id, displayName);
+      const relatedTabs = allTabs.filter(
+        (tab) => (tab.type === 'team' || tab.type === 'graph') && tab.teamName === teamName
+      );
+      for (const tab of relatedTabs) {
+        const nextLabel = tab.type === 'graph' ? `${displayName} Graph` : displayName;
+        if (tab.label !== nextLabel) {
+          get().updateTabLabel(tab.id, nextLabel);
+        }
       }
 
       if (opts?.skipProjectAutoSelect) {
@@ -1925,10 +1998,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   refreshTeamData: async (teamName: string, opts?: RefreshTeamDataOptions) => {
     const startedAt = performance.now();
-    const state = get();
-    if (state.selectedTeamName !== teamName) {
-      return;
-    }
     inFlightRefreshTeamDataCalls.add(teamName);
     // Silent refresh — update data without showing loading skeleton.
     // Only selectTeam() sets loading: true (for initial load).
@@ -1942,25 +2011,30 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       );
     }
     try {
-      const previousData = get().selectedTeamData;
+      const previousData = selectTeamDataForName(get(), teamName);
       const data = opts?.withDedup
         ? await fetchTeamDataDeduped(teamName)
         : await fetchTeamDataFresh(teamName);
       const ipcMs = performance.now() - startedAt;
-      // Re-check after async: the user might have navigated away.
-      if (get().selectedTeamName !== teamName) {
-        return;
-      }
+      const nextTeamData = previousData
+        ? {
+            ...data,
+            tasks: preserveKnownTaskChangePresence(teamName, previousData.tasks, data.tasks),
+          }
+        : data;
       const setStartedAt = performance.now();
-      set({
-        selectedTeamData: previousData
+      set((state) => ({
+        teamDataCacheByName: {
+          ...state.teamDataCacheByName,
+          [teamName]: nextTeamData,
+        },
+        ...(state.selectedTeamName === teamName
           ? {
-              ...data,
-              tasks: preserveKnownTaskChangePresence(teamName, previousData.tasks, data.tasks),
+              selectedTeamData: nextTeamData,
+              selectedTeamError: null,
             }
-          : data,
-        selectedTeamError: null,
-      });
+          : {}),
+      }));
       lastResolvedTeamDataRefreshAtByTeam.set(teamName, Date.now());
       const setMs = performance.now() - setStartedAt;
       const postStartedAt = performance.now();
@@ -1988,9 +2062,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         burstCount,
       });
     } catch (error) {
-      if (get().selectedTeamName !== teamName) {
-        return;
-      }
       const msg =
         error instanceof IpcError
           ? error.message
@@ -2002,16 +2073,39 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       // Preserve existing data instead of showing a fatal error.
       if (msg === 'TEAM_PROVISIONING' || msg.includes('TEAM_PROVISIONING')) {
         logger.debug(`refreshTeamData(${teamName}) skipped: team is still provisioning`);
-        set({ selectedTeamError: null });
+        if (get().selectedTeamName === teamName) {
+          set({ selectedTeamError: null });
+        }
         return;
       }
 
-      if (msg === 'TEAM_DRAFT' || msg.includes('TEAM_DRAFT')) {
-        set({
-          selectedTeamLoading: false,
-          selectedTeamData: null,
-          selectedTeamError: 'TEAM_DRAFT',
+      if (shouldInvalidateCachedTeamDataForError(teamName, msg)) {
+        set((state) => {
+          const nextCache = state.teamDataCacheByName[teamName]
+            ? { ...state.teamDataCacheByName }
+            : null;
+          if (nextCache) {
+            delete nextCache[teamName];
+          }
+          if (state.selectedTeamName !== teamName && !nextCache) {
+            return {};
+          }
+          return {
+            ...(nextCache ? { teamDataCacheByName: nextCache } : {}),
+            ...(state.selectedTeamName === teamName
+              ? {
+                  selectedTeamLoading: false,
+                  selectedTeamData: null,
+                  selectedTeamError:
+                    msg === 'TEAM_DRAFT' || msg.includes('TEAM_DRAFT') ? 'TEAM_DRAFT' : msg,
+                }
+              : {}),
+          };
         });
+        return;
+      }
+
+      if (get().selectedTeamName !== teamName) {
         return;
       }
 
@@ -2089,10 +2183,22 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         sendingMessage: false,
         sendMessageError: null,
         lastSendMessageResult: result,
-        selectedTeamData:
-          state.selectedTeamName === teamName && state.selectedTeamData
-            ? upsertLocalSentMessage(state.selectedTeamData, optimisticMessage)
-            : state.selectedTeamData,
+        ...(selectTeamDataForName(state, teamName)
+          ? {
+              teamDataCacheByName: {
+                ...state.teamDataCacheByName,
+                [teamName]: upsertLocalSentMessage(
+                  selectTeamDataForName(state, teamName)!,
+                  optimisticMessage
+                ),
+              },
+            }
+          : {}),
+        ...(state.selectedTeamName === teamName && state.selectedTeamData
+          ? {
+              selectedTeamData: upsertLocalSentMessage(state.selectedTeamData, optimisticMessage),
+            }
+          : {}),
       }));
       await get().refreshTeamData(teamName);
     } catch (error) {
@@ -2303,12 +2409,40 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   deleteTeam: async (teamName: string) => {
     await unwrapIpc('team:deleteTeam', () => api.teams.deleteTeam(teamName));
+    set((state) => {
+      const nextCache = state.teamDataCacheByName[teamName]
+        ? { ...state.teamDataCacheByName }
+        : null;
+      if (nextCache) {
+        delete nextCache[teamName];
+      }
+      if (state.selectedTeamName === teamName) {
+        return {
+          selectedTeamName: null,
+          selectedTeamData: null,
+          selectedTeamLoading: false,
+          selectedTeamError: null,
+          ...(nextCache ? { teamDataCacheByName: nextCache } : {}),
+        };
+      }
+      return nextCache ? { teamDataCacheByName: nextCache } : {};
+    });
     await get().fetchTeams();
     await get().fetchAllTasks();
   },
 
   restoreTeam: async (teamName: string) => {
     await unwrapIpc('team:restoreTeam', () => api.teams.restoreTeam(teamName));
+    set((state) => {
+      if (!state.teamDataCacheByName[teamName]) {
+        return {};
+      }
+      const nextCache = { ...state.teamDataCacheByName };
+      delete nextCache[teamName];
+      return {
+        teamDataCacheByName: nextCache,
+      };
+    });
     await get().fetchTeams();
     await get().fetchAllTasks();
   },
@@ -2316,8 +2450,19 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   permanentlyDeleteTeam: async (teamName: string) => {
     await unwrapIpc('team:permanentlyDeleteTeam', () => api.teams.permanentlyDeleteTeam(teamName));
     const state = get();
+    const nextCache = { ...state.teamDataCacheByName };
+    delete nextCache[teamName];
     if (state.selectedTeamName === teamName) {
-      set({ selectedTeamName: null, selectedTeamData: null, selectedTeamError: null });
+      set({
+        selectedTeamName: null,
+        selectedTeamData: null,
+        selectedTeamError: null,
+        teamDataCacheByName: nextCache,
+      });
+    } else if (state.teamDataCacheByName[teamName]) {
+      set({
+        teamDataCacheByName: nextCache,
+      });
     }
     await get().fetchTeams();
     await get().fetchAllTasks();
@@ -2872,11 +3017,17 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
     const isCanonicalRun =
       get().currentProvisioningRunIdByTeam[progress.teamName] === progress.runId;
+    let hydratedVisibleTeam = false;
 
     if (isCanonicalRun && becameConfigReady) {
       const state = get();
-      if (state.selectedTeamName === progress.teamName && state.selectedTeamData == null) {
-        void state.selectTeam(progress.teamName, { allowReloadWhileProvisioning: true });
+      if (isVisibleInActiveTeamSurface(state, progress.teamName)) {
+        if (state.selectedTeamName === progress.teamName && state.selectedTeamData == null) {
+          void state.selectTeam(progress.teamName, { allowReloadWhileProvisioning: true });
+        } else {
+          void state.refreshTeamData(progress.teamName, { withDedup: true });
+        }
+        hydratedVisibleTeam = true;
       }
     }
 
@@ -2916,10 +3067,21 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
     if (isCanonicalRun && (progress.state === 'ready' || progress.state === 'disconnected')) {
       void get().fetchTeams();
+      if (hydratedVisibleTeam) {
+        return;
+      }
+
+      const state = get();
+      if (!isVisibleInActiveTeamSurface(state, progress.teamName)) {
+        return;
+      }
+
       // If the user already opened the team tab, reload team data now that
       // config.json is guaranteed to exist.
-      if (get().selectedTeamName === progress.teamName) {
-        void get().selectTeam(progress.teamName);
+      if (state.selectedTeamName === progress.teamName) {
+        void state.selectTeam(progress.teamName);
+      } else {
+        void state.refreshTeamData(progress.teamName, { withDedup: true });
       }
     }
   },

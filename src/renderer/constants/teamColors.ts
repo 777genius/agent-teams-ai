@@ -134,6 +134,70 @@ function hsla(hue: number, saturation: number, lightness: number, alpha = 1): st
   return `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
 }
 
+function normalizeHexColor(color: string): string | null {
+  const trimmed = color.trim();
+  const shortHexMatch = /^#([\da-f]{3,4})$/i.exec(trimmed);
+  if (shortHexMatch) {
+    const expanded = shortHexMatch[1]
+      .slice(0, 3)
+      .split('')
+      .map((char) => char + char)
+      .join('');
+    return `#${expanded.toLowerCase()}`;
+  }
+
+  const longHexMatch = /^#([\da-f]{6})([\da-f]{2})?$/i.exec(trimmed);
+  if (longHexMatch) {
+    return `#${longHexMatch[1].toLowerCase()}`;
+  }
+
+  return null;
+}
+
+function hexToRgb(color: string): { r: number; g: number; b: number } | null {
+  const normalized = normalizeHexColor(color);
+  if (!normalized) return null;
+
+  return {
+    r: parseInt(normalized.slice(1, 3), 16),
+    g: parseInt(normalized.slice(3, 5), 16),
+    b: parseInt(normalized.slice(5, 7), 16),
+  };
+}
+
+function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const delta = max - min;
+  const lightness = (max + min) / 2;
+
+  if (delta === 0) {
+    return { h: 0, s: 0, l: lightness * 100 };
+  }
+
+  let hue = 0;
+  if (max === rn) {
+    hue = ((gn - bn) / delta) % 6;
+  } else if (max === gn) {
+    hue = (bn - rn) / delta + 2;
+  } else {
+    hue = (rn - gn) / delta + 4;
+  }
+
+  hue = Math.round(hue * 60);
+  if (hue < 0) hue += 360;
+
+  const saturation = delta / (1 - Math.abs(2 * lightness - 1));
+  return {
+    h: hue,
+    s: saturation * 100,
+    l: lightness * 100,
+  };
+}
+
 function buildGeneratedMemberColorSet(colorName: string): TeamColorSet | null {
   const hue = MEMBER_COLOR_HUE[colorName];
   if (hue === undefined) {
@@ -162,6 +226,28 @@ function buildColorSetFromHue(hue: number): TeamColorSet {
   };
 }
 
+function buildColorSetFromHex(color: string): TeamColorSet {
+  const normalized = normalizeHexColor(color);
+  const rgb = normalized ? hexToRgb(normalized) : null;
+  if (!normalized || !rgb) {
+    return {
+      border: color,
+      badge: `${color}26`,
+      text: color,
+    };
+  }
+
+  const { h } = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const derived = buildColorSetFromHue(h);
+
+  return {
+    ...derived,
+    border: normalized,
+    badge: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`,
+    badgeLight: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.12)`,
+  };
+}
+
 export function getTeamColorSet(colorName: string): TeamColorSet {
   if (!colorName) return DEFAULT_COLOR;
 
@@ -174,11 +260,7 @@ export function getTeamColorSet(colorName: string): TeamColorSet {
 
   // If it's a hex color, generate a set from it
   if (colorName.startsWith('#')) {
-    return {
-      border: colorName,
-      badge: `${colorName}26`,
-      text: colorName,
-    };
+    return buildColorSetFromHex(colorName);
   }
 
   // Hash unknown palette names (e.g. "coral", "sapphire") to one of the
@@ -211,23 +293,22 @@ export function getThemedBorder(colorSet: TeamColorSet, isLight: boolean): strin
 
 export function scaleColorAlpha(color: string, factor: number): string {
   const safeFactor = Math.max(0, factor);
-  const rgbaMatch = color.match(
-    /^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9]*\.?[0-9]+)\s*\)$/i
+  const rgbaMatch = /^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9]*\.?[0-9]+)\s*\)$/i.exec(
+    color
   );
   if (rgbaMatch) {
     const [, r, g, b, alpha] = rgbaMatch;
     return `rgba(${r}, ${g}, ${b}, ${Number(alpha) * safeFactor})`;
   }
 
-  const hslaMatch = color.match(
-    /^hsla\(\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([0-9]*\.?[0-9]+)\s*\)$/i
-  );
+  const hslaMatch =
+    /^hsla\(\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([0-9]*\.?[0-9]+)\s*\)$/i.exec(color);
   if (hslaMatch) {
     const [, hue, saturation, lightness, alpha] = hslaMatch;
     return `hsla(${hue}, ${saturation}, ${lightness}, ${Number(alpha) * safeFactor})`;
   }
 
-  const hexAlphaMatch = color.match(/^#([\da-f]{6})([\da-f]{2})$/i);
+  const hexAlphaMatch = /^#([\da-f]{6})([\da-f]{2})$/i.exec(color);
   if (hexAlphaMatch) {
     const [, hex, alphaHex] = hexAlphaMatch;
     const alpha = parseInt(alphaHex, 16) / 255;

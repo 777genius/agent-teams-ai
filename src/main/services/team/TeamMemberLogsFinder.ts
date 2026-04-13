@@ -7,6 +7,10 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as readline from 'readline';
 
+import {
+  canonicalizeAgentTeamsToolName,
+  lineHasAgentTeamsTaskBoundaryToolName,
+} from './agentTeamsToolNames';
 import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
@@ -684,7 +688,7 @@ export class TeamMemberLogsFinder {
 
   async listAttributedSubagentFiles(
     teamName: string
-  ): Promise<Array<{ memberName: string; sessionId: string; filePath: string; mtimeMs: number }>> {
+  ): Promise<{ memberName: string; sessionId: string; filePath: string; mtimeMs: number }[]> {
     const discovery = await this.discoverProjectSessions(teamName);
     if (!discovery) return [];
 
@@ -700,12 +704,12 @@ export class TeamMemberLogsFinder {
         ? [currentLeadSessionId]
         : sessionIds;
     const candidates = await this.collectSubagentCandidates(projectDir, candidateSessionIds);
-    const results: Array<{
+    const results: {
       memberName: string;
       sessionId: string;
       filePath: string;
       mtimeMs: number;
-    }> = [];
+    }[] = [];
 
     const settled = await Promise.all(
       candidates.map(async (candidate) => {
@@ -764,12 +768,7 @@ export class TeamMemberLogsFinder {
           stream.destroy();
           return true;
         }
-        if (
-          (line.includes('"task_start"') ||
-            line.includes('"task_complete"') ||
-            line.includes('"task_set_status"')) &&
-          pattern.test(line)
-        ) {
+        if (lineHasAgentTeamsTaskBoundaryToolName(line) && pattern.test(line)) {
           rl.close();
           stream.destroy();
           return true;
@@ -1146,13 +1145,9 @@ export class TeamMemberLogsFinder {
             // Skip read-only task tools — they reference taskId but don't indicate
             // that this session actually WORKED on the task. Agents commonly call
             // task_get to check dependencies from other tasks, producing false matches.
-            const toolName = typeof b.name === 'string' ? b.name : '';
-            if (
-              toolName === 'task_get' ||
-              toolName === 'mcp__agent-teams__task_get' ||
-              toolName === 'TaskGet'
-            )
-              continue;
+            const rawToolName = typeof b.name === 'string' ? b.name : '';
+            const toolName = canonicalizeAgentTeamsToolName(rawToolName);
+            if (toolName === 'task_get' || toolName === 'TaskGet') continue;
 
             const input = b.input as Record<string, unknown> | undefined;
             if (!input) continue;

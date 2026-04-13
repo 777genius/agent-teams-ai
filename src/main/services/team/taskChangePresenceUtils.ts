@@ -1,8 +1,8 @@
+import { deriveTaskSince } from '@shared/utils/taskChangeSince';
 import {
   getTaskChangeStateBucket,
   type TaskChangeStateBucket,
 } from '@shared/utils/taskChangeState';
-import { deriveTaskSince } from '@shared/utils/taskChangeSince';
 import { createHash } from 'crypto';
 
 export interface TaskChangePresenceInterval {

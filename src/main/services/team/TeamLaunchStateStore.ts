@@ -3,8 +3,8 @@ import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { normalizePersistedLaunchSnapshot } from './TeamLaunchStateEvaluator';
 import { atomicWriteAsync } from './atomicWrite';
+import { normalizePersistedLaunchSnapshot } from './TeamLaunchStateEvaluator';
 
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 

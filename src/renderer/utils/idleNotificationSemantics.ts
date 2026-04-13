@@ -7,7 +7,7 @@ import type {
   IdleNotificationPrimaryKind,
 } from '@shared/utils/idleNotificationSemantics';
 
-export type ClassifiedIdleNotification = {
+export interface ClassifiedIdleNotification {
   payload: IdleNotificationPayload;
   primaryKind: IdleNotificationPrimaryKind;
   hasPeerSummary: boolean;
@@ -15,7 +15,7 @@ export type ClassifiedIdleNotification = {
   countsAsBootstrapConfirmation: boolean;
   liveDelivery: 'silent_finalize' | 'passive_activity' | 'visible_actionable';
   uiPresentation: 'heartbeat' | 'peer_summary' | 'interrupted' | 'task_terminal' | 'failure';
-};
+}
 
 export function classifyIdleNotification(
   value: string | Pick<InboxMessage, 'text'> | Record<string, unknown> | IdleNotificationPayload
@@ -44,7 +44,7 @@ export function classifyIdleNotification(
       : shared.primaryKind;
 
   return {
-    ...(shared as SharedClassifiedIdleNotification),
+    ...shared,
     liveDelivery,
     uiPresentation,
   };

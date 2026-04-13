@@ -7,12 +7,13 @@
 
 import crypto from 'node:crypto';
 
-import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { getHomeDir } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 // eslint-disable-next-line boundaries/element-types -- IPC channel constants shared between main and preload
 import { TERMINAL_DATA, TERMINAL_EXIT } from '@preload/constants/ipcChannels';
 import { createLogger } from '@shared/utils/logger';
+
+import { buildProviderAwareCliEnv } from '../runtime/providerAwareCliEnv';
 
 import type { PtySpawnOptions } from '@shared/types/terminal';
 import type { BrowserWindow } from 'electron';
@@ -46,7 +47,7 @@ export class PtyTerminalService {
    * @returns Unique PTY ID for subsequent write/resize/kill calls.
    * @throws If node-pty native module is not available.
    */
-  spawn(options?: PtySpawnOptions): string {
+  async spawn(options?: PtySpawnOptions): Promise<string> {
     if (!nodePty) {
       throw new Error(
         'Terminal not available: node-pty native module not found. Run: pnpm install'
@@ -54,11 +55,15 @@ export class PtyTerminalService {
     }
 
     const id = crypto.randomUUID();
+    const { env } = await buildProviderAwareCliEnv({
+      env: options?.env,
+      connectionMode: 'augment',
+    });
     const shell =
       options?.command ??
       (process.platform === 'win32'
-        ? (process.env.COMSPEC ?? 'powershell.exe')
-        : (process.env.SHELL ?? '/bin/bash'));
+        ? (env.COMSPEC ?? process.env.COMSPEC ?? 'powershell.exe')
+        : (env.SHELL ?? process.env.SHELL ?? '/bin/bash'));
 
     const home = getHomeDir();
     const pty = nodePty.spawn(shell, options?.args ?? [], {
@@ -66,10 +71,7 @@ export class PtyTerminalService {
       cols: options?.cols ?? 80,
       rows: options?.rows ?? 24,
       cwd: options?.cwd ?? home,
-      env: {
-        ...buildEnrichedEnv(),
-        ...options?.env,
-      } as Record<string, string>,
+      env: env as Record<string, string>,
     });
 
     pty.onData((data) => this.send(TERMINAL_DATA, id, data));

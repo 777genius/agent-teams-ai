@@ -3,7 +3,12 @@ import * as os from 'os';
 import * as path from 'path';
 import { describe, expect, it } from 'vitest';
 
-import { analyzeSessionFileMetadata, calculateMetrics } from '../../../src/main/utils/jsonl';
+import {
+  analyzeSessionFileMetadata,
+  calculateMetrics,
+  parseJsonlFile,
+  parseJsonlLine,
+} from '../../../src/main/utils/jsonl';
 import type { ParsedMessage } from '../../../src/main/types';
 
 // Helper to create a minimal ParsedMessage
@@ -181,6 +186,52 @@ describe('jsonl', () => {
           // Best-effort cleanup; ignore ENOTEMPTY on Windows when dir is in use
         }
       }
+    });
+  });
+
+  describe('tolerant parsing', () => {
+    it('skips non-JSON garbage and ignores a partial trailing object', async () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jsonl-tolerant-'));
+      try {
+        const filePath = path.join(tempDir, 'session.jsonl');
+        const validLine = JSON.stringify({
+          type: 'assistant',
+          uuid: 'a1',
+          timestamp: '2026-01-01T00:00:01.000Z',
+          message: {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'hello' }],
+          },
+        });
+        const nonJsonGarbage = '╨╕┬аAI-╤А╨░╨╖╤А╨░╨▒';
+        const partialJson =
+          '{"type":"assistant","uuid":"a2","timestamp":"2026-01-01T00:00:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"partial"';
+
+        fs.writeFileSync(filePath, `${validLine}\n${nonJsonGarbage}\n${partialJson}`, 'utf8');
+
+        const result = await parseJsonlFile(filePath);
+
+        expect(result).toHaveLength(1);
+        expect(result[0]?.uuid).toBe('a1');
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    it('strips a UTF-8 BOM before parsing an object line', () => {
+      const parsed = parseJsonlLine(
+        `\ufeff${JSON.stringify({
+          type: 'assistant',
+          uuid: 'bom-1',
+          timestamp: '2026-01-01T00:00:01.000Z',
+          message: {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'bom' }],
+          },
+        })}`
+      );
+
+      expect(parsed?.uuid).toBe('bom-1');
     });
   });
 });

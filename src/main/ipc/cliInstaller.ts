@@ -8,8 +8,8 @@
  */
 
 import {
-  CLI_INSTALLER_GET_STATUS,
   CLI_INSTALLER_GET_PROVIDER_STATUS,
+  CLI_INSTALLER_GET_STATUS,
   CLI_INSTALLER_INSTALL,
   CLI_INSTALLER_INVALIDATE_STATUS,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants shared between main and preload
@@ -17,8 +17,9 @@ import {
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
-import type { CliInstallerService } from '../services';
 import { ClaudeBinaryResolver } from '../services/team/ClaudeBinaryResolver';
+
+import type { CliInstallerService } from '../services';
 import type {
   CliInstallationStatus,
   CliProviderId,

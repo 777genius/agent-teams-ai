@@ -7,6 +7,7 @@
 import { Fragment, useState } from 'react';
 
 import { isElectronMode } from '@renderer/api';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { HEADER_ROW1_HEIGHT } from '@renderer/constants/layout';
 import { useStore } from '@renderer/store';
 import { Plus } from 'lucide-react';
@@ -70,22 +71,27 @@ export const TabBarRow = (): React.JSX.Element => {
         ))}
 
         {/* New tab button — right after last tab */}
-        <button
-          onClick={openDashboard}
-          onMouseEnter={() => setNewTabHover(true)}
-          onMouseLeave={() => setNewTabHover(false)}
-          className="shrink-0 self-stretch px-2 transition-colors"
-          style={
-            {
-              WebkitAppRegion: 'no-drag',
-              color: newTabHover ? 'var(--color-text)' : 'var(--color-text-muted)',
-              backgroundColor: newTabHover ? 'var(--color-surface-raised)' : 'transparent',
-            } as React.CSSProperties
-          }
-          title="New tab (Dashboard)"
-        >
-          <Plus className="size-4" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={openDashboard}
+              onMouseEnter={() => setNewTabHover(true)}
+              onMouseLeave={() => setNewTabHover(false)}
+              className="shrink-0 self-stretch px-2 transition-colors"
+              style={
+                {
+                  WebkitAppRegion: 'no-drag',
+                  color: newTabHover ? 'var(--color-text)' : 'var(--color-text-muted)',
+                  backgroundColor: newTabHover ? 'var(--color-surface-raised)' : 'transparent',
+                } as React.CSSProperties
+              }
+              aria-label="New tab"
+            >
+              <Plus className="size-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">New tab (Dashboard)</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Action buttons — right side */}

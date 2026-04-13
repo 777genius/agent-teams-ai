@@ -14,7 +14,6 @@ import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
@@ -28,6 +27,7 @@ import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { KNOWN_SLASH_COMMANDS, parseStandaloneSlashCommand } from '@shared/utils/slashCommands';
 import { AlertCircle, Check, ChevronDown, Mic, Paperclip, Search, Send } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
 import type { MentionSuggestion } from '@renderer/types/mention';
@@ -41,6 +41,7 @@ import type {
 interface MessageComposerProps {
   teamName: string;
   members: ResolvedTeamMember[];
+  layout?: 'default' | 'compact';
   isTeamAlive?: boolean;
   sending: boolean;
   sendError: string | null;
@@ -67,6 +68,7 @@ interface MessageComposerProps {
 export const MessageComposer = ({
   teamName,
   members,
+  layout = 'default',
   isTeamAlive,
   sending,
   sendError,
@@ -443,10 +445,28 @@ export const MessageComposer = ({
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const hasAttachmentPreviewContent =
     draft.attachments.length > 0 || Boolean(draft.attachmentError ?? fileRestrictionError);
+  const shouldDockRecipientSelector = !hasAttachmentPreviewContent;
+  const isCompactLayout = layout === 'compact';
+  const compactFooterNotice = slashCommandRestrictionReason ? (
+    <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
+      <AlertCircle size={10} className="shrink-0" />
+      {slashCommandRestrictionReason}
+    </span>
+  ) : sendError ? (
+    <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">
+      <AlertCircle size={10} className="shrink-0" />
+      {sendError}
+    </span>
+  ) : lastResult?.deduplicated ? (
+    <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
+      <Check size={10} className="shrink-0" />
+      Reused recent cross-team request
+    </span>
+  ) : null;
 
   return (
     <div
-      className="relative mb-3 pb-3"
+      className={cn('relative', isCompactLayout ? 'pb-1' : 'mb-1.5 pb-1.5')}
       role="group"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -454,7 +474,12 @@ export const MessageComposer = ({
       onDrop={handleDropWrapper}
       onPaste={handlePasteWrapper}
     >
-      <div className="mb-1 space-y-2">
+      <div
+        className={cn(
+          shouldDockRecipientSelector ? 'mb-0' : 'mb-1',
+          isCompactLayout ? 'space-y-1.5' : 'space-y-2'
+        )}
+      >
         <div className="flex items-center gap-2">
           {isLeadRecipient ? (
             <>
@@ -503,7 +528,10 @@ export const MessageComposer = ({
             {/* Combined team + member selector */}
             <div
               className={cn(
-                'inline-flex items-center rounded-full border text-xs transition-colors',
+                'mr-[15px] inline-flex items-center border text-xs transition-colors',
+                shouldDockRecipientSelector
+                  ? 'relative z-10 -mb-px overflow-hidden rounded-b-none rounded-t-[1.35rem] border-b-0 bg-[var(--color-surface-raised)]'
+                  : 'rounded-full',
                 isCrossTeam ? 'border-[var(--cross-team-border)]' : 'border-[var(--color-border)]'
               )}
             >
@@ -512,7 +540,10 @@ export const MessageComposer = ({
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-l-full border-r border-r-[var(--color-border)] px-2.5 py-1 text-xs transition-colors',
+                      'inline-flex items-center gap-1.5 border-r border-r-[var(--color-border)] px-2.5 py-1 text-xs transition-colors',
+                      shouldDockRecipientSelector
+                        ? 'rounded-bl-none rounded-tl-[1.35rem]'
+                        : 'rounded-l-full',
                       isCrossTeam
                         ? 'hover:bg-[var(--cross-team-bg)]/80 bg-[var(--cross-team-bg)] text-purple-400'
                         : 'hover:bg-[var(--color-surface-raised)]'
@@ -656,7 +687,10 @@ export const MessageComposer = ({
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-r-full px-2.5 py-1 text-xs transition-colors',
+                      'inline-flex items-center gap-1.5 px-2.5 py-1 text-xs transition-colors',
+                      shouldDockRecipientSelector
+                        ? 'rounded-br-none rounded-tr-[1.35rem]'
+                        : 'rounded-r-full',
                       isCrossTeam
                         ? 'cursor-default bg-[var(--cross-team-bg)] opacity-60'
                         : 'hover:bg-[var(--color-surface-raised)]'
@@ -807,11 +841,17 @@ export const MessageComposer = ({
           onShiftTab={handleCycleActionMode}
           dismissMentionsRef={dismissMentionsRef}
           extraTips={['Tip: You can use "/" to run any Claude commands.']}
-          minRows={2}
+          surfaceClassName="message-composer-shell message-composer-orbit-surface border border-transparent bg-[var(--color-surface-raised)] shadow-[0_8px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.03)]"
+          surfaceDecoration="orbit-border"
+          surfaceFadeColor="var(--color-surface-raised)"
+          className="border-transparent shadow-none"
+          minRows={isCompactLayout ? 1 : 2}
           maxRows={6}
           maxLength={MAX_TEXT_LENGTH}
           disabled={sending}
           hintText={crossTeamHintText}
+          showHint={!isCompactLayout}
+          cornerActionInset={isCompactLayout ? 'compact' : 'default'}
           cornerActionLeft={
             <ActionModeSelector
               value={actionMode}
@@ -859,34 +899,23 @@ export const MessageComposer = ({
             </div>
           }
           footerRight={
-            <div className="flex items-center gap-2">
-              {slashCommandRestrictionReason ? (
-                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
-                  <AlertCircle size={10} className="shrink-0" />
-                  {slashCommandRestrictionReason}
-                </span>
-              ) : sendError ? (
-                <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-400">
-                  <AlertCircle size={10} className="shrink-0" />
-                  {sendError}
-                </span>
-              ) : lastResult?.deduplicated ? (
-                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">
-                  <Check size={10} className="shrink-0" />
-                  Reused recent cross-team request
-                </span>
-              ) : null}
-              {remaining < 200 ? (
-                <span
-                  className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
-                >
-                  {remaining} chars left
-                </span>
-              ) : null}
-              {draft.isSaved ? (
-                <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
-              ) : null}
-            </div>
+            isCompactLayout ? (
+              compactFooterNotice
+            ) : (
+              <div className="flex items-center gap-2">
+                {compactFooterNotice}
+                {remaining < 200 ? (
+                  <span
+                    className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
+                  >
+                    {remaining} chars left
+                  </span>
+                ) : null}
+                {draft.isSaved ? (
+                  <span className="text-[10px] text-[var(--color-text-muted)]">Saved</span>
+                ) : null}
+              </div>
+            )
           }
         />
       </div>

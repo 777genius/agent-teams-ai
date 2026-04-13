@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -488,12 +489,21 @@ export const ProviderRuntimeSettingsDialog = ({
   const runtimeSummary = selectedProvider
     ? getProviderRuntimeBackendSummary(selectedProvider)
     : null;
+  const configurableAuthModes = selectedProvider?.connection?.configurableAuthModes ?? [];
+  const configuredAuthMode: CliProviderAuthMode | undefined =
+    selectedProvider?.connection?.configuredAuthMode ?? configurableAuthModes[0] ?? undefined;
+  const connectionMethodCardOptions = selectedProvider
+    ? getConnectionMethodCardOptions(selectedProvider)
+    : null;
+  const showConnectionMethodCards =
+    connectionMethodCardOptions !== null && typeof configuredAuthMode !== 'undefined';
   const managedRuntimeSummary = selectedProvider
     ? getProviderCurrentRuntimeSummary(selectedProvider)
     : null;
   const connectionManagedRuntime = selectedProvider
     ? isConnectionManagedRuntimeProvider(selectedProvider)
     : false;
+  const hideConnectionMethodMeta = showConnectionMethodCards;
   const canConfigureRuntime =
     !connectionManagedRuntime && (selectedProvider?.availableBackends?.length ?? 0) > 0;
 
@@ -505,19 +515,14 @@ export const ProviderRuntimeSettingsDialog = ({
     selectedProvider &&
     isApiKeyProviderId(selectedProvider.providerId) &&
     activeApiKeyFormProviderId === selectedProvider.providerId;
-  const configurableAuthModes = selectedProvider?.connection?.configurableAuthModes ?? [];
-  const configuredAuthMode: CliProviderAuthMode | undefined =
-    selectedProvider?.connection?.configuredAuthMode ?? configurableAuthModes[0] ?? undefined;
   const codexApiKeyBetaEnabled = selectedProvider?.connection?.apiKeyBetaEnabled === true;
-  const connectionMethodCardOptions = selectedProvider
-    ? getConnectionMethodCardOptions(selectedProvider)
-    : null;
+  const showApiKeySection = Boolean(
+    apiKeyConfig && (selectedProvider?.providerId !== 'codex' || codexApiKeyBetaEnabled)
+  );
   const connectionAlert = selectedProvider ? getConnectionAlert(selectedProvider) : null;
   const connectionLoading = selectedProviderLoading || connectionSaving;
   const connectionBusy = disabled || connectionLoading;
   const runtimeBusy = disabled || selectedProviderLoading || runtimeSaving;
-  const showConnectionMethodCards =
-    connectionMethodCardOptions !== null && typeof configuredAuthMode !== 'undefined';
   const connectionMethodCardsHint = selectedProvider
     ? getConnectionMethodCardsHint(selectedProvider)
     : null;
@@ -531,6 +536,18 @@ export const ProviderRuntimeSettingsDialog = ({
     Boolean(selectedProvider?.connection?.supportsOAuth && onRequestLogin) &&
     configuredAuthMode !== 'api_key' &&
     (!selectedProvider?.authenticated || hasSubscriptionSession || configuredAuthMode === 'oauth');
+  let connectionStatusLabel: string | null = null;
+  if (selectedProvider) {
+    if (!hideConnectionMethodMeta && selectedProvider.authenticated) {
+      connectionStatusLabel = `Using ${formatProviderAuthMethodLabelForProvider(
+        selectedProvider.providerId,
+        selectedProvider.authMethod
+      )}`;
+    } else if (!hideConnectionMethodMeta) {
+      connectionStatusLabel = 'Not connected';
+    }
+  }
+  const showSelectedProviderSummary = Boolean(selectedProvider) && !connectionManagedRuntime;
 
   const connectionProgressMessage = useMemo(() => {
     if (!connectionLoading || !selectedProvider) {
@@ -783,7 +800,13 @@ export const ProviderRuntimeSettingsDialog = ({
                       value={provider.providerId}
                       className="relative rounded-b-none data-[state=active]:z-10 data-[state=active]:-mb-px data-[state=active]:bg-[var(--color-surface)] data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:inset-x-0 data-[state=active]:after:-bottom-px data-[state=active]:after:h-1 data-[state=active]:after:bg-[var(--color-surface)] data-[state=active]:after:content-['']"
                     >
-                      {provider.displayName}
+                      <span className="inline-flex items-center gap-2">
+                        <ProviderBrandLogo
+                          providerId={provider.providerId}
+                          className="size-4 shrink-0"
+                        />
+                        <span>{provider.displayName}</span>
+                      </span>
                     </TabsTrigger>
                   ))}
                 </TabsList>
@@ -791,7 +814,7 @@ export const ProviderRuntimeSettingsDialog = ({
             </Tabs>
           </div>
 
-          {selectedProvider ? (
+          {showSelectedProviderSummary && selectedProvider ? (
             <div
               className="rounded-lg border px-3 py-2.5"
               style={{
@@ -816,7 +839,7 @@ export const ProviderRuntimeSettingsDialog = ({
                       )}`
                     : selectedProvider.statusMessage || 'Not connected'}
                 </span>
-                {managedRuntimeSummary ? (
+                {managedRuntimeSummary && !hideConnectionMethodMeta ? (
                   <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                     {managedRuntimeSummary}
                   </span>
@@ -987,7 +1010,7 @@ export const ProviderRuntimeSettingsDialog = ({
               ) : null}
 
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                {configuredAuthMode ? (
+                {configuredAuthMode && !hideConnectionMethodMeta ? (
                   <span
                     className="rounded-full px-2 py-0.5"
                     style={{
@@ -1002,23 +1025,20 @@ export const ProviderRuntimeSettingsDialog = ({
                     )}
                   </span>
                 ) : null}
-                <span
-                  className="rounded-full px-2 py-0.5"
-                  style={{
-                    color: selectedProvider.authenticated ? '#86efac' : 'var(--color-text-muted)',
-                    backgroundColor: selectedProvider.authenticated
-                      ? 'rgba(74, 222, 128, 0.14)'
-                      : 'rgba(255, 255, 255, 0.05)',
-                  }}
-                >
-                  {selectedProvider.authenticated
-                    ? `Using ${formatProviderAuthMethodLabelForProvider(
-                        selectedProvider.providerId,
-                        selectedProvider.authMethod
-                      )}`
-                    : 'Not connected'}
-                </span>
-                {selectedProvider.connection?.apiKeyConfigured ? (
+                {connectionStatusLabel ? (
+                  <span
+                    className="rounded-full px-2 py-0.5"
+                    style={{
+                      color: selectedProvider.authenticated ? '#86efac' : 'var(--color-text-muted)',
+                      backgroundColor: selectedProvider.authenticated
+                        ? 'rgba(74, 222, 128, 0.14)'
+                        : 'rgba(255, 255, 255, 0.05)',
+                    }}
+                  >
+                    {connectionStatusLabel}
+                  </span>
+                ) : null}
+                {selectedProvider.connection?.apiKeyConfigured && !showApiKeySection ? (
                   <span style={{ color: 'var(--color-text-secondary)' }}>
                     {selectedProvider.connection.apiKeySourceLabel}
                   </span>
@@ -1039,8 +1059,7 @@ export const ProviderRuntimeSettingsDialog = ({
                 ) : null}
               </div>
 
-              {apiKeyConfig &&
-              (selectedProvider.providerId !== 'codex' || codexApiKeyBetaEnabled) ? (
+              {showApiKeySection && apiKeyConfig ? (
                 <div
                   className="space-y-3 rounded-md border p-3"
                   style={{ borderColor: 'var(--color-border-subtle)' }}
@@ -1049,7 +1068,8 @@ export const ProviderRuntimeSettingsDialog = ({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <div
-                          className="flex size-7 items-center justify-center rounded-md border"
+                          data-testid="provider-api-key-icon"
+                          className="flex size-8 shrink-0 items-center justify-center rounded-md border"
                           style={{
                             borderColor: 'var(--color-border-subtle)',
                             backgroundColor: 'rgba(255,255,255,0.03)',

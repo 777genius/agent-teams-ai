@@ -1,12 +1,12 @@
 import { formatRelativeTime, formatTokensCompact } from '@renderer/utils/formatters';
 
-export type MemberDetailTab = 'tasks' | 'messages' | 'stats' | 'logs';
+import type { MemberDetailTab } from './memberDetailTypes';
 
 interface MemberDetailStatsProps {
   totalTasks: number;
   inProgressTasks: number;
   completedTasks: number;
-  messageCount: number;
+  activityCount: number;
   totalTokens: number | null;
   statsLoading?: boolean;
   statsComputedAt?: string;
@@ -51,7 +51,7 @@ export const MemberDetailStats = ({
   totalTasks,
   inProgressTasks,
   completedTasks,
-  messageCount,
+  activityCount,
   totalTokens,
   statsLoading,
   statsComputedAt,
@@ -79,9 +79,9 @@ export const MemberDetailStats = ({
         onClick={onTabChange ? () => onTabChange('tasks') : undefined}
       />
       <StatBlock
-        label="Messages"
-        value={messageCount}
-        onClick={onTabChange ? () => onTabChange('messages') : undefined}
+        label="Activity"
+        value={activityCount}
+        onClick={onTabChange ? () => onTabChange('activity') : undefined}
       />
       <StatBlock
         label="Tokens"

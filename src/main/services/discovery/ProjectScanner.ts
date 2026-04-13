@@ -1002,6 +1002,7 @@ export class ProjectScanner {
       hasSubagents,
       messageCount: metadata.messageCount,
       isOngoing,
+      model: metadata.model ?? undefined,
       gitBranch: metadata.gitBranch ?? undefined,
       metadataLevel,
       contextConsumption: metadata.contextConsumption,
@@ -1050,6 +1051,7 @@ export class ProjectScanner {
           messageCount: 0,
           isOngoing: false,
           gitBranch: null,
+          model: null,
         };
       }
     }
@@ -1069,6 +1071,7 @@ export class ProjectScanner {
       messageTimestamp: metadata.firstUserMessage?.timestamp,
       hasSubagents: false,
       messageCount: metadata.messageCount,
+      model: metadata.model ?? undefined,
       metadataLevel,
     };
   }

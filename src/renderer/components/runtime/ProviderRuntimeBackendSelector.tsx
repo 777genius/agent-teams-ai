@@ -1,4 +1,3 @@
-import type { CliProviderStatus } from '@shared/types';
 import {
   Select,
   SelectContent,
@@ -13,11 +12,13 @@ import {
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
 
-type Props = {
+import type { CliProviderStatus } from '@shared/types';
+
+interface Props {
   provider: CliProviderStatus;
   disabled?: boolean;
   onSelect: (providerId: CliProviderStatus['providerId'], backendId: string) => void;
-};
+}
 
 export function getOptionDisplayLabel(
   option: NonNullable<CliProviderStatus['availableBackends']>[number],
@@ -47,11 +48,11 @@ export function getProviderRuntimeBackendSummary(provider: CliProviderStatus): s
   return getOptionDisplayLabel(selectedOption, resolvedOption);
 }
 
-export function ProviderRuntimeBackendSelector({
+export const ProviderRuntimeBackendSelector = ({
   provider,
   disabled = false,
   onSelect,
-}: Props): React.JSX.Element | null {
+}: Props): React.JSX.Element | null => {
   const options = provider.availableBackends ?? [];
   if (options.length === 0) {
     return null;
@@ -191,4 +192,4 @@ export function ProviderRuntimeBackendSelector({
       )}
     </div>
   );
-}
+};

@@ -14,3 +14,31 @@ export function normalizeTeamProviderId(
 ): TeamProviderId {
   return normalizeOptionalTeamProviderId(value) ?? fallback;
 }
+
+export function inferTeamProviderIdFromModel(
+  model: string | undefined
+): TeamProviderId | undefined {
+  const normalized = model?.trim().toLowerCase();
+  if (!normalized) {
+    return undefined;
+  }
+
+  if (normalized.startsWith('gpt-') || normalized.startsWith('codex')) {
+    return 'codex';
+  }
+
+  if (normalized.startsWith('gemini')) {
+    return 'gemini';
+  }
+
+  if (
+    normalized.startsWith('claude') ||
+    normalized === 'opus' ||
+    normalized === 'sonnet' ||
+    normalized === 'haiku'
+  ) {
+    return 'anthropic';
+  }
+
+  return undefined;
+}

@@ -3,7 +3,7 @@ import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { execFile } from 'child_process';
 
-import type { TmuxPlatform, TmuxStatus, IpcResult } from '@shared/types';
+import type { IpcResult, TmuxPlatform, TmuxStatus } from '@shared/types';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 const logger = createLogger('IPC:tmux');

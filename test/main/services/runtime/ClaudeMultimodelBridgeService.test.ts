@@ -4,9 +4,7 @@ import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const execCliMock = vi.fn();
-const buildEnrichedEnvMock = vi.fn<(binaryPath: string) => NodeJS.ProcessEnv>();
-const getCachedShellEnvMock = vi.fn<() => NodeJS.ProcessEnv | null>();
-const getShellPreferredHomeMock = vi.fn<() => string>();
+const buildProviderAwareCliEnvMock = vi.fn();
 const resolveInteractiveShellEnvMock = vi.fn<() => Promise<NodeJS.ProcessEnv>>();
 const readFileMock = vi.fn<(path: PathLike, encoding: BufferEncoding) => Promise<string>>();
 const enrichProviderStatusMock = vi.fn((provider) => Promise.resolve(provider));
@@ -16,13 +14,7 @@ vi.mock('@main/utils/childProcess', () => ({
   execCli: (...args: Parameters<typeof execCliMock>) => execCliMock(...args),
 }));
 
-vi.mock('@main/utils/cliEnv', () => ({
-  buildEnrichedEnv: (binaryPath: string) => buildEnrichedEnvMock(binaryPath),
-}));
-
 vi.mock('@main/utils/shellEnv', () => ({
-  getCachedShellEnv: () => getCachedShellEnvMock(),
-  getShellPreferredHome: () => getShellPreferredHomeMock(),
   resolveInteractiveShellEnv: () => resolveInteractiveShellEnvMock(),
 }));
 
@@ -49,18 +41,29 @@ vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
       enrichProviderStatusMock(...args),
     enrichProviderStatuses: (...args: Parameters<typeof enrichProviderStatusesMock>) =>
       enrichProviderStatusesMock(...args),
-    applyAllConfiguredConnectionEnv: vi.fn((env: NodeJS.ProcessEnv) => Promise.resolve(env)),
   },
+}));
+
+vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
+  buildProviderAwareCliEnv: (...args: Parameters<typeof buildProviderAwareCliEnvMock>) =>
+    buildProviderAwareCliEnvMock(...args),
 }));
 
 describe('ClaudeMultimodelBridgeService', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    buildEnrichedEnvMock.mockReturnValue({});
-    getCachedShellEnvMock.mockReturnValue({});
-    getShellPreferredHomeMock.mockReturnValue('/Users/tester');
     resolveInteractiveShellEnvMock.mockResolvedValue({});
+    buildProviderAwareCliEnvMock.mockImplementation(
+      ({ providerId }: { providerId?: string } = {}) =>
+        Promise.resolve({
+        env: {
+          HOME: '/Users/tester',
+          ...(providerId ? { CLAUDE_CODE_ENTRY_PROVIDER: providerId } : {}),
+        },
+        connectionIssues: {},
+        })
+    );
     readFileMock.mockImplementation((filePath) => {
       if (String(filePath) === path.join('/Users/tester', '.claude.json')) {
         return Promise.resolve(
@@ -179,5 +182,45 @@ describe('ClaudeMultimodelBridgeService', () => {
         projectId: 'demo-project',
       },
     });
+  });
+
+  it('overrides provider auth status when provider-aware env reports a missing API key', async () => {
+    buildProviderAwareCliEnvMock.mockResolvedValue({
+      env: { HOME: '/Users/tester' },
+      connectionIssues: {
+        anthropic:
+          'Anthropic API key mode is enabled, but no ANTHROPIC_API_KEY is configured.',
+      },
+    });
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        providers: {
+          anthropic: {
+            supported: true,
+            authenticated: true,
+            authMethod: 'oauth_token',
+            verificationState: 'verified',
+            canLoginFromUi: true,
+            capabilities: { teamLaunch: true, oneShot: true },
+          },
+        },
+      }),
+      stderr: '',
+      exitCode: 0,
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const provider = await service.getProviderStatus('/mock/agent_teams_orchestrator', 'anthropic');
+
+    expect(provider).toMatchObject({
+      providerId: 'anthropic',
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+    });
+    expect(provider.statusMessage).toContain('ANTHROPIC_API_KEY');
   });
 });

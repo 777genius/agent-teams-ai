@@ -2,8 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parentPort } from 'node:worker_threads';
 
-import { isLeadMember } from '@shared/utils/leadDetection';
 import { normalizePersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
+import { isLeadMember } from '@shared/utils/leadDetection';
 
 interface ListTeamsPayload {
   teamsDir: string;

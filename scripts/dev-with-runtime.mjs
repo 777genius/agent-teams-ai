@@ -19,10 +19,21 @@ const runtimeCacheRoot = process.env.CLAUDE_DEV_RUNTIME_CACHE_ROOT?.trim()
   ? path.resolve(process.env.CLAUDE_DEV_RUNTIME_CACHE_ROOT.trim())
   : defaultRuntimeCacheRoot;
 const shouldPrintRuntimePath = process.argv.includes('--print-runtime-path');
+const WINDOWS_SHELL_COMMANDS = new Set(['pnpm', 'npm', 'npx', 'yarn', 'yarnpkg', 'corepack']);
+
+function shouldUseWindowsShell(cmd) {
+  if (process.platform !== 'win32') {
+    return false;
+  }
+
+  const commandName = path.basename(cmd).toLowerCase();
+  return WINDOWS_SHELL_COMMANDS.has(commandName);
+}
 
 function runOrExit(cmd, args, options = {}) {
   const result = spawnSync(cmd, args, {
     stdio: 'inherit',
+    shell: shouldUseWindowsShell(cmd),
     ...options,
   });
 
@@ -39,6 +50,7 @@ function runOrExit(cmd, args, options = {}) {
 function runAndCapture(cmd, args, options = {}) {
   const result = spawnSync(cmd, args, {
     encoding: 'utf8',
+    shell: shouldUseWindowsShell(cmd),
     ...options,
   });
 
@@ -96,7 +108,10 @@ function getPlatformAssetKey() {
 }
 
 function getReleaseAssetUrl(runtimeLock, asset) {
-  return `https://github.com/${runtimeLock.releaseRepository}/releases/download/${runtimeLock.sourceRef}/${encodeURIComponent(asset.file)}`;
+  const releaseTag = typeof runtimeLock.releaseTag === 'string' && runtimeLock.releaseTag.trim().length > 0
+    ? runtimeLock.releaseTag.trim()
+    : runtimeLock.sourceRef;
+  return `https://github.com/${runtimeLock.releaseRepository}/releases/download/${releaseTag}/${encodeURIComponent(asset.file)}`;
 }
 
 function ensureDir(dirPath) {
@@ -503,8 +518,9 @@ async function main() {
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: resolvedRuntime.binaryPath,
   };
   delete uiEnv.CLAUDE_CLI_PATH;
+  const uiPackageManager = readPackageManagerCommand(uiRepoRoot);
 
-  runOrExit('pnpm', ['exec', 'electron-vite', 'dev'], {
+  runOrExit(uiPackageManager, ['exec', 'electron-vite', 'dev'], {
     cwd: uiRepoRoot,
     env: uiEnv,
   });

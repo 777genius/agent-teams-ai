@@ -5,12 +5,8 @@ import { useTheme } from '@renderer/hooks/useTheme';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import {
   agentAvatarUrl,
+  buildMemberLaunchPresentation,
   displayMemberName,
-  getLaunchAwarePresenceLabel,
-  getMemberRuntimeAdvisoryLabel,
-  getMemberRuntimeAdvisoryTitle,
-  getSpawnAwareDotClass,
-  getSpawnCardClass,
 } from '@renderer/utils/memberHelpers';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 import { AlertTriangle, GitBranch, Loader2, MessageSquare, Plus } from 'lucide-react';
@@ -81,44 +77,23 @@ export const MemberCard = ({
   // const leadContext = useStore((s) =>
   //   member.agentType === 'team-lead' && teamName ? s.leadContextByTeam[teamName] : undefined
   // );
-  const dotClass = getSpawnAwareDotClass(
-    member,
-    spawnStatus,
-    spawnLaunchState,
-    spawnRuntimeAlive,
-    isLaunchSettling,
-    isTeamAlive,
-    isTeamProvisioning,
-    leadActivity
-  );
-  const runtimeAdvisoryLabel = getMemberRuntimeAdvisoryLabel(
-    member.runtimeAdvisory,
-    member.providerId
-  );
-  const runtimeAdvisoryTitle = getMemberRuntimeAdvisoryTitle(
-    member.runtimeAdvisory,
-    member.providerId
-  );
-  const presenceLabel = getLaunchAwarePresenceLabel(
+  const launchPresentation = buildMemberLaunchPresentation({
     member,
     spawnStatus,
     spawnLaunchState,
     spawnLivenessSource,
     spawnRuntimeAlive,
-    member.runtimeAdvisory,
+    runtimeAdvisory: member.runtimeAdvisory,
     isLaunchSettling,
     isTeamAlive,
     isTeamProvisioning,
-    leadActivity
-  );
-  const spawnCardClass = getSpawnCardClass(
-    spawnStatus,
-    spawnLaunchState,
-    spawnRuntimeAlive,
-    isLaunchSettling,
-    isTeamAlive,
-    isTeamProvisioning
-  );
+    leadActivity,
+  });
+  const dotClass = launchPresentation.dotClass;
+  const runtimeAdvisoryLabel = launchPresentation.runtimeAdvisoryLabel;
+  const runtimeAdvisoryTitle = launchPresentation.runtimeAdvisoryTitle;
+  const presenceLabel = launchPresentation.presenceLabel;
+  const spawnCardClass = launchPresentation.cardClass;
   const colors = getTeamColorSet(memberColor);
   const { isLight } = useTheme();
   const pending = taskCounts?.pending ?? 0;

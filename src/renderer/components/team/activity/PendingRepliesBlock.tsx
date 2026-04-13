@@ -2,7 +2,6 @@ import { CARD_BG, CARD_BORDER_STYLE, CARD_ICON_MUTED } from '@renderer/constants
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import {
   agentAvatarUrl,
@@ -14,8 +13,10 @@ import {
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { Loader2, ShieldQuestion, Users } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import type { ResolvedTeamMember } from '@shared/types';
+import type { ReactNode } from 'react';
 
 export interface PendingCrossTeamReply {
   teamName: string;
@@ -26,6 +27,7 @@ interface PendingRepliesBlockProps {
   members: ResolvedTeamMember[];
   pendingRepliesByMember: Record<string, number>;
   pendingCrossTeamReplies?: PendingCrossTeamReply[];
+  headerRight?: ReactNode;
   onMemberClick?: (member: ResolvedTeamMember) => void;
 }
 
@@ -33,6 +35,7 @@ export const PendingRepliesBlock = ({
   members,
   pendingRepliesByMember,
   pendingCrossTeamReplies = [],
+  headerRight,
   onMemberClick,
 }: PendingRepliesBlockProps): React.JSX.Element | null => {
   const { isLight } = useTheme();
@@ -70,9 +73,12 @@ export const PendingRepliesBlock = ({
 
   return (
     <div className="mb-3 space-y-1.5">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
-        Awaiting replies
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+          Awaiting replies
+        </p>
+        {headerRight ? <div className="shrink-0">{headerRight}</div> : null}
+      </div>
       {pending.map((entry) => {
         const since = formatDistanceToNowStrict(entry.sentAtMs, { addSuffix: true });
 

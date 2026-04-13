@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
+import { SkipPermissionsCheckbox } from '@renderer/components/team/dialogs/SkipPermissionsCheckbox';
 import {
   buildMemberDraftColorMap,
   buildMemberDraftSuggestions,
@@ -13,7 +14,6 @@ import {
   validateMemberNameInline,
 } from '@renderer/components/team/members/MembersEditorSection';
 import { TeamRosterEditorSection } from '@renderer/components/team/members/TeamRosterEditorSection';
-import { SkipPermissionsCheckbox } from '@renderer/components/team/dialogs/SkipPermissionsCheckbox';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Combobox } from '@renderer/components/ui/combobox';
@@ -36,16 +36,16 @@ import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import {
   isGeminiUiFrozen,
   normalizeCreateLaunchProviderForUi,
 } from '@renderer/utils/geminiUiFreeze';
-import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
-import { normalizeTeamModelForUi } from '@renderer/utils/teamModelAvailability';
-import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
-import { useShallow } from 'zustand/react/shallow';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
+import { normalizeTeamModelForUi } from '@renderer/utils/teamModelAvailability';
+import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
+import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import {
   AlertTriangle,
   Check,
@@ -56,24 +56,25 @@ import {
   RotateCcw,
   X,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { CronScheduleInput } from '../schedule/CronScheduleInput';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { EffortLevelSelector } from './EffortLevelSelector';
+import { resolveLaunchDialogPrefill } from './launchDialogPrefill';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
+import { ProjectPathSelector } from './ProjectPathSelector';
 import {
   createInitialProviderChecks,
   failIncompleteProviderChecks,
-  getProvisioningProviderBackendSummary,
   getProvisioningFailureHint,
+  getProvisioningProviderBackendSummary,
+  type ProvisioningProviderCheck,
   ProvisioningProviderStatusList,
   shouldHideProvisioningProviderStatusList,
   updateProviderCheck,
-  type ProvisioningProviderCheck,
 } from './ProvisioningProviderStatusList';
-import { ProjectPathSelector } from './ProjectPathSelector';
-import { resolveLaunchDialogPrefill } from './launchDialogPrefill';
 import {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
@@ -160,15 +161,7 @@ function getStoredTeamModel(providerId: TeamProviderId): string {
 }
 
 function getProviderLabel(providerId: TeamProviderId): string {
-  switch (providerId) {
-    case 'codex':
-      return 'Codex';
-    case 'gemini':
-      return 'Gemini';
-    case 'anthropic':
-    default:
-      return 'Anthropic';
-  }
+  return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
 }
 
 function resolveMemberDraftRuntime(
@@ -339,9 +332,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
 
   const runtimeBackendSummaryByProvider = useMemo(() => {
-    const entries: Array<readonly [TeamProviderId, string | null]> = (
-      cliStatus?.providers ?? []
-    ).map(
+    const entries: (readonly [TeamProviderId, string | null])[] = (cliStatus?.providers ?? []).map(
       (provider) =>
         [
           provider.providerId as TeamProviderId,
@@ -643,10 +634,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const runtimeChangeNotes = useMemo(() => {
     if (!isLaunch) {
-      return [] as Array<{ key: string; memberName: string; message: string }>;
+      return [] as { key: string; memberName: string; message: string }[];
     }
 
-    const notes: Array<{ key: string; memberName: string; message: string }> = [];
+    const notes: { key: string; memberName: string; message: string }[] = [];
     const previousLeadModel = previousLaunchParams?.model?.trim() || '';
     const previousLeadEffort = previousLaunchParams?.effort;
     const currentLeadDisplayModel = selectedModel.trim() || effectiveLeadRuntimeModel;

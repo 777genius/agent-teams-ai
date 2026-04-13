@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { computeTakeaways } from '@renderer/utils/reportAssessments';
 import { analyzeSession } from '@renderer/utils/sessionAnalyzer';
+import { useShallow } from 'zustand/react/shallow';
 
 import { CostSection } from './sections/CostSection';
 import { ErrorSection } from './sections/ErrorSection';

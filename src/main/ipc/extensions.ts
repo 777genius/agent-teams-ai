@@ -28,12 +28,12 @@ import {
 } from '@preload/constants/ipcChannels';
 import { createLogger } from '@shared/utils/logger';
 
+import {
+  type ApiKeyService,
+  RUNTIME_MANAGED_API_KEY_ENV_VARS,
+} from '../services/extensions/apikeys/ApiKeyService';
 import { GitHubStarsService } from '../services/extensions/catalog/GitHubStarsService';
 
-import {
-  RUNTIME_MANAGED_API_KEY_ENV_VARS,
-  type ApiKeyService,
-} from '../services/extensions/apikeys/ApiKeyService';
 import type { ExtensionFacadeService } from '../services/extensions/ExtensionFacadeService';
 import type { McpInstallService } from '../services/extensions/install/McpInstallService';
 import type { PluginInstallService } from '../services/extensions/install/PluginInstallService';

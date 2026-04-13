@@ -222,7 +222,7 @@ export function getSpawnCardClass(
 ): string {
   const keepLaunchSettlingVisuals = isTeamProvisioning === true || isLaunchSettling;
   if (isTeamAlive === false && !isTeamProvisioning) {
-    return 'opacity-40';
+    return '';
   }
   if (
     isLaunchStillStarting(spawnStatus, spawnLaunchState, runtimeAlive, keepLaunchSettlingVisuals)
@@ -347,7 +347,7 @@ export function getMemberRuntimeAdvisoryLabel(
   providerId?: TeamProviderId,
   nowMs = Date.now()
 ): string | null {
-  if (!advisory || advisory.kind !== 'sdk_retrying') {
+  if (advisory?.kind !== 'sdk_retrying') {
     return null;
   }
   const baseLabel = formatRuntimeAdvisoryBaseLabel(advisory, providerId);
@@ -366,7 +366,7 @@ export function getMemberRuntimeAdvisoryTitle(
   advisory: MemberRuntimeAdvisory | undefined,
   providerId?: TeamProviderId
 ): string | undefined {
-  if (!advisory || advisory.kind !== 'sdk_retrying') {
+  if (advisory?.kind !== 'sdk_retrying') {
     return undefined;
   }
   return formatRuntimeAdvisoryTitle(advisory, providerId);
@@ -406,6 +406,127 @@ export function getLaunchAwarePresenceLabel(
   }
   const advisoryLabel = getMemberRuntimeAdvisoryLabel(runtimeAdvisory, member.providerId);
   return advisoryLabel ?? basePresenceLabel;
+}
+
+export type MemberLaunchVisualState =
+  | 'waiting'
+  | 'spawning'
+  | 'runtime_pending'
+  | 'settling'
+  | 'error'
+  | null;
+
+export interface MemberLaunchPresentation {
+  presenceLabel: string;
+  dotClass: string;
+  cardClass: string;
+  runtimeAdvisoryLabel: string | null;
+  runtimeAdvisoryTitle?: string;
+  launchVisualState: MemberLaunchVisualState;
+  spawnBadgeLabel: string | null;
+}
+
+export function buildMemberLaunchPresentation({
+  member,
+  spawnStatus,
+  spawnLaunchState,
+  spawnLivenessSource,
+  spawnRuntimeAlive,
+  runtimeAdvisory,
+  isLaunchSettling = false,
+  isTeamAlive,
+  isTeamProvisioning,
+  leadActivity,
+}: {
+  member: ResolvedTeamMember;
+  spawnStatus: MemberSpawnStatus | undefined;
+  spawnLaunchState: MemberLaunchState | undefined;
+  spawnLivenessSource: MemberSpawnLivenessSource | undefined;
+  spawnRuntimeAlive: boolean | undefined;
+  runtimeAdvisory: MemberRuntimeAdvisory | undefined;
+  isLaunchSettling?: boolean;
+  isTeamAlive?: boolean;
+  isTeamProvisioning?: boolean;
+  leadActivity?: LeadActivityState;
+}): MemberLaunchPresentation {
+  const presenceLabel = getLaunchAwarePresenceLabel(
+    member,
+    spawnStatus,
+    spawnLaunchState,
+    spawnLivenessSource,
+    spawnRuntimeAlive,
+    runtimeAdvisory,
+    isLaunchSettling,
+    isTeamAlive,
+    isTeamProvisioning,
+    leadActivity
+  );
+  const dotClass = getSpawnAwareDotClass(
+    member,
+    spawnStatus,
+    spawnLaunchState,
+    spawnRuntimeAlive,
+    isLaunchSettling,
+    isTeamAlive,
+    isTeamProvisioning,
+    leadActivity
+  );
+  const cardClass = getSpawnCardClass(
+    spawnStatus,
+    spawnLaunchState,
+    spawnRuntimeAlive,
+    isLaunchSettling,
+    isTeamAlive,
+    isTeamProvisioning
+  );
+  const runtimeAdvisoryLabel = getMemberRuntimeAdvisoryLabel(runtimeAdvisory, member.providerId);
+  const runtimeAdvisoryTitle = getMemberRuntimeAdvisoryTitle(runtimeAdvisory, member.providerId);
+  const keepLaunchSettlingVisuals = isTeamProvisioning === true || isLaunchSettling;
+
+  let launchVisualState: MemberLaunchVisualState = null;
+  if (isTeamAlive !== false || isTeamProvisioning) {
+    if (spawnLaunchState === 'failed_to_start' || spawnStatus === 'error') {
+      launchVisualState = 'error';
+    } else if (
+      spawnLaunchState === 'runtime_pending_bootstrap' &&
+      spawnStatus === 'online' &&
+      spawnRuntimeAlive === true
+    ) {
+      launchVisualState = 'runtime_pending';
+    } else if (
+      isLaunchStillStarting(
+        spawnStatus,
+        spawnLaunchState,
+        spawnRuntimeAlive,
+        keepLaunchSettlingVisuals
+      )
+    ) {
+      launchVisualState = spawnStatus === 'spawning' ? 'spawning' : 'waiting';
+    } else if (
+      isLaunchSettling &&
+      spawnStatus === 'online' &&
+      spawnLaunchState === 'confirmed_alive'
+    ) {
+      launchVisualState = 'settling';
+    }
+  }
+
+  const spawnBadgeLabel =
+    spawnStatus && spawnStatus !== 'online'
+      ? spawnStatus === 'waiting' || spawnStatus === 'spawning'
+        ? 'starting'
+        : spawnStatus
+      : null;
+
+  return {
+    presenceLabel,
+    dotClass,
+    cardClass,
+    runtimeAdvisoryLabel,
+    runtimeAdvisoryTitle,
+    launchVisualState,
+    spawnBadgeLabel,
+  };
 }
 
 export const TASK_STATUS_STYLES: Record<TeamTaskStatus, { bg: string; text: string }> = {

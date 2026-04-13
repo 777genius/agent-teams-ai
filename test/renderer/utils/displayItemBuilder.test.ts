@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildDisplayItemsFromMessages } from '../../../src/renderer/utils/displayItemBuilder';
+import {
+  buildDisplayItems,
+  buildDisplayItemsFromMessages,
+} from '../../../src/renderer/utils/displayItemBuilder';
 import type { ParsedMessage } from '../../../src/main/types/messages';
+import type { SemanticStep } from '../../../src/main/types/chunks';
+import type { AIGroupLastOutput } from '../../../src/renderer/types/groups';
 
 /**
  * Helper to create a minimal ParsedMessage for testing.
@@ -95,5 +100,55 @@ describe('buildDisplayItemsFromMessages', () => {
       if (inputItems[0].type !== 'subagent_input') throw new Error('Expected subagent_input');
       expect(inputItems[0].content).toBe('Please run the tests');
     });
+  });
+});
+
+describe('buildDisplayItems', () => {
+  it('keeps the linked tool item when the last output is the paired tool_result', () => {
+    const steps: SemanticStep[] = [
+      {
+        id: 'tool-1',
+        type: 'tool_call',
+        startTime: new Date('2025-01-01T00:00:00Z'),
+        durationMs: 0,
+        content: {
+          toolName: 'mcp__agent-teams__task_add_comment',
+          toolInput: { text: 'hello' },
+        },
+        context: 'main',
+      } as SemanticStep,
+      {
+        id: 'tool-1',
+        type: 'tool_result',
+        startTime: new Date('2025-01-01T00:00:01Z'),
+        durationMs: 0,
+        content: {
+          toolResultContent: 'comment posted',
+          isError: false,
+        },
+        context: 'main',
+      } as SemanticStep,
+    ];
+
+    const lastOutput: AIGroupLastOutput = {
+      type: 'tool_result',
+      toolResult: 'comment posted',
+      isError: false,
+      timestamp: new Date('2025-01-01T00:00:01Z'),
+    };
+
+    const items = buildDisplayItems(steps, lastOutput, []);
+
+    expect(items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'tool',
+          tool: expect.objectContaining({
+            id: 'tool-1',
+            name: 'mcp__agent-teams__task_add_comment',
+          }),
+        }),
+      ])
+    );
   });
 });

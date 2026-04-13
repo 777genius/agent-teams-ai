@@ -1,20 +1,20 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-export type GeminiGlobalConfig = {
+export interface GeminiGlobalConfig {
   geminiBackendPreference?: 'auto' | 'api' | 'cli' | 'cli-sdk';
   geminiResolvedBackend?: 'api' | 'cli' | 'cli-sdk';
   geminiLastAuthMethod?: string;
   geminiProjectId?: string;
-};
+}
 
-export type GeminiRuntimeAuthState = {
+export interface GeminiRuntimeAuthState {
   authenticated: boolean;
   authMethod: string | null;
   resolvedBackend: 'auto' | 'api' | 'cli-sdk';
   projectId: string | null;
   statusMessage: string | null;
-};
+}
 
 function normalizeGeminiBackend(
   value: string | null | undefined

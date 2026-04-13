@@ -10,7 +10,6 @@ import {
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { detectOperationalNoise } from '@renderer/utils/agentMessageFormatting';
 import { formatTokensCompact } from '@renderer/utils/formatters';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
@@ -19,6 +18,7 @@ import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
 import { format } from 'date-fns';
 import { ChevronRight, CornerDownLeft, MessageSquare, RefreshCw } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { MarkdownViewer } from '../viewers/MarkdownViewer';
 

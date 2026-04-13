@@ -17,7 +17,6 @@ import {
 import { getTeamColorSet, getThemedBorder } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import {
   getMessageTypeLabel,
   getStructuredMessageSummary,
@@ -70,6 +69,7 @@ import {
   Reply,
   X,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { ReplyQuoteBlock } from './ReplyQuoteBlock';
 
@@ -111,7 +111,7 @@ function getCommandOutputSummary(text: string): string {
 
 function parseIdlePeerSummaryRoute(summary: string): { recipient: string | null; body: string } {
   const trimmed = summary.trim();
-  const match = trimmed.match(/^\[to\s+([^\]]+)\]\s*(.*)$/i);
+  const match = /^\[to\s+([^\]]+)\]\s*(.*)$/i.exec(trimmed);
   if (!match) {
     return { recipient: null, body: trimmed };
   }
@@ -575,8 +575,52 @@ function renderInlineBoldSummary(
   });
 }
 
+const TaskRecipientBadge = ({
+  taskId,
+  displayId,
+  teamName,
+  onTaskIdClick,
+}: Readonly<{
+  taskId: string;
+  displayId: string;
+  teamName?: string;
+  onTaskIdClick?: (taskId: string) => void;
+}>): React.JSX.Element => {
+  const content = (
+    <span
+      className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide"
+      style={{
+        backgroundColor: 'rgba(96, 165, 250, 0.14)',
+        color: '#60a5fa',
+        border: '1px solid rgba(96, 165, 250, 0.3)',
+      }}
+    >
+      {displayId}
+    </span>
+  );
+
+  if (!onTaskIdClick) {
+    return content;
+  }
+
+  return (
+    <TaskTooltip taskId={taskId} teamName={teamName}>
+      <button
+        type="button"
+        className="inline-flex rounded transition-opacity hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-[var(--color-border)]"
+        onClick={(e) => {
+          e.stopPropagation();
+          onTaskIdClick(taskId);
+        }}
+      >
+        {content}
+      </button>
+    </TaskTooltip>
+  );
+};
+
 export const ActivityItem = memo(
-  function ActivityItem({
+  ({
     message,
     teamName,
     localMemberNames,
@@ -603,7 +647,7 @@ export const ActivityItem = memo(
     onExpand,
     expandItemKey,
     onExpandContent,
-  }: ActivityItemProps): React.JSX.Element {
+  }: Readonly<ActivityItemProps>): React.JSX.Element => {
     const colors = getTeamColorSet(memberColor ?? message.color ?? '');
     const { isLight } = useTheme();
     // Hide role when it matches the sender name (avoids "lead" badge + "Team Lead" text duplication)
@@ -784,6 +828,11 @@ export const ActivityItem = memo(
       structured,
     ]);
     const summaryText = useMemo(() => extractMarkdownPlainText(rawSummary), [rawSummary]);
+    const commentTaskRef =
+      message.messageKind === 'task_comment_notification' ? (message.taskRefs?.[0] ?? null) : null;
+    const commentTaskDisplayId =
+      commentTaskRef?.displayId ??
+      (commentTaskRef?.taskId ? `#${commentTaskRef.taskId.slice(0, 6)}` : null);
 
     // Permission request status icon (check/x/clock)
     const pendingApprovals = useStore(useShallow((s) => s.pendingApprovals));
@@ -881,6 +930,146 @@ export const ActivityItem = memo(
         onToggleCollapse?.(collapseToggleKey);
       }
     }, [collapseToggleKey, isHeaderClickable, onToggleCollapse]);
+    const useCompactCollapsedHeader = compactHeader && !isExpanded;
+
+    const senderBadge = isSlashCommandResult ? (
+      <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
+        result
+      </span>
+    ) : (
+      <MemberBadge
+        name={senderName}
+        color={senderColor}
+        teamName={teamName}
+        hideAvatar={senderHideAvatar || compactHeader}
+        onClick={onMemberNameClick}
+        disableHoverCard={crossTeamOrigin != null}
+      />
+    );
+
+    const messageTypeBadge = systemLabel ? (
+      <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+        {systemLabel}
+      </span>
+    ) : commentTaskRef ? (
+      <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+        Comment
+      </span>
+    ) : isSlashCommandResult && message.commandOutput ? (
+      <span
+        className={[
+          'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] uppercase tracking-wide',
+          isCommandOutputError ? 'bg-rose-500/15 text-rose-300' : 'bg-amber-500/15 text-amber-300',
+        ].join(' ')}
+      >
+        {message.commandOutput.stream}
+      </span>
+    ) : isSlashCommandMessage ? (
+      <span className="text-[10px] uppercase tracking-wide text-amber-400">command</span>
+    ) : messageType ? (
+      <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+        {messageType}
+      </span>
+    ) : null;
+
+    const leadSourceBadge =
+      message.source === 'lead_session' && !isSlashCommandResult ? (
+        <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+          session
+        </span>
+      ) : message.source === 'lead_process' && !isSlashCommandResult ? (
+        <span className="text-[10px] uppercase tracking-wide" style={{ color: CARD_ICON_MUTED }}>
+          live
+        </span>
+      ) : null;
+
+    const statusBadge = rateLimited ? (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+        <AlertTriangle size={10} />
+        Rate Limited
+      </span>
+    ) : isApiError ? (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+        <AlertTriangle size={10} />
+        API Error
+      </span>
+    ) : null;
+
+    const recipientBadge =
+      commentTaskRef && commentTaskDisplayId ? (
+        <>
+          <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
+          <TaskRecipientBadge
+            taskId={commentTaskRef.taskId}
+            displayId={commentTaskDisplayId}
+            teamName={commentTaskRef.teamName}
+            onTaskIdClick={onTaskIdClick}
+          />
+        </>
+      ) : message.to && message.to !== message.from ? (
+        <>
+          <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
+          {crossTeamTarget ? (
+            <CrossTeamTeamBadge teamName={crossTeamTarget} onClick={onTeamClick} />
+          ) : null}
+          {crossTeamSentMemberName || !crossTeamTarget ? (
+            <MemberBadge
+              name={crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to}
+              color={crossTeamTarget ? undefined : recipientColor}
+              teamName={crossTeamTarget ? undefined : teamName}
+              hideAvatar={
+                compactHeader ||
+                (crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to) === 'user'
+              }
+              onClick={onMemberNameClick}
+              disableHoverCard={crossTeamTarget != null}
+            />
+          ) : null}
+        </>
+      ) : null;
+
+    const summaryContent =
+      isSlashCommandResult && message.commandOutput ? (
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+          <Command
+            size={12}
+            className={['shrink-0', isCommandOutputError ? 'text-rose-400' : 'text-amber-400'].join(
+              ' '
+            )}
+          />
+          <span
+            className={[
+              'shrink-0 font-mono text-[11px]',
+              isCommandOutputError ? 'text-rose-300' : 'text-amber-300',
+            ].join(' ')}
+          >
+            {message.commandOutput.commandLabel}
+          </span>
+          <span className="min-w-0 truncate text-[11px] text-[var(--color-text-secondary)]">
+            {message.summary || getCommandOutputSummary(message.text) || rawSummary}
+          </span>
+        </span>
+      ) : isSlashCommandMessage && slashCommandMeta ? (
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+          <Command size={12} className="shrink-0 text-amber-400" />
+          <span className="shrink-0 font-mono text-[11px] text-amber-300">
+            {slashCommandMeta.command}
+          </span>
+          {slashCommandMeta.args ? (
+            <span className="min-w-0 truncate text-[11px] text-[var(--color-text-secondary)]">
+              {slashCommandMeta.args.replace(/\n+/g, ' ')}
+            </span>
+          ) : (slashCommandMeta.knownDescription ?? knownSlashCommand?.description) ? (
+            <span className="min-w-0 truncate text-[11px] text-[var(--color-text-secondary)]">
+              {slashCommandMeta.knownDescription ?? knownSlashCommand?.description}
+            </span>
+          ) : null}
+        </span>
+      ) : onTaskIdClick ? (
+        renderInlineBoldSummary(rawSummary, onTaskIdClick)
+      ) : (
+        renderInlineBoldSummary(rawSummary)
+      );
 
     return (
       <article
@@ -933,7 +1122,9 @@ export const ActivityItem = memo(
           role={isHeaderClickable ? 'button' : undefined}
           tabIndex={isHeaderClickable ? 0 : undefined}
           className={[
-            'flex min-w-0 items-center gap-2 px-3 py-2',
+            useCompactCollapsedHeader
+              ? 'min-w-0 px-3 py-2'
+              : 'flex min-w-0 items-center gap-2 px-3 py-2',
             isHeaderClickable ? 'cursor-pointer select-none' : '',
           ].join(' ')}
           onClick={handleHeaderToggle}
@@ -948,207 +1139,125 @@ export const ActivityItem = memo(
               : undefined
           }
         >
-          {isUnread ? (
-            <span className="size-2 shrink-0 rounded-full bg-blue-500" title="Unread" aria-hidden />
-          ) : null}
-          {/* Chevron for collapsible messages */}
-          {showChevron ? (
-            <ChevronRight
-              className="size-3 shrink-0 transition-transform duration-150"
-              style={{
-                color: CARD_ICON_MUTED,
-                transform: isExpanded ? 'rotate(90deg)' : undefined,
-              }}
-            />
-          ) : null}
-
-          {/* Sender avatar + name badge */}
-          {crossTeamOrigin ? (
-            <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
-          ) : null}
-          {isSlashCommandResult ? (
-            <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
-              result
-            </span>
-          ) : (
-            <MemberBadge
-              name={senderName}
-              color={senderColor}
-              teamName={teamName}
-              hideAvatar={senderHideAvatar || compactHeader}
-              onClick={onMemberNameClick}
-              disableHoverCard={crossTeamOrigin != null}
-            />
-          )}
-
-          {/* Role */}
-          {!compactHeader && formattedRole && !isSlashCommandResult ? (
-            <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
-              {formattedRole}
-            </span>
-          ) : null}
-
-          {/* Message type label or system label */}
-          {systemLabel ? (
-            <span
-              className="text-[10px] uppercase tracking-wide"
-              style={{ color: CARD_ICON_MUTED }}
-            >
-              {systemLabel}
-            </span>
-          ) : isSlashCommandResult && message.commandOutput ? (
-            <span
-              className={[
-                'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] uppercase tracking-wide',
-                isCommandOutputError
-                  ? 'bg-rose-500/15 text-rose-300'
-                  : 'bg-amber-500/15 text-amber-300',
-              ].join(' ')}
-            >
-              {message.commandOutput.stream}
-            </span>
-          ) : isSlashCommandMessage ? (
-            <span className="text-[10px] uppercase tracking-wide text-amber-400">command</span>
-          ) : messageType ? (
-            <span
-              className="text-[10px] uppercase tracking-wide"
-              style={{ color: CARD_ICON_MUTED }}
-            >
-              {messageType}
-            </span>
-          ) : null}
-
-          {/* Lead session marker */}
-          {message.source === 'lead_session' && !isSlashCommandResult ? (
-            <span
-              className="text-[10px] uppercase tracking-wide"
-              style={{ color: CARD_ICON_MUTED }}
-            >
-              session
-            </span>
-          ) : message.source === 'lead_process' && !isSlashCommandResult ? (
-            <span
-              className="text-[10px] uppercase tracking-wide"
-              style={{ color: CARD_ICON_MUTED }}
-            >
-              live
-            </span>
-          ) : null}
-
-          {/* Rate limit warning badge */}
-          {rateLimited ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
-              <AlertTriangle size={10} />
-              Rate Limited
-            </span>
-          ) : null}
-
-          {/* API Error warning badge */}
-          {isApiError && !rateLimited ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
-              <AlertTriangle size={10} />
-              API Error
-            </span>
-          ) : null}
-
-          {/* Recipient — arrow + avatar + badge */}
-          {message.to && message.to !== message.from ? (
-            <>
-              <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
-              {crossTeamTarget ? (
-                <CrossTeamTeamBadge teamName={crossTeamTarget} onClick={onTeamClick} />
-              ) : null}
-              {crossTeamSentMemberName || !crossTeamTarget ? (
-                <MemberBadge
-                  name={crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to}
-                  color={crossTeamTarget ? undefined : recipientColor}
-                  teamName={crossTeamTarget ? undefined : teamName}
-                  hideAvatar={
-                    compactHeader ||
-                    (crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to) ===
-                      'user'
-                  }
-                  onClick={onMemberNameClick}
-                  disableHoverCard={crossTeamTarget != null}
-                />
-              ) : null}
-            </>
-          ) : null}
-
-          {/* Summary */}
-          <span className="min-w-0 flex-1 truncate text-xs" style={{ color: CARD_TEXT_LIGHT }}>
-            {isSlashCommandResult && message.commandOutput ? (
-              <span className="inline-flex items-center gap-1.5">
-                <Command
-                  size={12}
-                  className={[
-                    'shrink-0',
-                    isCommandOutputError ? 'text-rose-400' : 'text-amber-400',
-                  ].join(' ')}
-                />
-                <span
-                  className={[
-                    'font-mono text-[11px]',
-                    isCommandOutputError ? 'text-rose-300' : 'text-amber-300',
-                  ].join(' ')}
-                >
-                  {message.commandOutput.commandLabel}
-                </span>
-                <span className="truncate text-[11px] text-[var(--color-text-secondary)]">
-                  {message.summary || getCommandOutputSummary(message.text) || rawSummary}
-                </span>
-              </span>
-            ) : isSlashCommandMessage && slashCommandMeta ? (
-              <span className="inline-flex items-center gap-1.5">
-                <Command size={12} className="shrink-0 text-amber-400" />
-                <span className="font-mono text-[11px] text-amber-300">
-                  {slashCommandMeta.command}
-                </span>
-                {slashCommandMeta.args ? (
-                  <span className="truncate text-[11px] text-[var(--color-text-secondary)]">
-                    {slashCommandMeta.args.replace(/\n+/g, ' ')}
+          {useCompactCollapsedHeader ? (
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                  {isUnread ? (
+                    <span
+                      className="size-2 shrink-0 rounded-full bg-blue-500"
+                      title="Unread"
+                      aria-hidden
+                    />
+                  ) : null}
+                  {crossTeamOrigin ? (
+                    <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
+                  ) : null}
+                  {senderBadge}
+                  {messageTypeBadge}
+                  {leadSourceBadge}
+                  {statusBadge}
+                  {recipientBadge}
+                </div>
+                <div className="relative flex shrink-0 items-center">
+                  <span
+                    className={
+                      onExpand && expandItemKey
+                        ? 'text-[10px] transition-opacity group-hover:opacity-0'
+                        : 'text-[10px]'
+                    }
+                    style={{ color: CARD_ICON_MUTED }}
+                  >
+                    {timestamp}
                   </span>
-                ) : (slashCommandMeta.knownDescription ?? knownSlashCommand?.description) ? (
-                  <span className="truncate text-[11px] text-[var(--color-text-secondary)]">
-                    {slashCommandMeta.knownDescription ?? knownSlashCommand?.description}
-                  </span>
-                ) : null}
-              </span>
-            ) : onTaskIdClick ? (
-              renderInlineBoldSummary(rawSummary, onTaskIdClick)
-            ) : (
-              renderInlineBoldSummary(rawSummary)
-            )}
-          </span>
-
-          {/* Timestamp / expand */}
-          <div className="relative flex shrink-0 items-center">
-            <span
-              className={
-                onExpand && expandItemKey
-                  ? 'text-[10px] transition-opacity group-hover:opacity-0'
-                  : 'text-[10px]'
-              }
-              style={{ color: CARD_ICON_MUTED }}
-            >
-              {timestamp}
-            </span>
-            {onExpand && expandItemKey && (
-              <button
-                type="button"
-                aria-label="Expand message"
-                className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
-                style={{ color: CARD_ICON_MUTED }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onExpand(expandItemKey);
-                }}
-                onKeyDown={(e) => e.stopPropagation()}
+                  {onExpand && expandItemKey && (
+                    <button
+                      type="button"
+                      aria-label="Expand message"
+                      className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
+                      style={{ color: CARD_ICON_MUTED }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onExpand(expandItemKey);
+                      }}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <Maximize2 size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div
+                className="mt-1 min-w-0 truncate text-[11px]"
+                style={{ color: CARD_TEXT_LIGHT }}
+                title={summaryText || rawSummary}
               >
-                <Maximize2 size={12} />
-              </button>
-            )}
-          </div>
+                {summaryContent}
+              </div>
+            </div>
+          ) : (
+            <>
+              {isUnread ? (
+                <span
+                  className="size-2 shrink-0 rounded-full bg-blue-500"
+                  title="Unread"
+                  aria-hidden
+                />
+              ) : null}
+              {showChevron ? (
+                <ChevronRight
+                  className="size-3 shrink-0 transition-transform duration-150"
+                  style={{
+                    color: CARD_ICON_MUTED,
+                    transform: isExpanded ? 'rotate(90deg)' : undefined,
+                  }}
+                />
+              ) : null}
+              {crossTeamOrigin ? (
+                <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
+              ) : null}
+              {senderBadge}
+              {!compactHeader && formattedRole && !isSlashCommandResult ? (
+                <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
+                  {formattedRole}
+                </span>
+              ) : null}
+              {messageTypeBadge}
+              {leadSourceBadge}
+              {statusBadge}
+              {recipientBadge}
+              <span className="min-w-0 flex-1 truncate text-xs" style={{ color: CARD_TEXT_LIGHT }}>
+                {summaryContent}
+              </span>
+              <div className="relative flex shrink-0 items-center">
+                <span
+                  className={
+                    onExpand && expandItemKey
+                      ? 'text-[10px] transition-opacity group-hover:opacity-0'
+                      : 'text-[10px]'
+                  }
+                  style={{ color: CARD_ICON_MUTED }}
+                >
+                  {timestamp}
+                </span>
+                {onExpand && expandItemKey && (
+                  <button
+                    type="button"
+                    aria-label="Expand message"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 group-hover:opacity-100"
+                    style={{ color: CARD_ICON_MUTED }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onExpand(expandItemKey);
+                    }}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    <Maximize2 size={12} />
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Content — collapsed for system messages, expanded for others */}
@@ -1380,3 +1489,5 @@ export const ActivityItem = memo(
     prev.onExpandContent === next.onExpandContent &&
     areMessagesEquivalentForActivityItem(prev.message, next.message)
 );
+
+ActivityItem.displayName = 'ActivityItem';

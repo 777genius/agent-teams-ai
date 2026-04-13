@@ -20,6 +20,7 @@ import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useStore } from '@renderer/store';
+import { selectTeamDataForName } from '@renderer/store/slices/teamSlice';
 import { chipToken, serializeChipsWithText } from '@renderer/types/inlineChip';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
@@ -77,7 +78,9 @@ export const CreateTaskDialog = ({
   submitting = false,
 }: CreateTaskDialogProps): React.JSX.Element => {
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
-  const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
+  const projectPath = useStore(
+    (s) => selectTeamDataForName(s, teamName)?.config.projectPath ?? null
+  );
   const { suggestions: taskSuggestions } = useTaskSuggestions(teamName);
   const [subject, setSubject] = useState(defaultSubject);
   const descriptionDraft = useDraftPersistence({

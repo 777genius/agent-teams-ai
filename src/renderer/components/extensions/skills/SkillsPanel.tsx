@@ -6,7 +6,6 @@ import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import {
   AlertTriangle,
   ArrowUpAZ,
@@ -19,6 +18,7 @@ import {
   Plus,
   Search,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { SearchInput } from '../common/SearchInput';
 

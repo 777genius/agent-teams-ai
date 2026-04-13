@@ -9,15 +9,10 @@
  */
 
 import { killProcessTree, spawnCli } from '@main/utils/childProcess';
-import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
 
-import { providerConnectionService } from '../runtime/ProviderConnectionService';
-import {
-  applyConfiguredRuntimeBackendsEnv,
-  applyProviderRuntimeEnv,
-} from '../runtime/providerRuntimeEnv';
+import { buildProviderAwareCliEnv } from '../runtime/providerAwareCliEnv';
 import { ClaudeBinaryResolver } from '../team/ClaudeBinaryResolver';
 
 import type { ScheduleLaunchConfig, ScheduleRun } from '@shared/types';
@@ -106,19 +101,23 @@ export class ScheduledTaskExecutor {
 
     logger.info(`[${request.runId}] Spawning: ${binaryPath} ${args.join(' ')}`);
 
-    const env = await providerConnectionService.applyConfiguredConnectionEnv(
-      applyProviderRuntimeEnv(
-        applyConfiguredRuntimeBackendsEnv({
-          ...buildEnrichedEnv(binaryPath),
-          ...shellEnv,
-          CLAUDECODE: undefined,
-        }),
-        request.config.providerId
-      ),
+    const providerId =
       request.config.providerId === 'codex' || request.config.providerId === 'gemini'
         ? request.config.providerId
-        : 'anthropic'
-    );
+        : 'anthropic';
+    const { env, connectionIssues } = await buildProviderAwareCliEnv({
+      binaryPath,
+      providerId,
+      shellEnv,
+      env: {
+        ...shellEnv,
+        CLAUDECODE: undefined,
+      },
+    });
+    const connectionIssue = connectionIssues[providerId];
+    if (connectionIssue) {
+      throw new Error(connectionIssue);
+    }
 
     const child = spawnCli(binaryPath, args, {
       cwd: request.config.cwd,

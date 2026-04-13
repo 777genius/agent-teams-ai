@@ -42,22 +42,23 @@ import {
 } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { normalizeTeamModelForUi } from '@renderer/utils/teamModelAvailability';
+import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
+import { ProjectPathSelector } from './ProjectPathSelector';
 import {
   createInitialProviderChecks,
   failIncompleteProviderChecks,
-  getProvisioningProviderBackendSummary,
   getProvisioningFailureHint,
+  getProvisioningProviderBackendSummary,
+  type ProvisioningProviderCheck,
   ProvisioningProviderStatusList,
   shouldHideProvisioningProviderStatusList,
   updateProviderCheck,
-  type ProvisioningProviderCheck,
 } from './ProvisioningProviderStatusList';
-import { ProjectPathSelector } from './ProjectPathSelector';
 import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
 import { computeEffectiveTeamModel } from './TeamModelSelector';
 import { getNextSuggestedTeamName } from './teamNameSets';
@@ -111,15 +112,7 @@ function isEphemeralRenderedProjectPath(projectPath: string | null | undefined):
 }
 
 function getProviderLabel(providerId: TeamProviderId): string {
-  switch (providerId) {
-    case 'codex':
-      return 'Codex';
-    case 'gemini':
-      return 'Gemini';
-    case 'anthropic':
-    default:
-      return 'Anthropic';
-  }
+  return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
 }
 
 export interface TeamCopyData {
@@ -484,9 +477,7 @@ export const CreateTeamDialog = ({
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
 
   const runtimeBackendSummaryByProvider = useMemo(() => {
-    const entries: Array<readonly [TeamProviderId, string | null]> = (
-      cliStatus?.providers ?? []
-    ).map(
+    const entries: (readonly [TeamProviderId, string | null])[] = (cliStatus?.providers ?? []).map(
       (provider) =>
         [
           provider.providerId as TeamProviderId,

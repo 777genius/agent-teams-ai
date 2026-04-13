@@ -16,9 +16,9 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { inferCapabilities, normalizeCategory } from '@shared/utils/extensionNormalizers';
 import { ArrowUpDown, Filter, Puzzle, Search } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { SearchInput } from '../common/SearchInput';
 

@@ -1,10 +1,10 @@
 export {
+  getTeamModelUiDisabledReason,
   GPT_5_1_CODEX_MINI_UI_DISABLED_MODEL,
   GPT_5_1_CODEX_MINI_UI_DISABLED_REASON,
   GPT_5_3_CODEX_SPARK_UI_DISABLED_MODEL,
   GPT_5_3_CODEX_SPARK_UI_DISABLED_REASON,
-  TEAM_MODEL_UI_DISABLED_BADGE_LABEL,
-  getTeamModelUiDisabledReason,
   isTeamModelUiDisabled,
   normalizeTeamModelForUi,
+  TEAM_MODEL_UI_DISABLED_BADGE_LABEL,
 } from './teamModelCatalog';

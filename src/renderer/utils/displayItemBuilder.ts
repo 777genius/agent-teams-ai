@@ -107,8 +107,14 @@ export function buildDisplayItems(
     subagents.map((s) => s.parentTaskId).filter((id): id is string => !!id)
   );
 
-  // Find the step ID of lastOutput to skip it
-  let lastOutputStepId: string | undefined;
+  // Find the exact lastOutput step to skip it without accidentally
+  // dropping the paired tool_call, which shares the same step id.
+  let lastOutputStepRef:
+    | {
+        id: string;
+        type: SemanticStep['type'];
+      }
+    | undefined;
   if (lastOutput) {
     for (let i = steps.length - 1; i >= 0; i--) {
       const step = steps[i];
@@ -117,7 +123,7 @@ export function buildDisplayItems(
         step.type === 'output' &&
         step.content.outputText === lastOutput.text
       ) {
-        lastOutputStepId = step.id;
+        lastOutputStepRef = { id: step.id, type: step.type };
         break;
       }
       if (
@@ -125,7 +131,7 @@ export function buildDisplayItems(
         step.type === 'tool_result' &&
         step.content.toolResultContent === lastOutput.toolResult
       ) {
-        lastOutputStepId = step.id;
+        lastOutputStepRef = { id: step.id, type: step.type };
         break;
       }
       if (
@@ -133,7 +139,7 @@ export function buildDisplayItems(
         step.type === 'interruption' &&
         step.content.interruptionText === lastOutput.interruptionMessage
       ) {
-        lastOutputStepId = step.id;
+        lastOutputStepRef = { id: step.id, type: step.type };
         break;
       }
     }
@@ -142,7 +148,11 @@ export function buildDisplayItems(
   // Build display items
   for (const step of steps) {
     // Skip the last output step
-    if (lastOutputStepId && step.id === lastOutputStepId) {
+    if (
+      lastOutputStepRef &&
+      step.id === lastOutputStepRef.id &&
+      step.type === lastOutputStepRef.type
+    ) {
       continue;
     }
 

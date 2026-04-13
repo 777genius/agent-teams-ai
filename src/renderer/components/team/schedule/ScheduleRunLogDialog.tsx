@@ -10,8 +10,8 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { AlertTriangle, Clock, Loader2, Terminal } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { CliLogsRichView } from '../CliLogsRichView';
 

@@ -10,6 +10,7 @@
 import type { GraphNode } from '../ports/types';
 import { KANBAN_ZONE } from '../constants/canvas-constants';
 import { COLORS } from '../constants/colors';
+import { resolveActivityLaneSide } from './activityLane';
 
 /** Column header info for rendering */
 export interface KanbanColumnHeader {
@@ -40,6 +41,35 @@ const COLUMN_LABELS: Record<string, { label: string; color: string }> = {
   approved: { label: 'Approved', color: COLORS.reviewApproved },
 };
 
+export function getOwnerKanbanBaseX(args: {
+  ownerX: number;
+  ownerKind: GraphNode['kind'];
+  activeColumnCount: number;
+  columnWidth: number;
+  leadX?: number | null;
+}): number {
+  const { ownerX, ownerKind, activeColumnCount, columnWidth, leadX } = args;
+  if (activeColumnCount <= 0) {
+    return ownerX;
+  }
+
+  if (ownerKind !== 'lead' && ownerKind !== 'member') {
+    return ownerX - (activeColumnCount * columnWidth) / 2;
+  }
+
+  const side = resolveActivityLaneSide({
+    nodeKind: ownerKind,
+    nodeX: ownerX,
+    leadX,
+  });
+
+  if (side === 'left') {
+    return ownerX;
+  }
+
+  return ownerX - (activeColumnCount - 1) * columnWidth;
+}
+
 export class KanbanLayoutEngine {
   // Reusable collections (cleared each call, never GC'd)
   static readonly #nodeMap = new Map<string, GraphNode>();
@@ -58,6 +88,7 @@ export class KanbanLayoutEngine {
     const nodeMap = this.#nodeMap;
     nodeMap.clear();
     for (const n of nodes) nodeMap.set(n.id, n);
+    const leadX = nodes.find((node) => node.kind === 'lead')?.x ?? null;
 
     const tasksByOwner = this.#tasksByOwner;
     tasksByOwner.clear();
@@ -84,7 +115,7 @@ export class KanbanLayoutEngine {
     for (const [ownerId, tasks] of tasksByOwner) {
       const owner = nodeMap.get(ownerId);
       if (!owner || owner.x == null || owner.y == null) continue;
-      const zoneInfo = KanbanLayoutEngine.#layoutZone(tasks, owner.x, owner.y, ownerId);
+      const zoneInfo = KanbanLayoutEngine.#layoutZone(tasks, owner, ownerId, leadX);
       if (zoneInfo) this.zones.push(zoneInfo);
     }
 
@@ -93,9 +124,16 @@ export class KanbanLayoutEngine {
 
   // ─── Private ──────────────────────────────────────────────────────────────
 
-  static #layoutZone(tasks: GraphNode[], ownerX: number, ownerY: number, ownerId: string): KanbanZoneInfo | null {
-    const { columnWidth, rowHeight, offsetY, columns, maxVisibleRows } = KANBAN_ZONE;
+  static #layoutZone(
+    tasks: GraphNode[],
+    owner: GraphNode,
+    ownerId: string,
+    leadX: number | null
+  ): KanbanZoneInfo | null {
+    const { columnWidth, rowHeight, offsetY, columns } = KANBAN_ZONE;
     const headerHeight = 20; // space for column header label
+    const ownerX = owner.x ?? 0;
+    const ownerY = owner.y ?? 0;
     const baseY = ownerY + offsetY;
 
     // Classify tasks into columns
@@ -119,9 +157,15 @@ export class KanbanLayoutEngine {
 
     if (activeColumns.length === 0) return null;
 
-    // Center active columns under owner
-    const totalWidth = activeColumns.length * columnWidth;
-    const baseX = ownerX - totalWidth / 2;
+    // Keep kanban columns on the open side of the owner, away from the reserved activity lane.
+    // This makes member lanes reserve real visual space instead of only affecting the force layout.
+    const baseX = getOwnerKanbanBaseX({
+      ownerX,
+      ownerKind: owner.kind,
+      activeColumnCount: activeColumns.length,
+      columnWidth,
+      leadX,
+    });
 
     // Build headers + position tasks
     const headers: KanbanColumnHeader[] = [];
@@ -129,8 +173,8 @@ export class KanbanLayoutEngine {
     for (const [colIdx, col] of activeColumns.entries()) {
       const colX = baseX + colIdx * columnWidth;
       const config = COLUMN_LABELS[col.name] ?? { label: col.name, color: '#888' };
-      const overflow = Math.max(0, col.tasks.length - maxVisibleRows);
-      const visibleCount = Math.min(col.tasks.length, maxVisibleRows);
+      const overflow = col.tasks.find((task) => task.isOverflowStack)?.overflowCount ?? 0;
+      const visibleCount = col.tasks.length;
 
       // Column header — centered over pill area (pill center = colX since drawTaskPill translates to x,y)
       headers.push({
@@ -144,13 +188,6 @@ export class KanbanLayoutEngine {
 
       // Position tasks below header
       for (const [rowIdx, task] of col.tasks.entries()) {
-        if (rowIdx >= maxVisibleRows) {
-          task.x = -99999;
-          task.y = -99999;
-          task.fx = task.x;
-          task.fy = task.y;
-          continue;
-        }
         const targetX = colX;
         const targetY = baseY + headerHeight + rowIdx * rowHeight;
         task.x = task.x != null ? task.x + (targetX - task.x) * 0.15 : targetX;
@@ -207,6 +244,7 @@ export class KanbanLayoutEngine {
 
     // Add zone header for unassigned section
     if (tasks.length > 0) {
+      const overflowCount = tasks.reduce((sum, task) => sum + (task.overflowCount ?? 0), 0);
       this.zones.push({
         ownerId: '__unassigned__',
         ownerX: centerX,
@@ -216,7 +254,7 @@ export class KanbanLayoutEngine {
           x: centerX,
           y: baseY - 10,
           color: COLORS.taskPending,
-          overflowCount: Math.max(0, tasks.length - cols * KANBAN_ZONE.maxVisibleRows),
+          overflowCount,
           overflowY: baseY + KANBAN_ZONE.maxVisibleRows * rowHeight,
         }],
       });

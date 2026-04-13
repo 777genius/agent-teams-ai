@@ -3,9 +3,9 @@ import React from 'react';
 import { CopyButton } from '@renderer/components/common/CopyButton';
 import { PROSE_BODY } from '@renderer/constants/cssVariables';
 
+import { FileLink, isRelativeUrl } from './viewers/FileLink';
 import { extractTextFromReactNode } from './markdownCopyUtils';
 import { highlightSearchInChildren, type SearchContext } from './searchHighlightUtils';
-import { FileLink, isRelativeUrl } from './viewers/FileLink';
 
 import type { Components } from 'react-markdown';
 

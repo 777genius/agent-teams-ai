@@ -16,6 +16,7 @@ const mockSpawnCli = vi.fn();
 const mockKillProcessTree = vi.fn();
 const mockResolve = vi.fn();
 const mockResolveShellEnv = vi.fn();
+const buildProviderAwareCliEnvMock = vi.fn();
 
 vi.mock('@main/utils/childProcess', () => ({
   spawnCli: (...args: unknown[]) => mockSpawnCli(...args),
@@ -26,8 +27,9 @@ vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnv: () => mockResolveShellEnv(),
 }));
 
-vi.mock('@main/utils/cliEnv', () => ({
-  buildEnrichedEnv: () => ({ ...process.env }),
+vi.mock('../../../../src/main/services/runtime/providerAwareCliEnv', () => ({
+  buildProviderAwareCliEnv: (...args: Parameters<typeof buildProviderAwareCliEnvMock>) =>
+    buildProviderAwareCliEnvMock(...args),
 }));
 
 vi.mock('../../../../src/main/services/team/ClaudeBinaryResolver', () => ({
@@ -84,6 +86,10 @@ describe('ScheduledTaskExecutor', () => {
     vi.clearAllMocks();
     mockResolve.mockResolvedValue('/usr/local/bin/claude');
     mockResolveShellEnv.mockResolvedValue({ SHELL: '/bin/zsh' });
+    buildProviderAwareCliEnvMock.mockResolvedValue({
+      env: { ...process.env, SHELL: '/bin/zsh' },
+      connectionIssues: {},
+    });
 
     const mod = await import('../../../../src/main/services/schedule/ScheduledTaskExecutor');
     ScheduledTaskExecutor = mod.ScheduledTaskExecutor;
@@ -445,7 +451,7 @@ describe('ScheduledTaskExecutor', () => {
 
     const opts = mockSpawnCli.mock.calls[0][2];
     expect(opts.cwd).toBe('/home/user/project');
-    expect(opts.env.MY_VAR).toBe('test');
+    expect(opts.env.SHELL).toBe('/bin/zsh');
     expect(opts.stdio).toEqual(['ignore', 'pipe', 'pipe']);
 
     proc.emit('close', 0);
@@ -476,5 +482,20 @@ describe('ScheduledTaskExecutor', () => {
         process.env.CLAUDECODE = originalClaudeCode;
       }
     }
+  });
+
+  it('fails fast when provider-aware env reports a missing API key', async () => {
+    buildProviderAwareCliEnvMock.mockResolvedValue({
+      env: { SHELL: '/bin/zsh' },
+      connectionIssues: {
+        anthropic:
+          'Anthropic API key mode is enabled, but no ANTHROPIC_API_KEY is configured.',
+      },
+    });
+
+    const executor = new ScheduledTaskExecutor();
+
+    await expect(executor.execute(makeRequest())).rejects.toThrow('ANTHROPIC_API_KEY');
+    expect(mockSpawnCli).not.toHaveBeenCalled();
   });
 });

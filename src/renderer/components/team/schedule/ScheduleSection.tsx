@@ -4,7 +4,6 @@ import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { formatNextRun, getCronDescription } from '@renderer/utils/scheduleFormatters';
 import {
   ChevronDown,
@@ -17,6 +16,7 @@ import {
   Trash2,
   Zap,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { LaunchTeamDialog } from '../dialogs/LaunchTeamDialog';
 

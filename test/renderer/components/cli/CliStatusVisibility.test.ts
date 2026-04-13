@@ -42,6 +42,8 @@ interface StoreState {
 const storeState = {} as StoreState;
 let providerRuntimeSettingsDialogProps: {
   onSelectBackend?: (providerId: string, backendId: string) => Promise<void> | void;
+  open?: boolean;
+  initialProviderId?: string;
 } | null = null;
 
 vi.mock('@renderer/api', () => ({
@@ -58,9 +60,19 @@ vi.mock('@renderer/components/common/ConfirmDialog', () => ({
 vi.mock('@renderer/components/runtime/ProviderRuntimeSettingsDialog', () => ({
   ProviderRuntimeSettingsDialog: (props: {
     onSelectBackend?: (providerId: string, backendId: string) => Promise<void> | void;
+    open?: boolean;
+    initialProviderId?: string;
   }) => {
     providerRuntimeSettingsDialogProps = props;
-    return null;
+    return React.createElement(
+      'div',
+      {
+        'data-testid': 'provider-runtime-settings-dialog',
+        'data-open': String(Boolean(props.open)),
+        'data-provider': props.initialProviderId ?? '',
+      },
+      null
+    );
   },
 }));
 
@@ -132,6 +144,60 @@ function createInstalledCliStatus(
     authMethod: null,
     providers: [],
     ...overrides,
+  };
+}
+
+function createApiKeyMisconfiguredProvider(
+  providerId: 'anthropic' | 'codex'
+): Record<string, unknown> {
+  return {
+    providerId,
+    displayName: providerId === 'anthropic' ? 'Anthropic' : 'Codex',
+    supported: true,
+    authenticated: false,
+    authMethod: null,
+    verificationState: 'error',
+    statusMessage:
+      providerId === 'anthropic'
+        ? 'Anthropic API key mode is enabled, but no ANTHROPIC_API_KEY is configured.'
+        : 'Codex API key mode is enabled, but no OPENAI_API_KEY is configured.',
+    models: [],
+    canLoginFromUi: true,
+    capabilities: {
+      teamLaunch: true,
+      oneShot: true,
+    },
+    connection: {
+      supportsOAuth: true,
+      supportsApiKey: true,
+      configurableAuthModes: providerId === 'anthropic' ? ['auto', 'oauth', 'api_key'] : ['oauth', 'api_key'],
+      configuredAuthMode: 'api_key',
+      apiKeyBetaAvailable: providerId === 'codex' ? true : undefined,
+      apiKeyBetaEnabled: providerId === 'codex' ? true : undefined,
+      apiKeyConfigured: false,
+      apiKeySource: null,
+      apiKeySourceLabel: null,
+    },
+  };
+}
+
+function createApiKeyModeProviderIssue(
+  providerId: 'anthropic' | 'codex'
+): Record<string, unknown> {
+  return {
+    ...createApiKeyMisconfiguredProvider(providerId),
+    statusMessage:
+      providerId === 'anthropic'
+        ? 'Anthropic API key was rejected by the runtime.'
+        : 'OpenAI API key was rejected by the runtime.',
+    connection: {
+      ...((createApiKeyMisconfiguredProvider(providerId) as { connection: Record<string, unknown> })
+        .connection),
+      apiKeyConfigured: true,
+      apiKeySource: 'stored',
+      apiKeySourceLabel:
+        providerId === 'anthropic' ? 'Stored Anthropic API key' : 'Stored OpenAI API key',
+    },
   };
 }
 
@@ -395,6 +461,76 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(host.textContent).not.toContain('Extensions');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('routes API-key misconfiguration to provider settings instead of login', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createInstalledCliStatus({
+      authLoggedIn: false,
+      providers: [createApiKeyMisconfiguredProvider('anthropic')],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('API key required');
+    expect(host.textContent).toContain('Manage Providers');
+    expect(host.textContent).not.toContain('Already logged in?');
+    expect(host.textContent).not.toContain('Login');
+
+    const manageButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('Manage Providers')
+    );
+    expect(manageButton).not.toBeUndefined();
+
+    await act(async () => {
+      manageButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    const dialog = host.querySelector('[data-testid="provider-runtime-settings-dialog"]');
+    expect(dialog?.getAttribute('data-open')).toBe('true');
+    expect(dialog?.getAttribute('data-provider')).toBe('anthropic');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps API-key mode issues on provider settings even when a saved key exists', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createInstalledCliStatus({
+      authLoggedIn: false,
+      providers: [createApiKeyModeProviderIssue('anthropic')],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Provider action required');
+    expect(host.textContent).toContain('Manage Providers');
+    expect(host.textContent).not.toContain('Already logged in?');
+    expect(host.textContent).not.toContain('Login');
 
     await act(async () => {
       root.unmount();

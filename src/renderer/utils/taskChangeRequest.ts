@@ -1,9 +1,9 @@
+import { deriveTaskSince as deriveSharedTaskSince } from '@shared/utils/taskChangeSince';
 import {
   getTaskChangeStateBucket,
   isTaskChangeSummaryCacheable,
   type TaskChangeStateBucket,
 } from '@shared/utils/taskChangeState';
-import { deriveTaskSince as deriveSharedTaskSince } from '@shared/utils/taskChangeSince';
 
 import type { ReviewAPI } from '@shared/types/api';
 import type { TeamTaskWithKanban } from '@shared/types/team';

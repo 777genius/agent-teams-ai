@@ -1,26 +1,26 @@
-export type MemberDiffInput = {
+export interface MemberDiffInput {
   name: string;
   role?: string;
   workflow?: string;
   providerId?: 'anthropic' | 'codex' | 'gemini';
   model?: string;
   removedAt?: number | string | null;
-};
+}
 
-export type ReplaceMembersDiff = {
-  added: Array<{
+export interface ReplaceMembersDiff {
+  added: {
     name: string;
     role?: string;
     workflow?: string;
     providerId?: 'anthropic' | 'codex' | 'gemini';
     model?: string;
-  }>;
+  }[];
   removed: string[];
-  updated: Array<{
+  updated: {
     name: string;
     changes: string[];
-  }>;
-};
+  }[];
+}
 
 function normalizeOptionalText(value: string | undefined): string | undefined {
   const normalized = value?.trim();
@@ -61,13 +61,13 @@ function describeWorkflowChange(
 
 export function buildReplaceMembersDiff(
   previousMembers: MemberDiffInput[],
-  nextMembers: Array<{
+  nextMembers: {
     name: string;
     role?: string;
     workflow?: string;
     providerId?: 'anthropic' | 'codex' | 'gemini';
     model?: string;
-  }>
+  }[]
 ): ReplaceMembersDiff {
   const previousByName = new Map(
     previousMembers

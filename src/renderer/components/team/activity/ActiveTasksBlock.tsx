@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 
 import { CARD_BG, CARD_BORDER_STYLE, CARD_ICON_MUTED } from '@renderer/constants/cssVariables';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
@@ -19,6 +19,7 @@ interface ActiveTasksBlockProps {
   tasks: TeamTaskWithKanban[];
   /** Start collapsed (e.g. when rendered inside the sidebar where MemberList already shows status). */
   defaultCollapsed?: boolean;
+  headerRight?: ReactNode;
   onMemberClick?: (member: ResolvedTeamMember) => void;
   onTaskClick?: (task: TeamTaskWithKanban) => void;
 }
@@ -34,6 +35,7 @@ export const ActiveTasksBlock = ({
   members,
   tasks,
   defaultCollapsed = false,
+  headerRight,
   onMemberClick,
   onTaskClick,
 }: ActiveTasksBlockProps): React.JSX.Element | null => {
@@ -70,23 +72,26 @@ export const ActiveTasksBlock = ({
 
   return (
     <div className="mb-3 space-y-1.5">
-      <button
-        type="button"
-        className="flex w-full items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
-        onClick={() => setCollapsed((v) => !v)}
-        aria-label={collapsed ? 'Expand in progress' : 'Collapse in progress'}
-      >
-        <ChevronRight
-          size={10}
-          className={`shrink-0 transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
-        />
-        <span>In progress</span>
-        {collapsed && (
-          <span className="rounded-full bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] font-medium tabular-nums leading-none text-[var(--color-text-muted)]">
-            {entries.length}
-          </span>
-        )}
-      </button>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          className="flex min-w-0 items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
+          onClick={() => setCollapsed((v) => !v)}
+          aria-label={collapsed ? 'Expand in progress' : 'Collapse in progress'}
+        >
+          <ChevronRight
+            size={10}
+            className={`shrink-0 transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
+          />
+          <span>In progress</span>
+          {collapsed && (
+            <span className="rounded-full bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] font-medium tabular-nums leading-none text-[var(--color-text-muted)]">
+              {entries.length}
+            </span>
+          )}
+        </button>
+        {headerRight ? <div className="shrink-0">{headerRight}</div> : null}
+      </div>
       {!collapsed &&
         entries.map(({ member, task, taskId, kind }) => {
           const colors = getTeamColorSet(colorMap.get(member.name) ?? '');

@@ -9,8 +9,8 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import type { ToolApprovalSettings, ToolApprovalTimeoutAction } from '@shared/types';
 

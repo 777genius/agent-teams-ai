@@ -1,11 +1,11 @@
 import { createHash } from 'crypto';
 
-type InboxIdentityLike = {
+interface InboxIdentityLike {
   messageId?: unknown;
   from?: unknown;
   timestamp?: unknown;
   text?: unknown;
-};
+}
 
 export function buildLegacyInboxMessageId(from: string, timestamp: string, text: string): string {
   return `inbox-${createHash('sha256').update(`${from}\n${timestamp}\n${text}`).digest('hex').slice(0, 16)}`;

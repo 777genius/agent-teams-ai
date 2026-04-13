@@ -155,6 +155,23 @@ export function getTeamModelBadgeLabel(
   return trimmed;
 }
 
+export function getProviderScopedTeamModelLabel(
+  providerId: SupportedProviderId,
+  model: string | undefined
+): string | undefined {
+  const trimmed = model?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const baseLabel = getTeamModelLabel(trimmed) ?? trimmed;
+  if (providerId !== 'codex') {
+    return baseLabel;
+  }
+
+  return baseLabel.replace(/^GPT-/i, '');
+}
+
 export function sortTeamProviderModels(
   providerId: SupportedProviderId,
   models: readonly string[]

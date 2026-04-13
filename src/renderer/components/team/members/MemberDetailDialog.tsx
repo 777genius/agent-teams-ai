@@ -1,13 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
 import { Button } from '@renderer/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader } from '@renderer/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
+import { buildInlineActivityEntries } from '@renderer/features/agent-graph/utils/buildInlineActivityEntries';
 import { useMemberStats } from '@renderer/hooks/useMemberStats';
-import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { BarChart3, FileText, ListPlus, MessageSquare, UserMinus } from 'lucide-react';
 
 import { MemberDetailHeader } from './MemberDetailHeader';
-import { MemberDetailStats, type MemberDetailTab } from './MemberDetailStats';
+import { MemberDetailStats } from './MemberDetailStats';
+import { type MemberActivityFilter, type MemberDetailTab } from './memberDetailTypes';
 import { MemberLogsTab } from './MemberLogsTab';
 import { MemberMessagesTab } from './MemberMessagesTab';
 import { MemberStatsTab } from './MemberStatsTab';
@@ -25,8 +28,11 @@ interface MemberDetailDialogProps {
   open: boolean;
   member: ResolvedTeamMember | null;
   teamName: string;
+  members: ResolvedTeamMember[];
   tasks: TeamTaskWithKanban[];
   messages: InboxMessage[];
+  initialTab?: MemberDetailTab;
+  initialActivityFilter?: MemberActivityFilter;
   isTeamAlive?: boolean;
   isTeamProvisioning?: boolean;
   isLaunchSettling?: boolean;
@@ -46,8 +52,11 @@ export const MemberDetailDialog = ({
   open,
   member,
   teamName,
+  members,
   tasks,
   messages,
+  initialTab = 'tasks',
+  initialActivityFilter = 'all',
   isTeamAlive,
   isTeamProvisioning,
   isLaunchSettling,
@@ -72,6 +81,27 @@ export const MemberDetailDialog = ({
     [messages, member]
   );
   const memberMessages = seedMemberMessages;
+  const memberActivityCount = useMemo(() => {
+    if (!member) {
+      return 0;
+    }
+    const leadId = `lead:${teamName}`;
+    const leadName =
+      members.find((candidate) => isLeadMember(candidate))?.name ?? `${teamName}-lead`;
+    const ownerNodeId = member.name === leadName ? leadId : `member:${teamName}:${member.name}`;
+    const entries = buildInlineActivityEntries({
+      data: {
+        members,
+        tasks,
+        messages: memberMessages,
+      },
+      teamName,
+      leadId,
+      leadName,
+      ownerNodeIds: new Set([leadId, ownerNodeId]),
+    });
+    return (entries.get(ownerNodeId) ?? []).length;
+  }, [member, memberMessages, members, tasks, teamName]);
 
   const inProgressTasks = useMemo(
     () => memberTasks.filter((t) => t.status === 'in_progress').length,
@@ -83,7 +113,14 @@ export const MemberDetailDialog = ({
     [memberTasks]
   );
 
-  const [activeTab, setActiveTab] = useState<MemberDetailTab>('tasks');
+  const [activeTab, setActiveTab] = useState<MemberDetailTab>(initialTab);
+
+  useEffect(() => {
+    if (!open || !member) {
+      return;
+    }
+    setActiveTab(initialTab);
+  }, [initialTab, member, open]);
 
   const {
     stats: memberStats,
@@ -121,7 +158,7 @@ export const MemberDetailDialog = ({
             totalTasks={memberTasks.length}
             inProgressTasks={inProgressTasks}
             completedTasks={completedTasks}
-            messageCount={memberMessages.length}
+            activityCount={memberActivityCount}
             totalTokens={totalTokens}
             statsLoading={statsLoading}
             statsComputedAt={memberStats?.computedAt}
@@ -143,11 +180,11 @@ export const MemberDetailDialog = ({
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="messages" className="flex-1 gap-1.5">
-              Messages
-              {memberMessages.length > 0 && (
+            <TabsTrigger value="activity" className="flex-1 gap-1.5">
+              Activity
+              {memberActivityCount > 0 && (
                 <span className="rounded-full bg-[var(--color-surface)] px-1.5 text-[10px]">
-                  {memberMessages.length}
+                  {memberActivityCount}
                 </span>
               )}
             </TabsTrigger>
@@ -163,11 +200,15 @@ export const MemberDetailDialog = ({
           <TabsContent value="tasks">
             <MemberTasksTab tasks={memberTasks} onTaskClick={onTaskClick} />
           </TabsContent>
-          <TabsContent value="messages">
+          <TabsContent value="activity">
             <MemberMessagesTab
               messages={memberMessages}
               teamName={teamName}
               memberName={member.name}
+              members={members}
+              tasks={tasks}
+              initialFilter={initialActivityFilter}
+              onTaskClick={onTaskClick}
             />
           </TabsContent>
           <TabsContent value="stats">

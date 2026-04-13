@@ -11,12 +11,12 @@ import { parentPort } from 'node:worker_threads';
 import { TeamDataService } from '@main/services/team/TeamDataService';
 import { TeamMemberLogsFinder } from '@main/services/team/TeamMemberLogsFinder';
 import { createLogger } from '@shared/utils/logger';
-import type { MemberLogSummary } from '@shared/types';
 
 import type {
   TeamDataWorkerRequest,
   TeamDataWorkerResponse,
 } from '@main/services/team/teamDataWorkerTypes';
+import type { MemberLogSummary } from '@shared/types';
 
 const logger = createLogger('Worker:TeamData');
 

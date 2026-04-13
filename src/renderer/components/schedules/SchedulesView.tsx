@@ -6,7 +6,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { formatNextRun, getCronDescription } from '@renderer/utils/scheduleFormatters';
 import {
@@ -23,6 +22,7 @@ import {
   Trash2,
   Zap,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { LaunchTeamDialog } from '../team/dialogs/LaunchTeamDialog';
 import { ScheduleRunLogDialog } from '../team/schedule/ScheduleRunLogDialog';

@@ -19,6 +19,7 @@ import remarkGfm from 'remark-gfm';
 import { useShallow } from 'zustand/react/shallow';
 
 import { CopyButton } from '../common/CopyButton';
+
 import { extractTextFromReactNode } from './markdownCopyUtils';
 import {
   createSearchContext,

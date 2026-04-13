@@ -39,12 +39,12 @@
     {
       "id": "whatIsIt",
       "question": "什么是 Claude Agent Teams？",
-      "answer": "一个桌面应用，让你组建由 Claude Code 驱动的 AI 智能体团队。每个智能体有自己的角色，自主工作，与队友协作——一切通过看板管理。"
+      "answer": "一个桌面应用，通过我们自己的本地协调层来编排 AI 智能体团队。每个智能体都有角色，可自主工作，在看板上协作，并且可以运行在 Anthropic 或 Codex 上。"
     },
     {
       "id": "isFree",
       "question": "真的免费吗？",
-      "answer": "是的。应用本身 100% 免费且开源。你只需要 Claude 订阅（Max 或 Pro 方案）就够了。Claude Code 通过我们的应用自动安装和配置，无需使用终端。"
+      "answer": "是的。应用本身 100% 免费且开源。应用没有自己的付费方案。要运行智能体，你只需要接入受支持的 provider/runtime，例如 Anthropic 或 Codex。"
     },
     {
       "id": "platforms",
@@ -64,7 +64,7 @@
     {
       "id": "requirements",
       "question": "开始需要什么？",
-      "answer": "只需安装应用——内置 Claude Code 安装和认证功能。零配置启动，几分钟即可运行。"
+      "answer": "只需安装应用 - 它会在界面中引导你完成 runtime 检测和 provider 认证。零配置上手，几分钟即可运行。"
     }
   ],
   "download": {

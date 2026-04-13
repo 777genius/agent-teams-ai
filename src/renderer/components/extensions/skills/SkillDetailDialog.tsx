@@ -23,8 +23,8 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { AlertTriangle, ExternalLink, FolderOpen, Pencil, Trash2 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 interface SkillDetailDialogProps {
   skillId: string | null;

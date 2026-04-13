@@ -4,7 +4,7 @@ Thanks for contributing to Claude Agent Teams UI!
 
 ## Before You Start
 
-For big features and major changes, please discuss them in our [Discord](https://discord.gg/qtqSZSyuEc) first so we can figure out the best approach together and avoid conflicts.
+For big features and major changes, please discuss them in our [Discord](https://discord.gg/qtqSZSyuEc) first: https://discord.gg/qtqSZSyuEc so we can figure out the best approach together and avoid conflicts.
 
 Small fixes, bug reports, and minor improvements are always welcome - just open a PR.
 

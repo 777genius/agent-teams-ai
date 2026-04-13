@@ -221,6 +221,60 @@ describe('FileWatcher', () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
+  it('pins fallback processed size to the last complete line until a trailing JSON object is completed', async () => {
+    vi.useRealTimers();
+    useRealExistsSync();
+
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-fallback-partial-'));
+    const projectsDir = path.join(tempDir, 'projects');
+    const projectDir = path.join(projectsDir, 'test-project');
+    fs.mkdirSync(projectDir, { recursive: true });
+
+    const filePath = path.join(projectDir, 'session-1.jsonl');
+    const firstLine = jsonlLine('u1', 'hello');
+    const partialSuffix =
+      '{"type":"assistant","uuid":"u2","timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"assistant","content":[{"type":"text","text":"partial"';
+    fs.writeFileSync(filePath, firstLine + partialSuffix, 'utf8');
+
+    const dataCache = new DataCache(50, 10, false);
+    const notificationManager = createMockNotificationManager();
+    const watcher = new FileWatcher(dataCache, projectsDir, path.join(tempDir, 'todos'));
+    watcher.setNotificationManager(notificationManager);
+
+    vi.mocked(errorDetector.detectErrors).mockClear();
+    vi.mocked(errorDetector.detectErrors).mockResolvedValue([]);
+
+    const watcherAny = watcher as unknown as {
+      detectErrorsInSessionFile: (
+        projectId: string,
+        sessionId: string,
+        filePath: string
+      ) => Promise<void>;
+      lastProcessedLineCount: Map<string, number>;
+      lastProcessedSize: Map<string, number>;
+      instanceCreatedAt: number;
+    };
+    watcherAny.instanceCreatedAt = 0;
+
+    await watcherAny.detectErrorsInSessionFile('test-project', 'session-1', filePath);
+
+    expect(errorDetector.detectErrors).toHaveBeenCalledTimes(1);
+    expect(watcherAny.lastProcessedLineCount.get(filePath)).toBe(1);
+    expect(watcherAny.lastProcessedSize.get(filePath)).toBe(Buffer.byteLength(firstLine, 'utf8'));
+
+    fs.appendFileSync(filePath, '}]}}\n', 'utf8');
+    await watcherAny.detectErrorsInSessionFile('test-project', 'session-1', filePath);
+
+    expect(errorDetector.detectErrors).toHaveBeenCalledTimes(2);
+    const secondCallArgs = vi.mocked(errorDetector.detectErrors).mock.calls[1];
+    expect(secondCallArgs?.[0]).toHaveLength(1);
+    expect(secondCallArgs?.[0][0]?.uuid).toBe('u2');
+    expect(watcherAny.lastProcessedSize.get(filePath)).toBe(fs.statSync(filePath).size);
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
   // ===========================================================================
   // Catch-Up Scan Tests
   // ===========================================================================

@@ -8,12 +8,11 @@ import {
   API_KEYS_SAVE,
   API_KEYS_STORAGE_STATUS,
   APP_RELAUNCH,
-  CLI_INSTALLER_GET_STATUS,
   CLI_INSTALLER_GET_PROVIDER_STATUS,
+  CLI_INSTALLER_GET_STATUS,
   CLI_INSTALLER_INSTALL,
   CLI_INSTALLER_INVALIDATE_STATUS,
   CLI_INSTALLER_PROGRESS,
-  TMUX_GET_STATUS,
   CONTEXT_CHANGED,
   CONTEXT_GET_ACTIVE,
   CONTEXT_LIST,
@@ -127,10 +126,16 @@ import {
   TEAM_GET_LOGS_FOR_TASK,
   TEAM_GET_MEMBER_LOGS,
   TEAM_GET_MEMBER_STATS,
+  TEAM_GET_MESSAGES_PAGE,
   TEAM_GET_PROJECT_BRANCH,
   TEAM_GET_SAVED_REQUEST,
+  TEAM_GET_TASK_ACTIVITY,
+  TEAM_GET_TASK_ACTIVITY_DETAIL,
   TEAM_GET_TASK_ATTACHMENT,
   TEAM_GET_TASK_CHANGE_PRESENCE,
+  TEAM_GET_TASK_EXACT_LOG_DETAIL,
+  TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
+  TEAM_GET_TASK_LOG_STREAM,
   TEAM_KILL_PROCESS,
   TEAM_LAUNCH,
   TEAM_LEAD_ACTIVITY,
@@ -152,7 +157,6 @@ import {
   TEAM_RESTORE_TASK,
   TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SEND_MESSAGE,
-  TEAM_GET_MESSAGES_PAGE,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
   TEAM_SET_PROJECT_BRANCH_TRACKING,
   TEAM_SET_TASK_CLARIFICATION,
@@ -180,6 +184,7 @@ import {
   TERMINAL_RESIZE,
   TERMINAL_SPAWN,
   TERMINAL_WRITE,
+  TMUX_GET_STATUS,
   UPDATER_CHECK,
   UPDATER_DOWNLOAD,
   UPDATER_INSTALL,
@@ -228,6 +233,11 @@ import type {
   ApplyReviewRequest,
   ApplyReviewResult,
   AttachmentFileData,
+  BoardTaskActivityDetailResult,
+  BoardTaskActivityEntry,
+  BoardTaskExactLogDetailResult,
+  BoardTaskExactLogSummariesResponse,
+  BoardTaskLogStreamResponse,
   ChangeStats,
   ClaudeRootFolderSelection,
   ClaudeRootInfo,
@@ -252,6 +262,7 @@ import type {
   MemberFullStats,
   MemberLogSummary,
   MemberSpawnStatusesSnapshot,
+  MessagesPage,
   NotificationTrigger,
   ProjectBranchChangeEvent,
   RejectResult,
@@ -261,7 +272,6 @@ import type {
   ScheduleRun,
   SendMessageRequest,
   SendMessageResult,
-  MessagesPage,
   SessionsByIdsOptions,
   SessionsPaginationOptions,
   SnippetDiff,
@@ -290,10 +300,10 @@ import type {
   TeamTask,
   TeamTaskStatus,
   TeamUpdateConfigRequest,
+  TmuxStatus,
   ToolApprovalEvent,
   ToolApprovalFileContent,
   ToolApprovalSettings,
-  TmuxStatus,
   TriggerTestResult,
   UpdateKanbanPatch,
   UpdateSchedulePatch,
@@ -952,6 +962,49 @@ const electronAPI: ElectronAPI = {
         teamName,
         taskId,
         options
+      );
+    },
+    getTaskActivity: async (teamName: string, taskId: string) => {
+      return invokeIpcWithResult<BoardTaskActivityEntry[]>(
+        TEAM_GET_TASK_ACTIVITY,
+        teamName,
+        taskId
+      );
+    },
+    getTaskActivityDetail: async (teamName: string, taskId: string, activityId: string) => {
+      return invokeIpcWithResult<BoardTaskActivityDetailResult>(
+        TEAM_GET_TASK_ACTIVITY_DETAIL,
+        teamName,
+        taskId,
+        activityId
+      );
+    },
+    getTaskLogStream: async (teamName: string, taskId: string) => {
+      return invokeIpcWithResult<BoardTaskLogStreamResponse>(
+        TEAM_GET_TASK_LOG_STREAM,
+        teamName,
+        taskId
+      );
+    },
+    getTaskExactLogSummaries: async (teamName: string, taskId: string) => {
+      return invokeIpcWithResult<BoardTaskExactLogSummariesResponse>(
+        TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
+        teamName,
+        taskId
+      );
+    },
+    getTaskExactLogDetail: async (
+      teamName: string,
+      taskId: string,
+      exactLogId: string,
+      expectedSourceGeneration: string
+    ) => {
+      return invokeIpcWithResult<BoardTaskExactLogDetailResult>(
+        TEAM_GET_TASK_EXACT_LOG_DETAIL,
+        teamName,
+        taskId,
+        exactLogId,
+        expectedSourceGeneration
       );
     },
     getMemberStats: async (teamName: string, memberName: string) => {

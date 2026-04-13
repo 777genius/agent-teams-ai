@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { createEncodedTaskReference } from '@renderer/utils/taskReferenceUtils';
 import { getTaskDisplayId } from '@shared/utils/taskIdentity';
+import { useShallow } from 'zustand/react/shallow';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { GlobalTask, TeamTaskWithKanban } from '@shared/types';

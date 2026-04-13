@@ -9,7 +9,10 @@ import { BEAM, MIN_VISIBLE_OPACITY } from '../constants/canvas-constants';
 
 // ─── Edge Type → Color/Width Mapping ────────────────────────────────────────
 
-const EDGE_STYLES: Record<GraphEdgeType, { color: string; startW: number; endW: number; dash?: number[] }> = {
+const EDGE_STYLES: Record<
+  GraphEdgeType,
+  { color: string; startW: number; endW: number; dash?: number[] }
+> = {
   'parent-child': { color: COLORS.edgeParentChild, ...BEAM.parentChild },
   ownership: { color: COLORS.edgeOwnership, ...BEAM.ownership },
   blocking: { color: COLORS.edgeBlocking, ...BEAM.blocking, dash: [8, 4] },
@@ -30,7 +33,7 @@ export function computeControlPoints(
   x1: number,
   y1: number,
   x2: number,
-  y2: number,
+  y2: number
 ): ControlPoints {
   const dx = x2 - x1;
   const dy = y2 - y1;
@@ -53,7 +56,7 @@ export function bezierPoint(
   cp: ControlPoints,
   x2: number,
   y2: number,
-  t: number,
+  t: number
 ): { x: number; y: number } {
   const u = 1 - t;
   const uu = u * u;
@@ -74,7 +77,12 @@ export function drawEdges(
   nodeMap: Map<string, GraphNode>,
   _time: number,
   hasActiveParticles: Set<string>,
+  focusEdgeIds?: ReadonlySet<string> | null,
+  hoveredEdgeId?: string | null,
+  selectedEdgeId?: string | null,
+  zoom = 1
 ): void {
+  const simplify = zoom < 0.18;
   for (const edge of edges) {
     const source = nodeMap.get(edge.source);
     const target = nodeMap.get(edge.target);
@@ -83,45 +91,83 @@ export function drawEdges(
 
     const style = EDGE_STYLES[edge.type] ?? EDGE_STYLES['parent-child'];
     const isActive = hasActiveParticles.has(edge.id);
+    const isSelected = selectedEdgeId === edge.id;
+    const isHovered = !isSelected && hoveredEdgeId === edge.id;
     // Pulse alpha when particles are travelling: base 0.3 + 0.2 * sin wave
-    const alpha = isActive
-      ? BEAM.activeAlpha + 0.2 * Math.sin(_time * 6)
-      : BEAM.idleAlpha;
+    const alpha = isActive ? BEAM.activeAlpha + 0.2 * Math.sin(_time * 6) : BEAM.idleAlpha;
+    const focusAlpha = focusEdgeIds && !focusEdgeIds.has(edge.id) ? 0.1 : 1;
+    const interactionAlpha = isSelected ? 0.95 : isHovered ? 0.6 : 0;
+    const finalAlpha = Math.max(alpha * focusAlpha, interactionAlpha);
 
-    if (alpha < MIN_VISIBLE_OPACITY) continue;
+    if (finalAlpha < MIN_VISIBLE_OPACITY) continue;
 
     const cp = computeControlPoints(source.x, source.y, target.x, target.y);
 
     ctx.save();
-    ctx.globalAlpha = alpha;
+    ctx.globalAlpha = finalAlpha;
 
     // Subtle glow pass when edge has active particles
-    if (isActive) {
+    if (!simplify && (isActive || isSelected || isHovered)) {
       ctx.shadowColor = edge.color ?? style.color;
-      ctx.shadowBlur = 12;
+      ctx.shadowBlur = isSelected ? 16 : isHovered ? 10 : 12;
     }
 
-    // Draw tapered bezier
-    drawTaperedBezier(
-      ctx,
-      source.x,
-      source.y,
-      cp,
-      target.x,
-      target.y,
-      style.startW,
-      style.endW,
-      edge.color ?? style.color,
-      style.dash,
-    );
+    if (simplify) {
+      drawSimplifiedBezier(
+        ctx,
+        source.x,
+        source.y,
+        cp,
+        target.x,
+        target.y,
+        (style.startW + style.endW) * 0.5 * (isSelected ? 1.35 : isHovered ? 1.15 : 1),
+        edge.color ?? style.color,
+        style.dash
+      );
+    } else {
+      // Draw tapered bezier
+      drawTaperedBezier(
+        ctx,
+        source.x,
+        source.y,
+        cp,
+        target.x,
+        target.y,
+        style.startW,
+        style.endW,
+        edge.color ?? style.color,
+        style.dash
+      );
+    }
 
     // Arrow for blocking edges
-    if (edge.type === 'blocking') {
-      drawArrowHead(ctx, cp, target.x, target.y, style.color, alpha);
+    if (!simplify && edge.type === 'blocking') {
+      drawArrowHead(ctx, cp, target.x, target.y, style.color, finalAlpha);
     }
 
     ctx.restore();
   }
+}
+
+function drawSimplifiedBezier(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  cp: ControlPoints,
+  x2: number,
+  y2: number,
+  width: number,
+  color: string,
+  dash?: number[]
+): void {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.bezierCurveTo(cp.cp1x, cp.cp1y, cp.cp2x, cp.cp2y, x2, y2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  if (dash) ctx.setLineDash(dash);
+  ctx.stroke();
+  if (dash) ctx.setLineDash([]);
 }
 
 // ─── Tapered Bezier ─────────────────────────────────────────────────────────
@@ -136,7 +182,7 @@ function drawTaperedBezier(
   startW: number,
   endW: number,
   color: string,
-  dash?: number[],
+  dash?: number[]
 ): void {
   if (dash) {
     // Dashed edges use stroke, not fill polygon
@@ -196,7 +242,7 @@ function drawArrowHead(
   x2: number,
   y2: number,
   color: string,
-  alpha: number,
+  alpha: number
 ): void {
   // Compute direction at t=1
   const dx = x2 - cp.cp2x;
@@ -211,8 +257,14 @@ function drawArrowHead(
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.moveTo(x2, y2);
-  ctx.lineTo(x2 - ux * arrowSize - uy * arrowSize * 0.5, y2 - uy * arrowSize + ux * arrowSize * 0.5);
-  ctx.lineTo(x2 - ux * arrowSize + uy * arrowSize * 0.5, y2 - uy * arrowSize - ux * arrowSize * 0.5);
+  ctx.lineTo(
+    x2 - ux * arrowSize - uy * arrowSize * 0.5,
+    y2 - uy * arrowSize + ux * arrowSize * 0.5
+  );
+  ctx.lineTo(
+    x2 - ux * arrowSize + uy * arrowSize * 0.5,
+    y2 - uy * arrowSize - ux * arrowSize * 0.5
+  );
   ctx.closePath();
   ctx.fill();
   ctx.restore();

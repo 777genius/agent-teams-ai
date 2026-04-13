@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 
 import { isElectronMode } from '@renderer/api';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import faviconUrl from '@renderer/favicon.png';
 import { useStore } from '@renderer/store';
 import { Minus, Square, X } from 'lucide-react';
@@ -68,36 +69,48 @@ export const CustomTitleBar = (): React.JSX.Element | null => {
 
       {/* Window controls — no-drag so they receive clicks */}
       <div className="flex shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-        <button
-          type="button"
-          className={`${buttonBase} ${buttonHover}`}
-          style={{ color: 'var(--color-text-secondary)' }}
-          onClick={() => void minimize()}
-          title="Minimize"
-          aria-label="Minimize"
-        >
-          <Minus className="size-4" strokeWidth={2.5} />
-        </button>
-        <button
-          type="button"
-          className={`${buttonBase} ${buttonHover}`}
-          style={{ color: 'var(--color-text-secondary)' }}
-          onClick={() => void handleMaximize()}
-          title={isMaximized ? 'Restore' : 'Maximize'}
-          aria-label={isMaximized ? 'Restore' : 'Maximize'}
-        >
-          <Square className="size-3.5" strokeWidth={2.5} />
-        </button>
-        <button
-          type="button"
-          className={`${buttonBase} hover:bg-red-500/90 hover:text-white`}
-          style={{ color: 'var(--color-text-secondary)' }}
-          onClick={() => void close()}
-          title="Close"
-          aria-label="Close"
-        >
-          <X className="size-4" strokeWidth={2.5} />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className={`${buttonBase} ${buttonHover}`}
+              style={{ color: 'var(--color-text-secondary)' }}
+              onClick={() => void minimize()}
+              aria-label="Minimize"
+            >
+              <Minus className="size-4" strokeWidth={2.5} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Minimize</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className={`${buttonBase} ${buttonHover}`}
+              style={{ color: 'var(--color-text-secondary)' }}
+              onClick={() => void handleMaximize()}
+              aria-label={isMaximized ? 'Restore' : 'Maximize'}
+            >
+              <Square className="size-3.5" strokeWidth={2.5} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{isMaximized ? 'Restore' : 'Maximize'}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className={`${buttonBase} hover:bg-red-500/90 hover:text-white`}
+              style={{ color: 'var(--color-text-secondary)' }}
+              onClick={() => void close()}
+              aria-label="Close"
+            >
+              <X className="size-4" strokeWidth={2.5} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Close</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

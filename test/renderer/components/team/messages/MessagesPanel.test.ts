@@ -60,7 +60,8 @@ vi.mock('@renderer/components/ui/button', () => ({
 }));
 
 vi.mock('@renderer/components/ui/tooltip', () => ({
-  Tooltip: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+  Tooltip: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
   TooltipTrigger: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
   TooltipContent: ({ children }: { children: React.ReactNode }) =>
@@ -99,6 +100,21 @@ vi.mock('@renderer/components/team/activity/ActivityTimeline', () => ({
 
 vi.mock('@renderer/components/team/activity/MessageExpandDialog', () => ({
   MessageExpandDialog: () => null,
+}));
+
+vi.mock('react-modal-sheet', () => ({
+  Sheet: Object.assign(
+    ({ children }: { children: React.ReactNode }) => React.createElement('div', null, children),
+    {
+      Container: ({ children }: { children: React.ReactNode }) =>
+        React.createElement('div', null, children),
+      Header: ({ children }: { children?: React.ReactNode }) =>
+        React.createElement('div', null, children),
+      DragIndicator: () => React.createElement('div', null, 'drag-indicator'),
+      Content: ({ children }: { children: React.ReactNode }) =>
+        React.createElement('div', null, children),
+    }
+  ),
 }));
 
 import { MessagesPanel } from '@renderer/components/team/messages/MessagesPanel';
@@ -163,7 +179,7 @@ describe('MessagesPanel idle summary invariants', () => {
         React.createElement(MessagesPanel, {
           teamName: 'atlas-hq',
           position: 'sidebar',
-          onTogglePosition: vi.fn(),
+          onPositionChange: vi.fn(),
           members: [],
           tasks: [],
           messages,
@@ -214,7 +230,7 @@ describe('MessagesPanel idle summary invariants', () => {
         React.createElement(MessagesPanel, {
           teamName: 'atlas-hq',
           position: 'sidebar',
-          onTogglePosition: vi.fn(),
+          onPositionChange: vi.fn(),
           members: [],
           tasks: [],
           messages,
@@ -228,6 +244,43 @@ describe('MessagesPanel idle summary invariants', () => {
     });
 
     expect(onPendingReplyChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders the bottom-sheet composer before the status block so input stays pinned near the header', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    const mountPoint = document.createElement('div');
+    host.appendChild(mountPoint);
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'bottom-sheet',
+          mountPoint,
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          messages: [makeMessage()],
+          timeWindow: null,
+          teamSessionIds: new Set<string>(),
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const text = host.textContent ?? '';
+    expect(text.indexOf('composer')).toBeGreaterThan(-1);
+    expect(text.indexOf('status-block')).toBeGreaterThan(text.indexOf('composer'));
 
     await act(async () => {
       root.unmount();

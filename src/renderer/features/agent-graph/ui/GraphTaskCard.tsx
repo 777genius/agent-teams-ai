@@ -7,7 +7,10 @@ import { useMemo } from 'react';
 
 import { KanbanTaskCard } from '@renderer/components/team/kanban/KanbanTaskCard';
 import { useStore } from '@renderer/store';
+import { selectTeamDataForName } from '@renderer/store/slices/teamSlice';
 import { useShallow } from 'zustand/react/shallow';
+
+import { isTaskBlocked, resolveTaskGraphColumn } from '../utils/taskGraphSemantics';
 
 import type { GraphNode } from '@claude-teams/agent-graph';
 import type { KanbanColumnId, TeamTask, TeamTaskWithKanban } from '@shared/types';
@@ -32,16 +35,12 @@ interface GraphTaskCardProps {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function resolveColumn(task: TeamTask): KanbanColumnId {
-  if (task.reviewState === 'approved') return 'approved';
-  if (task.reviewState === 'review' || task.reviewState === 'needsFix') return 'review';
-  if (task.status === 'in_progress') return 'in_progress';
-  if (task.status === 'completed') return 'done';
-  return 'todo';
+  return resolveTaskGraphColumn(task);
 }
 
-function getGlowStyle(task: TeamTask): React.CSSProperties {
+function getGlowStyle(task: TeamTask, taskMap: ReadonlyMap<string, TeamTask>): React.CSSProperties {
   const col = resolveColumn(task);
-  const blocked = (task.blockedBy?.length ?? 0) > 0;
+  const blocked = isTaskBlocked(task, taskMap);
   if (blocked) {
     return { boxShadow: '0 0 14px rgba(239, 68, 68, 0.4), inset 0 0 6px rgba(239, 68, 68, 0.08)' };
   }
@@ -87,9 +86,9 @@ export const GraphTaskCard = ({
 
   const { task, tasks, members } = useStore(
     useShallow((s) => ({
-      task: s.selectedTeamData?.tasks.find((t) => t.id === taskId),
-      tasks: s.selectedTeamData?.tasks ?? [],
-      members: s.selectedTeamData?.members ?? [],
+      tasks: selectTeamDataForName(s, teamName)?.tasks ?? [],
+      members: selectTeamDataForName(s, teamName)?.members ?? [],
+      task: selectTeamDataForName(s, teamName)?.tasks.find((t) => t.id === taskId),
     }))
   );
 
@@ -118,7 +117,7 @@ export const GraphTaskCard = ({
   }
 
   const columnId = resolveColumn(task);
-  const taskWithKanban = task as TeamTaskWithKanban;
+  const taskWithKanban = task;
 
   const closeAct = (fn?: (id: string) => void) => (taskId: string) => {
     fn?.(taskId);
@@ -128,7 +127,7 @@ export const GraphTaskCard = ({
   return (
     <div
       className={`min-w-[260px] max-w-[320px] rounded-lg shadow-2xl ${getPulseClass(task)}`}
-      style={getGlowStyle(task)}
+      style={getGlowStyle(task, taskMap)}
     >
       <KanbanTaskCard
         task={taskWithKanban}

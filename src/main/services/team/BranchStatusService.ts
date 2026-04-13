@@ -105,7 +105,7 @@ export class BranchStatusService {
       try {
         const branch = await this.resolver.getBranch(tracked.actualPath, { forceRefresh });
         const latestTracked = this.trackedPaths.get(normalizedPath);
-        if (!latestTracked || latestTracked.token !== expectedToken) return;
+        if (latestTracked?.token !== expectedToken) return;
 
         const previous = this.lastEmittedBranchByPath.get(normalizedPath) ?? UNSET_BRANCH;
         if (previous !== UNSET_BRANCH && previous === branch) {

@@ -6,9 +6,9 @@ import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { Filter } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 

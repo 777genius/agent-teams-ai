@@ -91,7 +91,7 @@ async function handleSpawn(
   options?: PtySpawnOptions
 ): Promise<IpcResult<string>> {
   try {
-    const id = service.spawn(options);
+    const id = await service.spawn(options);
     return { success: true, data: id };
   } catch (error) {
     const msg = getErrorMessage(error);

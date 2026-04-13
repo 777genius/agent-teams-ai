@@ -13,8 +13,8 @@ import {
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { Check, Loader2, Trash2 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import type { ExtensionOperationState } from '@shared/types/extensions';
 

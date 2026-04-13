@@ -140,6 +140,14 @@ vi.mock('@renderer/components/runtime/ProviderRuntimeBackendSelector', () => ({
   getProviderRuntimeBackendSummary: () => null,
 }));
 
+vi.mock('@renderer/components/common/ProviderBrandLogo', () => ({
+  ProviderBrandLogo: ({ providerId }: { providerId: string }) =>
+    React.createElement('span', {
+      'data-testid': `provider-logo-${providerId}`,
+      'data-provider-id': providerId,
+    }),
+}));
+
 import { ProviderRuntimeSettingsDialog } from '@renderer/components/runtime/ProviderRuntimeSettingsDialog';
 
 function createCodexProvider(
@@ -278,6 +286,10 @@ function findButtonByText(container: HTMLElement, text: string): HTMLButtonEleme
     throw new Error(`Button with text "${text}" not found`);
   }
   return button;
+}
+
+function countOccurrences(text: string, fragment: string): number {
+  return text.split(fragment).length - 1;
 }
 
 describe('ProviderRuntimeSettingsDialog Codex connection flows', () => {
@@ -424,6 +436,68 @@ describe('ProviderRuntimeSettingsDialog Codex connection flows', () => {
     });
   });
 
+  it('removes duplicate Codex summary and API key source text when connection cards are visible', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    storeState.appConfig.providerConnections.codex = {
+      apiKeyBetaEnabled: true,
+      authMode: 'oauth',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [
+            createCodexProvider({
+              apiKeyBetaEnabled: true,
+              configuredAuthMode: 'oauth',
+              apiKeyConfigured: true,
+              apiKeySource: 'environment',
+              apiKeySourceLabel: 'Detected from OPENAI_API_KEY',
+            }),
+          ],
+          initialProviderId: 'codex',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).not.toContain('Current runtime: Codex subscription');
+    expect(host.textContent).not.toContain('Mode: Codex subscription');
+    expect(host.textContent).not.toContain('Runtime: Default adapter');
+    expect(countOccurrences(host.textContent ?? '', 'Using Codex subscription')).toBe(0);
+    expect(countOccurrences(host.textContent ?? '', 'Detected from OPENAI_API_KEY')).toBe(1);
+    expect(host.textContent).not.toContain('Connected');
+  });
+
+  it('renders provider logos inside the provider tabs', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [createAnthropicProvider(), createCodexProvider()],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="provider-logo-anthropic"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="provider-logo-codex"]')).not.toBeNull();
+  });
+
   it('renders Anthropics connection methods as cards and hides the empty runtime section', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -456,6 +530,35 @@ describe('ProviderRuntimeSettingsDialog Codex connection flows', () => {
     expect(host.textContent).toContain('API key');
     expect(host.textContent).not.toContain('Authentication method');
     expect(host.textContent).not.toContain('Runtime backend is not configurable');
+    expect(host.textContent).not.toContain('Mode: Auto');
+    expect(countOccurrences(host.textContent ?? '', 'Using Anthropic subscription')).toBe(1);
+    expect(countOccurrences(host.textContent ?? '', 'Detected from ANTHROPIC_API_KEY')).toBe(1);
+  });
+
+  it('keeps the API key icon container square', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [createAnthropicProvider()],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const icon = host.querySelector('[data-testid="provider-api-key-icon"]');
+    expect(icon).not.toBeNull();
+    expect(icon?.className).toContain('size-8');
+    expect(icon?.className).not.toContain('w-8');
+    expect(icon?.className).toContain('shrink-0');
   });
 
   it('switches Anthropic to API key mode from the connection cards', async () => {
@@ -772,7 +875,8 @@ describe('ProviderRuntimeSettingsDialog Codex connection flows', () => {
 
     expect(storeState.updateConfig).toHaveBeenCalled();
     expect(onRefreshProvider).toHaveBeenCalledWith('anthropic');
-    expect(host.textContent).toContain('Mode: API key');
+    expect(host.textContent).not.toContain('Mode: API key');
+    expect(host.textContent).toContain('API keySelected');
     expect(host.textContent).toContain('Connection updated, but failed to refresh provider status.');
     expect(host.textContent).not.toContain('Failed to update connection');
   });
@@ -812,7 +916,8 @@ describe('ProviderRuntimeSettingsDialog Codex connection flows', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Mode: Anthropic subscription');
+    expect(host.textContent).not.toContain('Mode: Anthropic subscription');
+    expect(host.textContent).toContain('Anthropic subscriptionSelected');
     expect(host.textContent).toContain('Connect Anthropic');
     expect(host.textContent).toContain(
       'Anthropic subscription mode is selected. Sign in with Anthropic to use this provider.'
@@ -859,7 +964,8 @@ describe('ProviderRuntimeSettingsDialog Codex connection flows', () => {
         authMode: 'api_key',
       },
     });
-    expect(host.textContent).toContain('Mode: API key');
+    expect(host.textContent).not.toContain('Mode: API key');
+    expect(host.textContent).toContain('Selected');
     expect(host.textContent).toContain('Disable API key mode');
     expect(host.textContent).toContain('Connection updated, but failed to refresh provider status.');
   });

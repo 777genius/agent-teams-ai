@@ -3,9 +3,11 @@
 ## Flow
 
 ```
-TODO → IN PROGRESS → DONE → [юзер] → REVIEW → [юзер] → APPROVED
-                       ↑                  |
-                       └── Fix (error) ←──┘
+TODO → IN PROGRESS → DONE ───────────────→ APPROVED
+                       │                    ↑
+                       └→ REVIEW ───────────┘
+                           │
+                           └→ pending + needsFix
 ```
 
 ## Колонки
@@ -15,8 +17,8 @@ TODO → IN PROGRESS → DONE → [юзер] → REVIEW → [юзер] → APPRO
 | **TODO** | task.status = pending | Автоматически | Задачи ожидающие исполнителя |
 | **IN PROGRESS** | task.status = in_progress | Автоматически | Агент работает |
 | **DONE** | task.status = completed | Автоматически | Агент завершил |
-| **REVIEW** | kanban-state.json | Юзер (drag-and-drop) | На проверке |
-| **APPROVED** | kanban-state.json | Юзер (drag-and-drop) | Одобрено |
+| **REVIEW** | kanban-state.json | Юзер/UI actions | На проверке |
+| **APPROVED** | kanban-state.json | Юзер/UI actions | Одобрено |
 
 ---
 
@@ -90,9 +92,20 @@ const tasks = await getAllTasks(teamName);
 
 ## Review Flow
 
+⚠️ Этот файл описывает текущий продуктовый contract review flow. Исторические iteration-доки могут расходиться с ним.
+
+### Manual actions from DONE
+
+Из `DONE` сейчас есть два валидных пользовательских сценария:
+
+1. **Request Review** - отправить задачу в `REVIEW`
+2. **Approve** - сразу перевести задачу в `APPROVED` как manual shortcut
+
+`REVIEW` нужен, когда пользователь хочет отдельный шаг проверки на доске, включая reviewer-driven flow или ручную проверку через UI. Но `REVIEW` не является обязательным промежуточным шагом для каждого manual approval.
+
 ### Перемещение DONE → REVIEW
 
-1. Юзер перетаскивает карточку из DONE в REVIEW
+1. Юзер переводит карточку из DONE в REVIEW через UI action
 2. Проверяем `kanbanState.reviewers[]`
 3. **Есть ревьюверы**:
    - Берём первого свободного (round-robin с балансировкой по количеству активных ревью)
@@ -109,7 +122,14 @@ const tasks = await getAllTasks(teamName);
      ```
 4. **Нет ревьюверов**:
    - Записываем в kanban-state: `{ column: "review", reviewStatus: "pending" }`
-   - Юзер сам ревьювит через UI (кнопки OK / Error)
+   - Юзер сам ревьювит через UI (кнопки Approve / Request Changes)
+
+### Прямое DONE → APPROVED
+
+Юзер может сразу нажать **Approve** на карточке в `DONE`:
+- kanban-state: `{ column: "approved" }`
+- отдельный заход в `REVIEW` не требуется
+- это manual shortcut и текущее допустимое поведение UI
 
 ### Review Result
 
@@ -129,8 +149,10 @@ const tasks = await getAllTasks(teamName);
 2. Появляется ReviewDialog — textarea для описания проблемы (опционально)
 3. Юзер нажимает "Отправить"
 4. Действия:
-   - kanban-state: удаляем запись для этой задачи (вернётся в IN PROGRESS по status)
-   - task file: `status = "in_progress"` (atomic write)
+   - kanban-state: удаляем запись для этой задачи
+   - task file: `status = "pending"`
+   - reviewState становится `needsFix`
+   - в UI задача возвращается в TODO/backlog path с маркером Needs Fixes
    - Inbox к исходному owner:
      ```json
      {
@@ -150,30 +172,31 @@ const tasks = await getAllTasks(teamName);
 
 ### MVP: Click-to-Move
 
-Для MVP вместо drag-and-drop используется **click-to-move**: каждая карточка имеет кнопку или select-dropdown для смены колонки. Это проще реализовать и достаточно для первой версии.
+Для текущего UI переходы между review-колонками делаются через **card actions** на карточке. Отдельный DnD сейчас используется для перестановки задач внутри колонки, а не для review state transitions.
 
 ```
 [Task Card]
   Subject: Rename package in pubspec.yaml
   Owner: worker-1
-  [Move to: REVIEW ▼]   ← dropdown или кнопка
+  [Approve] [Request review]
 ```
 
-Разрешённые переходы через click-to-move:
+Разрешённые review-переходы через UI actions:
 | Откуда → Куда | Действие |
 |----------------|----------|
 | DONE → REVIEW | kanban-state: review + reviewStatus: pending. Inbox ревьюверу если есть |
+| DONE → APPROVED (Approve) | kanban-state: approved |
 | REVIEW → APPROVED (Approve) | kanban-state: approved |
-| REVIEW → DONE (Request Changes) | Dialog → task: in_progress, kanban: remove, inbox к owner |
+| REVIEW → TODO/Needs Fixes (Request Changes) | Dialog → task: pending + needsFix, kanban: remove, inbox к owner |
 | APPROVED → DONE | kanban-state: remove (возвращается в DONE по status) |
 
 Не разрешено:
 - TODO → IN PROGRESS (агент берёт сам через TaskUpdate)
 - IN PROGRESS → DONE (агент завершает сам через TaskUpdate)
 
-### Phase 2: Полноценный D&D через @dnd-kit
+### Phase 2: Полноценный D&D для state transitions
 
-`@dnd-kit` уже есть в зависимостях проекта (используется для перетаскивания табов). В Phase 2 добавить drag-and-drop для всех разрешённых переходов.
+`@dnd-kit` уже используется для ordering. В Phase 2 можно добавить drag-and-drop и для самих state transitions, если это понадобится по UX.
 
 ---
 

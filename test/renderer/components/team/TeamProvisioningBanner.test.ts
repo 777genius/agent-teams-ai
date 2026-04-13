@@ -14,6 +14,16 @@ const storeState = {
       { name: 'jack', agentType: 'developer' },
     ] as Array<Record<string, unknown>>,
   },
+  teamDataCacheByName: {
+    'northstar-core': {
+      members: [
+        { name: 'team-lead', agentType: 'team-lead' },
+        { name: 'alice', agentType: 'reviewer', runtimeAdvisory: undefined },
+        { name: 'bob', agentType: 'developer' },
+        { name: 'jack', agentType: 'developer' },
+      ],
+    },
+  } as Record<string, { members: Array<Record<string, unknown>> }>,
   memberSpawnStatusesByTeam: {
     'northstar-core': {},
   },
@@ -26,6 +36,9 @@ vi.mock('@renderer/store', () => ({
 
 vi.mock('@renderer/store/slices/teamSlice', () => ({
   getCurrentProvisioningProgressForTeam: () => storeState.progress,
+  selectTeamDataForName: (_state: typeof storeState, teamName: string) =>
+    storeState.teamDataCacheByName[teamName] ??
+    (storeState.selectedTeamName === teamName ? storeState.selectedTeamData : null),
 }));
 
 vi.mock('zustand/react/shallow', () => ({
@@ -40,11 +53,13 @@ vi.mock('@renderer/components/ui/button', () => ({
 vi.mock('@renderer/components/team/ProvisioningProgressBlock', () => ({
   ProvisioningProgressBlock: ({
     currentStepIndex,
+    loading,
     message,
     successMessage,
     successMessageSeverity,
   }: {
     currentStepIndex: number;
+    loading?: boolean;
     message?: string | null;
     successMessage?: string | null;
     successMessageSeverity?: string;
@@ -54,6 +69,7 @@ vi.mock('@renderer/components/team/ProvisioningProgressBlock', () => ({
       {
         'data-testid': 'progress-block',
         'data-current-step-index': String(currentStepIndex),
+        'data-loading': loading ? 'true' : 'false',
         'data-success-severity': successMessageSeverity ?? '',
       },
       [successMessage, message].filter(Boolean).join(' ')
@@ -87,6 +103,9 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
       { name: 'bob', agentType: 'developer', runtimeAdvisory: undefined },
       { name: 'jack', agentType: 'developer', runtimeAdvisory: undefined },
     ];
+    storeState.teamDataCacheByName['northstar-core'] = {
+      members: [...storeState.selectedTeamData.members],
+    };
     storeState.memberSpawnSnapshotsByTeam['northstar-core'] = {
       runId: 'run-1',
       expectedMembers: ['alice', 'bob', 'jack'],
@@ -114,7 +133,48 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
 
     const block = host.querySelector('[data-testid="progress-block"]');
     expect(block?.getAttribute('data-current-step-index')).toBe('2');
+    expect(block?.getAttribute('data-loading')).toBe('true');
     expect(block?.textContent).toContain('Finishing launch');
+    expect(block?.textContent).toContain('3 teammates still joining');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('derives teammate counts from team cache even when the team is not selected', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.selectedTeamName = 'other-team';
+    storeState.progress = {
+      runId: 'run-2',
+      teamName: 'northstar-core',
+      state: 'ready',
+      startedAt: '2026-04-08T16:00:00.000Z',
+      message: 'Launch completed',
+      messageSeverity: undefined,
+      pid: 1234,
+      cliLogsTail: '',
+      assistantOutput: '',
+    };
+    storeState.memberSpawnSnapshotsByTeam['northstar-core'] = undefined as unknown as Record<string, unknown>;
+    storeState.memberSpawnStatusesByTeam['northstar-core'] = {
+      alice: { status: 'waiting', launchState: 'starting' },
+      bob: { status: 'waiting', launchState: 'starting' },
+      jack: { status: 'waiting', launchState: 'starting' },
+    } as Record<string, unknown>;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      await Promise.resolve();
+    });
+
+    const block = host.querySelector('[data-testid="progress-block"]');
+    expect(block?.getAttribute('data-current-step-index')).toBe('2');
     expect(block?.textContent).toContain('3 teammates still joining');
 
     await act(async () => {

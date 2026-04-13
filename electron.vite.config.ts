@@ -11,9 +11,18 @@ import type { Plugin } from 'vite'
 const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8'))
 const prodDeps = Object.keys(pkg.dependencies || {})
 
+// Fastify and its plugins rely on runtime module resolution that breaks when bundled.
+const runtimeExternalDeps = new Set([
+  'node-pty',
+  'agent-teams-controller',
+  'fastify',
+  '@fastify/cors',
+  '@fastify/static',
+])
+
 // node-pty is a native addon that cannot be bundled by Rollup.
 // It must remain external and be loaded at runtime via require().
-const bundledDeps = prodDeps.filter(d => d !== 'node-pty' && d !== 'agent-teams-controller')
+const bundledDeps = prodDeps.filter(d => !runtimeExternalDeps.has(d))
 
 // Rollup plugin: stub out native .node addon imports with empty modules.
 // ssh2 and cpu-features use optional native bindings that can't be bundled,
@@ -122,7 +131,8 @@ export default defineConfig({
   },
   renderer: {
     optimizeDeps: {
-      include: ['@codemirror/language-data']
+      include: ['@codemirror/language-data'],
+      exclude: ['@claude-teams/agent-graph']
     },
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
@@ -133,7 +143,8 @@ export default defineConfig({
       alias: {
         '@renderer': resolve(__dirname, 'src/renderer'),
         '@shared': resolve(__dirname, 'src/shared'),
-        '@main': resolve(__dirname, 'src/main')
+        '@main': resolve(__dirname, 'src/main'),
+        '@claude-teams/agent-graph': resolve(__dirname, 'packages/agent-graph/src/index.ts')
       }
     },
     plugins: [react(), ...sentryPlugins],

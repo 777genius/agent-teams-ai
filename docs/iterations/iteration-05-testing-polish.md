@@ -1,5 +1,10 @@
 # Итерация 05 — Testing + Polish (production-ready)
 
+> Historical note
+> This document captures iteration-era test and polish assumptions.
+> It is not the source of truth for the current product contract.
+> For the current review flow, see [../team-management/README.md](../team-management/README.md) and [../team-management/kanban-design.md](../team-management/kanban-design.md).
+
 Эта итерация закрывает **качество**: тесты на критические пути (read/write), фиксация edge cases, UX-polish (empty/error/loading), и небольшие оптимизации под реальные объёмы inbox/tasks.
 
 Основание:
@@ -204,4 +209,3 @@ test/
 4) Request Review → карточка в REVIEW + (если reviewer задан) сообщение ушло  
 5) Request Changes → task.status стал `in_progress` + owner получил сообщение  
 6) Любое изменение файлов `~/.claude/teams/**` / `~/.claude/tasks/**` → UI обновился в пределах ~1с  
-

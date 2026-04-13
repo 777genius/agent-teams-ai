@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claude-team.local/schemas/board-task-transcript-v1.schema.json",
+  "title": "Board Task Transcript V1",
+  "type": "object",
+  "properties": {
+    "uuid": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sessionId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "boardTaskLinks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/boardTaskLink"
+      }
+    },
+    "boardTaskToolActions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/boardTaskToolAction"
+      }
+    }
+  },
+  "$defs": {
+    "boardTaskLocator": {
+      "type": "object",
+      "required": ["ref", "refKind"],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "refKind": {
+          "type": "string",
+          "enum": ["canonical", "display", "unknown"]
+        },
+        "canonicalId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "actorContext": {
+      "type": "object",
+      "required": ["relation"],
+      "properties": {
+        "relation": {
+          "type": "string",
+          "enum": ["same_task", "other_active_task", "idle", "ambiguous"]
+        },
+        "activeTask": {
+          "$ref": "#/$defs/boardTaskLocator"
+        },
+        "activePhase": {
+          "type": "string",
+          "enum": ["work", "review"]
+        },
+        "activeExecutionSeq": {
+          "type": "number"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "enum": ["same_task", "idle", "ambiguous"]
+              }
+            },
+            "required": ["relation"]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                { "required": ["activeTask"] },
+                { "required": ["activePhase"] },
+                { "required": ["activeExecutionSeq"] }
+              ]
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "boardTaskLink": {
+      "type": "object",
+      "required": ["schemaVersion", "task", "targetRole", "linkKind", "actorContext"],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "toolUseId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task": {
+          "$ref": "#/$defs/boardTaskLocator"
+        },
+        "targetRole": {
+          "type": "string",
+          "enum": ["subject", "related"]
+        },
+        "linkKind": {
+          "type": "string",
+          "enum": ["execution", "lifecycle", "board_action"]
+        },
+        "taskArgumentSlot": {
+          "type": "string",
+          "enum": ["taskId", "targetId"]
+        },
+        "actorContext": {
+          "$ref": "#/$defs/actorContext"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "linkKind": {
+                "const": "execution"
+              }
+            },
+            "required": ["linkKind"]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                { "required": ["taskArgumentSlot"] }
+              ]
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "boardTaskToolAction": {
+      "type": "object",
+      "required": ["schemaVersion", "toolUseId", "canonicalToolName"],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "toolUseId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "canonicalToolName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["pending", "in_progress", "completed", "deleted"]
+            },
+            "owner": { "type": ["string", "null"] },
+            "clarification": { "type": ["string", "null"], "enum": ["lead", "user", null] },
+            "reviewer": { "type": "string" },
+            "relationship": {
+              "type": "string",
+              "enum": ["blocked-by", "blocks", "related"]
+            },
+            "commentId": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "resultRefs": {
+          "type": "object",
+          "properties": {
+            "commentId": { "type": "string" },
+            "attachmentId": { "type": "string" },
+            "filename": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

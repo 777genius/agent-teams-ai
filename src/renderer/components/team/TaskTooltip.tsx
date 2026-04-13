@@ -4,11 +4,11 @@ import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { buildMemberColorMap, REVIEW_STATE_DISPLAY } from '@renderer/utils/memberHelpers';
 import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
 import { getTaskKanbanColumn } from '@shared/utils/reviewState';
 import { formatTaskDisplayLabel, taskMatchesRef } from '@shared/utils/taskIdentity';
+import { useShallow } from 'zustand/react/shallow';
 
 import type { TeamTaskWithKanban } from '@shared/types';
 

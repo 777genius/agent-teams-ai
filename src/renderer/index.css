@@ -259,7 +259,7 @@
 }
 
 .kanban-grid-layout {
-  min-height: 640px;
+  min-height: 0;
   overflow: visible;
   transition: none;
 }
@@ -357,11 +357,11 @@
 }
 
 .kanban-grid-resize-handle-n {
-  top: -3px;
+  top: 0;
 }
 
 .kanban-grid-resize-handle-s {
-  bottom: -3px;
+  bottom: 0;
 }
 
 .kanban-grid-resize-handle-e,
@@ -374,11 +374,11 @@
 }
 
 .kanban-grid-resize-handle-e {
-  right: -3px;
+  right: 0;
 }
 
 .kanban-grid-resize-handle-w {
-  left: -3px;
+  left: 0;
 }
 
 .kanban-grid-resize-handle-ne,
@@ -390,26 +390,26 @@
 }
 
 .kanban-grid-resize-handle-ne {
-  top: -4px;
-  right: -4px;
+  top: 0;
+  right: 0;
   cursor: nesw-resize;
 }
 
 .kanban-grid-resize-handle-nw {
-  top: -4px;
-  left: -4px;
+  top: 0;
+  left: 0;
   cursor: nwse-resize;
 }
 
 .kanban-grid-resize-handle-se {
-  right: -4px;
-  bottom: -4px;
+  right: 0;
+  bottom: 0;
   cursor: nwse-resize;
 }
 
 .kanban-grid-resize-handle-sw {
-  left: -4px;
-  bottom: -4px;
+  left: 0;
+  bottom: 0;
   cursor: nesw-resize;
 }
 
@@ -1321,5 +1321,185 @@ body.theme-transitioning {
   100% {
     transform: scale(2.2);
     opacity: 0;
+  }
+}
+
+@keyframes composer-orbit-border {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -100;
+  }
+}
+
+.message-composer-orbit-surface {
+  isolation: isolate;
+  --message-composer-orbit-stroke: rgba(129, 140, 248, 0.92);
+  --message-composer-orbit-glow-stroke: rgba(96, 165, 250, 0.62);
+}
+
+.message-composer-shell {
+  background-color: var(--color-surface-raised);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.message-composer-orbit-svg {
+  overflow: visible;
+}
+
+.message-composer-orbit-track,
+.message-composer-orbit-path,
+.message-composer-orbit-glow {
+  vector-effect: non-scaling-stroke;
+}
+
+.message-composer-orbit-track {
+  stroke: var(--color-border-emphasis);
+  opacity: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.message-composer-orbit-path,
+.message-composer-orbit-glow {
+  stroke-dasharray: 9 91;
+  animation: composer-orbit-border 19s linear infinite;
+  stroke-linecap: butt;
+  stroke-linejoin: round;
+  will-change: stroke-dashoffset;
+}
+
+.message-composer-orbit-path {
+  stroke-width: 1.35px;
+  stroke: var(--message-composer-orbit-stroke);
+  opacity: 0.48;
+}
+
+.message-composer-orbit-glow {
+  stroke-width: 3px;
+  stroke: var(--message-composer-orbit-glow-stroke);
+  opacity: 0.28;
+}
+
+.message-composer-orbit-path-secondary,
+.message-composer-orbit-glow-secondary {
+  animation-delay: -9.5s;
+}
+
+.message-composer-orbit-surface:focus-within .message-composer-orbit-path,
+.message-composer-orbit-surface:focus-within .message-composer-orbit-glow {
+  animation-duration: 14.5s;
+}
+
+.message-composer-orbit-surface:focus-within .message-composer-orbit-path {
+  opacity: 0.62;
+}
+
+.message-composer-orbit-surface:focus-within .message-composer-orbit-glow {
+  opacity: 0.36;
+}
+
+:root.light .message-composer-shell {
+  background-color: #dfdbd4;
+  box-shadow:
+    0 10px 24px rgba(113, 104, 92, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+:root.light .message-composer-orbit-surface {
+  --message-composer-orbit-stroke: rgba(79, 70, 229, 0.76);
+  --message-composer-orbit-glow-stroke: rgba(96, 165, 250, 0.46);
+}
+
+:root.light .message-composer-orbit-track {
+  stroke: rgba(138, 130, 118, 0.2);
+}
+
+:root.light .team-graph-view > .absolute.left-3.top-3 > div {
+  background: rgba(248, 244, 237, 0.9) !important;
+  border-color: rgba(120, 113, 108, 0.18) !important;
+  box-shadow: 0 10px 24px rgba(120, 113, 108, 0.1);
+}
+
+:root.light .team-graph-view > .absolute.left-3.top-3 > div,
+:root.light .team-graph-view > .absolute.right-3.top-3 > div:not(.relative),
+:root.light .team-graph-view > .absolute.right-3.top-3 > .relative > div:first-child,
+:root.light .team-graph-view > .absolute.bottom-3.right-3 > div,
+:root.light .team-graph-view > .absolute.bottom-3.left-3 > div {
+  background: rgba(248, 244, 237, 0.9) !important;
+  border-color: rgba(120, 113, 108, 0.18) !important;
+  box-shadow: 0 10px 24px rgba(120, 113, 108, 0.1);
+}
+
+:root.light .team-graph-view > .absolute.right-3.top-3 > .relative > .absolute {
+  background: rgba(248, 244, 237, 0.96) !important;
+  border-color: rgba(120, 113, 108, 0.18) !important;
+  box-shadow: 0 16px 32px rgba(120, 113, 108, 0.12);
+}
+
+.team-graph-view > .absolute.left-3.top-3 > div,
+.team-graph-view > .absolute.right-3.top-3 > div:not(.relative),
+.team-graph-view > .absolute.right-3.top-3 > .relative > div:first-child {
+  width: 25px !important;
+  min-width: 25px !important;
+  height: 25px !important;
+  min-height: 25px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+}
+
+.team-graph-view > .absolute.left-3.top-3 > div > button,
+.team-graph-view > .absolute.right-3.top-3 > div:not(.relative) > button,
+.team-graph-view > .absolute.right-3.top-3 > .relative > div:first-child > button {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  gap: 0 !important;
+}
+
+.team-graph-view > .absolute.left-3.top-3 > div > button svg,
+.team-graph-view > .absolute.right-3.top-3 > div:not(.relative) > button svg,
+.team-graph-view > .absolute.right-3.top-3 > .relative > div:first-child > button svg {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+.team-graph-view > .absolute.left-3.top-3 > div > button span,
+.team-graph-view > .absolute.right-3.top-3 > div:not(.relative) > button span,
+.team-graph-view > .absolute.right-3.top-3 > .relative > div:first-child > button span {
+  display: none !important;
+}
+
+:root.light .team-graph-view button[class*='font-mono'] {
+  color: rgba(70, 85, 125, 0.9) !important;
+}
+
+:root.light .team-graph-view button[class*='font-mono']:hover {
+  color: #334155 !important;
+  background: rgba(79, 70, 229, 0.08) !important;
+}
+
+:root.light
+  .team-graph-view
+  button[class*='font-mono'][class*='bg-\\[rgba\\(100\\,200\\,255\\,0\\.14\\)\\]'] {
+  color: #4338ca !important;
+  background: rgba(79, 70, 229, 0.12) !important;
+}
+
+:root.light .team-graph-view button[class*='font-mono'] svg {
+  opacity: 0.96;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message-composer-orbit-path,
+  .message-composer-orbit-glow {
+    animation: none;
   }
 }

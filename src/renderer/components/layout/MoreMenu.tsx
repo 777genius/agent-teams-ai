@@ -1,16 +1,29 @@
 /**
  * MoreMenu - Dropdown menu behind a "..." icon for less-frequent toolbar actions.
  *
- * Groups: Search, Export (session-only), Analyze (session-only).
+ * Groups: Teams, Settings, Extensions, Search, Schedules, Export (session-only), Analyze (session-only).
  * Closes on outside click or Escape.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { triggerDownload } from '@renderer/utils/sessionExporter';
 import { formatShortcut } from '@renderer/utils/stringUtils';
-import { Activity, Braces, Calendar, FileText, MoreHorizontal, Search, Type } from 'lucide-react';
+import {
+  Activity,
+  Braces,
+  Calendar,
+  FileText,
+  MoreHorizontal,
+  Puzzle,
+  Search,
+  Settings,
+  Type,
+  Users,
+} from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import type { SessionDetail } from '@renderer/types/data';
 import type { Tab } from '@renderer/types/tabs';
@@ -40,9 +53,23 @@ export const MoreMenu = ({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const openCommandPalette = useStore((s) => s.openCommandPalette);
-  const openSessionReport = useStore((s) => s.openSessionReport);
-  const openSchedulesTab = useStore((s) => s.openSchedulesTab);
+  const {
+    openCommandPalette,
+    openExtensionsTab,
+    openSessionReport,
+    openSchedulesTab,
+    openSettingsTab,
+    openTeamsTab,
+  } = useStore(
+    useShallow((s) => ({
+      openCommandPalette: () => s.openCommandPalette(),
+      openExtensionsTab: () => s.openExtensionsTab(),
+      openSessionReport: (tabId: string) => s.openSessionReport(tabId),
+      openSchedulesTab: () => s.openSchedulesTab(),
+      openSettingsTab: () => s.openSettingsTab(),
+      openTeamsTab: () => s.openTeamsTab(),
+    }))
+  );
 
   // Close on outside click
   useEffect(() => {
@@ -86,6 +113,33 @@ export const MoreMenu = ({
 
   // Build menu sections
   const topItems: MenuItem[] = [
+    {
+      id: 'teams',
+      label: 'Teams',
+      icon: Users,
+      onClick: () => {
+        openTeamsTab();
+        setIsOpen(false);
+      },
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: Settings,
+      onClick: () => {
+        openSettingsTab();
+        setIsOpen(false);
+      },
+    },
+    {
+      id: 'extensions',
+      label: 'Extensions',
+      icon: Puzzle,
+      onClick: () => {
+        openExtensionsTab();
+        setIsOpen(false);
+      },
+    },
     {
       id: 'search',
       label: 'Search',
@@ -171,19 +225,25 @@ export const MoreMenu = ({
   return (
     <div ref={containerRef} className="relative">
       {/* Trigger button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        onMouseEnter={() => setButtonHover(true)}
-        onMouseLeave={() => setButtonHover(false)}
-        className="rounded-md p-2 transition-colors"
-        style={{
-          color: buttonHover || isOpen ? 'var(--color-text)' : 'var(--color-text-muted)',
-          backgroundColor: buttonHover || isOpen ? 'var(--color-surface-raised)' : 'transparent',
-        }}
-        title="More actions"
-      >
-        <MoreHorizontal className="size-4" />
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            onMouseEnter={() => setButtonHover(true)}
+            onMouseLeave={() => setButtonHover(false)}
+            className="rounded-md p-2 transition-colors"
+            style={{
+              color: buttonHover || isOpen ? 'var(--color-text)' : 'var(--color-text-muted)',
+              backgroundColor:
+                buttonHover || isOpen ? 'var(--color-surface-raised)' : 'transparent',
+            }}
+            aria-label="More actions"
+          >
+            <MoreHorizontal className="size-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">More actions</TooltipContent>
+      </Tooltip>
 
       {/* Dropdown menu */}
       {isOpen && (

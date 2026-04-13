@@ -331,6 +331,14 @@ function isProviderCardLoading(provider: CliProviderStatus, providerLoading: boo
   );
 }
 
+function getApiKeyActionRequiredProviders(
+  providers: readonly CliProviderStatus[]
+): CliProviderStatus[] {
+  return providers.filter(
+    (provider) => !provider.authenticated && provider.connection?.configuredAuthMode === 'api_key'
+  );
+}
+
 function formatRuntimeLabel(
   cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>
 ): string | null {
@@ -1232,6 +1240,29 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
     !cliStatus.authStatusChecking &&
     !cliStatus.authLoggedIn
   ) {
+    const apiKeyActionRequiredProviders = getApiKeyActionRequiredProviders(cliStatus.providers);
+    const hasApiKeyModeIssue = apiKeyActionRequiredProviders.length > 0;
+    const primaryApiKeyProvider = apiKeyActionRequiredProviders[0] ?? null;
+    const apiKeyMissingProviders = apiKeyActionRequiredProviders.filter(
+      (provider) => provider.connection?.apiKeyConfigured !== true
+    );
+    const allApiKeyIssuesAreMissingKeys =
+      hasApiKeyModeIssue && apiKeyMissingProviders.length === apiKeyActionRequiredProviders.length;
+    const warningTitle = hasApiKeyModeIssue
+      ? allApiKeyIssuesAreMissingKeys
+        ? 'API key required'
+        : 'Provider action required'
+      : 'Not logged in';
+    const warningMessage = hasApiKeyModeIssue
+      ? allApiKeyIssuesAreMissingKeys
+        ? apiKeyActionRequiredProviders.length === 1 && primaryApiKeyProvider
+          ? `${primaryApiKeyProvider.displayName} is set to API key mode, but no API key is configured. Open Manage Providers to add a key or switch the connection mode.`
+          : 'One or more providers are set to API key mode, but no API key is configured. Open Manage Providers to add keys or switch the connection mode.'
+        : apiKeyActionRequiredProviders.length === 1 && primaryApiKeyProvider
+          ? `${primaryApiKeyProvider.displayName} is set to API key mode, but it is not connected. Open Manage Providers to review the saved key or switch the connection mode.`
+          : 'One or more providers are set to API key mode and need attention. Open Manage Providers to review saved keys or switch the connection mode.'
+      : `${cliStatus.displayName} is installed but you are not authenticated. Login is required for team provisioning and AI features.`;
+
     return (
       <>
         <InstalledBanner
@@ -1263,43 +1294,57 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
               <AlertTriangle className="mt-0.5 size-5 shrink-0" style={{ color: '#f59e0b' }} />
               <div>
                 <p className="text-sm font-medium" style={{ color: '#fbbf24' }}>
-                  Not logged in
+                  {warningTitle}
                 </p>
                 <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  {cliStatus.displayName} is installed but you are not authenticated. Login is
-                  required for team provisioning and AI features.
+                  {warningMessage}
                 </p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <button
-                onClick={() => setShowTroubleshoot((v) => !v)}
-                className="flex items-center gap-1.5 rounded-md border px-3 py-2 text-xs transition-colors hover:bg-white/5"
-                style={{
-                  borderColor: 'var(--color-border-emphasis)',
-                  color: 'var(--color-text-secondary)',
-                }}
-              >
-                <HelpCircle className="size-3.5" />
-                Already logged in?
-                {showTroubleshoot ? (
-                  <ChevronUp className="size-3" />
-                ) : (
-                  <ChevronDown className="size-3" />
-                )}
-              </button>
-              <button
-                onClick={() => setShowLoginTerminal(true)}
-                className="flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium text-white transition-colors"
-                style={{ backgroundColor: '#f59e0b' }}
-              >
-                <LogIn className="size-4" />
-                Login
-              </button>
+              {hasApiKeyModeIssue ? (
+                <button
+                  onClick={() =>
+                    handleProviderManage(primaryApiKeyProvider?.providerId ?? 'anthropic')
+                  }
+                  className="flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium text-white transition-colors"
+                  style={{ backgroundColor: '#f59e0b' }}
+                >
+                  <SlidersHorizontal className="size-4" />
+                  Manage Providers
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setShowTroubleshoot((v) => !v)}
+                    className="flex items-center gap-1.5 rounded-md border px-3 py-2 text-xs transition-colors hover:bg-white/5"
+                    style={{
+                      borderColor: 'var(--color-border-emphasis)',
+                      color: 'var(--color-text-secondary)',
+                    }}
+                  >
+                    <HelpCircle className="size-3.5" />
+                    Already logged in?
+                    {showTroubleshoot ? (
+                      <ChevronUp className="size-3" />
+                    ) : (
+                      <ChevronDown className="size-3" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowLoginTerminal(true)}
+                    className="flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium text-white transition-colors"
+                    style={{ backgroundColor: '#f59e0b' }}
+                  >
+                    <LogIn className="size-4" />
+                    Login
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
-          {showTroubleshoot && (
+          {!hasApiKeyModeIssue && showTroubleshoot && (
             <div
               className="mt-3 rounded-md border p-3"
               style={{

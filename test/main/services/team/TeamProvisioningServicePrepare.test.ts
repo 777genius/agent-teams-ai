@@ -12,6 +12,12 @@ vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnv: vi.fn(),
 }));
 
+const buildProviderAwareCliEnvMock = vi.fn();
+vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
+  buildProviderAwareCliEnv: (...args: Parameters<typeof buildProviderAwareCliEnvMock>) =>
+    buildProviderAwareCliEnvMock(...args),
+}));
+
 const addTeamNotificationMock = vi.fn().mockResolvedValue(null);
 vi.mock('@main/services/infrastructure/NotificationManager', () => ({
   NotificationManager: {
@@ -37,6 +43,12 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       PATH: '/usr/bin',
       SHELL: '/bin/zsh',
     });
+    buildProviderAwareCliEnvMock.mockImplementation(({ env }: { env: NodeJS.ProcessEnv }) =>
+      Promise.resolve({
+        env,
+        connectionIssues: {},
+      })
+    );
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.ANTHROPIC_AUTH_TOKEN;
   });
@@ -82,18 +94,18 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
   it('checks each unique provider during multi-provider prepare and blocks on provider auth failure', async () => {
     const svc = new TeamProvisioningService();
     const getCachedOrProbeResult = vi.spyOn(svc as any, 'getCachedOrProbeResult');
-    getCachedOrProbeResult.mockImplementation(async (_cwd: unknown, providerId: unknown) => {
+    getCachedOrProbeResult.mockImplementation((_cwd: unknown, providerId: unknown) => {
       if (providerId === 'codex') {
-        return {
+        return Promise.resolve({
           claudePath: '/fake/claude',
           authSource: 'none',
           warning: 'Not logged in to Codex runtime',
-        };
+        });
       }
-      return {
+      return Promise.resolve({
         claudePath: '/fake/claude',
         authSource: 'oauth_token',
-      };
+      });
     });
 
     const result = await svc.prepareForProvisioning(tempRoot, {
@@ -138,6 +150,51 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
 
     expect(result.authSource).toBe('anthropic_api_key');
     expect(result.env.ANTHROPIC_API_KEY).toBe('real-key');
+  });
+
+  it('allows help-env resolution to continue even when provisioning env warns', async () => {
+    const svc = new TeamProvisioningService();
+    vi.spyOn(svc as any, 'buildProvisioningEnv').mockResolvedValue({
+      env: {
+        PATH: '/usr/bin',
+        SHELL: '/bin/zsh',
+      },
+      authSource: 'configured_api_key_missing',
+      geminiRuntimeAuth: null,
+      warning: 'Anthropic API key mode is enabled, but no ANTHROPIC_API_KEY is configured.',
+    });
+    vi.spyOn(svc as any, 'getCachedOrProbeResult').mockResolvedValue({
+      claudePath: '/fake/claude',
+      authSource: 'none',
+    });
+    vi.spyOn(svc as any, 'spawnProbe').mockResolvedValue({
+      stdout: 'usage: claude [options]',
+      stderr: '',
+      exitCode: 0,
+    });
+
+    const output = await svc.getCliHelpOutput(tempRoot);
+
+    expect(output).toContain('usage: claude');
+  });
+
+  it('surfaces a missing configured Anthropic API key before probing', async () => {
+    const svc = new TeamProvisioningService();
+    buildProviderAwareCliEnvMock.mockResolvedValue({
+      env: {
+        PATH: '/usr/bin',
+        SHELL: '/bin/zsh',
+      },
+      connectionIssues: {
+        anthropic:
+          'Anthropic API key mode is enabled, but no ANTHROPIC_API_KEY is configured.',
+      },
+    });
+
+    const result = await (svc as any).buildProvisioningEnv();
+
+    expect(result.authSource).toBe('configured_api_key_missing');
+    expect(result.warning).toContain('ANTHROPIC_API_KEY');
   });
 
   it('does not treat assistant-text 401 noise as an auth failure', () => {
@@ -213,7 +270,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     const svc = new TeamProvisioningService();
     const handleAuthFailureInOutput = vi
       .spyOn(svc as any, 'handleAuthFailureInOutput')
-      .mockImplementation(() => {});
+      .mockImplementation(() => undefined);
 
     const run = {
       runId: 'run-2',

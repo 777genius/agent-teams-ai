@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortable';
 import { isElectronMode } from '@renderer/api';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { formatShortcut } from '@renderer/utils/stringUtils';
 import { RefreshCw } from 'lucide-react';
@@ -293,19 +294,24 @@ export const TabBar = ({ paneId }: TabBarProps): React.JSX.Element => {
 
         {/* Refresh button - show only for session tabs */}
         {activeTab?.type === 'session' && (
-          <button
-            className="flex size-8 shrink-0 items-center justify-center rounded-md transition-colors"
-            style={{
-              color: refreshHover ? 'var(--color-text)' : 'var(--color-text-muted)',
-              backgroundColor: refreshHover ? 'var(--color-surface-raised)' : 'transparent',
-            }}
-            onMouseEnter={() => setRefreshHover(true)}
-            onMouseLeave={() => setRefreshHover(false)}
-            onClick={handleRefresh}
-            title={`Refresh Session (${formatShortcut('R')})`}
-          >
-            <RefreshCw className="size-4" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="flex size-8 shrink-0 items-center justify-center rounded-md transition-colors"
+                style={{
+                  color: refreshHover ? 'var(--color-text)' : 'var(--color-text-muted)',
+                  backgroundColor: refreshHover ? 'var(--color-surface-raised)' : 'transparent',
+                }}
+                onMouseEnter={() => setRefreshHover(true)}
+                onMouseLeave={() => setRefreshHover(false)}
+                onClick={handleRefresh}
+                aria-label="Refresh session"
+              >
+                <RefreshCw className="size-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{`Refresh Session (${formatShortcut('R')})`}</TooltipContent>
+          </Tooltip>
         )}
       </div>
 

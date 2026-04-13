@@ -1,8 +1,9 @@
 /* eslint-disable tailwindcss/no-custom-classname -- this adapter needs stable non-Tailwind class hooks for react-grid-layout handles. */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactGridLayout, { WidthProvider } from 'react-grid-layout/legacy';
 
 import { usePersistedGridLayout } from '@renderer/hooks/usePersistedGridLayout';
+import { cn } from '@renderer/lib/utils';
 import { browserGridLayoutRepository } from '@renderer/services/layout-system/BrowserGridLayoutRepository';
 
 import { KanbanColumn } from './KanbanColumn';
@@ -25,6 +26,7 @@ const DEFAULT_MIN_HEIGHT = 10;
 const DEFAULT_MIN_WIDTH = 3;
 const GRID_SCOPE_KEY = 'kanban-grid-layout:global:v2';
 const SKELETON_HIDE_DELAY_MS = 500;
+const SKELETON_HIDE_DELAY_MS_ON_MODE_SWITCH = 750;
 const RESIZE_HANDLES: ResizeHandleAxis[] = ['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne'];
 const WidthAwareGridLayout = WidthProvider(ReactGridLayout);
 
@@ -36,22 +38,36 @@ export interface KanbanGridColumn {
   headerBg?: string;
   bodyBg?: string;
   content: React.ReactNode;
+  showAddButton?: boolean;
+  skeletonCards?: {
+    key: string;
+    height: number;
+  }[];
 }
 
 interface KanbanGridLayoutProps {
   columns: KanbanGridColumn[];
   allColumnIds: KanbanColumnId[];
+  primaryColumnId?: KanbanColumnId | null;
+  onPrimaryColumnWidthChange?: (width: number | null) => void;
+  skeletonDelayMs?: number;
 }
 
 interface LoadedKanbanGridLayoutProps {
   readonly columns: KanbanGridColumn[];
   readonly visibleItems: PersistedGridLayoutItem[];
   readonly onPersistLayout: (layout: Layout, options?: { persist?: boolean }) => void;
+  readonly primaryColumnId?: KanbanColumnId | null;
+  readonly onPrimaryColumnWidthChange?: (width: number | null) => void;
+  readonly className?: string;
 }
 
 interface LoadingKanbanGridLayoutProps {
   readonly columns: KanbanGridColumn[];
   readonly visibleItems: PersistedGridLayoutItem[];
+  readonly primaryColumnId?: KanbanColumnId | null;
+  readonly onPrimaryColumnWidthChange?: (width: number | null) => void;
+  readonly className?: string;
 }
 
 const ITEMS_PER_FIRST_ROW = 3;
@@ -115,18 +131,86 @@ function renderResizeHandle(axis: ResizeHandleAxis, ref: Ref<HTMLElement>): Reac
   );
 }
 
+const KanbanTaskCardSkeleton = ({ height }: { height: number }): ReactElement => (
+  <div
+    className="relative shrink-0 overflow-hidden rounded-md border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface-raised)]"
+    style={{ height }}
+  >
+    <div className="bg-[var(--color-surface-overlay)]/30 absolute left-[3px] top-[4px] h-2 w-14 rounded" />
+    <div className="bg-[var(--color-surface-overlay)]/25 absolute right-[6px] top-[4px] h-5 w-16 rounded-full" />
+    <div className="flex h-full flex-col px-1.5 py-3">
+      <div className="pt-[11px]">
+        <div className="bg-[var(--color-surface-overlay)]/25 h-4 w-[84%] rounded" />
+        <div className="bg-[var(--color-surface-overlay)]/18 mt-2 h-4 w-[68%] rounded" />
+      </div>
+      <div className="mt-auto flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <div className="bg-[var(--color-surface-overlay)]/18 size-6 rounded-full border border-[var(--color-border)]" />
+          <div className="bg-[var(--color-surface-overlay)]/18 size-6 rounded-full border border-[var(--color-border)]" />
+        </div>
+        <div className="flex gap-1.5">
+          <div className="bg-[var(--color-surface-overlay)]/12 size-6 rounded-full border border-[var(--color-border)]" />
+          <div className="bg-[var(--color-surface-overlay)]/12 size-6 rounded-full border border-[var(--color-border)]" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 const LoadingKanbanGridLayout = ({
   columns,
   visibleItems,
+  primaryColumnId,
+  onPrimaryColumnWidthChange,
+  className,
 }: Readonly<LoadingKanbanGridLayoutProps>): ReactElement => {
   const columnMap = new Map(columns.map((column) => [column.id, column]));
   const loadingItems =
     visibleItems.length > 0
       ? visibleItems
       : buildDefaultItems(columns.length > 0 ? columns.map((column) => column.id) : ['todo']);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+
+    const updateWidth = (): void => {
+      setContainerWidth(element.clientWidth);
+    };
+
+    updateWidth();
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      setContainerWidth(entry ? entry.contentRect.width : element.clientWidth);
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const primaryColumnWidth = useMemo(() => {
+    if (!primaryColumnId || containerWidth <= 0) {
+      return null;
+    }
+
+    const layoutItem = loadingItems.find((item) => item.id === primaryColumnId);
+    if (!layoutItem) {
+      return null;
+    }
+
+    const columnUnitWidth = (containerWidth - GRID_MARGIN[0] * (GRID_COLS - 1)) / GRID_COLS;
+    return Math.round(columnUnitWidth * layoutItem.w + GRID_MARGIN[0] * (layoutItem.w - 1));
+  }, [containerWidth, loadingItems, primaryColumnId]);
+
+  useEffect(() => {
+    onPrimaryColumnWidthChange?.(primaryColumnWidth);
+  }, [onPrimaryColumnWidthChange, primaryColumnWidth]);
 
   return (
-    <div>
+    <div ref={containerRef} className={cn('min-w-0 max-w-full', className)}>
       <div
         className="grid gap-3"
         style={{
@@ -136,30 +220,54 @@ const LoadingKanbanGridLayout = ({
       >
         {loadingItems.map((item) => {
           const column = columnMap.get(item.id as KanbanColumnId);
+          if (!column) {
+            return <div key={item.id} />;
+          }
+          const skeletonCards = column.skeletonCards ?? [];
+          const hasTasks = skeletonCards.length > 0;
+          const showAddButton = column.showAddButton === true;
 
           return (
-            <section
+            <div
               key={item.id}
-              className="min-h-[400px] animate-pulse rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]"
+              className="min-h-0"
               style={{
                 gridColumn: `${item.x + 1} / span ${item.w}`,
                 gridRow: `${item.y + 1} / span ${item.h}`,
               }}
             >
-              <header className="flex items-center justify-between border-b border-[var(--color-border)] px-3 py-2">
-                <div
-                  className="h-5 rounded bg-[var(--color-surface-raised)]"
-                  style={{ width: column ? 96 : 72 }}
-                />
-                <div className="h-6 w-10 rounded-md bg-[var(--color-surface-raised)]" />
-              </header>
-              <div className="flex h-[calc(100%-41px)] flex-col gap-3 p-3">
-                <div className="bg-[var(--color-surface-raised)]/35 h-12 rounded-md border border-dashed border-[var(--color-border-emphasis)]" />
-                <div className="h-24 rounded-md bg-[var(--color-surface-raised)]" />
-                <div className="bg-[var(--color-surface-raised)]/80 h-20 rounded-md" />
-                <div className="bg-[var(--color-surface-raised)]/60 h-16 rounded-md" />
-              </div>
-            </section>
+              <KanbanColumn
+                title={column.title}
+                count={column.count}
+                icon={column.icon}
+                headerBg={column.headerBg}
+                bodyBg={column.bodyBg}
+                className="flex h-full min-h-0 animate-pulse flex-col"
+                headerClassName="shrink-0"
+                bodyClassName="min-h-0 max-h-none flex-1 overflow-hidden"
+              >
+                {hasTasks ? (
+                  <>
+                    {skeletonCards.map((card) => (
+                      <KanbanTaskCardSkeleton key={card.key} height={card.height} />
+                    ))}
+                    {showAddButton ? (
+                      <div className="bg-[var(--color-surface-overlay)]/15 flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] px-3 text-xs text-[var(--color-text-muted)]">
+                        Add task
+                      </div>
+                    ) : null}
+                  </>
+                ) : showAddButton ? (
+                  <div className="bg-[var(--color-surface-overlay)]/15 flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] px-3 text-xs text-[var(--color-text-muted)]">
+                    Add task
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
+                    No tasks
+                  </div>
+                )}
+              </KanbanColumn>
+            </div>
           );
         })}
       </div>
@@ -171,11 +279,38 @@ const LoadedKanbanGridLayout = ({
   columns,
   visibleItems,
   onPersistLayout,
+  primaryColumnId,
+  onPrimaryColumnWidthChange,
+  className,
 }: Readonly<LoadedKanbanGridLayoutProps>): ReactElement => {
   const columnMap = useMemo(() => new Map(columns.map((column) => [column.id, column])), [columns]);
-  const [renderLayout, setRenderLayout] = useState<Layout>(() =>
-    visibleItems.map(toReactGridLayoutItem)
-  );
+  const visibleLayout = useMemo(() => visibleItems.map(toReactGridLayoutItem), [visibleItems]);
+  const [renderLayout, setRenderLayout] = useState<Layout>(() => visibleLayout);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    setRenderLayout(visibleLayout);
+  }, [visibleLayout]);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+
+    const updateWidth = (): void => {
+      setContainerWidth(element.clientWidth);
+    };
+
+    updateWidth();
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      setContainerWidth(entry ? entry.contentRect.width : element.clientWidth);
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   const applyReactGridLayout = useCallback(
     (layout: Layout, options?: { persist?: boolean }) => {
@@ -187,11 +322,28 @@ const LoadedKanbanGridLayout = ({
     [onPersistLayout]
   );
 
+  const primaryColumnWidth = useMemo(() => {
+    if (!primaryColumnId || containerWidth <= 0) {
+      return null;
+    }
+
+    const layoutItem = renderLayout.find((item) => item.i === primaryColumnId);
+    if (!layoutItem) {
+      return null;
+    }
+
+    const columnUnitWidth = (containerWidth - GRID_MARGIN[0] * (GRID_COLS - 1)) / GRID_COLS;
+    return Math.round(columnUnitWidth * layoutItem.w + GRID_MARGIN[0] * (layoutItem.w - 1));
+  }, [containerWidth, primaryColumnId, renderLayout]);
+
+  useEffect(() => {
+    onPrimaryColumnWidthChange?.(primaryColumnWidth);
+  }, [onPrimaryColumnWidthChange, primaryColumnWidth]);
+
   return (
-    <div>
+    <div ref={containerRef} className={cn('min-w-0 max-w-full', className)}>
       <WidthAwareGridLayout
         className="kanban-grid-layout"
-        measureBeforeMount
         layout={renderLayout}
         cols={GRID_COLS}
         rowHeight={GRID_ROW_HEIGHT}
@@ -238,6 +390,9 @@ const LoadedKanbanGridLayout = ({
 export const KanbanGridLayout = ({
   columns,
   allColumnIds,
+  primaryColumnId,
+  onPrimaryColumnWidthChange,
+  skeletonDelayMs = SKELETON_HIDE_DELAY_MS,
 }: KanbanGridLayoutProps): React.JSX.Element => {
   const visibleColumnIds = useMemo(() => columns.map((column) => column.id), [columns]);
   const { visibleItems, applyVisibleItems, isLoaded } = usePersistedGridLayout({
@@ -255,12 +410,12 @@ export const KanbanGridLayout = ({
 
     const timeoutId = window.setTimeout(() => {
       setShowResolvedLayout(true);
-    }, SKELETON_HIDE_DELAY_MS);
+    }, skeletonDelayMs);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [showResolvedLayout]);
+  }, [showResolvedLayout, skeletonDelayMs]);
 
   const applyReactGridLayout = useCallback(
     (layout: Layout, options?: { persist?: boolean }) => {
@@ -270,20 +425,36 @@ export const KanbanGridLayout = ({
     },
     [applyVisibleItems]
   );
-
-  if (!showResolvedLayout && !isLoaded) {
-    return <LoadingKanbanGridLayout columns={columns} visibleItems={visibleItems} />;
-  }
+  const showSkeletonOverlay = !showResolvedLayout || !isLoaded;
 
   const gridKey = visibleItems.map((item) => item.id).join('|');
 
   return (
-    <LoadedKanbanGridLayout
-      key={gridKey}
-      columns={columns}
-      visibleItems={visibleItems}
-      onPersistLayout={applyReactGridLayout}
-    />
+    <div className="relative min-w-0 max-w-full">
+      <LoadedKanbanGridLayout
+        key={gridKey}
+        columns={columns}
+        visibleItems={visibleItems}
+        onPersistLayout={applyReactGridLayout}
+        primaryColumnId={primaryColumnId}
+        onPrimaryColumnWidthChange={onPrimaryColumnWidthChange}
+        className={cn(
+          'transition-opacity duration-150',
+          showSkeletonOverlay ? 'pointer-events-none opacity-0' : 'opacity-100'
+        )}
+      />
+      {showSkeletonOverlay ? (
+        <LoadingKanbanGridLayout
+          columns={columns}
+          visibleItems={visibleItems}
+          primaryColumnId={primaryColumnId}
+          onPrimaryColumnWidthChange={onPrimaryColumnWidthChange}
+          className="pointer-events-none absolute inset-0 z-10"
+        />
+      ) : null}
+    </div>
   );
 };
+
+export { SKELETON_HIDE_DELAY_MS, SKELETON_HIDE_DELAY_MS_ON_MODE_SWITCH };
 /* eslint-enable tailwindcss/no-custom-classname -- stable class hooks remain scoped to this file. */

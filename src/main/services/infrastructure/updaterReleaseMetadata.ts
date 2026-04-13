@@ -58,7 +58,7 @@ export function parseReleaseMetadataAssetNames(metadataText: string): Set<string
 
   for (const rawLine of metadataText.split(/\r?\n/u)) {
     const line = rawLine.trim();
-    const match = line.match(/^(?:-\s+)?(url|path):\s+(.+)$/u);
+    const match = /^(?:-\s+)?(url|path):\s+(.+)$/u.exec(line);
     if (!match) {
       continue;
     }

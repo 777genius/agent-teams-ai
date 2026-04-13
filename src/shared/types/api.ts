@@ -39,7 +39,12 @@ import type {
 import type {
   AddMemberRequest,
   AddTaskCommentRequest,
+  BoardTaskActivityDetailResult,
   AttachmentFileData,
+  BoardTaskActivityEntry,
+  BoardTaskExactLogDetailResult,
+  BoardTaskExactLogSummariesResponse,
+  BoardTaskLogStreamResponse,
   CreateTaskRequest,
   CrossTeamMessage,
   CrossTeamSendRequest,
@@ -51,11 +56,11 @@ import type {
   MemberFullStats,
   MemberLogSummary,
   MemberSpawnStatusesSnapshot,
+  MessagesPage,
   ProjectBranchChangeEvent,
   ReplaceMembersRequest,
   SendMessageRequest,
   SendMessageResult,
-  MessagesPage,
   TaskAttachmentMeta,
   TaskChangePresenceState,
   TaskComment,
@@ -477,6 +482,23 @@ export interface TeamsAPI {
       since?: string;
     }
   ) => Promise<MemberLogSummary[]>;
+  getTaskActivity: (teamName: string, taskId: string) => Promise<BoardTaskActivityEntry[]>;
+  getTaskActivityDetail: (
+    teamName: string,
+    taskId: string,
+    activityId: string
+  ) => Promise<BoardTaskActivityDetailResult>;
+  getTaskLogStream: (teamName: string, taskId: string) => Promise<BoardTaskLogStreamResponse>;
+  getTaskExactLogSummaries: (
+    teamName: string,
+    taskId: string
+  ) => Promise<BoardTaskExactLogSummariesResponse>;
+  getTaskExactLogDetail: (
+    teamName: string,
+    taskId: string,
+    exactLogId: string,
+    expectedSourceGeneration: string
+  ) => Promise<BoardTaskExactLogDetailResult>;
   getMemberStats: (teamName: string, memberName: string) => Promise<MemberFullStats>;
   launchTeam: (request: TeamLaunchRequest) => Promise<TeamLaunchResponse>;
   getAllTasks: () => Promise<GlobalTask[]>;

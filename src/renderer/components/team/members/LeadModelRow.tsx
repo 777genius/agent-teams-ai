@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 
+import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
 import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitContextCheckbox';
 import {
   getProviderScopedTeamModelLabel,
+  getTeamProviderLabel,
   TeamModelSelector,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { Checkbox } from '@renderer/components/ui/checkbox';
@@ -52,6 +54,7 @@ export const LeadModelRow = ({
   const modelButtonLabel = model.trim()
     ? getProviderScopedTeamModelLabel(providerId, model.trim())
     : 'Default';
+  const modelButtonAriaLabel = `${getTeamProviderLabel(providerId)} provider, ${modelButtonLabel}`;
 
   return (
     <div
@@ -97,6 +100,7 @@ export const LeadModelRow = ({
             variant="outline"
             size="sm"
             className="h-8 w-full justify-start gap-1 overflow-hidden text-left"
+            aria-label={modelButtonAriaLabel}
             onClick={() => setModelExpanded((prev) => !prev)}
           >
             {modelExpanded ? (
@@ -104,7 +108,8 @@ export const LeadModelRow = ({
             ) : (
               <ChevronRight className="size-3.5" />
             )}
-            <span className="truncate">Model: {modelButtonLabel}</span>
+            <ProviderBrandLogo providerId={providerId} className="size-3.5 shrink-0" />
+            <span className="truncate">{modelButtonLabel}</span>
           </Button>
         </div>
       </div>

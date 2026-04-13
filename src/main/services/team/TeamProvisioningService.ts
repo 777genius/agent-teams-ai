@@ -65,12 +65,8 @@ import {
   type GeminiRuntimeAuthState,
   resolveGeminiRuntimeAuth,
 } from '../runtime/geminiRuntimeAuth';
-import { providerConnectionService } from '../runtime/ProviderConnectionService';
-import {
-  applyConfiguredRuntimeBackendsEnv,
-  applyProviderRuntimeEnv,
-  resolveTeamProviderId,
-} from '../runtime/providerRuntimeEnv';
+import { buildProviderAwareCliEnv } from '../runtime/providerAwareCliEnv';
+import { resolveTeamProviderId } from '../runtime/providerRuntimeEnv';
 
 import { buildActionModeProtocol } from './actionModeInstructions';
 import { atomicWriteAsync } from './atomicWrite';
@@ -704,6 +700,7 @@ type LeadActivityState = 'active' | 'idle' | 'offline';
 type ProvisioningAuthSource =
   | 'anthropic_api_key'
   | 'anthropic_auth_token'
+  | 'configured_api_key_missing'
   | 'codex_runtime'
   | 'gemini_runtime'
   | 'none';
@@ -712,6 +709,7 @@ interface ProvisioningEnvResolution {
   env: NodeJS.ProcessEnv;
   authSource: ProvisioningAuthSource;
   geminiRuntimeAuth: GeminiRuntimeAuthState | null;
+  warning?: string;
 }
 
 interface PromptSizeSummary {
@@ -3562,7 +3560,9 @@ export class TeamProvisioningService {
       const prefixedWarning =
         providerIds.length > 1 ? `${providerLabel}: ${probeResult.warning}` : probeResult.warning;
       const isAuthFailure = this.isAuthFailureWarning(probeResult.warning, 'probe');
-      if (
+      if (authSource === 'configured_api_key_missing') {
+        blockingMessages.push(prefixedWarning);
+      } else if (
         (authSource === 'none' ||
           authSource === 'codex_runtime' ||
           authSource === 'gemini_runtime') &&
@@ -3664,7 +3664,15 @@ export class TeamProvisioningService {
       const claudePath = await ClaudeBinaryResolver.resolve();
       if (!claudePath) return null;
 
-      const { env, authSource } = await this.buildProvisioningEnv(providerId);
+      const { env, authSource, warning } = await this.buildProvisioningEnv(providerId);
+      if (warning) {
+        return {
+          claudePath,
+          authSource,
+          warning,
+        };
+      }
+
       const probe = await this.probeClaudeRuntime(claudePath, cwd, env, providerId);
       const result = {
         claudePath,
@@ -4556,9 +4564,14 @@ export class TeamProvisioningService {
       const initialUserPrompt = request.prompt?.trim() ?? '';
       const promptSize = getPromptSizeSummary(initialUserPrompt);
       let child: ReturnType<typeof spawn>;
-      const { env: shellEnv, geminiRuntimeAuth } = await this.buildProvisioningEnv(
-        request.providerId
-      );
+      const {
+        env: shellEnv,
+        geminiRuntimeAuth,
+        warning: envWarning,
+      } = await this.buildProvisioningEnv(request.providerId);
+      if (envWarning) {
+        throw new Error(envWarning);
+      }
       shellEnv.CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP = '1';
       const teammateModeDecision = await resolveDesktopTeammateModeDecision(request.extraCliArgs);
       if (teammateModeDecision.forceProcessTeammates) {
@@ -5087,9 +5100,14 @@ export class TeamProvisioningService {
       );
       const promptSize = getPromptSizeSummary(prompt);
       let child: ReturnType<typeof spawn>;
-      const { env: shellEnv, geminiRuntimeAuth } = await this.buildProvisioningEnv(
-        request.providerId
-      );
+      const {
+        env: shellEnv,
+        geminiRuntimeAuth,
+        warning: envWarning,
+      } = await this.buildProvisioningEnv(request.providerId);
+      if (envWarning) {
+        throw new Error(envWarning);
+      }
       shellEnv.CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP = '1';
       const teammateModeDecision = await resolveDesktopTeammateModeDecision(request.extraCliArgs);
       if (teammateModeDecision.forceProcessTeammates) {
@@ -10305,21 +10323,23 @@ export class TeamProvisioningService {
         : {}),
       CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: '1',
     };
-    applyConfiguredRuntimeBackendsEnv(env);
-    applyProviderRuntimeEnv(env, providerId);
-    await providerConnectionService.applyConfiguredConnectionEnv(
+    const resolvedProviderId = resolveTeamProviderId(providerId);
+    const providerEnvResult = await buildProviderAwareCliEnv({
+      providerId,
+      shellEnv,
       env,
-      resolveTeamProviderId(providerId)
-    );
+    });
+    const providerConnectionIssue = providerEnvResult.connectionIssues[resolvedProviderId];
+    const providerEnv = providerEnvResult.env;
 
     const controlApiBaseUrl = await this.resolveControlApiBaseUrl();
     if (controlApiBaseUrl) {
-      env.CLAUDE_TEAM_CONTROL_URL = controlApiBaseUrl;
+      providerEnv.CLAUDE_TEAM_CONTROL_URL = controlApiBaseUrl;
     }
 
     // SHELL is a Unix concept — only set it on non-Windows platforms.
     if (!isWindows) {
-      env.SHELL = shell;
+      providerEnv.SHELL = shell;
     }
 
     // XDG directories are a freedesktop.org (Linux/macOS) convention.
@@ -10333,35 +10353,47 @@ export class TeamProvisioningService {
         shellEnv.XDG_STATE_HOME?.trim() ||
         process.env.XDG_STATE_HOME?.trim() ||
         `${home}/.local/state`;
-      env.XDG_CONFIG_HOME = xdgConfigHome;
-      env.XDG_STATE_HOME = xdgStateHome;
+      providerEnv.XDG_CONFIG_HOME = xdgConfigHome;
+      providerEnv.XDG_STATE_HOME = xdgStateHome;
     }
 
-    if (resolveTeamProviderId(providerId) === 'codex') {
-      return { env, authSource: 'codex_runtime', geminiRuntimeAuth: null };
-    }
-
-    if (resolveTeamProviderId(providerId) === 'gemini') {
+    if (providerConnectionIssue) {
       return {
-        env,
+        env: providerEnv,
+        authSource: 'configured_api_key_missing',
+        geminiRuntimeAuth: null,
+        warning: providerConnectionIssue,
+      };
+    }
+
+    if (resolvedProviderId === 'codex') {
+      return { env: providerEnv, authSource: 'codex_runtime', geminiRuntimeAuth: null };
+    }
+
+    if (resolvedProviderId === 'gemini') {
+      return {
+        env: providerEnv,
         authSource: 'gemini_runtime',
-        geminiRuntimeAuth: await resolveGeminiRuntimeAuth(env),
+        geminiRuntimeAuth: await resolveGeminiRuntimeAuth(providerEnv),
       };
     }
 
     // 1. Explicit ANTHROPIC_API_KEY — works with `-p` mode directly
-    if (typeof env.ANTHROPIC_API_KEY === 'string' && env.ANTHROPIC_API_KEY.trim().length > 0) {
-      return { env, authSource: 'anthropic_api_key', geminiRuntimeAuth: null };
+    if (
+      typeof providerEnv.ANTHROPIC_API_KEY === 'string' &&
+      providerEnv.ANTHROPIC_API_KEY.trim().length > 0
+    ) {
+      return { env: providerEnv, authSource: 'anthropic_api_key', geminiRuntimeAuth: null };
     }
 
     // 2. Proxy token (ANTHROPIC_AUTH_TOKEN) — `-p` mode does NOT read this var,
     //    so we must copy it into ANTHROPIC_API_KEY for it to work.
     if (
-      typeof env.ANTHROPIC_AUTH_TOKEN === 'string' &&
-      env.ANTHROPIC_AUTH_TOKEN.trim().length > 0
+      typeof providerEnv.ANTHROPIC_AUTH_TOKEN === 'string' &&
+      providerEnv.ANTHROPIC_AUTH_TOKEN.trim().length > 0
     ) {
-      env.ANTHROPIC_API_KEY = env.ANTHROPIC_AUTH_TOKEN;
-      return { env, authSource: 'anthropic_auth_token', geminiRuntimeAuth: null };
+      providerEnv.ANTHROPIC_API_KEY = providerEnv.ANTHROPIC_AUTH_TOKEN;
+      return { env: providerEnv, authSource: 'anthropic_auth_token', geminiRuntimeAuth: null };
     }
 
     // 3. No explicit API key — let the CLI handle its own OAuth auth.
@@ -10369,7 +10401,7 @@ export class TeamProvisioningService {
     //    tokens in-memory. Injecting CLAUDE_CODE_OAUTH_TOKEN from the
     //    credentials file causes 401 errors because the stored token is
     //    often stale (CLI refreshes in-memory but rarely writes back).
-    return { env, authSource: 'none', geminiRuntimeAuth: null };
+    return { env: providerEnv, authSource: 'none', geminiRuntimeAuth: null };
   }
 
   private async resolveControlApiBaseUrl(): Promise<string | null> {

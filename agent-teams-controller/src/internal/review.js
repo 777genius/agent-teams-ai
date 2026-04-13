@@ -1,8 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-
 const kanban = require('./kanban.js');
 const messages = require('./messages.js');
+const runtimeHelpers = require('./runtimeHelpers.js');
 const tasks = require('./tasks.js');
 const { wrapAgentBlock } = require('./agentBlocks.js');
 
@@ -17,19 +15,7 @@ function getReviewer(context, flags) {
 }
 
 function resolveLeadSessionId(context, flags) {
-  if (typeof flags.leadSessionId === 'string' && flags.leadSessionId.trim()) {
-    return flags.leadSessionId.trim();
-  }
-
-  try {
-    const configPath = path.join(context.paths.teamDir, 'config.json');
-    const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    return typeof parsed.leadSessionId === 'string' && parsed.leadSessionId.trim()
-      ? parsed.leadSessionId.trim()
-      : undefined;
-  } catch {
-    return undefined;
-  }
+  return runtimeHelpers.resolveCanonicalLeadSessionId(context.paths, flags.leadSessionId);
 }
 
 function getCurrentReviewState(task) {

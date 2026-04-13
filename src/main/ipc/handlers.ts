@@ -89,6 +89,11 @@ import { registerValidationHandlers, removeValidationHandlers } from './validati
 import { registerWindowHandlers, removeWindowHandlers } from './window';
 
 import type {
+  BoardTaskActivityDetailService,
+  BoardTaskActivityService,
+  BoardTaskExactLogDetailService,
+  BoardTaskExactLogsService,
+  BoardTaskLogStreamService,
   BranchStatusService,
   ChangeExtractorService,
   CliInstallerService,
@@ -130,6 +135,11 @@ export function initializeIpcHandlers(
   teamProvisioningService: TeamProvisioningService,
   teamMemberLogsFinder: TeamMemberLogsFinder,
   memberStatsComputer: MemberStatsComputer,
+  boardTaskActivityService: BoardTaskActivityService,
+  boardTaskActivityDetailService: BoardTaskActivityDetailService,
+  boardTaskLogStreamService: BoardTaskLogStreamService,
+  boardTaskExactLogsService: BoardTaskExactLogsService,
+  boardTaskExactLogDetailService: BoardTaskExactLogDetailService,
   teammateToolTracker: TeammateToolTracker | undefined,
   branchStatusService: BranchStatusService | undefined,
   contextCallbacks: {
@@ -174,7 +184,12 @@ export function initializeIpcHandlers(
     memberStatsComputer,
     teamBackupService,
     teammateToolTracker,
-    branchStatusService
+    branchStatusService,
+    boardTaskActivityService,
+    boardTaskActivityDetailService,
+    boardTaskLogStreamService,
+    boardTaskExactLogsService,
+    boardTaskExactLogDetailService
   );
   initializeConfigHandlers({
     onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,

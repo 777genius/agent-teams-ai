@@ -42,6 +42,7 @@ import {
   type SearchContext,
 } from '../searchHighlightUtils';
 import { highlightLine } from '../viewers/syntaxHighlighter';
+
 import { FileLink, isRelativeUrl } from './FileLink';
 import { MermaidDiagram } from './MermaidDiagram';
 

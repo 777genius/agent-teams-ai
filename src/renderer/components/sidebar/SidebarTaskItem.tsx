@@ -5,7 +5,6 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useUnreadCommentCount } from '@renderer/hooks/useUnreadCommentCount';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { buildMemberColorMap, REVIEW_STATE_DISPLAY } from '@renderer/utils/memberHelpers';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { projectColor } from '@renderer/utils/projectColor';
@@ -13,6 +12,7 @@ import { projectLabelFromPath } from '@renderer/utils/taskGrouping';
 import { getTaskKanbanColumn } from '@shared/utils/reviewState';
 import { format, isThisYear, isToday, isYesterday } from 'date-fns';
 import { CheckCircle2, Circle, Eye, Loader2, ShieldCheck, Trash2 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import type { GlobalTask, TeamTaskStatus } from '@shared/types';
 import type { LucideIcon } from 'lucide-react';

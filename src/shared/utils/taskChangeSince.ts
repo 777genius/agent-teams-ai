@@ -1,12 +1,12 @@
 const TASK_SINCE_GRACE_MS = 2 * 60 * 1000;
 
-type TaskChangeIntervalLike = {
+interface TaskChangeIntervalLike {
   startedAt?: string | null;
-};
+}
 
-type TaskChangeHistoryEventLike = {
+interface TaskChangeHistoryEventLike {
   timestamp?: string | null;
-};
+}
 
 export interface TaskChangeSinceLike<
   TInterval extends TaskChangeIntervalLike = TaskChangeIntervalLike,

@@ -13,8 +13,8 @@ import { Worker } from 'node:worker_threads';
 
 import { createLogger } from '@shared/utils/logger';
 
-import type { MemberLogSummary, TeamData } from '@shared/types';
 import type { TeamDataWorkerRequest, TeamDataWorkerResponse } from './teamDataWorkerTypes';
+import type { MemberLogSummary, TeamData } from '@shared/types';
 
 const logger = createLogger('Service:TeamDataWorkerClient');
 const WORKER_CALL_TIMEOUT_MS = 30_000;
@@ -49,10 +49,10 @@ function resolveWorkerPath(): string | null {
   return null;
 }
 
-type PendingEntry = {
+interface PendingEntry {
   resolve: (v: unknown) => void;
   reject: (e: Error) => void;
-};
+}
 
 export class TeamDataWorkerClient {
   private worker: Worker | null = null;

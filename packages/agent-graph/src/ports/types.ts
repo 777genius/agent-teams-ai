@@ -17,6 +17,13 @@ export type GraphNodeState =
   | 'error'
   | 'terminated';
 
+export type GraphLaunchVisualState =
+  | 'waiting'
+  | 'spawning'
+  | 'runtime_pending'
+  | 'settling'
+  | 'error';
+
 // ─── Edge & Particle Types ───────────────────────────────────────────────────
 
 export type GraphEdgeType = 'parent-child' | 'ownership' | 'blocking' | 'related' | 'message';
@@ -28,6 +35,18 @@ export type GraphParticleKind =
   | 'review_request'
   | 'review_response'
   | 'spawn';
+
+export interface GraphActivityItem {
+  id: string;
+  kind: Exclude<GraphParticleKind, 'spawn'>;
+  timestamp: string;
+  title: string;
+  preview?: string;
+  accentColor?: string;
+  taskId?: string;
+  taskDisplayId?: string;
+  authorLabel?: string;
+}
 
 // ─── Graph Node ──────────────────────────────────────────────────────────────
 
@@ -50,6 +69,8 @@ export interface GraphNode {
   avatarUrl?: string;
   /** Spawn lifecycle status */
   spawnStatus?: 'offline' | 'waiting' | 'spawning' | 'online' | 'error';
+  /** Shared launch-stage visual derived by the host app */
+  launchVisualState?: GraphLaunchVisualState;
   /** Context window usage ratio (0..1), available for lead only */
   contextUsage?: number;
   /** Current task ID this member is working on */
@@ -78,6 +99,14 @@ export interface GraphNode {
     resultPreview?: string;
     source: 'runtime' | 'member_log' | 'inbox';
   }>;
+  /** Compact abnormal-state indicator */
+  exceptionTone?: 'warning' | 'error';
+  /** Short human-readable abnormal-state label */
+  exceptionLabel?: string;
+  /** Recent activity feed rendered inline beside the node */
+  activityItems?: GraphActivityItem[];
+  /** Count of older items hidden behind the visible activity window */
+  activityOverflowCount?: number;
 
   // ─── Task-specific ─────────────────────────────────────────────────────
   /** Short display ID (e.g., "#3") */
@@ -90,6 +119,14 @@ export interface GraphNode {
   taskStatus?: 'pending' | 'in_progress' | 'completed' | 'deleted';
   /** Review state overlay */
   reviewState?: 'none' | 'review' | 'needsFix' | 'approved';
+  /** Reviewer shown as a compact handoff chip for active review cycles */
+  reviewerName?: string | null;
+  /** Reviewer chip mode */
+  reviewMode?: 'assigned' | 'manual';
+  /** Reviewer color override for compact review chip */
+  reviewerColor?: string;
+  /** Cheap persisted change-presence state used only for active review chips */
+  changePresence?: 'has_changes' | 'no_changes' | 'unknown';
   /** Requires clarification indicator */
   needsClarification?: 'lead' | 'user' | null;
   /** Task is blocked by other tasks */
@@ -102,6 +139,12 @@ export interface GraphNode {
   totalCommentCount?: number;
   /** Unread comment count on this task */
   unreadCommentCount?: number;
+  /** Synthetic overflow stack node instead of hidden task tails */
+  isOverflowStack?: boolean;
+  /** Number of hidden tasks behind this overflow stack */
+  overflowCount?: number;
+  /** Raw task IDs hidden behind this overflow stack */
+  overflowTaskIds?: string[];
 
   // ─── Process-specific ──────────────────────────────────────────────────
   /** Clickable URL for process */
@@ -137,6 +180,12 @@ export interface GraphEdge {
   label?: string;
   /** Edge color override */
   color?: string;
+  /** Number of aggregated raw relations behind this visual edge */
+  aggregateCount?: number;
+  /** Raw source-side task ids represented by this visual edge */
+  sourceTaskIds?: string[];
+  /** Raw target-side task ids represented by this visual edge */
+  targetTaskIds?: string[];
 }
 
 // ─── Graph Particle ──────────────────────────────────────────────────────────
@@ -153,6 +202,8 @@ export interface GraphParticle {
   size?: number;
   /** Short label near particle */
   label?: string;
+  /** Longer preview text for transient handoff cards */
+  preview?: string;
   /** If true, particle travels from target → source (reverse direction) */
   reverse?: boolean;
 }
@@ -163,5 +214,11 @@ export type GraphDomainRef =
   | { kind: 'lead'; teamName: string; memberName: string }
   | { kind: 'member'; teamName: string; memberName: string }
   | { kind: 'task'; teamName: string; taskId: string }
+  | {
+      kind: 'task_overflow';
+      teamName: string;
+      ownerMemberName?: string | null;
+      columnKey: string;
+    }
   | { kind: 'process'; teamName: string; processId: string }
   | { kind: 'crossteam'; teamName: string; externalTeamName: string };

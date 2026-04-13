@@ -104,6 +104,8 @@ export interface Session {
   messageCount: number;
   /** Whether the session is ongoing (last AI response has no output yet) */
   isOngoing?: boolean;
+  /** Latest main-thread model seen in the session metadata scan */
+  model?: string;
   /** Git branch name if available */
   gitBranch?: string;
   /** Metadata completeness level */

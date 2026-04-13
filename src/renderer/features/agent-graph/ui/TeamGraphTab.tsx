@@ -7,12 +7,21 @@ import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
 import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
+import { useStore } from '@renderer/store';
 
 import { useTeamGraphAdapter } from '../adapters/useTeamGraphAdapter';
 
+import { GraphActivityHud } from './GraphActivityHud';
+import { GraphBlockingEdgePopover } from './GraphBlockingEdgePopover';
 import { GraphNodePopover } from './GraphNodePopover';
+import { GraphProvisioningHud } from './GraphProvisioningHud';
+import { useGraphCreateTaskDialog } from './useGraphCreateTaskDialog';
 
 import type { GraphDomainRef, GraphEventPort, GraphNode } from '@claude-teams/agent-graph';
+import type {
+  MemberActivityFilter,
+  MemberDetailTab,
+} from '@renderer/components/team/members/memberDetailTypes';
 
 const TeamGraphOverlay = lazy(() =>
   import('./TeamGraphOverlay').then((m) => ({ default: m.TeamGraphOverlay }))
@@ -24,13 +33,23 @@ export interface TeamGraphTabProps {
   isPaneFocused?: boolean;
 }
 
+interface OpenProfileOptions {
+  initialTab?: MemberDetailTab;
+  initialActivityFilter?: MemberActivityFilter;
+}
+
 export const TeamGraphTab = ({
   teamName,
   isActive = true,
   isPaneFocused = false,
 }: TeamGraphTabProps): React.JSX.Element => {
   const graphData = useTeamGraphAdapter(teamName);
+  const leadNodeId = useMemo(
+    () => graphData.nodes.find((node) => node.kind === 'lead')?.id ?? null,
+    [graphData.nodes]
+  );
   const [fullscreen, setFullscreen] = useState(false);
+  const { dialog: createTaskDialog, openCreateTaskDialog } = useGraphCreateTaskDialog(teamName);
 
   // Typed event dispatchers (DRY — used in both events + renderOverlay)
   const dispatchOpenTask = useCallback(
@@ -46,17 +65,20 @@ export const TeamGraphTab = ({
     [teamName]
   );
   const dispatchOpenProfile = useCallback(
-    (memberName: string) =>
+    (memberName: string, options?: OpenProfileOptions) =>
       window.dispatchEvent(
-        new CustomEvent('graph:open-profile', { detail: { teamName, memberName } })
+        new CustomEvent('graph:open-profile', {
+          detail: { teamName, memberName, ...options },
+        })
       ),
     [teamName]
   );
-  const dispatchCreateTask = useCallback(
-    (owner: string) =>
-      window.dispatchEvent(new CustomEvent('graph:create-task', { detail: { teamName, owner } })),
-    [teamName]
-  );
+  const openTeamPage = useCallback(() => {
+    useStore.getState().openTeamTab(teamName);
+  }, [teamName]);
+  const openCreateTask = useCallback(() => {
+    openCreateTaskDialog('');
+  }, [openCreateTaskDialog]);
 
   // Task action dispatchers
   const dispatchTaskAction = useCallback(
@@ -98,7 +120,12 @@ export const TeamGraphTab = ({
     ),
     onSendMessage: dispatchSendMessage,
     onOpenTaskDetail: dispatchOpenTask,
-    onOpenMemberProfile: dispatchOpenProfile,
+    onOpenMemberProfile: useCallback(
+      (memberName: string) => {
+        dispatchOpenProfile(memberName);
+      },
+      [dispatchOpenProfile]
+    ),
   };
 
   return (
@@ -113,9 +140,47 @@ export const TeamGraphTab = ({
         <GraphView
           data={graphData}
           events={events}
-          className="size-full"
+          className="team-graph-view size-full"
           suspendAnimation={!isActive}
           onRequestFullscreen={() => setFullscreen(true)}
+          onOpenTeamPage={openTeamPage}
+          onCreateTask={openCreateTask}
+          renderHud={({
+            getLaunchAnchorScreenPlacement,
+            getActivityAnchorScreenPlacement,
+            getNodeScreenPosition,
+            focusNodeIds,
+          }) => (
+            <>
+              <GraphActivityHud
+                teamName={teamName}
+                nodes={graphData.nodes}
+                getActivityAnchorScreenPlacement={getActivityAnchorScreenPlacement}
+                getNodeScreenPosition={getNodeScreenPosition}
+                focusNodeIds={focusNodeIds}
+                enabled={isActive}
+                onOpenTaskDetail={dispatchOpenTask}
+                onOpenMemberProfile={dispatchOpenProfile}
+              />
+              <GraphProvisioningHud
+                teamName={teamName}
+                leadNodeId={leadNodeId}
+                getLaunchAnchorScreenPlacement={getLaunchAnchorScreenPlacement}
+                enabled={isActive}
+              />
+            </>
+          )}
+          renderEdgeOverlay={({ edge, sourceNode, targetNode, onClose, onSelectNode }) => (
+            <GraphBlockingEdgePopover
+              teamName={teamName}
+              edge={edge}
+              sourceNode={sourceNode}
+              targetNode={targetNode}
+              onClose={onClose}
+              onSelectNode={onSelectNode}
+              onOpenTaskDetail={dispatchOpenTask}
+            />
+          )}
           renderOverlay={({ node, onClose }) => (
             <GraphNodePopover
               node={node}
@@ -124,7 +189,7 @@ export const TeamGraphTab = ({
               onSendMessage={dispatchSendMessage}
               onOpenTaskDetail={dispatchOpenTask}
               onOpenMemberProfile={dispatchOpenProfile}
-              onCreateTask={dispatchCreateTask}
+              onCreateTask={openCreateTaskDialog}
               onStartTask={dispatchStartTask}
               onCompleteTask={dispatchCompleteTask}
               onApproveTask={dispatchApproveTask}
@@ -137,6 +202,7 @@ export const TeamGraphTab = ({
           )}
         />
       </div>
+      {createTaskDialog}
       {fullscreen && (
         <Suspense fallback={null}>
           <TeamGraphOverlay

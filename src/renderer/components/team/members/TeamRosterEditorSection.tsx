@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { MembersEditorSection } from './MembersEditorSection';
 import { LeadModelRow } from './LeadModelRow';
+import { MembersEditorSection } from './MembersEditorSection';
 
 import type { MemberDraft } from './membersEditorTypes';
 import type { MentionSuggestion } from '@renderer/types/mention';

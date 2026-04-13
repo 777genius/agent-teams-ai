@@ -7,7 +7,13 @@ import { useCallback, useState } from 'react';
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import {
+  getTeamColorSet,
+  getThemedBadge,
+  getThemedBorder,
+  getThemedText,
+} from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { nameColorSet } from '@renderer/utils/projectColor';
@@ -78,7 +84,7 @@ export const SortableTab = ({
 
   const teamColorSet = useStore(
     useShallow((s) => {
-      if (tab.type !== 'team' || !tab.teamName) return null;
+      if ((tab.type !== 'team' && tab.type !== 'graph') || !tab.teamName) return null;
       const team = s.teamByName[tab.teamName];
       const explicitColor =
         team?.color ??
@@ -86,10 +92,13 @@ export const SortableTab = ({
       if (explicitColor) return getTeamColorSet(explicitColor);
       // Fallback: deterministic color derived from display name
       const displayName = team?.displayName ?? tab.label;
-      return nameColorSet(displayName);
+      return nameColorSet(displayName, isLight);
     })
   );
-  const activeBorderColor = teamColorSet?.border ?? 'var(--color-accent, #6366f1)';
+  const activeBorderColor = teamColorSet
+    ? getThemedBorder(teamColorSet, isLight)
+    : 'var(--color-accent, #6366f1)';
+  const inactiveTeamTextColor = teamColorSet ? getThemedText(teamColorSet, isLight) : null;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tab.id,
@@ -116,11 +125,12 @@ export const SortableTab = ({
         : teamColorSet
           ? getThemedBadge(teamColorSet, isLight)
           : 'transparent',
-    color:
-      isActive || isHovered
-        ? 'var(--color-text)'
-        : teamColorSet
-          ? teamColorSet.text
+    color: isActive
+      ? 'var(--color-text)'
+      : inactiveTeamTextColor
+        ? inactiveTeamTextColor
+        : isHovered
+          ? 'var(--color-text)'
           : 'var(--color-text-muted)',
     outline: isSelected ? '1px solid var(--color-border-emphasis)' : 'none',
     outlineOffset: '-1px',
@@ -202,18 +212,23 @@ export const SortableTab = ({
           }}
         />
       )}
-      <button
-        className="flex size-4 shrink-0 items-center justify-center rounded-sm opacity-0 transition-opacity group-hover:opacity-100"
-        style={{ backgroundColor: 'transparent' }}
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose(tab.id);
-        }}
-        onPointerDown={(e) => e.stopPropagation()}
-        title="Close tab"
-      >
-        <X className="size-3" />
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            className="flex size-4 shrink-0 items-center justify-center rounded-sm opacity-0 transition-opacity group-hover:opacity-100"
+            style={{ backgroundColor: 'transparent' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose(tab.id);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            aria-label="Close tab"
+          >
+            <X className="size-3" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Close tab</TooltipContent>
+      </Tooltip>
     </div>
   );
 };

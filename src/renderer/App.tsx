@@ -37,7 +37,7 @@ export const App = (): React.JSX.Element => {
 
   return (
     <ErrorBoundary>
-      <TooltipProvider delayDuration={300}>
+      <TooltipProvider delayDuration={150} skipDelayDuration={1500}>
         <ContextSwitchOverlay />
         <TabbedLayout />
         <ConfirmDialog />

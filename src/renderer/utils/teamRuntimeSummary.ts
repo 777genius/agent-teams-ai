@@ -1,9 +1,10 @@
-import type { TeamProviderId } from '@shared/types';
 import {
   doesTeamModelCarryProviderBrand,
   getTeamModelLabel,
   getTeamProviderLabel,
 } from './teamModelCatalog';
+
+import type { TeamProviderId } from '@shared/types';
 
 export function getTeamRuntimeModelLabel(model: string | undefined): string | undefined {
   return getTeamModelLabel(model);

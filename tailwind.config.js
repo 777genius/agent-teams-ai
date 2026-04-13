@@ -4,7 +4,8 @@ module.exports = {
   content: [
     './src/renderer/index.html',
     './src/renderer/**/*.{js,ts,jsx,tsx}',
-    './src/shared/**/*.{js,ts,jsx,tsx}'
+    './src/shared/**/*.{js,ts,jsx,tsx}',
+    './packages/agent-graph/src/**/*.{js,ts,jsx,tsx}'
   ],
   theme: {
     extend: {

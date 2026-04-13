@@ -144,6 +144,108 @@ export class ProviderConnectionService {
     return nextEnv;
   }
 
+  async augmentConfiguredConnectionEnv(
+    env: NodeJS.ProcessEnv,
+    providerId: CliProviderId
+  ): Promise<NodeJS.ProcessEnv> {
+    if (providerId === 'anthropic') {
+      if (this.getConfiguredAuthMode(providerId) !== 'api_key') {
+        return env;
+      }
+
+      const storedKey = await this.apiKeyService.lookupPreferred('ANTHROPIC_API_KEY');
+      if (storedKey?.value.trim()) {
+        env.ANTHROPIC_API_KEY = storedKey.value;
+      }
+      return env;
+    }
+
+    if (providerId !== 'codex') {
+      return env;
+    }
+
+    const codexConnection = this.configManager.getConfig().providerConnections.codex;
+    if (!codexConnection.apiKeyBetaEnabled) {
+      return env;
+    }
+
+    env[CODEX_API_KEY_BETA_ENV_VAR] = '1';
+    env.CLAUDE_CODE_CODEX_BACKEND = codexConnection.authMode === 'oauth' ? 'adapter' : 'api';
+
+    if (codexConnection.authMode !== 'api_key') {
+      return env;
+    }
+
+    const storedKey = await this.apiKeyService.lookupPreferred('OPENAI_API_KEY');
+    if (storedKey?.value.trim()) {
+      env.OPENAI_API_KEY = storedKey.value;
+    }
+
+    return env;
+  }
+
+  async augmentAllConfiguredConnectionEnv(env: NodeJS.ProcessEnv): Promise<NodeJS.ProcessEnv> {
+    let nextEnv = env;
+    for (const providerId of ['anthropic', 'codex', 'gemini'] as const) {
+      nextEnv = await this.augmentConfiguredConnectionEnv(nextEnv, providerId);
+    }
+    return nextEnv;
+  }
+
+  async getConfiguredConnectionIssue(
+    env: NodeJS.ProcessEnv,
+    providerId: CliProviderId
+  ): Promise<string | null> {
+    if (providerId === 'anthropic') {
+      if (this.getConfiguredAuthMode(providerId) !== 'api_key') {
+        return null;
+      }
+
+      if (typeof env.ANTHROPIC_API_KEY === 'string' && env.ANTHROPIC_API_KEY.trim()) {
+        return null;
+      }
+
+      return (
+        'Anthropic API key mode is enabled, but no ANTHROPIC_API_KEY is configured. ' +
+        'Add a stored/environment API key or switch Anthropic auth mode back to Auto or OAuth.'
+      );
+    }
+
+    if (providerId !== 'codex') {
+      return null;
+    }
+
+    const codexConnection = this.configManager.getConfig().providerConnections.codex;
+    if (!codexConnection.apiKeyBetaEnabled || codexConnection.authMode !== 'api_key') {
+      return null;
+    }
+
+    if (typeof env.OPENAI_API_KEY === 'string' && env.OPENAI_API_KEY.trim()) {
+      return null;
+    }
+
+    return (
+      'Codex API key mode is enabled, but no OPENAI_API_KEY is configured. ' +
+      'Add a stored/environment API key or switch Codex auth mode back to OAuth.'
+    );
+  }
+
+  async getConfiguredConnectionIssues(
+    env: NodeJS.ProcessEnv,
+    providerIds: readonly CliProviderId[] = ['anthropic', 'codex', 'gemini']
+  ): Promise<Partial<Record<CliProviderId, string>>> {
+    const issues: Partial<Record<CliProviderId, string>> = {};
+
+    for (const providerId of providerIds) {
+      const issue = await this.getConfiguredConnectionIssue(env, providerId);
+      if (issue) {
+        issues[providerId] = issue;
+      }
+    }
+
+    return issues;
+  }
+
   async enrichProviderStatus(provider: CliProviderStatus): Promise<CliProviderStatus> {
     return {
       ...provider,

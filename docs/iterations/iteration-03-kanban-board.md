@@ -1,5 +1,10 @@
 # Итерация 03 — Kanban Board (click-to-move) + `kanban-state.json`
 
+> Historical note
+> This document captures the planned Kanban scope at iteration time.
+> It is not the source of truth for the current product contract.
+> For the current review flow, see [../team-management/README.md](../team-management/README.md) and [../team-management/kanban-design.md](../team-management/kanban-design.md).
+
 Эта итерация добавляет **kanban-доску команды** во вкладке Team и вводит **персистентное состояние** для колонок `REVIEW`/`APPROVED` через файл `~/.claude/teams/{teamName}/kanban-state.json`.
 
 Основание:
@@ -263,4 +268,3 @@
 - **EXDEV/rename нюансы**: в atomic write добавляем fallback copy+unlink.
 - **Синхронизация UI**: после `updateKanban` делаем `refreshTeamData(teamName)` (и всё равно придёт watcher-событие; refresh должен быть идемпотентен).
 - **Шум от fs.watch**: kanban-write может вызвать два refresh (ручной + watcher). Это ок, но store должен coalesce, а `refreshTeamData` — быть безопасным при частых вызовах.
-

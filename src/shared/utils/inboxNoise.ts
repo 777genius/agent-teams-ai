@@ -82,7 +82,7 @@ export interface ParsedPermissionRequest {
  */
 export function parsePermissionRequest(text: string): ParsedPermissionRequest | null {
   const parsed = parseInboxJson(text);
-  if (!parsed || parsed.type !== 'permission_request') return null;
+  if (parsed?.type !== 'permission_request') return null;
 
   const requestId = typeof parsed.request_id === 'string' ? parsed.request_id : null;
   const agentId = typeof parsed.agent_id === 'string' ? parsed.agent_id : null;

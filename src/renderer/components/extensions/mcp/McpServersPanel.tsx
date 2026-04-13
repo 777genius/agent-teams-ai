@@ -14,11 +14,11 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { formatRelativeTime } from '@renderer/utils/formatters';
 import { CLI_NOT_FOUND_MARKER } from '@shared/constants/cli';
 import { sanitizeMcpServerName } from '@shared/utils/extensionNormalizers';
 import { AlertTriangle, RefreshCw, Search, Server } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { SearchInput } from '../common/SearchInput';
 

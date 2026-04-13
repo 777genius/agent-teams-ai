@@ -1,9 +1,9 @@
+import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs/promises';
 
-import type { MemberRuntimeAdvisory, ResolvedTeamMember } from '@shared/types';
-import { createLogger } from '@shared/utils/logger';
-
 import { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
+
+import type { MemberRuntimeAdvisory, ResolvedTeamMember } from '@shared/types';
 
 const LOOKBACK_MS = 10 * 60 * 1000;
 const CACHE_TTL_MS = 5_000;
@@ -102,11 +102,7 @@ export class TeamMemberRuntimeAdvisoryService {
     const membersSignature = this.buildMembersSignature(activeMembers);
     const now = Date.now();
     const cachedBatch = this.teamBatchCacheByTeam.get(teamKey);
-    if (
-      cachedBatch &&
-      cachedBatch.membersSignature === membersSignature &&
-      cachedBatch.expiresAt > now
-    ) {
+    if (cachedBatch?.membersSignature === membersSignature && cachedBatch.expiresAt > now) {
       return this.materializeBatchAdvisories(activeMembers, cachedBatch.value);
     }
 

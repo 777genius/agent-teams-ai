@@ -7,8 +7,8 @@ import { useEffect, useState } from 'react';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { AlertTriangle, Info, Key, Plus } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { ApiKeyCard } from './ApiKeyCard';
 import { ApiKeyFormDialog } from './ApiKeyFormDialog';

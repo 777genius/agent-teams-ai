@@ -12,16 +12,15 @@ import { getCurrentProvisioningProgressForTeam } from '@renderer/store/slices/te
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import {
   agentAvatarUrl,
+  buildMemberLaunchPresentation,
   displayMemberName,
-  getLaunchAwarePresenceLabel,
-  getMemberRuntimeAdvisoryTitle,
-  getSpawnAwareDotClass,
 } from '@renderer/utils/memberHelpers';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { ExternalLink } from 'lucide-react';
 
-import { CurrentTaskIndicator } from './CurrentTaskIndicator';
 import { getLaunchJoinMilestonesFromMembers, getLaunchJoinState } from '../provisioningSteps';
+
+import { CurrentTaskIndicator } from './CurrentTaskIndicator';
 
 import type { LeadActivityState, TeamTaskWithKanban } from '@shared/types';
 
@@ -103,32 +102,21 @@ export const MemberHoverCard = ({
     progress?.state === 'ready' && getLaunchJoinState(launchJoinMilestones).hasMembersStillJoining;
   const colors = getTeamColorSet(color ?? member.color ?? '');
   const roleLabel = formatAgentRole(member.role) ?? formatAgentRole(member.agentType);
-  const presenceLabel = getLaunchAwarePresenceLabel(
+  const launchPresentation = buildMemberLaunchPresentation({
     member,
-    spawnEntry?.status,
-    spawnEntry?.launchState,
-    spawnEntry?.livenessSource,
-    spawnEntry?.runtimeAlive,
-    member.runtimeAdvisory,
+    spawnStatus: spawnEntry?.status,
+    spawnLaunchState: spawnEntry?.launchState,
+    spawnLivenessSource: spawnEntry?.livenessSource,
+    spawnRuntimeAlive: spawnEntry?.runtimeAlive,
+    runtimeAdvisory: member.runtimeAdvisory,
     isLaunchSettling,
     isTeamAlive,
-    false,
-    isLeadMember(member) ? leadActivity : undefined
-  );
-  const dotClass = getSpawnAwareDotClass(
-    member,
-    spawnEntry?.status,
-    spawnEntry?.launchState,
-    spawnEntry?.runtimeAlive,
-    isLaunchSettling,
-    isTeamAlive,
-    false,
-    isLeadMember(member) ? leadActivity : undefined
-  );
-  const runtimeAdvisoryTitle = getMemberRuntimeAdvisoryTitle(
-    member.runtimeAdvisory,
-    member.providerId
-  );
+    isTeamProvisioning: false,
+    leadActivity: isLeadMember(member) ? leadActivity : undefined,
+  });
+  const presenceLabel = launchPresentation.presenceLabel;
+  const dotClass = launchPresentation.dotClass;
+  const runtimeAdvisoryTitle = launchPresentation.runtimeAdvisoryTitle;
   const currentTask: TeamTaskWithKanban | null =
     member.currentTaskId && tasks
       ? (tasks.find((t) => t.id === member.currentTaskId) ?? null)

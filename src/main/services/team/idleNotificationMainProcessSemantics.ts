@@ -5,12 +5,12 @@ import {
 
 export type MainProcessIdleHandling = 'silent_noise' | 'passive_activity' | 'visible_actionable';
 
-export type ClassifiedMainProcessIdle = {
+export interface ClassifiedMainProcessIdle {
   primaryKind: MainProcessIdlePrimaryKind;
   hasPeerSummary: boolean;
   peerSummary: string | null;
   handling: MainProcessIdleHandling;
-};
+}
 
 export function classifyIdleNotificationForMainProcess(
   text: string

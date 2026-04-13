@@ -1,13 +1,12 @@
-import { execFile } from 'child_process';
-
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
+import { execFile } from 'child_process';
 
 const TMUX_AVAILABILITY_CACHE_TTL_MS = 10_000;
 
-type DesktopTeammateModeDecision = {
+interface DesktopTeammateModeDecision {
   injectedTeammateMode: 'tmux' | null;
   forceProcessTeammates: boolean;
-};
+}
 
 let tmuxAvailabilityCache: { value: boolean; at: number } | null = null;
 let tmuxAvailablePromise: Promise<boolean> | null = null;

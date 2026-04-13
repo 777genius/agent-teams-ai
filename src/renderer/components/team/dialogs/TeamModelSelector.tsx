@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 
+import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { Label } from '@renderer/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import {
@@ -17,6 +18,7 @@ import {
 } from '@renderer/utils/geminiUiFreeze';
 import {
   doesTeamModelCarryProviderBrand,
+  getProviderScopedTeamModelLabel,
   getTeamModelLabel as getCatalogTeamModelLabel,
   getTeamModelUiDisabledReason,
   getTeamProviderLabel as getCatalogTeamProviderLabel,
@@ -26,143 +28,27 @@ import {
 } from '@renderer/utils/teamModelCatalog';
 import { Info } from 'lucide-react';
 
-// --- Provider SVG Icons (real brand logos from Simple Icons, monochrome currentColor) ---
-
-/** Anthropic — official "A" lettermark (Simple Icons) */
-const AnthropicIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M17.304 3.541h-3.672l6.696 16.918H24Zm-10.608 0L0 20.459h3.744l1.37-3.553h7.005l1.369 3.553h3.744L10.536 3.541Zm-.371 10.223 2.291-5.946 2.292 5.946Z" />
-  </svg>
-);
-
-/** OpenAI — official hexagonal knot logo (Simple Icons) */
-const OpenAIIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.998 5.998 0 0 0-3.992 2.9 6.042 6.042 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365 2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.612-1.5z" />
-  </svg>
-);
-
-const GoogleGeminiIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M12 2.25c.62 3.9 1.6 6.57 3.18 8.15 1.58 1.58 4.25 2.56 8.15 3.18-3.9.62-6.57 1.6-8.15 3.18-1.58 1.58-2.56 4.25-3.18 8.15-.62-3.9-1.6-6.57-3.18-8.15-1.58-1.58-4.25-2.56-8.15-3.18 3.9-.62 6.57-1.6 8.15-3.18C10.4 8.82 11.38 6.15 12 2.25Z" />
-  </svg>
-);
-
-const OpenCodeIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg viewBox="0 0 24 24" className={className}>
-    <defs>
-      <linearGradient id="opencode-bg" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
-        <stop offset="0" stopColor="#303030" />
-        <stop offset="1" stopColor="#161616" />
-      </linearGradient>
-      <linearGradient
-        id="opencode-frame"
-        x1="7"
-        y1="4.5"
-        x2="17"
-        y2="19.5"
-        gradientUnits="userSpaceOnUse"
-      >
-        <stop offset="0" stopColor="#f4f4f4" />
-        <stop offset="0.35" stopColor="#d9d9d9" />
-        <stop offset="0.68" stopColor="#a8a8a8" />
-        <stop offset="1" stopColor="#ececec" />
-      </linearGradient>
-      <linearGradient
-        id="opencode-frame-stroke"
-        x1="7"
-        y1="4.5"
-        x2="17"
-        y2="19.5"
-        gradientUnits="userSpaceOnUse"
-      >
-        <stop offset="0" stopColor="#ffffff" stopOpacity="0.9" />
-        <stop offset="1" stopColor="#5a5a5a" stopOpacity="0.9" />
-      </linearGradient>
-      <linearGradient
-        id="opencode-core"
-        x1="12"
-        y1="7"
-        x2="12"
-        y2="17"
-        gradientUnits="userSpaceOnUse"
-      >
-        <stop offset="0" stopColor="#121212" />
-        <stop offset="0.42" stopColor="#3e3b33" />
-        <stop offset="1" stopColor="#16140f" />
-      </linearGradient>
-      <linearGradient
-        id="opencode-core-stroke"
-        x1="9"
-        y1="7"
-        x2="15"
-        y2="17"
-        gradientUnits="userSpaceOnUse"
-      >
-        <stop offset="0" stopColor="#f2f2f2" stopOpacity="0.95" />
-        <stop offset="1" stopColor="#6e6e6e" stopOpacity="0.85" />
-      </linearGradient>
-      <filter id="opencode-shadow" x="0" y="0" width="24" height="24" filterUnits="userSpaceOnUse">
-        <feDropShadow dx="0" dy="1.2" stdDeviation="1.2" floodColor="#000000" floodOpacity="0.42" />
-      </filter>
-    </defs>
-    <rect x="1.5" y="1.5" width="21" height="21" rx="5.2" fill="url(#opencode-bg)" />
-    <g filter="url(#opencode-shadow)">
-      <path
-        d="M7 4.25h10c.3 0 .55.25.55.55v14.4c0 .3-.25.55-.55.55H7c-.3 0-.55-.25-.55-.55V4.8c0-.3.25-.55.55-.55Z"
-        fill="url(#opencode-frame)"
-        stroke="url(#opencode-frame-stroke)"
-        strokeWidth="0.55"
-      />
-      <path
-        d="M8.95 7.25h6.1c.22 0 .4.18.4.4v8.7c0 .22-.18.4-.4.4h-6.1a.4.4 0 0 1-.4-.4v-8.7c0-.22.18-.4.4-.4Z"
-        fill="url(#opencode-core)"
-        stroke="url(#opencode-core-stroke)"
-        strokeWidth="0.45"
-      />
-      <path
-        d="M9.25 7.6h5.5"
-        stroke="#ffffff"
-        strokeOpacity="0.18"
-        strokeWidth="0.45"
-        strokeLinecap="round"
-      />
-    </g>
-  </svg>
-);
+export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
 
 // --- Provider definitions ---
 
 interface ProviderDef {
-  id: string;
+  id: 'anthropic' | 'codex' | 'gemini' | 'opencode';
   label: string;
-  icon: React.FC<{ className?: string }>;
   comingSoon: boolean;
 }
 
 const PROVIDERS: ProviderDef[] = [
-  { id: 'anthropic', label: 'Anthropic', icon: AnthropicIcon, comingSoon: false },
-  { id: 'codex', label: 'Codex', icon: OpenAIIcon, comingSoon: false },
-  // { id: 'gemini', label: 'Gemini', icon: GoogleGeminiIcon, comingSoon: false },
-  { id: 'gemini', label: 'Gemini', icon: GoogleGeminiIcon, comingSoon: false },
-  { id: 'opencode', label: 'OpenCode', icon: OpenCodeIcon, comingSoon: false },
+  { id: 'anthropic', label: 'Anthropic', comingSoon: false },
+  { id: 'codex', label: 'Codex', comingSoon: false },
+  { id: 'gemini', label: 'Gemini', comingSoon: false },
+  { id: 'opencode', label: 'OpenCode', comingSoon: false },
 ];
 
 const OPENCODE_UI_DISABLED_REASON = 'OpenCode in development';
 
 export function getTeamModelLabel(model: string): string {
   return getCatalogTeamModelLabel(model) ?? model;
-}
-
-export function getProviderScopedTeamModelLabel(
-  providerId: 'anthropic' | 'codex' | 'gemini',
-  model: string
-): string {
-  const baseLabel = getTeamModelLabel(model);
-  if (providerId !== 'codex') {
-    return baseLabel;
-  }
-  return baseLabel.replace(/^GPT-/i, '');
 }
 
 export function getTeamProviderLabel(providerId: 'anthropic' | 'codex' | 'gemini'): string {
@@ -343,7 +229,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           <div className="-mb-px border-b border-[var(--color-border-subtle)]">
             <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-none bg-transparent p-0">
               {PROVIDERS.map((provider) => {
-                const Icon = provider.icon;
                 const providerDisabledReason = getProviderDisabledReason(provider.id);
                 const providerSelectable = isProviderSelectable(provider.id);
                 const statusBadge = getProviderStatusBadge(provider.id);
@@ -365,7 +250,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       !providerSelectable && 'opacity-50'
                     )}
                   >
-                    <Icon className="size-3.5 shrink-0" />
+                    <ProviderBrandLogo providerId={provider.id} className="size-5 shrink-0" />
                     <span
                       className={cn(
                         'min-w-0 truncate text-sm font-medium',
@@ -422,19 +307,15 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                         id={opt.value === normalizedValue ? id : undefined}
                         aria-disabled={!modelSelectable}
                         className={cn(
-                          'flex min-h-[44px] items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-center text-xs font-medium transition-colors',
+                          'flex min-h-[44px] items-center justify-center gap-1.5 rounded-md border bg-[var(--color-surface)] px-3 py-2 text-center text-xs font-medium transition-[background-color,border-color,color,box-shadow] duration-150',
                           normalizedValue === opt.value
-                            ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
-                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]',
+                            ? 'border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
+                            : modelSelectable
+                              ? 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)] hover:border-[var(--color-border-emphasis)] hover:bg-[color-mix(in_srgb,var(--color-surface-raised)_62%,var(--color-surface)_38%)] hover:text-[var(--color-text-secondary)] hover:shadow-sm'
+                              : 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)]',
                           !modelSelectable && 'cursor-not-allowed opacity-45',
                           !modelDisabledReason && !activeProviderSelectable && 'pointer-events-none'
                         )}
-                        style={{
-                          borderColor:
-                            normalizedValue === opt.value
-                              ? 'var(--color-border-emphasis)'
-                              : 'var(--color-border-subtle)',
-                        }}
                         onClick={() => {
                           if (!modelSelectable) return;
                           onValueChange(opt.value);

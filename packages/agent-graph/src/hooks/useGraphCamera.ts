@@ -7,6 +7,7 @@
 import { useRef, useCallback } from 'react';
 import type { GraphNode } from '../ports/types';
 import { CAMERA, ANIM, NODE, TASK_PILL } from '../constants/canvas-constants';
+import type { WorldBounds } from '../layout/launchAnchor';
 
 export interface CameraTransform {
   x: number;
@@ -22,7 +23,7 @@ export interface UseGraphCameraResult {
   handlePanStart: (sx: number, sy: number) => void;
   handlePanMove: (sx: number, sy: number) => void;
   handlePanEnd: () => void;
-  zoomToFit: (nodes: GraphNode[], canvasW: number, canvasH: number) => void;
+  zoomToFit: (nodes: GraphNode[], canvasW: number, canvasH: number, extraBounds?: WorldBounds[]) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   updateInertia: () => void;
@@ -117,8 +118,8 @@ export function useGraphCamera(): UseGraphCameraResult {
     v.vy *= ANIM.inertiaDecay;
   }, []);
 
-  const zoomToFit = useCallback((nodes: GraphNode[], canvasW: number, canvasH: number) => {
-    if (nodes.length === 0) return;
+  const zoomToFit = useCallback((nodes: GraphNode[], canvasW: number, canvasH: number, extraBounds: WorldBounds[] = []) => {
+    if (nodes.length === 0 && extraBounds.length === 0) return;
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const n of nodes) {
@@ -133,6 +134,13 @@ export function useGraphCamera(): UseGraphCameraResult {
       minY = Math.min(minY, y - pad);
       maxX = Math.max(maxX, x + pad);
       maxY = Math.max(maxY, y + pad);
+    }
+
+    for (const bounds of extraBounds) {
+      minX = Math.min(minX, bounds.left);
+      minY = Math.min(minY, bounds.top);
+      maxX = Math.max(maxX, bounds.right);
+      maxY = Math.max(maxY, bounds.bottom);
     }
 
     const padding = ANIM.viewportPadding;

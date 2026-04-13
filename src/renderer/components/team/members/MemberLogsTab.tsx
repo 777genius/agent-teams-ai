@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useStore } from '@renderer/store';
-import { useTabIdOptional } from '@renderer/contexts/useTabUIContext';
-
 import { api } from '@renderer/api';
 import { MemberExecutionLog } from '@renderer/components/team/members/MemberExecutionLog';
 import {
@@ -11,6 +8,8 @@ import {
 } from '@renderer/components/team/members/SubagentRecentMessagesPreview';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useTabIdOptional } from '@renderer/contexts/useTabUIContext';
+import { useStore } from '@renderer/store';
 import { asEnhancedChunkArray } from '@renderer/types/data';
 import { enhanceAIGroup } from '@renderer/utils/aiGroupEnhancer';
 import { formatDuration } from '@renderer/utils/formatters';

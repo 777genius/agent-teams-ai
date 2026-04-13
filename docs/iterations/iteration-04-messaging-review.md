@@ -1,5 +1,10 @@
 # Итерация 04 — Messaging + Review (Inbox + ReviewDialog)
 
+> Historical note
+> This document captures the planned scope and assumptions at iteration time.
+> It is not the source of truth for the current product contract.
+> For the current review flow, see [../team-management/README.md](../team-management/README.md) and [../team-management/kanban-design.md](../team-management/kanban-design.md).
+
 Эта итерация добавляет **панель активности (inbox messages)** и **отправку сообщений** тиммейтам, а также закрывает MVP review-flow: **Request Review → Approve / Request Changes**.
 
 Основание:
@@ -293,4 +298,3 @@ Guards:
 - **Race condition inbox**: атомарная запись не решает overwrite race, поэтому делаем `messageId verify` + retry/backoff, плюс in-process `withInboxLock`.
 - **Конфликт при записи task.status**: после write делаем verify; если agent перезаписал — показываем warning в UI, не делаем silent fail.
 - **Большие inbox**: ограничиваем количество отображаемых сообщений (например 200) и добавляем “Show more” позже (итерация 05).
-

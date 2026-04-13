@@ -1,7 +1,8 @@
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import { createPersistedLaunchSnapshot } from './TeamLaunchStateEvaluator';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import { createPersistedLaunchSnapshot } from './TeamLaunchStateEvaluator';
 
 import type {
   PersistedTeamLaunchMemberState,
@@ -19,15 +20,15 @@ const MAX_BOOTSTRAP_JOURNAL_BYTES = 256 * 1024;
 const MAX_BOOTSTRAP_LOCK_METADATA_BYTES = 64 * 1024;
 const ACTIVE_BOOTSTRAP_STUCK_CLASSIFICATION_MS = 3 * 60 * 1000;
 
-type RawBootstrapMemberState = {
+interface RawBootstrapMemberState {
   name?: unknown;
   status?: unknown;
   lastAttemptAt?: unknown;
   lastObservedAt?: unknown;
   failureReason?: unknown;
-};
+}
 
-type RawBootstrapState = {
+interface RawBootstrapState {
   version?: unknown;
   runId?: unknown;
   teamName?: unknown;
@@ -38,7 +39,7 @@ type RawBootstrapState = {
   realTaskSubmissionState?: unknown;
   members?: unknown;
   terminal?: unknown;
-};
+}
 
 type RawBootstrapJournalRecord =
   | { ts?: unknown; type?: 'phase'; phase?: unknown }
@@ -47,31 +48,31 @@ type RawBootstrapJournalRecord =
   | { ts?: unknown; type?: 'terminal'; status?: unknown; reason?: unknown }
   | { ts?: unknown; type?: 'real_task'; state?: unknown; detail?: unknown };
 
-type RawBootstrapLockMetadata = {
+interface RawBootstrapLockMetadata {
   pid?: unknown;
   runId?: unknown;
   requestHash?: unknown;
   ownerStartedAt?: unknown;
   createdAt?: unknown;
   nonce?: unknown;
-};
+}
 
-type BootstrapStateInspection = {
+interface BootstrapStateInspection {
   raw: RawBootstrapState | null;
   issue?: string;
-};
+}
 
-type BootstrapJournalInspection = {
+interface BootstrapJournalInspection {
   warnings?: string[];
   issue?: string;
   lastPhase?: BootstrapRuntimePhase;
-};
+}
 
-type BootstrapLockMetadata = {
+interface BootstrapLockMetadata {
   pid: number;
   runId: string;
   ownerStartedAt?: number;
-};
+}
 
 type BootstrapRuntimePhase =
   | 'validating_spec'
@@ -84,13 +85,13 @@ type BootstrapRuntimePhase =
   | 'failed'
   | 'canceled';
 
-type ComparableStat = {
+interface ComparableStat {
   dev?: number;
   ino?: number;
   size: number;
   mode?: number;
   mtimeMs?: number;
-};
+}
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);

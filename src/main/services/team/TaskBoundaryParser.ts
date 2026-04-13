@@ -3,6 +3,11 @@ import { createReadStream } from 'fs';
 import { stat } from 'fs/promises';
 import * as readline from 'readline';
 
+import {
+  canonicalizeAgentTeamsToolName,
+  isAgentTeamsTaskBoundaryToolName,
+} from './agentTeamsToolNames';
+
 import type {
   TaskBoundariesResult,
   TaskBoundary,
@@ -30,8 +35,6 @@ interface ToolUseInfo {
   toolName: string;
   filePath?: string;
 }
-
-const MCP_TASK_BOUNDARY_TOOLS = new Set(['task_start', 'task_complete', 'task_set_status']);
 
 type DetectedMechanism = 'TaskUpdate' | 'mcp' | 'none';
 
@@ -102,7 +105,7 @@ export class TaskBoundaryParser {
             const b = block as Record<string, unknown>;
             if (b.type !== 'tool_use') continue;
             const rawName = typeof b.name === 'string' ? b.name : '';
-            const toolName = rawName.replace(/^proxy_/, '');
+            const toolName = canonicalizeAgentTeamsToolName(rawName);
             const toolUseId = typeof b.id === 'string' ? b.id : '';
             const input = b.input as Record<string, unknown> | undefined;
             const fp = typeof input?.file_path === 'string' ? input.file_path : undefined;
@@ -238,8 +241,8 @@ export class TaskBoundaryParser {
       if (b.type !== 'tool_use') continue;
 
       const rawName = typeof b.name === 'string' ? b.name : '';
-      const toolName = rawName.replace(/^proxy_/, '');
-      if (!MCP_TASK_BOUNDARY_TOOLS.has(toolName)) continue;
+      const toolName = canonicalizeAgentTeamsToolName(rawName);
+      if (!isAgentTeamsTaskBoundaryToolName(toolName)) continue;
 
       const input = b.input as Record<string, unknown> | undefined;
       if (!input) continue;

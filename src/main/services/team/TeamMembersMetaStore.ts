@@ -1,7 +1,7 @@
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
+import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import * as fs from 'fs';
 import * as path from 'path';
 

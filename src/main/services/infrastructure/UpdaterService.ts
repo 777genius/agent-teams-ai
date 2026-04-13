@@ -20,13 +20,14 @@ const { autoUpdater } = electronUpdater;
 
 import { app, net } from 'electron';
 
-import type { UpdaterStatus } from '@shared/types';
-import type { BrowserWindow } from 'electron';
 import {
   getExpectedReleaseAssetUrl,
   getLatestMacMetadataUrl,
   isLatestMacMetadataCompatible,
 } from './updaterReleaseMetadata';
+
+import type { UpdaterStatus } from '@shared/types';
+import type { BrowserWindow } from 'electron';
 
 const logger = createLogger('UpdaterService');
 

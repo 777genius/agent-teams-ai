@@ -1,8 +1,10 @@
 import React from 'react';
 
+import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
+import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+
 import type { TeamProviderId } from '@shared/types';
 import type { CliProviderStatus } from '@shared/types';
-import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
 export type ProvisioningProviderCheckStatus = 'pending' | 'checking' | 'ready' | 'notes' | 'failed';
 
@@ -14,15 +16,7 @@ export interface ProvisioningProviderCheck {
 }
 
 export function getProvisioningProviderLabel(providerId: TeamProviderId): string {
-  switch (providerId) {
-    case 'codex':
-      return 'Codex';
-    case 'gemini':
-      return 'Gemini';
-    case 'anthropic':
-    default:
-      return 'Anthropic';
-  }
+  return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
 }
 
 export function createInitialProviderChecks(
@@ -150,7 +144,7 @@ function summarizeDetail(detail: string, status: ProvisioningProviderCheckStatus
 
 function getDisplayStatusText(check: ProvisioningProviderCheck): string {
   const summary = check.details.find(Boolean)
-    ? summarizeDetail(check.details[0]!, check.status)
+    ? summarizeDetail(check.details[0], check.status)
     : null;
   return summary ?? getStatusLabel(check.status);
 }
@@ -194,7 +188,7 @@ function getStatusColor(status: ProvisioningProviderCheckStatus): string {
   }
 }
 
-function StatusIcon({ status }: { status: ProvisioningProviderCheckStatus }): React.JSX.Element {
+const StatusIcon = ({ status }: { status: ProvisioningProviderCheckStatus }): React.JSX.Element => {
   if (status === 'checking') {
     return <Loader2 className="size-3 animate-spin" />;
   }
@@ -205,9 +199,9 @@ function StatusIcon({ status }: { status: ProvisioningProviderCheckStatus }): Re
     return <AlertTriangle className="size-3" />;
   }
   return <span className="inline-block size-1.5 rounded-full bg-current opacity-60" />;
-}
+};
 
-export function ProvisioningProviderStatusList({
+export const ProvisioningProviderStatusList = ({
   checks,
   className = '',
   suppressDetailsMatching,
@@ -215,7 +209,7 @@ export function ProvisioningProviderStatusList({
   checks: ProvisioningProviderCheck[];
   className?: string;
   suppressDetailsMatching?: string | null;
-}): React.JSX.Element | null {
+}): React.JSX.Element | null => {
   if (checks.length === 0) {
     return null;
   }
@@ -253,7 +247,7 @@ export function ProvisioningProviderStatusList({
       })}
     </div>
   );
-}
+};
 
 export function getProvisioningFailureHint(
   message: string | null | undefined,

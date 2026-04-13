@@ -7,8 +7,11 @@
 import { useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { useStore } from '@renderer/store';
 import { formatSessionLabel, parseSessionTitle } from '@renderer/utils/sessionTitleParser';
+import { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
+import { inferTeamProviderIdFromModel } from '@shared/utils/teamProvider';
 import { formatTokensCompact } from '@shared/utils/tokenFormatting';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { EyeOff, MessageSquare, Pin, Play, RotateCw, Users } from 'lucide-react';
@@ -127,6 +130,28 @@ const ConsumptionBadge = ({
           </div>,
           document.body
         )}
+    </span>
+  );
+};
+
+const SessionRuntimeBadge = ({
+  model,
+}: Readonly<{
+  model: string | undefined;
+}>): React.JSX.Element | null => {
+  const providerId = inferTeamProviderIdFromModel(model);
+  if (!providerId) {
+    return null;
+  }
+
+  const modelLabel = getProviderScopedTeamModelLabel(providerId, model) ?? model?.trim();
+  return (
+    <span
+      className="flex min-w-0 shrink items-center gap-1"
+      title={modelLabel ? `${providerId} · ${modelLabel}` : providerId}
+    >
+      <ProviderBrandLogo providerId={providerId} className="size-3 shrink-0" />
+      {modelLabel && <span className="truncate">{modelLabel}</span>}
     </span>
   );
 };
@@ -321,6 +346,12 @@ export const SessionItem = ({
                 </span>
                 <span style={{ opacity: 0.5 }}>·</span>
                 <span className="tabular-nums">{formatShortTime(new Date(session.createdAt))}</span>
+                {session.model && (
+                  <>
+                    <span style={{ opacity: 0.5 }}>·</span>
+                    <SessionRuntimeBadge model={session.model} />
+                  </>
+                )}
                 {session.contextConsumption != null && session.contextConsumption > 0 && (
                   <>
                     <span style={{ opacity: 0.5 }}>·</span>

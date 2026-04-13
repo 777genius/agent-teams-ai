@@ -1,9 +1,9 @@
 import { Button } from '@renderer/components/ui/button';
 
-type TeamEmptyStateProps = {
+interface TeamEmptyStateProps {
   canCreate: boolean;
   onCreateTeam: () => void;
-};
+}
 
 export const TeamEmptyState = ({
   canCreate,

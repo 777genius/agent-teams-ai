@@ -11,7 +11,7 @@
  */
 
 import { type FileChangeEvent, type ParsedMessage } from '@main/types';
-import { parseJsonlFile, parseJsonlLine } from '@main/utils/jsonl';
+import { parseJsonlFileWithStats, parseJsonlStream } from '@main/utils/jsonl';
 import {
   getProjectsBasePath,
   getTasksBasePath,
@@ -765,12 +765,12 @@ export class FileWatcher extends EventEmitter {
       const currentSize = fileStats.size;
 
       // Fast path: no size change means no new data
-      if (currentSize === lastSize && lastLineCount > 0) {
+      if (currentSize === lastSize && lastSize > 0) {
         return;
       }
 
       const isFirstRead = lastLineCount === 0 && lastSize === 0;
-      const canUseIncrementalAppend = lastLineCount > 0 && currentSize > lastSize;
+      const canUseIncrementalAppend = lastSize > 0 && currentSize > lastSize;
       let newMessages: ParsedMessage[] = [];
       let currentLineCount: number;
       let processedSize: number;
@@ -782,12 +782,10 @@ export class FileWatcher extends EventEmitter {
         processedSize = lastSize + appended.consumedBytes;
       } else {
         // Fallback for first-read, truncation, or rewrite scenarios
-        const messages = await parseJsonlFile(filePath);
-        currentLineCount = messages.length;
-        newMessages = messages.slice(lastLineCount);
-        // Re-stat after full parse to capture bytes written during the parse
-        const postParseStats = await this.fsProvider.stat(filePath);
-        processedSize = postParseStats.size;
+        const parsedFile = await parseJsonlFileWithStats(filePath, this.fsProvider);
+        currentLineCount = parsedFile.parsedLineCount;
+        newMessages = parsedFile.messages.slice(lastLineCount);
+        processedSize = parsedFile.consumedBytes;
       }
 
       // If no new lines, skip processing
@@ -895,56 +893,15 @@ export class FileWatcher extends EventEmitter {
     filePath: string,
     startOffset: number
   ): Promise<AppendedParseResult> {
-    const parsedMessages: ParsedMessage[] = [];
     const stream = this.fsProvider.createReadStream(filePath, {
       start: startOffset,
-      encoding: 'utf8',
     });
-
-    let buffer = '';
-    let consumedBytes = 0;
-    let parsedLineCount = 0;
-    for await (const chunk of stream) {
-      buffer += chunk;
-      const lines = buffer.split('\n');
-      buffer = lines.pop() ?? '';
-
-      for (const rawLine of lines) {
-        consumedBytes += Buffer.byteLength(`${rawLine}\n`, 'utf8');
-        const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
-        if (!line.trim()) {
-          continue;
-        }
-        try {
-          const parsed = parseJsonlLine(line);
-          if (parsed) {
-            parsedMessages.push(parsed);
-            parsedLineCount++;
-          }
-        } catch {
-          // Ignore malformed appended lines; full parse path will recover on next rewrite.
-        }
-      }
-    }
-
-    // Handle final line without trailing newline
-    if (buffer.trim()) {
-      try {
-        const parsed = parseJsonlLine(buffer);
-        if (parsed) {
-          parsedMessages.push(parsed);
-          parsedLineCount++;
-          consumedBytes += Buffer.byteLength(buffer, 'utf8');
-        }
-      } catch {
-        // Keep offset pinned until this trailing partial becomes a complete line.
-      }
-    }
+    const parsed = await parseJsonlStream(stream);
 
     return {
-      messages: parsedMessages,
-      parsedLineCount,
-      consumedBytes,
+      messages: parsed.messages,
+      parsedLineCount: parsed.parsedLineCount,
+      consumedBytes: parsed.consumedBytes,
     };
   }
 

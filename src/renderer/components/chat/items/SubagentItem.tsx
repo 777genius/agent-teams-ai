@@ -20,7 +20,6 @@ import {
 import { useTabUI } from '@renderer/hooks/useTabUI';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
-import { useShallow } from 'zustand/react/shallow';
 import { buildDisplayItemsFromMessages, buildSummary } from '@renderer/utils/aiGroupEnhancer';
 import { computeSubagentPhaseBreakdown } from '@renderer/utils/aiGroupHelpers';
 import { formatDuration, formatTokensCompact } from '@renderer/utils/formatters';
@@ -37,6 +36,7 @@ import {
   Sigma,
   Terminal,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { ExecutionTrace } from './ExecutionTrace';
 import { MetricsPill } from './MetricsPill';

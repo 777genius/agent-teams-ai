@@ -1,5 +1,9 @@
 # Implementation Plan (v7 — Production-Ready Architecture)
 
+> Historical note
+> This is a planning and architecture document, not the source of truth for the current shipped product behavior.
+> For the current review flow, see [README.md](./README.md) and [kanban-design.md](./kanban-design.md).
+
 ## Обзор
 
 ~34 новых файлов + 18 модификаций + 18 тестов. Vertical slices (не backend-first).

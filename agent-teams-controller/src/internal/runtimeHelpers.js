@@ -299,6 +299,24 @@ function resolveLeadSessionId(paths) {
     : undefined;
 }
 
+function resolveCanonicalLeadSessionId(paths, candidate) {
+  const configured = resolveLeadSessionId(paths);
+  const explicit = typeof candidate === 'string' ? candidate.trim() : '';
+
+  if (!explicit) {
+    return configured;
+  }
+
+  // The team config is the canonical source of the current lead runtime session.
+  // If a caller passes a placeholder like "team-lead" or any other mismatched value,
+  // prefer the configured session id instead of persisting dirty metadata into inbox rows.
+  if (configured) {
+    return explicit === configured ? explicit : configured;
+  }
+
+  return explicit;
+}
+
 function isProcessAlive(pid) {
   try {
     process.kill(pid, 0);
@@ -497,6 +515,7 @@ module.exports = {
   readTeamConfig,
   resolveTeamMembers,
   getCurrentRuntimeMemberIdentity,
+  resolveCanonicalLeadSessionId,
   resolveLeadSessionId,
   saveTaskAttachmentFile,
 };
