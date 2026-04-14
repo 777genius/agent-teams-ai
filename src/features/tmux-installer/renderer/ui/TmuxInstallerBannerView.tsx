@@ -59,24 +59,29 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
 
   return (
     <div
-      className="mb-6 rounded-lg border-l-4 px-4 py-3"
+      className="mb-6 rounded-lg border-l-4 px-4 py-4"
       style={{
         borderLeftColor: viewModel.error ? '#ef4444' : '#f59e0b',
         backgroundColor: 'rgba(245, 158, 11, 0.08)',
         borderColor: 'rgba(245, 158, 11, 0.2)',
       }}
     >
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            {viewModel.error ? (
-              <AlertTriangle className="size-4 text-red-300" />
-            ) : (
-              <Wrench className="size-4 text-amber-300" />
-            )}
+      <div className="space-y-3">
+        <div className="min-w-0 max-w-4xl">
+          <div className="flex items-start gap-2 text-base font-semibold leading-6">
+            <span className="pt-0.5">
+              {viewModel.error ? (
+                <AlertTriangle className="size-4 text-red-300" />
+              ) : (
+                <Wrench className="size-4 text-amber-300" />
+              )}
+            </span>
             <span>{viewModel.title}</span>
           </div>
-          <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          <p
+            className="mt-2 text-[15px] leading-7"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
             {viewModel.body}
           </p>
           {(viewModel.platformLabel ||
@@ -84,20 +89,67 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
             viewModel.runtimeReadyLabel ||
             viewModel.versionLabel ||
             viewModel.phase !== 'idle') && (
-            <div
-              className="mt-2 flex flex-wrap items-center gap-2 text-[11px]"
-              style={{ color: 'var(--color-text-muted)' }}
-            >
-              {viewModel.platformLabel && <span>Detected OS: {viewModel.platformLabel}</span>}
-              {viewModel.locationLabel && <span>Runtime path: {viewModel.locationLabel}</span>}
-              {viewModel.runtimeReadyLabel && <span>{viewModel.runtimeReadyLabel}</span>}
-              {viewModel.versionLabel && <span>{viewModel.versionLabel}</span>}
-              {viewModel.phase !== 'idle' && <span>Phase: {viewModel.phase}</span>}
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+              {viewModel.platformLabel && (
+                <span
+                  className="rounded-full px-2 py-1"
+                  style={{
+                    color: 'var(--color-text-muted)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  }}
+                >
+                  Detected OS: {viewModel.platformLabel}
+                </span>
+              )}
+              {viewModel.locationLabel && (
+                <span
+                  className="rounded-full px-2 py-1"
+                  style={{
+                    color: 'var(--color-text-muted)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  }}
+                >
+                  Runtime path: {viewModel.locationLabel}
+                </span>
+              )}
+              {viewModel.runtimeReadyLabel && (
+                <span
+                  className="rounded-full px-2 py-1"
+                  style={{
+                    color: 'var(--color-text-muted)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  }}
+                >
+                  {viewModel.runtimeReadyLabel}
+                </span>
+              )}
+              {viewModel.versionLabel && (
+                <span
+                  className="rounded-full px-2 py-1"
+                  style={{
+                    color: 'var(--color-text-muted)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  }}
+                >
+                  {viewModel.versionLabel}
+                </span>
+              )}
+              {viewModel.phase !== 'idle' && (
+                <span
+                  className="rounded-full px-2 py-1"
+                  style={{
+                    color: 'var(--color-text-muted)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  }}
+                >
+                  Phase: {viewModel.phase}
+                </span>
+              )}
             </div>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 pt-1">
           {viewModel.installSupported && (
             <button
               type="button"
