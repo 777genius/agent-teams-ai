@@ -2,6 +2,7 @@ import type { JsonRpcStdioClient } from './JsonRpcStdioClient';
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 3_000;
 const DEFAULT_TOTAL_TIMEOUT_MS = 8_000;
+const MIN_SESSION_OVERHEAD_TIMEOUT_MS = 1_500;
 const SUPPRESSED_NOTIFICATION_METHODS = [
   'thread/started',
   'thread/status/changed',
@@ -63,7 +64,10 @@ export class CodexAppServerClient {
     const liveRequestTimeoutMs = options.liveRequestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     const archivedRequestTimeoutMs = options.archivedRequestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     const sessionRequestTimeoutMs = Math.max(liveRequestTimeoutMs, archivedRequestTimeoutMs);
-    const totalTimeoutMs = options.totalTimeoutMs ?? DEFAULT_TOTAL_TIMEOUT_MS;
+    const totalTimeoutMs = Math.max(
+      options.totalTimeoutMs ?? DEFAULT_TOTAL_TIMEOUT_MS,
+      sessionRequestTimeoutMs + MIN_SESSION_OVERHEAD_TIMEOUT_MS
+    );
 
     return this.rpcClient.withSession(
       {

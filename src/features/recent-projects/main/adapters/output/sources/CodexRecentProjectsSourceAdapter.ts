@@ -15,7 +15,10 @@ import type { ServiceContext } from '@main/services';
 const CODEX_THREAD_LIMIT = 40;
 const CODEX_LIVE_FETCH_TIMEOUT_MS = 4_500;
 const CODEX_ARCHIVED_FETCH_TIMEOUT_MS = 2_500;
-const CODEX_SOURCE_TIMEOUT_MS = 5_200;
+const CODEX_SESSION_OVERHEAD_TIMEOUT_MS = 1_500;
+const CODEX_TOTAL_FETCH_TIMEOUT_MS =
+  CODEX_LIVE_FETCH_TIMEOUT_MS + CODEX_SESSION_OVERHEAD_TIMEOUT_MS;
+const CODEX_SOURCE_TIMEOUT_MS = CODEX_TOTAL_FETCH_TIMEOUT_MS + 500;
 
 function isInteractiveSource(source: unknown): boolean {
   return source === 'vscode' || source === 'cli';
@@ -83,7 +86,7 @@ export class CodexRecentProjectsSourceAdapter implements RecentProjectsSourcePor
       limit: CODEX_THREAD_LIMIT,
       liveRequestTimeoutMs: CODEX_LIVE_FETCH_TIMEOUT_MS,
       archivedRequestTimeoutMs: CODEX_ARCHIVED_FETCH_TIMEOUT_MS,
-      totalTimeoutMs: CODEX_LIVE_FETCH_TIMEOUT_MS,
+      totalTimeoutMs: CODEX_TOTAL_FETCH_TIMEOUT_MS,
     });
 
     this.deps.logger.info('codex recent-projects thread lists loaded', {

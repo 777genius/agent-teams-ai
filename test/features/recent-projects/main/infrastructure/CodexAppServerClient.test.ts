@@ -53,7 +53,7 @@ describe('CodexAppServerClient', () => {
       expect.objectContaining({
         binaryPath: '/usr/local/bin/codex',
         requestTimeoutMs: 4500,
-        totalTimeoutMs: 4500,
+        totalTimeoutMs: 6000,
       }),
       expect.any(Function)
     );
@@ -106,5 +106,38 @@ describe('CodexAppServerClient', () => {
       threads: [],
       error: 'JSON-RPC request timed out: thread/list',
     });
+  });
+
+  it('raises the session timeout budget above the longest request timeout', async () => {
+    const session = createSession(
+      vi.fn().mockImplementation((method: string, params?: { archived?: boolean }) => {
+        if (method === 'initialize') {
+          return Promise.resolve({});
+        }
+
+        if (method === 'thread/list') {
+          return Promise.resolve({ data: [] });
+        }
+
+        return Promise.reject(new Error(`Unexpected method: ${method}`));
+      })
+    );
+
+    const withSession = vi.fn().mockImplementation((_options, handler) => handler(session));
+    const client = new CodexAppServerClient({ withSession } as unknown as JsonRpcStdioClient);
+
+    await client.listRecentThreads('/usr/local/bin/codex', {
+      limit: 40,
+      liveRequestTimeoutMs: 4500,
+      archivedRequestTimeoutMs: 2500,
+      totalTimeoutMs: 4500,
+    });
+
+    expect(withSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalTimeoutMs: 6000,
+      }),
+      expect.any(Function)
+    );
   });
 });
