@@ -57,12 +57,24 @@ export class ListDashboardRecentProjectsUseCase<TViewModel> {
 
   async #executeUncached(cacheKey: string): Promise<TViewModel> {
     const startedAt = this.deps.clock.now();
+    const stale = await this.deps.cache.getStale(cacheKey);
     const results = await Promise.all(
       this.deps.sources.map((source, index) => this.#loadSource(source, index))
     );
 
     const successful = results.flatMap((result) => result.candidates);
     const hasDegradedSources = results.some((result) => result.degraded);
+
+    if (hasDegradedSources && stale) {
+      await this.deps.cache.set(cacheKey, stale, this.#degradedCacheTtlMs);
+      this.deps.logger.info('recent-projects served stale cache', {
+        cacheKey,
+        degradedSources: results.filter((result) => result.degraded).length,
+        cacheTtlMs: this.#degradedCacheTtlMs,
+        durationMs: this.deps.clock.now() - startedAt,
+      });
+      return stale;
+    }
 
     const response: ListDashboardRecentProjectsResponse = {
       projects: mergeRecentProjectCandidates(successful),

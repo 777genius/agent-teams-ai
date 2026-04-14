@@ -11,17 +11,23 @@ export function resolveEffectiveSelectedRepositoryId({
   selectedRepositoryId,
   effectiveSelectedWorktreeId,
 }: ResolveEffectiveSelectedRepositoryIdInput): string | null {
-  if (selectedRepositoryId) {
+  const worktreeOwnerRepositoryId =
+    effectiveSelectedWorktreeId == null
+      ? null
+      : (repositoryGroups.find((repo) =>
+          repo.worktrees.some((worktree) => worktree.id === effectiveSelectedWorktreeId)
+        )?.id ?? null);
+
+  if (worktreeOwnerRepositoryId) {
+    return worktreeOwnerRepositoryId;
+  }
+
+  if (
+    selectedRepositoryId &&
+    repositoryGroups.some((repositoryGroup) => repositoryGroup.id === selectedRepositoryId)
+  ) {
     return selectedRepositoryId;
   }
 
-  if (!effectiveSelectedWorktreeId) {
-    return null;
-  }
-
-  return (
-    repositoryGroups.find((repo) =>
-      repo.worktrees.some((worktree) => worktree.id === effectiveSelectedWorktreeId)
-    )?.id ?? null
-  );
+  return null;
 }

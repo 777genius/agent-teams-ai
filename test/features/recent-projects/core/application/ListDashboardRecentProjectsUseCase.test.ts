@@ -50,6 +50,7 @@ describe('ListDashboardRecentProjectsUseCase', () => {
     const cached: TestViewModel = { ids: ['cached'], sources: ['cached'] };
     const cache: RecentProjectsCachePort<TestViewModel> = {
       get: vi.fn().mockResolvedValue(cached),
+      getStale: vi.fn().mockResolvedValue(cached),
       set: vi.fn(),
     };
     const output: ListDashboardRecentProjectsOutputPort<TestViewModel> = {
@@ -77,6 +78,7 @@ describe('ListDashboardRecentProjectsUseCase', () => {
   it('merges successful sources, degrades failed sources, and caches presenter output', async () => {
     const cache: RecentProjectsCachePort<TestViewModel> = {
       get: vi.fn().mockResolvedValue(null),
+      getStale: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue(undefined),
     };
     const output: ListDashboardRecentProjectsOutputPort<TestViewModel> = {
@@ -172,6 +174,7 @@ describe('ListDashboardRecentProjectsUseCase', () => {
     try {
       const cache: RecentProjectsCachePort<TestViewModel> = {
         get: vi.fn().mockResolvedValue(null),
+        getStale: vi.fn().mockResolvedValue(null),
         set: vi.fn().mockResolvedValue(undefined),
       };
       const output: ListDashboardRecentProjectsOutputPort<TestViewModel> = {
@@ -243,5 +246,62 @@ describe('ListDashboardRecentProjectsUseCase', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('returns stale cached data when a source degrades after cache expiry', async () => {
+    const stale: TestViewModel = { ids: ['repo:stale'], sources: ['mixed'] };
+    const cache: RecentProjectsCachePort<TestViewModel> = {
+      get: vi.fn().mockResolvedValue(null),
+      getStale: vi.fn().mockResolvedValue(stale),
+      set: vi.fn().mockResolvedValue(undefined),
+    };
+    const output: ListDashboardRecentProjectsOutputPort<TestViewModel> = {
+      present: vi.fn((response: ListDashboardRecentProjectsResponse) => ({
+        ids: response.projects.map((project) => project.identity),
+        sources: response.projects.map((project) => project.source),
+      })),
+    };
+    const sources: RecentProjectsSourcePort[] = [
+      {
+        sourceId: 'claude',
+        list: vi.fn().mockResolvedValue([
+          makeCandidate({
+            identity: 'repo:fresh',
+            providerIds: ['anthropic'],
+            sourceKind: 'claude',
+          }),
+        ]),
+      },
+      {
+        sourceId: 'codex',
+        list: vi.fn().mockRejectedValue(new Error('codex unavailable')),
+      },
+    ];
+    const logger = createLogger();
+    let now = 15_000;
+
+    const useCase = new ListDashboardRecentProjectsUseCase({
+      sources,
+      cache,
+      output,
+      clock: {
+        now: () => {
+          const current = now;
+          now += 200;
+          return current;
+        },
+      },
+      logger,
+    });
+
+    await expect(useCase.execute('recent-projects:stale')).resolves.toEqual(stale);
+    expect(output.present).not.toHaveBeenCalled();
+    expect(cache.set).toHaveBeenCalledWith('recent-projects:stale', stale, 1_500);
+    expect(logger.info).toHaveBeenCalledWith('recent-projects served stale cache', {
+      cacheKey: 'recent-projects:stale',
+      degradedSources: 1,
+      cacheTtlMs: 1_500,
+      durationMs: 200,
+    });
   });
 });

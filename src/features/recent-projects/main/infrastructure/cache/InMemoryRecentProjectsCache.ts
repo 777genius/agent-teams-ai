@@ -15,11 +15,14 @@ export class InMemoryRecentProjectsCache<T> implements RecentProjectsCachePort<T
     }
 
     if (entry.expiresAt <= Date.now()) {
-      this.#entries.delete(key);
       return null;
     }
 
     return entry.value;
+  }
+
+  async getStale(key: string): Promise<T | null> {
+    return this.#entries.get(key)?.value ?? null;
   }
 
   async set(key: string, value: T, ttlMs: number): Promise<void> {
