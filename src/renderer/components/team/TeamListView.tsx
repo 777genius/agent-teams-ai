@@ -484,10 +484,6 @@ export const TeamListView = (): React.JSX.Element => {
     [projects, repositoryGroups]
   );
 
-  const handleResetProjectSelection = useCallback((): void => {
-    handleProjectSelectionChange(null);
-  }, [handleProjectSelectionChange]);
-
   // Fetch branches once for all visible team project paths (no live polling)
   const teamPaths = useMemo(
     () => filteredTeams.map((t) => t.projectPath?.trim()).filter(Boolean) as string[],
@@ -759,35 +755,6 @@ export const TeamListView = (): React.JSX.Element => {
         <p className="mt-2 text-xs text-[var(--color-text-muted)]">
           Only available in local Electron mode.
         </p>
-      ) : null}
-      {currentProjectPath ? (
-        <div className="mt-3 flex items-start justify-between gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5">
-          <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-              Selected project
-            </p>
-            <div className="mt-1 flex items-center gap-2 text-sm text-[var(--color-text)]">
-              <FolderOpen size={14} className="shrink-0 text-[var(--color-text-muted)]" />
-              <span className="truncate font-medium" title={currentProjectPath}>
-                {folderName(currentProjectPath)}
-              </span>
-            </div>
-            <p
-              className="mt-1 truncate text-xs text-[var(--color-text-muted)]"
-              title={currentProjectPath}
-            >
-              Prioritizing teams related to this project - not hiding the rest
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="shrink-0"
-            onClick={handleResetProjectSelection}
-          >
-            Reset
-          </Button>
-        </div>
       ) : null}
 
       {teamsWithProvisioning.length > 0 ? (
