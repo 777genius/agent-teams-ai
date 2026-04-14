@@ -35,3 +35,30 @@ export function resolveProjectIdByPath(
 
   return null;
 }
+
+/**
+ * Resolve a filesystem path from an encoded project ID.
+ *
+ * Inverse of `resolveProjectIdByPath`: given a project ID (e.g. `-home-diego-DEV-monorepo-rCAPI`),
+ * returns the decoded path (e.g. `/home/diego/DEV/monorepo/rCAPI`).
+ *
+ * Checks both `projects[]` and `repositoryGroups[].worktrees[]` so the result
+ * is correct regardless of whether the sidebar is in flat or grouped view mode.
+ */
+export function resolveProjectPathById(
+  projectId: string | undefined | null,
+  projects: readonly Pick<Project, 'id' | 'path' | 'name'>[],
+  repositoryGroups: readonly Pick<RepositoryGroup, 'worktrees'>[]
+): { path: string; name: string } | null {
+  if (!projectId) return null;
+
+  const fromProjects = projects.find((p) => p.id === projectId);
+  if (fromProjects) return { path: fromProjects.path, name: fromProjects.name };
+
+  for (const group of repositoryGroups) {
+    const worktree = group.worktrees.find((w) => w.id === projectId);
+    if (worktree) return { path: worktree.path, name: worktree.name };
+  }
+
+  return null;
+}

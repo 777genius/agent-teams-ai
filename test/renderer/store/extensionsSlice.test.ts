@@ -258,6 +258,42 @@ describe('extensionsSlice', () => {
       expect(count1).toBe(1);
       expect(count2).toBe(1); // no duplicate
     });
+
+    it('updates projectId on existing tab when selected project changes', () => {
+      // Open Extensions with project-A
+      store.setState({ selectedProjectId: 'project-A', activeProjectId: null });
+      store.getState().openExtensionsTab();
+
+      const tabsBefore = store.getState().paneLayout.panes.flatMap((p) => p.tabs);
+      const extTabBefore = tabsBefore.find((t) => t.type === 'extensions');
+      expect(extTabBefore?.projectId).toBe('project-A');
+
+      // Switch to project-B and reopen Extensions
+      store.setState({ selectedProjectId: 'project-B' });
+      store.getState().openExtensionsTab();
+
+      const tabsAfter = store.getState().paneLayout.panes.flatMap((p) => p.tabs);
+      const extTabAfter = tabsAfter.find((t) => t.type === 'extensions');
+      expect(extTabAfter?.projectId).toBe('project-B');
+      // Still only one extensions tab
+      expect(tabsAfter.filter((t) => t.type === 'extensions')).toHaveLength(1);
+    });
+
+    it('does not update projectId when it already matches', () => {
+      store.setState({ selectedProjectId: 'project-A', activeProjectId: null });
+      store.getState().openExtensionsTab();
+
+      const layoutBefore = store.getState().paneLayout;
+
+      // Reopen with same project — layout should be referentially stable (no set() call)
+      store.getState().openExtensionsTab();
+
+      const tabsBefore = layoutBefore.panes.flatMap((p) => p.tabs);
+      const tabsAfter = store.getState().paneLayout.panes.flatMap((p) => p.tabs);
+      const extBefore = tabsBefore.find((t) => t.type === 'extensions');
+      const extAfter = tabsAfter.find((t) => t.type === 'extensions');
+      expect(extAfter?.projectId).toBe(extBefore?.projectId);
+    });
   });
 
   describe('installPlugin', () => {

@@ -18,6 +18,7 @@ import {
 import { useTabIdOptional } from '@renderer/contexts/useTabUIContext';
 import { useExtensionsTabState } from '@renderer/hooks/useExtensionsTabState';
 import { useStore } from '@renderer/store';
+import { resolveProjectPathById } from '@renderer/utils/projectLookup';
 import { AlertTriangle, BookOpen, Info, Key, Plus, Puzzle, RefreshCw, Server } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -45,6 +46,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
     openDashboard,
     sessions,
     projects,
+    repositoryGroups,
   } = useStore(
     useShallow((s) => ({
       fetchPluginCatalog: s.fetchPluginCatalog,
@@ -61,6 +63,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
       openDashboard: s.openDashboard,
       sessions: s.sessions,
       projects: s.projects,
+      repositoryGroups: s.repositoryGroups,
     }))
   );
   const cliInstalled = cliStatus?.installed ?? true;
@@ -74,14 +77,12 @@ export const ExtensionStoreView = (): React.JSX.Element => {
 
   const tabState = useExtensionsTabState();
   const [customMcpDialogOpen, setCustomMcpDialogOpen] = useState(false);
-  const projectPath = useMemo(
-    () => projects.find((project) => project.id === extensionsTabProjectId)?.path ?? null,
-    [extensionsTabProjectId, projects]
+  const resolvedProject = useMemo(
+    () => resolveProjectPathById(extensionsTabProjectId, projects, repositoryGroups),
+    [extensionsTabProjectId, projects, repositoryGroups]
   );
-  const projectLabel = useMemo(
-    () => projects.find((project) => project.id === extensionsTabProjectId)?.name ?? null,
-    [extensionsTabProjectId, projects]
-  );
+  const projectPath = resolvedProject?.path ?? null;
+  const projectLabel = resolvedProject?.name ?? null;
   const subTabs = useMemo(
     () => [
       {
