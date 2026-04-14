@@ -119,15 +119,6 @@ A local orchestration layer for AI agent teams across Claude and Codex.
 - **Task-specific logs and messages** — clearly see agent/runtime logs and messages in isolation for each individual task, making it easy to trace what happened for any assignment
 - **Live process section** — see which agents are running processes and open URLs directly in the browser
 - **Stay in control** — send a direct message to any agent, drop a comment on a task, or pick a quick action right on the kanban card whenever you want to clarify something or add new work
-
-## Developer architecture docs
-
-For feature architecture and implementation guidance:
-
-- Canonical standard - [docs/FEATURE_ARCHITECTURE_STANDARD.md](docs/FEATURE_ARCHITECTURE_STANDARD.md)
-- Repo working instructions - [CLAUDE.md](CLAUDE.md)
-- Feature root guidance - [src/features/README.md](src/features/README.md)
-- Reference implementation - `src/features/recent-projects`
 - **Flexible autonomy** — let agents run fully autonomous, or review and approve each action one by one (you'll get a notification) — configure the level of control that fits your security needs
 - **Solo mode** — one-member team: a single agent that creates its own tasks and shows live progress. Saves tokens; can expand to a full team anytime
 
@@ -165,6 +156,15 @@ For feature architecture and implementation guidance:
 - **Workflow history** — see the full timeline of each task: when and how its status changed, which agents were involved, and every action that led to the current state
 
 </details>
+
+## Developer architecture docs
+
+For feature architecture and implementation guidance:
+
+- Canonical standard - [docs/FEATURE_ARCHITECTURE_STANDARD.md](docs/FEATURE_ARCHITECTURE_STANDARD.md)
+- Repo working instructions - [CLAUDE.md](CLAUDE.md)
+- Feature root guidance - [src/features/README.md](src/features/README.md)
+- Reference implementation - `src/features/recent-projects`
 
 ## Comparison
 
