@@ -485,7 +485,14 @@ export class FileWatcher extends EventEmitter {
     watcher: fs.FSWatcher,
     watcherType: 'projects' | 'todos' | 'teams' | 'tasks'
   ): void {
-    watcher.on('error', (error) => {
+    watcher.on('error', (error: NodeJS.ErrnoException) => {
+      // Ephemeral .lock files cause harmless ENOENT when the recursive watcher
+      // tries to scandir a path that was already deleted. Log as debug and skip
+      // the teardown/retry — the watcher is still healthy.
+      if (error.code === 'ENOENT' && error.path?.endsWith('.lock')) {
+        logger.debug(`FileWatcher: ${watcherType} ignoring transient ENOENT on lock file`);
+        return;
+      }
       logger.error(`FileWatcher: ${watcherType} watcher error:`, error);
       if (watcherType === 'projects') {
         this.projectsWatcher = null;
