@@ -8,9 +8,10 @@
  */
 
 import type { GraphNode } from '../ports/types';
-import { KANBAN_ZONE } from '../constants/canvas-constants';
+import { KANBAN_ZONE, TASK_PILL } from '../constants/canvas-constants';
 import { COLORS } from '../constants/colors';
 import { resolveActivityLaneSide } from './activityLane';
+import type { ActivityLaneWorldBounds } from './activityLane';
 
 /** Column header info for rendering */
 export interface KanbanColumnHeader {
@@ -40,6 +41,8 @@ const COLUMN_LABELS: Record<string, { label: string; color: string }> = {
   review: { label: 'Review', color: COLORS.reviewPending },
   approved: { label: 'Approved', color: COLORS.reviewApproved },
 };
+
+const ACTIVITY_KANBAN_CLEARANCE = 24;
 
 export function getOwnerKanbanBaseX(args: {
   ownerX: number;
@@ -84,11 +87,15 @@ export class KanbanLayoutEngine {
    * Position all task nodes in kanban columns relative to their owner.
    * Call AFTER d3-force settles member positions, BEFORE drawing.
    */
-  static layout(nodes: GraphNode[]): void {
+  static layout(
+    nodes: GraphNode[],
+    options?: { activityLaneBounds?: readonly ActivityLaneWorldBounds[] }
+  ): void {
     const nodeMap = this.#nodeMap;
     nodeMap.clear();
     for (const n of nodes) nodeMap.set(n.id, n);
     const leadX = nodes.find((node) => node.kind === 'lead')?.x ?? null;
+    const activityLaneBounds = options?.activityLaneBounds ?? [];
 
     const tasksByOwner = this.#tasksByOwner;
     tasksByOwner.clear();
@@ -115,7 +122,13 @@ export class KanbanLayoutEngine {
     for (const [ownerId, tasks] of tasksByOwner) {
       const owner = nodeMap.get(ownerId);
       if (!owner || owner.x == null || owner.y == null) continue;
-      const zoneInfo = KanbanLayoutEngine.#layoutZone(tasks, owner, ownerId, leadX);
+      const zoneInfo = KanbanLayoutEngine.#layoutZone(
+        tasks,
+        owner,
+        ownerId,
+        leadX,
+        activityLaneBounds
+      );
       if (zoneInfo) this.zones.push(zoneInfo);
     }
 
@@ -128,13 +141,13 @@ export class KanbanLayoutEngine {
     tasks: GraphNode[],
     owner: GraphNode,
     ownerId: string,
-    leadX: number | null
+    leadX: number | null,
+    activityLaneBounds: readonly ActivityLaneWorldBounds[]
   ): KanbanZoneInfo | null {
     const { columnWidth, rowHeight, offsetY, columns } = KANBAN_ZONE;
     const headerHeight = 20; // space for column header label
     const ownerX = owner.x ?? 0;
     const ownerY = owner.y ?? 0;
-    const baseY = ownerY + offsetY;
 
     // Classify tasks into columns
     const colTasks = KanbanLayoutEngine.#colTasks;
@@ -166,6 +179,24 @@ export class KanbanLayoutEngine {
       columnWidth,
       leadX,
     });
+    const taskZoneLeft = baseX - TASK_PILL.width / 2;
+    const taskZoneRight =
+      baseX + (activeColumns.length - 1) * columnWidth + TASK_PILL.width / 2;
+    const overlappingActivityBottom = activityLaneBounds.reduce((maxBottom, bounds) => {
+      if (bounds.ownerId === ownerId) {
+        return Math.max(maxBottom, bounds.bottom);
+      }
+      if (!rangesOverlap(taskZoneLeft, taskZoneRight, bounds.left, bounds.right)) {
+        return maxBottom;
+      }
+      return Math.max(maxBottom, bounds.bottom);
+    }, -Infinity);
+    const baseY = Math.max(
+      ownerY + offsetY,
+      overlappingActivityBottom > -Infinity
+        ? overlappingActivityBottom + ACTIVITY_KANBAN_CLEARANCE
+        : -Infinity
+    );
 
     // Build headers + position tasks
     const headers: KanbanColumnHeader[] = [];
@@ -273,4 +304,8 @@ export class KanbanLayoutEngine {
       task.vy = 0;
     }
   }
+}
+
+function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
+  return aStart < bEnd && bStart < aEnd;
 }

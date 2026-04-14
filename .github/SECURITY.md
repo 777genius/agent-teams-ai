@@ -34,10 +34,11 @@ Or with Docker Compose, uncomment `network_mode: "none"` in `docker/docker-compo
 
 ## IPC & Input Validation
 
-- All IPC handlers validate inputs with strict path containment checks
-- File reads are constrained to the project root and `~/.claude/`
+- Electron IPC and standalone HTTP handlers validate IDs, paths, and payloads at the boundary
+- Project editing and write operations are constrained to the selected project root
+- Read-only discovery may access local Claude data under `~/.claude/` and app-owned state paths when needed
 - Path traversal attacks are blocked
-- Sensitive credential paths are rejected
+- Sensitive config and credential-like paths are rejected or treated as protected targets
 
 ## Supported Versions
 

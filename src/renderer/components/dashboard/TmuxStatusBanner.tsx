@@ -310,8 +310,10 @@ export const TmuxStatusBanner = (): React.JSX.Element | null => {
               className="mt-1 text-xs leading-relaxed"
               style={{ color: 'var(--color-text-muted)' }}
             >
-              Persistent team agents are more reliable on the process/tmux path. Without tmux, the
-              app falls back to the heavier in-process path. {getPrimaryDetail(state.status)}
+              You can keep using the app without tmux, but installing it is recommended for the best
+              experience. It enables the more reliable process/tmux path with persistent teammates,
+              cleaner restarts, and better recovery for long-running tasks.{' '}
+              {getPrimaryDetail(state.status)}
             </p>
             {state.status.error && (
               <p className="mt-1 text-xs" style={{ color: '#fbbf24' }}>

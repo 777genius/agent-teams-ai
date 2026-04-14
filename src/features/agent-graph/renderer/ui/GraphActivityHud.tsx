@@ -33,6 +33,11 @@ interface GraphActivityHudProps {
   getActivityAnchorScreenPlacement: (
     ownerNodeId: string
   ) => { x: number; y: number; scale: number; visible: boolean } | null;
+  getActivityAnchorWorldPosition?: (ownerNodeId: string) => { x: number; y: number } | null;
+  getCameraZoom?: () => number;
+  worldToScreen?: (x: number, y: number) => { x: number; y: number };
+  getNodeWorldPosition?: (nodeId: string) => { x: number; y: number } | null;
+  getViewportSize?: () => { width: number; height: number };
   getNodeScreenPosition?: (nodeId: string) => { x: number; y: number; visible: boolean } | null;
   focusNodeIds: ReadonlySet<string> | null;
   enabled?: boolean;
@@ -50,12 +55,19 @@ export const GraphActivityHud = ({
   teamName,
   nodes,
   getActivityAnchorScreenPlacement,
+  getActivityAnchorWorldPosition = () => null,
+  getCameraZoom = () => 1,
+  worldToScreen,
+  getNodeWorldPosition = () => null,
+  getViewportSize,
   getNodeScreenPosition = () => null,
   focusNodeIds,
   enabled = true,
   onOpenTaskDetail,
   onOpenMemberProfile,
 }: GraphActivityHudProps): React.JSX.Element | null => {
+  const ACTIVITY_LANE_WIDTH = 296;
+  const worldLayerRef = useRef<HTMLDivElement | null>(null);
   const shellRefs = useRef(new Map<string, HTMLDivElement | null>());
   const connectorRefs = useRef(new Map<string, SVGSVGElement | null>());
   const connectorPathRefs = useRef(new Map<string, SVGPathElement | null>());
@@ -140,16 +152,35 @@ export const GraphActivityHud = ({
 
     let frameId = 0;
     const updatePositions = (): void => {
+      const worldLayer = worldLayerRef.current;
+      if (worldLayer && worldToScreen) {
+        const origin = worldToScreen(0, 0);
+        const zoom = Math.max(getCameraZoom(), 0.001);
+        worldLayer.style.transform = `translate(${Math.round(origin.x)}px, ${Math.round(origin.y)}px) scale(${zoom.toFixed(3)})`;
+      }
+
+      const measurableLanes: Array<{
+        lane: (typeof visibleLanes)[number];
+        shell: HTMLDivElement;
+        connector: SVGSVGElement | null;
+        connectorPath: SVGPathElement | null;
+        laneTopLeft: { x: number; y: number };
+        nodeWorld: { x: number; y: number };
+        scale: number;
+      }> = [];
+
       for (const lane of visibleLanes) {
         const shell = shellRefs.current.get(lane.node.id);
         if (!shell) {
           continue;
         }
-        const connector = connectorRefs.current.get(lane.node.id);
+        const connector = connectorRefs.current.get(lane.node.id) ?? null;
         const connectorPath = connectorPathRefs.current.get(lane.node.id) ?? null;
 
         const placement = getActivityAnchorScreenPlacement(lane.node.id);
-        if (!placement?.visible) {
+        const laneTopLeft = getActivityAnchorWorldPosition(lane.node.id);
+        const nodeWorld = getNodeWorldPosition(lane.node.id);
+        if (!placement || !laneTopLeft || !nodeWorld) {
           shell.style.opacity = '0';
           if (connector) {
             connector.style.opacity = '0';
@@ -157,27 +188,57 @@ export const GraphActivityHud = ({
           continue;
         }
 
+        const scale = Math.max(getCameraZoom(), 0.001);
+        const widthScreen = Math.max(1, (shell.offsetWidth || ACTIVITY_LANE_WIDTH) * scale);
+        const heightScreen = Math.max(1, (shell.offsetHeight || 220) * scale);
+        const viewport = getViewportSize?.();
+        const laneVisible = viewport
+          ? placement.x + widthScreen > -80 &&
+            placement.x < viewport.width + 80 &&
+            placement.y + heightScreen > -80 &&
+            placement.y < viewport.height + 80
+          : placement.visible;
+
+        const nodeScreen = getNodeScreenPosition(lane.node.id);
+        if (!nodeScreen?.visible || !laneVisible) {
+          shell.style.opacity = '0';
+          if (connector) {
+            connector.style.opacity = '0';
+          }
+          continue;
+        }
+
+        measurableLanes.push({
+          lane,
+          shell,
+          connector,
+          connectorPath,
+          laneTopLeft,
+          nodeWorld,
+          scale,
+        });
+      }
+
+      for (const entry of measurableLanes) {
+        const { lane, shell, connector, connectorPath, laneTopLeft, nodeWorld, scale } = entry;
         const baseOpacity = focusNodeIds && !focusNodeIds.has(lane.node.id) ? 0.25 : 1;
         shell.style.opacity = String(baseOpacity);
-        shell.style.transform = `translate(${Math.round(placement.x)}px, ${Math.round(placement.y)}px) scale(${placement.scale.toFixed(3)})`;
+        shell.style.left = `${Math.round(laneTopLeft.x)}px`;
+        shell.style.top = `${Math.round(laneTopLeft.y)}px`;
+        shell.style.transform = '';
 
         if (connector && connectorPath) {
-          const nodeScreen = getNodeScreenPosition(lane.node.id);
-          if (!nodeScreen?.visible) {
-            connector.style.opacity = '0';
-            continue;
-          }
-          const scaledWidth = (shell.offsetWidth || 296) * placement.scale;
-          const laneCenterX = placement.x + scaledWidth / 2;
-          const laneIsLeft = laneCenterX < nodeScreen.x;
-          const endX = laneIsLeft ? placement.x + scaledWidth - 8 : placement.x + 8;
-          const endY = placement.y + 10 * placement.scale;
-          const startX = nodeScreen.x;
-          const startY = nodeScreen.y - 10;
+          const widthWorld = shell.offsetWidth || ACTIVITY_LANE_WIDTH;
+          const laneCenterX = laneTopLeft.x + widthWorld / 2;
+          const laneIsLeft = laneCenterX < nodeWorld.x;
+          const endX = laneIsLeft ? laneTopLeft.x + widthWorld - 8 : laneTopLeft.x + 8;
+          const endY = laneTopLeft.y + 10;
+          const startX = nodeWorld.x;
+          const startY = nodeWorld.y - 10 / scale;
           const minX = Math.min(startX, endX);
           const minY = Math.min(startY, endY);
-          const width = Math.max(1, Math.abs(endX - startX));
-          const height = Math.max(1, Math.abs(endY - startY));
+          const connectorWidth = Math.max(1, Math.abs(endX - startX));
+          const connectorHeight = Math.max(1, Math.abs(endY - startY));
           const localStartX = startX - minX;
           const localStartY = startY - minY;
           const localEndX = endX - minX;
@@ -192,9 +253,12 @@ export const GraphActivityHud = ({
           connector.style.opacity = String(baseOpacity);
           connector.style.left = `${Math.round(minX)}px`;
           connector.style.top = `${Math.round(minY)}px`;
-          connector.setAttribute('width', String(Math.ceil(width)));
-          connector.setAttribute('height', String(Math.ceil(height)));
-          connector.setAttribute('viewBox', `0 0 ${Math.ceil(width)} ${Math.ceil(height)}`);
+          connector.setAttribute('width', String(Math.ceil(connectorWidth)));
+          connector.setAttribute('height', String(Math.ceil(connectorHeight)));
+          connector.setAttribute(
+            'viewBox',
+            `0 0 ${Math.ceil(connectorWidth)} ${Math.ceil(connectorHeight)}`
+          );
           connectorPath.setAttribute(
             'd',
             `M ${localStartX.toFixed(1)} ${localStartY.toFixed(1)} C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${localEndX.toFixed(1)} ${localEndY.toFixed(1)}`
@@ -213,7 +277,12 @@ export const GraphActivityHud = ({
     enabled,
     focusNodeIds,
     getActivityAnchorScreenPlacement,
+    getActivityAnchorWorldPosition,
+    getCameraZoom,
+    getNodeWorldPosition,
     getNodeScreenPosition,
+    getViewportSize,
+    worldToScreen,
     visibleLanes,
   ]);
 
@@ -269,100 +338,154 @@ export const GraphActivityHud = ({
     [onOpenMemberProfile]
   );
 
+  const forwardWheelToGraph = useCallback((event: WheelEvent, shell: HTMLDivElement) => {
+    const graphRoot = shell.closest('.team-graph-view');
+    const canvas = graphRoot?.querySelector('canvas');
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return;
+    }
+    event.preventDefault();
+    canvas.dispatchEvent(
+      new WheelEvent('wheel', {
+        deltaX: event.deltaX,
+        deltaY: event.deltaY,
+        deltaMode: event.deltaMode,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        ctrlKey: event.ctrlKey,
+        shiftKey: event.shiftKey,
+        altKey: event.altKey,
+        metaKey: event.metaKey,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    const listeners: Array<{ shell: HTMLDivElement; handler: (event: WheelEvent) => void }> = [];
+
+    for (const lane of visibleLanes) {
+      const shell = shellRefs.current.get(lane.node.id);
+      if (!shell) {
+        continue;
+      }
+      const handler = (event: WheelEvent) => forwardWheelToGraph(event, shell);
+      shell.addEventListener('wheel', handler, { passive: false });
+      listeners.push({ shell, handler });
+    }
+
+    return () => {
+      for (const { shell, handler } of listeners) {
+        shell.removeEventListener('wheel', handler);
+      }
+    };
+  }, [enabled, forwardWheelToGraph, visibleLanes]);
+
   if (!enabled || !teamData || visibleLanes.length === 0) {
     return null;
   }
 
   return (
     <>
-      {visibleLanes.map((lane) => (
-        <div key={lane.node.id}>
-          <svg
-            ref={(element) => {
-              connectorRefs.current.set(lane.node.id, element);
-            }}
-            className="pointer-events-none absolute z-[9] overflow-visible opacity-0"
-          >
-            <path
+      <div
+        ref={worldLayerRef}
+        className="pointer-events-none absolute left-0 top-0 z-[8] origin-top-left"
+      >
+        {visibleLanes.map((lane) => (
+          <div key={lane.node.id}>
+            <svg
               ref={(element) => {
-                connectorPathRefs.current.set(lane.node.id, element);
+                connectorRefs.current.set(lane.node.id, element);
               }}
-              d=""
-              fill="none"
-              stroke="rgba(148, 163, 184, 0.3)"
-              strokeWidth="1.25"
-              strokeLinecap="round"
-              strokeDasharray="3 4"
-            />
-          </svg>
-          <div
-            ref={(element) => {
-              shellRefs.current.set(lane.node.id, element);
-            }}
-            className="pointer-events-auto absolute z-10 w-[296px] origin-top-left opacity-0"
-          >
-            <div className="mb-1 px-1 text-[10px] font-semibold tracking-[0.2em] text-slate-400/70">
-              Activity
-            </div>
-            <div className="space-y-2">
-              {lane.entries.map((entry, index) => {
-                const messageKey = toMessageKey(entry.message);
-                const renderProps = resolveMessageRenderProps(entry.message, messageContext);
-                const timelineItem: TimelineItem = { type: 'message', message: entry.message };
-                const isUnread = !entry.message.read && !readSet.has(messageKey);
+              className="pointer-events-none absolute z-[9] overflow-visible opacity-0"
+            >
+              <path
+                ref={(element) => {
+                  connectorPathRefs.current.set(lane.node.id, element);
+                }}
+                d=""
+                fill="none"
+                stroke="rgba(148, 163, 184, 0.3)"
+                strokeWidth="1.25"
+                strokeLinecap="round"
+                strokeDasharray="3 4"
+              />
+            </svg>
+            <div
+              ref={(element) => {
+                shellRefs.current.set(lane.node.id, element);
+              }}
+              className="pointer-events-auto absolute z-10 origin-top-left opacity-0"
+              style={{ width: `${ACTIVITY_LANE_WIDTH}px`, maxWidth: `${ACTIVITY_LANE_WIDTH}px` }}
+            >
+              <div className="mb-1 px-1 text-[10px] font-semibold tracking-[0.2em] text-slate-400/70">
+                Activity
+              </div>
+              <div className="min-w-0 max-w-full space-y-2 overflow-hidden">
+                {lane.entries.map((entry, index) => {
+                  const messageKey = toMessageKey(entry.message);
+                  const renderProps = resolveMessageRenderProps(entry.message, messageContext);
+                  const timelineItem: TimelineItem = { type: 'message', message: entry.message };
+                  const isUnread = !entry.message.read && !readSet.has(messageKey);
 
-                return (
-                  <div
-                    key={entry.graphItem.id}
-                    className="cursor-pointer"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleMessageClick(timelineItem)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        handleMessageClick(timelineItem);
-                      }
-                    }}
+                  return (
+                    <div
+                      key={entry.graphItem.id}
+                      className="min-w-0 max-w-full cursor-pointer overflow-hidden"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleMessageClick(timelineItem)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          handleMessageClick(timelineItem);
+                        }
+                      }}
+                    >
+                      <ActivityItem
+                        message={entry.message}
+                        teamName={teamName}
+                        compactHeader
+                        collapseMode="managed"
+                        isCollapsed
+                        canToggleCollapse={false}
+                        isUnread={isUnread}
+                        expandItemKey={messageKey}
+                        onExpand={handleExpandItem}
+                        memberRole={renderProps.memberRole}
+                        memberColor={renderProps.memberColor}
+                        recipientColor={renderProps.recipientColor}
+                        memberColorMap={messageContext.colorMap}
+                        localMemberNames={messageContext.localMemberNames}
+                        onMemberNameClick={handleMemberNameClick}
+                        onTaskIdClick={onOpenTaskDetail}
+                        zebraShade={index % 2 === 1}
+                        teamNames={teamNames}
+                        teamColorByName={teamColorByName}
+                      />
+                    </div>
+                  );
+                })}
+
+                {lane.overflowCount > 0 ? (
+                  <button
+                    type="button"
+                    className="w-full rounded-md border border-white/10 bg-[rgba(8,14,28,0.64)] px-3 py-1 text-center text-[11px] font-medium text-slate-300 transition-colors hover:border-white/20 hover:bg-[rgba(12,20,40,0.78)]"
+                    onClick={() => handleOpenOwnerActivity(lane.node)}
                   >
-                    <ActivityItem
-                      message={entry.message}
-                      teamName={teamName}
-                      compactHeader
-                      collapseMode="managed"
-                      isCollapsed
-                      canToggleCollapse={false}
-                      isUnread={isUnread}
-                      expandItemKey={messageKey}
-                      onExpand={handleExpandItem}
-                      memberRole={renderProps.memberRole}
-                      memberColor={renderProps.memberColor}
-                      recipientColor={renderProps.recipientColor}
-                      memberColorMap={messageContext.colorMap}
-                      localMemberNames={messageContext.localMemberNames}
-                      onMemberNameClick={handleMemberNameClick}
-                      onTaskIdClick={onOpenTaskDetail}
-                      zebraShade={index % 2 === 1}
-                      teamNames={teamNames}
-                      teamColorByName={teamColorByName}
-                    />
-                  </div>
-                );
-              })}
-
-              {lane.overflowCount > 0 ? (
-                <button
-                  type="button"
-                  className="w-full rounded-md border border-white/10 bg-[rgba(8,14,28,0.64)] px-3 py-1 text-center text-[11px] font-medium text-slate-300 transition-colors hover:border-white/20 hover:bg-[rgba(12,20,40,0.78)]"
-                  onClick={() => handleOpenOwnerActivity(lane.node)}
-                >
-                  +{lane.overflowCount} more
-                </button>
-              ) : null}
+                    +{lane.overflowCount} more
+                  </button>
+                ) : null}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
       <MessageExpandDialog
         expandedItem={expandedItem}

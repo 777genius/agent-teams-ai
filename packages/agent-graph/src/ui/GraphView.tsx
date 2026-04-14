@@ -65,6 +65,13 @@ export interface GraphViewProps {
     getActivityAnchorScreenPlacement: (
       ownerNodeId: string,
     ) => { x: number; y: number; scale: number; visible: boolean } | null;
+    getActivityAnchorWorldPosition: (
+      ownerNodeId: string,
+    ) => { x: number; y: number } | null;
+    getCameraZoom: () => number;
+    worldToScreen: (x: number, y: number) => { x: number; y: number };
+    getNodeWorldPosition: (nodeId: string) => { x: number; y: number } | null;
+    getViewportSize: () => { width: number; height: number };
     getNodeScreenPosition: (
       nodeId: string,
     ) => { x: number; y: number; visible: boolean } | null;
@@ -229,6 +236,11 @@ export function GraphView({
       viewportHeight: viewport.height,
     });
   }, [getViewportSize]);
+  const getActivityAnchorWorldPosition = useCallback(
+    (ownerNodeId: string) => simulationRef.current.getActivityAnchorWorldPosition(ownerNodeId),
+    [],
+  );
+  const getCameraZoom = useCallback(() => cameraRef.current.transformRef.current.zoom, []);
   const getNodeScreenPosition = useCallback((nodeId: string) => {
     const viewport = getViewportSize();
     if (viewport.width <= 0 || viewport.height <= 0) {
@@ -247,6 +259,13 @@ export function GraphView({
       visible: x > -80 && x < viewport.width + 80 && y > -80 && y < viewport.height + 80,
     };
   }, [getViewportSize]);
+  const getNodeWorldPosition = useCallback((nodeId: string) => {
+    const node = simulationRef.current.stateRef.current.nodes.find((candidate) => candidate.id === nodeId);
+    if (!node || node.x == null || node.y == null) {
+      return null;
+    }
+    return { x: node.x, y: node.y };
+  }, []);
 
   const animate = useCallback(() => {
     if (!runningRef.current) return;
@@ -710,6 +729,11 @@ export function GraphView({
           {renderHud({
             getLaunchAnchorScreenPlacement,
             getActivityAnchorScreenPlacement,
+            getActivityAnchorWorldPosition,
+            getCameraZoom,
+            worldToScreen: camera.worldToScreen,
+            getNodeWorldPosition,
+            getViewportSize,
             getNodeScreenPosition,
             focusNodeIds: focusState.focusNodeIds,
           })}

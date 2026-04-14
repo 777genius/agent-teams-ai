@@ -6,6 +6,8 @@ import {
   getActivityAnchorScreenPlacement,
   getActivityAnchorTarget,
   getActivityLaneBounds,
+  packActivityLaneScreenRects,
+  packActivityLaneWorldRects,
   getVisibleActivityWindow,
 } from '../../../../packages/agent-graph/src/layout/activityLane';
 
@@ -28,7 +30,7 @@ describe('activity lane helpers', () => {
     expect(window.overflowCount).toBe(3);
   });
 
-  it('places the lead lane to the left and member lane to the right', () => {
+  it('places activity lanes above their owners', () => {
     const leadTarget = getActivityAnchorTarget({ nodeX: 100, nodeY: 80, nodeKind: 'lead' });
     const memberTarget = getActivityAnchorTarget({ nodeX: 100, nodeY: 80, nodeKind: 'member' });
     const memberLeftOfLeadTarget = getActivityAnchorTarget({
@@ -38,11 +40,19 @@ describe('activity lane helpers', () => {
       leadX: 100,
     });
 
-    expect(leadTarget.x).toBeLessThan(100);
-    expect(memberTarget.x).toBeGreaterThan(100);
-    expect(memberLeftOfLeadTarget.x).toBeLessThan(80);
+    expect(leadTarget.x).toBe(100 - ACTIVITY_LANE.width / 2);
+    expect(memberTarget.x).toBe(100 - ACTIVITY_LANE.width / 2);
+    expect(memberLeftOfLeadTarget.x).toBe(80 - ACTIVITY_LANE.width / 2);
     expect(leadTarget.y).toBeLessThan(80);
     expect(memberTarget.y).toBeLessThan(80);
+  });
+
+  it('keeps the activity lane fully above the owner node', () => {
+    const ownerY = 120;
+    const memberTarget = getActivityAnchorTarget({ nodeX: 100, nodeY: ownerY, nodeKind: 'member' });
+    const bounds = getActivityLaneBounds(memberTarget.x, memberTarget.y);
+
+    expect(bounds.bottom).toBeLessThan(ownerY);
   });
 
   it('hits visible activity pills in the owner lane', () => {
@@ -80,8 +90,8 @@ describe('activity lane helpers', () => {
       viewportHeight: 600,
     });
 
-    expect(placement.x).toBe(40 - ACTIVITY_LANE.width / 2);
-    expect(placement.y).toBe(60 - (ACTIVITY_LANE.headerHeight + ACTIVITY_LANE.maxVisibleItems * ACTIVITY_LANE.rowHeight + ACTIVITY_LANE.overflowHeight) / 2);
+    expect(placement.x).toBe(40);
+    expect(placement.y).toBe(60);
     expect(placement.visible).toBe(true);
   });
 
@@ -98,5 +108,41 @@ describe('activity lane helpers', () => {
 
     expect(placement.x).toBeLessThan(0);
     expect(placement.visible).toBe(true);
+  });
+
+  it('packs overlapping lanes on the same side without moving independent lanes', () => {
+    const placements = packActivityLaneScreenRects([
+      { id: 'lane-a', side: 'right', x: 400, y: 100, width: 296, height: 220 },
+      { id: 'lane-b', side: 'right', x: 420, y: 150, width: 296, height: 220 },
+      { id: 'lane-c', side: 'left', x: 120, y: 150, width: 296, height: 220 },
+    ]);
+
+    expect(placements.get('lane-a')).toEqual({ x: 400, y: 100 });
+    expect(placements.get('lane-b')).toEqual({ x: 420, y: 328 });
+    expect(placements.get('lane-c')).toEqual({ x: 120, y: 150 });
+  });
+
+  it('packs world lanes globally even when they came from different legacy sides', () => {
+    const placements = packActivityLaneWorldRects([
+      { id: 'lane-a', side: 'left', x: 100, y: 100, width: 296, height: 220 },
+      { id: 'lane-b', side: 'right', x: 120, y: 140, width: 296, height: 220 },
+    ]);
+
+    expect(placements.get('lane-a')).toEqual({ x: 100, y: 100 });
+    expect(placements.get('lane-b')).toEqual({ x: 120, y: 328 });
+  });
+
+  it('tracks graph zoom so activity lanes behave like world elements', () => {
+    const placement = getActivityAnchorScreenPlacement({
+      anchorX: 40,
+      anchorY: 60,
+      cameraX: 0,
+      cameraY: 0,
+      zoom: 4,
+      viewportWidth: 800,
+      viewportHeight: 600,
+    });
+
+    expect(placement.scale).toBe(4);
   });
 });

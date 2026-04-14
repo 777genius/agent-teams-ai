@@ -145,31 +145,50 @@ export const TeamGraphTab = ({
           onRequestFullscreen={() => setFullscreen(true)}
           onOpenTeamPage={openTeamPage}
           onCreateTask={openCreateTask}
-          renderHud={({
-            getLaunchAnchorScreenPlacement,
-            getActivityAnchorScreenPlacement,
-            getNodeScreenPosition,
-            focusNodeIds,
-          }) => (
-            <>
-              <GraphActivityHud
-                teamName={teamName}
-                nodes={graphData.nodes}
-                getActivityAnchorScreenPlacement={getActivityAnchorScreenPlacement}
-                getNodeScreenPosition={getNodeScreenPosition}
-                focusNodeIds={focusNodeIds}
-                enabled={isActive}
-                onOpenTaskDetail={dispatchOpenTask}
-                onOpenMemberProfile={dispatchOpenProfile}
-              />
-              <GraphProvisioningHud
-                teamName={teamName}
-                leadNodeId={leadNodeId}
-                getLaunchAnchorScreenPlacement={getLaunchAnchorScreenPlacement}
-                enabled={isActive}
-              />
-            </>
-          )}
+          renderHud={(hudProps) => {
+            const extraHudProps = hudProps as typeof hudProps & {
+              getViewportSize?: () => { width: number; height: number };
+              getActivityAnchorWorldPosition?: (
+                ownerNodeId: string
+              ) => { x: number; y: number } | null;
+              getCameraZoom?: () => number;
+              worldToScreen?: (x: number, y: number) => { x: number; y: number };
+              getNodeWorldPosition?: (nodeId: string) => { x: number; y: number } | null;
+            };
+            const {
+              getLaunchAnchorScreenPlacement,
+              getActivityAnchorScreenPlacement,
+              getViewportSize,
+              getNodeScreenPosition,
+              focusNodeIds,
+            } = extraHudProps;
+
+            return (
+              <>
+                <GraphActivityHud
+                  teamName={teamName}
+                  nodes={graphData.nodes}
+                  getActivityAnchorScreenPlacement={getActivityAnchorScreenPlacement}
+                  getActivityAnchorWorldPosition={extraHudProps.getActivityAnchorWorldPosition}
+                  getCameraZoom={extraHudProps.getCameraZoom}
+                  worldToScreen={extraHudProps.worldToScreen}
+                  getNodeWorldPosition={extraHudProps.getNodeWorldPosition}
+                  getViewportSize={getViewportSize}
+                  getNodeScreenPosition={getNodeScreenPosition}
+                  focusNodeIds={focusNodeIds}
+                  enabled={isActive}
+                  onOpenTaskDetail={dispatchOpenTask}
+                  onOpenMemberProfile={dispatchOpenProfile}
+                />
+                <GraphProvisioningHud
+                  teamName={teamName}
+                  leadNodeId={leadNodeId}
+                  getLaunchAnchorScreenPlacement={getLaunchAnchorScreenPlacement}
+                  enabled={isActive}
+                />
+              </>
+            );
+          }}
           renderEdgeOverlay={({ edge, sourceNode, targetNode, onClose, onSelectNode }) => (
             <GraphBlockingEdgePopover
               teamName={teamName}

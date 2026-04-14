@@ -6,6 +6,7 @@ import {
   getOwnerKanbanBaseX,
 } from '../../../../packages/agent-graph/src/layout/kanbanLayout';
 import {
+  ACTIVITY_LANE,
   getActivityAnchorTarget,
   getActivityLaneBounds,
 } from '../../../../packages/agent-graph/src/layout/activityLane';
@@ -78,7 +79,7 @@ describe('kanban layout activity-lane avoidance', () => {
     expect(baseX).toBe(-220);
   });
 
-  it('keeps member task pills out of the reserved right-side activity lane', () => {
+  it('keeps member task pills below the reserved activity lane', () => {
     const lead = createLeadNode(0, 0);
     const member = createMemberNode('member:jack', 220, 40, 'jack');
     const tasks = [
@@ -96,12 +97,12 @@ describe('kanban layout activity-lane avoidance', () => {
       leadX: lead.x ?? null,
     });
     const laneBounds = getActivityLaneBounds(anchor.x, anchor.y);
-    const rightmostTaskEdge = Math.max(...tasks.map((task) => (task.x ?? 0) + TASK_PILL.width / 2));
+    const topmostTaskEdge = Math.min(...tasks.map((task) => (task.y ?? 0) - TASK_PILL.height / 2));
 
-    expect(rightmostTaskEdge).toBeLessThan(laneBounds.left);
+    expect(topmostTaskEdge).toBeGreaterThan(laneBounds.bottom);
   });
 
-  it('keeps member task pills out of the reserved left-side activity lane', () => {
+  it('keeps left-side member task pills below the reserved activity lane', () => {
     const lead = createLeadNode(0, 0);
     const member = createMemberNode('member:alice', -220, 40, 'alice');
     const tasks = [
@@ -119,8 +120,33 @@ describe('kanban layout activity-lane avoidance', () => {
       leadX: lead.x ?? null,
     });
     const laneBounds = getActivityLaneBounds(anchor.x, anchor.y);
-    const leftmostTaskEdge = Math.min(...tasks.map((task) => (task.x ?? 0) - TASK_PILL.width / 2));
+    const topmostTaskEdge = Math.min(...tasks.map((task) => (task.y ?? 0) - TASK_PILL.height / 2));
 
-    expect(leftmostTaskEdge).toBeGreaterThan(laneBounds.right);
+    expect(topmostTaskEdge).toBeGreaterThan(laneBounds.bottom);
+  });
+
+  it('pushes task zones below overlapping activity lanes from nearby owners', () => {
+    const lead = createLeadNode(0, 0);
+    const member = createMemberNode('member:alice', 120, 120, 'alice');
+    const tasks = [
+      createTaskNode('task:todo', member.id, 'pending'),
+      createTaskNode('task:wip', member.id, 'in_progress'),
+    ];
+
+    const nearbyLane = {
+      ownerId: 'member:tom',
+      left: 20,
+      top: -120,
+      right: 20 + ACTIVITY_LANE.width,
+      bottom: 180,
+    };
+
+    KanbanLayoutEngine.layout([lead, member, ...tasks], {
+      activityLaneBounds: [nearbyLane],
+    });
+
+    const topmostTaskEdge = Math.min(...tasks.map((task) => (task.y ?? 0) - TASK_PILL.height / 2));
+
+    expect(topmostTaskEdge).toBeGreaterThan(nearbyLane.bottom);
   });
 });

@@ -1,8 +1,7 @@
 import { NODE } from '../constants/canvas-constants';
 import {
   ACTIVITY_ANCHOR_LAYOUT,
-  getActivityAnchorTarget,
-  getActivityLaneBounds,
+  resolveActivityLaneSide,
 } from './activityLane';
 
 export interface WorldBounds {
@@ -76,9 +75,38 @@ export const getLaunchHudBounds = getLaunchAnchorBounds;
 export const HANDOFF_ANCHOR_LAYOUT = ACTIVITY_ANCHOR_LAYOUT;
 export const getHandoffAnchorId = getActivityAnchorId;
 export const isHandoffAnchorId = isActivityAnchorId;
-export { getActivityAnchorTarget };
-export const getHandoffAnchorTarget = getActivityAnchorTarget;
-export const getHandoffAnchorBounds = getActivityLaneBounds;
+
+export function getHandoffAnchorTarget(args: {
+  nodeX: number;
+  nodeY: number;
+  nodeKind: 'lead' | 'member';
+  leadX?: number | null;
+}): { x: number; y: number } {
+  const { nodeX, nodeY, nodeKind, leadX } = args;
+  const side = resolveActivityLaneSide({ nodeKind, nodeX, leadX });
+  if (side === 'left') {
+    return {
+      x: nodeX + ACTIVITY_ANCHOR_LAYOUT.leadOffsetX,
+      y: nodeY + ACTIVITY_ANCHOR_LAYOUT.leadOffsetY,
+    };
+  }
+
+  return {
+    x: nodeX + ACTIVITY_ANCHOR_LAYOUT.memberOffsetX,
+    y: nodeY + ACTIVITY_ANCHOR_LAYOUT.memberOffsetY,
+  };
+}
+
+export function getHandoffAnchorBounds(anchorX: number, anchorY: number): WorldBounds {
+  const halfWidth = ACTIVITY_ANCHOR_LAYOUT.reservedWidth / 2;
+  const halfHeight = ACTIVITY_ANCHOR_LAYOUT.reservedHeight / 2;
+  return {
+    left: anchorX - halfWidth,
+    top: anchorY - halfHeight,
+    right: anchorX + halfWidth,
+    bottom: anchorY + halfHeight,
+  };
+}
 
 export function getLaunchAnchorScreenPlacement(args: {
   anchorX: number;

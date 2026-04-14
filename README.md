@@ -10,7 +10,7 @@
   <a href="docs/screenshots/6.png"><img src="docs/screenshots/6.png" width="65" alt="Settings" /></a>
 </p>
 
-<h1 align="center"><a href="https://777genius.github.io/claude_agent_teams_ui/">Claude Agent Teams UI</a></h1>
+<h1 align="center"><a href="https://777genius.github.io/claude_agent_teams_ui/">Agent Teams UI</a></h1>
 
 <p align="center">
   <strong><code>You're the CTO, agents are your team. They handle tasks themselves, message each other, review each other. You just look at the kanban board and drink coffee.</code></strong>
@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <sub>100% free, open source. Auto-detects Claude/Codex. Use the provider access you already have - subscriptions/logins or API keys where supported. Not just coding agents.</sub>
+  <sub>100% free, open source. Auto-detects Claude/Codex. Use the provider access you already have -  subscriptions or API keys. Not just coding agents.</sub>
 </p>
 
 <img width="1500" height="1065" alt="demo" src="https://github.com/user-attachments/assets/be19cfcb-93ff-403a-9a1e-8ff1a803c55e" />
@@ -91,10 +91,10 @@ No prerequisites - the app can detect supported runtimes/providers and guide set
 - [Installation](#installation)
 - [Table of contents](#table-of-contents)
 - [What is this](#what-is-this)
+- [Developer architecture docs](#developer-architecture-docs)
 - [Comparison](#comparison)
 - [Quick start](#quick-start)
 - [FAQ](#faq)
-- [Developer architecture docs](#developer-architecture-docs)
 - [Development](#development)
 - [Tech stack](#tech-stack)
   - [Build for distribution](#build-for-distribution)
@@ -108,15 +108,14 @@ No prerequisites - the app can detect supported runtimes/providers and guide set
 
 A local orchestration layer for AI agent teams across Claude and Codex.
 
-- **Claude + Codex orchestration** — auto-detect available Claude/Codex runtimes and use the provider access you already have - subscriptions/logins or API keys where supported
+- **Claude + Codex orchestration** — auto-detect available Claude/Codex runtimes and use the provider access you already have - subscriptions or API keys
 - **Assemble your team** — create agent teams with different roles that work autonomously in parallel
 - **Agents talk to each other** — they communicate, create and manage their own tasks, review, leave comments
 - **Cross-team communication** — agents can fully communicate across different teams; you can configure or prompt them to collaborate and message each other between teams
 - **Sit back and watch** — tasks change status on the kanban board while agents handle everything on their own
 - **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment
 - **Built-in review workflow** — easily see how agents review each other's tasks to make sure everything went exactly as planned
-- **Full tool visibility** — inspect exactly which tools an agent used to complete each task
-- **Task-specific logs and messages** — clearly see agent/runtime logs and messages in isolation for each individual task, making it easy to trace what happened for any assignment
+- **Task-specific logs and messages** — clearly see agent/runtime logs (tools), actions and messages in isolation for each individual task, making it easy to trace what happened for any assignment
 - **Live process section** — see which agents are running processes and open URLs directly in the browser
 - **Stay in control** — send a direct message to any agent, drop a comment on a task, or pick a quick action right on the kanban card whenever you want to clarify something or add new work
 - **Flexible autonomy** — let agents run fully autonomous, or review and approve each action one by one (you'll get a notification) — configure the level of control that fits your security needs
@@ -168,7 +167,7 @@ For feature architecture and implementation guidance:
 
 ## Comparison
 
-| Feature | Claude Agent Teams UI | Vibe Kanban | Aperant | Cursor | Claude Code CLI |
+| Feature | Agent Teams UI | Vibe Kanban | Aperant | Cursor | Claude Code CLI |
 |---|---|---|---|---|---|
 | **Cross-team communication** | ✅ | ❌ | ❌ | — | ❌ |
 | **Agent-to-agent messaging** | ✅ Native real-time mailbox | ❌ Agents are independent | ❌ Fixed pipeline | ❌ | ✅⚠️ Built-in (no UI) |
@@ -306,7 +305,7 @@ pnpm dist            # macOS + Windows + Linux
 
 - [ ] Planning mode to organize agent plans before execution
 - [ ] Visual workflow editor ([@xyflow/react](https://github.com/xyflow/xyflow)) for building and orchestrating agent pipelines with drag & drop
-- [ ] Multi-model support: proxy layer to use other popular LLMs (GPT, Gemini, DeepSeek, Llama, etc.), including offline/local models
+- [ ] Support more models/providers (including local) e.g OpenCode (with many providers)
 - [ ] Remote agent execution via SSH: launch and manage agent teams on remote machines over SSH (stream-json protocol over SSH channel, SFTP-based file monitoring for tasks/inboxes/config)
 - [ ] CLI runtime: Run not only on a local PC but in any headless/console environment (web UI), e.g. VPS, remote server, etc.
 - [ ] 2 modes: current (agent teams), and a new mode: regular subagents (no communication between them)
@@ -317,6 +316,8 @@ pnpm dist            # macOS + Windows + Linux
 - [ ] Command palette — extend Cmd/Ctrl+K beyond project/session search to runnable actions (quick commands, navigation shortcuts, team/task operations) in a keyboard-first flow
 - [ ] Custom kanban columns
 - [ ] Run terminal commands
+- [ ] Monitor agents processes/stats
+- [ ] Reusable agents with SOUL.md
 
 ---
 
@@ -326,7 +327,7 @@ See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for development guidelines. Pleas
 
 ## Security
 
-IPC handlers validate all inputs with strict path containment checks. File reads are constrained to the project root and `~/.claude`. Sensitive credential paths are blocked. See [SECURITY.md](.github/SECURITY.md) for details.
+IPC and standalone HTTP handlers validate IDs, paths, and payload shape at the boundary. Project editing and write operations are constrained to the selected project root, while read-only discovery also accesses local Claude data under `~/.claude/` and app-owned state paths when required. Path traversal and sensitive config/credential targets are blocked. See [SECURITY.md](.github/SECURITY.md) for details.
 
 ## License
 

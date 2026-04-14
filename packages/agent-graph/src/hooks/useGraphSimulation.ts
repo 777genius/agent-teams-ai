@@ -26,7 +26,6 @@ import { KanbanLayoutEngine } from '../layout/kanbanLayout';
 import {
   LAUNCH_ANCHOR_LAYOUT,
   getActivityAnchorId,
-  getHandoffAnchorBounds,
   getLaunchAnchorBounds,
   getLaunchAnchorId,
   getLaunchAnchorTarget,
@@ -34,7 +33,14 @@ import {
   isLaunchAnchorId,
   type WorldBounds,
 } from '../layout/launchAnchor';
-import { ACTIVITY_ANCHOR_LAYOUT, getActivityAnchorTarget } from '../layout/activityLane';
+import {
+  ACTIVITY_ANCHOR_LAYOUT,
+  buildVisibleActivityLaneBounds,
+  getActivityLaneBounds,
+  getActivityAnchorTarget,
+  packActivityLaneWorldRects,
+  resolveActivityLaneSide,
+} from '../layout/activityLane';
 
 // ─── Force Node/Link types (properly typed, no loose `string`) ──────────────
 
@@ -91,35 +97,71 @@ function syncLaunchAnchors(forceNodes: ForceNode[]): void {
   }
   const leadNode = forceNodes.find((node) => node.kind === 'lead');
   const leadX = leadNode?.x ?? leadNode?.fx ?? null;
+  const pendingActivityAnchors: Array<{
+    node: ForceNode;
+    target: { x: number; y: number };
+    side: 'left' | 'right';
+  }> = [];
 
   for (const node of forceNodes) {
-    let target: { x: number; y: number } | null = null;
     if (node.kind === 'launch-anchor' && node.anchorForLeadId) {
       const leadNode = forceNodeMap.get(node.anchorForLeadId);
       if (!leadNode) continue;
-      target = getLaunchAnchorTarget(leadNode.x ?? 0, leadNode.y ?? 0);
-    } else if (node.kind === 'activity-anchor' && node.anchorForNodeId) {
+      const target = getLaunchAnchorTarget(leadNode.x ?? 0, leadNode.y ?? 0);
+      node.fx = target.x;
+      node.fy = target.y;
+      node.x = target.x;
+      node.y = target.y;
+      node.vx = 0;
+      node.vy = 0;
+      continue;
+    }
+
+    if (node.kind === 'activity-anchor' && node.anchorForNodeId) {
       const ownerNode = forceNodeMap.get(node.anchorForNodeId);
       if (!ownerNode || (ownerNode.kind !== 'lead' && ownerNode.kind !== 'member')) continue;
-      target = getActivityAnchorTarget({
+      const target = getActivityAnchorTarget({
         nodeX: ownerNode.x ?? 0,
         nodeY: ownerNode.y ?? 0,
         nodeKind: ownerNode.kind,
         leadX,
       });
-    } else {
-      continue;
+      pendingActivityAnchors.push({
+        node,
+        target,
+        side: resolveActivityLaneSide({
+          nodeKind: ownerNode.kind,
+          nodeX: ownerNode.x ?? 0,
+          leadX,
+        }),
+      });
     }
-    if (!target) {
-      continue;
-    }
+  }
 
-    node.fx = target.x;
-    node.fy = target.y;
-    node.x = target.x;
-    node.y = target.y;
-    node.vx = 0;
-    node.vy = 0;
+  const packedActivityAnchors = packActivityLaneWorldRects(
+    pendingActivityAnchors.map(({ node, target, side }) => ({
+      id: node.id,
+      side,
+      x: target.x,
+      y: target.y,
+      width: ACTIVITY_ANCHOR_LAYOUT.reservedWidth,
+      height: ACTIVITY_ANCHOR_LAYOUT.reservedHeight,
+    })),
+    18,
+  );
+
+  for (const entry of pendingActivityAnchors) {
+    const packed = packedActivityAnchors.get(entry.node.id);
+    const centerX = (packed?.x ?? entry.target.x)
+      + ACTIVITY_ANCHOR_LAYOUT.reservedWidth / 2;
+    const centerY = (packed?.y ?? entry.target.y)
+      + ACTIVITY_ANCHOR_LAYOUT.reservedHeight / 2;
+    entry.node.fx = centerX;
+    entry.node.fy = centerY;
+    entry.node.x = centerX;
+    entry.node.y = centerY;
+    entry.node.vx = 0;
+    entry.node.vy = 0;
   }
 }
 
@@ -142,8 +184,12 @@ function updateLaunchAnchorCaches(
       continue;
     }
     if (node.kind === 'activity-anchor' && node.anchorForNodeId) {
-      activityPositions.set(node.anchorForNodeId, { x, y });
-      bounds.push(getHandoffAnchorBounds(x, y));
+      const topLeft = {
+        x: x - ACTIVITY_ANCHOR_LAYOUT.reservedWidth / 2,
+        y: y - ACTIVITY_ANCHOR_LAYOUT.reservedHeight / 2,
+      };
+      activityPositions.set(node.anchorForNodeId, topLeft);
+      bounds.push(getActivityLaneBounds(topLeft.x, topLeft.y));
     }
   }
 }
@@ -314,7 +360,12 @@ export function useGraphSimulation(): UseGraphSimulationResult {
     }
 
     // Position tasks in kanban zones relative to their owners
-    KanbanLayoutEngine.layout(nodes);
+    KanbanLayoutEngine.layout(nodes, {
+      activityLaneBounds: buildVisibleActivityLaneBounds(
+        nodes,
+        activityAnchorPositionsRef.current
+      ),
+    });
     updateLaunchAnchorCaches(
       sim.nodes(),
       launchAnchorPositionsRef.current,
@@ -515,7 +566,9 @@ function tickFrame(
   }
 
   // Re-layout tasks in kanban zones — always run to handle new/moved tasks
-  KanbanLayoutEngine.layout(state.nodes);
+  KanbanLayoutEngine.layout(state.nodes, {
+    activityLaneBounds: buildVisibleActivityLaneBounds(state.nodes, activityAnchorPositions),
+  });
 
   // Update particle progress — in-place removal (no new array allocation)
   let pw = 0;
