@@ -575,6 +575,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         multimodelEnabled,
         storedProviderId,
         storedEffort: storedEffort === null ? 'medium' : storedEffort,
+        storedLimitContext: localStorage.getItem('team:lastLimitContext') === 'true',
         getStoredModel: getStoredTeamModel,
       });
       setSavedLaunchProviderId(savedProviderId);
@@ -590,10 +591,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setSelectedProviderIdRaw(launchPrefill.providerId);
       setSelectedModelRaw(launchPrefill.model);
       setSelectedEffortRaw(launchPrefill.effort);
-      setLimitContextRaw(
-        savedRequest?.limitContext === true ||
-          localStorage.getItem('team:lastLimitContext') === 'true'
-      );
+      setLimitContextRaw(launchPrefill.limitContext);
       setSkipPermissionsRaw(
         savedRequest?.skipPermissions ??
           localStorage.getItem('team:lastSkipPermissions') !== 'false'

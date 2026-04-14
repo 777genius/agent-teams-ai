@@ -26,7 +26,7 @@
   <sub>100% free, open source. Auto-detects Claude/Codex. Use the provider access you already have -  subscriptions or API keys. Not just coding agents.</sub>
 </p>
 
-<img width="1500" height="1065" alt="demo" src="https://github.com/user-attachments/assets/be19cfcb-93ff-403a-9a1e-8ff1a803c55e" />
+<img width="1500" height="1065" alt="demo" src="https://github.com/user-attachments/assets/9d502887-7e28-4a11-aedd-3bd45fdfb0d2" />
 
 
 <table>

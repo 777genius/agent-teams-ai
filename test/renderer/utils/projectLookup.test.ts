@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveProjectIdByPath } from '@renderer/utils/projectLookup';
+import { resolveProjectIdByPath, resolveProjectPathById } from '@renderer/utils/projectLookup';
 
 import type { Project, RepositoryGroup } from '@renderer/types/data';
 
@@ -9,16 +9,19 @@ import type { Project, RepositoryGroup } from '@renderer/types/data';
 // ---------------------------------------------------------------------------
 
 type ProjectLike = Pick<Project, 'id' | 'path'>;
+type ProjectWithName = Pick<Project, 'id' | 'path' | 'name'>;
 type RepoGroupLike = Pick<RepositoryGroup, 'worktrees'>;
 
-const CRYPTO_PROJECT: ProjectLike = {
+const CRYPTO_PROJECT: ProjectWithName = {
   id: '-Users-belief-dev-projects-crypto-research',
   path: '/Users/belief/dev/projects/crypto_research',
+  name: 'crypto_research',
 };
 
-const CLAUDE_PROJECT: ProjectLike = {
+const CLAUDE_PROJECT: ProjectWithName = {
   id: '-Users-belief-dev-projects-claude-claude-team',
   path: '/Users/belief/dev/projects/claude/claude_team',
+  name: 'claude_team',
 };
 
 function makeRepoGroup(worktrees: { id: string; path: string }[]): RepoGroupLike {
@@ -287,6 +290,159 @@ describe('resolveProjectIdByPath', () => {
           populatedGroups
         )
       ).toBe('-Users-belief-dev-projects-crypto-research');
+    });
+  });
+});
+
+// ===========================================================================
+// resolveProjectPathById — inverse lookup (ID → path + name)
+// ===========================================================================
+
+describe('resolveProjectPathById', () => {
+  // -----------------------------------------------------------------------
+  // Null / undefined / empty input
+  // -----------------------------------------------------------------------
+  describe('null/undefined/empty projectId', () => {
+    it('returns null for undefined projectId', () => {
+      expect(resolveProjectPathById(undefined, [CRYPTO_PROJECT], [])).toBeNull();
+    });
+
+    it('returns null for null projectId', () => {
+      expect(resolveProjectPathById(null, [CRYPTO_PROJECT], [])).toBeNull();
+    });
+
+    it('returns null for empty string projectId', () => {
+      expect(resolveProjectPathById('', [CRYPTO_PROJECT], [])).toBeNull();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Lookup from projects (flat view mode)
+  // -----------------------------------------------------------------------
+  describe('lookup from projects (flat mode)', () => {
+    it('finds project by exact id match', () => {
+      const result = resolveProjectPathById(
+        '-Users-belief-dev-projects-crypto-research',
+        [CRYPTO_PROJECT, CLAUDE_PROJECT],
+        []
+      );
+      expect(result).toEqual({
+        path: '/Users/belief/dev/projects/crypto_research',
+        name: 'crypto_research',
+      });
+    });
+
+    it('returns null when id not in projects', () => {
+      expect(
+        resolveProjectPathById('-Users-belief-dev-projects-unknown', [CRYPTO_PROJECT], [])
+      ).toBeNull();
+    });
+
+    it('returns null when projects list is empty', () => {
+      expect(
+        resolveProjectPathById('-Users-belief-dev-projects-crypto-research', [], [])
+      ).toBeNull();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Lookup from repositoryGroups (grouped view mode)
+  // -----------------------------------------------------------------------
+  describe('lookup from repositoryGroups (grouped mode)', () => {
+    it('finds project in worktrees when projects is empty', () => {
+      const result = resolveProjectPathById(
+        '-Users-belief-dev-projects-crypto-research',
+        [],
+        [CRYPTO_REPO_GROUP]
+      );
+      expect(result).toEqual({
+        path: '/Users/belief/dev/projects/crypto_research',
+        name: '-Users-belief-dev-projects-crypto-research',
+      });
+    });
+
+    it('finds project across multiple repo groups', () => {
+      const result = resolveProjectPathById(
+        '-Users-belief-dev-projects-claude-claude-team',
+        [],
+        [CRYPTO_REPO_GROUP, CLAUDE_REPO_GROUP]
+      );
+      expect(result).toEqual({
+        path: '/Users/belief/dev/projects/claude/claude_team',
+        name: '-Users-belief-dev-projects-claude-claude-team',
+      });
+    });
+
+    it('finds correct worktree in multi-worktree group', () => {
+      const result = resolveProjectPathById(
+        '-Users-belief-dev-projects-app-wt-feature',
+        [],
+        [MULTI_WORKTREE_GROUP]
+      );
+      expect(result).toEqual({
+        path: '/Users/belief/dev/projects/app-wt-feature',
+        name: '-Users-belief-dev-projects-app-wt-feature',
+      });
+    });
+
+    it('returns null when id not in any worktree', () => {
+      expect(
+        resolveProjectPathById('-Users-belief-dev-projects-unknown', [], [CRYPTO_REPO_GROUP])
+      ).toBeNull();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Priority: projects takes precedence over repositoryGroups
+  // -----------------------------------------------------------------------
+  describe('priority order', () => {
+    it('prefers projects match over repositoryGroups match', () => {
+      const projectEntry: ProjectWithName = {
+        id: 'shared-id',
+        path: '/from/projects',
+        name: 'from-projects',
+      };
+
+      const repoGroupEntry = makeRepoGroup([
+        { id: 'shared-id', path: '/from/repo-group' },
+      ]);
+
+      const result = resolveProjectPathById('shared-id', [projectEntry], [repoGroupEntry]);
+      expect(result).toEqual({ path: '/from/projects', name: 'from-projects' });
+    });
+
+    it('falls back to repositoryGroups when projects has no match', () => {
+      const result = resolveProjectPathById(
+        '-Users-belief-dev-projects-crypto-research',
+        [CLAUDE_PROJECT],
+        [CRYPTO_REPO_GROUP]
+      );
+      expect(result).toEqual({
+        path: '/Users/belief/dev/projects/crypto_research',
+        name: '-Users-belief-dev-projects-crypto-research',
+      });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Regression: Extensions tab with grouped view mode
+  // -----------------------------------------------------------------------
+  describe('regression: Extensions tab skills in grouped view mode', () => {
+    it('resolves projectPath from id when only repositoryGroups is populated', () => {
+      // This is the exact scenario that caused skills not to show:
+      // viewMode=grouped → projects=[] but repositoryGroups has the data
+      // ExtensionStoreView used projects.find(p => p.id === tabProjectId)
+      // which returned null, so projectPath was null and no project skills loaded
+      const emptyProjects: ProjectWithName[] = [];
+      const populatedGroups: RepoGroupLike[] = [CRYPTO_REPO_GROUP, CLAUDE_REPO_GROUP];
+
+      const result = resolveProjectPathById(
+        '-Users-belief-dev-projects-crypto-research',
+        emptyProjects,
+        populatedGroups
+      );
+      expect(result).not.toBeNull();
+      expect(result!.path).toBe('/Users/belief/dev/projects/crypto_research');
     });
   });
 });

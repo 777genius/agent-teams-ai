@@ -51,6 +51,8 @@ vi.mock('@main/utils/pathDecoder', async (importOriginal) => {
 });
 
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
+import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
+import { getTeamLaunchStatePath } from '@main/services/team/TeamLaunchStateStore';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { spawnCli } from '@main/utils/childProcess';
 import { AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES } from 'agent-teams-controller';
@@ -84,6 +86,63 @@ function createRunningChild() {
   });
 }
 
+function writeLaunchConfig(
+  teamName: string,
+  projectPath: string,
+  leadSessionId: string,
+  members: string[]
+): void {
+  const teamDir = path.join(tempTeamsBase, teamName);
+  fs.mkdirSync(teamDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(teamDir, 'config.json'),
+    JSON.stringify({
+      name: teamName,
+      projectPath,
+      leadSessionId,
+      members: [
+        { name: 'team-lead', agentType: 'team-lead' },
+        ...members.map((name) => ({ name })),
+      ],
+    }),
+    'utf8'
+  );
+}
+
+function writeLaunchState(
+  teamName: string,
+  leadSessionId: string,
+  members: Record<string, Record<string, unknown>>
+): void {
+  const snapshot = createPersistedLaunchSnapshot({
+    teamName,
+    leadSessionId,
+    launchPhase: 'finished',
+    expectedMembers: Object.keys(members),
+    members: Object.fromEntries(
+      Object.entries(members).map(([name, member]) => [
+        name,
+        {
+          name,
+          launchState: 'failed_to_start',
+          agentToolAccepted: false,
+          runtimeAlive: false,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          hardFailureReason: 'Teammate was never spawned during launch.',
+          lastEvaluatedAt: new Date().toISOString(),
+          ...member,
+        },
+      ])
+    ) as any,
+  });
+  fs.writeFileSync(
+    getTeamLaunchStatePath(teamName),
+    `${JSON.stringify(snapshot, null, 2)}\n`,
+    'utf8'
+  );
+}
+
 describe('TeamProvisioningService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -99,7 +158,6 @@ describe('TeamProvisioningService', () => {
     fs.mkdirSync(tempTasksBase, { recursive: true });
     fs.mkdirSync(tempProjectsBase, { recursive: true });
   });
-
 
   afterEach(() => {
     vi.useRealTimers();
@@ -389,14 +447,12 @@ describe('TeamProvisioningService', () => {
 
   it('expands teammate permission suggestions to the operational tool set only', async () => {
     allowConsoleLogs();
-    const svc = new TeamProvisioningService(
-      {
-        getConfig: vi.fn(async () => ({
-          projectPath: tempClaudeRoot,
-          members: [{ cwd: tempClaudeRoot }],
-        })),
-      } as any
-    );
+    const svc = new TeamProvisioningService({
+      getConfig: vi.fn(async () => ({
+        projectPath: tempClaudeRoot,
+        members: [{ cwd: tempClaudeRoot }],
+      })),
+    } as any);
 
     await (svc as any).respondToTeammatePermission(
       { teamName: 'ops-team' },
@@ -427,14 +483,12 @@ describe('TeamProvisioningService', () => {
 
   it('does not broaden admin/runtime teammate permission suggestions', async () => {
     allowConsoleLogs();
-    const svc = new TeamProvisioningService(
-      {
-        getConfig: vi.fn(async () => ({
-          projectPath: tempClaudeRoot,
-          members: [{ cwd: tempClaudeRoot }],
-        })),
-      } as any
-    );
+    const svc = new TeamProvisioningService({
+      getConfig: vi.fn(async () => ({
+        projectPath: tempClaudeRoot,
+        members: [{ cwd: tempClaudeRoot }],
+      })),
+    } as any);
 
     await (svc as any).respondToTeammatePermission(
       { teamName: 'ops-team' },
@@ -515,5 +569,108 @@ describe('TeamProvisioningService', () => {
         ],
       })
     ).toBe('Questions (2): First question with extra spacing.');
+  });
+
+  it('skips --resume when the persisted launch state shows no teammate ever spawned', async () => {
+    allowConsoleLogs();
+    const teamName = 'resume-skip-team';
+    const leadSessionId = 'lead-session-skip';
+    writeLaunchConfig(teamName, tempClaudeRoot, leadSessionId, ['alice', 'bob']);
+    writeLaunchState(teamName, leadSessionId, {
+      alice: {
+        launchState: 'failed_to_start',
+      },
+      bob: {
+        launchState: 'starting',
+        hardFailure: false,
+      },
+    });
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+    vi.mocked(spawnCli).mockImplementation(() => {
+      throw new Error('launch spawn EINVAL');
+    });
+
+    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
+      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+      removeConfigFile: vi.fn(async () => {}),
+    } as any);
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+      members: [{ name: 'alice' }, { name: 'bob' }],
+      source: 'members-meta',
+      warning: undefined,
+    }));
+    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
+    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).pathExists = vi.fn(async (targetPath: string) =>
+      targetPath.endsWith(`${leadSessionId}.jsonl`)
+    );
+
+    await expect(svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {})).rejects.toThrow(
+      'launch spawn EINVAL'
+    );
+
+    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+    expect(launchArgs).toBeTruthy();
+    expect(launchArgs).not.toContain('--resume');
+    expect(launchArgs).not.toContain(leadSessionId);
+  });
+
+  it('keeps --resume when a teammate had an accepted spawn before failing bootstrap', async () => {
+    allowConsoleLogs();
+    const teamName = 'resume-keep-team';
+    const leadSessionId = 'lead-session-keep';
+    const acceptedAt = '2026-04-14T12:00:00.000Z';
+    writeLaunchConfig(teamName, tempClaudeRoot, leadSessionId, ['alice']);
+    writeLaunchState(teamName, leadSessionId, {
+      alice: {
+        launchState: 'failed_to_start',
+        agentToolAccepted: true,
+        firstSpawnAcceptedAt: acceptedAt,
+        hardFailureReason: 'Teammate did not join within the launch grace window.',
+      },
+    });
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
+    vi.mocked(spawnCli).mockImplementation(() => {
+      throw new Error('launch spawn EINVAL');
+    });
+
+    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
+      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+      removeConfigFile: vi.fn(async () => {}),
+    } as any);
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { ANTHROPIC_API_KEY: 'test' },
+      authSource: 'anthropic_api_key',
+    }));
+    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+      members: [{ name: 'alice' }],
+      source: 'members-meta',
+      warning: undefined,
+    }));
+    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
+    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).pathExists = vi.fn(async (targetPath: string) =>
+      targetPath.endsWith(`${leadSessionId}.jsonl`)
+    );
+
+    await expect(svc.launchTeam({ teamName, cwd: tempClaudeRoot }, () => {})).rejects.toThrow(
+      'launch spawn EINVAL'
+    );
+
+    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+    expect(launchArgs).toContain('--resume');
+    expect(launchArgs).toContain(leadSessionId);
   });
 });

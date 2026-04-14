@@ -15,6 +15,7 @@ export interface ParsedStandaloneSlashCommand {
   endIndex: number;
 }
 
+const SLASH_COMMAND_NAME_PATTERN = /^[a-z][a-z0-9:-]{0,63}$/i;
 const STANDALONE_SLASH_COMMAND_PATTERN = /^\/([a-z][a-z0-9:-]{0,63})(?:\s+([\s\S]*\S))?$/i;
 
 export const KNOWN_SLASH_COMMANDS: readonly KnownSlashCommandDefinition[] = [
@@ -76,6 +77,10 @@ const KNOWN_SLASH_COMMANDS_BY_NAME = new Map(
 
 export function getKnownSlashCommand(name: string): KnownSlashCommandDefinition | null {
   return KNOWN_SLASH_COMMANDS_BY_NAME.get(name.trim().toLowerCase()) ?? null;
+}
+
+export function isSupportedSlashCommandName(name: string): boolean {
+  return SLASH_COMMAND_NAME_PATTERN.test(name.trim());
 }
 
 export function buildSlashCommandMeta(

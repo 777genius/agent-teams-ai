@@ -9,8 +9,8 @@ export interface MentionSuggestion {
   description?: string;
   /** Color name from TeamColorSet palette */
   color?: string;
-  /** Suggestion type — 'member' (default), 'team', 'file', 'folder', 'task', or 'command' */
-  type?: 'member' | 'team' | 'file' | 'folder' | 'task' | 'command';
+  /** Suggestion type — 'member' (default), 'team', 'file', 'folder', 'task', 'command', or 'skill' */
+  type?: 'member' | 'team' | 'file' | 'folder' | 'task' | 'command' | 'skill';
   /** Whether the team is currently online (team suggestions only) */
   isOnline?: boolean;
   /** Absolute file/folder path (file/folder suggestions only) */
@@ -21,7 +21,7 @@ export interface MentionSuggestion {
   insertText?: string;
   /** Optional extra searchable text (subject, team name, path, etc.) */
   searchText?: string;
-  /** Optional slash command string including leading slash (command suggestions only) */
+  /** Optional slash command string including leading slash (command and skill suggestions only) */
   command?: `/${string}`;
   /** Canonical task id (task suggestions only) */
   taskId?: string;

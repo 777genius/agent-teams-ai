@@ -4860,11 +4860,59 @@ export class TeamProvisioningService {
       // so the lead retains full context of prior work.
       // When clearContext is true, skip resume entirely to start a fresh session.
       let previousSessionId: string | undefined;
+      let skipResume = false;
       if (request.clearContext) {
+        skipResume = true;
         logger.info(
           `[${request.teamName}] clearContext requested — skipping session resume, starting fresh`
         );
       } else {
+        // Check persisted launch state: if the previous launch ended with no teammates
+        // ever spawned (all in 'starting' state), resuming would reconnect the lead but
+        // the CLI's deterministic bootstrap won't re-spawn dead teammates in reconnect
+        // mode. Skip resume so the CLI creates a fresh session that fully bootstraps.
+        const persistedLaunchState = await this.launchStateStore.read(request.teamName);
+        if (persistedLaunchState) {
+          const {
+            expectedMembers: prevExpected,
+            members: prevMembers,
+            launchPhase,
+          } = persistedLaunchState;
+          const teammateWasNeverSpawned = (
+            member:
+              | {
+                  agentToolAccepted?: boolean;
+                  firstSpawnAcceptedAt?: string;
+                  runtimeAlive?: boolean;
+                  bootstrapConfirmed?: boolean;
+                }
+              | undefined
+          ): boolean => {
+            if (!member) return true;
+            const hasAcceptedSpawn =
+              member.agentToolAccepted === true ||
+              (typeof member.firstSpawnAcceptedAt === 'string' &&
+                member.firstSpawnAcceptedAt.trim().length > 0);
+            return (
+              !hasAcceptedSpawn &&
+              member.runtimeAlive !== true &&
+              member.bootstrapConfirmed !== true
+            );
+          };
+          const allTeammatesNeverSpawned =
+            launchPhase !== 'active' &&
+            prevExpected.length > 0 &&
+            prevExpected.every((name) => teammateWasNeverSpawned(prevMembers[name]));
+          if (allTeammatesNeverSpawned) {
+            skipResume = true;
+            logger.info(
+              `[${request.teamName}] Previous launch had no teammates successfully spawned — ` +
+                `skipping session resume to allow full bootstrap`
+            );
+          }
+        }
+      }
+      if (!skipResume) {
         try {
           const configParsed = JSON.parse(configRaw) as Record<string, unknown>;
           const resumeGuard = shouldSkipResumeForProviderRuntimeChange(request, configParsed);

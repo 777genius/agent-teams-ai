@@ -7,6 +7,7 @@ import { api } from '@renderer/api';
 import { CLI_NOT_FOUND_MESSAGE } from '@shared/constants/cli';
 
 import type { AppState } from '../types';
+import { findPaneByTabId, updatePane } from '../utils/paneHelpers';
 import type {
   ApiKeyEntry,
   ApiKeySaveRequest,
@@ -889,9 +890,24 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   // ── Tab opener ──
   openExtensionsTab: () => {
     const state = get();
+    const currentProjectId = state.selectedProjectId ?? state.activeProjectId ?? undefined;
     const focusedPane = state.paneLayout.panes.find((p) => p.id === state.paneLayout.focusedPaneId);
     const existingTab = focusedPane?.tabs.find((tab) => tab.type === 'extensions');
     if (existingTab) {
+      // Update projectId to reflect the currently selected project
+      if (existingTab.projectId !== currentProjectId) {
+        const pane = findPaneByTabId(state.paneLayout, existingTab.id);
+        if (pane) {
+          set({
+            paneLayout: updatePane(state.paneLayout, {
+              ...pane,
+              tabs: pane.tabs.map((t) =>
+                t.id === existingTab.id ? { ...t, projectId: currentProjectId } : t
+              ),
+            }),
+          });
+        }
+      }
       state.setActiveTab(existingTab.id);
       return;
     }
@@ -899,7 +915,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
     state.openTab({
       type: 'extensions',
       label: 'Extensions',
-      projectId: state.selectedProjectId ?? state.activeProjectId ?? undefined,
+      projectId: currentProjectId,
     });
   },
 

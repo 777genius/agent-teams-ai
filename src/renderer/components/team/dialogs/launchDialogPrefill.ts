@@ -1,5 +1,6 @@
 import { normalizeCreateLaunchProviderForUi } from '@renderer/utils/geminiUiFreeze';
 import { normalizeTeamModelForUi } from '@renderer/utils/teamModelAvailability';
+import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
@@ -9,6 +10,7 @@ interface PreviousLaunchParamsLike {
   providerId?: TeamProviderId;
   model?: string;
   effort?: string;
+  limitContext?: boolean;
 }
 
 interface LaunchDialogPrefillInput {
@@ -18,6 +20,7 @@ interface LaunchDialogPrefillInput {
   multimodelEnabled: boolean;
   storedProviderId: TeamProviderId;
   storedEffort: string;
+  storedLimitContext: boolean;
   getStoredModel: (providerId: TeamProviderId) => string;
 }
 
@@ -25,14 +28,18 @@ interface LaunchDialogPrefillResult {
   providerId: TeamProviderId;
   model: string;
   effort: string;
+  limitContext: boolean;
 }
 
-function normalizeModelCandidate(model: string | undefined): string {
+function normalizeModelCandidate(
+  model: string | undefined,
+  providerId: TeamProviderId | undefined
+): string {
   const trimmed = model?.trim() ?? '';
   if (!trimmed || trimmed === 'default' || trimmed === '__default__') {
     return '';
   }
-  return trimmed;
+  return extractProviderScopedBaseModel(trimmed, providerId) ?? '';
 }
 
 function canReuseModelForSelectedProvider(
@@ -52,6 +59,7 @@ export function resolveLaunchDialogPrefill({
   multimodelEnabled,
   storedProviderId,
   storedEffort,
+  storedLimitContext,
   getStoredModel,
 }: LaunchDialogPrefillInput): LaunchDialogPrefillResult {
   const currentLead = members.find((member) => isLeadMember(member));
@@ -69,15 +77,15 @@ export function resolveLaunchDialogPrefill({
   const modelCandidates = [
     {
       providerId: currentLeadProviderId,
-      model: normalizeModelCandidate(currentLead?.model),
+      model: normalizeModelCandidate(currentLead?.model, currentLeadProviderId),
     },
     {
       providerId: savedRequestProviderId,
-      model: normalizeModelCandidate(savedRequest?.model),
+      model: normalizeModelCandidate(savedRequest?.model, savedRequestProviderId),
     },
     {
       providerId: previousLaunchProviderId,
-      model: normalizeModelCandidate(previousLaunchParams?.model),
+      model: normalizeModelCandidate(previousLaunchParams?.model, previousLaunchProviderId),
     },
   ];
 
@@ -88,6 +96,8 @@ export function resolveLaunchDialogPrefill({
 
   const effort =
     currentLead?.effort ?? savedRequest?.effort ?? previousLaunchParams?.effort ?? storedEffort;
+  const limitContext =
+    previousLaunchParams?.limitContext ?? savedRequest?.limitContext ?? storedLimitContext;
 
   return {
     providerId,
@@ -95,5 +105,6 @@ export function resolveLaunchDialogPrefill({
       ? normalizeTeamModelForUi(providerId, matchingModel)
       : getStoredModel(providerId),
     effort,
+    limitContext,
   };
 }

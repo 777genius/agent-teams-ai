@@ -89,7 +89,7 @@ function normalizeDetail(detail: BoardTaskActivityDetail): BoardTaskActivityDeta
     ...detail,
     logDetail: {
       ...detail.logDetail,
-      chunks: asEnhancedChunkArray(detail.logDetail.chunks),
+      chunks: asEnhancedChunkArray(detail.logDetail.chunks) ?? detail.logDetail.chunks,
     },
   };
 }

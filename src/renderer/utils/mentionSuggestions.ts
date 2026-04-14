@@ -2,12 +2,12 @@ import type { MentionSuggestion } from '@renderer/types/mention';
 
 export function getSuggestionTriggerChar(suggestion: MentionSuggestion): '@' | '#' | '/' {
   if (suggestion.type === 'task') return '#';
-  if (suggestion.type === 'command') return '/';
+  if (suggestion.type === 'command' || suggestion.type === 'skill') return '/';
   return '@';
 }
 
 export function getSuggestionInsertionText(suggestion: MentionSuggestion): string {
-  if (suggestion.type === 'command') {
+  if (suggestion.type === 'command' || suggestion.type === 'skill') {
     return suggestion.command?.slice(1) ?? suggestion.insertText ?? suggestion.name;
   }
   return suggestion.insertText ?? suggestion.name;

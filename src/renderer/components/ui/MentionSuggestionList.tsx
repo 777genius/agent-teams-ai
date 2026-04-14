@@ -83,11 +83,12 @@ export const MentionSuggestionList = ({
   }
 
   // Categorize suggestions (folders are grouped with files)
-  type Section = 'member' | 'team' | 'task' | 'file' | 'command';
+  type Section = 'member' | 'team' | 'task' | 'file' | 'command' | 'skill';
   const getSuggestionSection = (s: MentionSuggestion): Section => {
     if (s.type === 'file' || s.type === 'folder') return 'file';
     if (s.type === 'task') return 'task';
     if (s.type === 'command') return 'command';
+    if (s.type === 'skill') return 'skill';
     if (s.type === 'team') return 'team';
     return 'member';
   };
@@ -98,6 +99,7 @@ export const MentionSuggestionList = ({
     task: 'Tasks',
     file: 'Files',
     command: 'Commands',
+    skill: 'Skills',
   };
 
   // Determine which sections are present
@@ -117,6 +119,7 @@ export const MentionSuggestionList = ({
     const isTeam = section === 'team';
     const isTask = section === 'task';
     const isCommand = section === 'command';
+    const isSkill = section === 'skill';
     const taskTeamColorSet =
       isTask && s.color
         ? getTeamColorSet(s.color)
@@ -165,6 +168,8 @@ export const MentionSuggestionList = ({
           <Hash size={13} className="shrink-0 text-blue-500 dark:text-blue-400" />
         ) : isCommand ? (
           <Command size={13} className="shrink-0 text-amber-500 dark:text-amber-400" />
+        ) : isSkill ? (
+          <Command size={13} className="shrink-0 text-cyan-500 dark:text-cyan-400" />
         ) : isTeam ? (
           <UsersRound
             size={13}
@@ -188,13 +193,21 @@ export const MentionSuggestionList = ({
                   ? { color: 'var(--color-link, #60a5fa)' }
                   : isCommand
                     ? { color: 'rgb(245 158 11)' }
+                    : isSkill
+                      ? { color: 'rgb(6 182 212)' }
                     : colorSet
                       ? { color: getThemedText(colorSet, isLight) }
                       : undefined
               }
             >
               <HighlightedName
-                name={isTask ? `#${s.name}` : isCommand ? (s.command ?? `/${s.name}`) : s.name}
+                name={
+                  isTask
+                    ? `#${s.name}`
+                    : isCommand || isSkill
+                      ? (s.command ?? `/${s.name}`)
+                      : s.name
+                }
                 query={query}
               />
             </span>
@@ -218,7 +231,7 @@ export const MentionSuggestionList = ({
           {isTask && s.subtitle ? (
             <div className="truncate text-[10px] text-[var(--color-text-muted)]">{s.subtitle}</div>
           ) : null}
-          {isCommand && s.description ? (
+          {(isCommand || isSkill) && s.description ? (
             <div className="truncate text-[10px] text-[var(--color-text-muted)]">
               {s.description}
             </div>

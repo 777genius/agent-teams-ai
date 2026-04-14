@@ -6,15 +6,51 @@ import {
   canDisplayTaskChangesForOptions,
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
+import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';
 import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
+import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { createLogger } from '@shared/utils/logger';
 import { getTaskKanbanColumn } from '@shared/utils/reviewState';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 
 import { getWorktreeNavigationState } from '../utils/stateResetHelpers';
 
+import type { AppState } from '../types';
+import type { AppConfig } from '@renderer/types/data';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
+import type {
+  ActiveToolCall,
+  AddMemberRequest,
+  AddTaskCommentRequest,
+  CreateTaskRequest,
+  CrossTeamSendRequest,
+  EffortLevel,
+  GlobalTask,
+  InboxMessage,
+  KanbanColumnId,
+  LeadActivityState,
+  LeadContextUsage,
+  MemberSpawnStatusEntry,
+  MemberSpawnStatusesSnapshot,
+  PersistedTeamLaunchSummary,
+  SendMessageRequest,
+  SendMessageResult,
+  TaskChangePresenceState,
+  TaskComment,
+  TeamCreateRequest,
+  TeamData,
+  TeamLaunchRequest,
+  TeamProviderId,
+  TeamProvisioningProgress,
+  TeamSummary,
+  TeamTask,
+  TeamTaskStatus,
+  ToolApprovalRequest,
+  ToolApprovalSettings,
+  UpdateKanbanPatch,
+} from '@shared/types';
+import type { StateCreator } from 'zustand';
 
 const logger = createLogger('teamSlice');
 
@@ -482,42 +518,6 @@ async function pollProvisioningStatus(
     delayMs = Math.min(1500, Math.round(delayMs * 1.5));
   }
 }
-
-import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
-
-import type { AppState } from '../types';
-import type { AppConfig } from '@renderer/types/data';
-import type {
-  ActiveToolCall,
-  AddMemberRequest,
-  AddTaskCommentRequest,
-  CreateTaskRequest,
-  CrossTeamSendRequest,
-  EffortLevel,
-  GlobalTask,
-  InboxMessage,
-  KanbanColumnId,
-  LeadActivityState,
-  LeadContextUsage,
-  MemberSpawnStatusEntry,
-  MemberSpawnStatusesSnapshot,
-  PersistedTeamLaunchSummary,
-  SendMessageRequest,
-  SendMessageResult,
-  TaskChangePresenceState,
-  TaskComment,
-  TeamCreateRequest,
-  TeamData,
-  TeamLaunchRequest,
-  TeamProvisioningProgress,
-  TeamSummary,
-  TeamTask,
-  TeamTaskStatus,
-  ToolApprovalRequest,
-  ToolApprovalSettings,
-  UpdateKanbanPatch,
-} from '@shared/types';
-import type { StateCreator } from 'zustand';
 
 // --- Clarification notification tracking ---
 // Native OS notifications for new inbox messages are handled in main process
@@ -1219,9 +1219,8 @@ function saveLaunchParams(teamName: string, params: TeamLaunchParams): void {
  * Extract the base model name from the raw model string sent to CLI.
  * E.g. 'opus[1m]' → 'opus', 'sonnet' → 'sonnet', undefined → undefined.
  */
-function extractBaseModel(raw?: string): string | undefined {
-  if (!raw) return undefined;
-  return raw.replace(/\[1m\]$/, '') || undefined;
+function extractBaseModel(raw?: string, providerId?: TeamProviderId): string | undefined {
+  return extractProviderScopedBaseModel(raw, providerId);
 }
 
 const TOOL_APPROVAL_PREFIX = 'team:toolApprovalSettings:';
@@ -2587,7 +2586,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       const response = await unwrapIpc('team:create', () => api.teams.createTeam(request));
 
       // Persist per-team launch params (model, effort, limit context)
-      const baseModel = extractBaseModel(request.model);
+      const baseModel = extractBaseModel(request.model, request.providerId);
       const params: TeamLaunchParams = {
         providerId: request.providerId ?? 'anthropic',
         model: baseModel || 'default',
@@ -2767,7 +2766,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       const response = await unwrapIpc('team:launch', () => api.teams.launchTeam(request));
 
       // Persist per-team launch params (model, effort, limit context)
-      const baseModel = extractBaseModel(request.model);
+      const baseModel = extractBaseModel(request.model, request.providerId);
       const params: TeamLaunchParams = {
         providerId: request.providerId ?? 'anthropic',
         model: baseModel || 'default',

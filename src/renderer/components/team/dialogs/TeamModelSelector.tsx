@@ -26,6 +26,7 @@ import {
   normalizeTeamModelForUi,
   TEAM_MODEL_UI_DISABLED_BADGE_LABEL,
 } from '@renderer/utils/teamModelCatalog';
+import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';
 import { Info } from 'lucide-react';
 
 export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
@@ -99,8 +100,11 @@ export function computeEffectiveTeamModel(
   limitContext: boolean,
   providerId: 'anthropic' | 'codex' | 'gemini' = 'anthropic'
 ): string | undefined {
-  const base = selectedModel || undefined;
-  if (providerId !== 'anthropic') return base;
+  if (providerId !== 'anthropic') {
+    return selectedModel.trim() || undefined;
+  }
+
+  const base = extractProviderScopedBaseModel(selectedModel, providerId);
   if (limitContext) return base;
   if (base === 'haiku') return base;
   return base ? `${base}[1m]` : 'opus[1m]';

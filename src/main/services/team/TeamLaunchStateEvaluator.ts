@@ -213,13 +213,39 @@ export function createPersistedLaunchSnapshot(params: {
     )
   );
   const members = params.members ?? {};
+  const launchPhase = params.launchPhase ?? 'active';
+
+  // When the launch is over (finished/reconciled), members still in 'starting' state
+  // (never spawned — agentToolAccepted is false) are unreachable and should be marked
+  // as failed. Without this, they stay as 'pending' forever, causing the UI to show
+  // "Last launch is still reconciling" indefinitely after a crash or incomplete launch.
+  if (launchPhase !== 'active') {
+    for (const name of expectedMembers) {
+      const member = members[name];
+      if (
+        member &&
+        member.launchState === 'starting' &&
+        !member.agentToolAccepted &&
+        !member.runtimeAlive &&
+        !member.bootstrapConfirmed &&
+        !member.hardFailure
+      ) {
+        member.hardFailure = true;
+        member.hardFailureReason =
+          member.hardFailureReason ?? 'Teammate was never spawned during launch.';
+        member.launchState = deriveMemberLaunchState(member);
+        member.diagnostics = buildDiagnostics(member);
+      }
+    }
+  }
+
   const summary = summarizePersistedLaunchMembers(expectedMembers, members);
   return {
     version: 2,
     teamName: params.teamName,
     updatedAt,
     ...(params.leadSessionId ? { leadSessionId: params.leadSessionId } : {}),
-    launchPhase: params.launchPhase ?? 'active',
+    launchPhase,
     expectedMembers,
     members,
     summary,

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getKnownSlashCommand,
+  isSupportedSlashCommandName,
   KNOWN_SLASH_COMMANDS,
   parseStandaloneSlashCommand,
 } from '@shared/utils/slashCommands';
@@ -52,5 +53,12 @@ describe('slashCommands', () => {
   it('returns metadata for known commands only', () => {
     expect(getKnownSlashCommand('MODEL')?.description).toContain('Claude model');
     expect(getKnownSlashCommand('foo')).toBeNull();
+  });
+
+  it('validates slash-compatible command names', () => {
+    expect(isSupportedSlashCommandName('review')).toBe(true);
+    expect(isSupportedSlashCommandName('skill:name')).toBe(true);
+    expect(isSupportedSlashCommandName('my_skill')).toBe(false);
+    expect(isSupportedSlashCommandName('my skill')).toBe(false);
   });
 });
