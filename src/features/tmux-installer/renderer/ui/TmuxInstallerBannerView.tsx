@@ -13,6 +13,7 @@ import {
 import { useTmuxInstallerBanner } from '../hooks/useTmuxInstallerBanner';
 
 const SUMMARY_TITLE = 'tmux is not installed';
+const BANNER_MIN_H = 'min-h-[4.25rem]';
 
 const SourceLink = ({
   label,
@@ -78,7 +79,7 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
 
   return (
     <div
-      className="mb-6 rounded-lg border-l-4 px-4 py-4"
+      className={`mb-6 rounded-lg border-l-4 px-4 py-3 ${BANNER_MIN_H}`}
       style={{
         borderLeftColor: viewModel.error ? '#ef4444' : '#f59e0b',
         backgroundColor: 'rgba(245, 158, 11, 0.08)',
@@ -89,17 +90,22 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
         type="button"
         aria-expanded={expanded}
         onClick={() => setExpanded((current) => !current)}
-        className="flex w-full items-center justify-between gap-3 text-left"
+        className="flex min-h-[1.75rem] w-full items-center justify-between gap-3 text-left"
       >
-        <span className="flex min-w-0 items-start gap-2 text-base font-semibold leading-6">
-          <span className="pt-0.5">
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="shrink-0">
             {viewModel.error ? (
               <AlertTriangle className="size-4 text-red-300" />
             ) : (
               <Wrench className="size-4 text-amber-300" />
             )}
           </span>
-          <span className="truncate">{SUMMARY_TITLE}</span>
+          <span
+            className="truncate text-sm leading-5"
+            style={{ color: 'var(--color-text)' }}
+          >
+            {SUMMARY_TITLE}
+          </span>
         </span>
         {expanded ? (
           <ChevronUp className="size-4 shrink-0" />
@@ -109,7 +115,7 @@ export function TmuxInstallerBannerView(): React.JSX.Element | null {
       </button>
 
       {expanded && (
-        <div className="mt-4 space-y-3">
+        <div className="mt-3 space-y-3">
           <div className="min-w-0 max-w-4xl">
             {viewModel.title !== SUMMARY_TITLE && (
               <div

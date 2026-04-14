@@ -559,8 +559,80 @@ describe('TmuxInstallerRunnerAdapter', () => {
 
     await expect(runner.install()).resolves.toBeUndefined();
 
+    expect(statusCallCount).toBe(1);
     expect(runner.getSnapshot().phase).toBe('needs_restart');
     expect(runner.getSnapshot().message).toContain('Restart Windows');
     expect(runner.getSnapshot().detail).toContain('WSL core installation command completed');
+  });
+
+  it('switches immediately into needs_restart when the elevated step only returns a localized restart message', async () => {
+    const presenter = createPresenter();
+    const initialStatus = createBaseStatus({
+      platform: 'win32',
+      autoInstall: {
+        supported: true,
+        strategy: 'wsl',
+        packageManagerLabel: 'WSL',
+        requiresTerminalInput: false,
+        requiresAdmin: true,
+        requiresRestart: true,
+        mayOpenExternalWindow: true,
+        reasonIfUnsupported: null,
+        manualHints: [],
+      },
+      wsl: {
+        wslInstalled: false,
+        rebootRequired: false,
+        distroName: null,
+        distroVersion: null,
+        distroBootstrapped: false,
+        innerPackageManager: null,
+        tmuxAvailableInsideWsl: false,
+        tmuxVersion: null,
+        tmuxBinaryPath: null,
+        statusDetail: 'WSL is not installed yet.',
+      },
+    });
+    const statusSource = {
+      getStatus: vi.fn(async () => initialStatus),
+      invalidateStatus: vi.fn(),
+    };
+    const runner = new TmuxInstallerRunnerAdapter(
+      statusSource as never,
+      presenter as never,
+      {
+        resolve: vi.fn(async () => {
+          throw new Error('resolve() should not run before restart');
+        }),
+      } as never,
+      {
+        run: vi.fn(),
+        cancel: vi.fn(),
+      } as never,
+      {
+        run: vi.fn(),
+        writeLine: vi.fn(),
+        cancel: vi.fn(),
+      } as never,
+      {
+        persistPreferredDistro: vi.fn(async () => undefined),
+      } as never,
+      {
+        runWslCoreInstall: vi.fn(async () => ({
+          outcome: 'elevated_unknown_outcome',
+          detail:
+            'Требуемая операция выполнена успешно. Чтобы сделанные изменения вступили в силу, следует перезагрузить систему.',
+          restartRequired: false,
+          featureStates: [],
+          resultFilePath: null,
+        })),
+      } as never
+    );
+
+    await expect(runner.install()).resolves.toBeUndefined();
+
+    expect(statusSource.getStatus).toHaveBeenCalledTimes(1);
+    expect(runner.getSnapshot().phase).toBe('needs_restart');
+    expect(runner.getSnapshot().detail).toContain('перезагрузить систему');
   });
 });

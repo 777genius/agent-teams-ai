@@ -190,10 +190,7 @@ export class TmuxInstallerRunnerAdapter
       let status = currentStatus;
 
       if (!status.wsl?.wslInstalled) {
-        status = await this.#installWindowsWslCore();
-        if (!status.wsl?.wslInstalled) {
-          return;
-        }
+        status = await this.#installWindowsWslCore(status);
       }
 
       if (status.wsl?.rebootRequired) {
@@ -210,6 +207,10 @@ export class TmuxInstallerRunnerAdapter
           inputPrompt: null,
           inputSecret: false,
         });
+        return;
+      }
+
+      if (!status.wsl?.wslInstalled) {
         return;
       }
 
@@ -277,7 +278,7 @@ export class TmuxInstallerRunnerAdapter
     }
   }
 
-  async #installWindowsWslCore(): Promise<TmuxStatus> {
+  async #installWindowsWslCore(currentStatus: TmuxStatus): Promise<TmuxStatus> {
     this.#appendLog('Starting the elevated WSL core install step...');
     this.#setSnapshot({
       phase: 'pending_external_elevation',
@@ -295,6 +296,28 @@ export class TmuxInstallerRunnerAdapter
     const elevationResult = await this.#windowsElevatedStepRunner.runWslCoreInstall();
     if (elevationResult.detail) {
       this.#appendLog(elevationResult.detail);
+    }
+
+    const immediateRebootRequired =
+      elevationResult.restartRequired || this.#looksLikeRestartRequired(elevationResult.detail);
+    if (immediateRebootRequired) {
+      const rebootStatus = this.#markWindowsStatusAsRebootRequired(currentStatus, elevationResult.detail);
+      this.#statusSource.invalidateStatus();
+      this.#setSnapshot({
+        phase: 'needs_restart',
+        strategy: 'wsl',
+        message: 'Restart Windows before continuing with tmux setup',
+        detail:
+          elevationResult.detail ??
+          rebootStatus.wsl?.statusDetail ??
+          'WSL was installed, but Windows still needs a restart before tmux setup can continue.',
+        error: null,
+        canCancel: false,
+        acceptsInput: false,
+        inputPrompt: null,
+        inputSecret: false,
+      });
+      return rebootStatus;
     }
 
     this.#setSnapshot({
@@ -483,6 +506,34 @@ export class TmuxInstallerRunnerAdapter
   #looksLikeRestartRequired(value: string | null | undefined): boolean {
     const lowered = value?.toLowerCase() ?? '';
     return RESTART_REQUIRED_PATTERNS.some((pattern) => lowered.includes(pattern));
+  }
+
+  #markWindowsStatusAsRebootRequired(
+    status: TmuxStatus,
+    detail: string | null | undefined
+  ): TmuxStatus {
+    return {
+      ...status,
+      autoInstall: {
+        ...status.autoInstall,
+        requiresRestart: true,
+      },
+      wsl: {
+        wslInstalled: status.wsl?.wslInstalled ?? false,
+        rebootRequired: true,
+        distroName: status.wsl?.distroName ?? null,
+        distroVersion: status.wsl?.distroVersion ?? null,
+        distroBootstrapped: status.wsl?.distroBootstrapped ?? false,
+        innerPackageManager: status.wsl?.innerPackageManager ?? null,
+        tmuxAvailableInsideWsl: status.wsl?.tmuxAvailableInsideWsl ?? false,
+        tmuxVersion: status.wsl?.tmuxVersion ?? null,
+        tmuxBinaryPath: status.wsl?.tmuxBinaryPath ?? null,
+        statusDetail:
+          detail ??
+          status.wsl?.statusDetail ??
+          'Windows still needs a restart before tmux setup can continue.',
+      },
+    };
   }
 
   async #runResolvedPlan(plan: TmuxInstallPlan, resetLogs = true): Promise<void> {
