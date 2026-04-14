@@ -93,16 +93,32 @@ describe('TmuxInstallerBannerView', () => {
   it('keeps Windows setup steps collapsed by default and expands them on demand', async () => {
     const { host, root } = renderBanner(baseViewModel);
 
-    expect(host.textContent).toContain('Show setup steps (2)');
+    expect(host.textContent).toContain('tmux is not installed');
+    expect(host.textContent).not.toContain('WSL is available, but no Linux distribution is installed yet.');
+    expect(host.textContent).not.toContain('Show setup steps (2)');
     expect(host.textContent).not.toContain('wsl --install --no-distribution');
 
-    const toggleButton = [...host.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('Show setup steps')
+    const summaryButton = [...host.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('tmux is not installed')
     );
-    expect(toggleButton).toBeDefined();
+    expect(summaryButton).toBeDefined();
 
     await act(async () => {
-      toggleButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      summaryButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('WSL is available, but no Linux distribution is installed yet.');
+    expect(host.textContent).toContain('Show setup steps (2)');
+    expect(host.textContent).not.toContain('Hide setup steps');
+
+    const setupToggle = [...host.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Show setup steps')
+    );
+    expect(setupToggle).toBeDefined();
+
+    await act(async () => {
+      setupToggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
 
@@ -125,8 +141,49 @@ describe('TmuxInstallerBannerView', () => {
       ],
     });
 
+    const summaryButton = [...host.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('tmux is not installed')
+    );
+    expect(summaryButton).toBeDefined();
+
+    act(() => {
+      summaryButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
     expect(host.textContent).toContain('brew install tmux');
     expect(host.textContent).not.toContain('Show setup steps');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('auto-expands when installer flow becomes active', async () => {
+    const { host, root } = renderBanner(baseViewModel);
+
+    mockUseTmuxInstallerBanner.mockReturnValue({
+      viewModel: {
+        ...baseViewModel,
+        title: 'tmux needs a restart',
+        body: 'Restart Windows before continuing.',
+        phase: 'needs_restart',
+        progressPercent: 96,
+      },
+      install: vi.fn(),
+      cancel: vi.fn(),
+      submitInput: vi.fn(),
+      refresh: vi.fn(),
+      toggleDetails: vi.fn(),
+      openExternal: vi.fn(),
+    });
+
+    await act(async () => {
+      root.render(React.createElement(TmuxInstallerBannerView));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Restart Windows before continuing.');
+    expect(host.textContent).toContain('96%');
 
     act(() => {
       root.unmount();
