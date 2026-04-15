@@ -16,6 +16,7 @@ import type { GraphDataPort } from '../ports/GraphDataPort';
 import type { GraphEventPort } from '../ports/GraphEventPort';
 import type { GraphConfigPort } from '../ports/GraphConfigPort';
 import type { GraphEdge, GraphNode, GraphOwnerSlotAssignment } from '../ports/types';
+import type { StableRect } from '../layout/stableSlots';
 import { GraphCanvas, type GraphCanvasHandle } from './GraphCanvas';
 import { GraphControls, type GraphFilterState } from './GraphControls';
 import { GraphOverlay } from './GraphOverlay';
@@ -31,7 +32,6 @@ import {
   getEdgeMidpoint,
 } from '../canvas/hit-detection';
 import { ANIM_SPEED } from '../constants/canvas-constants';
-import { getActivityAnchorScreenPlacement as buildActivityAnchorScreenPlacement } from '../layout/activityLane';
 import { getLaunchAnchorScreenPlacement as buildLaunchAnchorScreenPlacement } from '../layout/launchAnchor';
 
 export interface GraphViewProps {
@@ -70,19 +70,11 @@ export interface GraphViewProps {
     getLaunchAnchorScreenPlacement: (
       leadNodeId: string,
     ) => { x: number; y: number; scale: number; visible: boolean } | null;
-    getActivityAnchorScreenPlacement: (
-      ownerNodeId: string,
-    ) => { x: number; y: number; scale: number; visible: boolean } | null;
-    getActivityAnchorWorldPosition: (
-      ownerNodeId: string,
-    ) => { x: number; y: number } | null;
+    getActivityWorldRect: (ownerNodeId: string) => StableRect | null;
     getCameraZoom: () => number;
     worldToScreen: (x: number, y: number) => { x: number; y: number };
     getNodeWorldPosition: (nodeId: string) => { x: number; y: number } | null;
     getViewportSize: () => { width: number; height: number };
-    getNodeScreenPosition: (
-      nodeId: string,
-    ) => { x: number; y: number; visible: boolean } | null;
     focusNodeIds: ReadonlySet<string> | null;
   }) => React.ReactNode;
 }
@@ -240,49 +232,11 @@ export function GraphView({
       viewportHeight: viewport.height,
     });
   }, [getViewportSize]);
-  const getActivityAnchorScreenPlacement = useCallback((ownerNodeId: string) => {
-    const anchor = simulationRef.current.getActivityAnchorWorldPosition(ownerNodeId);
-    if (!anchor) {
-      return null;
-    }
-    const viewport = getViewportSize();
-    if (viewport.width <= 0 || viewport.height <= 0) {
-      return null;
-    }
-    const transform = cameraRef.current.transformRef.current;
-    return buildActivityAnchorScreenPlacement({
-      anchorX: anchor.x,
-      anchorY: anchor.y,
-      cameraX: transform.x,
-      cameraY: transform.y,
-      zoom: transform.zoom,
-      viewportWidth: viewport.width,
-      viewportHeight: viewport.height,
-    });
-  }, [getViewportSize]);
-  const getActivityAnchorWorldPosition = useCallback(
-    (ownerNodeId: string) => simulationRef.current.getActivityAnchorWorldPosition(ownerNodeId),
-    [],
-  );
   const getCameraZoom = useCallback(() => cameraRef.current.transformRef.current.zoom, []);
-  const getNodeScreenPosition = useCallback((nodeId: string) => {
-    const viewport = getViewportSize();
-    if (viewport.width <= 0 || viewport.height <= 0) {
-      return null;
-    }
-    const node = simulationRef.current.stateRef.current.nodes.find((candidate) => candidate.id === nodeId);
-    if (node?.x == null || node?.y == null) {
-      return null;
-    }
-    const transform = cameraRef.current.transformRef.current;
-    const x = node.x * transform.zoom + transform.x;
-    const y = node.y * transform.zoom + transform.y;
-    return {
-      x,
-      y,
-      visible: x > -80 && x < viewport.width + 80 && y > -80 && y < viewport.height + 80,
-    };
-  }, [getViewportSize]);
+  const getActivityWorldRect = useCallback(
+    (ownerNodeId: string) => simulationRef.current.getActivityWorldRect(ownerNodeId),
+    []
+  );
   const getNodeWorldPosition = useCallback((nodeId: string) => {
     const node = simulationRef.current.stateRef.current.nodes.find((candidate) => candidate.id === nodeId);
     if (node?.x == null || node?.y == null) {
@@ -800,13 +754,11 @@ export function GraphView({
         <div className="pointer-events-none absolute inset-0 z-[5] overflow-hidden">
           {renderHud({
             getLaunchAnchorScreenPlacement,
-            getActivityAnchorScreenPlacement,
-            getActivityAnchorWorldPosition,
+            getActivityWorldRect,
             getCameraZoom,
             worldToScreen: camera.worldToScreen,
             getNodeWorldPosition,
             getViewportSize,
-            getNodeScreenPosition,
             focusNodeIds: focusState.focusNodeIds,
           })}
         </div>

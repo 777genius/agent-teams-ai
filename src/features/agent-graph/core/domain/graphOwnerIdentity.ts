@@ -17,6 +17,31 @@ export function buildGraphMemberNodeIdForMember(
   return buildGraphMemberNodeId(teamName, getGraphStableOwnerId(member));
 }
 
+export function buildGraphMemberNodeIdAliasMap(
+  teamName: string,
+  members: readonly StableTeamOwnerLike[]
+): Map<string, string> {
+  const aliases = new Map<string, string>();
+
+  for (const member of members) {
+    const stableOwnerId = getGraphStableOwnerId(member).trim();
+    if (!stableOwnerId) {
+      continue;
+    }
+    aliases.set(stableOwnerId, buildGraphMemberNodeId(teamName, stableOwnerId));
+  }
+
+  for (const member of members) {
+    const memberName = member.name.trim();
+    if (!memberName || aliases.has(memberName)) {
+      continue;
+    }
+    aliases.set(memberName, buildGraphMemberNodeIdForMember(teamName, member));
+  }
+
+  return aliases;
+}
+
 export function parseGraphMemberNodeId(nodeId: string, teamName?: string): string | null {
   const prefix = teamName ? `member:${teamName}:` : 'member:';
   if (!nodeId.startsWith(prefix)) {

@@ -153,33 +153,30 @@ export const TeamGraphTab = ({
           renderHud={(hudProps) => {
             const extraHudProps = hudProps as typeof hudProps & {
               getViewportSize?: () => { width: number; height: number };
-              getActivityAnchorWorldPosition?: (
-                ownerNodeId: string
-              ) => { x: number; y: number } | null;
+              getActivityWorldRect?: (ownerNodeId: string) => {
+                left: number;
+                top: number;
+                right: number;
+                bottom: number;
+                width: number;
+                height: number;
+              } | null;
               getCameraZoom?: () => number;
               worldToScreen?: (x: number, y: number) => { x: number; y: number };
               getNodeWorldPosition?: (nodeId: string) => { x: number; y: number } | null;
             };
-            const {
-              getLaunchAnchorScreenPlacement,
-              getActivityAnchorScreenPlacement,
-              getViewportSize,
-              getNodeScreenPosition,
-              focusNodeIds,
-            } = extraHudProps;
+            const { getLaunchAnchorScreenPlacement, getViewportSize, focusNodeIds } = extraHudProps;
 
             return (
               <>
                 <GraphActivityHud
                   teamName={teamName}
                   nodes={graphData.nodes}
-                  getActivityAnchorScreenPlacement={getActivityAnchorScreenPlacement}
-                  getActivityAnchorWorldPosition={extraHudProps.getActivityAnchorWorldPosition}
+                  getActivityWorldRect={extraHudProps.getActivityWorldRect}
                   getCameraZoom={extraHudProps.getCameraZoom}
                   worldToScreen={extraHudProps.worldToScreen}
                   getNodeWorldPosition={extraHudProps.getNodeWorldPosition}
                   getViewportSize={getViewportSize}
-                  getNodeScreenPosition={getNodeScreenPosition}
                   focusNodeIds={focusNodeIds}
                   enabled={isActive}
                   onOpenTaskDetail={dispatchOpenTask}

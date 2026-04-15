@@ -2,7 +2,6 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ACTIVITY_ANCHOR_LAYOUT } from '@claude-teams/agent-graph';
 import { GraphActivityHud } from '@features/agent-graph/renderer/ui/GraphActivityHud';
 
 import type { GraphNode } from '@claude-teams/agent-graph';
@@ -227,7 +226,18 @@ describe('GraphActivityHud', () => {
         React.createElement(GraphActivityHud, {
           teamName: 'demo-team',
           nodes: [node],
-          getActivityAnchorScreenPlacement: () => ({ x: 40, y: 80, scale: 1, visible: true }),
+          getActivityWorldRect: () => ({
+            left: 40,
+            top: 80,
+            right: 336,
+            bottom: 372,
+            width: 296,
+            height: 292,
+          }),
+          getCameraZoom: () => 1,
+          worldToScreen: (x: number, y: number) => ({ x, y }),
+          getNodeWorldPosition: () => ({ x: 120, y: 40 }),
+          getViewportSize: () => ({ width: 1200, height: 800 }),
           focusNodeIds: null,
           onOpenMemberProfile,
         })
@@ -256,7 +266,7 @@ describe('GraphActivityHud', () => {
     });
   });
 
-  it('keeps the activity lane above the owner label area when packed anchor drifts too low', async () => {
+  it('pins the activity lane to the provided world rect without post-hoc repositioning', async () => {
     const message: InboxMessage = {
       from: 'team-lead',
       to: 'jack',
@@ -307,17 +317,23 @@ describe('GraphActivityHud', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
     const nodeWorld = { x: 320, y: 300 };
-    const packedAnchor = { x: 120, y: 260 };
+    const laneRect = {
+      left: 120,
+      top: 340,
+      right: 416,
+      bottom: 632,
+      width: 296,
+      height: 292,
+    };
 
     await act(async () => {
       root.render(
         React.createElement(GraphActivityHud, {
           teamName: 'demo-team',
           nodes: [node],
-          getActivityAnchorScreenPlacement: () => ({ x: 40, y: 80, scale: 1, visible: true }),
-          getActivityAnchorWorldPosition: () => packedAnchor,
+          getActivityWorldRect: () => laneRect,
+          getCameraZoom: () => 1,
           getNodeWorldPosition: () => nodeWorld,
-          getNodeScreenPosition: () => ({ x: 400, y: 300, visible: true }),
           getViewportSize: () => ({ width: 1200, height: 800 }),
           worldToScreen: (x: number, y: number) => ({ x, y }),
           focusNodeIds: null,
@@ -328,12 +344,8 @@ describe('GraphActivityHud', () => {
 
     const shell = host.querySelector('.z-10');
     expect(shell).not.toBeNull();
-    const expectedTop =
-      nodeWorld.y +
-      ACTIVITY_ANCHOR_LAYOUT.memberOffsetY +
-      ACTIVITY_ANCHOR_LAYOUT.reservedHeight -
-      220;
-    expect((shell as HTMLDivElement).style.top).toBe(`${Math.round(expectedTop)}px`);
+    expect((shell as HTMLDivElement).style.left).toBe(`${laneRect.left}px`);
+    expect((shell as HTMLDivElement).style.top).toBe(`${laneRect.top}px`);
 
     await act(async () => {
       root.unmount();

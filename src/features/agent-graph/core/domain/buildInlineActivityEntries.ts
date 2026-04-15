@@ -3,7 +3,7 @@ import { getIdleGraphLabel } from '@shared/utils/idleNotificationSemantics';
 import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
 import { isLeadMember } from '@shared/utils/leadDetection';
 
-import { buildGraphMemberNodeIdForMember } from './graphOwnerIdentity';
+import { buildGraphMemberNodeIdAliasMap } from './graphOwnerIdentity';
 
 import type { GraphActivityItem } from '@claude-teams/agent-graph';
 import type {
@@ -53,10 +53,9 @@ export function buildInlineActivityEntries({
   ownerNodeIds,
 }: BuildInlineActivityEntriesArgs): Map<string, InlineActivityEntry[]> {
   const entriesByOwnerNodeId = new Map<string, InlineActivityEntry[]>();
-  const memberNodeIdByName = new Map(
-    data.members
-      .filter((member) => !isLeadMember(member))
-      .map((member) => [member.name, buildGraphMemberNodeIdForMember(teamName, member)] as const)
+  const memberNodeIdByAlias = buildGraphMemberNodeIdAliasMap(
+    teamName,
+    data.members.filter((member) => !isLeadMember(member))
   );
 
   const appendEntry = (entry: InlineActivityEntry): void => {
@@ -95,7 +94,7 @@ export function buildInlineActivityEntries({
       leadId,
       leadName,
       ownerNodeIds,
-      memberNodeIdByName,
+      memberNodeIdByAlias,
     });
     if (!ownerNodeId) {
       continue;
@@ -140,7 +139,7 @@ export function buildInlineActivityEntries({
       leadId,
       leadName,
       ownerNodeIds,
-      memberNodeIdByName,
+      memberNodeIdByAlias,
     });
     if (!ownerNodeId) {
       continue;
@@ -220,16 +219,16 @@ function resolveMessageOwnerNodeId(args: {
   leadId: string;
   leadName: string;
   ownerNodeIds: ReadonlySet<string>;
-  memberNodeIdByName: ReadonlyMap<string, string>;
+  memberNodeIdByAlias: ReadonlyMap<string, string>;
 }): string | null {
-  const { message, leadId, leadName, ownerNodeIds, memberNodeIdByName } = args;
+  const { message, leadId, leadName, ownerNodeIds, memberNodeIdByAlias } = args;
   if (message.source === 'cross_team' || message.source === 'cross_team_sent') {
     return leadId;
   }
 
-  const fromId = resolveParticipantId(message.from ?? '', leadId, leadName, memberNodeIdByName);
+  const fromId = resolveParticipantId(message.from ?? '', leadId, leadName, memberNodeIdByAlias);
   const toId = message.to
-    ? resolveParticipantId(message.to, leadId, leadName, memberNodeIdByName)
+    ? resolveParticipantId(message.to, leadId, leadName, memberNodeIdByAlias)
     : leadId;
 
   if (toId !== leadId && ownerNodeIds.has(toId)) {
@@ -247,17 +246,17 @@ function resolveCommentOwnerNodeId(args: {
   leadId: string;
   leadName: string;
   ownerNodeIds: ReadonlySet<string>;
-  memberNodeIdByName: ReadonlyMap<string, string>;
+  memberNodeIdByAlias: ReadonlyMap<string, string>;
 }): string | null {
-  const { taskOwner, author, leadId, leadName, ownerNodeIds, memberNodeIdByName } = args;
+  const { taskOwner, author, leadId, leadName, ownerNodeIds, memberNodeIdByAlias } = args;
   if (taskOwner) {
-    const ownerId = resolveParticipantId(taskOwner, leadId, leadName, memberNodeIdByName);
+    const ownerId = resolveParticipantId(taskOwner, leadId, leadName, memberNodeIdByAlias);
     if (ownerNodeIds.has(ownerId)) {
       return ownerId;
     }
   }
 
-  const authorId = resolveParticipantId(author, leadId, leadName, memberNodeIdByName);
+  const authorId = resolveParticipantId(author, leadId, leadName, memberNodeIdByAlias);
   if (ownerNodeIds.has(authorId)) {
     return authorId;
   }
@@ -367,7 +366,7 @@ function resolveParticipantId(
   name: string,
   leadId: string,
   leadName: string | undefined,
-  memberNodeIdByName: ReadonlyMap<string, string>
+  memberNodeIdByAlias: ReadonlyMap<string, string>
 ): string {
   const normalized = name.trim().toLowerCase();
   if (normalized === 'user' || normalized === 'team-lead') {
@@ -376,7 +375,7 @@ function resolveParticipantId(
   if (normalized === leadName?.trim().toLowerCase()) {
     return leadId;
   }
-  return memberNodeIdByName.get(name) ?? leadId;
+  return memberNodeIdByAlias.get(name) ?? leadId;
 }
 
 function buildParticipantLabel(name: string | undefined, leadName: string): string {

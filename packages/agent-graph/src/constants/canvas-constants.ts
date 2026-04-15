@@ -262,6 +262,8 @@ export const KANBAN_ZONE = {
   columnWidth: 180,
   /** Row height: pill (36) + gap (10) */
   rowHeight: 46,
+  /** Space reserved for column header label */
+  headerHeight: 20,
   /** Zone starts this far below member node center */
   offsetY: 70,
   /** Column sequence: pending → wip → done → review → approved */

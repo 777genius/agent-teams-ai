@@ -736,6 +736,80 @@ describe('TeamGraphAdapter particles', () => {
     ]);
   });
 
+  it('resolves task and process owners by stable owner id aliases, not only member names', () => {
+    const adapter = TeamGraphAdapter.create();
+
+    const graph = adapter.adapt(
+      createBaseTeamData({
+        config: {
+          name: 'My Team',
+          members: [
+            { name: 'team-lead', agentId: 'lead-agent' },
+            { name: 'alice', agentId: 'agent-alice' },
+          ],
+          projectPath: '/repo',
+        },
+        members: [
+          {
+            name: 'team-lead',
+            status: 'active',
+            currentTaskId: null,
+            taskCount: 0,
+            lastActiveAt: null,
+            messageCount: 0,
+            agentType: 'team-lead',
+            agentId: 'lead-agent',
+          },
+          {
+            name: 'alice',
+            status: 'active',
+            currentTaskId: null,
+            taskCount: 1,
+            lastActiveAt: null,
+            messageCount: 0,
+            agentId: 'agent-alice',
+          },
+        ],
+        tasks: [
+          {
+            id: 'task-owned-by-stable-id',
+            displayId: '#42',
+            subject: 'Stable owner task',
+            owner: 'agent-alice',
+            status: 'completed',
+            comments: [],
+            reviewState: 'none',
+          } as TeamTaskWithKanban,
+        ],
+        processes: [
+          {
+            id: 'proc-owned-by-stable-id',
+            label: 'Stable owner process',
+            pid: 4242,
+            registeredBy: 'agent-alice',
+            registeredAt: '2026-03-28T19:00:02.000Z',
+          },
+        ],
+      }),
+      'my-team'
+    );
+
+    expect(findNode(graph, 'task:my-team:task-owned-by-stable-id')).toMatchObject({
+      ownerId: 'member:my-team:agent-alice',
+      taskStatus: 'completed',
+    });
+    expect(findNode(graph, 'process:my-team:proc-owned-by-stable-id')).toMatchObject({
+      ownerId: 'member:my-team:agent-alice',
+    });
+    expect(
+      graph.edges.some(
+        (edge) =>
+          edge.id ===
+          'edge:own:member:my-team:agent-alice:task:my-team:task-owned-by-stable-id'
+      )
+    ).toBe(true);
+  });
+
   it('skips noisy idle inbox rows in the activity feed while keeping cross-team traffic on the lead lane', () => {
     const adapter = TeamGraphAdapter.create();
 

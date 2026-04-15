@@ -9,6 +9,7 @@ import {
   translateSlotFrame,
   validateStableSlotLayout,
   type StableSlotLayoutSnapshot,
+  type StableRect,
   type SlotFrame,
 } from '../layout/stableSlots';
 import { KanbanLayoutEngine } from '../layout/kanbanLayout';
@@ -47,7 +48,7 @@ export interface UseGraphSimulationResult {
     displacedAssignment?: GraphOwnerSlotAssignment;
   } | null;
   getLaunchAnchorWorldPosition: (leadNodeId: string) => { x: number; y: number } | null;
-  getActivityAnchorWorldPosition: (nodeId: string) => { x: number; y: number } | null;
+  getActivityWorldRect: (nodeId: string) => StableRect | null;
   getExtraWorldBounds: () => WorldBounds[];
 }
 
@@ -65,7 +66,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
   const lastValidSnapshotByTeamRef = useRef(new Map<string, StableSlotLayoutSnapshot>());
   const dragOwnerPositionsRef = useRef(new Map<string, { x: number; y: number }>());
   const launchAnchorPositionsRef = useRef(new Map<string, { x: number; y: number }>());
-  const activityAnchorPositionsRef = useRef(new Map<string, { x: number; y: number }>());
+  const activityRectByNodeIdRef = useRef(new Map<string, StableRect>());
   const extraWorldBoundsRef = useRef<WorldBounds[]>([]);
 
   const prevNodeIdsRef = useRef(new Set<string>());
@@ -91,7 +92,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
           lastValidSnapshotByTeamRef,
           dragOwnerPositionsRef,
           launchAnchorPositionsRef,
-          activityAnchorPositionsRef,
+          activityRectByNodeIdRef,
           extraWorldBoundsRef,
         });
         return;
@@ -111,7 +112,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
           lastValidSnapshotByTeamRef,
           dragOwnerPositionsRef,
           launchAnchorPositionsRef,
-          activityAnchorPositionsRef,
+          activityRectByNodeIdRef,
           extraWorldBoundsRef,
           fillMissingFallbackPositions: true,
         });
@@ -123,7 +124,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       nodes: state.nodes,
       layoutSnapshotRef,
       launchAnchorPositionsRef,
-      activityAnchorPositionsRef,
+      activityRectByNodeIdRef,
       extraWorldBoundsRef,
     });
   }, []);
@@ -220,7 +221,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
     return () => {
       dragOwnerPositionsRef.current.clear();
       launchAnchorPositionsRef.current.clear();
-      activityAnchorPositionsRef.current.clear();
+      activityRectByNodeIdRef.current.clear();
       extraWorldBoundsRef.current = [];
       layoutSnapshotRef.current = null;
       lastValidSnapshotByTeamRef.current.clear();
@@ -236,8 +237,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
     resolveNearestOwnerSlot,
     getLaunchAnchorWorldPosition: (leadNodeId: string) =>
       launchAnchorPositionsRef.current.get(leadNodeId) ?? null,
-    getActivityAnchorWorldPosition: (nodeId: string) =>
-      activityAnchorPositionsRef.current.get(nodeId) ?? null,
+    getActivityWorldRect: (nodeId: string) => activityRectByNodeIdRef.current.get(nodeId) ?? null,
     getExtraWorldBounds: () => extraWorldBoundsRef.current,
   };
 }
@@ -294,7 +294,7 @@ function commitSnapshotGeometry(args: {
   lastValidSnapshotByTeamRef: { current: Map<string, StableSlotLayoutSnapshot> };
   dragOwnerPositionsRef: { current: ReadonlyMap<string, { x: number; y: number }> };
   launchAnchorPositionsRef: { current: Map<string, { x: number; y: number }> };
-  activityAnchorPositionsRef: { current: Map<string, { x: number; y: number }> };
+  activityRectByNodeIdRef: { current: Map<string, StableRect> };
   extraWorldBoundsRef: { current: WorldBounds[] };
   fillMissingFallbackPositions?: boolean;
 }): void {
@@ -306,7 +306,7 @@ function commitSnapshotGeometry(args: {
     lastValidSnapshotByTeamRef,
     dragOwnerPositionsRef,
     launchAnchorPositionsRef,
-    activityAnchorPositionsRef,
+    activityRectByNodeIdRef,
     extraWorldBoundsRef,
     fillMissingFallbackPositions = false,
   } = args;
@@ -319,7 +319,7 @@ function commitSnapshotGeometry(args: {
   }
 
   launchAnchorPositionsRef.current.clear();
-  activityAnchorPositionsRef.current.clear();
+  activityRectByNodeIdRef.current.clear();
   extraWorldBoundsRef.current = snapshotToWorldBounds(snapshot);
 
   if (snapshot.leadNodeId && snapshot.launchAnchor) {
@@ -327,36 +327,32 @@ function commitSnapshotGeometry(args: {
   }
 
   for (const frame of getTranslatedMemberFrames(snapshot, dragOwnerPositionsRef.current)) {
-    activityAnchorPositionsRef.current.set(frame.ownerId, {
-      x: frame.activityRect.left,
-      y: frame.activityRect.top,
-    });
+    activityRectByNodeIdRef.current.set(frame.ownerId, frame.activityColumnRect);
   }
 
-  activityAnchorPositionsRef.current.set(`lead:${teamName}`, {
-    x: snapshot.leadActivityRect.left,
-    y: snapshot.leadActivityRect.top,
-  });
+  if (snapshot.leadNodeId) {
+    activityRectByNodeIdRef.current.set(snapshot.leadNodeId, snapshot.leadActivityRect);
+  }
 }
 
 function resetToFallbackLayout(args: {
   nodes: GraphNode[];
   layoutSnapshotRef: { current: StableSlotLayoutSnapshot | null };
   launchAnchorPositionsRef: { current: Map<string, { x: number; y: number }> };
-  activityAnchorPositionsRef: { current: Map<string, { x: number; y: number }> };
+  activityRectByNodeIdRef: { current: Map<string, StableRect> };
   extraWorldBoundsRef: { current: WorldBounds[] };
 }): void {
   const {
     nodes,
     layoutSnapshotRef,
     launchAnchorPositionsRef,
-    activityAnchorPositionsRef,
+    activityRectByNodeIdRef,
     extraWorldBoundsRef,
   } = args;
 
   layoutSnapshotRef.current = null;
   launchAnchorPositionsRef.current.clear();
-  activityAnchorPositionsRef.current.clear();
+  activityRectByNodeIdRef.current.clear();
   extraWorldBoundsRef.current = [];
   fallbackPositionNodes(nodes);
   KanbanLayoutEngine.layout(nodes);

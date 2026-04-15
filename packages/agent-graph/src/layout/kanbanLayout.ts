@@ -11,7 +11,6 @@ import type { GraphNode } from '../ports/types';
 import { KANBAN_ZONE, TASK_PILL } from '../constants/canvas-constants';
 import { COLORS } from '../constants/colors';
 import { resolveActivityLaneSide } from './activityLane';
-import type { ActivityLaneWorldBounds } from './activityLane';
 import type { SlotFrame, StableRect } from './stableSlots';
 
 /** Column header info for rendering */
@@ -42,8 +41,6 @@ const COLUMN_LABELS: Record<string, { label: string; color: string }> = {
   review: { label: 'Review', color: COLORS.reviewPending },
   approved: { label: 'Approved', color: COLORS.reviewApproved },
 };
-
-const ACTIVITY_KANBAN_CLEARANCE = 24;
 
 export function getOwnerKanbanBaseX(args: {
   ownerX: number;
@@ -91,7 +88,6 @@ export class KanbanLayoutEngine {
   static layout(
     nodes: GraphNode[],
     options?: {
-      activityLaneBounds?: readonly ActivityLaneWorldBounds[];
       memberSlotFrames?: readonly SlotFrame[];
       unassignedTaskRect?: StableRect | null;
     }
@@ -100,7 +96,6 @@ export class KanbanLayoutEngine {
     nodeMap.clear();
     for (const n of nodes) nodeMap.set(n.id, n);
     const leadX = nodes.find((node) => node.kind === 'lead')?.x ?? null;
-    const activityLaneBounds = options?.activityLaneBounds ?? [];
     const memberSlotFrameByOwnerId = new Map(
       (options?.memberSlotFrames ?? []).map((frame) => [frame.ownerId, frame] as const)
     );
@@ -148,7 +143,6 @@ export class KanbanLayoutEngine {
         owner,
         ownerId,
         leadX,
-        activityLaneBounds,
         memberSlotFrameByOwnerId.get(ownerId) ?? null
       );
       if (zoneInfo) this.zones.push(zoneInfo);
@@ -164,11 +158,9 @@ export class KanbanLayoutEngine {
     owner: GraphNode,
     ownerId: string,
     leadX: number | null,
-    activityLaneBounds: readonly ActivityLaneWorldBounds[],
     slotFrame: SlotFrame | null
   ): KanbanZoneInfo | null {
-    const { columnWidth, rowHeight, offsetY, columns } = KANBAN_ZONE;
-    const headerHeight = 20; // space for column header label
+    const { columnWidth, rowHeight, offsetY, columns, headerHeight } = KANBAN_ZONE;
     const ownerX = owner.x ?? 0;
     const ownerY = owner.y ?? 0;
 
@@ -193,8 +185,6 @@ export class KanbanLayoutEngine {
 
     if (activeColumns.length === 0) return null;
 
-    // Keep kanban columns on the open side of the owner, away from the reserved activity lane.
-    // This makes member lanes reserve real visual space instead of only affecting the force layout.
     let baseX = getOwnerKanbanBaseX({
       ownerX,
       ownerKind: owner.kind,
@@ -205,27 +195,10 @@ export class KanbanLayoutEngine {
     let baseY: number;
 
     if (slotFrame) {
-      baseX = slotFrame.taskBandRect.left + TASK_PILL.width / 2;
-      baseY = slotFrame.taskBandRect.top;
+      baseX = slotFrame.kanbanBandRect.left + TASK_PILL.width / 2;
+      baseY = slotFrame.kanbanBandRect.top;
     } else {
-      const taskZoneLeft = baseX - TASK_PILL.width / 2;
-      const taskZoneRight =
-        baseX + (activeColumns.length - 1) * columnWidth + TASK_PILL.width / 2;
-      const overlappingActivityBottom = activityLaneBounds.reduce((maxBottom, bounds) => {
-        if (bounds.ownerId === ownerId) {
-          return Math.max(maxBottom, bounds.bottom);
-        }
-        if (!rangesOverlap(taskZoneLeft, taskZoneRight, bounds.left, bounds.right)) {
-          return maxBottom;
-        }
-        return Math.max(maxBottom, bounds.bottom);
-      }, -Infinity);
-      baseY = Math.max(
-        ownerY + offsetY,
-        overlappingActivityBottom > -Infinity
-          ? overlappingActivityBottom + ACTIVITY_KANBAN_CLEARANCE
-          : -Infinity
-      );
+      baseY = ownerY + offsetY;
     }
 
     // Build headers + position tasks
@@ -375,8 +348,4 @@ export class KanbanLayoutEngine {
       task.vy = 0;
     }
   }
-}
-
-function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
-  return aStart < bEnd && bStart < aEnd;
 }

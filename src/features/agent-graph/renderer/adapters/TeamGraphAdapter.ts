@@ -30,6 +30,7 @@ import {
 } from '../../core/domain/buildInlineActivityEntries';
 import { collapseOverflowStacksWithMeta } from '../../core/domain/collapseOverflowStacks';
 import {
+  buildGraphMemberNodeIdAliasMap,
   buildGraphMemberNodeIdForMember,
   getGraphStableOwnerId,
   GRAPH_STABLE_SLOT_LAYOUT_VERSION,
@@ -134,7 +135,7 @@ export class TeamGraphAdapter {
 
     const leadId = `lead:${teamName}`;
     const leadName = TeamGraphAdapter.#getLeadMemberName(teamData, teamName);
-    const memberNodeIdByName = TeamGraphAdapter.#buildMemberNodeIdByName(teamData, teamName);
+    const memberNodeIdByAlias = TeamGraphAdapter.#buildMemberNodeIdByAlias(teamData, teamName);
     const provisioningPresentation = buildTeamProvisioningPresentation({
       progress: provisioningProgress,
       members: teamData.members,
@@ -164,7 +165,7 @@ export class TeamGraphAdapter {
       leadId,
       teamData,
       teamName,
-      memberNodeIdByName,
+      memberNodeIdByAlias,
       spawnStatuses,
       pendingApprovalAgents,
       activeTools,
@@ -173,8 +174,8 @@ export class TeamGraphAdapter {
       isTeamProvisioning,
       isLaunchSettling
     );
-    this.#buildTaskNodes(nodes, edges, teamData, teamName, commentReadState, memberNodeIdByName);
-    this.#buildProcessNodes(nodes, edges, teamData, teamName, memberNodeIdByName);
+    this.#buildTaskNodes(nodes, edges, teamData, teamName, commentReadState, memberNodeIdByAlias);
+    this.#buildProcessNodes(nodes, edges, teamData, teamName, memberNodeIdByAlias);
     this.#attachActivityFeeds(nodes, teamData, teamName, leadId, leadName);
     this.#buildMessageParticles(
       particles,
@@ -184,7 +185,7 @@ export class TeamGraphAdapter {
       leadId,
       leadName,
       edges,
-      memberNodeIdByName
+      memberNodeIdByAlias
     );
     this.#buildCommentParticles(
       particles,
@@ -193,7 +194,7 @@ export class TeamGraphAdapter {
       leadId,
       leadName,
       edges,
-      memberNodeIdByName
+      memberNodeIdByAlias
     );
 
     return {
@@ -226,11 +227,10 @@ export class TeamGraphAdapter {
     return getGraphLeadMemberName(data, teamName);
   }
 
-  static #buildMemberNodeIdByName(data: TeamData, teamName: string): Map<string, string> {
-    return new Map(
-      data.members
-        .filter((member) => !isLeadMember(member))
-        .map((member) => [member.name, buildGraphMemberNodeIdForMember(teamName, member)] as const)
+  static #buildMemberNodeIdByAlias(data: TeamData, teamName: string): Map<string, string> {
+    return buildGraphMemberNodeIdAliasMap(
+      teamName,
+      data.members.filter((member) => !isLeadMember(member))
     );
   }
 
@@ -464,7 +464,7 @@ export class TeamGraphAdapter {
     leadId: string,
     data: TeamData,
     teamName: string,
-    memberNodeIdByName: ReadonlyMap<string, string>,
+    memberNodeIdByAlias: ReadonlyMap<string, string>,
     spawnStatuses?: Record<string, MemberSpawnStatusEntry>,
     pendingApprovalAgents?: Set<string>,
     activeTools?: Record<string, Record<string, ActiveToolCall>>,
@@ -478,7 +478,7 @@ export class TeamGraphAdapter {
       if (isLeadMember(member)) continue;
 
       const memberId =
-        memberNodeIdByName.get(member.name) ?? buildGraphMemberNodeIdForMember(teamName, member);
+        memberNodeIdByAlias.get(member.name) ?? buildGraphMemberNodeIdForMember(teamName, member);
       const spawn = spawnStatuses?.[member.name];
       const activeTool = TeamGraphAdapter.#selectVisibleTool(
         activeTools?.[member.name],
@@ -568,7 +568,7 @@ export class TeamGraphAdapter {
     data: TeamData,
     teamName: string,
     commentReadState?: Record<string, unknown>,
-    memberNodeIdByName?: ReadonlyMap<string, string>
+    memberNodeIdByAlias?: ReadonlyMap<string, string>
   ): void {
     const taskStateById = new Map<string, Pick<TeamData['tasks'][number], 'status'>>();
     const taskDisplayIds = new Map<string, string>();
@@ -589,7 +589,7 @@ export class TeamGraphAdapter {
     for (const task of data.tasks) {
       if (task.status === 'deleted') continue;
       const taskId = `task:${teamName}:${task.id}`;
-      const ownerMemberId = task.owner ? (memberNodeIdByName?.get(task.owner) ?? null) : null;
+      const ownerMemberId = task.owner ? (memberNodeIdByAlias?.get(task.owner) ?? null) : null;
       const kanbanTaskState = data.kanbanState.tasks[task.id];
       const reviewerName = resolveTaskReviewer(task, kanbanTaskState);
       const isReviewCycle = isTaskInReviewCycle(task);
@@ -752,11 +752,11 @@ export class TeamGraphAdapter {
     edges: GraphEdge[],
     data: TeamData,
     teamName: string,
-    memberNodeIdByName?: ReadonlyMap<string, string>
+    memberNodeIdByAlias?: ReadonlyMap<string, string>
   ): void {
     for (const { process: proc, ownerId } of TeamGraphAdapter.#selectRelevantProcesses(
       data.processes,
-      memberNodeIdByName
+      memberNodeIdByAlias
     )) {
       const procId = `process:${teamName}:${proc.id}`;
 
@@ -786,13 +786,13 @@ export class TeamGraphAdapter {
 
   static #selectRelevantProcesses(
     processes: readonly TeamProcess[],
-    memberNodeIdByName?: ReadonlyMap<string, string>
+    memberNodeIdByAlias?: ReadonlyMap<string, string>
   ): { process: TeamProcess; ownerId: string }[] {
     const selectedByOwnerId = new Map<string, TeamProcess>();
 
     for (const process of processes) {
       const ownerId = process.registeredBy
-        ? (memberNodeIdByName?.get(process.registeredBy) ?? null)
+        ? (memberNodeIdByAlias?.get(process.registeredBy) ?? null)
         : null;
       if (!ownerId) {
         continue;
@@ -872,7 +872,7 @@ export class TeamGraphAdapter {
     leadId: string,
     leadName: string,
     edges: GraphEdge[],
-    memberNodeIdByName: ReadonlyMap<string, string>
+    memberNodeIdByAlias: ReadonlyMap<string, string>
   ): void {
     const ordered = [...messages].reverse();
 
@@ -960,7 +960,7 @@ export class TeamGraphAdapter {
         leadId,
         leadName,
         edges,
-        memberNodeIdByName
+        memberNodeIdByAlias
       );
       if (!edgeId) continue;
 
@@ -970,7 +970,7 @@ export class TeamGraphAdapter {
         msg.from ?? '',
         leadId,
         leadName,
-        memberNodeIdByName
+        memberNodeIdByAlias
       );
       const isFromTeammate = fromId !== leadId;
 
@@ -1011,7 +1011,7 @@ export class TeamGraphAdapter {
     leadId: string,
     leadName: string,
     edges: GraphEdge[],
-    memberNodeIdByName: ReadonlyMap<string, string>
+    memberNodeIdByAlias: ReadonlyMap<string, string>
   ): void {
     // First call: record current comment counts without creating particles.
     // This prevents pre-existing comments from spawning particles when the graph opens.
@@ -1052,7 +1052,7 @@ export class TeamGraphAdapter {
             newComment.author,
             leadId,
             leadName,
-            memberNodeIdByName
+            memberNodeIdByAlias
           );
           const taskNodeId = `task:${teamName}:${task.id}`;
           const authorEdge =
@@ -1187,7 +1187,7 @@ export class TeamGraphAdapter {
     leadId: string,
     leadName: string,
     edges: GraphEdge[],
-    memberNodeIdByName: ReadonlyMap<string, string>
+    memberNodeIdByAlias: ReadonlyMap<string, string>
   ): string | null {
     const { from, to } = msg;
 
@@ -1196,9 +1196,14 @@ export class TeamGraphAdapter {
         from,
         leadId,
         leadName,
-        memberNodeIdByName
+        memberNodeIdByAlias
       );
-      const toId = TeamGraphAdapter.#resolveParticipantId(to, leadId, leadName, memberNodeIdByName);
+      const toId = TeamGraphAdapter.#resolveParticipantId(
+        to,
+        leadId,
+        leadName,
+        memberNodeIdByAlias
+      );
       return (
         edges.find((e) => e.source === fromId && e.target === toId)?.id ??
         edges.find((e) => e.source === toId && e.target === fromId)?.id ??
@@ -1211,7 +1216,7 @@ export class TeamGraphAdapter {
         from,
         leadId,
         leadName,
-        memberNodeIdByName
+        memberNodeIdByAlias
       );
       return (
         edges.find(
@@ -1229,12 +1234,12 @@ export class TeamGraphAdapter {
     name: string,
     leadId: string,
     leadName: string | undefined,
-    memberNodeIdByName: ReadonlyMap<string, string>
+    memberNodeIdByAlias: ReadonlyMap<string, string>
   ): string {
     const normalized = name.trim().toLowerCase();
     if (normalized === 'user' || normalized === 'team-lead') return leadId;
     if (normalized === leadName?.trim().toLowerCase()) return leadId;
-    return memberNodeIdByName.get(name) ?? leadId;
+    return memberNodeIdByAlias.get(name) ?? leadId;
   }
 
   /** Extract external team name from cross-team "from" field like "team-b.alice" */
