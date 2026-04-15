@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MemberMessagesTab } from '@renderer/components/team/members/MemberMessagesTab';
+import { useStore } from '@renderer/store';
 
 import type { InboxMessage, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
@@ -48,11 +49,27 @@ describe('MemberMessagesTab', () => {
       nextCursor: null,
       hasMore: false,
     });
+    useStore.setState({
+      teamMessagesByName: {
+        'demo-team': {
+          canonicalMessages: [],
+          optimisticMessages: [],
+          feedRevision: 'rev-empty',
+          nextCursor: null,
+          hasMore: false,
+          lastFetchedAt: null,
+          loadingHead: false,
+          loadingOlder: false,
+          headHydrated: true,
+        },
+      },
+    } as never);
   });
 
   afterEach(() => {
     document.body.innerHTML = '';
     getMessagesPage.mockReset();
+    useStore.setState({ teamMessagesByName: {} } as never);
   });
 
   it('shows both messages and comments by default and filters them separately', async () => {
@@ -110,10 +127,25 @@ describe('MemberMessagesTab', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
 
+    useStore.setState({
+      teamMessagesByName: {
+        'demo-team': {
+          canonicalMessages: messages,
+          optimisticMessages: [],
+          feedRevision: 'rev-1',
+          nextCursor: null,
+          hasMore: false,
+          lastFetchedAt: Date.now(),
+          loadingHead: false,
+          loadingOlder: false,
+          headHydrated: true,
+        },
+      },
+    } as never);
+
     await act(async () => {
       root.render(
         React.createElement(MemberMessagesTab, {
-          messages,
           teamName: 'demo-team',
           memberName: 'jack',
           members,
@@ -122,6 +154,8 @@ describe('MemberMessagesTab', () => {
       );
       await Promise.resolve();
     });
+
+    expect(getMessagesPage).not.toHaveBeenCalled();
 
     const getRenderedKinds = () =>
       Array.from(host.querySelectorAll('[data-testid="activity-item"]')).map((node) =>
@@ -209,10 +243,35 @@ describe('MemberMessagesTab', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
 
+    useStore.setState({
+      teamMessagesByName: {
+        'demo-team': {
+          canonicalMessages: [
+            {
+              from: 'team-lead',
+              to: 'alice',
+              text: 'Message for another member',
+              summary: 'Message for another member',
+              timestamp: '2026-04-13T13:34:00.000Z',
+              read: false,
+              messageId: 'msg-other-member',
+            },
+          ],
+          optimisticMessages: [],
+          feedRevision: 'rev-older',
+          nextCursor: 'older-cursor',
+          hasMore: true,
+          lastFetchedAt: Date.now(),
+          loadingHead: false,
+          loadingOlder: false,
+          headHydrated: true,
+        },
+      },
+    } as never);
+
     await act(async () => {
       root.render(
         React.createElement(MemberMessagesTab, {
-          messages: [],
           teamName: 'demo-team',
           memberName: 'jack',
           members,
@@ -222,6 +281,7 @@ describe('MemberMessagesTab', () => {
       await Promise.resolve();
     });
 
+    expect(getMessagesPage).not.toHaveBeenCalled();
     expect(host.textContent).toContain('No activity with this member');
     expect(host.textContent).not.toContain('Load older messages');
 

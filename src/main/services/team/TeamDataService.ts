@@ -39,6 +39,7 @@ import {
 } from './cache/LeadSessionParseCache';
 import { atomicWriteAsync } from './atomicWrite';
 import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
+import { MemberActivityMetaService } from './MemberActivityMetaService';
 import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
 import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
@@ -46,6 +47,7 @@ import { TeamInboxWriter } from './TeamInboxWriter';
 import { TeamKanbanManager } from './TeamKanbanManager';
 import { TeamMemberResolver } from './TeamMemberResolver';
 import { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisoryService';
+import { TeamMessageFeedService } from './TeamMessageFeedService';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMetaStore } from './TeamMetaStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
@@ -65,7 +67,6 @@ import type {
   KanbanColumnId,
   KanbanState,
   MessagesPage,
-  ResolvedTeamMember,
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
@@ -74,13 +75,14 @@ import type {
   TaskRef,
   TeamConfig,
   TeamCreateConfigRequest,
-  TeamData,
+  TeamMemberActivityMeta,
   TeamMember,
   TeamProcess,
   TeamSummary,
   TeamTask,
   TeamTaskStatus,
   TeamTaskWithKanban,
+  TeamViewSnapshot,
   ToolCallMeta,
   UpdateKanbanPatch,
 } from '@shared/types';
@@ -97,6 +99,14 @@ const PROCESS_HEALTH_INTERVAL_MS = 2_000;
 const TASK_MAP_YIELD_EVERY = 250;
 const TASK_COMMENT_NOTIFICATION_SOURCE = 'system_notification';
 const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
+
+function requireCanonicalMessageId(message: InboxMessage): string {
+  const messageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
+  if (messageId.length > 0) {
+    return messageId;
+  }
+  throw new Error('Canonical team message is missing effective messageId');
+}
 
 interface EligibleTaskCommentNotification {
   key: string;
@@ -162,6 +172,8 @@ export class TeamDataService {
   private taskChangePresenceRepository: TaskChangePresenceRepository | null = null;
   private teamLogSourceTracker: TeamLogSourceTracker | null = null;
   private fileWatchReconcileDiagnostics = new Map<string, FileWatchReconcileDiagnostics>();
+  private readonly messageFeedService: TeamMessageFeedService;
+  private readonly memberActivityMetaService: MemberActivityMetaService;
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -183,7 +195,15 @@ export class TeamDataService {
     private readonly teamMetaStore: TeamMetaStore = new TeamMetaStore(),
     private memberRuntimeAdvisoryService: TeamMemberRuntimeAdvisoryService = new TeamMemberRuntimeAdvisoryService(),
     private readonly leadSessionParseCache: LeadSessionParseCache = new LeadSessionParseCache()
-  ) {}
+  ) {
+    this.messageFeedService = new TeamMessageFeedService({
+      getConfig: (teamName) => this.configReader.getConfig(teamName),
+      getInboxMessages: (teamName) => this.inboxReader.getMessages(teamName),
+      getLeadSessionMessages: (config) => this.extractLeadSessionTexts(config),
+      getSentMessages: (teamName) => this.sentMessagesStore.readMessages(teamName),
+    });
+    this.memberActivityMetaService = new MemberActivityMetaService(this.messageFeedService);
+  }
 
   private getController(teamName: string): AgentTeamsController {
     return this.controllerFactory(teamName);
@@ -622,7 +642,7 @@ export class TeamDataService {
     await fs.promises.rm(tasksDir, { recursive: true, force: true });
   }
 
-  async getTeamData(teamName: string): Promise<TeamData> {
+  async getTeamData(teamName: string): Promise<TeamViewSnapshot> {
     const startedAt = Date.now();
     const marks: Record<string, number> = {};
     const mark = (label: string): void => {
@@ -726,12 +746,6 @@ export class TeamDataService {
       warningText: 'Inboxes failed to load',
       load: () => this.inboxReader.listInboxNames(teamName),
     });
-    const sentMessagesStep = startReadStep({
-      label: 'sentMessages',
-      createFallback: () => [],
-      warningText: 'Sent messages failed to load',
-      load: () => this.sentMessagesStore.readMessages(teamName),
-    });
     const metaMembersStep = startReadStep({
       label: 'metaMembers',
       createFallback: () => [],
@@ -756,40 +770,8 @@ export class TeamDataService {
         load: () => this.taskReader.getTasks(teamName),
       })
     );
-    const messagesStep = runWithConcurrencyLimit(() =>
-      startReadStep({
-        label: 'messages',
-        createFallback: () => [],
-        warningText: 'Messages failed to load',
-        load: () => this.inboxReader.getMessages(teamName),
-      })
-    );
-    const leadTextsStep = runWithConcurrencyLimit(() =>
-      startReadStep({
-        label: 'leadTexts',
-        createFallback: () => [],
-        warningText: 'Lead session texts failed to load',
-        load: () => this.extractLeadSessionTexts(config),
-      })
-    );
-
-    const [
-      tasksStepResult,
-      inboxNamesStepResult,
-      messagesStepResult,
-      leadTextsStepResult,
-      sentMessagesStepResult,
-      metaMembersStepResult,
-      kanbanStateStepResult,
-    ] = await Promise.all([
-      tasksStep,
-      inboxNamesStep,
-      messagesStep,
-      leadTextsStep,
-      sentMessagesStep,
-      metaMembersStep,
-      kanbanStateStep,
-    ]);
+    const [tasksStepResult, inboxNamesStepResult, metaMembersStepResult, kanbanStateStepResult] =
+      await Promise.all([tasksStep, inboxNamesStep, metaMembersStep, kanbanStateStep]);
 
     // After parallelizing the top read phase, these marks no longer represent
     // serial stage boundaries. They now capture the actual completion time for
@@ -797,177 +779,17 @@ export class TeamDataService {
     // diagnostics useful without mutating marks from concurrent branches.
     marks.tasks = tasksStepResult.completedAt;
     marks.inboxNames = inboxNamesStepResult.completedAt;
-    marks.messages = messagesStepResult.completedAt;
-    marks.leadTexts = leadTextsStepResult.completedAt;
-    marks.sentMessages = sentMessagesStepResult.completedAt;
     marks.metaMembers = metaMembersStepResult.completedAt;
     marks.kanbanState = kanbanStateStepResult.completedAt;
 
     if (tasksStepResult.warning) warnings.push(tasksStepResult.warning);
     if (inboxNamesStepResult.warning) warnings.push(inboxNamesStepResult.warning);
-    if (messagesStepResult.warning) warnings.push(messagesStepResult.warning);
-    if (leadTextsStepResult.warning) warnings.push(leadTextsStepResult.warning);
-    if (sentMessagesStepResult.warning) warnings.push(sentMessagesStepResult.warning);
     if (metaMembersStepResult.warning) warnings.push(metaMembersStepResult.warning);
     if (kanbanStateStepResult.warning) warnings.push(kanbanStateStepResult.warning);
 
     const tasks: TeamTask[] = tasksStepResult.value;
     const inboxNames: string[] = inboxNamesStepResult.value;
-    let messages: InboxMessage[] = messagesStepResult.value;
-    const leadTexts: InboxMessage[] = leadTextsStepResult.value;
-    const sentMessages: InboxMessage[] = sentMessagesStepResult.value;
     mark('postStart');
-
-    if (leadTexts.length > 0) {
-      messages = [...messages, ...leadTexts];
-    }
-    if (sentMessages.length > 0) {
-      messages = [...messages, ...sentMessages];
-    }
-    mark('mergeMessages');
-
-    // Dedup: if a lead_process message text is also present in lead_session, prefer lead_session.
-    // This avoids double-rendering when we persist lead process messages and later load the lead JSONL.
-    // Exception: lead_process messages with `to` field are captured SendMessage — never dedup those.
-    if (leadTexts.length > 0) {
-      const normalizeText = (text: string): string => text.trim().replace(/\r\n/g, '\n');
-      const getLeadThoughtFingerprint = (
-        msg: Pick<InboxMessage, 'from' | 'text' | 'leadSessionId'>
-      ) => `${msg.leadSessionId ?? ''}\0${msg.from}\0${normalizeText(msg.text ?? '')}`;
-      const leadSessionFingerprints = new Set<string>();
-      for (const msg of leadTexts) {
-        if (msg.source !== 'lead_session') continue;
-        leadSessionFingerprints.add(getLeadThoughtFingerprint(msg));
-      }
-      messages = messages.filter((m) => {
-        if (m.source !== 'lead_process') return true;
-        // Captured SendMessage messages (with recipient) are real messages — never dedup
-        if (m.to) return true;
-        const fp = getLeadThoughtFingerprint(m);
-        return !leadSessionFingerprints.has(fp);
-      });
-    }
-    mark('dedupLeadTexts');
-
-    // Dedup exact message copies that can appear as both live lead_process rows and
-    // their persisted inbox/sent-message counterpart. If the messageId is identical,
-    // keep a single row so the UI does not show the same SendMessage twice
-    // (for example "LIVE" plus the stored copy).
-    const duplicateMessageIds = new Set<string>();
-    const messageIdCounts = new Map<string, number>();
-    for (const msg of messages) {
-      const id = typeof msg.messageId === 'string' ? msg.messageId.trim() : '';
-      if (!id) continue;
-      const nextCount = (messageIdCounts.get(id) ?? 0) + 1;
-      messageIdCounts.set(id, nextCount);
-      if (nextCount > 1) duplicateMessageIds.add(id);
-    }
-    if (duplicateMessageIds.size > 0) {
-      const choosePreferredMessage = (
-        current: InboxMessage,
-        candidate: InboxMessage
-      ): InboxMessage => {
-        const score = (msg: InboxMessage): number => {
-          let value = 0;
-          if (msg.source !== 'lead_process') value += 4;
-          if (msg.read === false) value += 2;
-          if (msg.relayOfMessageId) value += 1;
-          if (msg.summary) value += 1;
-          if (msg.to) value += 1;
-          return value;
-        };
-        const currentScore = score(current);
-        const candidateScore = score(candidate);
-        if (candidateScore !== currentScore) {
-          return candidateScore > currentScore ? candidate : current;
-        }
-        const currentTs = Date.parse(current.timestamp);
-        const candidateTs = Date.parse(candidate.timestamp);
-        if (
-          Number.isFinite(currentTs) &&
-          Number.isFinite(candidateTs) &&
-          candidateTs !== currentTs
-        ) {
-          return candidateTs > currentTs ? candidate : current;
-        }
-        return current;
-      };
-
-      const dedupedById = new Map<string, InboxMessage>();
-      const dedupedWithoutId: InboxMessage[] = [];
-      for (const msg of messages) {
-        const id = typeof msg.messageId === 'string' ? msg.messageId.trim() : '';
-        if (!id) {
-          dedupedWithoutId.push(msg);
-          continue;
-        }
-        const existing = dedupedById.get(id);
-        if (!existing) {
-          dedupedById.set(id, msg);
-          continue;
-        }
-        dedupedById.set(id, choosePreferredMessage(existing, msg));
-      }
-      messages = [...dedupedWithoutId, ...dedupedById.values()];
-    }
-    mark('dedupMessageIds');
-
-    messages = this.linkPassiveUserReplySummaries(messages);
-    mark('linkPassiveUserReplySummaries');
-
-    // Enrich inbox messages without leadSessionId by assigning the nearest neighbor's
-    // session ID (by timestamp). This avoids the old forward-only propagation bug.
-    if (config.leadSessionId || messages.some((m) => m.leadSessionId)) {
-      messages.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
-
-      const anchors: { index: number; time: number; sessionId: string }[] = [];
-      for (let i = 0; i < messages.length; i++) {
-        if (messages[i].leadSessionId) {
-          anchors.push({
-            index: i,
-            time: Date.parse(messages[i].timestamp),
-            sessionId: messages[i].leadSessionId!,
-          });
-        }
-      }
-
-      if (anchors.length > 0) {
-        let anchorIdx = 0;
-        for (let i = 0; i < messages.length; i++) {
-          if (messages[i].leadSessionId) {
-            while (anchorIdx < anchors.length - 1 && anchors[anchorIdx].index < i) {
-              anchorIdx++;
-            }
-            continue;
-          }
-
-          const msgTime = Date.parse(messages[i].timestamp);
-          let bestAnchor = anchors[0];
-          let bestDist = Math.abs(msgTime - bestAnchor.time);
-          for (const anchor of anchors) {
-            const dist = Math.abs(msgTime - anchor.time);
-            if (dist < bestDist) {
-              bestDist = dist;
-              bestAnchor = anchor;
-            } else if (dist > bestDist && anchor.time > msgTime) {
-              break;
-            }
-          }
-          messages[i].leadSessionId = bestAnchor.sessionId;
-        }
-      } else if (config.leadSessionId) {
-        for (const msg of messages) {
-          msg.leadSessionId = config.leadSessionId;
-        }
-      }
-    }
-    mark('attachLeadSessionIds');
-
-    messages.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
-    this.annotateSlashCommandResponses(messages);
-
-    messages.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
-    mark('normalizeMessages');
 
     const metaMembers: TeamConfig['members'] = metaMembersStepResult.value;
     const kanbanState: KanbanState = kanbanStateStepResult.value;
@@ -1000,8 +822,7 @@ export class TeamDataService {
       config,
       metaMembers,
       inboxNames,
-      tasksWithKanban,
-      messages
+      tasksWithKanban
     );
     mark('resolveMembers');
 
@@ -1036,30 +857,13 @@ export class TeamDataService {
 
     const totalMs = Date.now() - startedAt;
     if (totalMs >= 1500) {
-      const counts = `counts=tasks:${tasks.length},messages:${messages.length},inboxNames:${inboxNames.length},leadTexts:${leadTexts.length},sent:${sentMessages.length},members:${members.length},processes:${processes.length}`;
+      const counts = `counts=tasks:${tasks.length},inboxNames:${inboxNames.length},members:${members.length},processes:${processes.length}`;
       logger.warn(
         `getTeamData team=${teamName} slow total=${totalMs}ms config=${msSince('config')} tasks=${msSince('tasks')} inboxNames=${msSince(
           'inboxNames'
-        )} messages=${msSince('messages')} leadTexts=${msSince('leadTexts')} sent=${msSince(
-          'sentMessages'
         )} membersMeta=${msSince('metaMembers')} kanban=${msSince('kanbanState')} kanbanGc=${msSince(
           'kanbanGc'
-        )} post=${msBetween(
-          'postStart',
-          'mergeMessages'
-        )}/dedupLead=${msBetween('mergeMessages', 'dedupLeadTexts')}/dedupIds=${msBetween(
-          'dedupLeadTexts',
-          'dedupMessageIds'
-        )}/attachLeadSession=${msBetween(
-          'dedupMessageIds',
-          'attachLeadSessionIds'
-        )}/normalizeMessages=${msBetween(
-          'attachLeadSessionIds',
-          'normalizeMessages'
-        )}/attachKanban=${msBetween(
-          'normalizeMessages',
-          'attachKanban'
-        )}/loadPresenceIndex=${msBetween(
+        )} post=${msBetween('postStart', 'attachKanban')}/loadPresenceIndex=${msBetween(
           'attachKanban',
           'loadPresenceIndex'
         )}/changePresence=${msBetween(
@@ -1088,21 +892,14 @@ export class TeamDataService {
       this.processHealthTeams.delete(teamName);
     }
 
-    // Cap messages to keep IPC payloads small. Full history is available
-    // via the paginated getMessagesPage() API. We still include a small
-    // batch here for backward compatibility (notifications, dedup, etc.).
-    const MAX_RETURN_MESSAGES = 50;
-    const cappedMessages =
-      messages.length > MAX_RETURN_MESSAGES ? messages.slice(0, MAX_RETURN_MESSAGES) : messages;
-
     return {
       teamName,
       config,
       tasks: tasksWithKanban,
       members,
-      messages: cappedMessages,
       kanbanState,
       processes,
+      isAlive: hasAlive,
       warnings: warnings.length > 0 ? warnings : undefined,
     };
   }
@@ -1113,106 +910,45 @@ export class TeamDataService {
    */
   async getMessagesPage(
     teamName: string,
-    options: { beforeTimestamp?: string; limit: number }
+    options: { cursor?: string | null; limit: number }
   ): Promise<MessagesPage> {
-    const config = await this.configReader.getConfig(teamName);
-    if (!config) {
-      return { messages: [], nextCursor: null, hasMore: false };
-    }
+    const feed = await this.messageFeedService.getFeed(teamName);
+    let messages = feed.messages;
 
-    // Collect all messages from the same sources as getTeamData
-    let messages: InboxMessage[] = [];
-
-    const [inboxMessages, leadTexts, sentMessages] = await Promise.all([
-      this.inboxReader.getMessages(teamName).catch(() => [] as InboxMessage[]),
-      this.extractLeadSessionTexts(config).catch(() => [] as InboxMessage[]),
-      this.sentMessagesStore.readMessages(teamName).catch(() => [] as InboxMessage[]),
-    ]);
-
-    messages = [...inboxMessages, ...leadTexts, ...sentMessages];
-
-    // Dedup lead_session vs lead_process (same logic as getTeamData)
-    if (leadTexts.length > 0) {
-      const normalizeText = (text: string): string => text.trim().replace(/\r\n/g, '\n');
-      const getFingerprint = (msg: Pick<InboxMessage, 'from' | 'text' | 'leadSessionId'>) =>
-        `${msg.leadSessionId ?? ''}\0${msg.from}\0${normalizeText(msg.text ?? '')}`;
-      const leadSessionFingerprints = new Set<string>();
-      for (const msg of leadTexts) {
-        if (msg.source === 'lead_session') leadSessionFingerprints.add(getFingerprint(msg));
-      }
-      messages = messages.filter((m) => {
-        if (m.source !== 'lead_process') return true;
-        if (m.to) return true;
-        return !leadSessionFingerprints.has(getFingerprint(m));
-      });
-    }
-
-    // Enrich: propagate leadSessionId to messages missing it (same as getTeamData)
-    if (config.leadSessionId || messages.some((m) => m.leadSessionId)) {
-      messages.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
-      const anchors: { time: number; sessionId: string }[] = [];
-      for (const msg of messages) {
-        if (msg.leadSessionId) {
-          anchors.push({ time: Date.parse(msg.timestamp), sessionId: msg.leadSessionId });
-        }
-      }
-      if (anchors.length > 0) {
-        for (const msg of messages) {
-          if (msg.leadSessionId) continue;
-          const msgTime = Date.parse(msg.timestamp);
-          let best = anchors[0];
-          let bestDist = Math.abs(msgTime - best.time);
-          for (const a of anchors) {
-            const dist = Math.abs(msgTime - a.time);
-            if (dist < bestDist) {
-              bestDist = dist;
-              best = a;
-            } else if (dist > bestDist && a.time > msgTime) {
-              break;
-            }
-          }
-          msg.leadSessionId = best.sessionId;
-        }
-      } else if (config.leadSessionId) {
-        for (const msg of messages) {
-          msg.leadSessionId = config.leadSessionId;
-        }
-      }
-    }
-
-    // Enrich: annotate slash command responses
-    this.annotateSlashCommandResponses(messages);
-
-    // Sort newest-first, with stable tie-breaker by messageId
-    messages.sort((a, b) => {
-      const diff = Date.parse(b.timestamp) - Date.parse(a.timestamp);
-      if (diff !== 0) return diff;
-      return (a.messageId ?? '').localeCompare(b.messageId ?? '');
-    });
-
-    // Apply cursor filter. Cursor format: "timestamp|messageId" (compound)
-    // to handle multiple messages sharing the same timestamp.
-    if (options.beforeTimestamp) {
-      const [cursorTs, cursorId] = options.beforeTimestamp.split('|');
+    if (options.cursor) {
+      const [cursorTs, cursorId] = options.cursor.split('|');
       const cursorMs = Date.parse(cursorTs);
       messages = messages.filter((m) => {
         const ms = Date.parse(m.timestamp);
         if (ms < cursorMs) return true;
         if (ms > cursorMs) return false;
-        // Same timestamp — use messageId tie-breaker
         if (!cursorId) return false;
-        return (m.messageId ?? '').localeCompare(cursorId) > 0;
+        return requireCanonicalMessageId(m).localeCompare(cursorId) > 0;
       });
     }
 
-    // Paginate
     const hasMore = messages.length > options.limit;
     const page = messages.slice(0, options.limit);
     const lastMsg = page[page.length - 1];
     const nextCursor =
-      hasMore && lastMsg ? `${lastMsg.timestamp}|${lastMsg.messageId ?? ''}` : null;
+      hasMore && lastMsg ? `${lastMsg.timestamp}|${requireCanonicalMessageId(lastMsg)}` : null;
 
-    return { messages: page, nextCursor, hasMore };
+    return { messages: page, nextCursor, hasMore, feedRevision: feed.feedRevision };
+  }
+
+  async getMessageFeed(
+    teamName: string
+  ): Promise<{ teamName: string; feedRevision: string; messages: InboxMessage[] }> {
+    return this.messageFeedService.getFeed(teamName);
+  }
+
+  async getMemberActivityMeta(teamName: string): Promise<TeamMemberActivityMeta> {
+    return this.memberActivityMetaService.getMeta(teamName);
+  }
+
+  invalidateMessageFeed(teamName: string): void {
+    this.messageFeedService.invalidate(teamName);
+    this.memberActivityMetaService.invalidate(teamName);
   }
 
   /**
@@ -1220,7 +956,7 @@ export class TeamDataService {
    * Mutates members in-place for efficiency (called right after resolveMembers).
    */
   private async enrichMemberBranches(
-    members: ResolvedTeamMember[],
+    members: TeamViewSnapshot['members'],
     config: TeamConfig
   ): Promise<void> {
     const leadEntry = config.members?.find((member) => isLeadMember(member));
@@ -1892,7 +1628,7 @@ export class TeamDataService {
         slashCommand: slashCommandMeta,
       };
     }
-    return this.getController(teamName).messages.sendMessage({
+    const result = this.getController(teamName).messages.sendMessage({
       member: enrichedRequest.member,
       from: enrichedRequest.from,
       text: enrichedRequest.text,
@@ -1913,6 +1649,8 @@ export class TeamDataService {
       leadSessionId: enrichedRequest.leadSessionId,
       attachments: enrichedRequest.attachments,
     }) as SendMessageResult;
+    this.invalidateMessageFeed(teamName);
+    return result;
   }
 
   private resolveLeadNameFromConfig(config: TeamConfig | null): string {
@@ -2466,6 +2204,23 @@ export class TeamDataService {
       return displayName || teamName;
     } catch {
       return teamName;
+    }
+  }
+
+  async getTeamNotificationContext(teamName: string): Promise<{
+    displayName: string;
+    projectPath?: string;
+  }> {
+    try {
+      const config = await this.configReader.getConfig(teamName);
+      const displayName = config?.name?.trim() || teamName;
+      const projectPath =
+        typeof config?.projectPath === 'string' && config.projectPath.trim().length > 0
+          ? config.projectPath
+          : undefined;
+      return { displayName, projectPath };
+    } catch {
+      return { displayName: teamName };
     }
   }
 

@@ -20,12 +20,6 @@ describe('buildTeamProvisioningPresentation', () => {
       members: [
         {
           name: 'team-lead',
-          agentType: 'team-lead',
-          status: 'active',
-          currentTaskId: null,
-          taskCount: 0,
-          lastActiveAt: null,
-          messageCount: 0,
         },
       ],
       memberSpawnStatuses: {},

@@ -602,6 +602,11 @@ export interface MessagesPage {
   /** Opaque cursor string for fetching older messages. Null when no more pages. */
   nextCursor: string | null;
   hasMore: boolean;
+  /**
+   * Content-stable revision of the full normalized feed that produced this page.
+   * Changes only when the semantic message feed changes.
+   */
+  feedRevision: string;
 }
 
 export type AgentActionMode = 'do' | 'ask' | 'delegate';
@@ -729,12 +734,44 @@ export interface TeamProcess {
   stoppedAt?: string;
 }
 
-export interface TeamData {
+export interface TeamMemberSnapshot {
+  name: string;
+  agentId?: string;
+  currentTaskId: string | null;
+  taskCount: number;
+  color?: string;
+  agentType?: string;
+  role?: string;
+  workflow?: string;
+  providerId?: TeamProviderId;
+  model?: string;
+  effort?: EffortLevel;
+  cwd?: string;
+  /** Set only when member's git branch differs from the lead's branch. */
+  gitBranch?: string;
+  runtimeAdvisory?: MemberRuntimeAdvisory;
+  removedAt?: number;
+}
+
+export interface MemberActivityMetaEntry {
+  memberName: string;
+  lastAuthoredMessageAt: string | null;
+  messageCountExact: number;
+  latestAuthoredMessageSignalsTermination: boolean;
+}
+
+export interface TeamMemberActivityMeta {
+  teamName: string;
+  computedAt: string;
+  members: Record<string, MemberActivityMetaEntry>;
+  feedRevision: string;
+}
+
+export interface TeamViewSnapshot {
   teamName: string;
   config: TeamConfig;
   tasks: TeamTaskWithKanban[];
-  members: ResolvedTeamMember[];
-  messages: InboxMessage[];
+  members: TeamMemberSnapshot[];
   kanbanState: KanbanState;
   processes: TeamProcess[];
   warnings?: string[];

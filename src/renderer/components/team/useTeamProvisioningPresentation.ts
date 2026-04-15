@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { useStore } from '@renderer/store';
 import {
   getCurrentProvisioningProgressForTeam,
-  selectTeamDataForName,
+  selectTeamMemberSnapshotsForName,
 } from '@renderer/store/slices/teamSlice';
 import { buildTeamProvisioningPresentation } from '@renderer/utils/teamProvisioningPresentation';
 import { useShallow } from 'zustand/react/shallow';
@@ -20,7 +20,7 @@ export function useTeamProvisioningPresentation(teamName: string): {
       useShallow((s) => ({
         progress: getCurrentProvisioningProgressForTeam(s, teamName),
         cancelProvisioning: s.cancelProvisioning,
-        teamMembers: selectTeamDataForName(s, teamName)?.members ?? [],
+        teamMembers: selectTeamMemberSnapshotsForName(s, teamName),
         memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
         memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
       }))

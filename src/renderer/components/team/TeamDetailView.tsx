@@ -23,6 +23,9 @@ import { useStore } from '@renderer/store';
 import {
   getCurrentProvisioningProgressForTeam,
   isTeamProvisioningActive,
+  selectResolvedMemberForTeamName,
+  selectResolvedMembersForTeamName,
+  selectTeamMemberSnapshotsForName,
 } from '@renderer/store/slices/teamSlice';
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
 import { formatPercentOfTotal, sumContextInjectionTokens } from '@renderer/utils/contextMath';
@@ -740,16 +743,18 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
 }: TeamMemberDetailDialogBridgeProps): React.JSX.Element | null {
   const {
     leadActivity,
+    liveMember,
     progress,
-    members: launchMembers,
+    launchMembers,
     memberSpawnStatuses,
     memberSpawnSnapshot,
     spawnEntry,
   } = useStore(
     useShallow((s) => ({
       leadActivity: s.leadActivityByTeam[teamName],
+      liveMember: member ? selectResolvedMemberForTeamName(s, teamName, member.name) : null,
       progress: getCurrentProvisioningProgressForTeam(s, teamName),
-      members: s.selectedTeamName === teamName ? (s.selectedTeamData?.members ?? []) : [],
+      launchMembers: selectTeamMemberSnapshotsForName(s, teamName),
       memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
       memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
       spawnEntry: member ? s.memberSpawnStatusesByTeam[teamName]?.[member.name] : undefined,
@@ -772,7 +777,7 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
     <MemberDetailDialog
       {...props}
       teamName={teamName}
-      member={member}
+      member={liveMember ?? member}
       isLaunchSettling={isLaunchSettling}
       leadActivity={leadActivity}
       spawnEntry={spawnEntry}
@@ -821,7 +826,6 @@ export const TeamDetailView = ({
   );
   const provisioningBannerRef = useRef<HTMLDivElement>(null);
   const wasProvisioningRef = useRef(false);
-  const pendingReplyRefreshTimerRef = useRef<number | null>(null);
   const handleOpenGraphTab = useCallback(() => {
     const state = useStore.getState();
     const displayName = state.teamByName[teamName]?.displayName ?? teamName;
@@ -898,7 +902,7 @@ export const TeamDetailView = ({
         initialActivityFilter,
       } = (e as CustomEvent).detail ?? {};
       if (tn !== teamName || !data) return;
-      const member = data.members.find((m: { name: string }) => m.name === memberName);
+      const member = members.find((m: { name: string }) => m.name === memberName);
       if (member) {
         setSelectedMember(member);
         setSelectedMemberView({
@@ -1059,6 +1063,7 @@ export const TeamDetailView = ({
 
   const {
     data,
+    members,
     loading,
     error,
     projects,
@@ -1088,6 +1093,7 @@ export const TeamDetailView = ({
     clearProvisioningError,
     isTeamProvisioning,
     refreshTeamData,
+    syncTeamPendingReplyRefresh,
     kanbanFilterQuery,
     clearKanbanFilter,
     softDeleteTask,
@@ -1133,9 +1139,11 @@ export const TeamDetailView = ({
       clearProvisioningError: s.clearProvisioningError,
       isTeamProvisioning: teamName ? isTeamProvisioningActive(s, teamName) : false,
       data: s.selectedTeamName === teamName ? s.selectedTeamData : null,
+      members: selectResolvedMembersForTeamName(s, teamName),
       loading: s.selectedTeamName === teamName ? s.selectedTeamLoading : false,
       error: s.selectedTeamName === teamName ? s.selectedTeamError : null,
       refreshTeamData: s.refreshTeamData,
+      syncTeamPendingReplyRefresh: s.syncTeamPendingReplyRefresh,
       kanbanFilterQuery: s.kanbanFilterQuery,
       clearKanbanFilter: s.clearKanbanFilter,
       softDeleteTask: s.softDeleteTask,
@@ -1169,13 +1177,12 @@ export const TeamDetailView = ({
     diagnostic.count += 1;
 
     const commitMs = performance.now() - renderStartedAtRef.current;
-    const messagesCount = data?.messages.length ?? 0;
     const tasksCount = data?.tasks.length ?? 0;
-    const membersCount = data?.members.length ?? 0;
+    const membersCount = members.length;
     const processesCount = data?.processes.length ?? 0;
     const shouldWarnSlow = commitMs >= TEAM_DETAIL_COMMIT_WARN_MS;
     const shouldWarnBurst = diagnostic.count >= TEAM_DETAIL_RENDER_BURST_WARN_COUNT;
-    const shouldWarnLarge = messagesCount >= 150 || tasksCount >= 80;
+    const shouldWarnLarge = tasksCount >= 80;
 
     if (
       (shouldWarnSlow || shouldWarnBurst || shouldWarnLarge) &&
@@ -1187,7 +1194,7 @@ export const TeamDetailView = ({
           now - diagnostic.windowStartedAt
         } activeTab=${isThisTabActive ? 'yes' : 'no'} paneFocused=${isPaneFocused ? 'yes' : 'no'} loading=${
           loading ? 'yes' : 'no'
-        } messages=${messagesCount} tasks=${tasksCount} members=${membersCount} processes=${processesCount} panel=${messagesPanelMode}`
+        } tasks=${tasksCount} members=${membersCount} processes=${processesCount} panel=${messagesPanelMode}`
       );
     }
   });
@@ -1307,30 +1314,20 @@ export const TeamDetailView = ({
   );
 
   // Keep team message state fresh while we are explicitly waiting for a reply.
-  // Use a delayed single-shot refresh instead of a tight polling loop so we
-  // don't keep rewriting the whole team snapshot every 2 seconds.
+  // This stays enabled even for hidden mounted tabs, because the waiting state
+  // is renderer-local and should keep its lightweight polling until resolved.
   useEffect(() => {
-    if (pendingReplyRefreshTimerRef.current != null) {
-      window.clearTimeout(pendingReplyRefreshTimerRef.current);
-      pendingReplyRefreshTimerRef.current = null;
-    }
-
-    if (!isThisTabActive) return;
-    if (!data?.isAlive) return;
-    if (Object.keys(pendingRepliesByMember).length === 0) return;
-
-    pendingReplyRefreshTimerRef.current = window.setTimeout(() => {
-      pendingReplyRefreshTimerRef.current = null;
-      void refreshTeamData(teamName, { withDedup: true });
-    }, TEAM_PENDING_REPLY_REFRESH_DELAY_MS);
+    const hasPendingReplies = Object.keys(pendingRepliesByMember).length > 0;
+    syncTeamPendingReplyRefresh(
+      teamName,
+      Boolean(data?.isAlive) && hasPendingReplies,
+      TEAM_PENDING_REPLY_REFRESH_DELAY_MS
+    );
 
     return () => {
-      if (pendingReplyRefreshTimerRef.current != null) {
-        window.clearTimeout(pendingReplyRefreshTimerRef.current);
-        pendingReplyRefreshTimerRef.current = null;
-      }
+      syncTeamPendingReplyRefresh(teamName, false);
     };
-  }, [isThisTabActive, data, pendingRepliesByMember, refreshTeamData, teamName]);
+  }, [data?.isAlive, pendingRepliesByMember, syncTeamPendingReplyRefresh, teamName]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -1364,9 +1361,9 @@ export const TeamDetailView = ({
   // Live git branch tracking for the lead project and member worktrees
   const teamProjectPath = data?.config.projectPath?.trim() ?? null;
   const leadProjectPath = useMemo(() => {
-    const explicitLeadPath = data?.members.find((member) => isLeadMember(member))?.cwd?.trim();
+    const explicitLeadPath = members.find((member) => isLeadMember(member))?.cwd?.trim();
     return explicitLeadPath && explicitLeadPath.length > 0 ? explicitLeadPath : teamProjectPath;
-  }, [data?.members, teamProjectPath]);
+  }, [members, teamProjectPath]);
   const branchSyncPaths = useMemo(() => {
     const uniquePaths = new Map<string, string>();
     const addPath = (candidate: string | null | undefined): void => {
@@ -1378,12 +1375,12 @@ export const TeamDetailView = ({
     };
 
     addPath(leadProjectPath);
-    for (const member of data?.members ?? []) {
+    for (const member of members) {
       addPath(member.cwd);
     }
 
     return Array.from(uniquePaths.values());
-  }, [data?.members, leadProjectPath]);
+  }, [members, leadProjectPath]);
   useBranchSync(branchSyncPaths, { live: true });
   const trackedBranches = useStore(
     useShallow((s) =>
@@ -1401,7 +1398,7 @@ export const TeamDetailView = ({
   const membersWithLiveBranches = useMemo(() => {
     if (!data) return [];
 
-    return data.members.map((member) => {
+    return members.map((member) => {
       const memberPath = member.cwd?.trim();
       const nextGitBranch =
         memberPath && !isLeadMember(member) && leadBranch !== null
@@ -1423,7 +1420,7 @@ export const TeamDetailView = ({
       }
       return nextMember;
     });
-  }, [data, leadBranch, trackedBranches]);
+  }, [leadBranch, members, trackedBranches]);
 
   // Filter sessions to team-only using sessionHistory + leadSessionId
   const teamSessionIds = useMemo(() => {
@@ -1787,7 +1784,6 @@ export const TeamDetailView = ({
       mountPoint: messagesPanelMountPoint,
       members: activeMembers,
       tasks: data?.tasks ?? [],
-      messages: data?.messages ?? [],
       isTeamAlive: data?.isAlive,
       timeWindow,
       teamSessionIds,
@@ -1805,7 +1801,6 @@ export const TeamDetailView = ({
       activeMembers,
       data?.config.leadSessionId,
       data?.isAlive,
-      data?.messages,
       data?.tasks,
       handleCreateTaskFromMessage,
       handleOpenTask,
@@ -2482,7 +2477,7 @@ export const TeamDetailView = ({
                 open={requestChangesTaskId !== null}
                 teamName={teamName}
                 taskId={requestChangesTaskId}
-                members={data?.members ?? []}
+                members={members}
                 onCancel={() => setRequestChangesTaskId(null)}
                 onSubmit={(comment, taskRefs) => {
                   if (!requestChangesTaskId) {
@@ -2509,7 +2504,6 @@ export const TeamDetailView = ({
                 teamName={teamName}
                 members={membersWithLiveBranches}
                 tasks={data.tasks}
-                messages={data.messages}
                 initialTab={selectedMemberView?.initialTab}
                 initialActivityFilter={selectedMemberView?.initialActivityFilter}
                 isTeamAlive={data.isAlive}
@@ -2858,7 +2852,7 @@ export const TeamDetailView = ({
                 if (task) setSelectedTask(task);
               }}
               onOpenMemberProfile={(memberName, options) => {
-                const member = data.members.find((m) => m.name === memberName);
+                const member = members.find((m) => m.name === memberName);
                 if (member) {
                   setSelectedMember(member);
                   setSelectedMemberView({

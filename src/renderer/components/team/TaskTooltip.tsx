@@ -4,6 +4,7 @@ import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
+import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { buildMemberColorMap, REVIEW_STATE_DISPLAY } from '@renderer/utils/memberHelpers';
 import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
 import { getTaskKanbanColumn } from '@shared/utils/reviewState';
@@ -70,14 +71,16 @@ export const TaskTooltip = ({
   children,
   side = 'top',
 }: TaskTooltipProps): React.JSX.Element => {
-  const { selectedTeamName, selectedTeamData, globalTasks, teamByName } = useStore(
-    useShallow((s) => ({
-      selectedTeamName: s.selectedTeamName,
-      selectedTeamData: s.selectedTeamData,
-      globalTasks: s.globalTasks,
-      teamByName: s.teamByName,
-    }))
-  );
+  const { selectedTeamName, selectedTeamData, selectedTeamMembers, globalTasks, teamByName } =
+    useStore(
+      useShallow((s) => ({
+        selectedTeamName: s.selectedTeamName,
+        selectedTeamData: s.selectedTeamData,
+        selectedTeamMembers: selectResolvedMembersForTeamName(s, s.selectedTeamName),
+        globalTasks: s.globalTasks,
+        teamByName: s.teamByName,
+      }))
+    );
 
   const task = useMemo(() => {
     if (teamName && selectedTeamName === teamName) {
@@ -105,13 +108,13 @@ export const TaskTooltip = ({
 
   const members = useMemo(() => {
     if (teamName && selectedTeamName === teamName) {
-      return selectedTeamData?.members ?? [];
+      return selectedTeamMembers;
     }
     if (!teamName && task && selectedTeamName === (task as { teamName?: string }).teamName) {
-      return selectedTeamData?.members ?? [];
+      return selectedTeamMembers;
     }
     return [];
-  }, [selectedTeamData, selectedTeamName, teamName, task]);
+  }, [selectedTeamMembers, selectedTeamName, teamName, task]);
 
   const colorMap = useMemo(
     () => (members ? buildMemberColorMap(members) : new Map<string, string>()),

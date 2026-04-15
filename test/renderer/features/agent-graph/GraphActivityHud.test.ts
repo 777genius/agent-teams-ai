@@ -16,11 +16,10 @@ const teamState = {
       { name: 'jack', agentType: 'developer' },
     ],
     tasks: [],
-    messages: [],
   },
   teamDataCacheByName: new Map<
     string,
-    { members: Record<string, unknown>[]; tasks: unknown[]; messages: unknown[] }
+    { members: Record<string, unknown>[]; tasks: unknown[] }
   >([
     [
       'demo-team',
@@ -30,7 +29,6 @@ const teamState = {
           { name: 'jack', agentType: 'developer' },
         ],
         tasks: [],
-        messages: [],
       },
     ],
   ]),
@@ -55,6 +53,12 @@ vi.mock('@renderer/store/slices/teamSlice', () => ({
   selectTeamDataForName: (_state: typeof teamState, teamName: string) =>
     teamState.teamDataCacheByName.get(teamName) ??
     (teamState.selectedTeamName === teamName ? teamState.selectedTeamData : null),
+  selectResolvedMembersForTeamName: (_state: typeof teamState, teamName: string) =>
+    (
+      teamState.teamDataCacheByName.get(teamName) ??
+      (teamState.selectedTeamName === teamName ? teamState.selectedTeamData : null)
+    )?.members ?? [],
+  selectTeamMessages: () => [],
 }));
 
 vi.mock('zustand/react/shallow', () => ({

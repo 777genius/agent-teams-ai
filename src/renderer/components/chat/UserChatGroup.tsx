@@ -7,6 +7,7 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useTabUI } from '@renderer/hooks/useTabUI';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
@@ -398,7 +399,7 @@ const UserChatGroupInner = ({ userGroup }: Readonly<UserChatGroupProps>): React.
   // Get team members for @mention highlighting and team names for @team linkification
   const { members, teams } = useStore(
     useShallow((s) => ({
-      members: s.selectedTeamData?.members,
+      members: selectResolvedMembersForTeamName(s, s.selectedTeamName),
       teams: s.teams,
     }))
   );

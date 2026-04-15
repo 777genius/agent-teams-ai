@@ -292,14 +292,21 @@ const MemberPopoverContent = ({
       ? node.domainRef.teamName
       : '';
   const avatarSrc = node.avatarUrl ?? agentAvatarUrl(memberName, 64);
-  const { teamData, spawnEntry, leadActivity, progress, memberSpawnSnapshot, memberSpawnStatuses } =
-    useGraphMemberPopoverContext(teamName, memberName);
-  const member = teamData?.members.find((candidate) => candidate.name === memberName) ?? null;
+  const {
+    teamData,
+    teamMembers,
+    spawnEntry,
+    leadActivity,
+    progress,
+    memberSpawnSnapshot,
+    memberSpawnStatuses,
+  } = useGraphMemberPopoverContext(teamName, memberName);
+  const member = teamMembers.find((candidate) => candidate.name === memberName) ?? null;
   const provisioningPresentation =
     teamData && teamName
       ? buildTeamProvisioningPresentation({
           progress,
-          members: teamData.members,
+          members: teamMembers,
           memberSpawnStatuses,
           memberSpawnSnapshot,
         })

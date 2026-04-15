@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 
 import { useStore } from '@renderer/store';
+import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { buildTaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
 import { ExternalLink } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -24,6 +25,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
     closeGlobalTaskDetail,
     selectedTeamName,
     selectedTeamData,
+    selectedTeamMembers,
     selectedTeamLoading,
     selectedTeamError,
     selectTeam,
@@ -36,6 +38,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
       closeGlobalTaskDetail: s.closeGlobalTaskDetail,
       selectedTeamName: s.selectedTeamName,
       selectedTeamData: s.selectedTeamData,
+      selectedTeamMembers: selectResolvedMembersForTeamName(s, s.selectedTeamName),
       selectedTeamLoading: s.selectedTeamLoading,
       selectedTeamError: s.selectedTeamError,
       selectTeam: s.selectTeam,
@@ -94,8 +97,8 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
   }, [globalTaskDetail, globalTasks, isFullTeamLoaded, selectedTeamData]);
 
   const activeMembers = useMemo(
-    () => (isFullTeamLoaded ? (selectedTeamData?.members.filter((m) => !m.removedAt) ?? []) : []),
-    [isFullTeamLoaded, selectedTeamData]
+    () => (isFullTeamLoaded ? selectedTeamMembers.filter((m) => !m.removedAt) : []),
+    [isFullTeamLoaded, selectedTeamMembers]
   );
 
   const handleOpenTeam = useCallback((): void => {

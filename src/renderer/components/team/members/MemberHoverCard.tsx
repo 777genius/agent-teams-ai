@@ -8,7 +8,13 @@ import {
 } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
-import { getCurrentProvisioningProgressForTeam } from '@renderer/store/slices/teamSlice';
+import {
+  getCurrentProvisioningProgressForTeam,
+  selectResolvedMemberForTeamName,
+  selectTeamIsAliveForName,
+  selectTeamMemberSnapshotsForName,
+  selectTeamTasksForName,
+} from '@renderer/store/slices/teamSlice';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import {
   agentAvatarUrl,
@@ -17,6 +23,7 @@ import {
 } from '@renderer/utils/memberHelpers';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { ExternalLink } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { getLaunchJoinMilestonesFromMembers, getLaunchJoinState } from '../provisioningSteps';
 
@@ -38,7 +45,7 @@ interface MemberHoverCardProps {
 
 /**
  * Wraps children in a HoverCard that shows member info on hover.
- * Reads member data from the store (selectedTeamData.members).
+ * Reads member data from the team snapshot + resolved member selectors.
  * Falls back to a simple wrapper when member data is unavailable.
  */
 export const MemberHoverCard = ({
@@ -53,20 +60,22 @@ export const MemberHoverCard = ({
   const effectiveTeamName = teamName ?? selectedTeamName;
   const {
     member,
-    members,
+    teamMembers,
+    tasks,
     isTeamAlive,
     progress,
     memberSpawnSnapshot,
     memberSpawnStatuses,
     spawnEntry,
     leadActivity,
-  } = useStore((s) => {
-    const isSelectedTeam = Boolean(effectiveTeamName && s.selectedTeamName === effectiveTeamName);
-    const selectedTeamData = isSelectedTeam ? s.selectedTeamData : null;
-    return {
-      member: selectedTeamData?.members.find((m) => m.name === name) ?? null,
-      members: selectedTeamData?.members ?? [],
-      isTeamAlive: selectedTeamData?.isAlive,
+  } = useStore(
+    useShallow((s) => ({
+      member: effectiveTeamName
+        ? selectResolvedMemberForTeamName(s, effectiveTeamName, name)
+        : null,
+      teamMembers: effectiveTeamName ? selectTeamMemberSnapshotsForName(s, effectiveTeamName) : [],
+      tasks: effectiveTeamName ? selectTeamTasksForName(s, effectiveTeamName) : [],
+      isTeamAlive: effectiveTeamName ? selectTeamIsAliveForName(s, effectiveTeamName) : undefined,
       progress: effectiveTeamName
         ? getCurrentProvisioningProgressForTeam(s, effectiveTeamName)
         : null,
@@ -80,21 +89,16 @@ export const MemberHoverCard = ({
         ? s.memberSpawnStatusesByTeam[effectiveTeamName]?.[name]
         : undefined,
       leadActivity: effectiveTeamName ? s.leadActivityByTeam[effectiveTeamName] : undefined,
-    };
-  });
-  const openMemberProfile = useStore((s) => s.openMemberProfile);
-  const tasks = useStore((s) =>
-    effectiveTeamName && s.selectedTeamName === effectiveTeamName
-      ? s.selectedTeamData?.tasks
-      : undefined
+    }))
   );
+  const openMemberProfile = useStore((s) => s.openMemberProfile);
 
   if (!member) {
     return <>{children}</>;
   }
 
   const launchJoinMilestones = getLaunchJoinMilestonesFromMembers({
-    members,
+    members: teamMembers,
     memberSpawnStatuses,
     memberSpawnSnapshot,
   });
@@ -117,10 +121,9 @@ export const MemberHoverCard = ({
   const presenceLabel = launchPresentation.presenceLabel;
   const dotClass = launchPresentation.dotClass;
   const runtimeAdvisoryTitle = launchPresentation.runtimeAdvisoryTitle;
-  const currentTask: TeamTaskWithKanban | null =
-    member.currentTaskId && tasks
-      ? (tasks.find((t) => t.id === member.currentTaskId) ?? null)
-      : null;
+  const currentTask: TeamTaskWithKanban | null = member.currentTaskId
+    ? (tasks.find((t) => t.id === member.currentTaskId) ?? null)
+    : null;
   const reviewTask: TeamTaskWithKanban | null = tasks
     ? (tasks.find(
         (task) =>

@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Sheet, type SheetRef } from 'react-modal-sheet';
 
-import { api } from '@renderer/api';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -9,7 +8,7 @@ import { useStableTeamMentionMeta } from '@renderer/hooks/useStableTeamMentionMe
 import { useTeamMessagesExpanded } from '@renderer/hooks/useTeamMessagesExpanded';
 import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { useStore } from '@renderer/store';
-import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
+import { selectTeamMessages } from '@renderer/store/slices/teamSlice';
 import { filterTeamMessages } from '@renderer/utils/teamMessageFiltering';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { shouldExcludeInboxTextFromReplyCandidates } from '@shared/utils/idleNotificationSemantics';
@@ -70,8 +69,6 @@ interface MessagesPanelProps {
   members: ResolvedTeamMember[];
   /** All team tasks. */
   tasks: TeamTaskWithKanban[];
-  /** All raw messages from team data. */
-  messages: InboxMessage[];
   /** Whether the team is alive. */
   isTeamAlive?: boolean;
   /** Live lead activity status for the current team. */
@@ -109,7 +106,6 @@ export const MessagesPanel = memo(function MessagesPanel({
   mountPoint,
   members,
   tasks,
-  messages,
   isTeamAlive,
   leadActivity,
   leadContextUpdatedAt,
@@ -133,6 +129,9 @@ export const MessagesPanel = memo(function MessagesPanel({
     lastSendMessageResult,
     teams,
     openTeamTab,
+    messages,
+    messagesState,
+    loadOlderTeamMessages,
   } = useStore(
     useShallow((s) => ({
       sendTeamMessage: s.sendTeamMessage,
@@ -142,79 +141,23 @@ export const MessagesPanel = memo(function MessagesPanel({
       lastSendMessageResult: s.lastSendMessageResult,
       teams: s.teams,
       openTeamTab: s.openTeamTab,
+      messages: selectTeamMessages(s, teamName),
+      messagesState: teamName ? s.teamMessagesByName[teamName] : undefined,
+      loadOlderTeamMessages: s.loadOlderTeamMessages,
     }))
   );
 
-  // ── Paginated message fetching ──
-  // Messages are now fetched via getMessagesPage API instead of coming
-  // from getTeamData. The `messages` prop is used as initial seed if non-empty.
-  const PAGE_SIZE = 50;
-  const [fetchedMessages, setFetchedMessages] = useState<InboxMessage[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [messagesLoading, setMessagesLoading] = useState(false);
-  const fetchIdRef = useRef(0);
-
-  // Initial fetch on mount or team change
-  useEffect(() => {
-    const id = ++fetchIdRef.current;
-    setMessagesLoading(true);
-    void (async () => {
-      try {
-        const page = await api.teams.getMessagesPage(teamName, { limit: PAGE_SIZE });
-        if (fetchIdRef.current !== id) return;
-        setFetchedMessages(page.messages);
-        setNextCursor(page.nextCursor);
-        setHasMore(page.hasMore);
-      } catch {
-        // Fallback: use prop messages if API fails
-        if (fetchIdRef.current === id && messages.length > 0) {
-          setFetchedMessages(messages);
-        }
-      } finally {
-        if (fetchIdRef.current === id) setMessagesLoading(false);
-      }
-    })();
-  }, [teamName]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally only on teamName change
-
-  // Auto-refresh: poll for NEW messages only (prepend to head).
-  // Does NOT touch nextCursor/hasMore — those belong to the "Load older" flow.
-  useEffect(() => {
-    if (!isTeamAlive && leadActivity !== 'active') return;
-    const interval = setInterval(async () => {
-      try {
-        const page = await api.teams.getMessagesPage(teamName, { limit: PAGE_SIZE });
-        setFetchedMessages((prev) => mergeTeamMessages(prev, page.messages));
-      } catch {
-        // best-effort
-      }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [teamName, isTeamAlive, leadActivity]);
-
   const loadOlderMessages = useCallback(async () => {
-    if (!nextCursor || messagesLoading) return;
-    setMessagesLoading(true);
-    try {
-      const page = await api.teams.getMessagesPage(teamName, {
-        beforeTimestamp: nextCursor,
-        limit: PAGE_SIZE,
-      });
-      setFetchedMessages((prev) => mergeTeamMessages(prev, page.messages));
-      setNextCursor(page.nextCursor);
-      setHasMore(page.hasMore);
-    } catch {
-      // best-effort
-    } finally {
-      setMessagesLoading(false);
+    if (!messagesState?.hasMore || messagesState.loadingHead || messagesState.loadingOlder) {
+      return;
     }
-  }, [teamName, nextCursor, messagesLoading]);
+    await loadOlderTeamMessages(teamName);
+  }, [loadOlderTeamMessages, messagesState, teamName]);
 
-  // Use fetched messages, fall back to prop messages during initial load
-  const effectiveMessages = useMemo(() => {
-    if (fetchedMessages.length === 0) return messages;
-    return mergeTeamMessages(fetchedMessages, messages);
-  }, [fetchedMessages, messages]);
+  const messagesLoading =
+    (messagesState?.loadingHead ?? false) || (messagesState?.loadingOlder ?? false);
+  const hasMore = messagesState?.hasMore ?? false;
+  const effectiveMessages = messages;
 
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const sidebarScrollRef = useRef<HTMLDivElement | null>(null);

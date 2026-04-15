@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
 
 import type {
-  InboxMessage,
   TeamConfig,
   TeamTask,
   TeamTaskWithKanban,
@@ -24,13 +23,8 @@ describe('TeamMemberResolver', () => {
       { id: '1', subject: 'Visible task', status: 'pending', owner: 'alice' },
       { id: '2', subject: 'Ghost task', status: 'pending', owner: 'stranger' },
     ];
-    const now = new Date().toISOString();
-    const messages: InboxMessage[] = [
-      { from: 'bob', text: 'ready', timestamp: now, read: false, color: 'green' },
-      { from: 'user', text: 'system note', timestamp: now, read: false },
-    ];
 
-    const members = resolver.resolveMembers(config, metaMembers, inboxNames, tasks, messages);
+    const members = resolver.resolveMembers(config, metaMembers, inboxNames, tasks);
     const names = members.map((member) => member.name);
 
     expect(names).toHaveLength(3);
@@ -62,9 +56,8 @@ describe('TeamMemberResolver', () => {
     ];
     const inboxNames = ['user', 'alice'];
     const tasks: TeamTask[] = [];
-    const messages: InboxMessage[] = [];
 
-    const members = resolver.resolveMembers(config, metaMembers, inboxNames, tasks, messages);
+    const members = resolver.resolveMembers(config, metaMembers, inboxNames, tasks);
     const names = members.map((m) => m.name);
 
     expect(names).not.toContain('user');
@@ -81,9 +74,8 @@ describe('TeamMemberResolver', () => {
     const metaMembers: TeamConfig['members'] = [{ name: 'alice', agentType: 'general-purpose' }];
     const inboxNames = ['alice', 'team-best.user', 'dream-team.team-lead'];
     const tasks: TeamTask[] = [];
-    const messages: InboxMessage[] = [];
 
-    const members = resolver.resolveMembers(config, metaMembers, inboxNames, tasks, messages);
+    const members = resolver.resolveMembers(config, metaMembers, inboxNames, tasks);
     const names = members.map((m) => m.name);
 
     expect(names).toContain('alice');
@@ -104,7 +96,7 @@ describe('TeamMemberResolver', () => {
     ];
     const inboxNames = ['a3975f80d37fbcea1', 'alice', 'a68a8f6a643e59bfd'];
 
-    const members = resolver.resolveMembers(config, metaMembers, inboxNames, [], []);
+    const members = resolver.resolveMembers(config, metaMembers, inboxNames, []);
     const names = members.map((m) => m.name);
 
     expect(names).toContain('alice');
@@ -124,7 +116,7 @@ describe('TeamMemberResolver', () => {
       ],
     };
 
-    const members = resolver.resolveMembers(config, [], ['ops.bot'], [], []);
+    const members = resolver.resolveMembers(config, [], ['ops.bot'], []);
     const names = members.map((m) => m.name);
 
     expect(names).toContain('ops.bot');
@@ -141,7 +133,6 @@ describe('TeamMemberResolver', () => {
       config,
       [],
       ['cross-team:team-alpha-super', 'cross-team-team-alpha-super', 'alice'],
-      [],
       []
     );
     const names = members.map((m) => m.name);
@@ -163,7 +154,6 @@ describe('TeamMemberResolver', () => {
       config,
       [],
       ['cross_team_send', 'cross_team_list_targets', 'alice'],
-      [],
       []
     );
     const names = members.map((m) => m.name);
@@ -185,7 +175,6 @@ describe('TeamMemberResolver', () => {
       config,
       [],
       ['cross_team::team-alpha-super', 'cross_team--team-alpha-super', 'alice'],
-      [],
       []
     );
     const names = members.map((m) => m.name);
@@ -206,7 +195,7 @@ describe('TeamMemberResolver', () => {
       ],
     };
 
-    const members = resolver.resolveMembers(config, [], ['ops.bot'], [], []);
+    const members = resolver.resolveMembers(config, [], ['ops.bot'], []);
     const names = members.map((m) => m.name);
 
     expect(names).toContain('Ops.Bot');
@@ -222,7 +211,7 @@ describe('TeamMemberResolver', () => {
     const tasks: TeamTaskWithKanban[] = [
       { id: 't1', subject: 'Work', status: 'in_progress', owner: 'bob' },
     ];
-    const members = resolver.resolveMembers(config, [], [], tasks, []);
+    const members = resolver.resolveMembers(config, [], [], tasks);
     const bob = members.find((m) => m.name === 'bob');
     expect(bob?.currentTaskId).toBe('t1');
   });
@@ -243,7 +232,7 @@ describe('TeamMemberResolver', () => {
         kanbanColumn: 'approved',
       },
     ];
-    const members = resolver.resolveMembers(config, [], [], tasks, []);
+    const members = resolver.resolveMembers(config, [], [], tasks);
     const bob = members.find((m) => m.name === 'bob');
     expect(bob?.currentTaskId).toBeNull();
   });
@@ -264,7 +253,7 @@ describe('TeamMemberResolver', () => {
         // kanbanColumn not set — stale data scenario
       },
     ];
-    const members = resolver.resolveMembers(config, [], [], tasks, []);
+    const members = resolver.resolveMembers(config, [], [], tasks);
     const bob = members.find((m) => m.name === 'bob');
     expect(bob?.currentTaskId).toBeNull();
   });
@@ -281,7 +270,7 @@ describe('TeamMemberResolver', () => {
     // Teammates sometimes send messages to "lead" instead of "team-lead",
     // creating a separate inbox file that the resolver picks up.
     const inboxNames = ['team-lead', 'lead', 'alice'];
-    const members = resolver.resolveMembers(config, [], inboxNames, [], []);
+    const members = resolver.resolveMembers(config, [], inboxNames, []);
     const names = members.map((m) => m.name);
 
     expect(names).toContain('team-lead');
@@ -295,7 +284,7 @@ describe('TeamMemberResolver', () => {
       name: 'Team',
       members: [{ name: 'lead', agentType: 'team-lead', role: 'lead' }],
     };
-    const members = resolver.resolveMembers(config, [], ['lead'], [], []);
+    const members = resolver.resolveMembers(config, [], ['lead'], []);
     const names = members.map((m) => m.name);
 
     expect(names).toContain('lead');
@@ -310,7 +299,7 @@ describe('TeamMemberResolver', () => {
     const tasks: TeamTaskWithKanban[] = [
       { id: 't1', subject: 'Work', status: 'completed', owner: 'bob' },
     ];
-    const members = resolver.resolveMembers(config, [], [], tasks, []);
+    const members = resolver.resolveMembers(config, [], [], tasks);
     const bob = members.find((m) => m.name === 'bob');
     expect(bob?.currentTaskId).toBeNull();
   });

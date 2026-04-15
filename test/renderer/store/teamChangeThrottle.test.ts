@@ -62,6 +62,7 @@ vi.mock('@renderer/api', () => ({
 }));
 
 import { initializeNotificationListeners, useStore } from '../../../src/renderer/store';
+import { __resetTeamSliceModuleStateForTests } from '../../../src/renderer/store/slices/teamSlice';
 import { api } from '@renderer/api';
 
 describe('team change throttling', () => {
@@ -69,17 +70,29 @@ describe('team change throttling', () => {
 
   beforeEach(async () => {
     vi.useFakeTimers();
+    __resetTeamSliceModuleStateForTests();
     const fetchTeams = vi.fn(async () => undefined);
+    const fetchMemberSpawnStatuses = vi.fn(async () => undefined);
     const refreshTeamData = vi.fn(async () => undefined);
+    const refreshTeamMessagesHead = vi.fn(async () => ({
+      feedChanged: true,
+      headChanged: true,
+      feedRevision: 'rev-1',
+    }));
+    const refreshMemberActivityMeta = vi.fn(async () => undefined);
     const refreshTeamChangePresence = vi.fn(async () => undefined);
 
     useStore.setState({
       fetchTeams,
+      fetchMemberSpawnStatuses,
       refreshTeamData,
+      refreshTeamMessagesHead,
+      refreshMemberActivityMeta,
       refreshTeamChangePresence,
       selectedTeamName: null,
       selectedTeamData: null,
       teamDataCacheByName: {},
+      memberActivityMetaByTeam: {},
       paneLayout: {
         focusedPaneId: 'p1',
         panes: [
@@ -103,6 +116,7 @@ describe('team change throttling', () => {
   afterEach(() => {
     cleanup?.();
     cleanup = null;
+    __resetTeamSliceModuleStateForTests();
     vi.mocked(console.warn).mockClear();
     vi.useRealTimers();
   });
@@ -149,10 +163,12 @@ describe('team change throttling', () => {
     expect(refreshTeamDataSpy).toHaveBeenCalledTimes(2);
   });
 
-  it('lead-message refreshes detail only, not team list or tasks', async () => {
+  it('lead-message refreshes message head only, not team list, tasks, or structural detail', async () => {
     const state = useStore.getState();
     const fetchTeamsSpy = vi.spyOn(state, 'fetchTeams');
     const refreshTeamDataSpy = vi.spyOn(state, 'refreshTeamData');
+    const refreshTeamMessagesHeadSpy = vi.spyOn(state, 'refreshTeamMessagesHead');
+    const refreshMemberActivityMetaSpy = vi.spyOn(state, 'refreshMemberActivityMeta');
 
     // Emit a lead-message event
     hoisted.onTeamChangeCb?.({}, { type: 'lead-message', teamName: 'my-team' });
@@ -161,9 +177,11 @@ describe('team change throttling', () => {
     await vi.advanceTimersByTimeAsync(2100);
     expect(fetchTeamsSpy).not.toHaveBeenCalled();
 
-    // Should trigger refreshTeamData at 800ms
-    expect(refreshTeamDataSpy).toHaveBeenCalledTimes(1);
-    expect(refreshTeamDataSpy).toHaveBeenCalledWith('my-team', { withDedup: true });
+    expect(refreshTeamDataSpy).not.toHaveBeenCalled();
+    expect(refreshTeamMessagesHeadSpy).toHaveBeenCalledTimes(1);
+    expect(refreshTeamMessagesHeadSpy).toHaveBeenCalledWith('my-team');
+    expect(refreshMemberActivityMetaSpy).toHaveBeenCalledTimes(1);
+    expect(refreshMemberActivityMetaSpy).toHaveBeenCalledWith('my-team');
   });
 
   it('lead-message refreshes visible graph tabs even when the team is not selected', async () => {
@@ -174,7 +192,6 @@ describe('team change throttling', () => {
         config: { name: 'Other Team', members: [], projectPath: '/repo' },
         tasks: [],
         members: [],
-        messages: [],
         kanbanState: { teamName: 'other-team', reviewers: [], tasks: {} },
         processes: [],
       },
@@ -192,11 +209,88 @@ describe('team change throttling', () => {
     } as never);
 
     const refreshTeamDataSpy = vi.spyOn(useStore.getState(), 'refreshTeamData');
+    const refreshTeamMessagesHeadSpy = vi.spyOn(useStore.getState(), 'refreshTeamMessagesHead');
 
     hoisted.onTeamChangeCb?.({}, { type: 'lead-message', teamName: 'my-team' });
 
     await vi.advanceTimersByTimeAsync(800);
-    expect(refreshTeamDataSpy).toHaveBeenCalledWith('my-team', { withDedup: true });
+    expect(refreshTeamDataSpy).not.toHaveBeenCalled();
+    expect(refreshTeamMessagesHeadSpy).toHaveBeenCalledWith('my-team');
+  });
+
+  it('lead-message refreshes hidden teams with an active pending-reply wait state', async () => {
+    useStore.getState().syncTeamPendingReplyRefresh('other-team', true, 60_000);
+    useStore.setState({
+      paneLayout: {
+        focusedPaneId: 'p1',
+        panes: [
+          {
+            id: 'p1',
+            widthFraction: 1,
+            tabs: [{ id: 't1', type: 'team', teamName: 'my-team', label: 'my-team' }],
+            activeTabId: 't1',
+          },
+        ],
+      },
+    } as never);
+
+    const refreshTeamDataSpy = vi.spyOn(useStore.getState(), 'refreshTeamData');
+    const refreshTeamMessagesHeadSpy = vi.spyOn(useStore.getState(), 'refreshTeamMessagesHead');
+    const refreshMemberActivityMetaSpy = vi.spyOn(useStore.getState(), 'refreshMemberActivityMeta');
+
+    hoisted.onTeamChangeCb?.({}, { type: 'lead-message', teamName: 'other-team' });
+
+    await vi.advanceTimersByTimeAsync(800);
+    expect(refreshTeamDataSpy).not.toHaveBeenCalled();
+    expect(refreshTeamMessagesHeadSpy).toHaveBeenCalledWith('other-team');
+    expect(refreshMemberActivityMetaSpy).toHaveBeenCalledWith('other-team');
+  });
+
+  it('lead-message does not refresh hidden inactive teams without pending replies', async () => {
+    useStore.setState({
+      paneLayout: {
+        focusedPaneId: 'p1',
+        panes: [
+          {
+            id: 'p1',
+            widthFraction: 1,
+            tabs: [{ id: 't1', type: 'team', teamName: 'my-team', label: 'my-team' }],
+            activeTabId: 't1',
+          },
+        ],
+      },
+    } as never);
+
+    const refreshTeamMessagesHeadSpy = vi.spyOn(useStore.getState(), 'refreshTeamMessagesHead');
+    const refreshMemberActivityMetaSpy = vi.spyOn(useStore.getState(), 'refreshMemberActivityMeta');
+
+    hoisted.onTeamChangeCb?.({}, { type: 'lead-message', teamName: 'other-team' });
+
+    await vi.advanceTimersByTimeAsync(800);
+    expect(refreshTeamMessagesHeadSpy).not.toHaveBeenCalledWith('other-team');
+    expect(refreshMemberActivityMetaSpy).not.toHaveBeenCalledWith('other-team');
+  });
+
+  it('member-spawn refreshes spawn statuses without forcing structural refresh', async () => {
+    const fetchMemberSpawnStatusesSpy = vi.spyOn(useStore.getState(), 'fetchMemberSpawnStatuses');
+    const refreshTeamDataSpy = vi.spyOn(useStore.getState(), 'refreshTeamData');
+
+    hoisted.onTeamChangeCb?.({}, { type: 'member-spawn', teamName: 'my-team' });
+
+    await vi.advanceTimersByTimeAsync(500);
+    expect(fetchMemberSpawnStatusesSpy).toHaveBeenCalledWith('my-team');
+    expect(refreshTeamDataSpy).not.toHaveBeenCalled();
+  });
+
+  it('inbox/config/process do not refresh member spawn statuses by default', async () => {
+    const fetchMemberSpawnStatusesSpy = vi.spyOn(useStore.getState(), 'fetchMemberSpawnStatuses');
+
+    hoisted.onTeamChangeCb?.({}, { type: 'inbox', teamName: 'my-team' });
+    hoisted.onTeamChangeCb?.({}, { type: 'config', teamName: 'my-team' });
+    hoisted.onTeamChangeCb?.({}, { type: 'process', teamName: 'my-team' });
+
+    await vi.advanceTimersByTimeAsync(800);
+    expect(fetchMemberSpawnStatusesSpy).not.toHaveBeenCalled();
   });
 
   it('lead-message does not call fetchAllTasks', async () => {
@@ -209,6 +303,17 @@ describe('team change throttling', () => {
     expect(fetchAllTasksSpy).not.toHaveBeenCalled();
   });
 
+  it('fallback polling refreshes hidden teams with an active pending-reply wait state', async () => {
+    useStore.getState().syncTeamPendingReplyRefresh('other-team', true, 60_000);
+    const refreshTeamMessagesHeadSpy = vi.spyOn(useStore.getState(), 'refreshTeamMessagesHead');
+    const refreshMemberActivityMetaSpy = vi.spyOn(useStore.getState(), 'refreshMemberActivityMeta');
+
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(refreshTeamMessagesHeadSpy).toHaveBeenCalledWith('other-team');
+    expect(refreshMemberActivityMetaSpy).toHaveBeenCalledWith('other-team');
+  });
+
   it('log-source-change refreshes only task change presence', async () => {
     useStore.setState({
       selectedTeamName: 'my-team',
@@ -217,7 +322,6 @@ describe('team change throttling', () => {
         config: { name: 'My Team', members: [], projectPath: '/repo' },
         tasks: [],
         members: [],
-        messages: [],
         kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
         processes: [],
       },
@@ -248,7 +352,6 @@ describe('team change throttling', () => {
         config: { name: 'Other Team', members: [], projectPath: '/repo' },
         tasks: [],
         members: [],
-        messages: [],
         kanbanState: { teamName: 'other-team', reviewers: [], tasks: {} },
         processes: [],
       },
@@ -258,7 +361,6 @@ describe('team change throttling', () => {
           config: { name: 'My Team', members: [], projectPath: '/repo' },
           tasks: [],
           members: [],
-          messages: [],
           kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
           processes: [],
         },
@@ -318,7 +420,6 @@ describe('team change throttling', () => {
           },
         ],
         members: [],
-        messages: [],
         kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
         processes: [],
       },
@@ -354,7 +455,6 @@ describe('team change throttling', () => {
         config: { name: 'Other Team', members: [], projectPath: '/repo' },
         tasks: [],
         members: [],
-        messages: [],
         kanbanState: { teamName: 'other-team', reviewers: [], tasks: {} },
         processes: [],
       },
@@ -387,7 +487,6 @@ describe('team change throttling', () => {
             },
           ],
           members: [],
-          messages: [],
           kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
           processes: [],
         },
@@ -448,6 +547,7 @@ describe('team change throttling', () => {
 
     const state = useStore.getState();
     const refreshTeamDataSpy = vi.spyOn(state, 'refreshTeamData');
+    const refreshTeamMessagesHeadSpy = vi.spyOn(state, 'refreshTeamMessagesHead');
 
     // Fire rapid events for my-team (throttled)
     hoisted.onTeamChangeCb?.({}, { type: 'lead-message', teamName: 'my-team' });
@@ -459,9 +559,10 @@ describe('team change throttling', () => {
     await vi.advanceTimersByTimeAsync(800);
 
     // Both teams should get exactly 1 refresh each
-    expect(refreshTeamDataSpy).toHaveBeenCalledTimes(2);
-    expect(refreshTeamDataSpy).toHaveBeenCalledWith('my-team', { withDedup: true });
-    expect(refreshTeamDataSpy).toHaveBeenCalledWith('other-team', { withDedup: true });
+    expect(refreshTeamDataSpy).not.toHaveBeenCalled();
+    expect(refreshTeamMessagesHeadSpy).toHaveBeenCalledTimes(2);
+    expect(refreshTeamMessagesHeadSpy).toHaveBeenCalledWith('my-team');
+    expect(refreshTeamMessagesHeadSpy).toHaveBeenCalledWith('other-team');
   });
 
   it('keeps auto change presence tracking disabled even after selected team data is hydrated', async () => {
@@ -477,7 +578,6 @@ describe('team change throttling', () => {
         config: { name: 'My Team', members: [], projectPath: '/repo' },
         tasks: [],
         members: [],
-        messages: [],
         kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
         processes: [],
       },

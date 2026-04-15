@@ -1,16 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TeamGraphAdapter } from '@features/agent-graph/renderer/adapters/TeamGraphAdapter';
+import {
+  TeamGraphAdapter,
+  type TeamGraphData,
+} from '@features/agent-graph/renderer/adapters/TeamGraphAdapter';
 
-import type { InboxMessage, TeamData, TeamTaskWithKanban } from '@shared/types/team';
+import type { InboxMessage, TeamTaskWithKanban } from '@shared/types/team';
 import type { GraphDataPort } from '@claude-teams/agent-graph';
 
 function createBaseTeamData(
-  overrides?: Partial<TeamData> & {
+  overrides?: Partial<TeamGraphData> & {
     tasks?: TeamTaskWithKanban[];
     messages?: InboxMessage[];
   }
-): TeamData {
+): TeamGraphData {
+  const { messages, ...restOverrides } = overrides ?? {};
   return {
     teamName: 'my-team',
     config: {
@@ -46,11 +50,11 @@ function createBaseTeamData(
       },
     ],
     tasks: [],
-    messages: [],
+    messageFeed: messages ?? [],
     kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
     processes: [],
     isAlive: true,
-    ...overrides,
+    ...restOverrides,
   };
 }
 

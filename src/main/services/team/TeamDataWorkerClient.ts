@@ -14,7 +14,12 @@ import { Worker } from 'node:worker_threads';
 import { createLogger } from '@shared/utils/logger';
 
 import type { TeamDataWorkerRequest, TeamDataWorkerResponse } from './teamDataWorkerTypes';
-import type { MemberLogSummary, TeamData } from '@shared/types';
+import type {
+  MemberLogSummary,
+  MessagesPage,
+  TeamMemberActivityMeta,
+  TeamViewSnapshot,
+} from '@shared/types';
 
 const logger = createLogger('Service:TeamDataWorkerClient');
 const WORKER_CALL_TIMEOUT_MS = 30_000;
@@ -25,16 +30,20 @@ function makeId(): string {
   return `${Date.now()}-${crypto.randomUUID().slice(0, 12)}`;
 }
 
-function resolveWorkerPath(): string | null {
+function getWorkerPathCandidates(): string[] {
   const baseDir =
     typeof __dirname === 'string' && __dirname.length > 0
       ? __dirname
       : path.dirname(fileURLToPath(import.meta.url));
 
-  const candidates = [
+  return [
     path.join(baseDir, 'team-data-worker.cjs'),
     path.join(process.cwd(), 'dist-electron', 'main', 'team-data-worker.cjs'),
   ];
+}
+
+function resolveWorkerPath(): string | null {
+  const candidates = getWorkerPathCandidates();
 
   for (const candidate of candidates) {
     try {
@@ -75,7 +84,9 @@ export class TeamDataWorkerClient {
   isAvailable(): boolean {
     if (!this.workerPath && !this.warnedUnavailable) {
       this.warnedUnavailable = true;
-      logger.debug('team-data-worker not found; falling back to main-thread execution');
+      logger.warn(
+        `team-data-worker not found; heavy team data paths may fall back to main-thread execution. expectedOneOf=${getWorkerPathCandidates().join(',')}`
+      );
     }
     return this.workerPath !== null;
   }
@@ -144,9 +155,22 @@ export class TeamDataWorkerClient {
     });
   }
 
-  async getTeamData(teamName: string): Promise<TeamData> {
+  async getTeamData(teamName: string): Promise<TeamViewSnapshot> {
     if (!SAFE_NAME_RE.test(teamName)) throw new Error('Invalid teamName');
-    return this.call('getTeamData', { teamName }) as Promise<TeamData>;
+    return this.call('getTeamData', { teamName }) as Promise<TeamViewSnapshot>;
+  }
+
+  async getMessagesPage(
+    teamName: string,
+    options: { cursor?: string | null; limit: number }
+  ): Promise<MessagesPage> {
+    if (!SAFE_NAME_RE.test(teamName)) throw new Error('Invalid teamName');
+    return this.call('getMessagesPage', { teamName, options }) as Promise<MessagesPage>;
+  }
+
+  async getMemberActivityMeta(teamName: string): Promise<TeamMemberActivityMeta> {
+    if (!SAFE_NAME_RE.test(teamName)) throw new Error('Invalid teamName');
+    return this.call('getMemberActivityMeta', { teamName }) as Promise<TeamMemberActivityMeta>;
   }
 
   async findLogsForTask(

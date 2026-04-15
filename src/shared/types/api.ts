@@ -53,6 +53,7 @@ import type {
   KanbanColumnId,
   LeadActivitySnapshot,
   LeadContextUsageSnapshot,
+  TeamMemberActivityMeta,
   MemberFullStats,
   MemberLogSummary,
   MemberSpawnStatusesSnapshot,
@@ -71,10 +72,10 @@ import type {
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
-  TeamData,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamMessageNotificationData,
+  TeamViewSnapshot,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamSummary,
@@ -425,7 +426,7 @@ export interface HttpServerAPI {
 
 export interface TeamsAPI {
   list: () => Promise<TeamSummary[]>;
-  getData: (teamName: string) => Promise<TeamData>;
+  getData: (teamName: string) => Promise<TeamViewSnapshot>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
   setChangePresenceTracking: (teamName: string, enabled: boolean) => Promise<void>;
   setToolActivityTracking: (teamName: string, enabled: boolean) => Promise<void>;
@@ -446,8 +447,9 @@ export interface TeamsAPI {
   sendMessage: (teamName: string, request: SendMessageRequest) => Promise<SendMessageResult>;
   getMessagesPage: (
     teamName: string,
-    options?: { beforeTimestamp?: string; limit?: number }
+    options?: { cursor?: string | null; limit?: number }
   ) => Promise<MessagesPage>;
+  getMemberActivityMeta: (teamName: string) => Promise<TeamMemberActivityMeta>;
   createTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
   updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;

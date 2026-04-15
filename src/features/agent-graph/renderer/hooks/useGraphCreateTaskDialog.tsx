@@ -3,7 +3,11 @@ import { useCallback, useMemo, useState } from 'react';
 import { api } from '@renderer/api';
 import { CreateTaskDialog } from '@renderer/components/team/dialogs/CreateTaskDialog';
 import { useStore } from '@renderer/store';
-import { isTeamProvisioningActive, selectTeamDataForName } from '@renderer/store/slices/teamSlice';
+import {
+  isTeamProvisioningActive,
+  selectResolvedMembersForTeamName,
+  selectTeamDataForName,
+} from '@renderer/store/slices/teamSlice';
 import { useShallow } from 'zustand/react/shallow';
 
 import type { TaskRef } from '@shared/types';
@@ -25,17 +29,15 @@ export function useGraphCreateTaskDialog(teamName: string): UseGraphCreateTaskDi
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const { teamData, createTeamTask, isTeamProvisioning } = useStore(
+  const { teamData, activeMembers, createTeamTask, isTeamProvisioning } = useStore(
     useShallow((state) => ({
       teamData: selectTeamDataForName(state, teamName),
+      activeMembers: selectResolvedMembersForTeamName(state, teamName).filter(
+        (member) => !member.removedAt
+      ),
       createTeamTask: state.createTeamTask,
       isTeamProvisioning: isTeamProvisioningActive(state, teamName),
     }))
-  );
-
-  const activeMembers = useMemo(
-    () => (teamData?.members ?? []).filter((member) => !member.removedAt),
-    [teamData?.members]
   );
 
   const openCreateTaskDialog = useCallback((owner = ''): void => {

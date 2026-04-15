@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { shortenDisplayPath } from '@renderer/utils/pathDisplay';
 import { highlightLines } from '@renderer/utils/syntaxHighlighter';
 import { AlertTriangle, FileText, MessageCircleQuestion, Search, Terminal } from 'lucide-react';
@@ -149,6 +150,7 @@ export const ToolApprovalSheet: React.FC = () => {
     teams,
     selectedTeamName,
     selectedTeamData,
+    selectedTeamMembers,
   } = useStore(
     useShallow((s) => ({
       pendingApprovals: s.pendingApprovals,
@@ -157,6 +159,7 @@ export const ToolApprovalSheet: React.FC = () => {
       teams: s.teams,
       selectedTeamName: s.selectedTeamName,
       selectedTeamData: s.selectedTeamData,
+      selectedTeamMembers: selectResolvedMembersForTeamName(s, s.selectedTeamName),
     }))
   );
   const { isLight } = useTheme();
@@ -273,9 +276,9 @@ export const ToolApprovalSheet: React.FC = () => {
   // Resolve teammate color for MemberBadge (when source !== 'lead')
   const sourceColor = useMemo(() => {
     if (!current || current.source === 'lead') return undefined;
-    const member = selectedTeamData?.members?.find((m) => m.name === current.source);
+    const member = selectedTeamMembers.find((m) => m.name === current.source);
     return member?.color;
-  }, [current, selectedTeamData?.members]);
+  }, [current, selectedTeamMembers]);
 
   if (!current) return null;
 

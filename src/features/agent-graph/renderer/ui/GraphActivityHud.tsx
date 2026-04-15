@@ -71,6 +71,9 @@ export const GraphActivityHud = ({
   const connectorPathRefs = useRef(new Map<string, SVGPathElement | null>());
   const [expandedItem, setExpandedItem] = useState<TimelineItem | null>(null);
   const { teamData, teams } = useGraphActivityContext(teamName);
+  const teamSnapshot = teamData;
+  const members = teamData?.members ?? [];
+  const messages = teamData?.messageFeed ?? [];
 
   const ownerNodes = useMemo(
     () =>
@@ -81,21 +84,27 @@ export const GraphActivityHud = ({
     [nodes]
   );
   const leadNodeId = ownerNodes.find((node) => node.kind === 'lead')?.id ?? `lead:${teamName}`;
-  const leadName = teamData ? getGraphLeadMemberName(teamData, teamName) : `${teamName}-lead`;
+  const leadName = teamSnapshot
+    ? getGraphLeadMemberName({ members }, teamName)
+    : `${teamName}-lead`;
   const ownerNodeIds = useMemo(() => new Set(ownerNodes.map((node) => node.id)), [ownerNodes]);
   const entryMapByOwnerNodeId = useMemo(() => {
-    if (!teamData) {
+    if (!teamSnapshot) {
       return new Map<string, InlineActivityEntry[]>();
     }
     return buildInlineActivityEntries({
-      data: teamData,
+      data: {
+        members,
+        tasks: teamSnapshot.tasks,
+        messages,
+      },
       teamName,
       leadId: leadNodeId,
       leadName,
       ownerNodeIds,
     });
-  }, [leadName, leadNodeId, ownerNodeIds, teamData, teamName]);
-  const messageContext = useMemo(() => buildMessageContext(teamData?.members), [teamData?.members]);
+  }, [leadName, leadNodeId, members, messages, ownerNodeIds, teamName, teamSnapshot]);
+  const messageContext = useMemo(() => buildMessageContext(members), [members]);
   const { teamNames, teamColorByName } = useStableTeamMentionMeta(teams);
   const { readSet } = useTeamMessagesRead(teamName);
 
@@ -383,7 +392,7 @@ export const GraphActivityHud = ({
     };
   }, [enabled, forwardWheelToGraph, visibleLanes]);
 
-  if (!enabled || !teamData || visibleLanes.length === 0) {
+  if (!enabled || !teamSnapshot || visibleLanes.length === 0) {
     return null;
   }
 
@@ -493,7 +502,7 @@ export const GraphActivityHud = ({
           }
         }}
         teamName={teamName}
-        members={teamData.members}
+        members={members}
         onMemberClick={handleMemberClick}
         onTaskIdClick={onOpenTaskDetail}
         teamNames={teamNames}

@@ -61,6 +61,16 @@ vi.mock('@renderer/store', () => ({
 
 vi.mock('@renderer/store/slices/teamSlice', () => ({
   getCurrentProvisioningProgressForTeam: () => storeState.progress,
+  selectResolvedMemberForTeamName: (state: typeof storeState, teamName: string, memberName: string) =>
+    (state.selectedTeamName === teamName ? state.selectedTeamData : null)?.members.find(
+      (candidate) => candidate.name === memberName
+    ) ?? null,
+  selectTeamMemberSnapshotsForName: (state: typeof storeState, teamName: string) =>
+    (state.selectedTeamName === teamName ? state.selectedTeamData : null)?.members ?? [],
+  selectTeamTasksForName: (state: typeof storeState, teamName: string) =>
+    (state.selectedTeamName === teamName ? state.selectedTeamData : null)?.tasks ?? [],
+  selectTeamIsAliveForName: (state: typeof storeState, teamName: string) =>
+    (state.selectedTeamName === teamName ? state.selectedTeamData : null)?.isAlive,
 }));
 
 vi.mock('@renderer/hooks/useTheme', () => ({

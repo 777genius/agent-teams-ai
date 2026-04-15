@@ -8,7 +8,6 @@ import {
 import type {
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
-  ResolvedTeamMember,
   TeamProvisioningProgress,
 } from '@shared/types';
 
@@ -16,6 +15,11 @@ type MemberSpawnStatusCollection =
   | Record<string, MemberSpawnStatusEntry>
   | Map<string, MemberSpawnStatusEntry>
   | undefined;
+
+interface ProvisioningMemberLike {
+  name: string;
+  removedAt?: number;
+}
 
 const ACTIVE_PROVISIONING_STATES = new Set([
   'validating',
@@ -66,7 +70,7 @@ export function buildTeamProvisioningPresentation({
   memberSpawnSnapshot,
 }: {
   progress: TeamProvisioningProgress | null | undefined;
-  members: readonly ResolvedTeamMember[];
+  members: readonly ProvisioningMemberLike[];
   memberSpawnStatuses?: MemberSpawnStatusCollection;
   memberSpawnSnapshot?: Pick<MemberSpawnStatusesSnapshot, 'expectedMembers' | 'summary'>;
 }): TeamProvisioningPresentation | null {

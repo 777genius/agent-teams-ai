@@ -10,6 +10,7 @@ import {
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { detectOperationalNoise } from '@renderer/utils/agentMessageFormatting';
 import { formatTokensCompact } from '@renderer/utils/formatters';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
@@ -86,7 +87,9 @@ export const TeammateMessageItem: React.FC<TeammateMessageItemProps> = ({
   const { isLight } = useTheme();
 
   // Get team members for @mention highlighting
-  const members = useStore(useShallow((s) => s.selectedTeamData?.members));
+  const members = useStore(
+    useShallow((s) => selectResolvedMembersForTeamName(s, s.selectedTeamName))
+  );
   const memberColorMap = useMemo(
     () => (members ? buildMemberColorMap(members) : new Map<string, string>()),
     [members]

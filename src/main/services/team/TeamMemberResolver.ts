@@ -3,15 +3,9 @@ import {
   createCliProvisionerNameGuard,
 } from '@shared/utils/teamMemberName';
 import { getStableTeamOwnerId } from '@shared/utils/teamStableOwnerId';
+import { getMemberColorByName } from '@shared/constants/memberColors';
 
-import type {
-  InboxMessage,
-  MemberStatus,
-  ResolvedTeamMember,
-  TeamConfig,
-  TeamMember,
-  TeamTaskWithKanban,
-} from '@shared/types';
+import type { TeamConfig, TeamMember, TeamMemberSnapshot, TeamTaskWithKanban } from '@shared/types';
 
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const CROSS_TEAM_TOOL_RECIPIENT_NAMES = new Set([
@@ -63,9 +57,8 @@ export class TeamMemberResolver {
     config: TeamConfig,
     metaMembers: TeamConfig['members'],
     inboxNames: string[],
-    tasks: TeamTaskWithKanban[],
-    messages: InboxMessage[]
-  ): ResolvedTeamMember[] {
+    tasks: TeamTaskWithKanban[]
+  ): TeamMemberSnapshot[] {
     const names = new Set<string>();
     const explicitNames = new Set<string>();
     const seenNames = new Set<string>();
@@ -216,7 +209,7 @@ export class TeamMemberResolver {
       }
     }
 
-    const members: ResolvedTeamMember[] = [];
+    const members: TeamMemberSnapshot[] = [];
     for (const name of names) {
       const ownedTasks = tasks.filter((task) => task.owner === name);
       const currentTask =
@@ -226,21 +219,15 @@ export class TeamMemberResolver {
             task.reviewState !== 'approved' &&
             task.kanbanColumn !== 'approved'
         ) ?? null;
-      const memberMessages = messages.filter((message) => message.from === name);
-      const latestMessage = memberMessages[0] ?? null;
-      const status = this.resolveStatus(latestMessage, currentTask !== null);
       const configMember = configMemberMap.get(name);
       const metaMember = metaMemberMap.get(name);
       const agentId = configMember?.agentId ?? metaMember?.agentId;
       members.push({
         name,
         agentId,
-        status,
         currentTaskId: currentTask?.id ?? null,
         taskCount: ownedTasks.length,
-        messageCount: memberMessages.length,
-        lastActiveAt: latestMessage?.timestamp ?? null,
-        color: latestMessage?.color ?? configMember?.color ?? metaMember?.color,
+        color: configMember?.color ?? metaMember?.color ?? getMemberColorByName(name),
         agentType: configMember?.agentType ?? metaMember?.agentType,
         role: configMember?.role ?? metaMember?.role,
         workflow: configMember?.workflow ?? metaMember?.workflow,
@@ -276,46 +263,5 @@ export class TeamMemberResolver {
       return aStableId.localeCompare(bStableId);
     });
     return members;
-  }
-
-  private resolveStatus(message: InboxMessage | null, hasActiveTask: boolean): MemberStatus {
-    if (!message) {
-      // Member exists in config but has no messages yet —
-      // if they own an in_progress task they're clearly active, otherwise idle
-      return hasActiveTask ? 'active' : 'idle';
-    }
-
-    const structured = this.parseStructuredMessage(message.text);
-    if (structured) {
-      const typed = structured as { type?: string; approve?: boolean; approved?: boolean };
-      if (
-        (typed.type === 'shutdown_response' &&
-          (typed.approve === true || typed.approved === true)) ||
-        typed.type === 'shutdown_approved'
-      ) {
-        return 'terminated';
-      }
-    }
-
-    const ageMs = Date.now() - Date.parse(message.timestamp);
-    if (Number.isNaN(ageMs)) {
-      return 'unknown';
-    }
-    if (ageMs < 5 * 60 * 1000) {
-      return 'active';
-    }
-    return 'idle';
-  }
-
-  private parseStructuredMessage(text: string): Record<string, unknown> | null {
-    try {
-      const parsed = JSON.parse(text) as unknown;
-      if (parsed && typeof parsed === 'object') {
-        return parsed as Record<string, unknown>;
-      }
-    } catch {
-      // Ignore plain text.
-    }
-    return null;
   }
 }

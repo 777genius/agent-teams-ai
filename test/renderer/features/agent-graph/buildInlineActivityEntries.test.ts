@@ -1,25 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  type ActivityEntrySourceData,
   buildInlineActivityEntries,
   getGraphLeadMemberName,
 } from '@features/agent-graph/core/domain/buildInlineActivityEntries';
 
-import type { InboxMessage, TeamData, TeamTaskWithKanban } from '@shared/types/team';
+import type { InboxMessage, TeamTaskWithKanban } from '@shared/types/team';
 
 function createBaseTeamData(
-  overrides?: Partial<TeamData> & {
+  overrides?: Partial<ActivityEntrySourceData> & {
     tasks?: TeamTaskWithKanban[];
     messages?: InboxMessage[];
   }
-): TeamData {
+): ActivityEntrySourceData {
   return {
-    teamName: 'my-team',
-    config: {
-      name: 'My Team',
-      members: [{ name: 'team-lead' }, { name: 'alice' }, { name: 'bob' }],
-      projectPath: '/repo',
-    },
     members: [
       {
         name: 'team-lead',
@@ -49,9 +44,6 @@ function createBaseTeamData(
     ],
     tasks: [],
     messages: [],
-    kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
-    processes: [],
-    isAlive: true,
     ...overrides,
   };
 }

@@ -9,19 +9,24 @@ import { getSnapshot, subscribe } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
 import {
   getCurrentProvisioningProgressForTeam,
+  selectResolvedMembersForTeamName,
   selectTeamDataForName,
+  selectTeamMessages,
 } from '@renderer/store/slices/teamSlice';
 import { useShallow } from 'zustand/react/shallow';
 
 import { TeamGraphAdapter } from '../adapters/TeamGraphAdapter';
 
 import type { GraphDataPort } from '@claude-teams/agent-graph';
+import type { TeamGraphData } from '../adapters/TeamGraphAdapter';
 
 export function useTeamGraphAdapter(teamName: string): GraphDataPort {
   const adapterRef = useRef<TeamGraphAdapter>(TeamGraphAdapter.create());
 
   const {
-    teamData,
+    teamSnapshot,
+    members,
+    messages,
     spawnStatuses,
     leadActivity,
     leadContext,
@@ -35,7 +40,9 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
     ensureTeamGraphSlotAssignments,
   } = useStore(
     useShallow((s) => ({
-      teamData: selectTeamDataForName(s, teamName),
+      teamSnapshot: selectTeamDataForName(s, teamName),
+      members: selectResolvedMembersForTeamName(s, teamName),
+      messages: selectTeamMessages(s, teamName),
       spawnStatuses: teamName ? s.memberSpawnStatusesByTeam[teamName] : undefined,
       leadActivity: teamName ? s.leadActivityByTeam[teamName] : undefined,
       leadContext: teamName ? s.leadContextByTeam[teamName] : undefined,
@@ -59,6 +66,17 @@ export function useTeamGraphAdapter(teamName: string): GraphDataPort {
     }
     return agents;
   }, [pendingApprovals, teamName]);
+
+  const teamData = useMemo<TeamGraphData | null>(() => {
+    if (!teamSnapshot) {
+      return null;
+    }
+    return {
+      ...teamSnapshot,
+      members,
+      messageFeed: messages,
+    };
+  }, [members, messages, teamSnapshot]);
 
   const commentReadState = useSyncExternalStore(subscribe, getSnapshot);
 

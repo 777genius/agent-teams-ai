@@ -56,6 +56,7 @@ import {
 import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
 import type { TeamListFilterState } from './TeamListFilterPopover';
 import type {
+  TeamMemberSnapshot,
   ResolvedTeamMember,
   TeamCreateRequest,
   TeamLaunchRequest,
@@ -92,6 +93,17 @@ function getRecentProjects(team: TeamSummary): string[] {
 
 function folderName(fullPath: string): string {
   return getBaseName(fullPath) || fullPath;
+}
+
+function resolveLaunchDialogMembers(members: readonly TeamMemberSnapshot[]): ResolvedTeamMember[] {
+  return members.map((member) => {
+    return {
+      ...member,
+      status: member.currentTaskId ? 'active' : 'idle',
+      messageCount: 0,
+      lastActiveAt: null,
+    };
+  });
 }
 
 function renderMemberChips(members: TeamSummaryMember[], isLight: boolean): React.JSX.Element {
@@ -625,7 +637,7 @@ export const TeamListView = (): React.JSX.Element => {
       try {
         const data = await api.teams.getData(teamName);
         setLaunchDialogTeamName(teamName);
-        setLaunchDialogMembers(data.members ?? []);
+        setLaunchDialogMembers(resolveLaunchDialogMembers(data.members ?? []));
         setLaunchDialogDefaultPath(data.config.projectPath ?? projectPath);
         setLaunchDialogOpen(true);
       } catch (err) {

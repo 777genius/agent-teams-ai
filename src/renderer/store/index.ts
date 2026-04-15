@@ -35,7 +35,9 @@ import { createTabSlice } from './slices/tabSlice';
 import { createTabUISlice } from './slices/tabUISlice';
 import {
   createTeamSlice,
+  getActiveTeamPendingReplyWaits,
   getLastResolvedTeamDataRefreshAt,
+  hasActiveTeamPendingReplyWait,
   isTeamDataRefreshPending,
   selectTeamDataForName,
 } from './slices/teamSlice';
@@ -65,6 +67,7 @@ const TEAM_CHANGE_EVENT_BURST_WARN_COUNT = 8;
 const TEAM_CHANGE_EVENT_WARN_THROTTLE_MS = 2_000;
 const TEAM_VISIBLE_IDLE_WATCHDOG_POLL_MS = 10_000;
 const TEAM_VISIBLE_IDLE_WATCHDOG_STALE_MS = 30_000;
+const TEAM_MESSAGE_FALLBACK_POLL_MS = 10_000;
 const CURRENT_APP_VERSION =
   typeof __APP_VERSION__ === 'string' ? normalizeVersion(__APP_VERSION__) : '0.0.0';
 const logger = createLogger('Store:index');
@@ -237,10 +240,12 @@ export function initializeNotificationListeners(): () => void {
   const teamLastRelevantActivityAt = new Map<string, number>();
   const teamLastIdleWatchdogRefreshAt = new Map<string, number>();
   let teamRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  let teamMessageRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let teamPresenceRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let memberSpawnRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let toolActivityTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let inProgressChangePresencePollInFlight = false;
+  let teamMessageFallbackPollInFlight = false;
   const inProgressChangePresenceCursorByTeam = new Map<string, number>();
 
   let teamListRefreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -252,6 +257,23 @@ export function initializeNotificationListeners(): () => void {
   const TEAM_MEMBER_SPAWN_REFRESH_THROTTLE_MS = 500;
   const TEAM_LIST_REFRESH_THROTTLE_MS = 2000;
   const GLOBAL_TASKS_REFRESH_THROTTLE_MS = 500;
+  const refreshTrackedTeamMessages = async (teamName: string): Promise<void> => {
+    if (!teamName || !shouldRefreshTeamMessages(teamName)) {
+      return;
+    }
+
+    const current = useStore.getState();
+    try {
+      const headResult = await current.refreshTeamMessagesHead(teamName);
+      const latest = useStore.getState();
+      const meta = latest.memberActivityMetaByTeam[teamName];
+      if (headResult.feedChanged || !meta || meta.feedRevision !== headResult.feedRevision) {
+        await latest.refreshMemberActivityMeta(teamName);
+      }
+    } catch {
+      // Best-effort refresh for message-driven events and fallback polling only.
+    }
+  };
   const scheduleMemberSpawnStatusesRefresh = (teamName: string | null | undefined): void => {
     if (!teamName || !isTeamVisibleInAnyPane(teamName)) {
       return;
@@ -264,6 +286,19 @@ export function initializeNotificationListeners(): () => void {
       void useStore.getState().fetchMemberSpawnStatuses(teamName);
     }, TEAM_MEMBER_SPAWN_REFRESH_THROTTLE_MS);
     memberSpawnRefreshTimers.set(teamName, timer);
+  };
+  const scheduleTrackedTeamMessageRefresh = (teamName: string | null | undefined): void => {
+    if (!teamName || !shouldRefreshTeamMessages(teamName)) {
+      return;
+    }
+    if (teamMessageRefreshTimers.has(teamName)) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      teamMessageRefreshTimers.delete(teamName);
+      void refreshTrackedTeamMessages(teamName);
+    }, TEAM_REFRESH_THROTTLE_MS);
+    teamMessageRefreshTimers.set(teamName, timer);
   };
   const buildToolActivityTimerKey = (
     teamName: string,
@@ -587,6 +622,18 @@ export function initializeNotificationListeners(): () => void {
     return getVisibleTeamNamesInAnyPane().has(teamName);
   };
 
+  const shouldRefreshTeamMessages = (teamName: string): boolean => {
+    return isTeamVisibleInAnyPane(teamName) || hasActiveTeamPendingReplyWait(teamName);
+  };
+
+  const getTrackedTeamMessageRefreshTeams = (): Set<string> => {
+    const tracked = getVisibleTeamNamesInAnyPane();
+    for (const teamName of getActiveTeamPendingReplyWaits()) {
+      tracked.add(teamName);
+    }
+    return tracked;
+  };
+
   const getTrackedChangePresenceTeams = (): Set<string> => {
     const state = useStore.getState();
     const tracked = new Set<string>();
@@ -625,6 +672,26 @@ export function initializeNotificationListeners(): () => void {
     }
 
     return activeTab.teamName;
+  };
+
+  const pollTrackedTeamMessageFallback = async (): Promise<void> => {
+    if (teamMessageFallbackPollInFlight) {
+      return;
+    }
+
+    const teamNames = getTrackedTeamMessageRefreshTeams();
+    if (teamNames.size === 0) {
+      return;
+    }
+
+    teamMessageFallbackPollInFlight = true;
+    try {
+      await Promise.allSettled(
+        Array.from(teamNames, (teamName) => refreshTrackedTeamMessages(teamName))
+      );
+    } finally {
+      teamMessageFallbackPollInFlight = false;
+    }
   };
 
   const pollFocusedVisibleTeamIdleWatchdog = async (): Promise<void> => {
@@ -863,11 +930,18 @@ export function initializeNotificationListeners(): () => void {
   cleanupFns.push(() => {
     clearInterval(teamIdleWatchdogTimer);
   });
+  const teamMessageFallbackPollTimer = setInterval(() => {
+    void pollTrackedTeamMessageFallback();
+  }, TEAM_MESSAGE_FALLBACK_POLL_MS);
+  cleanupFns.push(() => {
+    clearInterval(teamMessageFallbackPollTimer);
+  });
 
   if (api.teams?.onTeamChange) {
     const cleanup = api.teams.onTeamChange((_event: unknown, event: TeamChangeEvent) => {
-      const visibleTeam = Boolean(event.teamName) && isTeamVisibleInAnyPane(event.teamName);
-      noteTeamChangeEventBurst(event.teamName, event.type, visibleTeam);
+      const messageRefreshRelevant =
+        Boolean(event.teamName) && shouldRefreshTeamMessages(event.teamName);
+      noteTeamChangeEventBurst(event.teamName, event.type, messageRefreshRelevant);
 
       const isIgnoredRuntimeRun = (() => {
         if (!event.runId) return false;
@@ -924,24 +998,26 @@ export function initializeNotificationListeners(): () => void {
             },
           };
 
-          const cachedTeamData = prev.teamDataCacheByName[event.teamName];
-          if (cachedTeamData) {
+          const baseTeamData =
+            prev.teamDataCacheByName[event.teamName] ??
+            (prev.selectedTeamName === event.teamName ? prev.selectedTeamData : null);
+          const nextTeamData =
+            baseTeamData && baseTeamData.isAlive !== (nextActivity !== 'offline')
+              ? {
+                  ...baseTeamData,
+                  isAlive: nextActivity !== 'offline',
+                }
+              : baseTeamData;
+
+          if (nextTeamData) {
             nextState.teamDataCacheByName = {
               ...prev.teamDataCacheByName,
-              [event.teamName]: {
-                ...cachedTeamData,
-                isAlive: nextActivity !== 'offline',
-              },
+              [event.teamName]: nextTeamData,
             };
           }
 
-          // Keep TeamDetailView in sync: it historically relied on selectedTeamData.isAlive,
-          // which isn't refreshed for lead-activity events.
-          if (prev.selectedTeamName === event.teamName && prev.selectedTeamData) {
-            nextState.selectedTeamData = {
-              ...prev.selectedTeamData,
-              isAlive: nextActivity !== 'offline',
-            };
+          if (prev.selectedTeamName === event.teamName && nextTeamData) {
+            nextState.selectedTeamData = nextTeamData;
           }
 
           // Clear context data when lead goes offline
@@ -1122,29 +1198,19 @@ export function initializeNotificationListeners(): () => void {
         return;
       }
 
-      if (event.type === 'inbox' || event.type === 'config' || event.type === 'process') {
-        scheduleMemberSpawnStatusesRefresh(event.teamName);
+      if (event.type === 'inbox') {
+        scheduleTrackedTeamMessageRefresh(event.teamName);
+        return;
       }
 
-      // Live lead-message events: only refresh the visible team detail, not team/task lists.
-      // This keeps the refresh lightweight and prevents one noisy team from starving another.
+      // Live lead-message events refresh only the tracked message feed surface
+      // (visible team or local pending-reply wait), not the structural snapshot.
       if (event.type === 'lead-message') {
         if (isStaleRuntimeEvent) {
           return;
         }
         seedCurrentRunIdIfMissing();
-        if (!event?.teamName || !isTeamVisibleInAnyPane(event.teamName)) {
-          return;
-        }
-        if (teamRefreshTimers.has(event.teamName)) {
-          return;
-        }
-        const timer = setTimeout(() => {
-          teamRefreshTimers.delete(event.teamName);
-          const current = useStore.getState();
-          void current.refreshTeamData(event.teamName, { withDedup: true });
-        }, TEAM_REFRESH_THROTTLE_MS);
-        teamRefreshTimers.set(event.teamName, timer);
+        scheduleTrackedTeamMessageRefresh(event.teamName);
         return;
       }
 
@@ -1205,6 +1271,8 @@ export function initializeNotificationListeners(): () => void {
         cleanup();
         for (const t of teamRefreshTimers.values()) clearTimeout(t);
         teamRefreshTimers = new Map();
+        for (const t of teamMessageRefreshTimers.values()) clearTimeout(t);
+        teamMessageRefreshTimers = new Map();
         for (const t of teamPresenceRefreshTimers.values()) clearTimeout(t);
         teamPresenceRefreshTimers = new Map();
         for (const t of memberSpawnRefreshTimers.values()) clearTimeout(t);

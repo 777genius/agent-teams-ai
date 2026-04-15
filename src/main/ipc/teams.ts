@@ -22,6 +22,7 @@ import {
   TEAM_GET_DATA,
   TEAM_GET_DELETED_TASKS,
   TEAM_GET_LOGS_FOR_TASK,
+  TEAM_GET_MEMBER_ACTIVITY_META,
   TEAM_GET_MEMBER_LOGS,
   TEAM_GET_MEMBER_STATS,
   TEAM_GET_MESSAGES_PAGE,
@@ -92,7 +93,7 @@ import {
   parseStandaloneSlashCommand,
 } from '@shared/utils/slashCommands';
 import crypto from 'crypto';
-import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
+import { app, BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -170,15 +171,16 @@ import type {
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
-  TeamData,
   TeamLaunchRequest,
   TeamLaunchResponse,
+  TeamMemberActivityMeta,
   TeamMessageNotificationData,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamSummary,
   TeamTask,
   TeamTaskStatus,
+  TeamViewSnapshot,
   TeamUpdateConfigRequest,
   ToolApprovalFileContent,
   ToolApprovalSettings,
@@ -195,6 +197,17 @@ const logger = createLogger('IPC:teams');
  */
 const seenRateLimitKeys = new Set<string>();
 const SEEN_RATE_LIMIT_KEYS_MAX = 500;
+
+function ensureHeavyTeamDataWorkerFallbackAllowed(operation: string): void {
+  if (!app.isPackaged) {
+    return;
+  }
+
+  logger.error(
+    `[${operation}] team-data-worker unavailable in packaged runtime; refusing main-thread fallback for heavy message/activity path`
+  );
+  throw new Error('TEAM_DATA_WORKER_UNAVAILABLE');
+}
 
 async function getDurableLeadTeammateRoster(
   teamName: string,
@@ -385,6 +398,19 @@ function checkApiErrorMessages(
   }
 }
 
+function scanTeamMessageNotifications(
+  messages: readonly { messageId?: string; from: string; text: string; timestamp: string }[],
+  teamName: string,
+  teamDisplayName: string,
+  projectPath?: string
+): void {
+  if (messages.length === 0) {
+    return;
+  }
+  checkRateLimitMessages(messages, teamName, teamDisplayName, projectPath);
+  checkApiErrorMessages(messages, teamName, teamDisplayName, projectPath);
+}
+
 let teamDataService: TeamDataService | null = null;
 let teamProvisioningService: TeamProvisioningService | null = null;
 let teamMemberLogsFinder: TeamMemberLogsFinder | null = null;
@@ -463,6 +489,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_CANCEL_PROVISIONING, handleCancelProvisioning);
   ipcMain.handle(TEAM_SEND_MESSAGE, handleSendMessage);
   ipcMain.handle(TEAM_GET_MESSAGES_PAGE, handleGetMessagesPage);
+  ipcMain.handle(TEAM_GET_MEMBER_ACTIVITY_META, handleGetMemberActivityMeta);
   ipcMain.handle(TEAM_CREATE_TASK, handleCreateTask);
   ipcMain.handle(TEAM_REQUEST_REVIEW, handleRequestReview);
   ipcMain.handle(TEAM_UPDATE_KANBAN, handleUpdateKanban);
@@ -535,6 +562,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_CANCEL_PROVISIONING);
   ipcMain.removeHandler(TEAM_SEND_MESSAGE);
   ipcMain.removeHandler(TEAM_GET_MESSAGES_PAGE);
+  ipcMain.removeHandler(TEAM_GET_MEMBER_ACTIVITY_META);
   ipcMain.removeHandler(TEAM_CREATE_TASK);
   ipcMain.removeHandler(TEAM_REQUEST_REVIEW);
   ipcMain.removeHandler(TEAM_UPDATE_KANBAN);
@@ -702,14 +730,14 @@ async function handleListTeams(_event: IpcMainInvokeEvent): Promise<IpcResult<Te
 async function handleGetData(
   _event: IpcMainInvokeEvent,
   teamName: unknown
-): Promise<IpcResult<TeamData>> {
+): Promise<IpcResult<TeamViewSnapshot>> {
   const validated = validateTeamName(teamName);
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   const tn = validated.value!;
   const startedAt = Date.now();
-  let data: TeamData;
+  let data: TeamViewSnapshot;
   setCurrentMainOp('team:getData');
   try {
     // Prefer worker thread to keep main event loop responsive
@@ -721,9 +749,11 @@ async function handleGetData(
         logger.warn(
           `[teams:getData] worker failed, falling back: ${workerErr instanceof Error ? workerErr.message : workerErr}`
         );
+        ensureHeavyTeamDataWorkerFallbackAllowed('teams:getData');
         data = await getTeamDataService().getTeamData(tn);
       }
     } else {
+      ensureHeavyTeamDataWorkerFallbackAllowed('teams:getData');
       data = await getTeamDataService().getTeamData(tn);
     }
   } catch (error) {
@@ -762,92 +792,9 @@ async function handleGetData(
 
   const displayName = data.config.name || tn;
   const projectPath = data.config.projectPath;
-
   const live = provisioning.getLiveLeadProcessMessages(tn);
-  if (live.length === 0) {
-    checkRateLimitMessages(data.messages, tn, displayName, projectPath);
-    checkApiErrorMessages(data.messages, tn, displayName, projectPath);
-    return { success: true, data: { ...data, isAlive } };
-  }
-
-  const normalizeText = (text: string): string => text.trim().replace(/\r\n/g, '\n');
-  const isLeadThoughtLike = (msg: { source?: unknown; to?: string }): boolean =>
-    !msg.to && (msg.source === 'lead_process' || msg.source === 'lead_session');
-  const getLeadThoughtFingerprint = (msg: {
-    from: string;
-    text: string;
-    leadSessionId?: string;
-  }): string => `${msg.leadSessionId ?? ''}\0${msg.from}\0${normalizeText(msg.text)}`;
-
-  // Collect fingerprints only for thought-like lead messages. Include leadSessionId so a
-  // repeated thought in a new session does not get collapsed into an old session's history.
-  const existingTextFingerprints = new Set<string>();
-  for (const msg of data.messages) {
-    if (typeof msg.from !== 'string' || typeof msg.text !== 'string') continue;
-    if (!isLeadThoughtLike(msg)) continue;
-    existingTextFingerprints.add(getLeadThoughtFingerprint(msg));
-  }
-
-  const keyFor = (m: {
-    messageId?: string;
-    timestamp: string;
-    from: string;
-    text: string;
-  }): string => {
-    if (typeof m.messageId === 'string' && m.messageId.trim().length > 0) {
-      return m.messageId;
-    }
-    return `${m.timestamp}\0${m.from}\0${(m.text ?? '').slice(0, 80)}`;
-  };
-
-  // Text-based fingerprints for live lead thoughts to catch duplicates with different
-  // messageIds inside the same session (e.g. lead-turn-* re-emits).
-  const leadProcessTextFingerprints = new Set<string>();
-
-  // Content-based dedup for SendMessage captures: Claude Code CLI and our
-  // persistInboxMessage both write to inboxes/{member}.json, producing two entries
-  // with identical content but different messageIds. Track content fingerprints
-  // (from+to+text) with timestamps to collapse them within a 5-second window.
-  const contentSeen = new Map<string, number>(); // fingerprint → timestamp ms
-
-  const merged: typeof data.messages = [];
-  const seen = new Set<string>();
-  for (const msg of [...data.messages, ...live]) {
-    if ((msg as { source?: unknown }).source === 'lead_process' && !msg.to) {
-      const fp = getLeadThoughtFingerprint(msg);
-      // Skip if the same thought already exists in persisted history for the same session.
-      if (existingTextFingerprints.has(fp)) {
-        continue;
-      }
-      // Dedup live lead_process thoughts with the same text in the same session.
-      if (leadProcessTextFingerprints.has(fp)) {
-        continue;
-      }
-      leadProcessTextFingerprints.add(fp);
-    }
-
-    // Content dedup for directed messages (SendMessage captures):
-    // same from+to+text within 5 seconds = duplicate from CLI + our persist.
-    if (typeof msg.to === 'string' && msg.to.trim().length > 0) {
-      const contentFp = `${msg.from}\0${msg.to}\0${(msg.text ?? '').replace(/\s+/g, ' ').slice(0, 100)}`;
-      const msgMs = Date.parse(msg.timestamp);
-      const existingMs = contentSeen.get(contentFp);
-      if (existingMs !== undefined && Math.abs(msgMs - existingMs) <= 5000) {
-        continue; // duplicate within 5s window — skip
-      }
-      contentSeen.set(contentFp, msgMs);
-    }
-
-    const key = keyFor(msg);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    merged.push(msg);
-  }
-  merged.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
-
-  checkRateLimitMessages(merged, tn, displayName, projectPath);
-  checkApiErrorMessages(merged, tn, displayName, projectPath);
-  return { success: true, data: { ...data, isAlive, messages: merged } };
+  scanTeamMessageNotifications(live, tn, displayName, projectPath);
+  return { success: true, data: { ...data, isAlive } };
 }
 
 async function handleGetTaskChangePresence(
@@ -1698,16 +1645,71 @@ async function handleGetMessagesPage(
     return { success: false, error: vTeam.error ?? 'Invalid teamName' };
   }
   const opts = (options && typeof options === 'object' ? options : {}) as {
-    beforeTimestamp?: string;
+    cursor?: string | null;
     limit?: number;
   };
   const limit = Math.min(Math.max(1, opts.limit ?? 50), 200);
-  const beforeTimestamp =
-    typeof opts.beforeTimestamp === 'string' ? opts.beforeTimestamp : undefined;
+  const cursor =
+    typeof opts.cursor === 'string' ? opts.cursor : opts.cursor === null ? null : undefined;
 
   return wrapTeamHandler('getMessagesPage', async () => {
-    const service = getTeamDataService();
-    return service.getMessagesPage(vTeam.value!, { beforeTimestamp, limit });
+    let page: MessagesPage;
+    const notificationContext = await getTeamDataService().getTeamNotificationContext(vTeam.value!);
+    const worker = getTeamDataWorkerClient();
+    if (worker.isAvailable()) {
+      try {
+        page = await worker.getMessagesPage(vTeam.value!, { cursor, limit });
+        scanTeamMessageNotifications(
+          page.messages,
+          vTeam.value!,
+          notificationContext.displayName,
+          notificationContext.projectPath
+        );
+        return page;
+      } catch (workerErr) {
+        logger.warn(
+          `[teams:getMessagesPage] worker failed, falling back: ${
+            workerErr instanceof Error ? workerErr.message : workerErr
+          }`
+        );
+      }
+    }
+    ensureHeavyTeamDataWorkerFallbackAllowed('teams:getMessagesPage');
+    page = await getTeamDataService().getMessagesPage(vTeam.value!, { cursor, limit });
+    scanTeamMessageNotifications(
+      page.messages,
+      vTeam.value!,
+      notificationContext.displayName,
+      notificationContext.projectPath
+    );
+    return page;
+  });
+}
+
+async function handleGetMemberActivityMeta(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown
+): Promise<IpcResult<TeamMemberActivityMeta>> {
+  const vTeam = validateTeamName(teamName);
+  if (!vTeam.valid) {
+    return { success: false, error: vTeam.error ?? 'Invalid teamName' };
+  }
+
+  return wrapTeamHandler('getMemberActivityMeta', async () => {
+    const worker = getTeamDataWorkerClient();
+    if (worker.isAvailable()) {
+      try {
+        return await worker.getMemberActivityMeta(vTeam.value!);
+      } catch (workerErr) {
+        logger.warn(
+          `[teams:getMemberActivityMeta] worker failed, falling back: ${
+            workerErr instanceof Error ? workerErr.message : workerErr
+          }`
+        );
+      }
+    }
+    ensureHeavyTeamDataWorkerFallbackAllowed('teams:getMemberActivityMeta');
+    return getTeamDataService().getMemberActivityMeta(vTeam.value!);
   });
 }
 

@@ -1,6 +1,10 @@
 import { useMemo } from 'react';
 
 import { useStore } from '@renderer/store';
+import {
+  selectResolvedMembersForTeamName,
+  selectTeamDataForName,
+} from '@renderer/store/slices/teamSlice';
 import { createEncodedTaskReference } from '@renderer/utils/taskReferenceUtils';
 import { getTaskDisplayId } from '@shared/utils/taskIdentity';
 import { useShallow } from 'zustand/react/shallow';
@@ -57,11 +61,13 @@ function isVisibleTask(task: TeamTaskWithKanban | GlobalTask): boolean {
 }
 
 export function useTaskSuggestions(currentTeamName: string | null): UseTaskSuggestionsResult {
-  const { globalTasks, selectedTeamName, selectedTeamData, teamByName } = useStore(
+  const { globalTasks, currentTeamData, currentTeamMembers, teamByName } = useStore(
     useShallow((s) => ({
       globalTasks: s.globalTasks,
-      selectedTeamName: s.selectedTeamName,
-      selectedTeamData: s.selectedTeamData,
+      currentTeamData: currentTeamName ? selectTeamDataForName(s, currentTeamName) : null,
+      currentTeamMembers: currentTeamName
+        ? selectResolvedMembersForTeamName(s, currentTeamName)
+        : [],
       teamByName: s.teamByName,
     }))
   );
@@ -73,14 +79,10 @@ export function useTaskSuggestions(currentTeamName: string | null): UseTaskSugge
     if (currentTeamName) {
       const currentTeamSummary = teamByName[currentTeamName];
       const currentTeamDisplayName = currentTeamSummary?.displayName || currentTeamName;
-      const currentTeamMembers =
-        selectedTeamName === currentTeamName && selectedTeamData
-          ? selectedTeamData.members
-          : (currentTeamSummary?.members ?? []);
       const currentTeamTasks =
-        selectedTeamName === currentTeamName && selectedTeamData
-          ? selectedTeamData.tasks
-          : globalTasks.filter((task) => task.teamName === currentTeamName);
+        currentTeamData?.tasks ?? globalTasks.filter((task) => task.teamName === currentTeamName);
+      const currentTeamMemberColors =
+        currentTeamMembers.length > 0 ? currentTeamMembers : (currentTeamSummary?.members ?? []);
 
       for (const task of currentTeamTasks) {
         if (!isVisibleTask(task)) continue;
@@ -91,7 +93,7 @@ export function useTaskSuggestions(currentTeamName: string | null): UseTaskSugge
           teamDisplayName: currentTeamDisplayName,
           teamColor: currentTeamSummary?.color,
           isCurrentTeamTask: true,
-          ownerColor: currentTeamMembers.find((member) => member.name === task.owner)?.color,
+          ownerColor: currentTeamMemberColors.find((member) => member.name === task.owner)?.color,
         });
       }
     }
@@ -123,7 +125,7 @@ export function useTaskSuggestions(currentTeamName: string | null): UseTaskSugge
     });
 
     return tasks.map(buildTaskSuggestion);
-  }, [currentTeamName, globalTasks, selectedTeamData, selectedTeamName, teamByName]);
+  }, [currentTeamData, currentTeamMembers, currentTeamName, globalTasks, teamByName]);
 
   return { suggestions };
 }

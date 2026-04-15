@@ -126,6 +126,7 @@ import {
   TEAM_GET_DATA,
   TEAM_GET_DELETED_TASKS,
   TEAM_GET_LOGS_FOR_TASK,
+  TEAM_GET_MEMBER_ACTIVITY_META,
   TEAM_GET_MEMBER_LOGS,
   TEAM_GET_MEMBER_STATS,
   TEAM_GET_MESSAGES_PAGE,
@@ -263,6 +264,7 @@ import type {
   LeadContextUsageSnapshot,
   MemberFullStats,
   MemberLogSummary,
+  TeamMemberActivityMeta,
   MemberSpawnStatusesSnapshot,
   MessagesPage,
   NotificationTrigger,
@@ -292,10 +294,10 @@ import type {
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
-  TeamData,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamMessageNotificationData,
+  TeamViewSnapshot,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamSummary,
@@ -822,7 +824,7 @@ const electronAPI: ElectronAPI = {
       return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
     },
     getData: async (teamName: string) => {
-      return invokeIpcWithResult<TeamData>(TEAM_GET_DATA, teamName);
+      return invokeIpcWithResult<TeamViewSnapshot>(TEAM_GET_DATA, teamName);
     },
     getTaskChangePresence: async (teamName: string) => {
       return invokeIpcWithResult<Record<string, TaskChangePresenceState>>(
@@ -883,9 +885,12 @@ const electronAPI: ElectronAPI = {
     },
     getMessagesPage: async (
       teamName: string,
-      options?: { beforeTimestamp?: string; limit?: number }
+      options?: { cursor?: string | null; limit?: number }
     ) => {
       return invokeIpcWithResult<MessagesPage>(TEAM_GET_MESSAGES_PAGE, teamName, options);
+    },
+    getMemberActivityMeta: async (teamName: string) => {
+      return invokeIpcWithResult<TeamMemberActivityMeta>(TEAM_GET_MEMBER_ACTIVITY_META, teamName);
     },
     createTask: async (teamName: string, request: CreateTaskRequest) => {
       return invokeIpcWithResult<TeamTask>(TEAM_CREATE_TASK, teamName, request);

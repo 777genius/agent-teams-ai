@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import {
-  buildGraphMemberNodeIdForMember,
-  buildInlineActivityEntries,
-} from '@features/agent-graph/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader } from '@renderer/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
@@ -20,7 +16,6 @@ import { MemberStatsTab } from './MemberStatsTab';
 import { MemberTasksTab } from './MemberTasksTab';
 
 import type {
-  InboxMessage,
   LeadActivityState,
   MemberSpawnStatusEntry,
   ResolvedTeamMember,
@@ -33,7 +28,6 @@ interface MemberDetailDialogProps {
   teamName: string;
   members: ResolvedTeamMember[];
   tasks: TeamTaskWithKanban[];
-  messages: InboxMessage[];
   initialTab?: MemberDetailTab;
   initialActivityFilter?: MemberActivityFilter;
   isTeamAlive?: boolean;
@@ -57,7 +51,6 @@ export const MemberDetailDialog = ({
   teamName,
   members,
   tasks,
-  messages,
   initialTab = 'tasks',
   initialActivityFilter = 'all',
   isTeamAlive,
@@ -78,34 +71,7 @@ export const MemberDetailDialog = ({
     () => (member ? tasks.filter((t) => t.owner === member.name) : []),
     [tasks, member]
   );
-
-  const seedMemberMessages = useMemo(
-    () => (member ? messages.filter((m) => m.from === member.name || m.to === member.name) : []),
-    [messages, member]
-  );
-  const memberMessages = seedMemberMessages;
-  const memberActivityCount = useMemo(() => {
-    if (!member) {
-      return 0;
-    }
-    const leadId = `lead:${teamName}`;
-    const leadName =
-      members.find((candidate) => isLeadMember(candidate))?.name ?? `${teamName}-lead`;
-    const ownerNodeId =
-      member.name === leadName ? leadId : buildGraphMemberNodeIdForMember(teamName, member);
-    const entries = buildInlineActivityEntries({
-      data: {
-        members,
-        tasks,
-        messages: memberMessages,
-      },
-      teamName,
-      leadId,
-      leadName,
-      ownerNodeIds: new Set([leadId, ownerNodeId]),
-    });
-    return (entries.get(ownerNodeId) ?? []).length;
-  }, [member, memberMessages, members, tasks, teamName]);
+  const memberActivityCount = member?.messageCount ?? 0;
 
   const inProgressTasks = useMemo(
     () => memberTasks.filter((t) => t.status === 'in_progress').length,
@@ -206,7 +172,6 @@ export const MemberDetailDialog = ({
           </TabsContent>
           <TabsContent value="activity">
             <MemberMessagesTab
-              messages={memberMessages}
               teamName={teamName}
               memberName={member.name}
               members={members}

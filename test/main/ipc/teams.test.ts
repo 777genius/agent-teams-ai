@@ -12,7 +12,7 @@ import type {
 } from '@shared/types/team';
 
 vi.mock('electron', () => ({
-  app: { getLocale: vi.fn(() => 'en'), getPath: vi.fn(() => '/tmp') },
+  app: { getLocale: vi.fn(() => 'en'), getPath: vi.fn(() => '/tmp'), isPackaged: false },
   Notification: Object.assign(vi.fn(), { isSupported: vi.fn(() => false) }),
   BrowserWindow: { getAllWindows: vi.fn(() => []) },
 }));
@@ -34,6 +34,8 @@ const { mockTeamDataWorkerClient } = vi.hoisted(() => ({
   mockTeamDataWorkerClient: {
     isAvailable: vi.fn(),
     getTeamData: vi.fn(),
+    getMessagesPage: vi.fn(),
+    getMemberActivityMeta: vi.fn(),
     findLogsForTask: vi.fn(),
   },
 }));
@@ -62,6 +64,8 @@ import {
   TEAM_CREATE_TASK,
   TEAM_DELETE_TEAM,
   TEAM_GET_DATA,
+  TEAM_GET_MEMBER_ACTIVITY_META,
+  TEAM_GET_MESSAGES_PAGE,
   TEAM_LAUNCH,
   TEAM_LIST,
   TEAM_PREPARE_PROVISIONING,
@@ -135,13 +139,33 @@ describe('ipc teams handlers', () => {
       config: { name: 'My Team' },
       tasks: [],
       members: [],
-      messages: [] as InboxMessage[],
       kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
       processes: [],
+    })),
+    getMessageFeed: vi.fn(async () => ({
+      teamName: 'my-team',
+      feedRevision: 'rev-1',
+      messages: [] as InboxMessage[],
+    })),
+    getMessagesPage: vi.fn(async () => ({
+      messages: [] as InboxMessage[],
+      nextCursor: null,
+      hasMore: false,
+      feedRevision: 'rev-1',
+    })),
+    getMemberActivityMeta: vi.fn(async () => ({
+      teamName: 'my-team',
+      computedAt: '2026-03-12T10:00:00.000Z',
+      members: {},
+      feedRevision: 'rev-1',
     })),
     getTaskChangePresence: vi.fn(async () => ({ 'task-1': 'has_changes' })),
     reconcileTeamArtifacts: vi.fn(async () => undefined),
     setTaskChangePresenceTracking: vi.fn(() => undefined),
+    getTeamNotificationContext: vi.fn(async () => ({
+      displayName: 'My Team',
+      projectPath: '/tmp/project',
+    })),
     deleteTeam: vi.fn(async () => undefined),
     getLeadMemberName: vi.fn(async () => 'team-lead'),
     getTeamDisplayName: vi.fn(async () => 'My Team'),
@@ -231,6 +255,8 @@ describe('ipc teams handlers', () => {
     mockGetMembersMeta.mockResolvedValue([]);
     mockTeamDataWorkerClient.isAvailable.mockReturnValue(false);
     mockTeamDataWorkerClient.getTeamData.mockReset();
+    mockTeamDataWorkerClient.getMessagesPage.mockReset();
+    mockTeamDataWorkerClient.getMemberActivityMeta.mockReset();
     mockTeamDataWorkerClient.findLogsForTask.mockReset();
     initializeTeamHandlers(
       service as never,
@@ -252,6 +278,8 @@ describe('ipc teams handlers', () => {
   it('registers all expected handlers', () => {
     expect(handlers.has(TEAM_LIST)).toBe(true);
     expect(handlers.has(TEAM_GET_DATA)).toBe(true);
+    expect(handlers.has(TEAM_GET_MESSAGES_PAGE)).toBe(true);
+    expect(handlers.has(TEAM_GET_MEMBER_ACTIVITY_META)).toBe(true);
     expect(handlers.has(TEAM_GET_TASK_CHANGE_PRESENCE)).toBe(true);
     expect(handlers.has(TEAM_SET_CHANGE_PRESENCE_TRACKING)).toBe(true);
     expect(handlers.has(TEAM_DELETE_TEAM)).toBe(true);
@@ -580,7 +608,6 @@ describe('ipc teams handlers', () => {
       config: { name: 'My Team' },
       tasks: [],
       members: [],
-      messages: [] as InboxMessage[],
       kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
       processes: [],
     });
@@ -759,24 +786,7 @@ describe('ipc teams handlers', () => {
     });
   });
 
-  it('dedups live lead replies when lead_session already has same text', async () => {
-    service.getTeamData.mockResolvedValueOnce({
-      teamName: 'my-team',
-      config: { name: 'My Team' },
-      tasks: [],
-      members: [],
-      messages: [
-        {
-          from: 'team-lead',
-          text: 'Hello there',
-          timestamp: '2026-02-23T10:00:00.000Z',
-          read: true,
-          source: 'lead_session' as const,
-        },
-      ],
-      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
-      processes: [],
-    });
+  it('keeps TEAM_GET_DATA structural and does not expose message transport', async () => {
     provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([
       {
         from: 'team-lead',
@@ -791,59 +801,159 @@ describe('ipc teams handlers', () => {
     const getDataHandler = handlers.get(TEAM_GET_DATA)!;
     const result = (await getDataHandler({} as never, 'my-team')) as {
       success: boolean;
-      data: { messages: { source?: string }[] };
+      data: Record<string, unknown>;
     };
     expect(result.success).toBe(true);
-    const sources = result.data.messages.map((m) => m.source);
-    expect(sources.filter((s) => s === 'lead_process')).toHaveLength(0);
-    expect(sources.filter((s) => s === 'lead_session')).toHaveLength(1);
+    expect(result.data.teamName).toBe('my-team');
+    expect(result.data).not.toHaveProperty('messages');
+    expect(service.getMessageFeed).not.toHaveBeenCalled();
   });
 
-  it('merges early live messages before durable lead_session backfill exists', async () => {
-    // Simulate: team just became readable but lead_session JSONL hasn't been written yet.
-    // Only live in-memory messages exist from the provisioning process.
-    service.getTeamData.mockResolvedValueOnce({
-      teamName: 'my-team',
-      config: { name: 'My Team' },
-      tasks: [],
-      members: [],
-      messages: [], // No durable messages yet
-      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
-      processes: [],
-    });
-    provisioningService.getLiveLeadProcessMessages.mockReturnValueOnce([
-      {
-        from: 'team-lead',
-        text: 'Команда создана. Запускаю тиммейтов.',
-        timestamp: '2026-02-23T10:00:00.000Z',
-        read: true,
-        source: 'lead_process' as const,
-        messageId: 'lead-turn-run-1-1',
-      },
-      {
-        from: 'team-lead',
-        text: 'All teammates online!',
-        timestamp: '2026-02-23T10:00:01.000Z',
-        read: true,
-        source: 'lead_process' as const,
-        messageId: 'lead-turn-run-1-2',
-        to: 'user',
-      },
-    ]);
+  it('rejects TEAM_GET_DATA fallback in packaged runtime when worker is unavailable', async () => {
+    const electron = await import('electron');
+    mockTeamDataWorkerClient.isAvailable.mockReturnValue(false);
+    (electron.app as { isPackaged: boolean }).isPackaged = true;
 
-    const getDataHandler = handlers.get(TEAM_GET_DATA)!;
-    const result = (await getDataHandler({} as never, 'my-team')) as {
-      success: boolean;
-      data: { messages: { source?: string; text: string }[] };
-    };
+    const handler = handlers.get(TEAM_GET_DATA)!;
+    const result = (await handler({} as never, 'my-team')) as { success: boolean; error?: string };
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('TEAM_DATA_WORKER_UNAVAILABLE');
+    expect(service.getTeamData).not.toHaveBeenCalled();
+    vi.mocked(console.error).mockClear();
+
+    (electron.app as { isPackaged: boolean }).isPackaged = false;
+  });
+
+  it('uses the team-data worker for TEAM_GET_MESSAGES_PAGE when available', async () => {
+    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+    mockTeamDataWorkerClient.getMessagesPage.mockResolvedValueOnce({
+      messages: [
+        {
+          from: 'team-lead',
+          text: 'Hello there',
+          timestamp: '2026-02-23T10:00:01.000Z',
+          read: true,
+          source: 'lead_session' as const,
+          messageId: 'msg-1',
+        },
+      ],
+      nextCursor: null,
+      hasMore: false,
+      feedRevision: 'rev-worker',
+    });
+
+    const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
+    const result = (await handler({} as never, 'my-team', {
+      limit: 50,
+    })) as { success: boolean; data: { feedRevision: string } };
+
     expect(result.success).toBe(true);
-    // Both live messages should appear since there's no durable backfill yet
-    // Sorted by timestamp descending (newest first)
-    expect(result.data.messages).toHaveLength(2);
-    expect(result.data.messages[0].source).toBe('lead_process');
-    expect(result.data.messages[0].text).toBe('All teammates online!');
-    expect(result.data.messages[1].source).toBe('lead_process');
-    expect(result.data.messages[1].text).toBe('Команда создана. Запускаю тиммейтов.');
+    expect(result.data.feedRevision).toBe('rev-worker');
+    expect(mockTeamDataWorkerClient.getMessagesPage).toHaveBeenCalledWith('my-team', {
+      cursor: undefined,
+      limit: 50,
+    });
+    expect(service.getMessagesPage).not.toHaveBeenCalled();
+  });
+
+  it('scans rate-limit notifications from message-page results without hydrating TEAM_GET_DATA feed', async () => {
+    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+    mockTeamDataWorkerClient.getMessagesPage.mockResolvedValueOnce({
+      messages: [
+        {
+          from: 'team-lead',
+          text: "You've hit your limit. Please wait a bit before retrying.",
+          timestamp: '2026-02-23T10:00:01.000Z',
+          read: true,
+          source: 'lead_session' as const,
+          messageId: 'msg-rate-limit-1',
+        },
+      ],
+      nextCursor: null,
+      hasMore: false,
+      feedRevision: 'rev-worker',
+    });
+
+    const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
+    const result = (await handler({} as never, 'my-team', {
+      limit: 50,
+    })) as { success: boolean; data: { feedRevision: string } };
+
+    expect(result.success).toBe(true);
+    expect(result.data.feedRevision).toBe('rev-worker');
+    expect(mockAddTeamNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamEventType: 'rate_limit',
+        teamName: 'my-team',
+        teamDisplayName: 'My Team',
+        from: 'team-lead',
+        dedupeKey: 'rate-limit:my-team:msg-rate-limit-1',
+      })
+    );
+    expect(service.getMessageFeed).not.toHaveBeenCalled();
+  });
+
+  it('rejects heavy TEAM_GET_MESSAGES_PAGE fallback in packaged runtime when worker is unavailable', async () => {
+    const electron = await import('electron');
+    mockTeamDataWorkerClient.isAvailable.mockReturnValue(false);
+    (electron.app as { isPackaged: boolean }).isPackaged = true;
+
+    const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
+    const result = (await handler({} as never, 'my-team', {
+      limit: 50,
+    })) as { success: boolean; error?: string };
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('TEAM_DATA_WORKER_UNAVAILABLE');
+    expect(service.getMessagesPage).not.toHaveBeenCalled();
+    vi.mocked(console.error).mockClear();
+
+    (electron.app as { isPackaged: boolean }).isPackaged = false;
+  });
+
+  it('uses the team-data worker for TEAM_GET_MEMBER_ACTIVITY_META when available', async () => {
+    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+    mockTeamDataWorkerClient.getMemberActivityMeta.mockResolvedValueOnce({
+      teamName: 'my-team',
+      computedAt: '2026-03-12T10:00:00.000Z',
+      members: {
+        alice: {
+          memberName: 'alice',
+          lastAuthoredMessageAt: '2026-03-12T10:00:00.000Z',
+          messageCountExact: 4,
+          latestAuthoredMessageSignalsTermination: false,
+        },
+      },
+      feedRevision: 'rev-worker',
+    });
+
+    const handler = handlers.get(TEAM_GET_MEMBER_ACTIVITY_META)!;
+    const result = (await handler({} as never, 'my-team')) as {
+      success: boolean;
+      data: { feedRevision: string };
+    };
+
+    expect(result.success).toBe(true);
+    expect(result.data.feedRevision).toBe('rev-worker');
+    expect(mockTeamDataWorkerClient.getMemberActivityMeta).toHaveBeenCalledWith('my-team');
+    expect(service.getMemberActivityMeta).not.toHaveBeenCalled();
+  });
+
+  it('rejects heavy TEAM_GET_MEMBER_ACTIVITY_META fallback in packaged runtime when worker is unavailable', async () => {
+    const electron = await import('electron');
+    mockTeamDataWorkerClient.isAvailable.mockReturnValue(false);
+    (electron.app as { isPackaged: boolean }).isPackaged = true;
+
+    const handler = handlers.get(TEAM_GET_MEMBER_ACTIVITY_META)!;
+    const result = (await handler({} as never, 'my-team')) as { success: boolean; error?: string };
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('TEAM_DATA_WORKER_UNAVAILABLE');
+    expect(service.getMemberActivityMeta).not.toHaveBeenCalled();
+    vi.mocked(console.error).mockClear();
+
+    (electron.app as { isPackaged: boolean }).isPackaged = false;
   });
 
   it('keeps TEAM_GET_DATA read-only and never triggers reconcile side effects', async () => {

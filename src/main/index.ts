@@ -562,6 +562,13 @@ function wireFileWatcherEvents(context: ServiceContext): void {
       const teamName = row.teamName.trim();
       const detail = typeof row.detail === 'string' ? row.detail : '';
 
+      if (
+        teamDataService &&
+        (row.type === 'inbox' || row.type === 'lead-message' || row.type === 'config')
+      ) {
+        teamDataService.invalidateMessageFeed(teamName);
+      }
+
       // --- Inbox change events: relay to lead + native OS notifications ---
       if (row.type === 'inbox') {
         if (reconcileScheduler) {
@@ -900,6 +907,12 @@ async function initializeServices(): Promise<void> {
   });
 
   const forwardTeamChange = (event: TeamChangeEvent): void => {
+    if (
+      teamDataService &&
+      (event.type === 'inbox' || event.type === 'lead-message' || event.type === 'config')
+    ) {
+      teamDataService.invalidateMessageFeed(event.teamName);
+    }
     safeSendToRenderer(mainWindow, TEAM_CHANGE, event);
     httpServer?.broadcast('team-change', event);
   };

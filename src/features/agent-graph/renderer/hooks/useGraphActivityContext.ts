@@ -1,17 +1,34 @@
 import { useStore } from '@renderer/store';
-import { selectTeamDataForName } from '@renderer/store/slices/teamSlice';
+import {
+  selectResolvedMembersForTeamName,
+  selectTeamDataForName,
+  selectTeamMessages,
+} from '@renderer/store/slices/teamSlice';
 import { useShallow } from 'zustand/react/shallow';
 
-import type { TeamData, TeamSummary } from '@shared/types/team';
+import type { TeamSummary } from '@shared/types/team';
+import type { TeamGraphData } from '../adapters/TeamGraphAdapter';
 
 export function useGraphActivityContext(teamName: string): {
-  teamData: TeamData | null;
+  teamData: TeamGraphData | null;
   teams: TeamSummary[];
 } {
   return useStore(
-    useShallow((state) => ({
-      teamData: selectTeamDataForName(state, teamName),
-      teams: state.teams,
-    }))
+    useShallow((state) => {
+      const snapshot = selectTeamDataForName(state, teamName);
+      const members = selectResolvedMembersForTeamName(state, teamName);
+      const messages = selectTeamMessages(state, teamName);
+
+      return {
+        teamData: snapshot
+          ? {
+              ...snapshot,
+              members,
+              messageFeed: messages,
+            }
+          : null,
+        teams: state.teams,
+      };
+    })
   );
 }

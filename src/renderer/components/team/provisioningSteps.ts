@@ -3,9 +3,13 @@ import { isLeadMember } from '@shared/utils/leadDetection';
 import type {
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
-  ResolvedTeamMember,
   TeamProvisioningProgress,
 } from '@shared/types';
+
+interface LaunchJoinMemberLike {
+  name: string;
+  removedAt?: number;
+}
 
 /** Display steps for the provisioning stepper (0-indexed). */
 export const DISPLAY_STEPS = [
@@ -52,7 +56,7 @@ export function getLaunchJoinMilestonesFromMembers({
   memberSpawnStatuses,
   memberSpawnSnapshot,
 }: {
-  members: readonly ResolvedTeamMember[];
+  members: readonly LaunchJoinMemberLike[];
   memberSpawnStatuses?: MemberSpawnStatusCollection;
   memberSpawnSnapshot?: Pick<MemberSpawnStatusesSnapshot, 'expectedMembers' | 'summary'>;
 }): LaunchJoinMilestones {

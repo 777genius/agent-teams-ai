@@ -1,5 +1,5 @@
 /**
- * TeamGraphAdapter — transforms Zustand TeamData → GraphDataPort.
+ * TeamGraphAdapter — transforms store-backed team graph input → GraphDataPort.
  *
  * This adapter owns the graph projection from team runtime state into the
  * reusable package port model. Renderer hooks may still read store state, but
@@ -55,11 +55,17 @@ import type {
   LeadActivityState,
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
-  TeamData,
+  ResolvedTeamMember,
   TeamProcess,
   TeamProvisioningProgress,
+  TeamViewSnapshot,
 } from '@shared/types/team';
 import type { LeadContextUsage } from '@shared/types/team';
+
+export interface TeamGraphData extends TeamViewSnapshot {
+  members: ResolvedTeamMember[];
+  messageFeed: InboxMessage[];
+}
 
 export class TeamGraphAdapter {
   // ─── ES #private fields ──────────────────────────────────────────────────
@@ -87,7 +93,7 @@ export class TeamGraphAdapter {
    * Adapt team data into a GraphDataPort snapshot.
    */
   adapt(
-    teamData: TeamData | null,
+    teamData: TeamGraphData | null,
     teamName: string,
     spawnStatuses?: Record<string, MemberSpawnStatusEntry>,
     leadActivity?: LeadActivityState,
@@ -179,7 +185,7 @@ export class TeamGraphAdapter {
     this.#buildMessageParticles(
       particles,
       nodes,
-      teamData.messages,
+      teamData.messageFeed,
       teamName,
       leadId,
       leadName,
@@ -222,11 +228,11 @@ export class TeamGraphAdapter {
 
   // ─── Private: node builders ──────────────────────────────────────────────
 
-  static #getLeadMemberName(data: TeamData, teamName: string): string {
+  static #getLeadMemberName(data: TeamGraphData, teamName: string): string {
     return getGraphLeadMemberName(data, teamName);
   }
 
-  static #buildMemberNodeIdByName(data: TeamData, teamName: string): Map<string, string> {
+  static #buildMemberNodeIdByName(data: TeamGraphData, teamName: string): Map<string, string> {
     return new Map(
       data.members
         .filter((member) => !isLeadMember(member))
@@ -235,7 +241,7 @@ export class TeamGraphAdapter {
   }
 
   static #buildLayoutPort(
-    data: TeamData,
+    data: TeamGraphData,
     teamName: string,
     slotAssignments?: Record<string, GraphOwnerSlotAssignment>
   ): GraphLayoutPort {
@@ -252,7 +258,7 @@ export class TeamGraphAdapter {
       (data.config.members ?? []).map((member) => getGraphStableOwnerId(member))
     );
 
-    const pushMember = (member: TeamData['members'][number] | undefined): void => {
+    const pushMember = (member: TeamGraphData['members'][number] | undefined): void => {
       if (!member) {
         return;
       }
@@ -322,7 +328,7 @@ export class TeamGraphAdapter {
   }
 
   static #collectDuplicateStableOwnerIds(
-    members: readonly TeamData['members'][number][]
+    members: readonly TeamGraphData['members'][number][]
   ): string[] {
     const counts = new Map<string, number>();
     for (const member of members) {
@@ -344,9 +350,9 @@ export class TeamGraphAdapter {
   }
 
   static #getRuntimeLabel(
-    providerId: TeamData['members'][number]['providerId'],
-    model: TeamData['members'][number]['model'],
-    effort: TeamData['members'][number]['effort']
+    providerId: ResolvedTeamMember['providerId'],
+    model: ResolvedTeamMember['model'],
+    effort: ResolvedTeamMember['effort']
   ): string | undefined {
     return formatTeamRuntimeSummary(providerId, model, effort);
   }
@@ -367,7 +373,7 @@ export class TeamGraphAdapter {
   #buildLeadNode(
     nodes: GraphNode[],
     leadId: string,
-    data: TeamData,
+    data: TeamGraphData,
     teamName: string,
     leadName: string,
     pendingApprovalAgents?: Set<string>,
@@ -462,7 +468,7 @@ export class TeamGraphAdapter {
     nodes: GraphNode[],
     edges: GraphEdge[],
     leadId: string,
-    data: TeamData,
+    data: TeamGraphData,
     teamName: string,
     memberNodeIdByName: ReadonlyMap<string, string>,
     spawnStatuses?: Record<string, MemberSpawnStatusEntry>,
@@ -565,12 +571,12 @@ export class TeamGraphAdapter {
   #buildTaskNodes(
     nodes: GraphNode[],
     edges: GraphEdge[],
-    data: TeamData,
+    data: TeamGraphData,
     teamName: string,
     commentReadState?: Record<string, unknown>,
     memberNodeIdByName?: ReadonlyMap<string, string>
   ): void {
-    const taskStateById = new Map<string, Pick<TeamData['tasks'][number], 'status'>>();
+    const taskStateById = new Map<string, Pick<TeamGraphData['tasks'][number], 'status'>>();
     const taskDisplayIds = new Map<string, string>();
     const memberColorByName = new Map<string, string>();
 
@@ -750,7 +756,7 @@ export class TeamGraphAdapter {
   #buildProcessNodes(
     nodes: GraphNode[],
     edges: GraphEdge[],
-    data: TeamData,
+    data: TeamGraphData,
     teamName: string,
     memberNodeIdByName?: ReadonlyMap<string, string>
   ): void {
@@ -828,7 +834,7 @@ export class TeamGraphAdapter {
 
   #attachActivityFeeds(
     nodes: GraphNode[],
-    data: TeamData,
+    data: TeamGraphData,
     teamName: string,
     leadId: string,
     leadName: string
@@ -845,7 +851,10 @@ export class TeamGraphAdapter {
     }
 
     const entriesByOwnerNodeId = buildInlineActivityEntries({
-      data,
+      data: {
+        ...data,
+        messages: data.messageFeed,
+      },
       teamName,
       leadId,
       leadName,
@@ -1006,7 +1015,7 @@ export class TeamGraphAdapter {
 
   #buildCommentParticles(
     particles: GraphParticle[],
-    data: TeamData,
+    data: TeamGraphData,
     teamName: string,
     leadId: string,
     leadName: string,
@@ -1099,8 +1108,8 @@ export class TeamGraphAdapter {
   }
 
   static #buildMemberException(
-    runtimeAdvisory: TeamData['members'][number]['runtimeAdvisory'],
-    providerId: TeamData['members'][number]['providerId'],
+    runtimeAdvisory: ResolvedTeamMember['runtimeAdvisory'],
+    providerId: ResolvedTeamMember['providerId'],
     spawn: MemberSpawnStatusEntry | undefined,
     pendingApproval: boolean
   ): Pick<GraphNode, 'exceptionTone' | 'exceptionLabel'> | undefined {

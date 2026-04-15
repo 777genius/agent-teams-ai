@@ -39,6 +39,16 @@ vi.mock('@renderer/store/slices/teamSlice', () => ({
   selectTeamDataForName: (_state: typeof storeState, teamName: string) =>
     storeState.teamDataCacheByName[teamName] ??
     (storeState.selectedTeamName === teamName ? storeState.selectedTeamData : null),
+  selectTeamMemberSnapshotsForName: (_state: typeof storeState, teamName: string) =>
+    (
+      storeState.teamDataCacheByName[teamName] ??
+      (storeState.selectedTeamName === teamName ? storeState.selectedTeamData : null)
+    )?.members ?? [],
+  selectResolvedMembersForTeamName: (_state: typeof storeState, teamName: string) =>
+    (
+      storeState.teamDataCacheByName[teamName] ??
+      (storeState.selectedTeamName === teamName ? storeState.selectedTeamData : null)
+    )?.members ?? [],
 }));
 
 vi.mock('zustand/react/shallow', () => ({

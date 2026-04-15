@@ -36,7 +36,10 @@ import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
-import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
+import {
+  isTeamProvisioningActive,
+  selectResolvedMembersForTeamName,
+} from '@renderer/store/slices/teamSlice';
 import {
   isGeminiUiFrozen,
   normalizeCreateLaunchProviderForUi,
@@ -281,7 +284,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
   const [prepareChecks, setPrepareChecks] = useState<ProvisioningProviderCheck[]>([]);
   const prepareRequestSeqRef = useRef(0);
-  const storeMembers = useStore((s) => s.selectedTeamData?.members ?? []);
+  const storeMembers = useStore((s) => selectResolvedMembersForTeamName(s, s.selectedTeamName));
   const previousLaunchParams = useStore((s) =>
     effectiveTeamName ? s.launchParamsByTeam[effectiveTeamName] : undefined
   );

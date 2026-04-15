@@ -42,6 +42,19 @@ parentPort?.on('message', async (msg: TeamDataWorkerRequest) => {
         respond({ id: msg.id, ok: true, result });
         break;
       }
+      case 'getMessagesPage': {
+        const result = await teamDataService.getMessagesPage(
+          msg.payload.teamName,
+          msg.payload.options
+        );
+        respond({ id: msg.id, ok: true, result });
+        break;
+      }
+      case 'getMemberActivityMeta': {
+        const result = await teamDataService.getMemberActivityMeta(msg.payload.teamName);
+        respond({ id: msg.id, ok: true, result });
+        break;
+      }
       case 'findLogsForTask': {
         const { teamName, taskId, options } = msg.payload;
         const intervalsKey = options?.intervals
