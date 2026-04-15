@@ -1,4 +1,3 @@
-import { encodePath, extractBaseDir, getProjectsBasePath } from '@main/utils/pathDecoder';
 import { isLeadMember as isLeadMemberCheck } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { parseAllTeammateMessages } from '@shared/utils/teammateMessageParser';
@@ -14,8 +13,13 @@ import {
 import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
+import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 
-import type { MemberLogSummary, MemberSubagentLogSummary } from '@shared/types';
+import type {
+  MemberLogSummary,
+  MemberSessionLogSummary,
+  MemberSubagentLogSummary,
+} from '@shared/types';
 
 const logger = createLogger('Service:TeamMemberLogsFinder');
 
@@ -76,23 +80,32 @@ interface SubagentAttribution {
   firstTimestamp: string | null;
 }
 
-function trimTrailingSlashes(value: string): string {
-  let end = value.length;
-  while (end > 0) {
-    const ch = value.charCodeAt(end - 1);
-    // '/' or '\'
-    if (ch === 47 || ch === 92) {
-      end--;
-      continue;
-    }
-    break;
-  }
-  return end === value.length ? value : value.slice(0, end);
+interface RootSessionAttribution {
+  detectedMember: string;
+  description: string;
+  firstTimestamp: string | null;
 }
+
+type LogCandidate =
+  | {
+      kind: 'subagent';
+      filePath: string;
+      sessionId: string;
+      fileName: string;
+    }
+  | {
+      kind: 'member_session';
+      filePath: string;
+      sessionId: string;
+      fileName: string;
+    };
 
 export class TeamMemberLogsFinder {
   private readonly fileMentionsCache = new Map<string, boolean>();
-  private readonly attributionCache = new Map<string, SubagentAttribution | null>();
+  private readonly attributionCache = new Map<
+    string,
+    SubagentAttribution | RootSessionAttribution | null
+  >();
   private readonly discoveryCache = new Map<
     string,
     {
@@ -104,7 +117,10 @@ export class TeamMemberLogsFinder {
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
     private readonly inboxReader: TeamInboxReader = new TeamInboxReader(),
-    private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore()
+    private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore(),
+    private readonly projectResolver: TeamTranscriptProjectResolver = new TeamTranscriptProjectResolver(
+      configReader
+    )
   ) {}
 
   async findMemberLogs(
@@ -134,8 +150,8 @@ export class TeamMemberLogsFinder {
     }
 
     // ── Collect and parallel-scan subagent files ──
-    const candidates = await this.collectSubagentCandidates(projectDir, sessionIds);
-    const settled: (MemberSubagentLogSummary | null)[] = new Array(candidates.length).fill(null);
+    const candidates = await this.collectLogCandidates(projectDir, sessionIds, config);
+    const settled: (MemberLogSummary | null)[] = new Array(candidates.length).fill(null);
     let nextIdx = 0;
 
     const scanWorker = async (): Promise<void> => {
@@ -152,17 +168,27 @@ export class TeamMemberLogsFinder {
               continue;
             }
           }
-          const summary = await this.parseSubagentSummary(
-            c.filePath,
-            projectId,
-            c.sessionId,
-            c.fileName,
-            memberName,
-            knownMembers
-          );
+          const summary =
+            c.kind === 'subagent'
+              ? await this.parseSubagentSummary(
+                  c.filePath,
+                  projectId,
+                  c.sessionId,
+                  c.fileName,
+                  memberName,
+                  knownMembers
+                )
+              : await this.parseMemberSessionSummary(
+                  c.filePath,
+                  projectId,
+                  c.sessionId,
+                  memberName,
+                  teamName,
+                  knownMembers
+                );
           if (summary) settled[idx] = summary;
         } catch (err) {
-          logger.warn(`Failed to parse subagent summary: ${c.filePath}`, err);
+          logger.warn(`Failed to parse member log summary: ${c.filePath}`, err);
         }
       }
     };
@@ -192,7 +218,7 @@ export class TeamMemberLogsFinder {
       this.discoveryCache.delete(teamName);
     }
 
-    const discovery = await this.discoverProjectSessions(teamName);
+    const discovery = await this.discoverProjectSessions(teamName, options);
     if (!discovery) {
       return null;
     }
@@ -258,7 +284,7 @@ export class TeamMemberLogsFinder {
     const tLead = performance.now();
 
     // ── Collect all subagent file candidates ──
-    const candidates = await this.collectSubagentCandidates(projectDir, sessionIds);
+    const candidates = await this.collectLogCandidates(projectDir, sessionIds, config);
 
     // ── Parallel scan with concurrency limit ──
     const settled: (MemberLogSummary | null)[] = new Array(candidates.length).fill(null);
@@ -273,20 +299,41 @@ export class TeamMemberLogsFinder {
           if (!(await this.fileMentionsTaskIdCached(c.filePath, teamName, taskId, false, sinceMs)))
             continue;
           mentionHits++;
-          const attribution = await this.attributeSubagent(c.filePath, knownMembers);
-          if (!attribution) continue;
-          const summary = await this.parseSubagentSummary(
-            c.filePath,
-            projectId,
-            c.sessionId,
-            c.fileName,
-            attribution.detectedMember,
-            knownMembers,
-            attribution
-          );
+          const summary =
+            c.kind === 'subagent'
+              ? await (async (): Promise<MemberLogSummary | null> => {
+                  const attribution = await this.attributeSubagent(c.filePath, knownMembers);
+                  if (!attribution) return null;
+                  return this.parseSubagentSummary(
+                    c.filePath,
+                    projectId,
+                    c.sessionId,
+                    c.fileName,
+                    attribution.detectedMember,
+                    knownMembers,
+                    attribution
+                  );
+                })()
+              : await (async (): Promise<MemberLogSummary | null> => {
+                  const attribution = await this.attributeMemberSession(
+                    c.filePath,
+                    teamName,
+                    knownMembers
+                  );
+                  if (!attribution) return null;
+                  return this.parseMemberSessionSummary(
+                    c.filePath,
+                    projectId,
+                    c.sessionId,
+                    attribution.detectedMember,
+                    teamName,
+                    knownMembers,
+                    attribution
+                  );
+                })();
           if (summary) settled[idx] = summary;
         } catch (err) {
-          logger.warn(`Failed to scan subagent file: ${c.filePath}`, err);
+          logger.warn(`Failed to scan member log file: ${c.filePath}`, err);
         }
       }
     };
@@ -368,14 +415,18 @@ export class TeamMemberLogsFinder {
         const key =
           log.kind === 'subagent'
             ? `subagent:${log.sessionId}:${log.subagentId}`
-            : `lead:${log.sessionId}`;
+            : log.kind === 'member_session'
+              ? `member:${log.sessionId}`
+              : `lead:${log.sessionId}`;
         seen.add(key);
       }
       for (const log of filteredOwnerLogs) {
         const key =
           log.kind === 'subagent'
             ? `subagent:${log.sessionId}:${log.subagentId}`
-            : `lead:${log.sessionId}`;
+            : log.kind === 'member_session'
+              ? `member:${log.sessionId}`
+              : `lead:${log.sessionId}`;
         if (!seen.has(key)) {
           seen.add(key);
           results.push(log);
@@ -455,16 +506,28 @@ export class TeamMemberLogsFinder {
 
     const sinceMs = this.deriveSinceMs(options);
     const { projectDir, config, sessionIds, knownMembers } = discovery;
-    const refs: { filePath: string; memberName: string; sortTime: number }[] = [];
+    const refs: {
+      kind: LogCandidate['kind'] | 'lead_session';
+      filePath: string;
+      memberName: string;
+      sessionId: string;
+      sortTime: number;
+    }[] = [];
     const seen = new Set<string>();
     const leadMemberName =
       config.members?.find((m) => isLeadMemberCheck(m))?.name?.trim() || 'team-lead';
 
-    const pushRef = (filePath: string, memberName: string, sortTime = 0): void => {
-      const key = `${memberName.toLowerCase()}:${filePath}`;
+    const pushRef = (
+      filePath: string,
+      memberName: string,
+      sortTime = 0,
+      kind: LogCandidate['kind'] | 'lead_session' = 'member_session',
+      sessionId = ''
+    ): void => {
+      const key = `${kind}:${sessionId}:${memberName.toLowerCase()}:${filePath}`;
       if (seen.has(key)) return;
       seen.add(key);
-      refs.push({ filePath, memberName, sortTime });
+      refs.push({ kind, filePath, memberName, sessionId, sortTime });
     };
 
     if (config.leadSessionId) {
@@ -473,7 +536,13 @@ export class TeamMemberLogsFinder {
         await fs.access(leadJsonl);
         if (await this.fileMentionsTaskIdCached(leadJsonl, teamName, taskId, true, sinceMs)) {
           const firstTimestamp = await this.probeFirstTimestamp(leadJsonl);
-          pushRef(leadJsonl, leadMemberName, await this.getSortTime(leadJsonl, firstTimestamp));
+          pushRef(
+            leadJsonl,
+            leadMemberName,
+            await this.getSortTime(leadJsonl, firstTimestamp),
+            'lead_session',
+            config.leadSessionId
+          );
         }
       } catch {
         // file missing or unreadable
@@ -482,7 +551,7 @@ export class TeamMemberLogsFinder {
     const tLead = performance.now();
 
     // ── Collect all subagent file candidates ──
-    const candidates = await this.collectSubagentCandidates(projectDir, sessionIds);
+    const candidates = await this.collectLogCandidates(projectDir, sessionIds, config);
 
     // ── Parallel scan with concurrency limit ──
     let nextIdx = 0;
@@ -496,15 +565,20 @@ export class TeamMemberLogsFinder {
           if (!(await this.fileMentionsTaskIdCached(c.filePath, teamName, taskId, false, sinceMs)))
             continue;
           mentionHits++;
-          const attribution = await this.attributeSubagent(c.filePath, knownMembers);
+          const attribution =
+            c.kind === 'subagent'
+              ? await this.attributeSubagent(c.filePath, knownMembers)
+              : await this.attributeMemberSession(c.filePath, teamName, knownMembers);
           if (!attribution) continue;
           pushRef(
             c.filePath,
             attribution.detectedMember,
-            await this.getSortTime(c.filePath, attribution.firstTimestamp)
+            await this.getSortTime(c.filePath, attribution.firstTimestamp),
+            c.kind,
+            c.sessionId
           );
         } catch (err) {
-          logger.warn(`Failed to scan subagent file: ${c.filePath}`, err);
+          logger.warn(`Failed to scan member log file: ${c.filePath}`, err);
         }
       }
     };
@@ -585,7 +659,11 @@ export class TeamMemberLogsFinder {
         pushRef(
           log.filePath,
           log.memberName ?? normalizedOwner,
-          Number.isFinite(new Date(log.startTime).getTime()) ? new Date(log.startTime).getTime() : 0
+          Number.isFinite(new Date(log.startTime).getTime())
+            ? new Date(log.startTime).getTime()
+            : 0,
+          log.kind === 'lead_session' ? 'lead_session' : log.kind,
+          log.sessionId
         );
       }
     }
@@ -595,22 +673,28 @@ export class TeamMemberLogsFinder {
     {
       const refsByKey = new Map<string, (typeof refs)[0]>();
       const leadRefs: (typeof refs)[0][] = [];
+      const memberSessionRefsByKey = new Map<string, (typeof refs)[0]>();
       for (const ref of refs) {
-        if (ref.memberName.toLowerCase() === leadMemberName.toLowerCase()) {
+        if (ref.kind === 'lead_session') {
           leadRefs.push(ref);
           continue;
         }
-        const parts = ref.filePath.split(path.sep);
-        const subagentsIdx = parts.lastIndexOf('subagents');
-        const sessionId = subagentsIdx > 0 ? parts[subagentsIdx - 1] : '';
-        const key = `${sessionId}:${ref.memberName.toLowerCase()}`;
+        if (ref.kind === 'member_session') {
+          const key = `member:${ref.sessionId}:${ref.memberName.toLowerCase()}`;
+          const existing = memberSessionRefsByKey.get(key);
+          if (!existing || ref.sortTime > existing.sortTime) {
+            memberSessionRefsByKey.set(key, ref);
+          }
+          continue;
+        }
+        const key = `${ref.sessionId}:${ref.memberName.toLowerCase()}`;
         const existing = refsByKey.get(key);
         if (!existing || ref.sortTime > existing.sortTime) {
           refsByKey.set(key, ref);
         }
       }
       refs.length = 0;
-      refs.push(...leadRefs, ...refsByKey.values());
+      refs.push(...leadRefs, ...memberSessionRefsByKey.values(), ...refsByKey.values());
     }
 
     const sortedRefs = [...refs].sort((a, b) => b.sortTime - a.sortTime);
@@ -650,43 +734,32 @@ export class TeamMemberLogsFinder {
       }
     }
 
-    for (const sessionId of sessionIds) {
-      const subagentsDir = path.join(projectDir, sessionId, 'subagents');
-
-      let files: string[];
+    const candidates = await this.collectLogCandidates(projectDir, sessionIds, config);
+    for (const candidate of candidates) {
+      let mtimeMs = 0;
       try {
-        files = await fs.readdir(subagentsDir);
+        mtimeMs = (await fs.stat(candidate.filePath)).mtimeMs;
       } catch {
         continue;
       }
-
-      for (const file of files) {
-        if (!file.startsWith('agent-') || !file.endsWith('.jsonl')) continue;
-        if (file.startsWith('agent-acompact')) continue;
-
-        const filePath = path.join(subagentsDir, file);
-        // Quick attribution check — only Phase 1 (no full-file streaming)
-        let mtimeMs = 0;
-        try {
-          mtimeMs = (await fs.stat(filePath)).mtimeMs;
-        } catch {
-          continue;
-        }
-        const attribution = await this.getCachedSubagentAttribution(
-          filePath,
-          knownMembers,
-          mtimeMs
-        );
-        if (attribution?.detectedMember.toLowerCase() === memberName.trim().toLowerCase()) {
-          paths.push(filePath);
-        }
+      const attribution =
+        candidate.kind === 'subagent'
+          ? await this.getCachedSubagentAttribution(candidate.filePath, knownMembers, mtimeMs)
+          : await this.getCachedMemberSessionAttribution(
+              candidate.filePath,
+              teamName,
+              knownMembers,
+              mtimeMs
+            );
+      if (attribution?.detectedMember.toLowerCase() === memberName.trim().toLowerCase()) {
+        paths.push(candidate.filePath);
       }
     }
 
     return paths;
   }
 
-  async listAttributedSubagentFiles(
+  async listAttributedMemberFiles(
     teamName: string
   ): Promise<{ memberName: string; sessionId: string; filePath: string; mtimeMs: number }[]> {
     const discovery = await this.discoverProjectSessions(teamName);
@@ -697,13 +770,7 @@ export class TeamMemberLogsFinder {
       typeof config.leadSessionId === 'string' && config.leadSessionId.trim().length > 0
         ? config.leadSessionId.trim()
         : null;
-    // Live teammate tool tracking should follow the current team run, not historical
-    // lead sessions kept in sessionHistory or lingering on disk.
-    const candidateSessionIds =
-      currentLeadSessionId && sessionIds.includes(currentLeadSessionId)
-        ? [currentLeadSessionId]
-        : sessionIds;
-    const candidates = await this.collectSubagentCandidates(projectDir, candidateSessionIds);
+    const candidates = await this.collectLogCandidates(projectDir, sessionIds, config);
     const results: {
       memberName: string;
       sessionId: string;
@@ -714,12 +781,27 @@ export class TeamMemberLogsFinder {
     const settled = await Promise.all(
       candidates.map(async (candidate) => {
         try {
+          if (
+            candidate.kind === 'subagent' &&
+            currentLeadSessionId &&
+            candidate.sessionId !== currentLeadSessionId
+          ) {
+            return null;
+          }
           const stat = await fs.stat(candidate.filePath);
-          const attribution = await this.getCachedSubagentAttribution(
-            candidate.filePath,
-            knownMembers,
-            stat.mtimeMs
-          );
+          const attribution =
+            candidate.kind === 'subagent'
+              ? await this.getCachedSubagentAttribution(
+                  candidate.filePath,
+                  knownMembers,
+                  stat.mtimeMs
+                )
+              : await this.getCachedMemberSessionAttribution(
+                  candidate.filePath,
+                  teamName,
+                  knownMembers,
+                  stat.mtimeMs
+                );
           if (!attribution) return null;
           return {
             memberName: attribution.detectedMember,
@@ -737,7 +819,34 @@ export class TeamMemberLogsFinder {
       if (item) results.push(item);
     }
 
-    return results;
+    const latestRootSessionsByMember = new Map<
+      string,
+      { memberName: string; sessionId: string; filePath: string; mtimeMs: number }
+    >();
+    const passthrough: typeof results = [];
+
+    for (const item of results) {
+      if (
+        !item.filePath.endsWith('.jsonl') ||
+        item.filePath.includes(`${path.sep}subagents${path.sep}`)
+      ) {
+        passthrough.push(item);
+        continue;
+      }
+      const key = item.memberName.toLowerCase();
+      const existing = latestRootSessionsByMember.get(key);
+      if (!existing || item.mtimeMs > existing.mtimeMs) {
+        latestRootSessionsByMember.set(key, item);
+      }
+    }
+
+    return [...passthrough, ...latestRootSessionsByMember.values()];
+  }
+
+  async listAttributedSubagentFiles(
+    teamName: string
+  ): Promise<{ memberName: string; sessionId: string; filePath: string; mtimeMs: number }[]> {
+    return this.listAttributedMemberFiles(teamName);
   }
 
   /**
@@ -783,97 +892,32 @@ export class TeamMemberLogsFinder {
     return false;
   }
 
-  private async discoverProjectSessions(teamName: string): Promise<{
+  private async discoverProjectSessions(
+    teamName: string,
+    options?: { forceRefresh?: boolean }
+  ): Promise<{
     projectDir: string;
     projectId: string;
     config: NonNullable<Awaited<ReturnType<TeamConfigReader['getConfig']>>>;
     sessionIds: string[];
     knownMembers: Set<string>;
   } | null> {
-    // Check discovery cache — avoids re-reading config/dirs within rapid successive calls
-    const cached = this.discoveryCache.get(teamName);
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached.result;
+    if (options?.forceRefresh) {
+      this.discoveryCache.delete(teamName);
+    } else {
+      // Check discovery cache — avoids re-reading config/dirs within rapid successive calls
+      const cached = this.discoveryCache.get(teamName);
+      if (cached && cached.expiresAt > Date.now()) {
+        return cached.result;
+      }
     }
 
-    const config = await this.configReader.getConfig(teamName);
-    if (!config?.projectPath) {
-      logger.debug(`No projectPath for team "${teamName}"`);
+    const context = await this.projectResolver.getContext(teamName, options);
+    if (!context) {
+      logger.debug(`No transcript context for team "${teamName}"`);
       return null;
     }
-
-    const normalizedProjectPath = trimTrailingSlashes(config.projectPath);
-    let projectId = encodePath(normalizedProjectPath);
-    let baseDir = extractBaseDir(projectId);
-    let projectDir = path.join(getProjectsBasePath(), baseDir);
-
-    // If the encoded directory doesn't exist (symlink/cwd mismatch), fall back to locating
-    // the project directory by leadSessionId which is unique and reliable.
-    try {
-      const stat = await fs.stat(projectDir);
-      if (!stat.isDirectory()) {
-        throw new Error('not a directory');
-      }
-    } catch {
-      const leadSessionId =
-        typeof config.leadSessionId === 'string' && config.leadSessionId.trim().length > 0
-          ? config.leadSessionId.trim()
-          : null;
-      if (leadSessionId) {
-        const projectsBase = getProjectsBasePath();
-        try {
-          const entries = await fs.readdir(projectsBase, { withFileTypes: true });
-          for (const entry of entries) {
-            if (!entry.isDirectory()) continue;
-            const candidateDir = path.join(projectsBase, entry.name);
-            const leadPath = path.join(candidateDir, `${leadSessionId}.jsonl`);
-            try {
-              await fs.access(leadPath);
-              projectDir = candidateDir;
-              projectId = entry.name;
-              baseDir = entry.name;
-              break;
-            } catch {
-              // not this project
-            }
-          }
-        } catch {
-          // ignore
-        }
-      }
-    }
-
-    const knownSessionIds = new Set<string>();
-    if (config.leadSessionId) {
-      knownSessionIds.add(config.leadSessionId);
-    }
-    if (Array.isArray(config.sessionHistory)) {
-      for (const sid of config.sessionHistory) {
-        if (typeof sid === 'string' && sid.trim().length > 0) {
-          knownSessionIds.add(sid.trim());
-        }
-      }
-    }
-
-    const discoveredSessionIds = await this.listSessionDirs(projectDir);
-    let sessionIds: string[];
-    if (knownSessionIds.size > 0) {
-      const verified: string[] = [];
-      for (const sid of knownSessionIds) {
-        const sidDir = path.join(projectDir, sid);
-        try {
-          const stat = await fs.stat(sidDir);
-          if (stat.isDirectory()) verified.push(sid);
-        } catch {
-          // dir doesn't exist
-        }
-      }
-      // Prefer config-backed sessions first, but also include any live session dirs that have
-      // appeared on disk and are not yet reflected in config/sessionHistory.
-      sessionIds = Array.from(new Set([...verified, ...discoveredSessionIds]));
-    } else {
-      sessionIds = discoveredSessionIds;
-    }
+    const { config, projectDir, projectId, sessionIds } = context;
 
     const knownMembers = new Set<string>(
       (config.members ?? [])
@@ -927,16 +971,42 @@ export class TeamMemberLogsFinder {
     return { ...discovery, isLeadMember };
   }
 
-  /**
-   * Collect all subagent JSONL file candidates across session directories.
-   * Filters out non-agent files and compact files (agent-acompact*).
-   */
-  private async collectSubagentCandidates(
+  private async collectLogCandidates(
     projectDir: string,
-    sessionIds: string[]
-  ): Promise<{ filePath: string; sessionId: string; fileName: string }[]> {
-    const candidates: { filePath: string; sessionId: string; fileName: string }[] = [];
+    sessionIds: string[],
+    config: NonNullable<Awaited<ReturnType<TeamConfigReader['getConfig']>>>
+  ): Promise<LogCandidate[]> {
+    const candidates: LogCandidate[] = [];
+    const leadSessionIds = new Set<string>();
+    if (typeof config.leadSessionId === 'string' && config.leadSessionId.trim().length > 0) {
+      leadSessionIds.add(config.leadSessionId.trim());
+    }
+    if (Array.isArray(config.sessionHistory)) {
+      for (const sessionId of config.sessionHistory) {
+        if (typeof sessionId === 'string' && sessionId.trim().length > 0) {
+          leadSessionIds.add(sessionId.trim());
+        }
+      }
+    }
+
     for (const sessionId of sessionIds) {
+      const mainTranscript = path.join(projectDir, `${sessionId}.jsonl`);
+      if (!leadSessionIds.has(sessionId)) {
+        try {
+          const stat = await fs.stat(mainTranscript);
+          if (stat.isFile()) {
+            candidates.push({
+              kind: 'member_session',
+              filePath: mainTranscript,
+              sessionId,
+              fileName: path.basename(mainTranscript),
+            });
+          }
+        } catch {
+          // missing root transcript
+        }
+      }
+
       const subagentsDir = path.join(projectDir, sessionId, 'subagents');
       let dirFiles: string[];
       try {
@@ -947,7 +1017,12 @@ export class TeamMemberLogsFinder {
       for (const f of dirFiles) {
         if (!f.startsWith('agent-') || !f.endsWith('.jsonl') || f.startsWith('agent-acompact'))
           continue;
-        candidates.push({ filePath: path.join(subagentsDir, f), sessionId, fileName: f });
+        candidates.push({
+          kind: 'subagent',
+          filePath: path.join(subagentsDir, f),
+          sessionId,
+          fileName: f,
+        });
       }
     }
     return candidates;
@@ -1201,16 +1276,6 @@ export class TeamMemberLogsFinder {
     return null;
   }
 
-  private async listSessionDirs(projectDir: string): Promise<string[]> {
-    try {
-      const dirEntries = await fs.readdir(projectDir, { withFileTypes: true });
-      return dirEntries.filter((e) => e.isDirectory()).map((e) => e.name);
-    } catch {
-      logger.debug(`Cannot read project dir: ${projectDir}`);
-      return [];
-    }
-  }
-
   private async getCachedSubagentAttribution(
     filePath: string,
     knownMembers: Set<string>,
@@ -1221,6 +1286,25 @@ export class TeamMemberLogsFinder {
       return this.attributionCache.get(cacheKey) ?? null;
     }
     const attribution = await this.attributeSubagent(filePath, knownMembers);
+    this.attributionCache.set(cacheKey, attribution);
+    if (this.attributionCache.size > ATTRIBUTION_CACHE_MAX) {
+      const oldestKey = this.attributionCache.keys().next().value;
+      if (oldestKey) this.attributionCache.delete(oldestKey);
+    }
+    return attribution;
+  }
+
+  private async getCachedMemberSessionAttribution(
+    filePath: string,
+    teamName: string,
+    knownMembers: Set<string>,
+    mtimeMs: number
+  ): Promise<RootSessionAttribution | null> {
+    const cacheKey = `${filePath}:${mtimeMs}:${teamName}:member-session`;
+    if (this.attributionCache.has(cacheKey)) {
+      return (this.attributionCache.get(cacheKey) as RootSessionAttribution | null) ?? null;
+    }
+    const attribution = await this.attributeMemberSession(filePath, teamName, knownMembers);
     this.attributionCache.set(cacheKey, attribution);
     if (this.attributionCache.size > ATTRIBUTION_CACHE_MAX) {
       const oldestKey = this.attributionCache.keys().next().value;
@@ -1280,6 +1364,60 @@ export class TeamMemberLogsFinder {
       sessionId,
       projectId,
       description: attribution.description || `Subagent ${subagentId}`,
+      memberName: targetMember,
+      startTime: firstTimestamp,
+      durationMs: Math.max(0, durationMs),
+      messageCount: metadata.messageCount,
+      isOngoing,
+      filePath,
+      lastOutputPreview: metadata.lastOutputPreview ?? undefined,
+      lastThinkingPreview: metadata.lastThinkingPreview ?? undefined,
+      recentPreviews: metadata.recentPreviews.length > 0 ? metadata.recentPreviews : undefined,
+    };
+  }
+
+  private async parseMemberSessionSummary(
+    filePath: string,
+    projectId: string,
+    sessionId: string,
+    targetMember: string,
+    teamName: string,
+    knownMembers: Set<string>,
+    precomputedAttribution?: RootSessionAttribution
+  ): Promise<MemberSessionLogSummary | null> {
+    const attribution =
+      precomputedAttribution ??
+      (await this.attributeMemberSession(filePath, teamName, knownMembers));
+    if (!attribution) {
+      return null;
+    }
+
+    if (attribution.detectedMember.toLowerCase() !== targetMember.toLowerCase()) {
+      return null;
+    }
+
+    const metadata = await this.streamFileMetadata(filePath);
+    const firstTimestamp =
+      metadata.firstTimestamp ?? attribution.firstTimestamp ?? (await this.getFileMtime(filePath));
+    const lastTimestamp = metadata.lastTimestamp ?? firstTimestamp;
+
+    const startTime = new Date(firstTimestamp);
+    const endTime = new Date(lastTimestamp);
+    const durationMs = endTime.getTime() - startTime.getTime();
+
+    let isOngoing = false;
+    try {
+      const stat = await fs.stat(filePath);
+      isOngoing = Date.now() - stat.mtimeMs < 60_000;
+    } catch {
+      // ignore
+    }
+
+    return {
+      kind: 'member_session',
+      sessionId,
+      projectId,
+      description: attribution.description || `${targetMember} session`,
       memberName: targetMember,
       startTime: firstTimestamp,
       durationMs: Math.max(0, durationMs),
@@ -1419,6 +1557,122 @@ export class TeamMemberLogsFinder {
     if (!best) return null;
 
     return { detectedMember: best.member, description, firstTimestamp };
+  }
+
+  private async attributeMemberSession(
+    filePath: string,
+    teamName: string,
+    knownMembers: Set<string>
+  ): Promise<RootSessionAttribution | null> {
+    const lines: string[] = [];
+
+    try {
+      const stream = createReadStream(filePath, { encoding: 'utf8' });
+      const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+
+      let count = 0;
+      for await (const line of rl) {
+        if (count >= ATTRIBUTION_SCAN_LINES) break;
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        lines.push(trimmed);
+        count++;
+      }
+      rl.close();
+      stream.destroy();
+    } catch {
+      return null;
+    }
+
+    if (lines.length === 0) {
+      return null;
+    }
+
+    const normalizedTeam = teamName.trim().toLowerCase();
+    let detectedMember: string | null = null;
+    let description = '';
+    let firstTimestamp: string | null = null;
+    let teamMatched = false;
+
+    for (const line of lines) {
+      if (!firstTimestamp) {
+        firstTimestamp = this.extractTimestampFromLine(line);
+      }
+
+      try {
+        const entry = JSON.parse(line) as Record<string, unknown>;
+        const directTeamName =
+          typeof entry.teamName === 'string' ? entry.teamName.trim().toLowerCase() : null;
+        if (directTeamName === normalizedTeam) {
+          teamMatched = true;
+        }
+
+        if (!detectedMember && typeof entry.agentName === 'string') {
+          const normalizedMember = entry.agentName.trim().toLowerCase();
+          if (normalizedMember.length > 0 && knownMembers.has(normalizedMember)) {
+            detectedMember = entry.agentName.trim();
+          }
+        }
+
+        const process = entry.process as Record<string, unknown> | undefined;
+        const processTeam = process?.team as Record<string, unknown> | undefined;
+        if (!detectedMember && typeof processTeam?.memberName === 'string') {
+          const normalizedMember = processTeam.memberName.trim().toLowerCase();
+          if (normalizedMember.length > 0 && knownMembers.has(normalizedMember)) {
+            detectedMember = processTeam.memberName.trim();
+          }
+        }
+        if (!teamMatched) {
+          const processTeamName =
+            typeof processTeam?.teamName === 'string'
+              ? processTeam.teamName.trim().toLowerCase()
+              : null;
+          if (processTeamName === normalizedTeam) {
+            teamMatched = true;
+          }
+        }
+
+        const role = this.extractRole(entry);
+        const textContent = this.extractTextContent(entry);
+        if (!teamMatched && textContent && textContent.toLowerCase().includes(normalizedTeam)) {
+          if (
+            textContent.toLowerCase().includes(`on team "${normalizedTeam}"`) ||
+            textContent.toLowerCase().includes(`on team '${normalizedTeam}'`) ||
+            textContent.toLowerCase().includes(`(${normalizedTeam})`)
+          ) {
+            teamMatched = true;
+          }
+        }
+
+        if (role === 'user' && textContent && !description) {
+          const normalizedText = textContent.trim();
+          if (
+            normalizedText.length > 0 &&
+            normalizedText !== 'Warmup' &&
+            !normalizedText.startsWith('You are bootstrapping into team') &&
+            !normalizedText.startsWith('Member briefing for ')
+          ) {
+            description = normalizedText.slice(0, 200);
+          }
+        }
+      } catch {
+        // ignore malformed lines
+      }
+
+      if (teamMatched && detectedMember && description) {
+        break;
+      }
+    }
+
+    if (!teamMatched || !detectedMember) {
+      return null;
+    }
+
+    return {
+      detectedMember,
+      description: description || `${detectedMember} session`,
+      firstTimestamp,
+    };
   }
 
   /**

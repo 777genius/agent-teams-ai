@@ -97,6 +97,118 @@ describe('TeamMemberLogsFinder', () => {
     expect(lead?.projectId).toBe(projectId);
   });
 
+  it('returns root member sessions when config.projectPath is missing but member cwd is present', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-logs-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'signal-ops-root';
+    const projectPath = '/Users/test/signal-ops-root';
+    const projectId = '-Users-test-signal-ops-root';
+    const leadSessionId = 'lead-root';
+    const memberSessionId = 'member-bob-root';
+
+    await fs.mkdir(path.join(tmpDir, 'teams', teamName), { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamName, 'config.json'),
+      JSON.stringify(
+        {
+          name: teamName,
+          leadSessionId,
+          members: [
+            { name: 'team-lead', agentType: 'team-lead', cwd: projectPath },
+            { name: 'bob', agentType: 'general-purpose', cwd: projectPath },
+          ],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    const projectRoot = path.join(tmpDir, 'projects', projectId);
+    await fs.mkdir(projectRoot, { recursive: true });
+
+    await fs.writeFile(
+      path.join(projectRoot, `${leadSessionId}.jsonl`),
+      JSON.stringify({
+        timestamp: '2026-04-15T14:02:00.000Z',
+        type: 'user',
+        teamName,
+        agentName: 'team-lead',
+        message: { role: 'user', content: `Lead for team "${teamName}" (${teamName})` },
+      }) + '\n',
+      'utf8'
+    );
+
+    await fs.writeFile(
+      path.join(projectRoot, `${memberSessionId}.jsonl`),
+      [
+        JSON.stringify({
+          timestamp: '2026-04-15T14:02:01.000Z',
+          type: 'user',
+          teamName,
+          agentName: 'bob',
+          message: {
+            role: 'user',
+            content: `You are bootstrapping into team "${teamName}" as member "bob".`,
+          },
+        }),
+        JSON.stringify({
+          timestamp: '2026-04-15T14:02:05.000Z',
+          type: 'assistant',
+          teamName,
+          agentName: 'bob',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                id: 'call-task-start',
+                name: 'mcp__agent-teams__task_start',
+                input: {
+                  teamName,
+                  taskId: 'task-root-1',
+                },
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+    const bobLogs = await finder.findMemberLogs(teamName, 'bob');
+    const taskLogs = await finder.findLogsForTask(teamName, 'task-root-1');
+    const attributedFiles = await finder.listAttributedMemberFiles(teamName);
+
+    expect(bobLogs).toHaveLength(1);
+    expect(bobLogs[0]?.kind).toBe('member_session');
+    if (bobLogs[0]?.kind === 'member_session') {
+      expect(bobLogs[0].sessionId).toBe(memberSessionId);
+      expect(bobLogs[0].projectId).toBe(projectId);
+      expect(bobLogs[0].memberName?.toLowerCase()).toBe('bob');
+      expect(bobLogs[0].filePath).toBe(path.join(projectRoot, `${memberSessionId}.jsonl`));
+    }
+
+    expect(
+      taskLogs.some(
+        (log) =>
+          log.kind === 'member_session' &&
+          log.sessionId === memberSessionId &&
+          log.memberName?.toLowerCase() === 'bob'
+      )
+    ).toBe(true);
+    expect(attributedFiles).toEqual([
+      {
+        memberName: 'bob',
+        sessionId: memberSessionId,
+        filePath: path.join(projectRoot, `${memberSessionId}.jsonl`),
+        mtimeMs: expect.any(Number),
+      },
+    ]);
+  });
+
   it('listAttributedSubagentFiles only returns files from the current lead session for live tracking', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-logs-'));
     setClaudeBasePathOverride(tmpDir);
@@ -841,7 +953,7 @@ describe('TeamMemberLogsFinder', () => {
             {
               type: 'tool_use',
               name: 'Bash',
-              input: { command: 'node \"teamctl.js\" --team demo task start task-42' },
+              input: { command: 'node "teamctl.js" --team demo task start task-42' },
             },
           ],
         },

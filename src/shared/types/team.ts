@@ -1040,7 +1040,7 @@ export interface MemberSubagentSummary {
   isOngoing: boolean;
 }
 
-export type MemberLogKind = 'subagent' | 'lead_session';
+export type MemberLogKind = 'subagent' | 'lead_session' | 'member_session';
 
 export interface MemberLogSummaryBase {
   kind: MemberLogKind;
@@ -1071,7 +1071,14 @@ export interface MemberLeadSessionLogSummary extends MemberLogSummaryBase {
   kind: 'lead_session';
 }
 
-export type MemberLogSummary = MemberSubagentLogSummary | MemberLeadSessionLogSummary;
+export interface MemberSessionLogSummary extends MemberLogSummaryBase {
+  kind: 'member_session';
+}
+
+export type MemberLogSummary =
+  | MemberSubagentLogSummary
+  | MemberLeadSessionLogSummary
+  | MemberSessionLogSummary;
 
 export interface FileLineStats {
   added: number;

@@ -183,9 +183,13 @@ export const MemberLogsTab = ({
   }, []);
 
   const getRowId = useCallback((log: MemberLogSummary): string => {
-    return log.kind === 'subagent'
-      ? `subagent:${log.sessionId}:${log.subagentId}`
-      : `lead:${log.sessionId}`;
+    if (log.kind === 'subagent') {
+      return `subagent:${log.sessionId}:${log.subagentId}`;
+    }
+    if (log.kind === 'member_session') {
+      return `member:${log.sessionId}`;
+    }
+    return `lead:${log.sessionId}`;
   }, []);
 
   const sortedLogs = useMemo(() => {
@@ -250,7 +254,9 @@ export const MemberLogsTab = ({
     if (!shouldShowPreview) return null;
 
     if (showSubagentPreview) {
-      const candidates = sortedLogs.filter((l) => l.kind === 'subagent');
+      const candidates = sortedLogs.filter(
+        (l) => l.kind === 'subagent' || l.kind === 'member_session'
+      );
       if (candidates.length === 0) return null;
 
       if (taskOwner) {
@@ -515,6 +521,10 @@ export const MemberLogsTab = ({
         );
         return d?.chunks ?? null;
       }
+      if (log.kind === 'member_session') {
+        const d = await api.getSessionDetail(log.projectId, log.sessionId, options);
+        return d ? asEnhancedChunkArray(d.chunks) : null;
+      }
       const d = await api.getSessionDetail(log.projectId, log.sessionId, options);
       return d ? asEnhancedChunkArray(d.chunks) : null;
     },
@@ -766,7 +776,7 @@ const LogCard = ({
                 <span className="truncate text-[var(--color-text)]" title={log.description}>
                   {log.description}
                 </span>
-                {log.kind === 'lead_session' && (
+                {(log.kind === 'lead_session' || log.kind === 'member_session') && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span
@@ -777,8 +787,9 @@ const LogCard = ({
                       </span>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-[240px] text-center">
-                      Full team lead session logs — useful for global orchestration context, not
-                      specific to this agent
+                      {log.kind === 'lead_session'
+                        ? 'Full team lead session logs - useful for global orchestration context, not specific to this agent'
+                        : 'Full persistent teammate session logs - useful when work runs in a root member session instead of a subagent file'}
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -838,7 +849,11 @@ const LogCard = ({
             <div className="w-full min-w-0">
               <MemberExecutionLog
                 chunks={detailChunks}
-                memberName={log.kind === 'lead_session' ? (log.memberName ?? undefined) : undefined}
+                memberName={
+                  log.kind === 'lead_session' || log.kind === 'member_session'
+                    ? (log.memberName ?? undefined)
+                    : undefined
+                }
               />
             </div>
           )}

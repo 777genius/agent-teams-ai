@@ -145,7 +145,7 @@ export class TeammateToolTracker {
     const state = this.stateByTeam.get(teamName);
     if (!state?.enabled || state.epoch !== expectedEpoch) return;
 
-    const attributedFiles = await this.logsFinder.listAttributedSubagentFiles(teamName);
+    const attributedFiles = await this.logsFinder.listAttributedMemberFiles(teamName);
     const currentState = this.stateByTeam.get(teamName);
     if (!currentState?.enabled || currentState.epoch !== expectedEpoch) return;
 

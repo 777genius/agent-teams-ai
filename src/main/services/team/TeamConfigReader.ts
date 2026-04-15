@@ -32,6 +32,51 @@ const MAX_PROJECT_PATH_HISTORY_IN_SUMMARY = 200;
 const MAX_LAUNCH_STATE_BYTES = 32 * 1024;
 const TEAM_LAUNCH_STATE_FILE = 'launch-state.json';
 
+function normalizeProjectPathCandidate(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function resolveProjectPathFromConfig(
+  config: Pick<TeamConfig, 'projectPath' | 'projectPathHistory' | 'members'>
+): string | undefined {
+  const direct = normalizeProjectPathCandidate(config.projectPath);
+  if (direct) {
+    return direct;
+  }
+
+  const leadMemberCwd = (config.members ?? []).find((member) => isLeadMember(member))?.cwd;
+  const leadResolved = normalizeProjectPathCandidate(leadMemberCwd);
+  if (leadResolved) {
+    return leadResolved;
+  }
+
+  const distinctMemberCwds = Array.from(
+    new Set(
+      (config.members ?? [])
+        .map((member) => normalizeProjectPathCandidate(member.cwd))
+        .filter((cwd): cwd is string => Boolean(cwd))
+    )
+  );
+  if (distinctMemberCwds.length === 1) {
+    return distinctMemberCwds[0];
+  }
+
+  if (Array.isArray(config.projectPathHistory)) {
+    for (let i = config.projectPathHistory.length - 1; i >= 0; i--) {
+      const historyValue = normalizeProjectPathCandidate(config.projectPathHistory[i]);
+      if (historyValue) {
+        return historyValue;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 interface LaunchStateSummary {
   partialLaunchFailure?: true;
   expectedMemberCount?: number;
@@ -250,10 +295,7 @@ export class TeamConfigReader {
           typeof config.color === 'string' && config.color.trim().length > 0
             ? config.color
             : undefined;
-        projectPath =
-          typeof config.projectPath === 'string' && config.projectPath.trim().length > 0
-            ? config.projectPath
-            : undefined;
+        projectPath = resolveProjectPathFromConfig(config);
         leadSessionId =
           typeof config.leadSessionId === 'string' && config.leadSessionId.trim().length > 0
             ? config.leadSessionId
@@ -470,7 +512,8 @@ export class TeamConfigReader {
       if (typeof config.name !== 'string' || config.name.trim() === '') {
         return null;
       }
-      return config;
+      const resolvedProjectPath = resolveProjectPathFromConfig(config);
+      return resolvedProjectPath ? { ...config, projectPath: resolvedProjectPath } : config;
     } catch (error) {
       if (error instanceof FileReadTimeoutError) {
         logger.warn(`[getConfig] ${error.message}`);
