@@ -5,6 +5,7 @@
 
 import { api } from '@renderer/api';
 import { CLI_NOT_FOUND_MESSAGE } from '@shared/constants/cli';
+import { getPluginOperationKey } from '@shared/utils/extensionNormalizers';
 
 import { findPaneByTabId, updatePane } from '../utils/paneHelpers';
 
@@ -150,6 +151,10 @@ function buildPluginIdSet(catalog: EnrichedPlugin[]): Set<string> {
   return new Set(catalog.map((plugin) => plugin.pluginId));
 }
 
+function buildPluginOperationKeys(pluginId: string): string[] {
+  return PLUGIN_OPERATION_SCOPES.map((scope) => getPluginOperationKey(pluginId, scope));
+}
+
 function clearPluginOperationState(
   pluginIds: Set<string>,
   pluginInstallProgress: Record<string, ExtensionOperationState>,
@@ -166,8 +171,10 @@ function clearPluginOperationState(
   const nextInstallErrors = { ...installErrors };
 
   for (const pluginId of pluginIds) {
-    delete nextPluginInstallProgress[pluginId];
-    delete nextInstallErrors[pluginId];
+    for (const operationKey of buildPluginOperationKeys(pluginId)) {
+      delete nextPluginInstallProgress[operationKey];
+      delete nextInstallErrors[operationKey];
+    }
   }
 
   return {
@@ -176,40 +183,42 @@ function clearPluginOperationState(
   };
 }
 
-function clearPluginSuccessResetTimer(pluginId: string): void {
-  const timer = pluginSuccessResetTimers.get(pluginId);
+function clearPluginSuccessResetTimer(operationKey: string): void {
+  const timer = pluginSuccessResetTimers.get(operationKey);
   if (!timer) {
     return;
   }
 
   clearTimeout(timer);
-  pluginSuccessResetTimers.delete(pluginId);
+  pluginSuccessResetTimers.delete(operationKey);
 }
 
 function clearPluginSuccessResetTimers(pluginIds: Set<string>): void {
   for (const pluginId of pluginIds) {
-    clearPluginSuccessResetTimer(pluginId);
+    for (const operationKey of buildPluginOperationKeys(pluginId)) {
+      clearPluginSuccessResetTimer(operationKey);
+    }
   }
 }
 
 function schedulePluginSuccessReset(
-  pluginId: string,
+  operationKey: string,
   set: Parameters<StateCreator<AppState, [], [], ExtensionsSlice>>[0]
 ): void {
-  clearPluginSuccessResetTimer(pluginId);
+  clearPluginSuccessResetTimer(operationKey);
   const timer = setTimeout(() => {
-    pluginSuccessResetTimers.delete(pluginId);
+    pluginSuccessResetTimers.delete(operationKey);
     set((prev) => {
-      if (prev.pluginInstallProgress[pluginId] !== 'success') {
+      if (prev.pluginInstallProgress[operationKey] !== 'success') {
         return {};
       }
 
       return {
-        pluginInstallProgress: { ...prev.pluginInstallProgress, [pluginId]: 'idle' },
+        pluginInstallProgress: { ...prev.pluginInstallProgress, [operationKey]: 'idle' },
       };
     });
   }, SUCCESS_DISPLAY_MS);
-  pluginSuccessResetTimers.set(pluginId, timer);
+  pluginSuccessResetTimers.set(operationKey, timer);
 }
 
 function getSkillsCatalogKey(projectPath?: string): string {
@@ -226,6 +235,7 @@ const CLI_STATUS_UNKNOWN_MESSAGE =
   'Unable to verify Claude CLI status. Open the Dashboard and check the CLI before retrying.';
 const PROJECT_SCOPE_REQUIRED_MESSAGE =
   'Project- and local-scoped plugins require an active project in the Extensions tab.';
+const PLUGIN_OPERATION_SCOPES: InstallScope[] = ['user', 'project', 'local'];
 
 export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSlice> = (
   set,
@@ -691,6 +701,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       request.scope !== 'user'
         ? (request.projectPath ?? get().pluginCatalogProjectPath ?? undefined)
         : request.projectPath;
+    const operationKey = getPluginOperationKey(request.pluginId, request.scope);
     const effectiveRequest =
       effectiveProjectPath === request.projectPath
         ? request
@@ -720,47 +731,47 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
               : null;
 
     if (preflightError) {
-      clearPluginSuccessResetTimer(request.pluginId);
+      clearPluginSuccessResetTimer(operationKey);
       set((prev) => ({
-        pluginInstallProgress: { ...prev.pluginInstallProgress, [request.pluginId]: 'error' },
-        installErrors: { ...prev.installErrors, [request.pluginId]: preflightError },
+        pluginInstallProgress: { ...prev.pluginInstallProgress, [operationKey]: 'error' },
+        installErrors: { ...prev.installErrors, [operationKey]: preflightError },
       }));
       return;
     }
 
-    clearPluginSuccessResetTimer(request.pluginId);
+    clearPluginSuccessResetTimer(operationKey);
     set((prev) => ({
-      pluginInstallProgress: { ...prev.pluginInstallProgress, [request.pluginId]: 'pending' },
-      installErrors: { ...prev.installErrors, [request.pluginId]: '' },
+      pluginInstallProgress: { ...prev.pluginInstallProgress, [operationKey]: 'pending' },
+      installErrors: { ...prev.installErrors, [operationKey]: '' },
     }));
 
     try {
       const result = await api.plugins.install(effectiveRequest);
       if (result.state === 'error') {
         set((prev) => ({
-          pluginInstallProgress: { ...prev.pluginInstallProgress, [request.pluginId]: 'error' },
+          pluginInstallProgress: { ...prev.pluginInstallProgress, [operationKey]: 'error' },
           installErrors: {
             ...prev.installErrors,
-            [request.pluginId]: result.error ?? 'Install failed',
+            [operationKey]: result.error ?? 'Install failed',
           },
         }));
         return;
       }
 
       set((prev) => ({
-        pluginInstallProgress: { ...prev.pluginInstallProgress, [request.pluginId]: 'success' },
+        pluginInstallProgress: { ...prev.pluginInstallProgress, [operationKey]: 'success' },
       }));
 
       // Refresh catalog to pick up new installed state
       void get().fetchPluginCatalog(get().pluginCatalogProjectPath ?? undefined, true);
 
-      schedulePluginSuccessReset(request.pluginId, set);
+      schedulePluginSuccessReset(operationKey, set);
     } catch (err) {
-      clearPluginSuccessResetTimer(request.pluginId);
+      clearPluginSuccessResetTimer(operationKey);
       const message = err instanceof Error ? err.message : 'Install failed';
       set((prev) => ({
-        pluginInstallProgress: { ...prev.pluginInstallProgress, [request.pluginId]: 'error' },
-        installErrors: { ...prev.installErrors, [request.pluginId]: message },
+        pluginInstallProgress: { ...prev.pluginInstallProgress, [operationKey]: 'error' },
+        installErrors: { ...prev.installErrors, [operationKey]: message },
       }));
     }
   },
@@ -769,48 +780,53 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   uninstallPlugin: async (pluginId: string, scope?: InstallScope, projectPath?: string) => {
     if (!api.plugins) return;
 
+    const effectiveScope = scope ?? 'user';
+    const operationKey = getPluginOperationKey(pluginId, effectiveScope);
     const effectiveProjectPath =
-      scope && scope !== 'user'
+      effectiveScope !== 'user'
         ? (projectPath ?? get().pluginCatalogProjectPath ?? undefined)
         : projectPath;
-    if (scope && scope !== 'user' && !effectiveProjectPath) {
-      clearPluginSuccessResetTimer(pluginId);
+    if (effectiveScope !== 'user' && !effectiveProjectPath) {
+      clearPluginSuccessResetTimer(operationKey);
       set((prev) => ({
-        pluginInstallProgress: { ...prev.pluginInstallProgress, [pluginId]: 'error' },
-        installErrors: { ...prev.installErrors, [pluginId]: PROJECT_SCOPE_REQUIRED_MESSAGE },
+        pluginInstallProgress: { ...prev.pluginInstallProgress, [operationKey]: 'error' },
+        installErrors: { ...prev.installErrors, [operationKey]: PROJECT_SCOPE_REQUIRED_MESSAGE },
       }));
       return;
     }
 
-    clearPluginSuccessResetTimer(pluginId);
+    clearPluginSuccessResetTimer(operationKey);
     set((prev) => ({
-      pluginInstallProgress: { ...prev.pluginInstallProgress, [pluginId]: 'pending' },
+      pluginInstallProgress: { ...prev.pluginInstallProgress, [operationKey]: 'pending' },
     }));
 
     try {
       const result = await api.plugins.uninstall(pluginId, scope, effectiveProjectPath);
       if (result.state === 'error') {
         set((prev) => ({
-          pluginInstallProgress: { ...prev.pluginInstallProgress, [pluginId]: 'error' },
-          installErrors: { ...prev.installErrors, [pluginId]: result.error ?? 'Uninstall failed' },
+          pluginInstallProgress: { ...prev.pluginInstallProgress, [operationKey]: 'error' },
+          installErrors: {
+            ...prev.installErrors,
+            [operationKey]: result.error ?? 'Uninstall failed',
+          },
         }));
         return;
       }
 
       set((prev) => ({
-        pluginInstallProgress: { ...prev.pluginInstallProgress, [pluginId]: 'success' },
+        pluginInstallProgress: { ...prev.pluginInstallProgress, [operationKey]: 'success' },
       }));
 
       // Refresh catalog
       void get().fetchPluginCatalog(get().pluginCatalogProjectPath ?? undefined, true);
 
-      schedulePluginSuccessReset(pluginId, set);
+      schedulePluginSuccessReset(operationKey, set);
     } catch (err) {
-      clearPluginSuccessResetTimer(pluginId);
+      clearPluginSuccessResetTimer(operationKey);
       const message = err instanceof Error ? err.message : 'Uninstall failed';
       set((prev) => ({
-        pluginInstallProgress: { ...prev.pluginInstallProgress, [pluginId]: 'error' },
-        installErrors: { ...prev.installErrors, [pluginId]: message },
+        pluginInstallProgress: { ...prev.pluginInstallProgress, [operationKey]: 'error' },
+        installErrors: { ...prev.installErrors, [operationKey]: message },
       }));
     }
   },

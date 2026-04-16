@@ -101,6 +101,13 @@ export function buildPluginId(pluginName: string, marketplaceName: string): stri
 }
 
 /**
+ * Namespaced operation-state key for plugin install/uninstall UI state.
+ */
+export function getPluginOperationKey(pluginId: string, scope: InstallScope): string {
+  return `plugin:${pluginId}:${scope}`;
+}
+
+/**
  * Check whether a plugin has an installation for the selected scope.
  */
 export function hasInstallationInScope(

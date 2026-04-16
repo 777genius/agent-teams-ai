@@ -27,6 +27,7 @@ import { useStore } from '@renderer/store';
 import {
   getInstallationSummaryLabel,
   getCapabilityLabel,
+  getPluginOperationKey,
   hasInstallationInScope,
   inferCapabilities,
   normalizeCategory,
@@ -74,10 +75,6 @@ export const PluginDetailDialog = ({
       pluginCatalogProjectPath: s.pluginCatalogProjectPath,
     }))
   );
-  const installProgress = useStore(
-    (s) => (plugin ? s.pluginInstallProgress[plugin.pluginId] : undefined) ?? 'idle'
-  );
-  const installError = useStore((s) => (plugin ? s.installErrors[plugin.pluginId] : undefined));
 
   const [scope, setScope] = useState<InstallScope>('user');
   const projectScopeAvailable = Boolean(pluginCatalogProjectPath);
@@ -99,6 +96,12 @@ export const PluginDetailDialog = ({
       setScope('user');
     }
   }, [projectScopeAvailable, scope]);
+
+  const operationKey = plugin ? getPluginOperationKey(plugin.pluginId, scope) : null;
+  const installProgress = useStore(
+    (s) => (operationKey ? s.pluginInstallProgress[operationKey] : undefined) ?? 'idle'
+  );
+  const installError = useStore((s) => (operationKey ? s.installErrors[operationKey] : undefined));
 
   if (!plugin) return <></>;
 

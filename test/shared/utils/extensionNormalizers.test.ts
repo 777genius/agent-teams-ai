@@ -8,6 +8,7 @@ import {
   getExtensionActionDisableReason,
   getCapabilityLabel,
   getInstallationSummaryLabel,
+  getPluginOperationKey,
   getPrimaryCapabilityLabel,
   hasInstallationInScope,
   inferCapabilities,
@@ -148,6 +149,14 @@ describe('buildPluginId', () => {
   it('creates qualifiedName format', () => {
     expect(buildPluginId('context7', 'claude-plugins-official')).toBe(
       'context7@claude-plugins-official',
+    );
+  });
+});
+
+describe('getPluginOperationKey', () => {
+  it('namespaces plugin operation keys by scope', () => {
+    expect(getPluginOperationKey('context7@claude-plugins-official', 'local')).toBe(
+      'plugin:context7@claude-plugins-official:local',
     );
   });
 });
