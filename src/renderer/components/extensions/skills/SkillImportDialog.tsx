@@ -25,7 +25,7 @@ import { FileSearch, FolderOpen, X } from 'lucide-react';
 import { getSuggestedSkillFolderNameFromPath } from './skillFolderNameUtils';
 import { SkillReviewDialog } from './SkillReviewDialog';
 import { resolveSkillProjectPath } from './skillProjectUtils';
-import { validateSkillFolderName } from './skillValidationUtils';
+import { validateSkillFolderName, validateSkillImportSourceDir } from './skillValidationUtils';
 
 import type { SkillReviewPreview } from '@shared/types/extensions';
 
@@ -127,8 +127,16 @@ export const SkillImportDialog = ({
   }
 
   async function handleReview(): Promise<void> {
+    const normalizedSourceDir = sourceDir.trim();
+    const normalizedFolderName = folderName.trim();
+    const sourceDirError = validateSkillImportSourceDir(sourceDir);
+    if (sourceDirError) {
+      setMutationError(sourceDirError);
+      return;
+    }
+
     const folderNameError =
-      folderName.trim().length > 0 ? validateSkillFolderName(folderName) : null;
+      normalizedFolderName.length > 0 ? validateSkillFolderName(normalizedFolderName) : null;
     if (folderNameError) {
       setMutationError(folderNameError);
       return;
@@ -138,8 +146,8 @@ export const SkillImportDialog = ({
     setMutationError(null);
     try {
       const nextPreview = await previewSkillImport({
-        sourceDir,
-        folderName: folderName || undefined,
+        sourceDir: normalizedSourceDir,
+        folderName: normalizedFolderName || undefined,
         scope,
         rootKind,
         projectPath: resolveSkillProjectPath(scope, projectPath),
@@ -158,12 +166,15 @@ export const SkillImportDialog = ({
   }
 
   async function handleConfirmImport(): Promise<void> {
+    const normalizedSourceDir = sourceDir.trim();
+    const normalizedFolderName = folderName.trim();
+
     setImportLoading(true);
     setMutationError(null);
     try {
       const detail = await applySkillImport({
-        sourceDir,
-        folderName: folderName || undefined,
+        sourceDir: normalizedSourceDir,
+        folderName: normalizedFolderName || undefined,
         scope,
         rootKind,
         projectPath: resolveSkillProjectPath(scope, projectPath),
@@ -296,7 +307,7 @@ export const SkillImportDialog = ({
               </p>
               <Button
                 onClick={() => void handleReview()}
-                disabled={!sourceDir || reviewLoading || importLoading}
+                disabled={!sourceDir.trim() || reviewLoading || importLoading}
               >
                 <FileSearch className="mr-1.5 size-3.5" />
                 {reviewLoading ? 'Preparing...' : 'Review And Import'}

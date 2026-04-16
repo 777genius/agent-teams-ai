@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
-import { validateSkillFolderName } from '../../../../../src/renderer/components/extensions/skills/skillValidationUtils';
+import {
+  validateSkillFolderName,
+  validateSkillImportSourceDir,
+} from '../../../../../src/renderer/components/extensions/skills/skillValidationUtils';
 
 describe('skillValidationUtils', () => {
+  it('rejects empty import source folders', () => {
+    expect(validateSkillImportSourceDir('   ')).toBe('Choose a skill folder to import.');
+  });
+
+  it('accepts non-empty import source folders', () => {
+    expect(validateSkillImportSourceDir('/tmp/source-skill')).toBeNull();
+  });
+
   it('accepts normal folder names', () => {
     expect(validateSkillFolderName('review-helper')).toBeNull();
   });

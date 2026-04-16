@@ -426,4 +426,49 @@ describe('SkillImportDialog', () => {
       await Promise.resolve();
     });
   });
+
+  it('keeps review disabled for whitespace-only source folders', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(SkillImportDialog, {
+          open: true,
+          projectPath: null,
+          projectLabel: null,
+          onClose: vi.fn(),
+          onImported: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const sourceInput = host.querySelector('#skill-import-source') as HTMLInputElement;
+    await act(async () => {
+      const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+      setValue?.call(sourceInput, '   ');
+      sourceInput.dispatchEvent(new Event('input', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    const reviewButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Review And Import')
+    ) as HTMLButtonElement;
+
+    expect(reviewButton.disabled).toBe(true);
+
+    await act(async () => {
+      reviewButton.click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.previewSkillImport).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
 });
