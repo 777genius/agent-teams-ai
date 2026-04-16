@@ -166,6 +166,61 @@ describe('extensionsSlice', () => {
       expect(store.getState().pluginCatalogError).toBe('boom');
       expect(store.getState().pluginCatalogLoading).toBe(false);
     });
+
+    it('dedups concurrent requests for the same project key', async () => {
+      let resolveFetch!: (plugins: EnrichedPlugin[]) => void;
+      const inFlight = new Promise<EnrichedPlugin[]>((resolve) => {
+        resolveFetch = resolve;
+      });
+      (api.plugins!.getAll as ReturnType<typeof vi.fn>).mockImplementation(() => inFlight);
+
+      const firstFetch = store.getState().fetchPluginCatalog('/tmp/project-a');
+      const secondFetch = store.getState().fetchPluginCatalog('/tmp/project-a');
+
+      expect(api.plugins!.getAll).toHaveBeenCalledTimes(1);
+
+      resolveFetch([makePlugin({ pluginId: 'same@m' })]);
+      await Promise.all([firstFetch, secondFetch]);
+
+      expect(store.getState().pluginCatalogProjectPath).toBe('/tmp/project-a');
+      expect(store.getState().pluginCatalog.map((plugin) => plugin.pluginId)).toEqual(['same@m']);
+    });
+
+    it('keeps the newest project catalog when project changes mid-flight', async () => {
+      let resolveProjectA!: (plugins: EnrichedPlugin[]) => void;
+      let resolveProjectB!: (plugins: EnrichedPlugin[]) => void;
+      const projectAFetch = new Promise<EnrichedPlugin[]>((resolve) => {
+        resolveProjectA = resolve;
+      });
+      const projectBFetch = new Promise<EnrichedPlugin[]>((resolve) => {
+        resolveProjectB = resolve;
+      });
+
+      (api.plugins!.getAll as ReturnType<typeof vi.fn>)
+        .mockImplementationOnce(() => projectAFetch)
+        .mockImplementationOnce(() => projectBFetch);
+
+      const firstFetch = store.getState().fetchPluginCatalog('/tmp/project-a');
+      const secondFetch = store.getState().fetchPluginCatalog('/tmp/project-b');
+
+      expect(api.plugins!.getAll).toHaveBeenCalledTimes(2);
+
+      resolveProjectB([makePlugin({ pluginId: 'project-b@m' })]);
+      await secondFetch;
+
+      expect(store.getState().pluginCatalogProjectPath).toBe('/tmp/project-b');
+      expect(store.getState().pluginCatalog.map((plugin) => plugin.pluginId)).toEqual([
+        'project-b@m',
+      ]);
+
+      resolveProjectA([makePlugin({ pluginId: 'project-a@m' })]);
+      await firstFetch;
+
+      expect(store.getState().pluginCatalogProjectPath).toBe('/tmp/project-b');
+      expect(store.getState().pluginCatalog.map((plugin) => plugin.pluginId)).toEqual([
+        'project-b@m',
+      ]);
+    });
   });
 
   describe('fetchPluginReadme', () => {

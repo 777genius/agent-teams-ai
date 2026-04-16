@@ -88,6 +88,12 @@ export const PluginDetailDialog = ({
   }, [plugin, open, fetchPluginReadme]);
 
   useEffect(() => {
+    if (open) {
+      setScope('user');
+    }
+  }, [open, plugin?.pluginId]);
+
+  useEffect(() => {
     if (scope === 'project' && !projectScopeAvailable) {
       setScope('user');
     }

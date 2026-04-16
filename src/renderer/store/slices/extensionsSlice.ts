@@ -127,7 +127,8 @@ export interface ExtensionsSlice {
 // Slice Creator
 // =============================================================================
 
-let pluginFetchInFlight: Promise<void> | null = null;
+let pluginFetchInFlight: { key: string; promise: Promise<void> } | null = null;
+let pluginCatalogRequestSeq = 0;
 let mcpDiagnosticsInFlight: Promise<void> | null = null;
 let skillsCatalogRequestSeq = 0;
 let skillsDetailRequestSeq = 0;
@@ -138,6 +139,10 @@ const USER_SKILLS_CATALOG_KEY = '__user__';
 
 function hasAnyLoading(loadingMap: Record<string, boolean>): boolean {
   return Object.values(loadingMap).some(Boolean);
+}
+
+function getPluginCatalogKey(projectPath?: string): string {
+  return projectPath ?? '__user__';
 }
 
 function getSkillsCatalogKey(projectPath?: string): string {
@@ -205,34 +210,52 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   // ── Plugin catalog fetch ──
   fetchPluginCatalog: async (projectPath?: string, forceRefresh?: boolean) => {
     if (!api.plugins) return;
+    const requestKey = getPluginCatalogKey(projectPath);
 
     // Dedup concurrent requests
-    if (pluginFetchInFlight && !forceRefresh) {
-      await pluginFetchInFlight;
+    if (pluginFetchInFlight && !forceRefresh && pluginFetchInFlight.key === requestKey) {
+      await pluginFetchInFlight.promise;
       return;
     }
 
+    const requestSeq = ++pluginCatalogRequestSeq;
     set({ pluginCatalogLoading: true, pluginCatalogError: null });
 
     const promise = (async () => {
       try {
         const result = await api.plugins!.getAll(projectPath, forceRefresh);
-        set({
-          pluginCatalog: result,
-          pluginCatalogLoading: false,
-          pluginCatalogProjectPath: projectPath ?? null,
+        set(() => {
+          if (requestSeq !== pluginCatalogRequestSeq) {
+            return {};
+          }
+
+          return {
+            pluginCatalog: result,
+            pluginCatalogLoading: false,
+            pluginCatalogError: null,
+            pluginCatalogProjectPath: projectPath ?? null,
+          };
         });
       } catch (err) {
-        set({
-          pluginCatalogLoading: false,
-          pluginCatalogError: err instanceof Error ? err.message : 'Failed to load plugins',
+        set(() => {
+          if (requestSeq !== pluginCatalogRequestSeq) {
+            return {};
+          }
+
+          return {
+            pluginCatalogLoading: false,
+            pluginCatalogError: err instanceof Error ? err.message : 'Failed to load plugins',
+            pluginCatalogProjectPath: projectPath ?? null,
+          };
         });
       } finally {
-        pluginFetchInFlight = null;
+        if (pluginFetchInFlight?.promise === promise) {
+          pluginFetchInFlight = null;
+        }
       }
     })();
 
-    pluginFetchInFlight = promise;
+    pluginFetchInFlight = { key: requestKey, promise };
     await promise;
   },
 

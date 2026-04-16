@@ -148,6 +148,12 @@ export const PluginsPanel = ({
     }
   }, [loading, selectedPlugin, selectedPluginId, setSelectedPluginId]);
 
+  useEffect(() => {
+    if (error && selectedPluginId) {
+      setSelectedPluginId(null);
+    }
+  }, [error, selectedPluginId, setSelectedPluginId]);
+
   const sortValue = `${pluginSort.field}:${pluginSort.order}`;
   const activeFilterCount =
     pluginFilters.categories.length +
