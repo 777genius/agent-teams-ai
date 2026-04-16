@@ -167,6 +167,20 @@ describe('extensionsSlice', () => {
       expect(store.getState().pluginCatalogLoading).toBe(false);
     });
 
+    it('clears stale catalog when a different project fetch fails', async () => {
+      store.setState({
+        pluginCatalog: [makePlugin({ pluginId: 'project-a@m' })],
+        pluginCatalogProjectPath: '/tmp/project-a',
+      });
+      (api.plugins!.getAll as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+
+      await store.getState().fetchPluginCatalog('/tmp/project-b');
+
+      expect(store.getState().pluginCatalog).toEqual([]);
+      expect(store.getState().pluginCatalogProjectPath).toBe('/tmp/project-b');
+      expect(store.getState().pluginCatalogError).toBe('boom');
+    });
+
     it('dedups concurrent requests for the same project key', async () => {
       let resolveFetch!: (plugins: EnrichedPlugin[]) => void;
       const inFlight = new Promise<EnrichedPlugin[]>((resolve) => {
@@ -242,6 +256,15 @@ describe('extensionsSlice', () => {
       store.getState().fetchPluginReadme('test@m');
 
       expect(api.plugins!.getReadme).not.toHaveBeenCalled();
+    });
+
+    it('retries README fetch when the cached value is null', () => {
+      store.setState({ pluginReadmes: { 'test@m': null } });
+      (api.plugins!.getReadme as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+      store.getState().fetchPluginReadme('test@m');
+
+      expect(api.plugins!.getReadme).toHaveBeenCalledWith('test@m');
     });
   });
 

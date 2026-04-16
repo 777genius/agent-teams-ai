@@ -237,15 +237,19 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
           };
         });
       } catch (err) {
-        set(() => {
+        set((prev) => {
           if (requestSeq !== pluginCatalogRequestSeq) {
             return {};
           }
 
+          const nextProjectPath = projectPath ?? null;
+          const isSameProjectContext = prev.pluginCatalogProjectPath === nextProjectPath;
+
           return {
+            pluginCatalog: isSameProjectContext ? prev.pluginCatalog : [],
             pluginCatalogLoading: false,
             pluginCatalogError: err instanceof Error ? err.message : 'Failed to load plugins',
-            pluginCatalogProjectPath: projectPath ?? null,
+            pluginCatalogProjectPath: nextProjectPath,
           };
         });
       } finally {
@@ -263,7 +267,13 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   fetchPluginReadme: (pluginId: string) => {
     if (!api.plugins) return;
     const state = get();
-    if (pluginId in state.pluginReadmes || state.pluginReadmeLoading[pluginId]) return;
+    const cachedReadme = state.pluginReadmes[pluginId];
+    if (
+      (cachedReadme !== undefined && cachedReadme !== null) ||
+      state.pluginReadmeLoading[pluginId]
+    ) {
+      return;
+    }
 
     set((prev) => ({
       pluginReadmeLoading: { ...prev.pluginReadmeLoading, [pluginId]: true },
