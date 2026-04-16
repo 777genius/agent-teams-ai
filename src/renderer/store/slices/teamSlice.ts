@@ -456,6 +456,7 @@ function areMemberSpawnStatusEntriesEqual(
     left.error === right.error &&
     left.livenessSource === right.livenessSource &&
     left.runtimeAlive === right.runtimeAlive &&
+    left.runtimeModel === right.runtimeModel &&
     left.bootstrapConfirmed === right.bootstrapConfirmed &&
     left.hardFailure === right.hardFailure
   );

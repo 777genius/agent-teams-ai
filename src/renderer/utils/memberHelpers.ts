@@ -423,7 +423,25 @@ export interface MemberLaunchPresentation {
   runtimeAdvisoryLabel: string | null;
   runtimeAdvisoryTitle?: string;
   launchVisualState: MemberLaunchVisualState;
+  launchStatusLabel: string | null;
   spawnBadgeLabel: string | null;
+}
+
+export function getMemberLaunchStatusLabel(visualState: MemberLaunchVisualState): string | null {
+  switch (visualState) {
+    case 'waiting':
+      return 'waiting to start';
+    case 'spawning':
+      return 'starting';
+    case 'runtime_pending':
+      return 'connecting';
+    case 'settling':
+      return 'joining team';
+    case 'error':
+      return 'failed';
+    default:
+      return null;
+  }
 }
 
 export function buildMemberLaunchPresentation({
@@ -511,6 +529,7 @@ export function buildMemberLaunchPresentation({
     }
   }
 
+  const launchStatusLabel = getMemberLaunchStatusLabel(launchVisualState);
   const spawnBadgeLabel =
     spawnStatus && spawnStatus !== 'online'
       ? spawnStatus === 'waiting' || spawnStatus === 'spawning'
@@ -525,6 +544,7 @@ export function buildMemberLaunchPresentation({
     runtimeAdvisoryLabel,
     runtimeAdvisoryTitle,
     launchVisualState,
+    launchStatusLabel,
     spawnBadgeLabel,
   };
 }

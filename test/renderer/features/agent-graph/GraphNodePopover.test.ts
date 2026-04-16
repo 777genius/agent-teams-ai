@@ -70,7 +70,7 @@ describe('GraphNodePopover spawn badge labels', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows human-facing starting for raw waiting/spawning spawn statuses', async () => {
+  it('shows human-readable launch-status labels for waiting and spawning spawn states', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -96,9 +96,9 @@ describe('GraphNodePopover spawn badge labels', () => {
       await Promise.resolve();
     });
 
+    expect(host.textContent).toContain('waiting to start');
     expect(host.textContent).toContain('starting');
     expect(host.textContent).toContain('Codex · GPT-5.4 Mini · Medium');
-    expect(host.textContent).not.toContain('waiting');
     expect(host.textContent).not.toContain('spawning');
 
     await act(async () => {
@@ -193,7 +193,7 @@ describe('GraphNodePopover spawn badge labels', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('online');
+    expect(host.textContent).toContain('connecting');
     expect(host.textContent).not.toContain('Idle');
 
     await act(async () => {

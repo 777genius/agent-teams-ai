@@ -783,6 +783,36 @@ function createInitialMemberSpawnStatusEntry(): MemberSpawnStatusEntry {
   };
 }
 
+interface LiveTeamAgentRuntimeMetadata {
+  model?: string;
+}
+
+function stripWrappedCliFlagValue(raw: string | undefined): string | undefined {
+  const trimmed = raw?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    const unwrapped = trimmed.slice(1, -1).trim();
+    return unwrapped.length > 0 ? unwrapped : undefined;
+  }
+  return trimmed;
+}
+
+function extractCliFlagValue(command: string, flagName: string): string | undefined {
+  const escapedFlag = flagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`(?:^|\\s)${escapedFlag}\\s+("([^"]*)"|'([^']*)'|([^\\s]+))`).exec(
+    command
+  );
+  if (!match) {
+    return undefined;
+  }
+  return stripWrappedCliFlagValue(match[2] ?? match[3] ?? match[4] ?? match[1]);
+}
+
 export function shouldAcceptDeterministicBootstrapEvent(params: {
   runId: string;
   teamName: string;
@@ -911,11 +941,17 @@ function buildEffectiveTeamMemberSpec(
 ): TeamMemberInput {
   const memberProviderId = normalizeTeamMemberProviderId(member.providerId);
   const defaultProviderId = normalizeTeamMemberProviderId(defaults.providerId);
-  const model = member.model?.trim() || defaults.model?.trim() || undefined;
+  const effectiveProviderId = memberProviderId ?? defaultProviderId ?? 'anthropic';
+  const model =
+    member.model?.trim() ||
+    (memberProviderId == null || memberProviderId === defaultProviderId
+      ? defaults.model?.trim()
+      : undefined) ||
+    undefined;
 
   return {
     ...member,
-    providerId: memberProviderId ?? defaultProviderId ?? 'anthropic',
+    providerId: effectiveProviderId,
     model,
     effort: member.effort ?? defaults.effort,
   };
@@ -3396,16 +3432,19 @@ export class TeamProvisioningService {
   }> {
     const runId = this.getTrackedRunId(teamName);
     if (!runId) {
-      return this.reconcilePersistedLaunchState(teamName).then(({ snapshot, statuses }) => ({
-        statuses,
-        runId: null,
-        teamLaunchState: snapshot?.teamLaunchState,
-        launchPhase: snapshot?.launchPhase,
-        expectedMembers: snapshot?.expectedMembers,
-        updatedAt: snapshot?.updatedAt,
-        summary: snapshot?.summary,
-        source: snapshot ? 'persisted' : 'persisted',
-      }));
+      return this.reconcilePersistedLaunchState(teamName).then(({ snapshot, statuses }) => {
+        this.attachLiveRuntimeMetadataToStatuses(teamName, statuses);
+        return {
+          statuses,
+          runId: null,
+          teamLaunchState: snapshot?.teamLaunchState,
+          launchPhase: snapshot?.launchPhase,
+          expectedMembers: snapshot?.expectedMembers,
+          updatedAt: snapshot?.updatedAt,
+          summary: snapshot?.summary,
+          source: snapshot ? 'persisted' : 'persisted',
+        };
+      });
     }
     const run = this.runs.get(runId);
     if (!run) {
@@ -3426,6 +3465,7 @@ export class TeamProvisioningService {
     });
     const snapshot = persisted ?? liveSnapshot;
     const statuses = snapshotToMemberSpawnStatuses(snapshot);
+    this.attachLiveRuntimeMetadataToStatuses(teamName, statuses);
     return {
       statuses,
       runId,
@@ -3552,7 +3592,6 @@ export class TeamProvisioningService {
         !current ||
         current.launchState === 'failed_to_start' ||
         current.launchState === 'confirmed_alive' ||
-        current.runtimeAlive === true ||
         current.hardFailure === true ||
         current.agentToolAccepted !== true
       ) {
@@ -3900,6 +3939,89 @@ export class TeamProvisioningService {
     return typeof defaultModel === 'string' && defaultModel.trim().length > 0
       ? defaultModel.trim()
       : null;
+  }
+
+  private async materializeEffectiveTeamMemberSpecs(params: {
+    claudePath: string;
+    cwd: string;
+    members: TeamCreateRequest['members'];
+    defaults: {
+      providerId?: TeamProviderId;
+      model?: string;
+      effort?: TeamCreateRequest['effort'];
+    };
+    primaryProviderId?: TeamProviderId;
+    primaryEnv?: ProvisioningEnvResolution;
+    limitContext?: boolean;
+  }): Promise<TeamCreateRequest['members']> {
+    const envByProvider = new Map<TeamProviderId, Promise<ProvisioningEnvResolution>>();
+    const defaultModelByProvider = new Map<TeamProviderId, Promise<string>>();
+    const normalizedPrimaryProviderId = resolveTeamProviderId(params.primaryProviderId);
+
+    const getProvisioningEnv = (providerId: TeamProviderId): Promise<ProvisioningEnvResolution> => {
+      if (normalizedPrimaryProviderId === providerId && params.primaryEnv != null) {
+        return Promise.resolve(params.primaryEnv);
+      }
+
+      const cached = envByProvider.get(providerId);
+      if (cached) {
+        return cached;
+      }
+
+      const created = this.buildProvisioningEnv(providerId);
+      envByProvider.set(providerId, created);
+      return created;
+    };
+
+    const getResolvedDefaultModel = (providerId: TeamProviderId): Promise<string> => {
+      const cached = defaultModelByProvider.get(providerId);
+      if (cached) {
+        return cached;
+      }
+
+      const providerLabel = getTeamProviderLabel(providerId);
+      const created = (async () => {
+        const envResolution = await getProvisioningEnv(providerId);
+        if (envResolution.warning) {
+          throw new Error(envResolution.warning);
+        }
+
+        const resolvedDefaultModel = await this.resolveProviderDefaultModel(
+          params.claudePath,
+          params.cwd,
+          providerId,
+          envResolution.env,
+          params.limitContext === true
+        );
+        const normalized = resolvedDefaultModel?.trim();
+        if (!normalized) {
+          throw new Error(
+            `Could not resolve the runtime default model for ${providerLabel} teammates. Select an explicit model and retry.`
+          );
+        }
+        return normalized;
+      })();
+
+      defaultModelByProvider.set(providerId, created);
+      return created;
+    };
+
+    const effectiveMembers: TeamCreateRequest['members'] = [];
+    for (const member of params.members) {
+      const effectiveMember = buildEffectiveTeamMemberSpec(member, params.defaults);
+      const providerId = normalizeTeamMemberProviderId(effectiveMember.providerId) ?? 'anthropic';
+      if (providerId === 'anthropic' || effectiveMember.model?.trim()) {
+        effectiveMembers.push(effectiveMember);
+        continue;
+      }
+
+      effectiveMembers.push({
+        ...effectiveMember,
+        model: await getResolvedDefaultModel(providerId),
+      });
+    }
+
+    return effectiveMembers;
   }
 
   private getFreshCachedProbeResult(
@@ -4756,10 +4878,23 @@ export class TeamProvisioningService {
         throw new Error('Claude CLI not found; install it or provide a valid path');
       }
 
-      const effectiveMemberSpecs = buildEffectiveTeamMemberSpecs(request.members, {
-        providerId: request.providerId,
-        model: request.model,
-        effort: request.effort,
+      const provisioningEnv = await this.buildProvisioningEnv(request.providerId);
+      const { env: shellEnv, geminiRuntimeAuth, warning: envWarning } = provisioningEnv;
+      if (envWarning) {
+        throw new Error(envWarning);
+      }
+      const effectiveMemberSpecs = await this.materializeEffectiveTeamMemberSpecs({
+        claudePath,
+        cwd: request.cwd,
+        members: request.members,
+        defaults: {
+          providerId: request.providerId,
+          model: request.model,
+          effort: request.effort,
+        },
+        primaryProviderId: request.providerId,
+        primaryEnv: provisioningEnv,
+        limitContext: request.limitContext,
       });
       const runId = randomUUID();
       const startedAt = nowIso();
@@ -4864,14 +4999,6 @@ export class TeamProvisioningService {
       const initialUserPrompt = request.prompt?.trim() ?? '';
       const promptSize = getPromptSizeSummary(initialUserPrompt);
       let child: ReturnType<typeof spawn>;
-      const {
-        env: shellEnv,
-        geminiRuntimeAuth,
-        warning: envWarning,
-      } = await this.buildProvisioningEnv(request.providerId);
-      if (envWarning) {
-        throw new Error(envWarning);
-      }
       shellEnv.CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP = '1';
       const teammateModeDecision = await resolveDesktopTeammateModeDecision(request.extraCliArgs);
       if (teammateModeDecision.forceProcessTeammates) {
@@ -4963,10 +5090,16 @@ export class TeamProvisioningService {
         });
         await this.membersMetaStore.writeMembers(
           request.teamName,
-          request.members.map((m) => ({
+          effectiveMemberSpecs.map((m) => ({
             name: m.name.trim(),
             role: m.role?.trim() || undefined,
             workflow: m.workflow?.trim() || undefined,
+            providerId: normalizeOptionalTeamProviderId(m.providerId),
+            model: m.model?.trim() || undefined,
+            effort:
+              m.effort === 'low' || m.effort === 'medium' || m.effort === 'high'
+                ? m.effort
+                : undefined,
             agentType: 'general-purpose' as const,
             color: getMemberColorByName(m.name.trim()),
             joinedAt: Date.now(),
@@ -5300,16 +5433,30 @@ export class TeamProvisioningService {
       const runId = randomUUID();
       const startedAt = nowIso();
 
-      const effectiveMemberSpecs = buildEffectiveTeamMemberSpecs(expectedMemberSpecs, {
-        providerId: request.providerId,
-        model: request.model,
-        effort: request.effort,
+      const provisioningEnv = await this.buildProvisioningEnv(request.providerId);
+      const { env: shellEnv, geminiRuntimeAuth, warning: envWarning } = provisioningEnv;
+      if (envWarning) {
+        throw new Error(envWarning);
+      }
+
+      const effectiveMemberSpecs = await this.materializeEffectiveTeamMemberSpecs({
+        claudePath,
+        cwd: request.cwd,
+        members: expectedMemberSpecs,
+        defaults: {
+          providerId: request.providerId,
+          model: request.model,
+          effort: request.effort,
+        },
+        primaryProviderId: request.providerId,
+        primaryEnv: provisioningEnv,
+        limitContext: request.limitContext,
       });
 
       // Build a synthetic TeamCreateRequest for reuse by shared infrastructure
       const syntheticRequest: TeamCreateRequest = {
         teamName: request.teamName,
-        members: expectedMemberSpecs,
+        members: effectiveMemberSpecs,
         cwd: request.cwd,
         providerId: request.providerId,
         model: request.model,
@@ -5448,14 +5595,6 @@ export class TeamProvisioningService {
       );
       const promptSize = getPromptSizeSummary(prompt);
       let child: ReturnType<typeof spawn>;
-      const {
-        env: shellEnv,
-        geminiRuntimeAuth,
-        warning: envWarning,
-      } = await this.buildProvisioningEnv(request.providerId);
-      if (envWarning) {
-        throw new Error(envWarning);
-      }
       shellEnv.CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP = '1';
       const teammateModeDecision = await resolveDesktopTeammateModeDecision(request.extraCliArgs);
       if (teammateModeDecision.forceProcessTeammates) {
@@ -6842,12 +6981,34 @@ export class TeamProvisioningService {
   }
 
   private hasLiveTeamAgentProcess(teamName: string, memberName: string): boolean {
-    return this.getLiveTeamAgentNames(teamName).has(memberName);
+    return this.getLiveTeamAgentRuntimeMetadata(teamName).has(memberName);
+  }
+
+  private attachLiveRuntimeMetadataToStatuses(
+    teamName: string,
+    statuses: Record<string, MemberSpawnStatusEntry>
+  ): void {
+    for (const [memberName, metadata] of this.getLiveTeamAgentRuntimeMetadata(teamName).entries()) {
+      const current = statuses[memberName];
+      if (!current || !metadata.model) {
+        continue;
+      }
+      statuses[memberName] = {
+        ...current,
+        runtimeModel: metadata.model,
+      };
+    }
   }
 
   private getLiveTeamAgentNames(teamName: string): Set<string> {
+    return new Set(this.getLiveTeamAgentRuntimeMetadata(teamName).keys());
+  }
+
+  private getLiveTeamAgentRuntimeMetadata(
+    teamName: string
+  ): Map<string, LiveTeamAgentRuntimeMetadata> {
     if (process.platform === 'win32') {
-      return new Set();
+      return new Map();
     }
 
     let output = '';
@@ -6857,11 +7018,11 @@ export class TeamProvisioningService {
         stdio: ['ignore', 'pipe', 'ignore'],
       });
     } catch {
-      return new Set();
+      return new Map();
     }
 
     const teamMarker = `--team-name ${teamName}`;
-    const names = new Set<string>();
+    const metadataByAgent = new Map<string, LiveTeamAgentRuntimeMetadata>();
     for (const line of output.split('\n')) {
       const trimmed = line.trim();
       if (!trimmed.includes(teamMarker)) continue;
@@ -6869,10 +7030,13 @@ export class TeamProvisioningService {
       if (!match) continue;
       const agentName = match[1]?.trim();
       if (agentName) {
-        names.add(agentName);
+        const model = extractCliFlagValue(trimmed, '--model');
+        metadataByAgent.set(agentName, {
+          ...(model ? { model } : {}),
+        });
       }
     }
-    return names;
+    return metadataByAgent;
   }
 
   private async clearPersistedLaunchState(teamName: string): Promise<void> {
@@ -7107,7 +7271,7 @@ export class TeamProvisioningService {
         current.hardFailure = false;
         current.hardFailureReason = undefined;
       }
-      if (!current.bootstrapConfirmed && !runtimeAlive && !current.hardFailure) {
+      if (!current.bootstrapConfirmed && !current.hardFailure) {
         const transcriptFailureReason = await this.findBootstrapTranscriptFailureReason(
           teamName,
           expected,

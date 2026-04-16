@@ -276,6 +276,76 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     await svc.cancelProvisioning(runId);
   });
 
+  it('createTeam materializes an explicit Codex default model for teammates before bootstrap spawn', async () => {
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
+    const { child } = createFakeChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService();
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { PATH: '/usr/bin' },
+      authSource: 'codex_runtime',
+      geminiRuntimeAuth: null,
+    }));
+    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).pathExists = vi.fn(async () => false);
+
+    const { runId } = await svc.createTeam(
+      {
+        teamName: 'codex-default-team',
+        cwd: process.cwd(),
+        providerId: 'codex',
+        members: [{ name: 'alice', role: 'developer', providerId: 'codex' }],
+      },
+      () => {}
+    );
+
+    const bootstrapSpec = extractBootstrapSpec();
+    expect(bootstrapSpec.members).toEqual([
+      expect.objectContaining({
+        name: 'alice',
+        provider: 'codex',
+        model: 'gpt-5.4',
+      }),
+    ]);
+
+    await svc.cancelProvisioning(runId);
+  });
+
+  it('createTeam fails fast when a Codex teammate default model cannot be resolved', async () => {
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
+    vi.mocked(spawnCli).mockReset();
+
+    const svc = new TeamProvisioningService();
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { PATH: '/usr/bin' },
+      authSource: 'codex_runtime',
+      geminiRuntimeAuth: null,
+    }));
+    (svc as any).resolveProviderDefaultModel = vi.fn(async () => null);
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).pathExists = vi.fn(async () => false);
+
+    await expect(
+      svc.createTeam(
+        {
+          teamName: 'codex-default-missing',
+          cwd: process.cwd(),
+          providerId: 'codex',
+          members: [{ name: 'alice', providerId: 'codex' }],
+        },
+        () => {}
+      )
+    ).rejects.toThrow(
+      'Could not resolve the runtime default model for Codex teammates. Select an explicit model and retry.'
+    );
+
+    expect(spawnCli).not.toHaveBeenCalled();
+  });
+
   it('add-member spawn prompt tells teammates to keep review on the same task', () => {
     const prompt = buildAddMemberSpawnMessage('my-team', 'My Team', 'team-lead', {
       name: 'alice',
@@ -426,6 +496,69 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain(
       'Correct flow: finish implementation on #X -> task_complete #X -> review_request #X -> reviewer runs review_start #X -> reviewer runs review_approve or review_request_changes on #X.'
     );
+
+    await svc.cancelProvisioning(runId);
+  });
+
+  it('launchTeam materializes an explicit Codex default model for launch teammates before bootstrap spawn', async () => {
+    const teamName = 'codex-default-launch';
+    const teamDir = path.join(tempTeamsBase, teamName);
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead', providerId: 'codex' },
+          { name: 'alice', agentType: 'teammate', role: 'developer', providerId: 'codex' },
+        ],
+      }),
+      'utf8'
+    );
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
+    const { child } = createFakeChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService();
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: { PATH: '/usr/bin' },
+      authSource: 'codex_runtime',
+      geminiRuntimeAuth: null,
+    }));
+    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
+    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
+    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
+    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+      members: [{ name: 'alice', role: 'developer', providerId: 'codex' }],
+      source: 'config-fallback',
+      warning: undefined,
+    }));
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).pathExists = vi.fn(async () => false);
+    (svc as any).startFilesystemMonitor = vi.fn();
+
+    const { runId } = await svc.launchTeam(
+      {
+        teamName,
+        cwd: process.cwd(),
+        providerId: 'codex',
+        clearContext: true,
+      } as any,
+      () => {}
+    );
+
+    const bootstrapSpec = extractBootstrapSpec();
+    expect(bootstrapSpec.members).toEqual([
+      expect.objectContaining({
+        name: 'alice',
+        provider: 'codex',
+        model: 'gpt-5.4',
+      }),
+    ]);
 
     await svc.cancelProvisioning(runId);
   });

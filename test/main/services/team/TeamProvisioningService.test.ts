@@ -752,7 +752,7 @@ describe('TeamProvisioningService', () => {
     expect(result.teamLaunchState).toBe('partial_failure');
   });
 
-  it('marks a live teammate bootstrap as failed when transcript shows model unavailability', async () => {
+  it('marks an online teammate bootstrap as failed when transcript shows model unavailability', async () => {
     allowConsoleLogs();
     const teamName = 'zz-live-bootstrap-model-unavailable';
     const leadSessionId = 'lead-session';
@@ -816,8 +816,8 @@ describe('TeamProvisioningService', () => {
             launchState: 'runtime_pending_bootstrap',
             error: undefined,
             updatedAt: acceptedAt,
-            runtimeAlive: false,
-            livenessSource: undefined,
+            runtimeAlive: true,
+            livenessSource: 'process',
             bootstrapConfirmed: false,
             hardFailure: false,
             agentToolAccepted: true,
@@ -845,5 +845,78 @@ describe('TeamProvisioningService', () => {
       'requested model is not available'
     );
     expect(run.provisioningOutputParts.join('\n')).toContain('requested model is not available');
+  });
+
+  it('marks a persisted online teammate bootstrap as failed when transcript shows model unavailability', async () => {
+    allowConsoleLogs();
+    const teamName = 'zz-persisted-live-bootstrap-model-unavailable';
+    const leadSessionId = 'lead-session';
+    const memberSessionId = 'jack-session';
+    const projectPath = '/Users/test/proj';
+    const projectId = '-Users-test-proj';
+    const acceptedAt = new Date(Date.now() - 5_000).toISOString();
+    const errorAt = new Date(Date.now() - 4_000).toISOString();
+
+    writeLaunchConfig(teamName, projectPath, leadSessionId, ['jack']);
+    writeLaunchState(teamName, leadSessionId, {
+      jack: {
+        launchState: 'runtime_pending_bootstrap',
+        agentToolAccepted: true,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        hardFailureReason: undefined,
+        firstSpawnAcceptedAt: acceptedAt,
+      },
+    });
+
+    const projectRoot = path.join(tempProjectsBase, projectId);
+    fs.mkdirSync(projectRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(projectRoot, `${memberSessionId}.jsonl`),
+      [
+        JSON.stringify({
+          timestamp: acceptedAt,
+          teamName,
+          agentName: 'jack',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: `You are bootstrapping into team "${teamName}" as member "jack".`,
+          },
+        }),
+        JSON.stringify({
+          timestamp: errorAt,
+          teamName,
+          agentName: 'jack',
+          type: 'assistant',
+          isApiErrorMessage: true,
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'text',
+                text: 'API Error: 400 {"detail":"The requested model is not available for your account."}',
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    (svc as any).getLiveTeamAgentNames = vi.fn(() => new Set(['jack']));
+
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.statuses.jack).toMatchObject({
+      status: 'error',
+      launchState: 'failed_to_start',
+      runtimeAlive: true,
+    });
+    expect(result.statuses.jack?.error).toContain('requested model is not available');
+    expect(result.statuses.jack?.hardFailureReason).toContain('requested model is not available');
+    expect(result.teamLaunchState).toBe('partial_failure');
   });
 });

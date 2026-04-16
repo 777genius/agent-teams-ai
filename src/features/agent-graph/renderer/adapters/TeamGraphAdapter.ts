@@ -417,6 +417,7 @@ export class TeamGraphAdapter {
         leadMember?.effort
       ),
       launchVisualState: leadLaunchPresentation?.launchVisualState ?? undefined,
+      launchStatusLabel: leadLaunchPresentation?.launchStatusLabel ?? undefined,
       contextUsage: percent != null ? Math.max(0, Math.min(1, percent / 100)) : undefined,
       avatarUrl: agentAvatarUrl(leadName, 64),
       pendingApproval,
@@ -509,6 +510,7 @@ export class TeamGraphAdapter {
         ),
         spawnStatus: spawn?.status,
         launchVisualState: launchPresentation.launchVisualState ?? undefined,
+        launchStatusLabel: launchPresentation.launchStatusLabel ?? undefined,
         avatarUrl: agentAvatarUrl(member.name, 64),
         currentTaskId: member.currentTaskId ?? undefined,
         currentTaskSubject: member.currentTaskId

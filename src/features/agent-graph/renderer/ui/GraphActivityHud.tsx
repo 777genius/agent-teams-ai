@@ -398,7 +398,7 @@ export const GraphActivityHud = ({
     <>
       <div
         ref={worldLayerRef}
-        className="pointer-events-none absolute left-0 top-0 z-[8] origin-top-left"
+        className="pointer-events-none absolute left-0 top-0 z-[8] origin-top-left select-none"
       >
         {visibleLanes.map((lane) => (
           <div key={lane.node.id}>
@@ -431,11 +431,14 @@ export const GraphActivityHud = ({
                     ref={(element) => {
                       shellRefs.current.set(lane.node.id, element);
                     }}
-                    className="pointer-events-auto absolute z-10 origin-top-left opacity-0"
+                    className="pointer-events-auto absolute z-10 origin-top-left select-none opacity-0"
                     style={{
                       width: `${laneWidth}px`,
                       maxWidth: `${laneWidth}px`,
                       height: `${laneHeight}px`,
+                    }}
+                    onDragStart={(event) => {
+                      event.preventDefault();
                     }}
                   >
                     <div className="flex h-full min-w-0 max-w-full flex-col overflow-hidden">

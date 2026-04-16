@@ -135,6 +135,7 @@ export function GraphView({
     y: number;
     color?: string | null;
   } | null>(null);
+  const selectionLockRef = useRef<{ userSelect: string; webkitUserSelect: string } | null>(null);
 
   // ─── Hooks ──────────────────────────────────────────────────────────────
   const simulation = useGraphSimulation();
@@ -253,6 +254,30 @@ export function GraphView({
       return null;
     }
     return { x: node.x, y: node.y };
+  }, []);
+
+  const setInteractionSelectionDisabled = useCallback((disabled: boolean) => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    const bodyStyle = document.body.style;
+    if (disabled) {
+      if (!selectionLockRef.current) {
+        selectionLockRef.current = {
+          userSelect: bodyStyle.userSelect,
+          webkitUserSelect: bodyStyle.webkitUserSelect,
+        };
+      }
+      bodyStyle.userSelect = 'none';
+      bodyStyle.webkitUserSelect = 'none';
+      return;
+    }
+    if (!selectionLockRef.current) {
+      return;
+    }
+    bodyStyle.userSelect = selectionLockRef.current.userSelect;
+    bodyStyle.webkitUserSelect = selectionLockRef.current.webkitUserSelect;
+    selectionLockRef.current = null;
   }, []);
 
   const animate = useCallback(() => {
@@ -405,10 +430,15 @@ export function GraphView({
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return; // only left click
+      e.preventDefault();
       dragPreviewRef.current = null;
+      setInteractionSelectionDisabled(true);
 
       const canvas = canvasHandle.current?.getCanvas();
-      if (!canvas) return;
+      if (!canvas) {
+        setInteractionSelectionDisabled(false);
+        return;
+      }
       const rect = canvas.getBoundingClientRect();
       const world = camera.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
       const nodes = getVisibleNodes(simulation.stateRef.current.nodes);
@@ -464,6 +494,9 @@ export function GraphView({
       }
 
       if (isPanningRef.current) {
+        if (typeof document !== 'undefined') {
+          document.getSelection()?.removeAllRanges();
+        }
         camera.handlePanMove(clientX, clientY);
         return true;
       }
@@ -480,6 +513,9 @@ export function GraphView({
 
       const draggedNodeId = interaction.dragNodeId.current;
       if (interaction.isDragging.current && draggedNodeId) {
+        if (typeof document !== 'undefined') {
+          document.getSelection()?.removeAllRanges();
+        }
         const draggedNode = simulation.stateRef.current.nodes.find((node) => node.id === draggedNodeId);
         if (draggedNode?.kind === 'member') {
           const nearest = simulation.resolveNearestOwnerSlot(draggedNodeId, world.x, world.y);
@@ -509,6 +545,7 @@ export function GraphView({
       if (isPanningRef.current) {
         camera.handlePanEnd();
         isPanningRef.current = false;
+        setInteractionSelectionDisabled(false);
         dragPreviewRef.current = null;
         setSelectedNodeId(null);
         setSelectedEdgeId(null);
@@ -519,6 +556,7 @@ export function GraphView({
 
       const clickedId = interaction.handleMouseUp();
       if (wasDragging && draggedNodeId) {
+        setInteractionSelectionDisabled(false);
         const draggedNode = simulation.stateRef.current.nodes.find((node) => node.id === draggedNodeId);
         if (draggedNode?.kind === 'member' && draggedNode.x != null && draggedNode.y != null) {
           const nearest = simulation.resolveNearestOwnerSlot(
@@ -547,6 +585,7 @@ export function GraphView({
         return;
       }
 
+      setInteractionSelectionDisabled(false);
       if (clickedId) {
         setSelectedNodeId(clickedId);
         setSelectedEdgeId(null);
@@ -585,7 +624,7 @@ export function GraphView({
       }
       dragPreviewRef.current = null;
     },
-    [camera, events, interaction, onOwnerSlotDrop, simulation]
+    [camera, events, interaction, onOwnerSlotDrop, setInteractionSelectionDisabled, simulation]
   );
 
   const handleMouseMove = useCallback(
@@ -640,6 +679,7 @@ export function GraphView({
   useEffect(() => {
     const handleWindowMouseMove = (event: MouseEvent): void => {
       if ((event.buttons & 1) === 0) {
+        setInteractionSelectionDisabled(false);
         return;
       }
       if (
@@ -650,6 +690,7 @@ export function GraphView({
       ) {
         return;
       }
+      event.preventDefault();
       processActivePointerMove(event.clientX, event.clientY, event.buttons);
     };
 
@@ -660,6 +701,7 @@ export function GraphView({
         !interaction.isDragging.current &&
         !edgeMouseDownRef.current
       ) {
+        setInteractionSelectionDisabled(false);
         return;
       }
       completePointerInteraction(event.clientX, event.clientY);
@@ -670,8 +712,9 @@ export function GraphView({
     return () => {
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
+      setInteractionSelectionDisabled(false);
     };
-  }, [completePointerInteraction, interaction, processActivePointerMove]);
+  }, [completePointerInteraction, interaction, processActivePointerMove, setInteractionSelectionDisabled]);
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -819,7 +862,10 @@ export function GraphView({
 
   // ─── Render ─────────────────────────────────────────────────────────────
   return (
-    <div ref={containerRef} className={`relative h-full w-full overflow-hidden ${className ?? ''}`}>
+    <div
+      ref={containerRef}
+      className={`relative h-full w-full overflow-hidden select-none ${className ?? ''}`}
+    >
       <GraphCanvas
         ref={canvasHandle}
         showHexGrid={config?.showHexGrid ?? true}

@@ -945,6 +945,8 @@ export interface MemberSpawnStatusEntry {
   firstSpawnAcceptedAt?: string;
   /** ISO timestamp of the latest confirmed heartbeat/bootstrap message. */
   lastHeartbeatAt?: string;
+  /** Live runtime model observed from the teammate process, when available. */
+  runtimeModel?: string;
   /** ISO timestamp of the last status change. */
   updatedAt: string;
 }

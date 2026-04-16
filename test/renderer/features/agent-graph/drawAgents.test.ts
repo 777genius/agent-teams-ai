@@ -108,4 +108,36 @@ describe('drawAgents', () => {
     expect(runtimeCall!.y).toBeGreaterThan(labelCall!.y);
     expect(toolCall!.y).toBeLessThan(node.y!);
   });
+
+  it('renders launch text as a third label line and removes old ad-hoc waiting text', () => {
+    const { ctx, fillTextCalls } = createMockContext();
+    const node: GraphNode = {
+      id: 'member:demo:alice',
+      kind: 'member',
+      label: 'alice',
+      state: 'idle',
+      color: '#60a5fa',
+      runtimeLabel: 'Codex · GPT-5.4 Mini · Medium',
+      launchVisualState: 'runtime_pending',
+      launchStatusLabel: 'connecting',
+      spawnStatus: 'online',
+      domainRef: { kind: 'member', teamName: 'demo', memberName: 'alice' },
+      x: 320,
+      y: 240,
+    };
+
+    drawAgents(ctx, [node], 0, null, null, null, 1);
+
+    const labelCall = fillTextCalls.find((call) => call.text === 'alice');
+    const runtimeCall = fillTextCalls.find((call) => call.text.includes('Codex'));
+    const launchCall = fillTextCalls.find((call) => call.text === 'connecting');
+
+    expect(labelCall).toBeDefined();
+    expect(runtimeCall).toBeDefined();
+    expect(launchCall).toBeDefined();
+    expect(runtimeCall!.y).toBeGreaterThan(labelCall!.y);
+    expect(launchCall!.y).toBeGreaterThan(runtimeCall!.y);
+    expect(fillTextCalls.some((call) => call.text === 'waiting...')).toBe(false);
+    expect(fillTextCalls.some((call) => call.text === 'connecting...')).toBe(false);
+  });
 });

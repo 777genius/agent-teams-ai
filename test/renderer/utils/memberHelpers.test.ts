@@ -177,33 +177,90 @@ describe('memberHelpers spawn-aware presence', () => {
   });
 
   it('derives runtime-pending and settling visual states from the same launch inputs', () => {
+    const runtimePending = buildMemberLaunchPresentation({
+      member,
+      spawnStatus: 'online',
+      spawnLaunchState: 'runtime_pending_bootstrap',
+      spawnLivenessSource: 'process',
+      spawnRuntimeAlive: true,
+      runtimeAdvisory: undefined,
+      isLaunchSettling: false,
+      isTeamAlive: true,
+      isTeamProvisioning: false,
+    });
+
+    const settling = buildMemberLaunchPresentation({
+      member,
+      spawnStatus: 'online',
+      spawnLaunchState: 'confirmed_alive',
+      spawnLivenessSource: 'heartbeat',
+      spawnRuntimeAlive: true,
+      runtimeAdvisory: undefined,
+      isLaunchSettling: true,
+      isTeamAlive: true,
+      isTeamProvisioning: false,
+    });
+
+    expect(runtimePending.launchVisualState).toBe('runtime_pending');
+    expect(runtimePending.launchStatusLabel).toBe('connecting');
+    expect(settling.launchVisualState).toBe('settling');
+    expect(settling.launchStatusLabel).toBe('joining team');
+  });
+
+  it('returns shared launch status labels without changing generic presence labels', () => {
     expect(
       buildMemberLaunchPresentation({
         member,
-        spawnStatus: 'online',
-        spawnLaunchState: 'runtime_pending_bootstrap',
-        spawnLivenessSource: 'process',
-        spawnRuntimeAlive: true,
+        spawnStatus: 'waiting',
+        spawnLaunchState: 'starting',
+        spawnLivenessSource: undefined,
+        spawnRuntimeAlive: false,
         runtimeAdvisory: undefined,
         isLaunchSettling: false,
         isTeamAlive: true,
         isTeamProvisioning: false,
-      }).launchVisualState
-    ).toBe('runtime_pending');
+      })
+    ).toMatchObject({
+      presenceLabel: 'starting',
+      launchVisualState: 'waiting',
+      launchStatusLabel: 'waiting to start',
+    });
 
     expect(
       buildMemberLaunchPresentation({
         member,
-        spawnStatus: 'online',
-        spawnLaunchState: 'confirmed_alive',
-        spawnLivenessSource: 'heartbeat',
-        spawnRuntimeAlive: true,
+        spawnStatus: 'spawning',
+        spawnLaunchState: 'starting',
+        spawnLivenessSource: undefined,
+        spawnRuntimeAlive: false,
         runtimeAdvisory: undefined,
-        isLaunchSettling: true,
+        isLaunchSettling: false,
         isTeamAlive: true,
         isTeamProvisioning: false,
-      }).launchVisualState
-    ).toBe('settling');
+      })
+    ).toMatchObject({
+      presenceLabel: 'starting',
+      launchVisualState: 'spawning',
+      launchStatusLabel: 'starting',
+    });
+
+    expect(
+      buildMemberLaunchPresentation({
+        member,
+        spawnStatus: 'error',
+        spawnLaunchState: 'failed_to_start',
+        spawnLivenessSource: undefined,
+        spawnRuntimeAlive: false,
+        runtimeAdvisory: undefined,
+        isLaunchSettling: false,
+        isTeamAlive: true,
+        isTeamProvisioning: false,
+      })
+    ).toMatchObject({
+      presenceLabel: 'spawn failed',
+      launchVisualState: 'error',
+      launchStatusLabel: 'failed',
+    });
   });
 
   it('renders unified retry advisory labels for provider retries', () => {

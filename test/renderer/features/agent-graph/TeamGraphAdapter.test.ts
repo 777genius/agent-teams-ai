@@ -1078,7 +1078,10 @@ describe('TeamGraphAdapter particles', () => {
       } as never
     );
 
-    expect(findNode(graph, 'member:my-team:alice')?.launchVisualState).toBe('runtime_pending');
+    expect(findNode(graph, 'member:my-team:alice')).toMatchObject({
+      launchVisualState: 'runtime_pending',
+      launchStatusLabel: 'connecting',
+    });
   });
 
   it('keeps confirmed teammates in settling visuals while launch is still joining', () => {
@@ -1125,7 +1128,10 @@ describe('TeamGraphAdapter particles', () => {
       } as never
     );
 
-    expect(findNode(graph, 'member:my-team:alice')?.launchVisualState).toBe('settling');
+    expect(findNode(graph, 'member:my-team:alice')).toMatchObject({
+      launchVisualState: 'settling',
+      launchStatusLabel: 'joining team',
+    });
   });
 
   it('scopes inbox particle ids by team name to avoid cross-team collisions', () => {

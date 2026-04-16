@@ -327,11 +327,17 @@ const MemberPopoverContent = ({
     : null;
   const fallbackSpawnStatusLabel =
     node.spawnStatus && node.spawnStatus !== 'online'
-      ? node.spawnStatus === 'waiting' || node.spawnStatus === 'spawning'
-        ? 'starting'
-        : node.spawnStatus
+      ? node.spawnStatus === 'waiting'
+        ? 'waiting to start'
+        : node.spawnStatus === 'spawning'
+          ? 'starting'
+          : node.spawnStatus === 'error'
+            ? 'failed'
+            : node.spawnStatus
       : null;
   const statusLabel =
+    launchPresentation?.launchStatusLabel ??
+    node.launchStatusLabel ??
     launchPresentation?.presenceLabel ??
     fallbackSpawnStatusLabel ??
     (node.state === 'active'

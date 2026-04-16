@@ -593,7 +593,7 @@ export const CreateTeamDialog = ({
       selectedMemberProviders
     );
     setPrepareState('loading');
-    setPrepareMessage('Checking selected providers...');
+    setPrepareMessage('Checking selected providers in parallel...');
     setPrepareWarnings([]);
     setPrepareChecks(initialChecks);
 
@@ -601,118 +601,128 @@ export const CreateTeamDialog = ({
     const timer = setTimeout(() => {
       void (async () => {
         let checks = initialChecks;
-        let anyFailure = false;
-        let anyNotes = false;
-        const collectedWarnings: string[] = [];
-
-        try {
-          for (const providerId of selectedMemberProviders) {
-            const selectedModelChecks = (() => {
-              const next = new Set<string>();
-              let hasDefaultSelection = false;
-              const supportsProviderDefaultCheck =
-                providerId === 'codex' ||
-                providerId === 'gemini' ||
-                (providerId === 'anthropic' && selectedProviderId === 'anthropic');
-              const leadModel = computeEffectiveTeamModel(
-                selectedModel,
-                limitContext,
-                selectedProviderId
-              );
-              if (selectedProviderId === providerId && selectedModel.trim()) {
-                if (leadModel?.trim()) {
-                  next.add(leadModel.trim());
-                }
-              } else if (selectedProviderId === providerId && supportsProviderDefaultCheck) {
+        const providerPlans = selectedMemberProviders.map((providerId) => {
+          const selectedModelChecks = (() => {
+            const next = new Set<string>();
+            let hasDefaultSelection = false;
+            const supportsProviderDefaultCheck =
+              providerId === 'codex' ||
+              providerId === 'gemini' ||
+              (providerId === 'anthropic' && selectedProviderId === 'anthropic');
+            const leadModel = computeEffectiveTeamModel(
+              selectedModel,
+              limitContext,
+              selectedProviderId
+            );
+            if (selectedProviderId === providerId && selectedModel.trim()) {
+              if (leadModel?.trim()) {
+                next.add(leadModel.trim());
+              }
+            } else if (selectedProviderId === providerId && supportsProviderDefaultCheck) {
+              hasDefaultSelection = true;
+            }
+            for (const member of effectiveMemberDrafts) {
+              if (member.removedAt) {
+                continue;
+              }
+              const memberProviderId =
+                normalizeOptionalTeamProviderId(member.providerId) ?? selectedProviderId;
+              if (memberProviderId !== providerId) {
+                continue;
+              }
+              const memberModel = member.model?.trim();
+              if (memberModel) {
+                next.add(memberModel);
+              } else if (supportsProviderDefaultCheck) {
                 hasDefaultSelection = true;
               }
-              for (const member of effectiveMemberDrafts) {
-                if (member.removedAt) {
-                  continue;
-                }
-                const memberProviderId =
-                  normalizeOptionalTeamProviderId(member.providerId) ?? selectedProviderId;
-                if (memberProviderId !== providerId) {
-                  continue;
-                }
-                const memberModel = member.model?.trim();
-                if (memberModel) {
-                  next.add(memberModel);
-                } else if (supportsProviderDefaultCheck) {
-                  hasDefaultSelection = true;
-                }
-              }
-              if (supportsProviderDefaultCheck && hasDefaultSelection) {
-                next.add(DEFAULT_PROVIDER_MODEL_SELECTION);
-              }
-              return Array.from(next);
-            })();
-            const backendSummary =
-              runtimeBackendSummaryByProviderRef.current.get(providerId) ?? null;
-            const cacheKey = buildPrepareModelCacheKey(effectiveCwd, providerId, backendSummary);
-            const cachedModelResultsById = prepareModelResultsCacheRef.current.get(cacheKey) ?? {};
-            const cachedSnapshot = getProviderPrepareCachedSnapshot({
-              providerId,
-              selectedModelIds: selectedModelChecks,
-              cachedModelResultsById,
-            });
-            checks = updateProviderCheck(checks, providerId, {
-              status: selectedModelChecks.length > 0 ? cachedSnapshot.status : 'checking',
-              backendSummary,
-              details: cachedSnapshot.details,
-            });
-            if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
-              setPrepareChecks(checks);
-              setPrepareMessage(
-                selectedModelChecks.length > 0
-                  ? `Checking ${getProviderLabel(providerId)} runtime and selected model checks ${cachedSnapshot.completedCount}/${cachedSnapshot.totalCount}...`
-                  : `Checking ${getProviderLabel(providerId)} runtime...`
-              );
             }
+            if (supportsProviderDefaultCheck && hasDefaultSelection) {
+              next.add(DEFAULT_PROVIDER_MODEL_SELECTION);
+            }
+            return Array.from(next);
+          })();
+          const backendSummary = runtimeBackendSummaryByProviderRef.current.get(providerId) ?? null;
+          const cacheKey = buildPrepareModelCacheKey(effectiveCwd, providerId, backendSummary);
+          const cachedModelResultsById = prepareModelResultsCacheRef.current.get(cacheKey) ?? {};
+          const cachedSnapshot = getProviderPrepareCachedSnapshot({
+            providerId,
+            selectedModelIds: selectedModelChecks,
+            cachedModelResultsById,
+          });
+          return {
+            providerId,
+            selectedModelChecks,
+            backendSummary,
+            cacheKey,
+            cachedModelResultsById,
+            cachedSnapshot,
+          };
+        });
 
-            const prepResult = await runProviderPrepareDiagnostics({
-              cwd: effectiveCwd,
-              providerId,
-              selectedModelIds: selectedModelChecks,
-              prepareProvisioning: api.teams.prepareProvisioning,
-              limitContext,
-              cachedModelResultsById,
-              onModelProgress: ({ details, completedCount, totalCount }) => {
-                checks = updateProviderCheck(checks, providerId, {
-                  status: 'checking',
-                  backendSummary,
-                  details,
-                });
-                if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
-                  setPrepareChecks(checks);
-                  setPrepareMessage(
-                    `Checking ${getProviderLabel(providerId)} runtime and selected model checks ${completedCount}/${totalCount}...`
-                  );
-                }
-              },
+        try {
+          for (const plan of providerPlans) {
+            checks = updateProviderCheck(checks, plan.providerId, {
+              status: plan.selectedModelChecks.length > 0 ? plan.cachedSnapshot.status : 'checking',
+              backendSummary: plan.backendSummary,
+              details: plan.cachedSnapshot.details,
             });
-            if (prepResult.warnings.length > 0) {
+          }
+          if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
+            setPrepareChecks(checks);
+          }
+          const providerResults = await Promise.all(
+            providerPlans.map(async (plan) => {
+              const prepResult = await runProviderPrepareDiagnostics({
+                cwd: effectiveCwd,
+                providerId: plan.providerId,
+                selectedModelIds: plan.selectedModelChecks,
+                prepareProvisioning: api.teams.prepareProvisioning,
+                limitContext,
+                cachedModelResultsById: plan.cachedModelResultsById,
+                onModelProgress: ({ details }) => {
+                  checks = updateProviderCheck(checks, plan.providerId, {
+                    status: 'checking',
+                    backendSummary: plan.backendSummary,
+                    details,
+                  });
+                  if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
+                    setPrepareChecks(checks);
+                  }
+                },
+              });
+              return { ...plan, prepResult };
+            })
+          );
+          let anyFailure = false;
+          let anyNotes = false;
+          const collectedWarnings: string[] = [];
+          for (const plan of providerResults) {
+            if (plan.prepResult.warnings.length > 0) {
               anyNotes = true;
               collectedWarnings.push(
-                ...prepResult.warnings.map(
-                  (warning) => `${getProviderLabel(providerId)}: ${warning}`
+                ...plan.prepResult.warnings.map(
+                  (warning) => `${getProviderLabel(plan.providerId)}: ${warning}`
                 )
               );
             }
-            if (prepResult.status === 'failed') {
+            if (plan.prepResult.status === 'failed') {
               anyFailure = true;
-            } else if (prepResult.status === 'notes') {
+            } else if (plan.prepResult.status === 'notes') {
               anyNotes = true;
             }
-            prepareModelResultsCacheRef.current.set(cacheKey, prepResult.modelResultsById);
-            checks = updateProviderCheck(checks, providerId, {
-              status: prepResult.status,
-              backendSummary,
-              details: prepResult.details,
+            prepareModelResultsCacheRef.current.set(
+              plan.cacheKey,
+              plan.prepResult.modelResultsById
+            );
+            checks = updateProviderCheck(checks, plan.providerId, {
+              status: plan.prepResult.status,
+              backendSummary: plan.backendSummary,
+              details: plan.prepResult.details,
             });
-            if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
-              setPrepareChecks(checks);
-            }
+          }
+          if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
+            setPrepareChecks(checks);
           }
           if (cancelled || prepareRequestSeqRef.current !== requestSeq) return;
           const failureMessage =

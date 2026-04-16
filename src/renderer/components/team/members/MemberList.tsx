@@ -1,13 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import {
-  formatTeamModelSummary,
-  getTeamEffortLabel,
-  getTeamModelLabel,
-  getTeamProviderLabel,
-} from '@renderer/components/team/dialogs/TeamModelSelector';
+import { resolveMemberRuntimeSummary } from '@renderer/utils/memberRuntimeSummary';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
+import { isLeadMember } from '@shared/utils/leadDetection';
 
 import { MemberCard } from './MemberCard';
 
@@ -152,6 +147,7 @@ function areMemberSpawnStatusesEquivalent(
       leftEntry.launchState !== rightEntry.launchState ||
       leftEntry.error !== rightEntry.error ||
       leftEntry.livenessSource !== rightEntry.livenessSource ||
+      leftEntry.runtimeModel !== rightEntry.runtimeModel ||
       leftEntry.runtimeAlive !== rightEntry.runtimeAlive
     ) {
       return false;
@@ -242,12 +238,11 @@ export const MemberList = memo(function MemberList({
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
 
   const buildRuntimeSummary = useCallback(
-    (member: ResolvedTeamMember): string | undefined => {
-      const effectiveProvider = member.providerId ?? launchParams?.providerId ?? 'anthropic';
-      const effectiveModel = member.model?.trim() || launchParams?.model?.trim() || '';
-      const effectiveEffort = member.effort ?? launchParams?.effort;
-
-      return formatTeamModelSummary(effectiveProvider, effectiveModel, effectiveEffort);
+    (
+      member: ResolvedTeamMember,
+      spawnEntry: MemberSpawnStatusEntry | undefined
+    ): string | undefined => {
+      return resolveMemberRuntimeSummary(member, launchParams, spawnEntry);
     },
     [launchParams]
   );
@@ -293,7 +288,7 @@ export const MemberList = memo(function MemberList({
         reviewTask={isRemoved ? null : reviewTask}
         isAwaitingReply={isRemoved ? false : awaitingReply}
         isRemoved={isRemoved}
-        runtimeSummary={isRemoved ? buildRuntimeSummary(member) : buildRuntimeSummary(member)}
+        runtimeSummary={buildRuntimeSummary(member, isRemoved ? undefined : spawnEntry)}
         spawnStatus={isRemoved ? undefined : spawnEntry?.status}
         spawnError={isRemoved ? undefined : spawnEntry?.error}
         spawnLivenessSource={isRemoved ? undefined : spawnEntry?.livenessSource}

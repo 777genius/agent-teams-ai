@@ -9,7 +9,7 @@ export const STABLE_SLOT_GEOMETRY = {
   unassignedGap: 72,
   maxGeneratedRings: 12,
   ownerCollisionPadding: 28,
-  ownerBandHeight: 72,
+  ownerBandHeight: 96,
   ownerMinWidth: 200,
   processBandHeight: 32,
   processRailWidth: 220,
