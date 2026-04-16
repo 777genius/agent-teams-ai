@@ -107,10 +107,10 @@ export const McpServersPanel = ({
 
   // Load initial browse data
   useEffect(() => {
-    if (browseCatalog.length === 0 && !browseLoading) {
+    if (browseCatalog.length === 0 && !browseLoading && !browseError) {
       void mcpBrowse();
     }
-  }, [browseCatalog.length, browseLoading, mcpBrowse]);
+  }, [browseCatalog.length, browseError, browseLoading, mcpBrowse]);
 
   useEffect(() => {
     void runMcpDiagnostics();
