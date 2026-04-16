@@ -19,6 +19,12 @@ type MemberSpawnStatusCollection =
 interface ProvisioningMemberLike {
   name: string;
   removedAt?: number;
+  agentType?: string;
+  status?: string;
+  currentTaskId?: string | null;
+  taskCount?: number;
+  lastActiveAt?: string | null;
+  messageCount?: number;
 }
 
 interface FailedSpawnDetail {

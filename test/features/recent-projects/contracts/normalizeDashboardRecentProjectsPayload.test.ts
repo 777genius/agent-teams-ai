@@ -44,7 +44,7 @@ describe('normalizeDashboardRecentProjectsPayload', () => {
       normalizeDashboardRecentProjectsPayload({
         degraded: false,
         projects: null,
-      } as unknown as { degraded: boolean; projects: null })
+      } as unknown as Parameters<typeof normalizeDashboardRecentProjectsPayload>[0])
     ).toBeNull();
   });
 });

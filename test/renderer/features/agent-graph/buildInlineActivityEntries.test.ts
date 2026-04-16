@@ -194,11 +194,6 @@ describe('buildInlineActivityEntries', () => {
 
   it('routes comment activity to a member lane when task.owner is stored as stable owner id', () => {
     const data = createBaseTeamData({
-      config: {
-        name: 'My Team',
-        members: [{ name: 'team-lead', agentId: 'lead-agent' }, { name: 'jack', agentId: 'agent-jack' }],
-        projectPath: '/repo',
-      },
       tasks: [
         {
           id: 'task-stable-owner',
