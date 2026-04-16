@@ -209,16 +209,16 @@ describe('getPreferredMcpInstallationEntry', () => {
     expect(getPreferredMcpInstallationEntry([])).toBeNull();
   });
 
-  it('prefers user scope over project and local', () => {
+  it('prefers local scope over project and user', () => {
     const installations: InstalledMcpEntry[] = [
-      { name: 'context7', scope: 'project' },
       { name: 'context7', scope: 'user' },
+      { name: 'context7', scope: 'project' },
       { name: 'context7', scope: 'local' },
     ];
 
     expect(getPreferredMcpInstallationEntry(installations)).toEqual({
       name: 'context7',
-      scope: 'user',
+      scope: 'local',
     });
   });
 });

@@ -146,14 +146,14 @@ export function getInstallationSummaryLabel(
 }
 
 const MCP_SCOPE_PRIORITY: Record<InstalledMcpEntry['scope'], number> = {
-  user: 0,
+  local: 0,
   project: 1,
-  local: 2,
+  user: 2,
 };
 
 /**
- * Pick a stable MCP installation entry when multiple scopes are installed.
- * Prefer user scope because it is the only safe direct-card action target.
+ * Pick the MCP installation entry that Claude will actually use.
+ * Scope precedence matches Claude Code: local > project > user.
  */
 export function getPreferredMcpInstallationEntry(
   installations: InstalledMcpEntry[]

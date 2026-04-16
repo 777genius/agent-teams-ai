@@ -69,7 +69,10 @@ export const McpServerCard = ({
     normalizedInstalledEntries.find((entry) => entry.scope === 'user') ?? null;
   const installSummaryLabel = getMcpInstallationSummaryLabel(normalizedInstalledEntries);
   const supportsDirectInstalledAction =
-    isInstalled && userInstallEntry?.name === defaultServerName && !requiresConfiguration;
+    isInstalled &&
+    normalizedInstalledEntries.length === 1 &&
+    userInstallEntry?.name === defaultServerName &&
+    !requiresConfiguration;
   const shouldShowDirectInstallButton =
     canAutoInstall && (!isInstalled ? !requiresConfiguration : supportsDirectInstalledAction);
   const [imgError, setImgError] = useState(false);

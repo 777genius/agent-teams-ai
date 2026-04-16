@@ -192,7 +192,7 @@ describe('McpServerCard direct action safety', () => {
     });
   });
 
-  it('keeps direct user action when the same server is installed in multiple scopes', async () => {
+  it('falls back to Manage when the same server is installed in multiple scopes', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -217,7 +217,8 @@ describe('McpServerCard direct action safety', () => {
     });
 
     expect(host.textContent).toContain('Installed in 2 scopes');
-    expect(host.querySelector('[data-testid="install-button"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="install-button"]')).toBeNull();
+    expect(host.textContent).toContain('Manage');
 
     await act(async () => {
       root.unmount();

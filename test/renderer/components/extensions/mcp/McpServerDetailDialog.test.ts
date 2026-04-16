@@ -407,4 +407,42 @@ describe('McpServerDetailDialog installed entry handling', () => {
       await Promise.resolve();
     });
   });
+
+  it('defaults to the highest-precedence installed scope', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const installedEntries: InstalledMcpEntry[] = [
+      { name: 'context7', scope: 'user' },
+      { name: 'context7-shared', scope: 'project' },
+    ];
+
+    await act(async () => {
+      root.render(
+        React.createElement(McpServerDetailDialog, {
+          server: makeServer(),
+          isInstalled: true,
+          installedEntry: installedEntries[0],
+          installedEntries,
+          diagnostic: null,
+          diagnosticsLoading: false,
+          projectPath: '/tmp/project',
+          open: true,
+          onClose: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const scopeSelect = host.querySelector('[data-testid="scope-select"]') as HTMLSelectElement;
+    const serverNameInput = host.querySelector('#server-name') as HTMLInputElement;
+
+    expect(scopeSelect.value).toBe('project');
+    expect(serverNameInput.value).toBe('context7-shared');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
 });
