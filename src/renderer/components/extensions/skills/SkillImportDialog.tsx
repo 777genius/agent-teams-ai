@@ -56,6 +56,11 @@ interface SkillImportDialogProps {
   onImported: (skillId: string | null) => void;
 }
 
+function getFolderNameFromPath(value: string): string {
+  const segments = value.split(/[\\/]/u).filter(Boolean);
+  return segments.at(-1) ?? '';
+}
+
 export const SkillImportDialog = ({
   open,
   projectPath,
@@ -68,6 +73,7 @@ export const SkillImportDialog = ({
 
   const [sourceDir, setSourceDir] = useState('');
   const [folderName, setFolderName] = useState('');
+  const [folderNameEdited, setFolderNameEdited] = useState(false);
   const [scope, setScope] = useState<'user' | 'project'>('user');
   const [rootKind, setRootKind] = useState<'claude' | 'cursor' | 'agents'>('claude');
   const [preview, setPreview] = useState<SkillReviewPreview | null>(null);
@@ -80,6 +86,7 @@ export const SkillImportDialog = ({
     if (!open) return;
     setSourceDir('');
     setFolderName('');
+    setFolderNameEdited(false);
     setScope(projectPath ? 'project' : 'user');
     setRootKind('claude');
     setPreview(null);
@@ -89,15 +96,24 @@ export const SkillImportDialog = ({
     setMutationError(null);
   }, [open, projectPath]);
 
+  useEffect(() => {
+    if (!open || folderNameEdited) {
+      return;
+    }
+    setFolderName(getFolderNameFromPath(sourceDir));
+  }, [folderNameEdited, open, sourceDir]);
+
+  useEffect(() => {
+    if (open && scope === 'project' && !projectPath) {
+      setScope('user');
+    }
+  }, [open, projectPath, scope]);
+
   async function handleChooseFolder(): Promise<void> {
     const selected = await api.config.selectFolders();
     const first = selected[0];
     if (!first) return;
     setSourceDir(first);
-    if (!folderName) {
-      const segments = first.split(/[\\/]/u).filter(Boolean);
-      setFolderName(segments.at(-1) ?? '');
-    }
   }
 
   async function handleReview(): Promise<void> {
@@ -190,7 +206,10 @@ export const SkillImportDialog = ({
                   <Input
                     id="skill-import-folder"
                     value={folderName}
-                    onChange={(event) => setFolderName(event.target.value)}
+                    onChange={(event) => {
+                      setFolderNameEdited(true);
+                      setFolderName(event.target.value);
+                    }}
                     placeholder="Defaults to source folder name"
                   />
                 </div>
