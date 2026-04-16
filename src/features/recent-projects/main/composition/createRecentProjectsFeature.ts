@@ -10,11 +10,14 @@ import { RecentProjectIdentityResolver } from '../infrastructure/identity/Recent
 
 import type { ClockPort } from '../../core/application/ports/ClockPort';
 import type { LoggerPort } from '../../core/application/ports/LoggerPort';
-import type { DashboardRecentProject } from '@features/recent-projects/contracts';
+import {
+  normalizeDashboardRecentProjectsPayload,
+  type DashboardRecentProjectsPayload,
+} from '@features/recent-projects/contracts';
 import type { ServiceContext } from '@main/services';
 
 export interface RecentProjectsFeatureFacade {
-  listDashboardRecentProjects(): Promise<DashboardRecentProject[]>;
+  listDashboardRecentProjects(): Promise<DashboardRecentProjectsPayload>;
 }
 
 export function createRecentProjectsFeature(deps: {
@@ -22,7 +25,7 @@ export function createRecentProjectsFeature(deps: {
   getLocalContext: () => ServiceContext | undefined;
   logger: LoggerPort;
 }): RecentProjectsFeatureFacade {
-  const cache = new InMemoryRecentProjectsCache<DashboardRecentProject[]>();
+  const cache = new InMemoryRecentProjectsCache<DashboardRecentProjectsPayload>();
   const presenter = new DashboardRecentProjectsPresenter();
   const clock: ClockPort = { now: () => Date.now() };
   const jsonRpcStdioClient = new JsonRpcStdioClient(deps.logger);
@@ -48,9 +51,10 @@ export function createRecentProjectsFeature(deps: {
   });
 
   return {
-    listDashboardRecentProjects: () => {
+    listDashboardRecentProjects: async () => {
       const activeContext = deps.getActiveContext();
-      return useCase.execute(`dashboard-recent-projects:${activeContext.id}`);
+      const payload = await useCase.execute(`dashboard-recent-projects:${activeContext.id}`);
+      return normalizeDashboardRecentProjectsPayload(payload) ?? { projects: [], degraded: true };
     },
   };
 }

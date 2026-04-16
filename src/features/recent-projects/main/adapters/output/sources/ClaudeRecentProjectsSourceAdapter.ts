@@ -3,7 +3,10 @@ import { WorktreeGrouper } from '@main/services/discovery/WorktreeGrouper';
 import { getProjectsBasePath } from '@main/utils/pathDecoder';
 
 import type { LoggerPort } from '@features/recent-projects/core/application/ports/LoggerPort';
-import type { RecentProjectsSourcePort } from '@features/recent-projects/core/application/ports/RecentProjectsSourcePort';
+import type {
+  RecentProjectsSourcePort,
+  RecentProjectsSourceResult,
+} from '@features/recent-projects/core/application/ports/RecentProjectsSourcePort';
 import type { RecentProjectCandidate } from '@features/recent-projects/core/domain/models/RecentProjectCandidate';
 import type { ServiceContext } from '@main/services';
 import type { RepositoryGroup, Worktree } from '@main/types';
@@ -47,7 +50,7 @@ export class ClaudeRecentProjectsSourceAdapter implements RecentProjectsSourcePo
     private readonly logger: LoggerPort
   ) {}
 
-  async list(): Promise<RecentProjectCandidate[]> {
+  async list(): Promise<RecentProjectsSourceResult> {
     const activeContext = this.getActiveContext();
     const groups =
       activeContext.type === 'local'
@@ -63,7 +66,10 @@ export class ClaudeRecentProjectsSourceAdapter implements RecentProjectsSourcePo
       contextId: activeContext.id,
     });
 
-    return candidates;
+    return {
+      candidates,
+      degraded: false,
+    };
   }
 
   async #groupLocalProjects(activeContext: ServiceContext): Promise<RepositoryGroup[]> {

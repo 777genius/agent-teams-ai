@@ -6,7 +6,10 @@ import {
   loadRecentProjectsWithClientCache,
 } from '@features/recent-projects/renderer/utils/recentProjectsClientCache';
 
-import type { DashboardRecentProject } from '@features/recent-projects/contracts';
+import type {
+  DashboardRecentProject,
+  DashboardRecentProjectsPayload,
+} from '@features/recent-projects/contracts';
 
 const project = (id: string): DashboardRecentProject => ({
   id,
@@ -22,6 +25,15 @@ const project = (id: string): DashboardRecentProject => ({
   },
 });
 
+const payload = (
+  id: string,
+  overrides: Partial<DashboardRecentProjectsPayload> = {}
+): DashboardRecentProjectsPayload => ({
+  projects: [project(id)],
+  degraded: false,
+  ...overrides,
+});
+
 describe('recentProjectsClientCache', () => {
   afterEach(() => {
     __resetRecentProjectsClientCacheForTests();
@@ -30,13 +42,13 @@ describe('recentProjectsClientCache', () => {
   });
 
   it('returns cached projects while the client cache is fresh', async () => {
-    const loader = vi.fn().mockResolvedValue([project('alpha')]);
+    const loader = vi.fn().mockResolvedValue(payload('alpha'));
 
-    await expect(loadRecentProjectsWithClientCache(loader)).resolves.toEqual([project('alpha')]);
-    await expect(loadRecentProjectsWithClientCache(loader)).resolves.toEqual([project('alpha')]);
+    await expect(loadRecentProjectsWithClientCache(loader)).resolves.toEqual(payload('alpha'));
+    await expect(loadRecentProjectsWithClientCache(loader)).resolves.toEqual(payload('alpha'));
 
     expect(loader).toHaveBeenCalledTimes(1);
-    expect(getRecentProjectsClientSnapshot()?.projects).toEqual([project('alpha')]);
+    expect(getRecentProjectsClientSnapshot()?.payload).toEqual(payload('alpha'));
   });
 
   it('revalidates stale cache without dropping the previous snapshot', async () => {
@@ -44,38 +56,38 @@ describe('recentProjectsClientCache', () => {
     vi.setSystemTime(new Date('2026-04-14T12:00:00.000Z'));
 
     const loader = vi
-      .fn<() => Promise<DashboardRecentProject[]>>()
-      .mockResolvedValueOnce([project('alpha')])
-      .mockResolvedValueOnce([project('beta')]);
+      .fn<() => Promise<DashboardRecentProjectsPayload>>()
+      .mockResolvedValueOnce(payload('alpha'))
+      .mockResolvedValueOnce(payload('beta'));
 
     await loadRecentProjectsWithClientCache(loader);
     vi.setSystemTime(new Date('2026-04-14T12:00:16.000Z'));
 
     expect(getRecentProjectsClientSnapshot()).toMatchObject({
-      projects: [project('alpha')],
+      payload: payload('alpha'),
       isStale: true,
     });
 
-    await expect(loadRecentProjectsWithClientCache(loader, { force: true })).resolves.toEqual([
-      project('beta'),
-    ]);
+    await expect(loadRecentProjectsWithClientCache(loader, { force: true })).resolves.toEqual(
+      payload('beta')
+    );
 
     expect(loader).toHaveBeenCalledTimes(2);
     expect(getRecentProjectsClientSnapshot()).toMatchObject({
-      projects: [project('beta')],
+      payload: payload('beta'),
       isStale: false,
     });
   });
 
   it('deduplicates concurrent client refreshes', async () => {
     const resolveLoaderRef: {
-      current: ((projects: DashboardRecentProject[]) => void) | null;
+      current: ((payload: DashboardRecentProjectsPayload) => void) | null;
     } = {
       current: null,
     };
     const loader = vi.fn(
       () =>
-        new Promise<DashboardRecentProject[]>((resolve) => {
+        new Promise<DashboardRecentProjectsPayload>((resolve) => {
           resolveLoaderRef.current = resolve;
         })
     );
@@ -85,9 +97,41 @@ describe('recentProjectsClientCache', () => {
 
     expect(loader).toHaveBeenCalledTimes(1);
 
-    resolveLoaderRef.current?.([project('alpha')]);
+    resolveLoaderRef.current?.(payload('alpha'));
 
-    await expect(first).resolves.toEqual([project('alpha')]);
-    await expect(second).resolves.toEqual([project('alpha')]);
+    await expect(first).resolves.toEqual(payload('alpha'));
+    await expect(second).resolves.toEqual(payload('alpha'));
+  });
+
+  it('marks degraded payload snapshots stale faster than healthy payloads', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-14T12:00:00.000Z'));
+
+    const loader = vi
+      .fn<() => Promise<DashboardRecentProjectsPayload>>()
+      .mockResolvedValueOnce(payload('alpha', { degraded: true }));
+
+    await expect(loadRecentProjectsWithClientCache(loader)).resolves.toEqual(
+      payload('alpha', { degraded: true })
+    );
+
+    vi.setSystemTime(new Date('2026-04-14T12:00:01.000Z'));
+    expect(getRecentProjectsClientSnapshot()).toMatchObject({
+      payload: payload('alpha', { degraded: true }),
+      isStale: false,
+    });
+
+    vi.setSystemTime(new Date('2026-04-14T12:00:02.000Z'));
+    expect(getRecentProjectsClientSnapshot()).toMatchObject({
+      payload: payload('alpha', { degraded: true }),
+      isStale: true,
+    });
+  });
+
+  it('normalizes legacy array responses from the loader during mixed-version dev reloads', async () => {
+    const loader = vi.fn<() => Promise<DashboardRecentProject[]>>().mockResolvedValue([project('alpha')]);
+
+    await expect(loadRecentProjectsWithClientCache(loader)).resolves.toEqual(payload('alpha'));
+    expect(getRecentProjectsClientSnapshot()?.payload).toEqual(payload('alpha'));
   });
 });

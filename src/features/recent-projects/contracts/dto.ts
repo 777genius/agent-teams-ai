@@ -17,3 +17,8 @@ export interface DashboardRecentProject {
   openTarget: DashboardRecentProjectOpenTarget;
   primaryBranch?: string;
 }
+
+export interface DashboardRecentProjectsPayload {
+  projects: DashboardRecentProject[];
+  degraded: boolean;
+}

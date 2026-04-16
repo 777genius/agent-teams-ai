@@ -140,6 +140,7 @@ describe('ListDashboardRecentProjectsUseCase', () => {
       sources: ['mixed'],
     });
     expect(output.present).toHaveBeenCalledWith({
+      degraded: true,
       projects: [
         expect.objectContaining({
           identity: 'repo:alpha',
@@ -299,6 +300,7 @@ describe('ListDashboardRecentProjectsUseCase', () => {
       sources: ['claude'],
     });
     expect(output.present).toHaveBeenCalledWith({
+      degraded: true,
       projects: [
         expect.objectContaining({
           identity: 'repo:fresh',
@@ -368,6 +370,75 @@ describe('ListDashboardRecentProjectsUseCase', () => {
       degradedSources: 1,
       cacheTtlMs: 1_500,
       durationMs: 200,
+    });
+  });
+
+  it('treats explicitly degraded source payloads as degraded even when they resolve successfully', async () => {
+    const cache: RecentProjectsCachePort<TestViewModel> = {
+      get: vi.fn().mockResolvedValue(null),
+      getStale: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue(undefined),
+    };
+    const output: ListDashboardRecentProjectsOutputPort<TestViewModel> = {
+      present: vi.fn((response: ListDashboardRecentProjectsResponse) => ({
+        ids: response.projects.map((project) => project.identity),
+        sources: response.projects.map((project) => project.source),
+      })),
+    };
+    const sources: RecentProjectsSourcePort[] = [
+      {
+        sourceId: 'claude',
+        list: vi.fn().mockResolvedValue([
+          makeCandidate({
+            identity: 'repo:alpha',
+            providerIds: ['anthropic'],
+            sourceKind: 'claude',
+          }),
+        ]),
+      },
+      {
+        sourceId: 'codex',
+        list: vi.fn().mockResolvedValue({
+          candidates: [],
+          degraded: true,
+        }),
+      },
+    ];
+    const logger = createLogger();
+
+    const useCase = new ListDashboardRecentProjectsUseCase({
+      sources,
+      cache,
+      output,
+      clock: { now: () => 25_000 },
+      logger,
+    });
+
+    await expect(useCase.execute('recent-projects:explicit-degraded')).resolves.toEqual({
+      ids: ['repo:alpha'],
+      sources: ['claude'],
+    });
+
+    expect(output.present).toHaveBeenCalledWith({
+      degraded: true,
+      projects: [
+        expect.objectContaining({
+          identity: 'repo:alpha',
+          source: 'claude',
+        }),
+      ],
+    });
+    expect(cache.set).toHaveBeenCalledWith(
+      'recent-projects:explicit-degraded',
+      { ids: ['repo:alpha'], sources: ['claude'] },
+      1_500
+    );
+    expect(logger.info).toHaveBeenCalledWith('recent-projects loaded', {
+      cacheKey: 'recent-projects:explicit-degraded',
+      count: 1,
+      degradedSources: 1,
+      cacheTtlMs: 1_500,
+      durationMs: 0,
     });
   });
 });

@@ -6,7 +6,11 @@ import type { ClockPort } from '../ports/ClockPort';
 import type { ListDashboardRecentProjectsOutputPort } from '../ports/ListDashboardRecentProjectsOutputPort';
 import type { LoggerPort } from '../ports/LoggerPort';
 import type { RecentProjectsCachePort } from '../ports/RecentProjectsCachePort';
-import type { RecentProjectsSourcePort } from '../ports/RecentProjectsSourcePort';
+import type {
+  RecentProjectsSourcePayload,
+  RecentProjectsSourcePort,
+  RecentProjectsSourceResult,
+} from '../ports/RecentProjectsSourcePort';
 
 const DEFAULT_CACHE_TTL_MS = 10_000;
 const DEFAULT_DEGRADED_CACHE_TTL_MS = 1_500;
@@ -14,6 +18,20 @@ const DEFAULT_DEGRADED_CACHE_TTL_MS = 1_500;
 interface SourceLoadResult {
   candidates: RecentProjectCandidate[];
   degraded: boolean;
+}
+
+function normalizeSourcePayload(payload: RecentProjectsSourcePayload): RecentProjectsSourceResult {
+  if (Array.isArray(payload)) {
+    return {
+      candidates: payload,
+      degraded: false,
+    };
+  }
+
+  return {
+    candidates: payload.candidates,
+    degraded: payload.degraded === true,
+  };
 }
 
 export interface ListDashboardRecentProjectsDeps<TViewModel> {
@@ -66,6 +84,7 @@ export class ListDashboardRecentProjectsUseCase<TViewModel> {
     const hasDegradedSources = results.some((result) => result.degraded);
     const response: ListDashboardRecentProjectsResponse = {
       projects: mergeRecentProjectCandidates(successful),
+      degraded: hasDegradedSources,
     };
 
     if (hasDegradedSources && stale && response.projects.length === 0) {
@@ -111,10 +130,10 @@ export class ListDashboardRecentProjectsUseCase<TViewModel> {
         source
           .list()
           .then(
-            (candidates) =>
+            (payload) =>
               ({
                 kind: 'success',
-                candidates,
+                payload: normalizeSourcePayload(payload),
               }) as const
           )
           .catch(
@@ -130,7 +149,7 @@ export class ListDashboardRecentProjectsUseCase<TViewModel> {
       ]);
 
       if (result.kind === 'success') {
-        return { candidates: result.candidates, degraded: false };
+        return result.payload;
       }
 
       if (result.kind === 'timeout') {
@@ -161,10 +180,7 @@ export class ListDashboardRecentProjectsUseCase<TViewModel> {
     sourceIndex: number
   ): Promise<SourceLoadResult> {
     try {
-      return {
-        candidates: await source.list(),
-        degraded: false,
-      };
+      return normalizeSourcePayload(await source.list());
     } catch (error) {
       this.deps.logger.warn('recent-projects source failed', {
         sourceId,

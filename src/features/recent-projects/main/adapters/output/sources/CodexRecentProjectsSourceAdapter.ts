@@ -2,7 +2,10 @@ import { normalizeIdentityPath } from '@features/recent-projects/main/infrastruc
 import path from 'path';
 
 import type { LoggerPort } from '@features/recent-projects/core/application/ports/LoggerPort';
-import type { RecentProjectsSourcePort } from '@features/recent-projects/core/application/ports/RecentProjectsSourcePort';
+import type {
+  RecentProjectsSourcePort,
+  RecentProjectsSourceResult,
+} from '@features/recent-projects/core/application/ports/RecentProjectsSourcePort';
 import type { RecentProjectCandidate } from '@features/recent-projects/core/domain/models/RecentProjectCandidate';
 import type {
   CodexAppServerClient,
@@ -34,6 +37,10 @@ function normalizeTimestamp(value: number | undefined): number {
   return value < 1_000_000_000_000 ? value * 1000 : value;
 }
 
+function isDegradedThreadResult(result: CodexRecentThreadsResult): boolean {
+  return Boolean(result.live.error || result.archived.error);
+}
+
 export class CodexRecentProjectsSourceAdapter implements RecentProjectsSourcePort {
   readonly sourceId = 'codex';
   readonly timeoutMs = CODEX_SOURCE_TIMEOUT_MS;
@@ -49,21 +56,28 @@ export class CodexRecentProjectsSourceAdapter implements RecentProjectsSourcePor
     }
   ) {}
 
-  async list(): Promise<RecentProjectCandidate[]> {
+  async list(): Promise<RecentProjectsSourceResult> {
     const activeContext = this.deps.getActiveContext();
     const localContext = this.deps.getLocalContext();
 
     if (activeContext.type !== 'local' || activeContext.id !== localContext?.id) {
-      return [];
+      return {
+        candidates: [],
+        degraded: false,
+      };
     }
 
     const binaryPath = await this.deps.resolveBinary();
     if (!binaryPath) {
       this.deps.logger.info('codex recent-projects source skipped - binary unavailable');
-      return [];
+      return {
+        candidates: [],
+        degraded: false,
+      };
     }
 
     const threadSegments = await this.#listRecentThreadsSafe(binaryPath);
+    const degraded = isDegradedThreadResult(threadSegments);
     this.#logSegmentFailure(threadSegments, 'live');
     this.#logSegmentFailure(threadSegments, 'archived');
     const liveThreads = threadSegments.live.threads;
@@ -79,9 +93,13 @@ export class CodexRecentProjectsSourceAdapter implements RecentProjectsSourcePor
 
     this.deps.logger.info('codex recent-projects source loaded', {
       count: candidates.length,
+      degraded,
     });
 
-    return candidates;
+    return {
+      candidates,
+      degraded,
+    };
   }
 
   async #listRecentThreads(binaryPath: string): Promise<CodexRecentThreadsResult> {

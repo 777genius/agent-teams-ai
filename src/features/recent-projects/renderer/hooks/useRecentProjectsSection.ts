@@ -23,6 +23,9 @@ import type { TeamSummary } from '@shared/types';
 
 const INITIAL_RECENT_PROJECTS = 11;
 const LOAD_MORE_STEP = 8;
+const DEGRADED_RECENT_PROJECTS_FAST_RETRY_DELAY_MS = 1_500;
+const DEGRADED_RECENT_PROJECTS_STEADY_RETRY_DELAY_MS = 5_000;
+const DEGRADED_RECENT_PROJECTS_FAST_RETRY_LIMIT = 3;
 
 function matchesSearch(project: DashboardRecentProject, query: string): boolean {
   if (!query) {
@@ -72,7 +75,13 @@ export function useRecentProjectsSection(
   const initialSnapshot = useMemo(() => getRecentProjectsClientSnapshot(), []);
   const { openRecentProject, openProjectPath, selectProjectFolder } = useOpenRecentProject();
   const [recentProjects, setRecentProjects] = useState<DashboardRecentProject[]>(
-    initialSnapshot?.projects ?? []
+    initialSnapshot?.payload.projects ?? []
+  );
+  const [recentProjectsDegraded, setRecentProjectsDegraded] = useState(
+    initialSnapshot?.payload.degraded ?? false
+  );
+  const [degradedRefreshCount, setDegradedRefreshCount] = useState(
+    initialSnapshot?.payload.degraded ? 1 : 0
   );
   const [loading, setLoading] = useState(initialSnapshot == null);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +89,9 @@ export function useRecentProjectsSection(
   const [aliveTeams, setAliveTeams] = useState<string[]>([]);
   const [openHistoryVersion, setOpenHistoryVersion] = useState(0);
   const hasFetchedTasksRef = useRef(globalTasksInitialized);
-  const recentProjectsRef = useRef<DashboardRecentProject[]>(initialSnapshot?.projects ?? []);
+  const recentProjectsRef = useRef<DashboardRecentProject[]>(
+    initialSnapshot?.payload.projects ?? []
+  );
 
   useEffect(() => {
     recentProjectsRef.current = recentProjects;
@@ -95,11 +106,13 @@ export function useRecentProjectsSection(
     }
     setError(null);
     try {
-      const projects = await loadRecentProjectsWithClientCache(
+      const payload = await loadRecentProjectsWithClientCache(
         () => api.getDashboardRecentProjects(),
         options
       );
-      setRecentProjects(projects);
+      setRecentProjects(payload.projects);
+      setRecentProjectsDegraded(payload.degraded);
+      setDegradedRefreshCount((current) => (payload.degraded ? current + 1 : 0));
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Failed to load recent projects');
     } finally {
@@ -115,6 +128,25 @@ export function useRecentProjectsSection(
 
     void reload({ force: snapshot != null });
   }, [reload]);
+
+  useEffect(() => {
+    if (!recentProjectsDegraded) {
+      return;
+    }
+
+    const delayMs =
+      degradedRefreshCount <= DEGRADED_RECENT_PROJECTS_FAST_RETRY_LIMIT
+        ? DEGRADED_RECENT_PROJECTS_FAST_RETRY_DELAY_MS
+        : DEGRADED_RECENT_PROJECTS_STEADY_RETRY_DELAY_MS;
+
+    const timer = window.setTimeout(() => {
+      void reload({ force: true });
+    }, delayMs);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [degradedRefreshCount, recentProjectsDegraded, reload]);
 
   useEffect(() => {
     if (recentProjects.length === 0 || hasFetchedTasksRef.current || globalTasksInitialized) {

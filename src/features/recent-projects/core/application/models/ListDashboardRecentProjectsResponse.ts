@@ -2,4 +2,5 @@ import type { RecentProjectAggregate } from '../../domain/models/RecentProjectAg
 
 export interface ListDashboardRecentProjectsResponse {
   projects: RecentProjectAggregate[];
+  degraded: boolean;
 }

@@ -57,12 +57,15 @@ describe('CodexRecentProjectsSourceAdapter', () => {
       logger,
     });
 
-    await expect(adapter.list()).resolves.toEqual([
-      expect.objectContaining({
-        identity: 'repo:headless',
-        primaryPath: '/Users/belief/dev/projects/headless',
-      }),
-    ]);
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [
+        expect.objectContaining({
+          identity: 'repo:headless',
+          primaryPath: '/Users/belief/dev/projects/headless',
+        }),
+      ],
+      degraded: true,
+    });
 
     expect(logger.info).toHaveBeenCalledWith(
       'codex recent-projects archived thread list degraded',
@@ -110,20 +113,23 @@ describe('CodexRecentProjectsSourceAdapter', () => {
       logger,
     });
 
-    await expect(adapter.list()).resolves.toEqual([
-      expect.objectContaining({
-        identity: 'repo:headless',
-        displayName: 'headless',
-        primaryPath: '/Users/belief/dev/projects/headless',
-        providerIds: ['codex'],
-        sourceKind: 'codex',
-        openTarget: {
-          type: 'synthetic-path',
-          path: '/Users/belief/dev/projects/headless',
-        },
-        branchName: 'main',
-      }),
-    ]);
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [
+        expect.objectContaining({
+          identity: 'repo:headless',
+          displayName: 'headless',
+          primaryPath: '/Users/belief/dev/projects/headless',
+          providerIds: ['codex'],
+          sourceKind: 'codex',
+          openTarget: {
+            type: 'synthetic-path',
+            path: '/Users/belief/dev/projects/headless',
+          },
+          branchName: 'main',
+        }),
+      ],
+      degraded: true,
+    });
 
     expect(appServerClient.listRecentThreads).toHaveBeenCalledTimes(1);
     expect(appServerClient.listRecentLiveThreads).toHaveBeenCalledTimes(1);
@@ -153,7 +159,10 @@ describe('CodexRecentProjectsSourceAdapter', () => {
       logger,
     });
 
-    await expect(adapter.list()).resolves.toEqual([]);
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [],
+      degraded: true,
+    });
     expect(appServerClient.listRecentLiveThreads).not.toHaveBeenCalled();
   });
 });

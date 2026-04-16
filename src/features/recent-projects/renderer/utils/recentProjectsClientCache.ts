@@ -1,38 +1,52 @@
-import type { DashboardRecentProject } from '@features/recent-projects/contracts';
+import type {
+  DashboardRecentProjectsPayloadLike,
+  DashboardRecentProjectsPayload,
+} from '@features/recent-projects/contracts';
+import { normalizeDashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
 
 const RECENT_PROJECTS_CLIENT_CACHE_TTL_MS = 15_000;
+const RECENT_PROJECTS_CLIENT_DEGRADED_CACHE_TTL_MS = 1_500;
 
-let cachedProjects: DashboardRecentProject[] | null = null;
+let cachedPayload: DashboardRecentProjectsPayloadLike = null;
 let cachedAt = 0;
-let inFlightLoad: Promise<DashboardRecentProject[]> | null = null;
+let inFlightLoad: Promise<DashboardRecentProjectsPayload> | null = null;
 
 export interface RecentProjectsClientSnapshot {
-  projects: DashboardRecentProject[];
+  payload: DashboardRecentProjectsPayload;
   fetchedAt: number;
   isStale: boolean;
 }
 
 export function getRecentProjectsClientSnapshot(): RecentProjectsClientSnapshot | null {
-  if (!cachedProjects) {
+  const normalizedPayload = normalizeDashboardRecentProjectsPayload(cachedPayload);
+  if (!normalizedPayload) {
     return null;
   }
 
+  if (cachedPayload !== normalizedPayload) {
+    cachedPayload = normalizedPayload;
+  }
+
+  const ttlMs = normalizedPayload.degraded
+    ? RECENT_PROJECTS_CLIENT_DEGRADED_CACHE_TTL_MS
+    : RECENT_PROJECTS_CLIENT_CACHE_TTL_MS;
+
   return {
-    projects: cachedProjects,
+    payload: normalizedPayload,
     fetchedAt: cachedAt,
-    isStale: Date.now() - cachedAt > RECENT_PROJECTS_CLIENT_CACHE_TTL_MS,
+    isStale: Date.now() - cachedAt > ttlMs,
   };
 }
 
 export async function loadRecentProjectsWithClientCache(
-  loader: () => Promise<DashboardRecentProject[]>,
+  loader: () => Promise<DashboardRecentProjectsPayloadLike>,
   options?: { force?: boolean }
-): Promise<DashboardRecentProject[]> {
+): Promise<DashboardRecentProjectsPayload> {
   const force = options?.force ?? false;
   const snapshot = getRecentProjectsClientSnapshot();
 
   if (!force && snapshot && !snapshot.isStale) {
-    return snapshot.projects;
+    return snapshot.payload;
   }
 
   if (inFlightLoad) {
@@ -40,10 +54,11 @@ export async function loadRecentProjectsWithClientCache(
   }
 
   const request = loader()
-    .then((projects) => {
-      cachedProjects = projects;
+    .then((payloadLike) => {
+      const normalizedPayload = normalizeDashboardRecentProjectsPayload(payloadLike);
+      cachedPayload = normalizedPayload;
       cachedAt = Date.now();
-      return projects;
+      return normalizedPayload ?? { projects: [], degraded: true };
     })
     .finally(() => {
       if (inFlightLoad === request) {
@@ -56,7 +71,7 @@ export async function loadRecentProjectsWithClientCache(
 }
 
 export function __resetRecentProjectsClientCacheForTests(): void {
-  cachedProjects = null;
+  cachedPayload = null;
   cachedAt = 0;
   inFlightLoad = null;
 }

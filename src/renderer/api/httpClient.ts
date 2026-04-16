@@ -6,7 +6,7 @@
  * to run in a regular browser connected to an HTTP server.
  */
 
-import type { DashboardRecentProject } from '@features/recent-projects/contracts';
+import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
 import type {
   AppConfig,
   AttachmentFileData,
@@ -218,8 +218,8 @@ export class HttpAPIClient implements ElectronAPI {
 
   getAppVersion = (): Promise<string> => this.get<string>('/api/version');
 
-  getDashboardRecentProjects = (): Promise<DashboardRecentProject[]> =>
-    this.get<DashboardRecentProject[]>('/api/dashboard/recent-projects');
+  getDashboardRecentProjects = (): Promise<DashboardRecentProjectsPayload> =>
+    this.get<DashboardRecentProjectsPayload>('/api/dashboard/recent-projects');
 
   getProjects = (): Promise<Project[]> => this.get<Project[]>('/api/projects');
 

@@ -1,5 +1,5 @@
-import type { DashboardRecentProject } from './dto';
+import type { DashboardRecentProjectsPayload } from './dto';
 
 export interface RecentProjectsElectronApi {
-  getDashboardRecentProjects(): Promise<DashboardRecentProject[]>;
+  getDashboardRecentProjects(): Promise<DashboardRecentProjectsPayload>;
 }
