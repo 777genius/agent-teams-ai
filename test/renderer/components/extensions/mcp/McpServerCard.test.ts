@@ -2,6 +2,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getMcpOperationKey } from '@shared/utils/extensionNormalizers';
 import type { InstalledMcpEntry, McpCatalogItem } from '@shared/types/extensions';
 
 interface StoreState {
@@ -55,7 +56,23 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
 }));
 
 vi.mock('@renderer/components/extensions/common/InstallButton', () => ({
-  InstallButton: () => React.createElement('button', { type: 'button', 'data-testid': 'install-button' }, 'Install'),
+  InstallButton: ({
+    state,
+    errorMessage,
+  }: {
+    state?: string;
+    errorMessage?: string;
+  }) =>
+    React.createElement(
+      'button',
+      {
+        type: 'button',
+        'data-testid': 'install-button',
+        'data-state': state,
+        'data-error': errorMessage,
+      },
+      'Install'
+    ),
 }));
 
 vi.mock('@renderer/components/extensions/common/SourceBadge', () => ({
@@ -219,6 +236,49 @@ describe('McpServerCard direct action safety', () => {
     expect(host.textContent).toContain('Installed in 2 scopes');
     expect(host.querySelector('[data-testid="install-button"]')).toBeNull();
     expect(host.textContent).toContain('Manage');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('reads direct-action state from the user-scope operation key', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const installedEntry: InstalledMcpEntry = {
+      name: 'context7',
+      scope: 'user',
+    };
+
+    storeState.mcpInstallProgress = {
+      [getMcpOperationKey('io.github.upstash/context7', 'project')]: 'error',
+      [getMcpOperationKey('io.github.upstash/context7', 'user')]: 'pending',
+    };
+    storeState.installErrors = {
+      [getMcpOperationKey('io.github.upstash/context7', 'project')]: 'Project failed',
+      [getMcpOperationKey('io.github.upstash/context7', 'user')]: 'User failed',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(McpServerCard, {
+          server: makeServer(),
+          isInstalled: true,
+          installedEntry,
+          installedEntries: [installedEntry],
+          diagnostic: null,
+          diagnosticsLoading: false,
+          onClick: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const installButton = host.querySelector('[data-testid="install-button"]') as HTMLButtonElement;
+    expect(installButton.dataset.state).toBe('pending');
+    expect(installButton.dataset.error).toBe('User failed');
 
     await act(async () => {
       root.unmount();

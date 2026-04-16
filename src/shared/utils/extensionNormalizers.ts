@@ -109,6 +109,13 @@ export function getPluginOperationKey(pluginId: string, scope: InstallScope): st
 }
 
 /**
+ * Namespaced operation-state key for MCP install/uninstall UI state.
+ */
+export function getMcpOperationKey(registryId: string, scope: InstallScope): string {
+  return `mcp:${registryId}:${scope}`;
+}
+
+/**
  * Check whether a plugin has an installation for the selected scope.
  */
 export function hasInstallationInScope(

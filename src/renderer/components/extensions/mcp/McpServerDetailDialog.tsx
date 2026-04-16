@@ -27,6 +27,7 @@ import {
 import { useStore } from '@renderer/store';
 import {
   getMcpInstallationSummaryLabel,
+  getMcpOperationKey,
   getPreferredMcpInstallationEntry,
   sanitizeMcpServerName,
 } from '@shared/utils/extensionNormalizers';
@@ -73,17 +74,18 @@ export const McpServerDetailDialog = ({
   open,
   onClose,
 }: McpServerDetailDialogProps): React.JSX.Element => {
+  const [scope, setScope] = useState<Scope>('user');
+  const operationKey = server ? getMcpOperationKey(server.id, scope) : null;
   const installProgress = useStore(
-    (s) => (server ? s.mcpInstallProgress[server.id] : undefined) ?? 'idle'
+    (s) => (operationKey ? s.mcpInstallProgress[operationKey] : undefined) ?? 'idle'
   );
   const installMcpServer = useStore((s) => s.installMcpServer);
   const uninstallMcpServer = useStore((s) => s.uninstallMcpServer);
-  const installError = useStore((s) => (server ? s.installErrors[server.id] : undefined));
+  const installError = useStore((s) => (operationKey ? s.installErrors[operationKey] : undefined));
   const stars = useStore((s) =>
     server?.repositoryUrl ? s.mcpGitHubStars[server.repositoryUrl] : undefined
   );
 
-  const [scope, setScope] = useState<Scope>('user');
   const [serverName, setServerName] = useState('');
   const [envValues, setEnvValues] = useState<Record<string, string>>({});
   const [headers, setHeaders] = useState<McpHeaderDef[]>([]);

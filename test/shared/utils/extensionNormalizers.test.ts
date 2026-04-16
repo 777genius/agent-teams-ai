@@ -9,6 +9,7 @@ import {
   getCapabilityLabel,
   getInstallationSummaryLabel,
   getMcpInstallationSummaryLabel,
+  getMcpOperationKey,
   getPreferredMcpInstallationEntry,
   getPluginOperationKey,
   getPrimaryCapabilityLabel,
@@ -159,6 +160,14 @@ describe('getPluginOperationKey', () => {
   it('namespaces plugin operation keys by scope', () => {
     expect(getPluginOperationKey('context7@claude-plugins-official', 'local')).toBe(
       'plugin:context7@claude-plugins-official:local',
+    );
+  });
+});
+
+describe('getMcpOperationKey', () => {
+  it('namespaces MCP operation keys by scope', () => {
+    expect(getMcpOperationKey('io.github.upstash/context7', 'project')).toBe(
+      'mcp:io.github.upstash/context7:project',
     );
   });
 });

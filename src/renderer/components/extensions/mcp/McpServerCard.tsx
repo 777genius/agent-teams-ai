@@ -13,6 +13,7 @@ import { useStore } from '@renderer/store';
 import { formatCompactNumber, formatRelativeTime } from '@renderer/utils/formatters';
 import {
   getMcpInstallationSummaryLabel,
+  getMcpOperationKey,
   sanitizeMcpServerName,
 } from '@shared/utils/extensionNormalizers';
 import { Clock, Cloud, Globe, KeyRound, Lock, Monitor, Star, Tag, Wrench } from 'lucide-react';
@@ -46,10 +47,11 @@ export const McpServerCard = ({
   diagnosticsLoading,
   onClick,
 }: McpServerCardProps): React.JSX.Element => {
-  const installProgress = useStore((s) => s.mcpInstallProgress[server.id] ?? 'idle');
+  const operationKey = getMcpOperationKey(server.id, 'user');
+  const installProgress = useStore((s) => s.mcpInstallProgress[operationKey] ?? 'idle');
   const installMcpServer = useStore((s) => s.installMcpServer);
   const uninstallMcpServer = useStore((s) => s.uninstallMcpServer);
-  const installError = useStore((s) => s.installErrors[server.id]);
+  const installError = useStore((s) => s.installErrors[operationKey]);
   const stars = useStore((s) =>
     server.repositoryUrl ? s.mcpGitHubStars[server.repositoryUrl] : undefined
   );

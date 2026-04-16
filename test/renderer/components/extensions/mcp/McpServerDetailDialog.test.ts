@@ -2,6 +2,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getMcpOperationKey } from '@shared/utils/extensionNormalizers';
 import type { InstalledMcpEntry, McpCatalogItem } from '@shared/types/extensions';
 
 interface StoreState {
@@ -104,10 +105,14 @@ vi.mock('@renderer/components/ui/select', () => ({
 vi.mock('@renderer/components/extensions/common/InstallButton', () => ({
   InstallButton: ({
     isInstalled,
+    state,
+    errorMessage,
     onInstall,
     onUninstall,
   }: {
     isInstalled: boolean;
+    state?: string;
+    errorMessage?: string;
     onInstall: () => void;
     onUninstall: () => void;
   }) =>
@@ -116,6 +121,8 @@ vi.mock('@renderer/components/extensions/common/InstallButton', () => ({
       {
         type: 'button',
         'data-testid': 'install-button',
+        'data-state': state,
+        'data-error': errorMessage,
         onClick: () => (isInstalled ? onUninstall() : onInstall()),
       },
       isInstalled ? 'Uninstall' : 'Install'
@@ -527,6 +534,55 @@ describe('McpServerDetailDialog installed entry handling', () => {
 
     expect(scopeSelect.value).toBe('project');
     expect(serverNameInput.value).toBe('context7-shared');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('reads install state from the selected scope operation key', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    storeState.mcpInstallProgress = {
+      [getMcpOperationKey('io.github.upstash/context7', 'user')]: 'success',
+      [getMcpOperationKey('io.github.upstash/context7', 'project')]: 'error',
+    };
+    storeState.installErrors = {
+      [getMcpOperationKey('io.github.upstash/context7', 'project')]: 'Project failed',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(McpServerDetailDialog, {
+          server: makeServer(),
+          isInstalled: false,
+          installedEntry: null,
+          installedEntries: [],
+          diagnostic: null,
+          diagnosticsLoading: false,
+          projectPath: '/tmp/project',
+          open: true,
+          onClose: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const installButton = host.querySelector('[data-testid="install-button"]') as HTMLButtonElement;
+    expect(installButton.dataset.state).toBe('success');
+    expect(installButton.dataset.error ?? '').toBe('');
+
+    const scopeSelect = host.querySelector('[data-testid="scope-select"]') as HTMLSelectElement;
+    await act(async () => {
+      scopeSelect.value = 'project';
+      scopeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(installButton.dataset.state).toBe('error');
+    expect(installButton.dataset.error).toBe('Project failed');
 
     await act(async () => {
       root.unmount();

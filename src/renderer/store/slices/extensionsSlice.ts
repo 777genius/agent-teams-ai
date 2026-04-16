@@ -5,7 +5,7 @@
 
 import { api } from '@renderer/api';
 import { CLI_NOT_FOUND_MESSAGE } from '@shared/constants/cli';
-import { getPluginOperationKey } from '@shared/utils/extensionNormalizers';
+import { getMcpOperationKey, getPluginOperationKey } from '@shared/utils/extensionNormalizers';
 
 import { findPaneByTabId, updatePane } from '../utils/paneHelpers';
 
@@ -60,7 +60,7 @@ export interface ExtensionsSlice {
   // ── Install progress ──
   pluginInstallProgress: Record<string, ExtensionOperationState>;
   mcpInstallProgress: Record<string, ExtensionOperationState>;
-  installErrors: Record<string, string>; // keyed by pluginId or registryId
+  installErrors: Record<string, string>; // keyed by scoped operation key
 
   // ── API Keys ──
   apiKeys: ApiKeyEntry[];
@@ -131,6 +131,7 @@ export interface ExtensionsSlice {
 let pluginFetchInFlight: { key: string; promise: Promise<void> } | null = null;
 let pluginCatalogRequestSeq = 0;
 const pluginSuccessResetTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const mcpSuccessResetTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let mcpDiagnosticsInFlight: Promise<void> | null = null;
 let skillsCatalogRequestSeq = 0;
 let skillsDetailRequestSeq = 0;
@@ -219,6 +220,82 @@ function schedulePluginSuccessReset(
     });
   }, SUCCESS_DISPLAY_MS);
   pluginSuccessResetTimers.set(operationKey, timer);
+}
+
+function getCustomMcpOperationKey(serverName: string, scope: InstallScope): string {
+  return `mcp-custom:${serverName}:${scope}`;
+}
+
+function clearMcpSuccessResetTimer(operationKey: string): void {
+  const timer = mcpSuccessResetTimers.get(operationKey);
+  if (!timer) {
+    return;
+  }
+
+  clearTimeout(timer);
+  mcpSuccessResetTimers.delete(operationKey);
+}
+
+function scheduleMcpSuccessReset(
+  operationKey: string,
+  set: Parameters<StateCreator<AppState, [], [], ExtensionsSlice>>[0]
+): void {
+  clearMcpSuccessResetTimer(operationKey);
+  const timer = setTimeout(() => {
+    mcpSuccessResetTimers.delete(operationKey);
+    set((prev) => {
+      if (prev.mcpInstallProgress[operationKey] !== 'success') {
+        return {};
+      }
+
+      return {
+        mcpInstallProgress: { ...prev.mcpInstallProgress, [operationKey]: 'idle' },
+      };
+    });
+  }, SUCCESS_DISPLAY_MS);
+  mcpSuccessResetTimers.set(operationKey, timer);
+}
+
+function clearMcpProjectScopedOperationState(
+  mcpInstallProgress: Record<string, ExtensionOperationState>,
+  installErrors: Record<string, string>
+): {
+  mcpInstallProgress: Record<string, ExtensionOperationState>;
+  installErrors: Record<string, string>;
+} {
+  const nextMcpInstallProgress = { ...mcpInstallProgress };
+  const nextInstallErrors = { ...installErrors };
+
+  for (const operationKey of Object.keys(nextMcpInstallProgress)) {
+    if (
+      (operationKey.startsWith('mcp:') || operationKey.startsWith('mcp-custom:')) &&
+      (operationKey.endsWith(':project') || operationKey.endsWith(':local'))
+    ) {
+      delete nextMcpInstallProgress[operationKey];
+    }
+  }
+
+  for (const operationKey of Object.keys(nextInstallErrors)) {
+    if (
+      (operationKey.startsWith('mcp:') || operationKey.startsWith('mcp-custom:')) &&
+      (operationKey.endsWith(':project') || operationKey.endsWith(':local'))
+    ) {
+      delete nextInstallErrors[operationKey];
+    }
+  }
+
+  return {
+    mcpInstallProgress: nextMcpInstallProgress,
+    installErrors: nextInstallErrors,
+  };
+}
+
+function clearMcpProjectScopedSuccessResetTimers(): void {
+  for (const operationKey of Array.from(mcpSuccessResetTimers.keys())) {
+    if (operationKey.endsWith(':project') || operationKey.endsWith(':local')) {
+      clearMcpSuccessResetTimer(operationKey);
+    }
+  }
 }
 
 function getSkillsCatalogKey(projectPath?: string): string {
@@ -434,9 +511,26 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
     try {
       const installed = await api.mcpRegistry.getInstalled(projectPath);
-      set({
-        mcpInstalledServers: installed,
-        mcpInstalledProjectPath: projectPath ?? null,
+      set((prev) => {
+        const nextProjectPath = projectPath ?? null;
+        const isSameProjectContext = prev.mcpInstalledProjectPath === nextProjectPath;
+        const nextOperationState = isSameProjectContext
+          ? {
+              mcpInstallProgress: prev.mcpInstallProgress,
+              installErrors: prev.installErrors,
+            }
+          : clearMcpProjectScopedOperationState(prev.mcpInstallProgress, prev.installErrors);
+
+        if (!isSameProjectContext) {
+          clearMcpProjectScopedSuccessResetTimers();
+        }
+
+        return {
+          mcpInstalledServers: installed,
+          mcpInstalledProjectPath: nextProjectPath,
+          mcpInstallProgress: nextOperationState.mcpInstallProgress,
+          installErrors: nextOperationState.installErrors,
+        };
       });
     } catch {
       // Silently fail — installed state is supplementary
@@ -833,29 +927,32 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
   // ── MCP install ──
   installMcpServer: async (request: McpInstallRequest) => {
+    const operationKey = getMcpOperationKey(request.registryId, request.scope);
     if (!api.mcpRegistry) {
+      clearMcpSuccessResetTimer(operationKey);
       set((prev) => ({
-        mcpInstallProgress: { ...prev.mcpInstallProgress, [request.registryId]: 'error' },
+        mcpInstallProgress: { ...prev.mcpInstallProgress, [operationKey]: 'error' },
         installErrors: {
           ...prev.installErrors,
-          [request.registryId]: 'MCP Registry not available',
+          [operationKey]: 'MCP Registry not available',
         },
       }));
       return;
     }
 
+    clearMcpSuccessResetTimer(operationKey);
     set((prev) => ({
-      mcpInstallProgress: { ...prev.mcpInstallProgress, [request.registryId]: 'pending' },
+      mcpInstallProgress: { ...prev.mcpInstallProgress, [operationKey]: 'pending' },
     }));
 
     try {
       const result = await api.mcpRegistry.install(request);
       if (result.state === 'error') {
         set((prev) => ({
-          mcpInstallProgress: { ...prev.mcpInstallProgress, [request.registryId]: 'error' },
+          mcpInstallProgress: { ...prev.mcpInstallProgress, [operationKey]: 'error' },
           installErrors: {
             ...prev.installErrors,
-            [request.registryId]: result.error ?? 'Install failed',
+            [operationKey]: result.error ?? 'Install failed',
           },
         }));
         return;
@@ -867,27 +964,26 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       ]);
 
       set((prev) => ({
-        mcpInstallProgress: { ...prev.mcpInstallProgress, [request.registryId]: 'success' },
+        mcpInstallProgress: { ...prev.mcpInstallProgress, [operationKey]: 'success' },
       }));
 
-      setTimeout(() => {
-        set((prev) => ({
-          mcpInstallProgress: { ...prev.mcpInstallProgress, [request.registryId]: 'idle' },
-        }));
-      }, SUCCESS_DISPLAY_MS);
+      scheduleMcpSuccessReset(operationKey, set);
     } catch (err) {
+      clearMcpSuccessResetTimer(operationKey);
       const message = err instanceof Error ? err.message : 'Install failed';
       set((prev) => ({
-        mcpInstallProgress: { ...prev.mcpInstallProgress, [request.registryId]: 'error' },
-        installErrors: { ...prev.installErrors, [request.registryId]: message },
+        mcpInstallProgress: { ...prev.mcpInstallProgress, [operationKey]: 'error' },
+        installErrors: { ...prev.installErrors, [operationKey]: message },
       }));
     }
   },
 
   // ── MCP custom install ──
   installCustomMcpServer: async (request: McpCustomInstallRequest) => {
+    const operationScope = request.scope;
+    const progressKey = getCustomMcpOperationKey(request.serverName, operationScope);
     if (!api.mcpRegistry) {
-      const progressKey = `custom:${request.serverName}`;
+      clearMcpSuccessResetTimer(progressKey);
       set((prev) => ({
         mcpInstallProgress: { ...prev.mcpInstallProgress, [progressKey]: 'error' },
         installErrors: { ...prev.installErrors, [progressKey]: 'MCP Registry not available' },
@@ -895,7 +991,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       return;
     }
 
-    const progressKey = `custom:${request.serverName}`;
+    clearMcpSuccessResetTimer(progressKey);
     set((prev) => ({
       mcpInstallProgress: { ...prev.mcpInstallProgress, [progressKey]: 'pending' },
     }));
@@ -919,12 +1015,9 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
         mcpInstallProgress: { ...prev.mcpInstallProgress, [progressKey]: 'success' },
       }));
 
-      setTimeout(() => {
-        set((prev) => ({
-          mcpInstallProgress: { ...prev.mcpInstallProgress, [progressKey]: 'idle' },
-        }));
-      }, SUCCESS_DISPLAY_MS);
+      scheduleMcpSuccessReset(progressKey, set);
     } catch (err) {
+      clearMcpSuccessResetTimer(progressKey);
       const message = err instanceof Error ? err.message : 'Install failed';
       set((prev) => ({
         mcpInstallProgress: { ...prev.mcpInstallProgress, [progressKey]: 'error' },
@@ -940,26 +1033,30 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
     scope?: string,
     projectPath?: string
   ) => {
+    const operationScope: InstallScope = scope === 'project' || scope === 'local' ? scope : 'user';
+    const operationKey = getMcpOperationKey(registryId, operationScope);
     if (!api.mcpRegistry) {
+      clearMcpSuccessResetTimer(operationKey);
       set((prev) => ({
-        mcpInstallProgress: { ...prev.mcpInstallProgress, [registryId]: 'error' },
-        installErrors: { ...prev.installErrors, [registryId]: 'MCP Registry not available' },
+        mcpInstallProgress: { ...prev.mcpInstallProgress, [operationKey]: 'error' },
+        installErrors: { ...prev.installErrors, [operationKey]: 'MCP Registry not available' },
       }));
       return;
     }
 
+    clearMcpSuccessResetTimer(operationKey);
     set((prev) => ({
-      mcpInstallProgress: { ...prev.mcpInstallProgress, [registryId]: 'pending' },
+      mcpInstallProgress: { ...prev.mcpInstallProgress, [operationKey]: 'pending' },
     }));
 
     try {
       const result = await api.mcpRegistry.uninstall(name, scope, projectPath);
       if (result.state === 'error') {
         set((prev) => ({
-          mcpInstallProgress: { ...prev.mcpInstallProgress, [registryId]: 'error' },
+          mcpInstallProgress: { ...prev.mcpInstallProgress, [operationKey]: 'error' },
           installErrors: {
             ...prev.installErrors,
-            [registryId]: result.error ?? 'Uninstall failed',
+            [operationKey]: result.error ?? 'Uninstall failed',
           },
         }));
         return;
@@ -971,19 +1068,16 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       ]);
 
       set((prev) => ({
-        mcpInstallProgress: { ...prev.mcpInstallProgress, [registryId]: 'success' },
+        mcpInstallProgress: { ...prev.mcpInstallProgress, [operationKey]: 'success' },
       }));
 
-      setTimeout(() => {
-        set((prev) => ({
-          mcpInstallProgress: { ...prev.mcpInstallProgress, [registryId]: 'idle' },
-        }));
-      }, SUCCESS_DISPLAY_MS);
+      scheduleMcpSuccessReset(operationKey, set);
     } catch (err) {
+      clearMcpSuccessResetTimer(operationKey);
       const message = err instanceof Error ? err.message : 'Uninstall failed';
       set((prev) => ({
-        mcpInstallProgress: { ...prev.mcpInstallProgress, [registryId]: 'error' },
-        installErrors: { ...prev.installErrors, [registryId]: message },
+        mcpInstallProgress: { ...prev.mcpInstallProgress, [operationKey]: 'error' },
+        installErrors: { ...prev.installErrors, [operationKey]: message },
       }));
     }
   },
