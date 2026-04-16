@@ -93,8 +93,12 @@ vi.mock('@renderer/components/ui/select', () => ({
   SelectValue: () => null,
   SelectContent: ({ children }: React.PropsWithChildren) =>
     React.createElement(React.Fragment, null, children),
-  SelectItem: ({ children, value }: React.PropsWithChildren<{ value: string }>) =>
-    React.createElement('option', { value }, children),
+  SelectItem: ({
+    children,
+    value,
+    disabled,
+  }: React.PropsWithChildren<{ value: string; disabled?: boolean }>) =>
+    React.createElement('option', { value, disabled }, children),
 }));
 
 vi.mock('@renderer/components/extensions/common/InstallButton', () => ({
@@ -187,6 +191,7 @@ describe('McpServerDetailDialog installed entry handling', () => {
           installedEntry,
           diagnostic: null,
           diagnosticsLoading: false,
+          projectPath: '/tmp/project',
           open: true,
           onClose: vi.fn(),
         })
@@ -211,7 +216,8 @@ describe('McpServerDetailDialog installed entry handling', () => {
     expect(storeState.uninstallMcpServer).toHaveBeenCalledWith(
       'io.github.upstash/context7',
       'context7-local',
-      'local'
+      'local',
+      undefined
     );
 
     await act(async () => {
@@ -241,6 +247,7 @@ describe('McpServerDetailDialog installed entry handling', () => {
           installedEntry: null,
           diagnostic: null,
           diagnosticsLoading: false,
+          projectPath: null,
           open: true,
           onClose: vi.fn(),
         })
@@ -251,6 +258,91 @@ describe('McpServerDetailDialog installed entry handling', () => {
 
     expect(lookupMock).toHaveBeenCalledTimes(1);
     expect(lookupMock).toHaveBeenCalledWith(['CONTEXT7_API_KEY']);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('passes project path for project-scoped installs and uninstalls', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const projectPath = '/tmp/project-context7';
+    const installedEntry: InstalledMcpEntry = {
+      name: 'context7-project',
+      scope: 'project',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(McpServerDetailDialog, {
+          server: makeServer(),
+          isInstalled: true,
+          installedEntry,
+          diagnostic: null,
+          diagnosticsLoading: false,
+          projectPath,
+          open: true,
+          onClose: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const scopeSelect = host.querySelector('[data-testid="scope-select"]') as HTMLSelectElement;
+    expect(scopeSelect.value).toBe('project');
+
+    const uninstallButton = host.querySelector('[data-testid="install-button"]') as HTMLButtonElement;
+    await act(async () => {
+      uninstallButton.click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.uninstallMcpServer).toHaveBeenCalledWith(
+      'io.github.upstash/context7',
+      'context7-project',
+      'project',
+      projectPath
+    );
+
+    await act(async () => {
+      root.render(
+        React.createElement(McpServerDetailDialog, {
+          server: makeServer(),
+          isInstalled: false,
+          installedEntry: null,
+          diagnostic: null,
+          diagnosticsLoading: false,
+          projectPath,
+          open: true,
+          onClose: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const installScopeSelect = host.querySelector('[data-testid="scope-select"]') as HTMLSelectElement;
+    await act(async () => {
+      installScopeSelect.value = 'project';
+      installScopeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    const installButton = host.querySelector('[data-testid="install-button"]') as HTMLButtonElement;
+    await act(async () => {
+      installButton.click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.installMcpServer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        registryId: 'io.github.upstash/context7',
+        scope: 'project',
+        projectPath,
+      })
+    );
 
     await act(async () => {
       root.unmount();

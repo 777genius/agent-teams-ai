@@ -142,6 +142,7 @@ describe('McpServersPanel initial browse loading', () => {
     await act(async () => {
       root.render(
         React.createElement(McpServersPanel, {
+          projectPath: null,
           mcpSearchQuery: '',
           mcpSearch: vi.fn(),
           mcpSearchResults: [],
@@ -171,6 +172,7 @@ describe('McpServersPanel initial browse loading', () => {
     await act(async () => {
       root.render(
         React.createElement(McpServersPanel, {
+          projectPath: null,
           mcpSearchQuery: '',
           mcpSearch: vi.fn(),
           mcpSearchResults: [],
@@ -189,6 +191,7 @@ describe('McpServersPanel initial browse loading', () => {
     await act(async () => {
       root.render(
         React.createElement(McpServersPanel, {
+          projectPath: null,
           mcpSearchQuery: '',
           mcpSearch: vi.fn(),
           mcpSearchResults: [],

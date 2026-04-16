@@ -59,6 +59,13 @@ export class McpInstallService {
       };
     }
 
+    if (scope === 'project' && !projectPath) {
+      return {
+        state: 'error',
+        error: 'projectPath is required for project scope',
+      };
+    }
+
     // 3. Validate env var keys (prevent command injection)
     for (const key of Object.keys(envValues)) {
       if (!ENV_KEY_RE.test(key)) {
@@ -212,6 +219,10 @@ export class McpInstallService {
       return { state: 'error', error: `Invalid scope: "${scope}".` };
     }
 
+    if (scope === 'project' && !projectPath) {
+      return { state: 'error', error: 'projectPath is required for project scope' };
+    }
+
     for (const key of Object.keys(envValues)) {
       if (!ENV_KEY_RE.test(key)) {
         return { state: 'error', error: `Invalid env var name: "${key}".` };
@@ -316,6 +327,13 @@ export class McpInstallService {
       return {
         state: 'error',
         error: `Invalid scope: "${scope}". Must be one of: local, user, project.`,
+      };
+    }
+
+    if (scope === 'project' && !projectPath) {
+      return {
+        state: 'error',
+        error: 'projectPath is required for project scope',
       };
     }
 

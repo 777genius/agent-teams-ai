@@ -44,14 +44,16 @@ interface McpServerDetailDialogProps {
   installedEntry?: InstalledMcpEntry | null;
   diagnostic?: McpServerDiagnostic | null;
   diagnosticsLoading?: boolean;
+  projectPath: string | null;
   open: boolean;
   onClose: () => void;
 }
 
-type Scope = 'local' | 'user';
+type Scope = 'local' | 'user' | 'project';
 
 const SCOPE_OPTIONS: { value: Scope; label: string }[] = [
   { value: 'user', label: 'User (global)' },
+  { value: 'project', label: 'Project' },
   { value: 'local', label: 'Local' },
 ];
 
@@ -61,6 +63,7 @@ export const McpServerDetailDialog = ({
   installedEntry,
   diagnostic,
   diagnosticsLoading,
+  projectPath,
   open,
   onClose,
 }: McpServerDetailDialogProps): React.JSX.Element => {
@@ -100,10 +103,16 @@ export const McpServerDetailDialog = ({
       }))
     );
     setServerName(installedEntry?.name ?? sanitizeMcpServerName(server.name));
-    setScope(installedEntry?.scope === 'local' ? 'local' : 'user');
+    setScope(installedEntry?.scope ?? 'user');
     setImgError(false);
     setAutoFilledFields(new Set());
   }, [installedEntry?.name, installedEntry?.scope, open, server?.id]);
+
+  useEffect(() => {
+    if (open && scope === 'project' && !projectPath) {
+      setScope('user');
+    }
+  }, [open, projectPath, scope]);
 
   // Auto-fill env values from saved API keys
   useEffect(() => {
@@ -144,9 +153,15 @@ export const McpServerDetailDialog = ({
   const missingRequiredHeaders = headers.some(
     (header) => header.isRequired && !header.value.trim()
   );
-  const installDisabled = !serverName.trim() || missingRequiredEnvVars || missingRequiredHeaders;
   const uninstallServerName = installedEntry?.name ?? serverName;
   const uninstallScope = installedEntry?.scope ?? scope;
+  const scopeRequiresProjectPath =
+    (scope === 'project' || uninstallScope === 'project') && !projectPath;
+  const installDisabled =
+    !serverName.trim() ||
+    missingRequiredEnvVars ||
+    missingRequiredHeaders ||
+    scopeRequiresProjectPath;
   const diagnosticBadgeClass =
     diagnostic?.status === 'connected'
       ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
@@ -161,13 +176,19 @@ export const McpServerDetailDialog = ({
       registryId: server.id,
       serverName,
       scope,
+      projectPath: scope === 'project' ? (projectPath ?? undefined) : undefined,
       envValues,
       headers,
     });
   };
 
   const handleUninstall = () => {
-    uninstallMcpServer(server.id, uninstallServerName, uninstallScope);
+    uninstallMcpServer(
+      server.id,
+      uninstallServerName,
+      uninstallScope,
+      uninstallScope === 'project' ? (projectPath ?? undefined) : undefined
+    );
   };
 
   const addHeader = () => {
@@ -370,7 +391,11 @@ export const McpServerDetailDialog = ({
                 </SelectTrigger>
                 <SelectContent>
                   {SCOPE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
+                    <SelectItem
+                      key={opt.value}
+                      value={opt.value}
+                      disabled={opt.value === 'project' && !projectPath}
+                    >
                       {opt.label}
                     </SelectItem>
                   ))}

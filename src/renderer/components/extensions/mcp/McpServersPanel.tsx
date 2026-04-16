@@ -55,6 +55,7 @@ function sortMcpServers(servers: McpCatalogItem[], sort: McpSortValue): McpCatal
 }
 
 interface McpServersPanelProps {
+  projectPath: string | null;
   mcpSearchQuery: string;
   mcpSearch: (query: string) => void;
   mcpSearchResults: McpCatalogItem[];
@@ -65,6 +66,7 @@ interface McpServersPanelProps {
 }
 
 export const McpServersPanel = ({
+  projectPath,
   mcpSearchQuery,
   mcpSearch,
   mcpSearchResults,
@@ -404,6 +406,7 @@ export const McpServersPanel = ({
         installedEntry={selectedServer ? getInstalledEntry(selectedServer) : null}
         diagnostic={selectedServer ? getDiagnostic(selectedServer) : null}
         diagnosticsLoading={mcpDiagnosticsLoading}
+        projectPath={projectPath}
         open={selectedMcpServerId !== null}
         onClose={() => setSelectedMcpServerId(null)}
       />

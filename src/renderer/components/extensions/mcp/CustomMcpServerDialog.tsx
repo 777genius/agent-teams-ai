@@ -37,14 +37,16 @@ const SERVER_NAME_RE = /^[\w.-]{1,100}$/;
 interface CustomMcpServerDialogProps {
   open: boolean;
   onClose: () => void;
+  projectPath: string | null;
 }
 
 type TransportMode = 'stdio' | 'http';
 type HttpTransport = 'streamable-http' | 'sse' | 'http';
-type Scope = 'local' | 'user';
+type Scope = 'local' | 'user' | 'project';
 
 const SCOPE_OPTIONS: { value: Scope; label: string }[] = [
   { value: 'user', label: 'User (global)' },
+  { value: 'project', label: 'Project' },
   { value: 'local', label: 'Local' },
 ];
 
@@ -62,6 +64,7 @@ interface EnvEntry {
 export const CustomMcpServerDialog = ({
   open,
   onClose,
+  projectPath,
 }: CustomMcpServerDialogProps): React.JSX.Element => {
   const installCustomMcpServer = useStore((s) => s.installCustomMcpServer);
 
@@ -100,6 +103,12 @@ export const CustomMcpServerDialog = ({
       setInstalling(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (open && scope === 'project' && !projectPath) {
+      setScope('user');
+    }
+  }, [open, projectPath, scope]);
 
   // Auto-fill env vars from saved API keys
   useEffect(() => {
@@ -168,6 +177,7 @@ export const CustomMcpServerDialog = ({
     const request: McpCustomInstallRequest = {
       serverName,
       scope,
+      projectPath: scope === 'project' ? (projectPath ?? undefined) : undefined,
       installSpec,
       envValues,
       headers: headers.filter((h) => h.key.trim() && h.value.trim()),
@@ -197,6 +207,7 @@ export const CustomMcpServerDialog = ({
   const canSubmit =
     serverName.trim() &&
     (transportMode === 'stdio' ? npmPackage.trim() : httpUrl.trim()) &&
+    !(scope === 'project' && !projectPath) &&
     !installing;
 
   return (
@@ -372,7 +383,11 @@ export const CustomMcpServerDialog = ({
               </SelectTrigger>
               <SelectContent>
                 {SCOPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
+                  <SelectItem
+                    key={opt.value}
+                    value={opt.value}
+                    disabled={opt.value === 'project' && !projectPath}
+                  >
                     {opt.label}
                   </SelectItem>
                 ))}

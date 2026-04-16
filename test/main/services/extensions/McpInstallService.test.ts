@@ -216,6 +216,20 @@ describe('McpInstallService', () => {
       expect(result.state).toBe('error');
       expect(result.error).toContain('Manual setup required');
     });
+
+    it('rejects project scope install without project path', async () => {
+      const result = await service.install({
+        registryId: 'upstash/context7-mcp',
+        serverName: 'context7',
+        scope: 'project',
+        envValues: {},
+        headers: [],
+      });
+
+      expect(result.state).toBe('error');
+      expect(result.error).toContain('projectPath is required');
+      expect(mockExecCli).not.toHaveBeenCalled();
+    });
   });
 
   // ── install: error masking ──────────────────────────────────────────────────
@@ -259,6 +273,25 @@ describe('McpInstallService', () => {
     });
   });
 
+  describe('installCustom (validation)', () => {
+    it('rejects project scope custom install without project path', async () => {
+      const result = await service.installCustom({
+        serverName: 'custom-context7',
+        scope: 'project',
+        installSpec: {
+          type: 'stdio',
+          npmPackage: '@upstash/context7-mcp',
+        },
+        envValues: {},
+        headers: [],
+      });
+
+      expect(result.state).toBe('error');
+      expect(result.error).toContain('projectPath is required');
+      expect(mockExecCli).not.toHaveBeenCalled();
+    });
+  });
+
   // ── uninstall ───────────────────────────────────────────────────────────────
 
   describe('uninstall', () => {
@@ -290,6 +323,14 @@ describe('McpInstallService', () => {
 
       expect(result.state).toBe('error');
       expect(result.error).toContain('Invalid server name');
+      expect(mockExecCli).not.toHaveBeenCalled();
+    });
+
+    it('rejects project scope uninstall without project path', async () => {
+      const result = await service.uninstall('context7', 'project');
+
+      expect(result.state).toBe('error');
+      expect(result.error).toContain('projectPath is required');
       expect(mockExecCli).not.toHaveBeenCalled();
     });
 
