@@ -129,6 +129,7 @@ export interface ExtensionsSlice {
 
 let pluginFetchInFlight: { key: string; promise: Promise<void> } | null = null;
 let pluginCatalogRequestSeq = 0;
+const pluginSuccessResetTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let mcpDiagnosticsInFlight: Promise<void> | null = null;
 let skillsCatalogRequestSeq = 0;
 let skillsDetailRequestSeq = 0;
@@ -173,6 +174,42 @@ function clearPluginOperationState(
     pluginInstallProgress: nextPluginInstallProgress,
     installErrors: nextInstallErrors,
   };
+}
+
+function clearPluginSuccessResetTimer(pluginId: string): void {
+  const timer = pluginSuccessResetTimers.get(pluginId);
+  if (!timer) {
+    return;
+  }
+
+  clearTimeout(timer);
+  pluginSuccessResetTimers.delete(pluginId);
+}
+
+function clearPluginSuccessResetTimers(pluginIds: Set<string>): void {
+  for (const pluginId of pluginIds) {
+    clearPluginSuccessResetTimer(pluginId);
+  }
+}
+
+function schedulePluginSuccessReset(
+  pluginId: string,
+  set: Parameters<StateCreator<AppState, [], [], ExtensionsSlice>>[0]
+): void {
+  clearPluginSuccessResetTimer(pluginId);
+  const timer = setTimeout(() => {
+    pluginSuccessResetTimers.delete(pluginId);
+    set((prev) => {
+      if (prev.pluginInstallProgress[pluginId] !== 'success') {
+        return {};
+      }
+
+      return {
+        pluginInstallProgress: { ...prev.pluginInstallProgress, [pluginId]: 'idle' },
+      };
+    });
+  }, SUCCESS_DISPLAY_MS);
+  pluginSuccessResetTimers.set(pluginId, timer);
 }
 
 function getSkillsCatalogKey(projectPath?: string): string {
@@ -269,6 +306,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
             prev.pluginInstallProgress,
             prev.installErrors
           );
+          clearPluginSuccessResetTimers(pluginIdsToClear);
 
           return {
             pluginCatalog: result,
@@ -291,6 +329,9 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
             isSameProjectContext ? new Set<string>() : buildPluginIdSet(prev.pluginCatalog),
             prev.pluginInstallProgress,
             prev.installErrors
+          );
+          clearPluginSuccessResetTimers(
+            isSameProjectContext ? new Set<string>() : buildPluginIdSet(prev.pluginCatalog)
           );
 
           return {
@@ -679,6 +720,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
               : null;
 
     if (preflightError) {
+      clearPluginSuccessResetTimer(request.pluginId);
       set((prev) => ({
         pluginInstallProgress: { ...prev.pluginInstallProgress, [request.pluginId]: 'error' },
         installErrors: { ...prev.installErrors, [request.pluginId]: preflightError },
@@ -686,6 +728,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       return;
     }
 
+    clearPluginSuccessResetTimer(request.pluginId);
     set((prev) => ({
       pluginInstallProgress: { ...prev.pluginInstallProgress, [request.pluginId]: 'pending' },
       installErrors: { ...prev.installErrors, [request.pluginId]: '' },
@@ -711,13 +754,9 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       // Refresh catalog to pick up new installed state
       void get().fetchPluginCatalog(get().pluginCatalogProjectPath ?? undefined, true);
 
-      // Return to idle after brief success display
-      setTimeout(() => {
-        set((prev) => ({
-          pluginInstallProgress: { ...prev.pluginInstallProgress, [request.pluginId]: 'idle' },
-        }));
-      }, SUCCESS_DISPLAY_MS);
+      schedulePluginSuccessReset(request.pluginId, set);
     } catch (err) {
+      clearPluginSuccessResetTimer(request.pluginId);
       const message = err instanceof Error ? err.message : 'Install failed';
       set((prev) => ({
         pluginInstallProgress: { ...prev.pluginInstallProgress, [request.pluginId]: 'error' },
@@ -735,6 +774,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
         ? (projectPath ?? get().pluginCatalogProjectPath ?? undefined)
         : projectPath;
     if (scope === 'project' && !effectiveProjectPath) {
+      clearPluginSuccessResetTimer(pluginId);
       set((prev) => ({
         pluginInstallProgress: { ...prev.pluginInstallProgress, [pluginId]: 'error' },
         installErrors: { ...prev.installErrors, [pluginId]: PROJECT_SCOPE_REQUIRED_MESSAGE },
@@ -742,6 +782,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       return;
     }
 
+    clearPluginSuccessResetTimer(pluginId);
     set((prev) => ({
       pluginInstallProgress: { ...prev.pluginInstallProgress, [pluginId]: 'pending' },
     }));
@@ -763,12 +804,9 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       // Refresh catalog
       void get().fetchPluginCatalog(get().pluginCatalogProjectPath ?? undefined, true);
 
-      setTimeout(() => {
-        set((prev) => ({
-          pluginInstallProgress: { ...prev.pluginInstallProgress, [pluginId]: 'idle' },
-        }));
-      }, SUCCESS_DISPLAY_MS);
+      schedulePluginSuccessReset(pluginId, set);
     } catch (err) {
+      clearPluginSuccessResetTimer(pluginId);
       const message = err instanceof Error ? err.message : 'Uninstall failed';
       set((prev) => ({
         pluginInstallProgress: { ...prev.pluginInstallProgress, [pluginId]: 'error' },

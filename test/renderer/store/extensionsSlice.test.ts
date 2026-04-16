@@ -142,6 +142,7 @@ describe('extensionsSlice', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -490,6 +491,25 @@ describe('extensionsSlice', () => {
       expect(store.getState().pluginInstallProgress['project@m']).toBe('error');
       expect(store.getState().installErrors['project@m']).toContain('active project');
     });
+
+    it('clears older success reset timers before a new operation on the same plugin', async () => {
+      vi.useFakeTimers();
+      store.setState({ cliStatus: makeReadyCliStatus() });
+      (api.plugins!.getAll as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.plugins!.install as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({ state: 'success' })
+        .mockResolvedValueOnce({ state: 'error', error: 'second failure' });
+
+      await store.getState().installPlugin({ pluginId: 'test@m', scope: 'user' });
+      expect(store.getState().pluginInstallProgress['test@m']).toBe('success');
+
+      await store.getState().installPlugin({ pluginId: 'test@m', scope: 'user' });
+      expect(store.getState().pluginInstallProgress['test@m']).toBe('error');
+
+      await vi.advanceTimersByTimeAsync(2_000);
+
+      expect(store.getState().pluginInstallProgress['test@m']).toBe('error');
+    });
   });
 
   describe('uninstallPlugin', () => {
@@ -523,6 +543,28 @@ describe('extensionsSlice', () => {
       expect(api.plugins!.uninstall).not.toHaveBeenCalled();
       expect(store.getState().pluginInstallProgress['project@m']).toBe('error');
       expect(store.getState().installErrors['project@m']).toContain('active project');
+    });
+
+    it('does not restore idle state after project switch clears a pending success timer', async () => {
+      vi.useFakeTimers();
+      store.setState({
+        pluginCatalogProjectPath: '/tmp/project-a',
+        pluginCatalog: [makePlugin({ pluginId: 'test@m' })],
+      });
+      (api.plugins!.getAll as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce([makePlugin({ pluginId: 'test@m' })])
+        .mockResolvedValueOnce([makePlugin({ pluginId: 'other@m' })]);
+      (api.plugins!.uninstall as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'success' });
+
+      await store.getState().uninstallPlugin('test@m', 'user');
+      expect(store.getState().pluginInstallProgress['test@m']).toBe('success');
+
+      await store.getState().fetchPluginCatalog('/tmp/project-b');
+      expect(store.getState().pluginInstallProgress['test@m']).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(2_000);
+
+      expect(store.getState().pluginInstallProgress['test@m']).toBeUndefined();
     });
   });
 
