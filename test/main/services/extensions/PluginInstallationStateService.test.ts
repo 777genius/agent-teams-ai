@@ -9,7 +9,7 @@ const MOCK_CLAUDE_BASE_PATH = path.join(TEST_ROOT, 'tmp', 'mock-claude');
 const PROJECT_A_PATH = path.join(TEST_ROOT, 'tmp', 'project-a');
 const PROJECT_B_PATH = path.join(TEST_ROOT, 'tmp', 'project-b');
 
-function normalizeMockPath(filePath: string | URL): string {
+function normalizeMockPath(filePath: unknown): string {
   return String(filePath).replaceAll('\\', '/');
 }
 

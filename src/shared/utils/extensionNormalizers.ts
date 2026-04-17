@@ -125,13 +125,7 @@ export function hasInstallationInScope(
   return installations.some((installation) => installation.scope === scope);
 }
 
-/**
- * Build a concise install-status label for plugin badges.
- */
-export function getInstallationSummaryLabel(
-  installations: Pick<InstalledPluginEntry, 'scope'>[]
-): string | null {
-  const scopes = Array.from(new Set(installations.map((installation) => installation.scope)));
+function summarizeInstallationScopes(scopes: InstallScope[]): string | null {
   if (scopes.length === 0) {
     return null;
   }
@@ -150,6 +144,16 @@ export function getInstallationSummaryLabel(
     default:
       return 'Installed';
   }
+}
+
+/**
+ * Build a concise install-status label for plugin badges.
+ */
+export function getInstallationSummaryLabel(
+  installations: Pick<InstalledPluginEntry, 'scope'>[]
+): string | null {
+  const scopes = Array.from(new Set(installations.map((installation) => installation.scope)));
+  return summarizeInstallationScopes(scopes);
 }
 
 const MCP_SCOPE_PRIORITY: Record<InstalledMcpEntry['scope'], number> = {
@@ -181,24 +185,7 @@ export function getMcpInstallationSummaryLabel(
   installations: Pick<InstalledMcpEntry, 'scope'>[]
 ): string | null {
   const scopes = Array.from(new Set(installations.map((installation) => installation.scope)));
-  if (scopes.length === 0) {
-    return null;
-  }
-
-  if (scopes.length > 1) {
-    return `Installed in ${scopes.length} scopes`;
-  }
-
-  switch (scopes[0]) {
-    case 'user':
-      return 'Installed globally';
-    case 'project':
-      return 'Installed in project';
-    case 'local':
-      return 'Installed locally';
-    default:
-      return 'Installed';
-  }
+  return summarizeInstallationScopes(scopes);
 }
 
 /**
