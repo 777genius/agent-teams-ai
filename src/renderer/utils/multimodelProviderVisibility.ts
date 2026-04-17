@@ -15,7 +15,7 @@ export function getVisibleMultimodelProviders(
 export function isMultimodelRuntimeStatus(
   cliStatus: Pick<CliInstallationStatus, 'flavor' | 'providers'> | null | undefined
 ): boolean {
-  return cliStatus?.flavor === 'agent_teams_orchestrator' && (cliStatus.providers?.length ?? 0) > 0;
+  return cliStatus?.flavor === 'agent_teams_orchestrator';
 }
 
 export function formatCliExtensionCapabilityStatus(

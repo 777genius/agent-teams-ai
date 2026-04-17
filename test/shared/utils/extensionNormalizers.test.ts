@@ -23,21 +23,15 @@ import {
 
 describe('normalizeRepoUrl', () => {
   it('lowercases and strips .git', () => {
-    expect(normalizeRepoUrl('https://GitHub.com/Org/Repo.git')).toBe(
-      'https://github.com/org/repo',
-    );
+    expect(normalizeRepoUrl('https://GitHub.com/Org/Repo.git')).toBe('https://github.com/org/repo');
   });
 
   it('strips trailing slashes', () => {
-    expect(normalizeRepoUrl('https://github.com/org/repo/')).toBe(
-      'https://github.com/org/repo',
-    );
+    expect(normalizeRepoUrl('https://github.com/org/repo/')).toBe('https://github.com/org/repo');
   });
 
   it('handles already clean URLs', () => {
-    expect(normalizeRepoUrl('https://github.com/org/repo')).toBe(
-      'https://github.com/org/repo',
-    );
+    expect(normalizeRepoUrl('https://github.com/org/repo')).toBe('https://github.com/org/repo');
   });
 });
 
@@ -68,9 +62,10 @@ describe('inferCapabilities', () => {
   });
 
   it('detects multiple capabilities', () => {
-    expect(
-      inferCapabilities(makePlugin({ hasLspServers: true, hasMcpServers: true })),
-    ).toEqual(['lsp', 'mcp']);
+    expect(inferCapabilities(makePlugin({ hasLspServers: true, hasMcpServers: true }))).toEqual([
+      'lsp',
+      'mcp',
+    ]);
   });
 
   it('preserves capability order', () => {
@@ -80,8 +75,8 @@ describe('inferCapabilities', () => {
           hasHooks: true,
           hasAgents: true,
           hasLspServers: true,
-        }),
-      ),
+        })
+      )
     ).toEqual(['lsp', 'agent', 'hook']);
   });
 });
@@ -151,7 +146,7 @@ describe('normalizeCategory', () => {
 describe('buildPluginId', () => {
   it('creates qualifiedName format', () => {
     expect(buildPluginId('context7', 'claude-plugins-official')).toBe(
-      'context7@claude-plugins-official',
+      'context7@claude-plugins-official'
     );
   });
 });
@@ -159,36 +154,28 @@ describe('buildPluginId', () => {
 describe('getPluginOperationKey', () => {
   it('namespaces user-scope plugin operation keys without a project suffix', () => {
     expect(getPluginOperationKey('context7@claude-plugins-official', 'user')).toBe(
-      'plugin:context7@claude-plugins-official:user',
+      'plugin:context7@claude-plugins-official:user'
     );
   });
 
   it('namespaces repo-scoped plugin operation keys by project path', () => {
-    expect(
-      getPluginOperationKey('context7@claude-plugins-official', 'local', '/tmp/project'),
-    ).toBe('plugin:context7@claude-plugins-official:local:/tmp/project');
+    expect(getPluginOperationKey('context7@claude-plugins-official', 'local', '/tmp/project')).toBe(
+      'plugin:context7@claude-plugins-official:local:/tmp/project'
+    );
   });
 });
 
 describe('getMcpOperationKey', () => {
   it('namespaces MCP operation keys by scope', () => {
     expect(getMcpOperationKey('io.github.upstash/context7', 'project', '/tmp/project')).toBe(
-      'mcp:io.github.upstash/context7:project:/tmp/project',
+      'mcp:io.github.upstash/context7:project:/tmp/project'
     );
   });
 });
 
 describe('hasInstallationInScope', () => {
   it('returns true when the selected scope exists', () => {
-    expect(
-      hasInstallationInScope(
-        [
-          { scope: 'user' },
-          { scope: 'project' },
-        ],
-        'project',
-      ),
-    ).toBe(true);
+    expect(hasInstallationInScope([{ scope: 'user' }, { scope: 'project' }], 'project')).toBe(true);
   });
 
   it('returns false when the selected scope is missing', () => {
@@ -210,12 +197,9 @@ describe('getInstallationSummaryLabel', () => {
   });
 
   it('summarizes multiple scopes without pretending they are global', () => {
-    expect(
-      getInstallationSummaryLabel([
-        { scope: 'project' },
-        { scope: 'user' },
-      ]),
-    ).toBe('Installed in 2 scopes');
+    expect(getInstallationSummaryLabel([{ scope: 'project' }, { scope: 'user' }])).toBe(
+      'Installed in 2 scopes'
+    );
   });
 });
 
@@ -252,12 +236,9 @@ describe('getMcpInstallationSummaryLabel', () => {
   });
 
   it('summarizes multiple MCP scopes', () => {
-    expect(
-      getMcpInstallationSummaryLabel([
-        { scope: 'user' },
-        { scope: 'project' },
-      ])
-    ).toBe('Installed in 2 scopes');
+    expect(getMcpInstallationSummaryLabel([{ scope: 'user' }, { scope: 'project' }])).toBe(
+      'Installed in 2 scopes'
+    );
   });
 });
 
@@ -285,7 +266,7 @@ describe('getExtensionActionDisableReason', () => {
         isInstalled: false,
         cliStatus: createDirectCliStatus({ authLoggedIn: false }),
         cliStatusLoading: false,
-      }),
+      })
     ).toContain('not signed in');
   });
 
@@ -295,7 +276,7 @@ describe('getExtensionActionDisableReason', () => {
         isInstalled: true,
         cliStatus: createDirectCliStatus({ authLoggedIn: false }),
         cliStatusLoading: false,
-      }),
+      })
     ).toBeNull();
   });
 
@@ -305,7 +286,7 @@ describe('getExtensionActionDisableReason', () => {
         isInstalled: true,
         cliStatus: createDirectCliStatus({ installed: false, authLoggedIn: false }),
         cliStatusLoading: false,
-      }),
+      })
     ).toContain('configured runtime');
   });
 
@@ -322,7 +303,7 @@ describe('getExtensionActionDisableReason', () => {
           }),
         },
         cliStatusLoading: false,
-      }),
+      })
     ).toContain('failed to start');
   });
 
@@ -365,7 +346,7 @@ describe('getExtensionActionDisableReason', () => {
           ],
         },
         cliStatusLoading: false,
-      }),
+      })
     ).toContain('Anthropic plugins unavailable');
   });
 
@@ -404,8 +385,42 @@ describe('getExtensionActionDisableReason', () => {
           ],
         },
         cliStatusLoading: false,
-      }),
+      })
     ).toBeNull();
+  });
+
+  it('uses conservative multimodel fallback when provider metadata is not available yet', () => {
+    expect(
+      getExtensionActionDisableReason({
+        isInstalled: false,
+        section: 'plugins',
+        cliStatus: {
+          installed: true,
+          authLoggedIn: false,
+          binaryPath: '/usr/local/bin/claude-multimodel',
+          launchError: null,
+          flavor: 'agent_teams_orchestrator',
+          providers: [],
+        },
+        cliStatusLoading: false,
+      })
+    ).toContain('not supported by the current runtime');
+
+    expect(
+      getExtensionActionDisableReason({
+        isInstalled: false,
+        section: 'mcp',
+        cliStatus: {
+          installed: true,
+          authLoggedIn: false,
+          binaryPath: '/usr/local/bin/claude-multimodel',
+          launchError: null,
+          flavor: 'agent_teams_orchestrator',
+          providers: [],
+        },
+        cliStatusLoading: false,
+      })
+    ).toContain('not supported by the current runtime');
   });
 });
 

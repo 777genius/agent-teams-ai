@@ -266,7 +266,7 @@ export function getExtensionActionDisableReason(options: {
   }
 
   const providers = cliStatus.providers ?? [];
-  const isMultimodel = cliStatus.flavor === 'agent_teams_orchestrator' && providers.length > 0;
+  const isMultimodel = cliStatus.flavor === 'agent_teams_orchestrator';
 
   if (section === 'mcp') {
     if (!isMultimodel) {
