@@ -1,3 +1,5 @@
+import { isInstalledMcpScope } from '@shared/utils/mcpScopes';
+
 import type { McpServerDiagnostic, McpServerHealthStatus } from '@shared/types/extensions';
 
 interface McpDiagnoseJsonEntry {
@@ -17,6 +19,21 @@ interface McpDiagnoseJsonPayload {
 const EMBEDDED_HTTP_URL_PATTERN = /https?:\/\/[^\s"'`]+/gi;
 const SENSITIVE_FLAG_VALUE_PATTERN =
   /(--(?:api[-_]?key|access[-_]?token|auth[-_]?token|token|secret|password|client[-_]?secret))(?:=([^\s]+)|\s+([^\s]+))/gi;
+
+function isPluginInjectedDiagnosticName(name: string): boolean {
+  return name.startsWith('plugin:');
+}
+
+function isExtensionsManagedDiagnosticEntry(entry: {
+  name: string;
+  scope?: 'local' | 'user' | 'project' | 'global' | 'dynamic' | 'managed';
+}): boolean {
+  if (isPluginInjectedDiagnosticName(entry.name)) {
+    return false;
+  }
+
+  return entry.scope === undefined || isInstalledMcpScope(entry.scope);
+}
 
 function extractJsonObject<T>(raw: string): T {
   const trimmed = raw.trim();
@@ -127,7 +144,8 @@ export function parseMcpDiagnosticsOutput(output: string): McpServerDiagnostic[]
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !line.startsWith('Checking MCP server health'))
     .map((line) => parseDiagnosticLine(line, checkedAt))
-    .filter((entry): entry is McpServerDiagnostic => entry !== null);
+    .filter((entry): entry is McpServerDiagnostic => entry !== null)
+    .filter((entry) => isExtensionsManagedDiagnosticEntry(entry));
 }
 
 export function parseMcpDiagnosticsJsonOutput(output: string): McpServerDiagnostic[] {
@@ -155,17 +173,17 @@ export function parseMcpDiagnosticsJsonOutput(output: string): McpServerDiagnost
             : 'unknown';
 
     const rawLine = `${entry.name}: ${redactedTarget} - ${entry.statusLabel}`;
-    return [
-      {
-        name: entry.name,
-        target: redactedTarget,
-        scope: entry.scope,
-        transport: entry.transport,
-        status: normalizedStatus,
-        statusLabel: entry.statusLabel,
-        rawLine,
-        checkedAt,
-      },
-    ];
+    const diagnostic = {
+      name: entry.name,
+      target: redactedTarget,
+      scope: entry.scope,
+      transport: entry.transport,
+      status: normalizedStatus,
+      statusLabel: entry.statusLabel,
+      rawLine,
+      checkedAt,
+    } satisfies McpServerDiagnostic;
+
+    return isExtensionsManagedDiagnosticEntry(diagnostic) ? [diagnostic] : [];
   });
 }

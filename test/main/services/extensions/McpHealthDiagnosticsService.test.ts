@@ -16,20 +16,20 @@ browsermcp: npx @browsermcp/mcp@latest - ✓ Connected
 tavily-remote-mcp: npx -y mcp-remote https://mcp.tavily.com/mcp/?tavilyApiKey=test - ✗ Failed to connect
 alpic: https://mcp.alpic.ai (HTTP) - ! Needs authentication`);
 
-    expect(diagnostics).toHaveLength(5);
+    expect(diagnostics).toHaveLength(3);
     expect(diagnostics[0]).toMatchObject({
-      name: 'plugin:context7:context7',
-      target: 'npx -y @upstash/context7-mcp',
+      name: 'browsermcp',
+      target: 'npx @browsermcp/mcp@latest',
       status: 'connected',
       statusLabel: 'Connected',
     });
-    expect(diagnostics[3]).toMatchObject({
+    expect(diagnostics[1]).toMatchObject({
       name: 'tavily-remote-mcp',
       target: 'npx -y mcp-remote https://mcp.tavily.com/mcp/?tavilyApiKey=REDACTED',
       status: 'failed',
       statusLabel: 'Failed to connect',
     });
-    expect(diagnostics[4]).toMatchObject({
+    expect(diagnostics[2]).toMatchObject({
       name: 'alpic',
       target: 'https://mcp.alpic.ai (HTTP)',
       status: 'needs-authentication',
@@ -63,6 +63,14 @@ another log line`);
             transport: 'http',
             status: 'timeout',
             statusLabel: 'Timed out',
+          },
+          {
+            name: 'plugin:context7:context7',
+            target: 'npx -y @upstash/context7-mcp',
+            scope: 'dynamic',
+            transport: 'stdio',
+            status: 'connected',
+            statusLabel: 'Connected',
           },
         ],
       })
