@@ -11,6 +11,10 @@ vi.mock('@main/utils/pathDecoder', () => ({
 // Mock filesystem
 vi.mock('node:fs/promises');
 
+function toPortablePath(filePath: unknown): string {
+  return String(filePath).replaceAll('\\', '/');
+}
+
 describe('PluginInstallationStateService', () => {
   let service: PluginInstallationStateService;
   const mockedFs = vi.mocked(fs);
@@ -27,7 +31,7 @@ describe('PluginInstallationStateService', () => {
   describe('getInstalledPlugins', () => {
     it('returns user-scoped plugins enabled in user settings', async () => {
       mockedFs.readFile.mockImplementation(async (filePath) => {
-        const normalizedPath = String(filePath);
+        const normalizedPath = toPortablePath(filePath);
         if (normalizedPath.endsWith('/plugins/installed_plugins.json')) {
           return JSON.stringify({
             version: 2,
@@ -75,7 +79,7 @@ describe('PluginInstallationStateService', () => {
 
     it('includes project and local scopes only for the active project', async () => {
       mockedFs.readFile.mockImplementation(async (filePath) => {
-        const normalizedPath = String(filePath);
+        const normalizedPath = toPortablePath(filePath);
         if (normalizedPath.endsWith('/plugins/installed_plugins.json')) {
           return JSON.stringify({
             version: 2,
@@ -143,7 +147,7 @@ describe('PluginInstallationStateService', () => {
 
     it('does not leak another project scope into the current project', async () => {
       mockedFs.readFile.mockImplementation(async (filePath) => {
-        const normalizedPath = String(filePath);
+        const normalizedPath = toPortablePath(filePath);
         if (normalizedPath.endsWith('/plugins/installed_plugins.json')) {
           return JSON.stringify({
             version: 2,
@@ -182,7 +186,7 @@ describe('PluginInstallationStateService', () => {
 
     it('returns empty array for unexpected version', async () => {
       mockedFs.readFile.mockImplementation(async (filePath) => {
-        const normalizedPath = String(filePath);
+        const normalizedPath = toPortablePath(filePath);
         if (normalizedPath.endsWith('/plugins/installed_plugins.json')) {
           return JSON.stringify({ version: 1, plugins: {} });
         }
@@ -198,7 +202,7 @@ describe('PluginInstallationStateService', () => {
 
     it('caches within TTL', async () => {
       mockedFs.readFile.mockImplementation(async (filePath) => {
-        const normalizedPath = String(filePath);
+        const normalizedPath = toPortablePath(filePath);
         if (normalizedPath.endsWith('/plugins/installed_plugins.json')) {
           return JSON.stringify({ version: 2, plugins: {} });
         }
@@ -216,7 +220,7 @@ describe('PluginInstallationStateService', () => {
 
     it('caches results independently per project path', async () => {
       mockedFs.readFile.mockImplementation(async (filePath) => {
-        const normalizedPath = String(filePath);
+        const normalizedPath = toPortablePath(filePath);
         if (normalizedPath.endsWith('/plugins/installed_plugins.json')) {
           return JSON.stringify({ version: 2, plugins: {} });
         }

@@ -13,6 +13,10 @@ vi.mock('@main/utils/pathDecoder', () => ({
 
 vi.mock('node:fs/promises');
 
+function toPortablePath(filePath: unknown): string {
+  return String(filePath).replaceAll('\\', '/');
+}
+
 describe('McpInstallationStateService', () => {
   let service: McpInstallationStateService;
   const mockedFs = vi.mocked(fs);
@@ -31,7 +35,7 @@ describe('McpInstallationStateService', () => {
   describe('getInstalled', () => {
     it('includes local scope from the current project entry in ~/.claude.json', async () => {
       mockedFs.readFile.mockImplementation(async (filePath) => {
-        const normalizedPath = String(filePath);
+        const normalizedPath = toPortablePath(filePath);
         if (normalizedPath === '/tmp/mock-home/.claude.json') {
           return JSON.stringify({
             mcpServers: {
@@ -69,7 +73,7 @@ describe('McpInstallationStateService', () => {
 
     it('caches results within TTL for the same project path', async () => {
       mockedFs.readFile.mockImplementation(async (filePath) => {
-        const normalizedPath = String(filePath);
+        const normalizedPath = toPortablePath(filePath);
         if (normalizedPath === '/tmp/mock-home/.claude.json') {
           return JSON.stringify({
             mcpServers: {
@@ -97,7 +101,7 @@ describe('McpInstallationStateService', () => {
 
     it('caches results independently per project path', async () => {
       mockedFs.readFile.mockImplementation(async (filePath) => {
-        const normalizedPath = String(filePath);
+        const normalizedPath = toPortablePath(filePath);
         if (normalizedPath === '/tmp/mock-home/.claude.json') {
           return JSON.stringify({
             mcpServers: {
