@@ -278,7 +278,7 @@ describe('McpServerDetailDialog installed entry handling', () => {
     });
   });
 
-  it('passes projectPath into API key lookup for project-aware autofill', async () => {
+  it('looks up project-scoped API keys only when project scope is selected', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -302,7 +302,81 @@ describe('McpServerDetailDialog installed entry handling', () => {
       await Promise.resolve();
     });
 
-    expect(lookupMock).toHaveBeenCalledWith(['CONTEXT7_API_KEY'], '/tmp/project-context7');
+    expect(lookupMock).toHaveBeenCalledWith(['CONTEXT7_API_KEY'], undefined);
+
+    const scopeSelect = host.querySelector('[data-testid="scope-select"]') as HTMLSelectElement;
+    await act(async () => {
+      scopeSelect.value = 'project';
+      scopeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(lookupMock).toHaveBeenLastCalledWith(['CONTEXT7_API_KEY'], '/tmp/project-context7');
+
+    await act(async () => {
+      scopeSelect.value = 'user';
+      scopeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(lookupMock).toHaveBeenLastCalledWith(['CONTEXT7_API_KEY'], undefined);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('clears stale project auto-filled values when switching back to user scope', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const server = makeServer();
+    server.envVars = [{ name: 'CONTEXT7_API_KEY', isSecret: true }];
+    lookupMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ envVarName: 'CONTEXT7_API_KEY', value: 'project-secret' }])
+      .mockResolvedValueOnce([]);
+
+    await act(async () => {
+      root.render(
+        React.createElement(McpServerDetailDialog, {
+          server,
+          isInstalled: false,
+          installedEntry: null,
+          diagnostic: null,
+          diagnosticsLoading: false,
+          projectPath: '/tmp/project-context7',
+          open: true,
+          onClose: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const scopeSelect = host.querySelector('[data-testid="scope-select"]') as HTMLSelectElement;
+    const envValueInput = host.querySelector('input[type="password"]') as HTMLInputElement;
+
+    await act(async () => {
+      scopeSelect.value = 'project';
+      scopeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(envValueInput.value).toBe('project-secret');
+
+    await act(async () => {
+      scopeSelect.value = 'user';
+      scopeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(envValueInput.value).toBe('');
 
     await act(async () => {
       root.unmount();

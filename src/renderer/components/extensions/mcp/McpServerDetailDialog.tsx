@@ -3,7 +3,7 @@
  * Uses Radix UI Kit for all form elements.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { Badge } from '@renderer/components/ui/badge';
@@ -92,6 +92,7 @@ export const McpServerDetailDialog = ({
   const [headers, setHeaders] = useState<McpHeaderDef[]>([]);
   const [imgError, setImgError] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
+  const autoFilledValuesRef = useRef<Record<string, string>>({});
   const normalizedInstalledEntries = installedEntries.length
     ? installedEntries
     : installedEntry
@@ -115,6 +116,9 @@ export const McpServerDetailDialog = ({
       .map((entry) => entry.name)
       .sort()
       .join('\0') ?? '';
+  const apiKeyLookupProjectPath = isProjectScopedMcpScope(scope)
+    ? (projectPath ?? undefined)
+    : undefined;
 
   // Initialize form when dialog opens or server changes
   useEffect(() => {
@@ -138,6 +142,7 @@ export const McpServerDetailDialog = ({
     setScope((preferredInstalledEntry?.scope as Scope | undefined) ?? defaultSharedScope);
     setImgError(false);
     setAutoFilledFields(new Set());
+    autoFilledValuesRef.current = {};
   }, [
     defaultSharedScope,
     open,
@@ -165,23 +170,38 @@ export const McpServerDetailDialog = ({
     if (!server || !open || server.envVars.length === 0 || !api.apiKeys) return;
 
     const envVarNames = server.envVars.map((e) => e.name);
-    void api.apiKeys.lookup(envVarNames, projectPath ?? undefined).then(
+    void api.apiKeys.lookup(envVarNames, apiKeyLookupProjectPath).then(
       (results) => {
-        if (results.length === 0) return;
-        const filled = new Set<string>();
-        const values: Record<string, string> = {};
+        const previousAutoFilledValues = autoFilledValuesRef.current;
+        const nextAutoFilledValues: Record<string, string> = {};
         for (const r of results) {
-          values[r.envVarName] = r.value;
-          filled.add(r.envVarName);
+          nextAutoFilledValues[r.envVarName] = r.value;
         }
-        setEnvValues((prev) => ({ ...prev, ...values }));
-        setAutoFilledFields(filled);
+        setEnvValues((prev) => {
+          const next = { ...prev };
+
+          for (const [envVarName, previousValue] of Object.entries(previousAutoFilledValues)) {
+            if (!(envVarName in nextAutoFilledValues) && next[envVarName] === previousValue) {
+              next[envVarName] = '';
+            }
+          }
+
+          for (const [envVarName, nextValue] of Object.entries(nextAutoFilledValues)) {
+            if (!next[envVarName] || next[envVarName] === previousAutoFilledValues[envVarName]) {
+              next[envVarName] = nextValue;
+            }
+          }
+
+          return next;
+        });
+        setAutoFilledFields(new Set(Object.keys(nextAutoFilledValues)));
+        autoFilledValuesRef.current = nextAutoFilledValues;
       },
       () => {
         // Silently fail — auto-fill is supplementary
       }
     );
-  }, [envVarLookupNames, open, projectPath, server?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [apiKeyLookupProjectPath, envVarLookupNames, open, server?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!server) return <></>;
 

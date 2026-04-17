@@ -3,7 +3,7 @@
  * Supports stdio (npm package) and HTTP/SSE transports.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
@@ -92,11 +92,15 @@ export const CustomMcpServerDialog = ({
   const [envVars, setEnvVars] = useState<EnvEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [installing, setInstalling] = useState(false);
+  const autoFilledValuesRef = useRef<Record<string, string>>({});
   const envVarLookupNames = envVars
     .map((entry) => entry.key.trim())
     .filter(Boolean)
     .sort()
     .join('\0');
+  const apiKeyLookupProjectPath = isProjectScopedMcpScope(scope)
+    ? (projectPath ?? undefined)
+    : undefined;
 
   // Reset on open
   useEffect(() => {
@@ -112,6 +116,7 @@ export const CustomMcpServerDialog = ({
       setEnvVars([]);
       setError(null);
       setInstalling(false);
+      autoFilledValuesRef.current = {};
     }
   }, [defaultSharedScope, open]);
 
@@ -128,19 +133,50 @@ export const CustomMcpServerDialog = ({
     const envVarNames = envVars.map((e) => e.key.trim()).filter(Boolean);
     if (envVarNames.length === 0) return;
 
-    void api.apiKeys.lookup(envVarNames, projectPath ?? undefined).then(
+    void api.apiKeys.lookup(envVarNames, apiKeyLookupProjectPath).then(
       (results) => {
-        if (results.length === 0) return;
-        const lookup = new Map(results.map((r) => [r.envVarName, r.value]));
-        setEnvVars((prev) =>
-          prev.map((e) => (lookup.has(e.key) && !e.value ? { ...e, value: lookup.get(e.key)! } : e))
+        const previousAutoFilledValues = autoFilledValuesRef.current;
+        const nextAutoFilledValues = Object.fromEntries(
+          results.map((result) => [result.envVarName, result.value])
         );
+        setEnvVars((prev) => {
+          let changed = false;
+          const next = prev.map((entry) => {
+            const envVarName = entry.key.trim();
+            if (!envVarName) {
+              return entry;
+            }
+
+            const previousValue = previousAutoFilledValues[envVarName];
+            const nextValue = nextAutoFilledValues[envVarName];
+
+            if (!nextValue) {
+              if (previousValue && entry.value === previousValue) {
+                changed = true;
+                return { ...entry, value: '' };
+              }
+              return entry;
+            }
+
+            if (!entry.value || entry.value === previousValue) {
+              if (entry.value !== nextValue) {
+                changed = true;
+                return { ...entry, value: nextValue };
+              }
+            }
+
+            return entry;
+          });
+
+          return changed ? next : prev;
+        });
+        autoFilledValuesRef.current = nextAutoFilledValues;
       },
       () => {
         // Silently fail
       }
     );
-  }, [envVarLookupNames, envVars, open, projectPath]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [apiKeyLookupProjectPath, envVarLookupNames, open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleInstall = async () => {
     setError(null);
