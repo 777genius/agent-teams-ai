@@ -254,4 +254,43 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
     expect(provider.statusMessage).toContain('ANTHROPIC_API_KEY');
   });
+
+  it('falls back conservatively when the runtime omits extension capability metadata', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        providers: {
+          codex: {
+            supported: true,
+            authenticated: true,
+            verificationState: 'verified',
+            canLoginFromUi: true,
+            capabilities: {
+              teamLaunch: true,
+              oneShot: true,
+            },
+          },
+        },
+      }),
+      stderr: '',
+      exitCode: 0,
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const provider = await service.getProviderStatus('/mock/agent_teams_orchestrator', 'codex');
+
+    expect(provider).toMatchObject({
+      providerId: 'codex',
+      capabilities: {
+        extensions: {
+          plugins: { status: 'unsupported' },
+          mcp: { status: 'read-only' },
+          skills: { status: 'supported' },
+          apiKeys: { status: 'supported' },
+        },
+      },
+    });
+  });
 });

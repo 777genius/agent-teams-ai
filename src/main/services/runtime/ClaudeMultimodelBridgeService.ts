@@ -1,7 +1,10 @@
 import { execCli } from '@main/utils/childProcess';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
-import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
+import {
+  createDefaultCliExtensionCapabilities,
+  createLegacyRuntimeFallbackCliExtensionCapabilities,
+} from '@shared/utils/providerExtensionCapabilities';
 
 import { resolveGeminiRuntimeAuth } from './geminiRuntimeAuth';
 import { buildProviderAwareCliEnv } from './providerAwareCliEnv';
@@ -145,7 +148,7 @@ function createDefaultProviderStatus(providerId: CliProviderId): CliProviderStat
     capabilities: {
       teamLaunch: false,
       oneShot: false,
-      extensions: createDefaultCliExtensionCapabilities(),
+      extensions: createLegacyRuntimeFallbackCliExtensionCapabilities(),
     },
     selectedBackendId: null,
     resolvedBackendId: null,
@@ -159,7 +162,9 @@ function createDefaultProviderStatus(providerId: CliProviderId): CliProviderStat
 function mapRuntimeExtensionCapabilities(
   capabilities?: RuntimeExtensionCapabilitiesResponse
 ): CliProviderStatus['capabilities']['extensions'] {
-  const defaults = createDefaultCliExtensionCapabilities();
+  const defaults = capabilities
+    ? createDefaultCliExtensionCapabilities()
+    : createLegacyRuntimeFallbackCliExtensionCapabilities();
 
   return {
     plugins: {
