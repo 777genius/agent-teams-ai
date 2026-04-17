@@ -7,6 +7,7 @@ import { useStore } from '@renderer/store';
 import {
   getCapabilityLabel,
   getInstallationSummaryLabel,
+  getPluginOperationKey,
   hasInstallationInScope,
   inferCapabilities,
   normalizeCategory,
@@ -27,10 +28,11 @@ interface PluginCardProps {
 export const PluginCard = ({ plugin, index, onClick }: PluginCardProps): React.JSX.Element => {
   const capabilities = inferCapabilities(plugin);
   const category = normalizeCategory(plugin.category);
-  const installProgress = useStore((s) => s.pluginInstallProgress[plugin.pluginId] ?? 'idle');
+  const operationKey = getPluginOperationKey(plugin.pluginId, 'user');
+  const installProgress = useStore((s) => s.pluginInstallProgress[operationKey] ?? 'idle');
   const installPlugin = useStore((s) => s.installPlugin);
   const uninstallPlugin = useStore((s) => s.uninstallPlugin);
-  const installError = useStore((s) => s.installErrors[plugin.pluginId]);
+  const installError = useStore((s) => s.installErrors[operationKey]);
   const isUserInstalled = hasInstallationInScope(plugin.installations, 'user');
   const installSummaryLabel = getInstallationSummaryLabel(plugin.installations);
   const baseStriped = index % 2 === 0;

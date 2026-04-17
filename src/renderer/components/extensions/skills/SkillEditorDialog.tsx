@@ -32,7 +32,10 @@ import {
   readSkillTemplateContent,
   updateSkillTemplateFrontmatter,
 } from './skillDraftUtils';
+import { toSuggestedSkillFolderName } from './skillFolderNameUtils';
+import { resolveSkillProjectPath } from './skillProjectUtils';
 import { SkillReviewDialog } from './SkillReviewDialog';
+import { validateSkillFolderName } from './skillValidationUtils';
 
 import type {
   SkillDetail,
@@ -58,16 +61,6 @@ function parseInitialName(detail: SkillDetail | null): string {
 
 function parseInitialDescription(detail: SkillDetail | null): string {
   return detail?.item.description ?? '';
-}
-
-function toSuggestedFolderName(value: string): string {
-  return value
-    .normalize('NFKD')
-    .replace(/[^\x00-\x7F]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
 }
 
 export const SkillEditorDialog = ({
@@ -191,7 +184,7 @@ export const SkillEditorDialog = ({
         notes: nextNotes,
       });
     const rawInput = readSkillTemplateContent(nextRawContent);
-    const suggestedFolderName = toSuggestedFolderName(nextName || 'New Skill');
+    const suggestedFolderName = toSuggestedSkillFolderName(nextName || 'New Skill');
     const hasCustomMarkdown = mode === 'edit' && rawInput.hasUnstructuredBody;
 
     setScope(nextScope);
@@ -228,14 +221,42 @@ export const SkillEditorDialog = ({
   }, [detail, mode, open, projectPath]);
 
   useEffect(() => {
+    if (open) {
+      return;
+    }
+
+    setReviewPreview(null);
+    setReviewOpen(false);
+    setReviewLoading(false);
+    setSaveLoading(false);
+    setMutationError(null);
+  }, [open]);
+
+  useEffect(() => {
+    if (open && mode === 'create' && scope === 'project' && !projectPath) {
+      setScope('user');
+    }
+  }, [mode, open, projectPath, scope]);
+
+  useEffect(() => {
     rawContentRef.current = rawContent;
   }, [rawContent]);
+
+  const effectiveProjectPath = useMemo(
+    () =>
+      resolveSkillProjectPath(
+        scope,
+        projectPath,
+        mode === 'edit' ? detail?.item.projectRoot : undefined
+      ),
+    [detail?.item.projectRoot, mode, projectPath, scope]
+  );
 
   const request = useMemo(
     () => ({
       scope,
       rootKind,
-      projectPath: scope === 'project' ? (projectPath ?? undefined) : undefined,
+      projectPath: effectiveProjectPath,
       folderName,
       existingSkillId: mode === 'edit' ? detail?.item.id : undefined,
       files: buildSkillDraftFiles({
@@ -252,10 +273,10 @@ export const SkillEditorDialog = ({
       includeReferences,
       includeScripts,
       mode,
-      projectPath,
       rawContent,
       rootKind,
       scope,
+      effectiveProjectPath,
     ]
   );
   const draftFilePaths = useMemo(
@@ -285,7 +306,11 @@ export const SkillEditorDialog = ({
     if (!folderName.trim()) {
       return 'Choose a folder name for this skill.';
     }
-    if (scope === 'project' && !projectPath) {
+    const folderNameError = validateSkillFolderName(folderName);
+    if (folderNameError) {
+      return folderNameError;
+    }
+    if (scope === 'project' && !effectiveProjectPath) {
       return 'Project skills need an active project.';
     }
     return null;
@@ -468,7 +493,7 @@ export const SkillEditorDialog = ({
                         const nextValue = event.target.value;
                         setName(nextValue);
                         if (mode === 'create' && !folderNameEdited) {
-                          setFolderName(toSuggestedFolderName(nextValue || 'New Skill'));
+                          setFolderName(toSuggestedSkillFolderName(nextValue || 'New Skill'));
                         }
                         applyFormToRawContent({ name: nextValue });
                       }}
@@ -713,6 +738,7 @@ export const SkillEditorDialog = ({
                           size="sm"
                           onClick={() => {
                             setManualRawEdit(false);
+                            setCustomMarkdownDetected(false);
                             const nextRawContent = buildSkillTemplate({
                               name,
                               description,

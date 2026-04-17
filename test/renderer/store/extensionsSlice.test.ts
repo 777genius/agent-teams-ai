@@ -40,6 +40,10 @@ vi.mock('../../../src/renderer/api', () => ({
 }));
 
 import { api } from '../../../src/renderer/api';
+import {
+  getMcpOperationKey,
+  getPluginOperationKey,
+} from '../../../src/shared/utils/extensionNormalizers';
 
 import type {
   EnrichedPlugin,
@@ -133,6 +137,11 @@ const makeReadyCliStatus = () => ({
   providers: [],
 });
 
+const pluginOperationKey = (pluginId: string, scope: 'user' | 'project' | 'local' = 'user') =>
+  getPluginOperationKey(pluginId, scope);
+const mcpOperationKey = (registryId: string, scope: 'user' | 'project' | 'local' = 'user') =>
+  getMcpOperationKey(registryId, scope);
+
 describe('extensionsSlice', () => {
   let store: TestStore;
 
@@ -187,10 +196,10 @@ describe('extensionsSlice', () => {
         pluginCatalog: [makePlugin({ pluginId: 'project-a@m' })],
         pluginCatalogProjectPath: '/tmp/project-a',
         pluginInstallProgress: {
-          'project-a@m': 'error',
+          [pluginOperationKey('project-a@m', 'project')]: 'error',
         },
         installErrors: {
-          'project-a@m': 'Install failed',
+          [pluginOperationKey('project-a@m', 'project')]: 'Install failed',
           'mcp-server': 'Keep me',
         },
       });
@@ -201,8 +210,10 @@ describe('extensionsSlice', () => {
       await store.getState().fetchPluginCatalog('/tmp/project-b');
 
       expect(store.getState().pluginCatalogProjectPath).toBe('/tmp/project-b');
-      expect(store.getState().pluginInstallProgress['project-a@m']).toBeUndefined();
-      expect(store.getState().installErrors['project-a@m']).toBeUndefined();
+      expect(
+        store.getState().pluginInstallProgress[pluginOperationKey('project-a@m', 'project')],
+      ).toBeUndefined();
+      expect(store.getState().installErrors[pluginOperationKey('project-a@m', 'project')]).toBeUndefined();
       expect(store.getState().installErrors['mcp-server']).toBe('Keep me');
     });
 
@@ -266,10 +277,10 @@ describe('extensionsSlice', () => {
         pluginCatalog: [makePlugin({ pluginId: 'project-a@m' })],
         pluginCatalogProjectPath: '/tmp/project-a',
         pluginInstallProgress: {
-          'project-a@m': 'error',
+          [pluginOperationKey('project-a@m', 'project')]: 'error',
         },
         installErrors: {
-          'project-a@m': 'Install failed',
+          [pluginOperationKey('project-a@m', 'project')]: 'Install failed',
           'mcp-server': 'Keep me',
         },
       });
@@ -278,8 +289,10 @@ describe('extensionsSlice', () => {
       await store.getState().fetchPluginCatalog('/tmp/project-b');
 
       expect(store.getState().pluginCatalog).toEqual([]);
-      expect(store.getState().pluginInstallProgress['project-a@m']).toBeUndefined();
-      expect(store.getState().installErrors['project-a@m']).toBeUndefined();
+      expect(
+        store.getState().pluginInstallProgress[pluginOperationKey('project-a@m', 'project')],
+      ).toBeUndefined();
+      expect(store.getState().installErrors[pluginOperationKey('project-a@m', 'project')]).toBeUndefined();
       expect(store.getState().installErrors['mcp-server']).toBe('Keep me');
     });
   });
@@ -362,6 +375,43 @@ describe('extensionsSlice', () => {
       await store.getState().mcpFetchInstalled();
 
       expect(store.getState().mcpInstalledServers).toEqual(installed);
+    });
+
+    it('clears stale project- and local-scoped MCP operation state when project changes', async () => {
+      store.setState({
+        mcpInstalledProjectPath: '/tmp/project-a',
+        mcpInstallProgress: {
+          [mcpOperationKey('project-server', 'project')]: 'error',
+          [mcpOperationKey('local-server', 'local')]: 'success',
+          [mcpOperationKey('user-server', 'user')]: 'pending',
+        },
+        installErrors: {
+          [mcpOperationKey('project-server', 'project')]: 'Project failed',
+          [mcpOperationKey('local-server', 'local')]: 'Local failed',
+          [mcpOperationKey('user-server', 'user')]: 'Keep user state',
+          'plugin:test@marketplace:user': 'Keep plugin state',
+          'mcp-custom:custom-server:project': 'Clear custom project state',
+        },
+      });
+      (api.mcpRegistry!.getInstalled as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+      await store.getState().mcpFetchInstalled('/tmp/project-b');
+
+      expect(store.getState().mcpInstalledProjectPath).toBe('/tmp/project-b');
+      expect(store.getState().mcpInstallProgress[mcpOperationKey('project-server', 'project')]).toBeUndefined();
+      expect(store.getState().mcpInstallProgress[mcpOperationKey('local-server', 'local')]).toBeUndefined();
+      expect(store.getState().mcpInstallProgress[mcpOperationKey('user-server', 'user')]).toBe(
+        'pending',
+      );
+      expect(store.getState().installErrors[mcpOperationKey('project-server', 'project')]).toBeUndefined();
+      expect(store.getState().installErrors[mcpOperationKey('local-server', 'local')]).toBeUndefined();
+      expect(store.getState().installErrors[mcpOperationKey('user-server', 'user')]).toBe(
+        'Keep user state',
+      );
+      expect(store.getState().installErrors['mcp-custom:custom-server:project']).toBeUndefined();
+      expect(store.getState().installErrors['plugin:test@marketplace:user']).toBe(
+        'Keep plugin state',
+      );
     });
   });
 
@@ -448,10 +498,10 @@ describe('extensionsSlice', () => {
       const promise = store.getState().installPlugin({ pluginId: 'test@m', scope: 'user' });
 
       // During execution, should be pending
-      expect(store.getState().pluginInstallProgress['test@m']).toBe('pending');
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('test@m')]).toBe('pending');
 
       await promise;
-      expect(store.getState().pluginInstallProgress['test@m']).toBe('success');
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('test@m')]).toBe('success');
     });
 
     it('sets progress to error on failure', async () => {
@@ -463,7 +513,7 @@ describe('extensionsSlice', () => {
 
       await store.getState().installPlugin({ pluginId: 'fail@m', scope: 'user' });
 
-      expect(store.getState().pluginInstallProgress['fail@m']).toBe('error');
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('fail@m')]).toBe('error');
     });
 
     it('fills missing projectPath from the active Extensions project context', async () => {
@@ -488,8 +538,12 @@ describe('extensionsSlice', () => {
       await store.getState().installPlugin({ pluginId: 'project@m', scope: 'project' });
 
       expect(api.plugins!.install).not.toHaveBeenCalled();
-      expect(store.getState().pluginInstallProgress['project@m']).toBe('error');
-      expect(store.getState().installErrors['project@m']).toContain('active project');
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('project@m', 'project')]).toBe(
+        'error',
+      );
+      expect(store.getState().installErrors[pluginOperationKey('project@m', 'project')]).toContain(
+        'active project',
+      );
     });
 
     it('fills missing projectPath for local scope from the active Extensions project context', async () => {
@@ -514,8 +568,24 @@ describe('extensionsSlice', () => {
       await store.getState().installPlugin({ pluginId: 'local@m', scope: 'local' });
 
       expect(api.plugins!.install).not.toHaveBeenCalled();
-      expect(store.getState().pluginInstallProgress['local@m']).toBe('error');
-      expect(store.getState().installErrors['local@m']).toContain('active project');
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('local@m', 'local')]).toBe(
+        'error',
+      );
+      expect(store.getState().installErrors[pluginOperationKey('local@m', 'local')]).toContain(
+        'active project',
+      );
+    });
+
+    it('keeps user-scope state isolated from local-scope failures', async () => {
+      store.setState({ cliStatus: makeReadyCliStatus(), pluginCatalogProjectPath: null });
+
+      await store.getState().installPlugin({ pluginId: 'shared@m', scope: 'local' });
+
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('shared@m', 'local')]).toBe(
+        'error',
+      );
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('shared@m', 'user')]).toBeUndefined();
+      expect(store.getState().installErrors[pluginOperationKey('shared@m', 'user')]).toBeUndefined();
     });
 
     it('clears older success reset timers before a new operation on the same plugin', async () => {
@@ -527,14 +597,14 @@ describe('extensionsSlice', () => {
         .mockResolvedValueOnce({ state: 'error', error: 'second failure' });
 
       await store.getState().installPlugin({ pluginId: 'test@m', scope: 'user' });
-      expect(store.getState().pluginInstallProgress['test@m']).toBe('success');
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('test@m')]).toBe('success');
 
       await store.getState().installPlugin({ pluginId: 'test@m', scope: 'user' });
-      expect(store.getState().pluginInstallProgress['test@m']).toBe('error');
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('test@m')]).toBe('error');
 
       await vi.advanceTimersByTimeAsync(2_000);
 
-      expect(store.getState().pluginInstallProgress['test@m']).toBe('error');
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('test@m')]).toBe('error');
     });
   });
 
@@ -546,10 +616,10 @@ describe('extensionsSlice', () => {
 
       const promise = store.getState().uninstallPlugin('test@m', 'user');
 
-      expect(store.getState().pluginInstallProgress['test@m']).toBe('pending');
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('test@m')]).toBe('pending');
 
       await promise;
-      expect(store.getState().pluginInstallProgress['test@m']).toBe('success');
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('test@m')]).toBe('success');
     });
 
     it('fills missing projectPath from the active Extensions project context', async () => {
@@ -567,8 +637,12 @@ describe('extensionsSlice', () => {
       await store.getState().uninstallPlugin('project@m', 'project');
 
       expect(api.plugins!.uninstall).not.toHaveBeenCalled();
-      expect(store.getState().pluginInstallProgress['project@m']).toBe('error');
-      expect(store.getState().installErrors['project@m']).toContain('active project');
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('project@m', 'project')]).toBe(
+        'error',
+      );
+      expect(store.getState().installErrors[pluginOperationKey('project@m', 'project')]).toContain(
+        'active project',
+      );
     });
 
     it('fills missing projectPath for local uninstall from the active Extensions project context', async () => {
@@ -586,8 +660,12 @@ describe('extensionsSlice', () => {
       await store.getState().uninstallPlugin('local@m', 'local');
 
       expect(api.plugins!.uninstall).not.toHaveBeenCalled();
-      expect(store.getState().pluginInstallProgress['local@m']).toBe('error');
-      expect(store.getState().installErrors['local@m']).toContain('active project');
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('local@m', 'local')]).toBe(
+        'error',
+      );
+      expect(store.getState().installErrors[pluginOperationKey('local@m', 'local')]).toContain(
+        'active project',
+      );
     });
 
     it('does not restore idle state after project switch clears a pending success timer', async () => {
@@ -602,14 +680,14 @@ describe('extensionsSlice', () => {
       (api.plugins!.uninstall as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'success' });
 
       await store.getState().uninstallPlugin('test@m', 'user');
-      expect(store.getState().pluginInstallProgress['test@m']).toBe('success');
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('test@m')]).toBe('success');
 
       await store.getState().fetchPluginCatalog('/tmp/project-b');
-      expect(store.getState().pluginInstallProgress['test@m']).toBeUndefined();
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('test@m')]).toBeUndefined();
 
       await vi.advanceTimersByTimeAsync(2_000);
 
-      expect(store.getState().pluginInstallProgress['test@m']).toBeUndefined();
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('test@m')]).toBeUndefined();
     });
   });
 
@@ -627,10 +705,44 @@ describe('extensionsSlice', () => {
         headers: [],
       });
 
-      expect(store.getState().mcpInstallProgress['test-id']).toBe('pending');
+      expect(store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'user')]).toBe(
+        'pending',
+      );
 
       await promise;
-      expect(store.getState().mcpInstallProgress['test-id']).toBe('success');
+      expect(store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'user')]).toBe(
+        'success',
+      );
+    });
+
+    it('does not restore idle state after project switch clears a pending project-scope success timer', async () => {
+      vi.useFakeTimers();
+      store.setState({
+        mcpInstalledProjectPath: '/tmp/project-a',
+      });
+      (api.mcpRegistry!.install as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'success' });
+      (api.mcpRegistry!.getInstalled as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.mcpRegistry!.diagnose as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+      await store.getState().installMcpServer({
+        registryId: 'test-id',
+        serverName: 'test-server',
+        scope: 'project',
+        projectPath: '/tmp/project-a',
+        envValues: {},
+        headers: [],
+      });
+
+      expect(store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'project')]).toBe(
+        'success',
+      );
+
+      await store.getState().mcpFetchInstalled('/tmp/project-b');
+      expect(store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'project')]).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(2_000);
+
+      expect(store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'project')]).toBeUndefined();
     });
   });
 
@@ -642,10 +754,14 @@ describe('extensionsSlice', () => {
 
       const promise = store.getState().uninstallMcpServer('test-id', 'test-server', 'user');
 
-      expect(store.getState().mcpInstallProgress['test-id']).toBe('pending');
+      expect(store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'user')]).toBe(
+        'pending',
+      );
 
       await promise;
-      expect(store.getState().mcpInstallProgress['test-id']).toBe('success');
+      expect(store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'user')]).toBe(
+        'success',
+      );
     });
   });
 

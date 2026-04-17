@@ -323,6 +323,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
 
               <TabsContent value="plugins" className="mt-0 pt-4">
                 <PluginsPanel
+                  projectPath={projectPath}
                   pluginFilters={tabState.pluginFilters}
                   pluginSort={tabState.pluginSort}
                   selectedPluginId={tabState.selectedPluginId}
@@ -339,6 +340,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
 
               <TabsContent value="mcp-servers" className="mt-0 pt-4">
                 <McpServersPanel
+                  projectPath={projectPath}
                   mcpSearchQuery={tabState.mcpSearchQuery}
                   mcpSearch={tabState.mcpSearch}
                   mcpSearchResults={tabState.mcpSearchResults}
@@ -371,6 +373,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
             <CustomMcpServerDialog
               open={customMcpDialogOpen}
               onClose={() => setCustomMcpDialogOpen(false)}
+              projectPath={projectPath}
             />
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { PluginCatalogItem } from '@shared/types/extensions';
+import type { InstalledMcpEntry, PluginCatalogItem } from '@shared/types/extensions';
 
 import {
   buildPluginId,
@@ -8,6 +8,10 @@ import {
   getExtensionActionDisableReason,
   getCapabilityLabel,
   getInstallationSummaryLabel,
+  getMcpInstallationSummaryLabel,
+  getMcpOperationKey,
+  getPreferredMcpInstallationEntry,
+  getPluginOperationKey,
   getPrimaryCapabilityLabel,
   hasInstallationInScope,
   inferCapabilities,
@@ -152,6 +156,22 @@ describe('buildPluginId', () => {
   });
 });
 
+describe('getPluginOperationKey', () => {
+  it('namespaces plugin operation keys by scope', () => {
+    expect(getPluginOperationKey('context7@claude-plugins-official', 'local')).toBe(
+      'plugin:context7@claude-plugins-official:local',
+    );
+  });
+});
+
+describe('getMcpOperationKey', () => {
+  it('namespaces MCP operation keys by scope', () => {
+    expect(getMcpOperationKey('io.github.upstash/context7', 'project')).toBe(
+      'mcp:io.github.upstash/context7:project',
+    );
+  });
+});
+
 describe('hasInstallationInScope', () => {
   it('returns true when the selected scope exists', () => {
     expect(
@@ -193,12 +213,50 @@ describe('getInstallationSummaryLabel', () => {
   });
 });
 
+describe('getPreferredMcpInstallationEntry', () => {
+  it('returns null when there are no MCP installs', () => {
+    expect(getPreferredMcpInstallationEntry([])).toBeNull();
+  });
+
+  it('prefers local scope over project and user', () => {
+    const installations: InstalledMcpEntry[] = [
+      { name: 'context7', scope: 'user' },
+      { name: 'context7', scope: 'project' },
+      { name: 'context7', scope: 'local' },
+    ];
+
+    expect(getPreferredMcpInstallationEntry(installations)).toEqual({
+      name: 'context7',
+      scope: 'local',
+    });
+  });
+});
+
+describe('getMcpInstallationSummaryLabel', () => {
+  it('returns null when there are no MCP installations', () => {
+    expect(getMcpInstallationSummaryLabel([])).toBeNull();
+  });
+
+  it('describes a single local MCP installation', () => {
+    expect(getMcpInstallationSummaryLabel([{ scope: 'local' }])).toBe('Installed locally');
+  });
+
+  it('summarizes multiple MCP scopes', () => {
+    expect(
+      getMcpInstallationSummaryLabel([
+        { scope: 'user' },
+        { scope: 'project' },
+      ])
+    ).toBe('Installed in 2 scopes');
+  });
+});
+
 describe('getExtensionActionDisableReason', () => {
   it('requires auth only for install actions', () => {
     expect(
       getExtensionActionDisableReason({
         isInstalled: false,
-        cliStatus: { installed: true, authLoggedIn: false },
+        cliStatus: { installed: true, authLoggedIn: false, binaryPath: null, launchError: null },
         cliStatusLoading: false,
       }),
     ).toContain('not signed in');
@@ -208,7 +266,7 @@ describe('getExtensionActionDisableReason', () => {
     expect(
       getExtensionActionDisableReason({
         isInstalled: true,
-        cliStatus: { installed: true, authLoggedIn: false },
+        cliStatus: { installed: true, authLoggedIn: false, binaryPath: null, launchError: null },
         cliStatusLoading: false,
       }),
     ).toBeNull();
@@ -218,10 +276,25 @@ describe('getExtensionActionDisableReason', () => {
     expect(
       getExtensionActionDisableReason({
         isInstalled: true,
-        cliStatus: { installed: false, authLoggedIn: false },
+        cliStatus: { installed: false, authLoggedIn: false, binaryPath: null, launchError: null },
         cliStatusLoading: false,
       }),
     ).toContain('Claude CLI required');
+  });
+
+  it('surfaces startup health-check failures separately from missing CLI', () => {
+    expect(
+      getExtensionActionDisableReason({
+        isInstalled: false,
+        cliStatus: {
+          installed: false,
+          authLoggedIn: false,
+          binaryPath: '/usr/local/bin/claude',
+          launchError: 'spawn EACCES',
+        },
+        cliStatusLoading: false,
+      }),
+    ).toContain('failed to start');
   });
 });
 

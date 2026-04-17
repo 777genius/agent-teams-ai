@@ -26,6 +26,8 @@ import { useStore } from '@renderer/store';
 import { AlertTriangle, ExternalLink, FolderOpen, Pencil, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { resolveSkillProjectPath } from './skillProjectUtils';
+
 interface SkillDetailDialogProps {
   skillId: string | null;
   open: boolean;
@@ -58,8 +60,13 @@ export const SkillDetailDialog = ({
 
   useEffect(() => {
     if (!open || !skillId) return;
-    void fetchSkillDetail(skillId, projectPath ?? undefined).catch(() => undefined);
-  }, [fetchSkillDetail, open, projectPath, skillId]);
+    void fetchSkillDetail(
+      skillId,
+      detail?.item.scope
+        ? resolveSkillProjectPath(detail.item.scope, projectPath, detail.item.projectRoot)
+        : (projectPath ?? undefined)
+    ).catch(() => undefined);
+  }, [detail?.item.projectRoot, detail?.item.scope, fetchSkillDetail, open, projectPath, skillId]);
 
   useEffect(() => {
     if (!open) {
@@ -70,6 +77,9 @@ export const SkillDetailDialog = ({
   }, [open]);
 
   const item = detail?.item;
+  const effectiveProjectPath = item
+    ? resolveSkillProjectPath(item.scope, projectPath, item.projectRoot)
+    : (projectPath ?? undefined);
 
   function formatRootKind(rootKind: 'claude' | 'cursor' | 'agents'): string {
     return `.${rootKind}`;
@@ -92,7 +102,7 @@ export const SkillDetailDialog = ({
     try {
       await deleteSkill({
         skillId: item.id,
-        projectPath: projectPath ?? undefined,
+        projectPath: effectiveProjectPath,
       });
       setDeleteConfirmOpen(false);
       onDeleted();
@@ -125,7 +135,7 @@ export const SkillDetailDialog = ({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  void fetchSkillDetail(skillId, projectPath ?? undefined).catch(() => undefined);
+                  void fetchSkillDetail(skillId, effectiveProjectPath).catch(() => undefined);
                 }}
               >
                 Retry
@@ -288,7 +298,7 @@ export const SkillDetailDialog = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => void api.openPath(item.skillFile, projectPath ?? undefined)}
+                        onClick={() => void api.openPath(item.skillFile, effectiveProjectPath)}
                       >
                         <ExternalLink className="mr-1.5 size-3.5" />
                         Open SKILL.md

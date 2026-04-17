@@ -27,6 +27,7 @@ import { useStore } from '@renderer/store';
 import {
   getCapabilityLabel,
   getInstallationSummaryLabel,
+  getPluginOperationKey,
   hasInstallationInScope,
   inferCapabilities,
   normalizeCategory,
@@ -44,6 +45,7 @@ interface PluginDetailDialogProps {
   plugin: EnrichedPlugin | null;
   open: boolean;
   onClose: () => void;
+  projectPath: string | null;
 }
 
 const SCOPE_OPTIONS: { value: InstallScope; label: string }[] = [
@@ -56,31 +58,20 @@ export const PluginDetailDialog = ({
   plugin,
   open,
   onClose,
+  projectPath,
 }: PluginDetailDialogProps): React.JSX.Element => {
-  const {
-    fetchPluginReadme,
-    readmes,
-    readmeLoading,
-    installPlugin,
-    uninstallPlugin,
-    pluginCatalogProjectPath,
-  } = useStore(
+  const { fetchPluginReadme, readmes, readmeLoading, installPlugin, uninstallPlugin } = useStore(
     useShallow((s) => ({
       fetchPluginReadme: s.fetchPluginReadme,
       readmes: s.pluginReadmes,
       readmeLoading: s.pluginReadmeLoading,
       installPlugin: s.installPlugin,
       uninstallPlugin: s.uninstallPlugin,
-      pluginCatalogProjectPath: s.pluginCatalogProjectPath,
     }))
   );
-  const installProgress = useStore(
-    (s) => (plugin ? s.pluginInstallProgress[plugin.pluginId] : undefined) ?? 'idle'
-  );
-  const installError = useStore((s) => (plugin ? s.installErrors[plugin.pluginId] : undefined));
 
   const [scope, setScope] = useState<InstallScope>('user');
-  const projectScopeAvailable = Boolean(pluginCatalogProjectPath);
+  const projectScopeAvailable = Boolean(projectPath);
 
   useEffect(() => {
     if (plugin && open) {
@@ -99,6 +90,12 @@ export const PluginDetailDialog = ({
       setScope('user');
     }
   }, [projectScopeAvailable, scope]);
+
+  const operationKey = plugin ? getPluginOperationKey(plugin.pluginId, scope) : null;
+  const installProgress = useStore(
+    (s) => (operationKey ? s.pluginInstallProgress[operationKey] : undefined) ?? 'idle'
+  );
+  const installError = useStore((s) => (operationKey ? s.installErrors[operationKey] : undefined));
 
   if (!plugin) return <></>;
 
@@ -202,16 +199,14 @@ export const PluginDetailDialog = ({
               installPlugin({
                 pluginId: plugin.pluginId,
                 scope,
-                ...(scope !== 'user' && pluginCatalogProjectPath
-                  ? { projectPath: pluginCatalogProjectPath }
-                  : {}),
+                ...(scope !== 'user' && projectPath ? { projectPath } : {}),
               })
             }
             onUninstall={() =>
               uninstallPlugin(
                 plugin.pluginId,
                 scope,
-                scope !== 'user' ? (pluginCatalogProjectPath ?? undefined) : undefined
+                scope !== 'user' ? (projectPath ?? undefined) : undefined
               )
             }
             size="default"

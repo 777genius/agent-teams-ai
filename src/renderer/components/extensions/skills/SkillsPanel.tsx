@@ -25,6 +25,7 @@ import { SearchInput } from '../common/SearchInput';
 import { SkillDetailDialog } from './SkillDetailDialog';
 import { SkillEditorDialog } from './SkillEditorDialog';
 import { SkillImportDialog } from './SkillImportDialog';
+import { resolveSkillProjectPath } from './skillProjectUtils';
 
 import type { SkillsSortState } from '@renderer/hooks/useExtensionsTabState';
 import type { SkillCatalogItem, SkillDetail } from '@shared/types/extensions';
@@ -109,6 +110,7 @@ export const SkillsPanel = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [highlightedSkillId, setHighlightedSkillId] = useState<string | null>(null);
   const selectedSkillIdRef = useRef<string | null>(selectedSkillId);
+  const selectedSkillItemRef = useRef<SkillCatalogItem | SkillDetail['item'] | null>(null);
   selectedSkillIdRef.current = selectedSkillId;
 
   const mergedSkills = useMemo(
@@ -116,6 +118,9 @@ export const SkillsPanel = ({
     [projectSkills, userSkills]
   );
   const selectedDetail = selectedSkillId ? (detailById[selectedSkillId] ?? null) : null;
+  selectedSkillItemRef.current = selectedSkillId
+    ? (selectedDetail?.item ?? mergedSkills.find((skill) => skill.id === selectedSkillId) ?? null)
+    : null;
 
   useEffect(() => {
     if (!selectedSkillId) return;
@@ -155,10 +160,19 @@ export const SkillsPanel = ({
       if (!shouldRefresh) return;
 
       void fetchSkillsCatalog(projectPath ?? undefined);
-      if (selectedSkillIdRef.current) {
-        void fetchSkillDetail(selectedSkillIdRef.current, projectPath ?? undefined).catch(
-          () => undefined
-        );
+      const selectedSkillId = selectedSkillIdRef.current;
+      const selectedSkillItem = selectedSkillItemRef.current;
+      if (selectedSkillId) {
+        void fetchSkillDetail(
+          selectedSkillId,
+          selectedSkillItem
+            ? resolveSkillProjectPath(
+                selectedSkillItem.scope,
+                projectPath,
+                selectedSkillItem.projectRoot
+              )
+            : (projectPath ?? undefined)
+        ).catch(() => undefined);
       }
     });
 

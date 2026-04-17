@@ -35,6 +35,7 @@ import type {
 } from '@shared/types/extensions';
 
 interface PluginsPanelProps {
+  projectPath: string | null;
   pluginFilters: PluginFilters;
   pluginSort: { field: PluginSortField; order: 'asc' | 'desc' };
   selectedPluginId: string | null;
@@ -111,6 +112,7 @@ function selectFilteredPlugins(
 }
 
 export const PluginsPanel = ({
+  projectPath,
   pluginFilters,
   pluginSort,
   selectedPluginId,
@@ -395,6 +397,7 @@ export const PluginsPanel = ({
         plugin={selectedPlugin}
         open={selectedPluginId !== null}
         onClose={() => setSelectedPluginId(null)}
+        projectPath={projectPath}
       />
     </div>
   );

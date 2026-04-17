@@ -4,6 +4,7 @@
 
 import type {
   CliInstallationStatus,
+  InstalledMcpEntry,
   InstalledPluginEntry,
   InstallScope,
   PluginCapability,
@@ -101,6 +102,20 @@ export function buildPluginId(pluginName: string, marketplaceName: string): stri
 }
 
 /**
+ * Namespaced operation-state key for plugin install/uninstall UI state.
+ */
+export function getPluginOperationKey(pluginId: string, scope: InstallScope): string {
+  return `plugin:${pluginId}:${scope}`;
+}
+
+/**
+ * Namespaced operation-state key for MCP install/uninstall UI state.
+ */
+export function getMcpOperationKey(registryId: string, scope: InstallScope): string {
+  return `mcp:${registryId}:${scope}`;
+}
+
+/**
  * Check whether a plugin has an installation for the selected scope.
  */
 export function hasInstallationInScope(
@@ -137,12 +152,64 @@ export function getInstallationSummaryLabel(
   }
 }
 
+const MCP_SCOPE_PRIORITY: Record<InstalledMcpEntry['scope'], number> = {
+  local: 0,
+  project: 1,
+  user: 2,
+};
+
+/**
+ * Pick the MCP installation entry that Claude will actually use.
+ * Scope precedence matches Claude Code: local > project > user.
+ */
+export function getPreferredMcpInstallationEntry(
+  installations: InstalledMcpEntry[]
+): InstalledMcpEntry | null {
+  if (installations.length === 0) {
+    return null;
+  }
+
+  return [...installations].sort(
+    (left, right) => MCP_SCOPE_PRIORITY[left.scope] - MCP_SCOPE_PRIORITY[right.scope]
+  )[0]!;
+}
+
+/**
+ * Build a concise install-status label for MCP badges.
+ */
+export function getMcpInstallationSummaryLabel(
+  installations: Pick<InstalledMcpEntry, 'scope'>[]
+): string | null {
+  const scopes = Array.from(new Set(installations.map((installation) => installation.scope)));
+  if (scopes.length === 0) {
+    return null;
+  }
+
+  if (scopes.length > 1) {
+    return `Installed in ${scopes.length} scopes`;
+  }
+
+  switch (scopes[0]) {
+    case 'user':
+      return 'Installed globally';
+    case 'project':
+      return 'Installed in project';
+    case 'local':
+      return 'Installed locally';
+    default:
+      return 'Installed';
+  }
+}
+
 /**
  * Install actions require Claude auth, but uninstall only requires a working CLI.
  */
 export function getExtensionActionDisableReason(options: {
   isInstalled: boolean;
-  cliStatus: Pick<CliInstallationStatus, 'installed' | 'authLoggedIn'> | null;
+  cliStatus: Pick<
+    CliInstallationStatus,
+    'installed' | 'authLoggedIn' | 'binaryPath' | 'launchError'
+  > | null;
   cliStatusLoading: boolean;
 }): string | null {
   const { isInstalled, cliStatus, cliStatusLoading } = options;
@@ -155,6 +222,9 @@ export function getExtensionActionDisableReason(options: {
   }
 
   if (cliStatus.installed === false) {
+    if (cliStatus.binaryPath && cliStatus.launchError) {
+      return 'Claude CLI was found but failed to start. Open the Dashboard to repair or reinstall it.';
+    }
     return 'Claude CLI required. Install it from the Dashboard.';
   }
 
