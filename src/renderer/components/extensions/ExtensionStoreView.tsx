@@ -162,7 +162,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
         label: 'Plugins',
         icon: Puzzle,
         description:
-          'Small add-ons for the runtime. In multimodel mode they currently apply to Anthropic sessions when supported.',
+          'Small add-ons for the runtime. In multimodel mode they currently apply to Anthropic sessions when supported. Broader provider support is in development.',
       },
       {
         value: 'mcp-servers' as const,
