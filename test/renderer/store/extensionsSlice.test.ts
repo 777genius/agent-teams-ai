@@ -1025,6 +1025,71 @@ describe('extensionsSlice', () => {
       expect(store.getState().apiKeys).toHaveLength(1);
     });
 
+    it('keeps saved API keys updated when provider status refresh fails', async () => {
+      (api.apiKeys!.save as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: 'k1',
+        name: 'Codex key',
+        envVarName: 'OPENAI_API_KEY',
+        maskedValue: '***',
+        scope: 'user',
+        createdAt: '2026-04-17T10:00:00.000Z',
+      });
+      (api.apiKeys!.list as ReturnType<typeof vi.fn>).mockResolvedValue([
+        {
+          id: 'k1',
+          name: 'Codex key',
+          envVarName: 'OPENAI_API_KEY',
+          maskedValue: '***',
+          scope: 'user',
+          createdAt: '2026-04-17T10:00:00.000Z',
+        },
+      ]);
+      (api.cliInstaller!.getStatus as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('refresh boom')
+      );
+
+      await store.getState().saveApiKey({
+        name: 'Codex key',
+        envVarName: 'OPENAI_API_KEY',
+        value: 'secret',
+        scope: 'user',
+      });
+
+      expect(store.getState().apiKeys).toHaveLength(1);
+      expect(store.getState().apiKeysError).toContain('API key saved, but failed to refresh provider status.');
+    });
+
+    it('keeps local API key state updated when key list refresh fails after save', async () => {
+      (api.apiKeys!.save as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: 'k1',
+        name: 'Codex key',
+        envVarName: 'OPENAI_API_KEY',
+        maskedValue: '***',
+        scope: 'user',
+        createdAt: '2026-04-17T10:00:00.000Z',
+      });
+      (api.apiKeys!.list as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('list boom'));
+
+      await store.getState().saveApiKey({
+        name: 'Codex key',
+        envVarName: 'OPENAI_API_KEY',
+        value: 'secret',
+        scope: 'user',
+      });
+
+      expect(store.getState().apiKeys).toEqual([
+        {
+          id: 'k1',
+          name: 'Codex key',
+          envVarName: 'OPENAI_API_KEY',
+          maskedValue: '***',
+          scope: 'user',
+          createdAt: '2026-04-17T10:00:00.000Z',
+        },
+      ]);
+      expect(store.getState().apiKeysError).toContain('API key saved, but failed to refresh key list.');
+    });
+
     it('refreshes CLI status after deleting an API key', async () => {
       store.setState({
         apiKeys: [
@@ -1044,6 +1109,32 @@ describe('extensionsSlice', () => {
 
       expect(api.cliInstaller!.getStatus).toHaveBeenCalled();
       expect(store.getState().apiKeys).toEqual([]);
+    });
+
+    it('keeps local API key state updated when provider status refresh fails after delete', async () => {
+      store.setState({
+        apiKeys: [
+          {
+            id: 'k1',
+            name: 'Codex key',
+            envVarName: 'OPENAI_API_KEY',
+            maskedValue: '***',
+            scope: 'user',
+            createdAt: '2026-04-17T10:00:00.000Z',
+          },
+        ],
+      });
+      (api.apiKeys!.delete as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+      (api.cliInstaller!.getStatus as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('refresh boom')
+      );
+
+      await store.getState().deleteApiKey('k1');
+
+      expect(store.getState().apiKeys).toEqual([]);
+      expect(store.getState().apiKeysError).toContain(
+        'API key deleted, but failed to refresh provider status.'
+      );
     });
 
     it('keys MCP diagnostics by scope when the same server exists in multiple scopes', async () => {

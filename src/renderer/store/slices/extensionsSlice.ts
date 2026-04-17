@@ -336,6 +336,11 @@ function getSkillsCatalogKey(projectPath?: string): string {
   return projectPath ?? USER_SKILLS_CATALOG_KEY;
 }
 
+function upsertApiKeyEntry(entries: ApiKeyEntry[], entry: ApiKeyEntry): ApiKeyEntry[] {
+  const nextEntries = entries.filter((candidate) => candidate.id !== entry.id);
+  return [entry, ...nextEntries];
+}
+
 /** Duration to show "success" state before returning to idle */
 const SUCCESS_DISPLAY_MS = 2_000;
 const PROJECT_SCOPE_REQUIRED_MESSAGE =
@@ -1286,10 +1291,29 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
     set({ apiKeySaving: true, apiKeysError: null });
     try {
-      await api.apiKeys.save(request);
-      // Refresh the list to get updated masked values
-      const [keys] = await Promise.all([api.apiKeys.list(), get().fetchCliStatus()]);
-      set({ apiKeys: keys, apiKeySaving: false });
+      const savedKey = await api.apiKeys.save(request);
+      const warnings: string[] = [];
+
+      try {
+        const keys = await api.apiKeys.list();
+        set({ apiKeys: keys });
+      } catch (listError) {
+        warnings.push(
+          listError instanceof Error
+            ? `API key saved, but failed to refresh key list. ${listError.message}`
+            : 'API key saved, but failed to refresh key list.'
+        );
+        set((prev) => ({
+          apiKeys: upsertApiKeyEntry(prev.apiKeys, savedKey),
+        }));
+      }
+
+      await get().fetchCliStatus();
+      const refreshError = get().cliStatusError;
+      if (refreshError) {
+        warnings.push(`API key saved, but failed to refresh provider status. ${refreshError}`);
+      }
+      set({ apiKeySaving: false, apiKeysError: warnings.length > 0 ? warnings.join(' ') : null });
     } catch (err) {
       set({
         apiKeySaving: false,
@@ -1305,10 +1329,16 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
     try {
       await api.apiKeys.delete(id);
-      await get().fetchCliStatus();
       set((prev) => ({
         apiKeys: prev.apiKeys.filter((k) => k.id !== id),
       }));
+      await get().fetchCliStatus();
+      const refreshError = get().cliStatusError;
+      set({
+        apiKeysError: refreshError
+          ? `API key deleted, but failed to refresh provider status. ${refreshError}`
+          : null,
+      });
     } catch (err) {
       set({
         apiKeysError: err instanceof Error ? err.message : 'Failed to delete API key',
