@@ -23,6 +23,7 @@ import {
 import { Textarea } from '@renderer/components/ui/textarea';
 import { useMarkdownScrollSync } from '@renderer/hooks/useMarkdownScrollSync';
 import { useStore } from '@renderer/store';
+import { SKILL_ROOT_DEFINITIONS } from '@shared/utils/skillRoots';
 import { FileSearch, RotateCcw, X } from 'lucide-react';
 
 import { SkillCodeEditor } from './SkillCodeEditor';
@@ -40,6 +41,7 @@ import { validateSkillFolderName } from './skillValidationUtils';
 import type {
   SkillDetail,
   SkillInvocationMode,
+  SkillRootKind,
   SkillReviewPreview,
 } from '@shared/types/extensions';
 
@@ -79,7 +81,7 @@ export const SkillEditorDialog = ({
   const applySkillUpsert = useStore((s) => s.applySkillUpsert);
 
   const [scope, setScope] = useState<'user' | 'project'>('user');
-  const [rootKind, setRootKind] = useState<'claude' | 'cursor' | 'agents'>('claude');
+  const [rootKind, setRootKind] = useState<SkillRootKind>('claude');
   const [folderName, setFolderName] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -427,18 +429,19 @@ export const SkillEditorDialog = ({
                     <Label htmlFor="skill-root">Where to store it</Label>
                     <Select
                       value={rootKind}
-                      onValueChange={(value) =>
-                        setRootKind(value as 'claude' | 'cursor' | 'agents')
-                      }
+                      onValueChange={(value) => setRootKind(value as SkillRootKind)}
                       disabled={mode === 'edit'}
                     >
                       <SelectTrigger id="skill-root">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="claude">.claude</SelectItem>
-                        <SelectItem value="cursor">.cursor</SelectItem>
-                        <SelectItem value="agents">.agents</SelectItem>
+                        {SKILL_ROOT_DEFINITIONS.map((definition) => (
+                          <SelectItem key={definition.rootKind} value={definition.rootKind}>
+                            {definition.directoryName}
+                            {definition.audience === 'codex' ? ' - Codex only' : ' - Shared'}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

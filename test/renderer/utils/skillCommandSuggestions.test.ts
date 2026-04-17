@@ -41,7 +41,7 @@ describe('buildSlashCommandSuggestions', () => {
       {
         name: 'review-skill',
         command: '/review-skill',
-        subtitle: 'Project skill',
+        subtitle: 'Project skill - Shared',
         type: 'skill',
       }
     );
@@ -73,6 +73,46 @@ describe('buildSlashCommandSuggestions', () => {
     );
     expect(suggestions.find((suggestion) => suggestion.command === '/shared-skill')?.id).toBe(
       'skill:project'
+    );
+  });
+
+  it('hides codex-only skills when the provider is not codex', () => {
+    const suggestions = buildSlashCommandSuggestions(
+      KNOWN_SLASH_COMMANDS,
+      [createSkill({ id: 'codex-project', folderName: 'codex-skill', rootKind: 'codex' })],
+      [],
+      'anthropic'
+    );
+
+    expect(suggestions.find((suggestion) => suggestion.id === 'skill:codex-project')).toBeUndefined();
+  });
+
+  it('prefers codex-only overlays ahead of shared skills for codex teams', () => {
+    const suggestions = buildSlashCommandSuggestions(
+      KNOWN_SLASH_COMMANDS,
+      [
+        createSkill({
+          id: 'shared-project',
+          folderName: 'review-skill',
+          rootKind: 'claude',
+          scope: 'project',
+        }),
+        createSkill({
+          id: 'codex-project',
+          folderName: 'review-skill',
+          rootKind: 'codex',
+          scope: 'project',
+        }),
+      ],
+      [],
+      'codex'
+    );
+
+    expect(suggestions.filter((suggestion) => suggestion.command === '/review-skill')).toHaveLength(
+      1
+    );
+    expect(suggestions.find((suggestion) => suggestion.command === '/review-skill')?.id).toBe(
+      'skill:codex-project'
     );
   });
 

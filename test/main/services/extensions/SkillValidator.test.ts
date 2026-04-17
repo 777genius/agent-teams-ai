@@ -40,6 +40,18 @@ describe('SkillValidator', () => {
     expect(result[1].issues.map((issue) => issue.code)).toContain('duplicate-name');
   });
 
+  it('does not warn when shared and codex-only overlays reuse the same skill name', () => {
+    const validator = new SkillValidator();
+
+    const result = validator.annotateCatalog([
+      makeSkill({ id: '/a', scope: 'project', rootKind: 'claude' }),
+      makeSkill({ id: '/b', scope: 'project', rootKind: 'codex' }),
+    ]);
+
+    expect(result[0].issues.map((issue) => issue.code)).not.toContain('duplicate-name');
+    expect(result[1].issues.map((issue) => issue.code)).not.toContain('duplicate-name');
+  });
+
   it('sorts by validity, scope, root precedence, then name', () => {
     const validator = new SkillValidator();
 
@@ -47,6 +59,7 @@ describe('SkillValidator', () => {
       makeSkill({ id: '/3', name: 'z-user', scope: 'user', rootKind: 'claude' }),
       makeSkill({ id: '/2', name: 'b-project-cursor', scope: 'project', rootKind: 'cursor' }),
       makeSkill({ id: '/1', name: 'a-project-claude', scope: 'project', rootKind: 'claude' }),
+      makeSkill({ id: '/5', name: 'c-project-codex', scope: 'project', rootKind: 'codex' }),
       makeSkill({
         id: '/4',
         name: 'invalid',
@@ -55,6 +68,6 @@ describe('SkillValidator', () => {
       }),
     ]);
 
-    expect(result.map((item) => item.id)).toEqual(['/1', '/2', '/3', '/4']);
+    expect(result.map((item) => item.id)).toEqual(['/1', '/2', '/5', '/3', '/4']);
   });
 });

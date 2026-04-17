@@ -8,9 +8,9 @@ describe('SkillRootsResolver', () => {
 
     const roots = resolver.resolve();
 
-    expect(roots).toHaveLength(3);
+    expect(roots).toHaveLength(4);
     expect(roots.every((root) => root.scope === 'user')).toBe(true);
-    expect(roots.map((root) => root.rootKind)).toEqual(['claude', 'cursor', 'agents']);
+    expect(roots.map((root) => root.rootKind)).toEqual(['claude', 'cursor', 'agents', 'codex']);
   });
 
   it('returns project and user roots when project path is provided', () => {
@@ -18,8 +18,8 @@ describe('SkillRootsResolver', () => {
 
     const roots = resolver.resolve('/tmp/demo-project');
 
-    expect(roots).toHaveLength(6);
-    expect(roots.filter((root) => root.scope === 'project')).toHaveLength(3);
-    expect(roots.filter((root) => root.scope === 'user')).toHaveLength(3);
+    expect(roots).toHaveLength(8);
+    expect(roots.filter((root) => root.scope === 'project')).toHaveLength(4);
+    expect(roots.filter((root) => root.scope === 'user')).toHaveLength(4);
   });
 });

@@ -4,7 +4,7 @@
 
 export type SkillScope = 'user' | 'project';
 
-export type SkillRootKind = 'claude' | 'cursor' | 'agents';
+export type SkillRootKind = 'claude' | 'cursor' | 'agents' | 'codex';
 
 export type SkillSourceType = 'filesystem';
 

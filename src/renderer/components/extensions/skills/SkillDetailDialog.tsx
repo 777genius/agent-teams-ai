@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { useStore } from '@renderer/store';
+import { formatSkillRootKind, getSkillAudienceLabel } from '@shared/utils/skillRoots';
 import { AlertTriangle, ExternalLink, FolderOpen, Pencil, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -81,18 +82,14 @@ export const SkillDetailDialog = ({
     ? resolveSkillProjectPath(item.scope, projectPath, item.projectRoot)
     : (projectPath ?? undefined);
 
-  function formatRootKind(rootKind: 'claude' | 'cursor' | 'agents'): string {
-    return `.${rootKind}`;
-  }
-
   function formatScopeLabel(scope: 'user' | 'project'): string {
     return scope === 'project' ? 'This project only' : 'Your personal skills';
   }
 
   function formatInvocationLabel(invocationMode: 'auto' | 'manual-only'): string {
     return invocationMode === 'manual-only'
-      ? 'Claude will only use this when you explicitly ask for it.'
-      : 'Claude can pick this automatically when it matches the task.';
+      ? 'Only runs when you explicitly ask for it.'
+      : 'Runs automatically when it matches the task.';
   }
 
   async function handleDelete(): Promise<void> {
@@ -159,7 +156,8 @@ export const SkillDetailDialog = ({
             )}
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">{formatScopeLabel(item.scope)}</Badge>
-              <Badge variant="outline">Stored in {formatRootKind(item.rootKind)}</Badge>
+              <Badge variant="outline">Stored in {formatSkillRootKind(item.rootKind)}</Badge>
+              <Badge variant="outline">{getSkillAudienceLabel(item.rootKind)}</Badge>
               <Badge variant="secondary">
                 {item.invocationMode === 'manual-only' ? 'Manual use' : 'Auto use'}
               </Badge>

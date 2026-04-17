@@ -7,6 +7,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import {
+  formatSkillRootKind,
+  getSkillAudience,
+  getSkillAudienceLabel,
+} from '@shared/utils/skillRoots';
+import {
   AlertTriangle,
   ArrowUpAZ,
   ArrowUpDown,
@@ -33,7 +38,14 @@ import type { SkillCatalogItem, SkillDetail } from '@shared/types/extensions';
 const SUCCESS_BANNER_MS = 2500;
 const NEW_SKILL_HIGHLIGHT_MS = 4000;
 const USER_SKILLS_CATALOG_KEY = '__user__';
-type SkillsQuickFilter = 'all' | 'project' | 'personal' | 'needs-attention' | 'has-scripts';
+type SkillsQuickFilter =
+  | 'all'
+  | 'project'
+  | 'personal'
+  | 'shared'
+  | 'codex-only'
+  | 'needs-attention'
+  | 'has-scripts';
 
 interface SkillsPanelProps {
   projectPath: string | null;
@@ -57,10 +69,6 @@ function sortSkills(skills: SkillCatalogItem[], sort: SkillsSortState): SkillCat
   return next;
 }
 
-function formatRootKind(rootKind: SkillCatalogItem['rootKind']): string {
-  return `.${rootKind}`;
-}
-
 function getScopeLabel(skill: SkillCatalogItem): string {
   return skill.scope === 'project' ? 'This project' : 'Personal';
 }
@@ -68,7 +76,7 @@ function getScopeLabel(skill: SkillCatalogItem): string {
 function getInvocationLabel(skill: SkillCatalogItem): string {
   return skill.invocationMode === 'manual-only'
     ? 'Only runs when you explicitly ask for it'
-    : 'Claude can use this automatically when it fits';
+    : 'Runs automatically when it fits';
 }
 
 function getSkillStatus(skill: SkillCatalogItem): string {
@@ -118,6 +126,11 @@ export const SkillsPanel = ({
     () => [...projectSkills, ...userSkills],
     [projectSkills, userSkills]
   );
+  const codexOnlySkillsCount = useMemo(
+    () => mergedSkills.filter((skill) => getSkillAudience(skill.rootKind) === 'codex').length,
+    [mergedSkills]
+  );
+  const sharedSkillsCount = mergedSkills.length - codexOnlySkillsCount;
   const selectedDetail = selectedSkillId ? (detailById[selectedSkillId] ?? null) : null;
   selectedSkillItemRef.current = selectedSkillId
     ? (selectedDetail?.item ?? mergedSkills.find((skill) => skill.id === selectedSkillId) ?? null)
@@ -205,6 +218,10 @@ export const SkillsPanel = ({
                 return skill.scope === 'project';
               case 'personal':
                 return skill.scope === 'user';
+              case 'shared':
+                return getSkillAudience(skill.rootKind) === 'shared';
+              case 'codex-only':
+                return getSkillAudience(skill.rootKind) === 'codex';
               case 'needs-attention':
                 return !skill.isValid;
               case 'has-scripts':
@@ -229,8 +246,8 @@ export const SkillsPanel = ({
     <div className="flex flex-col gap-4">
       {cliStatus?.flavor === 'agent_teams_orchestrator' && (
         <div className="rounded-md border border-blue-500/30 bg-blue-500/5 px-4 py-3 text-sm text-blue-300">
-          Skills are shared across providers in this runtime. A personal or project skill you edit
-          here is available to both Anthropic and Codex sessions that support skills.
+          Shared skills in `.claude`, `.cursor`, and `.agents` are available to both Anthropic and
+          Codex. Skills stored in `.codex` are only offered to Codex sessions.
         </div>
       )}
       <div className="bg-surface-raised/20 rounded-xl border border-border p-4">
@@ -249,7 +266,8 @@ export const SkillsPanel = ({
             </p>
             <p className="max-w-2xl text-xs leading-5 text-text-muted">
               Use personal skills for habits you want everywhere. Use project skills for workflows
-              that only make sense inside one codebase.
+              that only make sense inside one codebase. Use `.codex` when a skill should stay
+              Codex-only.
             </p>
           </div>
 
@@ -327,6 +345,12 @@ export const SkillsPanel = ({
               <Badge variant="secondary" className="font-normal">
                 {userSkills.length} personal
               </Badge>
+              <Badge variant="secondary" className="font-normal">
+                {sharedSkillsCount} shared
+              </Badge>
+              <Badge variant="secondary" className="font-normal">
+                {codexOnlySkillsCount} Codex only
+              </Badge>
             </div>
           </div>
         </div>
@@ -338,6 +362,8 @@ export const SkillsPanel = ({
             ['all', 'All skills'],
             ['project', 'Project'],
             ['personal', 'Personal'],
+            ['shared', 'Shared'],
+            ['codex-only', 'Codex only'],
             ['needs-attention', 'Needs attention'],
             ['has-scripts', 'Has scripts'],
           ] as [SkillsQuickFilter, string][]
@@ -449,7 +475,10 @@ export const SkillsPanel = ({
 
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Badge variant="secondary" className="font-normal">
-                        Stored in {formatRootKind(skill.rootKind)}
+                        Stored in {formatSkillRootKind(skill.rootKind)}
+                      </Badge>
+                      <Badge variant="outline" className="font-normal">
+                        {getSkillAudienceLabel(skill.rootKind)}
                       </Badge>
                       {skill.flags.hasScripts && (
                         <Badge variant="destructive" className="font-normal">
@@ -532,7 +561,10 @@ export const SkillsPanel = ({
 
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Badge variant="secondary" className="font-normal">
-                        Stored in {formatRootKind(skill.rootKind)}
+                        Stored in {formatSkillRootKind(skill.rootKind)}
+                      </Badge>
+                      <Badge variant="outline" className="font-normal">
+                        {getSkillAudienceLabel(skill.rootKind)}
                       </Badge>
                       {skill.flags.hasScripts && (
                         <Badge variant="destructive" className="font-normal">

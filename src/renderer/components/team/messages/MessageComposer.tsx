@@ -237,7 +237,8 @@ export const MessageComposer = ({
       buildSlashCommandSuggestions(
         getSuggestedSlashCommandsForProvider(leadProviderId),
         projectSkills,
-        userSkills
+        userSkills,
+        leadProviderId
       ),
     [leadProviderId, projectSkills, userSkills]
   );

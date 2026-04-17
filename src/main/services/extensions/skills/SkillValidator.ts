@@ -1,9 +1,12 @@
+import { formatSkillRootKind, getSkillAudience } from '@shared/utils/skillRoots';
+
 import type { SkillCatalogItem } from '@shared/types/extensions';
 
 const ROOT_PRECEDENCE: Record<SkillCatalogItem['rootKind'], number> = {
   claude: 0,
   cursor: 1,
   agents: 2,
+  codex: 3,
 };
 
 export class SkillValidator {
@@ -21,14 +24,14 @@ export class SkillValidator {
   private annotateDuplicateNames(items: SkillCatalogItem[]): SkillCatalogItem[] {
     const itemsByName = new Map<string, SkillCatalogItem[]>();
     for (const item of items) {
-      const key = item.name.trim().toLowerCase();
+      const key = `${item.name.trim().toLowerCase()}::${getSkillAudience(item.rootKind)}`;
       const bucket = itemsByName.get(key) ?? [];
       bucket.push(item);
       itemsByName.set(key, bucket);
     }
 
     return items.map((item) => {
-      const key = item.name.trim().toLowerCase();
+      const key = `${item.name.trim().toLowerCase()}::${getSkillAudience(item.rootKind)}`;
       const duplicates = itemsByName.get(key) ?? [];
       if (duplicates.length <= 1) {
         return item;
@@ -59,6 +62,7 @@ export class SkillValidator {
   }
 
   private formatRootLabel(item: SkillCatalogItem): string {
-    return item.scope === 'project' ? `project .${item.rootKind}` : `.${item.rootKind}`;
+    const rootLabel = formatSkillRootKind(item.rootKind);
+    return item.scope === 'project' ? `project ${rootLabel}` : rootLabel;
   }
 }
