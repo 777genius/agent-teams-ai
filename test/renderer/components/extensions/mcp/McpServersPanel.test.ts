@@ -149,7 +149,12 @@ describe('McpServersPanel initial browse loading', () => {
     storeState.mcpDiagnosticsLastCheckedAtByProjectPath = undefined;
     storeState.runMcpDiagnostics = vi.fn();
     storeState.cliStatusLoading = false;
-    storeState.cliStatus = undefined;
+    storeState.cliStatus = {
+      flavor: 'claude',
+      installed: true,
+      binaryPath: '/usr/local/bin/claude',
+      launchError: null,
+    };
   });
 
   afterEach(() => {
@@ -352,6 +357,38 @@ describe('McpServersPanel initial browse loading', () => {
     );
     expect(checkStatusButton).toBeDefined();
     expect((checkStatusButton as HTMLButtonElement).disabled).toBe(true);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('waits for runtime hydration before auto-running diagnostics', async () => {
+    storeState.cliStatus = null;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(McpServersPanel, {
+          projectPath: null,
+          mcpSearchQuery: '',
+          mcpSearch: vi.fn(),
+          mcpSearchResults: [],
+          mcpSearchLoading: false,
+          mcpSearchWarnings: [],
+          selectedMcpServerId: null,
+          setSelectedMcpServerId: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(storeState.runMcpDiagnostics).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('Checking runtime availability...');
 
     await act(async () => {
       root.unmount();

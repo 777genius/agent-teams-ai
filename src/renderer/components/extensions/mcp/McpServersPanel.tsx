@@ -151,6 +151,10 @@ export const McpServersPanel = ({
       return 'Checking runtime status...';
     }
 
+    if (cliStatus === null || typeof cliStatus === 'undefined') {
+      return 'Checking runtime availability...';
+    }
+
     if (cliStatus?.installed === false) {
       if (cliStatus.binaryPath && cliStatus.launchError) {
         return 'The configured runtime was found but failed to start. Open the Dashboard to repair or reinstall it.';
