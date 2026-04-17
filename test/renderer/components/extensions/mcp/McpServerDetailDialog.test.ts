@@ -581,10 +581,11 @@ describe('McpServerDetailDialog installed entry handling', () => {
     const root = createRoot(host);
     storeState.mcpInstallProgress = {
       [getMcpOperationKey('io.github.upstash/context7', 'user')]: 'success',
-      [getMcpOperationKey('io.github.upstash/context7', 'project')]: 'error',
+      [getMcpOperationKey('io.github.upstash/context7', 'project', '/tmp/project')]: 'error',
     };
     storeState.installErrors = {
-      [getMcpOperationKey('io.github.upstash/context7', 'project')]: 'Project failed',
+      [getMcpOperationKey('io.github.upstash/context7', 'project', '/tmp/project')]:
+        'Project failed',
     };
 
     await act(async () => {

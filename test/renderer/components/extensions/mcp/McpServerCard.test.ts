@@ -255,11 +255,12 @@ describe('McpServerCard direct action safety', () => {
     };
 
     storeState.mcpInstallProgress = {
-      [getMcpOperationKey('io.github.upstash/context7', 'project')]: 'error',
+      [getMcpOperationKey('io.github.upstash/context7', 'project', '/tmp/project')]: 'error',
       [getMcpOperationKey('io.github.upstash/context7', 'user')]: 'pending',
     };
     storeState.installErrors = {
-      [getMcpOperationKey('io.github.upstash/context7', 'project')]: 'Project failed',
+      [getMcpOperationKey('io.github.upstash/context7', 'project', '/tmp/project')]:
+        'Project failed',
       [getMcpOperationKey('io.github.upstash/context7', 'user')]: 'User failed',
     };
 

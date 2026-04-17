@@ -8,6 +8,7 @@ import { CLI_NOT_FOUND_MESSAGE } from '@shared/constants/cli';
 import { isProjectScopedMcpScope } from '@shared/utils/mcpScopes';
 import {
   getMcpDiagnosticKey,
+  getMcpProjectStateKey,
   getMcpOperationKey,
   getPluginOperationKey,
 } from '@shared/utils/extensionNormalizers';
@@ -56,11 +57,16 @@ export interface ExtensionsSlice {
   mcpBrowseLoading: boolean;
   mcpBrowseError: string | null;
   mcpInstalledServers: InstalledMcpEntry[];
+  mcpInstalledServersByProjectPath: Record<string, InstalledMcpEntry[]>;
   mcpInstalledProjectPath: string | null;
   mcpDiagnostics: Record<string, McpServerDiagnostic>;
+  mcpDiagnosticsByProjectPath: Record<string, Record<string, McpServerDiagnostic>>;
   mcpDiagnosticsLoading: boolean;
+  mcpDiagnosticsLoadingByProjectPath: Record<string, boolean>;
   mcpDiagnosticsError: string | null;
+  mcpDiagnosticsErrorByProjectPath: Record<string, string | null>;
   mcpDiagnosticsLastCheckedAt: number | null;
+  mcpDiagnosticsLastCheckedAtByProjectPath: Record<string, number | null>;
 
   // ── Install progress ──
   pluginInstallProgress: Record<string, ExtensionOperationState>;
@@ -137,7 +143,7 @@ let pluginFetchInFlight: { key: string; promise: Promise<void> } | null = null;
 let pluginCatalogRequestSeq = 0;
 const pluginSuccessResetTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const mcpSuccessResetTimers = new Map<string, ReturnType<typeof setTimeout>>();
-let mcpDiagnosticsInFlight: Promise<void> | null = null;
+const mcpDiagnosticsInFlightByKey = new Map<string, Promise<void>>();
 let skillsCatalogRequestSeq = 0;
 let skillsDetailRequestSeq = 0;
 const latestSkillsCatalogRequestByKey = new Map<string, number>();
@@ -227,8 +233,24 @@ function schedulePluginSuccessReset(
   pluginSuccessResetTimers.set(operationKey, timer);
 }
 
-function getCustomMcpOperationKey(serverName: string, scope: InstallScope): string {
+function getCustomMcpOperationKey(
+  serverName: string,
+  scope: InstallScope,
+  projectPath?: string | null
+): string {
+  if (scope === 'project' || scope === 'local') {
+    return `mcp-custom:${serverName}:${scope}:${getMcpProjectStateKey(projectPath)}`;
+  }
   return `mcp-custom:${serverName}:${scope}`;
+}
+
+function isProjectScopedMcpOperationKey(operationKey: string): boolean {
+  return (
+    operationKey.includes(':project:') ||
+    operationKey.endsWith(':project') ||
+    operationKey.includes(':local:') ||
+    operationKey.endsWith(':local')
+  );
 }
 
 function clearMcpSuccessResetTimer(operationKey: string): void {
@@ -274,7 +296,7 @@ function clearMcpProjectScopedOperationState(
   for (const operationKey of Object.keys(nextMcpInstallProgress)) {
     if (
       (operationKey.startsWith('mcp:') || operationKey.startsWith('mcp-custom:')) &&
-      (operationKey.endsWith(':project') || operationKey.endsWith(':local'))
+      isProjectScopedMcpOperationKey(operationKey)
     ) {
       delete nextMcpInstallProgress[operationKey];
     }
@@ -283,7 +305,7 @@ function clearMcpProjectScopedOperationState(
   for (const operationKey of Object.keys(nextInstallErrors)) {
     if (
       (operationKey.startsWith('mcp:') || operationKey.startsWith('mcp-custom:')) &&
-      (operationKey.endsWith(':project') || operationKey.endsWith(':local'))
+      isProjectScopedMcpOperationKey(operationKey)
     ) {
       delete nextInstallErrors[operationKey];
     }
@@ -297,7 +319,7 @@ function clearMcpProjectScopedOperationState(
 
 function clearMcpProjectScopedSuccessResetTimers(): void {
   for (const operationKey of Array.from(mcpSuccessResetTimers.keys())) {
-    if (operationKey.endsWith(':project') || operationKey.endsWith(':local')) {
+    if (isProjectScopedMcpOperationKey(operationKey)) {
       clearMcpSuccessResetTimer(operationKey);
     }
   }
@@ -336,11 +358,16 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   mcpBrowseLoading: false,
   mcpBrowseError: null,
   mcpInstalledServers: [],
+  mcpInstalledServersByProjectPath: {},
   mcpInstalledProjectPath: null,
   mcpDiagnostics: {},
+  mcpDiagnosticsByProjectPath: {},
   mcpDiagnosticsLoading: false,
+  mcpDiagnosticsLoadingByProjectPath: {},
   mcpDiagnosticsError: null,
+  mcpDiagnosticsErrorByProjectPath: {},
   mcpDiagnosticsLastCheckedAt: null,
+  mcpDiagnosticsLastCheckedAtByProjectPath: {},
 
   pluginInstallProgress: {},
   mcpInstallProgress: {},
@@ -519,6 +546,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       const installed = await api.mcpRegistry.getInstalled(projectPath);
       set((prev) => {
         const nextProjectPath = projectPath ?? null;
+        const stateKey = getMcpProjectStateKey(nextProjectPath);
         const isSameProjectContext = prev.mcpInstalledProjectPath === nextProjectPath;
         const nextOperationState = isSameProjectContext
           ? {
@@ -533,6 +561,10 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
         return {
           mcpInstalledServers: installed,
+          mcpInstalledServersByProjectPath: {
+            ...prev.mcpInstalledServersByProjectPath,
+            [stateKey]: installed,
+          },
           mcpInstalledProjectPath: nextProjectPath,
           mcpInstallProgress: nextOperationState.mcpInstallProgress,
           installErrors: nextOperationState.installErrors,
@@ -546,38 +578,72 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   runMcpDiagnostics: async (projectPath?: string) => {
     const mcpRegistry = api.mcpRegistry;
     if (!mcpRegistry) return;
+    const projectStateKey = getMcpProjectStateKey(projectPath);
 
-    if (mcpDiagnosticsInFlight) {
-      await mcpDiagnosticsInFlight;
+    const existing = mcpDiagnosticsInFlightByKey.get(projectStateKey);
+    if (existing) {
+      await existing;
       return;
     }
 
-    set({ mcpDiagnosticsLoading: true, mcpDiagnosticsError: null });
+    set((prev) => ({
+      mcpDiagnosticsLoading: true,
+      mcpDiagnosticsError: null,
+      mcpDiagnosticsLoadingByProjectPath: {
+        ...prev.mcpDiagnosticsLoadingByProjectPath,
+        [projectStateKey]: true,
+      },
+      mcpDiagnosticsErrorByProjectPath: {
+        ...prev.mcpDiagnosticsErrorByProjectPath,
+        [projectStateKey]: null,
+      },
+    }));
 
     const promise = (async () => {
       try {
         const diagnostics = await mcpRegistry.diagnose(projectPath);
+        const diagnosticsRecord = Object.fromEntries(
+          diagnostics.map((entry) => [getMcpDiagnosticKey(entry.name, entry.scope), entry] as const)
+        );
+        const checkedAt = Date.now();
         set({
-          mcpDiagnostics: Object.fromEntries(
-            diagnostics.map(
-              (entry) => [getMcpDiagnosticKey(entry.name, entry.scope), entry] as const
-            )
-          ),
+          mcpDiagnostics: diagnosticsRecord,
           mcpDiagnosticsLoading: false,
-          mcpDiagnosticsLastCheckedAt: Date.now(),
+          mcpDiagnosticsByProjectPath: {
+            ...get().mcpDiagnosticsByProjectPath,
+            [projectStateKey]: diagnosticsRecord,
+          },
+          mcpDiagnosticsLoadingByProjectPath: {
+            ...get().mcpDiagnosticsLoadingByProjectPath,
+            [projectStateKey]: false,
+          },
+          mcpDiagnosticsLastCheckedAt: checkedAt,
+          mcpDiagnosticsLastCheckedAtByProjectPath: {
+            ...get().mcpDiagnosticsLastCheckedAtByProjectPath,
+            [projectStateKey]: checkedAt,
+          },
         });
       } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to check MCP server health';
         set({
           mcpDiagnosticsLoading: false,
-          mcpDiagnosticsError:
-            err instanceof Error ? err.message : 'Failed to check MCP server health',
+          mcpDiagnosticsError: errorMessage,
+          mcpDiagnosticsLoadingByProjectPath: {
+            ...get().mcpDiagnosticsLoadingByProjectPath,
+            [projectStateKey]: false,
+          },
+          mcpDiagnosticsErrorByProjectPath: {
+            ...get().mcpDiagnosticsErrorByProjectPath,
+            [projectStateKey]: errorMessage,
+          },
         });
       } finally {
-        mcpDiagnosticsInFlight = null;
+        mcpDiagnosticsInFlightByKey.delete(projectStateKey);
       }
     })();
 
-    mcpDiagnosticsInFlight = promise;
+    mcpDiagnosticsInFlightByKey.set(projectStateKey, promise);
     await promise;
   },
 
@@ -935,7 +1001,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
   // ── MCP install ──
   installMcpServer: async (request: McpInstallRequest) => {
-    const operationKey = getMcpOperationKey(request.registryId, request.scope);
+    const operationKey = getMcpOperationKey(request.registryId, request.scope, request.projectPath);
     if (!api.mcpRegistry) {
       clearMcpSuccessResetTimer(operationKey);
       set((prev) => ({
@@ -967,8 +1033,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       }
 
       await Promise.all([
-        get().mcpFetchInstalled(get().mcpInstalledProjectPath ?? undefined),
-        get().runMcpDiagnostics(get().mcpInstalledProjectPath ?? undefined),
+        get().mcpFetchInstalled(request.projectPath),
+        get().runMcpDiagnostics(request.projectPath),
       ]);
 
       set((prev) => ({
@@ -989,7 +1055,11 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   // ── MCP custom install ──
   installCustomMcpServer: async (request: McpCustomInstallRequest) => {
     const operationScope = request.scope;
-    const progressKey = getCustomMcpOperationKey(request.serverName, operationScope);
+    const progressKey = getCustomMcpOperationKey(
+      request.serverName,
+      operationScope,
+      request.projectPath
+    );
     if (!api.mcpRegistry) {
       clearMcpSuccessResetTimer(progressKey);
       set((prev) => ({
@@ -1015,8 +1085,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       }
 
       await Promise.all([
-        get().mcpFetchInstalled(get().mcpInstalledProjectPath ?? undefined),
-        get().runMcpDiagnostics(get().mcpInstalledProjectPath ?? undefined),
+        get().mcpFetchInstalled(request.projectPath),
+        get().runMcpDiagnostics(request.projectPath),
       ]);
 
       set((prev) => ({
@@ -1043,7 +1113,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
   ) => {
     const operationScope: InstallScope =
       scope === 'global' || scope === 'user' || isProjectScopedMcpScope(scope) ? scope : 'user';
-    const operationKey = getMcpOperationKey(registryId, operationScope);
+    const operationKey = getMcpOperationKey(registryId, operationScope, projectPath);
     if (!api.mcpRegistry) {
       clearMcpSuccessResetTimer(operationKey);
       set((prev) => ({
@@ -1072,8 +1142,8 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       }
 
       await Promise.all([
-        get().mcpFetchInstalled(get().mcpInstalledProjectPath ?? undefined),
-        get().runMcpDiagnostics(get().mcpInstalledProjectPath ?? undefined),
+        get().mcpFetchInstalled(projectPath),
+        get().runMcpDiagnostics(projectPath),
       ]);
 
       set((prev) => ({

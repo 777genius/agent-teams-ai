@@ -76,7 +76,7 @@ export const McpServerDetailDialog = ({
   const cliStatus = useStore((s) => s.cliStatus);
   const defaultSharedScope = getDefaultMcpSharedScope(cliStatus?.flavor);
   const [scope, setScope] = useState<Scope>(defaultSharedScope);
-  const operationKey = server ? getMcpOperationKey(server.id, scope) : null;
+  const operationKey = server ? getMcpOperationKey(server.id, scope, projectPath) : null;
   const installProgress = useStore(
     (s) => (operationKey ? s.mcpInstallProgress[operationKey] : undefined) ?? 'idle'
   );

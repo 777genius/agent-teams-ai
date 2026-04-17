@@ -116,7 +116,14 @@ export function getPluginOperationKey(pluginId: string, scope: InstallScope): st
 /**
  * Namespaced operation-state key for MCP install/uninstall UI state.
  */
-export function getMcpOperationKey(registryId: string, scope: InstallScope): string {
+export function getMcpOperationKey(
+  registryId: string,
+  scope: InstallScope,
+  projectPath?: string | null
+): string {
+  if (scope === 'project' || scope === 'local') {
+    return `mcp:${registryId}:${scope}:${getMcpProjectStateKey(projectPath)}`;
+  }
   return `mcp:${registryId}:${scope}`;
 }
 
@@ -126,6 +133,13 @@ export function getMcpOperationKey(registryId: string, scope: InstallScope): str
  */
 export function getMcpDiagnosticKey(name: string, scope?: string | null): string {
   return scope ? `mcp-diagnostic:${scope}:${name}` : `mcp-diagnostic:${name}`;
+}
+
+/**
+ * Stable project-aware cache key for MCP installed/diagnostics state.
+ */
+export function getMcpProjectStateKey(projectPath?: string | null): string {
+  return projectPath ?? '__global__';
 }
 
 /**

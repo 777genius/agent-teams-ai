@@ -18,11 +18,19 @@ interface StoreState {
   mcpBrowseError: string | null;
   mcpBrowse: ReturnType<typeof vi.fn>;
   mcpInstalledServers: Array<{ name: string; scope: 'local' | 'user' | 'project' }>;
+  mcpInstalledServersByProjectPath?: Record<
+    string,
+    Array<{ name: string; scope: 'local' | 'user' | 'project' }>
+  >;
   fetchMcpGitHubStars: ReturnType<typeof vi.fn>;
   mcpDiagnostics: Record<string, never>;
+  mcpDiagnosticsByProjectPath?: Record<string, Record<string, never>>;
   mcpDiagnosticsLoading: boolean;
+  mcpDiagnosticsLoadingByProjectPath?: Record<string, boolean>;
   mcpDiagnosticsError: string | null;
+  mcpDiagnosticsErrorByProjectPath?: Record<string, string | null>;
   mcpDiagnosticsLastCheckedAt: number | null;
+  mcpDiagnosticsLastCheckedAtByProjectPath?: Record<string, number | null>;
   runMcpDiagnostics: ReturnType<typeof vi.fn>;
 }
 
@@ -121,11 +129,16 @@ describe('McpServersPanel initial browse loading', () => {
     storeState.mcpBrowseError = null;
     storeState.mcpBrowse = vi.fn();
     storeState.mcpInstalledServers = [];
+    storeState.mcpInstalledServersByProjectPath = undefined;
     storeState.fetchMcpGitHubStars = vi.fn();
     storeState.mcpDiagnostics = {};
+    storeState.mcpDiagnosticsByProjectPath = undefined;
     storeState.mcpDiagnosticsLoading = false;
+    storeState.mcpDiagnosticsLoadingByProjectPath = undefined;
     storeState.mcpDiagnosticsError = null;
+    storeState.mcpDiagnosticsErrorByProjectPath = undefined;
     storeState.mcpDiagnosticsLastCheckedAt = null;
+    storeState.mcpDiagnosticsLastCheckedAtByProjectPath = undefined;
     storeState.runMcpDiagnostics = vi.fn();
   });
 

@@ -56,6 +56,7 @@ vi.mock('../../../src/renderer/api', () => ({
 import { api } from '../../../src/renderer/api';
 import {
   getMcpDiagnosticKey,
+  getMcpProjectStateKey,
   getMcpOperationKey,
   getPluginOperationKey,
 } from '../../../src/shared/utils/extensionNormalizers';
@@ -154,8 +155,11 @@ const makeReadyCliStatus = () => ({
 
 const pluginOperationKey = (pluginId: string, scope: 'user' | 'project' | 'local' = 'user') =>
   getPluginOperationKey(pluginId, scope);
-const mcpOperationKey = (registryId: string, scope: 'user' | 'project' | 'local' = 'user') =>
-  getMcpOperationKey(registryId, scope);
+const mcpOperationKey = (
+  registryId: string,
+  scope: 'user' | 'project' | 'local' | 'global' = 'user',
+  projectPath?: string
+) => getMcpOperationKey(registryId, scope, projectPath);
 
 describe('extensionsSlice', () => {
   let store: TestStore;
@@ -393,20 +397,34 @@ describe('extensionsSlice', () => {
       expect(store.getState().mcpInstalledServers).toEqual(installed);
     });
 
+    it('stores installed MCP servers independently per project context', async () => {
+      (api.mcpRegistry!.getInstalled as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce([{ name: 'global-server', scope: 'global' as const }])
+        .mockResolvedValueOnce([{ name: 'project-server', scope: 'project' as const }]);
+
+      await store.getState().mcpFetchInstalled();
+      await store.getState().mcpFetchInstalled('/tmp/project-a');
+
+      expect(store.getState().mcpInstalledServersByProjectPath).toMatchObject({
+        [getMcpProjectStateKey()]: [{ name: 'global-server', scope: 'global' }],
+        [getMcpProjectStateKey('/tmp/project-a')]: [{ name: 'project-server', scope: 'project' }],
+      });
+    });
+
     it('clears stale project- and local-scoped MCP operation state when project changes', async () => {
       store.setState({
         mcpInstalledProjectPath: '/tmp/project-a',
         mcpInstallProgress: {
-          [mcpOperationKey('project-server', 'project')]: 'error',
-          [mcpOperationKey('local-server', 'local')]: 'success',
+          [mcpOperationKey('project-server', 'project', '/tmp/project-a')]: 'error',
+          [mcpOperationKey('local-server', 'local', '/tmp/project-a')]: 'success',
           [mcpOperationKey('user-server', 'user')]: 'pending',
         },
         installErrors: {
-          [mcpOperationKey('project-server', 'project')]: 'Project failed',
-          [mcpOperationKey('local-server', 'local')]: 'Local failed',
+          [mcpOperationKey('project-server', 'project', '/tmp/project-a')]: 'Project failed',
+          [mcpOperationKey('local-server', 'local', '/tmp/project-a')]: 'Local failed',
           [mcpOperationKey('user-server', 'user')]: 'Keep user state',
           'plugin:test@marketplace:user': 'Keep plugin state',
-          'mcp-custom:custom-server:project': 'Clear custom project state',
+          'mcp-custom:custom-server:project:/tmp/project-a': 'Clear custom project state',
         },
       });
       (api.mcpRegistry!.getInstalled as ReturnType<typeof vi.fn>).mockResolvedValue([]);
@@ -414,13 +432,21 @@ describe('extensionsSlice', () => {
       await store.getState().mcpFetchInstalled('/tmp/project-b');
 
       expect(store.getState().mcpInstalledProjectPath).toBe('/tmp/project-b');
-      expect(store.getState().mcpInstallProgress[mcpOperationKey('project-server', 'project')]).toBeUndefined();
-      expect(store.getState().mcpInstallProgress[mcpOperationKey('local-server', 'local')]).toBeUndefined();
+      expect(
+        store.getState().mcpInstallProgress[mcpOperationKey('project-server', 'project', '/tmp/project-a')]
+      ).toBeUndefined();
+      expect(
+        store.getState().mcpInstallProgress[mcpOperationKey('local-server', 'local', '/tmp/project-a')]
+      ).toBeUndefined();
       expect(store.getState().mcpInstallProgress[mcpOperationKey('user-server', 'user')]).toBe(
         'pending',
       );
-      expect(store.getState().installErrors[mcpOperationKey('project-server', 'project')]).toBeUndefined();
-      expect(store.getState().installErrors[mcpOperationKey('local-server', 'local')]).toBeUndefined();
+      expect(
+        store.getState().installErrors[mcpOperationKey('project-server', 'project', '/tmp/project-a')]
+      ).toBeUndefined();
+      expect(
+        store.getState().installErrors[mcpOperationKey('local-server', 'local', '/tmp/project-a')]
+      ).toBeUndefined();
       expect(store.getState().installErrors[mcpOperationKey('user-server', 'user')]).toBe(
         'Keep user state',
       );
@@ -749,16 +775,20 @@ describe('extensionsSlice', () => {
         headers: [],
       });
 
-      expect(store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'project')]).toBe(
-        'success',
-      );
+      expect(
+        store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'project', '/tmp/project-a')]
+      ).toBe('success');
 
       await store.getState().mcpFetchInstalled('/tmp/project-b');
-      expect(store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'project')]).toBeUndefined();
+      expect(
+        store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'project', '/tmp/project-a')]
+      ).toBeUndefined();
 
       await vi.advanceTimersByTimeAsync(2_000);
 
-      expect(store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'project')]).toBeUndefined();
+      expect(
+        store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'project', '/tmp/project-a')]
+      ).toBeUndefined();
     });
   });
 
@@ -867,6 +897,69 @@ describe('extensionsSlice', () => {
           target: 'uvx context7-project',
         }),
       });
+    });
+
+    it('stores MCP diagnostics independently per project context', async () => {
+      (api.mcpRegistry!.diagnose as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce([
+          {
+            name: 'global-server',
+            scope: 'global',
+            target: 'npx global-server',
+            status: 'connected',
+            statusLabel: 'Connected',
+            rawLine: 'global-server: npx global-server - Connected',
+            checkedAt: 1,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            name: 'project-server',
+            scope: 'project',
+            target: 'uvx project-server',
+            status: 'failed',
+            statusLabel: 'Failed to connect',
+            rawLine: 'project-server: uvx project-server - Failed to connect',
+            checkedAt: 2,
+          },
+        ]);
+
+      await store.getState().runMcpDiagnostics();
+      await store.getState().runMcpDiagnostics('/tmp/project-a');
+
+      expect(store.getState().mcpDiagnosticsByProjectPath).toMatchObject({
+        [getMcpProjectStateKey()]: {
+          [getMcpDiagnosticKey('global-server', 'global')]: expect.objectContaining({
+            target: 'npx global-server',
+          }),
+        },
+        [getMcpProjectStateKey('/tmp/project-a')]: {
+          [getMcpDiagnosticKey('project-server', 'project')]: expect.objectContaining({
+            target: 'uvx project-server',
+          }),
+        },
+      });
+    });
+
+    it('refreshes MCP install state using the operation project context instead of the last viewed tab', async () => {
+      store.setState({
+        mcpInstalledProjectPath: '/tmp/project-b',
+      });
+      (api.mcpRegistry!.install as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'success' });
+      (api.mcpRegistry!.getInstalled as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.mcpRegistry!.diagnose as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+      await store.getState().installMcpServer({
+        registryId: 'test-id',
+        serverName: 'test-server',
+        scope: 'project',
+        projectPath: '/tmp/project-a',
+        envValues: {},
+        headers: [],
+      });
+
+      expect(api.mcpRegistry!.getInstalled).toHaveBeenLastCalledWith('/tmp/project-a');
+      expect(api.mcpRegistry!.diagnose).toHaveBeenLastCalledWith('/tmp/project-a');
     });
   });
 

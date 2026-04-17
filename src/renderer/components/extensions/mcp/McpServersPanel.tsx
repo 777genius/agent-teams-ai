@@ -18,6 +18,7 @@ import { formatRelativeTime } from '@renderer/utils/formatters';
 import { CLI_NOT_FOUND_MARKER } from '@shared/constants/cli';
 import {
   getMcpDiagnosticKey,
+  getMcpProjectStateKey,
   getPreferredMcpInstallationEntry,
   sanitizeMcpServerName,
 } from '@shared/utils/extensionNormalizers';
@@ -79,18 +80,24 @@ export const McpServersPanel = ({
   selectedMcpServerId,
   setSelectedMcpServerId,
 }: McpServersPanelProps): React.JSX.Element => {
+  const projectStateKey = getMcpProjectStateKey(projectPath);
   const {
     browseCatalog,
     browseNextCursor,
     browseLoading,
     browseError,
     mcpBrowse,
-    installedServers,
+    installedServersByProjectPath,
+    installedServersFallback,
     fetchMcpGitHubStars,
-    mcpDiagnostics,
-    mcpDiagnosticsLoading,
-    mcpDiagnosticsError,
-    mcpDiagnosticsLastCheckedAt,
+    mcpDiagnosticsByProjectPath,
+    mcpDiagnosticsFallback,
+    mcpDiagnosticsLoadingByProjectPath,
+    mcpDiagnosticsLoadingFallback,
+    mcpDiagnosticsErrorByProjectPath,
+    mcpDiagnosticsErrorFallback,
+    mcpDiagnosticsLastCheckedAtByProjectPath,
+    mcpDiagnosticsLastCheckedAtFallback,
     runMcpDiagnostics,
     cliStatus,
   } = useStore(
@@ -100,16 +107,33 @@ export const McpServersPanel = ({
       browseLoading: s.mcpBrowseLoading,
       browseError: s.mcpBrowseError,
       mcpBrowse: s.mcpBrowse,
-      installedServers: s.mcpInstalledServers,
+      installedServersByProjectPath: s.mcpInstalledServersByProjectPath,
+      installedServersFallback: s.mcpInstalledServers,
       fetchMcpGitHubStars: s.fetchMcpGitHubStars,
-      mcpDiagnostics: s.mcpDiagnostics,
-      mcpDiagnosticsLoading: s.mcpDiagnosticsLoading,
-      mcpDiagnosticsError: s.mcpDiagnosticsError,
-      mcpDiagnosticsLastCheckedAt: s.mcpDiagnosticsLastCheckedAt,
+      mcpDiagnosticsByProjectPath: s.mcpDiagnosticsByProjectPath,
+      mcpDiagnosticsFallback: s.mcpDiagnostics,
+      mcpDiagnosticsLoadingByProjectPath: s.mcpDiagnosticsLoadingByProjectPath,
+      mcpDiagnosticsLoadingFallback: s.mcpDiagnosticsLoading,
+      mcpDiagnosticsErrorByProjectPath: s.mcpDiagnosticsErrorByProjectPath,
+      mcpDiagnosticsErrorFallback: s.mcpDiagnosticsError,
+      mcpDiagnosticsLastCheckedAtByProjectPath: s.mcpDiagnosticsLastCheckedAtByProjectPath,
+      mcpDiagnosticsLastCheckedAtFallback: s.mcpDiagnosticsLastCheckedAt,
       runMcpDiagnostics: s.runMcpDiagnostics,
       cliStatus: s.cliStatus,
     }))
   );
+  const installedServers =
+    installedServersByProjectPath?.[projectStateKey] ?? installedServersFallback ?? [];
+  const mcpDiagnostics =
+    mcpDiagnosticsByProjectPath?.[projectStateKey] ?? mcpDiagnosticsFallback ?? {};
+  const mcpDiagnosticsLoading =
+    mcpDiagnosticsLoadingByProjectPath?.[projectStateKey] ?? mcpDiagnosticsLoadingFallback ?? false;
+  const mcpDiagnosticsError =
+    mcpDiagnosticsErrorByProjectPath?.[projectStateKey] ?? mcpDiagnosticsErrorFallback ?? null;
+  const mcpDiagnosticsLastCheckedAt =
+    mcpDiagnosticsLastCheckedAtByProjectPath?.[projectStateKey] ??
+    mcpDiagnosticsLastCheckedAtFallback ??
+    null;
 
   const [mcpSort, setMcpSort] = useState<McpSortValue>('name-asc');
 

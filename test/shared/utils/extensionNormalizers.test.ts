@@ -166,8 +166,8 @@ describe('getPluginOperationKey', () => {
 
 describe('getMcpOperationKey', () => {
   it('namespaces MCP operation keys by scope', () => {
-    expect(getMcpOperationKey('io.github.upstash/context7', 'project')).toBe(
-      'mcp:io.github.upstash/context7:project',
+    expect(getMcpOperationKey('io.github.upstash/context7', 'project', '/tmp/project')).toBe(
+      'mcp:io.github.upstash/context7:project:/tmp/project',
     );
   });
 });
