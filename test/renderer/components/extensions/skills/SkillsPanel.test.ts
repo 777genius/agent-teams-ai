@@ -168,6 +168,52 @@ function makeUserSkill(): SkillCatalogItem {
   };
 }
 
+function makeMultimodelStatus(
+  overrides?: Partial<CliInstallationStatus>
+): CliInstallationStatus {
+  return {
+    flavor: 'agent_teams_orchestrator',
+    displayName: 'Multimodel runtime',
+    supportsSelfUpdate: false,
+    showVersionDetails: true,
+    showBinaryPath: true,
+    installed: true,
+    installedVersion: '1.0.0',
+    binaryPath: '/usr/local/bin/agent-teams',
+    latestVersion: '1.0.0',
+    updateAvailable: false,
+    authLoggedIn: false,
+    authStatusChecking: false,
+    authMethod: null,
+    providers: [
+      {
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        supported: true,
+        authenticated: true,
+        authMethod: 'oauth',
+        verificationState: 'verified',
+        statusMessage: 'Connected',
+        models: [],
+        canLoginFromUi: true,
+        capabilities: {
+          teamLaunch: true,
+          oneShot: true,
+          extensions: {
+            plugins: { status: 'supported', ownership: 'provider', reason: null },
+            mcp: { status: 'supported', ownership: 'shared', reason: null },
+            skills: { status: 'supported', ownership: 'shared', reason: null },
+            apiKeys: { status: 'supported', ownership: 'shared', reason: null },
+          },
+        },
+        connection: null,
+        backend: null,
+      },
+    ],
+    ...overrides,
+  };
+}
+
 describe('SkillsPanel', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -287,6 +333,40 @@ describe('SkillsPanel', () => {
     }
     const importDialog = host.querySelector('[data-testid="skill-import-dialog"]');
     expect(importDialog?.getAttribute('data-allow-codex-root-kind')).toBe('false');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('uses a runtime-aware shared skills banner when codex is unavailable', async () => {
+    storeState.cliStatus = makeMultimodelStatus();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(SkillsPanel, {
+          projectPath: '/tmp/project-a',
+          projectLabel: 'Project A',
+          skillsSearchQuery: '',
+          setSkillsSearchQuery: vi.fn(),
+          skillsSort: 'name-asc',
+          setSkillsSort: vi.fn(),
+          selectedSkillId: null,
+          setSelectedSkillId: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'Shared skills in `.claude`, `.cursor`, and `.agents` are available to Anthropic.'
+    );
+    expect(host.textContent).not.toContain('available to both Anthropic and Codex');
 
     await act(async () => {
       root.unmount();

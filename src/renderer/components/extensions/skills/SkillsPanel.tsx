@@ -6,6 +6,11 @@ import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
+import { getVisibleMultimodelProviders } from '@renderer/utils/multimodelProviderVisibility';
+import {
+  getCliProviderExtensionCapability,
+  isCliExtensionCapabilityAvailable,
+} from '@shared/utils/providerExtensionCapabilities';
 import {
   formatSkillRootKind,
   getSkillAudience,
@@ -90,6 +95,19 @@ function getSkillStatus(skill: SkillCatalogItem): string {
   return 'Ready to use';
 }
 
+function formatRuntimeAudienceLabel(providerNames: readonly string[]): string {
+  if (providerNames.length === 0) {
+    return 'the configured runtime';
+  }
+  if (providerNames.length === 1) {
+    return providerNames[0]!;
+  }
+  if (providerNames.length === 2) {
+    return `${providerNames[0]} and ${providerNames[1]}`;
+  }
+  return `${providerNames.slice(0, -1).join(', ')}, and ${providerNames.at(-1)}`;
+}
+
 export const SkillsPanel = ({
   projectPath,
   projectLabel,
@@ -131,6 +149,19 @@ export const SkillsPanel = ({
     () => isCodexSkillOverlayAvailable(cliStatus),
     [cliStatus]
   );
+  const skillsAudienceLabel = useMemo(() => {
+    if (cliStatus?.flavor !== 'agent_teams_orchestrator') {
+      return null;
+    }
+
+    const providerNames = getVisibleMultimodelProviders(cliStatus.providers ?? [])
+      .filter((provider) =>
+        isCliExtensionCapabilityAvailable(getCliProviderExtensionCapability(provider, 'skills'))
+      )
+      .map((provider) => provider.displayName);
+
+    return formatRuntimeAudienceLabel(providerNames);
+  }, [cliStatus]);
   const codexOnlySkillsCount = useMemo(
     () => mergedSkills.filter((skill) => getSkillAudience(skill.rootKind) === 'codex').length,
     [mergedSkills]
@@ -252,8 +283,9 @@ export const SkillsPanel = ({
     <div className="flex flex-col gap-4">
       {cliStatus?.flavor === 'agent_teams_orchestrator' && (
         <div className="rounded-md border border-blue-500/30 bg-blue-500/5 px-4 py-3 text-sm text-blue-300">
-          Shared skills in `.claude`, `.cursor`, and `.agents` are available to both Anthropic and
-          Codex. Skills stored in `.codex` are only offered to Codex sessions.
+          Shared skills in `.claude`, `.cursor`, and `.agents` are available to{' '}
+          {skillsAudienceLabel ?? 'the configured runtime'}. Skills stored in `.codex` stay
+          Codex-only when Codex support is available.
         </div>
       )}
       <div className="bg-surface-raised/20 rounded-xl border border-border p-4">
