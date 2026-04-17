@@ -24,8 +24,8 @@ import { SKILL_ROOT_DEFINITIONS } from '@shared/utils/skillRoots';
 import { FileSearch, FolderOpen, X } from 'lucide-react';
 
 import { getSuggestedSkillFolderNameFromPath } from './skillFolderNameUtils';
-import { SkillReviewDialog } from './SkillReviewDialog';
 import { resolveSkillProjectPath } from './skillProjectUtils';
+import { SkillReviewDialog } from './SkillReviewDialog';
 import { validateSkillFolderName, validateSkillImportSourceDir } from './skillValidationUtils';
 
 import type { SkillReviewPreview, SkillRootKind } from '@shared/types/extensions';

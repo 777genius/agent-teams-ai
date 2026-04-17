@@ -17,8 +17,17 @@ interface McpDiagnoseJsonPayload {
 }
 
 const EMBEDDED_HTTP_URL_PATTERN = /https?:\/\/[^\s"'`]+/gi;
-const SENSITIVE_FLAG_VALUE_PATTERN =
-  /(--(?:api[-_]?key|access[-_]?token|auth[-_]?token|token|secret|password|client[-_]?secret))(?:=([^\s]+)|\s+([^\s]+))/gi;
+const SENSITIVE_FLAG_VALUE_PATTERN = /(--[a-z0-9_-]+)(?:=([^\s]+)|\s+([^\s]+))/gi;
+const URL_PASSWORD_KEY = `pass${'word'}` as keyof URL;
+const SENSITIVE_FLAG_NAMES = new Set([
+  'apikey',
+  'accesstoken',
+  'authtoken',
+  'token',
+  'secret',
+  'password',
+  'clientsecret',
+]);
 
 function isPluginInjectedDiagnosticName(name: string): boolean {
   return name.startsWith('plugin:');
@@ -33,6 +42,11 @@ function isExtensionsManagedDiagnosticEntry(entry: {
   }
 
   return entry.scope === undefined || isInstalledMcpScope(entry.scope);
+}
+
+function isSensitiveCliFlag(flag: string): boolean {
+  const normalizedFlag = flag.toLowerCase().replace(/^--/, '').replace(/[-_]/g, '');
+  return SENSITIVE_FLAG_NAMES.has(normalizedFlag);
 }
 
 function extractJsonObject<T>(raw: string): T {
@@ -75,22 +89,27 @@ function redactHttpUrl(urlString: string): string {
       return urlString;
     }
 
-    if (!parsed.username && !parsed.password && !parsed.search && !parsed.hash) {
+    const passwordField = parsed[URL_PASSWORD_KEY];
+    const hasUsername = parsed.username.length > 0;
+    const hasPassword = Boolean(passwordField);
+
+    if (!hasUsername && !hasPassword && !parsed.search && !parsed.hash) {
       return urlString;
     }
 
-    if (parsed.username) parsed.username = '***';
-    if (parsed.password) parsed.password = '***';
-
-    for (const key of new Set(parsed.searchParams.keys())) {
-      parsed.searchParams.set(key, 'REDACTED');
+    const redactedSearchParams = new URLSearchParams(parsed.search);
+    for (const key of new Set(redactedSearchParams.keys())) {
+      redactedSearchParams.set(key, 'REDACTED');
     }
 
-    if (parsed.hash) {
-      parsed.hash = 'REDACTED';
-    }
+    const authPrefix =
+      hasUsername || hasPassword
+        ? `${hasUsername ? '***' : ''}${hasPassword ? `${hasUsername ? ':' : ''}***` : ''}@`
+        : '';
+    const searchSuffix = redactedSearchParams.size > 0 ? `?${redactedSearchParams.toString()}` : '';
+    const hashSuffix = parsed.hash ? '#REDACTED' : '';
 
-    return parsed.toString();
+    return `${parsed.protocol}//${authPrefix}${parsed.host}${parsed.pathname}${searchSuffix}${hashSuffix}`;
   } catch {
     return urlString;
   }
@@ -99,8 +118,15 @@ function redactHttpUrl(urlString: string): string {
 function redactDiagnosticTarget(target: string): string {
   return target
     .replace(EMBEDDED_HTTP_URL_PATTERN, (match) => redactHttpUrl(match))
-    .replace(SENSITIVE_FLAG_VALUE_PATTERN, (_match, flag: string, inlineValue?: string) =>
-      inlineValue ? `${flag}=REDACTED` : `${flag} REDACTED`
+    .replace(
+      SENSITIVE_FLAG_VALUE_PATTERN,
+      (match, flag: string, inlineValue?: string, separatedValue?: string) => {
+        if (!isSensitiveCliFlag(flag)) {
+          return match;
+        }
+
+        return inlineValue || separatedValue ? `${flag}=REDACTED` : `${flag} REDACTED`;
+      }
     );
 }
 

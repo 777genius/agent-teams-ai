@@ -29,6 +29,8 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { resolveSkillProjectPath } from './skillProjectUtils';
 
+import type { SkillValidationIssue } from '@shared/types';
+
 interface SkillDetailDialogProps {
   skillId: string | null;
   open: boolean;
@@ -93,7 +95,7 @@ export const SkillDetailDialog = ({
       : 'Runs automatically when it matches the task.';
   }
 
-  function getIssuesTone(issues: typeof item.issues): {
+  function getIssuesTone(issues: SkillValidationIssue[]): {
     className: string;
     title: string;
     Icon: typeof AlertTriangle;

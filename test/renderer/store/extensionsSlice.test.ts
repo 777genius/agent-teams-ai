@@ -55,12 +55,14 @@ vi.mock('../../../src/renderer/api', () => ({
 }));
 
 import { api } from '../../../src/renderer/api';
+import type { CliInstallationStatus } from '../../../src/shared/types';
 import {
   getMcpDiagnosticKey,
   getMcpProjectStateKey,
   getMcpOperationKey,
   getPluginOperationKey,
 } from '../../../src/shared/utils/extensionNormalizers';
+import { createDefaultCliExtensionCapabilities } from '../../../src/shared/utils/providerExtensionCapabilities';
 
 import type {
   EnrichedPlugin,
@@ -137,7 +139,7 @@ const makeSkillDetail = (overrides: Partial<SkillDetail> = {}): SkillDetail => (
   ...overrides,
 });
 
-const makeReadyCliStatus = () => ({
+const makeReadyCliStatus = (): CliInstallationStatus => ({
   flavor: 'claude' as const,
   displayName: 'Claude',
   supportsSelfUpdate: true,
@@ -154,7 +156,10 @@ const makeReadyCliStatus = () => ({
   providers: [],
 });
 
-const makeLimitedMultimodelCliStatus = (section: 'plugins' | 'mcp', reason: string) => ({
+const makeLimitedMultimodelCliStatus = (
+  section: 'plugins' | 'mcp',
+  reason: string
+): CliInstallationStatus => ({
   flavor: 'agent_teams_orchestrator' as const,
   displayName: 'Claude Multimodel',
   supportsSelfUpdate: false,
@@ -181,21 +186,22 @@ const makeLimitedMultimodelCliStatus = (section: 'plugins' | 'mcp', reason: stri
       capabilities: {
         teamLaunch: true,
         oneShot: true,
-        extensions: {
+        extensions: createDefaultCliExtensionCapabilities({
           plugins: {
             status: section === 'plugins' ? 'unsupported' : 'supported',
-            ownership: 'shared' as const,
+            ownership: 'shared',
             reason: section === 'plugins' ? reason : null,
           },
           mcp: {
             status: section === 'mcp' ? 'read-only' : 'supported',
-            ownership: 'shared' as const,
+            ownership: 'shared',
             reason: section === 'mcp' ? reason : null,
           },
-          skills: { status: 'supported', ownership: 'shared' as const, reason: null },
-          apiKeys: { status: 'supported', ownership: 'shared' as const, reason: null },
-        },
+        }),
       },
+      statusMessage: null,
+      connection: null,
+      backend: null,
     },
   ],
 });

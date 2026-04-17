@@ -3,16 +3,15 @@
  * Follows the exact ProjectEditorOverlay pattern (lazy-loaded, fixed z-50).
  */
 
-import { useCallback, useLayoutEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
 import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
-import { useStore } from '@renderer/store';
-import { isTeamGraphSlotPersistenceDisabled } from '@renderer/store/slices/teamSlice';
 
 import { useGraphCreateTaskDialog } from '../hooks/useGraphCreateTaskDialog';
 import { useGraphSidebarVisibility } from '../hooks/useGraphSidebarVisibility';
 import { useTeamGraphAdapter } from '../hooks/useTeamGraphAdapter';
+import { useTeamGraphSlotReset } from '../hooks/useTeamGraphSlotReset';
 import { useTeamGraphSurfaceActions } from '../hooks/useTeamGraphSurfaceActions';
 
 import { GraphActivityHud } from './GraphActivityHud';
@@ -55,14 +54,13 @@ export const TeamGraphOverlay = ({
 }: TeamGraphOverlayProps): React.JSX.Element => {
   const graphData = useTeamGraphAdapter(teamName);
   const { openTeamPage: openTeamTab, commitOwnerSlotDrop } = useTeamGraphSurfaceActions(teamName);
-  const resetTeamGraphSlotAssignmentsToDefaults = useStore(
-    (s) => s.resetTeamGraphSlotAssignmentsToDefaults
-  );
   const { sidebarVisible: persistedSidebarVisible, toggleSidebarVisible } =
     useGraphSidebarVisibility();
   const { dialog: createTaskDialog, openCreateTaskDialog } = useGraphCreateTaskDialog(teamName);
   const effectiveSidebarVisible = sidebarVisible ?? persistedSidebarVisible;
   const handleToggleSidebar = onToggleSidebar ?? toggleSidebarVisible;
+
+  useTeamGraphSlotReset(teamName);
 
   // Task action dispatchers (same pattern as TeamGraphTab)
   const dispatchTaskAction = useCallback(
@@ -90,13 +88,6 @@ export const TeamGraphOverlay = ({
   const openCreateTask = useCallback(() => {
     openCreateTaskDialog('');
   }, [openCreateTaskDialog]);
-
-  useLayoutEffect(() => {
-    if (!isTeamGraphSlotPersistenceDisabled()) {
-      return;
-    }
-    resetTeamGraphSlotAssignmentsToDefaults(teamName);
-  }, [resetTeamGraphSlotAssignmentsToDefaults, teamName]);
 
   const events: GraphEventPort = {
     onNodeDoubleClick: useCallback(

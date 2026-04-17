@@ -4,14 +4,14 @@
  */
 
 import { api } from '@renderer/api';
-import { isProjectScopedMcpScope } from '@shared/utils/mcpScopes';
 import {
   getExtensionActionDisableReason,
   getMcpDiagnosticKey,
-  getMcpProjectStateKey,
   getMcpOperationKey,
+  getMcpProjectStateKey,
   getPluginOperationKey,
 } from '@shared/utils/extensionNormalizers';
+import { isProjectScopedMcpScope } from '@shared/utils/mcpScopes';
 
 import { findPaneByTabId, updatePane } from '../utils/paneHelpers';
 

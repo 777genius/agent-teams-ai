@@ -1,8 +1,8 @@
+import { cn } from '@renderer/lib/utils';
 import {
   getTeamModelBadgeLabel,
   getVisibleTeamProviderModels,
 } from '@renderer/utils/teamModelCatalog';
-import { cn } from '@renderer/lib/utils';
 
 import type {
   CliProviderId,
@@ -43,7 +43,7 @@ function getAvailabilityChip(status: CliProviderModelAvailabilityStatus | null):
   }
 }
 
-export function ProviderModelBadges({
+export const ProviderModelBadges = ({
   providerId,
   models,
   modelAvailability,
@@ -53,7 +53,7 @@ export function ProviderModelBadges({
   readonly models: string[];
   readonly modelAvailability?: CliProviderModelAvailability[];
   readonly providerStatus?: Pick<CliProviderStatus, 'providerId' | 'authMethod' | 'backend'> | null;
-}): React.JSX.Element {
+}): React.JSX.Element => {
   const visibleModels = getVisibleTeamProviderModels(providerId, models, providerStatus);
 
   return (
@@ -94,4 +94,4 @@ export function ProviderModelBadges({
       })}
     </div>
   );
-}
+};

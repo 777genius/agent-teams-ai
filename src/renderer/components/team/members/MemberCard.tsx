@@ -111,8 +111,7 @@ export const MemberCard = ({
     !isRemoved &&
     presenceLabel === 'starting' &&
     spawnLaunchState !== 'failed_to_start' &&
-    !activityTask &&
-    !runtimeSummary;
+    !activityTask;
   const showStartingBadge = !isRemoved && presenceLabel === 'starting' && !activityTask;
   const showRuntimeAdvisoryBadge =
     !isRemoved &&

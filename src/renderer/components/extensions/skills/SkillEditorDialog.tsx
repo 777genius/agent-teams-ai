@@ -41,8 +41,8 @@ import { validateSkillFolderName } from './skillValidationUtils';
 import type {
   SkillDetail,
   SkillInvocationMode,
-  SkillRootKind,
   SkillReviewPreview,
+  SkillRootKind,
 } from '@shared/types/extensions';
 
 type EditorMode = 'create' | 'edit';

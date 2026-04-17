@@ -25,8 +25,8 @@ import {
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
 import {
-  getInstallationSummaryLabel,
   getCapabilityLabel,
+  getInstallationSummaryLabel,
   getPluginOperationKey,
   hasInstallationInScope,
   inferCapabilities,

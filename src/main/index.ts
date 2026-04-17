@@ -70,6 +70,7 @@ import { setReviewMainWindow } from './ipc/review';
 import { setTmuxMainWindow } from './ipc/tmux';
 import {
   ApiKeyService,
+  createExtensionsRuntimeAdapter,
   ExtensionFacadeService,
   GlamaMcpEnrichmentService,
   McpCatalogAggregator,
@@ -84,7 +85,6 @@ import {
   SkillsCatalogService,
   SkillsMutationService,
   SkillsWatcherService,
-  createExtensionsRuntimeAdapter,
 } from './services/extensions';
 import { startEventLoopLagMonitor } from './services/infrastructure/EventLoopLagMonitor';
 import { HttpServer } from './services/infrastructure/HttpServer';

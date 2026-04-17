@@ -1,8 +1,8 @@
 import { formatTeamModelSummary } from '@renderer/components/team/dialogs/TeamModelSelector';
+import { inferTeamProviderIdFromModel } from '@shared/utils/teamProvider';
 
 import type { TeamLaunchParams } from '@renderer/store/slices/teamSlice';
 import type { MemberSpawnStatusEntry, ResolvedTeamMember, TeamProviderId } from '@shared/types';
-import { inferTeamProviderIdFromModel } from '@shared/utils/teamProvider';
 
 function isMemberLaunchPending(spawnEntry: MemberSpawnStatusEntry | undefined): boolean {
   if (!spawnEntry) {

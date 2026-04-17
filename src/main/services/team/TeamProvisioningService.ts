@@ -33,6 +33,7 @@ import {
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
+import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import {
   isInboxNoiseMessage,
@@ -42,14 +43,13 @@ import {
 } from '@shared/utils/inboxNoise';
 import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
-import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
+import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   parseAllTeammateMessages,
   type ParsedTeammateContent,
 } from '@shared/utils/teammateMessageParser';
 import { createCliAutoSuffixNameGuard, parseNumericSuffixName } from '@shared/utils/teamMemberName';
-import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import {
   extractToolPreview,
@@ -68,16 +68,16 @@ import {
   type GeminiRuntimeAuthState,
   resolveGeminiRuntimeAuth,
 } from '../runtime/geminiRuntimeAuth';
+import { buildProviderAwareCliEnv } from '../runtime/providerAwareCliEnv';
 import {
-  buildProviderPreflightPingArgs,
   buildProviderModelProbeArgs,
+  buildProviderPreflightPingArgs,
   classifyProviderModelProbeFailure,
   getProviderModelProbeExpectedOutput,
   getProviderModelProbeTimeoutMs,
   isProviderModelProbeSuccessOutput,
   normalizeProviderModelProbeFailureReason,
 } from '../runtime/providerModelProbe';
-import { buildProviderAwareCliEnv } from '../runtime/providerAwareCliEnv';
 import { resolveTeamProviderId } from '../runtime/providerRuntimeEnv';
 
 import { buildActionModeProtocol } from './actionModeInstructions';

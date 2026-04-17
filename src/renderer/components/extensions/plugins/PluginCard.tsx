@@ -5,8 +5,8 @@
 import { Badge } from '@renderer/components/ui/badge';
 import { useStore } from '@renderer/store';
 import {
-  getInstallationSummaryLabel,
   getCapabilityLabel,
+  getInstallationSummaryLabel,
   getPluginOperationKey,
   hasInstallationInScope,
   inferCapabilities,

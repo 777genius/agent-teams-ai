@@ -16,8 +16,8 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
-import { getCliProviderExtensionCapability } from '@shared/utils/providerExtensionCapabilities';
 import { inferCapabilities, normalizeCategory } from '@shared/utils/extensionNormalizers';
+import { getCliProviderExtensionCapability } from '@shared/utils/providerExtensionCapabilities';
 import { ArrowUpDown, Filter, Puzzle, Search } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 

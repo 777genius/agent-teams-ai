@@ -40,7 +40,7 @@ interface StoreState {
     installed?: boolean;
     binaryPath?: string | null;
     launchError?: string | null;
-  };
+  } | null;
 }
 
 const storeState = {} as StoreState;

@@ -3,6 +3,8 @@ import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { normalizeCreateLaunchProviderForUi } from '@renderer/utils/geminiUiFreeze';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { normalizeTeamModelForUi } from '@renderer/utils/teamModelAvailability';
+import { normalizeTeamModelForUi as normalizeCatalogTeamModelForUi } from '@renderer/utils/teamModelCatalog';
+import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
@@ -32,6 +34,7 @@ function newDraftId(): string {
 
 export function createMemberDraft(initial?: Partial<MemberDraft>): MemberDraft {
   const providerId = initial?.providerId;
+  const normalizedModel = extractProviderScopedBaseModel(initial?.model ?? '', providerId) ?? '';
   return {
     id: initial?.id ?? newDraftId(),
     name: initial?.name ?? '',
@@ -39,7 +42,7 @@ export function createMemberDraft(initial?: Partial<MemberDraft>): MemberDraft {
     customRole: initial?.customRole ?? '',
     workflow: initial?.workflow,
     providerId,
-    model: normalizeTeamModelForUi(providerId, initial?.model ?? ''),
+    model: normalizeCatalogTeamModelForUi(providerId, normalizedModel),
     effort: initial?.effort,
     removedAt: initial?.removedAt,
   };

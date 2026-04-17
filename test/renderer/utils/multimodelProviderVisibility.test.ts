@@ -7,6 +7,7 @@ import {
 } from '@renderer/utils/multimodelProviderVisibility';
 
 import type { CliInstallationStatus, CliProviderStatus } from '@shared/types';
+import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 function createProvider(providerId: CliProviderStatus['providerId']): CliProviderStatus {
   return {
@@ -21,9 +22,9 @@ function createProvider(providerId: CliProviderStatus['providerId']): CliProvide
     capabilities: {
       teamLaunch: true,
       oneShot: true,
+      extensions: createDefaultCliExtensionCapabilities(),
     },
     statusMessage: null,
-    detailMessage: null,
     selectedBackendId: null,
     resolvedBackendId: null,
     availableBackends: [],

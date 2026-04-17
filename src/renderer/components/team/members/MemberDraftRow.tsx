@@ -16,8 +16,8 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { useTheme } from '@renderer/hooks/useTheme';
-import { reconcileChips, removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { cn } from '@renderer/lib/utils';
+import { reconcileChips, removeChipTokenFromText } from '@renderer/utils/chipUtils';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { AlertTriangle, ChevronDown, ChevronRight, Info, RotateCcw, Trash2 } from 'lucide-react';
 

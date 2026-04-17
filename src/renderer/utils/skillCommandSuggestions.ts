@@ -2,8 +2,8 @@ import { getSkillAudienceLabel, isSkillAvailableForProvider } from '@shared/util
 import { isSupportedSlashCommandName } from '@shared/utils/slashCommands';
 
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { SkillCatalogItem } from '@shared/types/extensions';
 import type { TeamProviderId } from '@shared/types';
+import type { SkillCatalogItem } from '@shared/types/extensions';
 import type { KnownSlashCommandDefinition } from '@shared/utils/slashCommands';
 
 function orderSkillsForProvider(

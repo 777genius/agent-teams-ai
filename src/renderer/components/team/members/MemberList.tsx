@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { resolveMemberRuntimeSummary } from '@renderer/utils/memberRuntimeSummary';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { resolveMemberRuntimeSummary } from '@renderer/utils/memberRuntimeSummary';
 import { isLeadMember } from '@shared/utils/leadDetection';
 
 import { MemberCard } from './MemberCard';

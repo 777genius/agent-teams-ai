@@ -9,9 +9,9 @@ import {
 
 import type {
   CliInstallationStatus,
-  InstallScope,
   InstalledMcpEntry,
   InstalledPluginEntry,
+  InstallScope,
   PluginCapability,
   PluginCatalogItem,
 } from '@shared/types';
@@ -206,7 +206,7 @@ export function getPreferredMcpInstallationEntry(
 
   return [...installations].sort(
     (left, right) => MCP_SCOPE_PRIORITY[left.scope] - MCP_SCOPE_PRIORITY[right.scope]
-  )[0]!;
+  )[0];
 }
 
 /**

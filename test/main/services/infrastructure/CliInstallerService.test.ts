@@ -231,7 +231,7 @@ describe('CliInstallerService', () => {
               verificationState: 'verified',
               modelVerificationState: 'idle',
               statusMessage: null,
-              models: ['gpt-5.4', 'gpt-5.2-codex'],
+              models: ['gpt-5.4', 'gpt-5.4-mini'],
               modelAvailability: [],
               canLoginFromUi: true,
               capabilities: { teamLaunch: true, oneShot: true },
@@ -267,13 +267,11 @@ describe('CliInstallerService', () => {
         if (normalizedArgs === '--version') {
           return { stdout: '2.3.4', stderr: '' };
         }
+        if (normalizedArgs.includes('--model gpt-5.4-mini')) {
+          throw new Error("The 'gpt-5.4-mini' model is not supported in this Codex runtime.");
+        }
         if (normalizedArgs.includes('--model gpt-5.4')) {
           return { stdout: 'PONG', stderr: '' };
-        }
-        if (normalizedArgs.includes('--model gpt-5.2-codex')) {
-          throw new Error(
-            "The 'gpt-5.2-codex' model is not supported when using Codex with a ChatGPT account."
-          );
         }
         throw new Error(`Unexpected execCli call: ${normalizedArgs}`);
       });
@@ -291,7 +289,7 @@ describe('CliInstallerService', () => {
       expect(verifiedProvider?.modelAvailability).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ modelId: 'gpt-5.4', status: 'checking' }),
-          expect.objectContaining({ modelId: 'gpt-5.2-codex', status: 'checking' }),
+          expect.objectContaining({ modelId: 'gpt-5.4-mini', status: 'checking' }),
         ])
       );
 
@@ -303,7 +301,7 @@ describe('CliInstallerService', () => {
         expect(latestCodexProvider?.modelAvailability).toEqual([
           expect.objectContaining({ modelId: 'gpt-5.4', status: 'available' }),
           expect.objectContaining({
-            modelId: 'gpt-5.2-codex',
+            modelId: 'gpt-5.4-mini',
             status: 'unavailable',
           }),
         ]);

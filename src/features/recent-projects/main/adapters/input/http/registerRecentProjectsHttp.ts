@@ -1,7 +1,7 @@
 import {
   DASHBOARD_RECENT_PROJECTS_ROUTE,
-  normalizeDashboardRecentProjectsPayload,
   type DashboardRecentProjectsPayload,
+  normalizeDashboardRecentProjectsPayload,
 } from '@features/recent-projects/contracts';
 import { createLogger } from '@shared/utils/logger';
 

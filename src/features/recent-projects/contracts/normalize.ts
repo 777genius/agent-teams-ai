@@ -3,6 +3,7 @@ import type { DashboardRecentProject, DashboardRecentProjectsPayload } from './d
 export type DashboardRecentProjectsPayloadLike =
   | DashboardRecentProjectsPayload
   | DashboardRecentProject[]
+  | { degraded?: unknown; projects?: unknown }
   | null
   | undefined;
 

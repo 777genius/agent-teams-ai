@@ -127,7 +127,7 @@ function formatRuntimeAudienceLabel(providerNames: readonly string[]): string {
     return 'the configured runtime';
   }
   if (providerNames.length === 1) {
-    return providerNames[0]!;
+    return providerNames[0];
   }
   if (providerNames.length === 2) {
     return `${providerNames[0]} and ${providerNames[1]}`;
@@ -165,7 +165,7 @@ export const SkillsPanel = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [highlightedSkillId, setHighlightedSkillId] = useState<string | null>(null);
   const selectedSkillIdRef = useRef<string | null>(selectedSkillId);
-  const selectedSkillItemRef = useRef<SkillCatalogItem | SkillDetail['item'] | null>(null);
+  const selectedSkillItemRef = useRef<SkillCatalogItem | null>(null);
   selectedSkillIdRef.current = selectedSkillId;
 
   const mergedSkills = useMemo(

@@ -11,7 +11,6 @@ import {
 } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
-import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
 import {
   GEMINI_UI_DISABLED_BADGE_LABEL,
   GEMINI_UI_DISABLED_REASON,
@@ -30,6 +29,7 @@ import {
   getTeamProviderLabel as getCatalogTeamProviderLabel,
 } from '@renderer/utils/teamModelCatalog';
 import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';
+import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
 import { AlertTriangle, Info } from 'lucide-react';
 
 export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';

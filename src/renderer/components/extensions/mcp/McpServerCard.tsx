@@ -11,12 +11,12 @@ import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { formatCompactNumber, formatRelativeTime } from '@renderer/utils/formatters';
-import { getDefaultMcpSharedScope } from '@shared/utils/mcpScopes';
 import {
   getMcpInstallationSummaryLabel,
   getMcpOperationKey,
   sanitizeMcpServerName,
 } from '@shared/utils/extensionNormalizers';
+import { getDefaultMcpSharedScope } from '@shared/utils/mcpScopes';
 import { Clock, Cloud, Globe, KeyRound, Lock, Monitor, Star, Tag, Wrench } from 'lucide-react';
 import { Github as GithubIcon } from 'lucide-react';
 

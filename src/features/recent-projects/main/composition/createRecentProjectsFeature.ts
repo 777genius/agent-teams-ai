@@ -1,3 +1,8 @@
+import {
+  type DashboardRecentProjectsPayload,
+  normalizeDashboardRecentProjectsPayload,
+} from '@features/recent-projects/contracts';
+
 import { ListDashboardRecentProjectsUseCase } from '../../core/application/use-cases/ListDashboardRecentProjectsUseCase';
 import { DashboardRecentProjectsPresenter } from '../adapters/output/presenters/DashboardRecentProjectsPresenter';
 import { ClaudeRecentProjectsSourceAdapter } from '../adapters/output/sources/ClaudeRecentProjectsSourceAdapter';
@@ -10,10 +15,6 @@ import { RecentProjectIdentityResolver } from '../infrastructure/identity/Recent
 
 import type { ClockPort } from '../../core/application/ports/ClockPort';
 import type { LoggerPort } from '../../core/application/ports/LoggerPort';
-import {
-  normalizeDashboardRecentProjectsPayload,
-  type DashboardRecentProjectsPayload,
-} from '@features/recent-projects/contracts';
 import type { ServiceContext } from '@main/services';
 
 export interface RecentProjectsFeatureFacade {

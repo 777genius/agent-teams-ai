@@ -1,7 +1,7 @@
+import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { getConfiguredCliFlavor } from '@main/services/team/cliFlavor';
 import { execCli } from '@main/utils/childProcess';
-import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { CLI_NOT_FOUND_MESSAGE } from '@shared/constants/cli';
 
 import { McpConfigStateReader } from './McpConfigStateReader';
@@ -13,6 +13,14 @@ import type { InstalledMcpEntry, McpServerDiagnostic } from '@shared/types/exten
 
 const MCP_LIST_TIMEOUT_MS = 15_000;
 const MCP_DIAGNOSE_TIMEOUT_MS = 60_000;
+
+async function buildManagementCliEnvForBinary(binaryPath: string): Promise<NodeJS.ProcessEnv> {
+  const { env } = await buildProviderAwareCliEnv({
+    binaryPath,
+    connectionMode: 'augment',
+  });
+  return env;
+}
 
 export interface ExtensionsRuntimeAdapter {
   readonly flavor: CliFlavor;
@@ -27,11 +35,7 @@ export class ClaudeExtensionsAdapter implements ExtensionsRuntimeAdapter {
   constructor(private readonly stateReader = new McpConfigStateReader()) {}
 
   async buildManagementCliEnv(binaryPath: string): Promise<NodeJS.ProcessEnv> {
-    const { env } = await buildProviderAwareCliEnv({
-      binaryPath,
-      connectionMode: 'augment',
-    });
-    return env;
+    return buildManagementCliEnvForBinary(binaryPath);
   }
 
   async getInstalledMcp(projectPath?: string): Promise<InstalledMcpEntry[]> {
@@ -59,11 +63,7 @@ export class MultimodelExtensionsAdapter implements ExtensionsRuntimeAdapter {
   readonly flavor = 'agent_teams_orchestrator' as const;
 
   async buildManagementCliEnv(binaryPath: string): Promise<NodeJS.ProcessEnv> {
-    const { env } = await buildProviderAwareCliEnv({
-      binaryPath,
-      connectionMode: 'augment',
-    });
-    return env;
+    return buildManagementCliEnvForBinary(binaryPath);
   }
 
   async getInstalledMcp(projectPath?: string): Promise<InstalledMcpEntry[]> {

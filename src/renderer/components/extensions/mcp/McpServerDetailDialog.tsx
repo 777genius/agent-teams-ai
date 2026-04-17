@@ -26,17 +26,17 @@ import {
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
 import {
-  getDefaultMcpSharedScope,
-  getMcpScopeLabel,
-  isProjectScopedMcpScope,
-  isSharedMcpScope,
-} from '@shared/utils/mcpScopes';
-import {
   getMcpInstallationSummaryLabel,
   getMcpOperationKey,
   getPreferredMcpInstallationEntry,
   sanitizeMcpServerName,
 } from '@shared/utils/extensionNormalizers';
+import {
+  getDefaultMcpSharedScope,
+  getMcpScopeLabel,
+  isProjectScopedMcpScope,
+  isSharedMcpScope,
+} from '@shared/utils/mcpScopes';
 import { ExternalLink, Lock, Plus, Star, Trash2, Wrench } from 'lucide-react';
 
 import { InstallButton } from '../common/InstallButton';

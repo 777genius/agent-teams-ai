@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CliInstallationStatus } from '@shared/types';
 import type { SkillCatalogItem } from '@shared/types/extensions';
+import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 interface StoreState {
   fetchSkillsCatalog: ReturnType<typeof vi.fn>;
@@ -213,12 +214,9 @@ function makeMultimodelStatus(
         capabilities: {
           teamLaunch: true,
           oneShot: true,
-          extensions: {
-            plugins: { status: 'supported', ownership: 'provider', reason: null },
-            mcp: { status: 'supported', ownership: 'shared', reason: null },
-            skills: { status: 'supported', ownership: 'shared', reason: null },
-            apiKeys: { status: 'supported', ownership: 'shared', reason: null },
-          },
+          extensions: createDefaultCliExtensionCapabilities({
+            plugins: { status: 'supported', ownership: 'provider-scoped', reason: null },
+          }),
         },
         connection: null,
         backend: null,
@@ -405,12 +403,9 @@ describe('SkillsPanel', () => {
           capabilities: {
             teamLaunch: true,
             oneShot: true,
-            extensions: {
-              plugins: { status: 'unsupported', ownership: 'provider', reason: null },
-              mcp: { status: 'supported', ownership: 'shared', reason: null },
-              skills: { status: 'supported', ownership: 'shared', reason: null },
-              apiKeys: { status: 'supported', ownership: 'shared', reason: null },
-            },
+            extensions: createDefaultCliExtensionCapabilities({
+              plugins: { status: 'unsupported', ownership: 'provider-scoped', reason: null },
+            }),
           },
           connection: null,
           backend: null,

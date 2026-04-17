@@ -94,10 +94,10 @@ type TeamGraphConfigMemberSeedInput = Pick<
   NonNullable<TeamData['config']['members']>[number],
   'name' | 'agentId' | 'removedAt'
 >;
-type TeamGraphLayoutSessionState = {
+interface TeamGraphLayoutSessionState {
   mode: 'default' | 'manual';
   signature: string | null;
-};
+}
 
 export function isTeamDataRefreshPending(teamName: string): boolean {
   return (
@@ -1025,8 +1025,7 @@ function areTeamGraphSlotAssignmentsEqual(
   for (const [stableOwnerId, leftAssignment] of leftEntries) {
     const rightAssignment = right?.[stableOwnerId];
     if (
-      !rightAssignment ||
-      rightAssignment.ringIndex !== leftAssignment.ringIndex ||
+      rightAssignment?.ringIndex !== leftAssignment.ringIndex ||
       rightAssignment.sectorIndex !== leftAssignment.sectorIndex
     ) {
       return false;
@@ -2063,8 +2062,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           return (
             (nextAssignment.ringIndex === assignment.ringIndex &&
               nextAssignment.sectorIndex === assignment.sectorIndex) ||
-            (displacedAssignment != null &&
-              nextAssignment.ringIndex === displacedAssignment.ringIndex &&
+            (nextAssignment.ringIndex === displacedAssignment?.ringIndex &&
               nextAssignment.sectorIndex === displacedAssignment.sectorIndex)
           );
         }

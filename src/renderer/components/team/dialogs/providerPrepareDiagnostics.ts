@@ -5,15 +5,13 @@ import type { TeamProviderId, TeamProvisioningPrepareResult } from '@shared/type
 
 export type ProviderPrepareCheckStatus = 'ready' | 'notes' | 'failed';
 
-interface PrepareProvisioningFn {
-  (
-    cwd?: string,
-    providerId?: TeamProviderId,
-    providerIds?: TeamProviderId[],
-    selectedModels?: string[],
-    limitContext?: boolean
-  ): Promise<TeamProvisioningPrepareResult>;
-}
+type PrepareProvisioningFn = (
+  cwd?: string,
+  providerId?: TeamProviderId,
+  providerIds?: TeamProviderId[],
+  selectedModels?: string[],
+  limitContext?: boolean
+) => Promise<TeamProvisioningPrepareResult>;
 
 interface ProviderPrepareDiagnosticsProgress {
   details: string[];
@@ -156,15 +154,15 @@ function normalizeModelReason(rawReason: string | null | undefined): string | nu
     return 'Model verification timed out';
   }
 
-  const detailMatch = trimmed.match(/"detail":"((?:\\"|[^"])*)"/i);
+  const detailMatch = /"detail":"((?:\\"|[^"])*)"/i.exec(trimmed);
   if (detailMatch?.[1]) {
     return normalizeModelReason(detailMatch[1].replace(/\\"/g, '"').trim());
   }
 
-  const messageMatch = trimmed.match(/"message":"((?:\\"|[^"])*)"/i);
+  const messageMatch = /"message":"((?:\\"|[^"])*)"/i.exec(trimmed);
   if (messageMatch?.[1]) {
     const decodedMessage = messageMatch[1].replace(/\\"/g, '"');
-    const nestedDetailMatch = decodedMessage.match(/"detail":"([^"]+)"/i);
+    const nestedDetailMatch = /"detail":"([^"]+)"/i.exec(decodedMessage);
     if (nestedDetailMatch?.[1]) {
       return normalizeModelReason(nestedDetailMatch[1].trim());
     }
