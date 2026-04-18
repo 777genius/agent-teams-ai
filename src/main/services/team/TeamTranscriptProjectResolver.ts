@@ -204,37 +204,37 @@ export class TeamTranscriptProjectResolver {
     );
   }
 
-  private async listSessionDirIds(projectDir: string): Promise<string[]> {
+  private async readProjectDirEntries(projectDir: string): Promise<Dirent[] | null> {
     try {
-      const dirEntries = await fs.readdir(projectDir, { withFileTypes: true });
-      return dirEntries
-        .filter((entry) => entry.isDirectory() && isSessionDirectoryName(entry.name))
-        .map((entry) => entry.name);
+      return await fs.readdir(projectDir, { withFileTypes: true });
     } catch {
       logger.debug(`Cannot read transcript project dir: ${projectDir}`);
-      return [];
+      return null;
     }
   }
 
-  private async listTeamRootSessionIds(projectDir: string, teamName: string): Promise<string[]> {
-    let dirEntries: Dirent[];
-    try {
-      dirEntries = await fs.readdir(projectDir, { withFileTypes: true });
-    } catch {
-      logger.debug(`Cannot read transcript project dir: ${projectDir}`);
+  private async listSessionDirIds(projectDir: string): Promise<string[]> {
+    const dirEntries = await this.readProjectDirEntries(projectDir);
+    if (!dirEntries) {
       return [];
     }
 
-    const rootJsonlEntries = dirEntries.filter(
-      (entry) => entry.isFile() && entry.name.endsWith('.jsonl')
-    );
+    return dirEntries
+      .filter((entry) => entry.isDirectory() && isSessionDirectoryName(entry.name))
+      .map((entry) => entry.name);
+  }
+
+  private async collectRootJsonlSessionIds(
+    rootJsonlEntries: Dirent[],
+    projectDir: string,
+    teamName: string
+  ): Promise<string[]> {
     const discovered = new Set<string>();
     let nextIndex = 0;
 
-    const worker = async (): Promise<void> => {
+    const scanNextRootEntry = async (): Promise<void> => {
       while (nextIndex < rootJsonlEntries.length) {
-        const index = nextIndex++;
-        const entry = rootJsonlEntries[index];
+        const entry = rootJsonlEntries[nextIndex++];
         const filePath = path.join(projectDir, entry.name);
         if (!(await this.fileBelongsToTeam(filePath, teamName))) {
           continue;
@@ -245,11 +245,23 @@ export class TeamTranscriptProjectResolver {
 
     await Promise.all(
       Array.from({ length: Math.min(ROOT_DISCOVERY_CONCURRENCY, rootJsonlEntries.length) }, () =>
-        worker()
+        scanNextRootEntry()
       )
     );
 
     return [...discovered];
+  }
+
+  private async listTeamRootSessionIds(projectDir: string, teamName: string): Promise<string[]> {
+    const dirEntries = await this.readProjectDirEntries(projectDir);
+    if (!dirEntries) {
+      return [];
+    }
+
+    const rootJsonlEntries = dirEntries.filter(
+      (entry) => entry.isFile() && entry.name.endsWith('.jsonl')
+    );
+    return this.collectRootJsonlSessionIds(rootJsonlEntries, projectDir, teamName);
   }
 
   private async fileBelongsToTeam(filePath: string, teamName: string): Promise<boolean> {
