@@ -13,6 +13,7 @@ import { createLogger } from '@shared/utils/logger';
 import { type IpcMain, type IpcMainInvokeEvent } from 'electron';
 
 import { DataCache } from '../services';
+import { stripSessionDetailMessages } from '../services/analysis/sessionDetailPayload';
 import {
   type ConversationGroup,
   type PaginatedSessionsResult,
@@ -247,8 +248,12 @@ async function handleGetSessionDetail(
     );
     session.hasSubagents = subagents.length > 0;
 
-    // Build session detail with chunks
-    sessionDetail = chunkBuilder.buildSessionDetail(session, parsedSession.messages, subagents);
+    // Build session detail with chunks. Strip the raw `messages` array before
+    // caching/returning — the renderer only consumes chunks/processes/session,
+    // and including messages doubled IPC payload size and cache footprint.
+    sessionDetail = stripSessionDetailMessages(
+      chunkBuilder.buildSessionDetail(session, parsedSession.messages, subagents)
+    );
 
     // Cache the result
     dataCache.set(cacheKey, sessionDetail);

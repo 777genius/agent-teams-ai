@@ -2,8 +2,15 @@
  * Cache-related constants.
  */
 
-/** Maximum number of sessions to cache */
-export const MAX_CACHE_SESSIONS = 5;
+/**
+ * Maximum number of session details retained in the in-memory LRU cache.
+ *
+ * Users regularly juggle dozens of sessions — the previous cap of 5 caused
+ * constant re-parsing of large JSONL files on every session switch. Raised
+ * now that the per-entry footprint is bounded (the raw `messages` array is
+ * stripped before caching; see `stripSessionDetailMessages`).
+ */
+export const MAX_CACHE_SESSIONS = 20;
 
 /** Cache TTL in minutes */
 export const CACHE_TTL_MINUTES = 5;
