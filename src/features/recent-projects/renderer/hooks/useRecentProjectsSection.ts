@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type DashboardRecentProject } from '@features/recent-projects/contracts';
 import { api, isElectronMode } from '@renderer/api';
 import { useStore } from '@renderer/store';
-import { buildTaskCountsByProject, normalizePath } from '@renderer/utils/pathNormalize';
+import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
+import { buildTaskCountsByProject } from '@renderer/utils/pathNormalize';
 import { useShallow } from 'zustand/react/shallow';
 
 import { adaptRecentProjectsSection } from '../adapters/RecentProjectsSectionAdapter';
@@ -11,6 +12,7 @@ import {
   sortRecentProjectsByDisplayPriority,
   subscribeRecentProjectOpenHistory,
 } from '../utils/recentProjectOpenHistory';
+import { buildActiveTeamsByProject } from '../utils/activeProjectTeams';
 import {
   getRecentProjectsClientSnapshot,
   loadRecentProjectsWithClientCache,
@@ -62,16 +64,27 @@ export function useRecentProjectsSection(
   openProjectPath: (projectPath: string) => Promise<void>;
   selectProjectFolder: () => Promise<void>;
 } {
-  const { globalTasks, globalTasksInitialized, globalTasksLoading, fetchAllTasks, teams } =
-    useStore(
-      useShallow((state) => ({
-        globalTasks: state.globalTasks,
-        globalTasksInitialized: state.globalTasksInitialized,
-        globalTasksLoading: state.globalTasksLoading,
-        fetchAllTasks: state.fetchAllTasks,
-        teams: state.teams,
-      }))
-    );
+  const {
+    globalTasks,
+    globalTasksInitialized,
+    globalTasksLoading,
+    fetchAllTasks,
+    teams,
+    provisioningRuns,
+    currentProvisioningRunIdByTeam,
+    provisioningSnapshotByTeam,
+  } = useStore(
+    useShallow((state) => ({
+      globalTasks: state.globalTasks,
+      globalTasksInitialized: state.globalTasksInitialized,
+      globalTasksLoading: state.globalTasksLoading,
+      fetchAllTasks: state.fetchAllTasks,
+      teams: state.teams,
+      provisioningRuns: state.provisioningRuns,
+      currentProvisioningRunIdByTeam: state.currentProvisioningRunIdByTeam,
+      provisioningSnapshotByTeam: state.provisioningSnapshotByTeam,
+    }))
+  );
   const initialSnapshot = useMemo(() => getRecentProjectsClientSnapshot(), []);
   const { openRecentProject, openProjectPath, selectProjectFolder } = useOpenRecentProject();
   const [recentProjects, setRecentProjects] = useState<DashboardRecentProject[]>(
@@ -91,6 +104,21 @@ export function useRecentProjectsSection(
   const hasFetchedTasksRef = useRef(globalTasksInitialized);
   const recentProjectsRef = useRef<DashboardRecentProject[]>(
     initialSnapshot?.payload.projects ?? []
+  );
+  const provisioningState = useMemo(
+    () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
+    [currentProvisioningRunIdByTeam, provisioningRuns]
+  );
+  const provisioningTeamNames = useMemo(
+    () =>
+      Object.keys(currentProvisioningRunIdByTeam).filter((teamName) =>
+        isTeamProvisioningActive(provisioningState, teamName)
+      ),
+    [currentProvisioningRunIdByTeam, provisioningState]
+  );
+  const provisioningTeamNamesKey = useMemo(
+    () => [...provisioningTeamNames].sort().join('\u0000'),
+    [provisioningTeamNames]
   );
 
   useEffect(() => {
@@ -173,7 +201,7 @@ export function useRecentProjectsSection(
     return () => {
       cancelled = true;
     };
-  }, [teams]);
+  }, [provisioningTeamNamesKey, teams]);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -189,25 +217,13 @@ export function useRecentProjectsSection(
   const taskCountsByProject = useMemo(() => buildTaskCountsByProject(globalTasks), [globalTasks]);
 
   const activeTeamsByProject = useMemo(() => {
-    const aliveSet = new Set(aliveTeams);
-    const teamsByProject = new Map<string, TeamSummary[]>();
-
-    for (const team of teams) {
-      if (!team.projectPath || !aliveSet.has(team.teamName)) {
-        continue;
-      }
-
-      const key = normalizePath(team.projectPath);
-      const existing = teamsByProject.get(key);
-      if (existing) {
-        existing.push(team);
-      } else {
-        teamsByProject.set(key, [team]);
-      }
-    }
-
-    return teamsByProject;
-  }, [aliveTeams, teams]);
+    return buildActiveTeamsByProject({
+      teams,
+      aliveTeamNames: aliveTeams,
+      provisioningTeamNames,
+      provisioningSnapshotByTeam,
+    });
+  }, [aliveTeams, provisioningSnapshotByTeam, provisioningTeamNames, teams]);
 
   const decoratedCards = useMemo(
     () =>
