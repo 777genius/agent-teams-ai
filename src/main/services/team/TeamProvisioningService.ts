@@ -205,6 +205,9 @@ const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const RUN_TIMEOUT_MS = 300_000;
 const VERIFY_TIMEOUT_MS = 15_000;
 const VERIFY_POLL_MS = 500;
+const MCP_PREFLIGHT_SHUTDOWN_GRACE_MS = 250;
+const MCP_PREFLIGHT_SHUTDOWN_TIMEOUT_MS = 2_000;
+const MCP_PREFLIGHT_SHUTDOWN_POLL_MS = 50;
 const STDERR_RING_LIMIT = 64 * 1024;
 const STDOUT_RING_LIMIT = 64 * 1024;
 // Progress emissions fan out the latest CLI tail + assistant output to the
@@ -1002,6 +1005,39 @@ async function waitForPidsToExit(
     }
     await sleep(opts.pollMs);
   }
+}
+
+async function waitForChildProcessToExit(
+  child: ChildProcess | null | undefined,
+  timeoutMs: number
+): Promise<void> {
+  if (!child?.pid || !isProcessAlive(child.pid)) {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+    const finish = (): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+      child.off('close', finish);
+      child.off('exit', finish);
+      child.off('error', finish);
+      resolve();
+    };
+
+    timeoutHandle = setTimeout(finish, timeoutMs);
+    child.once('close', finish);
+    child.once('exit', finish);
+    child.once('error', finish);
+  });
 }
 
 async function tryReadRegularFileUtf8(
@@ -13588,11 +13624,26 @@ export class TeamProvisioningService {
       throw new Error(this.buildAgentTeamsMcpValidationError(errorText));
     } finally {
       rejectAll(new Error('agent-teams MCP preflight session closed'));
-      if (child?.stdin && !child.stdin.destroyed) {
-        child.stdin.end();
+      if (child?.stdin && !child.stdin.destroyed && !child.stdin.writableEnded) {
+        const stdin = child.stdin;
+        await new Promise<void>((resolve) => {
+          try {
+            stdin.end(() => resolve());
+          } catch {
+            resolve();
+          }
+        });
       }
-      if (child) {
-        killProcessTree(child);
+      if (child?.pid) {
+        await waitForChildProcessToExit(child, MCP_PREFLIGHT_SHUTDOWN_GRACE_MS);
+        if (isProcessAlive(child.pid)) {
+          killProcessTree(child);
+          await waitForPidsToExit([child.pid], {
+            timeoutMs: MCP_PREFLIGHT_SHUTDOWN_TIMEOUT_MS,
+            pollMs: MCP_PREFLIGHT_SHUTDOWN_POLL_MS,
+          });
+          await waitForChildProcessToExit(child, MCP_PREFLIGHT_SHUTDOWN_GRACE_MS);
+        }
       }
       await fs.promises.rm(fixture.claudeDir, { recursive: true, force: true }).catch(() => {});
     }

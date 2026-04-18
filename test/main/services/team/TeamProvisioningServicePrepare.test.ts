@@ -144,6 +144,26 @@ process.stdin.on('data', (chunk) => {
   return scriptPath;
 }
 
+async function removeTempRoot(dirPath: string): Promise<void> {
+  if (!dirPath) {
+    return;
+  }
+
+  const maxAttempts = process.platform === 'win32' ? 20 : 1;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await fs.promises.rm(dirPath, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if ((code !== 'EBUSY' && code !== 'EPERM') || attempt === maxAttempts) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+}
+
 describe('TeamProvisioningService prepare/auth behavior', () => {
   let tempRoot = '';
 
@@ -166,13 +186,8 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     delete process.env.ANTHROPIC_AUTH_TOKEN;
   });
 
-  afterEach(() => {
-    fs.rmSync(tempRoot, {
-      recursive: true,
-      force: true,
-      maxRetries: 5,
-      retryDelay: 200,
-    });
+  afterEach(async () => {
+    await removeTempRoot(tempRoot);
   });
 
   it('does not create missing directories during prepareForProvisioning', async () => {
