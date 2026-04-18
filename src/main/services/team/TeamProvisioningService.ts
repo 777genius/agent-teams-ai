@@ -14,6 +14,7 @@ import {
   getTasksBasePath,
   getTeamsBasePath,
 } from '@main/utils/pathDecoder';
+import { isProcessAlive } from '@main/utils/processHealth';
 import { killProcessByPid } from '@main/utils/processKill';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import { shouldAutoAllow } from '@main/utils/toolApprovalRules';
@@ -168,8 +169,12 @@ import type {
   PersistedTeamLaunchPhase,
   PersistedTeamLaunchSummary,
   TeamChangeEvent,
+  TeamConfig,
   TeamCreateRequest,
   TeamCreateResponse,
+  TeamAgentRuntimeBackendType,
+  TeamAgentRuntimeEntry,
+  TeamAgentRuntimeSnapshot,
   TeamLaunchAggregateState,
   TeamLaunchRequest,
   TeamLaunchResponse,
@@ -789,7 +794,9 @@ function createInitialMemberSpawnStatusEntry(): MemberSpawnStatusEntry {
 }
 
 interface LiveTeamAgentRuntimeMetadata {
+  pid?: number;
   model?: string;
+  rssBytes?: number;
 }
 
 function stripWrappedCliFlagValue(raw: string | undefined): string | undefined {
@@ -865,6 +872,24 @@ function deriveMemberLaunchState(entry: {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForPidsToExit(
+  pids: readonly number[],
+  opts: { timeoutMs: number; pollMs: number }
+): Promise<void> {
+  if (pids.length === 0) {
+    return;
+  }
+
+  const deadline = Date.now() + opts.timeoutMs;
+  while (Date.now() < deadline) {
+    const remaining = pids.filter((pid) => isProcessAlive(pid));
+    if (remaining.length === 0) {
+      return;
+    }
+    await sleep(opts.pollMs);
+  }
 }
 
 async function tryReadRegularFileUtf8(
@@ -1404,6 +1429,52 @@ export function buildAddMemberSpawnMessage(
   return (
     `A new teammate "${member.name}"${roleHint} has been added to the team. ` +
     `Please spawn them immediately using the **Agent** tool with team_name="${teamName}", name="${member.name}", subagent_type="general-purpose"${providerPart}${modelPart}${effortPart}, and the exact prompt below:${workflowHint}\n\n` +
+    indentMultiline(prompt, '  ')
+  );
+}
+
+export function buildRestartMemberSpawnMessage(
+  teamName: string,
+  displayName: string,
+  leadName: string,
+  member: Pick<
+    TeamCreateRequest['members'][number],
+    'name' | 'role' | 'workflow' | 'providerId' | 'model' | 'effort'
+  >
+): string {
+  const roleHint =
+    typeof member.role === 'string' && member.role.trim()
+      ? ` with role "${member.role.trim()}"`
+      : '';
+  const workflowHint =
+    typeof member.workflow === 'string' && member.workflow.trim()
+      ? ` Their workflow: ${member.workflow.trim()}`
+      : '';
+
+  const prompt = buildMemberSpawnPrompt(
+    {
+      name: member.name,
+      ...(member.role ? { role: member.role } : {}),
+      ...(member.workflow ? { workflow: member.workflow } : {}),
+      ...(member.providerId ? { providerId: member.providerId } : {}),
+      ...(member.model ? { model: member.model } : {}),
+      ...(member.effort ? { effort: member.effort } : {}),
+    },
+    displayName,
+    teamName,
+    leadName
+  );
+  const providerPart =
+    member.providerId && member.providerId !== 'anthropic'
+      ? `, provider="${member.providerId}"`
+      : '';
+  const modelPart = member.model?.trim() ? `, model="${member.model.trim()}"` : '';
+  const effortPart = member.effort ? `, effort="${member.effort}"` : '';
+
+  return (
+    `Teammate "${member.name}"${roleHint} was restarted from the UI. ` +
+    `Please respawn them immediately using the **Agent** tool with team_name="${teamName}", name="${member.name}", subagent_type="general-purpose"${providerPart}${modelPart}${effortPart}, and the exact prompt below. ` +
+    `This is a restart of an existing persistent teammate, not a new teammate.${workflowHint ? workflowHint : ''}\n\n` +
     indentMultiline(prompt, '  ')
   );
 }
@@ -2290,6 +2361,7 @@ export class TeamProvisioningService {
   private static readonly SAME_TEAM_MATCH_WINDOW_MS = 30_000;
   private static readonly SAME_TEAM_RUN_START_SKEW_MS = 1_000;
   private static readonly SAME_TEAM_PERSIST_RETRY_MS = 2_000;
+  private static readonly AGENT_RUNTIME_SNAPSHOT_CACHE_TTL_MS = 2_000;
 
   private readonly runs = new Map<string, ProvisioningRun>();
   private readonly provisioningRunByTeam = new Map<string, string>();
@@ -2305,6 +2377,10 @@ export class TeamProvisioningService {
   private readonly recentSameTeamNativeFingerprints = new Map<
     string,
     NativeSameTeamFingerprint[]
+  >();
+  private readonly agentRuntimeSnapshotCache = new Map<
+    string,
+    { expiresAtMs: number; snapshot: TeamAgentRuntimeSnapshot }
   >();
   private readonly launchStateStore = new TeamLaunchStateStore();
   private readonly memberLogsFinder: TeamMemberLogsFinder;
@@ -3726,6 +3802,260 @@ export class TeamProvisioningService {
       summary: snapshot.summary,
       source: persisted ? 'merged' : 'live',
     };
+  }
+
+  async getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot> {
+    const cached = this.agentRuntimeSnapshotCache.get(teamName);
+    if (cached && cached.expiresAtMs > Date.now()) {
+      return cached.snapshot;
+    }
+
+    const updatedAt = nowIso();
+    const runId = this.getTrackedRunId(teamName);
+    const run = runId ? (this.runs.get(runId) ?? null) : null;
+
+    let configuredMembers: TeamConfig['members'] = [];
+    try {
+      configuredMembers = (await this.configReader.getConfig(teamName))?.members ?? [];
+    } catch {
+      configuredMembers = [];
+    }
+
+    const unixProcessRows = this.readUnixProcessTableRows();
+    const liveRuntimeByMember = this.getLiveTeamAgentRuntimeMetadata(teamName, unixProcessRows);
+    const persistedRuntimeMembers = this.readPersistedRuntimeMembers(teamName);
+    const snapshotMembers: Record<string, TeamAgentRuntimeEntry> = {};
+
+    const getPersistedRuntimeMember = (
+      memberName: string
+    ): PersistedRuntimeMemberLike | undefined => {
+      return persistedRuntimeMembers.find((member) => {
+        const candidateName = typeof member.name === 'string' ? member.name.trim() : '';
+        if (!candidateName) return false;
+        if (candidateName === memberName) return true;
+        const parsed = parseNumericSuffixName(candidateName);
+        return parsed !== null && parsed.suffix >= 2 && parsed.base === memberName;
+      });
+    };
+
+    const getLiveRuntimeMember = (memberName: string): LiveTeamAgentRuntimeMetadata | undefined => {
+      let fallback: LiveTeamAgentRuntimeMetadata | undefined;
+      for (const [candidateName, metadata] of liveRuntimeByMember.entries()) {
+        if (candidateName === memberName) {
+          return metadata;
+        }
+        const parsed = parseNumericSuffixName(candidateName);
+        if (parsed !== null && parsed.suffix >= 2 && parsed.base === memberName) {
+          fallback = metadata;
+        }
+      }
+      return fallback;
+    };
+
+    const normalizeBackendType = (
+      value: string | undefined,
+      isLead: boolean
+    ): TeamAgentRuntimeBackendType | undefined => {
+      if (isLead) return 'lead';
+      const normalized = value?.trim().toLowerCase();
+      if (normalized === 'tmux' || normalized === 'iterm2' || normalized === 'in-process') {
+        return normalized;
+      }
+      return normalized ? 'process' : undefined;
+    };
+
+    for (const member of configuredMembers) {
+      const memberName = typeof member?.name === 'string' ? member.name.trim() : '';
+      if (!memberName) continue;
+
+      const isLead = isLeadMember({ name: memberName, agentType: member.agentType });
+      if (isLead) {
+        const pid = run?.child?.pid;
+        const rssBytes = pid ? this.lookupProcessRssBytes(pid, unixProcessRows) : undefined;
+        const runtimeModel =
+          run?.request.model?.trim() ||
+          (run?.spawnContext
+            ? extractCliFlagValue(run.spawnContext.args.join(' '), '--model')
+            : undefined) ||
+          member.model?.trim() ||
+          undefined;
+        snapshotMembers[memberName] = {
+          memberName,
+          alive: Boolean(pid && !run?.processKilled && !run?.cancelRequested),
+          restartable: false,
+          backendType: 'lead',
+          ...(pid ? { pid } : {}),
+          ...(runtimeModel ? { runtimeModel } : {}),
+          ...(rssBytes != null ? { rssBytes } : {}),
+          updatedAt,
+        };
+        continue;
+      }
+
+      const persistedRuntimeMember = getPersistedRuntimeMember(memberName);
+      const liveRuntimeMember = getLiveRuntimeMember(memberName);
+      const backendType = normalizeBackendType(persistedRuntimeMember?.backendType, false);
+      const restartable = backendType !== 'in-process';
+      const runtimeModel = liveRuntimeMember?.model ?? member.model?.trim() ?? undefined;
+
+      snapshotMembers[memberName] = {
+        memberName,
+        alive: Boolean(liveRuntimeMember?.pid),
+        restartable,
+        ...(backendType ? { backendType } : {}),
+        ...(liveRuntimeMember?.pid ? { pid: liveRuntimeMember.pid } : {}),
+        ...(runtimeModel ? { runtimeModel } : {}),
+        ...(liveRuntimeMember?.rssBytes != null ? { rssBytes: liveRuntimeMember.rssBytes } : {}),
+        updatedAt,
+      };
+    }
+
+    const snapshot: TeamAgentRuntimeSnapshot = {
+      teamName,
+      updatedAt,
+      runId: run?.runId ?? null,
+      members: snapshotMembers,
+    };
+
+    this.agentRuntimeSnapshotCache.set(teamName, {
+      expiresAtMs: Date.now() + TeamProvisioningService.AGENT_RUNTIME_SNAPSHOT_CACHE_TTL_MS,
+      snapshot,
+    });
+    return snapshot;
+  }
+
+  async restartMember(teamName: string, memberName: string): Promise<void> {
+    const runId = this.getAliveRunId(teamName);
+    if (!runId) {
+      throw new Error(`Team "${teamName}" is not currently running`);
+    }
+    const run = this.runs.get(runId);
+    if (!run || run.processKilled || run.cancelRequested) {
+      throw new Error(`Team "${teamName}" is not currently running`);
+    }
+
+    const config = await this.configReader.getConfig(teamName);
+    const configuredMembers = config?.members ?? [];
+    const configuredMember = configuredMembers.find(
+      (member) => member?.name?.trim() === memberName
+    );
+    if (!configuredMember) {
+      throw new Error(`Member "${memberName}" is not configured in team "${teamName}"`);
+    }
+    if (configuredMember.removedAt) {
+      throw new Error(`Member "${memberName}" has been removed`);
+    }
+    if (isLeadMember({ name: memberName, agentType: configuredMember.agentType })) {
+      throw new Error('Lead restart is not supported from member controls');
+    }
+
+    const persistedRuntimeMembers = this.readPersistedRuntimeMembers(teamName).filter((member) => {
+      const candidateName = typeof member.name === 'string' ? member.name.trim() : '';
+      if (!candidateName) return false;
+      if (candidateName === memberName) return true;
+      const parsed = parseNumericSuffixName(candidateName);
+      return parsed !== null && parsed.suffix >= 2 && parsed.base === memberName;
+    });
+
+    const backendTypes = new Set(
+      persistedRuntimeMembers
+        .map((member) => member.backendType?.trim().toLowerCase())
+        .filter((value): value is string => Boolean(value))
+    );
+    if (backendTypes.has('in-process')) {
+      throw new Error(
+        `Member "${memberName}" uses an in-process runtime and cannot be restarted here`
+      );
+    }
+
+    const unixProcessRows = this.readUnixProcessTableRows();
+    const liveRuntimeByMember = this.getLiveTeamAgentRuntimeMetadata(teamName, unixProcessRows);
+    const livePids = new Set<number>();
+    for (const [candidateName, metadata] of liveRuntimeByMember.entries()) {
+      if (candidateName === memberName) {
+        if (metadata.pid) livePids.add(metadata.pid);
+        continue;
+      }
+      const parsed = parseNumericSuffixName(candidateName);
+      if (parsed !== null && parsed.suffix >= 2 && parsed.base === memberName && metadata.pid) {
+        livePids.add(metadata.pid);
+      }
+    }
+
+    for (const persistedRuntimeMember of persistedRuntimeMembers) {
+      const paneId =
+        typeof persistedRuntimeMember.tmuxPaneId === 'string'
+          ? persistedRuntimeMember.tmuxPaneId.trim()
+          : '';
+      const backendType = persistedRuntimeMember.backendType?.trim().toLowerCase();
+      if (!paneId || backendType !== 'tmux') {
+        continue;
+      }
+      try {
+        killTmuxPaneForCurrentPlatformSync(paneId);
+        logger.info(
+          `[${teamName}] Killed teammate pane ${memberName} (${paneId}) for manual restart`
+        );
+      } catch (error) {
+        logger.debug(
+          `[${teamName}] Failed to kill teammate pane ${memberName} (${paneId}) for manual restart: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+    }
+
+    for (const pid of livePids) {
+      try {
+        killProcessByPid(pid);
+      } catch (error) {
+        logger.debug(
+          `[${teamName}] Failed to kill teammate process ${memberName} pid=${pid} for manual restart: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+    }
+
+    if (livePids.size > 0) {
+      await waitForPidsToExit(Array.from(livePids), {
+        timeoutMs: 1_500,
+        pollMs: 100,
+      });
+    }
+
+    this.agentRuntimeSnapshotCache.delete(teamName);
+    this.setMemberSpawnStatus(run, memberName, 'offline');
+    this.setMemberSpawnStatus(run, memberName, 'spawning');
+    this.appendMemberBootstrapDiagnostic(run, memberName, 'manual restart requested from UI');
+
+    const leadName =
+      configuredMembers.find((member) => isLeadMember(member))?.name?.trim() || 'team-lead';
+    const restartMessage = buildRestartMemberSpawnMessage(
+      teamName,
+      config?.name?.trim() || teamName,
+      leadName,
+      {
+        name: memberName,
+        role: configuredMember.role,
+        workflow: configuredMember.workflow,
+        providerId: configuredMember.providerId,
+        model: configuredMember.model,
+        effort: configuredMember.effort,
+      }
+    );
+
+    try {
+      await this.sendMessageToRun(run, restartMessage);
+    } catch (error) {
+      this.setMemberSpawnStatus(
+        run,
+        memberName,
+        'error',
+        error instanceof Error ? error.message : String(error)
+      );
+      throw error;
+    }
   }
 
   private getMemberLaunchGraceKey(run: ProvisioningRun, memberName: string): string {
@@ -7275,27 +7605,84 @@ export class TeamProvisioningService {
     return new Set(this.getLiveTeamAgentRuntimeMetadata(teamName).keys());
   }
 
-  private getLiveTeamAgentRuntimeMetadata(
-    teamName: string
-  ): Map<string, LiveTeamAgentRuntimeMetadata> {
+  private readUnixProcessTableRows(): Array<{
+    pid: number;
+    rssBytes?: number;
+    command: string;
+  }> {
     if (process.platform === 'win32') {
-      return new Map();
+      return [];
     }
 
     let output = '';
     try {
-      output = execFileSync('ps', ['-ax', '-o', 'command='], {
+      output = execFileSync('ps', ['-ax', '-o', 'pid=,rss=,command='], {
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'ignore'],
       });
     } catch {
-      return new Map();
+      return [];
     }
 
-    const teamMarker = `--team-name ${teamName}`;
-    const metadataByAgent = new Map<string, LiveTeamAgentRuntimeMetadata>();
+    const rows: Array<{ pid: number; rssBytes?: number; command: string }> = [];
     for (const line of output.split('\n')) {
       const trimmed = line.trim();
+      if (!trimmed) continue;
+      const match = /^(\d+)\s+(\d+)\s+(.*)$/.exec(trimmed);
+      if (!match) continue;
+      const pid = Number.parseInt(match[1], 10);
+      const rssKb = Number.parseInt(match[2], 10);
+      const command = match[3]?.trim() ?? '';
+      if (!Number.isFinite(pid) || pid <= 0 || command.length === 0) {
+        continue;
+      }
+      rows.push({
+        pid,
+        ...(Number.isFinite(rssKb) && rssKb >= 0 ? { rssBytes: rssKb * 1024 } : {}),
+        command,
+      });
+    }
+    return rows;
+  }
+
+  private lookupProcessRssBytes(
+    pid: number,
+    unixProcessRows?: Array<{ pid: number; rssBytes?: number; command: string }>
+  ): number | undefined {
+    if (!Number.isFinite(pid) || pid <= 0) {
+      return undefined;
+    }
+
+    const cached = unixProcessRows?.find((row) => row.pid === pid);
+    if (cached) {
+      return cached.rssBytes;
+    }
+
+    if (process.platform === 'win32') {
+      return undefined;
+    }
+
+    try {
+      const output = execFileSync('ps', ['-o', 'rss=', '-p', String(pid)], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      });
+      const rssKb = Number.parseInt(output.trim(), 10);
+      return Number.isFinite(rssKb) && rssKb >= 0 ? rssKb * 1024 : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private getLiveTeamAgentRuntimeMetadata(
+    teamName: string,
+    unixProcessRows?: Array<{ pid: number; rssBytes?: number; command: string }>
+  ): Map<string, LiveTeamAgentRuntimeMetadata> {
+    const teamMarker = `--team-name ${teamName}`;
+    const metadataByAgent = new Map<string, LiveTeamAgentRuntimeMetadata>();
+    const rows = unixProcessRows ?? this.readUnixProcessTableRows();
+    for (const row of rows) {
+      const trimmed = row.command.trim();
       if (!trimmed.includes(teamMarker)) continue;
       const match = /--agent-id\s+([^\s@]+)@/.exec(trimmed);
       if (!match) continue;
@@ -7303,7 +7690,9 @@ export class TeamProvisioningService {
       if (agentName) {
         const model = extractCliFlagValue(trimmed, '--model');
         metadataByAgent.set(agentName, {
+          pid: row.pid,
           ...(model ? { model } : {}),
+          ...(row.rssBytes != null ? { rssBytes: row.rssBytes } : {}),
         });
       }
     }
@@ -8103,6 +8492,7 @@ export class TeamProvisioningService {
    * Always uses SIGKILL via killTeamProcess() to prevent CLI cleanup.
    */
   stopTeam(teamName: string): void {
+    this.agentRuntimeSnapshotCache.delete(teamName);
     this.stopPersistentTeamMembers(teamName);
 
     const runId = this.getTrackedRunId(teamName);
@@ -10700,6 +11090,7 @@ export class TeamProvisioningService {
       this.aliveRunByTeam.delete(run.teamName);
     }
     if (!hasNewerTrackedRun) {
+      this.agentRuntimeSnapshotCache.delete(run.teamName);
       this.leadInboxRelayInFlight.delete(run.teamName);
       this.relayedLeadInboxMessageIds.delete(run.teamName);
       this.pendingCrossTeamFirstReplies.delete(run.teamName);

@@ -145,6 +145,7 @@ import {
   TEAM_LEAD_CONTEXT,
   TEAM_LIST,
   TEAM_MEMBER_SPAWN_STATUSES,
+  TEAM_GET_AGENT_RUNTIME,
   TEAM_PERMANENTLY_DELETE,
   TEAM_PREPARE_PROVISIONING,
   TEAM_PROCESS_ALIVE,
@@ -156,6 +157,7 @@ import {
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REPLACE_MEMBERS,
   TEAM_REQUEST_REVIEW,
+  TEAM_RESTART_MEMBER,
   TEAM_RESTORE,
   TEAM_RESTORE_TASK,
   TEAM_SAVE_TASK_ATTACHMENT,
@@ -265,6 +267,7 @@ import type {
   LeadContextUsageSnapshot,
   MemberFullStats,
   MemberLogSummary,
+  TeamAgentRuntimeSnapshot,
   MemberSpawnStatusesSnapshot,
   MessagesPage,
   NotificationTrigger,
@@ -1062,6 +1065,12 @@ const electronAPI: ElectronAPI = {
     },
     getMemberSpawnStatuses: async (teamName: string) => {
       return invokeIpcWithResult<MemberSpawnStatusesSnapshot>(TEAM_MEMBER_SPAWN_STATUSES, teamName);
+    },
+    getTeamAgentRuntime: async (teamName: string) => {
+      return invokeIpcWithResult<TeamAgentRuntimeSnapshot>(TEAM_GET_AGENT_RUNTIME, teamName);
+    },
+    restartMember: async (teamName: string, memberName: string) => {
+      return invokeIpcWithResult<void>(TEAM_RESTART_MEMBER, teamName, memberName);
     },
     softDeleteTask: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<void>(TEAM_SOFT_DELETE_TASK, teamName, taskId);

@@ -18,6 +18,7 @@ import {
   TEAM_DELETE_TEAM,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
+  TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_CLAUDE_LOGS,
   TEAM_GET_DATA,
   TEAM_GET_DELETED_TASKS,
@@ -50,6 +51,7 @@ import {
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REPLACE_MEMBERS,
   TEAM_REQUEST_REVIEW,
+  TEAM_RESTART_MEMBER,
   TEAM_RESTORE,
   TEAM_RESTORE_TASK,
   TEAM_SAVE_TASK_ATTACHMENT,
@@ -162,6 +164,7 @@ import type {
   LeadContextUsageSnapshot,
   MemberFullStats,
   MemberLogSummary,
+  TeamAgentRuntimeSnapshot,
   MemberSpawnStatusesSnapshot,
   MessagesPage,
   SendMessageRequest,
@@ -552,6 +555,8 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_LEAD_ACTIVITY, handleLeadActivity);
   ipcMain.handle(TEAM_LEAD_CONTEXT, handleLeadContext);
   ipcMain.handle(TEAM_MEMBER_SPAWN_STATUSES, handleMemberSpawnStatuses);
+  ipcMain.handle(TEAM_GET_AGENT_RUNTIME, handleGetAgentRuntime);
+  ipcMain.handle(TEAM_RESTART_MEMBER, handleRestartMember);
   ipcMain.handle(TEAM_SOFT_DELETE_TASK, handleSoftDeleteTask);
   ipcMain.handle(TEAM_RESTORE_TASK, handleRestoreTask);
   ipcMain.handle(TEAM_GET_DELETED_TASKS, handleGetDeletedTasks);
@@ -625,6 +630,8 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_LEAD_ACTIVITY);
   ipcMain.removeHandler(TEAM_LEAD_CONTEXT);
   ipcMain.removeHandler(TEAM_MEMBER_SPAWN_STATUSES);
+  ipcMain.removeHandler(TEAM_GET_AGENT_RUNTIME);
+  ipcMain.removeHandler(TEAM_RESTART_MEMBER);
   ipcMain.removeHandler(TEAM_SOFT_DELETE_TASK);
   ipcMain.removeHandler(TEAM_RESTORE_TASK);
   ipcMain.removeHandler(TEAM_GET_DELETED_TASKS);
@@ -2755,6 +2762,37 @@ async function handleMemberSpawnStatuses(
   }
   return wrapTeamHandler('memberSpawnStatuses', async () =>
     getTeamProvisioningService().getMemberSpawnStatuses(validated.value!)
+  );
+}
+
+async function handleGetAgentRuntime(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown
+): Promise<IpcResult<TeamAgentRuntimeSnapshot>> {
+  const validated = validateTeamName(teamName);
+  if (!validated.valid) {
+    return { success: false, error: validated.error ?? 'Invalid teamName' };
+  }
+  return wrapTeamHandler('getAgentRuntime', async () =>
+    getTeamProvisioningService().getTeamAgentRuntimeSnapshot(validated.value!)
+  );
+}
+
+async function handleRestartMember(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  memberName: unknown
+): Promise<IpcResult<void>> {
+  const validatedTeamName = validateTeamName(teamName);
+  if (!validatedTeamName.valid) {
+    return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
+  }
+  const validatedMemberName = validateMemberName(memberName);
+  if (!validatedMemberName.valid) {
+    return { success: false, error: validatedMemberName.error ?? 'Invalid memberName' };
+  }
+  return wrapTeamHandler('restartMember', async () =>
+    getTeamProvisioningService().restartMember(validatedTeamName.value!, validatedMemberName.value!)
   );
 }
 

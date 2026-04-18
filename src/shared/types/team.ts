@@ -870,6 +870,26 @@ export interface MemberSpawnStatusesSnapshot {
 
 export type MemberSpawnLivenessSource = 'heartbeat' | 'process';
 
+export type TeamAgentRuntimeBackendType = 'lead' | 'tmux' | 'iterm2' | 'in-process' | 'process';
+
+export interface TeamAgentRuntimeEntry {
+  memberName: string;
+  alive: boolean;
+  restartable: boolean;
+  backendType?: TeamAgentRuntimeBackendType;
+  pid?: number;
+  runtimeModel?: string;
+  rssBytes?: number;
+  updatedAt: string;
+}
+
+export interface TeamAgentRuntimeSnapshot {
+  teamName: string;
+  updatedAt: string;
+  runId: string | null;
+  members: Record<string, TeamAgentRuntimeEntry>;
+}
+
 export interface TeamChangeEvent {
   type:
     | 'config'

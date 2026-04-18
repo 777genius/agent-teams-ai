@@ -10,6 +10,7 @@ import type { TeamLaunchParams } from '@renderer/store/slices/teamSlice';
 import type { TaskStatusCounts } from '@renderer/utils/pathNormalize';
 import type {
   LeadActivityState,
+  TeamAgentRuntimeEntry,
   MemberSpawnStatusEntry,
   ResolvedTeamMember,
   TeamTaskWithKanban,
@@ -21,6 +22,7 @@ interface MemberListProps {
   taskMap?: Map<string, TeamTaskWithKanban>;
   pendingRepliesByMember?: Record<string, number>;
   memberSpawnStatuses?: Map<string, MemberSpawnStatusEntry>;
+  memberRuntimeEntries?: Map<string, TeamAgentRuntimeEntry>;
   isLaunchSettling?: boolean;
   isTeamAlive?: boolean;
   isTeamProvisioning?: boolean;
@@ -169,6 +171,30 @@ function areLaunchParamsEquivalent(
   );
 }
 
+function areMemberRuntimeEntriesEquivalent(
+  left: Map<string, TeamAgentRuntimeEntry> | undefined,
+  right: Map<string, TeamAgentRuntimeEntry> | undefined
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+  if (left.size !== right.size) return false;
+  for (const [key, leftEntry] of left) {
+    const rightEntry = right.get(key);
+    if (
+      leftEntry.memberName !== rightEntry?.memberName ||
+      leftEntry.alive !== rightEntry?.alive ||
+      leftEntry.restartable !== rightEntry?.restartable ||
+      leftEntry.backendType !== rightEntry?.backendType ||
+      leftEntry.pid !== rightEntry?.pid ||
+      leftEntry.runtimeModel !== rightEntry?.runtimeModel ||
+      leftEntry.rssBytes !== rightEntry?.rssBytes
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function areMemberListPropsEqual(
   prev: Readonly<MemberListProps>,
   next: Readonly<MemberListProps>
@@ -179,6 +205,7 @@ function areMemberListPropsEqual(
     areMemberTaskMapsEquivalent(prev.taskMap, next.taskMap) &&
     arePendingRepliesEquivalent(prev.pendingRepliesByMember, next.pendingRepliesByMember) &&
     areMemberSpawnStatusesEquivalent(prev.memberSpawnStatuses, next.memberSpawnStatuses) &&
+    areMemberRuntimeEntriesEquivalent(prev.memberRuntimeEntries, next.memberRuntimeEntries) &&
     prev.isLaunchSettling === next.isLaunchSettling &&
     prev.isTeamAlive === next.isTeamAlive &&
     prev.isTeamProvisioning === next.isTeamProvisioning &&
@@ -193,6 +220,7 @@ export const MemberList = memo(function MemberList({
   taskMap,
   pendingRepliesByMember,
   memberSpawnStatuses,
+  memberRuntimeEntries,
   isLaunchSettling,
   isTeamAlive,
   isTeamProvisioning,
@@ -240,9 +268,10 @@ export const MemberList = memo(function MemberList({
   const buildRuntimeSummary = useCallback(
     (
       member: ResolvedTeamMember,
-      spawnEntry: MemberSpawnStatusEntry | undefined
+      spawnEntry: MemberSpawnStatusEntry | undefined,
+      runtimeEntry: TeamAgentRuntimeEntry | undefined
     ): string | undefined => {
-      return resolveMemberRuntimeSummary(member, launchParams, spawnEntry);
+      return resolveMemberRuntimeSummary(member, launchParams, spawnEntry, runtimeEntry);
     },
     [launchParams]
   );
@@ -275,6 +304,7 @@ export const MemberList = memo(function MemberList({
       reviewCandidate && reviewCandidate.id !== member.currentTaskId ? reviewCandidate : null;
     const awaitingReply = isTeamAlive !== false && Boolean(pendingRepliesByMember?.[member.name]);
     const spawnEntry = memberSpawnStatuses?.get(member.name);
+    const runtimeEntry = memberRuntimeEntries?.get(member.name);
     return (
       <MemberCard
         key={member.name}
@@ -288,7 +318,11 @@ export const MemberList = memo(function MemberList({
         reviewTask={isRemoved ? null : reviewTask}
         isAwaitingReply={isRemoved ? false : awaitingReply}
         isRemoved={isRemoved}
-        runtimeSummary={buildRuntimeSummary(member, isRemoved ? undefined : spawnEntry)}
+        runtimeSummary={buildRuntimeSummary(
+          member,
+          isRemoved ? undefined : spawnEntry,
+          isRemoved ? undefined : runtimeEntry
+        )}
         spawnStatus={isRemoved ? undefined : spawnEntry?.status}
         spawnError={isRemoved ? undefined : spawnEntry?.error}
         spawnLivenessSource={isRemoved ? undefined : spawnEntry?.livenessSource}

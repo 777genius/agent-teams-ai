@@ -13,11 +13,13 @@ const hoisted = vi.hoisted(() => ({
   createTeam: vi.fn(),
   getProvisioningStatus: vi.fn(),
   getMemberSpawnStatuses: vi.fn(),
+  getTeamAgentRuntime: vi.fn(),
   cancelProvisioning: vi.fn(),
   deleteTeam: vi.fn(),
   restoreTeam: vi.fn(),
   permanentlyDeleteTeam: vi.fn(),
   sendMessage: vi.fn(),
+  restartMember: vi.fn(),
   requestReview: vi.fn(),
   updateKanban: vi.fn(),
   invalidateTaskChangeSummaries: vi.fn(),
@@ -32,11 +34,13 @@ vi.mock('@renderer/api', () => ({
       createTeam: hoisted.createTeam,
       getProvisioningStatus: hoisted.getProvisioningStatus,
       getMemberSpawnStatuses: hoisted.getMemberSpawnStatuses,
+      getTeamAgentRuntime: hoisted.getTeamAgentRuntime,
       cancelProvisioning: hoisted.cancelProvisioning,
       deleteTeam: hoisted.deleteTeam,
       restoreTeam: hoisted.restoreTeam,
       permanentlyDeleteTeam: hoisted.permanentlyDeleteTeam,
       sendMessage: hoisted.sendMessage,
+      restartMember: hoisted.restartMember,
       requestReview: hoisted.requestReview,
       updateKanban: hoisted.updateKanban,
       onProvisioningProgress: hoisted.onProvisioningProgress,
@@ -125,6 +129,27 @@ function createMemberSpawnSnapshot(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function createRuntimeSnapshot(overrides: Record<string, unknown> = {}) {
+  return {
+    teamName: 'my-team',
+    updatedAt: '2026-03-12T10:00:00.000Z',
+    runId: 'runtime-run',
+    members: {
+      alice: {
+        memberName: 'alice',
+        alive: true,
+        restartable: true,
+        backendType: 'tmux',
+        pid: 4242,
+        runtimeModel: 'gpt-5.4-mini',
+        rssBytes: 256 * 1024 * 1024,
+        updatedAt: '2026-03-12T10:00:00.000Z',
+      },
+    },
+    ...overrides,
+  };
+}
+
 describe('teamSlice actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -153,10 +178,12 @@ describe('teamSlice actions', () => {
       updatedAt: new Date().toISOString(),
     });
     hoisted.getMemberSpawnStatuses.mockResolvedValue({ statuses: {}, runId: null });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(createRuntimeSnapshot({ runId: null, members: {} }));
     hoisted.cancelProvisioning.mockResolvedValue(undefined);
     hoisted.deleteTeam.mockResolvedValue(undefined);
     hoisted.restoreTeam.mockResolvedValue(undefined);
     hoisted.permanentlyDeleteTeam.mockResolvedValue(undefined);
+    hoisted.restartMember.mockResolvedValue(undefined);
   });
 
   it('maps inbox verify failure to user-friendly text', async () => {
@@ -630,6 +657,64 @@ describe('teamSlice actions', () => {
 
     expect(hoisted.restoreTeam).toHaveBeenCalledWith('my-team');
     expect(store.getState().teamDataCacheByName['my-team']).toBeUndefined();
+  });
+
+  it('stores runtime snapshots and suppresses semantic no-op refreshes', async () => {
+    const store = createSliceStore();
+    const snapshot = createRuntimeSnapshot();
+    hoisted.getTeamAgentRuntime.mockResolvedValue(snapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+    const firstSnapshot = store.getState().teamAgentRuntimeByTeam['my-team'];
+
+    expect(firstSnapshot).toEqual(snapshot);
+
+    hoisted.getTeamAgentRuntime.mockResolvedValue({
+      ...snapshot,
+      updatedAt: '2026-03-12T10:00:05.000Z',
+      members: {
+        alice: {
+          ...snapshot.members.alice,
+          updatedAt: '2026-03-12T10:00:05.000Z',
+        },
+      },
+    });
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toBe(firstSnapshot);
+  });
+
+  it('restartMember refreshes spawn statuses and runtime snapshot', async () => {
+    const store = createSliceStore();
+    hoisted.getMemberSpawnStatuses.mockResolvedValue({
+      statuses: {
+        alice: createMemberSpawnStatus({ status: 'spawning', launchState: 'starting' }),
+      },
+      runId: 'runtime-run',
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(createRuntimeSnapshot());
+
+    await store.getState().restartMember('my-team', 'alice');
+
+    expect(hoisted.restartMember).toHaveBeenCalledWith('my-team', 'alice');
+    expect(store.getState().memberSpawnStatusesByTeam['my-team']).toEqual({
+      alice: expect.objectContaining({ status: 'spawning', launchState: 'starting' }),
+    });
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(createRuntimeSnapshot());
+  });
+
+  it('clears stale runtime snapshots on delete', async () => {
+    const store = createSliceStore();
+    store.setState({
+      teamAgentRuntimeByTeam: {
+        'my-team': createRuntimeSnapshot(),
+      },
+    });
+
+    await store.getState().deleteTeam('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toBeUndefined();
   });
 
   describe('refreshTeamData provisioning safety', () => {

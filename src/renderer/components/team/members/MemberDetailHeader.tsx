@@ -24,6 +24,7 @@ import type {
 
 interface MemberDetailHeaderProps {
   member: ResolvedTeamMember;
+  runtimeSummary?: string;
   isTeamAlive?: boolean;
   isTeamProvisioning?: boolean;
   leadActivity?: LeadActivityState;
@@ -38,6 +39,7 @@ interface MemberDetailHeaderProps {
 
 export const MemberDetailHeader = ({
   member,
+  runtimeSummary,
   isTeamAlive,
   isTeamProvisioning,
   leadActivity,
@@ -139,6 +141,9 @@ export const MemberDetailHeader = ({
                 {/* NOTE: lead context token display disabled — usage formula is inaccurate */}
               </>
             )}
+            {!editing && runtimeSummary ? (
+              <div className="mt-1 text-xs text-[var(--color-text-muted)]">{runtimeSummary}</div>
+            ) : null}
           </div>
         </DialogDescription>
       </div>

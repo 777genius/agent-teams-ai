@@ -109,6 +109,7 @@ import type { ContextInjection } from '@renderer/types/contextInjection';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
+  TeamAgentRuntimeEntry,
   MemberSpawnStatusEntry,
   ResolvedTeamMember,
   TaskRef,
@@ -288,7 +289,7 @@ type TeamMemberListBridgeProps = Omit<
 };
 type TeamMemberDetailDialogBridgeProps = Omit<
   ComponentProps<typeof MemberDetailDialog>,
-  'leadActivity' | 'spawnEntry'
+  'leadActivity' | 'spawnEntry' | 'runtimeEntry'
 >;
 type TeamSidebarRailBridgeProps = Omit<
   ComponentProps<typeof TeamSidebarRail>,
@@ -326,6 +327,17 @@ function buildMemberSpawnStatusMap(
   return map.size > 0 ? map : undefined;
 }
 
+function buildTeamAgentRuntimeMap(
+  runtimeSnapshot: Record<string, TeamAgentRuntimeEntry> | undefined
+): Map<string, TeamAgentRuntimeEntry> | undefined {
+  if (!runtimeSnapshot) {
+    return undefined;
+  }
+
+  const map = new Map<string, TeamAgentRuntimeEntry>(Object.entries(runtimeSnapshot));
+  return map.size > 0 ? map : undefined;
+}
+
 const TeamSpawnStatusWatcher = memo(function TeamSpawnStatusWatcher({
   teamName,
   isTeamProvisioning,
@@ -357,6 +369,54 @@ const TeamSpawnStatusWatcher = memo(function TeamSpawnStatusWatcher({
     isTeamProvisioning,
     leadActivity,
     memberSpawnStatuses,
+    teamName,
+  ]);
+
+  return null;
+});
+
+const TEAM_AGENT_RUNTIME_REFRESH_MS = 5_000;
+
+const TeamAgentRuntimeWatcher = memo(function TeamAgentRuntimeWatcher({
+  teamName,
+  isTeamProvisioning,
+  isTeamAlive,
+  isThisTabActive,
+}: {
+  teamName: string;
+  isTeamProvisioning: boolean;
+  isTeamAlive?: boolean;
+  isThisTabActive: boolean;
+}): null {
+  const { leadActivity, fetchTeamAgentRuntime } = useStore(
+    useShallow((s) => ({
+      leadActivity: s.leadActivityByTeam[teamName],
+      fetchTeamAgentRuntime: s.fetchTeamAgentRuntime,
+    }))
+  );
+
+  useEffect(() => {
+    if (!isThisTabActive) return;
+    const shouldWatch =
+      isTeamProvisioning ||
+      isTeamAlive === true ||
+      leadActivity === 'active' ||
+      leadActivity === 'idle';
+    if (!shouldWatch) return;
+
+    void fetchTeamAgentRuntime(teamName);
+    const timer = window.setInterval(() => {
+      void fetchTeamAgentRuntime(teamName);
+    }, TEAM_AGENT_RUNTIME_REFRESH_MS);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [
+    fetchTeamAgentRuntime,
+    isTeamAlive,
+    isTeamProvisioning,
+    isThisTabActive,
+    leadActivity,
     teamName,
   ]);
 
@@ -681,17 +741,23 @@ const TeamMemberListBridge = memo(function TeamMemberListBridge({
   teamName,
   ...props
 }: TeamMemberListBridgeProps): React.JSX.Element {
-  const { leadActivity, progress, memberSpawnStatuses, memberSpawnSnapshot } = useStore(
-    useShallow((s) => ({
-      leadActivity: s.leadActivityByTeam[teamName],
-      progress: getCurrentProvisioningProgressForTeam(s, teamName),
-      memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
-      memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
-    }))
-  );
+  const { leadActivity, progress, memberSpawnStatuses, memberSpawnSnapshot, runtimeSnapshot } =
+    useStore(
+      useShallow((s) => ({
+        leadActivity: s.leadActivityByTeam[teamName],
+        progress: getCurrentProvisioningProgressForTeam(s, teamName),
+        memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
+        memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
+        runtimeSnapshot: s.teamAgentRuntimeByTeam[teamName],
+      }))
+    );
   const memberSpawnStatusMap = useMemo(
     () => buildMemberSpawnStatusMap(memberSpawnStatuses),
     [memberSpawnStatuses]
+  );
+  const memberRuntimeMap = useMemo(
+    () => buildTeamAgentRuntimeMap(runtimeSnapshot?.members),
+    [runtimeSnapshot?.members]
   );
   const isLaunchSettling = useMemo(() => {
     if (progress?.state !== 'ready') {
@@ -711,6 +777,7 @@ const TeamMemberListBridge = memo(function TeamMemberListBridge({
       {...props}
       leadActivity={leadActivity}
       memberSpawnStatuses={memberSpawnStatusMap}
+      memberRuntimeEntries={memberRuntimeMap}
       isLaunchSettling={isLaunchSettling}
     />
   );
@@ -771,6 +838,7 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
     memberSpawnStatuses,
     memberSpawnSnapshot,
     spawnEntry,
+    runtimeEntry,
   } = useStore(
     useShallow((s) => ({
       leadActivity: s.leadActivityByTeam[teamName],
@@ -779,6 +847,7 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
       memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
       memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
       spawnEntry: member ? s.memberSpawnStatusesByTeam[teamName]?.[member.name] : undefined,
+      runtimeEntry: member ? s.teamAgentRuntimeByTeam[teamName]?.members[member.name] : undefined,
     }))
   );
   const isLaunchSettling = useMemo(() => {
@@ -802,6 +871,7 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
       isLaunchSettling={isLaunchSettling}
       leadActivity={leadActivity}
       spawnEntry={spawnEntry}
+      runtimeEntry={runtimeEntry}
     />
   );
 });
@@ -1107,6 +1177,7 @@ export const TeamDetailView = ({
     lastSendMessageResult,
     reviewActionError,
     addMember,
+    restartMember,
     removeMember,
     updateMemberRole,
     launchTeam,
@@ -1152,6 +1223,7 @@ export const TeamDetailView = ({
       lastSendMessageResult: s.lastSendMessageResult,
       reviewActionError: s.reviewActionError,
       addMember: s.addMember,
+      restartMember: s.restartMember,
       removeMember: s.removeMember,
       updateMemberRole: s.updateMemberRole,
       launchTeam: s.launchTeam,
@@ -1863,6 +1935,14 @@ export const TeamDetailView = ({
       isTeamAlive={data?.isAlive}
     />
   );
+  const teamAgentRuntimeWatcher = (
+    <TeamAgentRuntimeWatcher
+      teamName={teamName}
+      isTeamProvisioning={isTeamProvisioning}
+      isTeamAlive={data?.isAlive}
+      isThisTabActive={isThisTabActive}
+    />
+  );
   const leadContextWatcher = (
     <LeadContextWatcher
       teamName={teamName}
@@ -2540,6 +2620,7 @@ export const TeamDetailView = ({
                 initialActivityFilter={selectedMemberView?.initialActivityFilter}
                 isTeamAlive={data.isAlive}
                 isTeamProvisioning={isTeamProvisioning}
+                launchParams={launchParams}
                 onClose={closeSelectedMemberDialog}
                 onSendMessage={() => {
                   const name = selectedMember?.name ?? '';
@@ -2555,6 +2636,7 @@ export const TeamDetailView = ({
                   closeSelectedMemberDialog();
                   openCreateTaskDialog('', '', name);
                 }}
+                onRestartMember={(memberName) => restartMember(teamName, memberName)}
                 onTaskClick={(task) => {
                   closeSelectedMemberDialog();
                   setSelectedTask(task);
@@ -2903,6 +2985,7 @@ export const TeamDetailView = ({
   return (
     <>
       {spawnStatusWatcher}
+      {teamAgentRuntimeWatcher}
       {leadContextWatcher}
       {renderBody()}
     </>

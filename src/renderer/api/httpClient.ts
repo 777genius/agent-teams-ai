@@ -908,6 +908,17 @@ export class HttpAPIClient implements ElectronAPI {
     getMemberSpawnStatuses: async () => {
       return { statuses: {}, runId: null };
     },
+    getTeamAgentRuntime: async (teamName: string) => {
+      return {
+        teamName,
+        updatedAt: new Date().toISOString(),
+        runId: null,
+        members: {},
+      };
+    },
+    restartMember: async (): Promise<void> => {
+      throw new Error('Member restart is not available in browser mode');
+    },
     softDeleteTask: async (_teamName: string, _taskId: string): Promise<void> => {
       // Not available via HTTP client — no-op
     },

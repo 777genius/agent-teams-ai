@@ -63,4 +63,21 @@ describe('resolveMemberRuntimeSummary', () => {
 
     expect(resolveMemberRuntimeSummary(member, undefined, spawnEntry)).toBe('5.4 Mini · Medium');
   });
+
+  it('appends runtime memory when a live process snapshot is available', () => {
+    const member = createMember({ model: 'gpt-5.4-mini' });
+    const runtimeEntry = {
+      memberName: 'alice',
+      alive: true,
+      restartable: true,
+      pid: 4242,
+      runtimeModel: 'gpt-5.4-mini',
+      rssBytes: 256 * 1024 * 1024,
+      updatedAt: '2026-04-18T18:00:00.000Z',
+    };
+
+    expect(resolveMemberRuntimeSummary(member, undefined, undefined, runtimeEntry)).toBe(
+      '5.4 Mini · Medium · 256.0 MB'
+    );
+  });
 });

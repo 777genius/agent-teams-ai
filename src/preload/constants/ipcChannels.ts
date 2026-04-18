@@ -373,6 +373,12 @@ export const TEAM_LEAD_CONTEXT = 'team:leadContext';
 /** Get per-member spawn statuses for a team */
 export const TEAM_MEMBER_SPAWN_STATUSES = 'team:memberSpawnStatuses';
 
+/** Get live per-agent runtime stats for a team */
+export const TEAM_GET_AGENT_RUNTIME = 'team:getAgentRuntime';
+
+/** Restart a specific teammate runtime */
+export const TEAM_RESTART_MEMBER = 'team:restartMember';
+
 /** Soft-delete a task (set status to 'deleted' with deletedAt timestamp) */
 export const TEAM_SOFT_DELETE_TASK = 'team:softDeleteTask';
 

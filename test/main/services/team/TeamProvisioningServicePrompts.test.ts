@@ -41,6 +41,7 @@ vi.mock('@main/utils/pathDecoder', async (importOriginal) => {
 
 import {
   buildAddMemberSpawnMessage,
+  buildRestartMemberSpawnMessage,
   TeamProvisioningService,
 } from '@main/services/team/TeamProvisioningService';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
@@ -277,6 +278,21 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     ]);
 
     await svc.cancelProvisioning(runId);
+  });
+
+  it('restart teammate message keeps the exact teammate identity and avoids duplicate semantics', () => {
+    const message = buildRestartMemberSpawnMessage('forge-labs', 'Forge Labs', 'lead', {
+      name: 'alice',
+      role: 'Reviewer',
+      providerId: 'codex',
+      model: 'gpt-5.4-mini',
+      effort: 'medium',
+    });
+
+    expect(message).toContain('Teammate "alice" with role "Reviewer" was restarted from the UI.');
+    expect(message).toContain('team_name="forge-labs", name="alice"');
+    expect(message).toContain('provider="codex", model="gpt-5.4-mini", effort="medium"');
+    expect(message).toContain('This is a restart of an existing persistent teammate, not a new teammate.');
   });
 
   it('createTeam materializes an explicit Codex default model for teammates before bootstrap spawn', async () => {
