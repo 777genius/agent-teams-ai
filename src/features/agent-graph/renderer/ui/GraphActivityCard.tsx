@@ -1,7 +1,7 @@
 import { ActivityItem } from '@renderer/components/team/activity/ActivityItem';
 import {
-  resolveMessageRenderProps,
   type MessageContext,
+  resolveMessageRenderProps,
 } from '@renderer/components/team/activity/activityMessageContext';
 
 import type {

@@ -10,9 +10,9 @@ import type { TeamLaunchParams } from '@renderer/store/slices/teamSlice';
 import type { TaskStatusCounts } from '@renderer/utils/pathNormalize';
 import type {
   LeadActivityState,
-  TeamAgentRuntimeEntry,
   MemberSpawnStatusEntry,
   ResolvedTeamMember,
+  TeamAgentRuntimeEntry,
   TeamTaskWithKanban,
 } from '@shared/types';
 

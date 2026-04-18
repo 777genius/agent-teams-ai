@@ -32,21 +32,21 @@ import {
   areThoughtMessagesEquivalentForRender,
 } from '@renderer/utils/messageRenderEquality';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
+import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { isApiErrorMessage } from '@shared/utils/apiErrorDetector';
 import { isThoughtProtocolNoise } from '@shared/utils/inboxNoise';
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
 import { formatToolSummary, parseToolSummary } from '@shared/utils/toolSummary';
 import { ChevronDown, ChevronRight, ChevronUp, Maximize2 } from 'lucide-react';
 
+import { buildThoughtDisplayContent } from './activityMarkdown';
 import {
   AnimatedHeightReveal,
   ENTRY_REVEAL_ANIMATION_MS,
   ENTRY_REVEAL_EASING,
 } from './AnimatedHeightReveal';
-import { buildThoughtDisplayContent } from './activityMarkdown';
 import { ThoughtBodyContent } from './ThoughtBodyContent';
 
-import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import type { InboxMessage, ToolCallMeta } from '@shared/types';
 
 export interface LeadThoughtGroup {

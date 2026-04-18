@@ -271,6 +271,7 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       undefined,
+      undefined,
       boardTaskActivityService as never,
       boardTaskActivityDetailService as never,
       boardTaskLogStreamService as never,

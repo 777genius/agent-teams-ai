@@ -122,10 +122,10 @@ import type { ContextInjection } from '@renderer/types/contextInjection';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
-  TeamAgentRuntimeEntry,
   MemberSpawnStatusEntry,
   ResolvedTeamMember,
   TaskRef,
+  TeamAgentRuntimeEntry,
   TeamTaskWithKanban,
 } from '@shared/types';
 import type { EditorSelectionAction } from '@shared/types/editor';

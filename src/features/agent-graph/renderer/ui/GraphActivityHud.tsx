@@ -13,6 +13,7 @@ import {
   type InlineActivityEntry,
 } from '../../core/domain/buildInlineActivityEntries';
 import { useGraphActivityContext } from '../hooks/useGraphActivityContext';
+
 import { GraphActivityCard } from './GraphActivityCard';
 
 import type { GraphNode } from '@claude-teams/agent-graph';

@@ -44,7 +44,6 @@ import { normalizePath } from '@renderer/utils/pathNormalize';
 import {
   getTeamModelSelectionError,
   normalizeExplicitTeamModelForUi,
-  normalizeTeamModelForUi,
 } from '@renderer/utils/teamModelAvailability';
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
@@ -400,7 +399,7 @@ export const CreateTeamDialog = ({
   }, [advancedKey]);
 
   const setSelectedModel = (value: string): void => {
-    const normalizedValue = normalizeTeamModelForUi(selectedProviderId, value);
+    const normalizedValue = normalizeExplicitTeamModelForUi(selectedProviderId, value);
     setSelectedModelRaw(normalizedValue);
     localStorage.setItem(`team:lastSelectedModel:${selectedProviderId}`, normalizedValue);
   };

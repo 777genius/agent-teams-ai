@@ -27,14 +27,14 @@ import { MemberMessagesTab } from './MemberMessagesTab';
 import { MemberStatsTab } from './MemberStatsTab';
 import { MemberTasksTab } from './MemberTasksTab';
 
+import type { TeamLaunchParams } from '@renderer/store/slices/teamSlice';
 import type {
   LeadActivityState,
   MemberSpawnStatusEntry,
-  TeamAgentRuntimeEntry,
   ResolvedTeamMember,
+  TeamAgentRuntimeEntry,
   TeamTaskWithKanban,
 } from '@shared/types';
-import type { TeamLaunchParams } from '@renderer/store/slices/teamSlice';
 
 interface MemberDetailDialogProps {
   open: boolean;

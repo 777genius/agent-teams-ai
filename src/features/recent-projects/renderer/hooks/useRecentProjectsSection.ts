@@ -8,11 +8,11 @@ import { buildTaskCountsByProject } from '@renderer/utils/pathNormalize';
 import { useShallow } from 'zustand/react/shallow';
 
 import { adaptRecentProjectsSection } from '../adapters/RecentProjectsSectionAdapter';
+import { buildActiveTeamsByProject } from '../utils/activeProjectTeams';
 import {
   sortRecentProjectsByDisplayPriority,
   subscribeRecentProjectOpenHistory,
 } from '../utils/recentProjectOpenHistory';
-import { buildActiveTeamsByProject } from '../utils/activeProjectTeams';
 import {
   getRecentProjectsClientSnapshot,
   loadRecentProjectsWithClientCache,

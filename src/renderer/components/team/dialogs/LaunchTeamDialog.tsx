@@ -49,7 +49,6 @@ import { nameColorSet } from '@renderer/utils/projectColor';
 import {
   getTeamModelSelectionError,
   normalizeExplicitTeamModelForUi,
-  normalizeTeamModelForUi,
 } from '@renderer/utils/teamModelAvailability';
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
@@ -462,7 +461,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setSelectedModel = (value: string): void => {
-    const normalizedValue = normalizeTeamModelForUi(selectedProviderId, value);
+    const normalizedValue = normalizeExplicitTeamModelForUi(selectedProviderId, value);
     setSelectedModelRaw(normalizedValue);
     localStorage.setItem(`team:lastSelectedModel:${selectedProviderId}`, normalizedValue);
   };
