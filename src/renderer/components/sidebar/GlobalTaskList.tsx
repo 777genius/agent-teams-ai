@@ -12,6 +12,7 @@ import {
   getNonEmptyTaskCategories,
   groupTasksByDate,
   groupTasksByProject,
+  NO_PROJECT_KEY,
   sortTasksByFreshness,
 } from '@renderer/utils/taskGrouping';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
@@ -430,8 +431,18 @@ export const GlobalTaskList = ({
         ? categories.length > 0
         : projectGroups.some((g) => g.tasks.length > 0));
 
+  const noProjectGroupColor = useMemo(
+    () => ({
+      border: 'var(--color-border)',
+      glow: 'transparent',
+      icon: 'var(--color-text-muted)',
+      text: 'var(--color-text-secondary)',
+    }),
+    []
+  );
+
   return (
-    <div className="flex size-full min-w-0 flex-col">
+    <div className="flex size-full min-w-0 flex-col overflow-x-hidden">
       {!hideHeader && (
         <div
           className="flex shrink-0 items-center gap-2 border-b px-3 py-1.5"
@@ -597,7 +608,7 @@ export const GlobalTaskList = ({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {globalTasksLoading && !globalTasksInitialized && (
           <div className="space-y-2 p-3">
             {[1, 2, 3].map((i) => (
@@ -644,7 +655,10 @@ export const GlobalTaskList = ({
           projectGroups.map((group) => {
             if (group.tasks.length === 0) return null;
             const isGroupCollapsed = projectCollapsed.isCollapsed(group.projectKey);
-            const groupColor = projectColor(group.projectLabel);
+            const isNoProjectGroup = group.projectKey === NO_PROJECT_KEY;
+            const groupColor = isNoProjectGroup
+              ? noProjectGroupColor
+              : projectColor(group.projectLabel);
             const visibleCount = getProjectGroupVisibleCount(
               projectVisibleCountByKey[group.projectKey],
               group.tasks.length
@@ -661,7 +675,9 @@ export const GlobalTaskList = ({
                   className="hover:bg-surface-raised/40 sticky top-0 z-10 flex w-full cursor-pointer items-center gap-1.5 p-2 transition-colors"
                   style={{
                     backgroundColor: 'var(--color-surface-sidebar)',
-                    backgroundImage: `linear-gradient(90deg, ${groupColor.glow} 0%, transparent 80%)`,
+                    backgroundImage: isNoProjectGroup
+                      ? undefined
+                      : `linear-gradient(90deg, ${groupColor.glow} 0%, transparent 80%)`,
                     boxShadow: `inset 2px 0 0 ${groupColor.border}, inset 0 -1px 0 var(--color-border)`,
                   }}
                 >
@@ -676,7 +692,7 @@ export const GlobalTaskList = ({
                     aria-hidden="true"
                   />
                   <span
-                    className="truncate text-[13px] font-bold leading-none"
+                    className="truncate text-[11px] font-bold leading-none"
                     style={{ color: groupColor.icon }}
                   >
                     {group.projectLabel}

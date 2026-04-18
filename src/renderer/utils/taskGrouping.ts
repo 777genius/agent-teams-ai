@@ -91,8 +91,8 @@ export function getNonEmptyTaskCategories(groups: DateGroupedTasks): DateCategor
   return DATE_CATEGORY_ORDER.filter((cat) => groups[cat].length > 0);
 }
 
-const NO_PROJECT_KEY = '__no_project__';
-const NO_PROJECT_LABEL = 'Without project';
+export const NO_PROJECT_KEY = '__no_project__';
+export const NO_PROJECT_LABEL = 'No project';
 
 function trimTrailingPathSep(p: string): string {
   let s = p;

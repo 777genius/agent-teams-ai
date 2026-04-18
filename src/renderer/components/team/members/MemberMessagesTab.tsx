@@ -70,6 +70,7 @@ export const MemberMessagesTab = ({
   }, [loadOlderTeamMessages, messagesState, teamName]);
 
   const loading = (messagesState?.loadingHead ?? false) || (messagesState?.loadingOlder ?? false);
+  const loadingOlderMessages = messagesState?.loadingOlder ?? false;
   const hasMore = messagesState?.hasMore ?? false;
 
   const activityEntries = useMemo(() => {
@@ -129,7 +130,8 @@ export const MemberMessagesTab = ({
     [onTaskClick, taskMap, tasks]
   );
 
-  const emptyStateText = loading
+  const initialPageLoading = loading && activityEntries.length === 0;
+  const emptyStateText = initialPageLoading
     ? 'Loading activity...'
     : activityFilter === 'comments'
       ? 'No comments for this member'
@@ -221,10 +223,11 @@ export const MemberMessagesTab = ({
               variant="ghost"
               size="sm"
               className="text-xs"
-              disabled={loading}
+              aria-busy={loadingOlderMessages}
+              disabled={loadingOlderMessages}
               onClick={() => void loadOlderMessages()}
             >
-              {loading ? 'Loading...' : 'Load older messages'}
+              Load older messages
             </Button>
           </div>
         )}

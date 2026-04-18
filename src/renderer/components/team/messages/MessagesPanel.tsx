@@ -152,6 +152,7 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   const messagesLoading =
     (messagesState?.loadingHead ?? false) || (messagesState?.loadingOlder ?? false);
+  const loadingOlderMessages = messagesState?.loadingOlder ?? false;
   const hasMore = messagesState?.hasMore ?? false;
   const effectiveMessages = messages;
 
@@ -246,7 +247,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     for (const [element, setHeight] of observedEntries) {
       if (!element) continue;
 
-      const updateHeight = () => {
+      const updateHeight = (): void => {
         const nextHeight = Math.ceil(element.getBoundingClientRect().height);
         if (nextHeight > 0) {
           setHeight(nextHeight);
@@ -591,10 +592,11 @@ export const MessagesPanel = memo(function MessagesPanel({
             variant="ghost"
             size="sm"
             className="text-xs text-text-muted"
-            disabled={messagesLoading}
+            aria-busy={loadingOlderMessages}
+            disabled={loadingOlderMessages}
             onClick={() => void loadOlderMessages()}
           >
-            {messagesLoading ? 'Loading...' : 'Load older messages'}
+            Load older messages
           </Button>
         </div>
       )}
@@ -776,10 +778,11 @@ export const MessagesPanel = memo(function MessagesPanel({
                 variant="ghost"
                 size="sm"
                 className="text-xs text-text-muted"
-                disabled={messagesLoading}
+                aria-busy={loadingOlderMessages}
+                disabled={loadingOlderMessages}
                 onClick={() => void loadOlderMessages()}
               >
-                {messagesLoading ? 'Loading...' : 'Load older messages'}
+                Load older messages
               </Button>
             </div>
           )}
@@ -1062,10 +1065,11 @@ export const MessagesPanel = memo(function MessagesPanel({
                       variant="ghost"
                       size="sm"
                       className="text-xs text-text-muted"
-                      disabled={messagesLoading}
+                      aria-busy={loadingOlderMessages}
+                      disabled={loadingOlderMessages}
                       onClick={() => void loadOlderMessages()}
                     >
-                      {messagesLoading ? 'Loading...' : 'Load older messages'}
+                      Load older messages
                     </Button>
                   </div>
                 )}

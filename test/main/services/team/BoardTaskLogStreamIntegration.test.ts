@@ -643,4 +643,51 @@ describe('BoardTaskLogStreamService integration', () => {
     expect(bashCommands).not.toContain('echo alien');
     expect(rawMessages.some((message) => message.uuid === 'u-bash-alice-real')).toBe(false);
   });
+  it('falls back to createdAt/updatedAt time window when workIntervals are missing', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-created-window-'));
+    tempDirs.push(dir);
+    const transcriptPath = path.join(dir, 'session.jsonl');
+    const fixtureText = await readFile(REAL_FIXTURE_PATH, 'utf8');
+    await writeFile(transcriptPath, fixtureText, 'utf8');
+
+    const task = createTask({
+      owner: 'tom',
+      createdAt: '2026-04-12T15:35:50.000Z',
+      updatedAt: '2026-04-12T15:37:00.000Z',
+      workIntervals: undefined,
+    });
+
+    const recordSource = {
+      getTaskRecords: async () => buildRecordsFromTranscript(transcriptPath, task),
+    };
+    const taskReader = {
+      getTasks: async () => [task],
+      getDeletedTasks: async () => [] as TeamTask[],
+    };
+    const transcriptSourceLocator = {
+      getContext: async () =>
+        ({
+          transcriptFiles: [transcriptPath],
+          config: {
+            members: [{ name: 'team-lead', agentType: 'team-lead' }],
+          },
+        }) as never,
+    };
+
+    const service = new BoardTaskLogStreamService(
+      recordSource as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      taskReader as never,
+      transcriptSourceLocator as never,
+    );
+    const response = await service.getTaskLogStream(TEAM_NAME, task.id);
+    const rawMessages = flattenRawMessages(response);
+
+    expect(response.participants.map((participant) => participant.label)).toEqual(['tom']);
+    expect(rawMessages.some((message) => message.uuid === 'a-bash-real')).toBe(true);
+    expect(rawMessages.some((message) => message.uuid === 'u-bash-alice-real')).toBe(false);
+  });
 });

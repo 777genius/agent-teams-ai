@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 import React, { act } from 'react';
@@ -14,6 +14,10 @@ import type { TeamTask } from '../../../../../src/shared/types';
 
 const TEAM_NAME = 'beacon-desk-2';
 const TASK_ID = 'c414cd52-470a-4b51-ae1e-e5250fff95d7';
+const REAL_FIXTURE_PATH = path.resolve(
+  process.cwd(),
+  'test/fixtures/team/task-log-stream-fallback-real.jsonl',
+);
 
 const apiState = {
   getTaskLogStream: vi.fn(),
@@ -105,8 +109,7 @@ function createUserEntry(args: {
   };
 }
 
-async function buildStreamResponse(transcriptPath: string) {
-  const task = createTask();
+async function buildStreamResponse(transcriptPath: string, task: TeamTask = createTask()) {
   const transcriptReader = new BoardTaskActivityTranscriptReader();
   const recordBuilder = new BoardTaskActivityRecordBuilder();
   const messages = await transcriptReader.readFiles([transcriptPath]);
@@ -119,8 +122,29 @@ async function buildStreamResponse(transcriptPath: string) {
         messages,
       }),
   };
+  const taskReader = {
+    getTasks: async () => [task],
+    getDeletedTasks: async () => [] as TeamTask[],
+  };
+  const transcriptSourceLocator = {
+    getContext: async () =>
+      ({
+        transcriptFiles: [transcriptPath],
+        config: {
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        },
+      }) as never,
+  };
 
-  const service = new BoardTaskLogStreamService(recordSource as never);
+  const service = new BoardTaskLogStreamService(
+    recordSource as never,
+    undefined as never,
+    undefined as never,
+    undefined as never,
+    undefined as never,
+    taskReader as never,
+    transcriptSourceLocator as never,
+  );
   return service.getTaskLogStream(TEAM_NAME, task.id);
 }
 
@@ -541,6 +565,59 @@ describe('TaskLogStreamSection integration', () => {
     expect(text).toContain('mcp__agent-teams__task_start');
     expect(text).toContain('mcp__agent-teams__task_complete');
     expect(text).not.toContain('[]');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('renders fallback worker logs from a real-format transcript fixture and hides unrelated participant logs', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-render-real-'));
+    tempDirs.push(dir);
+    const transcriptPath = path.join(dir, 'session.jsonl');
+    const fixtureText = await readFile(REAL_FIXTURE_PATH, 'utf8');
+    await writeFile(transcriptPath, fixtureText, 'utf8');
+
+    apiState.getTaskLogStream.mockResolvedValueOnce(
+      await buildStreamResponse(
+        transcriptPath,
+        createTask({
+          owner: 'tom',
+          workIntervals: [
+            {
+              startedAt: '2026-04-12T15:36:00.000Z',
+              completedAt: '2026-04-12T15:40:00.000Z',
+            },
+          ],
+        }),
+      ),
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(
+          TooltipProvider,
+          null,
+          React.createElement(TaskLogStreamSection, { teamName: TEAM_NAME, taskId: TASK_ID }),
+        ),
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    const text = host.textContent ?? '';
+    expect(text).toContain('Task Log Stream');
+    expect(text).toContain('Bash');
+    expect(text).toContain('Run targeted tests');
+    expect(text).not.toContain('echo alien');
+    expect(text).not.toContain('alice');
 
     await act(async () => {
       root.unmount();
