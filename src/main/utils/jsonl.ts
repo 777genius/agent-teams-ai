@@ -240,8 +240,10 @@ function parseChatHistoryEntry(entry: ChatHistoryEntry): ParsedMessage | null {
   let model: string | undefined;
   let requestId: string | undefined;
   let cwd: string | undefined;
+  let sessionId: string | undefined;
   let gitBranch: string | undefined;
   let agentId: string | undefined;
+  let agentName: string | undefined;
   let isSidechain = false;
   let isMeta = false;
   let userType: string | undefined;
@@ -255,10 +257,12 @@ function parseChatHistoryEntry(entry: ChatHistoryEntry): ParsedMessage | null {
   if (isConversationalEntry(entry)) {
     // Common properties from ConversationalEntry base
     cwd = entry.cwd;
+    sessionId = entry.sessionId;
     gitBranch = entry.gitBranch;
     isSidechain = entry.isSidechain ?? false;
     userType = entry.userType;
     parentUuid = entry.parentUuid ?? null;
+    agentName = entry.agentName;
 
     // Type-specific properties
     if (entry.type === 'user') {
@@ -298,8 +302,10 @@ function parseChatHistoryEntry(entry: ChatHistoryEntry): ParsedMessage | null {
     model,
     // Metadata
     cwd,
+    sessionId,
     gitBranch,
     agentId,
+    agentName,
     isSidechain,
     isMeta,
     userType,

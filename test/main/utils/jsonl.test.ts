@@ -233,5 +233,48 @@ describe('jsonl', () => {
 
       expect(parsed?.uuid).toBe('bom-1');
     });
+
+    it('preserves real transcript metadata needed by task-log fallback selection', () => {
+      const parsed = parseJsonlLine(
+        JSON.stringify({
+          parentUuid: 'assistant-1',
+          isSidechain: false,
+          userType: 'external',
+          cwd: '/tmp/project',
+          sessionId: 'session-real-1',
+          version: '1.0.0',
+          gitBranch: 'main',
+          type: 'user',
+          uuid: 'user-real-1',
+          timestamp: '2026-04-12T15:36:14.250Z',
+          agentName: 'tom',
+          isMeta: true,
+          sourceToolAssistantUUID: 'assistant-1',
+          sourceToolUseID: 'call-bash-real',
+          toolUseResult: {
+            toolUseId: 'call-bash-real',
+            stdout: 'tests ok',
+            exitCode: 0,
+          },
+          message: {
+            role: 'user',
+            content: [
+              {
+                type: 'tool_result',
+                tool_use_id: 'call-bash-real',
+                content: 'tests ok',
+              },
+            ],
+          },
+        }),
+      );
+
+      expect(parsed?.sessionId).toBe('session-real-1');
+      expect(parsed?.agentName).toBe('tom');
+      expect(parsed?.isMeta).toBe(true);
+      expect(parsed?.sourceToolAssistantUUID).toBe('assistant-1');
+      expect(parsed?.sourceToolUseID).toBe('call-bash-real');
+      expect(parsed?.toolResults[0]?.toolUseId).toBe('call-bash-real');
+    });
   });
 });

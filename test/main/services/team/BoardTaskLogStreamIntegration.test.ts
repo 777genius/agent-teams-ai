@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 
@@ -13,6 +13,10 @@ import type { TeamTask } from '../../../../src/shared/types';
 
 const TEAM_NAME = 'beacon-desk-2';
 const TASK_ID = 'c414cd52-470a-4b51-ae1e-e5250fff95d7';
+const REAL_FIXTURE_PATH = path.resolve(
+  process.cwd(),
+  'test/fixtures/team/task-log-stream-fallback-real.jsonl',
+);
 
 function createTask(overrides: Partial<TeamTask> = {}): TeamTask {
   return {
@@ -376,5 +380,267 @@ describe('BoardTaskLogStreamService integration', () => {
 
     expect(response.segments).toHaveLength(1);
     expect(commentResult).toBeUndefined();
+  });
+
+  it('falls back to task time-window worker logs when explicit execution links are missing', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-inferred-'));
+    tempDirs.push(dir);
+    const transcriptPath = path.join(dir, 'session.jsonl');
+    const task = createTask({
+      owner: 'tom',
+      workIntervals: [
+        {
+          startedAt: '2026-04-12T15:36:00.000Z',
+          completedAt: '2026-04-12T15:40:00.000Z',
+        },
+      ],
+    });
+
+    const lines = [
+      createAssistantEntry({
+        uuid: 'a-start',
+        timestamp: '2026-04-12T15:36:00.000Z',
+        requestId: 'req-start',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'call-task-start',
+            name: 'mcp__agent-teams__task_start',
+            input: {
+              teamName: TEAM_NAME,
+              taskId: TASK_ID,
+            },
+          },
+        ],
+      }),
+      createUserEntry({
+        uuid: 'u-start',
+        timestamp: '2026-04-12T15:36:00.120Z',
+        sourceToolAssistantUUID: 'a-start',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'call-task-start',
+            content: 'ok',
+          },
+        ],
+        boardTaskLinks: [
+          {
+            schemaVersion: 1,
+            toolUseId: 'call-task-start',
+            task: {
+              ref: TASK_ID,
+              refKind: 'canonical',
+              canonicalId: TASK_ID,
+            },
+            targetRole: 'subject',
+            linkKind: 'lifecycle',
+            taskArgumentSlot: 'taskId',
+            actorContext: {
+              relation: 'idle',
+            },
+          },
+        ],
+        boardTaskToolActions: [
+          {
+            schemaVersion: 1,
+            toolUseId: 'call-task-start',
+            canonicalToolName: 'task_start',
+          },
+        ],
+        toolUseResult: {
+          toolUseId: 'call-task-start',
+          content: '{"id":"c414cd52"}',
+        },
+      }),
+      createAssistantEntry({
+        uuid: 'a-bash',
+        timestamp: '2026-04-12T15:36:14.000Z',
+        requestId: 'req-bash',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'call-bash',
+            name: 'Bash',
+            input: {
+              command: 'pnpm test',
+            },
+          },
+        ],
+      }),
+      createUserEntry({
+        uuid: 'u-bash',
+        timestamp: '2026-04-12T15:36:14.300Z',
+        sourceToolAssistantUUID: 'a-bash',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'call-bash',
+            content: 'tests ok',
+          },
+        ],
+        toolUseResult: {
+          toolUseId: 'call-bash',
+          content: 'tests ok',
+        },
+      }),
+      createAssistantEntry({
+        uuid: 'a-complete',
+        timestamp: '2026-04-12T15:36:30.000Z',
+        requestId: 'req-complete',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'call-complete',
+            name: 'mcp__agent-teams__task_complete',
+            input: {
+              teamName: TEAM_NAME,
+              taskId: TASK_ID,
+            },
+          },
+        ],
+      }),
+      createUserEntry({
+        uuid: 'u-complete',
+        timestamp: '2026-04-12T15:36:30.150Z',
+        sourceToolAssistantUUID: 'a-complete',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'call-complete',
+            content: 'ok',
+          },
+        ],
+        boardTaskLinks: [
+          {
+            schemaVersion: 1,
+            toolUseId: 'call-complete',
+            task: {
+              ref: TASK_ID,
+              refKind: 'canonical',
+              canonicalId: TASK_ID,
+            },
+            targetRole: 'subject',
+            linkKind: 'lifecycle',
+            taskArgumentSlot: 'taskId',
+            actorContext: {
+              relation: 'same_task',
+            },
+          },
+        ],
+        boardTaskToolActions: [
+          {
+            schemaVersion: 1,
+            toolUseId: 'call-complete',
+            canonicalToolName: 'task_complete',
+          },
+        ],
+        toolUseResult: {
+          toolUseId: 'call-complete',
+          content: '{"id":"c414cd52"}',
+        },
+      }),
+    ];
+
+    await writeFile(
+      transcriptPath,
+      `${lines.map((line) => JSON.stringify(line)).join('\n')}\n`,
+      'utf8',
+    );
+
+    const recordSource = {
+      getTaskRecords: async () => buildRecordsFromTranscript(transcriptPath, task),
+    };
+    const taskReader = {
+      getTasks: async () => [task],
+      getDeletedTasks: async () => [] as TeamTask[],
+    };
+    const transcriptSourceLocator = {
+      getContext: async () =>
+        ({
+          transcriptFiles: [transcriptPath],
+          config: {
+            members: [{ name: 'team-lead', agentType: 'team-lead' }],
+          },
+        }) as never,
+    };
+
+    const service = new BoardTaskLogStreamService(
+      recordSource as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      taskReader as never,
+      transcriptSourceLocator as never,
+    );
+    const response = await service.getTaskLogStream(TEAM_NAME, task.id);
+    const rawMessages = flattenRawMessages(response);
+    const toolNames = rawMessages.flatMap((message) =>
+      message.toolCalls.map((toolCall) => toolCall.name),
+    );
+
+    expect(response.participants.map((participant) => participant.label)).toEqual(['tom']);
+    expect(response.defaultFilter).toBe('member:tom');
+    expect(toolNames).toContain('Bash');
+    expect(toolNames).toContain('mcp__agent-teams__task_complete');
+  });
+
+  it('reads a real-format transcript fixture and surfaces fallback worker logs for the task owner only', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-real-fixture-'));
+    tempDirs.push(dir);
+    const transcriptPath = path.join(dir, 'session.jsonl');
+    const fixtureText = await readFile(REAL_FIXTURE_PATH, 'utf8');
+    await writeFile(transcriptPath, fixtureText, 'utf8');
+
+    const task = createTask({
+      owner: 'tom',
+      workIntervals: [
+        {
+          startedAt: '2026-04-12T15:36:00.000Z',
+          completedAt: '2026-04-12T15:40:00.000Z',
+        },
+      ],
+    });
+
+    const recordSource = {
+      getTaskRecords: async () => buildRecordsFromTranscript(transcriptPath, task),
+    };
+    const taskReader = {
+      getTasks: async () => [task],
+      getDeletedTasks: async () => [] as TeamTask[],
+    };
+    const transcriptSourceLocator = {
+      getContext: async () =>
+        ({
+          transcriptFiles: [transcriptPath],
+          config: {
+            members: [{ name: 'team-lead', agentType: 'team-lead' }],
+          },
+        }) as never,
+    };
+
+    const service = new BoardTaskLogStreamService(
+      recordSource as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      taskReader as never,
+      transcriptSourceLocator as never,
+    );
+    const response = await service.getTaskLogStream(TEAM_NAME, task.id);
+    const rawMessages = flattenRawMessages(response);
+    const bashCommands = rawMessages.flatMap((message) =>
+      message.toolCalls
+        .filter((toolCall) => toolCall.name === 'Bash')
+        .map((toolCall) => String(toolCall.input.command ?? '')),
+    );
+
+    expect(response.participants.map((participant) => participant.label)).toEqual(['tom']);
+    expect(response.defaultFilter).toBe('member:tom');
+    expect(bashCommands).toContain('pnpm test --filter signal-ops');
+    expect(bashCommands).not.toContain('echo alien');
+    expect(rawMessages.some((message) => message.uuid === 'u-bash-alice-real')).toBe(false);
   });
 });

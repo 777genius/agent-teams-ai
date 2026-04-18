@@ -216,6 +216,9 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(prompt).toContain('Do NOT start implementation in this turn.');
     expect(prompt).toContain('Use this turn only to refresh context, review the current board snapshot, and confirm you are ready.');
     expect(prompt).toContain(
+      'Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.'
+    );
+    expect(prompt).toContain(
       'review_request already notifies the reviewer, so do NOT send a second manual SendMessage for the same review request'
     );
     expect(prompt).toContain(
@@ -473,7 +476,10 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     const prompt = extractPromptFromBootstrapFile();
     expect(prompt).toContain('This reconnect/bootstrap step has already been completed deterministically by the runtime.');
     expect(prompt).toContain('Do NOT use Agent to spawn or restore teammates.');
-    expect(prompt).toContain('Use this turn only to refresh context, review the current board snapshot, and prepare the next delegation step.');
+    expect(prompt).toContain('Use this turn only to refresh context and review the current board snapshot.');
+    expect(prompt).toContain(
+      'Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.'
+    );
     expect(prompt).toContain('DELEGATION-FIRST (behavior rule for ALL future turns):');
     expect(prompt).toContain(`AGENT_BLOCK_OPEN is exactly: ${AGENT_BLOCK_OPEN}`);
     expect(prompt).toContain(`AGENT_BLOCK_CLOSE is exactly: ${AGENT_BLOCK_CLOSE}`);

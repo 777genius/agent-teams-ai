@@ -1,6 +1,9 @@
 import { extractToolCalls, extractToolResults } from '@main/utils/toolExtraction';
+import { isLeadMember as isLeadMemberCheck } from '@shared/utils/leadDetection';
 
+import { TeamTaskReader } from '../../TeamTaskReader';
 import { BoardTaskActivityRecordSource } from '../activity/BoardTaskActivityRecordSource';
+import { TeamTranscriptSourceLocator } from '../discovery/TeamTranscriptSourceLocator';
 import { BoardTaskExactLogChunkBuilder } from '../exact/BoardTaskExactLogChunkBuilder';
 import { BoardTaskExactLogDetailSelector } from '../exact/BoardTaskExactLogDetailSelector';
 import { BoardTaskExactLogStrictParser } from '../exact/BoardTaskExactLogStrictParser';
@@ -16,12 +19,14 @@ import type {
   BoardTaskLogParticipant,
   BoardTaskLogSegment,
   BoardTaskLogStreamResponse,
+  TeamTask,
 } from '@shared/types';
 
 interface StreamSlice {
   id: string;
   timestamp: string;
   filePath: string;
+  sortOrder?: number;
   participantKey: string;
   actor: BoardTaskLogActor;
   actionCategory?: BoardTaskActivityCategory;
@@ -37,6 +42,17 @@ interface MergedMessageAccumulator {
   toolUseResults: ToolUseResultData[];
 }
 
+interface TimeWindow {
+  startMs: number;
+  endMs: number | null;
+}
+
+const BOARD_MCP_TOOL_PREFIXES = ['mcp__agent-teams__', 'mcp__agent_teams__'] as const;
+const INFERRED_WINDOW_GRACE_BEFORE_MS = 30_000;
+const INFERRED_WINDOW_GRACE_AFTER_MS = 15_000;
+const INFERRED_RECORD_RANGE_BEFORE_MS = 5 * 60_000;
+const INFERRED_RECORD_RANGE_AFTER_MS = 60_000;
+
 function emptyResponse(): BoardTaskLogStreamResponse {
   return {
     participants: [],
@@ -47,6 +63,12 @@ function emptyResponse(): BoardTaskLogStreamResponse {
 
 function normalizeMemberName(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function isBoardMcpToolName(toolName: string | undefined): boolean {
+  if (!toolName) return false;
+  const normalized = toolName.trim().toLowerCase();
+  return BOARD_MCP_TOOL_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 }
 
 function toStreamActor(detail: BoardTaskExactLogDetailCandidate['actor']): BoardTaskLogActor {
@@ -691,14 +713,318 @@ function buildSegmentId(participantKey: string, slices: StreamSlice[]): string {
   return `${participantKey}:${first?.id ?? 'start'}:${last?.id ?? 'end'}`;
 }
 
+function buildToolNameByUseId(
+  parsedMessagesByFile: Map<string, ParsedMessage[]>
+): Map<string, string> {
+  const toolNameByUseId = new Map<string, string>();
+
+  for (const messages of parsedMessagesByFile.values()) {
+    for (const message of messages) {
+      for (const toolCall of message.toolCalls) {
+        toolNameByUseId.set(toolCall.id, toolCall.name);
+      }
+    }
+  }
+
+  return toolNameByUseId;
+}
+
+function buildTaskTimeWindows(task: TeamTask, recordTimestamps: number[]): TimeWindow[] {
+  const windowsFromIntervals = (Array.isArray(task.workIntervals) ? task.workIntervals : [])
+    .map((interval) => {
+      const startedAt = Date.parse(interval.startedAt);
+      if (!Number.isFinite(startedAt)) {
+        return null;
+      }
+      const completedAt =
+        typeof interval.completedAt === 'string' ? Date.parse(interval.completedAt) : Number.NaN;
+      return {
+        startMs: startedAt - INFERRED_WINDOW_GRACE_BEFORE_MS,
+        endMs: Number.isFinite(completedAt) ? completedAt + INFERRED_WINDOW_GRACE_AFTER_MS : null,
+      };
+    })
+    .filter((window): window is TimeWindow => window !== null);
+
+  if (windowsFromIntervals.length > 0) {
+    return windowsFromIntervals;
+  }
+
+  const createdAtMs = typeof task.createdAt === 'string' ? Date.parse(task.createdAt) : Number.NaN;
+  const updatedAtMs = typeof task.updatedAt === 'string' ? Date.parse(task.updatedAt) : Number.NaN;
+  if (Number.isFinite(createdAtMs) || Number.isFinite(updatedAtMs)) {
+    const startMs = Number.isFinite(createdAtMs) ? createdAtMs : updatedAtMs;
+    return [
+      {
+        startMs: startMs - INFERRED_WINDOW_GRACE_BEFORE_MS,
+        endMs: Number.isFinite(updatedAtMs) ? updatedAtMs + INFERRED_WINDOW_GRACE_AFTER_MS : null,
+      },
+    ];
+  }
+
+  const finiteRecordTimestamps = recordTimestamps.filter((timestamp) => Number.isFinite(timestamp));
+  if (finiteRecordTimestamps.length === 0) {
+    return [];
+  }
+
+  return [
+    {
+      startMs: Math.min(...finiteRecordTimestamps) - INFERRED_RECORD_RANGE_BEFORE_MS,
+      endMs: Math.max(...finiteRecordTimestamps) + INFERRED_RECORD_RANGE_AFTER_MS,
+    },
+  ];
+}
+
+function isWithinTimeWindows(timestamp: Date, windows: TimeWindow[]): boolean {
+  const messageTime = timestamp.getTime();
+  if (!Number.isFinite(messageTime)) {
+    return false;
+  }
+  if (windows.length === 0) {
+    return true;
+  }
+
+  const now = Date.now();
+  return windows.some((window) => {
+    const endMs = window.endMs ?? now;
+    return messageTime >= window.startMs && messageTime <= endMs;
+  });
+}
+
+function collectExplicitMessageIds(records: { source: { messageUuid: string } }[]): Set<string> {
+  return new Set(records.map((record) => record.source.messageUuid));
+}
+
+function collectExplicitToolUseIds(
+  records: {
+    source: { toolUseId?: string };
+    action?: { toolUseId?: string };
+  }[]
+): Set<string> {
+  const toolUseIds = new Set<string>();
+
+  for (const record of records) {
+    const sourceToolUseId = record.source.toolUseId?.trim();
+    if (sourceToolUseId) {
+      toolUseIds.add(sourceToolUseId);
+    }
+
+    const actionToolUseId = record.action?.toolUseId?.trim();
+    if (actionToolUseId) {
+      toolUseIds.add(actionToolUseId);
+    }
+  }
+
+  return toolUseIds;
+}
+
+function collectAllowedMemberNames(
+  task: TeamTask,
+  records: { actor: { memberName?: string } }[]
+): Set<string> {
+  const allowedNames = new Set<string>();
+
+  if (typeof task.owner === 'string' && task.owner.trim().length > 0) {
+    allowedNames.add(normalizeMemberName(task.owner));
+  }
+
+  for (const record of records) {
+    if (typeof record.actor.memberName === 'string' && record.actor.memberName.trim().length > 0) {
+      allowedNames.add(normalizeMemberName(record.actor.memberName));
+    }
+  }
+
+  return allowedNames;
+}
+
+function extractMessageToolUseIds(message: ParsedMessage): Set<string> {
+  const toolUseIds = new Set<string>();
+
+  for (const toolCall of message.toolCalls) {
+    if (typeof toolCall.id === 'string' && toolCall.id.trim().length > 0) {
+      toolUseIds.add(toolCall.id.trim());
+    }
+  }
+
+  for (const toolResult of message.toolResults) {
+    if (typeof toolResult.toolUseId === 'string' && toolResult.toolUseId.trim().length > 0) {
+      toolUseIds.add(toolResult.toolUseId.trim());
+    }
+  }
+
+  if (typeof message.sourceToolUseID === 'string' && message.sourceToolUseID.trim().length > 0) {
+    toolUseIds.add(message.sourceToolUseID.trim());
+  }
+
+  return toolUseIds;
+}
+
+function messageHasNonBoardToolActivity(
+  message: ParsedMessage,
+  toolNameByUseId: Map<string, string>
+): boolean {
+  for (const toolCall of message.toolCalls) {
+    if (!isBoardMcpToolName(toolCall.name)) {
+      return true;
+    }
+  }
+
+  for (const toolResult of message.toolResults) {
+    if (!isBoardMcpToolName(toolNameByUseId.get(toolResult.toolUseId))) {
+      return true;
+    }
+  }
+
+  if (message.sourceToolUseID) {
+    const sourceToolName = toolNameByUseId.get(message.sourceToolUseID);
+    if (sourceToolName && !isBoardMcpToolName(sourceToolName)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function buildInferredActor(message: ParsedMessage, leadName: string): BoardTaskLogActor | null {
+  const sessionId = message.sessionId?.trim();
+  if (!sessionId) {
+    return null;
+  }
+
+  const memberName =
+    typeof message.agentName === 'string' && message.agentName.trim().length > 0
+      ? message.agentName.trim()
+      : undefined;
+
+  const isLead =
+    memberName != null && normalizeMemberName(memberName) === normalizeMemberName(leadName);
+
+  return {
+    ...(memberName ? { memberName } : {}),
+    role: isLead ? 'lead' : memberName ? 'member' : message.isSidechain ? 'member' : 'unknown',
+    sessionId,
+    ...(message.agentId ? { agentId: message.agentId } : {}),
+    isSidechain: message.isSidechain,
+  };
+}
+
+function compareSlices(left: StreamSlice, right: StreamSlice): number {
+  const leftTs = Date.parse(left.timestamp);
+  const rightTs = Date.parse(right.timestamp);
+  if (Number.isFinite(leftTs) && Number.isFinite(rightTs) && leftTs !== rightTs) {
+    return leftTs - rightTs;
+  }
+  if (left.filePath !== right.filePath) {
+    return left.filePath.localeCompare(right.filePath);
+  }
+  if ((left.sortOrder ?? 0) !== (right.sortOrder ?? 0)) {
+    return (left.sortOrder ?? 0) - (right.sortOrder ?? 0);
+  }
+  return left.id.localeCompare(right.id);
+}
+
 export class BoardTaskLogStreamService {
   constructor(
     private readonly recordSource: BoardTaskActivityRecordSource = new BoardTaskActivityRecordSource(),
     private readonly summarySelector: BoardTaskExactLogSummarySelector = new BoardTaskExactLogSummarySelector(),
     private readonly strictParser: BoardTaskExactLogStrictParser = new BoardTaskExactLogStrictParser(),
     private readonly detailSelector: BoardTaskExactLogDetailSelector = new BoardTaskExactLogDetailSelector(),
-    private readonly chunkBuilder: BoardTaskExactLogChunkBuilder = new BoardTaskExactLogChunkBuilder()
+    private readonly chunkBuilder: BoardTaskExactLogChunkBuilder = new BoardTaskExactLogChunkBuilder(),
+    private readonly taskReader: TeamTaskReader = new TeamTaskReader(),
+    private readonly transcriptSourceLocator: TeamTranscriptSourceLocator = new TeamTranscriptSourceLocator()
   ) {}
+
+  private async buildInferredExecutionSlices(
+    teamName: string,
+    taskId: string,
+    records: Awaited<ReturnType<BoardTaskActivityRecordSource['getTaskRecords']>>,
+    parsedMessagesByFile: Map<string, ParsedMessage[]>
+  ): Promise<StreamSlice[]> {
+    if (records.some((record) => record.linkKind === 'execution')) {
+      return [];
+    }
+
+    const [activeTasks, deletedTasks, transcriptContext] = await Promise.all([
+      this.taskReader.getTasks(teamName),
+      this.taskReader.getDeletedTasks(teamName),
+      this.transcriptSourceLocator.getContext(teamName),
+    ]);
+
+    const task = [...activeTasks, ...deletedTasks].find((candidate) => candidate.id === taskId);
+    if (!task) {
+      return [];
+    }
+
+    const transcriptFiles = transcriptContext?.transcriptFiles ?? [];
+    const missingFiles = transcriptFiles.filter((filePath) => !parsedMessagesByFile.has(filePath));
+    let mergedParsedMessagesByFile = parsedMessagesByFile;
+    if (missingFiles.length > 0) {
+      const additionalParsedMessages = await this.strictParser.parseFiles(missingFiles);
+      mergedParsedMessagesByFile = new Map([
+        ...parsedMessagesByFile.entries(),
+        ...additionalParsedMessages.entries(),
+      ]);
+    }
+
+    const toolNameByUseId = buildToolNameByUseId(mergedParsedMessagesByFile);
+    const recordTimestamps = records.map((record) => Date.parse(record.timestamp));
+    const taskTimeWindows = buildTaskTimeWindows(task, recordTimestamps);
+    if (taskTimeWindows.length === 0) {
+      return [];
+    }
+
+    const explicitMessageIds = collectExplicitMessageIds(records);
+    const explicitToolUseIds = collectExplicitToolUseIds(records);
+    const allowedMemberNames = collectAllowedMemberNames(task, records);
+    const leadName =
+      transcriptContext?.config.members
+        ?.find((member) => isLeadMemberCheck(member))
+        ?.name?.trim() || 'team-lead';
+
+    const inferredSlices: StreamSlice[] = [];
+    for (const [filePath, messages] of mergedParsedMessagesByFile.entries()) {
+      for (let index = 0; index < messages.length; index += 1) {
+        const message = messages[index];
+        if (explicitMessageIds.has(message.uuid)) {
+          continue;
+        }
+        if (!isWithinTimeWindows(message.timestamp, taskTimeWindows)) {
+          continue;
+        }
+
+        const actor = buildInferredActor(message, leadName);
+        if (!actor || !actor.memberName) {
+          continue;
+        }
+
+        if (
+          allowedMemberNames.size > 0 &&
+          !allowedMemberNames.has(normalizeMemberName(actor.memberName))
+        ) {
+          continue;
+        }
+
+        const messageToolUseIds = extractMessageToolUseIds(message);
+        if ([...messageToolUseIds].some((toolUseId) => explicitToolUseIds.has(toolUseId))) {
+          continue;
+        }
+        if (!messageHasNonBoardToolActivity(message, toolNameByUseId)) {
+          continue;
+        }
+
+        inferredSlices.push({
+          id: `inferred:${filePath}:${message.uuid}`,
+          timestamp: message.timestamp.toISOString(),
+          filePath,
+          sortOrder: index,
+          participantKey: buildParticipantKey(actor),
+          actor,
+          filteredMessages: [message],
+        });
+      }
+    }
+
+    return inferredSlices.sort(compareSlices);
+  }
 
   async getTaskLogStream(teamName: string, taskId: string): Promise<BoardTaskLogStreamResponse> {
     if (!isBoardTaskExactLogsReadEnabled()) {
@@ -762,6 +1088,7 @@ export class BoardTaskLogStreamService {
         id: detail.id,
         timestamp: detail.timestamp,
         filePath: detail.source.filePath,
+        sortOrder: detail.source.sourceOrder,
         participantKey: buildParticipantKey(actor),
         actor,
         actionCategory: candidate.actionCategory,
@@ -773,7 +1100,14 @@ export class BoardTaskLogStreamService {
       return emptyResponse();
     }
 
-    const deNoisedSlices = filterReadOnlySlices(slices);
+    const inferredExecutionSlices = await this.buildInferredExecutionSlices(
+      teamName,
+      taskId,
+      records,
+      parsedMessagesByFile
+    );
+    const combinedSlices = [...slices, ...inferredExecutionSlices].sort(compareSlices);
+    const deNoisedSlices = filterReadOnlySlices(combinedSlices);
 
     const namedParticipantSlices = deNoisedSlices.filter((slice) =>
       hasNamedParticipant(slice.actor)

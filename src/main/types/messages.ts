@@ -80,10 +80,14 @@ export interface ParsedMessage {
   // Metadata
   /** Current working directory when message was created */
   cwd?: string;
+  /** Root/session identifier from transcript */
+  sessionId?: string;
   /** Git branch context */
   gitBranch?: string;
   /** Agent ID for subagent messages */
   agentId?: string;
+  /** Human-readable agent/member name from transcript */
+  agentName?: string;
   /** Whether this is a sidechain message */
   isSidechain: boolean;
   /** Whether this is a meta message */

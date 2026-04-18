@@ -1906,6 +1906,7 @@ function buildDeterministicLaunchHydrationPrompt(
   const userPromptBlock = request.prompt?.trim()
     ? `\nOriginal user instructions to apply after reconnect is stable:\n${request.prompt.trim()}\n`
     : '';
+  const hasOriginalUserPrompt = Boolean(request.prompt?.trim());
   const taskBoardSnapshot = buildTaskBoardSnapshot(tasks);
   const persistentContext = buildPersistentLeadContext({
     teamName: request.teamName,
@@ -1919,13 +1920,21 @@ Do NOT call TeamCreate.
 Do NOT use Agent to spawn or restore teammates.
 Do NOT start implementation in this turn.
 Use this turn only to refresh context, review the current board snapshot, and confirm you are ready.
-If the user instructions imply new substantial work that is not on the board yet, you MAY create or update board tasks for yourself, but do not begin executing them yet.`
+${
+  hasOriginalUserPrompt
+    ? 'Do NOT create or update any new task in this turn - wait for the next normal operating turn before translating those instructions into board work.'
+    : 'Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.'
+}`
     : `This reconnect/bootstrap step has already been completed deterministically by the runtime.
 Do NOT call TeamCreate.
 Do NOT use Agent to spawn or restore teammates.
 Do NOT repeat the launch summary.
-Use this turn only to refresh context, review the current board snapshot, and prepare the next delegation step.
-If the user instructions imply new substantial work that is not on the board yet, you MAY create or update team-board tasks and assign owners now, but do NOT start implementation work in this turn.
+Use this turn only to refresh context and review the current board snapshot.
+${
+  hasOriginalUserPrompt
+    ? 'Do NOT create or assign any new task in this turn - wait for the next normal operating turn before translating those instructions into board work.'
+    : 'Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.'
+}
 Treat teammates whose bootstrap is still pending as not-yet-available for blocking assignments.`;
 
   return `${startLabel} [Deterministic reconnect | Team: "${request.teamName}" | Project: "${projectName}" | Lead: "${leadName}"]
@@ -1952,6 +1961,7 @@ function buildGeminiPostLaunchHydrationPrompt(
   const userPromptBlock = run.request.prompt?.trim()
     ? `\nOriginal user instructions to apply now:\n${run.request.prompt.trim()}\n`
     : '';
+  const hasOriginalUserPrompt = Boolean(run.request.prompt?.trim());
   const taskBoardSnapshot = buildTaskBoardSnapshot(tasks);
   const teammateBootstrapSnapshot = members.length
     ? `Current teammate launch status:\n${members
@@ -1980,8 +1990,12 @@ function buildGeminiPostLaunchHydrationPrompt(
     members,
   });
   const nextStepInstruction = isSolo
-    ? 'From this point on, use the full operating rules below for all future turns. If the original user instructions describe substantial work that should be tracked, you MAY now create board tasks for yourself, but do not start implementation in this context-refresh turn.'
-    : 'From this point on, use the full team operating rules below for all future turns. If the original user instructions describe substantial work that should be tracked, you MAY now translate them into board tasks and prepare delegation, but do not start implementation work in this context-refresh turn. Do NOT assume bootstrap-pending or failed teammates are ready; only treat teammates with confirmed bootstrap as immediately available for blocking assignments.';
+    ? hasOriginalUserPrompt
+      ? 'From this point on, use the full operating rules below for all future turns. Do NOT create or update any new task in this context-refresh turn - wait for the next normal operating turn before translating those instructions into board work.'
+      : 'From this point on, use the full operating rules below for all future turns. Do NOT create, assign, or delegate any new task in this context-refresh turn. If the board is empty, stay silent and wait for a fresh user instruction.'
+    : hasOriginalUserPrompt
+      ? 'From this point on, use the full team operating rules below for all future turns. Do NOT create or assign any new task in this context-refresh turn - wait for the next normal operating turn before translating those instructions into board work. Do NOT assume bootstrap-pending or failed teammates are ready; only treat teammates with confirmed bootstrap as immediately available for blocking assignments.'
+      : 'From this point on, use the full team operating rules below for all future turns. Do NOT create, assign, or delegate any new task in this context-refresh turn. If the board is empty, stay silent and wait for a fresh user instruction. Do NOT assume bootstrap-pending or failed teammates are ready; only treat teammates with confirmed bootstrap as immediately available for blocking assignments.';
 
   return `Gemini launch phase 2 — operating context for team "${run.teamName}".
 
