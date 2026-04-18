@@ -73,6 +73,7 @@ import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchSta
 import { getTeamLaunchStatePath } from '@main/services/team/TeamLaunchStateStore';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { spawnCli } from '@main/utils/childProcess';
+import { encodePath } from '@main/utils/pathDecoder';
 import { AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES } from 'agent-teams-controller';
 import { listTmuxPanePidsForCurrentPlatform } from '@features/tmux-installer/main';
 import pidusage from 'pidusage';
@@ -234,6 +235,40 @@ function createMemberSpawnRun(params?: {
   } as any;
 }
 
+function createClaudeLogsRun(overrides: Record<string, unknown> = {}) {
+  return {
+    runId: 'run-logs-1',
+    teamName: 'logs-team',
+    startedAt: '2026-04-19T10:00:00.000Z',
+    isLaunch: false,
+    provisioningComplete: true,
+    processKilled: false,
+    cancelRequested: false,
+    timeoutHandle: null,
+    fsMonitorHandle: null,
+    stallCheckHandle: null,
+    silentUserDmForwardClearHandle: null,
+    child: null,
+    leadActivityState: 'idle',
+    activeToolCalls: new Map(),
+    pendingDirectCrossTeamSendRefresh: false,
+    memberSpawnStatuses: new Map(),
+    activeCrossTeamReplyHints: [],
+    pendingInboxRelayCandidates: [],
+    pendingApprovals: new Map(),
+    mcpConfigPath: null,
+    bootstrapSpecPath: null,
+    bootstrapUserPromptPath: null,
+    claudeLogLines: ['[stdout]', 'first line', '[stderr]', 'boom'],
+    claudeLogsUpdatedAt: '2026-04-19T10:00:01.000Z',
+    progress: {
+      updatedAt: '2026-04-19T10:00:01.000Z',
+      state: 'ready',
+    },
+    ...overrides,
+  } as any;
+}
+
 describe('TeamProvisioningService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -280,6 +315,80 @@ describe('TeamProvisioningService', () => {
       const svc = new TeamProvisioningService();
       await expect(svc.warmup()).resolves.not.toThrow();
       expect(spawnCli).toHaveBeenCalled();
+    });
+  });
+
+  describe('getClaudeLogs', () => {
+    it('retains the last logs after cleanupRun removes the live run', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createClaudeLogsRun();
+
+      (svc as any).runs.set(run.runId, run);
+      (svc as any).aliveRunByTeam.set(run.teamName, run.runId);
+
+      await expect(svc.getClaudeLogs(run.teamName)).resolves.toEqual({
+        lines: ['boom', '[stderr]', 'first line', '[stdout]'],
+        total: 4,
+        hasMore: false,
+        updatedAt: '2026-04-19T10:00:01.000Z',
+      });
+
+      (svc as any).cleanupRun(run);
+
+      await expect(svc.getClaudeLogs(run.teamName)).resolves.toEqual({
+        lines: ['boom', '[stderr]', 'first line', '[stdout]'],
+        total: 4,
+        hasMore: false,
+        updatedAt: '2026-04-19T10:00:01.000Z',
+      });
+    });
+
+    it('falls back to the persisted lead transcript when no live run exists', async () => {
+      const svc = new TeamProvisioningService();
+      const teamName = 'offline-logs-team';
+      const projectPath = '/tmp/offline-logs-project';
+      const leadSessionId = 'lead-session-1';
+      const projectDir = path.join(tempProjectsBase, encodePath(projectPath));
+
+      writeLaunchConfig(teamName, projectPath, leadSessionId, []);
+      fs.mkdirSync(projectDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(projectDir, `${leadSessionId}.jsonl`),
+        [
+          '{"type":"user","message":{"role":"user","content":"first"}}',
+          '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"second"}]}}',
+          '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"third"}]}}',
+        ].join('\n') + '\n',
+        'utf8'
+      );
+
+      await expect(svc.getClaudeLogs(teamName)).resolves.toEqual({
+        lines: [
+          '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"third"}]}}',
+          '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"second"}]}}',
+          '{"type":"user","message":{"role":"user","content":"first"}}',
+        ],
+        total: 3,
+        hasMore: false,
+        updatedAt: expect.any(String),
+      });
+    });
+
+    it('clears retained logs when a new run starts for the same team', async () => {
+      const svc = new TeamProvisioningService();
+
+      (svc as any).retainedClaudeLogsByTeam.set('logs-team', {
+        lines: ['[stdout]', 'stale line'],
+        updatedAt: '2026-04-19T10:00:01.000Z',
+      });
+
+      (svc as any).resetTeamScopedTransientStateForNewRun('logs-team');
+
+      await expect(svc.getClaudeLogs('logs-team')).resolves.toEqual({
+        lines: [],
+        total: 0,
+        hasMore: false,
+      });
     });
   });
 

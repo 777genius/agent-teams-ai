@@ -1315,7 +1315,7 @@ async function handleGetClaudeLogs(
   }
 
   return wrapTeamHandler('getClaudeLogs', async () => {
-    const data = getTeamProvisioningService().getClaudeLogs(validated.value!, parsed);
+    const data = await getTeamProvisioningService().getClaudeLogs(validated.value!, parsed);
     return {
       lines: data.lines,
       total: data.total,

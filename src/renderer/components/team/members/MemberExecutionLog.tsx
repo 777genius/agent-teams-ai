@@ -192,7 +192,7 @@ const AIExecutionGroup = ({
             >
               <Bot className="size-4 shrink-0 text-[var(--color-text-secondary)]" />
               <span className="shrink-0 text-xs font-semibold text-[var(--color-text-secondary)]">
-                Claude
+                Agent
               </span>
               <span className="min-w-0 flex-1 truncate text-xs text-[var(--color-text-muted)]">
                 {enhanced.itemsSummary}
