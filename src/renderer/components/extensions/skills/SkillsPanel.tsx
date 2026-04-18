@@ -127,7 +127,7 @@ function formatRuntimeAudienceLabel(providerNames: readonly string[]): string {
     return 'the configured runtime';
   }
   if (providerNames.length === 1) {
-    return providerNames[0];
+    return providerNames[0]!;
   }
   if (providerNames.length === 2) {
     return `${providerNames[0]} and ${providerNames[1]}`;

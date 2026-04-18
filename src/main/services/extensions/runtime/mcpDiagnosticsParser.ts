@@ -48,7 +48,6 @@ function isSensitiveCliFlag(flag: string): boolean {
   const normalizedFlag = flag.toLowerCase().replace(/^--/, '').replace(/[-_]/g, '');
   return SENSITIVE_FLAG_NAMES.has(normalizedFlag);
 }
-
 function extractJsonObject<T>(raw: string): T {
   const trimmed = raw.trim();
   try {

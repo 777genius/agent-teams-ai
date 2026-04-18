@@ -29,7 +29,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { resolveSkillProjectPath } from './skillProjectUtils';
 
-import type { SkillValidationIssue } from '@shared/types';
+import type { SkillValidationIssue } from '@shared/types/extensions';
 
 interface SkillDetailDialogProps {
   skillId: string | null;

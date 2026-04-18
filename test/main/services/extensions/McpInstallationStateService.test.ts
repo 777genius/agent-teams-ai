@@ -21,14 +21,15 @@ vi.mock('@main/utils/pathDecoder', () => ({
     const windowsRoot = cwd.match(/^[A-Za-z]:[\\/]/)?.[0] ?? null;
     const root = windowsRoot ?? '/';
     const sep = windowsRoot ? '\\' : '/';
-    return `${root}tmp${sep}mock-home`.replaceAll('//', '/');
+    return `${root}${root.endsWith(sep) ? '' : sep}tmp${sep}mock-home`;
   },
   getClaudeBasePath: () => {
     const cwd = process.cwd();
     const windowsRoot = cwd.match(/^[A-Za-z]:[\\/]/)?.[0] ?? null;
     const root = windowsRoot ?? '/';
     const sep = windowsRoot ? '\\' : '/';
-    return `${root}tmp${sep}mock-home${sep}.claude`.replaceAll('//', '/');
+    const mockHome = `${root}${root.endsWith(sep) ? '' : sep}tmp${sep}mock-home`;
+    return `${mockHome}${sep}.claude`;
   },
   setClaudeBasePathOverride: vi.fn(),
 }));

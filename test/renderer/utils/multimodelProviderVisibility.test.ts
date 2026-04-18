@@ -5,7 +5,6 @@ import {
   getVisibleMultimodelProviders,
   isMultimodelRuntimeStatus,
 } from '@renderer/utils/multimodelProviderVisibility';
-
 import type { CliInstallationStatus, CliProviderStatus } from '@shared/types';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 

@@ -21,7 +21,6 @@ async function buildManagementCliEnvForBinary(binaryPath: string): Promise<NodeJ
   });
   return env;
 }
-
 export interface ExtensionsRuntimeAdapter {
   readonly flavor: CliFlavor;
   buildManagementCliEnv(binaryPath: string): Promise<NodeJS.ProcessEnv>;
