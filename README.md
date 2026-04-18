@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <sub>100% free, open source. Auto-detects Claude/Codex. Use the provider access you already have -  subscriptions or API keys. Not just coding agents.</sub>
+  <sub>Free desktop app for AI agent teams. Auto-detects Claude/Codex. Use the provider access you already have - subscriptions or API keys. Not just coding agents.</sub>
 </p>
 
 <img width="1500" height="1065" alt="demo" src="https://github.com/user-attachments/assets/9d502887-7e28-4a11-aedd-3bd45fdfb0d2" />
@@ -107,7 +107,7 @@ If you want the freshest version, clone the repo and run it from the `dev` branc
 
 ## What is this
 
-A local orchestration layer for AI agent teams across Claude and Codex.
+An orchestration layer for AI agent teams across Claude and Codex.
 
 - **Claude + Codex orchestration** — auto-detect available Claude/Codex runtimes and use the provider access you already have - subscriptions or API keys
 - **Assemble your team** — create agent teams with different roles that work autonomously in parallel
@@ -215,7 +215,7 @@ No. The app guides runtime detection/setup and provider authentication from the 
 <details>
 <summary><strong>Does it read or upload my code?</strong></summary>
 <br />
-No. Everything runs locally. The app reads local runtime/session data to power the UI - your source code is never sent anywhere.
+The app is not a cloud code-sync service. It reads local runtime/session data to power the UI, and your project stays on your machine unless you choose a provider/runtime path that sends data to that provider. In `multimodel` mode, startup may also perform runtime access and capability checks before launch.
 </details>
 
 <details>
@@ -227,7 +227,7 @@ Yes. Agents send direct messages, create shared tasks, and leave comments - all 
 <details>
 <summary><strong>Is it free?</strong></summary>
 <br />
-Yes, completely free and open source. The app has no paid tier of its own. To run agents, you only need access to a supported provider/runtime, such as Anthropic or Codex.
+Yes, free and open source. The app has no paid tier of its own. To run agents, you only need access to a supported provider/runtime, such as Anthropic or Codex.
 </details>
 
 <details>
@@ -254,7 +254,7 @@ Yes. Run multiple teams in one project or across different projects, even simult
 
 ## Tech stack
 
-Electron 40, React 19, TypeScript 5, Tailwind CSS 3, Zustand 4. Data from `~/.claude/` (session logs, todos, tasks). No cloud backend — everything runs locally.
+Electron 40, React 19, TypeScript 5, Tailwind CSS 3, Zustand 4. Data from `~/.claude/` (session logs, todos, tasks). The desktop app works with local runtime/session state, while some runtime modes may also use provider or startup capability services when required.
 
 <details>
 <summary><strong>Build from source</strong></summary>
