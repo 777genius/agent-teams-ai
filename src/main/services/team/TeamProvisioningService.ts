@@ -82,15 +82,16 @@ import { resolveTeamProviderId } from '../runtime/providerRuntimeEnv';
 
 import { buildActionModeProtocol } from './actionModeInstructions';
 import { atomicWriteAsync } from './atomicWrite';
+import { peekAutoResumeService } from './AutoResumeService';
 import { ClaudeBinaryResolver } from './ClaudeBinaryResolver';
 import { withFileLock } from './fileLock';
-import { buildProgressAssistantOutput, buildProgressLogsTail } from './progressPayload';
 import {
   type ClassifiedMainProcessIdle,
   classifyIdleNotificationForMainProcess,
 } from './idleNotificationMainProcessSemantics';
 import { withInboxLock } from './inboxLock';
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
+import { buildProgressAssistantOutput, buildProgressLogsTail } from './progressPayload';
 import { resolveDesktopTeammateModeDecision } from './runtimeTeammateMode';
 import {
   choosePreferredLaunchSnapshot,
@@ -113,7 +114,6 @@ import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMetaStore } from './TeamMetaStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { TeamTaskReader } from './TeamTaskReader';
-import { peekAutoResumeService } from './AutoResumeService';
 
 /**
  * Kill a team CLI process using SIGKILL (uncatchable).
