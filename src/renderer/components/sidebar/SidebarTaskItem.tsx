@@ -144,11 +144,13 @@ export const SidebarTaskItem = ({
   );
 
   const showTeamRow = showTeamName && !hideTeamName;
+  const unreadBackgroundClass =
+    unreadCount > 0 ? (isLight ? 'bg-blue-500/[0.03]' : 'bg-blue-500/[0.05]') : '';
 
   return (
     <button
       type="button"
-      className={`flex w-full cursor-pointer flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${unreadCount > 0 ? (isLight ? 'bg-blue-500/[0.03]' : 'bg-blue-500/[0.08]') : ''} ${task.teamDeleted ? 'opacity-50' : ''}`}
+      className={`flex w-full cursor-pointer flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${unreadBackgroundClass} ${task.teamDeleted ? 'opacity-50' : ''}`}
       style={{ borderColor: 'var(--color-border)' }}
       onClick={() => {
         if (!isRenaming) {
