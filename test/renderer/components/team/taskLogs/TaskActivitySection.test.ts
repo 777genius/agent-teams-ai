@@ -241,6 +241,120 @@ describe('TaskActivitySection', () => {
     });
   });
 
+  it('does not load activity while disabled', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskActivitySection, {
+          teamName: 'demo',
+          taskId: 'task-a',
+          enabled: false,
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(apiState.getTaskActivity).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('preserves loaded activity while disabled and refreshes again on re-enable', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    apiState.getTaskActivity
+      .mockResolvedValueOnce([
+        makeEntry({
+          id: 'started',
+          timestamp: '2026-04-13T10:34:00.000Z',
+          linkKind: 'lifecycle',
+          action: {
+            canonicalToolName: 'task_start',
+            category: 'status',
+          },
+        }),
+      ])
+      .mockResolvedValueOnce([
+        makeEntry({
+          id: 'started',
+          timestamp: '2026-04-13T10:34:00.000Z',
+          linkKind: 'lifecycle',
+          action: {
+            canonicalToolName: 'task_start',
+            category: 'status',
+          },
+        }),
+        makeEntry({
+          id: 'viewed',
+          timestamp: '2026-04-13T10:35:00.000Z',
+          linkKind: 'board_action',
+          action: {
+            canonicalToolName: 'task_get',
+            category: 'read',
+          },
+        }),
+      ]);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskActivitySection, {
+          teamName: 'demo',
+          taskId: 'task-a',
+          enabled: true,
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(host.textContent).toContain('Started work');
+    expect(apiState.getTaskActivity).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskActivitySection, {
+          teamName: 'demo',
+          taskId: 'task-a',
+          enabled: false,
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(host.textContent).toContain('Started work');
+    expect(apiState.getTaskActivity).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskActivitySection, {
+          teamName: 'demo',
+          taskId: 'task-a',
+          enabled: true,
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(host.textContent).toContain('Started work');
+    expect(host.textContent).toContain('Viewed task');
+    expect(apiState.getTaskActivity).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
   it('loads inline detail lazily and renders metadata plus a linked tool card', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     apiState.getTaskActivity.mockResolvedValue([

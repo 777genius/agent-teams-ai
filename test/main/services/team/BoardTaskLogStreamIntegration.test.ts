@@ -586,6 +586,189 @@ describe('BoardTaskLogStreamService integration', () => {
     expect(toolNames).toContain('mcp__agent-teams__task_complete');
   });
 
+  it('sanitizes inferred SendMessage results instead of surfacing raw json payloads', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-inferred-sendmessage-'));
+    tempDirs.push(dir);
+    const transcriptPath = path.join(dir, 'session.jsonl');
+    const task = createTask({
+      owner: 'tom',
+      workIntervals: [
+        {
+          startedAt: '2026-04-12T15:36:00.000Z',
+          completedAt: '2026-04-12T15:40:00.000Z',
+        },
+      ],
+    });
+
+    const lines = [
+      createAssistantEntry({
+        uuid: 'a-start',
+        timestamp: '2026-04-12T15:36:00.000Z',
+        requestId: 'req-start',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'call-task-start',
+            name: 'mcp__agent-teams__task_start',
+            input: {
+              teamName: TEAM_NAME,
+              taskId: TASK_ID,
+            },
+          },
+        ],
+      }),
+      createUserEntry({
+        uuid: 'u-start',
+        timestamp: '2026-04-12T15:36:00.120Z',
+        sourceToolAssistantUUID: 'a-start',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'call-task-start',
+            content: 'ok',
+          },
+        ],
+        boardTaskLinks: [
+          {
+            schemaVersion: 1,
+            toolUseId: 'call-task-start',
+            task: {
+              ref: TASK_ID,
+              refKind: 'canonical',
+              canonicalId: TASK_ID,
+            },
+            targetRole: 'subject',
+            linkKind: 'lifecycle',
+            taskArgumentSlot: 'taskId',
+            actorContext: {
+              relation: 'idle',
+            },
+          },
+        ],
+        boardTaskToolActions: [
+          {
+            schemaVersion: 1,
+            toolUseId: 'call-task-start',
+            canonicalToolName: 'task_start',
+          },
+        ],
+        toolUseResult: {
+          toolUseId: 'call-task-start',
+          content: '{"id":"c414cd52"}',
+        },
+      }),
+      createAssistantEntry({
+        uuid: 'a-send',
+        timestamp: '2026-04-12T15:36:10.000Z',
+        requestId: 'req-send',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'call-send',
+            name: 'SendMessage',
+            input: {
+              to: 'team-lead',
+              summary: '#abc done',
+              message: 'Detailed body',
+            },
+          },
+        ],
+      }),
+      createUserEntry({
+        uuid: 'u-send',
+        timestamp: '2026-04-12T15:36:10.200Z',
+        sourceToolAssistantUUID: 'a-send',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'call-send',
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  success: true,
+                  message: "Message sent to team-lead's inbox",
+                  routing: {
+                    target: '@team-lead',
+                    summary: '#abc done',
+                    content: 'Detailed body',
+                  },
+                }),
+              },
+            ],
+          },
+        ],
+        toolUseResult: {
+          success: true,
+          message: "Message sent to team-lead's inbox",
+          routing: {
+            target: '@team-lead',
+            summary: '#abc done',
+            content: 'Detailed body',
+          },
+        },
+      }),
+    ];
+
+    await writeFile(
+      transcriptPath,
+      `${lines.map((line) => JSON.stringify(line)).join('\n')}\n`,
+      'utf8',
+    );
+
+    const recordSource = {
+      getTaskRecords: async () => buildRecordsFromTranscript(transcriptPath, task),
+    };
+    const taskReader = {
+      getTasks: async () => [task],
+      getDeletedTasks: async () => [] as TeamTask[],
+    };
+    const transcriptSourceLocator = {
+      getContext: async () =>
+        ({
+          transcriptFiles: [transcriptPath],
+          config: {
+            members: [{ name: 'team-lead', agentType: 'team-lead' }],
+          },
+        }) as never,
+    };
+
+    const service = new BoardTaskLogStreamService(
+      recordSource as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      taskReader as never,
+      transcriptSourceLocator as never,
+    );
+    const response = await service.getTaskLogStream(TEAM_NAME, task.id);
+    const rawMessages = flattenRawMessages(response);
+    const sendResult = rawMessages.find((message) => message.uuid === 'u-send');
+    const semanticToolResult = response.segments
+      .flatMap((segment) => segment.chunks)
+      .flatMap((chunk) => ('semanticSteps' in chunk ? (chunk.semanticSteps ?? []) : []))
+      .find((step) => step.type === 'tool_result' && step.id === 'call-send');
+
+    expect(rawMessages.flatMap((message) => message.toolCalls.map((toolCall) => toolCall.name))).toContain(
+      'SendMessage'
+    );
+    expect(sendResult?.toolResults).toEqual([
+      {
+        toolUseId: 'call-send',
+        content: "Message sent to team-lead's inbox - #abc done",
+        isError: false,
+      },
+    ]);
+    expect(semanticToolResult).toMatchObject({
+      id: 'call-send',
+      type: 'tool_result',
+      content: expect.objectContaining({
+        toolResultContent: "Message sent to team-lead's inbox - #abc done",
+      }),
+    });
+  });
+
   it('reads a real-format transcript fixture and surfaces fallback worker logs for the task owner only', async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'task-log-stream-real-fixture-'));
     tempDirs.push(dir);

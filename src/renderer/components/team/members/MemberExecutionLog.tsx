@@ -28,10 +28,7 @@ export const MemberExecutionLog = ({
   const conversation = useMemo(() => transformChunksToConversation(chunks, [], false), [chunks]);
 
   // Show newest groups first — most recent activity is most relevant in execution logs.
-  const orderedItems = useMemo(
-    () => [...conversation.items].reverse(),
-    [conversation.items]
-  );
+  const orderedItems = useMemo(() => [...conversation.items].reverse(), [conversation.items]);
 
   // Store collapsed groups instead of expanded: by default, everything is expanded.
   // This avoids resetting state in an effect when conversation changes.
@@ -179,6 +176,8 @@ const AIExecutionGroup = ({
     return enhanceAIGroup({ ...group, processes: filteredProcesses });
   }, [group, memberName]);
   const hasToggleContent = enhanced.displayItems.length > 0;
+  const visibleLastOutput =
+    enhanced.lastOutput?.type === 'tool_result' ? null : enhanced.lastOutput;
 
   return (
     <div className="space-y-3 border-l-2 pl-3" style={{ borderColor: 'var(--chat-ai-border)' }}>
@@ -219,7 +218,7 @@ const AIExecutionGroup = ({
         </div>
       ) : null}
 
-      <LastOutputDisplay lastOutput={enhanced.lastOutput} aiGroupId={group.id} />
+      <LastOutputDisplay lastOutput={visibleLastOutput} aiGroupId={group.id} />
     </div>
   );
 };

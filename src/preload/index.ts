@@ -161,6 +161,7 @@ import {
   TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SEND_MESSAGE,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
+  TEAM_SET_TASK_LOG_STREAM_TRACKING,
   TEAM_SET_PROJECT_BRANCH_TRACKING,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SET_TOOL_ACTIVITY_TRACKING,
@@ -833,6 +834,9 @@ const electronAPI: ElectronAPI = {
     },
     setChangePresenceTracking: async (teamName: string, enabled: boolean) => {
       return invokeIpcWithResult<void>(TEAM_SET_CHANGE_PRESENCE_TRACKING, teamName, enabled);
+    },
+    setTaskLogStreamTracking: async (teamName: string, enabled: boolean) => {
+      return invokeIpcWithResult<void>(TEAM_SET_TASK_LOG_STREAM_TRACKING, teamName, enabled);
     },
     setToolActivityTracking: async (teamName: string, enabled: boolean) => {
       return invokeIpcWithResult<void>(TEAM_SET_TOOL_ACTIVITY_TRACKING, teamName, enabled);

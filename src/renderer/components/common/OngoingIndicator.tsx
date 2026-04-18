@@ -14,6 +14,8 @@ interface OngoingIndicatorProps {
   showLabel?: boolean;
   /** Custom label text */
   label?: string;
+  /** Accessible title/tooltip text */
+  title?: string;
 }
 
 /**
@@ -24,11 +26,12 @@ export const OngoingIndicator = ({
   size = 'sm',
   showLabel = false,
   label = 'Session in progress...',
+  title = label,
 }: Readonly<OngoingIndicatorProps>): React.JSX.Element => {
   const dotSize = size === 'sm' ? 'h-2 w-2' : 'h-2.5 w-2.5';
 
   return (
-    <span className="inline-flex items-center gap-2" title="Session in progress">
+    <span className="inline-flex items-center gap-2" title={title}>
       <span className={`relative flex ${dotSize} shrink-0`}>
         <span className="absolute inline-flex size-full animate-ping rounded-full bg-green-400 opacity-75" />
         <span className={`relative inline-flex rounded-full ${dotSize} bg-green-500`} />

@@ -4,25 +4,61 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskLogsPanel } from '../../../../../src/renderer/components/team/taskLogs/TaskLogsPanel';
 
+import type { TeamChangeEvent } from '../../../../../src/shared/types';
 import type { TeamTaskWithKanban } from '../../../../../src/shared/types';
+
+const apiState = {
+  onTeamChange: vi.fn<(callback: (event: unknown, data: TeamChangeEvent) => void) => () => void>(),
+  setTaskLogStreamTracking: vi.fn<(teamName: string, enabled: boolean) => Promise<void>>(),
+};
+
+vi.mock('@renderer/api', () => ({
+  api: {
+    teams: {
+      onTeamChange: (...args: Parameters<typeof apiState.onTeamChange>) =>
+        apiState.onTeamChange(...args),
+      setTaskLogStreamTracking: (...args: Parameters<typeof apiState.setTaskLogStreamTracking>) =>
+        apiState.setTaskLogStreamTracking(...args),
+    },
+  },
+}));
 
 const featureGateState = {
   activityEnabled: true,
   exactLogsEnabled: true,
 };
 
+const taskActivityProps = vi.hoisted(() => ({
+  calls: [] as Array<Record<string, unknown>>,
+}));
+
 vi.mock('../../../../../src/renderer/components/team/taskLogs/TaskActivitySection', () => ({
-  TaskActivitySection: () => React.createElement('div', { 'data-testid': 'task-activity' }, 'activity'),
+  TaskActivitySection: (props: Record<string, unknown>) => {
+    taskActivityProps.calls.push(props);
+    return React.createElement('div', { 'data-testid': 'task-activity' }, 'activity');
+  },
+}));
+
+const taskLogStreamProps = vi.hoisted(() => ({
+  calls: [] as Array<Record<string, unknown>>,
+}));
+
+const executionSessionsProps = vi.hoisted(() => ({
+  calls: [] as Array<Record<string, unknown>>,
 }));
 
 vi.mock('../../../../../src/renderer/components/team/taskLogs/TaskLogStreamSection', () => ({
-  TaskLogStreamSection: () =>
-    React.createElement('div', { 'data-testid': 'task-log-stream' }, 'stream'),
+  TaskLogStreamSection: (props: Record<string, unknown>) => {
+    taskLogStreamProps.calls.push(props);
+    return React.createElement('div', { 'data-testid': 'task-log-stream' }, 'stream');
+  },
 }));
 
 vi.mock('../../../../../src/renderer/components/team/taskLogs/ExecutionSessionsSection', () => ({
-  ExecutionSessionsSection: () =>
-    React.createElement('div', { 'data-testid': 'execution-sessions' }, 'sessions'),
+  ExecutionSessionsSection: (props: Record<string, unknown>) => {
+    executionSessionsProps.calls.push(props);
+    return React.createElement('div', { 'data-testid': 'execution-sessions' }, 'sessions');
+  },
 }));
 
 vi.mock('../../../../../src/renderer/components/team/taskLogs/featureGates', () => ({
@@ -128,6 +164,12 @@ describe('TaskLogsPanel', () => {
     document.body.innerHTML = '';
     featureGateState.activityEnabled = true;
     featureGateState.exactLogsEnabled = true;
+    taskActivityProps.calls = [];
+    taskLogStreamProps.calls = [];
+    executionSessionsProps.calls = [];
+    apiState.onTeamChange.mockReset();
+    apiState.setTaskLogStreamTracking.mockReset();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -147,6 +189,12 @@ describe('TaskLogsPanel', () => {
     expect(host.textContent).toContain('Execution Sessions');
     expect(findTabButton(host, 'Task Log Stream')?.getAttribute('data-state')).toBe('active');
     expect(host.querySelector('[data-testid="task-log-stream"]')).not.toBeNull();
+    expect(taskLogStreamProps.calls.at(-1)).toMatchObject({
+      teamName: 'demo',
+      taskId: 'task-1',
+      taskStatus: 'in_progress',
+      liveEnabled: true,
+    });
 
     const activityTab = findTabButton(host, 'Task Activity');
     expect(activityTab).not.toBeNull();
@@ -158,6 +206,11 @@ describe('TaskLogsPanel', () => {
 
     expect(findTabButton(host, 'Task Activity')?.getAttribute('data-state')).toBe('active');
     expect(host.querySelector('[data-testid="task-activity"]')).not.toBeNull();
+    expect(taskActivityProps.calls.at(-1)).toMatchObject({
+      teamName: 'demo',
+      taskId: 'task-1',
+      enabled: true,
+    });
 
     const sessionsTab = findTabButton(host, 'Execution Sessions');
     expect(sessionsTab).not.toBeNull();
@@ -169,6 +222,11 @@ describe('TaskLogsPanel', () => {
 
     expect(findTabButton(host, 'Execution Sessions')?.getAttribute('data-state')).toBe('active');
     expect(host.querySelector('[data-testid="execution-sessions"]')).not.toBeNull();
+    expect(executionSessionsProps.calls.at(-1)).toMatchObject({
+      teamName: 'demo',
+      taskId: 'task-1',
+      enabled: true,
+    });
 
     await act(async () => {
       root.unmount();
@@ -192,6 +250,234 @@ describe('TaskLogsPanel', () => {
     expect(findTabButton(host, 'Task Activity')?.getAttribute('data-state')).toBe('active');
     expect(host.querySelector('[data-testid="task-activity"]')).not.toBeNull();
     expect(host.textContent).not.toContain('Task Log Stream');
+    expect(apiState.setTaskLogStreamTracking).not.toHaveBeenCalled();
+    expect(apiState.onTeamChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('does not mount Task Activity content while the section is collapsed and stream is disabled', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    featureGateState.exactLogsEnabled = false;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskLogsPanel, {
+          teamName: 'demo',
+          task: makeTask(),
+          isOpen: false,
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(host.querySelector('[data-testid="task-log-stream"]')).toBeNull();
+    expect(host.querySelector('[data-testid="task-activity"]')).toBeNull();
+    expect(taskLogStreamProps.calls).toHaveLength(0);
+    expect(apiState.setTaskLogStreamTracking).not.toHaveBeenCalled();
+    expect(apiState.onTeamChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('keeps task-log tracking active across tab switches and pulses on matching live updates', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+
+    const activityStates: boolean[] = [];
+    let handler: ((event: unknown, data: TeamChangeEvent) => void) | null = null;
+    apiState.onTeamChange.mockImplementation((callback) => {
+      handler = callback;
+      return () => {
+        handler = null;
+      };
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskLogsPanel, {
+          teamName: 'demo',
+          task: makeTask(),
+          onTaskLogActivityChange: (isActive: boolean) => activityStates.push(isActive),
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(apiState.setTaskLogStreamTracking).toHaveBeenCalledTimes(1);
+    expect(apiState.setTaskLogStreamTracking).toHaveBeenCalledWith('demo', true);
+    expect(handler).toBeTypeOf('function');
+    expect(activityStates).toEqual([false]);
+
+    const activityTab = findTabButton(host, 'Task Activity');
+    expect(activityTab).not.toBeNull();
+
+    await act(async () => {
+      activityTab?.click();
+      await flushMicrotasks();
+    });
+
+    expect(apiState.setTaskLogStreamTracking).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      handler?.(null, { teamName: 'other-team', type: 'task-log-change', taskId: 'task-1' });
+      handler?.(null, { teamName: 'demo', type: 'task-log-change', taskId: 'task-2' });
+      await flushMicrotasks();
+    });
+
+    expect(activityStates).toEqual([false]);
+
+    await act(async () => {
+      handler?.(null, { teamName: 'demo', type: 'task-log-change', taskId: 'task-1' });
+      await flushMicrotasks();
+    });
+
+    expect(activityStates).toEqual([false, true]);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1800);
+      await flushMicrotasks();
+    });
+
+    expect(activityStates).toEqual([false, true, false]);
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+
+    expect(apiState.setTaskLogStreamTracking).toHaveBeenLastCalledWith('demo', false);
+  });
+
+  it('does not mount Task Log Stream content while the section is collapsed but still pulses on matching updates', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+
+    const activityStates: boolean[] = [];
+    let handler: ((event: unknown, data: TeamChangeEvent) => void) | null = null;
+    apiState.onTeamChange.mockImplementation((callback) => {
+      handler = callback;
+      return () => {
+        handler = null;
+      };
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskLogsPanel, {
+          teamName: 'demo',
+          task: makeTask(),
+          isOpen: false,
+          onTaskLogActivityChange: (isActive: boolean) => activityStates.push(isActive),
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(host.querySelector('[data-testid="task-log-stream"]')).toBeNull();
+    expect(taskLogStreamProps.calls).toHaveLength(0);
+    expect(apiState.setTaskLogStreamTracking).toHaveBeenCalledWith('demo', true);
+    expect(handler).toBeTypeOf('function');
+    expect(activityStates).toEqual([false]);
+
+    await act(async () => {
+      handler?.(null, { teamName: 'demo', type: 'task-log-change', taskId: 'task-1' });
+      await flushMicrotasks();
+    });
+
+    expect(activityStates).toEqual([false, true]);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1800);
+      await flushMicrotasks();
+    });
+
+    expect(activityStates).toEqual([false, true, false]);
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+
+    expect(apiState.setTaskLogStreamTracking).toHaveBeenLastCalledWith('demo', false);
+  });
+
+  it('pauses mounted activity and sessions tabs when the section collapses', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TaskLogsPanel, { teamName: 'demo', task: makeTask() }));
+      await flushMicrotasks();
+    });
+
+    const activityTab = findTabButton(host, 'Task Activity');
+    expect(activityTab).not.toBeNull();
+
+    await act(async () => {
+      activityTab?.click();
+      await flushMicrotasks();
+    });
+
+    expect(taskActivityProps.calls.at(-1)).toMatchObject({ enabled: true });
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskLogsPanel, {
+          teamName: 'demo',
+          task: makeTask(),
+          isOpen: false,
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(taskActivityProps.calls.at(-1)).toMatchObject({ enabled: false });
+
+    const sessionsTab = findTabButton(host, 'Execution Sessions');
+    expect(sessionsTab).not.toBeNull();
+
+    await act(async () => {
+      root.render(React.createElement(TaskLogsPanel, { teamName: 'demo', task: makeTask() }));
+      sessionsTab?.click();
+      await flushMicrotasks();
+    });
+
+    expect(executionSessionsProps.calls.at(-1)).toMatchObject({ enabled: true });
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskLogsPanel, {
+          teamName: 'demo',
+          task: makeTask(),
+          isOpen: false,
+        })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(executionSessionsProps.calls.at(-1)).toMatchObject({ enabled: false });
 
     await act(async () => {
       root.unmount();

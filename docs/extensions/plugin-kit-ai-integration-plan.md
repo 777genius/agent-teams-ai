@@ -18,6 +18,36 @@ The integration must support two different truths at the same time:
 
 Those are different objects and must remain different in UI, state, and actions.
 
+## How To Use This Plan
+
+This document is intentionally long because it combines:
+
+- product model
+- backend contract spec
+- rollout spec
+- app integration rules
+
+Use it in this order:
+
+1. read `One-Page Summary`
+2. read `Phase 0 Decision Checkpoints`
+3. read `Current backend blockers that shape the plan`
+4. for backend work:
+   - read `Recommended Backend Basis By Surface`
+   - read `Managed Lifecycle Model`
+   - read `JSON Contract Style`
+   - read `Recommended Contract Drafts`
+5. for app work:
+   - read `Entry Derivation and Conflict Resolution`
+   - read `UI and Entry Model in claude_team`
+   - read `claude_team Changes Required`
+6. before shipping:
+   - read `Rollout Phases`
+   - read `PR Exit Criteria`
+   - read `No-Go Conditions`
+
+If any implementation decision contradicts the earlier sections, the earlier sections win.
+
 ## One-Page Summary
 
 ### What we are building
@@ -43,6 +73,93 @@ Those are different objects and must remain different in UI, state, and actions.
 - universal plugins are the main storefront
 - native installed Claude/Codex plugins stay visible and are labeled honestly
 - install/update/remove/repair results stay target-granular
+- mutation results do not lie about partial progress:
+  - applied
+  - rolled back
+  - degraded state persisted
+
+### Phase 1 can and cannot promise
+
+Phase 1 can safely promise:
+
+- truthful mixed rendering of universal and native external entries
+- truthful managed lifecycle status for installed universal entries
+- explicit degraded / rolled-back mutation outcomes
+- explicit adopted-target update semantics when backend provides them
+
+Phase 1 must **not** promise:
+
+- parallel managed installs of the same integration across scopes or workspaces
+- fake `local` scope parity
+- destructive actions for native external entries
+- instant local-only previews for every lifecycle action
+- shared universal card metadata that silently reflects one target override
+- invisible policy-driven target adoption during update
+- target-scoped `update` or `remove` UX until the public backend command surface exposes that capability consistently
+
+### Quick truth map
+
+| User question | Backend surface |
+|---|---|
+| What universal plugins exist? | `catalog` |
+| What native plugins already exist outside managed state? | `discover` |
+| What universal plugins are managed right now? | `list` |
+| Which managed targets need attention or repair? | `doctor` |
+| How fresh is the managed lifecycle truth? | lifecycle grouped metadata such as `last_checked_at` and `last_updated_at` |
+| Can I install/update/remove/repair this universal plugin? | lifecycle `plan/result` contracts |
+| What detail text and README should the storefront show? | `catalog` detail path |
+| What detail explains current target drift or activation? | lifecycle target-detail payload |
+
+### Command quick reference
+
+| Command surface | Can be networked in preview? | Can mutate native state? | Phase-1 app expectation |
+|---|---|---|---|
+| `catalog` | no | no | fast storefront truth |
+| `discover` | no | no | fast native-installed truth |
+| `list` | no | no | fast managed ownership truth |
+| `doctor` | no | no | fast health + recovery truth |
+| `add` dry-run | yes | no | review can show source-checking state |
+| `update` dry-run | yes | no | review can show source-checking state and adopted-target work; phase-1 public command surface is integration-wide, not target-filtered |
+| `remove` dry-run | no | no | cheap review, no source resolution required; phase-1 public command surface is integration-wide, not target-filtered |
+| `repair` dry-run | no | no | cheap review, no source resolution required |
+| apply mutations | yes | yes | explicit progress + explicit outcome class |
+
+### Lifecycle action families from current code
+
+Current `integrationctl` already has several different action families.
+
+They are not interchangeable and the app should not flatten them into one generic “plugin action” concept.
+
+| Action family | Current action ids | Key behavior from code | Phase-1 app status |
+|---|---|---|---|
+| add new managed integration | `add` | resolves requested source, plans/installs one or more targets | in scope |
+| mutate existing managed integration | `update_version` | resolves current source, may also adopt newly supported targets | in scope |
+| remove managed targets | `remove_orphaned_target` | dry-run can stay local, apply may resolve source and mutate state | in scope |
+| repair managed drift | `repair_drift` | dry-run can stay local, apply may resolve source and persist degraded state on failure | in scope |
+| toggle managed target | `enable_target`, `disable_target` | single-target toggle lane, distinct summary and apply path | out of scope for phase 1 |
+
+### Phase-1 action subset
+
+Phase 1 plugin lifecycle in `claude_team` should expose only:
+
+- `add`
+- `update_version`
+- `remove_orphaned_target`
+- `repair_drift`
+
+Phase 1 should not expose:
+
+- `enable_target`
+- `disable_target`
+- `sync`
+- target-scoped `update` or `remove` controls unless backend command contracts add them explicitly
+
+Why:
+
+- they are lower-value than core lifecycle
+- they have distinct semantics that would widen the UI surface
+- they are better added only after mixed-entry rendering and primary lifecycle flows are proven
+- current public command surface is not yet symmetric for target-filtered existing mutations
 
 ### Safe delivery order
 
@@ -53,12 +170,87 @@ Those are different objects and must remain different in UI, state, and actions.
 5. add universal lifecycle actions in `claude_team`
 6. consider optional native convenience flows only later
 
+### Current backend blockers that shape the plan
+
+These come from current code and are the main reason the rollout has to stay phased:
+
+- managed state is effectively keyed by `integration_id`, not by a richer record key
+- project-sensitive service construction still depends on implicit `cwd`
+- current `integrations` manage commands still do not accept explicit `--workspace-root`
+- current `update_version` planning may also produce adopted-target work based on manifest drift and policy
+- current `update_version` dry-run already resolves current source and may therefore clone/fetch remote source before review is shown
+- dry-run planning can look clean and still fail later on apply because same-`integration_id` conflict is enforced only under state lock
+- current public CLI command surface is asymmetric for existing-target filtering:
+  - `repair` exposes `--target`
+  - `enable/disable` can require `--target`
+  - `update/remove` currently do not expose `--target`, even though the underlying usecase model already has a target field
+- current lifecycle `Report.Targets` are too flat for app use and lose integration-level grouping
+- current lifecycle `TargetReport` also drops some adapter-level detail that the app will need for truthful detail views
+- current lifecycle `TargetReport` currently drops concrete detail such as:
+  - target warnings
+  - owned native objects
+  - observed native objects
+  - settings files
+  - config precedence context
+  - paths touched
+  - commands
+- current lifecycle report also drops managed freshness fields such as `last_checked_at` and `last_updated_at`
+
+### Execution blueprint
+
+| Step | Repo | Main packages | What changes | Why this step exists |
+|---|---|---|---|---|
+| 0 | `plugin-kit-ai` | `integrationctl`, CLI command layer | freeze state identity, conflict timing, app-mode workspace semantics | prevents bad contracts from being versioned |
+| 1 | `plugin-kit-ai` | CLI JSON output layer | add versioned lifecycle JSON envelopes | gives app a stable machine-readable seam |
+| 2 | `plugin-kit-ai` | lifecycle usecase/domain | add managed grouping and target-detail fidelity | makes lifecycle usable for app cards/detail views |
+| 3 | `plugin-kit-ai` | service construction + request context | add explicit `workspace_root` handling | removes hidden `cwd` coupling |
+| 4 | `plugin-kit-ai` | authored inspection/catalog projection | add universal catalog JSON | provides storefront truth |
+| 5 | `plugin-kit-ai` | new discovery usecase + adapters | add native discovery JSON | provides native installed truth |
+| 6 | `claude_team` | main services + renderer normalized model | read-only mixed plugin page | validates catalog + discover + list + doctor interplay |
+| 7 | `claude_team` | lifecycle actions + store refresh | universal install/update/remove/repair | completes managed plugin flow |
+
+### Backend readiness gate before any `claude_team` plugin-kit PR
+
+`claude_team` should not start real plugin-kit-backed plugin rendering or lifecycle work until the backend can already guarantee all of the following.
+
+This gate is intentionally stricter than “some JSON exists”.
+
+| Required backend guarantee | Why the app needs it | Current code reality |
+|---|---|---|
+| explicit `workspace_root` request context for project-sensitive commands | prevents plan/apply from using hidden `cwd` semantics | missing at CLI manage-command layer |
+| stable `managed_entry_key` for grouped lifecycle entries | prevents app cache keys from collapsing to raw `integration_id` | missing as a public grouped contract field |
+| grouped lifecycle JSON with `requested_source_ref`, `resolved_source_ref`, `policy.scope`, and `workspace_root` | lets app render ownership truth without row reconstruction heuristics | current report is target-row oriented |
+| lifecycle freshness fields such as `last_checked_at` and `last_updated_at` | prevents app from implying live remote verification when it only has stored-state truth | stored in state, not projected publicly |
+| structured target-detail fidelity | lets detail panes explain drift, blocking, and owned objects without renderer-side probing | current target report drops key adapter detail |
+| structured top-level `doctor` recovery warnings | keeps degraded/interrupted recovery truth first-class | warnings exist in backend but not yet in app-facing JSON |
+| explicit target `action_class` and mutation `outcome` in plan/result | keeps `update` vs `adopt_new_target` and `applied` vs `rolled_back` vs `degraded` distinct | backend semantics exist but are not yet pinned in an app contract |
+| explicit public policy for target-filtered existing mutations | prevents renderer from inventing target-scoped `update/remove` UX that current CLI surface does not actually support | usecase model has a target field, public command surface is still asymmetric |
+
+Recommended rule:
+
+- until this gate is green, `claude_team` may build only isolated types and fixtures behind a feature flag
+- it must not ship real plugin-kit-backed mixed rendering or lifecycle actions
+
+### Top implementation anti-patterns
+
+These are the fastest ways to create bugs in this migration:
+
+- using authored target names as installability truth
+- using raw `integration_id` as the only managed entry key in the app
+- reusing current adapter `Inspect` as discovery backend
+- inferring project context from Electron process cwd
+- merging native external entries into universal entries by display name
+- letting target-specific metadata override shared universal card identity
+- treating process exit as the only JSON command outcome signal
+- reconstructing managed entry groups from flat target rows in renderer code
+
 ### Non-negotiable no-go items
 
 - no auto-merge by display name
 - no silent `local -> project` downgrade
 - no destructive actions on native external entries unless backend explicitly declares them safe
 - no app-side inference where backend truth is missing
+- no accidental `enable/disable` app surface in phase 1 just because backend already has those actions
 
 ## Glossary
 
@@ -150,6 +342,58 @@ This migration is done only when all of the following are true:
 
 If any of these is false, the migration is still in progress.
 
+## Phase 0 Decision Checkpoints
+
+Before app integration starts, these questions must already have explicit answers in backend contracts or documented policy:
+
+1. **Managed state identity**
+   - default phase-1 answer: single-record-per-integration
+2. **Conflict timing for `add`**
+   - default phase-1 answer: conflict is surfaced during planning/preflight, not only after confirm
+3. **Workspace semantics**
+   - default phase-1 answer: project-sensitive app mode never depends on implicit `cwd`
+4. **Planning context**
+   - default phase-1 answer: project-sensitive planning uses explicit workspace context, not hidden service-wide defaults
+5. **Capability projection**
+   - default phase-1 answer: installability comes from projected backend capabilities, not from authored target names alone
+6. **Catalog truth**
+   - default phase-1 answer: storefront metadata comes from the richer authored inspection path, not the narrow lifecycle loader
+7. **Discovery truth**
+   - default phase-1 answer: `discover` is read-only, scanner-oriented, and overlap-aware
+8. **Target detail fidelity**
+   - default phase-1 answer: app-facing lifecycle JSON keeps target warnings, object ownership, and blocking status instead of dropping them into prose or internal-only fields
+9. **Adopted-target update semantics**
+   - default phase-1 answer: update plans expose newly adopted targets explicitly instead of burying them as generic update rows or warnings
+10. **Doctor warning fidelity**
+   - default phase-1 answer: `doctor` warnings are treated as structured recovery guidance, not decorative text
+11. **Managed freshness semantics**
+   - default phase-1 answer: grouped lifecycle payloads expose stored-state freshness timestamps and the app does not imply live remote verification unless a source-resolving action actually ran
+
+If any of these stays fuzzy, the implementation will drift into app-side heuristics.
+
+## Hard Defaults For Low-Confidence Seams
+
+These defaults should be used unless a later ADR deliberately changes them.
+
+| Seam | Default |
+|---|---|
+| managed state identity | one managed record per `integration_id` in phase 1 |
+| install-intent conflict timing | surface during planning/preflight, not only after confirm |
+| project context | explicit `workspace_root`, never implicit `cwd` |
+| lifecycle grouping key | `managed_entry_key`, not reconstructed from rows |
+| discovery backend | separate scanner surface, not current adapter `Inspect` |
+| native-to-universal matching | advisory only unless evidence is exact |
+| Codex ambiguous state | downgrade to `observed_degraded` |
+| target-specific metadata | detail-only enhancement, never shared card identity |
+| mutation outcome | keep `applied`, `rolled_back`, and `degraded` distinct |
+| adopted targets during update | show as explicit `adopt_new_target` work, not generic update noise |
+| doctor warnings | surface as recovery guidance, not ignorable banner copy |
+| plan/review latency | assume `update` preview may resolve remote source; do not design UX as instant/local-only |
+| action surface breadth | keep `enable/disable` out of phase 1 |
+| lifecycle freshness | show stored-state timestamps, do not imply live remote verification unless a source-resolving action just ran |
+| unsupported fields | omit or degrade, never synthesize in renderer |
+| parallel managed installs for same integration | unsupported until backend state identity is upgraded |
+
 ## What Is Already True in plugin-kit-ai
 
 This plan should build on real current code, not on an imagined backend.
@@ -176,7 +420,9 @@ This plan should build on real current code, not on an imagined backend.
 - there is no public `catalog` surface yet
 - there is no public `discover` surface yet
 - current managed `Report.Targets` do not carry enough integration-level context for the app
+- current managed `TargetReport` also drops adapter-level detail such as target warnings, owned-object context, settings files, and precedence context
 - current service composition still depends on `os.Getwd()` for workspace semantics
+- current CLI manage commands do not yet carry explicit `workspace_root` request context
 
 ### Important current model split
 
@@ -229,6 +475,10 @@ These are backend facts the plan must respect.
 - supports native remove: yes
 - supports scopes: `user`, `project`
 - does not currently advertise `local`
+- currently advertises supported source kinds:
+  - `local_path`
+  - `github_repo_path`
+  - `git_url`
 - requires reload after install
 
 ### Codex adapter
@@ -238,6 +488,10 @@ These are backend facts the plan must respect.
 - supports native remove: no
 - supports scopes: `user`, `project`
 - does not currently advertise `local`
+- currently advertises supported source kinds:
+  - `local_path`
+  - `github_repo_path`
+  - `git_url`
 - requires restart and a new thread
 - current inspect logic distinguishes:
   - fully installed
@@ -552,6 +806,18 @@ Notably, it does **not** include:
 - `codex-runtime`
 - `cursor-workspace`
 
+Important nuance from current code:
+
+- target adapters expose `Capabilities()`
+- but current add planning does not use adapter capabilities as one central authoritative gate before all plan work
+- current planning first resolves manifest deliveries and then inspects/plans target-specific installs
+
+Practical consequence:
+
+- the app must not infer real installability from authored targets alone
+- the backend contract should project lifecycle-manageable truth explicitly
+- if capability-based limits such as supported source kinds or scopes matter, they should come from backend projection, not renderer heuristics
+
 ### 3. App-primary action targets
 
 What `claude_team` should expose as first-class install lanes in this rollout.
@@ -590,6 +856,25 @@ This keeps the system honest:
 - authored truth stays intact
 - backend actionability stays explicit
 - app UI stays focused
+
+### Capability projection rule
+
+For app-facing plugin installability, the contract should project at least:
+
+- manageable targets
+- supported scopes by target
+- supported source kinds by target when relevant
+- target-level lifecycle capabilities that materially affect UX such as:
+  - update support
+  - remove support
+  - repair support
+  - restart / reload / new-thread requirements
+
+Recommended rule:
+
+- the app should render from this projected capability layer
+- not from authored target names
+- and not by trying to call low-level capability methods itself
 
 ## Product Model
 
@@ -973,6 +1258,26 @@ But current adapters derive effective native roots differently:
 
 This means the same raw workspace path can lead to different effective native roots depending on target semantics.
 
+There is one more critical current reality:
+
+- current `integrationctl.newService()` still derives:
+  - current workspace root from `os.Getwd()`
+  - repo-root-oriented files such as workspace lock and evidence paths from discovered repo root
+  - default adapter project roots from that same cwd
+
+That is acceptable for a human CLI launched from the intended repo.
+It is not a safe default for a bundled desktop app.
+
+There is also a more subtle planning seam:
+
+- current add planning calls adapter `Inspect(...)` with:
+  - `IntegrationID`
+  - `Scope`
+- but no explicit `workspace_root` field in `InspectInput`
+- project context therefore reaches adapters indirectly through service construction and adapter defaults, not through an explicit per-request planning field
+
+That may be acceptable for the current CLI composition, but it is too implicit for app integration.
+
 ### Why this matters
 
 If the app assumes one global meaning for `workspace_root`, it can easily:
@@ -1004,6 +1309,39 @@ Phase-1 minimum:
 - `workspace_root` is required for project-scoped managed installs
 - missing project `workspace_root` must remain a hard backend error
 - target-specific effective root may be additive if not ready immediately
+
+### Required service-construction rule for app mode
+
+For app integration, `plugin-kit-ai` should not rely on implicit process cwd semantics.
+
+Recommended rule:
+
+- add an explicit app/CLI service-construction path that accepts:
+  - `workspace_root`
+  - optional repo-root-oriented paths only where they are still needed
+- project-sensitive commands should use that explicit workspace input
+- packaged app execution must not depend on what directory the Electron process happened to launch from
+
+Recommended phase-1 default:
+
+- keep repo-root-oriented flows such as workspace lock and `sync` out of app mode
+- require explicit `workspace_root` for project-scoped lifecycle and discovery commands
+- treat missing explicit workspace context as usage error, not as permission to fall back to `os.Getwd()`
+
+### Planning-context rule
+
+For app integration, project-sensitive planning must also receive explicit context.
+
+Recommended rule:
+
+- either service construction per request must bind explicit workspace context before planning
+- or planning interfaces must grow explicit workspace-root context
+
+What must not happen:
+
+- “plan” uses one implicit project context
+- “apply” uses a different explicit project context
+- and the app presents them as if they were the same decision
 
 ### Recommended app rule
 
@@ -1218,6 +1556,29 @@ Current code already proves this path exists:
 - `codex-package` generation merges base manifest metadata with optional `targets/codex-package/package.yaml`
 - validation checks the generated Codex package metadata against that merged expectation
 
+Current code also proves the override boundary is intentionally narrow.
+
+For `codex-package`, the effective metadata overlay is currently designed for:
+
+- `author`
+- `homepage`
+- `repository`
+- `license`
+- `keywords`
+
+It is **not** the same thing as “target can override any storefront field”.
+
+Recommended rule:
+
+- phase 1 should treat only these currently-proven metadata fields as safe `codex-package` effective overrides
+- the app should not assume per-target overrides for:
+  - `name`
+  - `version`
+  - `description`
+  - entry identity
+  - universal card title
+  - universal card summary
+
 ### Recommended catalog rule
 
 The catalog contract should preserve both layers explicitly:
@@ -1243,6 +1604,10 @@ At minimum, per-target effective metadata may include:
 - list cards should use shared metadata
 - provider-specific effective metadata should appear only in target detail sections or provider-specific support details
 - the app must not silently replace universal card metadata with one target's override
+- the app must not let `codex-package` override:
+  - universal `display_name`
+  - universal `description`
+  - universal search identity
 
 Why:
 
@@ -1394,6 +1759,8 @@ Important rule:
 
 - `discover` should keep this richer observed-state truth
 - the app should not collapse everything into plain `installed/not installed`
+- the app should not promote `observed_active` from cache evidence alone
+- when evidence is missing or contradictory, downgrade to `observed_degraded`
 
 ### Codex evidence mapping table
 
@@ -1414,6 +1781,7 @@ Until discovery evidence is richer, prefer these defaults:
 
 - if evidence is ambiguous, downgrade to `observed_degraded`
 - do not claim `observed_active` from config evidence alone
+- do not claim `observed_active` from cache evidence alone when marketplace entry or plugin root is missing
 - do not infer exact universal matching from marketplace entry name alone
 - do not infer safe removal from discovered Codex paths alone
 - do not suppress a discovered Codex entry unless managed-overlap evidence includes owned objects or stable lifecycle evidence
@@ -1520,6 +1888,48 @@ The app needs lifecycle JSON to include integration-level context such as:
 - policy scope
 - workspace root
 
+### Important current state-identity constraint
+
+Current managed state logic is narrower than it may look at first glance.
+
+From current `integrationctl` code:
+
+- `StateFile.Installations` is an array of `InstallationRecord`
+- but `findInstallation`, `upsertInstallation`, and `removeInstallation` all key records only by `IntegrationID`
+- existing plan and mutation flows also load records by integration name only
+
+Practical consequence:
+
+- current backend behavior effectively supports only one managed installation record per `integration_id`
+- it does **not** yet describe a first-class model where the same integration can safely exist as parallel managed records for different scopes or workspaces
+- current add flow also checks this conflict only at apply time after loading locked state, not during the earlier dry-run planning path
+
+This is a critical contract seam, not an implementation detail.
+
+### Install-intent conflict timing
+
+Current behavior is stricter than it first appears, but also later than the app would ideally want:
+
+- `add --dry-run` can still produce a plan without surfacing “integration already exists in state”
+- `applyAdd(...)` then acquires the state lock, loads state, and fails with:
+  - `ErrStateConflict`
+  - `integration already exists in state: <integration_id>`
+
+Why this matters:
+
+- the app can otherwise show a plausible install plan and only fail after the user confirms the mutation
+- that is acceptable for a CLI, but it is weak UX for a structured desktop integration
+
+Recommended phase-0 rule:
+
+- either backend planning surfaces existing-state conflicts explicitly
+- or the app must perform an authoritative managed-state preflight before presenting install as cleanly applyable
+
+Recommended default:
+
+- prefer surfacing the conflict in backend planning/contract, not only at apply time
+- if that is not ready yet, app UI must at least treat same-`integration_id` managed presence as a preflight blocker
+
 ### Why the current raw lifecycle report is not enough for app integration
 
 Today the raw `integrationctl` lifecycle query shape is still too flat for the plugin page.
@@ -1548,6 +1958,13 @@ What it does **not** preserve at the same level:
 - `workspace_root`
 - a stable grouping boundary between one integration and another
 
+And for planning/apply UX it also drops important target-plan semantics that do exist one layer below in `ports.AdapterPlan`, such as:
+
+- explicit `blocking`
+- plan `summary`
+- `paths_touched`
+- `commands`
+
 That matters because the app needs to render cards and detail views at the integration-entry level, not as an ungrouped stream of target facts.
 
 Recommended rule:
@@ -1555,6 +1972,51 @@ Recommended rule:
 - `plugin-kit-ai` should keep its current internal normalized lifecycle model
 - but the app-facing JSON contract must expose managed entries grouped by integration
 - `claude_team` must not try to reconstruct integration grouping from flat target rows by heuristics
+- app-facing plan/result contracts must also preserve enough per-target semantics to tell:
+  - whether the action is actually applyable
+  - why it is blocked
+  - what manual steps are advisory vs blocking
+
+### Current report also drops target-detail fidelity the app will care about
+
+Today there is another mismatch between the internal adapter layer and the public lifecycle report.
+
+Current adapter-level structs already carry richer target detail:
+
+- `InspectResult`
+  - `Warnings`
+  - `OwnedNativeObjects`
+  - `ObservedNativeObjects`
+  - `SettingsFiles`
+  - `ConfigPrecedenceContext`
+- `ApplyResult`
+  - `Warnings`
+  - `OwnedNativeObjects`
+  - `AdapterMetadata`
+- `AdapterPlan`
+  - `Blocking`
+  - `Summary`
+  - `PathsTouched`
+  - `Commands`
+
+Current `TargetReport` keeps only a subset of that.
+
+Practical consequence:
+
+- the current lifecycle report is enough for a terminal summary
+- it is not yet a strong enough truth surface for a desktop detail view
+- if phase 1 exposes only the current flat report shape, `claude_team` will eventually be forced to guess or hide important state
+
+Recommended rule:
+
+- app-facing lifecycle JSON should include a structured target-detail block
+- it does not need to expose every low-level adapter internal
+- but it must preserve at minimum:
+  - target warnings
+  - owned native objects
+  - blocking vs advisory status
+  - settings or config files when they are part of the activation story
+  - enough context to explain precedence or override issues truthfully
 
 ### Required grouped lifecycle identifiers
 
@@ -1567,6 +2029,8 @@ For app-facing lifecycle JSON, each managed entry should include at minimum:
 - `resolved_version`
 - `policy.scope`
 - `workspace_root`
+- `last_checked_at`
+- `last_updated_at`
 
 Recommended rule:
 
@@ -1575,6 +2039,33 @@ Recommended rule:
 - it should be safe for the app to use as the primary cache and merge key for managed lifecycle entries
 
 Without this, the frontend will eventually drift into reconstructing groups from target arrays, which is fragile and unnecessary.
+
+### Freshness semantics from current code
+
+Current managed lifecycle state is persisted with freshness timestamps.
+
+From current code:
+
+- successful `add` persists:
+  - `last_checked_at`
+  - `last_updated_at`
+- successful `update/remove/repair/toggle` also update those timestamps
+- degraded persistence paths also update stored record timestamps
+- current `list` and `doctor` reports read state and journal, but they do not currently project these timestamps into public report rows
+
+Practical consequence:
+
+- current lifecycle truth is primarily stored-state truth
+- it is not the same thing as “this source was remotely revalidated just now”
+- without explicit timestamps, the app can easily overstate freshness
+
+Recommended rule:
+
+- grouped lifecycle payloads should expose at least:
+  - `last_checked_at`
+  - `last_updated_at`
+- the app should use those fields for freshness copy and stale-state heuristics
+- the app should not imply remote source freshness unless a source-resolving lifecycle action actually ran
 
 ### Conservative phase-1 grouped lifecycle rule
 
@@ -1586,6 +2077,108 @@ Until the backend exposes a more formal record identifier, phase 1 should still 
 - explicit grouping keys in payload, not implied grouping by adjacent rows
 
 The app must treat missing grouping keys as a compatibility problem, not as an invitation to reconstruct them heuristically.
+
+### Managed multiplicity rule
+
+Phase 1 must choose one of these backend truths explicitly and reflect it in the contract:
+
+1. **single-record-per-integration**
+   - one `integration_id` can have only one managed record at a time
+   - conflicting install intents must fail explicitly
+2. **multi-record-per-integration**
+   - the backend introduces a real record key beyond `integration_id`
+   - lifecycle and state mutations become record-key aware
+
+Recommended phase-1 default:
+
+- keep the current single-record-per-integration model explicit
+- do **not** let the app imply parallel managed `user` and `project` installs of the same universal plugin unless backend state identity is upgraded first
+- if the user attempts a conflicting install intent, backend should return a structured conflict instead of silently replacing the existing record
+
+### Mutation outcome fidelity from current code
+
+Current mutation paths already distinguish more than plain success vs failure.
+
+From current code:
+
+- `add`
+  - may finish `committed`
+  - may finish `rolled_back`
+  - may finish `degraded` if rollback was incomplete and degraded state was persisted
+- `update`
+  - may finish `committed`
+  - may finish `degraded`
+- `remove`
+  - may finish `committed`
+  - may finish `rolled_back`
+  - may finish `degraded`
+- `repair`
+  - may finish `committed`
+  - may finish `degraded`
+
+Practical consequence:
+
+- app-facing mutation contracts should not flatten all non-success paths into one generic `failed`
+- the app needs to know whether native changes were rolled back cleanly or whether degraded managed state was persisted
+
+Recommended rule:
+
+- payload-level mutation outcome should distinguish at least:
+  - `applied`
+  - `rolled_back`
+  - `degraded`
+  - `failed`
+- target-level results should remain visible inside that higher-level operation outcome
+
+### Update-time adopted target semantics from current code
+
+Current `update_version` planning already has a second behavior beyond “update existing targets”.
+
+From current code:
+
+- `update_version` resolves the next manifest/source
+- if the next manifest exposes deliveries for targets not currently present in the managed record
+- planning may also produce adopted-target work
+- that adopted work is policy-sensitive:
+  - if `adopt_new_targets=manual`, planning emits warnings instead of auto-adopt work
+  - if `adopt_new_targets=auto`, planning may produce target plans with action class `adopt_new_target`
+
+Practical consequence:
+
+- an update plan is not always only “update current targets”
+- it may also include “new target becomes managed as part of update policy”
+
+Recommended rule:
+
+- app-facing lifecycle plan/result payloads should preserve whether a target is:
+  - ordinary update work
+  - adopted new target work
+- the app should render adopted targets explicitly in review/results instead of burying them inside generic update output
+
+Conservative phase-1 default:
+
+- if adopted-target semantics are not explicitly present in payloads, the app should not silently assume there are none
+- update UX should stay conservative until backend carries that signal clearly
+
+### Adopted-target apply path from current code
+
+Current apply logic makes this even more important.
+
+From current code:
+
+- ordinary `update_version` target work uses `ApplyUpdate`
+- adopted target work uses `ApplyInstall`
+
+Practical consequence:
+
+- adopted target work is not just cosmetic plan labeling
+- it is a materially different mutation path
+
+Recommended rule:
+
+- plan and result payloads must preserve target `action_class`
+- `action_class` must survive from preview to final result
+- the app must not treat every target in an update result as if it came from the same mutation path
 
 ### Critical CLI semantic to freeze
 
@@ -1692,6 +2285,8 @@ For machine-readable integrations surfaces, outcome should be explicit in the pa
   - recommended values:
     - `planned`
     - `applied`
+    - `rolled_back`
+    - `degraded`
     - `partial_success`
     - `failed`
 
@@ -1703,6 +2298,160 @@ The exact enum may still evolve, but the contract must keep payload-level outcom
 - `plugin-kit-ai/integrations-result`
 - `plugin-kit-ai/integrations-catalog`
 - `plugin-kit-ai/integrations-discovery`
+
+### Summary-string rule
+
+Current backend summary strings are useful for humans, but they are not strong enough to be canonical machine truth.
+
+Examples from current code:
+
+- `Updated integration "demo".`
+- `Removed managed targets from integration "demo".`
+- `Repaired managed targets for integration "demo".`
+
+Those are helpful, but they do not by themselves preserve:
+
+- adopted-target work
+- degraded vs rolled-back outcome
+- target-level action classes
+- target-level manual steps or restrictions
+
+Recommended rule:
+
+- app contracts may keep human-readable `summary`
+- but the app must never infer machine semantics from `summary` alone
+- target rows and explicit payload fields always win
+
+### Minimum contract by command
+
+| Command | Minimum request context | Minimum payload truth |
+|---|---|---|
+| `catalog` | optional requested targets | universal entries, target projection, freshness |
+| `discover` | requested targets, requested workspace root when relevant | native entries, observed state, manageability, match metadata |
+| `list` | optional requested targets | grouped managed entries, `managed_entry_key`, source refs, scope, workspace, freshness timestamps |
+| `doctor` | optional requested targets | everything from `list` plus top-level recovery warnings and target manual steps |
+| `add` plan/apply | source ref, targets, scope, workspace root when relevant | grouped target plans/results, blocking, action class, mutation outcome |
+| `update` plan/apply | integration id, workspace root when relevant; optional target filter only after the public command contract adds it | grouped target plans/results, adopted-target semantics, mutation outcome |
+| `remove` plan/apply | integration id, workspace root when relevant; optional target filter only after the public command contract adds it | grouped target plans/results, mutation outcome |
+| `repair` plan/apply | integration id, optional target filter, workspace root when relevant | grouped target plans/results, repair guidance, mutation outcome |
+
+### Plan fidelity rule
+
+For app integration, a machine-readable dry-run plan is not useful unless it preserves the distinction between:
+
+- applyable plan with advisory manual steps
+- blocked plan with required manual intervention
+
+Recommended rule:
+
+- app-facing plan payloads should expose target-level fields such as:
+  - `blocking`
+  - `summary`
+  - `manual_steps`
+  - optional `paths_touched`
+  - optional `commands`
+- if backend wants to omit some operational detail from the public app contract, it may omit `commands`
+- but it must not omit whether the plan is blocked
+
+Without this rule, the app can only discover some blocking cases after the user already tries to apply the mutation.
+
+### Target detail fidelity rule
+
+For app integration, lifecycle JSON is not good enough if it flattens all interesting target detail into:
+
+- one summary string
+- a few booleans
+- or process-exit semantics
+
+Recommended rule:
+
+- app-facing lifecycle entry payloads should expose a structured target-detail section, either inline or under a nested field such as `target_detail`
+- that section should be allowed to include fields such as:
+  - `warnings`
+  - `owned_native_objects`
+  - `observed_native_objects`
+  - `settings_files`
+  - `config_precedence_context`
+  - `adapter_metadata` only when the value is intentionally public and stable
+
+Conservative phase-1 default:
+
+- `warnings`
+- `owned_native_objects`
+- `settings_files`
+- `blocking`
+- `manual_steps`
+
+must be preserved
+
+Current-code note:
+
+- raw `domain.TargetReport` already keeps useful basics such as:
+  - `action_class`
+  - `manual_steps`
+  - lifecycle booleans and restrictions
+- but it still drops higher-fidelity adapter truth the app will need for honest detail panes, including:
+  - target warnings
+  - owned-object and observed-object context
+  - settings-file context
+  - config precedence context
+  - paths touched
+  - command detail
+
+Why:
+
+- this is enough for truthful card/detail UX
+- it avoids forcing the app to inspect native filesystem state itself
+- it keeps app-side remediation copy grounded in backend truth
+
+### Action-class persistence rule
+
+For app integration, target-level `action_class` is part of the contract, not decorative text.
+
+Why:
+
+- current backend already distinguishes different mutation kinds at target level
+- during `update`, some targets may be ordinary updates while others are `adopt_new_target`
+- those may even go through different apply paths
+
+Recommended rule:
+
+- app-facing plan payloads must expose target `action_class`
+- app-facing result payloads must also expose target `action_class`
+- the app must not reconstruct it from summary prose
+
+Conservative phase-1 default:
+
+- if a mutating result payload loses target `action_class`, treat that payload as reduced-fidelity and avoid pretending the result was semantically complete
+
+### Doctor warning fidelity rule
+
+Current `doctor` output is not only a list of target states.
+
+From current code:
+
+- `doctor` top-level warnings already include open journal / operation recovery guidance
+- examples:
+  - previously degraded operation guidance
+  - interrupted `in_progress` operation guidance
+  - failed-before-commit guidance
+- target-level manual steps are also derived from:
+  - degraded state
+  - auth pending state
+  - activation restrictions
+
+Recommended rule:
+
+- app-facing `doctor` JSON must preserve:
+  - top-level recovery warnings
+  - target-level manual steps
+  - activation and restriction-derived guidance
+- the app must not treat top-level `doctor` warnings as incidental text that can be hidden without replacement
+
+Why:
+
+- these warnings already encode recovery truth from journal state
+- hiding them would make desktop UX less informative than the existing backend
 
 ## Recommended Contract Drafts
 
@@ -1734,6 +2483,8 @@ They should extend the existing normalized result shape, not invent a second unr
       },
       "resolved_version": "0.1.0",
       "workspace_root": "/repo",
+      "last_checked_at": "2026-04-18T12:00:00Z",
+      "last_updated_at": "2026-04-18T12:00:00Z",
       "policy": {
         "scope": "project",
         "auto_update": true,
@@ -1746,7 +2497,56 @@ They should extend the existing normalized result shape, not invent a second unr
           "capability_surface": ["mcp"],
           "state": "installed",
           "activation_state": "reload_pending",
-          "source_access_state": "ok"
+          "source_access_state": "ok",
+          "target_detail": {
+            "warnings": [
+              "reload required before the plugin becomes active in existing Claude sessions"
+            ],
+            "owned_native_objects": [
+              {
+                "kind": "config_file",
+                "path": "/repo/.claude/settings.json"
+              }
+            ],
+            "settings_files": [
+              "/repo/.claude/settings.json"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Doctor report with recovery warnings
+
+```json
+{
+  "format": "plugin-kit-ai/integrations-report",
+  "schema_version": 1,
+  "report_kind": "doctor",
+  "requested_targets": [],
+  "warning_count": 2,
+  "warnings": [
+    "Operation op-degraded for context7 ended degraded - run plugin-kit-ai integrations repair context7.",
+    "Operation op-in-progress for context7 is still marked in_progress - inspect the journal and rerun repair if the process was interrupted."
+  ],
+  "summary": "Doctor: 1 installation(s), 2 open operation journal(s), 1 degraded target(s), 0 activation-pending target(s), 0 auth-pending target(s).",
+  "managed_entries": [
+    {
+      "managed_entry_key": "project:/repo:context7",
+      "integration_id": "context7",
+      "policy": {
+        "scope": "project"
+      },
+      "targets": [
+        {
+          "target_id": "claude",
+          "state": "degraded",
+          "manual_steps": [
+            "run plugin-kit-ai integrations repair context7"
+          ]
         }
       ]
     }
@@ -1839,6 +2639,98 @@ They should extend the existing normalized result shape, not invent a second unr
 }
 ```
 
+### Dry-run lifecycle plan with blocking target
+
+```json
+{
+  "format": "plugin-kit-ai/integrations-report",
+  "schema_version": 1,
+  "report_kind": "plan_add",
+  "requested_integration_id": "context7",
+  "requested_targets": ["claude"],
+  "requested_scope": "project",
+  "requested_workspace_root": "/repo",
+  "ok": true,
+  "warning_count": 0,
+  "warnings": [],
+  "summary": "Dry-run plan for integration \"context7\" at version 0.1.0.",
+  "managed_entries": [
+    {
+      "managed_entry_key": "planned:context7",
+      "integration_id": "context7",
+      "policy": {
+        "scope": "project"
+      },
+      "targets": [
+        {
+          "target_id": "claude",
+          "action_class": "install_target",
+          "blocking": true,
+          "summary": "Install Claude plugin through a managed local marketplace",
+          "manual_steps": [
+            "managed policy blocks adding this marketplace",
+            "ask an administrator to update the allowlist or seed configuration"
+          ],
+          "target_detail": {
+            "warnings": [
+              "this target is currently blocked by managed policy"
+            ],
+            "settings_files": [
+              "/repo/.claude/settings.json"
+            ]
+          },
+          "paths_touched": [
+            "/Users/example/.plugin-kit-ai/materialized/claude/context7",
+            "/repo/.claude/settings.json"
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Dry-run update with adopted target
+
+```json
+{
+  "format": "plugin-kit-ai/integrations-report",
+  "schema_version": 1,
+  "report_kind": "plan_update",
+  "requested_integration_id": "context7",
+  "requested_targets": ["claude", "codex"],
+  "requested_scope": "user",
+  "ok": true,
+  "warning_count": 0,
+  "warnings": [],
+  "summary": "Dry-run update plan for \"context7\".",
+  "managed_entries": [
+    {
+      "managed_entry_key": "user::context7",
+      "integration_id": "context7",
+      "policy": {
+        "scope": "user",
+        "adopt_new_targets": "auto"
+      },
+      "targets": [
+        {
+          "target_id": "claude",
+          "action_class": "update_version",
+          "blocking": false,
+          "summary": "Update managed Claude target"
+        },
+        {
+          "target_id": "codex",
+          "action_class": "adopt_new_target",
+          "blocking": false,
+          "summary": "Adopt newly supported target codex"
+        }
+      ]
+    }
+  ]
+}
+```
+
 ### Mutating lifecycle result
 
 ```json
@@ -1857,6 +2749,7 @@ They should extend the existing normalized result shape, not invent a second unr
     "operation_id": "add-context7-...",
     "summary": "Managed targets processed for integration \"context7\".",
     "integration_id": "context7",
+    "managed_entry_key": "project:/repo:context7",
     "targets": [
       {
         "target_id": "claude",
@@ -1873,6 +2766,53 @@ They should extend the existing normalized result shape, not invent a second unr
         "activation_state": "restart_pending",
         "environment_restrictions": ["native_activation_required", "new_thread_required"],
         "manual_steps": ["restart Codex", "open a new thread"]
+      }
+    ]
+  }
+}
+```
+
+### Mutating lifecycle result with degraded persistence
+
+```json
+{
+  "format": "plugin-kit-ai/integrations-result",
+  "schema_version": 1,
+  "requested_integration_id": "context7",
+  "requested_targets": ["claude"],
+  "requested_scope": "project",
+  "requested_workspace_root": "/repo",
+  "ok": false,
+  "warning_count": 1,
+  "warnings": [
+    "apply failed after partial progress; degraded state was persisted"
+  ],
+  "outcome": "degraded",
+  "report": {
+    "operation_id": "add-context7-...",
+    "summary": "Managed targets processed for integration \"context7\".",
+    "integration_id": "context7",
+    "managed_entry_key": "project:/repo:context7",
+    "targets": [
+      {
+        "target_id": "claude",
+        "action_class": "install_target",
+        "state": "degraded",
+        "activation_state": "reload_pending",
+        "manual_steps": [
+          "run repair before trusting this installation"
+        ],
+        "target_detail": {
+          "warnings": [
+            "rollback could not fully restore native state"
+          ],
+          "owned_native_objects": [
+            {
+              "kind": "config_file",
+              "path": "/repo/.claude/settings.json"
+            }
+          ]
+        }
       }
     ]
   }
@@ -1922,8 +2862,8 @@ Each backend surface owns a different truth:
 
 Recommended deterministic algorithm:
 
-1. Load `list` and build a managed map keyed by `integration_id`.
-2. Overlay `doctor` onto that managed map by `integration_id + target_id`.
+1. Load `list` and build a managed map keyed by `managed_entry_key`.
+2. Overlay `doctor` onto that managed map by `managed_entry_key + target_id`.
 3. Load `catalog` and build a universal catalog map keyed by `integration_id`.
 4. For every managed entry:
    - create one `universal_installed` entry
@@ -2013,6 +2953,10 @@ Recommended renderer ownership matrix:
 
 - `entry_kind`
   - derived by the app from surface class, never from heuristics
+- `entry_id`
+  - `managed_entry_key` for `universal_installed`
+  - stable catalog `integration_id` for `universal_available`
+  - stable discovery identity for `native_external_installed`
 - `integration_id`
   - `catalog` or `list`
   - never guessed from discovery display name alone
@@ -2159,6 +3103,36 @@ Expected result:
 - no stronger action unlock
 - no `exact` badge or stronger “same plugin” copy
 
+### Example 7 - conflicting managed install intent for the same integration
+
+Situation:
+
+- backend still uses single-record-per-integration state identity
+- `list` already contains managed `context7` in `user` scope
+- user now requests managed `context7` in `project` scope for `/repo`
+
+Expected result:
+
+- backend returns structured conflict or explicit unsupported-state error
+- app explains that the same integration is already present in managed state under a different install context
+- app does not pretend both managed installs now coexist
+- app does not silently overwrite the existing entry in UI optimism
+
+### Example 8 - update plans newly adopted target support
+
+Situation:
+
+- managed `context7` currently exists only for `claude`
+- next manifest now also supports `codex`
+- managed policy says `adopt_new_targets=auto`
+
+Expected result:
+
+- update review shows ordinary update work for existing targets
+- update review also shows explicit `adopt_new_target` work for `codex`
+- app does not bury this inside generic update prose
+- if policy were `manual`, app would instead surface a warning, not pretend adoption will happen
+
 ## Command Semantics Matrix
 
 The app integration should treat command classes differently.
@@ -2189,6 +3163,47 @@ The app integration should treat command classes differently.
   - scope where relevant
   - workspace root where relevant
 - post-mutation refresh in the app must use the origin operation context, not global last-view state
+- for `add`, state-conflict semantics must be explicit:
+  - either surfaced in planning/preflight
+  - or represented as a known late-apply conflict the app blocks before confirm
+
+### Source-resolution and preview cost rule
+
+Current backend behavior is not symmetric across lifecycle previews.
+
+From current code:
+
+- `add`
+  - plan resolves requested source
+  - may clone/fetch remote source
+- `update_version`
+  - dry-run plan resolves current stored source
+  - may clone/fetch remote source before review is shown
+- `remove_orphaned_target`
+  - dry-run plan does **not** resolve source
+  - apply does resolve source
+- `repair_drift`
+  - dry-run plan does **not** resolve source
+  - apply does resolve source
+
+Recommended rule:
+
+- app UX should not assume every preview is cheap or local-only
+- update review in particular should be allowed a slower “checking source / comparing manifest” state
+- timeout policy should distinguish:
+  - cheap state-only views like `list` and `doctor`
+  - potentially source-resolving lifecycle previews like `add` and `update`
+
+### Mutation outcome matrix
+
+| Payload outcome | Meaning | UI expectation |
+|---|---|---|
+| `planned` | dry-run only, no mutation applied | show review state, not success |
+| `applied` | mutation committed | show success with target details |
+| `rolled_back` | mutation failed after progress but native/state effects were rolled back | show failure, but do not imply degraded managed state remains |
+| `degraded` | mutation failed and degraded managed state was persisted | show failure with high-visibility repair guidance |
+| `partial_success` | some requested targets succeeded while others did not | keep target-granular result rendering |
+| `failed` | no structured recovery class beyond failure | show failure with backend reason |
 
 ### Payload vs process-failure rule
 
@@ -2250,8 +3265,16 @@ Universal detail must show:
 - category only when curated metadata exists
 - target support
 - scope support
+- managed freshness when installed:
+  - last checked
+  - last updated
 - README/detail content
 - lifecycle actions where supported
+- lifecycle target detail from backend truth:
+  - warnings
+  - owned native objects when relevant
+  - settings/config files when relevant
+  - blocking or activation guidance without app-side inference
 
 Native external detail must show:
 
@@ -2302,41 +3325,66 @@ Why:
 
 ### Must-have for phase 0
 
-1. `integrations --format json` around the current normalized lifecycle model  
-   🎯 10   🛡️ 10   🧠 4  
+1. `integrations --format json` around the current normalized lifecycle model
+   🎯 10   🛡️ 10   🧠 4
    Approximate change size: `150-300` lines
 
-2. integration-level fields in managed lifecycle JSON  
-   Needed because current `Report.Targets` do not identify which integration a target belongs to.  
-   🎯 10   🛡️ 10   🧠 5  
+2. integration-level fields in managed lifecycle JSON
+   Needed because current `Report.Targets` do not identify which integration a target belongs to.
+   🎯 10   🛡️ 10   🧠 5
    Approximate change size: `120-240` lines
 
-3. `integrations catalog --format json`  
-   🎯 10   🛡️ 9   🧠 5  
-   Approximate change size: `180-350` lines
-
-4. `integrations discover --format json`  
-   🎯 10   🛡️ 10   🧠 6  
-   Approximate change size: `220-450` lines
-
-5. `--workspace-root`  
-   🎯 9   🛡️ 10   🧠 4  
+3. explicit managed-state identity policy
+   Needed because current state upsert/find/remove is keyed only by `integration_id`.
+   🎯 10   🛡️ 10   🧠 5
    Approximate change size: `80-180` lines
 
-6. capability and scope metadata in catalog/discovery  
-   🎯 9   🛡️ 9   🧠 4  
-   Approximate change size: `80-160` lines
-
-7. stable detail path or detail endpoint  
-   🎯 8   🛡️ 8   🧠 4  
+4. explicit conflict-timing policy for `add`
+   Needed because current dry-run planning can succeed while apply later fails with `integration already exists in state`.
+   🎯 10   🛡️ 9   🧠 4
    Approximate change size: `60-140` lines
 
-8. discovery trust/manageability metadata  
-   🎯 8   🛡️ 9   🧠 5  
+5. plan blocking fidelity in app-facing JSON
+   Needed because current `AdapterPlan` knows `Blocking`, but current target report projection does not preserve it.
+   🎯 10   🛡️ 10   🧠 4
+   Approximate change size: `60-140` lines
+
+6. target-detail fidelity in app-facing lifecycle JSON
+   Needed because current adapter layer already knows warnings, owned objects, and settings context, but current `TargetReport` drops them.
+   🎯 10   🛡️ 10   🧠 4
    Approximate change size: `80-180` lines
 
-9. provenance metadata  
-   🎯 8   🛡️ 9   🧠 4  
+7. `integrations catalog --format json`
+   🎯 10   🛡️ 9   🧠 5
+   Approximate change size: `180-350` lines
+
+8. `integrations discover --format json`
+   🎯 10   🛡️ 10   🧠 6
+   Approximate change size: `220-450` lines
+
+9. explicit app-mode service construction decoupled from implicit cwd
+   Needed because current `newService()` still derives workspace/repo context from `os.Getwd()`.
+   🎯 10   🛡️ 10   🧠 5
+   Approximate change size: `100-220` lines
+
+10. `--workspace-root` and explicit request-context propagation across plan and apply
+   🎯 9   🛡️ 10   🧠 4
+   Approximate change size: `80-180` lines
+
+11. capability, scope, and source-kind projection in catalog/discovery
+   🎯 9   🛡️ 9   🧠 4
+   Approximate change size: `80-160` lines
+
+12. stable detail path or detail endpoint
+   🎯 8   🛡️ 8   🧠 4
+   Approximate change size: `60-140` lines
+
+13. discovery trust/manageability metadata
+   🎯 8   🛡️ 9   🧠 5
+   Approximate change size: `80-180` lines
+
+14. provenance metadata
+   🎯 8   🛡️ 9   🧠 4
    Approximate change size: `60-140` lines
 
 ### Explicitly not required for the first app rollout
@@ -2378,6 +3426,25 @@ Recommended rule:
 - do not keep stretching the current `EnrichedPlugin` model until it represents two different product classes badly
 - introduce a new normalized plugin-entry layer for the plugin-kit-backed flow
 - keep the legacy Claude-only model behind the feature flag until rollout is complete
+
+### Migration-safe IPC and API boundary
+
+Current preload and IPC plugin APIs are shaped around the legacy Claude-marketplace model:
+
+- `getAll(projectPath?, forceRefresh?) -> EnrichedPlugin[]`
+- legacy install and uninstall request shapes
+
+Recommended rule:
+
+- do not silently change the meaning of the legacy plugin IPC payloads during rollout
+- introduce a plugin-kit-backed API boundary separately, or clearly version the payload shape
+- keep legacy and plugin-kit flows selectable behind the feature flag until the mixed-entry model is proven
+
+Why:
+
+- this reduces rollout blast radius
+- it keeps renderer tests and preload contracts easier to reason about
+- it avoids “same method name, different product model” ambiguity
 
 ### Required app-side model split
 
@@ -2437,6 +3504,17 @@ Recommended rule:
 - stale responses must never overwrite newer state
 - post-mutation refresh must use the origin operation context
 
+Recommended keying rule:
+
+- `universal_installed` cache and mutation keys should use `managed_entry_key`, not only `integration_id`
+- `integration_id` alone is not a safe future-proof cache key for managed lifecycle entries
+- the app should treat payloads that omit `managed_entry_key` as legacy-incompatible for the plugin-kit-backed flow
+- mutation UI state should also preserve backend outcome class:
+  - `applied`
+  - `rolled_back`
+  - `degraded`
+  instead of collapsing every non-success into one generic failure bucket
+
 ### Feature flag
 
 Recommended app flag:
@@ -2455,7 +3533,9 @@ Ship:
 - JSON envelopes
 - `catalog`
 - `discover`
+- app-safe service construction
 - `--workspace-root`
+- target-detail fidelity for warnings / owned objects / blocking state
 - schema docs
 - source/provenance metadata
 
@@ -2464,7 +3544,10 @@ Acceptance:
 - contracts are versioned and testable
 - command classes are clearly read-only vs mutating
 - managed lifecycle JSON includes integration-level context
+- managed-state identity policy is explicit and testable
+- blocked vs applyable plans are distinguishable in machine-readable payloads
 - views are internally consistent across `catalog`, `discover`, `list`, and `doctor`
+- project-sensitive app mode no longer depends on implicit `cwd`
 
 ### Phase 1 - read-only app integration
 
@@ -2484,8 +3567,11 @@ Acceptance:
 
 - native external entries render truthfully
 - universal catalog renders truthfully
+- target detail renders from backend truth, not renderer guesses
+- target-specific effective metadata does not leak into shared universal card identity or summary
 - no misleading install button on native external entries
 - page remains useful when `catalog` or `discover` partially fail
+- source-resolving previews such as `update` have truthful loading and timeout behavior
 - warm-load performance remains acceptable
 - plugin-kit-backed renderer state uses the new normalized entry model instead of overloading legacy `EnrichedPlugin`
 
@@ -2526,6 +3612,20 @@ Acceptance:
 
 ## Recommended First PR Sequence
 
+### PR 0 - freeze backend semantics that shape every later contract
+
+Ship:
+
+- explicit managed-state identity policy
+- explicit conflict-timing policy for `add`
+- explicit app-mode service-construction policy
+- explicit planning-context policy for project-sensitive commands
+
+Must not do:
+
+- silently preserve current implicit behavior just because the CLI can tolerate it
+- let the app contract depend on hidden `cwd` or late state-lock conflicts
+
 ### PR 1 - JSON envelopes for existing lifecycle commands
 
 Ship:
@@ -2544,10 +3644,12 @@ Must not do:
 Ship:
 
 - `integration_id`
+- `managed_entry_key`
 - source refs
 - policy scope
 - workspace root
 - target grouping under managed entries
+- target-detail fidelity for warnings / owned objects / settings context
 
 Must not do:
 
@@ -2558,6 +3660,7 @@ Must not do:
 Ship:
 
 - `--workspace-root`
+- app-safe service construction for project-sensitive flows
 - project-sensitive commands stop depending on implicit `cwd`
 
 Must not do:
@@ -2618,6 +3721,9 @@ Required:
 - one golden fixture exists
 - one failure fixture exists
 - one compatibility test exists
+- one fixture proves target-detail fidelity for warnings or owned-object context
+- one fixture proves adopted-target update semantics or explicit adopted-target warning behavior
+- one fixture proves grouped lifecycle freshness fields are projected
 
 ### Backend discovery PRs
 
@@ -2626,8 +3732,17 @@ Required:
 - at least one Claude discovery fixture
 - at least one Codex discovery fixture
 - explicit observed-state coverage
+- explicit Codex `prepared` and `degraded` fixture coverage
 - explicit manageability coverage
 - no destructive side effects in read-only commands
+
+### Backend doctor/report PRs
+
+Required:
+
+- one fixture proves top-level `doctor` recovery warnings survive JSON projection
+- one fixture proves target-level manual steps survive JSON projection
+- interrupted/degraded operation guidance is not flattened away
 
 ### App read-only integration PRs
 
@@ -2644,6 +3759,8 @@ Required:
 
 - explicit dry-run protection
 - target-level partial success rendering
+- `rolled_back` vs `degraded` outcome rendering is distinct and truthful
+- source-resolving preview states are handled explicitly, not as generic loading guesswork
 - stale-response protection
 - safe retry behavior
 
@@ -2759,6 +3876,53 @@ Best resolution:
 - preserve separate target fields in catalog
 - test them with golden fixtures
 - never let renderer heuristics rebuild one layer from another
+
+### 9. Managed state identity and multiplicity
+
+🎯 7   🛡️ 10   🧠 7
+
+Why this is hard:
+
+- current state operations are keyed only by `integration_id`
+- that may be fine for the current CLI mental model, but it is not enough if the app later wants parallel managed records for the same integration across scopes or workspaces
+- if this stays implicit, the app can easily promise install combinations the backend will silently overwrite or collapse
+
+Best resolution:
+
+- make the current single-record-per-integration rule explicit in phase 0, or upgrade backend state identity before the app promises multiplicity
+- return structured conflicts instead of silent replacement for incompatible install intents
+
+### 10. Adopted-target update semantics
+
+🎯 7   🛡️ 9   🧠 6
+
+Why this is hard:
+
+- current `update_version` planning may also create `adopt_new_target` work
+- that behavior is policy-sensitive and depends on next manifest deliveries
+- if the app hides this inside generic update review, users can approve broader changes than they realized
+
+Best resolution:
+
+- preserve adopted-target work as explicit target-level semantics in plan/result payloads
+- show it distinctly in review and result UI
+- if backend cannot expose it clearly yet, keep update UX conservative instead of pretending it is plain update-only work
+
+### 11. Managed freshness truth
+
+🎯 8   🛡️ 9   🧠 4
+
+Why this is hard:
+
+- current managed state already tracks freshness timestamps
+- but current public lifecycle report does not project them
+- without them, desktop UI can accidentally present stored state as if it were freshly revalidated remote truth
+
+Best resolution:
+
+- expose `last_checked_at` and `last_updated_at` in grouped lifecycle JSON
+- use explicit freshness copy in UI
+- never imply remote verification unless a source-resolving action actually ran
 
 ## E2E and Contract Testing
 
@@ -2882,6 +4046,17 @@ Keep separate fields for:
 - backend-manageable lifecycle support
 - app-primary action targets
 
+### 12. Should phase 1 support multiple parallel managed installs of the same integration across scopes or workspaces?
+
+Recommended default: **No**.
+
+Keep the current single-record-per-integration model explicit until backend state identity is upgraded.
+
+That means:
+
+- same-`integration_id` managed installs should conflict
+- the app should not promise parallel managed `user` + `project` presence for one universal plugin yet
+
 ## Phase-1 Conservative Defaults
 
 These defaults are intentional.
@@ -2899,6 +4074,7 @@ They should not be treated as missing polish or as accidental gaps.
 | stale catalog while managed installs exist | keep managed entry visible | `list` wins for managed existence |
 | stale discover while catalog works | keep catalog visible and warn | do not claim “no installed plugins” |
 | grouped lifecycle keys missing | treat as incompatible payload | do not reconstruct entry groups in app |
+| same integration across multiple managed scopes/workspaces | do not promise it until backend identity model supports it | avoids silent state overwrite |
 
 ## Final Recommendation
 

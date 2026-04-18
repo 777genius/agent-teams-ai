@@ -404,8 +404,8 @@ describe('TaskLogStreamSection integration', () => {
     expect(text).toContain('Edit');
     expect(text).toContain('Claude');
     expect(text).toContain('3 tool calls');
-    expect(text).toContain('Audit complete');
     expect(text).not.toContain('[]');
+    expect(text).not.toContain('Audit complete');
     expect(text).not.toContain('lead session');
 
     await act(async () => {

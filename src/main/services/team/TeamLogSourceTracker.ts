@@ -14,13 +14,15 @@ import type { TeamChangeEvent } from '@shared/types';
 import type { FSWatcher } from 'chokidar';
 
 const logger = createLogger('Service:TeamLogSourceTracker');
+const BOARD_TASK_LOG_FRESHNESS_DIRNAME = '.board-task-log-freshness';
+const BOARD_TASK_LOG_FRESHNESS_FILE_SUFFIX = '.json';
 
 interface TeamLogSourceSnapshot {
   projectFingerprint: string | null;
   logSourceGeneration: string | null;
 }
 
-export type TeamLogSourceTrackingConsumer = 'change_presence' | 'tool_activity';
+export type TeamLogSourceTrackingConsumer = 'change_presence' | 'tool_activity' | 'task_log_stream';
 
 interface TrackingState {
   watcher: FSWatcher | null;
@@ -31,7 +33,7 @@ interface TrackingState {
   recomputePromise: Promise<TeamLogSourceSnapshot> | null;
   recomputeVersion: number | null;
   snapshot: TeamLogSourceSnapshot;
-  consumers: Set<TeamLogSourceTrackingConsumer>;
+  consumerCounts: Map<TeamLogSourceTrackingConsumer, number>;
   lifecycleVersion: number;
 }
 
@@ -67,17 +69,27 @@ export class TeamLogSourceTracker {
     consumer: TeamLogSourceTrackingConsumer
   ): Promise<TeamLogSourceSnapshot> {
     const state = this.getOrCreateState(teamName);
-    if (!state.consumers.has(consumer)) {
-      state.consumers.add(consumer);
+    const activeConsumerCountBefore = this.getActiveConsumerCount(state);
+    state.consumerCounts.set(consumer, (state.consumerCounts.get(consumer) ?? 0) + 1);
+    if (activeConsumerCountBefore === 0) {
       state.lifecycleVersion += 1;
     }
 
     if (
       state.initializePromise &&
       state.initializeVersion === state.lifecycleVersion &&
-      state.consumers.size > 0
+      this.getActiveConsumerCount(state) > 0
     ) {
       return state.initializePromise;
+    }
+
+    if (
+      activeConsumerCountBefore > 0 &&
+      (state.watcher !== null ||
+        state.projectDir !== null ||
+        state.snapshot.logSourceGeneration !== null)
+    ) {
+      return { ...state.snapshot };
     }
 
     const initializeVersion = state.lifecycleVersion;
@@ -118,11 +130,19 @@ export class TeamLogSourceTracker {
       recomputePromise: null,
       recomputeVersion: null,
       snapshot: { projectFingerprint: null, logSourceGeneration: null },
-      consumers: new Set(),
+      consumerCounts: new Map(),
       lifecycleVersion: 0,
     };
     this.stateByTeam.set(teamName, created);
     return created;
+  }
+
+  private getActiveConsumerCount(state: TrackingState): number {
+    let count = 0;
+    for (const value of state.consumerCounts.values()) {
+      count += value;
+    }
+    return count;
   }
 
   async stopTracking(teamName: string): Promise<void> {
@@ -138,13 +158,22 @@ export class TeamLogSourceTracker {
       return { projectFingerprint: null, logSourceGeneration: null };
     }
 
-    if (state.consumers.has(consumer)) {
-      state.consumers.delete(consumer);
-      state.lifecycleVersion += 1;
+    const currentConsumerCount = state.consumerCounts.get(consumer) ?? 0;
+    if (currentConsumerCount > 1) {
+      state.consumerCounts.set(consumer, currentConsumerCount - 1);
+      return { ...state.snapshot };
     }
 
-    if (state.consumers.size > 0) {
+    if (currentConsumerCount === 1) {
+      state.consumerCounts.delete(consumer);
+    }
+
+    if (this.getActiveConsumerCount(state) > 0) {
       return { ...state.snapshot };
+    }
+
+    if (currentConsumerCount > 0) {
+      state.lifecycleVersion += 1;
     }
 
     if (state.refreshTimer) {
@@ -164,7 +193,11 @@ export class TeamLogSourceTracker {
 
   private isTrackingCurrent(teamName: string, expectedVersion: number): boolean {
     const state = this.stateByTeam.get(teamName);
-    return !!state && state.consumers.size > 0 && state.lifecycleVersion === expectedVersion;
+    return (
+      !!state &&
+      this.getActiveConsumerCount(state) > 0 &&
+      state.lifecycleVersion === expectedVersion
+    );
   }
 
   private async initializeTeam(
@@ -207,7 +240,11 @@ export class TeamLogSourceTracker {
     expectedVersion: number
   ): Promise<void> {
     const state = this.stateByTeam.get(teamName);
-    if (!state || state.consumers.size === 0 || state.lifecycleVersion !== expectedVersion) {
+    if (
+      !state ||
+      this.getActiveConsumerCount(state) === 0 ||
+      state.lifecycleVersion !== expectedVersion
+    ) {
       return;
     }
     if (state.projectDir === projectDir && state.watcher) {
@@ -240,9 +277,15 @@ export class TeamLogSourceTracker {
       },
     });
 
-    const scheduleRecompute = (): void => {
+    const scheduleRecompute = (changedPath?: string): void => {
       const current = this.stateByTeam.get(teamName);
-      if (!current || current.consumers.size === 0) {
+      if (!current || this.getActiveConsumerCount(current) === 0 || !current.projectDir) {
+        return;
+      }
+      if (
+        changedPath &&
+        this.handleTaskLogFreshnessSignalChange(teamName, current.projectDir, changedPath)
+      ) {
         return;
       }
       if (current.refreshTimer) {
@@ -264,15 +307,65 @@ export class TeamLogSourceTracker {
     });
   }
 
+  private handleTaskLogFreshnessSignalChange(
+    teamName: string,
+    projectDir: string,
+    changedPath: string
+  ): boolean {
+    const signalDir = path.join(projectDir, BOARD_TASK_LOG_FRESHNESS_DIRNAME);
+    const relativePath = path.relative(signalDir, changedPath);
+    if (!relativePath || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+      return path.normalize(changedPath) === path.normalize(signalDir);
+    }
+
+    if (relativePath === '.') {
+      return true;
+    }
+
+    if (relativePath.includes(path.sep)) {
+      return true;
+    }
+
+    const taskId = this.decodeTaskLogFreshnessTaskId(relativePath);
+    if (!taskId) {
+      return true;
+    }
+
+    this.emitter?.({
+      type: 'task-log-change',
+      teamName,
+      taskId,
+    });
+    return true;
+  }
+
+  private decodeTaskLogFreshnessTaskId(fileName: string): string | null {
+    if (!fileName.endsWith(BOARD_TASK_LOG_FRESHNESS_FILE_SUFFIX)) {
+      return null;
+    }
+
+    const encodedTaskId = fileName.slice(0, -BOARD_TASK_LOG_FRESHNESS_FILE_SUFFIX.length);
+    if (!encodedTaskId) {
+      return null;
+    }
+
+    try {
+      const taskId = decodeURIComponent(encodedTaskId);
+      return taskId.trim().length > 0 ? taskId : null;
+    } catch {
+      return null;
+    }
+  }
+
   private async recompute(teamName: string): Promise<TeamLogSourceSnapshot> {
     const state = this.getOrCreateState(teamName);
-    if (state.consumers.size === 0) {
+    if (this.getActiveConsumerCount(state) === 0) {
       return state.snapshot;
     }
     if (
       state.recomputePromise &&
       state.recomputeVersion === state.lifecycleVersion &&
-      state.consumers.size > 0
+      this.getActiveConsumerCount(state) > 0
     ) {
       return state.recomputePromise;
     }

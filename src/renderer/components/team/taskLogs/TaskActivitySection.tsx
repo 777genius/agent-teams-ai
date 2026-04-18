@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { asEnhancedChunkArray } from '@renderer/types/data';
@@ -26,6 +26,7 @@ import type {
 interface TaskActivitySectionProps {
   teamName: string;
   taskId: string;
+  enabled?: boolean;
 }
 
 function isHighSignalTaskActivityEntry(entry: BoardTaskActivityEntry): boolean {
@@ -262,12 +263,14 @@ const Row = ({
 export const TaskActivitySection = ({
   teamName,
   taskId,
+  enabled = true,
 }: TaskActivitySectionProps): React.JSX.Element => {
   const [detailStates, setDetailStates] = useState<Record<string, ActivityDetailState>>({});
   const [entries, setEntries] = useState<BoardTaskActivityEntry[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
   const fetchDetail = useCallback(
     async (entry: BoardTaskActivityEntry): Promise<void> => {
@@ -325,13 +328,27 @@ export const TaskActivitySection = ({
   );
 
   useEffect(() => {
-    let cancelled = false;
-
     setEntries([]);
     setExpandedId(null);
     setDetailStates({});
-    setLoading(true);
     setError(null);
+    setLoading(enabled);
+    hasLoadedRef.current = false;
+  }, [taskId, teamName]);
+
+  useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+    }
+  }, [enabled]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!enabled) {
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const load = async (showSpinner: boolean): Promise<void> => {
       try {
@@ -344,6 +361,7 @@ export const TaskActivitySection = ({
         const result = await api.teams.getTaskActivity(teamName, taskId);
         if (!cancelled) {
           setEntries(result);
+          hasLoadedRef.current = true;
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -357,7 +375,7 @@ export const TaskActivitySection = ({
       }
     };
 
-    void load(true);
+    void load(!hasLoadedRef.current);
     const intervalId = window.setInterval(() => {
       void load(false);
     }, 8000);
@@ -366,7 +384,7 @@ export const TaskActivitySection = ({
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [teamName, taskId]);
+  }, [enabled, teamName, taskId]);
 
   const visibleEntries = useMemo(
     () =>

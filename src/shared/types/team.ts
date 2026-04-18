@@ -875,6 +875,7 @@ export interface TeamChangeEvent {
     | 'config'
     | 'inbox'
     | 'log-source-change'
+    | 'task-log-change'
     | 'task'
     | 'lead-activity'
     | 'lead-context'
@@ -885,6 +886,7 @@ export interface TeamChangeEvent {
   teamName: string;
   runId?: string;
   detail?: string;
+  taskId?: string;
 }
 
 export interface ProjectBranchChangeEvent {

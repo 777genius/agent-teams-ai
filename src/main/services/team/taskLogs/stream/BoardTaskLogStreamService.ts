@@ -161,11 +161,44 @@ function extractBoardToolOutputText(
     return null;
   }
 
+  const normalizedToolName = toolName.trim().toLowerCase();
   const payload = parsedPayload as Record<string, unknown>;
-  if (toolName === 'task_add_comment' || toolName === 'task_get_comment') {
+  if (normalizedToolName === 'task_add_comment' || normalizedToolName === 'task_get_comment') {
     const comment = payload.comment as Record<string, unknown> | undefined;
     if (typeof comment?.text === 'string' && comment.text.trim().length > 0) {
       return comment.text;
+    }
+  }
+
+  if (normalizedToolName === 'sendmessage') {
+    const routing = payload.routing as Record<string, unknown> | undefined;
+    const deliveryMessage =
+      typeof payload.message === 'string' && payload.message.trim().length > 0
+        ? payload.message.trim()
+        : null;
+    const summary =
+      typeof routing?.summary === 'string' && routing.summary.trim().length > 0
+        ? routing.summary.trim()
+        : null;
+    const target =
+      typeof routing?.target === 'string' && routing.target.trim().length > 0
+        ? routing.target.trim()
+        : null;
+
+    if (deliveryMessage && summary) {
+      return `${deliveryMessage} - ${summary}`;
+    }
+    if (summary && target) {
+      return `Message sent to ${target} - ${summary}`;
+    }
+    if (summary) {
+      return summary;
+    }
+    if (deliveryMessage) {
+      return deliveryMessage;
+    }
+    if (target) {
+      return `Message sent to ${target}`;
     }
   }
 
@@ -289,12 +322,67 @@ function sanitizeToolResultContent(
   };
 }
 
+function sanitizeToolResultPayloadValue(
+  value: string | unknown[],
+  canonicalToolName?: string
+): string | unknown[] {
+  if (typeof value === 'string') {
+    const parsedPayload = parseJsonLikeString(value);
+    const extractedText = extractBoardToolOutputText(canonicalToolName, parsedPayload);
+    if (typeof extractedText === 'string') {
+      return extractedText;
+    }
+    return parsedPayload ? '' : value;
+  }
+
+  const jsonText = collectTextBlockText(value);
+  const parsedPayload = parseJsonLikeString(jsonText);
+  const extractedText = extractBoardToolOutputText(canonicalToolName, parsedPayload);
+  if (typeof extractedText === 'string') {
+    return extractedText;
+  }
+
+  const sanitizedChildren = value
+    .map((child) => {
+      if (
+        typeof child === 'object' &&
+        child !== null &&
+        'type' in child &&
+        child.type === 'text' &&
+        'text' in child &&
+        typeof child.text === 'string'
+      ) {
+        return looksLikeJsonPayload(child.text) ? null : { ...child };
+      }
+      return child;
+    })
+    .filter((child) => child !== null);
+
+  if (parsedPayload && sanitizedChildren.length === value.length) {
+    return '';
+  }
+
+  return sanitizedChildren.length > 0 ? sanitizedChildren : '';
+}
+
 function sanitizeJsonLikeToolResultPayloads(
   messages: ParsedMessage[],
   canonicalToolName?: string
 ): ParsedMessage[] {
   return messages.map((message) => {
     let nextMessage = message;
+    let toolResultsChanged = false;
+    const nextToolResults = message.toolResults.map((toolResult) => {
+      const nextContent = sanitizeToolResultPayloadValue(toolResult.content, canonicalToolName);
+      if (JSON.stringify(nextContent) !== JSON.stringify(toolResult.content)) {
+        toolResultsChanged = true;
+        return {
+          ...toolResult,
+          content: nextContent,
+        };
+      }
+      return toolResult;
+    });
 
     const rawToolUseResult = message.toolUseResult as unknown;
     if (
@@ -388,12 +476,20 @@ function sanitizeJsonLikeToolResultPayloads(
     });
 
     if (!changed) {
-      return nextMessage;
+      if (!toolResultsChanged) {
+        return nextMessage;
+      }
+
+      return {
+        ...nextMessage,
+        toolResults: nextToolResults,
+      };
     }
 
     return {
       ...nextMessage,
       content: nextContent,
+      toolResults: toolResultsChanged ? nextToolResults : nextMessage.toolResults,
     };
   });
 }
@@ -1011,6 +1107,15 @@ export class BoardTaskLogStreamService {
           continue;
         }
 
+        const inferredToolName = [...messageToolUseIds]
+          .map((toolUseId) => toolNameByUseId.get(toolUseId))
+          .find((toolName): toolName is string => typeof toolName === 'string');
+        const sanitizedMessages = sanitizeJsonLikeToolResultPayloads([message], inferredToolName);
+        const prunedMessages = pruneEmptyInternalToolResultMessages(sanitizedMessages);
+        if (prunedMessages.length === 0) {
+          continue;
+        }
+
         inferredSlices.push({
           id: `inferred:${filePath}:${message.uuid}`,
           timestamp: message.timestamp.toISOString(),
@@ -1018,7 +1123,7 @@ export class BoardTaskLogStreamService {
           sortOrder: index,
           participantKey: buildParticipantKey(actor),
           actor,
-          filteredMessages: [message],
+          filteredMessages: prunedMessages,
         });
       }
     }

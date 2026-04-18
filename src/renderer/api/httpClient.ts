@@ -688,6 +688,9 @@ export class HttpAPIClient implements ElectronAPI {
     setChangePresenceTracking: async (): Promise<void> => {
       // Not available in browser mode — no-op.
     },
+    setTaskLogStreamTracking: async (): Promise<void> => {
+      // Not available in browser mode — no-op.
+    },
     setToolActivityTracking: async (): Promise<void> => {
       // Not available in browser mode — no-op.
     },

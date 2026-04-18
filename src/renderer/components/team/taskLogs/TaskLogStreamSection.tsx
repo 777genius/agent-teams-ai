@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { MemberExecutionLog } from '@renderer/components/team/members/MemberExecutionLog';
@@ -14,7 +14,11 @@ import type {
 interface TaskLogStreamSectionProps {
   teamName: string;
   taskId: string;
+  taskStatus?: string;
+  liveEnabled?: boolean;
 }
+
+const LIVE_RELOAD_DEBOUNCE_MS = 350;
 
 function formatRelativeTime(isoString: string): string {
   const date = new Date(isoString);
@@ -86,39 +90,160 @@ const SegmentBlock = ({
 export const TaskLogStreamSection = ({
   teamName,
   taskId,
+  taskStatus,
+  liveEnabled = true,
 }: TaskLogStreamSectionProps): React.JSX.Element => {
   const [stream, setStream] = useState<BoardTaskLogStreamResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedParticipantKey, setSelectedParticipantKey] = useState<'all' | string>('all');
+  const requestSeqRef = useRef(0);
+  const streamRef = useRef<BoardTaskLogStreamResponse | null>(null);
+  const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    streamRef.current = stream;
+  }, [stream]);
 
-    const run = async (): Promise<void> => {
-      try {
+  const loadStream = useCallback(
+    async (options?: { resetSelection?: boolean; background?: boolean }): Promise<void> => {
+      const resetSelection = options?.resetSelection ?? false;
+      const background = options?.background ?? false;
+      const hadExistingStream = streamRef.current != null;
+      const requestSeq = requestSeqRef.current + 1;
+      requestSeqRef.current = requestSeq;
+
+      if (!background) {
         setLoading(true);
-        setError(null);
+      }
+      setError((prev) => (background ? prev : null));
+
+      try {
         const response = normalizeResponse(await api.teams.getTaskLogStream(teamName, taskId));
-        if (cancelled) return;
+        if (requestSeqRef.current !== requestSeq) {
+          return;
+        }
+
         setStream(response);
-        setSelectedParticipantKey(response.defaultFilter);
+        setSelectedParticipantKey((prev) => {
+          if (resetSelection) {
+            return response.defaultFilter;
+          }
+          const availableParticipantKeys = new Set([
+            'all',
+            ...response.participants.map((participant) => participant.key),
+          ]);
+          return availableParticipantKeys.has(prev) ? prev : response.defaultFilter;
+        });
+        setError(null);
       } catch (loadError) {
-        if (cancelled) return;
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load task log stream');
-        setStream(null);
+        if (requestSeqRef.current !== requestSeq) {
+          return;
+        }
+
+        if (!background || streamRef.current == null) {
+          setError(
+            loadError instanceof Error ? loadError.message : 'Failed to load task log stream'
+          );
+          setStream(null);
+        }
       } finally {
-        if (!cancelled) {
+        if (requestSeqRef.current === requestSeq && (!background || !hadExistingStream)) {
           setLoading(false);
         }
       }
+    },
+    [taskId, teamName]
+  );
+
+  useEffect(() => {
+    setStream(null);
+    streamRef.current = null;
+    setError(null);
+    setSelectedParticipantKey('all');
+    requestSeqRef.current += 1;
+    if (reloadTimerRef.current) {
+      clearTimeout(reloadTimerRef.current);
+      reloadTimerRef.current = null;
+    }
+    void loadStream({ resetSelection: true });
+  }, [loadStream]);
+
+  const previousTaskMetaRef = useRef({ taskId, taskStatus });
+
+  useEffect(() => {
+    const previousTaskMeta = previousTaskMetaRef.current;
+    previousTaskMetaRef.current = { taskId, taskStatus };
+
+    if (previousTaskMeta.taskId !== taskId) {
+      return;
+    }
+
+    if (
+      previousTaskMeta.taskStatus === 'in_progress' &&
+      taskStatus &&
+      taskStatus !== 'in_progress'
+    ) {
+      void loadStream({ background: true });
+    }
+  }, [loadStream, taskId, taskStatus]);
+
+  useEffect(() => {
+    if (!liveEnabled) {
+      if (reloadTimerRef.current) {
+        clearTimeout(reloadTimerRef.current);
+        reloadTimerRef.current = null;
+      }
+      return;
+    }
+
+    const scheduleReload = (): void => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      if (reloadTimerRef.current) {
+        clearTimeout(reloadTimerRef.current);
+      }
+      reloadTimerRef.current = setTimeout(() => {
+        reloadTimerRef.current = null;
+        void loadStream({ background: true });
+      }, LIVE_RELOAD_DEBOUNCE_MS);
     };
 
-    void run();
-    return () => {
-      cancelled = true;
+    const unsubscribe = api.teams.onTeamChange?.((_event, event) => {
+      if (
+        event.teamName !== teamName ||
+        event.type !== 'task-log-change' ||
+        event.taskId !== taskId
+      ) {
+        return;
+      }
+      scheduleReload();
+    });
+
+    const handleVisibilityChange = (): void => {
+      if (document.visibilityState === 'visible') {
+        scheduleReload();
+      }
     };
-  }, [taskId, teamName]);
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
+    return () => {
+      if (reloadTimerRef.current) {
+        clearTimeout(reloadTimerRef.current);
+        reloadTimerRef.current = null;
+      }
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [liveEnabled, loadStream, taskId, teamName]);
 
   const participants = stream?.participants ?? [];
   const showChips = participants.length > 1;

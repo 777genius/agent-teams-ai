@@ -219,6 +219,9 @@ export const TEAM_SET_CHANGE_PRESENCE_TRACKING = 'team:setChangePresenceTracking
 /** Enable or disable live teammate tool activity tracking for a visible team tab */
 export const TEAM_SET_TOOL_ACTIVITY_TRACKING = 'team:setToolActivityTracking';
 
+/** Enable or disable task log stream invalidation tracking for an open task log panel */
+export const TEAM_SET_TASK_LOG_STREAM_TRACKING = 'team:setTaskLogStreamTracking';
+
 /** Get buffered Claude CLI logs (paged, newest-first) */
 export const TEAM_GET_CLAUDE_LOGS = 'team:getClaudeLogs';
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
+import { OngoingIndicator } from '@renderer/components/common/OngoingIndicator';
 import {
   ImageLightbox,
   LightboxLockProvider,
@@ -156,6 +157,8 @@ export const TaskDetailDialog = ({
 
   const [logsRefreshing, setLogsRefreshing] = useState(false);
   const [executionPreviewOnline, setExecutionPreviewOnline] = useState(false);
+  const [logsSectionOpen, setLogsSectionOpen] = useState(false);
+  const [taskLogActivityActive, setTaskLogActivityActive] = useState(false);
   const [changesSectionOpen, setChangesSectionOpen] = useState(false);
   const [taskChangesFiles, setTaskChangesFiles] = useState<FileChangeSummary[] | null>(null);
   const [taskChangesLoading, setTaskChangesLoading] = useState(false);
@@ -231,6 +234,8 @@ export const TaskDetailDialog = ({
     setTaskChangesError(null);
     setLogsRefreshing(false);
     setExecutionPreviewOnline(false);
+    setLogsSectionOpen(false);
+    setTaskLogActivityActive(false);
   }, [open, currentTask?.id]);
 
   const [replyTo, setReplyTo] = useState<{
@@ -1258,16 +1263,23 @@ export const TaskDetailDialog = ({
                 key={`task-logs:${currentTask.id}`}
                 title="Task Logs"
                 icon={<ScrollText size={14} />}
+                headerExtra={
+                  taskLogActivityActive ? (
+                    <OngoingIndicator size="sm" title="New task logs arriving" />
+                  ) : null
+                }
                 contentClassName="pl-2.5 overflow-visible"
                 headerClassName="-mx-6 w-[calc(100%+3rem)]"
                 headerContentClassName="pl-6"
                 defaultOpen={false}
+                onOpenChange={setLogsSectionOpen}
                 keepMounted
               >
                 <div className="min-w-0">
                   <TaskLogsPanel
                     teamName={teamName}
                     task={currentTask}
+                    isOpen={logsSectionOpen}
                     taskSince={taskSince}
                     isExecutionRefreshing={logsRefreshing}
                     isExecutionPreviewOnline={executionPreviewOnline}
@@ -1275,6 +1287,7 @@ export const TaskDetailDialog = ({
                     showSubagentPreview={Boolean(currentTask.owner) && !isLeadOwnedTask}
                     showLeadPreview={allowLeadExecutionPreview && isLeadOwnedTask}
                     onPreviewOnlineChange={setExecutionPreviewOnline}
+                    onTaskLogActivityChange={setTaskLogActivityActive}
                   />
                 </div>
               </CollapsibleTeamSection>

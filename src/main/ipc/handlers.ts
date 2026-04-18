@@ -106,6 +106,7 @@ import type {
   ServiceContextRegistry,
   SshConnectionManager,
   TeamDataService,
+  TeamLogSourceTracker,
   TeammateToolTracker,
   TeamMemberLogsFinder,
   TeamProvisioningService,
@@ -141,6 +142,7 @@ export function initializeIpcHandlers(
   boardTaskExactLogsService: BoardTaskExactLogsService,
   boardTaskExactLogDetailService: BoardTaskExactLogDetailService,
   teammateToolTracker: TeammateToolTracker | undefined,
+  teamLogSourceTracker: TeamLogSourceTracker | undefined,
   branchStatusService: BranchStatusService | undefined,
   contextCallbacks: {
     rewire: (context: ServiceContext) => void;
@@ -184,6 +186,7 @@ export function initializeIpcHandlers(
     memberStatsComputer,
     teamBackupService,
     teammateToolTracker,
+    teamLogSourceTracker,
     branchStatusService,
     boardTaskActivityService,
     boardTaskActivityDetailService,

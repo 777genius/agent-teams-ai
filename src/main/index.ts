@@ -965,6 +965,7 @@ async function initializeServices(): Promise<void> {
     boardTaskExactLogsService,
     boardTaskExactLogDetailService,
     teammateToolTracker ?? undefined,
+    teamLogSourceTracker,
     branchStatusService ?? undefined,
     {
       rewire: rewireContextEvents,

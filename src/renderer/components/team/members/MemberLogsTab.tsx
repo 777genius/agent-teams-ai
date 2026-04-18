@@ -74,6 +74,7 @@ interface MemberLogsTabProps {
   teamName: string;
   memberName?: string;
   taskId?: string;
+  enabled?: boolean;
   /** When viewing task logs: include owner's sessions when task is in_progress */
   taskOwner?: string;
   taskStatus?: string;
@@ -100,6 +101,7 @@ export const MemberLogsTab = ({
   teamName,
   memberName,
   taskId,
+  enabled = true,
   taskOwner,
   taskStatus,
   taskWorkIntervals,
@@ -375,6 +377,7 @@ export const MemberLogsTab = ({
   const previewHasMore = allPreviewMessages.length > previewVisibleCount;
 
   const previewOnline = useMemo((): boolean => {
+    if (!enabled) return false;
     if (!previewLog) return false;
     // Determine the most recent activity timestamp from preview messages
     const newest = previewMessages[0];
@@ -398,7 +401,7 @@ export const MemberLogsTab = ({
     if (taskStatus === 'in_progress') return ageMs <= 60_000;
     // Completed/other tasks — shorter window
     return ageMs <= 15_000;
-  }, [previewLog, previewMessages, taskStatus]);
+  }, [enabled, previewLog, previewMessages, taskStatus]);
 
   const expandedLogSummary = useMemo(() => {
     if (!expandedId) return null;
@@ -443,6 +446,17 @@ export const MemberLogsTab = ({
   useEffect(() => {
     let cancelled = false;
     const shouldAutoRefresh = taskId != null && taskStatus === 'in_progress';
+    if (!enabled) {
+      return () => {
+        cancelled = true;
+        refreshCountRef.current = 0;
+        if (refreshHideTimeoutRef.current) {
+          clearTimeout(refreshHideTimeoutRef.current);
+          refreshHideTimeoutRef.current = null;
+        }
+        setRefreshing(false);
+      };
+    }
 
     const load = async (): Promise<void> => {
       let didBeginRefreshing = false;
@@ -505,7 +519,17 @@ export const MemberLogsTab = ({
       setRefreshing(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intervalsKey + taskSince drive refresh; deps intentionally minimal to avoid refetch loops
-  }, [teamName, memberName, taskId, taskOwner, taskStatus, intervalsKey, taskSince, isTabActive]);
+  }, [
+    enabled,
+    teamName,
+    memberName,
+    taskId,
+    taskOwner,
+    taskStatus,
+    intervalsKey,
+    taskSince,
+    isTabActive,
+  ]);
 
   const fetchDetailForLog = useCallback(
     async (
@@ -532,6 +556,9 @@ export const MemberLogsTab = ({
   );
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     if (!shouldShowPreview) {
       setPreviewChunks(null);
       return;
@@ -557,9 +584,10 @@ export const MemberLogsTab = ({
     return () => {
       cancelled = true;
     };
-  }, [fetchDetailForLog, previewLog, shouldShowPreview, intervalsKey]);
+  }, [enabled, fetchDetailForLog, previewLog, shouldShowPreview, intervalsKey]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (!shouldShowPreview) return;
     if (!previewLog) return;
 
@@ -594,9 +622,11 @@ export const MemberLogsTab = ({
     taskStatus,
     intervalsKey,
     isTabActive,
+    enabled,
   ]);
 
   useEffect(() => {
+    if (!enabled) return;
     const shouldAutoRefreshSummary = taskId != null && taskStatus === 'in_progress';
     if (!expandedLogSummary) return;
     if (!shouldAutoRefreshSummary && !expandedLogSummary.isOngoing) return;
@@ -634,6 +664,7 @@ export const MemberLogsTab = ({
     taskStatus,
     intervalsKey,
     isTabActive,
+    enabled,
   ]);
 
   const handleExpand = useCallback(
