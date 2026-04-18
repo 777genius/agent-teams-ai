@@ -2079,6 +2079,72 @@ function buildCombinedLogs(stdoutBuffer: string, stderrBuffer: string): string {
   return [`[stdout]`, stdoutTrimmed, '', `[stderr]`, stderrTrimmed].join('\n');
 }
 
+interface AgentTeamsMcpConfigEntry {
+  command?: unknown;
+  args?: unknown;
+  env?: unknown;
+  cwd?: unknown;
+}
+
+interface AgentTeamsMcpConfigFile {
+  mcpServers?: Record<string, AgentTeamsMcpConfigEntry>;
+}
+
+interface AgentTeamsMcpLaunchSpec {
+  command: string;
+  args: string[];
+  cwd?: string;
+  env: Record<string, string>;
+}
+
+interface McpJsonRpcErrorPayload {
+  code?: number;
+  message?: string;
+}
+
+interface McpJsonRpcResponse<TResult> {
+  id?: number;
+  result?: TResult;
+  error?: McpJsonRpcErrorPayload;
+}
+
+interface McpToolsListResult {
+  tools?: Array<{
+    name?: string;
+    _meta?: Record<string, unknown>;
+  }>;
+}
+
+interface McpToolCallResult {
+  content?: Array<{
+    type?: string;
+    text?: string;
+  }>;
+  isError?: boolean;
+}
+
+interface AgentTeamsMcpValidationFixture {
+  claudeDir: string;
+  teamName: string;
+  memberName: string;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+}
+
+function normalizeRecordStringValues(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, entry]) =>
+      typeof entry === 'string' ? [[key, entry]] : []
+    )
+  );
+}
+
 function extractLogsTail(stdoutBuffer: string, stderrBuffer: string): string | undefined {
   const trimmed = buildCombinedLogs(stdoutBuffer, stderrBuffer).trim();
   if (trimmed.length === 0) {
@@ -12428,50 +12494,322 @@ export class TeamProvisioningService {
   private buildAgentTeamsMcpValidationError(output: string): string {
     const detail = this.normalizeApiRetryErrorMessage(output) || output.trim();
     if (!detail) {
-      return (
-        'agent-teams MCP loaded config but did not expose member_briefing. ' +
-        'The leader would start without required team MCP tools.'
+      return 'agent-teams MCP preflight failed before team launch.';
+    }
+    return `agent-teams MCP preflight failed before team launch. Details: ${detail}`;
+  }
+
+  private async readAgentTeamsMcpLaunchSpec(
+    mcpConfigPath: string
+  ): Promise<AgentTeamsMcpLaunchSpec> {
+    let parsed: AgentTeamsMcpConfigFile;
+    try {
+      const raw = await fs.promises.readFile(mcpConfigPath, 'utf8');
+      parsed = JSON.parse(raw) as AgentTeamsMcpConfigFile;
+    } catch (error) {
+      throw new Error(
+        this.buildAgentTeamsMcpValidationError(
+          `Failed to read generated MCP config ${mcpConfigPath}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        )
       );
     }
-    return (
-      'agent-teams MCP loaded config but did not expose member_briefing. ' + `Details: ${detail}`
+
+    const server = parsed.mcpServers?.['agent-teams'];
+    if (!server) {
+      throw new Error(
+        this.buildAgentTeamsMcpValidationError(
+          `Generated MCP config ${mcpConfigPath} does not contain an "agent-teams" server entry.`
+        )
+      );
+    }
+
+    if (typeof server.command !== 'string' || server.command.trim().length === 0) {
+      throw new Error(
+        this.buildAgentTeamsMcpValidationError(
+          'Generated agent-teams MCP config is missing a valid launch command.'
+        )
+      );
+    }
+
+    if (server.args !== undefined && !isStringArray(server.args)) {
+      throw new Error(
+        this.buildAgentTeamsMcpValidationError(
+          'Generated agent-teams MCP config has invalid args; expected a string array.'
+        )
+      );
+    }
+
+    if (server.cwd !== undefined && typeof server.cwd !== 'string') {
+      throw new Error(
+        this.buildAgentTeamsMcpValidationError(
+          'Generated agent-teams MCP config has invalid cwd; expected a string path.'
+        )
+      );
+    }
+
+    return {
+      command: server.command,
+      args: server.args ?? [],
+      cwd: typeof server.cwd === 'string' ? server.cwd : undefined,
+      env: normalizeRecordStringValues(server.env),
+    };
+  }
+
+  private async createAgentTeamsMcpValidationFixture(
+    projectPath: string
+  ): Promise<AgentTeamsMcpValidationFixture> {
+    const claudeDir = await fs.promises.mkdtemp(
+      path.join(os.tmpdir(), 'agent-teams-mcp-validate-')
     );
+    const teamName = 'mcp-validation-team';
+    const memberName = 'mcp-validation-member';
+    const teamDir = path.join(claudeDir, 'teams', teamName);
+
+    await fs.promises.mkdir(teamDir, { recursive: true });
+    await fs.promises.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify(
+        {
+          name: teamName,
+          projectPath,
+          members: [
+            { name: 'team-lead', agentType: 'team-lead', role: 'lead' },
+            { name: memberName, agentType: 'teammate', role: 'developer' },
+          ],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    return {
+      claudeDir,
+      teamName,
+      memberName,
+    };
   }
 
   private async validateAgentTeamsMcpRuntime(
-    claudePath: string,
+    _claudePath: string,
     cwd: string,
     env: NodeJS.ProcessEnv,
     mcpConfigPath: string
   ): Promise<void> {
-    const result = await this.spawnProbe(
-      claudePath,
-      [
-        '--setting-sources',
-        'user,project,local',
-        '--mcp-config',
-        mcpConfigPath,
-        '--',
-        'mcp',
-        'get',
-        'agent-teams',
-      ],
-      cwd,
-      env,
-      VERIFY_TIMEOUT_MS
-    );
+    const launchSpec = await this.readAgentTeamsMcpLaunchSpec(mcpConfigPath);
+    const fixture = await this.createAgentTeamsMcpValidationFixture(cwd);
+    let child: ReturnType<typeof spawn> | null = null;
+    let stdoutBuffer = '';
+    let stderrBuffer = '';
+    let nextRequestId = 1;
+    const pending = new Map<
+      number,
+      {
+        resolve: (value: unknown) => void;
+        reject: (error: Error) => void;
+        timeoutHandle: ReturnType<typeof setTimeout>;
+      }
+    >();
 
-    const combinedOutput = buildCombinedLogs(result.stdout, result.stderr).trim();
-    if (result.exitCode !== 0) {
-      throw new Error(this.buildAgentTeamsMcpValidationError(combinedOutput));
-    }
+    const rejectAll = (error: Error): void => {
+      for (const [id, entry] of pending) {
+        clearTimeout(entry.timeoutHandle);
+        entry.reject(error);
+        pending.delete(id);
+      }
+    };
 
-    const normalizedOutput = combinedOutput.toLowerCase();
-    if (
-      !normalizedOutput.includes('status: ✓ connected') &&
-      !normalizedOutput.includes('status: connected')
-    ) {
-      throw new Error(this.buildAgentTeamsMcpValidationError(combinedOutput));
+    try {
+      child = spawnCli(launchSpec.command, launchSpec.args, {
+        cwd: launchSpec.cwd ?? cwd,
+        env: { ...env, ...launchSpec.env },
+        stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
+      });
+
+      const parseStdoutLine = (line: string): void => {
+        let message: McpJsonRpcResponse<unknown>;
+        try {
+          message = JSON.parse(line) as McpJsonRpcResponse<unknown>;
+        } catch (error) {
+          logger.warn(
+            `agent-teams MCP preflight emitted non-JSON stdout line: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+          return;
+        }
+
+        if (typeof message.id !== 'number') {
+          return;
+        }
+
+        const entry = pending.get(message.id);
+        if (!entry) {
+          return;
+        }
+
+        clearTimeout(entry.timeoutHandle);
+        pending.delete(message.id);
+
+        if (message.error) {
+          entry.reject(new Error(message.error.message ?? 'Unknown MCP JSON-RPC error'));
+          return;
+        }
+
+        entry.resolve(message.result);
+      };
+
+      child.stdout?.setEncoding('utf8');
+      child.stdout?.on('data', (chunk: string | Buffer) => {
+        stdoutBuffer += chunk.toString();
+
+        while (true) {
+          const newlineIndex = stdoutBuffer.indexOf('\n');
+          if (newlineIndex === -1) {
+            break;
+          }
+
+          const line = stdoutBuffer.slice(0, newlineIndex).trim();
+          stdoutBuffer = stdoutBuffer.slice(newlineIndex + 1);
+          if (!line) {
+            continue;
+          }
+          parseStdoutLine(line);
+        }
+      });
+
+      child.stderr?.setEncoding('utf8');
+      child.stderr?.on('data', (chunk: string | Buffer) => {
+        stderrBuffer += chunk.toString();
+      });
+
+      child.once('error', (error) => {
+        rejectAll(error instanceof Error ? error : new Error(String(error)));
+      });
+
+      child.once('close', (code, signal) => {
+        if (pending.size === 0) {
+          return;
+        }
+        rejectAll(
+          new Error(
+            `agent-teams MCP process exited unexpectedly during preflight (code=${
+              code ?? 'null'
+            } signal=${signal ?? 'null'})`
+          )
+        );
+      });
+
+      const request = <TResult>(
+        method: string,
+        params: Record<string, unknown>,
+        timeoutMs: number = VERIFY_TIMEOUT_MS
+      ): Promise<TResult> =>
+        new Promise<TResult>((resolve, reject) => {
+          if (!child?.stdin) {
+            reject(new Error('agent-teams MCP stdin is not available'));
+            return;
+          }
+
+          const id = nextRequestId++;
+          const timeoutHandle = setTimeout(() => {
+            pending.delete(id);
+            reject(new Error(`agent-teams MCP request timed out: ${method}`));
+          }, timeoutMs);
+
+          pending.set(id, {
+            resolve: resolve as (value: unknown) => void,
+            reject,
+            timeoutHandle,
+          });
+
+          child.stdin.write(
+            `${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`,
+            (error) => {
+              if (!error) {
+                return;
+              }
+              clearTimeout(timeoutHandle);
+              pending.delete(id);
+              reject(error instanceof Error ? error : new Error(String(error)));
+            }
+          );
+        });
+
+      const notify = async (method: string, params?: Record<string, unknown>): Promise<void> => {
+        if (!child?.stdin) {
+          throw new Error('agent-teams MCP stdin is not available');
+        }
+        const stdin = child.stdin;
+
+        await new Promise<void>((resolve, reject) => {
+          stdin.write(
+            `${JSON.stringify({ jsonrpc: '2.0', method, ...(params ? { params } : {}) })}\n`,
+            (error) => {
+              if (error) {
+                reject(error instanceof Error ? error : new Error(String(error)));
+                return;
+              }
+              resolve();
+            }
+          );
+        });
+      };
+
+      await request('initialize', {
+        protocolVersion: '2024-11-05',
+        capabilities: {},
+        clientInfo: { name: 'claude-agent-teams-ui', version: '1.0.0' },
+      });
+      await notify('notifications/initialized');
+
+      const toolsList = await request<McpToolsListResult>('tools/list', {});
+      const memberBriefingTool = (toolsList.tools ?? []).find(
+        (tool) => tool.name === 'member_briefing'
+      );
+      if (!memberBriefingTool) {
+        throw new Error('agent-teams MCP started but tools/list did not include member_briefing');
+      }
+
+      const memberBriefing = await request<McpToolCallResult>('tools/call', {
+        name: 'member_briefing',
+        arguments: {
+          claudeDir: fixture.claudeDir,
+          teamName: fixture.teamName,
+          memberName: fixture.memberName,
+        },
+      });
+
+      if (memberBriefing.isError) {
+        throw new Error(
+          memberBriefing.content?.[0]?.text ??
+            'agent-teams MCP returned an unspecified error for member_briefing'
+        );
+      }
+
+      const briefingText = memberBriefing.content?.find((item) => item.type === 'text')?.text ?? '';
+      if (briefingText.trim().length === 0) {
+        throw new Error('agent-teams MCP returned empty content for member_briefing');
+      }
+    } catch (error) {
+      const detail = buildCombinedLogs('', stderrBuffer).trim();
+      const errorText =
+        error instanceof Error && detail.length > 0
+          ? `${error.message}\n${detail}`
+          : detail || String(error);
+      throw new Error(this.buildAgentTeamsMcpValidationError(errorText));
+    } finally {
+      rejectAll(new Error('agent-teams MCP preflight session closed'));
+      if (child?.stdin && !child.stdin.destroyed) {
+        child.stdin.end();
+      }
+      if (child) {
+        killProcessTree(child);
+      }
+      await fs.promises.rm(fixture.claudeDir, { recursive: true, force: true }).catch(() => {});
     }
   }
 
