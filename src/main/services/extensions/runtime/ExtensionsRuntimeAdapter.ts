@@ -61,6 +61,8 @@ export class ClaudeExtensionsAdapter implements ExtensionsRuntimeAdapter {
 export class MultimodelExtensionsAdapter implements ExtensionsRuntimeAdapter {
   readonly flavor = 'agent_teams_orchestrator' as const;
 
+  constructor(private readonly stateReader = new McpConfigStateReader()) {}
+
   async buildManagementCliEnv(binaryPath: string): Promise<NodeJS.ProcessEnv> {
     return buildManagementCliEnvForBinary(binaryPath);
   }
@@ -72,13 +74,21 @@ export class MultimodelExtensionsAdapter implements ExtensionsRuntimeAdapter {
     }
 
     const env = await this.buildManagementCliEnv(binaryPath);
-    const { stdout } = await execCli(binaryPath, ['mcp', 'list', '--json'], {
-      timeout: MCP_LIST_TIMEOUT_MS,
-      cwd: projectPath,
-      env,
-    });
+    try {
+      const { stdout } = await execCli(binaryPath, ['mcp', 'list', '--json'], {
+        timeout: MCP_LIST_TIMEOUT_MS,
+        cwd: projectPath,
+        env,
+      });
 
-    return parseInstalledMcpJsonOutput(stdout);
+      return parseInstalledMcpJsonOutput(stdout);
+    } catch (error) {
+      if (!isUnsupportedMcpJsonContractError(error)) {
+        throw error;
+      }
+
+      return this.stateReader.readInstalled(projectPath);
+    }
   }
 
   async diagnoseMcp(projectPath?: string): Promise<McpServerDiagnostic[]> {
@@ -88,14 +98,42 @@ export class MultimodelExtensionsAdapter implements ExtensionsRuntimeAdapter {
     }
 
     const env = await this.buildManagementCliEnv(binaryPath);
-    const { stdout } = await execCli(binaryPath, ['mcp', 'diagnose', '--json'], {
-      timeout: MCP_DIAGNOSE_TIMEOUT_MS,
-      cwd: projectPath,
-      env,
-    });
+    try {
+      const { stdout } = await execCli(binaryPath, ['mcp', 'diagnose', '--json'], {
+        timeout: MCP_DIAGNOSE_TIMEOUT_MS,
+        cwd: projectPath,
+        env,
+      });
 
-    return parseMcpDiagnosticsJsonOutput(stdout);
+      return parseMcpDiagnosticsJsonOutput(stdout);
+    } catch (error) {
+      if (!isUnsupportedMcpJsonContractError(error)) {
+        throw error;
+      }
+
+      const { stdout, stderr } = await execCli(binaryPath, ['mcp', 'list'], {
+        timeout: MCP_DIAGNOSE_TIMEOUT_MS,
+        cwd: projectPath,
+        env,
+      });
+
+      return parseMcpDiagnosticsOutput([stdout, stderr].filter(Boolean).join('\n'));
+    }
   }
+}
+
+function isUnsupportedMcpJsonContractError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+
+  return (
+    normalized.includes("unknown command 'diagnose'") ||
+    normalized.includes('unknown command "diagnose"') ||
+    normalized.includes('unknown option') ||
+    normalized.includes('unknown argument') ||
+    normalized.includes('unexpected argument') ||
+    normalized.includes('unrecognized option')
+  );
 }
 
 class RuntimeSwitchingExtensionsAdapter implements ExtensionsRuntimeAdapter {
