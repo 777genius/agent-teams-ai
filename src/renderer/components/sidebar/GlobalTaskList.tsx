@@ -33,6 +33,14 @@ import { AnimatedHeightReveal } from '../team/activity/AnimatedHeightReveal';
 import { type ComboboxOption } from '../ui/combobox';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
+import {
+  canProjectGroupShowLess,
+  canProjectGroupShowMore,
+  getNextProjectGroupVisibleCount,
+  getPreviousProjectGroupVisibleCount,
+  getProjectGroupVisibleCount,
+  syncProjectGroupVisibleCountByKey,
+} from './projectGroupPagination';
 import { SidebarTaskItem } from './SidebarTaskItem';
 import { TaskContextMenu } from './TaskContextMenu';
 import { TaskFiltersPopover } from './TaskFiltersPopover';
@@ -207,6 +215,9 @@ export const GlobalTaskList = ({
   const [sortPopoverOpen, setSortPopoverOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [renamingTaskKey, setRenamingTaskKey] = useState<string | null>(null);
+  const [projectRequestedVisibleCountByKey, setProjectRequestedVisibleCountByKey] = useState<
+    Record<string, number>
+  >({});
   const searchInputRef = useRef<HTMLInputElement>(null);
   const hasFetchedRef = useRef(false);
   const readState = useReadStateSnapshot();
@@ -221,21 +232,23 @@ export const GlobalTaskList = ({
       return new Set<string>();
     }
 
-    // First load: seed all known IDs, no animations
+    // eslint-disable-next-line react-hooks/refs -- Synchronous diff is required so new rows mount with animate=true.
     if (isInitialTaskLoadRef.current) {
       isInitialTaskLoadRef.current = false;
       for (const t of globalTasks) {
+        // eslint-disable-next-line react-hooks/refs -- Synchronous diff is required so new rows mount with animate=true.
         knownTaskIdsRef.current.add(`${t.teamName}:${t.id}`);
       }
       return new Set<string>();
     }
 
-    // Subsequent updates: detect truly new tasks
     const newIds = new Set<string>();
     for (const t of globalTasks) {
       const key = `${t.teamName}:${t.id}`;
+      // eslint-disable-next-line react-hooks/refs -- Synchronous diff is required so new rows mount with animate=true.
       if (!knownTaskIdsRef.current.has(key)) {
         newIds.add(key);
+        // eslint-disable-next-line react-hooks/refs -- Synchronous diff is required so new rows mount with animate=true.
         knownTaskIdsRef.current.add(key);
       }
     }
@@ -326,6 +339,11 @@ export const GlobalTaskList = ({
 
   // Resolve project filter from filters state
   const selectedProjectPath = filters.projectPath;
+  const hasArchivedTasks = useMemo(
+    () => globalTasks.some((t) => taskLocalState.isArchived(t.teamName, t.id)),
+    [globalTasks, taskLocalState]
+  );
+  const effectiveShowArchived = showArchived && hasArchivedTasks;
 
   const filtered = useMemo(() => {
     let result = globalTasks;
@@ -345,7 +363,7 @@ export const GlobalTaskList = ({
     }
     result = applySearch(result, searchQuery);
     // Archive filtering
-    if (showArchived) {
+    if (effectiveShowArchived) {
       result = result.filter((t) => taskLocalState.isArchived(t.teamName, t.id));
     } else {
       result = result.filter((t) => !taskLocalState.isArchived(t.teamName, t.id));
@@ -353,28 +371,15 @@ export const GlobalTaskList = ({
     return result;
   }, [
     globalTasks,
-    filters.projectPath,
+    selectedProjectPath,
     filters.statusIds,
     filters.teamName,
     filters.readFilter,
     searchQuery,
     readState,
-    showArchived,
+    effectiveShowArchived,
     taskLocalState,
   ]);
-
-  // Check if any archived tasks exist (before archive filtering) to conditionally show the toggle
-  const hasArchivedTasks = useMemo(
-    () => globalTasks.some((t) => taskLocalState.isArchived(t.teamName, t.id)),
-    [globalTasks, taskLocalState]
-  );
-
-  // Reset showArchived when archive becomes empty
-  useEffect(() => {
-    if (showArchived && !hasArchivedTasks) {
-      setShowArchived(false);
-    }
-  }, [showArchived, hasArchivedTasks]);
 
   // Split into pinned and normal (non-pinned) tasks
   const pinnedTasks = useMemo(
@@ -400,6 +405,19 @@ export const GlobalTaskList = ({
     [projectGroups]
   );
   const timeGroupKeys = useMemo(() => categories.map((c) => c), [categories]);
+  const projectGroupVisibility = useMemo(
+    () =>
+      projectGroups.map((group) => ({
+        projectKey: group.projectKey,
+        taskCount: group.tasks.length,
+      })),
+    [projectGroups]
+  );
+  const projectVisibleCountByKey = useMemo(
+    () =>
+      syncProjectGroupVisibleCountByKey(projectRequestedVisibleCountByKey, projectGroupVisibility),
+    [projectRequestedVisibleCountByKey, projectGroupVisibility]
+  );
 
   const projectCollapsed = useCollapsedGroups('project', projectGroupKeys);
   const timeCollapsed = useCollapsedGroups('time', timeGroupKeys);
@@ -499,7 +517,7 @@ export const GlobalTaskList = ({
       </div>
 
       {/* Pinned tasks section */}
-      {pinnedTasks.length > 0 && !showArchived && (
+      {pinnedTasks.length > 0 && !effectiveShowArchived && (
         <div className="shrink-0 border-b" style={{ borderColor: 'var(--color-border)' }}>
           <div className="flex items-center gap-1 px-2 py-1">
             <Pin className="size-3 text-text-muted" />
@@ -562,7 +580,7 @@ export const GlobalTaskList = ({
                   onClick={() => setShowArchived(!showArchived)}
                   className={cn(
                     'rounded p-0.5 transition-colors',
-                    showArchived
+                    effectiveShowArchived
                       ? 'bg-surface-raised text-text-secondary'
                       : 'text-text-muted hover:text-text-secondary'
                   )}
@@ -571,7 +589,7 @@ export const GlobalTaskList = ({
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top">
-                {showArchived ? 'Hide archived' : 'Show archived'}
+                {effectiveShowArchived ? 'Hide archived' : 'Show archived'}
               </TooltipContent>
             </Tooltip>
           </div>
@@ -627,14 +645,25 @@ export const GlobalTaskList = ({
             if (group.tasks.length === 0) return null;
             const isGroupCollapsed = projectCollapsed.isCollapsed(group.projectKey);
             const groupColor = projectColor(group.projectLabel);
+            const visibleCount = getProjectGroupVisibleCount(
+              projectVisibleCountByKey[group.projectKey],
+              group.tasks.length
+            );
+            const visibleTasks = group.tasks.slice(0, visibleCount);
+            const showMoreVisible = canProjectGroupShowMore(visibleCount, group.tasks.length);
+            const showLessVisible = canProjectGroupShowLess(visibleCount, group.tasks.length);
             let lastTeam: string | null = null;
             return (
               <div key={group.projectKey}>
                 <button
                   type="button"
                   onClick={() => projectCollapsed.toggle(group.projectKey)}
-                  className="hover:bg-surface-raised/40 sticky top-0 z-10 flex w-full cursor-pointer items-center gap-1 px-2 py-1.5 text-[11px] font-semibold transition-colors"
-                  style={{ backgroundColor: 'var(--color-surface-sidebar)' }}
+                  className="hover:bg-surface-raised/40 sticky top-0 z-10 flex w-full cursor-pointer items-center gap-1.5 p-2 transition-colors"
+                  style={{
+                    backgroundColor: 'var(--color-surface-sidebar)',
+                    backgroundImage: `linear-gradient(90deg, ${groupColor.glow} 0%, transparent 80%)`,
+                    boxShadow: `inset 2px 0 0 ${groupColor.border}, inset 0 -1px 0 var(--color-border)`,
+                  }}
                 >
                   {isGroupCollapsed ? (
                     <ChevronRight className="size-3 shrink-0 text-text-muted" />
@@ -642,11 +671,14 @@ export const GlobalTaskList = ({
                     <ChevronDown className="size-3 shrink-0 text-text-muted" />
                   )}
                   <Folder
-                    className="size-3 shrink-0"
-                    style={{ color: groupColor.border }}
+                    className="size-3.5 shrink-0"
+                    style={{ color: groupColor.icon }}
                     aria-hidden="true"
                   />
-                  <span className="truncate" style={{ color: groupColor.text }}>
+                  <span
+                    className="truncate text-[13px] font-bold leading-none"
+                    style={{ color: groupColor.icon }}
+                  >
                     {group.projectLabel}
                   </span>
                   <span className="ml-auto shrink-0 text-[10px] font-normal text-text-muted">
@@ -654,7 +686,7 @@ export const GlobalTaskList = ({
                   </span>
                 </button>
                 {!isGroupCollapsed &&
-                  group.tasks.map((task) => {
+                  visibleTasks.map((task) => {
                     const showTeamHeader = task.teamName !== lastTeam;
                     lastTeam = task.teamName;
                     return (
@@ -691,6 +723,44 @@ export const GlobalTaskList = ({
                       </div>
                     );
                   })}
+                {!isGroupCollapsed && (showMoreVisible || showLessVisible) && (
+                  <div className="flex items-center gap-2 px-3 pb-2 pt-1">
+                    {showMoreVisible && (
+                      <button
+                        type="button"
+                        className="text-[11px] font-medium text-text-muted transition-colors hover:text-text"
+                        onClick={() =>
+                          setProjectRequestedVisibleCountByKey((prev) => ({
+                            ...prev,
+                            [group.projectKey]: getNextProjectGroupVisibleCount(
+                              projectVisibleCountByKey[group.projectKey],
+                              group.tasks.length
+                            ),
+                          }))
+                        }
+                      >
+                        Show more
+                      </button>
+                    )}
+                    {showLessVisible && (
+                      <button
+                        type="button"
+                        className="text-[11px] font-medium text-text-muted transition-colors hover:text-text"
+                        onClick={() =>
+                          setProjectRequestedVisibleCountByKey((prev) => ({
+                            ...prev,
+                            [group.projectKey]: getPreviousProjectGroupVisibleCount(
+                              projectVisibleCountByKey[group.projectKey],
+                              group.tasks.length
+                            ),
+                          }))
+                        }
+                      >
+                        Show less
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
