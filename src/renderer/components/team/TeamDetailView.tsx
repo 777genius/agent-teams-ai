@@ -39,8 +39,8 @@ import {
 } from '@renderer/store/slices/teamSlice';
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
 import { sumContextInjectionTokens } from '@renderer/utils/contextMath';
-import { formatProjectPath } from '@renderer/utils/pathDisplay';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { formatProjectPath } from '@renderer/utils/pathDisplay';
 import { buildTaskCountsByOwner, normalizePath } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { resolveProjectIdByPath } from '@renderer/utils/projectLookup';
@@ -2011,6 +2011,7 @@ export const TeamDetailView = ({
       onReplyToMessage: handleReplyToMessage,
       onRestartTeam: handleRestartTeam,
       onTaskIdClick: handleTaskIdClick,
+      inlineScrollContainerRef: contentRef,
     }),
     [
       activeMembers,

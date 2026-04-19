@@ -1,4 +1,13 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  memo,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Sheet, type SheetRef } from 'react-modal-sheet';
 
 import { Badge } from '@renderer/components/ui/badge';
@@ -91,6 +100,13 @@ interface MessagesPanelProps {
   onRestartTeam?: () => void;
   /** Callback when a task ID link is clicked. */
   onTaskIdClick?: (taskId: string) => void;
+  /**
+   * Scroll container owned by the parent view when `position === 'inline'`.
+   * MessagesPanel does not own this element — the viewport lives in
+   * TeamDetailView's content scroll area. Plumbed for future viewport
+   * consumers (virtualization); unused in this release.
+   */
+  inlineScrollContainerRef?: RefObject<HTMLDivElement | null>;
 }
 
 export function reconcilePendingRepliesByMember(
@@ -214,6 +230,11 @@ export const MessagesPanel = memo(function MessagesPanel({
   const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
   const bottomSheetRef = useRef<SheetRef>(null);
   const bottomSheetStickyTopRef = useRef<HTMLDivElement | null>(null);
+  // Scroll container inside `Sheet.Content` for the bottom-sheet layout.
+  // react-modal-sheet merges this ref with its own internal scroll ref.
+  // Held here so future viewport consumers (virtualization) can observe the
+  // true scrolling element in bottom-sheet mode.
+  const bottomSheetScrollRef = useRef<HTMLDivElement | null>(null);
   const handleExpandContent = useCallback(() => {
     // no-op: user is reading expanded content, not composing
   }, []);
@@ -1067,6 +1088,7 @@ export const MessagesPanel = memo(function MessagesPanel({
             <Sheet.Content
               className="min-h-0 bg-[var(--color-surface-sidebar)]"
               scrollClassName="flex min-h-full flex-col"
+              scrollRef={bottomSheetScrollRef}
               disableDrag={(state) => state.scrollPosition !== 'top'}
             >
               <div
