@@ -885,6 +885,15 @@ function buildRestartStillRunningReason(memberName: string): string {
   );
 }
 
+function buildRestartDuplicateUnconfirmedReason(memberName: string, rawReason?: string): string {
+  const suffix = rawReason?.trim()
+    ? ` Agent returned duplicate_skipped with unrecognized reason "${rawReason.trim()}".`
+    : ' Agent returned duplicate_skipped without a reason.';
+  return (
+    `Restart for teammate "${memberName}" could not be confirmed and may not have applied.` + suffix
+  );
+}
+
 function buildRestartGraceTimeoutReason(memberName: string): string {
   return `Teammate "${memberName}" did not rejoin within the restart grace window.`;
 }
@@ -4048,8 +4057,25 @@ export class TeamProvisioningService {
           const detail =
             parsedStatus.reason === 'already_running'
               ? 'duplicate spawn skipped - already running'
-              : 'duplicate spawn skipped - teammate bootstrap still pending';
+              : parsedStatus.reason === 'bootstrap_pending'
+                ? 'duplicate spawn skipped - teammate bootstrap still pending'
+                : parsedStatus.rawReason
+                  ? `duplicate spawn skipped - unrecognized reason: ${parsedStatus.rawReason}`
+                  : 'duplicate spawn skipped - reason unavailable';
           this.appendMemberBootstrapDiagnostic(run, spawnedMemberName, detail);
+          if (pendingRestart && !parsedStatus.reason) {
+            logger.warn(
+              `[${run.teamName}] Restart for teammate "${spawnedMemberName}" returned duplicate_skipped without a recognized reason`
+            );
+            run.pendingMemberRestarts.delete(spawnedMemberName);
+            this.setMemberSpawnStatus(
+              run,
+              spawnedMemberName,
+              'error',
+              buildRestartDuplicateUnconfirmedReason(spawnedMemberName, parsedStatus.rawReason)
+            );
+            return;
+          }
           if (parsedStatus.reason === 'already_running') {
             if (pendingRestart) {
               run.pendingMemberRestarts.delete(spawnedMemberName);

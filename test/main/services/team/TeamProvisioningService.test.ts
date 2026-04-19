@@ -1064,6 +1064,88 @@ describe('TeamProvisioningService', () => {
       expect(run.pendingMemberRestarts.has('bob')).toBe(true);
     });
 
+    it('fails a codex teammate restart immediately when Agent returns duplicate_skipped without a reason', async () => {
+      allowConsoleLogs();
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'codex-team',
+        expectedMembers: ['jack'],
+        memberSpawnStatuses: new Map([
+          [
+            'jack',
+            createMemberSpawnStatusEntry({
+              launchState: 'failed_to_start',
+              hardFailure: true,
+              hardFailureReason: 'Teammate was never spawned during launch.',
+              error: 'Teammate was never spawned during launch.',
+            }),
+          ],
+        ]),
+      });
+      run.child = { pid: 111 };
+      run.processKilled = false;
+      run.cancelRequested = false;
+
+      (svc as any).sendMessageToRun = vi.fn(async () => {});
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          name: 'Codex Team',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'jack',
+            role: 'Developer',
+            providerId: 'codex',
+            model: 'gpt-5.4',
+            effort: 'medium',
+            agentType: 'general-purpose',
+          },
+        ]),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
+      (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
+      (svc as any).aliveRunByTeam.set('codex-team', run.runId);
+      (svc as any).runs.set(run.runId, run);
+
+      await svc.restartMember('codex-team', 'jack');
+
+      run.activeToolCalls.set('tool-agent-1', {
+        memberName: 'jack',
+        toolUseId: 'tool-agent-1',
+        toolName: 'Agent',
+        preview: 'Spawn teammate jack',
+        startedAt: new Date().toISOString(),
+        state: 'running',
+        source: 'runtime',
+      });
+      run.memberSpawnToolUseIds.set('tool-agent-1', 'jack');
+
+      (svc as any).finishRuntimeToolActivity(
+        run,
+        'tool-agent-1',
+        [
+          {
+            type: 'text',
+            text: 'status: duplicate_skipped\nname: jack\nteam_name: codex-team',
+          },
+        ],
+        false
+      );
+
+      expect(run.pendingMemberRestarts.has('jack')).toBe(false);
+      expect(run.memberSpawnStatuses.get('jack')).toMatchObject({
+        status: 'error',
+        launchState: 'failed_to_start',
+        runtimeAlive: false,
+        hardFailure: true,
+        hardFailureReason:
+          'Restart for teammate "jack" could not be confirmed and may not have applied. Agent returned duplicate_skipped without a reason.',
+      });
+    });
+
     it('waits for a killed tmux pane to disappear before sending a restart request', async () => {
       vi.useFakeTimers();
 

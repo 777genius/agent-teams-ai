@@ -10,6 +10,16 @@ import type { Session, SessionSortMode } from '@renderer/types/data';
 import type { StateCreator } from 'zustand';
 
 const logger = createLogger('Store:session');
+const SESSION_IN_PLACE_RETRY_DELAY_MS = 150;
+
+function isTransientSessionsPaginatedIpcError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return (
+    message.includes(
+      "Error invoking remote method 'get-sessions-paginated': reply was never sent"
+    ) || message.includes("No handler registered for 'get-sessions-paginated'")
+  );
+}
 
 /**
  * Tracks the latest in-place refresh generation per project.
@@ -257,20 +267,21 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
     const generation = (projectRefreshGeneration.get(projectId) ?? 0) + 1;
     projectRefreshGeneration.set(projectId, generation);
 
-    try {
+    const fetchPage = async () => {
       const { connectionMode } = get();
-      const result = await api.getSessionsPaginated(projectId, null, 20, {
+      return api.getSessionsPaginated(projectId, null, 20, {
         includeTotalCount: false,
         prefilterAll: false,
         metadataLevel: connectionMode === 'ssh' ? 'light' : 'deep',
       });
+    };
 
+    const applyResult = (result: Awaited<ReturnType<typeof api.getSessionsPaginated>>) => {
       // Drop stale responses from older in-flight refreshes
       if (projectRefreshGeneration.get(projectId) !== generation) {
         return;
       }
 
-      // Update sessions without loading state
       set({
         sessions: result.sessions,
         sessionsCursor: result.nextCursor,
@@ -278,7 +289,27 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         sessionsTotalCount: result.totalCount,
         // Don't touch sessionsLoading - keep it as-is
       });
+    };
+
+    try {
+      const result = await fetchPage();
+      applyResult(result);
     } catch (error) {
+      if (isTransientSessionsPaginatedIpcError(error) && get().selectedProjectId === projectId) {
+        logger.warn('refreshSessionsInPlace transient IPC error - retrying once');
+        try {
+          await new Promise((resolve) => setTimeout(resolve, SESSION_IN_PLACE_RETRY_DELAY_MS));
+          if (get().selectedProjectId !== projectId) {
+            return;
+          }
+          const retried = await fetchPage();
+          applyResult(retried);
+          return;
+        } catch (retryError) {
+          logger.error('refreshSessionsInPlace retry error:', retryError);
+          return;
+        }
+      }
       logger.error('refreshSessionsInPlace error:', error);
       // Don't set error state - this is a background refresh
     }
