@@ -98,4 +98,22 @@ describe('resolveMemberRuntimeSummary', () => {
       )
     ).toBe('5.4 Mini · Medium · Codex native');
   });
+
+  it('marks persisted legacy Codex lanes as legacy fallbacks in the runtime summary', () => {
+    const member = createMember({ model: 'gpt-5.4-mini' });
+
+    expect(
+      resolveMemberRuntimeSummary(
+        member,
+        {
+          providerId: 'codex',
+          providerBackendId: 'api',
+          model: 'gpt-5.4-mini',
+          effort: 'medium',
+          limitContext: false,
+        },
+        undefined
+      )
+    ).toBe('5.4 Mini · Medium · Legacy OpenAI fallback');
+  });
 });

@@ -47,6 +47,7 @@ describe('resolveLaunchDialogPrefill', () => {
 
     expect(result).toEqual({
       providerId: 'codex',
+      providerBackendId: 'codex-native',
       model: 'gpt-5.4',
       effort: 'medium',
       limitContext: false,
@@ -89,6 +90,7 @@ describe('resolveLaunchDialogPrefill', () => {
 
     expect(result).toEqual({
       providerId: 'codex',
+      providerBackendId: 'codex-native',
       model: 'gpt-5.4',
       effort: 'medium',
       limitContext: false,
@@ -143,6 +145,37 @@ describe('resolveLaunchDialogPrefill', () => {
       storedLimitContext: false,
       getStoredModel: createStoredModelGetter({
         anthropic: 'haiku',
+        codex: 'gpt-5.4',
+      }),
+    });
+
+    expect(result).toEqual({
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.4',
+      effort: 'medium',
+      limitContext: false,
+    });
+  });
+
+  it('defaults new Codex launch flows to codex-native when no backend was persisted', () => {
+    const result = resolveLaunchDialogPrefill({
+      members: [
+        {
+          name: 'team-lead',
+          agentType: 'team-lead',
+          providerId: 'codex',
+          model: 'gpt-5.4',
+          effort: 'medium',
+        },
+      ] as ResolvedTeamMember[],
+      savedRequest: null,
+      previousLaunchParams: undefined,
+      multimodelEnabled: true,
+      storedProviderId: 'codex',
+      storedEffort: 'medium',
+      storedLimitContext: false,
+      getStoredModel: createStoredModelGetter({
         codex: 'gpt-5.4',
       }),
     });
@@ -237,6 +270,7 @@ describe('resolveLaunchDialogPrefill', () => {
 
     expect(result).toEqual({
       providerId: 'codex',
+      providerBackendId: 'codex-native',
       model: 'custom-model[1m]',
       effort: 'medium',
       limitContext: false,
@@ -264,6 +298,7 @@ describe('resolveLaunchDialogPrefill', () => {
 
     expect(result).toEqual({
       providerId: 'codex',
+      providerBackendId: 'codex-native',
       model: 'custom-model[1m]',
       effort: 'medium',
       limitContext: false,

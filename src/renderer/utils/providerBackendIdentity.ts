@@ -5,13 +5,46 @@ function normalizeOptionalBackendId(value: string | null | undefined): string | 
   return trimmed ? trimmed : undefined;
 }
 
+export function getDefaultProviderBackendId(
+  providerId: TeamProviderId | CliProviderStatus['providerId'] | undefined
+): string | undefined {
+  return providerId === 'codex' ? 'codex-native' : undefined;
+}
+
+export function isLegacyCodexProviderBackendId(
+  providerBackendId: string | null | undefined
+): boolean {
+  const normalizedBackendId = normalizeOptionalBackendId(providerBackendId);
+  return (
+    normalizedBackendId === 'auto' ||
+    normalizedBackendId === 'adapter' ||
+    normalizedBackendId === 'api'
+  );
+}
+
 export function resolveEffectiveProviderBackendId(
   provider: Pick<CliProviderStatus, 'selectedBackendId' | 'resolvedBackendId'> | null | undefined
 ): string | undefined {
   return normalizeOptionalBackendId(provider?.resolvedBackendId ?? provider?.selectedBackendId);
 }
 
-export function formatTeamProviderBackendLabel(
+export function resolveUiOwnedProviderBackendId(
+  providerId: TeamProviderId | CliProviderStatus['providerId'] | undefined,
+  provider: Pick<CliProviderStatus, 'selectedBackendId' | 'resolvedBackendId'> | null | undefined
+): string | undefined {
+  const normalizedProviderId = providerId ?? undefined;
+  if (normalizedProviderId === 'codex') {
+    const selectedBackendId = normalizeOptionalBackendId(provider?.selectedBackendId);
+    if (!selectedBackendId || selectedBackendId === 'auto') {
+      return 'codex-native';
+    }
+    return selectedBackendId;
+  }
+
+  return resolveEffectiveProviderBackendId(provider);
+}
+
+export function formatProviderBackendLabel(
   providerId: TeamProviderId | undefined,
   providerBackendId: string | undefined
 ): string | undefined {
@@ -26,11 +59,11 @@ export function formatTeamProviderBackendLabel(
       case 'codex-native':
         return 'Codex native';
       case 'adapter':
-        return 'Default adapter';
+        return 'Legacy adapter fallback';
       case 'api':
-        return 'OpenAI API';
+        return 'Legacy OpenAI fallback';
       case 'auto':
-        return undefined;
+        return 'Legacy auto fallback';
       default:
         return normalizedBackendId;
     }
@@ -50,4 +83,11 @@ export function formatTeamProviderBackendLabel(
   }
 
   return normalizedBackendId;
+}
+
+export function formatTeamProviderBackendLabel(
+  providerId: TeamProviderId | undefined,
+  providerBackendId: string | undefined
+): string | undefined {
+  return formatProviderBackendLabel(providerId, providerBackendId);
 }

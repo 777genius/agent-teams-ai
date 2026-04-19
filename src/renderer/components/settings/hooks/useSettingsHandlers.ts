@@ -340,7 +340,7 @@ export function useSettingsHandlers({
         runtime: {
           providerBackends: {
             gemini: 'auto',
-            codex: 'auto',
+            codex: 'codex-native',
           },
         },
         display: {

@@ -281,7 +281,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
     async (providerId: CliProviderId, backendId: string) => {
       const currentBackends = appConfig?.runtime?.providerBackends ?? {
         gemini: 'auto' as const,
-        codex: 'auto' as const,
+        codex: 'codex-native' as const,
       };
 
       if (providerId !== 'gemini' && providerId !== 'codex') {

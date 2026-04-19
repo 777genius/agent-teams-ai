@@ -187,4 +187,40 @@ describe('ProvisioningProviderStatusList', () => {
       })
     ).toBe('Codex native - internal, locked');
   });
+
+  it('marks explicit legacy codex fallback summaries as legacy during the soak', () => {
+    expect(
+      getProvisioningProviderBackendSummary({
+        providerId: 'codex',
+        selectedBackendId: 'api',
+        resolvedBackendId: 'api',
+        backend: {
+          kind: 'api',
+          label: 'OpenAI API',
+        },
+        availableBackends: [
+          {
+            id: 'api',
+            label: 'OpenAI API',
+            description: 'Legacy public Responses API fallback.',
+            selectable: true,
+            recommended: false,
+            available: true,
+            state: 'ready',
+            audience: 'internal',
+          },
+          {
+            id: 'codex-native',
+            label: 'Codex native',
+            description: 'Use codex exec JSON mode.',
+            selectable: true,
+            recommended: true,
+            available: true,
+            state: 'ready',
+            audience: 'general',
+          },
+        ],
+      })
+    ).toBe('Legacy OpenAI fallback - internal');
+  });
 });

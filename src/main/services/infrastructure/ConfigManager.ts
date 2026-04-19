@@ -342,7 +342,7 @@ const DEFAULT_CONFIG: AppConfig = {
   runtime: {
     providerBackends: {
       gemini: 'auto',
-      codex: 'auto',
+      codex: 'codex-native',
     },
   },
   display: {

@@ -11,6 +11,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
+import {
+  formatProviderBackendLabel,
+  isLegacyCodexProviderBackendId,
+} from '@renderer/utils/providerBackendIdentity';
 
 import type { CliProviderStatus } from '@shared/types';
 
@@ -53,10 +57,43 @@ export function getProviderRuntimeBackendAudienceLabel(
   return option.audience === 'internal' ? 'Internal' : null;
 }
 
+export function getVisibleProviderRuntimeBackendOptions(
+  provider: CliProviderStatus
+): NonNullable<CliProviderStatus['availableBackends']> {
+  const options = provider.availableBackends ?? [];
+  if (provider.providerId !== 'codex') {
+    return options;
+  }
+
+  const selectedBackendId = provider.selectedBackendId ?? null;
+  return options.filter(
+    (option) => !isLegacyCodexProviderBackendId(option.id) || option.id === selectedBackendId
+  );
+}
+
 export function getOptionDisplayLabel(
+  provider: CliProviderStatus,
   option: NonNullable<CliProviderStatus['availableBackends']>[number],
   resolvedOption: NonNullable<CliProviderStatus['availableBackends']>[number] | null
 ): string {
+  if (provider.providerId === 'codex') {
+    if (option.id === 'auto') {
+      const currentLabel =
+        resolvedOption && resolvedOption.id !== 'auto'
+          ? (formatProviderBackendLabel(provider.providerId, resolvedOption.id) ??
+            resolvedOption.label)
+          : null;
+      return currentLabel
+        ? `Legacy auto fallback (currently: ${currentLabel})`
+        : 'Legacy auto fallback';
+    }
+
+    const legacyLabel = formatProviderBackendLabel(provider.providerId, option.id);
+    if (legacyLabel) {
+      return legacyLabel;
+    }
+  }
+
   if (option.id !== 'auto') {
     return option.label;
   }
@@ -77,7 +114,7 @@ export function getProviderRuntimeBackendSummary(provider: CliProviderStatus): s
   const selectedBackendId = provider.selectedBackendId ?? options[0]?.id ?? '';
   const selectedOption = options.find((option) => option.id === selectedBackendId) ?? options[0];
   const resolvedOption = options.find((option) => option.id === provider.resolvedBackendId) ?? null;
-  const parts = [getOptionDisplayLabel(selectedOption, resolvedOption)];
+  const parts = [getOptionDisplayLabel(provider, selectedOption, resolvedOption)];
   const audienceLabel = getProviderRuntimeBackendAudienceLabel(selectedOption);
   const stateLabel = getProviderRuntimeBackendStateLabel(selectedOption);
 
@@ -96,7 +133,7 @@ export const ProviderRuntimeBackendSelector = ({
   disabled = false,
   onSelect,
 }: Props): React.JSX.Element | null => {
-  const options = provider.availableBackends ?? [];
+  const options = getVisibleProviderRuntimeBackendOptions(provider);
   if (options.length === 0) {
     return null;
   }
@@ -104,7 +141,7 @@ export const ProviderRuntimeBackendSelector = ({
   const selectedBackendId = provider.selectedBackendId ?? options[0]?.id ?? '';
   const selectedOption = options.find((option) => option.id === selectedBackendId) ?? options[0];
   const resolvedOption = options.find((option) => option.id === provider.resolvedBackendId) ?? null;
-  const selectedLabel = getOptionDisplayLabel(selectedOption, resolvedOption);
+  const selectedLabel = getOptionDisplayLabel(provider, selectedOption, resolvedOption);
   const selectedStateLabel = getProviderRuntimeBackendStateLabel(selectedOption);
   const selectedAudienceLabel = getProviderRuntimeBackendAudienceLabel(selectedOption);
 
@@ -153,7 +190,9 @@ export const ProviderRuntimeBackendSelector = ({
             >
               <div className="flex min-w-0 flex-col gap-1">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate">{getOptionDisplayLabel(option, resolvedOption)}</span>
+                  <span className="truncate">
+                    {getOptionDisplayLabel(provider, option, resolvedOption)}
+                  </span>
                   {option.recommended ? (
                     <span
                       className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px]"

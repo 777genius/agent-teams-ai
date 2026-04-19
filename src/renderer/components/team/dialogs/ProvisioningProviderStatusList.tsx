@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
+import { formatProviderBackendLabel } from '@renderer/utils/providerBackendIdentity';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
 import type { TeamProviderId } from '@shared/types';
@@ -34,7 +35,7 @@ export function getProvisioningProviderBackendSummary(
   provider:
     | Pick<
         CliProviderStatus,
-        'selectedBackendId' | 'resolvedBackendId' | 'availableBackends' | 'backend'
+        'providerId' | 'selectedBackendId' | 'resolvedBackendId' | 'availableBackends' | 'backend'
       >
     | null
     | undefined
@@ -47,9 +48,21 @@ export function getProvisioningProviderBackendSummary(
   const optionById = new Map(options.map((option) => [option.id, option.label]));
   const effectiveBackendId = provider.resolvedBackendId ?? provider.selectedBackendId;
   const effectiveOption = options.find((option) => option.id === effectiveBackendId) ?? null;
+  const inferredProviderId =
+    provider.providerId ??
+    (effectiveBackendId === 'codex-native' ||
+    effectiveBackendId === 'adapter' ||
+    options.some((option) => option.id === 'codex-native' || option.id === 'adapter')
+      ? 'codex'
+      : undefined);
+  const normalizedLabel =
+    formatProviderBackendLabel(inferredProviderId, effectiveBackendId ?? undefined) ?? null;
 
   const baseSummary = effectiveBackendId
-    ? (optionById.get(effectiveBackendId) ?? provider.backend?.label ?? effectiveBackendId)
+    ? (normalizedLabel ??
+      optionById.get(effectiveBackendId) ??
+      provider.backend?.label ??
+      effectiveBackendId)
     : (provider.backend?.label ?? null);
 
   if (!baseSummary) {

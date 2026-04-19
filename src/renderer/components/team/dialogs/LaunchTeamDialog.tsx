@@ -45,7 +45,7 @@ import {
   normalizeCreateLaunchProviderForUi,
 } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
-import { resolveEffectiveProviderBackendId } from '@renderer/utils/providerBackendIdentity';
+import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import {
   getTeamModelSelectionError,
@@ -1403,7 +1403,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             prompt: promptDraft.value.trim() || undefined,
             providerId: selectedProviderId,
             providerBackendId:
-              resolveEffectiveProviderBackendId(
+              resolveUiOwnedProviderBackendId(
+                selectedProviderId,
                 runtimeProviderStatusById.get(selectedProviderId)
               ) ??
               previousLaunchParams?.providerBackendId ??

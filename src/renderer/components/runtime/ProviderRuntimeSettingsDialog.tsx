@@ -86,7 +86,7 @@ const API_KEY_PROVIDER_CONFIG: Record<
     name: 'OpenAI API Key',
     title: 'API key',
     description:
-      'Use `OPENAI_API_KEY` with the public OpenAI Responses API. Your Codex subscription session stays available when you switch back.',
+      'Use `OPENAI_API_KEY` for Codex runs that need API-key billing. Codex native stays the primary runtime path while your subscription session remains available when you switch back.',
     placeholder: 'sk-proj-...',
   },
   gemini: {
@@ -125,10 +125,10 @@ function getConnectionDescription(provider: CliProviderStatus): string {
       return 'Choose how app-launched Anthropic sessions authenticate.';
     case 'codex':
       return hasExplicitRuntimeBackends(provider)
-        ? 'Choose which credentials app-launched Codex sessions should use. Runtime backend is configured separately below.'
+        ? 'Choose which credentials app-launched Codex sessions should use. Codex native remains the primary runtime path unless you intentionally keep a legacy fallback selected.'
         : provider.connection?.apiKeyBetaEnabled
-          ? 'Choose whether app-launched Codex sessions use your Codex subscription or an OpenAI API key.'
-          : 'Codex uses your subscription session by default. Enable API key mode if you want to switch Codex credential routing to API-key billing.';
+          ? 'Choose whether app-launched Codex sessions use your Codex subscription or API-key billing.'
+          : 'Codex native uses your subscription session by default. Enable API key mode only if you want native Codex launches to consume API-key credentials.';
     case 'gemini':
       return 'Configure optional API access. CLI SDK and ADC are still discovered automatically.';
   }
@@ -140,8 +140,8 @@ function getRuntimeDescription(provider: CliProviderStatus): string {
       return 'Anthropic currently has no separate runtime backend selector.';
     case 'codex':
       return hasExplicitRuntimeBackends(provider)
-        ? 'Choose which Codex runtime backend multimodel should use. Connection method only controls credentials.'
-        : 'Codex runtime selection follows the active connection method automatically.';
+        ? 'Choose which Codex runtime backend multimodel should use. Codex native is the default. Legacy fallbacks stay hidden unless they are already selected.'
+        : 'Codex native is the default runtime path. Connection method only controls which credentials the runtime can consume.';
     case 'gemini':
       return 'Choose which Gemini runtime backend multimodel should use.';
   }
@@ -161,8 +161,8 @@ function getAuthModeDescription(providerId: CliProviderId, authMode: CliProvider
 
   if (providerId === 'codex') {
     return authMode === 'api_key'
-      ? 'Use API-key credentials for app-launched Codex sessions. The selected runtime backend decides how those credentials are consumed.'
-      : 'Use your Codex subscription session. API-key-only backends remain unavailable until you switch this credential mode.';
+      ? 'Use API-key credentials for app-launched Codex sessions. Codex native remains the primary runtime path and will consume those credentials when needed.'
+      : 'Use your Codex subscription session. API-key-only fallback paths remain unavailable until you switch this credential mode.';
   }
 
   return '';

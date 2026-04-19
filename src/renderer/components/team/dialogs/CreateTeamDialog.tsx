@@ -41,7 +41,7 @@ import {
   normalizeCreateLaunchProviderForUi,
 } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
-import { resolveEffectiveProviderBackendId } from '@renderer/utils/providerBackendIdentity';
+import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
 import {
   getTeamModelSelectionError,
   normalizeExplicitTeamModelForUi,
@@ -974,8 +974,10 @@ export const CreateTeamDialog = ({
       prompt: prompt.trim() || undefined,
       providerId: selectedProviderId,
       providerBackendId:
-        resolveEffectiveProviderBackendId(runtimeProviderStatusById.get(selectedProviderId)) ??
-        undefined,
+        resolveUiOwnedProviderBackendId(
+          selectedProviderId,
+          runtimeProviderStatusById.get(selectedProviderId)
+        ) ?? undefined,
       model: effectiveModel,
       effort: (selectedEffort as EffortLevel) || undefined,
       limitContext,

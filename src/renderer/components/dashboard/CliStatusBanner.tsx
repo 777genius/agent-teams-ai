@@ -844,7 +844,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
 
       const currentBackends = appConfig?.runtime?.providerBackends ?? {
         gemini: 'auto' as const,
-        codex: 'auto' as const,
+        codex: 'codex-native' as const,
       };
 
       await updateConfig('runtime', {
