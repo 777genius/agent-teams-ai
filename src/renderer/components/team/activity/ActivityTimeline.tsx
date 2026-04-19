@@ -75,6 +75,13 @@ const EMPTY_TEAM_NAMES: string[] = [];
 const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
 const DEFAULT_COLLAPSE_MODE = 'default' as const;
 
+function getItemSessionAnchorId(item: TimelineItem): string | undefined {
+  if (item.type === 'lead-thoughts') {
+    return item.group.thoughts[0]?.leadSessionId;
+  }
+  return undefined;
+}
+
 interface ItemCollapseProps {
   collapseMode: 'default' | 'managed';
   isCollapsed: boolean;
@@ -418,13 +425,20 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     setVisibleCount(Infinity);
   };
 
-  const getItemSessionAnchorId = (item: TimelineItem): string | undefined => {
-    if (item.type === 'lead-thoughts') {
-      return item.group.thoughts[0]?.leadSessionId;
+  // Precompute, per timeline index, the most recent session anchor that appears
+  // strictly earlier in the list. Replaces an O(n) backward scan during render
+  // with an O(1) lookup; total work drops from O(n^2) to O(n) per timelineItems
+  // change.
+  const previousSessionAnchorByIndex = useMemo<readonly (string | undefined)[]>(() => {
+    const anchors: (string | undefined)[] = [];
+    let lastSeen: string | undefined;
+    for (const item of timelineItems) {
+      anchors.push(lastSeen);
+      const anchor = getItemSessionAnchorId(item);
+      if (anchor) lastSeen = anchor;
     }
-
-    return undefined;
-  };
+    return anchors;
+  }, [timelineItems]);
 
   // Pin the newest thought group (if first) so it stays at the top and doesn't jump.
   const pinnedThoughtGroup = timelineItems[0]?.type === 'lead-thoughts' ? timelineItems[0] : null;
@@ -532,14 +546,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
         let sessionSeparator: React.JSX.Element | null = null;
         if (realIndex > 0) {
           const currSessionId = getItemSessionAnchorId(item);
-          let prevSessionId: string | undefined;
-          for (let searchIndex = realIndex - 1; searchIndex >= 0; searchIndex -= 1) {
-            const candidateSessionId = getItemSessionAnchorId(timelineItems[searchIndex]);
-            if (candidateSessionId) {
-              prevSessionId = candidateSessionId;
-              break;
-            }
-          }
+          const prevSessionId = previousSessionAnchorByIndex[realIndex];
           if (prevSessionId && currSessionId && prevSessionId !== currSessionId) {
             sessionSeparator = (
               <div

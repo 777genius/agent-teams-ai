@@ -153,4 +153,135 @@ describe('ActivityTimeline session separators', () => {
       root.unmount();
     });
   });
+
+  it('renders a separator for every session transition across three lead sessions', async () => {
+    const root = createRoot(container);
+    const messages: InboxMessage[] = [
+      makeMessage({
+        messageId: 'thought-s3',
+        text: 'thought session 3',
+        leadSessionId: 'lead-session-3',
+        from: 'team-lead',
+        source: 'lead_session',
+      }),
+      makeMessage({
+        messageId: 'thought-s2',
+        text: 'thought session 2',
+        leadSessionId: 'lead-session-2',
+        from: 'team-lead',
+        source: 'lead_session',
+      }),
+      makeMessage({
+        messageId: 'thought-s1',
+        text: 'thought session 1',
+        leadSessionId: 'lead-session-1',
+        from: 'team-lead',
+        source: 'lead_session',
+      }),
+    ];
+
+    await act(async () => {
+      root.render(React.createElement(ActivityTimeline, { messages, teamName: 'demo-team' }));
+    });
+
+    const matches = container.textContent?.match(/New session/g) ?? [];
+    expect(matches.length).toBe(2);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it('finds the previous anchor even when many non-anchor items sit between lead thought groups', async () => {
+    const root = createRoot(container);
+    const messages: InboxMessage[] = [
+      makeMessage({
+        messageId: 'thought-newest',
+        text: 'newest thought',
+        leadSessionId: 'lead-session-newest',
+        from: 'team-lead',
+        source: 'lead_session',
+      }),
+      ...Array.from({ length: 8 }, (_, i) =>
+        makeMessage({
+          messageId: `filler-${i}`,
+          text: `filler message ${i}`,
+          leadSessionId: `member-session-${i}`,
+          from: 'alice',
+          source: 'inbox',
+        })
+      ),
+      makeMessage({
+        messageId: 'thought-oldest',
+        text: 'oldest thought',
+        leadSessionId: 'lead-session-oldest',
+        from: 'team-lead',
+        source: 'lead_session',
+      }),
+    ];
+
+    await act(async () => {
+      root.render(React.createElement(ActivityTimeline, { messages, teamName: 'demo-team' }));
+    });
+
+    expect(container.textContent).toContain('New session');
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it('does not render a separator when two consecutive lead thoughts share the same session', async () => {
+    const root = createRoot(container);
+    const messages: InboxMessage[] = [
+      makeMessage({
+        messageId: 'thought-a',
+        text: 'thought a',
+        leadSessionId: 'lead-session-shared',
+        from: 'team-lead',
+        source: 'lead_session',
+      }),
+      makeMessage({
+        messageId: 'thought-b',
+        text: 'thought b',
+        leadSessionId: 'lead-session-shared',
+        from: 'team-lead',
+        source: 'lead_session',
+      }),
+    ];
+
+    await act(async () => {
+      root.render(React.createElement(ActivityTimeline, { messages, teamName: 'demo-team' }));
+    });
+
+    expect(container.textContent).not.toContain('New session');
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it('handles a single message list without errors or separators', async () => {
+    const root = createRoot(container);
+    const messages: InboxMessage[] = [
+      makeMessage({
+        messageId: 'only',
+        text: 'only message',
+        leadSessionId: 'lead-session-1',
+        from: 'team-lead',
+        source: 'lead_session',
+      }),
+    ];
+
+    await act(async () => {
+      root.render(React.createElement(ActivityTimeline, { messages, teamName: 'demo-team' }));
+    });
+
+    expect(container.textContent).not.toContain('New session');
+    expect(container.textContent).toContain('only message');
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
 });
