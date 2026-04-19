@@ -14,7 +14,7 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { isAnthropicHaikuTeamModel } from '@renderer/utils/teamModelCatalog';
-import { getMemberColorByName } from '@shared/constants/memberColors';
+import { resolveTeamLeadColorName } from '@shared/utils/teamMemberColors';
 import { AlertTriangle, ChevronDown, ChevronRight, Info } from 'lucide-react';
 
 import { Button } from '../../ui/button';
@@ -54,7 +54,7 @@ export const LeadModelRow = ({
 }: LeadModelRowProps): React.JSX.Element => {
   const { isLight } = useTheme();
   const [modelExpanded, setModelExpanded] = useState(false);
-  const leadColorSet = getTeamColorSet(getMemberColorByName('lead'));
+  const leadColorSet = getTeamColorSet(resolveTeamLeadColorName());
   const modelButtonLabel = model.trim()
     ? getProviderScopedTeamModelLabel(providerId, model.trim())
     : 'Default';

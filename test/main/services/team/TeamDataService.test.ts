@@ -461,6 +461,73 @@ function buildResolvedMember(name: string): ResolvedTeamMember {
 }
 
 describe('TeamDataService', () => {
+  it('rejects duplicate member names in replaceMembers', async () => {
+    const writeMembers = vi.fn(async () => {});
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => []),
+      writeMembers,
+    } as never;
+
+    const service = new TeamDataService(
+      { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+      { getTasks: vi.fn(async () => []) } as never,
+      { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+      { resolveMembers: vi.fn(() => []) } as never,
+      { getState: vi.fn(async () => ({ teamName: 'dup-team', reviewers: [], tasks: {} })) } as never,
+      {} as never,
+      membersMetaStore,
+      { readMessages: vi.fn(async () => []) } as never
+    );
+
+    await expect(
+      service.replaceMembers('dup-team', {
+        members: [
+          { name: 'alice', role: 'Reviewer' },
+          { name: 'alice', role: 'Developer' },
+        ],
+      })
+    ).rejects.toThrow('Member "alice" already exists');
+
+    expect(writeMembers).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid or reserved member names in replaceMembers', async () => {
+    const writeMembers = vi.fn(async () => {});
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => []),
+      writeMembers,
+    } as never;
+
+    const service = new TeamDataService(
+      { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+      { getTasks: vi.fn(async () => []) } as never,
+      { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+      { resolveMembers: vi.fn(() => []) } as never,
+      { getState: vi.fn(async () => ({ teamName: 'dup-team', reviewers: [], tasks: {} })) } as never,
+      {} as never,
+      membersMetaStore,
+      { readMessages: vi.fn(async () => []) } as never
+    );
+
+    await expect(
+      service.replaceMembers('dup-team', {
+        members: [{ name: 'bad/name', role: 'Reviewer' }],
+      })
+    ).rejects.toThrow('Member name "bad/name" is invalid');
+
+    await expect(
+      service.replaceMembers('dup-team', {
+        members: [{ name: 'user', role: 'Reviewer' }],
+      })
+    ).rejects.toThrow('Member name "user" is reserved');
+
+    expect(writeMembers).not.toHaveBeenCalled();
+  });
+
   it('keeps getTeamData read-only and skips kanban garbage-collect', async () => {
     const order: string[] = [];
     const tasks: TeamTask[] = [

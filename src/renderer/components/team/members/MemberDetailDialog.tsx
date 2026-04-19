@@ -128,6 +128,9 @@ export const MemberDetailDialog = ({
         : undefined,
     [launchParams, member, runtimeEntry, spawnEntry]
   );
+  const restartInFlight =
+    spawnEntry?.launchState === 'starting' ||
+    spawnEntry?.launchState === 'runtime_pending_bootstrap';
 
   useEffect(() => {
     if (!open || !member) {
@@ -267,7 +270,7 @@ export const MemberDetailDialog = ({
                     variant="outline"
                     size="sm"
                     className="gap-1.5"
-                    disabled={restarting}
+                    disabled={restarting || restartInFlight}
                     onClick={async () => {
                       setRestartError(null);
                       setRestarting(true);

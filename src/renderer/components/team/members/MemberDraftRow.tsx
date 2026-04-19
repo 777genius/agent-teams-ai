@@ -50,10 +50,15 @@ interface MemberDraftRowProps {
   taskSuggestions?: MentionSuggestion[];
   teamSuggestions?: MentionSuggestion[];
   lockProviderModel?: boolean;
+  lockRole?: boolean;
+  lockedRoleLabel?: string;
+  lockIdentity?: boolean;
+  identityLockReason?: string;
   forceInheritedModelSettings?: boolean;
   modelLockReason?: string;
   isRemoved?: boolean;
   onRestore?: (id: string) => void;
+  hideActionButton?: boolean;
   warningText?: string | null;
   disableGeminiOption?: boolean;
   modelIssueText?: string | null;
@@ -83,10 +88,15 @@ export const MemberDraftRow = ({
   taskSuggestions,
   teamSuggestions,
   lockProviderModel = false,
+  lockRole = false,
+  lockedRoleLabel,
+  lockIdentity = false,
+  identityLockReason,
   forceInheritedModelSettings = false,
   modelLockReason,
   isRemoved = false,
   onRestore,
+  hideActionButton = false,
   warningText,
   disableGeminiOption = false,
   modelIssueText,
@@ -200,29 +210,28 @@ export const MemberDraftRow = ({
           className="h-8 text-xs"
           value={member.name}
           aria-label={`Member ${index + 1} name`}
-          disabled={isRemoved}
+          disabled={isRemoved || lockIdentity}
           onChange={(event) => onNameChange(member.id, event.target.value)}
           placeholder="member-name"
-          style={
-            member.name.trim()
-              ? {
-                  color: memberColorSet.text,
-                }
-              : undefined
-          }
         />
         {nameError ? <p className="text-[10px] text-red-300">{nameError}</p> : null}
       </div>
       <div>
-        <RoleSelect
-          value={member.roleSelection || '__none__'}
-          disabled={isRemoved}
-          onValueChange={(roleSelection) => onRoleChange(member.id, roleSelection)}
-          customRole={member.customRole}
-          onCustomRoleChange={(customRole) => onCustomRoleChange(member.id, customRole)}
-          triggerClassName="h-8 text-xs"
-          inputClassName="h-8 text-xs"
-        />
+        {lockRole ? (
+          <div className="flex h-8 items-center rounded-md border border-[var(--color-border)] bg-transparent px-3 text-xs text-[var(--color-text)] opacity-80">
+            {lockedRoleLabel || member.customRole || member.roleSelection || 'No role'}
+          </div>
+        ) : (
+          <RoleSelect
+            value={member.roleSelection || '__none__'}
+            disabled={isRemoved}
+            onValueChange={(roleSelection) => onRoleChange(member.id, roleSelection)}
+            customRole={member.customRole}
+            onCustomRoleChange={(customRole) => onCustomRoleChange(member.id, customRole)}
+            triggerClassName="h-8 text-xs"
+            inputClassName="h-8 text-xs"
+          />
+        )}
       </div>
       <div className="space-y-1">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
@@ -289,7 +298,7 @@ export const MemberDraftRow = ({
               ) : null}
             </Tooltip>
           </div>
-          {isRemoved ? (
+          {hideActionButton ? null : isRemoved ? (
             <Button
               variant="outline"
               size="sm"

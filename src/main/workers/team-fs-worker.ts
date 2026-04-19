@@ -4,6 +4,7 @@ import { parentPort } from 'node:worker_threads';
 
 import { normalizePersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
 import { isLeadMember } from '@shared/utils/leadDetection';
+import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 
 interface ListTeamsPayload {
   teamsDir: string;
@@ -593,6 +594,11 @@ async function listTeams(
     dropCliProvisionerMembers(memberMap);
 
     const members = Array.from(memberMap.values());
+    const memberColors = buildTeamMemberColorMap(members, { preferProvidedColors: false });
+    const coloredMembers = members.map((member) => ({
+      ...member,
+      color: memberColors.get(member.name) ?? member.color,
+    }));
     const launchStateSummary =
       (await readLaunchState(payload.teamsDir, teamName)) ??
       (() => {
@@ -623,7 +629,7 @@ async function listTeams(
       memberCount: memberMap.size,
       taskCount: 0,
       lastActivity: null,
-      ...(members.length > 0 ? { members } : {}),
+      ...(coloredMembers.length > 0 ? { members: coloredMembers } : {}),
       ...(color ? { color } : {}),
       ...(projectPath ? { projectPath } : {}),
       ...(leadSessionId ? { leadSessionId } : {}),

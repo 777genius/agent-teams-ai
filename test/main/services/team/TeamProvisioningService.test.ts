@@ -69,6 +69,7 @@ import {
   getAutoResumeService,
   initializeAutoResumeService,
 } from '@main/services/team/AutoResumeService';
+import { getTeamBootstrapStatePath } from '@main/services/team/TeamBootstrapStateReader';
 import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
 import { getTeamLaunchStatePath } from '@main/services/team/TeamLaunchStateStore';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
@@ -176,6 +177,28 @@ function writeLaunchState(
   );
 }
 
+function writeBootstrapState(
+  teamName: string,
+  members: { name: string; status: string; lastAttemptAt?: number; lastObservedAt?: number }[],
+  updatedAt = new Date().toISOString()
+): void {
+  fs.writeFileSync(
+    getTeamBootstrapStatePath(teamName),
+    `${JSON.stringify(
+      {
+        version: 1,
+        teamName,
+        updatedAt,
+        phase: 'completed',
+        members,
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+}
+
 function createMemberSpawnStatusEntry(
   overrides: Record<string, unknown> = {}
 ): Record<string, unknown> {
@@ -226,6 +249,7 @@ function createMemberSpawnRun(params?: {
     expectedMembers,
     memberSpawnStatuses,
     memberSpawnToolUseIds: new Map(),
+    pendingMemberRestarts: new Map(),
     memberSpawnLeadInboxCursorByMember:
       params?.memberSpawnLeadInboxCursorByMember ?? new Map(),
     provisioningOutputParts: [],
@@ -483,6 +507,403 @@ describe('TeamProvisioningService', () => {
       expect(pidusage).toHaveBeenNthCalledWith(3, 222, { maxage: 0 });
       expect(snapshot.members['team-lead']?.rssBytes).toBe(123_000_000);
       expect(snapshot.members.alice?.rssBytes).toBe(456_000_000);
+    });
+
+    it('falls back to direct agent process lookup when tmux pane pid lookup is unavailable', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'alice', model: 'gpt-5.2' },
+          ],
+        })),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
+        {
+          name: 'alice',
+          agentId: 'alice@nice-team',
+          tmuxPaneId: '%0',
+          backendType: 'tmux',
+        },
+      ]);
+      (svc as any).aliveRunByTeam.set('nice-team', 'run-1');
+      (svc as any).runs.set('run-1', {
+        runId: 'run-1',
+        child: { pid: 111 },
+        request: { model: 'gpt-5.4' },
+        processKilled: false,
+        cancelRequested: false,
+        spawnContext: null,
+      });
+      (svc as any).readUnixProcessTableRows = vi.fn(() => [
+        {
+          pid: 333,
+          command:
+            '/Users/belief/.bun/bin/bun cli.js --agent-id alice@nice-team --agent-name alice --team-name nice-team --model gpt-5.2',
+        },
+      ]);
+      vi.mocked(listTmuxPanePidsForCurrentPlatform).mockResolvedValueOnce(new Map());
+      vi.mocked(pidusage).mockResolvedValueOnce({
+        '111': createPidusageStat(111, 123_000_000),
+        '333': createPidusageStat(333, 456_000_000),
+      } as any);
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot('nice-team');
+
+      expect(snapshot.members['team-lead']).toMatchObject({
+        pid: 111,
+        rssBytes: 123_000_000,
+      });
+      expect(snapshot.members.alice).toMatchObject({
+        pid: 333,
+        rssBytes: 456_000_000,
+        runtimeModel: 'gpt-5.2',
+      });
+    });
+
+    it('prefers the newest matching agent pid when multiple processes match the same teammate', async () => {
+      const svc = new TeamProvisioningService();
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'alice', model: 'gpt-5.2' },
+          ],
+        })),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
+        {
+          name: 'alice',
+          agentId: 'alice@nice-team',
+          tmuxPaneId: '%0',
+          backendType: 'tmux',
+        },
+      ]);
+      (svc as any).aliveRunByTeam.set('nice-team', 'run-1');
+      (svc as any).runs.set('run-1', {
+        runId: 'run-1',
+        child: { pid: 111 },
+        request: { model: 'gpt-5.4' },
+        processKilled: false,
+        cancelRequested: false,
+        spawnContext: null,
+      });
+      (svc as any).readUnixProcessTableRows = vi.fn(() => [
+        {
+          pid: 222,
+          command:
+            '/Users/belief/.bun/bin/bun cli.js --agent-id alice@nice-team --agent-name alice --team-name nice-team --model gpt-5.2',
+        },
+        {
+          pid: 333,
+          command:
+            '/Users/belief/.bun/bin/bun cli.js --team-name nice-team --agent-id alice@nice-team --agent-name alice --model gpt-5.2',
+        },
+      ]);
+      vi.mocked(listTmuxPanePidsForCurrentPlatform).mockResolvedValueOnce(new Map());
+      vi.mocked(pidusage).mockResolvedValueOnce({
+        '111': createPidusageStat(111, 123_000_000),
+        '333': createPidusageStat(333, 456_000_000),
+      } as any);
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot('nice-team');
+
+      expect(snapshot.members.alice).toMatchObject({
+        pid: 333,
+        rssBytes: 456_000_000,
+      });
+    });
+  });
+
+  describe('restartMember', () => {
+    it('uses members meta runtime settings when config members are stale or absent', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'edited-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map(),
+      });
+      run.child = { pid: 111 };
+      run.processKilled = false;
+      run.cancelRequested = false;
+
+      const sendMessageToRun = vi.fn(async () => {});
+      (svc as any).sendMessageToRun = sendMessageToRun;
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          name: 'Edited Team',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'alice',
+            role: 'Reviewer',
+            workflow: 'Use checklist',
+            providerId: 'codex',
+            model: 'gpt-5.4-mini',
+            effort: 'high',
+            agentType: 'general-purpose',
+          },
+        ]),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
+      (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
+      (svc as any).aliveRunByTeam.set('edited-team', run.runId);
+      (svc as any).runs.set(run.runId, run);
+
+      await svc.restartMember('edited-team', 'alice');
+
+      expect(sendMessageToRun).toHaveBeenCalledTimes(1);
+      const restartCall = sendMessageToRun.mock.calls[0] as unknown as
+        | [unknown, string]
+        | undefined;
+      const restartMessage = restartCall?.[1] ?? '';
+      expect(restartMessage).toContain('provider="codex"');
+      expect(restartMessage).toContain('model="gpt-5.4-mini"');
+      expect(restartMessage).toContain('effort="high"');
+      expect(restartMessage).toContain('with role "Reviewer"');
+      expect(restartMessage).toContain('Their workflow: Use checklist');
+    });
+
+    it('treats duplicate_skipped already_running as a failed codex restart because the old runtime is still active', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'codex-team',
+        expectedMembers: ['bob'],
+        memberSpawnStatuses: new Map(),
+      });
+      run.child = { pid: 111 };
+      run.processKilled = false;
+      run.cancelRequested = false;
+
+      const sendMessageToRun = vi.fn(async () => {});
+      (svc as any).sendMessageToRun = sendMessageToRun;
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          name: 'Codex Team',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'codex',
+            model: 'gpt-5.2',
+            effort: 'medium',
+            agentType: 'general-purpose',
+          },
+        ]),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
+      (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
+      (svc as any).aliveRunByTeam.set('codex-team', run.runId);
+      (svc as any).runs.set(run.runId, run);
+
+      await svc.restartMember('codex-team', 'bob');
+
+      expect(run.memberSpawnStatuses.get('bob')).toMatchObject({
+        status: 'spawning',
+        launchState: 'starting',
+      });
+      expect(sendMessageToRun).toHaveBeenCalledWith(
+        run,
+        expect.stringContaining('provider="codex", model="gpt-5.2", effort="medium"')
+      );
+
+      run.activeToolCalls.set('tool-agent-1', {
+        memberName: 'bob',
+        toolUseId: 'tool-agent-1',
+        toolName: 'Agent',
+        preview: 'Spawn teammate bob',
+        startedAt: new Date().toISOString(),
+        state: 'running',
+        source: 'runtime',
+      });
+      run.memberSpawnToolUseIds.set('tool-agent-1', 'bob');
+
+      (svc as any).finishRuntimeToolActivity(
+        run,
+        'tool-agent-1',
+        [
+          {
+            type: 'text',
+            text: 'status: duplicate_skipped\nreason: already_running\nname: bob\nteam_name: codex-team',
+          },
+        ],
+        false
+      );
+
+      expect(run.memberSpawnStatuses.get('bob')).toMatchObject({
+        status: 'error',
+        launchState: 'failed_to_start',
+        runtimeAlive: false,
+        hardFailure: true,
+        hardFailureReason:
+          'Restart for teammate "bob" was skipped because the previous runtime still appears to be active. The requested settings may not have been applied.',
+      });
+      expect(run.pendingMemberRestarts.has('bob')).toBe(false);
+    });
+
+    it('keeps a codex teammate restart pending instead of failed when lead reports duplicate_skipped bootstrap_pending', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'codex-team',
+        expectedMembers: ['bob'],
+        memberSpawnStatuses: new Map(),
+      });
+      run.child = { pid: 111 };
+      run.processKilled = false;
+      run.cancelRequested = false;
+
+      (svc as any).sendMessageToRun = vi.fn(async () => {});
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          name: 'Codex Team',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'codex',
+            model: 'gpt-5.2',
+            effort: 'medium',
+            agentType: 'general-purpose',
+          },
+        ]),
+      };
+      (svc as any).readPersistedRuntimeMembers = vi.fn(() => []);
+      (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
+      (svc as any).aliveRunByTeam.set('codex-team', run.runId);
+      (svc as any).runs.set(run.runId, run);
+
+      await svc.restartMember('codex-team', 'bob');
+
+      run.activeToolCalls.set('tool-agent-1', {
+        memberName: 'bob',
+        toolUseId: 'tool-agent-1',
+        toolName: 'Agent',
+        preview: 'Spawn teammate bob',
+        startedAt: new Date().toISOString(),
+        state: 'running',
+        source: 'runtime',
+      });
+      run.memberSpawnToolUseIds.set('tool-agent-1', 'bob');
+
+      (svc as any).finishRuntimeToolActivity(
+        run,
+        'tool-agent-1',
+        [
+          {
+            type: 'text',
+            text: 'status: duplicate_skipped\nreason: bootstrap_pending\nname: bob\nteam_name: codex-team',
+          },
+        ],
+        false
+      );
+
+      expect(run.memberSpawnStatuses.get('bob')).toMatchObject({
+        status: 'waiting',
+        launchState: 'runtime_pending_bootstrap',
+        runtimeAlive: false,
+        agentToolAccepted: true,
+        hardFailure: false,
+        hardFailureReason: undefined,
+      });
+      expect(run.pendingMemberRestarts.has('bob')).toBe(true);
+    });
+
+    it('rejects a second restart request while the first restart is still in flight', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'codex-team',
+        expectedMembers: ['bob'],
+        memberSpawnStatuses: new Map(),
+      });
+      run.child = { pid: 111 };
+      run.processKilled = false;
+      run.cancelRequested = false;
+      run.pendingMemberRestarts.set('bob', {
+        requestedAt: new Date().toISOString(),
+        desired: {
+          name: 'bob',
+          providerId: 'codex',
+          model: 'gpt-5.2',
+          effort: 'medium',
+        },
+      });
+
+      (svc as any).configReader = {
+        getConfig: vi.fn(async () => ({
+          name: 'Codex Team',
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        })),
+      };
+      (svc as any).membersMetaStore = {
+        getMembers: vi.fn(async () => [
+          {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'codex',
+            model: 'gpt-5.2',
+            effort: 'medium',
+            agentType: 'general-purpose',
+          },
+        ]),
+      };
+      (svc as any).aliveRunByTeam.set('codex-team', run.runId);
+      (svc as any).runs.set(run.runId, run);
+
+      await expect(svc.restartMember('codex-team', 'bob')).rejects.toThrow(
+        'Restart for teammate "bob" is already in progress'
+      );
+    });
+
+    it('marks a pending restart as failed when the teammate never rejoins within the restart grace window', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'codex-team',
+        expectedMembers: ['bob'],
+        memberSpawnStatuses: new Map([
+          [
+            'bob',
+            createMemberSpawnStatusEntry({
+              status: 'waiting',
+              launchState: 'runtime_pending_bootstrap',
+              agentToolAccepted: true,
+              firstSpawnAcceptedAt: new Date(Date.now() - 120_000).toISOString(),
+            }),
+          ],
+        ]),
+      });
+      run.pendingMemberRestarts.set('bob', {
+        requestedAt: new Date(Date.now() - 120_000).toISOString(),
+        desired: {
+          name: 'bob',
+          providerId: 'codex',
+          model: 'gpt-5.2',
+          effort: 'medium',
+        },
+      });
+      (svc as any).refreshMemberSpawnStatusesFromLeadInbox = vi.fn(async () => {});
+      (svc as any).maybeAuditMemberSpawnStatuses = vi.fn(async () => {});
+
+      await (svc as any).reevaluateMemberLaunchStatus(run, 'bob');
+
+      expect(run.memberSpawnStatuses.get('bob')).toMatchObject({
+        status: 'error',
+        launchState: 'failed_to_start',
+        error: 'Teammate "bob" did not rejoin within the restart grace window.',
+        hardFailureReason: 'Teammate "bob" did not rejoin within the restart grace window.',
+      });
+      expect(run.pendingMemberRestarts.has('bob')).toBe(false);
     });
   });
 
@@ -1654,6 +2075,227 @@ describe('TeamProvisioningService', () => {
     );
 
     expect(run.memberSpawnStatuses.get('alice')).toBe(existingEntry);
+  });
+
+  it('treats duplicate_skipped already_running as process-confirmed online', () => {
+    const run = createMemberSpawnRun();
+    run.activeToolCalls.set('tool-agent-1', {
+      memberName: 'alice',
+      toolUseId: 'tool-agent-1',
+      toolName: 'Agent',
+      preview: 'Spawn teammate alice',
+      startedAt: new Date().toISOString(),
+      state: 'running',
+      source: 'runtime',
+    });
+    run.memberSpawnToolUseIds.set('tool-agent-1', 'alice');
+
+    const svc = new TeamProvisioningService();
+
+    (svc as any).finishRuntimeToolActivity(
+      run,
+      'tool-agent-1',
+      [
+        {
+          type: 'text',
+          text: 'status: duplicate_skipped\nreason: already_running\nname: alice\nteam_name: nice-team',
+        },
+      ],
+      false
+    );
+
+    expect(run.memberSpawnStatuses.get('alice')).toMatchObject({
+      status: 'online',
+      launchState: 'runtime_pending_bootstrap',
+      runtimeAlive: true,
+      livenessSource: 'process',
+      hardFailure: false,
+    });
+  });
+
+  it('clears stale failed_to_start state when live runtime metadata proves the teammate is alive', async () => {
+    const svc = new TeamProvisioningService();
+    (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () =>
+      new Map([
+        [
+          'bob',
+          {
+            alive: true,
+            model: 'gpt-5.2',
+          },
+        ],
+      ])
+    );
+
+    const result = await (svc as any).attachLiveRuntimeMetadataToStatuses('beacon-desk-4', {
+      bob: createMemberSpawnStatusEntry({
+        status: 'error',
+        launchState: 'failed_to_start',
+        error: 'Teammate did not join within the launch grace window.',
+        hardFailure: true,
+        hardFailureReason: 'Teammate did not join within the launch grace window.',
+      }),
+    });
+
+    expect(result.bob).toMatchObject({
+      status: 'online',
+      launchState: 'runtime_pending_bootstrap',
+      runtimeAlive: true,
+      hardFailure: false,
+      hardFailureReason: undefined,
+      error: undefined,
+      runtimeModel: 'gpt-5.2',
+      livenessSource: 'process',
+    });
+  });
+
+  it('does not clear an explicit restart failure just because the old runtime is still alive', async () => {
+    const svc = new TeamProvisioningService();
+    (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () =>
+      new Map([
+        [
+          'bob',
+          {
+            alive: true,
+            model: 'gpt-5.3-codex',
+          },
+        ],
+      ])
+    );
+
+    const result = await (svc as any).attachLiveRuntimeMetadataToStatuses('beacon-desk-4', {
+      bob: createMemberSpawnStatusEntry({
+        status: 'error',
+        launchState: 'failed_to_start',
+        error:
+          'Restart for teammate "bob" was skipped because the previous runtime still appears to be active. The requested settings may not have been applied.',
+        hardFailure: true,
+        hardFailureReason:
+          'Restart for teammate "bob" was skipped because the previous runtime still appears to be active. The requested settings may not have been applied.',
+      }),
+    });
+
+    expect(result.bob).toMatchObject({
+      status: 'error',
+      launchState: 'failed_to_start',
+      runtimeAlive: false,
+      hardFailure: true,
+      hardFailureReason:
+        'Restart for teammate "bob" was skipped because the previous runtime still appears to be active. The requested settings may not have been applied.',
+      error:
+        'Restart for teammate "bob" was skipped because the previous runtime still appears to be active. The requested settings may not have been applied.',
+      runtimeModel: 'gpt-5.3-codex',
+    });
+  });
+
+  it('does not downgrade an already-online teammate when waiting is reported later', () => {
+    const run = createMemberSpawnRun({
+      memberSpawnStatuses: new Map([
+        [
+          'alice',
+          createMemberSpawnStatusEntry({
+            status: 'online',
+            launchState: 'confirmed_alive',
+            runtimeAlive: true,
+            livenessSource: 'heartbeat',
+            bootstrapConfirmed: true,
+            lastHeartbeatAt: '2026-04-16T10:00:00.000Z',
+          }),
+        ],
+      ]),
+    });
+    const svc = new TeamProvisioningService();
+
+    (svc as any).setMemberSpawnStatus(run, 'alice', 'waiting');
+
+    expect(run.memberSpawnStatuses.get('alice')).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: true,
+      livenessSource: 'heartbeat',
+      bootstrapConfirmed: true,
+      lastHeartbeatAt: '2026-04-16T10:00:00.000Z',
+    });
+  });
+
+  it('clears stale hard failure state when a new spawn attempt starts', () => {
+    const staleAcceptedAt = '2026-04-16T10:00:00.000Z';
+    const run = createMemberSpawnRun({
+      memberSpawnStatuses: new Map([
+        [
+          'alice',
+          createMemberSpawnStatusEntry({
+            status: 'error',
+            launchState: 'failed_to_start',
+            error: 'Teammate was never spawned during launch.',
+            hardFailure: true,
+            hardFailureReason: 'Teammate was never spawned during launch.',
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            livenessSource: 'heartbeat',
+            firstSpawnAcceptedAt: staleAcceptedAt,
+            lastHeartbeatAt: staleAcceptedAt,
+          }),
+        ],
+      ]),
+    });
+    const svc = new TeamProvisioningService();
+
+    (svc as any).setMemberSpawnStatus(run, 'alice', 'spawning');
+
+    expect(run.memberSpawnStatuses.get('alice')).toMatchObject({
+      status: 'spawning',
+      launchState: 'starting',
+      error: undefined,
+      hardFailure: false,
+      hardFailureReason: undefined,
+      agentToolAccepted: false,
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      livenessSource: undefined,
+      firstSpawnAcceptedAt: undefined,
+      lastHeartbeatAt: undefined,
+    });
+  });
+
+  it('reconciles stale never-spawned failures when bootstrap state proves the teammate was registered', async () => {
+    const teamName = 'registered-bootstrap-team';
+    const leadSessionId = 'lead-session';
+    const acceptedAt = new Date(Date.now() - 60_000).toISOString();
+    writeLaunchConfig(teamName, '/Users/test/proj', leadSessionId, ['alice']);
+    writeLaunchState(teamName, leadSessionId, {
+      alice: {
+        launchState: 'failed_to_start',
+        agentToolAccepted: false,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: true,
+        hardFailureReason: 'Teammate was never spawned during launch.',
+      },
+    });
+    writeBootstrapState(
+      teamName,
+      [
+        {
+          name: 'alice',
+          status: 'registered',
+          lastAttemptAt: Date.parse(acceptedAt),
+          lastObservedAt: Date.parse(acceptedAt),
+        },
+      ],
+      new Date(Date.now() - 30_000).toISOString()
+    );
+
+    const svc = new TeamProvisioningService();
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.statuses.alice).toMatchObject({
+      status: 'waiting',
+      launchState: 'runtime_pending_bootstrap',
+      hardFailure: false,
+      hardFailureReason: undefined,
+      agentToolAccepted: true,
+    });
   });
 
 });

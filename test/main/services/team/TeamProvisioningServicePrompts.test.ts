@@ -293,6 +293,12 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     expect(message).toContain('team_name="forge-labs", name="alice"');
     expect(message).toContain('provider="codex", model="gpt-5.4-mini", effort="medium"');
     expect(message).toContain('This is a restart of an existing persistent teammate, not a new teammate.');
+    expect(message).toContain(
+      'If the Agent tool returns duplicate_skipped with reason bootstrap_pending, treat that as a pending restart and wait for teammate check-in.'
+    );
+    expect(message).toContain(
+      'If it returns duplicate_skipped with reason already_running, do not report success - it means the previous runtime still appears active and the restart may not have applied.'
+    );
   });
 
   it('createTeam materializes an explicit Codex default model for teammates before bootstrap spawn', async () => {

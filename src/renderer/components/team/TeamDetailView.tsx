@@ -40,6 +40,7 @@ import {
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
 import { sumContextInjectionTokens } from '@renderer/utils/contextMath';
 import { formatProjectPath } from '@renderer/utils/pathDisplay';
+import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { buildTaskCountsByOwner, normalizePath } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { resolveProjectIdByPath } from '@renderer/utils/projectLookup';
@@ -1537,6 +1538,10 @@ export const TeamDetailView = ({
       return nextMember;
     });
   }, [leadBranch, members, trackedBranches]);
+  const resolvedMemberColorMap = useMemo(
+    () => buildMemberColorMap(membersWithLiveBranches),
+    [membersWithLiveBranches]
+  );
 
   // Filter sessions to team-only using sessionHistory + leadSessionId
   const teamSessionIds = useMemo(() => {
@@ -2168,12 +2173,17 @@ export const TeamDetailView = ({
                           variant="ghost"
                           size="sm"
                           className="h-7 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                          disabled={isTeamProvisioning}
                           onClick={() => setEditDialogOpen(true)}
                         >
                           <Pencil size={12} />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="bottom">Edit team</TooltipContent>
+                      <TooltipContent side="bottom">
+                        {isTeamProvisioning
+                          ? 'Edit team is unavailable while provisioning is still in progress'
+                          : 'Edit team'}
+                      </TooltipContent>
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -2708,7 +2718,10 @@ export const TeamDetailView = ({
                 currentDescription={data.config.description ?? ''}
                 currentColor={data.config.color ?? ''}
                 currentMembers={membersWithLiveBranches.filter((m) => !isLeadMember(m))}
+                leadMember={membersWithLiveBranches.find((m) => isLeadMember(m)) ?? null}
+                resolvedMemberColorMap={resolvedMemberColorMap}
                 isTeamAlive={data.isAlive && !isTeamProvisioning}
+                isTeamProvisioning={isTeamProvisioning}
                 projectPath={data.config.projectPath}
                 onClose={() => setEditDialogOpen(false)}
                 onSaved={() => void selectTeam(teamName)}

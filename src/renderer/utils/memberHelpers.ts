@@ -1,8 +1,4 @@
-import {
-  getMemberColorByName,
-  MEMBER_COLOR_PALETTE,
-  normalizeMemberColorName,
-} from '@shared/constants/memberColors';
+import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { isLeadMember } from '@shared/utils/leadDetection';
 
 import type {
@@ -579,42 +575,7 @@ interface MemberColorInput {
  * Maps "user" to a reserved color.
  */
 export function buildMemberColorMap(members: MemberColorInput[]): Map<string, string> {
-  const map = new Map<string, string>();
-  const active = members.filter((m) => !m.removedAt);
-  const removed = members.filter((m) => m.removedAt);
-  const usedColors = new Set<string>();
-  let nextPaletteIdx = 0;
-
-  for (const member of active) {
-    let color = member.color ? normalizeMemberColorName(member.color) : undefined;
-    if (!color || usedColors.has(color)) {
-      // Assign the next unused color from the pre-ordered palette.
-      while (
-        nextPaletteIdx < MEMBER_COLOR_PALETTE.length &&
-        usedColors.has(MEMBER_COLOR_PALETTE[nextPaletteIdx])
-      ) {
-        nextPaletteIdx++;
-      }
-      color =
-        nextPaletteIdx < MEMBER_COLOR_PALETTE.length
-          ? MEMBER_COLOR_PALETTE[nextPaletteIdx]
-          : MEMBER_COLOR_PALETTE[active.indexOf(member) % MEMBER_COLOR_PALETTE.length];
-      nextPaletteIdx++;
-    }
-    map.set(member.name, color);
-    usedColors.add(color);
-  }
-
-  for (const member of removed) {
-    const color = member.color
-      ? normalizeMemberColorName(member.color)
-      : getMemberColorByName(member.name);
-    map.set(member.name, color);
-  }
-
-  map.set('user', 'user');
-
-  return map;
+  return buildTeamMemberColorMap(members, { preferProvidedColors: true });
 }
 
 export const KANBAN_COLUMN_DISPLAY: Record<

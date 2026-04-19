@@ -1074,6 +1074,9 @@ async function handleUpdateConfig(
   }
   return wrapTeamHandler('updateConfig', async () => {
     const tn = validated.value!;
+    const teamDataService = getTeamDataService();
+    const previousDisplayName = await teamDataService.getTeamDisplayName(tn).catch(() => tn);
+    const requestedName = typeof name === 'string' ? name.trim() : '';
     const result = await getTeamDataService().updateConfig(tn, {
       name,
       description,
@@ -1084,10 +1087,10 @@ async function handleUpdateConfig(
     }
 
     // Notify running lead about the rename so it stays aware of current team name
-    if (typeof name === 'string' && name.trim()) {
+    if (requestedName && requestedName !== (previousDisplayName?.trim() || tn)) {
       const provisioning = getTeamProvisioningService();
       if (provisioning.isTeamAlive(tn)) {
-        const msg = `The team has been renamed to "${name.trim()}". Please use this name when referring to the team going forward.`;
+        const msg = `The team has been renamed to "${requestedName}". Please use this name when referring to the team going forward.`;
         try {
           await provisioning.sendMessageToTeam(tn, msg);
         } catch {

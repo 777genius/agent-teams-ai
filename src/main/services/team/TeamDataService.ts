@@ -12,9 +12,10 @@ import { classifyIdleNotificationText } from '@shared/utils/idleNotificationSema
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { getKanbanColumnFromReviewState, normalizeReviewState } from '@shared/utils/reviewState';
+import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
-import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
+import { parseNumericSuffixName, validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
@@ -128,6 +129,16 @@ interface FileWatchReconcileDiagnostics {
   burstCount: number;
   windowStartedAt: number;
   lastPressureLogAt: number;
+}
+
+function applyDistinctRosterColors<T extends { name: string; color?: string; removedAt?: number }>(
+  members: readonly T[]
+): T[] {
+  const colorMap = buildTeamMemberColorMap(members, { preferProvidedColors: false });
+  return members.map((member) => ({
+    ...member,
+    color: colorMap.get(member.name) ?? member.color ?? getMemberColorByName(member.name),
+  }));
 }
 
 function normalizePassiveUserReplyLinkText(value: string | undefined): string {
@@ -1161,7 +1172,7 @@ export class TeamDataService {
           role: configMember.role,
           workflow: configMember.workflow,
           agentType: configMember.agentType ?? 'general-purpose',
-          color: configMember.color ?? getMemberColorByName(configMember.name.trim()),
+          color: configMember.color,
           joinedAt: configMember.joinedAt ?? Date.now(),
           cwd: configMember.cwd,
         };
@@ -1176,13 +1187,13 @@ export class TeamDataService {
         member = {
           name: memberName,
           agentType: 'general-purpose',
-          color: getMemberColorByName(memberName),
           joinedAt: Date.now(),
         };
       }
 
-      members.push(member);
-      await this.membersMetaStore.writeMembers(teamName, members);
+      const nextMembers = applyDistinctRosterColors([...members, member]);
+      member = nextMembers.find((m) => m.name === memberName) ?? member;
+      await this.membersMetaStore.writeMembers(teamName, nextMembers);
     }
 
     return { members, member };
@@ -1192,6 +1203,13 @@ export class TeamDataService {
     const name = request.name.trim();
     if (!name) {
       throw new Error('Member name cannot be empty');
+    }
+    const formatError = validateTeamMemberNameFormat(name);
+    if (formatError) {
+      throw new Error(`Member name "${name}" is invalid: ${formatError}`);
+    }
+    if (name.toLowerCase() === 'user') {
+      throw new Error('Member name "user" is reserved');
     }
     const suffixInfo = parseNumericSuffixName(name);
     if (suffixInfo && suffixInfo.suffix >= 2) {
@@ -1224,12 +1242,11 @@ export class TeamDataService {
           ? request.effort
           : undefined,
       agentType: 'general-purpose',
-      color: getMemberColorByName(name),
       joinedAt: Date.now(),
     };
 
-    members.push(newMember);
-    await this.membersMetaStore.writeMembers(teamName, members);
+    const nextMembers = applyDistinctRosterColors([...members, newMember]);
+    await this.membersMetaStore.writeMembers(teamName, nextMembers);
   }
 
   async updateMemberRole(
@@ -1269,36 +1286,48 @@ export class TeamDataService {
     const joinedAt = Date.now();
     const nextByName = new Set<string>();
 
-    const nextActive: TeamMember[] = request.members.map((member) => {
-      const name = member.name.trim();
-      if (!name) throw new Error('Member name cannot be empty');
-      if (name.toLowerCase() === 'team-lead') {
-        throw new Error('Member name "team-lead" is reserved');
-      }
-      const suffixInfo = parseNumericSuffixName(name);
-      if (suffixInfo && suffixInfo.suffix >= 2) {
-        throw new Error(
-          `Member name "${name}" is not allowed (reserved for Claude CLI auto-suffix). Use "${suffixInfo.base}" instead.`
-        );
-      }
-      nextByName.add(name.toLowerCase());
-      const prev = existingByName.get(name.toLowerCase());
-      return {
-        name,
-        role: member.role?.trim() || undefined,
-        workflow: member.workflow?.trim() || undefined,
-        providerId: normalizeOptionalTeamProviderId(member.providerId),
-        model: member.model?.trim() || undefined,
-        effort:
-          member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
-            ? member.effort
-            : undefined,
-        agentType: prev?.agentType ?? 'general-purpose',
-        color: prev?.color ?? getMemberColorByName(name),
-        joinedAt: prev?.joinedAt ?? joinedAt,
-        removedAt: undefined,
-      };
-    });
+    const nextActive = applyDistinctRosterColors(
+      request.members.map((member) => {
+        const name = member.name.trim();
+        if (!name) throw new Error('Member name cannot be empty');
+        const formatError = validateTeamMemberNameFormat(name);
+        if (formatError) {
+          throw new Error(`Member name "${name}" is invalid: ${formatError}`);
+        }
+        if (name.toLowerCase() === 'user') {
+          throw new Error('Member name "user" is reserved');
+        }
+        if (name.toLowerCase() === 'team-lead') {
+          throw new Error('Member name "team-lead" is reserved');
+        }
+        if (nextByName.has(name.toLowerCase())) {
+          throw new Error(`Member "${name}" already exists`);
+        }
+        const suffixInfo = parseNumericSuffixName(name);
+        if (suffixInfo && suffixInfo.suffix >= 2) {
+          throw new Error(
+            `Member name "${name}" is not allowed (reserved for Claude CLI auto-suffix). Use "${suffixInfo.base}" instead.`
+          );
+        }
+        nextByName.add(name.toLowerCase());
+        const prev = existingByName.get(name.toLowerCase());
+        return {
+          name,
+          role: member.role?.trim() || undefined,
+          workflow: member.workflow?.trim() || undefined,
+          providerId: normalizeOptionalTeamProviderId(member.providerId),
+          model: member.model?.trim() || undefined,
+          effort:
+            member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
+              ? member.effort
+              : undefined,
+          agentType: prev?.agentType ?? 'general-purpose',
+          color: prev?.color,
+          joinedAt: prev?.joinedAt ?? joinedAt,
+          removedAt: undefined,
+        };
+      })
+    );
 
     // Preserve/mark removed members so stale inbox files don't resurrect them in the UI.
     const nextRemoved: TeamMember[] = [];
@@ -2322,12 +2351,18 @@ export class TeamDataService {
       createdAt: joinedAt,
     });
 
-    await this.membersMetaStore.writeMembers(
-      request.teamName,
+    const membersToWrite = applyDistinctRosterColors(
       request.members.map((member) => ({
         name: (() => {
           const name = member.name.trim();
           if (!name) throw new Error('Member name cannot be empty');
+          const formatError = validateTeamMemberNameFormat(name);
+          if (formatError) {
+            throw new Error(`Member name "${name}" is invalid: ${formatError}`);
+          }
+          if (name.toLowerCase() === 'user') {
+            throw new Error('Member name "user" is reserved');
+          }
           if (name.toLowerCase() === 'team-lead')
             throw new Error('Member name "team-lead" is reserved');
           const suffixInfo = parseNumericSuffixName(name);
@@ -2346,11 +2381,11 @@ export class TeamDataService {
           member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
             ? member.effort
             : undefined,
-        agentType: 'general-purpose',
-        color: getMemberColorByName(member.name.trim()),
+        agentType: 'general-purpose' as const,
         joinedAt,
       }))
     );
+    await this.membersMetaStore.writeMembers(request.teamName, membersToWrite);
   }
 
   async reconcileTeamArtifacts(
