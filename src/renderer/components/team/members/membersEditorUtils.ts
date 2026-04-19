@@ -2,6 +2,7 @@ import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRole
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { normalizeCreateLaunchProviderForUi } from '@renderer/utils/geminiUiFreeze';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import { getMemberColorByName } from '@shared/constants/memberColors';
 import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
@@ -147,19 +148,42 @@ export function buildMemberDraftColorMap(
     .filter(Boolean)
     .map((name) => ({ name }));
 
-  // When existing members are provided, include them first so their colors
-  // are reserved and new drafts receive the next available palette entries.
-  const allEntries = existingMembers ? [...existingMembers, ...draftEntries] : draftEntries;
+  const existingSeedEntries = (existingMembers ?? [])
+    .map((member) => ({
+      ...member,
+      name: member.name.trim(),
+      color: member.color?.trim() || getMemberColorByName(member.name),
+    }))
+    .filter((member) => member.name);
+  const existingNames = new Set(existingSeedEntries.map((member) => member.name.toLowerCase()));
+  const unseenNewDraftNames = new Set<string>();
+  const uniqueNewDraftEntries = draftEntries.filter((entry) => {
+    const normalizedName = entry.name.toLowerCase();
+    if (existingNames.has(normalizedName) || unseenNewDraftNames.has(normalizedName)) {
+      return false;
+    }
+    unseenNewDraftNames.add(normalizedName);
+    return true;
+  });
 
-  const fullMap = buildMemberColorMap(allEntries);
+  const predictedDraftSeedEntries = uniqueNewDraftEntries.map((entry) => ({
+    ...entry,
+    color: getMemberColorByName(entry.name),
+  }));
 
-  // Return only draft entries so callers don't see existing-member keys
-  // they didn't ask for (keeps the API surface unchanged).
-  if (!existingMembers) return fullMap;
+  // Mirror the team page color inputs:
+  // 1. existing members keep their persisted/resolved color
+  // 2. new draft members get the same name-based default color that the resolver
+  //    will assign after create/launch/add
+  // 3. buildMemberColorMap still resolves rare collisions the same way as the UI
+  const fullMap = buildMemberColorMap([...existingSeedEntries, ...predictedDraftSeedEntries]);
+  const fullColorByName = new Map(
+    Array.from(fullMap.entries()).map(([name, color]) => [name.toLowerCase(), color] as const)
+  );
 
   const draftMap = new Map<string, string>();
   for (const entry of draftEntries) {
-    const color = fullMap.get(entry.name);
+    const color = fullColorByName.get(entry.name.toLowerCase());
     if (color) draftMap.set(entry.name, color);
   }
   return draftMap;

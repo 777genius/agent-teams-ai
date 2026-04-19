@@ -164,6 +164,7 @@ export const EditTeamDialog = ({
               showJsonEditor={!isTeamAlive}
               draftKeyPrefix={`editTeam:${teamName}`}
               projectPath={projectPath ?? null}
+              existingMembers={currentMembers}
               lockProviderModel={isTeamAlive}
             />
           </div>
