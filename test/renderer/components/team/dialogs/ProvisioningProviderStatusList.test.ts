@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   getPrimaryProvisioningFailureDetail,
+  getProvisioningProviderBackendSummary,
   ProvisioningProviderStatusList,
   createInitialProviderChecks,
 } from '@renderer/components/team/dialogs/ProvisioningProviderStatusList';
@@ -159,5 +160,31 @@ describe('ProvisioningProviderStatusList', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('keeps internal native rollout state visible in provisioning backend summaries', () => {
+    expect(
+      getProvisioningProviderBackendSummary({
+        selectedBackendId: 'codex-native',
+        resolvedBackendId: 'codex-native',
+        backend: {
+          kind: 'codex-native',
+          label: 'Codex native',
+        },
+        availableBackends: [
+          {
+            id: 'codex-native',
+            label: 'Codex native',
+            description: 'Use codex exec JSON mode.',
+            selectable: false,
+            recommended: false,
+            available: true,
+            state: 'locked',
+            audience: 'internal',
+            statusMessage: 'Ready but locked',
+          },
+        ],
+      })
+    ).toBe('Codex native - internal, locked');
   });
 });

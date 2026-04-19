@@ -20,6 +20,39 @@ interface Props {
   onSelect: (providerId: CliProviderStatus['providerId'], backendId: string) => void;
 }
 
+export function getProviderRuntimeBackendStateLabel(
+  option: NonNullable<CliProviderStatus['availableBackends']>[number]
+): string | null {
+  switch (option.state) {
+    case 'ready':
+      return null;
+    case 'locked':
+      return 'Locked';
+    case 'disabled':
+      return 'Disabled';
+    case 'authentication-required':
+      return 'Auth required';
+    case 'runtime-missing':
+      return 'Runtime missing';
+    case 'degraded':
+      return 'Degraded';
+    default:
+      if (!option.available) {
+        return 'Unavailable';
+      }
+      if (option.selectable === false) {
+        return 'Locked';
+      }
+      return null;
+  }
+}
+
+export function getProviderRuntimeBackendAudienceLabel(
+  option: NonNullable<CliProviderStatus['availableBackends']>[number]
+): string | null {
+  return option.audience === 'internal' ? 'Internal' : null;
+}
+
 export function getOptionDisplayLabel(
   option: NonNullable<CliProviderStatus['availableBackends']>[number],
   resolvedOption: NonNullable<CliProviderStatus['availableBackends']>[number] | null
@@ -44,8 +77,18 @@ export function getProviderRuntimeBackendSummary(provider: CliProviderStatus): s
   const selectedBackendId = provider.selectedBackendId ?? options[0]?.id ?? '';
   const selectedOption = options.find((option) => option.id === selectedBackendId) ?? options[0];
   const resolvedOption = options.find((option) => option.id === provider.resolvedBackendId) ?? null;
+  const parts = [getOptionDisplayLabel(selectedOption, resolvedOption)];
+  const audienceLabel = getProviderRuntimeBackendAudienceLabel(selectedOption);
+  const stateLabel = getProviderRuntimeBackendStateLabel(selectedOption);
 
-  return getOptionDisplayLabel(selectedOption, resolvedOption);
+  if (audienceLabel) {
+    parts.push(audienceLabel.toLowerCase());
+  }
+  if (stateLabel) {
+    parts.push(stateLabel.toLowerCase());
+  }
+
+  return parts.join(' - ');
 }
 
 export const ProviderRuntimeBackendSelector = ({
@@ -62,6 +105,8 @@ export const ProviderRuntimeBackendSelector = ({
   const selectedOption = options.find((option) => option.id === selectedBackendId) ?? options[0];
   const resolvedOption = options.find((option) => option.id === provider.resolvedBackendId) ?? null;
   const selectedLabel = getOptionDisplayLabel(selectedOption, resolvedOption);
+  const selectedStateLabel = getProviderRuntimeBackendStateLabel(selectedOption);
+  const selectedAudienceLabel = getProviderRuntimeBackendAudienceLabel(selectedOption);
 
   return (
     <div className="mt-2 space-y-2.5">
@@ -120,25 +165,40 @@ export const ProviderRuntimeBackendSelector = ({
                       Recommended
                     </span>
                   ) : null}
-                  {!option.available ? (
+                  {getProviderRuntimeBackendAudienceLabel(option) ? (
                     <span
                       className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px]"
                       style={{
-                        color: '#fca5a5',
-                        backgroundColor: 'rgba(248, 113, 113, 0.14)',
+                        color: '#93c5fd',
+                        backgroundColor: 'rgba(59, 130, 246, 0.14)',
                       }}
                     >
-                      Unavailable
+                      {getProviderRuntimeBackendAudienceLabel(option)}
                     </span>
-                  ) : option.selectable === false ? (
+                  ) : null}
+                  {getProviderRuntimeBackendStateLabel(option) ? (
                     <span
                       className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px]"
                       style={{
-                        color: 'var(--color-text-secondary)',
-                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        color:
+                          option.state === 'disabled' ||
+                          option.state === 'authentication-required' ||
+                          option.state === 'runtime-missing' ||
+                          option.state === 'degraded' ||
+                          (!option.available && option.state !== 'locked')
+                            ? '#fca5a5'
+                            : 'var(--color-text-secondary)',
+                        backgroundColor:
+                          option.state === 'disabled' ||
+                          option.state === 'authentication-required' ||
+                          option.state === 'runtime-missing' ||
+                          option.state === 'degraded' ||
+                          (!option.available && option.state !== 'locked')
+                            ? 'rgba(248, 113, 113, 0.14)'
+                            : 'rgba(255, 255, 255, 0.08)',
                       }}
                     >
-                      Locked
+                      {getProviderRuntimeBackendStateLabel(option)}
                     </span>
                   ) : null}
                 </div>
@@ -173,7 +233,18 @@ export const ProviderRuntimeBackendSelector = ({
                 Recommended
               </span>
             ) : null}
-            {!selectedOption.available ? (
+            {selectedAudienceLabel ? (
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[10px]"
+                style={{
+                  color: '#93c5fd',
+                  backgroundColor: 'rgba(59, 130, 246, 0.14)',
+                }}
+              >
+                {selectedAudienceLabel}
+              </span>
+            ) : null}
+            {!selectedStateLabel && !selectedOption.available ? (
               <TooltipProvider delayDuration={150}>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -192,18 +263,24 @@ export const ProviderRuntimeBackendSelector = ({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            ) : selectedOption.selectable === false ? (
+            ) : selectedStateLabel ? (
               <TooltipProvider delayDuration={150}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span
                       className="cursor-help rounded-full px-1.5 py-0.5 text-[10px]"
                       style={{
-                        color: 'var(--color-text-secondary)',
-                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        color:
+                          selectedOption.state === 'locked'
+                            ? 'var(--color-text-secondary)'
+                            : '#fca5a5',
+                        backgroundColor:
+                          selectedOption.state === 'locked'
+                            ? 'rgba(255, 255, 255, 0.08)'
+                            : 'rgba(248, 113, 113, 0.14)',
                       }}
                     >
-                      Locked
+                      {selectedStateLabel}
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>

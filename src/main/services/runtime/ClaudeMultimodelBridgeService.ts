@@ -88,6 +88,14 @@ interface UnifiedRuntimeStatusResponse {
         selectable?: boolean;
         recommended?: boolean;
         available?: boolean;
+        state?:
+          | 'ready'
+          | 'locked'
+          | 'disabled'
+          | 'authentication-required'
+          | 'runtime-missing'
+          | 'degraded';
+        audience?: 'general' | 'internal';
         statusMessage?: string | null;
         detailMessage?: string | null;
       }[];
@@ -270,6 +278,8 @@ export class ClaudeMultimodelBridgeService {
           selectable: backend.selectable !== false,
           recommended: backend.recommended === true,
           available: backend.available === true,
+          state: backend.state ?? undefined,
+          audience: backend.audience ?? undefined,
           statusMessage: backend.statusMessage ?? null,
           detailMessage: backend.detailMessage ?? null,
         })) ?? [],

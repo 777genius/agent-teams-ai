@@ -346,6 +346,8 @@ describe('ClaudeMultimodelBridgeService', () => {
                 selectable: false,
                 recommended: false,
                 available: true,
+                state: 'locked',
+                audience: 'internal',
                 statusMessage: 'Experimental native lane',
                 detailMessage: 'Phase 0 keeps the lane locked behind rollout policy.',
               },
@@ -422,6 +424,8 @@ describe('ClaudeMultimodelBridgeService', () => {
           id: 'codex-native',
           selectable: false,
           available: true,
+          state: 'locked',
+          audience: 'internal',
           statusMessage: 'Experimental native lane',
         }),
       ],
@@ -438,5 +442,68 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(isConnectionManagedRuntimeProvider(codex!)).toBe(false);
     expect(getProviderConnectionModeSummary(codex!)).toBeNull();
     expect(getProviderCurrentRuntimeSummary(codex!)).toBeNull();
+  });
+
+  it('preserves codex-native internal unlock readiness from runtime status payloads', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        providers: {
+          codex: {
+            supported: true,
+            authenticated: true,
+            authMethod: 'api_key',
+            verificationState: 'verified',
+            canLoginFromUi: false,
+            selectedBackendId: 'codex-native',
+            resolvedBackendId: 'codex-native',
+            availableBackends: [
+              {
+                id: 'codex-native',
+                label: 'Codex native',
+                selectable: true,
+                recommended: false,
+                available: true,
+                state: 'ready',
+                audience: 'internal',
+                statusMessage: 'Ready for internal use',
+                detailMessage: 'Internal rollout only.',
+              },
+            ],
+            capabilities: {
+              teamLaunch: true,
+              oneShot: true,
+              extensions: {
+                plugins: { status: 'unsupported', ownership: 'shared', reason: 'Phase 1' },
+                mcp: { status: 'unsupported', ownership: 'shared', reason: 'Phase 1' },
+                skills: { status: 'unsupported', ownership: 'shared', reason: 'Phase 1' },
+                apiKeys: { status: 'supported', ownership: 'shared', reason: null },
+              },
+            },
+            backend: {
+              kind: 'codex-native',
+              label: 'Codex native',
+              authMethodDetail: 'api_key',
+            },
+          },
+        },
+      }),
+      stderr: '',
+      exitCode: 0,
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const codex = await service.getProviderStatus('/mock/agent_teams_orchestrator', 'codex');
+
+    expect(codex.availableBackends?.find((backend) => backend.id === 'codex-native')).toMatchObject({
+      id: 'codex-native',
+      selectable: true,
+      available: true,
+      state: 'ready',
+      audience: 'internal',
+      statusMessage: 'Ready for internal use',
+    });
   });
 });

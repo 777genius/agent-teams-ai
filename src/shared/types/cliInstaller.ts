@@ -45,6 +45,14 @@ export interface CliProviderBackendOption {
   selectable: boolean;
   recommended: boolean;
   available: boolean;
+  state?:
+    | 'ready'
+    | 'locked'
+    | 'disabled'
+    | 'authentication-required'
+    | 'runtime-missing'
+    | 'degraded';
+  audience?: 'general' | 'internal';
   statusMessage?: string | null;
   detailMessage?: string | null;
 }
