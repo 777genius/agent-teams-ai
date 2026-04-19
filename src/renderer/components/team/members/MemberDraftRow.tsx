@@ -30,6 +30,7 @@ import type { EffortLevel, TeamProviderId } from '@shared/types';
 interface MemberDraftRowProps {
   member: MemberDraft;
   index: number;
+  avatarSrc?: string;
   resolvedColor?: string;
   nameError: string | null;
   onNameChange: (id: string, name: string) => void;
@@ -74,6 +75,7 @@ interface MemberDraftRowProps {
 export const MemberDraftRow = ({
   member,
   index,
+  avatarSrc,
   resolvedColor,
   nameError,
   onNameChange,
@@ -221,14 +223,24 @@ export const MemberDraftRow = ({
         aria-hidden="true"
       />
       <div className="space-y-0.5">
-        <Input
-          className="h-8 text-xs"
-          value={member.name}
-          aria-label={`Member ${index + 1} name`}
-          disabled={isRemoved || lockIdentity}
-          onChange={(event) => onNameChange(member.id, event.target.value)}
-          placeholder="member-name"
-        />
+        <div className="flex items-center gap-2">
+          {avatarSrc ? (
+            <img
+              src={avatarSrc}
+              alt=""
+              className="size-8 shrink-0 rounded-full bg-[var(--color-surface-raised)]"
+              loading="lazy"
+            />
+          ) : null}
+          <Input
+            className="h-8 text-xs"
+            value={member.name}
+            aria-label={`Member ${index + 1} name`}
+            disabled={isRemoved || lockIdentity}
+            onChange={(event) => onNameChange(member.id, event.target.value)}
+            placeholder="member-name"
+          />
+        </div>
         {nameError ? <p className="text-[10px] text-red-300">{nameError}</p> : null}
       </div>
       <div>

@@ -1560,7 +1560,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       }}
     >
       <DialogContent
-        className={isSchedule ? 'max-h-[90vh] max-w-2xl overflow-y-auto' : 'max-w-2xl'}
+        className={isSchedule ? 'max-h-[90vh] max-w-3xl overflow-y-auto' : 'max-w-3xl'}
       >
         <DialogHeader>
           <DialogTitle className="text-sm">{dialogTitle}</DialogTitle>

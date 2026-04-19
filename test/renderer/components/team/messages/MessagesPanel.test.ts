@@ -13,6 +13,11 @@ const storeState = {
   teams: [],
   openTeamTab: vi.fn(),
   loadOlderTeamMessages: vi.fn().mockResolvedValue(undefined),
+  refreshTeamMessagesHead: vi.fn().mockResolvedValue({
+    feedChanged: true,
+    headChanged: true,
+    feedRevision: 'rev-1',
+  }),
   teamMessagesByName: {} as Record<
     string,
     {
@@ -38,6 +43,17 @@ const readHookState = {
 const expandedHookState = {
   expandedSet: new Set<string>(),
   toggle: vi.fn(),
+};
+
+const sidebarUiState = {
+  messagesSearchQuery: '',
+  messagesFilter: { from: new Set<string>(), to: new Set<string>(), showNoise: false },
+  messagesFilterOpen: false,
+  messagesCollapsed: true,
+  messagesSearchBarVisible: false,
+  expandedItemKey: null as string | null,
+  messagesScrollTop: 0,
+  bottomSheetSnapIndex: 2,
 };
 
 vi.mock('@renderer/store', () => ({
@@ -95,6 +111,24 @@ vi.mock('@renderer/components/team/messages/StatusBlock', () => ({
   StatusBlock: () => React.createElement('div', null, 'status-block'),
 }));
 
+vi.mock('@renderer/components/team/sidebar/teamSidebarUiState', () => ({
+  getTeamMessagesSidebarUiState: () => ({
+    messagesSearchQuery: sidebarUiState.messagesSearchQuery,
+    messagesFilter: {
+      from: new Set(sidebarUiState.messagesFilter.from),
+      to: new Set(sidebarUiState.messagesFilter.to),
+      showNoise: sidebarUiState.messagesFilter.showNoise,
+    },
+    messagesFilterOpen: sidebarUiState.messagesFilterOpen,
+    messagesCollapsed: sidebarUiState.messagesCollapsed,
+    messagesSearchBarVisible: sidebarUiState.messagesSearchBarVisible,
+    expandedItemKey: sidebarUiState.expandedItemKey,
+    messagesScrollTop: sidebarUiState.messagesScrollTop,
+    bottomSheetSnapIndex: sidebarUiState.bottomSheetSnapIndex,
+  }),
+  setTeamMessagesSidebarUiState: vi.fn(),
+}));
+
 vi.mock('@renderer/components/team/activity/ActivityTimeline', () => ({
   ActivityTimeline: ({ messages }: { messages: InboxMessage[] }) =>
     React.createElement(
@@ -132,7 +166,10 @@ vi.mock('react-modal-sheet', () => ({
   ),
 }));
 
-import { MessagesPanel } from '@renderer/components/team/messages/MessagesPanel';
+import {
+  MessagesPanel,
+  reconcilePendingRepliesByMember,
+} from '@renderer/components/team/messages/MessagesPanel';
 
 function makeMessage(overrides: Partial<InboxMessage> = {}): InboxMessage {
   return {
@@ -162,7 +199,16 @@ describe('MessagesPanel idle summary invariants', () => {
     storeState.sendCrossTeamMessage.mockClear();
     storeState.openTeamTab.mockClear();
     storeState.loadOlderTeamMessages.mockClear();
+    storeState.refreshTeamMessagesHead.mockClear();
     storeState.teamMessagesByName = {};
+    sidebarUiState.messagesSearchQuery = '';
+    sidebarUiState.messagesFilter = { from: new Set(), to: new Set(), showNoise: false };
+    sidebarUiState.messagesFilterOpen = false;
+    sidebarUiState.messagesCollapsed = true;
+    sidebarUiState.messagesSearchBarVisible = false;
+    sidebarUiState.expandedItemKey = null;
+    sidebarUiState.messagesScrollTop = 0;
+    sidebarUiState.bottomSheetSnapIndex = 2;
   });
 
   it('keeps read passive peer summaries in the activity timeline while unread badge only counts filtered unread messages', async () => {
@@ -286,7 +332,7 @@ describe('MessagesPanel idle summary invariants', () => {
     });
   });
 
-  it('clears pending replies when a real member reply arrives after the pending timestamp', async () => {
+  it('clears pending replies when a real member reply to the user arrives after the pending timestamp', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -296,10 +342,11 @@ describe('MessagesPanel idle summary invariants', () => {
     const pendingSentAtMs = Date.parse('2026-04-08T12:00:00.000Z');
     const messages: InboxMessage[] = [
       makeMessage({
-        messageId: 'lead-reply',
+        messageId: 'member-reply',
         from: 'alice',
+        to: 'user',
         read: true,
-        source: 'lead_process',
+        source: 'inbox',
         timestamp: '2026-04-08T12:01:00.000Z',
         text: 'Starting now.',
       }),
@@ -344,6 +391,30 @@ describe('MessagesPanel idle summary invariants', () => {
     });
   });
 
+  it('clears pending replies from durable user_sent history even if the local pending timestamp drifted later', () => {
+    const pendingSentAtMs = Date.parse('2026-04-08T12:02:00.000Z');
+    const messages: InboxMessage[] = [
+      makeMessage({
+        messageId: 'user-send',
+        from: 'user',
+        to: 'forge',
+        source: 'user_sent',
+        timestamp: '2026-04-08T12:00:00.000Z',
+        text: 'Тут?',
+      }),
+      makeMessage({
+        messageId: 'forge-reply',
+        from: 'forge',
+        to: 'user',
+        source: 'inbox',
+        timestamp: '2026-04-08T12:00:05.000Z',
+        text: 'Да, я тут.',
+      }),
+    ];
+
+    expect(reconcilePendingRepliesByMember({ forge: pendingSentAtMs }, messages)).toEqual({});
+  });
+
   it('renders the bottom-sheet composer before the status block so input stays pinned near the header', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
@@ -383,6 +454,90 @@ describe('MessagesPanel idle summary invariants', () => {
     const text = host.textContent ?? '';
     expect(text.indexOf('composer')).toBeGreaterThan(-1);
     expect(text.indexOf('status-block')).toBeGreaterThan(text.indexOf('composer'));
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('reopens the search bar when a persisted search query is active', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    sidebarUiState.messagesSearchQuery = 'Тут?';
+    sidebarUiState.messagesSearchBarVisible = false;
+
+    await act(async () => {
+      storeState.teamMessagesByName['atlas-hq'] = {
+        canonicalMessages: [makeMessage({ text: 'Тут?' })],
+        optimisticMessages: [],
+        feedRevision: 'rev-1',
+        nextCursor: null,
+        hasMore: false,
+        lastFetchedAt: Date.now(),
+        loadingHead: false,
+        loadingOlder: false,
+        headHydrated: true,
+      };
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('input[placeholder=\"Search...\"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('requests a one-shot head refresh when the messages cache is empty', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      storeState.teamMessagesByName['atlas-hq'] = {
+        canonicalMessages: [],
+        optimisticMessages: [],
+        feedRevision: null,
+        nextCursor: null,
+        hasMore: false,
+        lastFetchedAt: null,
+        loadingHead: false,
+        loadingOlder: false,
+        headHydrated: false,
+      };
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(storeState.refreshTeamMessagesHead).toHaveBeenCalledWith('atlas-hq');
 
     await act(async () => {
       root.unmount();

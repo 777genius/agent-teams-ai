@@ -107,6 +107,10 @@ import { ScheduleSection } from './schedule/ScheduleSection';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
 import { TeamSidebarPortalSource } from './sidebar/TeamSidebarPortalSource';
 import { TeamSidebarRail } from './sidebar/TeamSidebarRail';
+import {
+  getTeamPendingRepliesState,
+  setTeamPendingRepliesState,
+} from './sidebar/teamSidebarUiState';
 import { ClaudeLogsSection } from './ClaudeLogsSection';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 import { ProcessesSection } from './ProcessesSection';
@@ -914,7 +918,9 @@ export const TeamDetailView = ({
     initialTab?: MemberDetailTab;
     initialActivityFilter?: MemberActivityFilter;
   } | null>(null);
-  const [pendingRepliesByMember, setPendingRepliesByMember] = useState<Record<string, number>>({});
+  const [pendingRepliesByMember, setPendingRepliesByMember] = useState<Record<string, number>>(() =>
+    getTeamPendingRepliesState(teamName)
+  );
   const [createTaskDialog, setCreateTaskDialog] = useState<CreateTaskDialogState>({
     open: false,
     defaultSubject: '',
@@ -1211,6 +1217,8 @@ export const TeamDetailView = ({
     clearProvisioningError,
     isTeamProvisioning,
     refreshTeamData,
+    refreshTeamMessagesHead,
+    refreshMemberActivityMeta,
     syncTeamPendingReplyRefresh,
     kanbanFilterQuery,
     clearKanbanFilter,
@@ -1262,6 +1270,8 @@ export const TeamDetailView = ({
       loading: s.selectedTeamName === teamName ? s.selectedTeamLoading : false,
       error: s.selectedTeamName === teamName ? s.selectedTeamError : null,
       refreshTeamData: s.refreshTeamData,
+      refreshTeamMessagesHead: s.refreshTeamMessagesHead,
+      refreshMemberActivityMeta: s.refreshMemberActivityMeta,
       syncTeamPendingReplyRefresh: s.syncTeamPendingReplyRefresh,
       kanbanFilterQuery: s.kanbanFilterQuery,
       clearKanbanFilter: s.clearKanbanFilter,
@@ -1285,6 +1295,7 @@ export const TeamDetailView = ({
   const tabId = useTabIdOptional();
   const activeTabId = useStore((s) => s.activeTabId);
   const isThisTabActive = tabId ? activeTabId === tabId : false;
+  const wasInteractiveRef = useRef(false);
 
   useEffect(() => {
     const now = Date.now();
@@ -1349,6 +1360,14 @@ export const TeamDetailView = ({
   }, [tabId, initTabUIState]);
 
   useEffect(() => {
+    setPendingRepliesByMember(getTeamPendingRepliesState(teamName));
+  }, [teamName]);
+
+  useEffect(() => {
+    setTeamPendingRepliesState(teamName, pendingRepliesByMember);
+  }, [pendingRepliesByMember, teamName]);
+
+  useEffect(() => {
     const wasProvisioning = wasProvisioningRef.current;
     wasProvisioningRef.current = isTeamProvisioning;
     if (!wasProvisioning && isTeamProvisioning) {
@@ -1385,6 +1404,32 @@ export const TeamDetailView = ({
       void selectTeam(teamName);
     }
   }, [isThisTabActive, teamName, storedTeamName, loading, selectTeam]);
+
+  useEffect(() => {
+    const isInteractive = isThisTabActive && isPaneFocused;
+    const justBecameInteractive = isInteractive && !wasInteractiveRef.current;
+    wasInteractiveRef.current = isInteractive;
+    if (!justBecameInteractive || !teamName) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const headResult = await refreshTeamMessagesHead(teamName);
+        if (headResult.feedChanged) {
+          await refreshMemberActivityMeta(teamName);
+        }
+      } catch {
+        // Best-effort refresh on tab focus.
+      }
+    })();
+  }, [
+    isPaneFocused,
+    isThisTabActive,
+    refreshMemberActivityMeta,
+    refreshTeamMessagesHead,
+    teamName,
+  ]);
 
   // Fetch active teams when launch dialog opens (for conflict warning)
   useEffect(() => {

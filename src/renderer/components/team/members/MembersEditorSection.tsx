@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
 import { Label } from '@renderer/components/ui/label';
+import { getParticipantAvatarUrlByIndex } from '@renderer/utils/memberAvatarCatalog';
 import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { Plus } from 'lucide-react';
@@ -315,6 +316,7 @@ export const MembersEditorSection = ({
                 key={member.id}
                 member={member}
                 index={index}
+                avatarSrc={getParticipantAvatarUrlByIndex(index + 1)}
                 resolvedColor={memberColorMap.get(member.id)}
                 nameError={validateMemberName?.(member.name) ?? null}
                 onNameChange={updateMemberName}
@@ -356,6 +358,7 @@ export const MembersEditorSection = ({
                       key={member.id}
                       member={member}
                       index={activeMembers.length + index}
+                      avatarSrc={getParticipantAvatarUrlByIndex(activeMembers.length + index + 1)}
                       resolvedColor={memberColorMap.get(member.id)}
                       nameError={null}
                       onNameChange={updateMemberName}

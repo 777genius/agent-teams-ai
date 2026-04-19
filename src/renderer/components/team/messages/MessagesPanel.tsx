@@ -93,6 +93,60 @@ interface MessagesPanelProps {
   onTaskIdClick?: (taskId: string) => void;
 }
 
+export function reconcilePendingRepliesByMember(
+  pendingRepliesByMember: Record<string, number>,
+  messages: InboxMessage[]
+): Record<string, number> {
+  if (Object.keys(pendingRepliesByMember).length === 0) {
+    return pendingRepliesByMember;
+  }
+
+  const latestUserSentByMember = new Map<string, number>();
+  const latestReplyToUserByMember = new Map<string, number>();
+
+  for (const message of messages) {
+    const ts = Date.parse(message.timestamp);
+    if (!Number.isFinite(ts)) {
+      continue;
+    }
+
+    if (
+      message.from === 'user' &&
+      typeof message.to === 'string' &&
+      message.to.length > 0 &&
+      message.source === 'user_sent'
+    ) {
+      const previous = latestUserSentByMember.get(message.to);
+      if (previous == null || ts > previous) {
+        latestUserSentByMember.set(message.to, ts);
+      }
+      continue;
+    }
+
+    if (message.to === 'user') {
+      const previous = latestReplyToUserByMember.get(message.from);
+      if (previous == null || ts > previous) {
+        latestReplyToUserByMember.set(message.from, ts);
+      }
+    }
+  }
+
+  let changed = false;
+  const next: Record<string, number> = {};
+  for (const [memberName, sentAtMs] of Object.entries(pendingRepliesByMember)) {
+    const latestReplyAt = latestReplyToUserByMember.get(memberName);
+    const latestDurableSendAt = latestUserSentByMember.get(memberName);
+    const threshold = latestDurableSendAt ?? sentAtMs;
+    if (latestReplyAt != null && latestReplyAt > threshold) {
+      changed = true;
+      continue;
+    }
+    next[memberName] = sentAtMs;
+  }
+
+  return changed ? next : pendingRepliesByMember;
+}
+
 export const MessagesPanel = memo(function MessagesPanel({
   teamName,
   position,
@@ -125,6 +179,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     messages,
     messagesState,
     loadOlderTeamMessages,
+    refreshTeamMessagesHead,
   } = useStore(
     useShallow((s) => ({
       sendTeamMessage: s.sendTeamMessage,
@@ -137,8 +192,10 @@ export const MessagesPanel = memo(function MessagesPanel({
       messages: selectTeamMessages(s, teamName),
       messagesState: teamName ? s.teamMessagesByName[teamName] : undefined,
       loadOlderTeamMessages: s.loadOlderTeamMessages,
+      refreshTeamMessagesHead: s.refreshTeamMessagesHead,
     }))
   );
+  const bootstrapHeadRefreshAttemptedForTeamRef = useRef<string | null>(null);
 
   const loadOlderMessages = useCallback(async () => {
     if (!messagesState?.hasMore || messagesState.loadingHead || messagesState.loadingOlder) {
@@ -222,6 +279,37 @@ export const MessagesPanel = memo(function MessagesPanel({
     expandedItemKey,
     messagesScrollTop,
     bottomSheetSnapIndex,
+  ]);
+
+  useEffect(() => {
+    if (messagesSearchBarVisible || messagesSearchQuery.trim().length === 0) {
+      return;
+    }
+    setMessagesSearchBarVisible(true);
+  }, [messagesSearchBarVisible, messagesSearchQuery]);
+
+  useEffect(() => {
+    if (!teamName) {
+      return;
+    }
+    if (effectiveMessages.length > 0) {
+      bootstrapHeadRefreshAttemptedForTeamRef.current = null;
+      return;
+    }
+    if (messagesState?.loadingHead || messagesState?.loadingOlder) {
+      return;
+    }
+    if (bootstrapHeadRefreshAttemptedForTeamRef.current === teamName) {
+      return;
+    }
+    bootstrapHeadRefreshAttemptedForTeamRef.current = teamName;
+    void refreshTeamMessagesHead(teamName).catch(() => undefined);
+  }, [
+    effectiveMessages.length,
+    messagesState?.loadingHead,
+    messagesState?.loadingOlder,
+    refreshTeamMessagesHead,
+    teamName,
   ]);
 
   useLayoutEffect(() => {
@@ -352,20 +440,8 @@ export const MessagesPanel = memo(function MessagesPanel({
   // Auto-clear pending replies when a member actually responds
   useEffect(() => {
     if (Object.keys(pendingRepliesByMember).length === 0) return;
-    const next = { ...pendingRepliesByMember };
-    let changed = false;
-    for (const [memberName, sentAtMs] of Object.entries(pendingRepliesByMember)) {
-      const hasReply = replyCandidateMessages.some((m) => {
-        if (m.from !== memberName) return false;
-        const ts = Date.parse(m.timestamp);
-        return Number.isFinite(ts) && ts > sentAtMs;
-      });
-      if (hasReply) {
-        delete next[memberName];
-        changed = true;
-      }
-    }
-    if (changed) onPendingReplyChange(() => next);
+    const next = reconcilePendingRepliesByMember(pendingRepliesByMember, replyCandidateMessages);
+    if (next !== pendingRepliesByMember) onPendingReplyChange(() => next);
   }, [onPendingReplyChange, pendingRepliesByMember, replyCandidateMessages]);
 
   const handleSend = useCallback(

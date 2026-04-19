@@ -23,7 +23,11 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
-import { buildMemberColorMap, displayMemberName } from '@renderer/utils/memberHelpers';
+import {
+  agentAvatarUrl,
+  buildMemberColorMap,
+  displayMemberName,
+} from '@renderer/utils/memberHelpers';
 import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { Loader2 } from 'lucide-react';
 
@@ -451,7 +455,7 @@ export const EditTeamDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>Edit Team</DialogTitle>
           <DialogDescription>Change team name, description and color</DialogDescription>
@@ -518,6 +522,7 @@ export const EditTeamDialog = ({
                     <MemberDraftRow
                       member={leadDraft}
                       index={0}
+                      avatarSrc={agentAvatarUrl('team-lead', 32)}
                       resolvedColor={effectiveResolvedMemberColorMap.get(
                         leadDraft.originalName ?? leadDraft.name
                       )}

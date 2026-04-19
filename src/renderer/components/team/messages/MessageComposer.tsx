@@ -282,6 +282,9 @@ export const MessageComposer = ({
     if (!isInitializedRef.current) {
       isInitializedRef.current = true;
       prevShouldAutoDelegateRef.current = shouldAutoDelegate;
+      if (shouldAutoDelegate && actionMode === 'do') {
+        setActionMode('delegate');
+      }
       return;
     }
 
