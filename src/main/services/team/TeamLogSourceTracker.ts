@@ -22,7 +22,11 @@ interface TeamLogSourceSnapshot {
   logSourceGeneration: string | null;
 }
 
-export type TeamLogSourceTrackingConsumer = 'change_presence' | 'tool_activity' | 'task_log_stream';
+export type TeamLogSourceTrackingConsumer =
+  | 'change_presence'
+  | 'tool_activity'
+  | 'task_log_stream'
+  | 'stall_monitor';
 
 interface TrackingState {
   watcher: FSWatcher | null;

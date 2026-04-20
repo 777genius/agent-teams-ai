@@ -3,6 +3,7 @@ import {
   createCliAutoSuffixNameGuard,
   createCliProvisionerNameGuard,
 } from '@shared/utils/teamMemberName';
+import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { getStableTeamOwnerId } from '@shared/utils/teamStableOwnerId';
 
 import type { TeamConfig, TeamMember, TeamMemberSnapshot, TeamTaskWithKanban } from '@shared/types';
@@ -262,6 +263,11 @@ export class TeamMemberResolver {
       }
       return aStableId.localeCompare(bStableId);
     });
-    return members;
+
+    const colorMap = buildTeamMemberColorMap(members, { preferProvidedColors: false });
+    return members.map((member) => ({
+      ...member,
+      color: colorMap.get(member.name) ?? member.color ?? getMemberColorByName(member.name),
+    }));
   }
 }

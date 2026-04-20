@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
 import {
+  formatTeamModelSummary,
   getProviderScopedTeamModelLabel,
   getTeamProviderLabel,
   TeamModelSelector,
@@ -29,6 +30,7 @@ import type { EffortLevel, TeamProviderId } from '@shared/types';
 interface MemberDraftRowProps {
   member: MemberDraft;
   index: number;
+  avatarSrc?: string;
   resolvedColor?: string;
   nameError: string | null;
   onNameChange: (id: string, name: string) => void;
@@ -50,18 +52,30 @@ interface MemberDraftRowProps {
   taskSuggestions?: MentionSuggestion[];
   teamSuggestions?: MentionSuggestion[];
   lockProviderModel?: boolean;
+  lockRole?: boolean;
+  lockedRoleLabel?: string;
+  lockIdentity?: boolean;
+  identityLockReason?: string;
   forceInheritedModelSettings?: boolean;
   modelLockReason?: string;
   isRemoved?: boolean;
   onRestore?: (id: string) => void;
+  hideActionButton?: boolean;
   warningText?: string | null;
   disableGeminiOption?: boolean;
   modelIssueText?: string | null;
+  lockedModelAction?: {
+    label: string;
+    description?: string;
+    onClick: () => void;
+    disabled?: boolean;
+  };
 }
 
 export const MemberDraftRow = ({
   member,
   index,
+  avatarSrc,
   resolvedColor,
   nameError,
   onNameChange,
@@ -83,17 +97,24 @@ export const MemberDraftRow = ({
   taskSuggestions,
   teamSuggestions,
   lockProviderModel = false,
+  lockRole = false,
+  lockedRoleLabel,
+  lockIdentity = false,
+  identityLockReason,
   forceInheritedModelSettings = false,
   modelLockReason,
   isRemoved = false,
   onRestore,
+  hideActionButton = false,
   warningText,
   disableGeminiOption = false,
   modelIssueText,
+  lockedModelAction,
 }: MemberDraftRowProps): React.JSX.Element => {
   const { isLight } = useTheme();
   const memberColorSet = getTeamColorSet(
-    resolvedColor ?? getMemberColorByName(member.name.trim() || `member-${index}`)
+    resolvedColor ??
+      getMemberColorByName(member.originalName?.trim() || member.name.trim() || `member-${index}`)
   );
   const [workflowExpanded, setWorkflowExpanded] = useState(false);
   const [modelExpanded, setModelExpanded] = useState(false);
@@ -175,10 +196,16 @@ export const MemberDraftRow = ({
     ? `${modelButtonLabelBase} (lead)`
     : modelButtonLabelBase;
   const modelButtonAriaLabel = `${getTeamProviderLabel(effectiveProviderId)} provider, ${modelButtonLabel}`;
+  const canOpenLockedModelPanel = lockProviderModel && !isRemoved && Boolean(lockedModelAction);
   const modelTooltipText = forceInheritedModelSettings
     ? 'Provider, model, and effort are inherited from the lead while sync is enabled.'
-    : modelLockReason;
+    : (lockedModelAction?.description ?? modelLockReason);
   const hasModelIssue = Boolean(modelIssueText);
+  const runtimeSummary = formatTeamModelSummary(
+    effectiveProviderId,
+    effectiveModel?.trim() ?? '',
+    effectiveEffort
+  );
 
   return (
     <div
@@ -196,33 +223,42 @@ export const MemberDraftRow = ({
         aria-hidden="true"
       />
       <div className="space-y-0.5">
-        <Input
-          className="h-8 text-xs"
-          value={member.name}
-          aria-label={`Member ${index + 1} name`}
-          disabled={isRemoved}
-          onChange={(event) => onNameChange(member.id, event.target.value)}
-          placeholder="member-name"
-          style={
-            member.name.trim()
-              ? {
-                  color: memberColorSet.text,
-                }
-              : undefined
-          }
-        />
+        <div className="flex items-center gap-2">
+          {avatarSrc ? (
+            <img
+              src={avatarSrc}
+              alt=""
+              className="size-8 shrink-0 rounded-full bg-[var(--color-surface-raised)]"
+              loading="lazy"
+            />
+          ) : null}
+          <Input
+            className="h-8 text-xs"
+            value={member.name}
+            aria-label={`Member ${index + 1} name`}
+            disabled={isRemoved || lockIdentity}
+            onChange={(event) => onNameChange(member.id, event.target.value)}
+            placeholder="member-name"
+          />
+        </div>
         {nameError ? <p className="text-[10px] text-red-300">{nameError}</p> : null}
       </div>
       <div>
-        <RoleSelect
-          value={member.roleSelection || '__none__'}
-          disabled={isRemoved}
-          onValueChange={(roleSelection) => onRoleChange(member.id, roleSelection)}
-          customRole={member.customRole}
-          onCustomRoleChange={(customRole) => onCustomRoleChange(member.id, customRole)}
-          triggerClassName="h-8 text-xs"
-          inputClassName="h-8 text-xs"
-        />
+        {lockRole ? (
+          <div className="flex h-8 items-center rounded-md border border-[var(--color-border)] bg-transparent px-3 text-xs text-[var(--color-text)] opacity-80">
+            {lockedRoleLabel || member.customRole || member.roleSelection || 'No role'}
+          </div>
+        ) : (
+          <RoleSelect
+            value={member.roleSelection || '__none__'}
+            disabled={isRemoved}
+            onValueChange={(roleSelection) => onRoleChange(member.id, roleSelection)}
+            customRole={member.customRole}
+            onCustomRoleChange={(customRole) => onCustomRoleChange(member.id, customRole)}
+            triggerClassName="h-8 text-xs"
+            inputClassName="h-8 text-xs"
+          />
+        )}
       </div>
       <div className="space-y-1">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
@@ -258,7 +294,7 @@ export const MemberDraftRow = ({
                         'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50'
                     )}
                     aria-label={modelButtonAriaLabel}
-                    disabled={lockProviderModel || isRemoved}
+                    disabled={(lockProviderModel && !canOpenLockedModelPanel) || isRemoved}
                     onClick={() => setModelExpanded((prev) => !prev)}
                   >
                     {modelExpanded ? (
@@ -289,7 +325,7 @@ export const MemberDraftRow = ({
               ) : null}
             </Tooltip>
           </div>
-          {isRemoved ? (
+          {hideActionButton ? null : isRemoved ? (
             <Button
               variant="outline"
               size="sm"
@@ -358,36 +394,66 @@ export const MemberDraftRow = ({
       ) : null}
       {modelExpanded && (
         <div className="space-y-2 pl-3 md:col-span-3">
-          <TeamModelSelector
-            providerId={effectiveProviderId}
-            onProviderChange={(providerId) => {
-              if (lockProviderModel) return;
-              onProviderChange(member.id, providerId);
-            }}
-            value={effectiveModel ?? ''}
-            onValueChange={(value) => {
-              if (lockProviderModel) return;
-              onModelChange(member.id, value);
-            }}
-            id={`member-${member.id}-model`}
-            disableGeminiOption={disableGeminiOption}
-            modelIssueReasonByValue={
-              effectiveModel?.trim() ? { [effectiveModel.trim()]: modelIssueText } : undefined
-            }
-          />
-          <EffortLevelSelector
-            value={effectiveEffort ?? ''}
-            onValueChange={(value) => {
-              if (lockProviderModel) return;
-              onEffortChange(member.id, value);
-            }}
-            id={`member-${member.id}-effort`}
-          />
-          {lockProviderModel && (
-            <p className="text-[11px] text-amber-300">
-              {modelLockReason ??
-                'Provider, model, and effort changes are disabled while the team is live. Reconnect the team to apply them safely.'}
-            </p>
+          {lockProviderModel && lockedModelAction ? (
+            <div className="space-y-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+              <div className="space-y-1">
+                <p className="text-[11px] font-medium text-[var(--color-text)]">
+                  Current lead runtime
+                </p>
+                <p className="text-[11px] text-[var(--color-text-muted)]">{runtimeSummary}</p>
+              </div>
+              <p className="text-[11px] text-[var(--color-text-muted)]">
+                {lockedModelAction.description ??
+                  'Lead runtime changes open Relaunch Team, where provider, model, and effort can be updated.'}
+              </p>
+              <p className="text-[11px] text-amber-300">
+                Saving those runtime changes restarts the whole team.
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="w-fit"
+                onClick={lockedModelAction.onClick}
+                disabled={lockedModelAction.disabled}
+              >
+                {lockedModelAction.label}
+              </Button>
+            </div>
+          ) : (
+            <>
+              <TeamModelSelector
+                providerId={effectiveProviderId}
+                onProviderChange={(providerId) => {
+                  if (lockProviderModel) return;
+                  onProviderChange(member.id, providerId);
+                }}
+                value={effectiveModel ?? ''}
+                onValueChange={(value) => {
+                  if (lockProviderModel) return;
+                  onModelChange(member.id, value);
+                }}
+                id={`member-${member.id}-model`}
+                disableGeminiOption={disableGeminiOption}
+                modelIssueReasonByValue={
+                  effectiveModel?.trim() ? { [effectiveModel.trim()]: modelIssueText } : undefined
+                }
+              />
+              <EffortLevelSelector
+                value={effectiveEffort ?? ''}
+                onValueChange={(value) => {
+                  if (lockProviderModel) return;
+                  onEffortChange(member.id, value);
+                }}
+                id={`member-${member.id}-effort`}
+              />
+              {lockProviderModel && (
+                <p className="text-[11px] text-amber-300">
+                  {modelLockReason ??
+                    'Provider, model, and effort changes are disabled while the team is live. Reconnect the team to apply them safely.'}
+                </p>
+              )}
+            </>
           )}
         </div>
       )}

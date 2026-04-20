@@ -4,9 +4,15 @@
  * composes project-specific UI, selectors, and presentation helpers.
  */
 
+import { useMemo } from 'react';
+
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
-import { agentAvatarUrl, buildMemberLaunchPresentation } from '@renderer/utils/memberHelpers';
+import {
+  agentAvatarUrl,
+  buildMemberAvatarMap,
+  buildMemberLaunchPresentation,
+} from '@renderer/utils/memberHelpers';
 import { buildTeamProvisioningPresentation } from '@renderer/utils/teamProvisioningPresentation';
 import { ExternalLink, Loader2, MessageSquare, Plus, User } from 'lucide-react';
 
@@ -291,7 +297,6 @@ const MemberPopoverContent = ({
     node.domainRef.kind === 'member' || node.domainRef.kind === 'lead'
       ? node.domainRef.teamName
       : '';
-  const avatarSrc = node.avatarUrl ?? agentAvatarUrl(memberName, 64);
   const {
     teamData,
     teamMembers,
@@ -301,6 +306,8 @@ const MemberPopoverContent = ({
     memberSpawnSnapshot,
     memberSpawnStatuses,
   } = useGraphMemberPopoverContext(teamName, memberName);
+  const avatarMap = useMemo(() => buildMemberAvatarMap(teamMembers), [teamMembers]);
+  const avatarSrc = node.avatarUrl ?? avatarMap.get(memberName) ?? agentAvatarUrl(memberName, 64);
   const member = teamMembers.find((candidate) => candidate.name === memberName) ?? null;
   const provisioningPresentation =
     teamData && teamName

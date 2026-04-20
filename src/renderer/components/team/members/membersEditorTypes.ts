@@ -4,6 +4,7 @@ import type { EffortLevel, TeamProviderId } from '@shared/types';
 export interface MemberDraft {
   id: string;
   name: string;
+  originalName?: string;
   roleSelection: string;
   customRole: string;
   workflow?: string;

@@ -1,4 +1,5 @@
 import { classifyIdleNotificationText } from '@shared/utils/idleNotificationSemantics';
+import { createLogger } from '@shared/utils/logger';
 import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { createHash } from 'crypto';
 
@@ -7,6 +8,8 @@ import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
 import type { InboxMessage, TeamConfig } from '@shared/types';
 
 const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
+const MESSAGE_FEED_CACHE_MAX_AGE_MS = 5_000;
+const logger = createLogger('Service:TeamMessageFeedService');
 
 interface TeamMessageFeedDeps {
   getConfig: (teamName: string) => Promise<TeamConfig | null>;
@@ -18,6 +21,7 @@ interface TeamMessageFeedDeps {
 interface TeamMessageFeedCacheEntry {
   feedRevision: string;
   messages: InboxMessage[];
+  cachedAt: number;
 }
 
 export interface TeamNormalizedMessageFeed {
@@ -352,7 +356,10 @@ export class TeamMessageFeedService {
 
   async getFeed(teamName: string): Promise<TeamNormalizedMessageFeed> {
     const cached = this.cacheByTeam.get(teamName);
-    if (cached && !this.dirtyTeams.has(teamName)) {
+    const now = Date.now();
+    const cacheDirty = this.dirtyTeams.has(teamName);
+    const cacheExpired = !cached || now - cached.cachedAt >= MESSAGE_FEED_CACHE_MAX_AGE_MS;
+    if (cached && !cacheDirty && !cacheExpired) {
       return {
         teamName,
         feedRevision: cached.feedRevision,
@@ -362,7 +369,7 @@ export class TeamMessageFeedService {
 
     const config = await this.deps.getConfig(teamName);
     if (!config) {
-      const emptyEntry = { feedRevision: toFeedRevision([]), messages: [] };
+      const emptyEntry = { feedRevision: toFeedRevision([]), messages: [], cachedAt: now };
       this.cacheByTeam.set(teamName, emptyEntry);
       this.dirtyTeams.delete(teamName);
       return { teamName, ...emptyEntry };
@@ -389,12 +396,21 @@ export class TeamMessageFeedService {
     });
 
     const feedRevision = toFeedRevision(messages);
+    if (cached && !cacheDirty && cacheExpired && cached.feedRevision !== feedRevision) {
+      logger.warn(
+        `[${teamName}] Message feed cache expired without dirty invalidation and recovered newer durable messages`
+      );
+    }
     const nextEntry =
       cached?.feedRevision === feedRevision
-        ? cached
+        ? {
+            ...cached,
+            cachedAt: now,
+          }
         : {
             feedRevision,
             messages,
+            cachedAt: now,
           };
 
     this.cacheByTeam.set(teamName, nextEntry);

@@ -172,6 +172,7 @@ describe('ipc teams handlers', () => {
     deleteTeam: vi.fn(async () => undefined),
     getLeadMemberName: vi.fn(async () => 'team-lead'),
     getTeamDisplayName: vi.fn(async () => 'My Team'),
+    updateConfig: vi.fn(async () => ({ name: 'My Team' })),
     sendMessage: vi.fn(async () => ({ deliveredToInbox: true, messageId: 'm1' })),
     sendDirectToLead: vi.fn(async () => ({ deliveredToInbox: false, messageId: 'direct-1' })),
     createTask: vi.fn(async () => ({ id: '1', subject: 'Test', status: 'pending' })),
@@ -1729,6 +1730,47 @@ describe('ipc teams handlers', () => {
       const handler = handlers.get(TEAM_ADD_MEMBER)!;
       const result = (await handler({} as never, 'my-team', null)) as { success: boolean };
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe('updateConfig', () => {
+    it('notifies a live lead only when the team name actually changes', async () => {
+      const handler = handlers.get(TEAM_UPDATE_CONFIG)!;
+      service.getTeamDisplayName.mockResolvedValueOnce('My Team');
+      provisioningService.isTeamAlive = vi.fn(() => true);
+
+      const result = (await handler({} as never, 'my-team', {
+        name: 'Renamed Team',
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(service.updateConfig).toHaveBeenCalledWith('my-team', {
+        name: 'Renamed Team',
+        description: undefined,
+        color: undefined,
+      });
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledWith(
+        'my-team',
+        'The team has been renamed to "Renamed Team". Please use this name when referring to the team going forward.'
+      );
+    });
+
+    it('does not notify the lead when the submitted team name is unchanged', async () => {
+      const handler = handlers.get(TEAM_UPDATE_CONFIG)!;
+      service.getTeamDisplayName.mockResolvedValueOnce('My Team');
+      provisioningService.isTeamAlive = vi.fn(() => true);
+
+      const result = (await handler({} as never, 'my-team', {
+        name: 'My Team',
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(service.updateConfig).toHaveBeenCalledWith('my-team', {
+        name: 'My Team',
+        description: undefined,
+        color: undefined,
+      });
+      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
     });
   });
 

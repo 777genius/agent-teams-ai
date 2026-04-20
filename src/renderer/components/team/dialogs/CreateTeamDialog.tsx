@@ -48,6 +48,7 @@ import {
 } from '@renderer/utils/teamModelAvailability';
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
+import { resolveTeamLeadColorName } from '@shared/utils/teamMemberColors';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 
@@ -941,7 +942,14 @@ export const CreateTeamDialog = ({
   const mentionSuggestions = useMemo(
     () =>
       soloTeam
-        ? [{ id: 'team-lead', name: 'team-lead', subtitle: 'Team Lead', color: 'blue' }]
+        ? [
+            {
+              id: 'team-lead',
+              name: 'team-lead',
+              subtitle: 'Team Lead',
+              color: resolveTeamLeadColorName(),
+            },
+          ]
         : buildMemberDraftSuggestions(members, memberColorMap),
     [memberColorMap, members, soloTeam]
   );
@@ -1219,7 +1227,7 @@ export const CreateTeamDialog = ({
         }
       }}
     >
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="text-sm">{initialData ? 'Copy Team' : 'Create Team'}</DialogTitle>
           <DialogDescription className="text-xs">

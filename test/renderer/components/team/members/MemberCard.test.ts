@@ -274,4 +274,35 @@ describe('MemberCard starting-state visuals', () => {
       await Promise.resolve();
     });
   });
+
+  it('renders memory after the role label in the compact runtime summary row', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberCard, {
+          member,
+          memberColor: 'blue',
+          runtimeSummary: '5.2 · Medium · 238.3 MB',
+          isTeamAlive: true,
+          isTeamProvisioning: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const text = host.textContent ?? '';
+    expect(text).toContain('5.2 · Medium');
+    expect(text).toContain('Reviewer');
+    expect(text).toContain('238.3 MB');
+    expect(text.indexOf('Reviewer')).toBeLessThan(text.indexOf('238.3 MB'));
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
 });

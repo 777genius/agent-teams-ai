@@ -76,8 +76,8 @@ interface SendMessageDialogProps {
   onClose: () => void;
 }
 
-// Sticky action mode — survives dialog close/reopen (component remount)
-// Default: 'delegate' for teams (overridden to 'do' if solo/no teammates)
+// Sticky action mode within the current session.
+// Each dialog open still re-derives the default from the current team shape.
 let stickyActionMode: ActionMode = 'delegate';
 
 export const SendMessageDialog = ({
@@ -168,7 +168,12 @@ export const SendMessageDialog = ({
   useEffect(() => {
     if (open && !prevOpenRef.current) {
       const leadName = members.find((m) => isLeadMember(m))?.name;
-      setMember(defaultRecipient ?? leadName ?? '');
+      const nextRecipient = defaultRecipient ?? leadName ?? '';
+      const nextRecipientMember = members.find((candidate) => candidate.name === nextRecipient);
+      const nextCanDelegate =
+        members.length > 1 && Boolean(nextRecipientMember && isLeadMember(nextRecipientMember));
+      setMember(nextRecipient);
+      setActionMode(nextCanDelegate ? 'delegate' : 'do');
       setQuote(quotedMessage);
       setQuoteExpanded(false);
       prevResultRef.current = lastResult;
@@ -188,6 +193,8 @@ export const SendMessageDialog = ({
     defaultChip,
     quotedMessage,
     lastResult,
+    members,
+    setActionMode,
     textDraft,
     chipDraft,
   ]);

@@ -38,6 +38,7 @@ import { useStore } from '@renderer/store';
 import { isImageMimeType } from '@renderer/utils/attachmentUtils';
 import {
   agentAvatarUrl,
+  buildMemberAvatarMap,
   buildMemberColorMap,
   displayMemberName,
   KANBAN_COLUMN_DISPLAY,
@@ -149,6 +150,7 @@ export const TaskDetailDialog = ({
   headerExtra,
 }: TaskDetailDialogProps): React.JSX.Element => {
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
+  const avatarMap = useMemo(() => buildMemberAvatarMap(members), [members]);
   const { isLight } = useTheme();
   const currentTask = task ? (taskMap.get(task.id) ?? task) : null;
   const updateTaskFields = useStore((s) => s.updateTaskFields);
@@ -697,7 +699,10 @@ export const TaskDetailDialog = ({
                         style={reviewerBadgeStyle}
                       >
                         <img
-                          src={agentAvatarUrl(currentTask.reviewer, 18)}
+                          src={
+                            avatarMap.get(currentTask.reviewer) ??
+                            agentAvatarUrl(currentTask.reviewer, 18)
+                          }
                           alt=""
                           className="size-4 shrink-0 rounded-full bg-[var(--color-surface-raised)]"
                           loading="lazy"

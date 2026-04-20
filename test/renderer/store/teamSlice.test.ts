@@ -2421,6 +2421,22 @@ describe('teamSlice actions', () => {
     expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(createRuntimeSnapshot());
   });
 
+  it('restartMember refreshes spawn statuses and runtime snapshot even when restart fails', async () => {
+    const store = createSliceStore();
+    const refreshSpawnStatuses = vi.fn(async (_teamName: string) => undefined);
+    const refreshRuntimeSnapshot = vi.fn(async (_teamName: string) => undefined);
+    store.setState({
+      fetchMemberSpawnStatuses: refreshSpawnStatuses,
+      fetchTeamAgentRuntime: refreshRuntimeSnapshot,
+    });
+    hoisted.restartMember.mockRejectedValueOnce(new Error('restart failed'));
+
+    await expect(store.getState().restartMember('my-team', 'alice')).rejects.toThrow('restart failed');
+
+    expect(refreshSpawnStatuses).toHaveBeenCalledWith('my-team');
+    expect(refreshRuntimeSnapshot).toHaveBeenCalledWith('my-team');
+  });
+
   it('clears stale runtime snapshots on delete', async () => {
     const store = createSliceStore();
     store.setState({

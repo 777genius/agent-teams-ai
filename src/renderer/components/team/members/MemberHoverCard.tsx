@@ -18,6 +18,7 @@ import {
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import {
   agentAvatarUrl,
+  buildMemberAvatarMap,
   buildMemberLaunchPresentation,
   displayMemberName,
 } from '@renderer/utils/memberHelpers';
@@ -92,6 +93,7 @@ export const MemberHoverCard = ({
     }))
   );
   const openMemberProfile = useStore((s) => s.openMemberProfile);
+  const avatarMap = buildMemberAvatarMap(teamMembers);
 
   if (!member) {
     return <>{children}</>;
@@ -142,7 +144,7 @@ export const MemberHoverCard = ({
           <div className="flex items-center gap-3">
             <div className="relative shrink-0">
               <img
-                src={agentAvatarUrl(member.name, 64)}
+                src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name, 64)}
                 alt={member.name}
                 className="size-10 rounded-full bg-[var(--color-surface-raised)]"
                 loading="lazy"

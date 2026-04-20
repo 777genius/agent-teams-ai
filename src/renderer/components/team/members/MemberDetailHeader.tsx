@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Badge } from '@renderer/components/ui/badge';
 import { DialogDescription, DialogTitle } from '@renderer/components/ui/dialog';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useStore } from '@renderer/store';
+import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import {
   agentAvatarUrl,
+  buildMemberAvatarMap,
   buildMemberLaunchPresentation,
   displayMemberName,
 } from '@renderer/utils/memberHelpers';
@@ -52,6 +55,11 @@ export const MemberDetailHeader = ({
   updatingRole,
 }: MemberDetailHeaderProps): React.JSX.Element => {
   const [editing, setEditing] = useState(false);
+  const selectedTeamName = useStore((s) => s.selectedTeamName);
+  const teamMembers = useStore((s) =>
+    selectedTeamName ? selectResolvedMembersForTeamName(s, selectedTeamName) : []
+  );
+  const avatarMap = useMemo(() => buildMemberAvatarMap(teamMembers), [teamMembers]);
 
   // NOTE: lead context display disabled — usage formula is inaccurate
   // const teamName = useStore((s) => s.selectedTeamName);
@@ -84,7 +92,7 @@ export const MemberDetailHeader = ({
     <div className="flex items-center gap-3">
       <div className="relative shrink-0">
         <img
-          src={agentAvatarUrl(member.name, 96)}
+          src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name, 96)}
           alt={member.name}
           className="size-12 rounded-full bg-[var(--color-surface-raised)]"
           loading="lazy"

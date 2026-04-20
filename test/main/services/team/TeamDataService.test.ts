@@ -461,6 +461,195 @@ function buildResolvedMember(name: string): ResolvedTeamMember {
 }
 
 describe('TeamDataService', () => {
+  it('rejects duplicate member names in replaceMembers', async () => {
+    const writeMembers = vi.fn(async () => {});
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => []),
+      writeMembers,
+    } as never;
+
+    const service = new TeamDataService(
+      { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+      { getTasks: vi.fn(async () => []) } as never,
+      { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+      { resolveMembers: vi.fn(() => []) } as never,
+      { getState: vi.fn(async () => ({ teamName: 'dup-team', reviewers: [], tasks: {} })) } as never,
+      {} as never,
+      membersMetaStore,
+      { readMessages: vi.fn(async () => []) } as never
+    );
+
+    await expect(
+      service.replaceMembers('dup-team', {
+        members: [
+          { name: 'alice', role: 'Reviewer' },
+          { name: 'alice', role: 'Developer' },
+        ],
+      })
+    ).rejects.toThrow('Member "alice" already exists');
+
+    expect(writeMembers).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid or reserved member names in replaceMembers', async () => {
+    const writeMembers = vi.fn(async () => {});
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => []),
+      writeMembers,
+    } as never;
+
+    const service = new TeamDataService(
+      { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+      { getTasks: vi.fn(async () => []) } as never,
+      { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+      { resolveMembers: vi.fn(() => []) } as never,
+      { getState: vi.fn(async () => ({ teamName: 'dup-team', reviewers: [], tasks: {} })) } as never,
+      {} as never,
+      membersMetaStore,
+      { readMessages: vi.fn(async () => []) } as never
+    );
+
+    await expect(
+      service.replaceMembers('dup-team', {
+        members: [{ name: 'bad/name', role: 'Reviewer' }],
+      })
+    ).rejects.toThrow('Member name "bad/name" is invalid');
+
+    await expect(
+      service.replaceMembers('dup-team', {
+        members: [{ name: 'user', role: 'Reviewer' }],
+      })
+    ).rejects.toThrow('Member name "user" is reserved');
+
+    expect(writeMembers).not.toHaveBeenCalled();
+  });
+
+  it('preserves agentId for existing members during replaceMembers', async () => {
+    const writeMembers = vi.fn(async () => {});
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [
+        {
+          name: 'alice',
+          role: 'Developer',
+          providerId: 'codex',
+          model: 'gpt-5.4-mini',
+          effort: 'medium',
+          agentType: 'general-purpose',
+          agentId: 'alice@runtime-team',
+          joinedAt: 1710000000000,
+        },
+      ]),
+      writeMembers,
+    } as never;
+
+    const service = new TeamDataService(
+      { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+      { getTasks: vi.fn(async () => []) } as never,
+      { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+      { resolveMembers: vi.fn(() => []) } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'runtime-team', reviewers: [], tasks: {} })),
+      } as never,
+      {} as never,
+      membersMetaStore,
+      { readMessages: vi.fn(async () => []) } as never
+    );
+
+    await service.replaceMembers('runtime-team', {
+      members: [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'codex',
+          model: 'gpt-5.2',
+          effort: 'high',
+        },
+      ],
+    });
+
+    expect(writeMembers).toHaveBeenCalledWith(
+      'runtime-team',
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'codex',
+          model: 'gpt-5.2',
+          effort: 'high',
+          agentId: 'alice@runtime-team',
+        }),
+      ])
+    );
+  });
+
+  it('does not carry over agentId from a previously removed member with the same name', async () => {
+    const writeMembers = vi.fn(async () => {});
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [
+        {
+          name: 'alice',
+          role: 'Developer',
+          providerId: 'codex',
+          model: 'gpt-5.4-mini',
+          effort: 'medium',
+          agentType: 'general-purpose',
+          agentId: 'alice@old-runtime-team',
+          joinedAt: 1710000000000,
+          removedAt: 1715000000000,
+        },
+      ]),
+      writeMembers,
+    } as never;
+
+    const service = new TeamDataService(
+      { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+      { getTasks: vi.fn(async () => []) } as never,
+      { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+      { resolveMembers: vi.fn(() => []) } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'runtime-team', reviewers: [], tasks: {} })),
+      } as never,
+      {} as never,
+      membersMetaStore,
+      { readMessages: vi.fn(async () => []) } as never
+    );
+
+    await service.replaceMembers('runtime-team', {
+      members: [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'codex',
+          model: 'gpt-5.2',
+          effort: 'high',
+        },
+      ],
+    });
+
+    expect(writeMembers).toHaveBeenCalledWith(
+      'runtime-team',
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'codex',
+          model: 'gpt-5.2',
+          effort: 'high',
+          agentId: undefined,
+          removedAt: undefined,
+        }),
+      ])
+    );
+  });
+
   it('keeps getTeamData read-only and skips kanban garbage-collect', async () => {
     const order: string[] = [];
     const tasks: TeamTask[] = [

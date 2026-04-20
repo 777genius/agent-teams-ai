@@ -30,6 +30,20 @@ describe('getTeamColorSet', () => {
     expect(getTeamColorSet('purple').border).toBe('#a855f7');
   });
 
+  it('resolves curated member palette colors for the first roster slots', () => {
+    expect(getTeamColorSet('saffron').border).toBe('#eab308');
+    expect(getTeamColorSet('turquoise').border).toBe('#14b8a6');
+    expect(getTeamColorSet('brick').border).toBe('#ef4444');
+    expect(getTeamColorSet('indigo').border).toBe('#8b5cf6');
+    expect(getTeamColorSet('forest').border).toBe('#22c55e');
+    expect(getTeamColorSet('apricot').border).toBe('#fb923c');
+    expect(getTeamColorSet('rose').border).toBe('#f43f5e');
+    expect(getTeamColorSet('cerulean').border).toBe('#38bdf8');
+    expect(getTeamColorSet('olive').border).toBe('#84cc16');
+    expect(getTeamColorSet('copper').border).toBe('#b45309');
+    expect(getTeamColorSet('steel').border).toBe('#64748b');
+  });
+
   it('is case-insensitive for named colors', () => {
     expect(getTeamColorSet('Green')).toEqual(getTeamColorSet('green'));
     expect(getTeamColorSet('BLUE')).toEqual(getTeamColorSet('blue'));

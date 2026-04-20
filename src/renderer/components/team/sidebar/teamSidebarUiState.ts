@@ -23,6 +23,7 @@ export interface TeamClaudeLogsSidebarUiState {
 }
 
 const messagesStateByTeam = new Map<string, TeamMessagesSidebarUiState>();
+const pendingRepliesStateByTeam = new Map<string, Record<string, number>>();
 const claudeLogsStateByTeam = new Map<string, TeamClaudeLogsSidebarUiState>();
 
 function cloneMessagesFilter(filter: MessagesFilterState): MessagesFilterState {
@@ -99,6 +100,17 @@ export function setTeamMessagesSidebarUiState(
     ...state,
     messagesFilter: cloneMessagesFilter(state.messagesFilter),
   });
+}
+
+export function getTeamPendingRepliesState(teamName: string): Record<string, number> {
+  return { ...(pendingRepliesStateByTeam.get(teamName) ?? {}) };
+}
+
+export function setTeamPendingRepliesState(
+  teamName: string,
+  pendingRepliesByMember: Record<string, number>
+): void {
+  pendingRepliesStateByTeam.set(teamName, { ...pendingRepliesByMember });
 }
 
 export function getTeamClaudeLogsSidebarUiState(teamName: string): TeamClaudeLogsSidebarUiState {

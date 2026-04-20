@@ -1,6 +1,7 @@
 import {
   type JSX,
   memo,
+  type RefObject,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -157,6 +158,14 @@ interface LeadThoughtsGroupRowProps {
   memberColor?: string;
   isNew?: boolean;
   onVisible?: (message: InboxMessage) => void;
+  /**
+   * Root element for IntersectionObserver-based visibility tracking. When
+   * omitted, the observer falls back to the document viewport — correct for
+   * top-level renders, incorrect when the row is inside a scroll container
+   * (sidebar, bottom-sheet) that can clip the row while the document
+   * viewport still contains it.
+   */
+  observerRoot?: RefObject<HTMLElement | null>;
   /** When false, the live indicator is always off (for historical thought groups). */
   canBeLive?: boolean;
   /** Whether the owning team is currently alive. */
@@ -528,6 +537,7 @@ const LeadThoughtsGroupRowComponent = ({
   memberColor,
   isNew,
   onVisible,
+  observerRoot,
   canBeLive,
   isTeamAlive,
   leadActivity,
@@ -637,6 +647,9 @@ const LeadThoughtsGroupRowComponent = ({
     if (!onVisible) return;
     const el = ref.current;
     if (!el) return;
+    // Resolve observer root at effect-time. Falls back to the document
+    // viewport when no root is provided — preserves pre-contract behavior.
+    const root = observerRoot?.current ?? null;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry?.isIntersecting) return;
@@ -647,11 +660,11 @@ const LeadThoughtsGroupRowComponent = ({
         }
         reportedCountRef.current = thoughts.length;
       },
-      { threshold: VIEWPORT_THRESHOLD, rootMargin: '0px' }
+      { root, threshold: VIEWPORT_THRESHOLD, rootMargin: '0px' }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [onVisible, thoughts]);
+  }, [onVisible, observerRoot, thoughts]);
 
   const clearPendingScrollSync = useCallback(() => {
     if (scrollSyncFrameRef.current !== null) {
@@ -1134,5 +1147,6 @@ export const LeadThoughtsGroupRow = memo(
     prev.compactHeader === next.compactHeader &&
     prev.onExpand === next.onExpand &&
     prev.expandItemKey === next.expandItemKey &&
+    prev.observerRoot === next.observerRoot &&
     areThoughtGroupsEquivalent(prev.group, next.group)
 );

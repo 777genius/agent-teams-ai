@@ -9,7 +9,7 @@ import {
 } from '@renderer/components/ui/dialog';
 import { CARD_ICON_MUTED } from '@renderer/constants/cssVariables';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
+import { agentAvatarUrl, buildMemberAvatarMap } from '@renderer/utils/memberHelpers';
 
 import { MemberBadge } from '../MemberBadge';
 
@@ -28,6 +28,7 @@ function formatTime(timestamp: string): string {
 
 interface DialogThoughtsContentProps {
   group: LeadThoughtGroup;
+  members?: ResolvedTeamMember[];
   memberColor?: string;
   onTaskIdClick?: (taskId: string) => void;
   onReply?: (message: InboxMessage) => void;
@@ -39,6 +40,7 @@ interface DialogThoughtsContentProps {
 
 const DialogThoughtsContent = ({
   group,
+  members,
   memberColor,
   onTaskIdClick,
   onReply,
@@ -51,6 +53,7 @@ const DialogThoughtsContent = ({
   const newest = thoughts[0];
   const oldest = thoughts[thoughts.length - 1];
   const colors = getTeamColorSet(memberColor ?? '');
+  const avatarMap = useMemo(() => buildMemberAvatarMap(members ?? []), [members]);
   const chronological = useMemo(() => [...thoughts].reverse(), [thoughts]);
 
   return (
@@ -58,7 +61,7 @@ const DialogThoughtsContent = ({
       {/* Header */}
       <div className="flex items-center gap-2 pb-3">
         <img
-          src={agentAvatarUrl(newest.from, 32)}
+          src={avatarMap.get(newest.from) ?? agentAvatarUrl(newest.from, 32)}
           alt=""
           className="size-6 rounded-full bg-[var(--color-surface-raised)]"
           loading="lazy"
@@ -193,6 +196,7 @@ export const MessageExpandDialog = memo(function MessageExpandDialog({
           ) : displayItem?.type === 'lead-thoughts' ? (
             <DialogThoughtsContent
               group={displayItem.group}
+              members={members}
               memberColor={thoughtMemberColor}
               onTaskIdClick={onTaskIdClick}
               onReply={onReplyToMessage}

@@ -4,7 +4,11 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
-import { agentAvatarUrl, buildMemberColorMap } from '@renderer/utils/memberHelpers';
+import {
+  agentAvatarUrl,
+  buildMemberAvatarMap,
+  buildMemberColorMap,
+} from '@renderer/utils/memberHelpers';
 import { Command as CommandPrimitive } from 'cmdk';
 import { Check, ChevronsUpDown } from 'lucide-react';
 
@@ -43,6 +47,7 @@ export const MemberSelect = ({
   const { isLight } = useTheme();
 
   const colorMap = React.useMemo(() => buildMemberColorMap(members), [members]);
+  const avatarMap = React.useMemo(() => buildMemberAvatarMap(members), [members]);
   const selectedMember = React.useMemo(
     () => (value ? members.find((m) => m.name === value) : null),
     [members, value]
@@ -60,7 +65,7 @@ export const MemberSelect = ({
     return (
       <span className="inline-flex items-center gap-1.5">
         <img
-          src={agentAvatarUrl(member.name, avatarSize)}
+          src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name, avatarSize)}
           alt=""
           className={`${avatarClass} shrink-0 rounded-full bg-[var(--color-surface-raised)]`}
           loading="lazy"
@@ -176,7 +181,7 @@ export const MemberSelect = ({
                     className="relative flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none data-[selected=true]:bg-[var(--color-surface-raised)] data-[selected=true]:text-[var(--color-text)]"
                   >
                     <img
-                      src={agentAvatarUrl(m.name, avatarSize)}
+                      src={avatarMap.get(m.name) ?? agentAvatarUrl(m.name, avatarSize)}
                       alt=""
                       className={`${avatarClass} shrink-0 rounded-full bg-[var(--color-surface-raised)]`}
                       loading="lazy"

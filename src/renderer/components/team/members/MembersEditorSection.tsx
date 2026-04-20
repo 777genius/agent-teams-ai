@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
 import { Label } from '@renderer/components/ui/label';
+import { getParticipantAvatarUrlByIndex } from '@renderer/utils/memberAvatarCatalog';
 import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { Plus } from 'lucide-react';
@@ -88,10 +89,15 @@ export interface MembersEditorSectionProps {
   hideContent?: boolean;
   /** Existing team members — used to reserve their colors so drafts get the next available ones */
   existingMembers?: readonly { name: string; color?: string; removedAt?: number | string | null }[];
+  /** Pre-resolved member colors from the live Team view. */
+  existingMemberColorMap?: ReadonlyMap<string, string>;
   /** Default provider to use for newly added member rows. */
   defaultProviderId?: TeamProviderId;
   /** When true, provider/model controls stay read-only for existing rows. */
   lockProviderModel?: boolean;
+  /** When true, existing teammate names stay read-only while the team is live. */
+  lockExistingMemberIdentity?: boolean;
+  identityLockReason?: string;
   inheritedProviderId?: TeamProviderId;
   inheritedModel?: string;
   inheritedEffort?: EffortLevel;
@@ -102,6 +108,8 @@ export interface MembersEditorSectionProps {
   memberWarningById?: Record<string, string | null | undefined>;
   disableGeminiOption?: boolean;
   memberModelIssueById?: Record<string, string | null | undefined>;
+  disableAddMember?: boolean;
+  addMemberLockReason?: string;
 }
 
 export const MembersEditorSection = ({
@@ -118,8 +126,11 @@ export const MembersEditorSection = ({
   headerExtra,
   hideContent = false,
   existingMembers,
+  existingMemberColorMap,
   defaultProviderId = 'anthropic',
   lockProviderModel = false,
+  lockExistingMemberIdentity = false,
+  identityLockReason,
   inheritedProviderId,
   inheritedModel,
   inheritedEffort,
@@ -130,6 +141,8 @@ export const MembersEditorSection = ({
   memberWarningById,
   disableGeminiOption = false,
   memberModelIssueById,
+  disableAddMember = false,
+  addMemberLockReason,
 }: MembersEditorSectionProps): React.JSX.Element => {
   const [jsonEditorOpen, setJsonEditorOpen] = useState(false);
   const [jsonText, setJsonText] = useState('');
@@ -257,8 +270,8 @@ export const MembersEditorSection = ({
   const names = activeMembers.map((m) => m.name.trim().toLowerCase()).filter(Boolean);
   const hasDuplicates = new Set(names).size !== names.length;
   const memberColorMap = useMemo(
-    () => buildMemberDraftColorMap(members, existingMembers),
-    [members, existingMembers]
+    () => buildMemberDraftColorMap(members, existingMembers, existingMemberColorMap),
+    [members, existingMembers, existingMemberColorMap]
   );
 
   const mentionSuggestions = useMemo(
@@ -272,7 +285,14 @@ export const MembersEditorSection = ({
         <Label>Members</Label>
         {!hideContent && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={addMember}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={addMember}
+              disabled={disableAddMember}
+              title={disableAddMember ? addMemberLockReason : undefined}
+            >
               <Plus className="size-3.5" />
               Add member
             </Button>
@@ -287,13 +307,17 @@ export const MembersEditorSection = ({
       {headerExtra}
       {!hideContent && (
         <>
+          {disableAddMember && addMemberLockReason ? (
+            <p className="text-[11px] text-[var(--color-text-muted)]">{addMemberLockReason}</p>
+          ) : null}
           <div className="space-y-2">
             {activeMembers.map((member, index) => (
               <MemberDraftRow
                 key={member.id}
                 member={member}
                 index={index}
-                resolvedColor={memberColorMap.get(member.name.trim())}
+                avatarSrc={getParticipantAvatarUrlByIndex(index + 1)}
+                resolvedColor={memberColorMap.get(member.id)}
                 nameError={validateMemberName?.(member.name) ?? null}
                 onNameChange={updateMemberName}
                 onRoleChange={updateMemberRole}
@@ -315,6 +339,8 @@ export const MembersEditorSection = ({
                 taskSuggestions={taskSuggestions}
                 teamSuggestions={teamSuggestions}
                 lockProviderModel={lockProviderModel}
+                lockIdentity={lockExistingMemberIdentity && Boolean(member.originalName?.trim())}
+                identityLockReason={identityLockReason}
                 modelLockReason={modelLockReason}
                 warningText={memberWarningById?.[member.id] ?? null}
                 disableGeminiOption={disableGeminiOption}
@@ -332,7 +358,8 @@ export const MembersEditorSection = ({
                       key={member.id}
                       member={member}
                       index={activeMembers.length + index}
-                      resolvedColor={memberColorMap.get(member.name.trim())}
+                      avatarSrc={getParticipantAvatarUrlByIndex(activeMembers.length + index + 1)}
+                      resolvedColor={memberColorMap.get(member.id)}
                       nameError={null}
                       onNameChange={updateMemberName}
                       onRoleChange={updateMemberRole}

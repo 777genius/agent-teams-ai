@@ -8,6 +8,21 @@ export function parseNumericSuffixName(name: string): { base: string; suffix: nu
   return { base: match[1], suffix };
 }
 
+export function validateTeamMemberNameFormat(name: string): string | null {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  if (trimmed.length < 1 || trimmed.length > 128) {
+    return 'Start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars';
+  }
+  if (!/^[a-zA-Z0-9]/.test(trimmed)) {
+    return 'Start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars';
+  }
+  if (!/^[a-zA-Z0-9._-]+$/.test(trimmed)) {
+    return 'Start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars';
+  }
+  return null;
+}
+
 /**
  * Claude CLI auto-suffixes teammate names when a name already exists in config.json
  * (e.g. "alice" → "alice-2"). We treat "-2+" as an auto-suffix only when the base

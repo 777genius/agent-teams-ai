@@ -312,6 +312,21 @@ function compareRecords(left: BoardTaskActivityRecord, right: BoardTaskActivityR
   return left.id.localeCompare(right.id);
 }
 
+function resolveCandidateTaskIds(locator: BoardTaskLocator, lookup: TaskLookup): string[] {
+  const canonicalTask =
+    (locator.canonicalId && lookup.byId.get(locator.canonicalId)) ||
+    (locator.refKind === 'canonical' ? lookup.byId.get(locator.ref) : undefined) ||
+    (locator.refKind === 'unknown' && looksLikeCanonicalTaskId(locator.ref)
+      ? lookup.byId.get(locator.ref)
+      : undefined);
+  if (canonicalTask) {
+    return [canonicalTask.id];
+  }
+
+  const displayCandidates = lookup.byDisplayId.get(normalizeDisplayRef(locator.ref)) ?? [];
+  return [...new Set(displayCandidates.map((task) => task.id))];
+}
+
 export class BoardTaskActivityRecordBuilder {
   buildForTask(args: {
     teamName: string;
@@ -319,64 +334,98 @@ export class BoardTaskActivityRecordBuilder {
     tasks: TeamTask[];
     messages: RawTaskActivityMessage[];
   }): BoardTaskActivityRecord[] {
+    return (
+      this.buildForTasks({
+        teamName: args.teamName,
+        tasks: args.tasks,
+        messages: args.messages,
+      }).get(args.targetTask.id) ?? []
+    );
+  }
+
+  buildForTasks(args: {
+    teamName: string;
+    tasks: TeamTask[];
+    messages: RawTaskActivityMessage[];
+  }): Map<string, BoardTaskActivityRecord[]> {
     const lookup = buildTaskLookup(args.tasks);
-    const records: BoardTaskActivityRecord[] = [];
-    const seenIds = new Set<string>();
+    const recordsByTaskId = new Map<string, BoardTaskActivityRecord[]>();
+    const seenIdsByTaskId = new Map<string, Set<string>>();
 
     for (const message of args.messages) {
       const actionMap = buildActionMap(message.boardTaskToolActions);
 
       for (const link of message.boardTaskLinks) {
         const resolvedTask = resolveLocatorToTaskRef(args.teamName, link.task, lookup);
-        if (
-          resolvedTask.taskRef?.taskId !== args.targetTask.id &&
-          !locatorCouldMatchTask(link.task, args.targetTask, lookup)
-        ) {
+        const candidateTaskIds = resolveCandidateTaskIds(link.task, lookup);
+        if (candidateTaskIds.length === 0) {
           continue;
         }
-
         const action =
           link.linkKind === 'execution' || !link.toolUseId
             ? undefined
             : actionMap.get(link.toolUseId);
-        const peerTask = resolvePeerTask(
-          args.teamName,
-          link,
-          message.boardTaskLinks,
-          args.targetTask,
-          lookup
-        );
-        const record: BoardTaskActivityRecord = {
-          id: [
-            message.uuid,
-            link.toolUseId ?? 'ambient',
-            link.task.ref,
-            link.targetRole,
-            link.linkKind,
-          ].join(':'),
-          timestamp: message.timestamp,
-          task: resolvedTask,
-          linkKind: link.linkKind,
-          targetRole: link.targetRole,
-          actor: resolveActivityActor(message),
-          actorContext: buildActorContext(args.teamName, link.actorContext, lookup),
-          ...(action ? { action: buildAction({ action, link, peerTask }) } : {}),
-          source: {
-            messageUuid: message.uuid,
-            filePath: message.filePath,
-            ...(link.toolUseId ? { toolUseId: link.toolUseId } : {}),
-            sourceOrder: message.sourceOrder,
-          },
-        };
 
-        if (seenIds.has(record.id)) {
-          continue;
+        for (const taskId of candidateTaskIds) {
+          const targetTask = lookup.byId.get(taskId);
+          if (!targetTask) {
+            continue;
+          }
+          if (
+            resolvedTask.taskRef?.taskId !== targetTask.id &&
+            !locatorCouldMatchTask(link.task, targetTask, lookup)
+          ) {
+            continue;
+          }
+
+          const peerTask = resolvePeerTask(
+            args.teamName,
+            link,
+            message.boardTaskLinks,
+            targetTask,
+            lookup
+          );
+          const record: BoardTaskActivityRecord = {
+            id: [
+              message.uuid,
+              link.toolUseId ?? 'ambient',
+              link.task.ref,
+              link.targetRole,
+              link.linkKind,
+            ].join(':'),
+            timestamp: message.timestamp,
+            task: resolvedTask,
+            linkKind: link.linkKind,
+            targetRole: link.targetRole,
+            actor: resolveActivityActor(message),
+            actorContext: buildActorContext(args.teamName, link.actorContext, lookup),
+            ...(action ? { action: buildAction({ action, link, peerTask }) } : {}),
+            source: {
+              messageUuid: message.uuid,
+              filePath: message.filePath,
+              ...(link.toolUseId ? { toolUseId: link.toolUseId } : {}),
+              sourceOrder: message.sourceOrder,
+            },
+          };
+
+          const seenIds = seenIdsByTaskId.get(taskId) ?? new Set<string>();
+          if (seenIds.has(record.id)) {
+            continue;
+          }
+          seenIds.add(record.id);
+          seenIdsByTaskId.set(taskId, seenIds);
+
+          const taskRecords = recordsByTaskId.get(taskId) ?? [];
+          taskRecords.push(record);
+          recordsByTaskId.set(taskId, taskRecords);
         }
-        seenIds.add(record.id);
-        records.push(record);
       }
     }
 
-    return records.sort(compareRecords);
+    for (const [taskId, records] of recordsByTaskId) {
+      recordsByTaskId.set(taskId, records.sort(compareRecords));
+    }
+
+    return recordsByTaskId;
   }
 }

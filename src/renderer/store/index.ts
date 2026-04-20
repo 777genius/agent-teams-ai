@@ -116,15 +116,7 @@ function noteTeamChangeEventBurst(teamName: string, eventType: string, visible: 
     now - diagnostic.lastWarnAt >= TEAM_CHANGE_EVENT_WARN_THROTTLE_MS
   ) {
     diagnostic.lastWarnAt = now;
-    const typeSummary = Object.entries(diagnostic.countsByType)
-      .sort((a, b) => b[1] - a[1])
-      .map(([type, count]) => `${type}:${count}`)
-      .join(',');
-    logger.warn(
-      `[perf] team-change burst team=${teamName} total=${diagnostic.count} windowMs=${
-        now - diagnostic.windowStartedAt
-      } types=${typeSummary}`
-    );
+    // Disabled - this warning is too noisy during normal inbox bursts on active teams.
   }
 
   teamChangeEventDiagnostics.set(teamName, diagnostic);

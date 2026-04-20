@@ -116,4 +116,38 @@ describe('TeamLogSourceTracker', () => {
     await tracker.disableTracking('demo', 'task_log_stream');
     await tracker.disableTracking('demo', 'tool_activity');
   });
+
+  it('supports stall_monitor as an independent tracking consumer', async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), 'team-log-source-tracker-stall-monitor-'));
+
+    const logsFinder = {
+      getLogSourceWatchContext: vi.fn(async () => ({
+        projectDir: tempDir!,
+        sessionIds: [],
+      })),
+    } as unknown as TeamMemberLogsFinder;
+
+    const tracker = new TeamLogSourceTracker(logsFinder);
+    const emitter = vi.fn<(event: TeamChangeEvent) => void>();
+    tracker.setEmitter(emitter);
+
+    await tracker.enableTracking('demo', 'stall_monitor');
+    emitter.mockClear();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const taskId = '323e4567-e89b-12d3-a456-426614174999';
+    const signalDir = path.join(tempDir, '.board-task-log-freshness');
+    await mkdir(signalDir, { recursive: true });
+    await writeFile(path.join(signalDir, `${encodeURIComponent(taskId)}.json`), '{"ok":true}');
+
+    await vi.waitFor(() => {
+      expect(emitter).toHaveBeenCalledWith({
+        type: 'task-log-change',
+        teamName: 'demo',
+        taskId,
+      });
+    });
+
+    await tracker.disableTracking('demo', 'stall_monitor');
+  });
 });

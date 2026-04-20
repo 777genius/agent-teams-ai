@@ -5,6 +5,7 @@ import { useStore } from '@renderer/store';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import {
   agentAvatarUrl,
+  buildMemberAvatarMap,
   buildMemberColorMap,
   displayMemberName,
   getMemberRuntimeAdvisoryLabel,
@@ -41,6 +42,7 @@ export const PendingRepliesBlock = ({
   const { isLight } = useTheme();
   const pendingApprovals = useStore(useShallow((s) => s.pendingApprovals));
   const colorMap = buildMemberColorMap(members);
+  const avatarMap = buildMemberAvatarMap(members);
   const memberPending = Object.entries(pendingRepliesByMember)
     .map(([name, sentAtMs]) => ({
       kind: 'member' as const,
@@ -111,7 +113,7 @@ export const PendingRepliesBlock = ({
               <div className="flex items-center gap-2 px-3 py-2">
                 <span className="relative inline-flex shrink-0">
                   <img
-                    src={agentAvatarUrl(member.name, 24)}
+                    src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name, 24)}
                     alt=""
                     className="size-5 rounded-full bg-[var(--color-surface-raised)]"
                     loading="lazy"

@@ -1,4 +1,13 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  memo,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Sheet, type SheetRef } from 'react-modal-sheet';
 
 import { Badge } from '@renderer/components/ui/badge';
@@ -27,7 +36,7 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { ActivityTimeline } from '../activity/ActivityTimeline';
+import { ActivityTimeline, type TimelineViewport } from '../activity/ActivityTimeline';
 import { getThoughtGroupKey, groupTimelineItems } from '../activity/LeadThoughtsGroup';
 import { MessageExpandDialog } from '../activity/MessageExpandDialog';
 import { CollapsibleTeamSection } from '../CollapsibleTeamSection';
@@ -91,6 +100,67 @@ interface MessagesPanelProps {
   onRestartTeam?: () => void;
   /** Callback when a task ID link is clicked. */
   onTaskIdClick?: (taskId: string) => void;
+  /**
+   * Scroll container owned by the parent view when `position === 'inline'`.
+   * MessagesPanel does not own this element — the viewport lives in
+   * TeamDetailView's content scroll area. Plumbed for future viewport
+   * consumers (virtualization); unused in this release.
+   */
+  inlineScrollContainerRef?: RefObject<HTMLDivElement | null>;
+}
+
+export function reconcilePendingRepliesByMember(
+  pendingRepliesByMember: Record<string, number>,
+  messages: InboxMessage[]
+): Record<string, number> {
+  if (Object.keys(pendingRepliesByMember).length === 0) {
+    return pendingRepliesByMember;
+  }
+
+  const latestUserSentByMember = new Map<string, number>();
+  const latestReplyToUserByMember = new Map<string, number>();
+
+  for (const message of messages) {
+    const ts = Date.parse(message.timestamp);
+    if (!Number.isFinite(ts)) {
+      continue;
+    }
+
+    if (
+      message.from === 'user' &&
+      typeof message.to === 'string' &&
+      message.to.length > 0 &&
+      message.source === 'user_sent'
+    ) {
+      const previous = latestUserSentByMember.get(message.to);
+      if (previous == null || ts > previous) {
+        latestUserSentByMember.set(message.to, ts);
+      }
+      continue;
+    }
+
+    if (message.to === 'user') {
+      const previous = latestReplyToUserByMember.get(message.from);
+      if (previous == null || ts > previous) {
+        latestReplyToUserByMember.set(message.from, ts);
+      }
+    }
+  }
+
+  let changed = false;
+  const next: Record<string, number> = {};
+  for (const [memberName, sentAtMs] of Object.entries(pendingRepliesByMember)) {
+    const latestReplyAt = latestReplyToUserByMember.get(memberName);
+    const latestDurableSendAt = latestUserSentByMember.get(memberName);
+    const threshold = latestDurableSendAt ?? sentAtMs;
+    if (latestReplyAt != null && latestReplyAt > threshold) {
+      changed = true;
+      continue;
+    }
+    next[memberName] = sentAtMs;
+  }
+
+  return changed ? next : pendingRepliesByMember;
 }
 
 export const MessagesPanel = memo(function MessagesPanel({
@@ -113,6 +183,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   onReplyToMessage,
   onRestartTeam,
   onTaskIdClick,
+  inlineScrollContainerRef,
 }: MessagesPanelProps): React.JSX.Element {
   const {
     sendTeamMessage,
@@ -125,6 +196,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     messages,
     messagesState,
     loadOlderTeamMessages,
+    refreshTeamMessagesHead,
   } = useStore(
     useShallow((s) => ({
       sendTeamMessage: s.sendTeamMessage,
@@ -137,8 +209,10 @@ export const MessagesPanel = memo(function MessagesPanel({
       messages: selectTeamMessages(s, teamName),
       messagesState: teamName ? s.teamMessagesByName[teamName] : undefined,
       loadOlderTeamMessages: s.loadOlderTeamMessages,
+      refreshTeamMessagesHead: s.refreshTeamMessagesHead,
     }))
   );
+  const bootstrapHeadRefreshAttemptedForTeamRef = useRef<string | null>(null);
 
   const loadOlderMessages = useCallback(async () => {
     if (!messagesState?.hasMore || messagesState.loadingHead || messagesState.loadingOlder) {
@@ -157,6 +231,36 @@ export const MessagesPanel = memo(function MessagesPanel({
   const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
   const bottomSheetRef = useRef<SheetRef>(null);
   const bottomSheetStickyTopRef = useRef<HTMLDivElement | null>(null);
+  // Scroll container inside `Sheet.Content` for the bottom-sheet layout.
+  // react-modal-sheet merges this ref with its own internal scroll ref.
+  // Held here so future viewport consumers (virtualization) can observe the
+  // true scrolling element in bottom-sheet mode.
+  const bottomSheetScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Resolve the active scroll owner for the current layout. This is the
+  // ref that ActivityTimeline's IntersectionObserver will use as its root,
+  // so visibility is measured against the real scroll container rather
+  // than the document viewport. Virtualizer consumers will hook into the
+  // same ref in a follow-up change.
+  const activeScrollContainerRef =
+    position === 'inline'
+      ? (inlineScrollContainerRef ?? null)
+      : position === 'sidebar'
+        ? sidebarScrollRef
+        : bottomSheetScrollRef;
+
+  const activityTimelineViewport = useMemo<TimelineViewport | undefined>(() => {
+    if (!activeScrollContainerRef) return undefined;
+    return {
+      scrollElementRef: activeScrollContainerRef,
+      observerRoot: activeScrollContainerRef,
+      scrollMargin: 0,
+      // Opt into virtualization; ActivityTimeline keeps the direct render
+      // path for short lists and only switches to the windowed path once
+      // the row count crosses its internal threshold.
+      virtualizationEnabled: true,
+    };
+  }, [activeScrollContainerRef]);
   const handleExpandContent = useCallback(() => {
     // no-op: user is reading expanded content, not composing
   }, []);
@@ -222,6 +326,41 @@ export const MessagesPanel = memo(function MessagesPanel({
     expandedItemKey,
     messagesScrollTop,
     bottomSheetSnapIndex,
+  ]);
+
+  useEffect(() => {
+    const hasActiveParticipantFilter = messagesFilter.from.size > 0 || messagesFilter.to.size > 0;
+    if (
+      messagesSearchBarVisible ||
+      (messagesSearchQuery.trim().length === 0 && !hasActiveParticipantFilter)
+    ) {
+      return;
+    }
+    setMessagesSearchBarVisible(true);
+  }, [messagesFilter.from, messagesFilter.to, messagesSearchBarVisible, messagesSearchQuery]);
+
+  useEffect(() => {
+    if (!teamName) {
+      return;
+    }
+    if (effectiveMessages.length > 0) {
+      bootstrapHeadRefreshAttemptedForTeamRef.current = null;
+      return;
+    }
+    if (messagesState?.loadingHead || messagesState?.loadingOlder) {
+      return;
+    }
+    if (bootstrapHeadRefreshAttemptedForTeamRef.current === teamName) {
+      return;
+    }
+    bootstrapHeadRefreshAttemptedForTeamRef.current = teamName;
+    void refreshTeamMessagesHead(teamName).catch(() => undefined);
+  }, [
+    effectiveMessages.length,
+    messagesState?.loadingHead,
+    messagesState?.loadingOlder,
+    refreshTeamMessagesHead,
+    teamName,
   ]);
 
   useLayoutEffect(() => {
@@ -352,20 +491,8 @@ export const MessagesPanel = memo(function MessagesPanel({
   // Auto-clear pending replies when a member actually responds
   useEffect(() => {
     if (Object.keys(pendingRepliesByMember).length === 0) return;
-    const next = { ...pendingRepliesByMember };
-    let changed = false;
-    for (const [memberName, sentAtMs] of Object.entries(pendingRepliesByMember)) {
-      const hasReply = replyCandidateMessages.some((m) => {
-        if (m.from !== memberName) return false;
-        const ts = Date.parse(m.timestamp);
-        return Number.isFinite(ts) && ts > sentAtMs;
-      });
-      if (hasReply) {
-        delete next[memberName];
-        changed = true;
-      }
-    }
-    if (changed) onPendingReplyChange(() => next);
+    const next = reconcilePendingRepliesByMember(pendingRepliesByMember, replyCandidateMessages);
+    if (next !== pendingRepliesByMember) onPendingReplyChange(() => next);
   }, [onPendingReplyChange, pendingRepliesByMember, replyCandidateMessages]);
 
   const handleSend = useCallback(
@@ -581,6 +708,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         onTaskIdClick={onTaskIdClick}
         onExpandItem={handleExpandItem}
         onExpandContent={handleExpandContent}
+        viewport={activityTimelineViewport}
       />
       {hasMore && (
         <div className="flex justify-center py-2">
@@ -766,6 +894,7 @@ export const MessagesPanel = memo(function MessagesPanel({
             onTaskIdClick={onTaskIdClick}
             onExpandItem={handleExpandItem}
             onExpandContent={handleExpandContent}
+            viewport={activityTimelineViewport}
           />
           {hasMore && (
             <div className="flex justify-center py-2">
@@ -987,6 +1116,7 @@ export const MessagesPanel = memo(function MessagesPanel({
             <Sheet.Content
               className="min-h-0 bg-[var(--color-surface-sidebar)]"
               scrollClassName="flex min-h-full flex-col"
+              scrollRef={bottomSheetScrollRef}
               disableDrag={(state) => state.scrollPosition !== 'top'}
             >
               <div
@@ -1052,6 +1182,7 @@ export const MessagesPanel = memo(function MessagesPanel({
                   onTaskIdClick={onTaskIdClick}
                   onExpandItem={handleExpandItem}
                   onExpandContent={handleExpandContent}
+                  viewport={activityTimelineViewport}
                 />
                 {hasMore && (
                   <div className="flex justify-center py-2">

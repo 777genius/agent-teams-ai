@@ -4180,11 +4180,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   restartMember: async (teamName: string, memberName: string) => {
-    await unwrapIpc('team:restartMember', () => api.teams.restartMember(teamName, memberName));
-    await Promise.all([
-      get().fetchMemberSpawnStatuses(teamName),
-      get().fetchTeamAgentRuntime(teamName),
-    ]);
+    try {
+      await unwrapIpc('team:restartMember', () => api.teams.restartMember(teamName, memberName));
+    } finally {
+      await Promise.allSettled([
+        get().fetchMemberSpawnStatuses(teamName),
+        get().fetchTeamAgentRuntime(teamName),
+      ]);
+    }
   },
 
   removeMember: async (teamName: string, memberName: string) => {

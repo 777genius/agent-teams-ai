@@ -9,7 +9,8 @@ export type AgentToolDuplicateSkipReason = 'already_running' | 'bootstrap_pendin
 
 export interface ParsedAgentToolResultStatus {
   status: 'duplicate_skipped';
-  reason: AgentToolDuplicateSkipReason;
+  reason?: AgentToolDuplicateSkipReason;
+  rawReason?: string;
   name?: string;
   teamName?: string;
 }
@@ -262,14 +263,14 @@ export function parseAgentToolResultStatus(content: unknown): ParsedAgentToolRes
     return null;
   }
 
-  const reason = fields.get('reason');
-  if (reason !== 'already_running' && reason !== 'bootstrap_pending') {
-    return null;
-  }
+  const rawReason = fields.get('reason');
+  const reason =
+    rawReason === 'already_running' || rawReason === 'bootstrap_pending' ? rawReason : undefined;
 
   return {
     status: 'duplicate_skipped',
     reason,
+    ...(rawReason ? { rawReason } : {}),
     name: fields.get('name'),
     teamName: fields.get('team_name'),
   };

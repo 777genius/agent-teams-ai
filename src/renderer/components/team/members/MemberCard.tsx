@@ -1,10 +1,15 @@
+import { useMemo } from 'react';
+
 import { Badge } from '@renderer/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
+import { useStore } from '@renderer/store';
+import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import {
   agentAvatarUrl,
+  buildMemberAvatarMap,
   buildMemberLaunchPresentation,
   displayMemberName,
 } from '@renderer/utils/memberHelpers';
@@ -48,6 +53,26 @@ interface MemberCardProps {
   onAssignTask?: () => void;
 }
 
+function splitRuntimeSummaryMemory(runtimeSummary: string | undefined): {
+  summary: string | undefined;
+  memory: string | undefined;
+} {
+  const trimmed = runtimeSummary?.trim();
+  if (!trimmed) {
+    return { summary: undefined, memory: undefined };
+  }
+
+  const match = /^(.*?)(?:\s·\s(\d+(?:\.\d+)?\s(?:B|KB|MB|GB|TB)))$/.exec(trimmed);
+  if (!match) {
+    return { summary: trimmed, memory: undefined };
+  }
+
+  return {
+    summary: match[1]?.trim() || undefined,
+    memory: match[2]?.trim() || undefined,
+  };
+}
+
 export const MemberCard = ({
   member,
   memberColor,
@@ -77,6 +102,11 @@ export const MemberCard = ({
   // const leadContext = useStore((s) =>
   //   member.agentType === 'team-lead' && teamName ? s.leadContextByTeam[teamName] : undefined
   // );
+  const selectedTeamName = useStore((s) => s.selectedTeamName);
+  const teamMembers = useStore((s) =>
+    selectedTeamName ? selectResolvedMembersForTeamName(s, selectedTeamName) : []
+  );
+  const avatarMap = useMemo(() => buildMemberAvatarMap(teamMembers), [teamMembers]);
   const launchPresentation = buildMemberLaunchPresentation({
     member,
     spawnStatus,
@@ -102,6 +132,8 @@ export const MemberCard = ({
   const totalTasks = pending + inProgress + completed;
   const progressPercent = totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 0;
   const roleLabel = formatAgentRole(member.role) ?? formatAgentRole(member.agentType);
+  const { summary: runtimeSummaryText, memory: memoryLabel } =
+    splitRuntimeSummaryMemory(runtimeSummary);
   const activityTask = currentTask ?? reviewTask ?? null;
   const activityTitle = currentTask
     ? `Current task: #${deriveTaskDisplayId(currentTask.id)}`
@@ -151,7 +183,7 @@ export const MemberCard = ({
               }}
             >
               <img
-                src={agentAvatarUrl(member.name)}
+                src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name)}
                 alt={member.name}
                 className="size-7 rounded-full bg-[var(--color-surface-raised)]"
                 loading="lazy"
@@ -215,13 +247,19 @@ export const MemberCard = ({
                   style={{ backgroundColor: 'var(--skeleton-base)' }}
                 />
               </div>
-            ) : runtimeSummary || roleLabel ? (
+            ) : runtimeSummaryText || roleLabel || memoryLabel ? (
               <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-[var(--color-text-muted)]">
-                {runtimeSummary ? <span className="min-w-0 truncate">{runtimeSummary}</span> : null}
-                {runtimeSummary && roleLabel ? (
+                {runtimeSummaryText ? (
+                  <span className="min-w-0 truncate">{runtimeSummaryText}</span>
+                ) : null}
+                {runtimeSummaryText && roleLabel ? (
                   <span className="shrink-0 opacity-60">•</span>
                 ) : null}
                 {roleLabel ? <span className="shrink-0">{roleLabel}</span> : null}
+                {(runtimeSummaryText || roleLabel) && memoryLabel ? (
+                  <span className="shrink-0 opacity-60">•</span>
+                ) : null}
+                {memoryLabel ? <span className="shrink-0">{memoryLabel}</span> : null}
               </div>
             ) : null}
           </div>

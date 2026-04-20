@@ -39,6 +39,7 @@ import {
 } from '@renderer/store/slices/teamSlice';
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
 import { sumContextInjectionTokens } from '@renderer/utils/contextMath';
+import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { formatProjectPath } from '@renderer/utils/pathDisplay';
 import { buildTaskCountsByOwner, normalizePath } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
@@ -75,10 +76,11 @@ import { useShallow } from 'zustand/react/shallow';
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
 import { CreateTaskDialog } from './dialogs/CreateTaskDialog';
 import { EditTeamDialog } from './dialogs/EditTeamDialog';
-import { LaunchTeamDialog } from './dialogs/LaunchTeamDialog';
+import { LaunchTeamDialog, type TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
 import { ReviewDialog } from './dialogs/ReviewDialog';
 import { SendMessageDialog } from './dialogs/SendMessageDialog';
 import { TaskDetailDialog } from './dialogs/TaskDetailDialog';
+import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { KanbanBoard } from './kanban/KanbanBoard';
 import { UNASSIGNED_OWNER } from './kanban/KanbanFilterPopover';
 import { KanbanSearchInput } from './kanban/KanbanSearchInput';
@@ -105,6 +107,10 @@ import { ScheduleSection } from './schedule/ScheduleSection';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
 import { TeamSidebarPortalSource } from './sidebar/TeamSidebarPortalSource';
 import { TeamSidebarRail } from './sidebar/TeamSidebarRail';
+import {
+  getTeamPendingRepliesState,
+  setTeamPendingRepliesState,
+} from './sidebar/teamSidebarUiState';
 import { ClaudeLogsSection } from './ClaudeLogsSection';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 import { ProcessesSection } from './ProcessesSection';
@@ -126,6 +132,8 @@ import type {
   ResolvedTeamMember,
   TaskRef,
   TeamAgentRuntimeEntry,
+  TeamCreateRequest,
+  TeamLaunchRequest,
   TeamTaskWithKanban,
 } from '@shared/types';
 import type { EditorSelectionAction } from '@shared/types/editor';
@@ -910,7 +918,9 @@ export const TeamDetailView = ({
     initialTab?: MemberDetailTab;
     initialActivityFilter?: MemberActivityFilter;
   } | null>(null);
-  const [pendingRepliesByMember, setPendingRepliesByMember] = useState<Record<string, number>>({});
+  const [pendingRepliesByMember, setPendingRepliesByMember] = useState<Record<string, number>>(() =>
+    getTeamPendingRepliesState(teamName)
+  );
   const [createTaskDialog, setCreateTaskDialog] = useState<CreateTaskDialogState>({
     open: false,
     defaultSubject: '',
@@ -923,7 +933,13 @@ export const TeamDetailView = ({
   const [removeMemberConfirm, setRemoveMemberConfirm] = useState<string | null>(null);
   const [updatingRoleLoading, setUpdatingRoleLoading] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
+  const [launchDialogState, setLaunchDialogState] = useState<{
+    open: boolean;
+    mode: TeamLaunchDialogMode;
+  }>({
+    open: false,
+    mode: 'launch',
+  });
   const [editorOpen, setEditorOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -1155,6 +1171,7 @@ export const TeamDetailView = ({
   const [activeTeamsForLaunch, setActiveTeamsForLaunch] = useState<
     { teamName: string; displayName: string; projectPath: string }[]
   >([]);
+  const launchDialogOpen = launchDialogState.open;
 
   // Session loading and filtering state
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -1200,6 +1217,8 @@ export const TeamDetailView = ({
     clearProvisioningError,
     isTeamProvisioning,
     refreshTeamData,
+    refreshTeamMessagesHead,
+    refreshMemberActivityMeta,
     syncTeamPendingReplyRefresh,
     kanbanFilterQuery,
     clearKanbanFilter,
@@ -1251,6 +1270,8 @@ export const TeamDetailView = ({
       loading: s.selectedTeamName === teamName ? s.selectedTeamLoading : false,
       error: s.selectedTeamName === teamName ? s.selectedTeamError : null,
       refreshTeamData: s.refreshTeamData,
+      refreshTeamMessagesHead: s.refreshTeamMessagesHead,
+      refreshMemberActivityMeta: s.refreshMemberActivityMeta,
       syncTeamPendingReplyRefresh: s.syncTeamPendingReplyRefresh,
       kanbanFilterQuery: s.kanbanFilterQuery,
       clearKanbanFilter: s.clearKanbanFilter,
@@ -1274,6 +1295,7 @@ export const TeamDetailView = ({
   const tabId = useTabIdOptional();
   const activeTabId = useStore((s) => s.activeTabId);
   const isThisTabActive = tabId ? activeTabId === tabId : false;
+  const wasInteractiveRef = useRef(false);
 
   useEffect(() => {
     const now = Date.now();
@@ -1338,6 +1360,14 @@ export const TeamDetailView = ({
   }, [tabId, initTabUIState]);
 
   useEffect(() => {
+    setPendingRepliesByMember(getTeamPendingRepliesState(teamName));
+  }, [teamName]);
+
+  useEffect(() => {
+    setTeamPendingRepliesState(teamName, pendingRepliesByMember);
+  }, [pendingRepliesByMember, teamName]);
+
+  useEffect(() => {
     const wasProvisioning = wasProvisioningRef.current;
     wasProvisioningRef.current = isTeamProvisioning;
     if (!wasProvisioning && isTeamProvisioning) {
@@ -1374,6 +1404,32 @@ export const TeamDetailView = ({
       void selectTeam(teamName);
     }
   }, [isThisTabActive, teamName, storedTeamName, loading, selectTeam]);
+
+  useEffect(() => {
+    const isInteractive = isThisTabActive && isPaneFocused;
+    const justBecameInteractive = isInteractive && !wasInteractiveRef.current;
+    wasInteractiveRef.current = isInteractive;
+    if (!justBecameInteractive || !teamName) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const headResult = await refreshTeamMessagesHead(teamName);
+        if (headResult.feedChanged) {
+          await refreshMemberActivityMeta(teamName);
+        }
+      } catch {
+        // Best-effort refresh on tab focus.
+      }
+    })();
+  }, [
+    isPaneFocused,
+    isThisTabActive,
+    refreshMemberActivityMeta,
+    refreshTeamMessagesHead,
+    teamName,
+  ]);
 
   // Fetch active teams when launch dialog opens (for conflict warning)
   useEffect(() => {
@@ -1537,6 +1593,10 @@ export const TeamDetailView = ({
       return nextMember;
     });
   }, [leadBranch, members, trackedBranches]);
+  const resolvedMemberColorMap = useMemo(
+    () => buildMemberColorMap(membersWithLiveBranches),
+    [membersWithLiveBranches]
+  );
 
   // Filter sessions to team-only using sessionHistory + leadSessionId
   const teamSessionIds = useMemo(() => {
@@ -1661,9 +1721,48 @@ export const TeamDetailView = ({
     setSendDialogOpen(true);
   }, []);
 
-  const handleRestartTeam = useCallback(() => {
-    setLaunchDialogOpen(true);
+  const openLaunchDialog = useCallback((mode: TeamLaunchDialogMode) => {
+    setLaunchDialogState({ open: true, mode });
   }, []);
+
+  const closeLaunchDialog = useCallback(() => {
+    setLaunchDialogState((prev) => ({ ...prev, open: false }));
+  }, []);
+
+  const handleRestartTeam = useCallback(() => {
+    openLaunchDialog('relaunch');
+  }, [openLaunchDialog]);
+
+  const handleLaunchDialogSubmit = useCallback(
+    async (request: TeamLaunchRequest): Promise<void> => {
+      await launchTeam(request);
+    },
+    [launchTeam]
+  );
+
+  const handleRelaunchDialogSubmit = useCallback(
+    async (
+      request: TeamLaunchRequest,
+      nextMembers: TeamCreateRequest['members']
+    ): Promise<void> => {
+      await executeTeamRelaunch({
+        teamName,
+        isTeamAlive: data?.isAlive === true,
+        request,
+        members: nextMembers,
+        stopTeam: (nextTeamName) => api.teams.stop(nextTeamName),
+        replaceMembers: (nextTeamName, nextRequest) =>
+          api.teams.replaceMembers(nextTeamName, nextRequest),
+        launchTeam,
+      });
+    },
+    [data?.isAlive, launchTeam, teamName]
+  );
+
+  const handleChangeLeadRuntime = useCallback(() => {
+    setEditDialogOpen(false);
+    openLaunchDialog(data?.isAlive && !isTeamProvisioning ? 'relaunch' : 'launch');
+  }, [data?.isAlive, isTeamProvisioning, openLaunchDialog]);
 
   const handleSelectMember = useCallback((member: ResolvedTeamMember) => {
     setSelectedMember(member);
@@ -1912,6 +2011,7 @@ export const TeamDetailView = ({
       onReplyToMessage: handleReplyToMessage,
       onRestartTeam: handleRestartTeam,
       onTaskIdClick: handleTaskIdClick,
+      inlineScrollContainerRef: contentRef,
     }),
     [
       activeMembers,
@@ -2010,7 +2110,7 @@ export const TeamDetailView = ({
                 <div className="mt-4 flex justify-center gap-2">
                   <button
                     className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
-                    onClick={() => setLaunchDialogOpen(true)}
+                    onClick={() => openLaunchDialog('launch')}
                   >
                     Launch
                   </button>
@@ -2027,17 +2127,16 @@ export const TeamDetailView = ({
             </div>
           </div>
           <LaunchTeamDialog
-            mode="launch"
+            mode={launchDialogState.mode}
             open={launchDialogOpen}
             teamName={teamName}
             members={[]}
             defaultProjectPath={draftTeamSummary?.projectPath}
             provisioningError={provisioningError}
             clearProvisioningError={clearProvisioningError}
-            onClose={() => setLaunchDialogOpen(false)}
-            onLaunch={async (request) => {
-              await launchTeam(request);
-            }}
+            onClose={closeLaunchDialog}
+            onLaunch={handleLaunchDialogSubmit}
+            onRelaunch={handleRelaunchDialogSubmit}
           />
         </>
       );
@@ -2168,12 +2267,17 @@ export const TeamDetailView = ({
                           variant="ghost"
                           size="sm"
                           className="h-7 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                          disabled={isTeamProvisioning}
                           onClick={() => setEditDialogOpen(true)}
                         >
                           <Pencil size={12} />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="bottom">Edit team</TooltipContent>
+                      <TooltipContent side="bottom">
+                        {isTeamProvisioning
+                          ? 'Edit team is unavailable while provisioning is still in progress'
+                          : 'Edit team'}
+                      </TooltipContent>
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -2294,7 +2398,7 @@ export const TeamDetailView = ({
               {!data.isAlive && !isTeamProvisioning ? (
                 <TeamOfflineStatusBanner
                   teamName={teamName}
-                  onLaunch={() => setLaunchDialogOpen(true)}
+                  onLaunch={() => openLaunchDialog('launch')}
                 />
               ) : null}
 
@@ -2708,9 +2812,13 @@ export const TeamDetailView = ({
                 currentDescription={data.config.description ?? ''}
                 currentColor={data.config.color ?? ''}
                 currentMembers={membersWithLiveBranches.filter((m) => !isLeadMember(m))}
+                leadMember={membersWithLiveBranches.find((m) => isLeadMember(m)) ?? null}
+                resolvedMemberColorMap={resolvedMemberColorMap}
                 isTeamAlive={data.isAlive && !isTeamProvisioning}
+                isTeamProvisioning={isTeamProvisioning}
                 projectPath={data.config.projectPath}
                 onClose={() => setEditDialogOpen(false)}
+                onChangeLeadRuntime={handleChangeLeadRuntime}
                 onSaved={() => void selectTeam(teamName)}
               />
 
@@ -2801,7 +2909,7 @@ export const TeamDetailView = ({
               </Dialog>
 
               <LaunchTeamDialog
-                mode="launch"
+                mode={launchDialogState.mode}
                 open={launchDialogOpen}
                 teamName={teamName}
                 members={membersWithLiveBranches}
@@ -2809,10 +2917,9 @@ export const TeamDetailView = ({
                 provisioningError={provisioningError}
                 clearProvisioningError={clearProvisioningError}
                 activeTeams={activeTeamsForLaunch}
-                onClose={() => setLaunchDialogOpen(false)}
-                onLaunch={async (request) => {
-                  await launchTeam(request);
-                }}
+                onClose={closeLaunchDialog}
+                onLaunch={handleLaunchDialogSubmit}
+                onRelaunch={handleRelaunchDialogSubmit}
               />
 
               <SendMessageDialog

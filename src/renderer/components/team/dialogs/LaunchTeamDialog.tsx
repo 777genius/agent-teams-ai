@@ -107,6 +107,7 @@ import type {
   ResolvedTeamMember,
   Schedule,
   ScheduleLaunchConfig,
+  TeamCreateRequest,
   TeamLaunchRequest,
   TeamProviderId,
   UpdateSchedulePatch,
@@ -140,6 +141,8 @@ interface LaunchDialogBase {
   onClose: () => void;
 }
 
+export type TeamLaunchDialogMode = 'launch' | 'relaunch';
+
 interface LaunchDialogLaunchMode extends LaunchDialogBase {
   mode: 'launch';
   members: ResolvedTeamMember[];
@@ -148,6 +151,16 @@ interface LaunchDialogLaunchMode extends LaunchDialogBase {
   clearProvisioningError?: (teamName?: string) => void;
   activeTeams?: ActiveTeamRef[];
   onLaunch: (request: TeamLaunchRequest) => Promise<void>;
+}
+
+interface LaunchDialogRelaunchMode extends LaunchDialogBase {
+  mode: 'relaunch';
+  members: ResolvedTeamMember[];
+  defaultProjectPath?: string;
+  provisioningError: string | null;
+  clearProvisioningError?: (teamName?: string) => void;
+  activeTeams?: ActiveTeamRef[];
+  onRelaunch: (request: TeamLaunchRequest, members: TeamCreateRequest['members']) => Promise<void>;
 }
 
 interface LaunchDialogScheduleMode {
@@ -160,7 +173,10 @@ interface LaunchDialogScheduleMode {
   schedule?: Schedule | null;
 }
 
-export type LaunchTeamDialogProps = LaunchDialogLaunchMode | LaunchDialogScheduleMode;
+export type LaunchTeamDialogProps =
+  | LaunchDialogLaunchMode
+  | LaunchDialogRelaunchMode
+  | LaunchDialogScheduleMode;
 
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
 
@@ -234,7 +250,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const cliStatus = useStore((s) => s.cliStatus);
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
   const fetchCliStatus = useStore((s) => s.fetchCliStatus);
-  const isLaunch = props.mode === 'launch';
+  const isLaunchMode = props.mode === 'launch' || props.mode === 'relaunch';
+  const isRelaunch = props.mode === 'relaunch';
   const isSchedule = props.mode === 'schedule';
   const schedule = isSchedule ? (props.schedule ?? null) : null;
   const isEditing = isSchedule && !!schedule;
@@ -318,7 +335,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const previousLaunchParams = useStore((s) =>
     effectiveTeamName ? s.launchParamsByTeam[effectiveTeamName] : undefined
   );
-  const members = isLaunch ? props.members : storeMembers;
+  const members = isLaunchMode ? props.members : storeMembers;
   const [savedLaunchProviderId, setSavedLaunchProviderId] = useState<TeamProviderId | null>(null);
   const [savedLaunchProviderBackendId, setSavedLaunchProviderBackendId] = useState<string | null>(
     null
@@ -541,7 +558,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const closeDialog = (): void => {
-    if (isLaunch) {
+    if (isLaunchMode) {
       resetFormState();
     }
     onClose();
@@ -599,7 +616,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [open, isSchedule, schedule?.id]);
 
   useEffect(() => {
-    if (!open || !isLaunch) return;
+    if (!open || !isLaunchMode) return;
 
     let cancelled = false;
     void (async () => {
@@ -669,10 +686,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return () => {
       cancelled = true;
     };
-  }, [open, isLaunch, effectiveTeamName, members, multimodelEnabled, previousLaunchParams]);
+  }, [open, isLaunchMode, effectiveTeamName, members, multimodelEnabled, previousLaunchParams]);
 
   const previousProviderId = useMemo<TeamProviderId | null>(() => {
-    if (!isLaunch) {
+    if (!isLaunchMode) {
       return null;
     }
     const fromLaunchParams = previousLaunchParams?.providerId;
@@ -684,14 +701,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return fromLaunchParams;
     }
     return savedLaunchProviderId;
-  }, [isLaunch, previousLaunchParams?.providerId, savedLaunchProviderId]);
+  }, [isLaunchMode, previousLaunchParams?.providerId, savedLaunchProviderId]);
 
   const providerChangeForcesFreshLeadContext = useMemo(() => {
-    if (!isLaunch || !previousProviderId) {
+    if (!isLaunchMode || !previousProviderId) {
       return false;
     }
     return previousProviderId !== selectedProviderId;
-  }, [isLaunch, previousProviderId, selectedProviderId]);
+  }, [isLaunchMode, previousProviderId, selectedProviderId]);
 
   const effectiveLeadRuntimeModel = useMemo(
     () => computeEffectiveTeamModel(selectedModel, limitContext, selectedProviderId) ?? '',
@@ -744,7 +761,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [effectiveLeadRuntimeModel, effectiveMemberDrafts, selectedModel, selectedProviderId]);
 
   const runtimeChangeNotes = useMemo(() => {
-    if (!isLaunch) {
+    if (!isLaunchMode) {
       return [] as { key: string; memberName: string; message: string }[];
     }
 
@@ -836,7 +853,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
     return notes;
   }, [
-    isLaunch,
+    isLaunchMode,
     previousLaunchParams?.effort,
     previousLaunchParams?.model,
     previousProviderId,
@@ -895,14 +912,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   // Clear stale provisioning error when dialog opens
   useEffect(() => {
-    if (!open || !isLaunch) return;
+    if (!open || !isLaunchMode) return;
     props.clearProvisioningError?.(effectiveTeamName);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, isLaunch, effectiveTeamName]);
+  }, [open, isLaunchMode, effectiveTeamName]);
 
   // Warm up CLI for the currently selected working directory (launch mode only).
   useEffect(() => {
-    if (!open || !isLaunch) return;
+    if (!open || !isLaunchMode) return;
 
     if (typeof api.teams.prepareProvisioning !== 'function') {
       setPrepareState('failed');
@@ -1052,7 +1069,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     };
   }, [
     open,
-    isLaunch,
+    isLaunchMode,
     effectiveCwd,
     selectedProviderId,
     selectedMemberProviders,
@@ -1111,7 +1128,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [open, repositoryGroups]);
 
   // Pre-select defaultProjectPath (launch mode) or first project
-  const defaultProjectPath = isLaunch ? props.defaultProjectPath : undefined;
+  const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
 
   useEffect(() => {
     if (!open || cwdMode !== 'project' || selectedProjectPath || projects.length === 0) return;
@@ -1132,17 +1149,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Launch-only: conflict detection
   // ---------------------------------------------------------------------------
 
-  const activeTeams = isLaunch ? props.activeTeams : undefined;
+  const activeTeams = isLaunchMode ? props.activeTeams : undefined;
 
   const conflictingTeam = useMemo(() => {
-    if (!isLaunch || !activeTeams?.length || !effectiveCwd) return null;
+    if (!isLaunchMode || !activeTeams?.length || !effectiveCwd) return null;
     const norm = normalizePath(effectiveCwd);
     return (
       activeTeams.find(
         (t) => t.teamName !== effectiveTeamName && normalizePath(t.projectPath) === norm
       ) ?? null
     );
-  }, [isLaunch, activeTeams, effectiveCwd, effectiveTeamName]);
+  }, [isLaunchMode, activeTeams, effectiveCwd, effectiveTeamName]);
 
   useEffect(() => {
     setConflictDismissed(false);
@@ -1168,7 +1185,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // ---------------------------------------------------------------------------
 
   const internalArgs = useMemo(() => {
-    if (!isLaunch) return [];
+    if (!isLaunchMode) return [];
     const args: string[] = [];
     args.push('--input-format', 'stream-json', '--output-format', 'stream-json');
     args.push('--verbose', '--setting-sources', 'user,project,local');
@@ -1180,7 +1197,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     if (!clearContext) args.push('--resume', '<previous>');
     return args;
   }, [
-    isLaunch,
+    isLaunchMode,
     skipPermissions,
     selectedModel,
     limitContext,
@@ -1190,7 +1207,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   ]);
 
   const launchOptionalSummary = useMemo(() => {
-    if (!isLaunch) return [];
+    if (!isLaunchMode) return [];
 
     const summary: string[] = [];
     if (promptDraft.value.trim()) summary.push('Lead prompt');
@@ -1204,7 +1221,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     if (customArgs.trim()) summary.push('Custom CLI args');
     return summary;
   }, [
-    isLaunch,
+    isLaunchMode,
     promptDraft.value,
     selectedModel,
     selectedProviderId,
@@ -1241,7 +1258,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return leadError;
     }
 
-    if (!isLaunch) {
+    if (!isLaunchMode) {
       return null;
     }
 
@@ -1267,7 +1284,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return null;
   }, [
     effectiveMemberDrafts,
-    isLaunch,
+    isLaunchMode,
     runtimeProviderStatusById,
     selectedModel,
     selectedProviderId,
@@ -1282,7 +1299,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [effectiveLeadRuntimeModel, prepareChecks, selectedModel, selectedProviderId]);
   const memberModelIssueById = useMemo(() => {
     const next: Record<string, string> = {};
-    if (!isLaunch) {
+    if (!isLaunchMode) {
       return next;
     }
     for (const member of effectiveMemberDrafts) {
@@ -1303,7 +1320,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return next;
   }, [
     effectiveMemberDrafts,
-    isLaunch,
+    isLaunchMode,
     leadModelIssueText,
     prepareChecks,
     selectedProviderId,
@@ -1311,32 +1328,32 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   ]);
   const hasInvalidLaunchMemberNames = useMemo(
     () =>
-      isLaunch &&
+      isLaunchMode &&
       membersDrafts.some(
         (member) => !member.name.trim() || validateMemberNameInline(member.name.trim()) !== null
       ),
-    [isLaunch, membersDrafts]
+    [isLaunchMode, membersDrafts]
   );
   const hasDuplicateLaunchMemberNames = useMemo(() => {
-    if (!isLaunch) return false;
+    if (!isLaunchMode) return false;
     const activeNames = membersDrafts
       .map((member) => member.name.trim().toLowerCase())
       .filter(Boolean);
     return new Set(activeNames).size !== activeNames.length;
-  }, [isLaunch, membersDrafts]);
+  }, [isLaunchMode, membersDrafts]);
 
   // ---------------------------------------------------------------------------
   // Error
   // ---------------------------------------------------------------------------
 
-  const provisioningError = isLaunch ? props.provisioningError : null;
+  const provisioningError = isLaunchMode ? props.provisioningError : null;
   const activeError = localError ?? modelValidationError ?? provisioningError;
   const launchInFlight = useStore((s) =>
-    isLaunch && effectiveTeamName ? isTeamProvisioningActive(s, effectiveTeamName) : false
+    isLaunchMode && effectiveTeamName ? isTeamProvisioningActive(s, effectiveTeamName) : false
   );
 
   useEffect(() => {
-    if (!open || !isLaunch || !effectiveTeamName || !launchInFlight) {
+    if (!open || !isLaunchMode || !effectiveTeamName || !launchInFlight) {
       return;
     }
 
@@ -1347,7 +1364,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     defaultProjectPath,
     effectiveCwd,
     effectiveTeamName,
-    isLaunch,
+    isLaunchMode,
     launchInFlight,
     open,
     openTeamTab,
@@ -1366,12 +1383,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setLocalError(modelValidationError);
       return;
     }
-    if (isLaunch && !effectiveCwd) {
+    if (isLaunchMode && !effectiveCwd) {
       setLocalError('Select working directory (cwd)');
       return;
     }
     if (
-      isLaunch &&
+      isLaunchMode &&
       membersDrafts.some(
         (member) => !member.name.trim() || validateMemberNameInline(member.name.trim()) !== null
       )
@@ -1379,7 +1396,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setLocalError('Fix member names before launch');
       return;
     }
-    if (isLaunch) {
+    if (isLaunchMode) {
       const activeNames = membersDrafts
         .map((member) => member.name.trim().toLowerCase())
         .filter(Boolean);
@@ -1393,11 +1410,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
     void (async () => {
       try {
-        if (isLaunch) {
-          await api.teams.replaceMembers(effectiveTeamName, {
-            members: buildMembersFromDrafts(effectiveMemberDrafts),
-          });
-          await props.onLaunch({
+        if (isLaunchMode) {
+          const nextMembers = buildMembersFromDrafts(effectiveMemberDrafts);
+          const launchRequest: TeamLaunchRequest = {
             teamName: effectiveTeamName,
             cwd: effectiveCwd,
             prompt: promptDraft.value.trim() || undefined,
@@ -1417,7 +1432,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             skipPermissions,
             worktree: worktreeEnabled && worktreeName.trim() ? worktreeName.trim() : undefined,
             extraCliArgs: customArgs.trim() || undefined,
-          });
+          };
+          if (isRelaunch) {
+            await props.onRelaunch(launchRequest, nextMembers);
+          } else {
+            await api.teams.replaceMembers(effectiveTeamName, {
+              members: nextMembers,
+            });
+            await props.onLaunch(launchRequest);
+          }
           openTeamTab(effectiveTeamName, effectiveCwd || defaultProjectPath);
           closeDialog();
         } else {
@@ -1464,10 +1487,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             ? err.message
             : isSchedule
               ? 'Failed to save schedule'
-              : 'Failed to launch team';
+              : isRelaunch
+                ? 'Failed to relaunch team'
+                : 'Failed to launch team';
         setLocalError(message);
-        if (isLaunch) {
-          console.error('Failed to launch team from dialog:', err);
+        if (isLaunchMode) {
+          console.error(
+            isRelaunch
+              ? 'Failed to relaunch team from dialog:'
+              : 'Failed to launch team from dialog:',
+            err
+          );
         }
       } finally {
         setIsSubmitting(false);
@@ -1479,7 +1509,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Disabled state
   // ---------------------------------------------------------------------------
 
-  const isDisabled = isLaunch
+  const isDisabled = isLaunchMode
     ? isSubmitting ||
       launchInFlight ||
       validationErrors.length > 0 ||
@@ -1492,13 +1522,26 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Dynamic labels
   // ---------------------------------------------------------------------------
 
-  const dialogTitle = isLaunch ? 'Launch Team' : isEditing ? 'Edit Schedule' : 'Create Schedule';
+  const dialogTitle = isLaunchMode
+    ? isRelaunch
+      ? 'Relaunch Team'
+      : 'Launch Team'
+    : isEditing
+      ? 'Edit Schedule'
+      : 'Create Schedule';
 
-  const dialogDescription = isLaunch ? (
-    <>
-      Start team <span className="font-mono font-medium">{effectiveTeamName}</span> via local Claude
-      CLI.
-    </>
+  const dialogDescription = isLaunchMode ? (
+    isRelaunch ? (
+      <>
+        Stop the current run for <span className="font-mono font-medium">{effectiveTeamName}</span>{' '}
+        and start it again via local Claude CLI.
+      </>
+    ) : (
+      <>
+        Start team <span className="font-mono font-medium">{effectiveTeamName}</span> via local
+        Claude CLI.
+      </>
+    )
   ) : isEditing ? (
     `Editing schedule for team "${effectiveTeamName}"`
   ) : effectiveTeamName ? (
@@ -1507,15 +1550,21 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     'Schedule automatic Claude task execution'
   );
 
-  const submitLabel = isLaunch
-    ? prepareState === 'idle' || prepareState === 'loading'
-      ? 'Skip and Launch'
-      : 'Launch'
+  const submitLabel = isLaunchMode
+    ? isRelaunch
+      ? 'Relaunch team'
+      : 'Launch team'
     : isEditing
       ? 'Save Changes'
       : 'Create Schedule';
 
-  const submittingLabel = isLaunch ? 'Launching...' : isEditing ? 'Saving...' : 'Creating...';
+  const submittingLabel = isLaunchMode
+    ? isRelaunch
+      ? 'Relaunching...'
+      : 'Launching...'
+    : isEditing
+      ? 'Saving...'
+      : 'Creating...';
 
   // ---------------------------------------------------------------------------
   // Render
@@ -1531,15 +1580,37 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       }}
     >
       <DialogContent
-        className={isSchedule ? 'max-h-[90vh] max-w-2xl overflow-y-auto' : 'max-w-2xl'}
+        className={isSchedule ? 'max-h-[90vh] max-w-3xl overflow-y-auto' : 'max-w-3xl'}
       >
         <DialogHeader>
           <DialogTitle className="text-sm">{dialogTitle}</DialogTitle>
           <DialogDescription className="text-xs">{dialogDescription}</DialogDescription>
         </DialogHeader>
 
+        {isRelaunch ? (
+          <div
+            className="rounded-md border p-3 text-xs"
+            style={{
+              backgroundColor: 'var(--warning-bg)',
+              borderColor: 'var(--warning-border)',
+              color: 'var(--warning-text)',
+            }}
+          >
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="font-medium">Relaunch will restart the current team run</p>
+                <p className="opacity-80">
+                  Saving these settings will stop the current team process, persist the updated
+                  roster, and launch the team again with the new runtime.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {/* Launch-only: Conflict warning */}
-        {isLaunch && conflictingTeam && !conflictDismissed ? (
+        {isLaunchMode && conflictingTeam && !conflictDismissed ? (
           <div
             className="rounded-md border p-3 text-xs"
             style={{
@@ -1714,10 +1785,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               Launch: optional settings
               Schedule: prompt + execution defaults
               ═══════════════════════════════════════════════════════════════════ */}
-          {isLaunch ? (
+          {isLaunchMode ? (
             <OptionalSettingsSection
-              title="Optional launch settings"
-              description="Keep the launch flow focused on the project path and only expand this when you want extra control."
+              title={isRelaunch ? 'Relaunch settings' : 'Optional launch settings'}
+              description={
+                isRelaunch
+                  ? 'Review the roster and lead runtime before restarting the team.'
+                  : 'Keep the launch flow focused on the project path and only expand this when you want extra control.'
+              }
               summary={launchOptionalSummary}
             >
               <div className="space-y-4">
@@ -1964,9 +2039,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           </div>
         ) : null}
 
-        <DialogFooter className={isLaunch ? 'pt-4 sm:justify-between' : 'pt-4'}>
+        <DialogFooter className={isLaunchMode ? 'pt-4 sm:justify-between' : 'pt-4'}>
           {/* Launch-only: CLI warm-up status */}
-          {isLaunch ? (
+          {isLaunchMode ? (
             <div className="min-w-0">
               {prepareState === 'idle' || prepareState === 'loading' ? (
                 <>
@@ -1980,7 +2055,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                             : 'Preparing environment...')}
                       </span>
                       <p className="mt-0.5 flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
-                        <span>Pre-flight check to catch errors before launch</span>
+                        <span>
+                          Pre-flight check to catch errors before{' '}
+                          {isRelaunch ? 'relaunch' : 'launch'}
+                        </span>
                       </p>
                     </div>
                   </div>
@@ -2023,13 +2101,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                     <div className="min-w-0">
                       <p className="font-medium">
-                        CLI environment is not available - launch is blocked
+                        CLI environment is not available - {isRelaunch ? 'relaunch' : 'launch'} is
+                        blocked
                       </p>
                       <p className="mt-0.5 text-red-300/80">
                         {prepareMessage ?? 'Failed to prepare environment'}
                       </p>
                       <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
-                        Pre-flight check to catch errors before launch
+                        Pre-flight check to catch errors before {isRelaunch ? 'relaunch' : 'launch'}
                       </p>
                     </div>
                   </div>
@@ -2080,7 +2159,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
           <div className="flex shrink-0 items-center gap-2">
             <Button variant="outline" size="sm" onClick={closeDialog}>
-              {isLaunch ? 'Close' : 'Cancel'}
+              {isLaunchMode ? 'Close' : 'Cancel'}
             </Button>
             <Button
               size="sm"

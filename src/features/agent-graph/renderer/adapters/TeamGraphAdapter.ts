@@ -11,8 +11,10 @@
 import { getUnreadCount } from '@renderer/services/commentReadStorage';
 import {
   agentAvatarUrl,
+  buildMemberAvatarMap,
   buildMemberLaunchPresentation,
   getMemberRuntimeAdvisoryLabel,
+  resolveMemberAvatarUrl,
 } from '@renderer/utils/memberHelpers';
 import { buildTeamProvisioningPresentation } from '@renderer/utils/teamProvisioningPresentation';
 import { formatTeamRuntimeSummary } from '@renderer/utils/teamRuntimeSummary';
@@ -143,6 +145,7 @@ export class TeamGraphAdapter {
     const leadId = `lead:${teamName}`;
     const leadName = TeamGraphAdapter.#getLeadMemberName(teamData, teamName);
     const memberNodeIdByAlias = TeamGraphAdapter.#buildMemberNodeIdByAlias(teamData, teamName);
+    const avatarMap = buildMemberAvatarMap(teamData.members);
     const provisioningPresentation = buildTeamProvisioningPresentation({
       progress: provisioningProgress,
       members: teamData.members,
@@ -158,6 +161,7 @@ export class TeamGraphAdapter {
       teamData,
       teamName,
       leadName,
+      avatarMap,
       pendingApprovalAgents,
       leadActivity,
       leadContext,
@@ -173,6 +177,7 @@ export class TeamGraphAdapter {
       teamData,
       teamName,
       memberNodeIdByAlias,
+      avatarMap,
       spawnStatuses,
       pendingApprovalAgents,
       activeTools,
@@ -369,6 +374,7 @@ export class TeamGraphAdapter {
     data: TeamGraphData,
     teamName: string,
     leadName: string,
+    avatarMap: ReadonlyMap<string, string>,
     pendingApprovalAgents?: Set<string>,
     leadActivity?: LeadActivityState,
     leadContext?: LeadContextUsage,
@@ -428,7 +434,9 @@ export class TeamGraphAdapter {
       launchVisualState: leadLaunchPresentation?.launchVisualState ?? undefined,
       launchStatusLabel: leadLaunchPresentation?.launchStatusLabel ?? undefined,
       contextUsage: percent != null ? Math.max(0, Math.min(1, percent / 100)) : undefined,
-      avatarUrl: agentAvatarUrl(leadName, 64),
+      avatarUrl: leadMember
+        ? resolveMemberAvatarUrl(leadMember, avatarMap, 64)
+        : agentAvatarUrl(leadName, 64),
       pendingApproval,
       activeTool: activeTool
         ? {
@@ -465,6 +473,7 @@ export class TeamGraphAdapter {
     data: TeamGraphData,
     teamName: string,
     memberNodeIdByAlias: ReadonlyMap<string, string>,
+    avatarMap: ReadonlyMap<string, string>,
     spawnStatuses?: Record<string, MemberSpawnStatusEntry>,
     pendingApprovalAgents?: Set<string>,
     activeTools?: Record<string, Record<string, ActiveToolCall>>,
@@ -520,7 +529,7 @@ export class TeamGraphAdapter {
         spawnStatus: spawn?.status,
         launchVisualState: launchPresentation.launchVisualState ?? undefined,
         launchStatusLabel: launchPresentation.launchStatusLabel ?? undefined,
-        avatarUrl: agentAvatarUrl(member.name, 64),
+        avatarUrl: resolveMemberAvatarUrl(member, avatarMap, 64),
         currentTaskId: member.currentTaskId ?? undefined,
         currentTaskSubject: member.currentTaskId
           ? data.tasks.find((t) => t.id === member.currentTaskId)?.subject

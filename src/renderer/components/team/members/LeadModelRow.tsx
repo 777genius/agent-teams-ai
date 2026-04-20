@@ -13,8 +13,9 @@ import { Label } from '@renderer/components/ui/label';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
+import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
 import { isAnthropicHaikuTeamModel } from '@renderer/utils/teamModelCatalog';
-import { getMemberColorByName } from '@shared/constants/memberColors';
+import { resolveTeamLeadColorName } from '@shared/utils/teamMemberColors';
 import { AlertTriangle, ChevronDown, ChevronRight, Info } from 'lucide-react';
 
 import { Button } from '../../ui/button';
@@ -54,7 +55,7 @@ export const LeadModelRow = ({
 }: LeadModelRowProps): React.JSX.Element => {
   const { isLight } = useTheme();
   const [modelExpanded, setModelExpanded] = useState(false);
-  const leadColorSet = getTeamColorSet(getMemberColorByName('lead'));
+  const leadColorSet = getTeamColorSet(resolveTeamLeadColorName());
   const modelButtonLabel = model.trim()
     ? getProviderScopedTeamModelLabel(providerId, model.trim())
     : 'Default';
@@ -63,7 +64,7 @@ export const LeadModelRow = ({
 
   return (
     <div
-      className="relative grid grid-cols-1 gap-2 rounded-md p-2 shadow-sm md:grid-cols-[auto_1fr_auto]"
+      className="relative grid grid-cols-1 gap-2 rounded-md p-2 shadow-sm md:grid-cols-[minmax(0,1fr)_auto_auto]"
       style={{
         backgroundColor: isLight
           ? 'color-mix(in srgb, var(--color-surface-raised) 22%, white 78%)'
@@ -77,9 +78,17 @@ export const LeadModelRow = ({
         aria-hidden="true"
       />
       <div className="min-w-0">
-        <div className="flex h-8 items-center gap-3 px-2">
-          <span className="text-sm font-medium text-[var(--color-text)]">lead</span>
-          <span className="shrink-0 text-xs text-[var(--color-text-secondary)]">Team Lead</span>
+        <div className="flex items-center gap-2">
+          <img
+            src={agentAvatarUrl('team-lead', 32)}
+            alt=""
+            className="size-8 shrink-0 rounded-full bg-[var(--color-surface-raised)]"
+            loading="lazy"
+          />
+          <div className="flex h-8 min-w-0 items-center gap-3">
+            <span className="truncate text-sm font-medium text-[var(--color-text)]">lead</span>
+            <span className="shrink-0 text-xs text-[var(--color-text-secondary)]">Team Lead</span>
+          </div>
         </div>
       </div>
       <div className="min-w-0">

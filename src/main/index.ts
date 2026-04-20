@@ -111,6 +111,7 @@ import {
 } from './utils/safeWebContentsSend';
 import { syncTelemetryFlag } from './sentry';
 import {
+  ActiveTeamRegistry,
   BoardTaskActivityDetailService,
   BoardTaskActivityRecordSource,
   BoardTaskActivityService,
@@ -130,6 +131,11 @@ import {
   TaskBoundaryParser,
   TeamDataService,
   TeamLogSourceTracker,
+  TeamTaskStallJournal,
+  TeamTaskStallMonitor,
+  TeamTaskStallNotifier,
+  TeamTaskStallPolicy,
+  TeamTaskStallSnapshotSource,
   TeammateToolTracker,
   TeamMemberLogsFinder,
   TeamProvisioningService,
@@ -415,6 +421,7 @@ let cliInstallerService: CliInstallerService;
 let ptyTerminalService: PtyTerminalService;
 let httpServer: HttpServer;
 let schedulerService: SchedulerService;
+let teamTaskStallMonitor: TeamTaskStallMonitor | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
 let teamBackupService: TeamBackupService | null = null;
 let branchStatusService: BranchStatusService | null = null;
@@ -848,6 +855,13 @@ async function initializeServices(): Promise<void> {
 
   const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
   const teamLogSourceTracker = new TeamLogSourceTracker(teamMemberLogsFinder);
+  teamTaskStallMonitor = new TeamTaskStallMonitor(
+    new ActiveTeamRegistry(teamDataService, teamLogSourceTracker),
+    new TeamTaskStallSnapshotSource(),
+    new TeamTaskStallPolicy(),
+    new TeamTaskStallJournal(),
+    new TeamTaskStallNotifier(teamDataService)
+  );
   let teammateToolTracker: TeammateToolTracker | null = null;
   branchStatusService = new BranchStatusService((event) => {
     safeSendToRenderer(mainWindow, TEAM_PROJECT_BRANCH_CHANGE, event);
@@ -930,6 +944,7 @@ async function initializeServices(): Promise<void> {
   // Allow TeamProvisioningService to trigger team refresh events (e.g. live lead replies).
   const teamChangeEmitter = (event: TeamChangeEvent): void => {
     forwardTeamChange(event);
+    teamTaskStallMonitor?.noteTeamChange(event);
     if (event.type === 'lead-activity' && event.detail === 'offline') {
       teammateToolTracker?.handleTeamOffline(event.teamName);
     }
@@ -939,6 +954,7 @@ async function initializeServices(): Promise<void> {
   teamLogSourceTracker.onLogSourceChange((teamName) => {
     teammateToolTracker?.handleLogSourceChange(teamName);
   });
+  teamTaskStallMonitor.start();
 
   // Allow SchedulerService to push schedule events to renderer
   schedulerService.setChangeEmitter((event) => {
@@ -1141,6 +1157,10 @@ function shutdownServices(): void {
   // Stop background polling timers (prevents hanging shutdown).
   if (teamDataService) {
     teamDataService.stopProcessHealthPolling();
+  }
+  if (teamTaskStallMonitor) {
+    void teamTaskStallMonitor.stop();
+    teamTaskStallMonitor = null;
   }
   branchStatusService?.dispose();
   branchStatusService = null;

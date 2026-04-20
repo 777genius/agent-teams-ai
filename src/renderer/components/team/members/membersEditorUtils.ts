@@ -1,29 +1,20 @@
 import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { normalizeCreateLaunchProviderForUi } from '@renderer/utils/geminiUiFreeze';
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { getMemberColorByName } from '@shared/constants/memberColors';
 import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { isLeadMember } from '@shared/utils/leadDetection';
+import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
+import { validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type { MemberDraft } from './membersEditorTypes';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { EffortLevel, TeamProviderId, TeamProvisioningMemberInput } from '@shared/types';
 
-function isValidMemberName(name: string): boolean {
-  if (name.length < 1 || name.length > 128) return false;
-  if (!/^[a-zA-Z0-9]/.test(name)) return false;
-  return /^[a-zA-Z0-9._-]+$/.test(name);
-}
-
 export function validateMemberNameInline(name: string): string | null {
   const trimmed = name.trim();
   if (!trimmed) return null;
-  if (!isValidMemberName(trimmed)) {
-    return 'Start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars';
-  }
-  return null;
+  return validateTeamMemberNameFormat(trimmed);
 }
 
 function newDraftId(): string {
@@ -36,6 +27,7 @@ export function createMemberDraft(initial?: Partial<MemberDraft>): MemberDraft {
   return {
     id: initial?.id ?? newDraftId(),
     name: initial?.name ?? '',
+    originalName: initial?.originalName,
     roleSelection: initial?.roleSelection ?? '',
     customRole: initial?.customRole ?? '',
     workflow: initial?.workflow,
@@ -66,6 +58,7 @@ export function createMemberDraftsFromInputs(
       const isPreset = presetRoles.includes(role);
       return createMemberDraft({
         name: member.name,
+        originalName: member.name,
         roleSelection: role ? (isPreset ? role : CUSTOM_ROLE) : '',
         customRole: role && !isPreset ? role : '',
         workflow: member.workflow,
@@ -139,52 +132,62 @@ interface ExistingMemberColorInput {
   removedAt?: number | string | null;
 }
 
+function getMemberDraftColorSeedKey(member: Pick<MemberDraft, 'id' | 'originalName'>): string {
+  const originalName = member.originalName?.trim();
+  return originalName || `draft:${member.id}`;
+}
+
 export function buildMemberDraftColorMap(
-  members: readonly Pick<MemberDraft, 'name'>[],
-  existingMembers?: readonly ExistingMemberColorInput[]
+  members: readonly Pick<MemberDraft, 'id' | 'name' | 'originalName'>[],
+  existingMembers?: readonly ExistingMemberColorInput[],
+  existingColorMap?: ReadonlyMap<string, string>
 ): Map<string, string> {
-  const draftEntries = members
-    .map((member) => member.name.trim())
-    .filter(Boolean)
-    .map((name) => ({ name }));
+  const normalizedExistingColorMap = new Map<string, string>(
+    Array.from(existingColorMap?.entries() ?? []).map(([name, color]) => [
+      name.trim().toLowerCase(),
+      color,
+    ])
+  );
 
   const existingSeedEntries = (existingMembers ?? [])
     .map((member) => ({
       ...member,
       name: member.name.trim(),
-      color: member.color?.trim() || getMemberColorByName(member.name),
+      color:
+        normalizedExistingColorMap.get(member.name.trim().toLowerCase()) ??
+        member.color?.trim() ??
+        undefined,
     }))
     .filter((member) => member.name);
   const existingNames = new Set(existingSeedEntries.map((member) => member.name.toLowerCase()));
-  const unseenNewDraftNames = new Set<string>();
-  const uniqueNewDraftEntries = draftEntries.filter((entry) => {
-    const normalizedName = entry.name.toLowerCase();
-    if (existingNames.has(normalizedName) || unseenNewDraftNames.has(normalizedName)) {
-      return false;
-    }
-    unseenNewDraftNames.add(normalizedName);
-    return true;
+  const uniqueNewDraftEntries = members
+    .filter((member) => {
+      if (member.originalName?.trim()) {
+        return false;
+      }
+      const currentName = member.name.trim();
+      return !currentName || !existingNames.has(currentName.toLowerCase());
+    })
+    .map((member) => ({ name: getMemberDraftColorSeedKey(member) }));
+
+  const fullMap = buildTeamMemberColorMap([...existingSeedEntries, ...uniqueNewDraftEntries], {
+    preferProvidedColors: true,
   });
-
-  const predictedDraftSeedEntries = uniqueNewDraftEntries.map((entry) => ({
-    ...entry,
-    color: getMemberColorByName(entry.name),
-  }));
-
-  // Mirror the team page color inputs:
-  // 1. existing members keep their persisted/resolved color
-  // 2. new draft members get the same name-based default color that the resolver
-  //    will assign after create/launch/add
-  // 3. buildMemberColorMap still resolves rare collisions the same way as the UI
-  const fullMap = buildMemberColorMap([...existingSeedEntries, ...predictedDraftSeedEntries]);
   const fullColorByName = new Map(
     Array.from(fullMap.entries()).map(([name, color]) => [name.toLowerCase(), color] as const)
   );
 
   const draftMap = new Map<string, string>();
-  for (const entry of draftEntries) {
-    const color = fullColorByName.get(entry.name.toLowerCase());
-    if (color) draftMap.set(entry.name, color);
+  for (const member of members) {
+    const originalName = member.originalName?.trim();
+    const currentName = member.name.trim();
+    const colorSeedKey = originalName
+      ? originalName
+      : currentName && existingNames.has(currentName.toLowerCase())
+        ? currentName
+        : getMemberDraftColorSeedKey(member);
+    const color = fullColorByName.get(colorSeedKey.toLowerCase());
+    if (color) draftMap.set(member.id, color);
   }
   return draftMap;
 }
@@ -209,7 +212,7 @@ export function buildMemberDraftSuggestions(
       id: m.id,
       name: m.name.trim(),
       subtitle: getMemberDraftRole(m),
-      color: colorMap.get(m.name.trim()) ?? undefined,
+      color: colorMap.get(m.id) ?? undefined,
     }));
 }
 

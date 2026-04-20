@@ -270,6 +270,35 @@ describe('sessionSlice', () => {
       await Promise.all([first, second]);
       expect(store.getState().sessions[0]?.id).toBe('newest');
     });
+
+    it('should retry once on transient invoke lifecycle errors', async () => {
+      vi.useFakeTimers();
+      store.setState({
+        selectedProjectId: 'project-1',
+        sessions: [{ id: 'seed' }] as never[],
+      });
+
+      mockAPI.getSessionsPaginated
+        .mockRejectedValueOnce(
+          new Error(
+            "Error invoking remote method 'get-sessions-paginated': reply was never sent"
+          )
+        )
+        .mockResolvedValueOnce({
+          sessions: [{ id: 'recovered' }] as never[],
+          nextCursor: null,
+          hasMore: false,
+          totalCount: 1,
+        });
+
+      const refreshPromise = store.getState().refreshSessionsInPlace('project-1');
+      await vi.advanceTimersByTimeAsync(150);
+      await refreshPromise;
+
+      expect(mockAPI.getSessionsPaginated).toHaveBeenCalledTimes(2);
+      expect(store.getState().sessions[0]?.id).toBe('recovered');
+      vi.useRealTimers();
+    });
   });
 
   describe('fetchSessionDetail', () => {

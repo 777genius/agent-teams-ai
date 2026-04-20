@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import {
   getTeamColorSet,
   getThemedBadge,
@@ -5,7 +7,13 @@ import {
   getThemedText,
 } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
-import { agentAvatarUrl, displayMemberName } from '@renderer/utils/memberHelpers';
+import { useStore } from '@renderer/store';
+import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
+import {
+  agentAvatarUrl,
+  buildMemberAvatarMap,
+  displayMemberName,
+} from '@renderer/utils/memberHelpers';
 
 import { MemberHoverCard } from './members/MemberHoverCard';
 
@@ -40,6 +48,12 @@ export const MemberBadge = ({
 }: MemberBadgeProps): React.JSX.Element => {
   const colors = getTeamColorSet(color ?? '');
   const { isLight } = useTheme();
+  const selectedTeamName = useStore((s) => s.selectedTeamName);
+  const effectiveTeamName = teamName ?? selectedTeamName;
+  const teamMembers = useStore((s) =>
+    effectiveTeamName ? selectResolvedMembersForTeamName(s, effectiveTeamName) : []
+  );
+  const avatarMap = useMemo(() => buildMemberAvatarMap(teamMembers), [teamMembers]);
   const avatarSize = size === 'md' ? 32 : size === 'sm' ? 24 : 18;
   const avatarClass = size === 'md' ? 'size-6' : size === 'sm' ? 'size-5' : 'size-4';
   const textClass = size === 'md' ? 'text-xs' : size === 'sm' ? 'text-[10px]' : 'text-[9px]';
@@ -53,7 +67,7 @@ export const MemberBadge = ({
 
   const avatar = (
     <img
-      src={agentAvatarUrl(name, avatarSize)}
+      src={avatarMap.get(name) ?? agentAvatarUrl(name, avatarSize)}
       alt=""
       className={`${avatarClass} shrink-0 rounded-full bg-[var(--color-surface-raised)]`}
       loading="lazy"

@@ -6,6 +6,7 @@ import { useTheme } from '@renderer/hooks/useTheme';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import {
   agentAvatarUrl,
+  buildMemberAvatarMap,
   buildMemberColorMap,
   displayMemberName,
 } from '@renderer/utils/memberHelpers';
@@ -42,6 +43,7 @@ export const ActiveTasksBlock = ({
   const { isLight } = useTheme();
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const colorMap = buildMemberColorMap(members);
+  const avatarMap = buildMemberAvatarMap(members);
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
 
   const entries: ActivityEntry[] = [];
@@ -115,7 +117,7 @@ export const ActiveTasksBlock = ({
               <div className="flex items-center gap-2 px-3 py-2">
                 <span className="relative inline-flex shrink-0">
                   <img
-                    src={agentAvatarUrl(member.name, 24)}
+                    src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name, 24)}
                     alt=""
                     className="size-5 rounded-full bg-[var(--color-surface-raised)]"
                     loading="lazy"

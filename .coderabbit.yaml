@@ -3,7 +3,9 @@
 reviews:
   auto_review:
     enabled: true
-    drafts: false
+    drafts: true
+    base_branches:
+      - '.*'
   auto_title_instructions: |
     Follow Conventional Commits format: '<type>: <description>'
     Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
