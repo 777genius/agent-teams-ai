@@ -24,6 +24,7 @@ const storeState = {
 };
 
 vi.mock('@renderer/api', () => ({
+  isElectronMode: () => true,
   api: {
     getProjects: vi.fn(async () => [
       {

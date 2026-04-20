@@ -240,7 +240,7 @@ export class ProjectScanner {
       }
 
       const ms = Date.now() - startedAt;
-      if (ms >= 2000) {
+      if (ms >= 5000) {
         logger.warn(
           `[scan] completed slow ms=${ms} projectDirs=${projectDirs.length} projects=${validProjects.length}`
         );

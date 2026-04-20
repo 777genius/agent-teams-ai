@@ -4,6 +4,7 @@
 
 import { isCommandOutputContent, sanitizeDisplayContent } from '@shared/utils/contentSanitizer';
 import { createLogger } from '@shared/utils/logger';
+import * as fs from 'fs/promises';
 import * as readline from 'readline';
 
 import { LocalFileSystemProvider } from '../services/infrastructure/LocalFileSystemProvider';
@@ -29,7 +30,7 @@ function normalizeDriveLetter(p: string): string {
 
 const defaultProvider = new LocalFileSystemProvider();
 
-const JSONL_HEAD_TIMEOUT_MS = 2000;
+const JSONL_HEAD_TIMEOUT_MS = 5000;
 const JSONL_HEAD_MAX_BYTES = 256 * 1024;
 const JSONL_HEAD_MAX_LINES = 400;
 
@@ -53,6 +54,41 @@ function createStreamCleanup(rl: readline.Interface, fileStream: Readable): () =
   };
 }
 
+function extractCwdFromBufferedText(text: string): string | null {
+  const lines = text.split(/\r?\n/, JSONL_HEAD_MAX_LINES);
+  for (const line of lines) {
+    if (!line.trim()) continue;
+
+    let entry: ChatHistoryEntry;
+    try {
+      entry = JSON.parse(line) as ChatHistoryEntry;
+    } catch {
+      continue;
+    }
+
+    if ('cwd' in entry && entry.cwd) {
+      return normalizeDriveLetter(translateWslMountPath(entry.cwd));
+    }
+  }
+
+  return null;
+}
+
+async function extractCwdFromLocalFile(filePath: string): Promise<string | null> {
+  const handle = await fs.open(filePath, 'r');
+  try {
+    const buffer = Buffer.alloc(JSONL_HEAD_MAX_BYTES);
+    const { bytesRead } = await handle.read(buffer, 0, JSONL_HEAD_MAX_BYTES, 0);
+    if (bytesRead <= 0) {
+      return null;
+    }
+
+    return extractCwdFromBufferedText(buffer.toString('utf8', 0, bytesRead));
+  } finally {
+    await handle.close().catch(() => undefined);
+  }
+}
+
 /**
  * Extract CWD (current working directory) from the first entry.
  * Used to get the actual project path from encoded directory names.
@@ -72,6 +108,15 @@ export async function extractCwd(
     }
   } catch {
     return null;
+  }
+
+  if (fsProvider.type === 'local') {
+    try {
+      return await extractCwdFromLocalFile(filePath);
+    } catch (error) {
+      logger.debug(`Error extracting cwd from local file ${filePath}:`, error);
+      return null;
+    }
   }
 
   const fileStream = fsProvider.createReadStream(filePath, { encoding: 'utf8' });

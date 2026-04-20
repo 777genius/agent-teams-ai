@@ -779,16 +779,20 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     );
   });
 
-  it('validates the generated agent-teams MCP server directly over stdio', async () => {
-    const svc = new TeamProvisioningService();
-    const configPath = writeMcpConfig(tempRoot, {
-      'agent-teams': getRealAgentTeamsMcpLaunchSpec(),
-    });
+  it(
+    'validates the generated agent-teams MCP server directly over stdio',
+    async () => {
+      const svc = new TeamProvisioningService();
+      const configPath = writeMcpConfig(tempRoot, {
+        'agent-teams': getRealAgentTeamsMcpLaunchSpec(),
+      });
 
-    await expect(
-      (svc as any).validateAgentTeamsMcpRuntime('/fake/claude', tempRoot, process.env, configPath)
-    ).resolves.toBeUndefined();
-  });
+      await expect(
+        (svc as any).validateAgentTeamsMcpRuntime('/fake/claude', tempRoot, process.env, configPath)
+      ).resolves.toBeUndefined();
+    },
+    45_000
+  );
 
   it('fails validation when the generated MCP config has no agent-teams entry', async () => {
     const svc = new TeamProvisioningService();

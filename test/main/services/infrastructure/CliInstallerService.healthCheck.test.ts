@@ -83,7 +83,7 @@ describe('CliInstallerService health check', () => {
 
   it('does not treat a found binary as installed until --version succeeds', async () => {
     resolveBinaryMock.mockResolvedValue('/usr/local/bin/claude');
-    execCliMock.mockRejectedValueOnce(new Error('spawn EACCES'));
+    execCliMock.mockRejectedValue(new Error('spawn EACCES'));
 
     const status = await service.getStatus();
 

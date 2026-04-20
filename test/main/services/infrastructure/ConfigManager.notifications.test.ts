@@ -20,11 +20,12 @@ describe('ConfigManager notification config shape', () => {
     vi.resetModules();
 
     overrideRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'config-notifications-'));
+    const configPath = path.join(overrideRoot, 'claude-devtools-config.json');
     const pathDecoder = await import('../../../../src/main/utils/pathDecoder');
     pathDecoder.setClaudeBasePathOverride(overrideRoot);
 
     fs.writeFileSync(
-      path.join(overrideRoot, 'claude-devtools-config.json'),
+      configPath,
       JSON.stringify({
         notifications: {
           notifyOnInboxMessages: true,
@@ -42,5 +43,14 @@ describe('ConfigManager notification config shape', () => {
     expect(config.notifications.autoResumeOnRateLimit).toBe(true);
     expect(config.notifications.notifyOnTeamLaunched).toBe(false);
     expect('notifyOnInboxMessages' in config.notifications).toBe(false);
+
+    await vi.waitFor(() => {
+      const persisted = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+        notifications: Record<string, unknown>;
+      };
+      expect(persisted.notifications.autoResumeOnRateLimit).toBe(true);
+      expect(persisted.notifications.notifyOnTeamLaunched).toBe(false);
+      expect('notifyOnInboxMessages' in persisted.notifications).toBe(false);
+    });
   });
 });
