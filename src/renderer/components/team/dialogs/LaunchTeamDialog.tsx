@@ -50,14 +50,15 @@ import {
   normalizeCreateLaunchProviderForUi,
 } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
+import { nameColorSet } from '@renderer/utils/projectColor';
 import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
-import { nameColorSet } from '@renderer/utils/projectColor';
 import {
   getTeamModelSelectionError,
   normalizeExplicitTeamModelForUi,
 } from '@renderer/utils/teamModelAvailability';
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import {
@@ -1454,8 +1455,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 selectedProviderId,
                 runtimeProviderStatusById.get(selectedProviderId)
               ) ??
-              previousLaunchParams?.providerBackendId ??
-              savedLaunchProviderBackendId ??
+              migrateProviderBackendId(
+                selectedProviderId,
+                previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
+              ) ??
               undefined,
             model: computeEffectiveTeamModel(selectedModel, limitContext, selectedProviderId),
             effort: (selectedEffort as EffortLevel) || undefined,

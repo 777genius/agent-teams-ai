@@ -91,7 +91,7 @@ import {
   PROTECTED_CLI_FLAGS,
 } from '@shared/utils/cliArgsParser';
 import { createLogger } from '@shared/utils/logger';
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { isTeamProviderBackendId, migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
 import {
   buildStandaloneSlashCommandMeta,
@@ -186,6 +186,8 @@ import type {
   TeamLaunchResponse,
   TeamMemberActivityMeta,
   TeamMessageNotificationData,
+  TeamProviderBackendId,
+  TeamProviderId,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamSummary,
@@ -1131,8 +1133,9 @@ function parseOptionalMemberProviderId(
 }
 
 function parseOptionalProviderBackendId(
-  value: unknown
-): { valid: true; value: string | undefined } | { valid: false; error: string } {
+  value: unknown,
+  providerId?: TeamProviderId
+): { valid: true; value: TeamProviderBackendId | undefined } | { valid: false; error: string } {
   if (value === undefined || value === null || value === '') {
     return { valid: true, value: undefined };
   }
@@ -1146,7 +1149,19 @@ function parseOptionalProviderBackendId(
   if (trimmed.length > 64) {
     return { valid: false, error: 'providerBackendId too long (max 64)' };
   }
-  return { valid: true, value: trimmed };
+  if (providerId) {
+    const migratedBackendId = migrateProviderBackendId(providerId, trimmed);
+    if (migratedBackendId) {
+      return { valid: true, value: migratedBackendId };
+    }
+  } else if (isTeamProviderBackendId(trimmed)) {
+    return { valid: true, value: trimmed };
+  }
+
+  return {
+    valid: false,
+    error: 'providerBackendId must be one of auto, adapter, api, cli-sdk, or codex-native',
+  };
 }
 
 function parseOptionalMemberEffort(
@@ -1242,7 +1257,16 @@ async function validateProvisioningRequest(
   if (payload.prompt !== undefined && typeof payload.prompt !== 'string') {
     return { valid: false, error: 'prompt must be a string' };
   }
-  const providerBackendValidation = parseOptionalProviderBackendId(payload.providerBackendId);
+  const providerId =
+    payload.providerId === 'codex'
+      ? 'codex'
+      : payload.providerId === 'gemini'
+        ? 'gemini'
+        : 'anthropic';
+  const providerBackendValidation = parseOptionalProviderBackendId(
+    payload.providerBackendId,
+    providerId
+  );
   if (!providerBackendValidation.valid) {
     return { valid: false, error: providerBackendValidation.error };
   }
@@ -1297,12 +1321,7 @@ async function validateProvisioningRequest(
       members,
       cwd,
       prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
-      providerId:
-        payload.providerId === 'codex'
-          ? 'codex'
-          : payload.providerId === 'gemini'
-            ? 'gemini'
-            : 'anthropic',
+      providerId,
       providerBackendId: providerBackendValidation.value,
       model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
       effort: isValidEffort(payload.effort) ? payload.effort : undefined,
@@ -1413,7 +1432,16 @@ async function handleLaunchTeam(
   if (payload.model !== undefined && typeof payload.model !== 'string') {
     return { success: false, error: 'model must be a string' };
   }
-  const providerBackendValidation = parseOptionalProviderBackendId(payload.providerBackendId);
+  const providerId =
+    payload.providerId === 'codex'
+      ? 'codex'
+      : payload.providerId === 'gemini'
+        ? 'gemini'
+        : 'anthropic';
+  const providerBackendValidation = parseOptionalProviderBackendId(
+    payload.providerBackendId,
+    providerId
+  );
   if (!providerBackendValidation.valid) {
     return { success: false, error: providerBackendValidation.error };
   }
@@ -1439,15 +1467,13 @@ async function handleLaunchTeam(
     const members = membersMeta?.members ?? [];
 
     const resolvedProviderId =
-      payload.providerId === 'codex'
-        ? 'codex'
-        : payload.providerId === 'gemini'
-          ? 'gemini'
-          : meta?.providerId === 'codex'
-            ? 'codex'
-            : meta?.providerId === 'gemini'
-              ? 'gemini'
-              : 'anthropic';
+      providerId === 'codex' || providerId === 'gemini'
+        ? providerId
+        : meta?.providerId === 'codex'
+          ? 'codex'
+          : meta?.providerId === 'gemini'
+            ? 'gemini'
+            : 'anthropic';
 
     const createRequest: TeamCreateRequest = {
       teamName: tn,
@@ -1501,12 +1527,7 @@ async function handleLaunchTeam(
         teamName: validatedTeamName.value!,
         cwd,
         prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
-        providerId:
-          payload.providerId === 'codex'
-            ? 'codex'
-            : payload.providerId === 'gemini'
-              ? 'gemini'
-              : 'anthropic',
+        providerId,
         providerBackendId: providerBackendValidation.value,
         model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
         effort: isValidEffort(payload.effort) ? payload.effort : undefined,

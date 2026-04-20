@@ -784,7 +784,7 @@ export interface TeamViewSnapshot {
 
 export type EffortLevel = 'low' | 'medium' | 'high';
 export type TeamProviderId = 'anthropic' | 'codex' | 'gemini';
-export type TeamProviderBackendId = string;
+export type TeamProviderBackendId = 'auto' | 'adapter' | 'api' | 'cli-sdk' | 'codex-native';
 
 export interface TeamLaunchRequest {
   teamName: string;

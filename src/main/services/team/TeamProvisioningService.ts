@@ -38,10 +38,9 @@ import { getMemberColorByName } from '@shared/constants/memberColors';
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
-import { getErrorMessage } from '@shared/utils/errorHandling';
-import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import { deriveContextMetrics, inferContextWindowTokens } from '@shared/utils/contextMetrics';
+import { getErrorMessage } from '@shared/utils/errorHandling';
 import {
   isInboxNoiseMessage,
   isMeaningfulBootstrapCheckInMessage,
@@ -57,6 +56,7 @@ import {
   parseAllTeammateMessages,
   type ParsedTeammateContent,
 } from '@shared/utils/teammateMessageParser';
+import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { createCliAutoSuffixNameGuard, parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import {
@@ -4540,7 +4540,10 @@ export class TeamProvisioningService {
       teamName,
       updatedAt,
       runId: run?.runId ?? null,
-      providerBackendId: run?.request.providerBackendId ?? persistedTeamMeta?.providerBackendId,
+      providerBackendId: migrateProviderBackendId(
+        run?.request.providerId ?? persistedTeamMeta?.providerId,
+        run?.request.providerBackendId ?? persistedTeamMeta?.providerBackendId
+      ),
       members: snapshotMembers,
     };
 
