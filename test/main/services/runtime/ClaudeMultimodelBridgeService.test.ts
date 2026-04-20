@@ -428,9 +428,9 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(codex?.capabilities.extensions.plugins).toMatchObject({
       status: 'unsupported',
     });
-    expect(isConnectionManagedRuntimeProvider(codex!)).toBe(false);
+    expect(isConnectionManagedRuntimeProvider(codex!)).toBe(true);
     expect(getProviderConnectionModeSummary(codex!)).toBeNull();
-    expect(getProviderCurrentRuntimeSummary(codex!)).toBeNull();
+    expect(getProviderCurrentRuntimeSummary(codex!)).toBe('Current runtime: Codex native');
   });
 
   it('preserves codex-native ready truth from runtime status payloads', async () => {

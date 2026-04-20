@@ -41,7 +41,7 @@ describe('resolveMemberRuntimeSummary', () => {
     const spawnEntry = createSpawnEntry({ runtimeModel: 'claude-opus-4-7', runtimeAlive: true });
 
     expect(resolveMemberRuntimeSummary(member, undefined, spawnEntry)).toBe(
-      'Anthropic · Opus 4.7 · Medium · Codex native'
+      'Anthropic · Opus 4.7 · Medium · Codex'
     );
   });
 
@@ -62,7 +62,7 @@ describe('resolveMemberRuntimeSummary', () => {
     });
 
     expect(resolveMemberRuntimeSummary(member, undefined, spawnEntry)).toBe(
-      '5.4 Mini · Medium · Codex native'
+      '5.4 Mini · Medium · Codex'
     );
   });
 
@@ -79,7 +79,7 @@ describe('resolveMemberRuntimeSummary', () => {
     };
 
     expect(resolveMemberRuntimeSummary(member, undefined, undefined, runtimeEntry)).toBe(
-      '5.4 Mini · Medium · Codex native · 256.0 MB'
+      '5.4 Mini · Medium · Codex · 256.0 MB'
     );
   });
 
@@ -98,7 +98,7 @@ describe('resolveMemberRuntimeSummary', () => {
         },
         undefined
       )
-    ).toBe('5.4 Mini · Medium · Codex native');
+    ).toBe('5.4 Mini · Medium · Codex');
   });
 
   it('normalizes persisted legacy Codex lanes to the native runtime summary', () => {
@@ -116,6 +116,6 @@ describe('resolveMemberRuntimeSummary', () => {
         },
         undefined
       )
-    ).toBe('5.4 Mini · Medium · Codex native');
+    ).toBe('5.4 Mini · Medium · Codex');
   });
 });

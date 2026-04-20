@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo } from 'react';
 
+import {
+  mergeCodexCliStatusWithSnapshot,
+  useCodexAccountSnapshot,
+} from '@features/codex-account/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { Label } from '@renderer/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
@@ -10,6 +14,7 @@ import {
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
+import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { useStore } from '@renderer/store';
 import {
   GEMINI_UI_DISABLED_BADGE_LABEL,
@@ -136,10 +141,26 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const cliStatus = useStore((s) => s.cliStatus);
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
-  const multimodelAvailable = multimodelEnabled || cliStatus?.flavor === 'agent_teams_orchestrator';
+  const loadingCliStatus = useMemo(
+    () =>
+      !cliStatus && cliStatusLoading && multimodelEnabled
+        ? createLoadingMultimodelCliStatus()
+        : cliStatus,
+    [cliStatus, cliStatusLoading, multimodelEnabled]
+  );
 
   const effectiveProviderId =
     disableGeminiOption && isGeminiUiFrozen() && providerId === 'gemini' ? 'anthropic' : providerId;
+  const codexAccount = useCodexAccountSnapshot({
+    enabled: multimodelEnabled && effectiveProviderId === 'codex',
+  });
+  const effectiveCliStatus = useMemo(
+    () => mergeCodexCliStatusWithSnapshot(loadingCliStatus, codexAccount.snapshot),
+    [codexAccount.snapshot, loadingCliStatus]
+  );
+  const effectiveCliStatusLoading = cliStatusLoading && effectiveCliStatus === null;
+  const multimodelAvailable =
+    multimodelEnabled || effectiveCliStatus?.flavor === 'agent_teams_orchestrator';
   const defaultModelTooltip = useMemo(() => {
     if (effectiveProviderId === 'anthropic') {
       return 'Uses the Claude team default model.\nResolves to Opus 4.7 with 1M context, or Opus 4.7 with 200K context when Limit context is enabled.';
@@ -190,12 +211,14 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   };
   const runtimeProviderStatus = useMemo(
     () =>
-      cliStatus?.providers.find((provider) => provider.providerId === effectiveProviderId) ?? null,
-    [cliStatus?.providers, effectiveProviderId]
+      effectiveCliStatus?.providers.find(
+        (provider) => provider.providerId === effectiveProviderId
+      ) ?? null,
+    [effectiveCliStatus?.providers, effectiveProviderId]
   );
   const shouldAwaitRuntimeModelList =
     effectiveProviderId !== 'anthropic' &&
-    (cliStatus == null || cliStatusLoading) &&
+    (effectiveCliStatus == null || effectiveCliStatusLoading) &&
     runtimeProviderStatus == null;
   const normalizedValue = normalizeTeamModelForUi(
     effectiveProviderId,

@@ -33,6 +33,7 @@ import {
 } from '@shared/utils/mcpScopes';
 import { Plus, Server, Trash2 } from 'lucide-react';
 
+import type { CliInstallationStatus } from '@shared/types';
 import type {
   McpCustomInstallRequest,
   McpHeaderDef,
@@ -45,6 +46,11 @@ interface CustomMcpServerDialogProps {
   open: boolean;
   onClose: () => void;
   projectPath: string | null;
+  cliStatus?: Pick<
+    CliInstallationStatus,
+    'installed' | 'authLoggedIn' | 'binaryPath' | 'launchError' | 'flavor' | 'providers'
+  > | null;
+  cliStatusLoading?: boolean;
 }
 
 type TransportMode = 'stdio' | 'http';
@@ -66,10 +72,14 @@ export const CustomMcpServerDialog = ({
   open,
   onClose,
   projectPath,
+  cliStatus: cliStatusOverride,
+  cliStatusLoading: cliStatusLoadingOverride,
 }: CustomMcpServerDialogProps): React.JSX.Element => {
   const installCustomMcpServer = useStore((s) => s.installCustomMcpServer);
-  const cliStatus = useStore((s) => s.cliStatus);
-  const cliStatusLoading = useStore((s) => s.cliStatusLoading);
+  const storedCliStatus = useStore((s) => s.cliStatus);
+  const storedCliStatusLoading = useStore((s) => s.cliStatusLoading);
+  const cliStatus = cliStatusOverride ?? storedCliStatus;
+  const cliStatusLoading = cliStatusLoadingOverride ?? storedCliStatusLoading;
   const defaultSharedScope = getDefaultMcpSharedScope(cliStatus?.flavor);
   const scopeOptions: { value: Scope; label: string }[] = [
     { value: defaultSharedScope, label: getMcpScopeLabel(defaultSharedScope, cliStatus?.flavor) },

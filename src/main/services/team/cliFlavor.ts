@@ -26,7 +26,7 @@ export function getCliFlavorUiOptions(flavor: CliFlavor): CliFlavorUiOptions {
   switch (flavor) {
     case 'agent_teams_orchestrator':
       return {
-        displayName: 'agent_teams_orchestrator',
+        displayName: 'Multimodel runtime',
         supportsSelfUpdate: false,
         showVersionDetails: false,
         showBinaryPath: false,

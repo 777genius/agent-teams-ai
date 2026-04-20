@@ -237,12 +237,8 @@ export function getExtensionActionDisableReason(options: {
   section?: 'plugins' | 'mcp';
 }): string | null {
   const { isInstalled, cliStatus, cliStatusLoading, section = 'plugins' } = options;
-  if (cliStatusLoading) {
-    return 'Checking runtime status...';
-  }
-
   if (cliStatus === null) {
-    return 'Checking runtime availability...';
+    return cliStatusLoading ? 'Checking runtime status...' : 'Checking runtime availability...';
   }
 
   if (cliStatus.installed === false) {

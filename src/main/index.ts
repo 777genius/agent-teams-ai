@@ -20,6 +20,12 @@ process.env.UV_THREADPOOL_SIZE ??= '16';
 import './sentry';
 
 import {
+  createCodexAccountFeature,
+  type CodexAccountFeatureFacade,
+  registerCodexAccountIpc,
+  removeCodexAccountIpc,
+} from '@features/codex-account/main';
+import {
   createRecentProjectsFeature,
   type RecentProjectsFeatureFacade,
   registerRecentProjectsIpc,
@@ -39,6 +45,7 @@ import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import { TeamMcpConfigBuilder } from '@main/services/team/TeamMcpConfigBuilder';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
+import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import {
   CONTEXT_CHANGED,
   SCHEDULE_CHANGE,
@@ -414,6 +421,7 @@ let contextRegistry: ServiceContextRegistry;
 let notificationManager: NotificationManager;
 let updaterService: UpdaterService;
 let sshConnectionManager: SshConnectionManager;
+let codexAccountFeature: CodexAccountFeatureFacade | null = null;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
@@ -975,6 +983,11 @@ async function initializeServices(): Promise<void> {
     getLocalContext: () => contextRegistry.get('local'),
     logger: createLogger('Feature:RecentProjects'),
   });
+  codexAccountFeature = createCodexAccountFeature({
+    logger: createLogger('Feature:CodexAccount'),
+    configManager,
+  });
+  providerConnectionService.setCodexAccountFeature(codexAccountFeature);
 
   // startProcessHealthPolling() is deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.
@@ -1029,6 +1042,7 @@ async function initializeServices(): Promise<void> {
     crossTeamService,
     teamBackupService ?? undefined
   );
+  registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
 
   // Forward SSH state changes to renderer and HTTP SSE clients
@@ -1171,6 +1185,9 @@ function shutdownServices(): void {
   }
 
   void skillsWatcherService?.stopAll();
+  providerConnectionService.setCodexAccountFeature(null);
+  void codexAccountFeature?.dispose();
+  codexAccountFeature = null;
 
   // Kill all PTY processes
   if (ptyTerminalService) {
@@ -1179,6 +1196,7 @@ function shutdownServices(): void {
 
   // Remove IPC handlers
   removeIpcHandlers();
+  removeCodexAccountIpc(ipcMain);
   removeRecentProjectsIpc(ipcMain);
 
   // Dispose backup service timers
@@ -1458,6 +1476,7 @@ function createWindow(): void {
     if (teamProvisioningService) {
       teamProvisioningService.setMainWindow(null);
     }
+    codexAccountFeature?.setMainWindow(null);
     setEditorMainWindow(null);
     setReviewMainWindow(null);
     cleanupEditorState();
@@ -1492,6 +1511,7 @@ function createWindow(): void {
   if (teamProvisioningService) {
     teamProvisioningService.setMainWindow(mainWindow);
   }
+  codexAccountFeature?.setMainWindow(mainWindow);
   setEditorMainWindow(mainWindow);
   setReviewMainWindow(mainWindow);
 

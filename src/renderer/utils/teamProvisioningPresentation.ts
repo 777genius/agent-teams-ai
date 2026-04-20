@@ -318,7 +318,7 @@ export function buildTeamProvisioningPresentation({
       panelMessage:
         failedSpawnCount > 0 ? (failedSpawnPanelMessage ?? progress.message) : progress.message,
       panelMessageSeverity: failedSpawnCount > 0 ? 'warning' : progress.messageSeverity,
-      defaultLiveOutputOpen: true,
+      defaultLiveOutputOpen: false,
       compactTitle: 'Launching team',
       compactDetail:
         failedSpawnCount > 0

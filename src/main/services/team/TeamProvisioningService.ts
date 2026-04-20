@@ -773,6 +773,7 @@ interface ProvisioningEnvResolution {
   env: NodeJS.ProcessEnv;
   authSource: ProvisioningAuthSource;
   geminiRuntimeAuth: GeminiRuntimeAuthState | null;
+  providerArgs?: string[];
   warning?: string;
 }
 
@@ -6201,7 +6202,12 @@ export class TeamProvisioningService {
         request.providerId,
         request.providerBackendId
       );
-      const { env: shellEnv, geminiRuntimeAuth, warning: envWarning } = provisioningEnv;
+      const {
+        env: shellEnv,
+        geminiRuntimeAuth,
+        providerArgs = [],
+        warning: envWarning,
+      } = provisioningEnv;
       if (envWarning) {
         throw new Error(envWarning);
       }
@@ -6380,6 +6386,7 @@ export class TeamProvisioningService {
         ...(request.effort ? ['--effort', request.effort] : []),
         ...(request.worktree ? ['--worktree', request.worktree] : []),
         ...parseCliArgs(request.extraCliArgs),
+        ...providerArgs,
       ];
       const runtimeWarning = buildRuntimeLaunchWarning(request, shellEnv, {
         geminiRuntimeAuth,
@@ -6427,12 +6434,11 @@ export class TeamProvisioningService {
                 : undefined,
             agentType: 'general-purpose' as const,
             joinedAt: Date.now(),
-          })),
-          {
-            providerBackendId: request.providerBackendId,
-          }
+          }))
         );
-        await this.membersMetaStore.writeMembers(request.teamName, membersToWrite);
+        await this.membersMetaStore.writeMembers(request.teamName, membersToWrite, {
+          providerBackendId: request.providerBackendId,
+        });
         if (request.skipPermissions === false) {
           await this.seedTeammateOperationalPermissionRules(request.teamName, request.cwd);
         }
@@ -6772,7 +6778,12 @@ export class TeamProvisioningService {
         request.providerId,
         request.providerBackendId
       );
-      const { env: shellEnv, geminiRuntimeAuth, warning: envWarning } = provisioningEnv;
+      const {
+        env: shellEnv,
+        geminiRuntimeAuth,
+        providerArgs = [],
+        warning: envWarning,
+      } = provisioningEnv;
       if (envWarning) {
         throw new Error(envWarning);
       }
@@ -7009,6 +7020,7 @@ export class TeamProvisioningService {
         launchArgs.push('--worktree', request.worktree);
       }
       launchArgs.push(...parseCliArgs(request.extraCliArgs));
+      launchArgs.push(...providerArgs);
       const runtimeWarning = buildRuntimeLaunchWarning(request, shellEnv, {
         geminiRuntimeAuth,
         promptSize,
@@ -12888,12 +12900,18 @@ export class TeamProvisioningService {
         env: providerEnv,
         authSource: 'configured_api_key_missing',
         geminiRuntimeAuth: null,
+        providerArgs: providerEnvResult.providerArgs,
         warning: providerConnectionIssue,
       };
     }
 
     if (resolvedProviderId === 'codex') {
-      return { env: providerEnv, authSource: 'codex_runtime', geminiRuntimeAuth: null };
+      return {
+        env: providerEnv,
+        authSource: 'codex_runtime',
+        geminiRuntimeAuth: null,
+        providerArgs: providerEnvResult.providerArgs,
+      };
     }
 
     if (resolvedProviderId === 'gemini') {
@@ -12901,6 +12919,7 @@ export class TeamProvisioningService {
         env: providerEnv,
         authSource: 'gemini_runtime',
         geminiRuntimeAuth: await resolveGeminiRuntimeAuth(providerEnv),
+        providerArgs: providerEnvResult.providerArgs,
       };
     }
 
@@ -12909,7 +12928,12 @@ export class TeamProvisioningService {
       typeof providerEnv.ANTHROPIC_API_KEY === 'string' &&
       providerEnv.ANTHROPIC_API_KEY.trim().length > 0
     ) {
-      return { env: providerEnv, authSource: 'anthropic_api_key', geminiRuntimeAuth: null };
+      return {
+        env: providerEnv,
+        authSource: 'anthropic_api_key',
+        geminiRuntimeAuth: null,
+        providerArgs: providerEnvResult.providerArgs,
+      };
     }
 
     // 2. Proxy token (ANTHROPIC_AUTH_TOKEN) — `-p` mode does NOT read this var,
@@ -12919,7 +12943,12 @@ export class TeamProvisioningService {
       providerEnv.ANTHROPIC_AUTH_TOKEN.trim().length > 0
     ) {
       providerEnv.ANTHROPIC_API_KEY = providerEnv.ANTHROPIC_AUTH_TOKEN;
-      return { env: providerEnv, authSource: 'anthropic_auth_token', geminiRuntimeAuth: null };
+      return {
+        env: providerEnv,
+        authSource: 'anthropic_auth_token',
+        geminiRuntimeAuth: null,
+        providerArgs: providerEnvResult.providerArgs,
+      };
     }
 
     // 3. No explicit API key — let the CLI handle its own OAuth auth.
@@ -12927,7 +12956,12 @@ export class TeamProvisioningService {
     //    tokens in-memory. Injecting CLAUDE_CODE_OAUTH_TOKEN from the
     //    credentials file causes 401 errors because the stored token is
     //    often stale (CLI refreshes in-memory but rarely writes back).
-    return { env: providerEnv, authSource: 'none', geminiRuntimeAuth: null };
+    return {
+      env: providerEnv,
+      authSource: 'none',
+      geminiRuntimeAuth: null,
+      providerArgs: providerEnvResult.providerArgs,
+    };
   }
 
   private async resolveControlApiBaseUrl(): Promise<string | null> {
@@ -13681,12 +13715,11 @@ export class TeamProvisioningService {
               : undefined,
           agentType: 'general-purpose' as const,
           joinedAt,
-        })),
-        {
-          providerBackendId: request.providerBackendId,
-        }
+        }))
       );
-      await this.membersMetaStore.writeMembers(teamName, membersToWrite);
+      await this.membersMetaStore.writeMembers(teamName, membersToWrite, {
+        providerBackendId: request.providerBackendId,
+      });
     } catch (error) {
       logger.warn(
         `[${teamName}] Failed to persist members.meta.json: ${

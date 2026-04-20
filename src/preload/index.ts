@@ -1,3 +1,4 @@
+import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
@@ -121,6 +122,7 @@ import {
   TEAM_DELETE_DRAFT,
   TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_DELETE_TEAM,
+  TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
   TEAM_GET_CLAUDE_LOGS,
@@ -147,7 +149,6 @@ import {
   TEAM_LEAD_CONTEXT,
   TEAM_LIST,
   TEAM_MEMBER_SPAWN_STATUSES,
-  TEAM_GET_AGENT_RUNTIME,
   TEAM_PERMANENTLY_DELETE,
   TEAM_PREPARE_PROVISIONING,
   TEAM_PROCESS_ALIVE,
@@ -165,9 +166,9 @@ import {
   TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SEND_MESSAGE,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
-  TEAM_SET_TASK_LOG_STREAM_TRACKING,
   TEAM_SET_PROJECT_BRANCH_TRACKING,
   TEAM_SET_TASK_CLARIFICATION,
+  TEAM_SET_TASK_LOG_STREAM_TRACKING,
   TEAM_SET_TOOL_ACTIVITY_TRACKING,
   TEAM_SHOW_MESSAGE_NOTIFICATION,
   TEAM_SOFT_DELETE_TASK,
@@ -270,7 +271,6 @@ import type {
   LeadContextUsageSnapshot,
   MemberFullStats,
   MemberLogSummary,
-  TeamAgentRuntimeSnapshot,
   MemberSpawnStatusesSnapshot,
   MessagesPage,
   NotificationTrigger,
@@ -293,6 +293,7 @@ import type {
   TaskChangePresenceState,
   TaskChangeSetV2,
   TaskComment,
+  TeamAgentRuntimeSnapshot,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
@@ -458,6 +459,9 @@ ipcRenderer.on(
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 const electronAPI: ElectronAPI = {
+  ...createCodexAccountBridge({
+    ipcRenderer,
+  }),
   ...createRecentProjectsBridge(),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   getProjects: () => ipcRenderer.invoke('get-projects'),

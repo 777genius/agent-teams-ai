@@ -6,7 +6,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { api } from '@renderer/api';
+import {
+  mergeCodexProviderStatusWithSnapshot,
+  useCodexAccountSnapshot,
+} from '@features/codex-account/renderer';
+import { api, isElectronMode } from '@renderer/api';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
@@ -20,12 +24,15 @@ import {
 import { useTabIdOptional } from '@renderer/contexts/useTabUIContext';
 import { useExtensionsTabState } from '@renderer/hooks/useExtensionsTabState';
 import { useStore } from '@renderer/store';
+import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import {
   formatCliExtensionCapabilityStatus,
   getVisibleMultimodelProviders,
   isMultimodelRuntimeStatus,
 } from '@renderer/utils/multimodelProviderVisibility';
 import { resolveProjectPathById } from '@renderer/utils/projectLookup';
+import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
+import { getRuntimeDisplayName } from '@renderer/utils/runtimeDisplayName';
 import { getExtensionActionDisableReason } from '@shared/utils/extensionNormalizers';
 import { getCliProviderExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import {
@@ -97,10 +104,19 @@ function isProviderCapabilityCardLoading(
   );
 }
 
+function isCodexSnapshotPending(
+  provider: CliProviderStatus,
+  codexSnapshotPending: boolean
+): boolean {
+  return provider.providerId === 'codex' && codexSnapshotPending;
+}
+
 export const ExtensionStoreView = (): React.JSX.Element => {
+  const isElectron = useMemo(() => isElectronMode(), []);
   const tabId = useTabIdOptional();
   const {
     fetchPluginCatalog,
+    bootstrapCliStatus,
     fetchCliStatus,
     fetchApiKeys,
     fetchSkillsCatalog,
@@ -113,6 +129,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
     cliStatus,
     cliStatusLoading,
     cliProviderStatusLoading,
+    appConfig,
     openDashboard,
     sessions,
     projects,
@@ -120,6 +137,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
   } = useStore(
     useShallow((s) => ({
       fetchPluginCatalog: s.fetchPluginCatalog,
+      bootstrapCliStatus: s.bootstrapCliStatus,
       fetchCliStatus: s.fetchCliStatus,
       fetchApiKeys: s.fetchApiKeys,
       fetchSkillsCatalog: s.fetchSkillsCatalog,
@@ -132,13 +150,58 @@ export const ExtensionStoreView = (): React.JSX.Element => {
       cliStatus: s.cliStatus,
       cliStatusLoading: s.cliStatusLoading,
       cliProviderStatusLoading: s.cliProviderStatusLoading,
+      appConfig: s.appConfig,
       openDashboard: s.openDashboard,
       sessions: s.sessions,
       projects: s.projects,
       repositoryGroups: s.repositoryGroups,
     }))
   );
-  const cliInstalled = cliStatus?.installed ?? true;
+  const multimodelEnabled = appConfig?.general?.multimodelEnabled ?? true;
+  const loadingCliStatus = useMemo(
+    () =>
+      !cliStatus && cliStatusLoading && multimodelEnabled
+        ? createLoadingMultimodelCliStatus()
+        : cliStatus,
+    [cliStatus, cliStatusLoading, multimodelEnabled]
+  );
+  const codexAccount = useCodexAccountSnapshot({
+    enabled:
+      isElectron &&
+      multimodelEnabled &&
+      loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
+      Boolean(
+        loadingCliStatus?.providers.some(
+          (provider: CliProviderStatus) => provider.providerId === 'codex'
+        )
+      ),
+    includeRateLimits: true,
+  });
+  const codexSnapshotPending =
+    codexAccount.loading &&
+    Boolean(
+      loadingCliStatus?.providers.some(
+        (provider: CliProviderStatus) => provider.providerId === 'codex'
+      )
+    ) &&
+    !codexAccount.snapshot;
+  const effectiveCliStatus = useMemo(
+    () =>
+      loadingCliStatus
+        ? {
+            ...loadingCliStatus,
+            providers: loadingCliStatus.providers.map((provider: CliProviderStatus) =>
+              provider.providerId === 'codex'
+                ? mergeCodexProviderStatusWithSnapshot(provider, codexAccount.snapshot)
+                : provider
+            ),
+          }
+        : loadingCliStatus,
+    [loadingCliStatus, codexAccount.snapshot]
+  );
+  const effectiveCliStatusLoading = cliStatusLoading && effectiveCliStatus === null;
+  const runtimeDisplayName = getRuntimeDisplayName(effectiveCliStatus, multimodelEnabled);
+  const cliInstalled = effectiveCliStatus?.installed ?? true;
   const hasOngoingSessions = sessions.some((sess) => sess.isOngoing);
   const extensionsTabProjectId = useStore((s) =>
     tabId
@@ -195,8 +258,12 @@ export const ExtensionStoreView = (): React.JSX.Element => {
   }, [fetchPluginCatalog, projectPath]);
 
   useEffect(() => {
-    void fetchCliStatus();
-  }, [fetchCliStatus]);
+    void refreshCliStatusForCurrentMode({
+      multimodelEnabled,
+      bootstrapCliStatus,
+      fetchCliStatus,
+    });
+  }, [bootstrapCliStatus, fetchCliStatus, multimodelEnabled]);
 
   // Fetch MCP installed state on mount
   useEffect(() => {
@@ -215,42 +282,55 @@ export const ExtensionStoreView = (): React.JSX.Element => {
 
   // Refresh all data (plugins + MCP browse + installed + skills)
   const handleRefresh = useCallback(() => {
-    void fetchCliStatus();
+    void refreshCliStatusForCurrentMode({
+      multimodelEnabled,
+      bootstrapCliStatus,
+      fetchCliStatus,
+    });
     void fetchApiKeys();
     void fetchPluginCatalog(projectPath ?? undefined, true);
     void mcpBrowse(); // re-fetch first page
     void mcpFetchInstalled(projectPath ?? undefined);
     void fetchSkillsCatalog(projectPath ?? undefined);
   }, [
+    bootstrapCliStatus,
     fetchApiKeys,
     fetchCliStatus,
     fetchPluginCatalog,
     fetchSkillsCatalog,
+    multimodelEnabled,
     mcpBrowse,
     mcpFetchInstalled,
     projectPath,
   ]);
 
   const isRefreshing =
-    cliStatusLoading || apiKeysLoading || pluginCatalogLoading || mcpBrowseLoading || skillsLoading;
+    effectiveCliStatusLoading ||
+    apiKeysLoading ||
+    pluginCatalogLoading ||
+    mcpBrowseLoading ||
+    skillsLoading;
   const mcpMutationDisableReason = useMemo(
     () =>
       getExtensionActionDisableReason({
         isInstalled: false,
-        cliStatus,
-        cliStatusLoading,
+        cliStatus: effectiveCliStatus,
+        cliStatusLoading: effectiveCliStatusLoading,
         section: 'mcp',
       }),
-    [cliStatus, cliStatusLoading]
+    [effectiveCliStatus, effectiveCliStatusLoading]
   );
   const cliStatusBanner = useMemo(() => {
-    const providers = cliStatus?.providers ?? [];
+    const providers = effectiveCliStatus?.providers ?? [];
     const visibleProviders = getVisibleMultimodelProviders(providers);
-    const isMultimodel = isMultimodelRuntimeStatus(cliStatus);
+    const isMultimodel = isMultimodelRuntimeStatus(effectiveCliStatus);
     const shouldShowMultimodelProviderCards =
-      isMultimodel && visibleProviders.length > 0 && cliStatus !== null;
+      isMultimodel && visibleProviders.length > 0 && effectiveCliStatus !== null;
 
-    if ((cliStatusLoading || cliStatus === null) && !shouldShowMultimodelProviderCards) {
+    if (
+      (effectiveCliStatusLoading || effectiveCliStatus === null) &&
+      !shouldShowMultimodelProviderCards
+    ) {
       return (
         <div className="bg-surface/70 mx-4 mt-3 flex items-start gap-3 rounded-md border border-border px-4 py-3">
           <Info className="mt-0.5 size-4 shrink-0 text-text-secondary" />
@@ -267,8 +347,10 @@ export const ExtensionStoreView = (): React.JSX.Element => {
       );
     }
 
-    if (!cliStatus.installed) {
-      const cliLaunchIssue = Boolean(cliStatus.binaryPath && cliStatus.launchError);
+    if (!effectiveCliStatus.installed) {
+      const cliLaunchIssue = Boolean(
+        effectiveCliStatus.binaryPath && effectiveCliStatus.launchError
+      );
       return (
         <div className="mx-4 mt-3 flex items-start gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-3">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
@@ -283,9 +365,9 @@ export const ExtensionStoreView = (): React.JSX.Element => {
                 ? 'Extensions are disabled until the runtime passes its startup health check. Open the Dashboard to repair or reinstall it.'
                 : 'Extensions are disabled until the runtime is installed. Open the Dashboard to install it and retry.'}
             </p>
-            {cliLaunchIssue && cliStatus.launchError && (
+            {cliLaunchIssue && effectiveCliStatus.launchError && (
               <p className="mt-2 break-all font-mono text-[11px] text-text-muted">
-                {cliStatus.launchError}
+                {effectiveCliStatus.launchError}
               </p>
             )}
           </div>
@@ -296,16 +378,18 @@ export const ExtensionStoreView = (): React.JSX.Element => {
       );
     }
 
-    if (!isMultimodel && !cliStatus.authLoggedIn) {
+    if (!isMultimodel && !effectiveCliStatus.authLoggedIn) {
       return (
         <div className="mx-4 mt-3 flex items-start gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-3">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-amber-300">Claude CLI needs sign-in</p>
+            <p className="text-sm font-medium text-amber-300">{runtimeDisplayName} needs sign-in</p>
             <p className="mt-0.5 text-xs text-text-muted">
-              Claude CLI was found
-              {cliStatus.installedVersion ? ` (${cliStatus.installedVersion})` : ''}, but plugin
-              installs are disabled until you sign in from the Dashboard.
+              {runtimeDisplayName} was found
+              {effectiveCliStatus.installedVersion
+                ? ` (${effectiveCliStatus.installedVersion})`
+                : ''}
+              , but plugin installs are disabled until you sign in from the Dashboard.
             </p>
           </div>
           <Button size="sm" variant="outline" onClick={openDashboard}>
@@ -332,7 +416,10 @@ export const ExtensionStoreView = (): React.JSX.Element => {
             <div className="mt-3 grid gap-2 md:grid-cols-2">
               {visibleProviders.map((provider) => {
                 const providerLoading = cliProviderStatusLoading[provider.providerId] === true;
-                if (isProviderCapabilityCardLoading(provider, providerLoading)) {
+                if (
+                  isProviderCapabilityCardLoading(provider, providerLoading) ||
+                  isCodexSnapshotPending(provider, codexSnapshotPending)
+                ) {
                   return (
                     <ProviderCapabilityCardSkeleton
                       key={provider.providerId}
@@ -410,15 +497,24 @@ export const ExtensionStoreView = (): React.JSX.Element => {
       <div className="mx-4 mt-3 flex items-start gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
         <Info className="mt-0.5 size-4 shrink-0 text-emerald-300" />
         <div>
-          <p className="text-sm font-medium text-emerald-300">Claude CLI is ready</p>
+          <p className="text-sm font-medium text-emerald-300">{runtimeDisplayName} is ready</p>
           <p className="mt-0.5 text-xs text-text-muted">
             Plugins can be installed from this page
-            {cliStatus.installedVersion ? ` using Claude CLI ${cliStatus.installedVersion}` : ''}.
+            {effectiveCliStatus.installedVersion
+              ? ` using ${runtimeDisplayName} ${effectiveCliStatus.installedVersion}`
+              : ''}
+            .
           </p>
         </div>
       </div>
     );
-  }, [cliProviderStatusLoading, cliStatus, cliStatusLoading, openDashboard]);
+  }, [
+    cliProviderStatusLoading,
+    codexSnapshotPending,
+    effectiveCliStatus,
+    effectiveCliStatusLoading,
+    openDashboard,
+  ]);
 
   // Browser mode guard
   if (!api.plugins && !api.mcpRegistry && !api.skills) {
@@ -526,6 +622,8 @@ export const ExtensionStoreView = (): React.JSX.Element => {
                   clearFilters={tabState.clearFilters}
                   hasActiveFilters={tabState.hasActiveFilters}
                   setPluginSort={tabState.setPluginSort}
+                  cliStatus={effectiveCliStatus}
+                  cliStatusLoading={effectiveCliStatusLoading}
                 />
               </TabsContent>
 
@@ -539,6 +637,8 @@ export const ExtensionStoreView = (): React.JSX.Element => {
                   mcpSearchWarnings={tabState.mcpSearchWarnings}
                   selectedMcpServerId={tabState.selectedMcpServerId}
                   setSelectedMcpServerId={tabState.setSelectedMcpServerId}
+                  cliStatus={effectiveCliStatus}
+                  cliStatusLoading={effectiveCliStatusLoading}
                 />
               </TabsContent>
 
@@ -565,6 +665,8 @@ export const ExtensionStoreView = (): React.JSX.Element => {
               open={customMcpDialogOpen}
               onClose={() => setCustomMcpDialogOpen(false)}
               projectPath={projectPath}
+              cliStatus={effectiveCliStatus}
+              cliStatusLoading={effectiveCliStatusLoading}
             />
           </div>
         </div>

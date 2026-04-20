@@ -17,6 +17,7 @@ import { getExtensionActionDisableReason } from '@shared/utils/extensionNormaliz
 import { Check, Loader2, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import type { CliInstallationStatus } from '@shared/types';
 import type { ExtensionOperationState } from '@shared/types/extensions';
 
 interface InstallButtonProps {
@@ -28,6 +29,11 @@ interface InstallButtonProps {
   disabled?: boolean;
   size?: 'sm' | 'default';
   errorMessage?: string;
+  cliStatus?: Pick<
+    CliInstallationStatus,
+    'installed' | 'authLoggedIn' | 'binaryPath' | 'launchError' | 'flavor' | 'providers'
+  > | null;
+  cliStatusLoading?: boolean;
 }
 
 export const InstallButton = ({
@@ -39,13 +45,17 @@ export const InstallButton = ({
   disabled,
   size = 'sm',
   errorMessage,
+  cliStatus: cliStatusOverride,
+  cliStatusLoading: cliStatusLoadingOverride,
 }: InstallButtonProps) => {
-  const { cliStatus, cliStatusLoading } = useStore(
+  const { cliStatus: storedCliStatus, cliStatusLoading: storedCliStatusLoading } = useStore(
     useShallow((s) => ({
       cliStatus: s.cliStatus,
       cliStatusLoading: s.cliStatusLoading,
     }))
   );
+  const cliStatus = cliStatusOverride ?? storedCliStatus;
+  const cliStatusLoading = cliStatusLoadingOverride ?? storedCliStatusLoading;
   const disableReason = getExtensionActionDisableReason({
     isInstalled,
     cliStatus,

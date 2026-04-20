@@ -44,7 +44,7 @@ export function createLoadingMultimodelCliStatus(): CliInstallationStatus {
 
   return {
     flavor: 'agent_teams_orchestrator',
-    displayName: 'agent_teams_orchestrator',
+    displayName: 'Multimodel runtime',
     supportsSelfUpdate: false,
     showVersionDetails: false,
     showBinaryPath: false,
@@ -59,6 +59,24 @@ export function createLoadingMultimodelCliStatus(): CliInstallationStatus {
     authMethod: null,
     providers,
   };
+}
+
+function isHydratedMultimodelProviderStatus(provider: CliProviderStatus | undefined): boolean {
+  if (!provider) {
+    return false;
+  }
+
+  return !(
+    provider.supported === false &&
+    provider.authenticated === false &&
+    provider.authMethod === null &&
+    provider.verificationState === 'unknown' &&
+    provider.statusMessage === 'Checking...' &&
+    provider.models.length === 0 &&
+    provider.backend == null &&
+    (provider.availableBackends?.length ?? 0) === 0 &&
+    provider.connection == null
+  );
 }
 
 // =============================================================================
@@ -164,6 +182,18 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         return;
       }
 
+      const nextProviderLoading = Object.fromEntries(
+        MULTIMODEL_PROVIDER_IDS.map((providerId) => [
+          providerId,
+          !isHydratedMultimodelProviderStatus(
+            metadata.providers.find((provider) => provider.providerId === providerId)
+          ),
+        ])
+      ) as Partial<Record<CliProviderId, boolean>>;
+      const pendingProviderIds = MULTIMODEL_PROVIDER_IDS.filter(
+        (providerId) => nextProviderLoading[providerId] === true
+      );
+
       set((state) => {
         if (epoch !== cliStatusEpoch || !state.cliStatus) {
           return {};
@@ -171,37 +201,37 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
         return {
           cliStatus: {
-            ...state.cliStatus,
-            flavor: metadata.flavor,
-            displayName: metadata.displayName,
-            supportsSelfUpdate: metadata.supportsSelfUpdate,
-            showVersionDetails: metadata.showVersionDetails,
-            showBinaryPath: metadata.showBinaryPath,
-            installed: metadata.installed,
-            installedVersion: metadata.installedVersion,
-            binaryPath: metadata.binaryPath,
+            ...metadata,
             launchError: metadata.launchError ?? null,
-            latestVersion: metadata.latestVersion,
-            updateAvailable: metadata.updateAvailable,
-            authStatusChecking:
-              metadata.installed &&
-              state.cliStatus.providers.some(
-                (provider) => provider.statusMessage === 'Checking...'
-              ),
-            providers: metadata.installed ? state.cliStatus.providers : metadata.providers,
+            authStatusChecking: metadata.installed && pendingProviderIds.length > 0,
           },
+          cliStatusLoading: false,
+          cliProviderStatusLoading: nextProviderLoading,
         };
       });
 
       if (!metadata.installed) {
         if (epoch === cliStatusEpoch) {
           set({
-            cliStatusLoading: false,
             cliProviderStatusLoading: {},
           });
         }
         return;
       }
+
+      if (pendingProviderIds.length === 0) {
+        return;
+      }
+
+      await Promise.allSettled(
+        pendingProviderIds.map((providerId) =>
+          get().fetchCliProviderStatus(providerId, {
+            silent: false,
+            epoch,
+          })
+        )
+      );
+      return;
     } catch (error) {
       logger.warn('Failed to hydrate CLI metadata during provider-first bootstrap:', error);
     }

@@ -23,6 +23,7 @@ import { Github as GithubIcon } from 'lucide-react';
 import { InstallButton } from '../common/InstallButton';
 import { SourceBadge } from '../common/SourceBadge';
 
+import type { CliInstallationStatus } from '@shared/types';
 import type {
   InstalledMcpEntry,
   McpCatalogItem,
@@ -37,6 +38,11 @@ interface McpServerCardProps {
   diagnostic?: McpServerDiagnostic | null;
   diagnosticsLoading?: boolean;
   onClick: (serverId: string) => void;
+  cliStatus?: Pick<
+    CliInstallationStatus,
+    'installed' | 'authLoggedIn' | 'binaryPath' | 'launchError' | 'flavor' | 'providers'
+  > | null;
+  cliStatusLoading?: boolean;
 }
 
 export const McpServerCard = ({
@@ -47,8 +53,11 @@ export const McpServerCard = ({
   diagnostic,
   diagnosticsLoading,
   onClick,
+  cliStatus: cliStatusOverride,
+  cliStatusLoading,
 }: McpServerCardProps): React.JSX.Element => {
-  const cliStatus = useStore((s) => s.cliStatus);
+  const storedCliStatus = useStore((s) => s.cliStatus);
+  const cliStatus = cliStatusOverride ?? storedCliStatus;
   const sharedScope = getDefaultMcpSharedScope(cliStatus?.flavor);
   const operationKey = getMcpOperationKey(server.id, sharedScope);
   const installProgress = useStore((s) => s.mcpInstallProgress[operationKey] ?? 'idle');
@@ -262,6 +271,8 @@ export const McpServerCard = ({
               state={installProgress}
               isInstalled={isInstalled}
               section="mcp"
+              cliStatus={cliStatus}
+              cliStatusLoading={cliStatusLoading}
               onInstall={() =>
                 installMcpServer({
                   registryId: server.id,

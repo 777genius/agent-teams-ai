@@ -17,15 +17,27 @@ import { Tag } from 'lucide-react';
 import { InstallButton } from '../common/InstallButton';
 import { InstallCountBadge } from '../common/InstallCountBadge';
 
+import type { CliInstallationStatus } from '@shared/types';
 import type { EnrichedPlugin } from '@shared/types/extensions';
 
 interface PluginCardProps {
   plugin: EnrichedPlugin;
   index: number;
   onClick: (pluginId: string) => void;
+  cliStatus?: Pick<
+    CliInstallationStatus,
+    'installed' | 'authLoggedIn' | 'binaryPath' | 'launchError' | 'flavor' | 'providers'
+  > | null;
+  cliStatusLoading?: boolean;
 }
 
-export const PluginCard = ({ plugin, index, onClick }: PluginCardProps): React.JSX.Element => {
+export const PluginCard = ({
+  plugin,
+  index,
+  onClick,
+  cliStatus,
+  cliStatusLoading,
+}: PluginCardProps): React.JSX.Element => {
   const capabilities = inferCapabilities(plugin);
   const category = normalizeCategory(plugin.category);
   const operationKey = getPluginOperationKey(plugin.pluginId, 'user');
@@ -120,6 +132,8 @@ export const PluginCard = ({ plugin, index, onClick }: PluginCardProps): React.J
             state={installProgress}
             isInstalled={isUserInstalled}
             section="plugins"
+            cliStatus={cliStatus}
+            cliStatusLoading={cliStatusLoading}
             onInstall={() => installPlugin({ pluginId: plugin.pluginId, scope: 'user' })}
             onUninstall={() => uninstallPlugin(plugin.pluginId, 'user')}
             size="sm"

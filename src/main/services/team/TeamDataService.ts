@@ -2424,12 +2424,11 @@ export class TeamDataService {
             : undefined,
         agentType: 'general-purpose' as const,
         joinedAt,
-      })),
-      {
-        providerBackendId: request.providerBackendId,
-      }
+      }))
     );
-    await this.membersMetaStore.writeMembers(request.teamName, membersToWrite);
+    await this.membersMetaStore.writeMembers(request.teamName, membersToWrite, {
+      providerBackendId: request.providerBackendId,
+    });
   }
 
   async reconcileTeamArtifacts(

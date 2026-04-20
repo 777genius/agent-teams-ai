@@ -11,6 +11,21 @@ import type {
   TeamProviderId,
 } from '@shared/types';
 
+function normalizeMemberBackendLabel(
+  providerId: TeamProviderId,
+  backendLabel: string | undefined
+): string | undefined {
+  if (!backendLabel) {
+    return undefined;
+  }
+
+  if (providerId === 'codex' && backendLabel === 'Codex native') {
+    return 'Codex';
+  }
+
+  return backendLabel;
+}
+
 function isMemberLaunchPending(spawnEntry: MemberSpawnStatusEntry | undefined): boolean {
   if (!spawnEntry) {
     return false;
@@ -35,9 +50,9 @@ export function resolveMemberRuntimeSummary(
   const configuredModel = member.model?.trim() || launchParams?.model?.trim() || '';
   const configuredEffort = member.effort ?? launchParams?.effort;
   const runtimeModel = spawnEntry?.runtimeModel?.trim() || runtimeEntry?.runtimeModel?.trim();
-  const backendLabel = formatTeamProviderBackendLabel(
+  const backendLabel = normalizeMemberBackendLabel(
     configuredProvider,
-    launchParams?.providerBackendId
+    formatTeamProviderBackendLabel(configuredProvider, launchParams?.providerBackendId)
   );
   const memorySuffix =
     typeof runtimeEntry?.rssBytes === 'number' && runtimeEntry.rssBytes > 0

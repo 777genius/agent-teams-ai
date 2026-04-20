@@ -55,7 +55,7 @@ vi.mock('../../../src/renderer/api', () => ({
 }));
 
 import { api } from '../../../src/renderer/api';
-import type { CliInstallationStatus } from '../../../src/shared/types';
+import type { AppConfig, CliInstallationStatus } from '../../../src/shared/types';
 import {
   getMcpDiagnosticKey,
   getMcpProjectStateKey,
@@ -205,6 +205,69 @@ const makeLimitedMultimodelCliStatus = (
     },
   ],
 });
+
+function makeAppConfig(multimodelEnabled: boolean): AppConfig {
+  return {
+    notifications: {
+      enabled: true,
+      soundEnabled: false,
+      ignoredRegex: [],
+      ignoredRepositories: [],
+      snoozedUntil: null,
+      snoozeMinutes: 60,
+      includeSubagentErrors: true,
+      notifyOnLeadInbox: true,
+      notifyOnUserInbox: true,
+      notifyOnClarifications: true,
+      notifyOnStatusChange: true,
+      notifyOnTaskComments: true,
+      notifyOnTaskCreated: true,
+      notifyOnAllTasksCompleted: true,
+      notifyOnCrossTeamMessage: true,
+      notifyOnTeamLaunched: true,
+      notifyOnToolApproval: true,
+      autoResumeOnRateLimit: false,
+      statusChangeOnlySolo: false,
+      statusChangeStatuses: [],
+      triggers: [],
+    },
+    general: {
+      launchAtLogin: false,
+      showDockIcon: true,
+      theme: 'system',
+      defaultTab: 'dashboard',
+      multimodelEnabled,
+      claudeRootPath: null,
+      agentLanguage: 'system',
+      autoExpandAIGroups: true,
+      useNativeTitleBar: false,
+      telemetryEnabled: false,
+    },
+    providerConnections: {
+      anthropic: {
+        authMode: 'auto',
+      },
+      codex: {
+        preferredAuthMode: 'auto',
+      },
+    },
+    runtime: {
+      providerBackends: {
+        gemini: 'auto',
+        codex: 'codex-native',
+      },
+    },
+    display: {
+      showTimestamps: true,
+      compactMode: false,
+      syntaxHighlighting: true,
+    },
+    sessions: {
+      pinnedSessions: {},
+      hiddenSessions: {},
+    },
+  };
+}
 
 const pluginOperationKey = (
   pluginId: string,
@@ -602,6 +665,18 @@ describe('extensionsSlice', () => {
       expect(store.getState().pluginInstallProgress[pluginOperationKey('test@m')]).toBe('success');
     });
 
+    it('does not block plugin install when a usable runtime status already exists during background refresh', async () => {
+      store.setState({ cliStatus: makeReadyCliStatus(), cliStatusLoading: true });
+      (api.plugins!.getAll as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.plugins!.install as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'success' });
+
+      await store.getState().installPlugin({ pluginId: 'test@m', scope: 'user' });
+
+      expect(api.plugins!.install).toHaveBeenCalledWith({ pluginId: 'test@m', scope: 'user' });
+      expect(api.cliInstaller!.getStatus).not.toHaveBeenCalled();
+      expect(store.getState().pluginInstallProgress[pluginOperationKey('test@m')]).toBe('success');
+    });
+
     it('sets progress to error on failure', async () => {
       store.setState({ cliStatus: makeReadyCliStatus() });
       (api.plugins!.install as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -878,6 +953,33 @@ describe('extensionsSlice', () => {
       );
     });
 
+    it('does not block MCP install when a usable runtime status already exists during background refresh', async () => {
+      store.setState({ cliStatus: makeReadyCliStatus(), cliStatusLoading: true });
+      (api.mcpRegistry!.install as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'success' });
+      (api.mcpRegistry!.getInstalled as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (api.mcpRegistry!.diagnose as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+      await store.getState().installMcpServer({
+        registryId: 'test-id',
+        serverName: 'test-server',
+        scope: 'user',
+        envValues: {},
+        headers: [],
+      });
+
+      expect(api.mcpRegistry!.install).toHaveBeenCalledWith({
+        registryId: 'test-id',
+        serverName: 'test-server',
+        scope: 'user',
+        envValues: {},
+        headers: [],
+      });
+      expect(api.cliInstaller!.getStatus).not.toHaveBeenCalled();
+      expect(store.getState().mcpInstallProgress[mcpOperationKey('test-id', 'user')]).toBe(
+        'success',
+      );
+    });
+
     it('does not restore idle state after project switch clears a pending project-scope success timer', async () => {
       vi.useFakeTimers();
       store.setState({
@@ -1032,6 +1134,9 @@ describe('extensionsSlice', () => {
     });
 
     it('keeps saved API keys updated when provider status refresh fails', async () => {
+      store.setState({
+        appConfig: makeAppConfig(false),
+      });
       (api.apiKeys!.save as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'k1',
         name: 'Codex key',
@@ -1118,6 +1223,9 @@ describe('extensionsSlice', () => {
     });
 
     it('keeps local API key state updated when provider status refresh fails after delete', async () => {
+      store.setState({
+        appConfig: makeAppConfig(false),
+      });
       store.setState({
         apiKeys: [
           {

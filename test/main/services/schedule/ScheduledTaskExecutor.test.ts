@@ -89,6 +89,7 @@ describe('ScheduledTaskExecutor', () => {
     buildProviderAwareCliEnvMock.mockResolvedValue({
       env: { ...process.env, SHELL: '/bin/zsh' },
       connectionIssues: {},
+      providerArgs: [],
     });
 
     const mod = await import('../../../../src/main/services/schedule/ScheduledTaskExecutor');
@@ -137,6 +138,37 @@ describe('ScheduledTaskExecutor', () => {
     const result = await resultPromise;
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toBe('Error: something broke');
+  });
+
+  it('appends provider launch overrides returned by provider-aware env resolution', async () => {
+    buildProviderAwareCliEnvMock.mockResolvedValue({
+      env: { ...process.env, SHELL: '/bin/zsh' },
+      connectionIssues: {},
+      providerArgs: ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'],
+    });
+    const proc = createMockProcess();
+    mockSpawnCli.mockReturnValue(proc);
+
+    const executor = new ScheduledTaskExecutor();
+    const resultPromise = executor.execute(
+      makeRequest({
+        config: {
+          cwd: '/tmp/project',
+          prompt: 'Run the tests',
+          providerId: 'codex',
+        },
+      })
+    );
+
+    await flushAsync();
+
+    const spawnArgs = mockSpawnCli.mock.calls[0]?.[1] as string[];
+    expect(spawnArgs).toEqual(
+      expect.arrayContaining(['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'])
+    );
+
+    proc.emit('close', 0);
+    await resultPromise;
   });
 
   it('rejects on process error event', async () => {

@@ -6,6 +6,7 @@ const ANTHROPIC_SUBSCRIPTION_LABEL = 'Anthropic subscription';
 const AUTH_MODE_LABELS: Record<CliProviderAuthMode, string> = {
   auto: 'Auto',
   oauth: 'Subscription / OAuth',
+  chatgpt: 'ChatGPT account',
   api_key: 'API key',
 };
 
@@ -86,11 +87,53 @@ function getSelectedRuntimeBackendOption(
 }
 
 export function isConnectionManagedRuntimeProvider(provider: CliProviderStatus): boolean {
-  return false;
+  return provider.providerId === 'codex';
 }
 
 function getCodexCurrentRuntimeLabel(provider: CliProviderStatus): string {
-  return provider.backend?.label ?? CODEX_NATIVE_LABEL;
+  return CODEX_NATIVE_LABEL;
+}
+
+function getCodexApiKeyAvailabilitySummary(provider: CliProviderStatus): string | null {
+  if (provider.providerId !== 'codex' || !provider.connection?.apiKeyConfigured) {
+    return null;
+  }
+
+  if (provider.connection.apiKeySource === 'stored') {
+    return 'Saved API key available in Manage';
+  }
+
+  return provider.connection.apiKeySourceLabel ?? 'API key is configured';
+}
+
+function getCodexMissingManagedAccountStatus(provider: CliProviderStatus): string | null {
+  if (provider.providerId !== 'codex') {
+    return null;
+  }
+
+  const codexConnection = provider.connection?.codex;
+  if (!codexConnection || codexConnection.managedAccount?.type === 'chatgpt') {
+    return null;
+  }
+
+  if (provider.connection?.configuredAuthMode !== 'chatgpt') {
+    return null;
+  }
+
+  if (codexConnection.requiresOpenaiAuth) {
+    if (codexConnection.localActiveChatgptAccountPresent) {
+      return 'Codex has a locally selected ChatGPT account, but the current session needs reconnect.';
+    }
+
+    return codexConnection.localAccountArtifactsPresent
+      ? 'Codex CLI reports no active ChatGPT login. Local Codex account data exists, but no active managed session is selected.'
+      : 'Codex CLI reports no active ChatGPT login';
+  }
+
+  return (
+    codexConnection.launchIssueMessage ??
+    'Connect a ChatGPT account to use your Codex subscription.'
+  );
 }
 
 export function getProviderCurrentRuntimeSummary(provider: CliProviderStatus): string | null {
@@ -106,6 +149,51 @@ export function formatProviderStatusText(provider: CliProviderStatus): string {
   const selectedBackendOption = getSelectedRuntimeBackendOption(provider);
 
   if (provider.providerId === 'codex') {
+    if (provider.connection?.codex?.login.status === 'starting') {
+      return 'Starting ChatGPT login...';
+    }
+
+    if (provider.connection?.codex?.login.status === 'pending') {
+      return 'Waiting for ChatGPT account login...';
+    }
+
+    if (
+      provider.connection?.codex?.login.status === 'failed' &&
+      provider.connection.codex.login.error
+    ) {
+      return provider.connection.codex.login.error;
+    }
+
+    if (
+      provider.connection?.codex?.appServerState === 'degraded' &&
+      provider.connection.codex.effectiveAuthMode === 'chatgpt' &&
+      provider.connection.codex.launchAllowed
+    ) {
+      return (
+        provider.connection.codex.launchIssueMessage ??
+        'ChatGPT account detected - account verification is currently degraded.'
+      );
+    }
+
+    if (provider.connection?.codex?.launchAllowed) {
+      if (provider.connection.codex.effectiveAuthMode === 'chatgpt') {
+        return 'ChatGPT account ready';
+      }
+
+      if (provider.connection.codex.effectiveAuthMode === 'api_key') {
+        return 'API key ready';
+      }
+    }
+
+    const missingManagedAccountStatus = getCodexMissingManagedAccountStatus(provider);
+    if (missingManagedAccountStatus) {
+      return missingManagedAccountStatus;
+    }
+
+    if (provider.connection?.codex?.launchIssueMessage) {
+      return provider.connection.codex.launchIssueMessage;
+    }
+
     if (selectedBackendOption?.statusMessage) {
       return selectedBackendOption.statusMessage;
     }
@@ -156,11 +244,17 @@ export function getProviderConnectionModeSummary(provider: CliProviderStatus): s
     return null;
   }
 
-  if (provider.authenticated) {
-    return null;
+  if (provider.providerId === 'anthropic') {
+    if (provider.authenticated) {
+      return null;
+    }
+
+    if (provider.connection?.configuredAuthMode === 'auto') {
+      return null;
+    }
   }
 
-  if (provider.providerId === 'anthropic' && provider.connection?.configuredAuthMode === 'auto') {
+  if (provider.providerId === 'codex' && provider.connection?.configuredAuthMode === 'auto') {
     return null;
   }
 
@@ -168,7 +262,13 @@ export function getProviderConnectionModeSummary(provider: CliProviderStatus): s
     provider.providerId,
     provider.connection?.configuredAuthMode ?? null
   );
-  return authModeLabel ? `Preferred auth: ${authModeLabel}` : null;
+  if (!authModeLabel) {
+    return null;
+  }
+
+  return provider.providerId === 'codex'
+    ? `Selected auth: ${authModeLabel}`
+    : `Preferred auth: ${authModeLabel}`;
 }
 
 export function getProviderCredentialSummary(provider: CliProviderStatus): string | null {
@@ -197,9 +297,31 @@ export function getProviderCredentialSummary(provider: CliProviderStatus): strin
   }
 
   if (provider.providerId === 'codex') {
-    return provider.connection.apiKeySource === 'stored'
-      ? 'Saved API key available in Manage'
-      : (provider.connection.apiKeySourceLabel ?? 'API key is configured');
+    const apiKeyAvailabilitySummary = getCodexApiKeyAvailabilitySummary(provider);
+    if (!apiKeyAvailabilitySummary) {
+      return null;
+    }
+
+    if (
+      provider.connection.codex?.managedAccount?.type === 'chatgpt' ||
+      provider.connection.codex?.effectiveAuthMode === 'chatgpt'
+    ) {
+      return provider.connection.apiKeySource === 'stored'
+        ? 'API key also available in Manage as fallback'
+        : `${apiKeyAvailabilitySummary} - available as fallback`;
+    }
+
+    if (provider.connection.configuredAuthMode === 'chatgpt') {
+      return provider.connection.apiKeySource === 'stored'
+        ? 'Saved API key available in Manage if you switch to API key mode'
+        : `${apiKeyAvailabilitySummary} - available if you switch to API key mode`;
+    }
+
+    if (provider.connection.configuredAuthMode === 'auto') {
+      return `${apiKeyAvailabilitySummary} - Auto will use this until ChatGPT is connected`;
+    }
+
+    return apiKeyAvailabilitySummary;
   }
 
   return provider.connection.apiKeySourceLabel ?? null;
@@ -249,7 +371,7 @@ export function getProviderConnectLabel(provider: CliProviderStatus): string {
   }
 
   if (provider.providerId === 'codex') {
-    return 'Configure API key';
+    return 'Connect ChatGPT';
   }
 
   if (provider.providerId === 'gemini') {

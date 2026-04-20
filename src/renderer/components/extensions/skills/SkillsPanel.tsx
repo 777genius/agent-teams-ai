@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  mergeCodexProviderStatusWithSnapshot,
+  useCodexAccountSnapshot,
+} from '@features/codex-account/renderer';
 import { api } from '@renderer/api';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
+import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { getVisibleMultimodelProviders } from '@renderer/utils/multimodelProviderVisibility';
 import {
   getCliProviderExtensionCapability,
@@ -149,6 +154,8 @@ export const SkillsPanel = ({
   const fetchSkillsCatalog = useStore((s) => s.fetchSkillsCatalog);
   const fetchSkillDetail = useStore((s) => s.fetchSkillDetail);
   const cliStatus = useStore((s) => s.cliStatus);
+  const cliStatusLoading = useStore((s) => s.cliStatusLoading);
+  const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const skillsLoading = useStore((s) => s.skillsCatalogLoadingByProjectPath[catalogKey] ?? false);
   const skillsError = useStore((s) => s.skillsCatalogErrorByProjectPath[catalogKey] ?? null);
   const detailById = useStore(useShallow((s) => s.skillsDetailsById));
@@ -167,28 +174,54 @@ export const SkillsPanel = ({
   const selectedSkillIdRef = useRef<string | null>(selectedSkillId);
   const selectedSkillItemRef = useRef<SkillCatalogItem | null>(null);
   selectedSkillIdRef.current = selectedSkillId;
+  const loadingCliStatus = useMemo(
+    () =>
+      !cliStatus && cliStatusLoading && multimodelEnabled
+        ? createLoadingMultimodelCliStatus()
+        : cliStatus,
+    [cliStatus, cliStatusLoading, multimodelEnabled]
+  );
+  const codexAccount = useCodexAccountSnapshot({
+    enabled:
+      loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
+      Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
+  });
+  const effectiveCliStatus = useMemo(
+    () =>
+      loadingCliStatus
+        ? {
+            ...loadingCliStatus,
+            providers: loadingCliStatus.providers.map((provider) =>
+              provider.providerId === 'codex'
+                ? mergeCodexProviderStatusWithSnapshot(provider, codexAccount.snapshot)
+                : provider
+            ),
+          }
+        : loadingCliStatus,
+    [loadingCliStatus, codexAccount.snapshot]
+  );
 
   const mergedSkills = useMemo(
     () => [...projectSkills, ...userSkills],
     [projectSkills, userSkills]
   );
   const codexSkillOverlayAvailable = useMemo(
-    () => isCodexSkillOverlayAvailable(cliStatus),
-    [cliStatus]
+    () => isCodexSkillOverlayAvailable(effectiveCliStatus),
+    [effectiveCliStatus]
   );
   const skillsAudienceLabel = useMemo(() => {
-    if (cliStatus?.flavor !== 'agent_teams_orchestrator') {
+    if (effectiveCliStatus?.flavor !== 'agent_teams_orchestrator') {
       return null;
     }
 
-    const providerNames = getVisibleMultimodelProviders(cliStatus.providers ?? [])
+    const providerNames = getVisibleMultimodelProviders(effectiveCliStatus.providers ?? [])
       .filter((provider) =>
         isCliExtensionCapabilityAvailable(getCliProviderExtensionCapability(provider, 'skills'))
       )
       .map((provider) => provider.displayName);
 
     return formatRuntimeAudienceLabel(providerNames);
-  }, [cliStatus]);
+  }, [effectiveCliStatus]);
   const codexOnlySkillsCount = useMemo(
     () => mergedSkills.filter((skill) => getSkillAudience(skill.rootKind) === 'codex').length,
     [mergedSkills]
@@ -314,7 +347,7 @@ export const SkillsPanel = ({
 
   return (
     <div className="flex flex-col gap-4">
-      {cliStatus?.flavor === 'agent_teams_orchestrator' && (
+      {effectiveCliStatus?.flavor === 'agent_teams_orchestrator' && (
         <div className="rounded-md border border-blue-500/30 bg-blue-500/5 px-4 py-3 text-sm text-blue-300">
           Shared skills in `.claude`, `.cursor`, and `.agents` are available to{' '}
           {skillsAudienceLabel ?? 'the configured runtime'}. Skills stored in `.codex` stay

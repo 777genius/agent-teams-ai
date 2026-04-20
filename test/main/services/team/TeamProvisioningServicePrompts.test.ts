@@ -189,6 +189,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
       authSource: 'anthropic_api_key',
     }));
     (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
     (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
@@ -276,6 +277,39 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
         cwd: process.cwd(),
       }),
     ]);
+
+    await svc.cancelProvisioning(runId);
+  });
+
+  it('forwards codex provider launch overrides into createTeam runtime args', async () => {
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
+    const { child } = createFakeChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService();
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: {},
+      authSource: 'codex_runtime',
+      providerArgs: ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'],
+    }));
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).startFilesystemMonitor = vi.fn();
+    (svc as any).pathExists = vi.fn(async () => false);
+
+    const { runId } = await svc.createTeam(
+      {
+        teamName: 'codex-team',
+        cwd: process.cwd(),
+        members: [],
+        providerId: 'codex',
+      },
+      () => {}
+    );
+
+    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+    expect(launchArgs).toEqual(
+      expect.arrayContaining(['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'])
+    );
 
     await svc.cancelProvisioning(runId);
   });
@@ -428,6 +462,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
       authSource: 'anthropic_api_key',
     }));
     (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
@@ -486,6 +521,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
       authSource: 'anthropic_api_key',
     }));
     (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
@@ -569,6 +605,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     }));
     (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
     (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
     (svc as any).updateConfigProjectPath = vi.fn(async () => {});
     (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
     (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
@@ -600,6 +637,66 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
         model: 'gpt-5.4',
       }),
     ]);
+
+    await svc.cancelProvisioning(runId);
+  });
+
+  it('forwards codex provider launch overrides into launchTeam runtime args', async () => {
+    const teamName = 'codex-launch-forced-login';
+    const teamDir = path.join(tempTeamsBase, teamName);
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead', providerId: 'codex' },
+          { name: 'alice', agentType: 'teammate', role: 'developer', providerId: 'codex' },
+        ],
+      }),
+      'utf8'
+    );
+
+    vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
+    const { child } = createFakeChild();
+    vi.mocked(spawnCli).mockReturnValue(child as any);
+
+    const svc = new TeamProvisioningService();
+    (svc as any).buildProvisioningEnv = vi.fn(async () => ({
+      env: {},
+      authSource: 'codex_runtime',
+      geminiRuntimeAuth: null,
+      providerArgs: ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'],
+    }));
+    (svc as any).resolveProviderDefaultModel = vi.fn(async () => 'gpt-5.4');
+    (svc as any).normalizeTeamConfigForLaunch = vi.fn(async () => {});
+    (svc as any).updateConfigProjectPath = vi.fn(async () => {});
+    (svc as any).restorePrelaunchConfig = vi.fn(async () => {});
+    (svc as any).assertConfigLeadOnlyForLaunch = vi.fn(async () => {});
+    (svc as any).persistLaunchStateSnapshot = vi.fn(async () => {});
+    (svc as any).resolveLaunchExpectedMembers = vi.fn(async () => ({
+      members: [{ name: 'alice', role: 'developer', providerId: 'codex' }],
+      source: 'config-fallback',
+      warning: undefined,
+    }));
+    (svc as any).validateAgentTeamsMcpRuntime = vi.fn(async () => {});
+    (svc as any).pathExists = vi.fn(async () => false);
+    (svc as any).startFilesystemMonitor = vi.fn();
+
+    const { runId } = await svc.launchTeam(
+      {
+        teamName,
+        cwd: process.cwd(),
+        providerId: 'codex',
+        clearContext: true,
+      } as any,
+      () => {}
+    );
+
+    const launchArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[];
+    expect(launchArgs).toEqual(
+      expect.arrayContaining(['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'])
+    );
 
     await svc.cancelProvisioning(runId);
   });

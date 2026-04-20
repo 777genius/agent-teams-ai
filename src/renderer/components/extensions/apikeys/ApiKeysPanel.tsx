@@ -4,9 +4,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import {
+  mergeCodexProviderStatusWithSnapshot,
+  useCodexAccountSnapshot,
+} from '@features/codex-account/renderer';
+import { isElectronMode } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
+import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { AlertTriangle, Info, Key, Plus } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -24,17 +30,56 @@ export const ApiKeysPanel = ({
   projectPath,
   projectLabel,
 }: ApiKeysPanelProps): React.JSX.Element => {
-  const { apiKeys, apiKeysLoading, apiKeysError, storageStatus, fetchStorageStatus, cliStatus } =
-    useStore(
-      useShallow((s) => ({
-        apiKeys: s.apiKeys,
-        apiKeysLoading: s.apiKeysLoading,
-        apiKeysError: s.apiKeysError,
-        storageStatus: s.apiKeyStorageStatus,
-        fetchStorageStatus: s.fetchApiKeyStorageStatus,
-        cliStatus: s.cliStatus,
-      }))
-    );
+  const isElectron = useMemo(() => isElectronMode(), []);
+  const {
+    apiKeys,
+    apiKeysLoading,
+    apiKeysError,
+    storageStatus,
+    fetchStorageStatus,
+    cliStatus,
+    cliStatusLoading,
+    appConfig,
+  } = useStore(
+    useShallow((s) => ({
+      apiKeys: s.apiKeys,
+      apiKeysLoading: s.apiKeysLoading,
+      apiKeysError: s.apiKeysError,
+      storageStatus: s.apiKeyStorageStatus,
+      fetchStorageStatus: s.fetchApiKeyStorageStatus,
+      cliStatus: s.cliStatus,
+      cliStatusLoading: s.cliStatusLoading,
+      appConfig: s.appConfig,
+    }))
+  );
+  const multimodelEnabled = appConfig?.general?.multimodelEnabled ?? true;
+  const loadingCliStatus = useMemo(
+    () =>
+      !cliStatus && cliStatusLoading && multimodelEnabled
+        ? createLoadingMultimodelCliStatus()
+        : cliStatus,
+    [cliStatus, cliStatusLoading, multimodelEnabled]
+  );
+  const codexAccount = useCodexAccountSnapshot({
+    enabled:
+      isElectron &&
+      loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
+      Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
+  });
+  const effectiveCliStatus = useMemo(
+    () =>
+      loadingCliStatus
+        ? {
+            ...loadingCliStatus,
+            providers: loadingCliStatus.providers.map((provider) =>
+              provider.providerId === 'codex'
+                ? mergeCodexProviderStatusWithSnapshot(provider, codexAccount.snapshot)
+                : provider
+            ),
+          }
+        : loadingCliStatus,
+    [loadingCliStatus, codexAccount.snapshot]
+  );
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingKey, setEditingKey] = useState<ApiKeyEntry | null>(null);
@@ -60,7 +105,7 @@ export const ApiKeysPanel = ({
 
   const isOsKeychain = storageStatus?.encryptionMethod === 'os-keychain';
   const providerKeyCards = useMemo(() => {
-    if (!cliStatus?.providers?.length) {
+    if (!effectiveCliStatus?.providers?.length) {
       return [];
     }
 
@@ -78,7 +123,9 @@ export const ApiKeysPanel = ({
         },
       ] as const
     ).flatMap((item) => {
-      const provider = cliStatus.providers.find((entry) => entry.providerId === item.providerId);
+      const provider = effectiveCliStatus.providers.find(
+        (entry) => entry.providerId === item.providerId
+      );
       if (!provider) {
         return [];
       }
@@ -93,7 +140,7 @@ export const ApiKeysPanel = ({
         },
       ];
     });
-  }, [cliStatus]);
+  }, [effectiveCliStatus]);
 
   return (
     <div className="flex flex-col gap-4">

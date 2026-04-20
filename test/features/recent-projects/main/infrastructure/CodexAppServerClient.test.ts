@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { CodexAppServerClient } from '@features/recent-projects/main/infrastructure/codex/CodexAppServerClient';
 
-import type { JsonRpcSession, JsonRpcStdioClient } from '@features/recent-projects/main/infrastructure/codex/JsonRpcStdioClient';
+import type {
+  JsonRpcSession,
+  JsonRpcStdioClient,
+} from '@main/services/infrastructure/codexAppServer';
 
 function createSession(
   request: JsonRpcSession['request'],
@@ -11,6 +14,8 @@ function createSession(
   return {
     request,
     notify,
+    onNotification: vi.fn().mockReturnValue(() => undefined),
+    close: vi.fn().mockResolvedValue(undefined),
   };
 }
 

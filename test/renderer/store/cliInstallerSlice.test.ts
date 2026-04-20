@@ -55,6 +55,36 @@ import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExt
 
 import type { CliInstallationStatus } from '@shared/types';
 
+function createMultimodelProvider(
+  overrides: Partial<CliInstallationStatus['providers'][number]> & {
+    providerId: 'anthropic' | 'codex' | 'gemini';
+    displayName: string;
+  }
+): CliInstallationStatus['providers'][number] {
+  return {
+    supported: true,
+    authenticated: false,
+    authMethod: null,
+    verificationState: 'verified',
+    statusMessage: null,
+    models: [],
+    modelVerificationState: 'idle',
+    modelAvailability: [],
+    canLoginFromUi: true,
+    capabilities: {
+      teamLaunch: true,
+      oneShot: true,
+      extensions: createDefaultCliExtensionCapabilities(),
+    },
+    backend: null,
+    connection: null,
+    selectedBackendId: null,
+    resolvedBackendId: null,
+    availableBackends: [],
+    ...overrides,
+  };
+}
+
 describe('cliInstallerSlice', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -214,6 +244,153 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliStatusLoading).toBe(false);
       expect(useStore.getState().cliProviderStatusLoading).toEqual({});
       expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
+    });
+
+    it('reuses hydrated provider statuses from bootstrap metadata without duplicate provider probes', async () => {
+      const mockStatus: CliInstallationStatus = {
+        flavor: 'agent_teams_orchestrator',
+        displayName: 'Multimodel runtime',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: true,
+        installed: true,
+        installedVersion: '0.0.3',
+        binaryPath: '/Users/belief/.agent-teams/runtime-cache/0.0.3/darwin-arm64/claude-multimodel',
+        latestVersion: null,
+        updateAvailable: false,
+        authLoggedIn: true,
+        authStatusChecking: false,
+        authMethod: 'oauth_token',
+        providers: [
+          createMultimodelProvider({
+            providerId: 'anthropic',
+            displayName: 'Anthropic',
+            authenticated: true,
+            authMethod: 'oauth_token',
+            statusMessage: 'Connected',
+          }),
+          createMultimodelProvider({
+            providerId: 'codex',
+            displayName: 'Codex',
+            authenticated: true,
+            authMethod: 'chatgpt',
+            statusMessage: 'ChatGPT account ready',
+          }),
+          createMultimodelProvider({
+            providerId: 'gemini',
+            displayName: 'Gemini',
+            statusMessage: 'Ready',
+          }),
+        ],
+      };
+      vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(mockStatus);
+
+      await useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
+
+      expect(useStore.getState().cliStatus).toMatchObject({
+        ...mockStatus,
+        launchError: null,
+      });
+      expect(useStore.getState().cliProviderStatusLoading).toEqual({
+        anthropic: false,
+        codex: false,
+        gemini: false,
+      });
+      expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
+    });
+
+    it('drops global loading once metadata is ready and keeps only unresolved providers loading', async () => {
+      let resolveCodexStatus!: (
+        value: CliInstallationStatus['providers'][number]
+      ) => void;
+      const pendingCodexStatus = new Promise<CliInstallationStatus['providers'][number]>((resolve) => {
+        resolveCodexStatus = resolve;
+      });
+      const mockStatus: CliInstallationStatus = {
+        flavor: 'agent_teams_orchestrator',
+        displayName: 'Multimodel runtime',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: true,
+        installed: true,
+        installedVersion: '0.0.3',
+        binaryPath: '/Users/belief/.agent-teams/runtime-cache/0.0.3/darwin-arm64/claude-multimodel',
+        latestVersion: null,
+        updateAvailable: false,
+        authLoggedIn: true,
+        authStatusChecking: true,
+        authMethod: 'oauth_token',
+        providers: [
+          createMultimodelProvider({
+            providerId: 'anthropic',
+            displayName: 'Anthropic',
+            authenticated: true,
+            authMethod: 'oauth_token',
+            statusMessage: 'Connected',
+          }),
+          createMultimodelProvider({
+            providerId: 'codex',
+            displayName: 'Codex',
+            supported: false,
+            authenticated: false,
+            authMethod: null,
+            verificationState: 'unknown',
+            statusMessage: 'Checking...',
+            models: [],
+            backend: null,
+            connection: null,
+            availableBackends: [],
+          }),
+          createMultimodelProvider({
+            providerId: 'gemini',
+            displayName: 'Gemini',
+            statusMessage: 'Ready',
+          }),
+        ],
+      };
+      vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(mockStatus);
+      vi.mocked(api.cliInstaller.getProviderStatus).mockImplementation(async (providerId) => {
+        if (providerId === 'codex') {
+          return pendingCodexStatus;
+        }
+        throw new Error(`Unexpected provider status request for ${providerId}`);
+      });
+
+      const bootstrapPromise = useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
+
+      await vi.waitFor(() => {
+        expect(useStore.getState().cliStatusLoading).toBe(false);
+      });
+
+      expect(useStore.getState().cliProviderStatusLoading).toEqual({
+        anthropic: false,
+        codex: true,
+        gemini: false,
+      });
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledWith('codex');
+
+      resolveCodexStatus(
+        createMultimodelProvider({
+          providerId: 'codex',
+          displayName: 'Codex',
+          authenticated: true,
+          authMethod: 'chatgpt',
+          statusMessage: 'ChatGPT account ready',
+        })
+      );
+      await bootstrapPromise;
+
+      expect(useStore.getState().cliProviderStatusLoading).toEqual({
+        anthropic: false,
+        codex: false,
+        gemini: false,
+      });
+      expect(useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'codex'))
+        .toMatchObject({
+          authenticated: true,
+          statusMessage: 'ChatGPT account ready',
+        });
     });
   });
 

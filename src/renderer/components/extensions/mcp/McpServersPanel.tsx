@@ -15,6 +15,7 @@ import {
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
 import { formatRelativeTime } from '@renderer/utils/formatters';
+import { getRuntimeDisplayName } from '@renderer/utils/runtimeDisplayName';
 import { CLI_NOT_FOUND_MARKER } from '@shared/constants/cli';
 import {
   getMcpDiagnosticKey,
@@ -30,6 +31,7 @@ import { SearchInput } from '../common/SearchInput';
 import { McpServerCard } from './McpServerCard';
 import { McpServerDetailDialog } from './McpServerDetailDialog';
 
+import type { CliInstallationStatus } from '@shared/types';
 import type {
   InstalledMcpEntry,
   McpCatalogItem,
@@ -68,6 +70,17 @@ interface McpServersPanelProps {
   mcpSearchWarnings: string[];
   selectedMcpServerId: string | null;
   setSelectedMcpServerId: (id: string | null) => void;
+  cliStatus?: Pick<
+    CliInstallationStatus,
+    | 'installed'
+    | 'authLoggedIn'
+    | 'binaryPath'
+    | 'launchError'
+    | 'flavor'
+    | 'displayName'
+    | 'providers'
+  > | null;
+  cliStatusLoading?: boolean;
 }
 
 export const McpServersPanel = ({
@@ -79,6 +92,8 @@ export const McpServersPanel = ({
   mcpSearchWarnings,
   selectedMcpServerId,
   setSelectedMcpServerId,
+  cliStatus: cliStatusOverride,
+  cliStatusLoading: cliStatusLoadingOverride,
 }: McpServersPanelProps): React.JSX.Element => {
   const projectStateKey = getMcpProjectStateKey(projectPath);
   const {
@@ -99,8 +114,6 @@ export const McpServersPanel = ({
     mcpDiagnosticsLastCheckedAtByProjectPath,
     mcpDiagnosticsLastCheckedAtFallback,
     runMcpDiagnostics,
-    cliStatus,
-    cliStatusLoading,
   } = useStore(
     useShallow((s) => ({
       browseCatalog: s.mcpBrowseCatalog,
@@ -120,10 +133,12 @@ export const McpServersPanel = ({
       mcpDiagnosticsLastCheckedAtByProjectPath: s.mcpDiagnosticsLastCheckedAtByProjectPath,
       mcpDiagnosticsLastCheckedAtFallback: s.mcpDiagnosticsLastCheckedAt,
       runMcpDiagnostics: s.runMcpDiagnostics,
-      cliStatus: s.cliStatus,
-      cliStatusLoading: s.cliStatusLoading,
     }))
   );
+  const storedCliStatus = useStore((s) => s.cliStatus);
+  const storedCliStatusLoading = useStore((s) => s.cliStatusLoading);
+  const cliStatus = cliStatusOverride ?? storedCliStatus;
+  const cliStatusLoading = cliStatusLoadingOverride ?? storedCliStatusLoading;
   const installedServers =
     installedServersByProjectPath?.[projectStateKey] ?? installedServersFallback ?? [];
   const mcpDiagnostics =
@@ -147,12 +162,8 @@ export const McpServersPanel = ({
   }, [browseCatalog.length, browseError, browseLoading, mcpBrowse]);
 
   const diagnosticsDisableReason = useMemo(() => {
-    if (cliStatusLoading) {
-      return 'Checking runtime status...';
-    }
-
     if (cliStatus === null || typeof cliStatus === 'undefined') {
-      return 'Checking runtime availability...';
+      return cliStatusLoading ? 'Checking runtime status...' : 'Checking runtime availability...';
     }
 
     if (cliStatus?.installed === false) {
@@ -241,8 +252,7 @@ export const McpServersPanel = ({
 
   // Sort displayed servers
   const displayServers = useMemo(() => sortMcpServers(rawServers, mcpSort), [rawServers, mcpSort]);
-  const runtimeLabel =
-    cliStatus?.flavor === 'agent_teams_orchestrator' ? 'multimodel runtime' : 'Claude CLI';
+  const runtimeLabel = getRuntimeDisplayName(cliStatus, true);
 
   // Find selected server (search in both lists to avoid losing selection during search toggle)
   const selectedServer = useMemo(() => {
@@ -411,13 +421,12 @@ export const McpServersPanel = ({
             <div>
               <p className="text-sm font-medium text-amber-300">
                 {cliStatus?.flavor === 'agent_teams_orchestrator'
-                  ? 'Configured runtime not available'
-                  : 'Claude CLI not installed'}
+                  ? `${runtimeLabel} not available`
+                  : `${runtimeLabel} not installed`}
               </p>
               <p className="mt-0.5 text-xs text-text-muted">
-                {cliStatus?.flavor === 'agent_teams_orchestrator'
-                  ? 'MCP health checks require the configured runtime. Go to the Dashboard to install or repair it.'
-                  : 'MCP health checks require Claude CLI. Go to the Dashboard to install or repair it.'}
+                MCP health checks require {runtimeLabel}. Go to the Dashboard to install or repair
+                it.
               </p>
             </div>
           </div>
@@ -458,6 +467,8 @@ export const McpServersPanel = ({
               diagnostic={getDiagnostic(server)}
               diagnosticsLoading={mcpDiagnosticsLoading}
               onClick={setSelectedMcpServerId}
+              cliStatus={cliStatus}
+              cliStatusLoading={cliStatusLoading}
             />
           ))}
         </div>
@@ -488,6 +499,8 @@ export const McpServersPanel = ({
         projectPath={projectPath}
         open={selectedMcpServerId !== null}
         onClose={() => setSelectedMcpServerId(null)}
+        cliStatus={cliStatus}
+        cliStatusLoading={cliStatusLoading}
       />
     </div>
   );

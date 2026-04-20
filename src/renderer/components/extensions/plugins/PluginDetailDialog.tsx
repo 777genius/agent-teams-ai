@@ -39,6 +39,7 @@ import { InstallButton } from '../common/InstallButton';
 import { InstallCountBadge } from '../common/InstallCountBadge';
 import { SourceBadge } from '../common/SourceBadge';
 
+import type { CliInstallationStatus } from '@shared/types';
 import type { EnrichedPlugin, InstallScope } from '@shared/types/extensions';
 
 interface PluginDetailDialogProps {
@@ -46,6 +47,11 @@ interface PluginDetailDialogProps {
   open: boolean;
   onClose: () => void;
   projectPath: string | null;
+  cliStatus?: Pick<
+    CliInstallationStatus,
+    'installed' | 'authLoggedIn' | 'binaryPath' | 'launchError' | 'flavor' | 'providers'
+  > | null;
+  cliStatusLoading?: boolean;
 }
 
 const SCOPE_OPTIONS: { value: InstallScope; label: string }[] = [
@@ -59,6 +65,8 @@ export const PluginDetailDialog = ({
   open,
   onClose,
   projectPath,
+  cliStatus,
+  cliStatusLoading,
 }: PluginDetailDialogProps): React.JSX.Element => {
   const { fetchPluginReadme, readmes, readmeLoading, installPlugin, uninstallPlugin } = useStore(
     useShallow((s) => ({
@@ -198,6 +206,8 @@ export const PluginDetailDialog = ({
             state={installProgress}
             isInstalled={isInstalledForScope}
             section="plugins"
+            cliStatus={cliStatus}
+            cliStatusLoading={cliStatusLoading}
             onInstall={() =>
               installPlugin({
                 pluginId: plugin.pluginId,

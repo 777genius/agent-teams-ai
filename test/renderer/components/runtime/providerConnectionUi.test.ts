@@ -104,11 +104,32 @@ function createCodexProvider(
     connection: {
       supportsOAuth: false,
       supportsApiKey: true,
-      configurableAuthModes: [],
-      configuredAuthMode: overrides?.configuredAuthMode ?? null,
+      configurableAuthModes: ['auto', 'chatgpt', 'api_key'],
+      configuredAuthMode: overrides?.configuredAuthMode ?? 'auto',
       apiKeyConfigured: overrides?.apiKeyConfigured ?? false,
       apiKeySource: overrides?.apiKeySource ?? null,
       apiKeySourceLabel: overrides?.apiKeySourceLabel ?? null,
+      codex: {
+        preferredAuthMode: 'auto',
+        effectiveAuthMode: overrides?.apiKeyConfigured ? 'api_key' : null,
+        appServerState: 'healthy',
+        appServerStatusMessage: null,
+        managedAccount: null,
+        requiresOpenaiAuth: null,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        launchAllowed: Boolean(overrides?.authenticated ?? true) || Boolean(overrides?.apiKeyConfigured),
+        launchIssueMessage: null,
+        launchReadinessState:
+          Boolean(overrides?.authenticated ?? true) || Boolean(overrides?.apiKeyConfigured)
+            ? 'ready_api_key'
+            : 'missing_auth',
+        ...overrides?.codex,
+      },
     },
   };
 }
@@ -139,15 +160,33 @@ describe('providerConnectionUi', () => {
     );
   });
 
-  it('treats Codex as lane-managed and hides the old connection-managed runtime summary', () => {
+  it('treats Codex as lane-managed and surfaces the current runtime summary', () => {
     const provider = createCodexProvider({
       apiKeyConfigured: true,
       apiKeySource: 'stored',
       apiKeySourceLabel: 'Stored in app',
     });
 
-    expect(isConnectionManagedRuntimeProvider(provider)).toBe(false);
-    expect(getProviderCurrentRuntimeSummary(provider)).toBeNull();
+    expect(isConnectionManagedRuntimeProvider(provider)).toBe(true);
+    expect(getProviderCurrentRuntimeSummary(provider)).toBe('Current runtime: Codex native');
+  });
+
+  it('keeps the Codex runtime summary native even if a stale legacy backend label leaks in', () => {
+    const provider = createCodexProvider({
+      authenticated: false,
+      authMethod: null,
+      selectedBackendId: 'auto',
+      resolvedBackendId: 'api',
+      backend: {
+        kind: 'adapter',
+        label: 'Default adapter',
+        endpointLabel: 'legacy adapter',
+        projectId: null,
+        authMethodDetail: null,
+      },
+    });
+
+    expect(getProviderCurrentRuntimeSummary(provider)).toBe('Selected runtime: Codex native');
   });
 
   it('shows stored Codex API keys as immediately usable for native runtime', () => {
@@ -157,7 +196,9 @@ describe('providerConnectionUi', () => {
       apiKeySourceLabel: 'Stored in app',
     });
 
-    expect(getProviderCredentialSummary(provider)).toBe('Saved API key available in Manage');
+    expect(getProviderCredentialSummary(provider)).toBe(
+      'Saved API key available in Manage - Auto will use this until ChatGPT is connected'
+    );
   });
 
   it('shows environment Codex credentials without claiming they are stored in Manage', () => {
@@ -167,7 +208,73 @@ describe('providerConnectionUi', () => {
       apiKeySourceLabel: 'Detected from CODEX_API_KEY',
     });
 
-    expect(getProviderCredentialSummary(provider)).toBe('Detected from CODEX_API_KEY');
+    expect(getProviderCredentialSummary(provider)).toBe(
+      'Detected from CODEX_API_KEY - Auto will use this until ChatGPT is connected'
+    );
+  });
+
+  it('describes Codex API keys as a mode-switch fallback when ChatGPT mode is pinned', () => {
+    const provider = createCodexProvider({
+      authenticated: false,
+      authMethod: null,
+      configuredAuthMode: 'chatgpt',
+      apiKeyConfigured: true,
+      apiKeySource: 'environment',
+      apiKeySourceLabel: 'Detected from OPENAI_API_KEY',
+      codex: {
+        preferredAuthMode: 'chatgpt',
+        effectiveAuthMode: null,
+        appServerState: 'healthy',
+        appServerStatusMessage: null,
+        managedAccount: null,
+        requiresOpenaiAuth: true,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        launchAllowed: false,
+        launchIssueMessage: 'Connect a ChatGPT account to use your Codex subscription.',
+        launchReadinessState: 'missing_auth',
+      },
+    });
+
+    expect(getProviderCredentialSummary(provider)).toBe(
+      'Detected from OPENAI_API_KEY - available if you switch to API key mode'
+    );
+  });
+
+  it('describes Codex API keys as the current Auto fallback when no ChatGPT account is connected', () => {
+    const provider = createCodexProvider({
+      authenticated: true,
+      authMethod: 'api_key',
+      configuredAuthMode: 'auto',
+      apiKeyConfigured: true,
+      apiKeySource: 'environment',
+      apiKeySourceLabel: 'Detected from OPENAI_API_KEY',
+      codex: {
+        preferredAuthMode: 'auto',
+        effectiveAuthMode: 'api_key',
+        appServerState: 'healthy',
+        appServerStatusMessage: null,
+        managedAccount: null,
+        requiresOpenaiAuth: true,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        launchAllowed: true,
+        launchIssueMessage: null,
+        launchReadinessState: 'ready_api_key',
+      },
+    });
+
+    expect(getProviderCredentialSummary(provider)).toBe(
+      'Detected from OPENAI_API_KEY - Auto will use this until ChatGPT is connected'
+    );
   });
 
   it('surfaces native backend status instead of flattening Codex to connected-via-api-key text', () => {
@@ -188,6 +295,126 @@ describe('providerConnectionUi', () => {
     });
 
     expect(formatProviderStatusText(provider)).toBe('Codex native ready');
+  });
+
+  it('surfaces degraded ChatGPT verification warnings instead of flattening them to ready', () => {
+    const provider = createCodexProvider({
+      authenticated: false,
+      authMethod: null,
+      codex: {
+        preferredAuthMode: 'auto',
+        effectiveAuthMode: 'chatgpt',
+        appServerState: 'degraded',
+        appServerStatusMessage: 'Transient app-server verification failure.',
+        managedAccount: {
+          type: 'chatgpt',
+          email: 'belief@example.com',
+          planType: 'plus',
+        },
+        requiresOpenaiAuth: true,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        launchAllowed: true,
+        launchIssueMessage: 'ChatGPT account detected, but account verification is currently degraded.',
+        launchReadinessState: 'warning_degraded_but_launchable',
+      },
+    });
+
+    expect(formatProviderStatusText(provider)).toBe(
+      'ChatGPT account detected, but account verification is currently degraded.'
+    );
+  });
+
+  it('surfaces a clear ChatGPT-required state when the pinned subscription login is missing', () => {
+    const provider = createCodexProvider({
+      authenticated: false,
+      authMethod: null,
+      configuredAuthMode: 'chatgpt',
+      codex: {
+        preferredAuthMode: 'chatgpt',
+        effectiveAuthMode: null,
+        appServerState: 'healthy',
+        appServerStatusMessage: null,
+        managedAccount: null,
+        requiresOpenaiAuth: true,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        launchAllowed: false,
+        launchIssueMessage: 'Connect a ChatGPT account to use your Codex subscription.',
+        launchReadinessState: 'missing_auth',
+      },
+    });
+
+    expect(formatProviderStatusText(provider)).toBe('Codex CLI reports no active ChatGPT login');
+  });
+
+  it('mentions local Codex account artifacts when the CLI has no active managed ChatGPT session', () => {
+    const provider = createCodexProvider({
+      authenticated: false,
+      authMethod: null,
+      configuredAuthMode: 'chatgpt',
+      codex: {
+        preferredAuthMode: 'chatgpt',
+        effectiveAuthMode: null,
+        appServerState: 'healthy',
+        appServerStatusMessage: null,
+        managedAccount: null,
+        requiresOpenaiAuth: true,
+        localAccountArtifactsPresent: true,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        launchAllowed: false,
+        launchIssueMessage: 'Connect a ChatGPT account to use your Codex subscription.',
+        launchReadinessState: 'missing_auth',
+      },
+    });
+
+    expect(formatProviderStatusText(provider)).toBe(
+      'Codex CLI reports no active ChatGPT login. Local Codex account data exists, but no active managed session is selected.'
+    );
+  });
+
+  it('asks for reconnect when a locally selected ChatGPT account exists but the session is stale', () => {
+    const provider = createCodexProvider({
+      authenticated: false,
+      authMethod: null,
+      configuredAuthMode: 'chatgpt',
+      codex: {
+        preferredAuthMode: 'chatgpt',
+        effectiveAuthMode: null,
+        appServerState: 'healthy',
+        appServerStatusMessage: null,
+        managedAccount: null,
+        requiresOpenaiAuth: true,
+        localAccountArtifactsPresent: true,
+        localActiveChatgptAccountPresent: true,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        launchAllowed: false,
+        launchIssueMessage: 'Reconnect ChatGPT to refresh the current Codex subscription session.',
+        launchReadinessState: 'missing_auth',
+      },
+    });
+
+    expect(formatProviderStatusText(provider)).toBe(
+      'Codex has a locally selected ChatGPT account, but the current session needs reconnect.'
+    );
   });
 
   it('surfaces native auth-required state from the selected backend option', () => {

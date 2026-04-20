@@ -6,6 +6,7 @@ import { api } from '@renderer/api';
 import { syncRendererTelemetry } from '@renderer/sentry';
 import { cleanupStale as cleanupCommentReadState } from '@renderer/services/commentReadStorage';
 import { normalizePath } from '@renderer/utils/pathNormalize';
+import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import {
   buildTaskChangePresenceKey,
   buildTaskChangeRequestOptions,
@@ -1424,13 +1425,21 @@ export function initializeNotificationListeners(): () => void {
           break;
         }
         case 'completed':
+          {
+            const multimodelEnabled =
+              useStore.getState().appConfig?.general?.multimodelEnabled ?? true;
+            void refreshCliStatusForCurrentMode({
+              multimodelEnabled,
+              bootstrapCliStatus: useStore.getState().bootstrapCliStatus,
+              fetchCliStatus: useStore.getState().fetchCliStatus,
+            });
+          }
           useStore.setState({
             cliInstallerState: 'completed',
             cliCompletedVersion: progress.version ?? null,
             cliInstallerDetail: null,
           });
           // Re-fetch status after install and auto-revert to idle after 3s
-          void useStore.getState().fetchCliStatus();
           cliCompletedRevertTimer = setTimeout(() => {
             cliCompletedRevertTimer = null;
             // Only revert if still in 'completed' state (not overwritten by a new install)

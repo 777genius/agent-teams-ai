@@ -28,6 +28,7 @@ import { CategoryChips } from './CategoryChips';
 import { PluginCard } from './PluginCard';
 import { PluginDetailDialog } from './PluginDetailDialog';
 
+import type { CliInstallationStatus } from '@shared/types';
 import type {
   EnrichedPlugin,
   PluginCapability,
@@ -48,6 +49,11 @@ interface PluginsPanelProps {
   clearFilters: () => void;
   hasActiveFilters: boolean;
   setPluginSort: (sort: { field: PluginSortField; order: 'asc' | 'desc' }) => void;
+  cliStatus?: Pick<
+    CliInstallationStatus,
+    'installed' | 'authLoggedIn' | 'binaryPath' | 'launchError' | 'flavor' | 'providers'
+  > | null;
+  cliStatusLoading?: boolean;
 }
 
 const SORT_OPTIONS: { value: string; label: string }[] = [
@@ -125,8 +131,15 @@ export const PluginsPanel = ({
   clearFilters,
   hasActiveFilters,
   setPluginSort,
+  cliStatus: cliStatusOverride,
+  cliStatusLoading,
 }: PluginsPanelProps): React.JSX.Element => {
-  const { catalog, loading, error, cliStatus } = useStore(
+  const {
+    catalog,
+    loading,
+    error,
+    cliStatus: storedCliStatus,
+  } = useStore(
     useShallow((s) => ({
       catalog: s.pluginCatalog,
       loading: s.pluginCatalogLoading,
@@ -134,6 +147,7 @@ export const PluginsPanel = ({
       cliStatus: s.cliStatus,
     }))
   );
+  const cliStatus = cliStatusOverride ?? storedCliStatus;
 
   const filtered = useMemo(
     () => selectFilteredPlugins(catalog, pluginFilters, pluginSort),
@@ -192,8 +206,9 @@ export const PluginsPanel = ({
 
           return (
             <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-300">
-              In the multimodel runtime, plugins currently apply only to Anthropic sessions. Broader
-              plugin support across providers is in development.
+              In the multimodel runtime, plugins are currently guaranteed only for Anthropic
+              sessions. We are actively building broader plugin support for all agents, including
+              both universal plugins and agent-specific plugins.
               {capability.reason ? ` ${capability.reason}` : ''}
             </div>
           );
@@ -407,6 +422,8 @@ export const PluginsPanel = ({
               plugin={plugin}
               index={index}
               onClick={setSelectedPluginId}
+              cliStatus={cliStatus}
+              cliStatusLoading={cliStatusLoading}
             />
           ))}
         </div>
@@ -418,6 +435,8 @@ export const PluginsPanel = ({
         open={selectedPluginId !== null}
         onClose={() => setSelectedPluginId(null)}
         projectPath={projectPath}
+        cliStatus={cliStatus}
+        cliStatusLoading={cliStatusLoading}
       />
     </div>
   );

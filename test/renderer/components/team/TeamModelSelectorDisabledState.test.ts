@@ -2,6 +2,8 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
+
 vi.mock('@renderer/components/ui/tooltip', () => ({
   TooltipProvider: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
@@ -67,10 +69,27 @@ const storeState = {
   appConfig: { general: { multimodelEnabled: true } },
   fetchCliProviderStatus: vi.fn().mockResolvedValue(undefined),
 };
+const codexAccountHookState = {
+  snapshot: null as CodexAccountSnapshotDto | null,
+  loading: false,
+  error: null as string | null,
+  refresh: vi.fn(() => Promise.resolve(undefined)),
+  startChatgptLogin: vi.fn(() => Promise.resolve(true)),
+  cancelChatgptLogin: vi.fn(() => Promise.resolve(true)),
+  logout: vi.fn(() => Promise.resolve(true)),
+};
 
 vi.mock('@renderer/store', () => ({
   useStore: (selector: (state: unknown) => unknown) => selector(storeState),
 }));
+
+vi.mock('@features/codex-account/renderer', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@features/codex-account/renderer')>();
+  return {
+    ...actual,
+    useCodexAccountSnapshot: () => codexAccountHookState,
+  };
+});
 
 import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
 
@@ -80,6 +99,13 @@ describe('TeamModelSelector disabled Codex models', () => {
     storeState.cliStatus = null;
     storeState.cliStatusLoading = false;
     storeState.fetchCliProviderStatus.mockClear();
+    codexAccountHookState.snapshot = null;
+    codexAccountHookState.loading = false;
+    codexAccountHookState.error = null;
+    codexAccountHookState.refresh.mockClear();
+    codexAccountHookState.startChatgptLogin.mockClear();
+    codexAccountHookState.cancelChatgptLogin.mockClear();
+    codexAccountHookState.logout.mockClear();
   });
 
   it('shows only Default while Codex runtime models are still loading', async () => {
@@ -102,7 +128,6 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(host.textContent).toContain('Default');
-    expect(host.textContent).toContain('Explicit models load from the current runtime');
     expect(host.textContent).not.toContain('5.1 Codex Mini');
     expect(host.textContent).not.toContain('5.3 Codex Spark');
 
@@ -198,6 +223,44 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).toContain('5.4');
     expect(host.textContent).toContain('5.3 Codex');
     expect(host.textContent).not.toContain('5.2 Codex');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps the runtime-reported Codex model list visible during a background refresh', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'codex',
+          models: ['gpt-5.4', 'gpt-5.3-codex'],
+        },
+      ],
+    };
+    storeState.cliStatusLoading = true;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'codex',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('5.4');
+    expect(host.textContent).toContain('5.3 Codex');
+    expect(host.textContent).not.toContain('Explicit models load from the current runtime');
 
     await act(async () => {
       root.unmount();
@@ -309,6 +372,82 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(onValueChange).toHaveBeenCalledWith('gpt-5.1-codex-max');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('disables 5.1 Codex Max when the live Codex snapshot says ChatGPT account mode', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'codex',
+          authMethod: null,
+          backend: null,
+          models: ['gpt-5.4', 'gpt-5.1-codex-max'],
+          modelVerificationState: 'idle',
+          modelAvailability: [],
+        },
+      ],
+    };
+    codexAccountHookState.snapshot = {
+      preferredAuthMode: 'chatgpt',
+      effectiveAuthMode: 'chatgpt',
+      launchAllowed: true,
+      launchIssueMessage: null,
+      launchReadinessState: 'ready_chatgpt',
+      appServerState: 'healthy',
+      appServerStatusMessage: null,
+      managedAccount: {
+        type: 'chatgpt',
+        email: 'user@example.com',
+        planType: 'pro',
+      },
+      apiKey: {
+        available: false,
+        source: null,
+        sourceLabel: null,
+      },
+      requiresOpenaiAuth: false,
+      localAccountArtifactsPresent: false,
+      login: {
+        status: 'idle',
+        error: null,
+        startedAt: null,
+      },
+      rateLimits: null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'codex',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('5.4');
+    const disabledButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('5.1 Codex Max')
+    );
+    expect(disabledButton).not.toBeNull();
+    expect(disabledButton?.getAttribute('aria-disabled')).toBe('true');
+    expect(disabledButton?.textContent).toContain('Disabled');
+    expect(disabledButton?.getAttribute('title')).toContain(
+      'Temporarily disabled for team agents - this model is not currently available on the Codex native runtime.'
+    );
 
     await act(async () => {
       root.unmount();

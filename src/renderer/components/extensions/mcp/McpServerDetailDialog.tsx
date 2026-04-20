@@ -42,6 +42,7 @@ import { ExternalLink, Lock, Plus, Star, Trash2, Wrench } from 'lucide-react';
 import { InstallButton } from '../common/InstallButton';
 import { SourceBadge } from '../common/SourceBadge';
 
+import type { CliInstallationStatus } from '@shared/types';
 import type {
   InstalledMcpEntry,
   McpCatalogItem,
@@ -59,6 +60,11 @@ interface McpServerDetailDialogProps {
   projectPath: string | null;
   open: boolean;
   onClose: () => void;
+  cliStatus?: Pick<
+    CliInstallationStatus,
+    'installed' | 'authLoggedIn' | 'binaryPath' | 'launchError' | 'flavor' | 'providers'
+  > | null;
+  cliStatusLoading?: boolean;
 }
 
 type Scope = 'local' | 'user' | 'project' | 'global';
@@ -73,8 +79,11 @@ export const McpServerDetailDialog = ({
   projectPath,
   open,
   onClose,
+  cliStatus: cliStatusOverride,
+  cliStatusLoading,
 }: McpServerDetailDialogProps): React.JSX.Element => {
-  const cliStatus = useStore((s) => s.cliStatus);
+  const storedCliStatus = useStore((s) => s.cliStatus);
+  const cliStatus = cliStatusOverride ?? storedCliStatus;
   const defaultSharedScope = getDefaultMcpSharedScope(cliStatus?.flavor);
   const [scope, setScope] = useState<Scope>(defaultSharedScope);
   const operationKey = server ? getMcpOperationKey(server.id, scope, projectPath) : null;
@@ -587,6 +596,8 @@ export const McpServerDetailDialog = ({
                 state={installProgress}
                 isInstalled={isInstalledForScope}
                 section="mcp"
+                cliStatus={cliStatus}
+                cliStatusLoading={cliStatusLoading}
                 onInstall={handleInstall}
                 onUninstall={handleUninstall}
                 disabled={installDisabled}

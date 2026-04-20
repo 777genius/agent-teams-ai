@@ -6,6 +6,7 @@
  * to run in a regular browser connected to an HTTP server.
  */
 
+import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
 import type {
   AppConfig,
@@ -218,6 +219,29 @@ export class HttpAPIClient implements ElectronAPI {
   // ---------------------------------------------------------------------------
 
   getAppVersion = (): Promise<string> => this.get<string>('/api/version');
+
+  getCodexAccountSnapshot = (): Promise<CodexAccountSnapshotDto> =>
+    Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
+
+  refreshCodexAccountSnapshot = (_options?: {
+    includeRateLimits?: boolean;
+    forceRefreshToken?: boolean;
+  }): Promise<CodexAccountSnapshotDto> =>
+    Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
+
+  startCodexChatgptLogin = (): Promise<CodexAccountSnapshotDto> =>
+    Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
+
+  cancelCodexChatgptLogin = (): Promise<CodexAccountSnapshotDto> =>
+    Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
+
+  logoutCodexAccount = (): Promise<CodexAccountSnapshotDto> =>
+    Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
+
+  onCodexAccountSnapshotChanged =
+    (_callback: (event: unknown, snapshot: CodexAccountSnapshotDto) => void): (() => void) =>
+    () =>
+      undefined;
 
   getDashboardRecentProjects = (): Promise<DashboardRecentProjectsPayload> =>
     this.get<DashboardRecentProjectsPayload>('/api/dashboard/recent-projects');

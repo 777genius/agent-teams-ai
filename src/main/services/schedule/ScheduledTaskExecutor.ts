@@ -105,7 +105,7 @@ export class ScheduledTaskExecutor {
       request.config.providerId === 'codex' || request.config.providerId === 'gemini'
         ? request.config.providerId
         : 'anthropic';
-    const { env, connectionIssues } = await buildProviderAwareCliEnv({
+    const { env, connectionIssues, providerArgs } = await buildProviderAwareCliEnv({
       binaryPath,
       providerId,
       shellEnv,
@@ -118,6 +118,8 @@ export class ScheduledTaskExecutor {
     if (connectionIssue) {
       throw new Error(connectionIssue);
     }
+
+    args.push(...providerArgs);
 
     const child = spawnCli(binaryPath, args, {
       cwd: request.config.cwd,

@@ -71,6 +71,9 @@ const CLI_INSTALLER_PROGRESS_CHANNEL = 'cliInstaller:progress';
 
 /** Timeout for `claude --version` (ms) */
 const VERSION_TIMEOUT_MS = 10_000;
+const VERSION_RETRY_ATTEMPTS = 2;
+const VERSION_RETRY_DELAY_MS = 350;
+const HEALTHY_STATUS_FALLBACK_TTL_MS = 60_000;
 
 /** Timeout for `claude install` (ms) — can take a while on slow disks */
 const INSTALL_TIMEOUT_MS = 120_000;
@@ -132,6 +135,10 @@ function clipHeadForDiag(s: string, maxLen: number): string {
 
 function clipTailForDiag(s: string, maxLen: number): string {
   return stripControlForDiag(s).slice(-maxLen);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 const DIAG_PATH_HEAD = 400;
@@ -355,7 +362,35 @@ export class CliInstallerService {
     }
   );
   private latestStatusSnapshot: CliInstallationStatus | null = null;
+  private lastHealthyStatusSnapshot: CliInstallationStatus | null = null;
+  private lastHealthyStatusObservedAt = 0;
   private readonly latestProviderSignatures = new Map<CliProviderId, string | null>();
+
+  private rememberHealthyStatus(status: CliInstallationStatus): void {
+    if (!status.installed || !status.binaryPath || status.launchError) {
+      return;
+    }
+
+    this.lastHealthyStatusSnapshot = cloneCliInstallationStatus(status);
+    this.lastHealthyStatusObservedAt = Date.now();
+  }
+
+  private getRecoverableHealthyStatus(binaryPath: string): CliInstallationStatus | null {
+    if (
+      !this.lastHealthyStatusSnapshot ||
+      !this.lastHealthyStatusSnapshot.installed ||
+      !this.lastHealthyStatusSnapshot.binaryPath ||
+      this.lastHealthyStatusSnapshot.binaryPath !== binaryPath
+    ) {
+      return null;
+    }
+
+    if (Date.now() - this.lastHealthyStatusObservedAt > HEALTHY_STATUS_FALLBACK_TTL_MS) {
+      return null;
+    }
+
+    return cloneCliInstallationStatus(this.lastHealthyStatusSnapshot);
+  }
 
   private electronMetaForDiag(): Record<string, unknown> {
     try {
@@ -764,6 +799,7 @@ export class CliInstallerService {
         r.installedVersion = versionProbe.version;
         r.launchError = null;
         r.authStatusChecking = true;
+        this.rememberHealthyStatus(r);
         this.publishStatusSnapshot(r);
 
         // Auth and GCS version check are independent — run in parallel.
@@ -772,8 +808,21 @@ export class CliInstallerService {
           this.checkAuthStatus(binaryPath, r, diag),
           r.supportsSelfUpdate ? this.fetchLatestVersion(r) : Promise.resolve(),
         ]);
+        this.rememberHealthyStatus(r);
         this.publishStatusSnapshot(r);
       } else {
+        const recoveredHealthyStatus = this.getRecoverableHealthyStatus(binaryPath);
+        if (recoveredHealthyStatus) {
+          logger.warn(
+            `CLI version probe failed for ${binaryPath}, reusing last healthy status snapshot: ${versionProbe.error}`
+          );
+          Object.assign(r, recoveredHealthyStatus, {
+            launchError: null,
+          });
+          this.publishStatusSnapshot(r);
+          return;
+        }
+
         diag.versionError = versionProbe.error;
         r.installed = false;
         r.installedVersion = null;
@@ -806,37 +855,50 @@ export class CliInstallerService {
   private async probeCliVersion(
     binaryPath: string
   ): Promise<{ ok: true; version: string | null } | { ok: false; error: string }> {
-    try {
-      const { stdout } = await execCli(binaryPath, ['--version'], {
-        timeout: VERSION_TIMEOUT_MS,
-        env: this.envForCli(binaryPath),
-      });
-      const version = normalizeVersion(stdout);
-      if (!version) {
-        return { ok: false, error: 'CLI returned an empty version string.' };
-      }
+    let lastError: string | null = null;
 
-      if (isSemverVersion(version)) {
-        logger.info(`Installed CLI version: "${stdout.trim()}" → normalized: "${version}"`);
-        return { ok: true, version };
-      }
+    for (let attempt = 1; attempt <= VERSION_RETRY_ATTEMPTS; attempt += 1) {
+      try {
+        const { stdout } = await execCli(binaryPath, ['--version'], {
+          timeout: VERSION_TIMEOUT_MS,
+          env: this.envForCli(binaryPath),
+        });
+        const version = normalizeVersion(stdout);
+        if (!version) {
+          return { ok: false, error: 'CLI returned an empty version string.' };
+        }
 
-      const inferredVersion = await this.inferInstalledCliVersionFromPath(binaryPath);
-      if (inferredVersion) {
-        logger.info(
-          `Installed CLI version was inferred from installer path: "${stdout.trim()}" → "${inferredVersion}"`
+        if (isSemverVersion(version)) {
+          logger.info(`Installed CLI version: "${stdout.trim()}" → normalized: "${version}"`);
+          return { ok: true, version };
+        }
+
+        const inferredVersion = await this.inferInstalledCliVersionFromPath(binaryPath);
+        if (inferredVersion) {
+          logger.info(
+            `Installed CLI version was inferred from installer path: "${stdout.trim()}" → "${inferredVersion}"`
+          );
+          return { ok: true, version: inferredVersion };
+        }
+
+        logger.warn(
+          `Installed CLI returned a non-semver version string: "${stdout.trim()}". ` +
+            'Treating the binary as healthy, but omitting version details.'
         );
-        return { ok: true, version: inferredVersion };
+        return { ok: true, version: null };
+      } catch (err) {
+        lastError = getErrorMessage(err);
+        if (attempt < VERSION_RETRY_ATTEMPTS) {
+          logger.warn(
+            `CLI version probe failed (attempt ${attempt}/${VERSION_RETRY_ATTEMPTS}), retrying after ${VERSION_RETRY_DELAY_MS}ms: ${lastError}`
+          );
+          await sleep(VERSION_RETRY_DELAY_MS);
+          continue;
+        }
       }
-
-      logger.warn(
-        `Installed CLI returned a non-semver version string: "${stdout.trim()}". ` +
-          'Treating the binary as healthy, but omitting version details.'
-      );
-      return { ok: true, version: null };
-    } catch (err) {
-      return { ok: false, error: getErrorMessage(err) };
     }
+
+    return { ok: false, error: lastError ?? 'Failed to run runtime version probe.' };
   }
 
   private async inferInstalledCliVersionFromPath(binaryPath: string): Promise<string | null> {

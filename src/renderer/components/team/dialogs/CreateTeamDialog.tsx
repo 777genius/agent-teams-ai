@@ -1,5 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  mergeCodexCliStatusWithSnapshot,
+  useCodexAccountSnapshot,
+} from '@features/codex-account/renderer';
 import { api } from '@renderer/api';
 import {
   buildMemberDraftColorMap,
@@ -36,12 +40,14 @@ import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import {
   isGeminiUiFrozen,
   normalizeCreateLaunchProviderForUi,
 } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
+import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import {
   getTeamModelSelectionError,
   normalizeExplicitTeamModelForUi,
@@ -309,7 +315,25 @@ export const CreateTeamDialog = ({
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const cliStatus = useStore((s) => s.cliStatus);
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
+  const bootstrapCliStatus = useStore((s) => s.bootstrapCliStatus);
   const fetchCliStatus = useStore((s) => s.fetchCliStatus);
+  const loadingCliStatus = useMemo(
+    () =>
+      !cliStatus && cliStatusLoading && multimodelEnabled
+        ? createLoadingMultimodelCliStatus()
+        : cliStatus,
+    [cliStatus, cliStatusLoading, multimodelEnabled]
+  );
+  const codexAccount = useCodexAccountSnapshot({
+    enabled:
+      multimodelEnabled &&
+      loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
+      Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
+  });
+  const effectiveCliStatus = useMemo(
+    () => mergeCodexCliStatusWithSnapshot(loadingCliStatus, codexAccount.snapshot),
+    [loadingCliStatus, codexAccount.snapshot]
+  );
 
   // ── Persisted draft state (survives tab navigation) ──────────────────
   const {
@@ -508,7 +532,9 @@ export const CreateTeamDialog = ({
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
 
   const runtimeBackendSummaryByProvider = useMemo(() => {
-    const entries: (readonly [TeamProviderId, string | null])[] = (cliStatus?.providers ?? []).map(
+    const entries: (readonly [TeamProviderId, string | null])[] = (
+      effectiveCliStatus?.providers ?? []
+    ).map(
       (provider) =>
         [
           provider.providerId as TeamProviderId,
@@ -516,7 +542,7 @@ export const CreateTeamDialog = ({
         ] as const
     );
     return new Map<TeamProviderId, string | null>(entries);
-  }, [cliStatus?.providers]);
+  }, [effectiveCliStatus?.providers]);
   const runtimeBackendSummaryByProviderRef = useRef(runtimeBackendSummaryByProvider);
   const prepareChecksRef = useRef<ProvisioningProviderCheck[]>([]);
   const prepareModelResultsCacheRef = useRef(
@@ -556,8 +582,12 @@ export const CreateTeamDialog = ({
     if (!open || cliStatus || cliStatusLoading) {
       return;
     }
-    void fetchCliStatus();
-  }, [open, cliStatus, cliStatusLoading, fetchCliStatus]);
+    void refreshCliStatusForCurrentMode({
+      multimodelEnabled,
+      bootstrapCliStatus,
+      fetchCliStatus,
+    });
+  }, [bootstrapCliStatus, cliStatus, cliStatusLoading, fetchCliStatus, multimodelEnabled, open]);
 
   useEffect(() => {
     if (!open || !canCreate || !launchTeam) {
@@ -961,9 +991,11 @@ export const CreateTeamDialog = ({
   const runtimeProviderStatusById = useMemo(
     () =>
       new Map(
-        (cliStatus?.providers ?? []).map((provider) => [provider.providerId, provider] as const)
+        (effectiveCliStatus?.providers ?? []).map(
+          (provider) => [provider.providerId, provider] as const
+        )
       ),
-    [cliStatus?.providers]
+    [effectiveCliStatus?.providers]
   );
 
   const sanitizedTeamName = sanitizeTeamName(teamName.trim());

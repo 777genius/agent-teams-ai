@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CLI_NOT_FOUND_MARKER } from '@shared/constants/cli';
 
 interface StoreState {
-  mcpBrowseCatalog: Array<{
+  mcpBrowseCatalog: {
     id: string;
     name: string;
     description: string;
@@ -14,15 +14,15 @@ interface StoreState {
     envVars: [];
     tools: [];
     requiresAuth: boolean;
-  }>;
+  }[];
   mcpBrowseNextCursor?: string;
   mcpBrowseLoading: boolean;
   mcpBrowseError: string | null;
   mcpBrowse: ReturnType<typeof vi.fn>;
-  mcpInstalledServers: Array<{ name: string; scope: 'local' | 'user' | 'project' }>;
+  mcpInstalledServers: { name: string; scope: 'local' | 'user' | 'project' }[];
   mcpInstalledServersByProjectPath?: Record<
     string,
-    Array<{ name: string; scope: 'local' | 'user' | 'project' }>
+    { name: string; scope: 'local' | 'user' | 'project' }[]
   >;
   fetchMcpGitHubStars: ReturnType<typeof vi.fn>;
   mcpDiagnostics: Record<string, never>;
@@ -310,8 +310,8 @@ describe('McpServersPanel initial browse loading', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Configured runtime not available');
-    expect(host.textContent).toContain('MCP health checks require the configured runtime');
+    expect(host.textContent).toContain('Multimodel runtime not available');
+    expect(host.textContent).toContain('MCP health checks require Multimodel runtime');
     expect(host.textContent).not.toContain('Claude CLI not installed');
 
     await act(async () => {
@@ -356,7 +356,7 @@ describe('McpServersPanel initial browse loading', () => {
       button.textContent?.includes('Check Status')
     );
     expect(checkStatusButton).toBeDefined();
-    expect((checkStatusButton as HTMLButtonElement).disabled).toBe(true);
+    expect((checkStatusButton!).disabled).toBe(true);
 
     await act(async () => {
       root.unmount();
@@ -420,6 +420,88 @@ describe('McpServersPanel initial browse loading', () => {
     });
 
     expect(host.textContent).toContain('Waiting for diagnostics results...');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('uses the effective runtime status override for diagnostics gating during background refresh', async () => {
+    storeState.cliStatus = null;
+    storeState.cliStatusLoading = true;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(McpServersPanel, {
+          projectPath: null,
+          mcpSearchQuery: '',
+          mcpSearch: vi.fn(),
+          mcpSearchResults: [],
+          mcpSearchLoading: false,
+          mcpSearchWarnings: [],
+          selectedMcpServerId: null,
+          setSelectedMcpServerId: vi.fn(),
+          cliStatus: {
+            flavor: 'agent_teams_orchestrator',
+            displayName: 'Multimodel runtime',
+            installed: true,
+            authLoggedIn: false,
+            binaryPath: '/usr/local/bin/agent-teams',
+            launchError: null,
+            providers: [],
+          },
+          cliStatusLoading: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(storeState.runMcpDiagnostics).toHaveBeenCalledTimes(1);
+    expect(host.textContent).not.toContain('Checking runtime availability...');
+    expect(host.textContent).not.toContain('The configured runtime is required.');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('does not block diagnostics when a usable runtime status already exists during background refresh', async () => {
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      installed: true,
+      binaryPath: '/usr/local/bin/agent-teams',
+      launchError: null,
+    };
+    storeState.cliStatusLoading = true;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(McpServersPanel, {
+          projectPath: null,
+          mcpSearchQuery: '',
+          mcpSearch: vi.fn(),
+          mcpSearchResults: [],
+          mcpSearchLoading: false,
+          mcpSearchWarnings: [],
+          selectedMcpServerId: null,
+          setSelectedMcpServerId: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(storeState.runMcpDiagnostics).toHaveBeenCalledTimes(1);
+    expect(host.textContent).not.toContain('Checking runtime status...');
 
     await act(async () => {
       root.unmount();

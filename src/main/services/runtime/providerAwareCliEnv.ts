@@ -1,14 +1,7 @@
-import { buildEnrichedEnv } from '@main/utils/cliEnv';
-import { getCachedShellEnv, getShellPreferredHome } from '@main/utils/shellEnv';
+import { getCachedShellEnv } from '@main/utils/shellEnv';
 
-import { configManager } from '../infrastructure/ConfigManager';
-
+import { buildRuntimeBaseEnv } from './buildRuntimeBaseEnv';
 import { providerConnectionService } from './ProviderConnectionService';
-import {
-  applyConfiguredRuntimeBackendsEnv,
-  applyProviderRuntimeEnv,
-  resolveTeamProviderId,
-} from './providerRuntimeEnv';
 
 import type { CliProviderId, TeamProviderId } from '@shared/types';
 
@@ -26,15 +19,7 @@ export interface ProviderAwareCliEnvOptions {
 export interface ProviderAwareCliEnvResult {
   env: NodeJS.ProcessEnv;
   connectionIssues: Partial<Record<CliProviderId, string>>;
-}
-
-function getFirstNonEmptyEnvValue(...values: (string | null | undefined)[]): string | undefined {
-  for (const value of values) {
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return value;
-    }
-  }
-  return undefined;
+  providerArgs: string[];
 }
 
 export async function buildProviderAwareCliEnv(
@@ -42,41 +27,17 @@ export async function buildProviderAwareCliEnv(
 ): Promise<ProviderAwareCliEnvResult> {
   const connectionMode = options.connectionMode ?? 'strict';
   const shellEnv = options.shellEnv ?? getCachedShellEnv() ?? {};
-  const env = {
-    ...buildEnrichedEnv(options.binaryPath),
-    ...shellEnv,
-  };
-
-  applyConfiguredRuntimeBackendsEnv(env, configManager.getConfig().runtime);
-
-  Object.assign(env, options.env ?? {});
-
-  const explicitHome = getFirstNonEmptyEnvValue(options.env?.HOME, options.env?.USERPROFILE);
-  const fallbackHome = getFirstNonEmptyEnvValue(
-    env.HOME,
-    env.USERPROFILE,
-    getShellPreferredHome(),
-    shellEnv.HOME,
-    process.env.HOME,
-    process.env.USERPROFILE
-  );
-
-  if (explicitHome) {
-    env.HOME = getFirstNonEmptyEnvValue(options.env?.HOME, explicitHome);
-    env.USERPROFILE = getFirstNonEmptyEnvValue(options.env?.USERPROFILE, explicitHome);
-  } else if (fallbackHome) {
-    env.HOME = getFirstNonEmptyEnvValue(env.HOME, fallbackHome);
-    env.USERPROFILE = getFirstNonEmptyEnvValue(env.USERPROFILE, fallbackHome);
-  }
+  const { env, resolvedProviderId } = buildRuntimeBaseEnv({
+    binaryPath: options.binaryPath,
+    providerId: options.providerId,
+    providerBackendId: options.providerBackendId,
+    shellEnv,
+    env: options.env,
+  });
 
   if (options.providerId) {
-    const resolvedProviderId = resolveTeamProviderId(options.providerId);
-    applyProviderRuntimeEnv(env, options.providerId);
-    if (resolvedProviderId === 'codex' && options.providerBackendId?.trim()) {
-      env.CLAUDE_CODE_CODEX_BACKEND = options.providerBackendId.trim();
-    }
-    if (resolvedProviderId === 'gemini' && options.providerBackendId?.trim()) {
-      env.CLAUDE_CODE_GEMINI_BACKEND = options.providerBackendId.trim();
+    if (!resolvedProviderId) {
+      throw new Error('Resolved provider id is required when providerId is set');
     }
     if (connectionMode === 'augment') {
       await providerConnectionService.augmentConfiguredConnectionEnv(
@@ -87,6 +48,7 @@ export async function buildProviderAwareCliEnv(
       return {
         env,
         connectionIssues: {},
+        providerArgs: [],
       };
     }
 
@@ -98,6 +60,12 @@ export async function buildProviderAwareCliEnv(
 
     return {
       env,
+      providerArgs: await providerConnectionService.getConfiguredConnectionLaunchArgs(
+        env,
+        resolvedProviderId,
+        options.providerBackendId,
+        options.binaryPath
+      ),
       connectionIssues: await providerConnectionService.getConfiguredConnectionIssues(
         env,
         [resolvedProviderId],
@@ -113,6 +81,7 @@ export async function buildProviderAwareCliEnv(
     return {
       env,
       connectionIssues: {},
+      providerArgs: [],
     };
   }
 
@@ -120,5 +89,6 @@ export async function buildProviderAwareCliEnv(
   return {
     env,
     connectionIssues: await providerConnectionService.getConfiguredConnectionIssues(env),
+    providerArgs: [],
   };
 }

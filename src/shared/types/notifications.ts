@@ -328,7 +328,9 @@ export interface AppConfig {
     anthropic: {
       authMode: 'auto' | 'oauth' | 'api_key';
     };
-    codex: Record<string, never>;
+    codex: {
+      preferredAuthMode: 'auto' | 'chatgpt' | 'api_key';
+    };
   };
   /** Runtime backend preferences for app-launched agent_teams_orchestrator sessions */
   runtime: {

@@ -165,6 +165,7 @@ describe('ProvisioningProviderStatusList', () => {
   it('keeps internal native rollout state visible in provisioning backend summaries', () => {
     expect(
       getProvisioningProviderBackendSummary({
+        providerId: 'codex',
         selectedBackendId: 'codex-native',
         resolvedBackendId: 'codex-native',
         backend: {

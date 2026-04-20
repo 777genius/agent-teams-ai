@@ -11,14 +11,15 @@
 
 import { getClaudeBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { validateRegexPattern } from '@main/utils/regexValidation';
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { createLogger } from '@shared/utils/logger';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import * as fs from 'fs';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 import { DEFAULT_TRIGGERS, TriggerManager } from './TriggerManager';
 
+import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
 import type { TriggerColor } from '@shared/constants/triggerColors';
 import type { SshConnectionProfile } from '@shared/types/api';
 
@@ -237,7 +238,9 @@ export interface ProviderConnectionsConfig {
   anthropic: {
     authMode: ProviderConnectionAuthMode;
   };
-  codex: Record<string, never>;
+  codex: {
+    preferredAuthMode: CodexAccountAuthMode;
+  };
 }
 
 export interface DisplayConfig {
@@ -331,7 +334,9 @@ const DEFAULT_CONFIG: AppConfig = {
     anthropic: {
       authMode: 'auto',
     },
-    codex: {},
+    codex: {
+      preferredAuthMode: 'auto',
+    },
   },
   runtime: {
     providerBackends: {
@@ -392,6 +397,27 @@ function normalizeConfiguredClaudeRootPath(value: unknown): string | null {
   return resolved.slice(0, end);
 }
 
+function normalizeCodexPreferredAuthMode(
+  currentValue: unknown,
+  legacyValue?: unknown
+): CodexAccountAuthMode {
+  const candidate = currentValue ?? legacyValue;
+
+  if (candidate === 'chatgpt' || candidate === 'api_key' || candidate === 'auto') {
+    return candidate;
+  }
+
+  if (candidate === 'oauth') {
+    return 'chatgpt';
+  }
+
+  return DEFAULT_CONFIG.providerConnections.codex.preferredAuthMode;
+}
+
+function shouldPersistNormalizedConfig(loaded: Partial<AppConfig>, normalized: AppConfig): boolean {
+  return JSON.stringify(loaded) !== JSON.stringify(normalized);
+}
+
 // ===========================================================================
 // ConfigManager Class
 // ===========================================================================
@@ -443,9 +469,14 @@ export class ConfigManager {
     try {
       const content = fs.readFileSync(this.configPath, 'utf8');
       const parsed = JSON.parse(content) as Partial<AppConfig>;
+      const merged = this.mergeWithDefaults(parsed);
+
+      if (shouldPersistNormalizedConfig(parsed, merged)) {
+        this.persistConfig(merged);
+      }
 
       // Merge with defaults to ensure all fields exist
-      return this.mergeWithDefaults(parsed);
+      return merged;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         logger.info('No config file found, using defaults');
@@ -560,7 +591,12 @@ export class ConfigManager {
           ...DEFAULT_CONFIG.providerConnections.anthropic,
           ...(loaded.providerConnections?.anthropic ?? {}),
         },
-        codex: {},
+        codex: {
+          preferredAuthMode: normalizeCodexPreferredAuthMode(
+            loaded.providerConnections?.codex?.preferredAuthMode,
+            (loaded.providerConnections?.codex as { authMode?: unknown } | undefined)?.authMode
+          ),
+        },
       },
       runtime: {
         providerBackends: {
@@ -655,6 +691,10 @@ export class ConfigManager {
         providerBackends: {
           ...this.config.runtime.providerBackends,
           ...runtimeUpdate.providerBackends,
+          codex: migrateProviderBackendId(
+            'codex',
+            runtimeUpdate.providerBackends?.codex ?? this.config.runtime.providerBackends.codex
+          ) as RuntimeConfig['providerBackends']['codex'],
         },
       } as unknown as Partial<AppConfig[K]>;
     }
@@ -670,6 +710,10 @@ export class ConfigManager {
         codex: {
           ...this.config.providerConnections.codex,
           ...(connectionUpdate.codex ?? {}),
+          preferredAuthMode: normalizeCodexPreferredAuthMode(
+            connectionUpdate.codex?.preferredAuthMode,
+            (connectionUpdate.codex as { authMode?: unknown } | undefined)?.authMode
+          ),
         },
       } as unknown as Partial<AppConfig[K]>;
     }

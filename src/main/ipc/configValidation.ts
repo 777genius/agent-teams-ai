@@ -529,6 +529,23 @@ function validateProviderConnectionsSection(
         continue;
       }
 
+      if (connectionKey === 'preferredAuthMode') {
+        if (
+          connectionValue !== 'auto' &&
+          connectionValue !== 'chatgpt' &&
+          connectionValue !== 'api_key'
+        ) {
+          return {
+            valid: false,
+            error:
+              'providerConnections.codex.preferredAuthMode must be one of: auto, chatgpt, api_key',
+          };
+        }
+
+        codexUpdate.preferredAuthMode = connectionValue;
+        continue;
+      }
+
       return {
         valid: false,
         error: `providerConnections.codex.${connectionKey} is not a valid setting`,

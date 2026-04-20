@@ -3,10 +3,9 @@ import readline from 'node:readline';
 
 import { killProcessTree, spawnCli } from '@main/utils/childProcess';
 
-import type { LoggerPort } from '../../../core/application/ports/LoggerPort';
-
-const DEFAULT_REQUEST_TIMEOUT_MS = 3_000;
-const DEFAULT_TOTAL_TIMEOUT_MS = 8_000;
+interface JsonRpcLogger {
+  warn: (message: string, meta?: Record<string, unknown>) => void;
+}
 
 interface JsonRpcErrorPayload {
   code?: number;
@@ -19,9 +18,16 @@ interface JsonRpcResponse<T> {
   error?: JsonRpcErrorPayload;
 }
 
+interface JsonRpcNotificationMessage {
+  method?: string;
+  params?: unknown;
+}
+
 export interface JsonRpcSession {
   request<TResult>(method: string, params?: unknown, timeoutMs?: number): Promise<TResult>;
   notify(method: string, params?: unknown): Promise<void>;
+  onNotification(listener: (method: string, params: unknown) => void): () => void;
+  close(): Promise<void>;
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -40,42 +46,48 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   }) as Promise<T>;
 }
 
+const DEFAULT_REQUEST_TIMEOUT_MS = 3_000;
+const DEFAULT_TOTAL_TIMEOUT_MS = 8_000;
+
 export class JsonRpcStdioClient {
-  constructor(private readonly logger: LoggerPort) {}
+  constructor(private readonly logger: JsonRpcLogger) {}
 
   async withSession<T>(
     options: {
       binaryPath: string;
       args: string[];
+      env?: NodeJS.ProcessEnv;
       requestTimeoutMs?: number;
       totalTimeoutMs?: number;
       label: string;
     },
     handler: (session: JsonRpcSession) => Promise<T>
   ): Promise<T> {
-    const requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    const session = await this.openSession(options);
     const totalTimeoutMs = options.totalTimeoutMs ?? DEFAULT_TOTAL_TIMEOUT_MS;
 
-    return withTimeout(
-      this.#runSession(options.binaryPath, options.args, requestTimeoutMs, handler),
-      totalTimeoutMs,
-      options.label
-    );
+    try {
+      return await withTimeout(handler(session), totalTimeoutMs, options.label);
+    } finally {
+      await session.close();
+    }
   }
 
-  async #runSession<T>(
-    binaryPath: string,
-    args: string[],
-    requestTimeoutMs: number,
-    handler: (session: JsonRpcSession) => Promise<T>
-  ): Promise<T> {
-    const child = spawnCli(binaryPath, args, {
+  async openSession(options: {
+    binaryPath: string;
+    args: string[];
+    env?: NodeJS.ProcessEnv;
+    requestTimeoutMs?: number;
+  }): Promise<JsonRpcSession> {
+    const requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    const child = spawnCli(options.binaryPath, options.args, {
+      env: options.env,
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
     });
     const lineReader = readline.createInterface({ input: child.stdout! });
     child.stderr?.on('data', () => {
-      // Keep stderr drained so process warnings do not block the pipe.
+      // Keep stderr drained so warnings never block the pipe.
     });
 
     const pending = new Map<
@@ -86,8 +98,10 @@ export class JsonRpcStdioClient {
         timeoutId: ReturnType<typeof setTimeout>;
       }
     >();
+    const notificationListeners = new Set<(method: string, params: unknown) => void>();
 
     let nextRequestId = 1;
+    let closed = false;
 
     const rejectAll = (error: Error): void => {
       for (const [id, entry] of pending) {
@@ -97,10 +111,27 @@ export class JsonRpcStdioClient {
       }
     };
 
+    const handleNotification = (message: JsonRpcNotificationMessage): void => {
+      if (typeof message.method !== 'string' || message.method.length === 0) {
+        return;
+      }
+
+      for (const listener of notificationListeners) {
+        try {
+          listener(message.method, message.params);
+        } catch (error) {
+          this.logger.warn('json-rpc notification listener failed', {
+            error: error instanceof Error ? error.message : String(error),
+            method: message.method,
+          });
+        }
+      }
+    };
+
     lineReader.on('line', (line) => {
-      let message: JsonRpcResponse<unknown>;
+      let message: JsonRpcResponse<unknown> & JsonRpcNotificationMessage;
       try {
-        message = JSON.parse(line) as JsonRpcResponse<unknown>;
+        message = JSON.parse(line) as JsonRpcResponse<unknown> & JsonRpcNotificationMessage;
       } catch (error) {
         this.logger.warn('json-rpc stdio emitted non-json line', {
           error: error instanceof Error ? error.message : String(error),
@@ -108,24 +139,25 @@ export class JsonRpcStdioClient {
         return;
       }
 
-      if (typeof message.id !== 'number') {
+      if (typeof message.id === 'number') {
+        const entry = pending.get(message.id);
+        if (!entry) {
+          return;
+        }
+
+        clearTimeout(entry.timeoutId);
+        pending.delete(message.id);
+
+        if (message.error) {
+          entry.reject(new Error(message.error.message ?? 'Unknown JSON-RPC error'));
+          return;
+        }
+
+        entry.resolve(message.result);
         return;
       }
 
-      const entry = pending.get(message.id);
-      if (!entry) {
-        return;
-      }
-
-      clearTimeout(entry.timeoutId);
-      pending.delete(message.id);
-
-      if (message.error) {
-        entry.reject(new Error(message.error.message ?? 'Unknown JSON-RPC error'));
-        return;
-      }
-
-      entry.resolve(message.result);
+      handleNotification(message);
     });
 
     child.once('error', (error) => {
@@ -144,14 +176,42 @@ export class JsonRpcStdioClient {
       );
     });
 
-    const session: JsonRpcSession = {
+    const close = async (): Promise<void> => {
+      if (closed) {
+        return;
+      }
+      closed = true;
+
+      rejectAll(new Error('JSON-RPC session closed'));
+      notificationListeners.clear();
+      lineReader.close();
+
+      if (child.stdin && !child.stdin.destroyed && !child.stdin.writableEnded) {
+        await new Promise<void>((resolve) => {
+          try {
+            child.stdin!.end(() => resolve());
+          } catch {
+            resolve();
+          }
+        });
+      }
+
+      killProcessTree(child);
+      try {
+        await once(child, 'close');
+      } catch {
+        this.logger.warn('json-rpc close wait failed');
+      }
+    };
+
+    return {
       request: <TResult>(
         method: string,
         params?: unknown,
         timeoutMs = requestTimeoutMs
       ): Promise<TResult> =>
         new Promise<TResult>((resolve, reject) => {
-          if (!child.stdin) {
+          if (!child.stdin || child.stdin.destroyed || child.stdin.writableEnded) {
             reject(new Error('JSON-RPC stdin is not available'));
             return;
           }
@@ -176,7 +236,7 @@ export class JsonRpcStdioClient {
         }),
 
       notify: async (method: string, params?: unknown): Promise<void> => {
-        if (!child.stdin) {
+        if (!child.stdin || child.stdin.destroyed || child.stdin.writableEnded) {
           throw new Error('JSON-RPC stdin is not available');
         }
 
@@ -190,22 +250,15 @@ export class JsonRpcStdioClient {
           });
         });
       },
-    };
 
-    try {
-      return await handler(session);
-    } finally {
-      rejectAll(new Error('JSON-RPC session closed'));
-      lineReader.close();
-      if (child.stdin && !child.stdin.destroyed) {
-        child.stdin.end();
-      }
-      killProcessTree(child);
-      try {
-        await once(child, 'close');
-      } catch {
-        this.logger.warn('json-rpc close wait failed');
-      }
-    }
+      onNotification: (listener) => {
+        notificationListeners.add(listener);
+        return (): void => {
+          notificationListeners.delete(listener);
+        };
+      },
+
+      close,
+    };
   }
 }

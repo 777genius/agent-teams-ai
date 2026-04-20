@@ -1,6 +1,6 @@
 /**
  * CliInstallWarningBanner — Global warning strip shown below the tab bar
- * when Claude Code CLI is not installed.
+ * when the configured runtime is unavailable.
  *
  * Hidden on Dashboard pages (which have their own detailed CliStatusBanner).
  * Only rendered in Electron mode.
@@ -13,6 +13,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 export const CliInstallWarningBanner = (): React.JSX.Element | null => {
   const cliStatus = useStore(useShallow((s) => s.cliStatus));
+  const cliStatusLoading = useStore((s) => s.cliStatusLoading);
   const openDashboard = useStore((s) => s.openDashboard);
 
   // Returns a primitive boolean — minimizes re-renders
@@ -24,7 +25,13 @@ export const CliInstallWarningBanner = (): React.JSX.Element | null => {
   });
 
   // Hide when: not Electron, status not loaded yet, CLI installed, or dashboard is focused
-  if (!isElectronMode() || !cliStatus || cliStatus.installed || isDashboardFocused) {
+  if (
+    !isElectronMode() ||
+    cliStatusLoading ||
+    !cliStatus ||
+    cliStatus.installed ||
+    isDashboardFocused
+  ) {
     return null;
   }
 
@@ -40,8 +47,8 @@ export const CliInstallWarningBanner = (): React.JSX.Element | null => {
       <AlertTriangle className="size-3.5 shrink-0" />
       <span className="text-xs">
         {cliStatus.binaryPath && cliStatus.launchError
-          ? 'Claude Code was found but failed to start. Open the Dashboard to repair or reinstall it.'
-          : 'Claude Code is not installed. Install it from the Dashboard to enable all features.'}
+          ? `The configured ${cliStatus.displayName} runtime was found but failed to start. Open the Dashboard to repair or reinstall it.`
+          : `The configured ${cliStatus.displayName} runtime is not installed. Install it from the Dashboard to enable all features.`}
       </span>
       <button
         onClick={openDashboard}

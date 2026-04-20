@@ -2,6 +2,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { CliInstallationStatus } from '@shared/types';
 import type { SkillCatalogItem } from '@shared/types/extensions';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
@@ -15,12 +16,27 @@ interface StoreState {
   skillsUserCatalog: SkillCatalogItem[];
   skillsProjectCatalogByProjectPath: Record<string, SkillCatalogItem[]>;
   cliStatus: CliInstallationStatus | null;
+  cliStatusLoading: boolean;
+  appConfig: {
+    general: {
+      multimodelEnabled: boolean;
+    };
+  } | null;
 }
 
 const storeState = {} as StoreState;
 const startWatchingMock = vi.fn();
 const stopWatchingMock = vi.fn();
 const onChangedMock = vi.fn();
+const codexAccountHookState = {
+  snapshot: null as CodexAccountSnapshotDto | null,
+  loading: false,
+  error: null as string | null,
+  refresh: vi.fn(() => Promise.resolve(undefined)),
+  startChatgptLogin: vi.fn(() => Promise.resolve(true)),
+  cancelChatgptLogin: vi.fn(() => Promise.resolve(true)),
+  logout: vi.fn(() => Promise.resolve(true)),
+};
 let skillsChangedHandler: ((event: {
   scope: 'user' | 'project';
   projectPath: string | null;
@@ -31,6 +47,14 @@ let skillsChangedHandler: ((event: {
 vi.mock('@renderer/store', () => ({
   useStore: (selector: (state: StoreState) => unknown) => selector(storeState),
 }));
+
+vi.mock('@features/codex-account/renderer', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@features/codex-account/renderer')>();
+  return {
+    ...actual,
+    useCodexAccountSnapshot: () => codexAccountHookState,
+  };
+});
 
 vi.mock('zustand/react/shallow', () => ({
   useShallow: <T,>(selector: T) => selector,
@@ -238,6 +262,12 @@ describe('SkillsPanel', () => {
     storeState.skillsProjectCatalogByProjectPath = {
       '/tmp/project-a': [],
     };
+    storeState.cliStatusLoading = false;
+    storeState.appConfig = {
+      general: {
+        multimodelEnabled: true,
+      },
+    };
     storeState.cliStatus = {
       flavor: 'claude',
       displayName: 'Claude CLI',
@@ -254,6 +284,9 @@ describe('SkillsPanel', () => {
       authMethod: 'oauth',
       providers: [],
     };
+    codexAccountHookState.snapshot = null;
+    codexAccountHookState.loading = false;
+    codexAccountHookState.error = null;
     startWatchingMock.mockReset();
     stopWatchingMock.mockReset();
     onChangedMock.mockReset();
@@ -379,6 +412,156 @@ describe('SkillsPanel', () => {
       'Shared skills in `.claude`, `.cursor`, and `.agents` are available to Anthropic.'
     );
     expect(host.textContent).not.toContain('available to both Anthropic and Codex');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('uses the live Codex snapshot to expose Codex-only skill affordances after a stale provider bootstrap', async () => {
+    storeState.cliStatus = makeMultimodelStatus({
+      providers: [
+        ...makeMultimodelStatus().providers,
+        {
+          providerId: 'codex',
+          displayName: 'Codex',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          statusMessage: 'Checking...',
+          models: [],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: true,
+            extensions: createDefaultCliExtensionCapabilities({
+              plugins: { status: 'unsupported', ownership: 'provider-scoped', reason: null },
+            }),
+          },
+          connection: null,
+          backend: null,
+        },
+      ],
+    });
+    codexAccountHookState.snapshot = {
+      preferredAuthMode: 'chatgpt',
+      effectiveAuthMode: 'chatgpt',
+      launchAllowed: true,
+      launchIssueMessage: null,
+      launchReadinessState: 'ready_chatgpt',
+      appServerState: 'healthy',
+      appServerStatusMessage: null,
+      managedAccount: {
+        type: 'chatgpt',
+        email: 'user@example.com',
+        planType: 'pro',
+      },
+      apiKey: {
+        available: true,
+        source: 'environment',
+        sourceLabel: 'Detected from OPENAI_API_KEY',
+      },
+      requiresOpenaiAuth: false,
+      login: {
+        status: 'idle',
+        error: null,
+        startedAt: null,
+      },
+      rateLimits: null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(SkillsPanel, {
+          projectPath: '/tmp/project-a',
+          projectLabel: 'Project A',
+          skillsSearchQuery: '',
+          setSkillsSearchQuery: vi.fn(),
+          skillsSort: 'name-asc',
+          setSkillsSort: vi.fn(),
+          selectedSkillId: null,
+          setSelectedSkillId: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'Shared skills in `.claude`, `.cursor`, and `.agents` are available to Anthropic and Codex.'
+    );
+    expect(host.textContent).toContain('Codex only');
+    expect(host.textContent).toContain('Use `.codex` when a skill should stay Codex-only.');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('uses the live Codex snapshot even while multimodel provider status is still loading', async () => {
+    storeState.cliStatus = null;
+    storeState.cliStatusLoading = true;
+    codexAccountHookState.snapshot = {
+      preferredAuthMode: 'chatgpt',
+      effectiveAuthMode: 'chatgpt',
+      launchAllowed: true,
+      launchIssueMessage: null,
+      launchReadinessState: 'ready_chatgpt',
+      appServerState: 'healthy',
+      appServerStatusMessage: null,
+      managedAccount: {
+        type: 'chatgpt',
+        email: 'user@example.com',
+        planType: 'pro',
+      },
+      apiKey: {
+        available: true,
+        source: 'environment',
+        sourceLabel: 'Detected from OPENAI_API_KEY',
+      },
+      requiresOpenaiAuth: false,
+      login: {
+        status: 'idle',
+        error: null,
+        startedAt: null,
+      },
+      rateLimits: null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(SkillsPanel, {
+          projectPath: '/tmp/project-a',
+          projectLabel: 'Project A',
+          skillsSearchQuery: '',
+          setSkillsSearchQuery: vi.fn(),
+          skillsSort: 'name-asc',
+          setSkillsSort: vi.fn(),
+          selectedSkillId: null,
+          setSelectedSkillId: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'Shared skills in `.claude`, `.cursor`, and `.agents` are available to Anthropic and Codex.'
+    );
+    expect(host.textContent).toContain('Codex only');
 
     await act(async () => {
       root.unmount();

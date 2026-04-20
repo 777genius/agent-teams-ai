@@ -332,7 +332,9 @@ export function useSettingsHandlers({
           anthropic: {
             authMode: 'auto',
           },
-          codex: {},
+          codex: {
+            preferredAuthMode: 'auto',
+          },
         },
         runtime: {
           providerBackends: {

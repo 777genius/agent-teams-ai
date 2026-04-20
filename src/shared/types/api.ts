@@ -107,6 +107,7 @@ import type {
   SessionsPaginationOptions,
   SubagentDetail,
 } from '@main/types';
+import type { CodexAccountElectronApi } from '@features/codex-account/contracts';
 
 // =============================================================================
 // Cost Calculation Types
@@ -732,7 +733,7 @@ export interface ReviewAPI {
 /**
  * Complete Electron API exposed to the renderer process via preload script.
  */
-export interface ElectronAPI extends RecentProjectsElectronApi {
+export interface ElectronAPI extends RecentProjectsElectronApi, CodexAccountElectronApi {
   getAppVersion: () => Promise<string>;
   getProjects: () => Promise<Project[]>;
   getSessions: (projectId: string) => Promise<Session[]>;

@@ -70,6 +70,24 @@ describe('teamModelAvailability', () => {
     ]);
   });
 
+  it('hides 5.1 Codex Max on the ChatGPT subscription-backed path', () => {
+    const providerStatus = createCodexProviderStatus(['gpt-5.4', 'gpt-5.1-codex-max'], {
+      authMethod: 'chatgpt',
+      backend: {
+        kind: 'codex-native',
+        label: 'Codex native',
+        endpointLabel: 'codex exec --json',
+        authMethodDetail: 'chatgpt',
+      },
+    });
+
+    expect(getAvailableTeamProviderModels('codex', providerStatus)).toEqual(['gpt-5.4']);
+    expect(normalizeTeamModelForUi('codex', 'gpt-5.1-codex-max', providerStatus)).toBe('');
+    expect(getTeamModelSelectionError('codex', 'gpt-5.1-codex-max', providerStatus)).toContain(
+      'Temporarily disabled for team agents - this model is not currently available on the Codex native runtime.'
+    );
+  });
+
   it('builds Codex model options from the runtime list instead of the hardcoded fallback', () => {
     const providerStatus = createCodexProviderStatus(['gpt-5.4', 'gpt-5.3-codex']);
 

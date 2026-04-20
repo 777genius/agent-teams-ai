@@ -139,6 +139,57 @@ describe('CliInstallerService', () => {
       expect(status.installedVersion).toBeNull();
     });
 
+    it('retries the version probe once before marking the runtime unhealthy', async () => {
+      allowConsoleLogs();
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
+      vi.mocked(execCli)
+        .mockRejectedValueOnce(new Error('Command failed: /usr/local/bin/claude --version'))
+        .mockResolvedValueOnce({ stdout: '2.3.4', stderr: '' })
+        .mockResolvedValueOnce({
+          stdout: '{"loggedIn":true,"authMethod":"oauth_token"}',
+          stderr: '',
+        });
+
+      const status = await service.getStatus();
+
+      expect(status.installed).toBe(true);
+      expect(status.installedVersion).toBe('2.3.4');
+      expect(execCli).toHaveBeenNthCalledWith(
+        1,
+        '/usr/local/bin/claude',
+        ['--version'],
+        expect.objectContaining({ timeout: expect.any(Number) })
+      );
+      expect(execCli).toHaveBeenNthCalledWith(
+        2,
+        '/usr/local/bin/claude',
+        ['--version'],
+        expect.objectContaining({ timeout: expect.any(Number) })
+      );
+    });
+
+    it('reuses the last healthy runtime snapshot when a later version probe fails transiently', async () => {
+      allowConsoleLogs();
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
+      vi.mocked(execCli)
+        .mockResolvedValueOnce({ stdout: '2.3.4', stderr: '' })
+        .mockResolvedValueOnce({
+          stdout: '{"loggedIn":true,"authMethod":"oauth_token"}',
+          stderr: '',
+        })
+        .mockRejectedValueOnce(new Error('Command failed: /usr/local/bin/claude --version'))
+        .mockRejectedValueOnce(new Error('Command failed: /usr/local/bin/claude --version'));
+
+      const firstStatus = await service.getStatus();
+      const secondStatus = await service.getStatus();
+
+      expect(firstStatus.installed).toBe(true);
+      expect(firstStatus.installedVersion).toBe('2.3.4');
+      expect(secondStatus.installed).toBe(true);
+      expect(secondStatus.installedVersion).toBe('2.3.4');
+      expect(secondStatus.launchError).toBeNull();
+    });
+
     it('handles spawn EINVAL when binary path contains non-ASCII by falling back', async () => {
       allowConsoleLogs();
       const fakePath = 'C:\\Users\\Алексей\\AppData\\Roaming\\npm\\claude.cmd';

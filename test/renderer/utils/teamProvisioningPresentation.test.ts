@@ -88,6 +88,7 @@ describe('buildTeamProvisioningPresentation', () => {
     expect(presentation?.panelMessageSeverity).toBe('warning');
     expect(presentation?.compactDetail).toBe('jack failed to start');
     expect(presentation?.compactTone).toBe('warning');
+    expect(presentation?.defaultLiveOutputOpen).toBe(false);
   });
 
   it('surfaces the failed teammate reason after launch completes with errors', () => {

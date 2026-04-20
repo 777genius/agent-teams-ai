@@ -4,6 +4,16 @@
  * Used for detecting, downloading, verifying, and installing Claude Code CLI binary.
  */
 
+import type {
+  CodexAccountAppServerState,
+  CodexAccountAuthMode,
+  CodexAccountEffectiveAuthMode,
+  CodexLoginStateDto,
+  CodexLaunchReadinessState,
+  CodexManagedAccountDto,
+  CodexRateLimitSnapshotDto,
+} from '@features/codex-account/contracts';
+
 // =============================================================================
 // Platform Detection
 // =============================================================================
@@ -24,7 +34,7 @@ export type CliPlatform =
 export type CliFlavor = 'claude' | 'agent_teams_orchestrator';
 
 export type CliProviderId = 'anthropic' | 'codex' | 'gemini';
-export type CliProviderAuthMode = 'auto' | 'oauth' | 'api_key';
+export type CliProviderAuthMode = 'auto' | 'oauth' | 'chatgpt' | 'api_key';
 
 export interface CliProviderConnectionInfo {
   supportsOAuth: boolean;
@@ -34,6 +44,21 @@ export interface CliProviderConnectionInfo {
   apiKeyConfigured: boolean;
   apiKeySource: 'stored' | 'environment' | null;
   apiKeySourceLabel?: string | null;
+  codex?: {
+    preferredAuthMode: CodexAccountAuthMode;
+    effectiveAuthMode: CodexAccountEffectiveAuthMode;
+    appServerState: CodexAccountAppServerState;
+    appServerStatusMessage: string | null;
+    managedAccount: CodexManagedAccountDto | null;
+    requiresOpenaiAuth: boolean | null;
+    localAccountArtifactsPresent?: boolean;
+    localActiveChatgptAccountPresent?: boolean;
+    login: CodexLoginStateDto;
+    rateLimits: CodexRateLimitSnapshotDto | null;
+    launchAllowed: boolean;
+    launchIssueMessage: string | null;
+    launchReadinessState: CodexLaunchReadinessState;
+  } | null;
 }
 
 export interface CliProviderBackendOption {

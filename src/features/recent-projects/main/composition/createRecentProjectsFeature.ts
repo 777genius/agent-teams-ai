@@ -9,12 +9,14 @@ import { ClaudeRecentProjectsSourceAdapter } from '../adapters/output/sources/Cl
 import { CodexRecentProjectsSourceAdapter } from '../adapters/output/sources/CodexRecentProjectsSourceAdapter';
 import { InMemoryRecentProjectsCache } from '../infrastructure/cache/InMemoryRecentProjectsCache';
 import { CodexAppServerClient } from '../infrastructure/codex/CodexAppServerClient';
-import { CodexBinaryResolver } from '../infrastructure/codex/CodexBinaryResolver';
-import { JsonRpcStdioClient } from '../infrastructure/codex/JsonRpcStdioClient';
 import { RecentProjectIdentityResolver } from '../infrastructure/identity/RecentProjectIdentityResolver';
 
 import type { ClockPort } from '../../core/application/ports/ClockPort';
 import type { LoggerPort } from '../../core/application/ports/LoggerPort';
+import {
+  CodexBinaryResolver,
+  JsonRpcStdioClient,
+} from '@main/services/infrastructure/codexAppServer';
 import type { ServiceContext } from '@main/services';
 
 export interface RecentProjectsFeatureFacade {

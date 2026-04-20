@@ -1,4 +1,7 @@
-import type { JsonRpcSession, JsonRpcStdioClient } from './JsonRpcStdioClient';
+import type {
+  JsonRpcSession,
+  JsonRpcStdioClient,
+} from '@main/services/infrastructure/codexAppServer';
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 3_000;
 const DEFAULT_TOTAL_TIMEOUT_MS = 8_000;

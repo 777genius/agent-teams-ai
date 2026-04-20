@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import {
+  formatCodexCreditsValue,
+  formatCodexRemainingPercent,
+  formatCodexResetWindowLabel,
+  formatCodexUsageExplanation,
+  formatCodexUsagePercent,
+  formatCodexUsageWindowLabel,
+  formatCodexWindowDurationLong,
+  mergeCodexProviderStatusWithSnapshot,
+  normalizeCodexResetTimestamp,
+  useCodexAccountSnapshot,
+} from '@features/codex-account/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -30,8 +42,8 @@ import {
   isConnectionManagedRuntimeProvider,
 } from './providerConnectionUi';
 import {
-  getVisibleProviderRuntimeBackendOptions,
   getProviderRuntimeBackendSummary,
+  getVisibleProviderRuntimeBackendOptions,
   ProviderRuntimeBackendSelector,
 } from './ProviderRuntimeBackendSelector';
 
@@ -39,7 +51,8 @@ import type { CliProviderAuthMode, CliProviderId, CliProviderStatus } from '@sha
 import type { ApiKeyEntry } from '@shared/types/extensions';
 
 type ApiKeyProviderId = 'anthropic' | 'codex' | 'gemini';
-type PendingConnectionAction = 'auto' | 'oauth' | 'api_key' | null;
+type PendingConnectionAction = 'auto' | 'oauth' | 'chatgpt' | 'api_key' | null;
+
 interface ConnectionMethodCardOption {
   readonly authMode: CliProviderAuthMode;
   readonly title: string;
@@ -81,7 +94,7 @@ const API_KEY_PROVIDER_CONFIG: Record<
     name: 'Codex API Key',
     title: 'API key',
     description:
-      'Codex native requires API-key credentials. Save OPENAI_API_KEY here and the app will mirror it into the native CODEX_API_KEY environment when launching Codex.',
+      'Use an OpenAI API key as a secondary Codex auth path. If you switch Codex to API key mode, the app will mirror OPENAI_API_KEY into CODEX_API_KEY for native launches.',
     placeholder: 'sk-proj-...',
   },
   gemini: {
@@ -98,13 +111,6 @@ function isApiKeyProviderId(providerId: CliProviderId): providerId is ApiKeyProv
   return providerId === 'anthropic' || providerId === 'codex' || providerId === 'gemini';
 }
 
-function isCodexNativeLane(provider: CliProviderStatus): boolean {
-  return (
-    provider.providerId === 'codex' &&
-    (provider.selectedBackendId === 'codex-native' || provider.resolvedBackendId === 'codex-native')
-  );
-}
-
 function findPreferredApiKeyEntry(apiKeys: ApiKeyEntry[], envVarName: string): ApiKeyEntry | null {
   const matches = apiKeys.filter((entry) => entry.envVarName === envVarName);
   return matches.find((entry) => entry.scope === 'user') ?? null;
@@ -115,7 +121,7 @@ function getConnectionDescription(provider: CliProviderStatus): string {
     case 'anthropic':
       return 'Choose how app-launched Anthropic sessions authenticate.';
     case 'codex':
-      return 'Codex launches always use the native runtime now. Manage API-key credentials here before launching teams or one-shot Codex runs.';
+      return 'Choose whether Codex should prefer your ChatGPT subscription or an API key when the native runtime launches.';
     case 'gemini':
       return 'Configure optional API access. CLI SDK and ADC are still discovered automatically.';
   }
@@ -145,7 +151,16 @@ function getAuthModeDescription(providerId: CliProviderId, authMode: CliProvider
   }
 
   if (providerId === 'codex') {
-    return 'Codex always launches through the native runtime and requires API-key credentials.';
+    switch (authMode) {
+      case 'auto':
+        return 'Prefer your ChatGPT account when it is available. Fall back to API key mode only when needed.';
+      case 'chatgpt':
+        return 'Force native Codex launches to use your connected ChatGPT account and subscription.';
+      case 'api_key':
+        return 'Force native Codex launches to use OPENAI_API_KEY / CODEX_API_KEY billing.';
+      default:
+        return '';
+    }
   }
 
   return '';
@@ -180,8 +195,51 @@ function getConnectionAlert(provider: CliProviderStatus): string | null {
     return 'A saved API key is available, but app-launched Anthropic sessions use it only after you switch to API key mode.';
   }
 
-  if (provider.providerId === 'codex' && !provider.connection?.apiKeyConfigured) {
-    return 'No OPENAI_API_KEY or CODEX_API_KEY credential is available yet.';
+  if (provider.providerId === 'codex') {
+    const codex = provider.connection?.codex;
+    if (codex?.login.status === 'starting') {
+      return 'Starting ChatGPT login...';
+    }
+
+    if (codex?.login.status === 'pending') {
+      return 'Waiting for ChatGPT account login to finish...';
+    }
+
+    if (codex?.login.status === 'failed' && codex.login.error) {
+      return codex.login.error;
+    }
+
+    if (provider.connection?.configuredAuthMode === 'api_key') {
+      if (!provider.connection?.apiKeyConfigured) {
+        return 'API key mode is selected, but no OPENAI_API_KEY or CODEX_API_KEY credential is available yet.';
+      }
+      return null;
+    }
+
+    if (provider.connection?.configuredAuthMode === 'chatgpt' && !codex?.managedAccount) {
+      const missingChatgptMessage = codex?.localActiveChatgptAccountPresent
+        ? 'Codex has a locally selected ChatGPT account, but the current session needs reconnect.'
+        : codex?.localAccountArtifactsPresent
+          ? 'Codex CLI currently has no active ChatGPT account. Local Codex account data exists, but no active managed session is selected.'
+          : 'Codex CLI currently has no active ChatGPT account. Connect ChatGPT to use your subscription.';
+      return provider.connection.apiKeyConfigured
+        ? `${missingChatgptMessage} Switch to API key mode to use the detected API key.`
+        : missingChatgptMessage;
+    }
+
+    if (!codex?.launchAllowed && codex?.launchIssueMessage) {
+      return codex.launchIssueMessage;
+    }
+
+    if (codex?.appServerState === 'degraded' && codex.appServerStatusMessage) {
+      return codex.appServerStatusMessage;
+    }
+
+    if (!provider.connection?.apiKeyConfigured && !codex?.managedAccount) {
+      return 'No ChatGPT account or API key is available yet.';
+    }
+
+    return null;
   }
 
   if (
@@ -192,6 +250,147 @@ function getConnectionAlert(provider: CliProviderStatus): string | null {
   }
 
   return null;
+}
+
+function getCodexAccountPanelHint(
+  provider: CliProviderStatus | null,
+  configuredAuthMode: CliProviderAuthMode | undefined
+): string | null {
+  if (provider?.providerId !== 'codex') {
+    return null;
+  }
+
+  const codex = provider.connection?.codex;
+  if (!codex || codex.login.status === 'starting' || codex.login.status === 'pending') {
+    return null;
+  }
+
+  if (codex.managedAccount?.type === 'chatgpt') {
+    if (!codex.rateLimits) {
+      return 'Usage limits appear here after Codex reports them for the connected ChatGPT account.';
+    }
+
+    return null;
+  }
+
+  const usageSentence = codex.localActiveChatgptAccountPresent
+    ? 'Codex has a locally selected ChatGPT account, but the current session needs reconnect before usage limits can load here.'
+    : codex.localAccountArtifactsPresent
+      ? 'Codex CLI currently reports no active ChatGPT account. Local Codex account data exists, but no active managed session is selected. Usage limits appear here only after Codex CLI sees one.'
+      : 'Codex CLI currently reports no active ChatGPT account. Usage limits appear here only after Codex CLI sees one.';
+  if (configuredAuthMode === 'chatgpt' && provider.connection?.apiKeyConfigured) {
+    return `${usageSentence} The detected API key is only used after you switch Codex to API key mode.`;
+  }
+
+  if (configuredAuthMode === 'auto' && provider.connection?.apiKeyConfigured) {
+    return `${usageSentence} Auto will keep using the detected API key until ChatGPT is connected.`;
+  }
+
+  return usageSentence;
+}
+
+function getCheckingStatusColor(): string {
+  return 'var(--color-text-secondary)';
+}
+
+function getProviderStatusColor(statusText: string | null, authenticated: boolean): string {
+  if (statusText === 'Checking...') {
+    return getCheckingStatusColor();
+  }
+
+  return authenticated ? '#4ade80' : 'var(--color-text-muted)';
+}
+
+function formatCodexResetDateTime(timestampSeconds: number | null | undefined): string {
+  const normalized = normalizeCodexResetTimestamp(timestampSeconds);
+  return normalized ? new Date(normalized).toLocaleString() : 'Unknown';
+}
+
+function CodexRateLimitWindowCard({
+  title,
+  usedLabel,
+  usedValue,
+  remainingValue,
+  resetLabel,
+  resetValue,
+  accent,
+}: Readonly<{
+  title: string;
+  usedLabel: string;
+  usedValue: string;
+  remainingValue: string;
+  resetLabel: string;
+  resetValue: string;
+  accent: 'primary' | 'secondary';
+}>): React.JSX.Element {
+  const accentStyles =
+    accent === 'primary'
+      ? {
+          borderColor: 'rgba(74, 222, 128, 0.24)',
+          backgroundColor: 'rgba(74, 222, 128, 0.05)',
+          badgeColor: '#86efac',
+          badgeBackground: 'rgba(74, 222, 128, 0.14)',
+        }
+      : {
+          borderColor: 'rgba(125, 211, 252, 0.22)',
+          backgroundColor: 'rgba(125, 211, 252, 0.04)',
+          badgeColor: '#bae6fd',
+          badgeBackground: 'rgba(125, 211, 252, 0.14)',
+        };
+
+  return (
+    <div
+      className="rounded-lg border px-4 py-3"
+      style={{
+        borderColor: accentStyles.borderColor,
+        backgroundColor: accentStyles.backgroundColor,
+      }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+          {title}
+        </div>
+        <span
+          className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+          style={{
+            color: accentStyles.badgeColor,
+            backgroundColor: accentStyles.badgeBackground,
+          }}
+        >
+          {remainingValue}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="space-y-1">
+          <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+            {usedLabel}
+          </div>
+          <div
+            className="text-3xl font-semibold leading-none"
+            style={{ color: 'var(--color-text)' }}
+          >
+            {usedValue}
+          </div>
+          <div className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+            {remainingValue} left
+          </div>
+        </div>
+
+        <div
+          className="rounded-md border px-3 py-2"
+          style={{ borderColor: 'var(--color-border-subtle)' }}
+        >
+          <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+            {resetLabel}
+          </div>
+          <div className="mt-1 text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+            {resetValue}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function getConnectionMethodCardOptions(
@@ -217,7 +416,24 @@ function getConnectionMethodCardOptions(
         },
       ];
     case 'codex':
-      return null;
+      return [
+        {
+          authMode: 'auto',
+          title: 'Auto',
+          description:
+            'Prefer your ChatGPT account and subscription. Use API key mode only if needed.',
+        },
+        {
+          authMode: 'chatgpt',
+          title: 'ChatGPT account',
+          description: 'Use your connected ChatGPT account and Codex subscription.',
+        },
+        {
+          authMode: 'api_key',
+          title: 'API key',
+          description: 'Use OPENAI_API_KEY and CODEX_API_KEY billing for native Codex launches.',
+        },
+      ];
     default:
       return null;
   }
@@ -225,7 +441,7 @@ function getConnectionMethodCardOptions(
 
 function getConnectionMethodCardsHint(provider: CliProviderStatus): string | null {
   if (provider.providerId === 'codex') {
-    return 'Codex uses saved or environment API-key credentials for the native runtime.';
+    return 'Codex always runs through the native runtime. Auto prefers your ChatGPT account before falling back to API-key credentials.';
   }
 
   if (provider.providerId === 'anthropic') {
@@ -342,6 +558,10 @@ export const ProviderRuntimeSettingsDialog = ({
   const deleteApiKey = useStore((s) => s.deleteApiKey);
   const updateConfig = useStore((s) => s.updateConfig);
   const appConfig = useStore((s) => s.appConfig);
+  const codexAccount = useCodexAccountSnapshot({
+    enabled: open && selectedProviderId === 'codex',
+    includeRateLimits: true,
+  });
 
   useEffect(() => {
     if (!open) {
@@ -374,6 +594,12 @@ export const ProviderRuntimeSettingsDialog = ({
     setRuntimeError(null);
   }, [selectedProviderId]);
 
+  useEffect(() => {
+    if (selectedProviderId === 'codex' && codexAccount.error) {
+      setConnectionError(codexAccount.error);
+    }
+  }, [codexAccount.error, selectedProviderId]);
+
   const statusSelectedProvider = useMemo(() => {
     return (
       providers.find((provider) => provider.providerId === selectedProviderId) ??
@@ -394,18 +620,29 @@ export const ProviderRuntimeSettingsDialog = ({
     : null;
 
   const selectedProvider = useMemo(() => {
-    if (!statusSelectedProvider?.connection) {
-      return statusSelectedProvider;
+    const mergedStatusProvider =
+      statusSelectedProvider?.providerId === 'codex'
+        ? mergeCodexProviderStatusWithSnapshot(statusSelectedProvider, codexAccount.snapshot)
+        : statusSelectedProvider;
+
+    if (!mergedStatusProvider?.connection) {
+      return mergedStatusProvider;
     }
 
     const nextConnection = {
-      ...statusSelectedProvider.connection,
+      ...mergedStatusProvider.connection,
     };
 
-    if (statusSelectedProvider.providerId === 'anthropic') {
+    if (mergedStatusProvider.providerId === 'anthropic') {
       nextConnection.configuredAuthMode =
         appConfig?.providerConnections?.anthropic.authMode ??
-        statusSelectedProvider.connection.configuredAuthMode;
+        mergedStatusProvider.connection.configuredAuthMode;
+    }
+
+    if (mergedStatusProvider.providerId === 'codex') {
+      nextConnection.configuredAuthMode =
+        appConfig?.providerConnections?.codex.preferredAuthMode ??
+        mergedStatusProvider.connection.configuredAuthMode;
     }
 
     if (statusApiKeyConfig) {
@@ -421,11 +658,13 @@ export const ProviderRuntimeSettingsDialog = ({
     }
 
     return {
-      ...statusSelectedProvider,
+      ...mergedStatusProvider,
       connection: nextConnection,
     };
   }, [
     appConfig?.providerConnections?.anthropic.authMode,
+    appConfig?.providerConnections?.codex.preferredAuthMode,
+    codexAccount.snapshot,
     selectedApiKey,
     statusApiKeyConfig,
     statusSelectedProvider,
@@ -437,6 +676,10 @@ export const ProviderRuntimeSettingsDialog = ({
   const runtimeSummary = selectedProvider
     ? getProviderRuntimeBackendSummary(selectedProvider)
     : null;
+  const codexConnection =
+    selectedProvider?.providerId === 'codex' ? (selectedProvider.connection?.codex ?? null) : null;
+  const codexLoginPending =
+    codexConnection?.login.status === 'starting' || codexConnection?.login.status === 'pending';
   const configurableAuthModes = selectedProvider?.connection?.configurableAuthModes ?? [];
   const configuredAuthMode: CliProviderAuthMode | undefined =
     selectedProvider?.connection?.configuredAuthMode ?? configurableAuthModes[0] ?? undefined;
@@ -471,19 +714,30 @@ export const ProviderRuntimeSettingsDialog = ({
     (selectedProvider?.providerId !== 'codex' || !selectedProvider.connection?.supportsOAuth)
   );
   const connectionAlert = selectedProvider ? getConnectionAlert(selectedProvider) : null;
-  const connectionLoading = selectedProviderLoading || connectionSaving;
+  const connectionLoading =
+    selectedProviderLoading ||
+    connectionSaving ||
+    Boolean(selectedProvider?.providerId === 'codex' && codexAccount.loading && !codexConnection);
   const connectionBusy = disabled || connectionLoading;
+  const codexActionBusy =
+    disabled || selectedProviderLoading || connectionSaving || codexAccount.loading;
   const runtimeBusy = disabled || selectedProviderLoading || runtimeSaving;
   const connectionMethodCardsHint = selectedProvider
     ? getConnectionMethodCardsHint(selectedProvider)
     : null;
+  const codexAccountPanelHint = getCodexAccountPanelHint(
+    selectedProvider ?? null,
+    configuredAuthMode
+  );
   const hasSubscriptionSession =
     selectedProvider?.providerId === 'anthropic'
       ? selectedProvider.authMethod === 'oauth_token' || selectedProvider.authMethod === 'claude.ai'
       : false;
   const canRequestSubscriptionLogin =
-    Boolean(selectedProvider?.connection?.supportsOAuth && onRequestLogin) &&
+    selectedProvider?.providerId === 'anthropic' &&
+    Boolean(selectedProvider.connection?.supportsOAuth && onRequestLogin) &&
     configuredAuthMode !== 'api_key' &&
+    selectedProvider.statusMessage !== 'Checking...' &&
     (!selectedProvider?.authenticated || hasSubscriptionSession || configuredAuthMode === 'oauth');
   let connectionStatusLabel: string | null = null;
   if (selectedProvider) {
@@ -510,6 +764,19 @@ export const ProviderRuntimeSettingsDialog = ({
             return 'Switching to API key...';
           case 'oauth':
             return 'Switching to Anthropic subscription...';
+          case 'auto':
+            return 'Switching to Auto...';
+          default:
+            return 'Applying connection changes...';
+        }
+      }
+
+      if (selectedProvider.providerId === 'codex') {
+        switch (pendingConnectionAction) {
+          case 'chatgpt':
+            return 'Switching to ChatGPT account mode...';
+          case 'api_key':
+            return 'Switching to API key mode...';
           case 'auto':
             return 'Switching to Auto...';
           default:
@@ -601,7 +868,7 @@ export const ProviderRuntimeSettingsDialog = ({
   };
 
   const handleAuthModeChange = async (authMode: string): Promise<void> => {
-    if (selectedProvider?.providerId !== 'anthropic') {
+    if (selectedProvider?.providerId !== 'anthropic' && selectedProvider?.providerId !== 'codex') {
       return;
     }
 
@@ -615,11 +882,21 @@ export const ProviderRuntimeSettingsDialog = ({
     setConnectionError(null);
     let updateSucceeded = false;
     try {
-      await updateConfig('providerConnections', {
-        anthropic: {
-          authMode: nextAuthMode,
-        },
-      });
+      if (selectedProvider.providerId === 'anthropic') {
+        await updateConfig('providerConnections', {
+          anthropic: {
+            authMode: nextAuthMode,
+          },
+        });
+      } else if (nextAuthMode !== 'oauth') {
+        await updateConfig('providerConnections', {
+          codex: {
+            preferredAuthMode: nextAuthMode,
+          },
+        });
+        await codexAccount.refresh({ includeRateLimits: true, forceRefreshToken: true });
+      }
+
       updateSucceeded = true;
     } catch (error) {
       setConnectionError(error instanceof Error ? error.message : 'Failed to update connection');
@@ -634,6 +911,46 @@ export const ProviderRuntimeSettingsDialog = ({
 
       setConnectionSaving(false);
       setPendingConnectionAction(null);
+    }
+  };
+
+  const handleCodexAccountRefresh = async (): Promise<void> => {
+    setConnectionError(null);
+    try {
+      await codexAccount.refresh({ includeRateLimits: true, forceRefreshToken: true });
+      await onRefreshProvider?.('codex');
+    } catch (error) {
+      setConnectionError(
+        error instanceof Error ? error.message : 'Failed to refresh Codex account'
+      );
+    }
+  };
+
+  const handleCodexStartLogin = async (): Promise<void> => {
+    setConnectionError(null);
+    const success = await codexAccount.startChatgptLogin();
+    if (!success && codexAccount.error) {
+      setConnectionError(codexAccount.error);
+    }
+  };
+
+  const handleCodexCancelLogin = async (): Promise<void> => {
+    setConnectionError(null);
+    const success = await codexAccount.cancelChatgptLogin();
+    if (success) {
+      await onRefreshProvider?.('codex');
+    } else if (codexAccount.error) {
+      setConnectionError(codexAccount.error);
+    }
+  };
+
+  const handleCodexLogout = async (): Promise<void> => {
+    setConnectionError(null);
+    const success = await codexAccount.logout();
+    if (success) {
+      await onRefreshProvider?.('codex');
+    } else if (codexAccount.error) {
+      setConnectionError(codexAccount.error);
     }
   };
 
@@ -712,7 +1029,15 @@ export const ProviderRuntimeSettingsDialog = ({
                 <span
                   className="text-xs"
                   style={{
-                    color: selectedProvider.authenticated ? '#4ade80' : 'var(--color-text-muted)',
+                    color: getProviderStatusColor(
+                      selectedProvider.authenticated
+                        ? `Using ${formatProviderAuthMethodLabelForProvider(
+                            selectedProvider.providerId,
+                            selectedProvider.authMethod
+                          )}`
+                        : selectedProvider.statusMessage || 'Not connected',
+                      selectedProvider.authenticated
+                    ),
                   }}
                 >
                   {selectedProvider.authenticated
@@ -862,6 +1187,281 @@ export const ProviderRuntimeSettingsDialog = ({
                   </span>
                 ) : null}
               </div>
+
+              {selectedProvider.providerId === 'codex' ? (
+                <div
+                  className="space-y-3 rounded-md border p-3"
+                  style={{ borderColor: 'var(--color-border-subtle)' }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                        ChatGPT account
+                      </div>
+                      <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                        Manage the local Codex app-server account session that powers
+                        subscription-backed native launches.
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={codexActionBusy}
+                        onClick={() => void handleCodexAccountRefresh()}
+                      >
+                        Refresh
+                      </Button>
+                      {codexLoginPending ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={codexActionBusy}
+                          onClick={() => void handleCodexCancelLogin()}
+                        >
+                          Cancel login
+                        </Button>
+                      ) : codexConnection?.managedAccount?.type === 'chatgpt' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={codexActionBusy}
+                          onClick={() => void handleCodexLogout()}
+                        >
+                          Disconnect account
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={codexActionBusy}
+                          onClick={() => void handleCodexStartLogin()}
+                        >
+                          <Link2 className="mr-1 size-3.5" />
+                          Connect ChatGPT
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span
+                      className="rounded-full px-2 py-0.5"
+                      style={{
+                        color:
+                          codexConnection?.managedAccount?.type === 'chatgpt'
+                            ? '#86efac'
+                            : 'var(--color-text-muted)',
+                        backgroundColor:
+                          codexConnection?.managedAccount?.type === 'chatgpt'
+                            ? 'rgba(74, 222, 128, 0.14)'
+                            : 'rgba(255, 255, 255, 0.05)',
+                      }}
+                    >
+                      {codexConnection?.managedAccount?.type === 'chatgpt'
+                        ? 'Connected'
+                        : codexLoginPending
+                          ? 'Login in progress'
+                          : 'Not connected'}
+                    </span>
+                    {codexConnection ? (
+                      <span
+                        className="rounded-full px-2 py-0.5"
+                        style={{
+                          color:
+                            codexConnection.appServerState === 'healthy'
+                              ? '#86efac'
+                              : codexConnection.appServerState === 'degraded'
+                                ? '#fbbf24'
+                                : '#fca5a5',
+                          backgroundColor:
+                            codexConnection.appServerState === 'healthy'
+                              ? 'rgba(74, 222, 128, 0.14)'
+                              : codexConnection.appServerState === 'degraded'
+                                ? 'rgba(245, 158, 11, 0.12)'
+                                : 'rgba(248, 113, 113, 0.08)',
+                        }}
+                      >
+                        App-server: {codexConnection.appServerState}
+                      </span>
+                    ) : null}
+                    {codexConnection?.managedAccount?.planType ? (
+                      <span style={{ color: 'var(--color-text-secondary)' }}>
+                        Plan: {codexConnection.managedAccount.planType}
+                      </span>
+                    ) : null}
+                    {codexConnection?.managedAccount?.email ? (
+                      <span style={{ color: 'var(--color-text-secondary)' }}>
+                        {codexConnection.managedAccount.email}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {codexAccountPanelHint ? (
+                    <div
+                      className="rounded-md border px-3 py-2 text-xs"
+                      style={{
+                        borderColor: 'var(--color-border-subtle)',
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      {codexAccountPanelHint}
+                    </div>
+                  ) : null}
+
+                  {codexConnection?.rateLimits ? (
+                    <div className="space-y-2">
+                      <div
+                        className="rounded-md border px-3 py-2 text-xs"
+                        style={{
+                          borderColor: 'var(--color-border-subtle)',
+                          color: 'var(--color-text-secondary)',
+                        }}
+                      >
+                        These percentages show used quota, not remaining quota.{' '}
+                        {formatCodexUsageExplanation(
+                          codexConnection.rateLimits.primary?.usedPercent,
+                          codexConnection.rateLimits.primary?.windowDurationMins
+                        )}
+                        {codexConnection.rateLimits.secondary
+                          ? ` Weekly limits are shown separately in the ${
+                              formatCodexWindowDurationLong(
+                                codexConnection.rateLimits.secondary.windowDurationMins
+                              ) ?? 'secondary'
+                            } window.`
+                          : ''}
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <CodexRateLimitWindowCard
+                            title="Primary window"
+                            usedLabel={formatCodexUsageWindowLabel(
+                              'Primary used',
+                              codexConnection.rateLimits.primary?.windowDurationMins
+                            )}
+                            usedValue={formatCodexUsagePercent(
+                              codexConnection.rateLimits.primary?.usedPercent
+                            )}
+                            remainingValue={
+                              formatCodexRemainingPercent(
+                                codexConnection.rateLimits.primary?.usedPercent
+                              ) ?? 'Remaining unknown'
+                            }
+                            resetLabel={formatCodexResetWindowLabel(
+                              'Primary reset',
+                              codexConnection.rateLimits.primary?.windowDurationMins
+                            )}
+                            resetValue={formatCodexResetDateTime(
+                              codexConnection.rateLimits.primary?.resetsAt
+                            )}
+                            accent="primary"
+                          />
+
+                          {codexConnection.rateLimits.secondary ? (
+                            <CodexRateLimitWindowCard
+                              title={
+                                codexConnection.rateLimits.secondary.windowDurationMins === 10_080
+                                  ? 'Weekly window'
+                                  : 'Secondary window'
+                              }
+                              usedLabel={formatCodexUsageWindowLabel(
+                                codexConnection.rateLimits.secondary.windowDurationMins === 10_080
+                                  ? 'Weekly used'
+                                  : 'Secondary used',
+                                codexConnection.rateLimits.secondary.windowDurationMins
+                              )}
+                              usedValue={formatCodexUsagePercent(
+                                codexConnection.rateLimits.secondary.usedPercent
+                              )}
+                              remainingValue={
+                                formatCodexRemainingPercent(
+                                  codexConnection.rateLimits.secondary.usedPercent
+                                ) ?? 'Remaining unknown'
+                              }
+                              resetLabel={formatCodexResetWindowLabel(
+                                codexConnection.rateLimits.secondary.windowDurationMins === 10_080
+                                  ? 'Weekly reset'
+                                  : 'Secondary reset',
+                                codexConnection.rateLimits.secondary.windowDurationMins
+                              )}
+                              resetValue={formatCodexResetDateTime(
+                                codexConnection.rateLimits.secondary.resetsAt
+                              )}
+                              accent="secondary"
+                            />
+                          ) : (
+                            <div
+                              className="rounded-lg border px-4 py-3"
+                              style={{
+                                borderColor: 'var(--color-border-subtle)',
+                                backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                              }}
+                            >
+                              <div
+                                className="text-sm font-medium"
+                                style={{ color: 'var(--color-text)' }}
+                              >
+                                Weekly window
+                              </div>
+                              <div
+                                className="mt-3 text-[11px]"
+                                style={{ color: 'var(--color-text-muted)' }}
+                              >
+                                Weekly used (1w)
+                              </div>
+                              <div
+                                className="mt-1 text-sm font-medium"
+                                style={{ color: 'var(--color-text)' }}
+                              >
+                                Not reported
+                              </div>
+                              <div
+                                className="mt-1 text-[11px]"
+                                style={{ color: 'var(--color-text-secondary)' }}
+                              >
+                                Codex did not return a secondary window for this account snapshot.
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div
+                          className="rounded-lg border px-4 py-3"
+                          style={{
+                            borderColor: 'var(--color-border-subtle)',
+                            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                          }}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <div
+                                className="text-[11px]"
+                                style={{ color: 'var(--color-text-muted)' }}
+                              >
+                                Credits
+                              </div>
+                              <div
+                                className="mt-1 text-sm font-medium"
+                                style={{ color: 'var(--color-text)' }}
+                              >
+                                {formatCodexCreditsValue(codexConnection.rateLimits.credits)}
+                              </div>
+                            </div>
+                            <div
+                              className="max-w-md text-[11px]"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                              Credits are shown separately from window-based subscription usage and
+                              may be unavailable for plan-backed ChatGPT sessions.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               {showApiKeySection && apiKeyConfig ? (
                 <div

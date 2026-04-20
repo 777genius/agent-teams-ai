@@ -4,6 +4,7 @@
  */
 
 import { api } from '@renderer/api';
+import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import {
   getExtensionActionDisableReason,
   getMcpDiagnosticKey,
@@ -345,6 +346,26 @@ function upsertApiKeyEntry(entries: ApiKeyEntry[], entry: ApiKeyEntry): ApiKeyEn
 const SUCCESS_DISPLAY_MS = 2_000;
 const PROJECT_SCOPE_REQUIRED_MESSAGE =
   'Project- and local-scoped plugins require an active project in the Extensions tab.';
+
+function refreshConfiguredCliStatus(
+  state: Pick<AppState, 'appConfig' | 'bootstrapCliStatus' | 'fetchCliStatus'>
+): Promise<void> {
+  return refreshCliStatusForCurrentMode({
+    multimodelEnabled: state.appConfig?.general?.multimodelEnabled ?? true,
+    bootstrapCliStatus: state.bootstrapCliStatus,
+    fetchCliStatus: state.fetchCliStatus,
+  });
+}
+
+function getExtensionActionCliStatusState(
+  state: Pick<AppState, 'cliStatus' | 'cliStatusLoading'>
+): Pick<Parameters<typeof getExtensionActionDisableReason>[0], 'cliStatus' | 'cliStatusLoading'> {
+  return {
+    cliStatus: state.cliStatus,
+    cliStatusLoading: state.cliStatus === null && state.cliStatusLoading,
+  };
+}
+
 export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSlice> = (
   set,
   get
@@ -886,22 +907,21 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
         : { ...request, projectPath: effectiveProjectPath };
 
     const preflightState = get();
-    if (preflightState.cliStatus === null || preflightState.cliStatusLoading) {
+    if (preflightState.cliStatus === null) {
       try {
-        await preflightState.fetchCliStatus();
+        await refreshConfiguredCliStatus(preflightState);
       } catch {
         // fetchCliStatus stores the error in cliStatusError; map to a user-facing install error below.
       }
     }
 
-    const cliStatus = get().cliStatus;
+    const extensionCliStatusState = getExtensionActionCliStatusState(get());
     const preflightError =
       effectiveRequest.scope !== 'user' && !effectiveRequest.projectPath
         ? PROJECT_SCOPE_REQUIRED_MESSAGE
         : getExtensionActionDisableReason({
             isInstalled: false,
-            cliStatus,
-            cliStatusLoading: get().cliStatusLoading,
+            ...extensionCliStatusState,
             section: 'plugins',
           });
 
@@ -977,9 +997,9 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
     }
 
     const preflightState = get();
-    if (preflightState.cliStatus === null || preflightState.cliStatusLoading) {
+    if (preflightState.cliStatus === null) {
       try {
-        await preflightState.fetchCliStatus();
+        await refreshConfiguredCliStatus(preflightState);
       } catch {
         // fetchCliStatus stores the error in cliStatusError; map to a user-facing uninstall error below.
       }
@@ -987,8 +1007,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
     const uninstallDisableReason = getExtensionActionDisableReason({
       isInstalled: true,
-      cliStatus: get().cliStatus,
-      cliStatusLoading: get().cliStatusLoading,
+      ...getExtensionActionCliStatusState(get()),
       section: 'plugins',
     });
     if (uninstallDisableReason) {
@@ -1055,9 +1074,9 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
     }
 
     const preflightState = get();
-    if (preflightState.cliStatus === null || preflightState.cliStatusLoading) {
+    if (preflightState.cliStatus === null) {
       try {
-        await preflightState.fetchCliStatus();
+        await refreshConfiguredCliStatus(preflightState);
       } catch {
         // fetchCliStatus stores the error in cliStatusError; map to a user-facing install error below.
       }
@@ -1065,8 +1084,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
     const installDisableReason = getExtensionActionDisableReason({
       isInstalled: false,
-      cliStatus: get().cliStatus,
-      cliStatusLoading: get().cliStatusLoading,
+      ...getExtensionActionCliStatusState(get()),
       section: 'mcp',
     });
     if (installDisableReason) {
@@ -1130,9 +1148,9 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       }
 
       const preflightState = get();
-      if (preflightState.cliStatus === null || preflightState.cliStatusLoading) {
+      if (preflightState.cliStatus === null) {
         try {
-          await preflightState.fetchCliStatus();
+          await refreshConfiguredCliStatus(preflightState);
         } catch {
           // fetchCliStatus stores the error in cliStatusError; map to a user-facing install error below.
         }
@@ -1140,8 +1158,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
       const installDisableReason = getExtensionActionDisableReason({
         isInstalled: false,
-        cliStatus: get().cliStatus,
-        cliStatusLoading: get().cliStatusLoading,
+        ...getExtensionActionCliStatusState(get()),
         section: 'mcp',
       });
       if (installDisableReason) {
@@ -1199,9 +1216,9 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
     }
 
     const preflightState = get();
-    if (preflightState.cliStatus === null || preflightState.cliStatusLoading) {
+    if (preflightState.cliStatus === null) {
       try {
-        await preflightState.fetchCliStatus();
+        await refreshConfiguredCliStatus(preflightState);
       } catch {
         // fetchCliStatus stores the error in cliStatusError; map to a user-facing uninstall error below.
       }
@@ -1209,8 +1226,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
 
     const uninstallDisableReason = getExtensionActionDisableReason({
       isInstalled: true,
-      cliStatus: get().cliStatus,
-      cliStatusLoading: get().cliStatusLoading,
+      ...getExtensionActionCliStatusState(get()),
       section: 'mcp',
     });
     if (uninstallDisableReason) {
@@ -1309,7 +1325,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
         }));
       }
 
-      await get().fetchCliStatus();
+      await refreshConfiguredCliStatus(get());
       const refreshError = get().cliStatusError;
       if (refreshError) {
         warnings.push(`API key saved, but failed to refresh provider status. ${refreshError}`);
@@ -1333,7 +1349,7 @@ export const createExtensionsSlice: StateCreator<AppState, [], [], ExtensionsSli
       set((prev) => ({
         apiKeys: prev.apiKeys.filter((k) => k.id !== id),
       }));
-      await get().fetchCliStatus();
+      await refreshConfiguredCliStatus(get());
       const refreshError = get().cliStatusError;
       set({
         apiKeysError: refreshError

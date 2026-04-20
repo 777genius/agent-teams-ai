@@ -157,9 +157,7 @@ export const ProvisioningProgressBlock = ({
   className,
 }: ProvisioningProgressBlockProps): React.JSX.Element => {
   const elapsed = useElapsedTimer(startedAt, loading);
-  const [logsOpen, setLogsOpen] = useState(
-    () => defaultLogsOpen ?? (Boolean(cliLogsTail) && loading)
-  );
+  const [logsOpen, setLogsOpen] = useState(() => defaultLogsOpen ?? false);
   const [liveOutputOpen, setLiveOutputOpen] = useState(defaultLiveOutputOpen);
   const outputScrollRef = useRef<HTMLDivElement>(null);
   const isError = tone === 'error';
@@ -191,29 +189,6 @@ export const ProvisioningProgressBlock = ({
       setLiveOutputOpen(false);
     }
   }, [isError, cliLogsTail]);
-
-  // Open CLI logs while loading, collapse when done (unless error).
-  const prevLoadingRef = useRef(loading);
-  const hadLogsRef = useRef(Boolean(cliLogsTail));
-  useEffect(() => {
-    if (!isError) {
-      const hasLogs = Boolean(cliLogsTail);
-
-      if (loading && hasLogs && !hadLogsRef.current) {
-        // Logs just appeared while loading → open
-        setLogsOpen(true);
-      } else if (loading && !prevLoadingRef.current && hasLogs) {
-        // Started loading with logs already present → open
-        setLogsOpen(true);
-      } else if (!loading && prevLoadingRef.current) {
-        // Finished loading → collapse
-        setLogsOpen(false);
-      }
-
-      hadLogsRef.current = hasLogs;
-    }
-    prevLoadingRef.current = loading;
-  }, [loading, cliLogsTail, isError]);
 
   return (
     <div

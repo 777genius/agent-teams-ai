@@ -290,6 +290,16 @@ describe('getExtensionActionDisableReason', () => {
     ).toContain('configured runtime');
   });
 
+  it('does not block extension actions during a background refresh when runtime status is already known', () => {
+    expect(
+      getExtensionActionDisableReason({
+        isInstalled: false,
+        cliStatus: createDirectCliStatus(),
+        cliStatusLoading: true,
+      })
+    ).toBeNull();
+  });
+
   it('surfaces startup health-check failures separately from missing CLI', () => {
     expect(
       getExtensionActionDisableReason({

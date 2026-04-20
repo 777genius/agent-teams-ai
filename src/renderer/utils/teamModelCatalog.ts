@@ -323,8 +323,14 @@ export function sortTeamProviderModels(
 export function isCodexChatGptSubscriptionProviderStatus(
   providerStatus?: RuntimeAwareProviderStatus | null
 ): boolean {
-  void providerStatus;
-  return false;
+  if (providerStatus?.providerId !== 'codex') {
+    return false;
+  }
+
+  return (
+    providerStatus.authMethod === 'chatgpt' ||
+    providerStatus.backend?.authMethodDetail === 'chatgpt'
+  );
 }
 
 function isRuntimeHiddenTeamModel(

@@ -17,7 +17,9 @@ describe('ProviderConnectionService', () => {
         anthropic: {
           authMode,
         },
-        codex: {},
+        codex: {
+          preferredAuthMode: 'auto' as const,
+        },
       },
       runtime: {
         providerBackends: {
@@ -174,8 +176,8 @@ describe('ProviderConnectionService', () => {
     expect(info).toMatchObject({
       supportsOAuth: false,
       supportsApiKey: true,
-      configurableAuthModes: [],
-      configuredAuthMode: null,
+      configurableAuthModes: ['auto', 'chatgpt', 'api_key'],
+      configuredAuthMode: 'auto',
       apiKeyConfigured: false,
       apiKeySource: null,
       apiKeySourceLabel: null,
@@ -279,6 +281,209 @@ describe('ProviderConnectionService', () => {
     expect(issue).toContain('Codex native requires OPENAI_API_KEY or CODEX_API_KEY');
   });
 
+  it('reports a pinned Codex ChatGPT mode as a missing active CLI login instead of flattening it to generic auth advice', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue({
+        preferredAuthMode: 'chatgpt',
+        effectiveAuthMode: null,
+        launchAllowed: false,
+        launchIssueMessage: 'Connect a ChatGPT account to use your Codex subscription.',
+        launchReadinessState: 'missing_auth',
+        appServerState: 'healthy',
+        appServerStatusMessage: null,
+        managedAccount: null,
+        apiKey: {
+          available: true,
+          source: 'environment',
+          sourceLabel: 'Detected from OPENAI_API_KEY',
+        },
+        requiresOpenaiAuth: true,
+        localAccountArtifactsPresent: false,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        updatedAt: '2026-04-20T00:00:00.000Z',
+      }),
+    } as never);
+
+    const issue = await service.getConfiguredConnectionIssue(
+      {
+        OPENAI_API_KEY: 'env-key',
+      },
+      'codex'
+    );
+
+    expect(issue).toBe(
+      'Codex ChatGPT account mode is selected, but Codex CLI reports no active ChatGPT login. Connect ChatGPT again or switch Codex auth mode to API key.'
+    );
+  });
+
+  it('mentions local Codex account artifacts when pinned ChatGPT mode has no active managed session', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue({
+        preferredAuthMode: 'chatgpt',
+        effectiveAuthMode: null,
+        launchAllowed: false,
+        launchIssueMessage: 'Connect a ChatGPT account to use your Codex subscription.',
+        launchReadinessState: 'missing_auth',
+        appServerState: 'healthy',
+        appServerStatusMessage: null,
+        managedAccount: null,
+        apiKey: {
+          available: true,
+          source: 'environment',
+          sourceLabel: 'Detected from OPENAI_API_KEY',
+        },
+        requiresOpenaiAuth: true,
+        localAccountArtifactsPresent: true,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        updatedAt: '2026-04-20T00:00:00.000Z',
+      }),
+    } as never);
+
+    const issue = await service.getConfiguredConnectionIssue(
+      {
+        OPENAI_API_KEY: 'env-key',
+      },
+      'codex'
+    );
+
+    expect(issue).toBe(
+      'Codex ChatGPT account mode is selected, but Codex CLI reports no active ChatGPT login. Local Codex account data exists, but no active managed session is selected. Connect ChatGPT again or switch Codex auth mode to API key.'
+    );
+  });
+
+  it('asks for reconnect when pinned ChatGPT mode still has a locally selected Codex account', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue({
+        preferredAuthMode: 'chatgpt',
+        effectiveAuthMode: null,
+        launchAllowed: false,
+        launchIssueMessage: 'Reconnect ChatGPT to refresh the current Codex subscription session.',
+        launchReadinessState: 'missing_auth',
+        appServerState: 'healthy',
+        appServerStatusMessage: null,
+        managedAccount: null,
+        apiKey: {
+          available: true,
+          source: 'environment',
+          sourceLabel: 'Detected from OPENAI_API_KEY',
+        },
+        requiresOpenaiAuth: true,
+        localAccountArtifactsPresent: true,
+        localActiveChatgptAccountPresent: true,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        updatedAt: '2026-04-20T00:00:00.000Z',
+      }),
+    } as never);
+
+    const issue = await service.getConfiguredConnectionIssue(
+      {
+        OPENAI_API_KEY: 'env-key',
+      },
+      'codex'
+    );
+
+    expect(issue).toBe(
+      'Codex ChatGPT account mode is selected, and Codex has a locally selected ChatGPT account, but the current session needs reconnect. Reconnect ChatGPT or switch Codex auth mode to API key.'
+    );
+  });
+
+  it('reports a pinned Codex API-key mode as missing only the API key credential', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue({
+        preferredAuthMode: 'api_key',
+        effectiveAuthMode: null,
+        launchAllowed: false,
+        launchIssueMessage: 'Add OPENAI_API_KEY or CODEX_API_KEY to use Codex API key mode.',
+        launchReadinessState: 'missing_auth',
+        appServerState: 'healthy',
+        appServerStatusMessage: null,
+        managedAccount: null,
+        apiKey: {
+          available: false,
+          source: null,
+          sourceLabel: null,
+        },
+        requiresOpenaiAuth: true,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        updatedAt: '2026-04-20T00:00:00.000Z',
+      }),
+    } as never);
+
+    const issue = await service.getConfiguredConnectionIssue({}, 'codex');
+
+    expect(issue).toBe(
+      'Codex API key mode is selected, but no OPENAI_API_KEY or CODEX_API_KEY credential is available. Add one before launching Codex.'
+    );
+  });
+
   it('augments PTY env for native Codex without dropping existing OpenAI credentials', async () => {
     const { ProviderConnectionService } =
       await import('@main/services/runtime/ProviderConnectionService');
@@ -301,5 +506,119 @@ describe('ProviderConnectionService', () => {
 
     expect(result.OPENAI_API_KEY).toBe('shell-key');
     expect(result.CODEX_API_KEY).toBe('shell-key');
+  });
+
+  it('returns a chatgpt forced_login_method override for managed Codex launches', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue({
+        preferredAuthMode: 'chatgpt',
+        effectiveAuthMode: 'chatgpt',
+        launchAllowed: true,
+        launchIssueMessage: null,
+        launchReadinessState: 'ready_chatgpt',
+        appServerState: 'healthy',
+        appServerStatusMessage: null,
+        managedAccount: {
+          type: 'chatgpt',
+          email: 'user@example.com',
+          planType: 'pro',
+        },
+        apiKey: {
+          available: true,
+          source: 'environment',
+          sourceLabel: 'Detected from OPENAI_API_KEY',
+        },
+        requiresOpenaiAuth: true,
+        login: {
+          status: 'idle',
+          error: null,
+          startedAt: null,
+        },
+        rateLimits: null,
+        updatedAt: '2026-04-20T00:00:00.000Z',
+      }),
+    } as never);
+
+    const args = await service.getConfiguredConnectionLaunchArgs(
+      {
+        OPENAI_API_KEY: undefined,
+        CODEX_API_KEY: undefined,
+      },
+      'codex',
+      undefined,
+      '/mock/claude-multimodel'
+    );
+
+    expect(args).toEqual(['--settings', '{"codex":{"forced_login_method":"chatgpt"}}']);
+  });
+
+  it('returns an api forced_login_method override for Codex API-key launches', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'OPENAI_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    const args = await service.getConfiguredConnectionLaunchArgs(
+      {
+        OPENAI_API_KEY: 'stored-key',
+        CODEX_API_KEY: 'stored-key',
+      },
+      'codex',
+      undefined,
+      '/mock/claude-multimodel'
+    );
+
+    expect(args).toEqual(['--settings', '{"codex":{"forced_login_method":"api"}}']);
+  });
+
+  it('keeps codex exec style config overrides for direct Codex binary launches', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue({
+          envVarName: 'OPENAI_API_KEY',
+          value: 'stored-key',
+        }),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+
+    const args = await service.getConfiguredConnectionLaunchArgs(
+      {
+        OPENAI_API_KEY: 'stored-key',
+        CODEX_API_KEY: 'stored-key',
+      },
+      'codex',
+      undefined,
+      '/usr/local/bin/codex'
+    );
+
+    expect(args).toEqual(['-c', 'forced_login_method="api"']);
   });
 });
