@@ -1,16 +1,17 @@
-import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
-import {
-  buildOpenCodeCanonicalMcpToolId,
-  REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS,
-} from '../mcp/OpenCodeMcpToolAvailability';
-import type {
-  OpenCodeTeamLaunchReadiness,
-  OpenCodeTeamLaunchReadinessState,
-} from '../readiness/OpenCodeTeamLaunchReadiness';
 import {
   assertOpenCodeProductionE2EArtifactGate,
   type OpenCodeProductionE2EEvidence,
 } from '../e2e/OpenCodeProductionE2EEvidence';
+import {
+  buildOpenCodeCanonicalMcpToolId,
+  REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS,
+} from '../mcp/OpenCodeMcpToolAvailability';
+
+import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
+import type {
+  OpenCodeTeamLaunchReadiness,
+  OpenCodeTeamLaunchReadinessState,
+} from '../readiness/OpenCodeTeamLaunchReadiness';
 import type {
   OpenCodeBridgeCommandName,
   OpenCodeBridgeDiagnosticEvent,
@@ -50,7 +51,7 @@ export interface OpenCodeReadinessBridgeOptions {
 }
 
 export interface OpenCodeProductionE2EEvidenceReadPort {
-  read(): Promise<{
+  read(input?: { selectedModel?: string | null }): Promise<{
     ok: boolean;
     evidence: OpenCodeProductionE2EEvidence | null;
     artifactPath: string;
@@ -126,15 +127,15 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       return input.readiness;
     }
 
+    const expectedModel = input.readiness.modelId ?? input.input.selectedModel;
     const evidenceRead = this.options.productionE2eEvidence
-      ? await this.options.productionE2eEvidence.read()
+      ? await this.options.productionE2eEvidence.read({ selectedModel: expectedModel })
       : {
           ok: false,
           evidence: null,
           artifactPath: '',
           diagnostics: ['OpenCode production E2E evidence store is not configured'],
         };
-    const expectedModel = input.readiness.modelId ?? input.input.selectedModel;
     const gate = evidenceRead.ok
       ? assertOpenCodeProductionE2EArtifactGate({
           evidence: evidenceRead.evidence,

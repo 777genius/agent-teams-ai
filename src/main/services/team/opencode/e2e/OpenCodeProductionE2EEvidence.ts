@@ -1,4 +1,5 @@
 export const OPENCODE_PRODUCTION_E2E_EVIDENCE_SCHEMA_VERSION = 1;
+export const OPENCODE_PRODUCTION_E2E_EVIDENCE_COLLECTION_SCHEMA_VERSION = 1;
 
 export const OPENCODE_PRODUCTION_E2E_EVIDENCE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -76,6 +77,16 @@ export interface OpenCodeProductionE2EEvidence {
   diagnostics?: string[];
 }
 
+export interface OpenCodeProductionE2EEvidenceCollection {
+  collectionSchemaVersion: typeof OPENCODE_PRODUCTION_E2E_EVIDENCE_COLLECTION_SCHEMA_VERSION;
+  entriesByModel: Record<string, OpenCodeProductionE2EEvidence>;
+}
+
+export type OpenCodeProductionE2EEvidenceStoreData =
+  | OpenCodeProductionE2EEvidence
+  | OpenCodeProductionE2EEvidenceCollection
+  | null;
+
 export interface OpenCodeProductionE2EGateExpectation {
   opencodeVersion: string | null;
   binaryFingerprint: string | null;
@@ -132,6 +143,34 @@ export function validateNullableOpenCodeProductionE2EEvidence(
     return null;
   }
   return validateOpenCodeProductionE2EEvidence(value);
+}
+
+export function validateOpenCodeProductionE2EEvidenceStoreData(
+  value: unknown
+): OpenCodeProductionE2EEvidenceStoreData {
+  if (value === null) {
+    return null;
+  }
+
+  const record = asRecord(value);
+  if (
+    record?.collectionSchemaVersion === OPENCODE_PRODUCTION_E2E_EVIDENCE_COLLECTION_SCHEMA_VERSION
+  ) {
+    return validateOpenCodeProductionE2EEvidenceCollection(record);
+  }
+
+  return validateOpenCodeProductionE2EEvidence(value);
+}
+
+export function isOpenCodeProductionE2EEvidenceCollection(
+  value: OpenCodeProductionE2EEvidenceStoreData
+): value is OpenCodeProductionE2EEvidenceCollection {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'collectionSchemaVersion' in value &&
+    value.collectionSchemaVersion === OPENCODE_PRODUCTION_E2E_EVIDENCE_COLLECTION_SCHEMA_VERSION
+  );
 }
 
 export function assertOpenCodeProductionE2EEvidenceBasics(input: {
@@ -367,6 +406,36 @@ function normalizeMcpTools(value: unknown): OpenCodeProductionE2EEvidence['mcpTo
   return {
     requiredTools: requireStringArray(record.requiredTools, 'mcpTools.requiredTools'),
     observedTools: requireStringArray(record.observedTools, 'mcpTools.observedTools'),
+  };
+}
+
+function validateOpenCodeProductionE2EEvidenceCollection(
+  value: Record<string, unknown>
+): OpenCodeProductionE2EEvidenceCollection {
+  const entriesRecord = asRecord(value.entriesByModel);
+  if (!entriesRecord) {
+    throw new Error('OpenCode production E2E evidence collection entriesByModel must be an object');
+  }
+
+  const entries: Record<string, OpenCodeProductionE2EEvidence> = {};
+  for (const [modelId, rawEvidence] of Object.entries(entriesRecord)) {
+    const trimmedModelId = modelId.trim();
+    if (!trimmedModelId) {
+      throw new Error('OpenCode production E2E evidence collection model id must be non-empty');
+    }
+
+    const evidence = validateOpenCodeProductionE2EEvidence(rawEvidence);
+    if (evidence.selectedModel !== trimmedModelId) {
+      throw new Error(
+        `OpenCode production E2E evidence collection key ${trimmedModelId} does not match selectedModel ${evidence.selectedModel}`
+      );
+    }
+    entries[trimmedModelId] = evidence;
+  }
+
+  return {
+    collectionSchemaVersion: OPENCODE_PRODUCTION_E2E_EVIDENCE_COLLECTION_SCHEMA_VERSION,
+    entriesByModel: entries,
   };
 }
 

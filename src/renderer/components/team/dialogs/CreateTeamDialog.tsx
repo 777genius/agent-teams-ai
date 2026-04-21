@@ -64,6 +64,10 @@ import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
+import {
+  clearInheritedMemberModelsUnavailableForProvider,
+  resolveProviderScopedMemberModel,
+} from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { ProjectPathSelector } from './ProjectPathSelector';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
@@ -564,6 +568,15 @@ export const CreateTeamDialog = ({
     );
     return new Map<TeamProviderId, string | null>(entries);
   }, [effectiveCliStatus?.providers]);
+  const runtimeProviderStatusById = useMemo(
+    () =>
+      new Map(
+        (effectiveCliStatus?.providers ?? []).map(
+          (provider) => [provider.providerId, provider] as const
+        )
+      ),
+    [effectiveCliStatus?.providers]
+  );
   const runtimeBackendSummaryByProviderRef = useRef(runtimeBackendSummaryByProvider);
   const prepareChecksRef = useRef<ProvisioningProviderCheck[]>([]);
   const prepareModelResultsCacheRef = useRef(
@@ -573,6 +586,17 @@ export const CreateTeamDialog = ({
   useEffect(() => {
     runtimeBackendSummaryByProviderRef.current = runtimeBackendSummaryByProvider;
   }, [runtimeBackendSummaryByProvider]);
+
+  useEffect(() => {
+    const sanitized = clearInheritedMemberModelsUnavailableForProvider({
+      members,
+      selectedProviderId,
+      runtimeProviderStatusById,
+    });
+    if (sanitized.changed) {
+      setMembers(sanitized.members);
+    }
+  }, [members, runtimeProviderStatusById, selectedProviderId, setMembers]);
 
   useEffect(() => {
     prepareChecksRef.current = prepareChecks;
@@ -672,14 +696,17 @@ export const CreateTeamDialog = ({
               if (member.removedAt) {
                 continue;
               }
-              const memberProviderId =
-                normalizeOptionalTeamProviderId(member.providerId) ?? selectedProviderId;
-              if (memberProviderId !== providerId) {
+              const scopedModel = resolveProviderScopedMemberModel({
+                memberProviderId: member.providerId,
+                memberModel: member.model,
+                selectedProviderId,
+                runtimeProviderStatusById,
+              });
+              if (scopedModel.providerId !== providerId) {
                 continue;
               }
-              const memberModel = member.model?.trim();
-              if (memberModel) {
-                next.add(memberModel);
+              if (scopedModel.model) {
+                next.add(scopedModel.model);
               } else if (supportsProviderDefaultCheck) {
                 hasDefaultSelection = true;
               }
@@ -812,6 +839,7 @@ export const CreateTeamDialog = ({
     effectiveCwd,
     effectiveMemberDrafts,
     limitContext,
+    runtimeProviderStatusById,
     selectedModel,
     selectedProviderId,
     selectedMemberProviders,
@@ -1005,15 +1033,6 @@ export const CreateTeamDialog = ({
     [memberColorMap, members, soloTeam]
   );
 
-  const runtimeProviderStatusById = useMemo(
-    () =>
-      new Map(
-        (effectiveCliStatus?.providers ?? []).map(
-          (provider) => [provider.providerId, provider] as const
-        )
-      ),
-    [effectiveCliStatus?.providers]
-  );
   const effectiveModel = useMemo(
     () =>
       computeEffectiveTeamModel(

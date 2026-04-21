@@ -147,8 +147,9 @@ describe('OpenCodeReadinessBridge', () => {
     const executor = fakeExecutor(
       bridgeSuccess(readiness({ state: 'ready', launchAllowed: true }))
     );
+    const evidence = fakeEvidenceStore(productionEvidence());
     const bridge = new OpenCodeReadinessBridge(executor, {
-      productionE2eEvidence: fakeEvidenceStore(productionEvidence()),
+      productionE2eEvidence: evidence,
     });
 
     await expect(
@@ -163,6 +164,9 @@ describe('OpenCodeReadinessBridge', () => {
       launchAllowed: true,
       supportLevel: 'production_supported',
       diagnostics: [],
+    });
+    expect(evidence.read).toHaveBeenCalledWith({
+      selectedModel: 'openai/gpt-5.4-mini',
     });
   });
 

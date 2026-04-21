@@ -135,6 +135,41 @@ describe('OpenCodeProductionE2EEvidence', () => {
       diagnostics: [],
     });
   });
+
+  it('stores production evidence for multiple raw model ids and reads exact model matches', async () => {
+    const filePath = path.join(tempDir, 'production-e2e-evidence.json');
+    const store = new OpenCodeProductionE2EEvidenceStore({
+      filePath,
+      clock: () => now,
+    });
+
+    await store.write(passingEvidence({ selectedModel: 'opencode/big-pickle' }));
+    await store.write(
+      passingEvidence({
+        evidenceId: 'e2e-2',
+        selectedModel: 'opencode/minimax-m2.5-free',
+      })
+    );
+
+    await expect(
+      store.read({ selectedModel: 'opencode/minimax-m2.5-free' })
+    ).resolves.toMatchObject({
+      ok: true,
+      evidence: {
+        evidenceId: 'e2e-2',
+        selectedModel: 'opencode/minimax-m2.5-free',
+      },
+      diagnostics: [],
+    });
+
+    await expect(store.read({ selectedModel: 'openai/gpt-5.4-mini' })).resolves.toMatchObject({
+      ok: true,
+      evidence: null,
+      diagnostics: [
+        'OpenCode production E2E evidence artifact has no entry for selected model openai/gpt-5.4-mini',
+      ],
+    });
+  });
 });
 
 function passingEvidence(

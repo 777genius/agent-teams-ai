@@ -83,6 +83,10 @@ import { CronScheduleInput } from '../schedule/CronScheduleInput';
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { EffortLevelSelector } from './EffortLevelSelector';
 import { resolveLaunchDialogPrefill } from './launchDialogPrefill';
+import {
+  clearInheritedMemberModelsUnavailableForProvider,
+  resolveProviderScopedMemberModel,
+} from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { ProjectPathSelector } from './ProjectPathSelector';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
@@ -463,6 +467,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       ),
     [effectiveCliStatus?.providers]
   );
+
+  useEffect(() => {
+    setMembersDrafts((prev) => {
+      const sanitized = clearInheritedMemberModelsUnavailableForProvider({
+        members: prev,
+        selectedProviderId,
+        runtimeProviderStatusById,
+      });
+      return sanitized.changed ? sanitized.members : prev;
+    });
+  }, [runtimeProviderStatusById, selectedProviderId]);
 
   useEffect(() => {
     if (multimodelEnabled) {
@@ -889,11 +904,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       if (member.removedAt) {
         continue;
       }
-      const providerId = normalizeOptionalTeamProviderId(member.providerId) ?? selectedProviderId;
-      if (member.model?.trim()) {
-        addModel(providerId, member.model);
+      const scopedModel = resolveProviderScopedMemberModel({
+        memberProviderId: member.providerId,
+        memberModel: member.model,
+        selectedProviderId,
+        runtimeProviderStatusById,
+      });
+      if (scopedModel.model) {
+        addModel(scopedModel.providerId, scopedModel.model);
       } else {
-        addDefaultSelection(providerId);
+        addDefaultSelection(scopedModel.providerId);
       }
     }
     for (const providerId of defaultSelectionByProvider.keys()) {
@@ -901,7 +921,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     }
 
     return modelsByProvider;
-  }, [effectiveLeadRuntimeModel, effectiveMemberDrafts, selectedModel, selectedProviderId]);
+  }, [
+    effectiveLeadRuntimeModel,
+    effectiveMemberDrafts,
+    runtimeProviderStatusById,
+    selectedModel,
+    selectedProviderId,
+  ]);
 
   const runtimeChangeNotes = useMemo(() => {
     if (!isLaunchMode) {

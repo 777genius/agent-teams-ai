@@ -139,7 +139,11 @@ vi.mock('@renderer/components/ui/button', () => ({
     disabled?: boolean;
     className?: string;
   }) =>
-    React.createElement('button', { type: type ?? 'button', onClick, disabled, className }, children),
+    React.createElement(
+      'button',
+      { type: type ?? 'button', onClick, disabled, className },
+      children
+    ),
 }));
 
 vi.mock('@renderer/components/ui/checkbox', () => ({
@@ -156,8 +160,7 @@ vi.mock('@renderer/components/ui/checkbox', () => ({
       id,
       type: 'checkbox',
       checked,
-      onChange: (event: Event) =>
-        onCheckedChange?.((event.target as HTMLInputElement).checked),
+      onChange: (event: Event) => onCheckedChange?.((event.target as HTMLInputElement).checked),
     }),
 }));
 
@@ -166,13 +169,8 @@ vi.mock('@renderer/components/ui/combobox', () => ({
 }));
 
 vi.mock('@renderer/components/ui/dialog', () => ({
-  Dialog: ({
-    open,
-    children,
-  }: {
-    open: boolean;
-    children: React.ReactNode;
-  }) => (open ? React.createElement('div', null, children) : null),
+  Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
+    open ? React.createElement('div', null, children) : null,
   DialogContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
   DialogHeader: ({ children }: { children: React.ReactNode }) =>
@@ -258,6 +256,7 @@ vi.mock('@renderer/utils/geminiUiFreeze', () => ({
 
 vi.mock('@renderer/utils/teamModelAvailability', () => ({
   getTeamModelSelectionError: () => null,
+  isTeamModelAvailableForUi: () => true,
   normalizeExplicitTeamModelForUi: (_providerId: string, model: string) => model,
 }));
 
@@ -405,7 +404,7 @@ describe('LaunchTeamDialog', () => {
 
     const [request, members] = onRelaunch.mock.calls[0] as unknown as [
       { teamName: string; cwd: string; providerId?: string; model?: string },
-      Array<{ name: string; providerId?: string; model?: string }>
+      Array<{ name: string; providerId?: string; model?: string }>,
     ];
 
     expect(request.teamName).toBe('team-alpha');
