@@ -18,10 +18,12 @@ import { OpenCodeStateChangingBridgeCommandService } from '../../../../src/main/
 import {
   assertOpenCodeProductionE2EArtifactGate,
   OPENCODE_PRODUCTION_E2E_EVIDENCE_SCHEMA_VERSION,
+  OPENCODE_PRODUCTION_E2E_EVIDENCE_MAX_AGE_MS,
   OPENCODE_PRODUCTION_E2E_READY_CHECKPOINTS,
   OPENCODE_PRODUCTION_E2E_REQUIRED_SIGNALS,
   type OpenCodeProductionE2EEvidence,
 } from '../../../../src/main/services/team/opencode/e2e/OpenCodeProductionE2EEvidence';
+import { OpenCodeProductionE2EEvidenceStore } from '../../../../src/main/services/team/opencode/e2e/OpenCodeProductionE2EEvidenceStore';
 import {
   buildOpenCodeCanonicalMcpToolId,
   REQUIRED_AGENT_TEAMS_RUNTIME_TOOLS,
@@ -39,7 +41,15 @@ import type { OpenCodeBridgeCommandExecutor } from '../../../../src/main/service
 
 const liveDescribe = process.env.OPENCODE_E2E === '1' ? describe : describe.skip;
 
-const PROJECT_PATH = '/Users/belief/dev/projects/claude/claude_team_opencode_integration';
+const DEFAULT_APP_PRODUCTION_E2E_EVIDENCE_PATH = path.join(
+  os.userInfo().homedir,
+  'Library',
+  'Application Support',
+  'claude-agent-teams-ui',
+  'opencode-bridge',
+  'production-e2e-evidence.json'
+);
+const PROJECT_PATH = process.env.OPENCODE_E2E_PROJECT_PATH?.trim() || process.cwd();
 const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli';
 const DEFAULT_MODEL = 'opencode/big-pickle';
 
@@ -211,6 +221,7 @@ liveDescribe('OpenCode production gate live e2e', () => {
         ok: true,
         diagnostics: [],
       });
+      await writeProductionEvidenceIfRequested(candidate);
     } finally {
       if (!stop) {
         await readinessBridge
@@ -229,6 +240,24 @@ liveDescribe('OpenCode production gate live e2e', () => {
     }
   }, 240_000);
 });
+
+async function writeProductionEvidenceIfRequested(
+  evidence: OpenCodeProductionE2EEvidence
+): Promise<void> {
+  const explicitPath = process.env.OPENCODE_E2E_WRITE_EVIDENCE_PATH?.trim();
+  const writeAppEvidence = process.env.OPENCODE_E2E_WRITE_APP_EVIDENCE === '1';
+  const filePath =
+    explicitPath || (writeAppEvidence ? DEFAULT_APP_PRODUCTION_E2E_EVIDENCE_PATH : '');
+  if (!filePath) {
+    return;
+  }
+
+  const store = new OpenCodeProductionE2EEvidenceStore({ filePath });
+  await store.write({
+    ...evidence,
+    artifactPath: filePath,
+  });
+}
 
 function createStateChangingCommands(input: {
   bridge: OpenCodeBridgeCommandExecutor;
@@ -337,7 +366,7 @@ function buildCandidateEvidence(input: {
     schemaVersion: OPENCODE_PRODUCTION_E2E_EVIDENCE_SCHEMA_VERSION,
     evidenceId: `live-${input.runId}`,
     createdAt,
-    expiresAt: new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
+    expiresAt: new Date(now.getTime() + OPENCODE_PRODUCTION_E2E_EVIDENCE_MAX_AGE_MS).toISOString(),
     version: input.runtime.version ?? 'unknown',
     passed: true,
     artifactPath: path.join(os.tmpdir(), `opencode-production-e2e-${input.runId}.json`),
