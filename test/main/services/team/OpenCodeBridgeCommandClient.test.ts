@@ -57,6 +57,9 @@ describe('OpenCodeBridgeCommandClient', () => {
       args: ['runtime', 'opencode-command', '--json', '--input', expect.any(String)],
       cwd: '/tmp/project',
       timeoutMs: 10_000,
+      env: expect.objectContaining({
+        OPENCODE_DISABLE_AUTOUPDATE: '1',
+      }),
     });
 
     const inputPath = runner.calls[0].args[4];

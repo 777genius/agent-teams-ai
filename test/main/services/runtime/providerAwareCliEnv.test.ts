@@ -132,6 +132,26 @@ describe('buildProviderAwareCliEnv', () => {
     );
     expect(result.connectionIssues).toEqual({});
     expect(result.providerArgs).toEqual([]);
+    expect(result.env.OPENCODE_DISABLE_AUTOUPDATE).toBe('1');
+  });
+
+  it('allows OpenCode auto-update only behind an explicit app override', async () => {
+    buildEnrichedEnvMock.mockReturnValue({
+      PATH: '/usr/bin',
+      OPENCODE_DISABLE_AUTOUPDATE: '1',
+    });
+    const { buildProviderAwareCliEnv } = await import(
+      '../../../../src/main/services/runtime/providerAwareCliEnv'
+    );
+
+    const result = await buildProviderAwareCliEnv({
+      env: {
+        CLAUDE_TEAM_OPENCODE_ALLOW_AUTOUPDATE: '1',
+      },
+    });
+
+    expect(result.env.CLAUDE_TEAM_OPENCODE_ALLOW_AUTOUPDATE).toBe('1');
+    expect(result.env.OPENCODE_DISABLE_AUTOUPDATE).toBeUndefined();
   });
 
   it('uses non-destructive credential augmentation for PTY-style envs', async () => {
