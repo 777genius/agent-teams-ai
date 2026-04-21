@@ -82,7 +82,7 @@ describe('OpenCodeProductionE2EEvidence', () => {
         'OpenCode production E2E evidence is expired',
         'OpenCode production E2E evidence is missing signals: stale_run_rejected',
         'OpenCode production E2E evidence is missing observed MCP tools: agent-teams_runtime_deliver_message',
-        'OpenCode production E2E evidence model openrouter/anthropic/claude-sonnet-4.5 does not match selected model openai/gpt-5.4-mini',
+        'OpenCode production E2E evidence model openrouter/anthropic/claude-sonnet-4.5 does not match selected model openai/gpt-5.4-mini. Production launch is intentionally scoped to the exact raw model id; regenerate evidence with OPENCODE_E2E_MODEL=openai/gpt-5.4-mini.',
       ]),
     });
   });

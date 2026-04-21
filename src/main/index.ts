@@ -20,14 +20,14 @@ process.env.UV_THREADPOOL_SIZE ??= '16';
 import './sentry';
 
 import {
-  createCodexAccountFeature,
   type CodexAccountFeatureFacade,
+  createCodexAccountFeature,
   registerCodexAccountIpc,
   removeCodexAccountIpc,
 } from '@features/codex-account/main';
 import {
-  createCodexModelCatalogFeature,
   type CodexModelCatalogFeatureFacade,
+  createCodexModelCatalogFeature,
 } from '@features/codex-model-catalog/main';
 import {
   createRecentProjectsFeature,
@@ -35,6 +35,7 @@ import {
   registerRecentProjectsIpc,
   removeRecentProjectsIpc,
 } from '@features/recent-projects/main';
+import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
 import { SchedulerService } from '@main/services/schedule/SchedulerService';
@@ -52,7 +53,6 @@ import {
   TeamMcpConfigBuilder,
 } from '@main/services/team/TeamMcpConfigBuilder';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
-import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import {
   CONTEXT_CHANGED,
   SCHEDULE_CHANGE,
@@ -103,6 +103,19 @@ import {
 import { startEventLoopLagMonitor } from './services/infrastructure/EventLoopLagMonitor';
 import { HttpServer } from './services/infrastructure/HttpServer';
 import { clearAutoResumeService } from './services/team/AutoResumeService';
+import { OpenCodeBridgeCommandClient } from './services/team/opencode/bridge/OpenCodeBridgeCommandClient';
+import {
+  createOpenCodeBridgeCommandLeaseStore,
+  createOpenCodeBridgeCommandLedgerStore,
+} from './services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
+import {
+  createOpenCodeBridgeClientIdentity,
+  OpenCodeBridgeCommandHandshakePort,
+} from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { resolveOpenCodeProductionE2EEvidencePath } from './services/team/opencode/e2e/OpenCodeProductionE2EEvidencePath';
+import { OpenCodeProductionE2EEvidenceStore } from './services/team/opencode/e2e/OpenCodeProductionE2EEvidenceStore';
+import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
   buildTeamControlApiBaseUrl,
   clearTeamControlApiState,
@@ -115,18 +128,6 @@ import {
   type TeamReconcileTrigger,
 } from './services/team/TeamReconcileDrainScheduler';
 import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
-import { OpenCodeBridgeCommandClient } from './services/team/opencode/bridge/OpenCodeBridgeCommandClient';
-import {
-  createOpenCodeBridgeCommandLeaseStore,
-  createOpenCodeBridgeCommandLedgerStore,
-} from './services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
-import {
-  createOpenCodeBridgeClientIdentity,
-  OpenCodeBridgeCommandHandshakePort,
-} from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
-import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import { OpenCodeProductionE2EEvidenceStore } from './services/team/opencode/e2e/OpenCodeProductionE2EEvidenceStore';
-import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { getAppIconPath } from './utils/appIcon';
 import { getProjectsBasePath, getTeamsBasePath, getTodosBasePath } from './utils/pathDecoder';
 import {
@@ -160,21 +161,21 @@ import {
   TaskBoundaryParser,
   TeamDataService,
   TeamLogSourceTracker,
+  TeammateToolTracker,
+  TeamMemberLogsFinder,
+  TeamProvisioningService,
   TeamRuntimeAdapterRegistry,
   TeamTaskStallJournal,
   TeamTaskStallMonitor,
   TeamTaskStallNotifier,
   TeamTaskStallPolicy,
   TeamTaskStallSnapshotSource,
-  TeammateToolTracker,
-  TeamMemberLogsFinder,
-  TeamProvisioningService,
   UpdaterService,
 } from './services';
 
+import type { OpenCodeTeamLaunchMode } from './services/team';
 import type { FileChangeEvent } from '@main/types';
 import type { TeamChangeEvent } from '@shared/types';
-import type { OpenCodeTeamLaunchMode } from './services/team';
 
 const logger = createLogger('App');
 startEventLoopLagMonitor();
@@ -266,7 +267,7 @@ async function createOpenCodeRuntimeAdapterRegistry(): Promise<TeamRuntimeAdapte
       new OpenCodeReadinessBridge(bridgeClient, {
         stateChangingCommands,
         productionE2eEvidence: new OpenCodeProductionE2EEvidenceStore({
-          filePath: join(bridgeControlDir, 'production-e2e-evidence.json'),
+          filePath: resolveOpenCodeProductionE2EEvidencePath({ bridgeControlDir }),
         }),
       }),
       {

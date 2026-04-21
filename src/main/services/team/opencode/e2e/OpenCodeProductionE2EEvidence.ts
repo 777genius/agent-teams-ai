@@ -325,7 +325,7 @@ function collectExpectedRuntimeDiagnostics(
     diagnostics.push('OpenCode production gate cannot verify selected raw model id');
   } else if (evidence.selectedModel !== expected.selectedModel) {
     diagnostics.push(
-      `OpenCode production E2E evidence model ${evidence.selectedModel} does not match selected model ${expected.selectedModel}`
+      `OpenCode production E2E evidence model ${evidence.selectedModel} does not match selected model ${expected.selectedModel}. Production launch is intentionally scoped to the exact raw model id; regenerate evidence with OPENCODE_E2E_MODEL=${expected.selectedModel}.`
     );
   }
 
