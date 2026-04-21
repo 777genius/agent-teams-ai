@@ -91,6 +91,10 @@ import {
   PROTECTED_CLI_FLAGS,
 } from '@shared/utils/cliArgsParser';
 import { createLogger } from '@shared/utils/logger';
+import {
+  formatEffortLevelListForProvider,
+  isTeamEffortLevelForProvider,
+} from '@shared/utils/effortLevels';
 import { isTeamProviderBackendId, migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
 import {
@@ -1112,10 +1116,8 @@ function isProvisioningTeamName(teamName: string): boolean {
   return parts.every((p) => /^[a-z0-9]+$/.test(p));
 }
 
-const VALID_EFFORT_LEVELS: readonly string[] = ['low', 'medium', 'high'];
-
-function isValidEffort(value: unknown): value is EffortLevel {
-  return typeof value === 'string' && VALID_EFFORT_LEVELS.includes(value);
+function isValidEffort(value: unknown, providerId?: TeamProviderId | null): value is EffortLevel {
+  return isTeamEffortLevelForProvider(value, providerId);
 }
 
 function parseOptionalMemberProviderId(
@@ -1165,15 +1167,35 @@ function parseOptionalProviderBackendId(
 }
 
 function parseOptionalMemberEffort(
-  value: unknown
+  value: unknown,
+  providerId?: TeamProviderId | null
 ): { valid: true; value: EffortLevel | undefined } | { valid: false; error: string } {
   if (value === undefined || value === null || value === '') {
     return { valid: true, value: undefined };
   }
-  if (isValidEffort(value)) {
+  if (isValidEffort(value, providerId)) {
     return { valid: true, value };
   }
-  return { valid: false, error: 'member effort must be low, medium, or high' };
+  return {
+    valid: false,
+    error: `member effort must be one of ${formatEffortLevelListForProvider(providerId)}`,
+  };
+}
+
+function parseOptionalTeamEffort(
+  value: unknown,
+  providerId?: TeamProviderId | null
+): { valid: true; value: EffortLevel | undefined } | { valid: false; error: string } {
+  if (value === undefined || value === null || value === '') {
+    return { valid: true, value: undefined };
+  }
+  if (isValidEffort(value, providerId)) {
+    return { valid: true, value };
+  }
+  return {
+    valid: false,
+    error: `effort must be one of ${formatEffortLevelListForProvider(providerId)}`,
+  };
 }
 
 async function validateProvisioningRequest(
@@ -1202,6 +1224,12 @@ async function validateProvisioningRequest(
   if (!Array.isArray(payload.members)) {
     return { valid: false, error: 'members must be an array' };
   }
+  const providerId =
+    payload.providerId === 'codex'
+      ? 'codex'
+      : payload.providerId === 'gemini'
+        ? 'gemini'
+        : 'anthropic';
 
   const seenNames = new Set<string>();
   const members: TeamCreateRequest['members'] = [];
@@ -1237,12 +1265,20 @@ async function validateProvisioningRequest(
     if (model !== undefined && typeof model !== 'string') {
       return { valid: false, error: 'member model must be string' };
     }
+    const effortValidation = parseOptionalMemberEffort(
+      (member as { effort?: unknown }).effort,
+      providerValidation.value ?? providerId
+    );
+    if (!effortValidation.valid) {
+      return { valid: false, error: effortValidation.error };
+    }
     members.push({
       name: memberName,
       role: typeof role === 'string' ? role.trim() : undefined,
       workflow: typeof workflow === 'string' ? workflow.trim() : undefined,
       providerId: providerValidation.value,
       model: typeof model === 'string' ? model.trim() || undefined : undefined,
+      effort: effortValidation.value,
     });
   }
 
@@ -1257,18 +1293,16 @@ async function validateProvisioningRequest(
   if (payload.prompt !== undefined && typeof payload.prompt !== 'string') {
     return { valid: false, error: 'prompt must be a string' };
   }
-  const providerId =
-    payload.providerId === 'codex'
-      ? 'codex'
-      : payload.providerId === 'gemini'
-        ? 'gemini'
-        : 'anthropic';
   const providerBackendValidation = parseOptionalProviderBackendId(
     payload.providerBackendId,
     providerId
   );
   if (!providerBackendValidation.valid) {
     return { valid: false, error: providerBackendValidation.error };
+  }
+  const effortValidation = parseOptionalTeamEffort(payload.effort, providerId);
+  if (!effortValidation.valid) {
+    return { valid: false, error: effortValidation.error };
   }
 
   try {
@@ -1324,7 +1358,7 @@ async function validateProvisioningRequest(
       providerId,
       providerBackendId: providerBackendValidation.value,
       model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
-      effort: isValidEffort(payload.effort) ? payload.effort : undefined,
+      effort: effortValidation.value,
       skipPermissions:
         typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
       worktree:
@@ -1474,6 +1508,10 @@ async function handleLaunchTeam(
           : meta?.providerId === 'gemini'
             ? 'gemini'
             : 'anthropic';
+    const effortValidation = parseOptionalTeamEffort(payload.effort, resolvedProviderId);
+    if (!effortValidation.valid) {
+      return { success: false, error: effortValidation.error };
+    }
 
     const createRequest: TeamCreateRequest = {
       teamName: tn,
@@ -1488,7 +1526,7 @@ async function handleLaunchTeam(
         providerBackendValidation.value ?? meta?.providerBackendId ?? membersMeta?.providerBackendId
       ),
       model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
-      effort: isValidEffort(payload.effort) ? payload.effort : undefined,
+      effort: effortValidation.value,
       limitContext: typeof payload.limitContext === 'boolean' ? payload.limitContext : undefined,
       skipPermissions:
         typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
@@ -1520,6 +1558,11 @@ async function handleLaunchTeam(
     );
   }
 
+  const effortValidation = parseOptionalTeamEffort(payload.effort, providerId);
+  if (!effortValidation.valid) {
+    return { success: false, error: effortValidation.error };
+  }
+
   return wrapTeamHandler('launch', () => {
     addMainBreadcrumb('team', 'launch', { teamName: validatedTeamName.value! });
     return getTeamProvisioningService().launchTeam(
@@ -1530,7 +1573,7 @@ async function handleLaunchTeam(
         providerId,
         providerBackendId: providerBackendValidation.value,
         model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
-        effort: isValidEffort(payload.effort) ? payload.effort : undefined,
+        effort: effortValidation.value,
         clearContext: payload.clearContext === true ? true : undefined,
         skipPermissions:
           typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
@@ -2652,7 +2695,10 @@ async function handleCreateConfig(
     if (model !== undefined && typeof model !== 'string') {
       return { success: false, error: 'member model must be string' };
     }
-    const effortValidation = parseOptionalMemberEffort((member as { effort?: unknown }).effort);
+    const effortValidation = parseOptionalMemberEffort(
+      (member as { effort?: unknown }).effort,
+      providerValidation.value
+    );
     if (!effortValidation.valid) {
       return { success: false, error: effortValidation.error };
     }
@@ -3090,7 +3136,10 @@ async function handleAddMember(
   if (model !== undefined && typeof model !== 'string') {
     return { success: false, error: 'model must be a string' };
   }
-  const effortValidation = parseOptionalMemberEffort((payload as { effort?: unknown }).effort);
+  const effortValidation = parseOptionalMemberEffort(
+    (payload as { effort?: unknown }).effort,
+    providerValidation.value
+  );
   if (!effortValidation.valid) {
     return { success: false, error: effortValidation.error };
   }
@@ -3162,7 +3211,7 @@ async function handleReplaceMembers(
     workflow?: string;
     providerId?: 'anthropic' | 'codex' | 'gemini';
     model?: string;
-    effort?: 'low' | 'medium' | 'high';
+    effort?: EffortLevel;
   }[] = [];
   for (const item of payload.members) {
     if (!item || typeof item !== 'object') {
@@ -3196,7 +3245,10 @@ async function handleReplaceMembers(
     if (m.model !== undefined && typeof m.model !== 'string') {
       return { success: false, error: 'member model must be string' };
     }
-    const effortValidation = parseOptionalMemberEffort((m as { effort?: unknown }).effort);
+    const effortValidation = parseOptionalMemberEffort(
+      (m as { effort?: unknown }).effort,
+      providerValidation.value
+    );
     if (!effortValidation.valid) {
       return { success: false, error: effortValidation.error };
     }

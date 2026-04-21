@@ -2,11 +2,15 @@ import { constants as fsConstants } from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import path from 'node:path';
 
+import { execCli } from '@main/utils/childProcess';
+
 const CACHE_VERIFY_TTL_MS = 30_000;
+const VERSION_CACHE_TTL_MS = 30_000;
 
 let cachedBinaryPath: string | null | undefined;
 let cacheVerifiedAt = 0;
 let resolveInFlight: Promise<string | null> | null = null;
+const versionCache = new Map<string, { version: string | null; observedAt: number }>();
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
@@ -69,6 +73,7 @@ export class CodexBinaryResolver {
     cachedBinaryPath = undefined;
     cacheVerifiedAt = 0;
     resolveInFlight = null;
+    versionCache.clear();
   }
 
   static async resolve(): Promise<string | null> {
@@ -116,5 +121,35 @@ export class CodexBinaryResolver {
     cachedBinaryPath = null;
     cacheVerifiedAt = Date.now();
     return null;
+  }
+
+  static async resolveVersion(binaryPath: string | null | undefined): Promise<string | null> {
+    const normalizedPath = binaryPath?.trim();
+    if (!normalizedPath) {
+      return null;
+    }
+
+    const cached = versionCache.get(normalizedPath);
+    if (cached && Date.now() - cached.observedAt <= VERSION_CACHE_TTL_MS) {
+      return cached.version;
+    }
+
+    try {
+      const result = await execCli(normalizedPath, ['--version'], {
+        timeout: 3_000,
+      });
+      const version = result.stdout.trim().split(/\s+/).filter(Boolean).at(-1) ?? null;
+      versionCache.set(normalizedPath, {
+        version,
+        observedAt: Date.now(),
+      });
+      return version;
+    } catch {
+      versionCache.set(normalizedPath, {
+        version: null,
+        observedAt: Date.now(),
+      });
+      return null;
+    }
   }
 }

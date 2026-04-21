@@ -1,5 +1,9 @@
 import { validateTeamName } from '@main/ipc/guards';
 import { getErrorMessage } from '@shared/utils/errorHandling';
+import {
+  formatEffortLevelListForProvider,
+  isTeamEffortLevelForProvider,
+} from '@shared/utils/effortLevels';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { isAbsolute } from 'path';
@@ -11,8 +15,6 @@ import type { FastifyInstance } from 'fastify';
 const logger = createLogger('HTTP:teams');
 
 type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;
-
-const EFFORT_LEVELS = new Set<EffortLevel>(['low', 'medium', 'high']);
 
 class HttpBadRequestError extends Error {}
 class HttpFeatureUnavailableError extends Error {}
@@ -76,16 +78,21 @@ function assertOptionalBoolean(value: unknown, fieldName: string): boolean | und
   return value;
 }
 
-function assertOptionalEffort(value: unknown): EffortLevel | undefined {
+function assertOptionalEffort(
+  value: unknown,
+  providerId: TeamLaunchRequest['providerId']
+): EffortLevel | undefined {
   if (value == null) {
     return undefined;
   }
 
-  if (typeof value !== 'string' || !EFFORT_LEVELS.has(value as EffortLevel)) {
-    throw new HttpBadRequestError('effort must be one of: low, medium, high');
+  if (!isTeamEffortLevelForProvider(value, providerId)) {
+    throw new HttpBadRequestError(
+      `effort must be one of: ${formatEffortLevelListForProvider(providerId)}`
+    );
   }
 
-  return value as EffortLevel;
+  return value;
 }
 
 function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchRequest {
@@ -109,7 +116,7 @@ function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchRequest 
     );
   }
   const model = assertOptionalString(payload.model, 'model');
-  const effort = assertOptionalEffort(payload.effort);
+  const effort = assertOptionalEffort(payload.effort, providerId);
   const clearContext = assertOptionalBoolean(payload.clearContext, 'clearContext');
   const skipPermissions = assertOptionalBoolean(payload.skipPermissions, 'skipPermissions');
   const worktree = assertOptionalString(payload.worktree, 'worktree');

@@ -68,6 +68,7 @@ export function getTeamProviderLabel(providerId: 'anthropic' | 'codex' | 'gemini
 export function getTeamEffortLabel(effort: string): string {
   const trimmed = effort.trim();
   if (!trimmed) return 'Default';
+  if (trimmed === 'xhigh') return 'XHigh';
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 }
 

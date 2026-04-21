@@ -5,6 +5,7 @@ import { Label } from '@renderer/components/ui/label';
 import { getParticipantAvatarUrlByIndex } from '@renderer/utils/memberAvatarCatalog';
 import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { Plus } from 'lucide-react';
 
 import { MembersJsonEditor } from '../dialogs/MembersJsonEditor';
@@ -50,10 +51,9 @@ function parseJsonToDrafts(text: string): MemberDraft[] {
     const workflow = typeof item.workflow === 'string' ? item.workflow.trim() : '';
     const providerId = normalizeOptionalTeamProviderId(item.providerId);
     const model = typeof item.model === 'string' ? item.model.trim() : '';
-    const effort: EffortLevel | undefined =
-      item.effort === 'low' || item.effort === 'medium' || item.effort === 'high'
-        ? item.effort
-        : undefined;
+    const effort: EffortLevel | undefined = isTeamEffortLevel(item.effort)
+      ? item.effort
+      : undefined;
     const presetRoles: readonly string[] = PRESET_ROLES;
     const isPreset = presetRoles.includes(role);
     return createMemberDraft({
@@ -227,8 +227,7 @@ export const MembersEditorSection = ({
         c.id === memberId
           ? {
               ...c,
-              effort:
-                effort === 'low' || effort === 'medium' || effort === 'high' ? effort : undefined,
+              effort: isTeamEffortLevel(effort) ? effort : undefined,
             }
           : c
       )

@@ -10,6 +10,7 @@ interface JsonRpcLogger {
 interface JsonRpcErrorPayload {
   code?: number;
   message?: string;
+  data?: unknown;
 }
 
 interface JsonRpcResponse<T> {
@@ -48,6 +49,22 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 3_000;
 const DEFAULT_TOTAL_TIMEOUT_MS = 8_000;
+
+export class JsonRpcRequestError extends Error {
+  readonly code: number | null;
+  readonly data: unknown;
+  readonly details: unknown;
+  readonly method: string;
+
+  constructor(method: string, payload: JsonRpcErrorPayload) {
+    super(payload.message ?? 'Unknown JSON-RPC error');
+    this.name = 'JsonRpcRequestError';
+    this.method = method;
+    this.code = typeof payload.code === 'number' ? payload.code : null;
+    this.data = payload.data;
+    this.details = payload.data;
+  }
+}
 
 export class JsonRpcStdioClient {
   constructor(private readonly logger: JsonRpcLogger) {}
@@ -93,6 +110,7 @@ export class JsonRpcStdioClient {
     const pending = new Map<
       number,
       {
+        method: string;
         resolve: (value: unknown) => void;
         reject: (error: Error) => void;
         timeoutId: ReturnType<typeof setTimeout>;
@@ -149,7 +167,7 @@ export class JsonRpcStdioClient {
         pending.delete(message.id);
 
         if (message.error) {
-          entry.reject(new Error(message.error.message ?? 'Unknown JSON-RPC error'));
+          entry.reject(new JsonRpcRequestError(entry.method, message.error));
           return;
         }
 
@@ -222,17 +240,25 @@ export class JsonRpcStdioClient {
             reject(new Error(`JSON-RPC request timed out: ${method}`));
           }, timeoutMs);
 
-          pending.set(id, { resolve: resolve as (value: unknown) => void, reject, timeoutId });
-
-          child.stdin.write(`${JSON.stringify({ id, method, params })}\n`, (error) => {
-            if (!error) {
-              return;
-            }
-
-            clearTimeout(timeoutId);
-            pending.delete(id);
-            reject(error instanceof Error ? error : new Error(String(error)));
+          pending.set(id, {
+            method,
+            resolve: resolve as (value: unknown) => void,
+            reject,
+            timeoutId,
           });
+
+          child.stdin.write(
+            `${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`,
+            (error) => {
+              if (!error) {
+                return;
+              }
+
+              clearTimeout(timeoutId);
+              pending.delete(id);
+              reject(error instanceof Error ? error : new Error(String(error)));
+            }
+          );
         }),
 
       notify: async (method: string, params?: unknown): Promise<void> => {
@@ -241,7 +267,7 @@ export class JsonRpcStdioClient {
         }
 
         await new Promise<void>((resolve, reject) => {
-          child.stdin!.write(`${JSON.stringify({ method, params })}\n`, (error) => {
+          child.stdin!.write(`${JSON.stringify({ jsonrpc: '2.0', method, params })}\n`, (error) => {
             if (error) {
               reject(error instanceof Error ? error : new Error(String(error)));
               return;

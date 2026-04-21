@@ -155,6 +155,8 @@ export const LeadModelRow = ({
             value={effort ?? ''}
             onValueChange={onEffortChange}
             id="lead-effort"
+            providerId={providerId}
+            model={model}
           />
           {providerId === 'anthropic' ? (
             <LimitContextCheckbox

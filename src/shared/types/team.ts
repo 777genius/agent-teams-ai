@@ -782,9 +782,22 @@ export interface TeamViewSnapshot {
   isAlive?: boolean;
 }
 
-export type EffortLevel = 'low' | 'medium' | 'high';
+export type EffortLevel = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
 export type TeamProviderId = 'anthropic' | 'codex' | 'gemini';
 export type TeamProviderBackendId = 'auto' | 'adapter' | 'api' | 'cli-sdk' | 'codex-native';
+
+export interface ProviderModelLaunchIdentity {
+  providerId: TeamProviderId;
+  providerBackendId: TeamProviderBackendId | null;
+  selectedModel: string | null;
+  selectedModelKind: 'default' | 'explicit';
+  resolvedLaunchModel: string | null;
+  catalogId: string | null;
+  catalogSource: 'app-server' | 'static-fallback' | 'runtime' | 'unavailable';
+  catalogFetchedAt: string | null;
+  selectedEffort: EffortLevel | null;
+  resolvedEffort: EffortLevel | null;
+}
 
 export interface TeamLaunchRequest {
   teamName: string;

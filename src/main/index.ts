@@ -26,6 +26,10 @@ import {
   removeCodexAccountIpc,
 } from '@features/codex-account/main';
 import {
+  createCodexModelCatalogFeature,
+  type CodexModelCatalogFeatureFacade,
+} from '@features/codex-model-catalog/main';
+import {
   createRecentProjectsFeature,
   type RecentProjectsFeatureFacade,
   registerRecentProjectsIpc,
@@ -422,6 +426,7 @@ let notificationManager: NotificationManager;
 let updaterService: UpdaterService;
 let sshConnectionManager: SshConnectionManager;
 let codexAccountFeature: CodexAccountFeatureFacade | null = null;
+let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
@@ -988,6 +993,11 @@ async function initializeServices(): Promise<void> {
     configManager,
   });
   providerConnectionService.setCodexAccountFeature(codexAccountFeature);
+  codexModelCatalogFeature = createCodexModelCatalogFeature({
+    logger: createLogger('Feature:CodexModelCatalog'),
+    codexAccountFeature,
+  });
+  providerConnectionService.setCodexModelCatalogFeature(codexModelCatalogFeature);
 
   // startProcessHealthPolling() is deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.
@@ -1185,7 +1195,10 @@ function shutdownServices(): void {
   }
 
   void skillsWatcherService?.stopAll();
+  providerConnectionService.setCodexModelCatalogFeature(null);
   providerConnectionService.setCodexAccountFeature(null);
+  void codexModelCatalogFeature?.dispose();
+  codexModelCatalogFeature = null;
   void codexAccountFeature?.dispose();
   codexAccountFeature = null;
 

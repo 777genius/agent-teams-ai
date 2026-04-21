@@ -8,6 +8,7 @@ import {
   wrapAgentBlock,
 } from '@shared/constants/agentBlocks';
 import { getMemberColorByName } from '@shared/constants/memberColors';
+import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { classifyIdleNotificationText } from '@shared/utils/idleNotificationSemantics';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
@@ -1258,10 +1259,7 @@ export class TeamDataService {
           ? request.providerId
           : undefined,
       model: request.model?.trim() || undefined,
-      effort:
-        request.effort === 'low' || request.effort === 'medium' || request.effort === 'high'
-          ? request.effort
-          : undefined,
+      effort: isTeamEffortLevel(request.effort) ? request.effort : undefined,
       agentType: 'general-purpose',
       joinedAt: Date.now(),
     };
@@ -1297,7 +1295,7 @@ export class TeamDataService {
         workflow?: string;
         providerId?: 'anthropic' | 'codex' | 'gemini';
         model?: string;
-        effort?: 'low' | 'medium' | 'high';
+        effort?: TeamMember['effort'];
       }[];
     }
   ): Promise<void> {
@@ -1339,10 +1337,7 @@ export class TeamDataService {
           workflow: member.workflow?.trim() || undefined,
           providerId: normalizeOptionalTeamProviderId(member.providerId),
           model: member.model?.trim() || undefined,
-          effort:
-            member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
-              ? member.effort
-              : undefined,
+          effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
           agentType: prev?.agentType ?? 'general-purpose',
           agentId: isSameActiveMember ? prev?.agentId : undefined,
           color: prev?.color,
@@ -2418,10 +2413,7 @@ export class TeamDataService {
         workflow: member.workflow?.trim() || undefined,
         providerId: normalizeOptionalTeamProviderId(member.providerId),
         model: member.model?.trim() || undefined,
-        effort:
-          member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
-            ? member.effort
-            : undefined,
+        effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
         agentType: 'general-purpose' as const,
         joinedAt,
       }))

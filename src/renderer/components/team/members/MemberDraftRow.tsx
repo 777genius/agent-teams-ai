@@ -446,6 +446,8 @@ export const MemberDraftRow = ({
                   onEffortChange(member.id, value);
                 }}
                 id={`member-${member.id}-effort`}
+                providerId={effectiveProviderId}
+                model={effectiveModel}
               />
               {lockProviderModel && (
                 <p className="text-[11px] text-amber-300">

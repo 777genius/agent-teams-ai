@@ -5,7 +5,7 @@ export {
 } from './CodexAppServerSessionFactory';
 export { CodexBinaryResolver } from './CodexBinaryResolver';
 export type { JsonRpcSession } from './JsonRpcStdioClient';
-export { JsonRpcStdioClient } from './JsonRpcStdioClient';
+export { JsonRpcRequestError, JsonRpcStdioClient } from './JsonRpcStdioClient';
 export type {
   CodexAppServerAccount,
   CodexAppServerAccountLoginCompletedNotification,
@@ -20,10 +20,17 @@ export type {
   CodexAppServerGetAccountRateLimitsResponse,
   CodexAppServerGetAccountResponse,
   CodexAppServerInitializeResponse,
+  CodexAppServerListModelsParams,
+  CodexAppServerListModelsResponse,
   CodexAppServerLoginAccountParams,
   CodexAppServerLoginAccountResponse,
   CodexAppServerLogoutAccountResponse,
+  CodexAppServerModel,
   CodexAppServerPlanType,
   CodexAppServerRateLimitSnapshot,
   CodexAppServerRateLimitWindow,
+  CodexAppServerReadConfigParams,
+  CodexAppServerReadConfigResponse,
+  CodexAppServerReasoningEffort,
+  CodexAppServerReasoningEffortOption,
 } from './protocol';

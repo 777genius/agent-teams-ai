@@ -46,6 +46,46 @@ vi.mock('@main/services/team/TeamTaskReader', () => ({
 }));
 
 vi.mock('@main/utils/childProcess', () => ({
+  execCli: vi.fn(async (_binaryPath: string | null, args: string[]) => {
+    if (args[0] === 'model') {
+      return {
+        stdout: JSON.stringify({
+          schemaVersion: 1,
+          providers: {
+            codex: {
+              defaultModel: 'gpt-5.4',
+              models: [{ id: 'gpt-5.4', label: 'GPT-5.4', description: 'Codex default' }],
+            },
+            gemini: {
+              defaultModel: 'gemini-2.5-pro',
+              models: [{ id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Default' }],
+            },
+          },
+        }),
+        stderr: '',
+      };
+    }
+    if (args[0] === 'runtime') {
+      return {
+        stdout: JSON.stringify({
+          providers: {
+            codex: {
+              runtimeCapabilities: {
+                modelCatalog: { dynamic: false, source: 'runtime' },
+                reasoningEffort: {
+                  supported: true,
+                  values: ['low', 'medium', 'high'],
+                  configPassthrough: false,
+                },
+              },
+            },
+          },
+        }),
+        stderr: '',
+      };
+    }
+    return { stdout: '', stderr: '' };
+  }),
   spawnCli: vi.fn(),
   killProcessTree: vi.fn(),
 }));

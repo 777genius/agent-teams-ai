@@ -11,6 +11,10 @@
 
 import { del, get, set } from 'idb-keyval';
 
+import { isTeamEffortLevel } from '@shared/utils/effortLevels';
+
+import type { EffortLevel } from '@shared/types';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -27,7 +31,7 @@ export interface SerializedMemberDraft {
   workflow?: string;
   providerId?: 'anthropic' | 'codex' | 'gemini';
   model?: string;
-  effort?: 'low' | 'medium' | 'high';
+  effort?: EffortLevel;
 }
 
 export interface CreateTeamDraftSnapshot {
@@ -67,10 +71,7 @@ function isValidMember(m: unknown): m is SerializedMemberDraft {
       obj.providerId === 'codex' ||
       obj.providerId === 'gemini') &&
     (obj.model === undefined || typeof obj.model === 'string') &&
-    (obj.effort === undefined ||
-      obj.effort === 'low' ||
-      obj.effort === 'medium' ||
-      obj.effort === 'high')
+    (obj.effort === undefined || isTeamEffortLevel(obj.effort))
   );
 }
 

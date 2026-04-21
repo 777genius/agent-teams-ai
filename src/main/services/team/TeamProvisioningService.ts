@@ -40,6 +40,7 @@ import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import { deriveContextMetrics, inferContextWindowTokens } from '@shared/utils/contextMetrics';
+import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import {
   isInboxNoiseMessage,
@@ -169,6 +170,7 @@ interface RelayInboxMessageView {
 
 import type {
   ActiveToolCall,
+  CliProviderRuntimeCapabilities,
   CrossTeamSendResult,
   EffortLevel,
   InboxMessage,
@@ -179,6 +181,7 @@ import type {
   MemberSpawnStatusEntry,
   PersistedTeamLaunchPhase,
   PersistedTeamLaunchSummary,
+  ProviderModelLaunchIdentity,
   TeamAgentRuntimeBackendType,
   TeamAgentRuntimeEntry,
   TeamAgentRuntimeSnapshot,
@@ -320,6 +323,21 @@ interface ProviderModelListCommandResponse {
   >;
 }
 
+interface RuntimeStatusCommandResponse {
+  providers?: Record<
+    string,
+    {
+      runtimeCapabilities?: CliProviderRuntimeCapabilities | null;
+    }
+  >;
+}
+
+interface RuntimeProviderLaunchFacts {
+  defaultModel: string | null;
+  modelIds: Set<string>;
+  runtimeCapabilities: CliProviderRuntimeCapabilities | null;
+}
+
 function extractJsonObjectFromCli<T>(raw: string): T {
   const trimmed = raw.trim();
   try {
@@ -332,6 +350,65 @@ function extractJsonObjectFromCli<T>(raw: string): T {
     }
     throw new Error('No JSON object found in CLI output');
   }
+}
+
+function getExplicitLaunchModelSelection(model: string | undefined): string | undefined {
+  const trimmed = model?.trim();
+  if (!trimmed || isDefaultProviderModelSelection(trimmed)) {
+    return undefined;
+  }
+  return trimmed;
+}
+
+function getLaunchModelArg(
+  providerId: TeamProviderId,
+  model: string | undefined,
+  launchIdentity?: ProviderModelLaunchIdentity | null
+): string | undefined {
+  const explicitModel = getExplicitLaunchModelSelection(model);
+  if (explicitModel) {
+    return explicitModel;
+  }
+
+  if (
+    providerId === 'codex' &&
+    launchIdentity?.selectedModelKind === 'default' &&
+    launchIdentity.resolvedLaunchModel
+  ) {
+    return launchIdentity.resolvedLaunchModel;
+  }
+
+  return undefined;
+}
+
+function normalizeProviderModelListModels(
+  provider: NonNullable<ProviderModelListCommandResponse['providers']>[string] | undefined
+): Set<string> {
+  const models = new Set<string>();
+  for (const entry of provider?.models ?? []) {
+    const modelId = typeof entry === 'string' ? entry : entry.id;
+    const trimmed = modelId?.trim();
+    if (trimmed) {
+      models.add(trimmed);
+    }
+  }
+  return models;
+}
+
+function isLegacySafeEffort(effort: EffortLevel): boolean {
+  return effort === 'low' || effort === 'medium' || effort === 'high';
+}
+
+function isCodexEffortRuntimeSupported(
+  effort: EffortLevel,
+  capabilities: CliProviderRuntimeCapabilities | null
+): boolean {
+  if (isLegacySafeEffort(effort)) {
+    return true;
+  }
+
+  const reasoning = capabilities?.reasoningEffort;
+  return reasoning?.configPassthrough === true && reasoning.values.includes(effort);
 }
 
 function isProbeTimeoutMessage(message: string): boolean {
@@ -476,6 +553,7 @@ function logRuntimeLaunchSnapshot(
     geminiRuntimeAuth?: GeminiRuntimeAuthState | null;
     promptSize?: PromptSizeSummary | null;
     expectedMembersCount?: number;
+    launchIdentity?: ProviderModelLaunchIdentity | null;
   }
 ): void {
   const providerId = resolveTeamProviderId(request.providerId);
@@ -489,6 +567,7 @@ function logRuntimeLaunchSnapshot(
       getConfiguredRuntimeBackend(providerId),
     promptSize: options?.promptSize ?? null,
     expectedMembersCount: options?.expectedMembersCount ?? null,
+    launchIdentity: options?.launchIdentity ?? null,
     geminiRuntimeAuth:
       providerId === 'gemini'
         ? {
@@ -1257,17 +1336,22 @@ function buildEffectiveTeamMemberSpec(
   const defaultProviderId = normalizeTeamMemberProviderId(defaults.providerId);
   const effectiveProviderId = memberProviderId ?? defaultProviderId ?? 'anthropic';
   const model =
-    member.model?.trim() ||
+    getExplicitLaunchModelSelection(member.model) ||
     (memberProviderId == null || memberProviderId === defaultProviderId
-      ? defaults.model?.trim()
+      ? getExplicitLaunchModelSelection(defaults.model)
       : undefined) ||
     undefined;
+  const effort =
+    member.effort ??
+    (memberProviderId == null || memberProviderId === defaultProviderId
+      ? defaults.effort
+      : undefined);
 
   return {
     ...member,
     providerId: effectiveProviderId,
     model,
-    effort: member.effort ?? defaults.effort,
+    effort,
   };
 }
 
@@ -2857,6 +2941,214 @@ export class TeamProvisioningService {
 
   setControlApiBaseUrlResolver(resolver: (() => Promise<string | null>) | null): void {
     this.controlApiBaseUrlResolver = resolver;
+  }
+
+  private async readRuntimeProviderLaunchFacts(params: {
+    claudePath: string;
+    cwd: string;
+    providerId: TeamProviderId;
+    env: NodeJS.ProcessEnv;
+    limitContext?: boolean;
+  }): Promise<RuntimeProviderLaunchFacts> {
+    if (params.providerId === 'anthropic') {
+      return {
+        defaultModel: getAnthropicDefaultTeamModel(params.limitContext === true),
+        modelIds: new Set<string>(),
+        runtimeCapabilities: null,
+      };
+    }
+
+    const modelListPromise = execCli(
+      params.claudePath,
+      ['model', 'list', '--json', '--provider', params.providerId],
+      {
+        cwd: params.cwd,
+        env: params.env,
+        timeout: 10_000,
+      }
+    );
+    const runtimeStatusPromise =
+      params.providerId === 'codex'
+        ? execCli(params.claudePath, ['runtime', 'status', '--json', '--provider', 'codex'], {
+            cwd: params.cwd,
+            env: params.env,
+            timeout: 8_000,
+          })
+        : null;
+
+    const [modelListResult, runtimeStatusResult] = await Promise.allSettled([
+      modelListPromise,
+      runtimeStatusPromise,
+    ]);
+
+    let defaultModel: string | null = null;
+    let modelIds = new Set<string>();
+    if (modelListResult.status === 'fulfilled') {
+      try {
+        const parsed = extractJsonObjectFromCli<ProviderModelListCommandResponse>(
+          modelListResult.value.stdout
+        );
+        const provider = parsed.providers?.[params.providerId];
+        defaultModel =
+          typeof provider?.defaultModel === 'string' && provider.defaultModel.trim().length > 0
+            ? provider.defaultModel.trim()
+            : null;
+        modelIds = normalizeProviderModelListModels(provider);
+      } catch (error) {
+        logger.warn(
+          `[${params.providerId}] Failed to parse runtime model list for launch validation: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+    }
+
+    let runtimeCapabilities: CliProviderRuntimeCapabilities | null = null;
+    if (
+      runtimeStatusResult.status === 'fulfilled' &&
+      runtimeStatusResult.value &&
+      typeof runtimeStatusResult.value.stdout === 'string'
+    ) {
+      try {
+        const parsed = extractJsonObjectFromCli<RuntimeStatusCommandResponse>(
+          runtimeStatusResult.value.stdout
+        );
+        runtimeCapabilities = parsed.providers?.[params.providerId]?.runtimeCapabilities ?? null;
+      } catch (error) {
+        logger.warn(
+          `[${params.providerId}] Failed to parse runtime capabilities for launch validation: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+    }
+
+    return {
+      defaultModel,
+      modelIds,
+      runtimeCapabilities,
+    };
+  }
+
+  private buildProviderModelLaunchIdentity(params: {
+    request: Pick<TeamCreateRequest, 'providerId' | 'providerBackendId' | 'model' | 'effort'>;
+    facts: RuntimeProviderLaunchFacts;
+  }): ProviderModelLaunchIdentity {
+    const providerId = resolveTeamProviderId(params.request.providerId);
+    const explicitModel = getExplicitLaunchModelSelection(params.request.model);
+    const resolvedLaunchModel = explicitModel ?? params.facts.defaultModel;
+    const resolvedEffort = params.request.effort ?? null;
+
+    return {
+      providerId,
+      providerBackendId:
+        migrateProviderBackendId(providerId, params.request.providerBackendId) ?? null,
+      selectedModel: explicitModel ?? null,
+      selectedModelKind: explicitModel ? 'explicit' : 'default',
+      resolvedLaunchModel,
+      catalogId: resolvedLaunchModel,
+      catalogSource: 'runtime',
+      catalogFetchedAt: null,
+      selectedEffort: params.request.effort ?? null,
+      resolvedEffort,
+    };
+  }
+
+  private validateRuntimeLaunchSelection(params: {
+    actorLabel: string;
+    providerId: TeamProviderId;
+    model?: string;
+    effort?: EffortLevel;
+    facts: RuntimeProviderLaunchFacts;
+  }): void {
+    const explicitModel = getExplicitLaunchModelSelection(params.model);
+
+    if (params.providerId !== 'codex') {
+      if (params.effort && !isLegacySafeEffort(params.effort)) {
+        throw new Error(
+          `${params.actorLabel} uses effort "${params.effort}", but ${getTeamProviderLabel(
+            params.providerId
+          )} currently supports only low, medium, or high effort in Agent Teams.`
+        );
+      }
+      return;
+    }
+
+    if (
+      params.effort &&
+      !isCodexEffortRuntimeSupported(params.effort, params.facts.runtimeCapabilities)
+    ) {
+      throw new Error(
+        `${params.actorLabel} uses Codex effort "${params.effort}", but this Agent Teams runtime does not expose Codex reasoning config passthrough yet. Use low, medium, or high for now.`
+      );
+    }
+
+    if (!explicitModel || params.facts.modelIds.has(explicitModel)) {
+      return;
+    }
+
+    if (params.facts.runtimeCapabilities?.modelCatalog?.dynamic === true) {
+      return;
+    }
+
+    throw new Error(
+      `${params.actorLabel} uses Codex model "${explicitModel}", but this Agent Teams runtime does not declare dynamic Codex model launch support yet. Upgrade the runtime or pick a listed Codex model.`
+    );
+  }
+
+  private async resolveAndValidateLaunchIdentity(params: {
+    claudePath: string;
+    cwd: string;
+    env: NodeJS.ProcessEnv;
+    request: Pick<
+      TeamCreateRequest,
+      'providerId' | 'providerBackendId' | 'model' | 'effort' | 'limitContext'
+    >;
+    effectiveMembers: TeamCreateRequest['members'];
+  }): Promise<ProviderModelLaunchIdentity> {
+    const leadProviderId = resolveTeamProviderId(params.request.providerId);
+    const factsByProvider = new Map<TeamProviderId, RuntimeProviderLaunchFacts>();
+    const getFacts = async (providerId: TeamProviderId): Promise<RuntimeProviderLaunchFacts> => {
+      const cached = factsByProvider.get(providerId);
+      if (cached) {
+        return cached;
+      }
+      const facts = await this.readRuntimeProviderLaunchFacts({
+        claudePath: params.claudePath,
+        cwd: params.cwd,
+        providerId,
+        env: params.env,
+        limitContext: params.request.limitContext,
+      });
+      factsByProvider.set(providerId, facts);
+      return facts;
+    };
+
+    const leadFacts = await getFacts(leadProviderId);
+    this.validateRuntimeLaunchSelection({
+      actorLabel: 'Team lead',
+      providerId: leadProviderId,
+      model: params.request.model,
+      effort: params.request.effort,
+      facts: leadFacts,
+    });
+
+    for (const member of params.effectiveMembers) {
+      const memberProviderId = resolveTeamProviderId(member.providerId);
+      const memberFacts = await getFacts(memberProviderId);
+      this.validateRuntimeLaunchSelection({
+        actorLabel: `Member ${member.name}`,
+        providerId: memberProviderId,
+        model: member.model,
+        effort: member.effort,
+        facts: memberFacts,
+      });
+    }
+
+    return this.buildProviderModelLaunchIdentity({
+      request: params.request,
+      facts: leadFacts,
+    });
   }
 
   async getClaudeLogs(
@@ -6227,6 +6519,13 @@ export class TeamProvisioningService {
         primaryEnv: provisioningEnv,
         limitContext: request.limitContext,
       });
+      const launchIdentity = await this.resolveAndValidateLaunchIdentity({
+        claudePath,
+        cwd: request.cwd,
+        env: shellEnv,
+        request,
+        effectiveMembers: effectiveMemberSpecs,
+      });
       const runId = randomUUID();
       const startedAt = nowIso();
       const run: ProvisioningRun = {
@@ -6363,6 +6662,11 @@ export class TeamProvisioningService {
         run.bootstrapUserPromptPath = null;
         throw error;
       }
+      const launchModelArg = getLaunchModelArg(
+        resolveTeamProviderId(request.providerId),
+        request.model,
+        launchIdentity
+      );
       const spawnArgs = [
         '--input-format',
         'stream-json',
@@ -6385,7 +6689,7 @@ export class TeamProvisioningService {
         ...(request.skipPermissions !== false
           ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
           : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
-        ...(request.model ? ['--model', request.model] : []),
+        ...(launchModelArg ? ['--model', launchModelArg] : []),
         ...(request.effort ? ['--effort', request.effort] : []),
         ...(request.worktree ? ['--worktree', request.worktree] : []),
         ...parseCliArgs(request.extraCliArgs),
@@ -6400,6 +6704,7 @@ export class TeamProvisioningService {
         geminiRuntimeAuth,
         promptSize,
         expectedMembersCount: effectiveMemberSpecs.length,
+        launchIdentity,
       });
       try {
         // Pre-save our meta files before spawn — CLI doesn't touch these.
@@ -6422,6 +6727,7 @@ export class TeamProvisioningService {
           worktree: request.worktree,
           extraCliArgs: request.extraCliArgs,
           limitContext: request.limitContext,
+          launchIdentity,
           createdAt: Date.now(),
         });
         const membersToWrite = applyDistinctProvisioningMemberColors(
@@ -6431,10 +6737,7 @@ export class TeamProvisioningService {
             workflow: m.workflow?.trim() || undefined,
             providerId: normalizeOptionalTeamProviderId(m.providerId),
             model: m.model?.trim() || undefined,
-            effort:
-              m.effort === 'low' || m.effort === 'medium' || m.effort === 'high'
-                ? m.effort
-                : undefined,
+            effort: isTeamEffortLevel(m.effort) ? m.effort : undefined,
             agentType: 'general-purpose' as const,
             joinedAt: Date.now(),
           }))
@@ -6804,6 +7107,13 @@ export class TeamProvisioningService {
         primaryEnv: provisioningEnv,
         limitContext: request.limitContext,
       });
+      const launchIdentity = await this.resolveAndValidateLaunchIdentity({
+        claudePath,
+        cwd: request.cwd,
+        env: shellEnv,
+        request,
+        effectiveMembers: effectiveMemberSpecs,
+      });
 
       // Build a synthetic TeamCreateRequest for reuse by shared infrastructure
       const syntheticRequest: TeamCreateRequest = {
@@ -7013,8 +7323,13 @@ export class TeamProvisioningService {
           `[${request.teamName}] Launching with --resume ${previousSessionId} for session continuity`
         );
       }
-      if (request.model) {
-        launchArgs.push('--model', request.model);
+      const launchModelArg = getLaunchModelArg(
+        resolveTeamProviderId(request.providerId),
+        request.model,
+        launchIdentity
+      );
+      if (launchModelArg) {
+        launchArgs.push('--model', launchModelArg);
       }
       if (request.effort) {
         launchArgs.push('--effort', request.effort);
@@ -7033,6 +7348,7 @@ export class TeamProvisioningService {
         geminiRuntimeAuth,
         promptSize,
         expectedMembersCount: effectiveMemberSpecs.length,
+        launchIdentity,
       });
       // --resume is added above when a valid previous session JSONL exists.
       // Without it, CLI creates a fresh session ID automatically.
@@ -7050,6 +7366,7 @@ export class TeamProvisioningService {
         worktree: request.worktree,
         extraCliArgs: request.extraCliArgs,
         limitContext: request.limitContext,
+        launchIdentity,
         createdAt: Date.now(),
       });
       await this.membersMetaStore.writeMembers(
@@ -7060,10 +7377,7 @@ export class TeamProvisioningService {
           workflow: member.workflow?.trim() || undefined,
           providerId: normalizeOptionalTeamProviderId(member.providerId),
           model: member.model?.trim() || undefined,
-          effort:
-            member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
-              ? member.effort
-              : undefined,
+          effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
           agentType: 'general-purpose',
           color: getMemberColorByName(member.name.trim()),
           joinedAt: Date.now(),
@@ -8514,16 +8828,11 @@ export class TeamProvisioningService {
       normalizeTeamMemberProviderId(metaMember?.providerId) ??
       normalizeTeamMemberProviderId(configuredMember?.providerId);
     const model = metaMember?.model?.trim() || configuredMember?.model?.trim() || undefined;
-    const effort =
-      metaMember?.effort === 'low' ||
-      metaMember?.effort === 'medium' ||
-      metaMember?.effort === 'high'
-        ? metaMember.effort
-        : configuredMember?.effort === 'low' ||
-            configuredMember?.effort === 'medium' ||
-            configuredMember?.effort === 'high'
-          ? configuredMember.effort
-          : undefined;
+    const effort = isTeamEffortLevel(metaMember?.effort)
+      ? metaMember.effort
+      : isTeamEffortLevel(configuredMember?.effort)
+        ? configuredMember.effort
+        : undefined;
     const agentType =
       metaMember?.agentType?.trim() || configuredMember?.agentType?.trim() || undefined;
     const removedAt = metaMember?.removedAt ?? configuredMember?.removedAt;
@@ -13035,12 +13344,9 @@ export class TeamProvisioningService {
     const effectiveLeadProviderId =
       normalizeTeamMemberProviderId(launchState.providerId) ?? 'anthropic';
     const effectiveLeadModel = launchState.model?.trim() || undefined;
-    const effectiveLeadEffort =
-      launchState.effort === 'low' ||
-      launchState.effort === 'medium' ||
-      launchState.effort === 'high'
-        ? launchState.effort
-        : undefined;
+    const effectiveLeadEffort = isTeamEffortLevel(launchState.effort)
+      ? launchState.effort
+      : undefined;
 
     const membersByName = new Map(
       (launchState.members ?? []).map((member) => [member.name.toLowerCase(), member] as const)
@@ -13075,10 +13381,7 @@ export class TeamProvisioningService {
           delete nextMember.model;
         }
 
-        const effort =
-          state.effort === 'low' || state.effort === 'medium' || state.effort === 'high'
-            ? state.effort
-            : undefined;
+        const effort = isTeamEffortLevel(state.effort) ? state.effort : undefined;
         if (effort) {
           nextMember.effort = effort;
         } else {
@@ -13712,10 +14015,7 @@ export class TeamProvisioningService {
           workflow: member.workflow?.trim() || undefined,
           providerId: normalizeOptionalTeamProviderId(member.providerId),
           model: member.model?.trim() || undefined,
-          effort:
-            member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
-              ? member.effort
-              : undefined,
+          effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
           agentType: 'general-purpose' as const,
           joinedAt,
         }))
@@ -13758,10 +14058,7 @@ export class TeamProvisioningService {
         const providerId = normalizeOptionalTeamProviderId(member.providerId);
         const model =
           typeof member.model === 'string' ? member.model.trim() || undefined : undefined;
-        const effort =
-          member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
-            ? member.effort
-            : undefined;
+        const effort = isTeamEffortLevel(member.effort) ? member.effort : undefined;
         const prev = byName.get(name);
         if (!prev) {
           byName.set(name, { name, role, workflow, providerId, model, effort });
@@ -13923,10 +14220,7 @@ export class TeamProvisioningService {
             typeof member.workflow === 'string' ? member.workflow.trim() || undefined : undefined,
           providerId: normalizeTeamMemberProviderId(member.providerId ?? member.provider),
           model: typeof member.model === 'string' ? member.model.trim() || undefined : undefined,
-          effort:
-            member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
-              ? member.effort
-              : undefined,
+          effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
         });
       }
       // Defense: ignore CLI auto-suffixed duplicates (alice-2) when base name exists.

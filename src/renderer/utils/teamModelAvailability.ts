@@ -4,6 +4,7 @@ import {
   getTeamProviderLabel,
   getTeamProviderModelOptions,
   getVisibleTeamProviderModels,
+  CODEX_DYNAMIC_MODEL_REQUIRES_RUNTIME_SUPPORT_REASON,
   GPT_5_1_CODEX_MAX_CHATGPT_UI_DISABLED_REASON,
   GPT_5_1_CODEX_MINI_UI_DISABLED_MODEL,
   GPT_5_1_CODEX_MINI_UI_DISABLED_REASON,
@@ -28,6 +29,7 @@ import type {
 } from '@shared/types';
 
 export {
+  CODEX_DYNAMIC_MODEL_REQUIRES_RUNTIME_SUPPORT_REASON,
   GPT_5_1_CODEX_MAX_CHATGPT_UI_DISABLED_REASON,
   GPT_5_1_CODEX_MINI_UI_DISABLED_MODEL,
   GPT_5_1_CODEX_MINI_UI_DISABLED_REASON,
@@ -44,8 +46,10 @@ export type TeamModelRuntimeProviderStatus = Pick<
   CliProviderStatus,
   | 'providerId'
   | 'models'
+  | 'modelCatalog'
   | 'modelAvailability'
   | 'modelVerificationState'
+  | 'runtimeCapabilities'
   | 'authMethod'
   | 'backend'
   | 'authenticated'
@@ -100,12 +104,67 @@ function getFallbackTeamProviderModelOptions(
   }));
 }
 
+function getRuntimeCatalogModels(
+  providerId: SupportedProviderId,
+  providerStatus?: TeamModelRuntimeProviderStatus | null
+): string[] | null {
+  if (providerId !== 'codex' || providerStatus?.modelCatalog?.providerId !== 'codex') {
+    return null;
+  }
+
+  const models = providerStatus.modelCatalog.models
+    .filter((model) => !model.hidden)
+    .map((model) => model.launchModel.trim())
+    .filter(Boolean);
+  return models.length > 0 ? models : null;
+}
+
+function getRuntimeCatalogModelOption(
+  providerId: SupportedProviderId,
+  model: string,
+  providerStatus?: TeamModelRuntimeProviderStatus | null
+): TeamRuntimeModelOption | null {
+  if (providerId !== 'codex' || providerStatus?.modelCatalog?.providerId !== 'codex') {
+    return null;
+  }
+
+  const catalogModel = providerStatus.modelCatalog.models.find(
+    (item) => item.launchModel === model || item.id === model
+  );
+  if (!catalogModel) {
+    return null;
+  }
+
+  return {
+    value: catalogModel.launchModel,
+    label:
+      getProviderScopedTeamModelLabel(providerId, catalogModel.displayName) ??
+      catalogModel.displayName,
+    badgeLabel:
+      catalogModel.badgeLabel ??
+      (getTeamProviderModelOptions(providerId).some((option) => option.value === model)
+        ? undefined
+        : 'New'),
+    availabilityStatus: getRuntimeModelAvailability(
+      providerId,
+      catalogModel.launchModel,
+      providerStatus
+    ),
+    availabilityReason: getRuntimeModelAvailabilityReason(catalogModel.launchModel, providerStatus),
+  };
+}
+
 function getRuntimeSelectorModels(
   providerId: SupportedProviderId,
   providerStatus?: TeamModelRuntimeProviderStatus | null
 ): string[] {
   if (!providerStatus) {
     return [];
+  }
+
+  const catalogModels = getRuntimeCatalogModels(providerId, providerStatus);
+  if (catalogModels) {
+    return getVisibleTeamProviderModels(providerId, catalogModels, providerStatus);
   }
 
   return sortTeamProviderModels(providerId, providerStatus.models);
@@ -208,12 +267,18 @@ export function getAvailableTeamProviderModelOptions(
   const visibleModels = getRuntimeSelectorModels(providerId, providerStatus);
   return [
     { value: '', label: 'Default', badgeLabel: 'Default' },
-    ...visibleModels.map((model) => ({
-      value: model,
-      label: getProviderScopedTeamModelLabel(providerId, model) ?? model,
-      availabilityStatus: getRuntimeModelAvailability(providerId, model, providerStatus),
-      availabilityReason: getRuntimeModelAvailabilityReason(model, providerStatus),
-    })),
+    ...visibleModels.map((model) => {
+      const catalogOption = getRuntimeCatalogModelOption(providerId, model, providerStatus);
+      if (catalogOption) {
+        return catalogOption;
+      }
+      return {
+        value: model,
+        label: getProviderScopedTeamModelLabel(providerId, model) ?? model,
+        availabilityStatus: getRuntimeModelAvailability(providerId, model, providerStatus),
+        availabilityReason: getRuntimeModelAvailabilityReason(model, providerStatus),
+      };
+    }),
   ];
 }
 

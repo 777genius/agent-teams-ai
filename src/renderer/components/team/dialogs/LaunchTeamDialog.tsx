@@ -2011,6 +2011,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   value={selectedEffort}
                   onValueChange={setSelectedEffort}
                   id="dialog-effort"
+                  providerId={selectedProviderId}
+                  model={selectedModel}
                 />
                 <SkipPermissionsCheckbox
                   id="dialog-skip-permissions"

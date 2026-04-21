@@ -30,6 +30,18 @@ interface RuntimeExtensionCapabilitiesResponse {
   apiKeys?: RuntimeExtensionCapabilityResponse;
 }
 
+interface RuntimeProviderCapabilitiesResponse {
+  modelCatalog?: {
+    dynamic?: boolean;
+    source?: 'app-server' | 'static-fallback' | 'runtime';
+  };
+  reasoningEffort?: {
+    supported?: boolean;
+    values?: string[];
+    configPassthrough?: boolean;
+  };
+}
+
 interface ProviderStatusCommandResponse {
   schemaVersion?: number;
   providers?: Record<
@@ -53,6 +65,7 @@ interface ProviderStatusCommandResponse {
         projectId?: string | null;
         authMethodDetail?: string | null;
       } | null;
+      runtimeCapabilities?: RuntimeProviderCapabilitiesResponse;
     }
   >;
 }
@@ -119,6 +132,7 @@ interface UnifiedRuntimeStatusResponse {
         projectId?: string | null;
         authMethodDetail?: string | null;
       } | null;
+      runtimeCapabilities?: RuntimeProviderCapabilitiesResponse;
     }
   >;
 }
@@ -164,6 +178,8 @@ function createDefaultProviderStatus(providerId: CliProviderId): CliProviderStat
     externalRuntimeDiagnostics: [],
     backend: null,
     connection: null,
+    modelCatalog: null,
+    runtimeCapabilities: null,
   };
 }
 
@@ -299,6 +315,34 @@ export class ClaudeMultimodelBridgeService {
             endpointLabel: runtimeStatus.backend.endpointLabel ?? null,
             projectId: runtimeStatus.backend.projectId ?? null,
             authMethodDetail: runtimeStatus.backend.authMethodDetail ?? null,
+          }
+        : null,
+      runtimeCapabilities: runtimeStatus.runtimeCapabilities
+        ? {
+            modelCatalog: runtimeStatus.runtimeCapabilities.modelCatalog
+              ? {
+                  dynamic: runtimeStatus.runtimeCapabilities.modelCatalog.dynamic === true,
+                  source: runtimeStatus.runtimeCapabilities.modelCatalog.source,
+                }
+              : undefined,
+            reasoningEffort: runtimeStatus.runtimeCapabilities.reasoningEffort
+              ? {
+                  supported: runtimeStatus.runtimeCapabilities.reasoningEffort.supported === true,
+                  values:
+                    runtimeStatus.runtimeCapabilities.reasoningEffort.values?.flatMap((value) =>
+                      value === 'none' ||
+                      value === 'minimal' ||
+                      value === 'low' ||
+                      value === 'medium' ||
+                      value === 'high' ||
+                      value === 'xhigh'
+                        ? [value]
+                        : []
+                    ) ?? [],
+                  configPassthrough:
+                    runtimeStatus.runtimeCapabilities.reasoningEffort.configPassthrough === true,
+                }
+              : undefined,
           }
         : null,
     };
