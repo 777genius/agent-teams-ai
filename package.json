@@ -344,11 +344,5 @@
     "ignoreBinaries": [
       "pkg"
     ]
-  },
-  "workspaces": [
-    "agent-teams-controller",
-    "mcp-server",
-    "landing",
-    "packages/agent-graph"
-  ]
+  }
 }
