@@ -138,6 +138,7 @@ function normalizeEditableMemberSnapshot(member: {
   providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
+  isolation?: 'worktree';
 } | null {
   if (member.removedAt) {
     return null;

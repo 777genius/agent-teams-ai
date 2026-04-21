@@ -208,4 +208,36 @@ describe('getMembersRequiringRuntimeRestart', () => {
 
     expect(refreshed).toBe(base);
   });
+
+  it('keeps worktree isolation in the edit source snapshot', () => {
+    const sharedWorkspace = buildEditTeamSourceSnapshot({
+      name: 'Team A',
+      description: 'desc',
+      color: 'blue',
+      members: [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+        } as any,
+      ],
+    });
+
+    const isolatedWorkspace = buildEditTeamSourceSnapshot({
+      name: 'Team A',
+      description: 'desc',
+      color: 'blue',
+      members: [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          isolation: 'worktree',
+        } as any,
+      ],
+    });
+
+    expect(isolatedWorkspace).not.toBe(sharedWorkspace);
+    expect(JSON.parse(isolatedWorkspace).members[0]).toMatchObject({
+      isolation: 'worktree',
+    });
+  });
 });
