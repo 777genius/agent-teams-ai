@@ -122,9 +122,14 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
     return;
   }
 
-  const nextProviders = cachedStatus.value.providers.map((provider) =>
-    provider.providerId === providerStatus.providerId ? providerStatus : provider
+  const hasProvider = cachedStatus.value.providers.some(
+    (provider) => provider.providerId === providerStatus.providerId
   );
+  const nextProviders = hasProvider
+    ? cachedStatus.value.providers.map((provider) =>
+        provider.providerId === providerStatus.providerId ? providerStatus : provider
+      )
+    : [...cachedStatus.value.providers, providerStatus];
   const authenticatedProvider = nextProviders.find((provider) => provider.authenticated) ?? null;
 
   cachedStatus = {

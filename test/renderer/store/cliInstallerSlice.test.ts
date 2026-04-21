@@ -51,6 +51,11 @@ vi.mock('@renderer/api', () => ({
 
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
+import {
+  getIncompleteMultimodelProviderIds,
+  getModelOnlyFallbackProviderIds,
+  mergeCliStatusPreservingHydratedProviders,
+} from '@renderer/store/slices/cliInstallerSlice';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 import type { CliInstallationStatus } from '@shared/types';
@@ -78,11 +83,41 @@ function createMultimodelProvider(
       extensions: createDefaultCliExtensionCapabilities(),
     },
     backend: null,
-    connection: null,
+    connection: {
+      supportsOAuth: false,
+      supportsApiKey: false,
+      configurableAuthModes: [],
+      configuredAuthMode: null,
+      apiKeyConfigured: false,
+      apiKeySource: null,
+    },
     selectedBackendId: null,
     resolvedBackendId: null,
     availableBackends: [],
     ...overrides,
+  };
+}
+
+function createMultimodelStatus(
+  providers: CliInstallationStatus['providers']
+): CliInstallationStatus {
+  const authenticatedProvider = providers.find((provider) => provider.authenticated) ?? null;
+
+  return {
+    flavor: 'agent_teams_orchestrator',
+    displayName: 'Multimodel runtime',
+    supportsSelfUpdate: false,
+    showVersionDetails: false,
+    showBinaryPath: true,
+    installed: true,
+    installedVersion: '0.0.3',
+    binaryPath: '/Users/belief/.agent-teams/runtime-cache/0.0.3/darwin-arm64/claude-multimodel',
+    latestVersion: null,
+    updateAvailable: false,
+    authLoggedIn: providers.some((provider) => provider.authenticated),
+    authStatusChecking: false,
+    authMethod: authenticatedProvider?.authMethod ?? null,
+    providers,
   };
 }
 
@@ -112,6 +147,145 @@ describe('cliInstallerSlice', () => {
       expect(state.cliInstallerState).toBe('idle');
       expect(state.cliDownloadProgress).toBe(0);
       expect(state.cliInstallerError).toBeNull();
+    });
+  });
+
+  describe('mergeCliStatusPreservingHydratedProviders', () => {
+    it('does not let model-only OpenCode fallback overwrite hydrated runtime status', () => {
+      const current = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          models: ['opencode/minimax-m2.5-free'],
+          canLoginFromUi: false,
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        }),
+      ]);
+      const incoming = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          statusMessage: null,
+          models: ['opencode/minimax-m2.5-free'],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: false,
+            oneShot: false,
+            extensions: createDefaultCliExtensionCapabilities(),
+          },
+          backend: null,
+          availableBackends: [],
+        }),
+      ]);
+
+      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+
+      expect(merged.providers.find((provider) => provider.providerId === 'opencode')).toMatchObject({
+        supported: true,
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+      });
+    });
+
+    it('classifies model-only OpenCode fallback as incomplete for progress events', () => {
+      const status = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          statusMessage: null,
+          models: ['opencode/minimax-m2.5-free'],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: false,
+            oneShot: false,
+            extensions: createDefaultCliExtensionCapabilities(),
+          },
+          backend: null,
+          availableBackends: [],
+        }),
+      ]);
+
+      expect(getIncompleteMultimodelProviderIds(status)).toEqual(['opencode']);
+      expect(getModelOnlyFallbackProviderIds(status)).toEqual(['opencode']);
+    });
+
+    it('keeps connection-enriched checking placeholders incomplete until provider hydration finishes', () => {
+      const status = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          statusMessage: 'Checking...',
+          models: [],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: false,
+            oneShot: false,
+            extensions: createDefaultCliExtensionCapabilities(),
+          },
+          backend: null,
+          availableBackends: [],
+        }),
+      ]);
+
+      expect(getIncompleteMultimodelProviderIds(status)).toEqual(['opencode']);
+      expect(getModelOnlyFallbackProviderIds(status)).toEqual([]);
+    });
+
+    it('still allows real OpenCode runtime errors to replace previous ready status', () => {
+      const current = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          models: ['opencode/minimax-m2.5-free'],
+          canLoginFromUi: false,
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        }),
+      ]);
+      const incoming = createMultimodelStatus([
+        createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'error',
+          statusMessage: 'Runtime not found.',
+          models: [],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: false,
+            oneShot: false,
+            extensions: createDefaultCliExtensionCapabilities(),
+          },
+          backend: null,
+        }),
+      ]);
+
+      const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
+
+      expect(merged.providers.find((provider) => provider.providerId === 'opencode')).toMatchObject({
+        supported: false,
+        authenticated: false,
+        verificationState: 'error',
+        statusMessage: 'Runtime not found.',
+      });
     });
   });
 
@@ -410,6 +584,95 @@ describe('cliInstallerSlice', () => {
         .toMatchObject({
           authenticated: true,
           statusMessage: 'ChatGPT account ready',
+        });
+    });
+
+    it('refreshes OpenCode when bootstrap metadata only has fallback models', async () => {
+      const mockStatus: CliInstallationStatus = {
+        flavor: 'agent_teams_orchestrator',
+        displayName: 'Multimodel runtime',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: true,
+        installed: true,
+        installedVersion: '0.0.3',
+        binaryPath: '/Users/belief/.agent-teams/runtime-cache/0.0.3/darwin-arm64/claude-multimodel',
+        latestVersion: null,
+        updateAvailable: false,
+        authLoggedIn: true,
+        authStatusChecking: true,
+        authMethod: 'oauth_token',
+        providers: [
+          createMultimodelProvider({
+            providerId: 'anthropic',
+            displayName: 'Anthropic',
+            authenticated: true,
+            authMethod: 'oauth_token',
+            statusMessage: 'Connected',
+          }),
+          createMultimodelProvider({
+            providerId: 'codex',
+            displayName: 'Codex',
+            statusMessage: 'Codex unavailable',
+          }),
+          createMultimodelProvider({
+            providerId: 'gemini',
+            displayName: 'Gemini',
+            statusMessage: 'Ready',
+          }),
+          createMultimodelProvider({
+            providerId: 'opencode',
+            displayName: 'OpenCode',
+            supported: false,
+            authenticated: false,
+            authMethod: null,
+            verificationState: 'unknown',
+            statusMessage: null,
+            models: ['opencode/minimax-m2.5-free'],
+            canLoginFromUi: false,
+            capabilities: {
+              teamLaunch: false,
+              oneShot: false,
+              extensions: createDefaultCliExtensionCapabilities(),
+            },
+            backend: null,
+            availableBackends: [],
+          }),
+        ],
+      };
+      vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(mockStatus);
+      vi.mocked(api.cliInstaller.getProviderStatus).mockImplementation(async (providerId) => {
+        if (providerId === 'opencode') {
+          return createMultimodelProvider({
+            providerId: 'opencode',
+            displayName: 'OpenCode',
+            authenticated: true,
+            authMethod: 'opencode_managed',
+            statusMessage: null,
+            models: ['opencode/minimax-m2.5-free'],
+            canLoginFromUi: false,
+            backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          });
+        }
+        throw new Error(`Unexpected provider status request for ${providerId}`);
+      });
+
+      await useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
+
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledWith('opencode');
+      expect(useStore.getState().cliProviderStatusLoading).toEqual({
+        anthropic: false,
+        codex: false,
+        gemini: false,
+        opencode: false,
+      });
+      expect(useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'opencode'))
+        .toMatchObject({
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
         });
     });
   });

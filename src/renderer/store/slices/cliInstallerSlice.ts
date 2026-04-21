@@ -67,8 +67,25 @@ export function createLoadingMultimodelCliStatus(): CliInstallationStatus {
   };
 }
 
+function isModelOnlyFallbackProviderStatus(provider: CliProviderStatus): boolean {
+  return (
+    provider.supported === false &&
+    provider.authenticated === false &&
+    provider.authMethod === null &&
+    provider.verificationState === 'unknown' &&
+    provider.models.length > 0 &&
+    provider.backend == null &&
+    (provider.availableBackends?.length ?? 0) === 0 &&
+    provider.capabilities.teamLaunch === false
+  );
+}
+
 function isHydratedMultimodelProviderStatus(provider: CliProviderStatus | undefined): boolean {
   if (!provider) {
+    return false;
+  }
+
+  if (isModelOnlyFallbackProviderStatus(provider)) {
     return false;
   }
 
@@ -80,9 +97,79 @@ function isHydratedMultimodelProviderStatus(provider: CliProviderStatus | undefi
     provider.statusMessage === 'Checking...' &&
     provider.models.length === 0 &&
     provider.backend == null &&
-    (provider.availableBackends?.length ?? 0) === 0 &&
-    provider.connection == null
+    (provider.availableBackends?.length ?? 0) === 0
   );
+}
+
+export function getIncompleteMultimodelProviderIds(
+  status: CliInstallationStatus | null
+): CliProviderId[] {
+  if (!status || status.flavor !== 'agent_teams_orchestrator' || !status.installed) {
+    return [];
+  }
+
+  return status.providers
+    .filter((provider) => !isHydratedMultimodelProviderStatus(provider))
+    .map((provider) => provider.providerId);
+}
+
+export function getModelOnlyFallbackProviderIds(
+  status: CliInstallationStatus | null
+): CliProviderId[] {
+  if (!status || status.flavor !== 'agent_teams_orchestrator' || !status.installed) {
+    return [];
+  }
+
+  return status.providers
+    .filter((provider) => isModelOnlyFallbackProviderStatus(provider))
+    .map((provider) => provider.providerId);
+}
+
+export function mergeCliStatusPreservingHydratedProviders(
+  current: CliInstallationStatus | null,
+  incoming: CliInstallationStatus
+): CliInstallationStatus {
+  if (
+    !current ||
+    current.flavor !== 'agent_teams_orchestrator' ||
+    incoming.flavor !== 'agent_teams_orchestrator'
+  ) {
+    return incoming;
+  }
+
+  const currentProvidersById = new Map(
+    current.providers.map((provider) => [provider.providerId, provider])
+  );
+  const incomingProviderIds = new Set(incoming.providers.map((provider) => provider.providerId));
+  const providers = incoming.providers.map((incomingProvider) => {
+    const currentProvider = currentProvidersById.get(incomingProvider.providerId);
+    if (
+      currentProvider &&
+      isHydratedMultimodelProviderStatus(currentProvider) &&
+      !isHydratedMultimodelProviderStatus(incomingProvider)
+    ) {
+      return currentProvider;
+    }
+    return incomingProvider;
+  });
+
+  for (const currentProvider of current.providers) {
+    if (
+      !incomingProviderIds.has(currentProvider.providerId) &&
+      isHydratedMultimodelProviderStatus(currentProvider)
+    ) {
+      providers.push(currentProvider);
+    }
+  }
+
+  const authenticatedProvider = providers.find((provider) => provider.authenticated) ?? null;
+
+  return {
+    ...incoming,
+    providers,
+    authLoggedIn: providers.some((provider) => provider.authenticated),
+    authMethod: authenticatedProvider?.authMethod ?? null,
+  };
 }
 
 // =============================================================================
@@ -178,8 +265,13 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
             return {};
           }
 
+          const mergedMetadata = mergeCliStatusPreservingHydratedProviders(
+            state.cliStatus,
+            metadata
+          );
+
           return {
-            cliStatus: metadata,
+            cliStatus: mergedMetadata,
             cliStatusLoading: false,
             cliProviderStatusLoading: {},
             cliStatusError: state.cliStatusError,
@@ -207,7 +299,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
         return {
           cliStatus: {
-            ...metadata,
+            ...mergeCliStatusPreservingHydratedProviders(state.cliStatus, metadata),
             launchError: metadata.launchError ?? null,
             authStatusChecking: metadata.installed && pendingProviderIds.length > 0,
           },
@@ -270,7 +362,10 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         if (epoch !== cliStatusEpoch) {
           return;
         }
-        set({ cliStatus: status, cliProviderStatusLoading: {} });
+        set((state) => ({
+          cliStatus: mergeCliStatusPreservingHydratedProviders(state.cliStatus, status),
+          cliProviderStatusLoading: {},
+        }));
         if (status.installed) {
           for (const provider of status.providers) {
             void get().fetchCliProviderStatus(provider.providerId, {

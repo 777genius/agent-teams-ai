@@ -86,6 +86,19 @@ function getSelectedRuntimeBackendOption(
   );
 }
 
+export function isProviderInventoryOnlyFallback(provider: CliProviderStatus): boolean {
+  return (
+    provider.supported === false &&
+    provider.authenticated === false &&
+    provider.authMethod === null &&
+    provider.verificationState === 'unknown' &&
+    provider.models.length > 0 &&
+    provider.backend == null &&
+    (provider.availableBackends?.length ?? 0) === 0 &&
+    provider.capabilities.teamLaunch === false
+  );
+}
+
 export function isConnectionManagedRuntimeProvider(provider: CliProviderStatus): boolean {
   return provider.providerId === 'codex';
 }
@@ -146,6 +159,10 @@ export function getProviderCurrentRuntimeSummary(provider: CliProviderStatus): s
 }
 
 export function formatProviderStatusText(provider: CliProviderStatus): string {
+  if (isProviderInventoryOnlyFallback(provider)) {
+    return 'Checking...';
+  }
+
   const selectedBackendOption = getSelectedRuntimeBackendOption(provider);
 
   if (provider.providerId === 'codex') {

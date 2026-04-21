@@ -128,6 +128,34 @@ describe('CliInstallerService', () => {
       expect(status.updateAvailable).toBe(false);
     });
 
+    it('includes OpenCode in unavailable multimodel bootstrap status', async () => {
+      allowConsoleLogs();
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'agent_teams_orchestrator',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue(null);
+
+      const status = await service.getStatus();
+      const openCodeStatus = status.providers.find((provider) => provider.providerId === 'opencode');
+
+      expect(status.providers.map((provider) => provider.providerId)).toEqual([
+        'anthropic',
+        'codex',
+        'gemini',
+        'opencode',
+      ]);
+      expect(openCodeStatus).toMatchObject({
+        displayName: 'OpenCode',
+        supported: false,
+        statusMessage: 'Runtime not found.',
+        canLoginFromUi: false,
+      });
+    });
+
     it('does not mark the CLI installed when the version probe cannot confirm the binary', async () => {
       allowConsoleLogs();
       vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
