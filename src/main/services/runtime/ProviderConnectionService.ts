@@ -44,6 +44,11 @@ const PROVIDER_CAPABILITIES: Record<
     supportsApiKey: true,
     configurableAuthModes: [],
   },
+  opencode: {
+    supportsOAuth: false,
+    supportsApiKey: false,
+    configurableAuthModes: [],
+  },
 };
 
 const PROVIDER_API_KEY_ENV_VARS: Partial<Record<CliProviderId, string>> = {
@@ -184,7 +189,7 @@ export class ProviderConnectionService {
 
   async applyAllConfiguredConnectionEnv(env: NodeJS.ProcessEnv): Promise<NodeJS.ProcessEnv> {
     let nextEnv = env;
-    for (const providerId of ['anthropic', 'codex', 'gemini'] as const) {
+    for (const providerId of ['anthropic', 'codex', 'gemini', 'opencode'] as const) {
       nextEnv = await this.applyConfiguredConnectionEnv(nextEnv, providerId);
     }
     return nextEnv;
@@ -238,7 +243,7 @@ export class ProviderConnectionService {
 
   async augmentAllConfiguredConnectionEnv(env: NodeJS.ProcessEnv): Promise<NodeJS.ProcessEnv> {
     let nextEnv = env;
-    for (const providerId of ['anthropic', 'codex', 'gemini'] as const) {
+    for (const providerId of ['anthropic', 'codex', 'gemini', 'opencode'] as const) {
       nextEnv = await this.augmentConfiguredConnectionEnv(nextEnv, providerId);
     }
     return nextEnv;
@@ -308,7 +313,7 @@ export class ProviderConnectionService {
 
   async getConfiguredConnectionIssues(
     env: NodeJS.ProcessEnv,
-    providerIds: readonly CliProviderId[] = ['anthropic', 'codex', 'gemini'],
+    providerIds: readonly CliProviderId[] = ['anthropic', 'codex', 'gemini', 'opencode'],
     runtimeBackendOverrides?: Partial<Record<CliProviderId, string>>
   ): Promise<Partial<Record<CliProviderId, string>>> {
     const issues: Partial<Record<CliProviderId, string>> = {};

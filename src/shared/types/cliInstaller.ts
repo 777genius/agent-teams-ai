@@ -33,7 +33,7 @@ export type CliPlatform =
 
 export type CliFlavor = 'claude' | 'agent_teams_orchestrator';
 
-export type CliProviderId = 'anthropic' | 'codex' | 'gemini';
+export type CliProviderId = 'anthropic' | 'codex' | 'gemini' | 'opencode';
 export type CliProviderAuthMode = 'auto' | 'oauth' | 'chatgpt' | 'api_key';
 
 export interface CliProviderConnectionInfo {
@@ -194,6 +194,7 @@ export interface CliProviderStatus {
   verificationState: 'verified' | 'unknown' | 'offline' | 'error';
   modelVerificationState?: 'idle' | 'verifying' | 'verified';
   statusMessage?: string | null;
+  detailMessage?: string | null;
   models: string[];
   modelCatalog?: CliProviderModelCatalog | null;
   modelAvailability?: CliProviderModelAvailability[];

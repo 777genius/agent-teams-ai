@@ -33,7 +33,8 @@ vi.mock('@renderer/components/ui/tabs', () => {
       currentOnValueChange = onValueChange ?? null;
       return React.createElement('div', { 'data-tabs-value': value }, children);
     },
-    TabsList: ({ children }: { children: React.ReactNode }) => React.createElement('div', null, children),
+    TabsList: ({ children }: { children: React.ReactNode }) =>
+      React.createElement('div', null, children),
     TabsTrigger: ({
       children,
       value,
@@ -542,9 +543,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       button.textContent?.includes('5.2 Codex')
     );
     expect(issueButton?.className).toContain('border-red-500/40');
-    expect(issueButton?.getAttribute('title')).toBe(
-      'Not available on this Codex native runtime'
-    );
+    expect(issueButton?.getAttribute('title')).toBe('Not available on this Codex native runtime');
 
     await act(async () => {
       root.unmount();
@@ -677,8 +676,8 @@ describe('TeamModelSelector disabled Codex models', () => {
       await Promise.resolve();
     });
 
-    const modelButtons = Array.from(host.querySelectorAll('button')).map((button) =>
-      button.textContent?.trim() ?? ''
+    const modelButtons = Array.from(host.querySelectorAll('button')).map(
+      (button) => button.textContent?.trim() ?? ''
     );
 
     expect(modelButtons.some((text) => text.startsWith('Default'))).toBe(true);
@@ -694,7 +693,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('shows OpenCode as an in-development provider and keeps it non-selectable', async () => {
+  it('shows OpenCode as readiness-gated and keeps it non-selectable', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -721,7 +720,9 @@ describe('TeamModelSelector disabled Codex models', () => {
     const openCodeButton = buttons.find((button) => button.textContent?.includes('OpenCode'));
     expect(openCodeButton).not.toBeNull();
     expect(openCodeButton?.hasAttribute('disabled')).toBe(true);
-    expect(openCodeButton?.getAttribute('title')).toContain('OpenCode in development');
+    expect(openCodeButton?.getAttribute('title')).toContain(
+      'OpenCode runtime status is still loading.'
+    );
 
     await act(async () => {
       openCodeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -729,6 +730,52 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(onProviderChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('uses backend OpenCode readiness detail as the disabled reason', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          statusMessage: 'OpenCode team launch is gated',
+          detailMessage: 'OpenCode production E2E evidence is missing',
+          capabilities: { teamLaunch: false },
+          models: [],
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const openCodeButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('OpenCode')
+    );
+    expect(openCodeButton?.hasAttribute('disabled')).toBe(true);
+    expect(openCodeButton?.getAttribute('title')).toContain(
+      'OpenCode production E2E evidence is missing'
+    );
+    expect(openCodeButton?.textContent).toContain('Gate');
 
     await act(async () => {
       root.unmount();
@@ -767,6 +814,65 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(onProviderChange).toHaveBeenCalledWith('codex');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders OpenCode source badges and keeps raw model ids on selection', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          detailMessage: null,
+          statusMessage: null,
+          capabilities: {
+            teamLaunch: true,
+          },
+          models: ['openai/gpt-5.4', 'openrouter/moonshotai/kimi-k2'],
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onValueChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('GPT-5.4');
+    expect(host.textContent).toContain('OpenAI');
+    expect(host.textContent).toContain('moonshotai/kimi-k2');
+    expect(host.textContent).toContain('OpenRouter');
+
+    const openRouterButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('OpenRouter')
+    );
+
+    expect(openRouterButton).toBeTruthy();
+
+    await act(async () => {
+      openRouterButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(onValueChange).toHaveBeenCalledWith('openrouter/moonshotai/kimi-k2');
 
     await act(async () => {
       root.unmount();

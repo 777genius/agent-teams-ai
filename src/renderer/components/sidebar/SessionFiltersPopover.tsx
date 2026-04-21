@@ -14,6 +14,7 @@ export const SESSION_PROVIDER_IDS = [
   'anthropic',
   'codex',
   'gemini',
+  'opencode',
 ] as const satisfies readonly TeamProviderId[];
 
 interface SessionFiltersPopoverProps {

@@ -18,6 +18,7 @@ import {
   getTeamsBasePath,
   getTodosBasePath,
 } from '@main/utils/pathDecoder';
+import { OPENCODE_TASK_LOG_ATTRIBUTION_FILE } from '@shared/constants/opencodeTaskLogAttribution';
 import { createLogger } from '@shared/utils/logger';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
@@ -1003,6 +1004,16 @@ export class FileWatcher extends EventEmitter {
     ) {
       const event: TeamChangeEvent = {
         type: 'config',
+        teamName,
+        detail: relative,
+      };
+      this.emit('team-change', event);
+      return;
+    }
+
+    if (relative === OPENCODE_TASK_LOG_ATTRIBUTION_FILE) {
+      const event: TeamChangeEvent = {
+        type: 'log-source-change',
         teamName,
         detail: relative,
       };

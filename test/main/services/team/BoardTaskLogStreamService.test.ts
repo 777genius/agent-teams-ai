@@ -108,6 +108,61 @@ describe('BoardTaskLogStreamService', () => {
     expect(recordSource.getTaskRecords).not.toHaveBeenCalled();
   });
 
+  it('falls back to OpenCode runtime stream when transcript slices are empty', async () => {
+    const runtimeFallbackSource = {
+      getTaskLogStream: vi.fn(async () => ({
+        participants: [
+          {
+            key: 'member:alice',
+            label: 'alice',
+            role: 'member' as const,
+            isLead: false,
+            isSidechain: true,
+          },
+        ],
+        defaultFilter: 'member:alice',
+        segments: [
+          {
+            id: 'opencode:segment-1',
+            participantKey: 'member:alice',
+            actor: {
+              memberName: 'alice',
+              role: 'member' as const,
+              sessionId: 'session-opencode',
+              isSidechain: true,
+            },
+            startTimestamp: '2026-04-21T10:00:00.000Z',
+            endTimestamp: '2026-04-21T10:01:00.000Z',
+            chunks: [{ id: 'chunk-1' }],
+          },
+        ],
+        source: 'opencode_runtime_fallback' as const,
+      })),
+    };
+
+    const service = new BoardTaskLogStreamService(
+      {
+        getTaskRecords: vi.fn(async () => []),
+      } as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      runtimeFallbackSource as never
+    );
+
+    const response = await service.getTaskLogStream('demo', 'task-a');
+
+    expect(response.source).toBe('opencode_runtime_fallback');
+    expect(response.segments).toHaveLength(1);
+    expect(await service.getTaskLogStreamSummary('demo', 'task-a')).toEqual({
+      segmentCount: 0,
+    });
+    expect(runtimeFallbackSource.getTaskLogStream).toHaveBeenCalledTimes(1);
+  });
+
   it('groups contiguous slices into participant segments and excludes lead slices when member slices exist', async () => {
     const tom = {
       memberName: 'tom',

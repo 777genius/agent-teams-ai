@@ -6,7 +6,7 @@ import {
 } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 
-import type { TeamProvisioningPrepareResult } from '@shared/types';
+import type { TeamProviderId, TeamProvisioningPrepareResult } from '@shared/types';
 
 function createDeferred<T>(): {
   promise: Promise<T>;
@@ -57,8 +57,8 @@ describe('runProviderPrepareDiagnostics', () => {
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
-        providerId?: 'anthropic' | 'codex' | 'gemini',
-        providerIds?: ('anthropic' | 'codex' | 'gemini')[],
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >().mockResolvedValue({
@@ -86,8 +86,8 @@ describe('runProviderPrepareDiagnostics', () => {
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
-        providerId?: 'anthropic' | 'codex' | 'gemini',
-        providerIds?: ('anthropic' | 'codex' | 'gemini')[],
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {
@@ -146,8 +146,8 @@ describe('runProviderPrepareDiagnostics', () => {
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
-        providerId?: 'anthropic' | 'codex' | 'gemini',
-        providerIds?: ('anthropic' | 'codex' | 'gemini')[],
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {
@@ -181,8 +181,8 @@ describe('runProviderPrepareDiagnostics', () => {
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
-        providerId?: 'anthropic' | 'codex' | 'gemini',
-        providerIds?: ('anthropic' | 'codex' | 'gemini')[],
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {
@@ -218,8 +218,8 @@ describe('runProviderPrepareDiagnostics', () => {
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
-        providerId?: 'anthropic' | 'codex' | 'gemini',
-        providerIds?: ('anthropic' | 'codex' | 'gemini')[],
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {
@@ -257,8 +257,8 @@ describe('runProviderPrepareDiagnostics', () => {
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
-        providerId?: 'anthropic' | 'codex' | 'gemini',
-        providerIds?: ('anthropic' | 'codex' | 'gemini')[],
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
         selectedModels?: string[],
         limitContext?: boolean
       ) => Promise<TeamProvisioningPrepareResult>
@@ -309,8 +309,8 @@ describe('runProviderPrepareDiagnostics', () => {
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
-        providerId?: 'anthropic' | 'codex' | 'gemini',
-        providerIds?: ('anthropic' | 'codex' | 'gemini')[],
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {
@@ -377,8 +377,8 @@ describe('runProviderPrepareDiagnostics', () => {
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
-        providerId?: 'anthropic' | 'codex' | 'gemini',
-        providerIds?: ('anthropic' | 'codex' | 'gemini')[],
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {

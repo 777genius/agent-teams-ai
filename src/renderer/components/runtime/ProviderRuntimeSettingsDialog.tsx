@@ -124,6 +124,8 @@ function getConnectionDescription(provider: CliProviderStatus): string {
       return 'Choose whether Codex should prefer your ChatGPT subscription or an API key when the native runtime launches.';
     case 'gemini':
       return 'Configure optional API access. CLI SDK and ADC are still discovered automatically.';
+    case 'opencode':
+      return 'OpenCode authentication and provider inventory are managed by the OpenCode runtime.';
   }
 }
 
@@ -135,6 +137,8 @@ function getRuntimeDescription(provider: CliProviderStatus): string {
       return 'Codex now runs only through the native runtime path.';
     case 'gemini':
       return 'Choose which Gemini runtime backend multimodel should use.';
+    case 'opencode':
+      return 'OpenCode uses its own managed runtime host. Desktop currently exposes status only.';
   }
 }
 
@@ -1093,6 +1097,26 @@ export const ProviderRuntimeSettingsDialog = ({
                   </span>
                 ) : null}
               </div>
+              {selectedProvider.detailMessage ? (
+                <div className="mt-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                  {selectedProvider.detailMessage}
+                </div>
+              ) : null}
+              {selectedProvider.externalRuntimeDiagnostics &&
+              selectedProvider.externalRuntimeDiagnostics.length > 0 ? (
+                <div
+                  className="mt-2 space-y-1 text-[11px]"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  {selectedProvider.externalRuntimeDiagnostics.slice(0, 3).map((diagnostic) => (
+                    <div key={diagnostic.id}>
+                      {diagnostic.label}:{' '}
+                      {diagnostic.statusMessage ?? (diagnostic.detected ? 'detected' : 'missing')}
+                      {diagnostic.detailMessage ? ` - ${diagnostic.detailMessage}` : ''}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
 

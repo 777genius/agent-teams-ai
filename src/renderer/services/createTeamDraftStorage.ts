@@ -10,6 +10,9 @@
  */
 
 import { del, get, set } from 'idb-keyval';
+import { isTeamProviderId } from '@shared/utils/teamProvider';
+
+import type { TeamProviderId } from '@shared/types';
 
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 
@@ -29,7 +32,7 @@ export interface SerializedMemberDraft {
   roleSelection: string;
   customRole: string;
   workflow?: string;
-  providerId?: 'anthropic' | 'codex' | 'gemini';
+  providerId?: TeamProviderId;
   model?: string;
   effort?: EffortLevel;
 }
@@ -66,10 +69,7 @@ function isValidMember(m: unknown): m is SerializedMemberDraft {
     typeof obj.name === 'string' &&
     typeof obj.roleSelection === 'string' &&
     typeof obj.customRole === 'string' &&
-    (obj.providerId === undefined ||
-      obj.providerId === 'anthropic' ||
-      obj.providerId === 'codex' ||
-      obj.providerId === 'gemini') &&
+    (obj.providerId === undefined || isTeamProviderId(obj.providerId)) &&
     (obj.model === undefined || typeof obj.model === 'string') &&
     (obj.effort === undefined || isTeamEffortLevel(obj.effort))
   );

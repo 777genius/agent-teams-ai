@@ -1069,6 +1069,77 @@ describe('agent-teams-controller API', () => {
     }
   });
 
+  it('forwards OpenCode runtime MCP calls to the app control API', async () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const calls = [];
+
+    const server = await startControlServer(async ({ method, url, body }) => {
+      calls.push({ method, url, body });
+      if (method === 'POST' && url === '/api/teams/my-team/opencode/runtime/bootstrap-checkin') {
+        return { body: { ok: true, state: 'accepted' } };
+      }
+      if (method === 'POST' && url === '/api/teams/my-team/opencode/runtime/deliver-message') {
+        return { body: { ok: true, state: 'delivered' } };
+      }
+      if (method === 'POST' && url === '/api/teams/my-team/opencode/runtime/task-event') {
+        return { body: { ok: true, state: 'recorded' } };
+      }
+      if (method === 'POST' && url === '/api/teams/my-team/opencode/runtime/heartbeat') {
+        return { body: { ok: true, state: 'accepted' } };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+
+    try {
+      await controller.runtime.runtimeBootstrapCheckin({
+        controlUrl: server.baseUrl,
+        runId: 'run-oc',
+        memberName: 'bob',
+        runtimeSessionId: 'ses-1',
+      });
+      await controller.runtime.runtimeDeliverMessage({
+        controlUrl: server.baseUrl,
+        idempotencyKey: 'idem-1',
+        runId: 'run-oc',
+        fromMemberName: 'bob',
+        runtimeSessionId: 'ses-1',
+        to: 'user',
+        text: 'hello',
+      });
+      await controller.runtime.runtimeTaskEvent({
+        controlUrl: server.baseUrl,
+        idempotencyKey: 'idem-task-1',
+        runId: 'run-oc',
+        memberName: 'bob',
+        runtimeSessionId: 'ses-1',
+        taskId: 'task-1',
+        event: 'started',
+      });
+      await controller.runtime.runtimeHeartbeat({
+        controlUrl: server.baseUrl,
+        runId: 'run-oc',
+        memberName: 'bob',
+        runtimeSessionId: 'ses-1',
+      });
+
+      expect(calls.map((call) => call.url)).toEqual([
+        '/api/teams/my-team/opencode/runtime/bootstrap-checkin',
+        '/api/teams/my-team/opencode/runtime/deliver-message',
+        '/api/teams/my-team/opencode/runtime/task-event',
+        '/api/teams/my-team/opencode/runtime/heartbeat',
+      ]);
+      expect(calls[0].body).toEqual({
+        teamName: 'my-team',
+        runId: 'run-oc',
+        memberName: 'bob',
+        runtimeSessionId: 'ses-1',
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('prefers the published control endpoint over a stale env URL', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });

@@ -407,6 +407,188 @@ describe('CliInstallerService', () => {
         )
       ).toBe(false);
     });
+
+    it('uses execution-grade OpenCode model verification for explicit verify requests', async () => {
+      allowConsoleLogs();
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'agent_teams_orchestrator',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/usr/local/bin/claude');
+
+      vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses').mockResolvedValue([
+        {
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          supported: true,
+          authenticated: true,
+          authMethod: 'oauth_token',
+          verificationState: 'verified',
+          modelVerificationState: 'idle',
+          statusMessage: null,
+          detailMessage: null,
+          models: [],
+          modelAvailability: [],
+          canLoginFromUi: true,
+          capabilities: { teamLaunch: true, oneShot: true, extensions: undefined as never },
+          selectedBackendId: null,
+          resolvedBackendId: null,
+          availableBackends: [],
+          externalRuntimeDiagnostics: [],
+          backend: null,
+          connection: null,
+        },
+        {
+          providerId: 'codex',
+          displayName: 'Codex',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          modelVerificationState: 'idle',
+          statusMessage: null,
+          detailMessage: null,
+          models: [],
+          modelAvailability: [],
+          canLoginFromUi: true,
+          capabilities: { teamLaunch: false, oneShot: false, extensions: undefined as never },
+          selectedBackendId: null,
+          resolvedBackendId: null,
+          availableBackends: [],
+          externalRuntimeDiagnostics: [],
+          backend: null,
+          connection: null,
+        },
+        {
+          providerId: 'gemini',
+          displayName: 'Gemini',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          modelVerificationState: 'idle',
+          statusMessage: null,
+          detailMessage: null,
+          models: [],
+          modelAvailability: [],
+          canLoginFromUi: true,
+          capabilities: { teamLaunch: false, oneShot: false, extensions: undefined as never },
+          selectedBackendId: null,
+          resolvedBackendId: null,
+          availableBackends: [],
+          externalRuntimeDiagnostics: [],
+          backend: null,
+          connection: null,
+        },
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          modelVerificationState: 'idle',
+          statusMessage: null,
+          detailMessage: null,
+          models: ['openai/gpt-5.4-mini', 'opencode/big-pickle'],
+          modelAvailability: [],
+          canLoginFromUi: false,
+          capabilities: { teamLaunch: false, oneShot: false, extensions: undefined as never },
+          selectedBackendId: null,
+          resolvedBackendId: null,
+          availableBackends: [],
+          externalRuntimeDiagnostics: [],
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          connection: null,
+        },
+      ] as never);
+
+      vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'verifyProviderStatus').mockResolvedValue({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        supported: true,
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        verificationState: 'verified',
+        modelVerificationState: 'idle',
+        statusMessage: null,
+        detailMessage: null,
+        models: ['openai/gpt-5.4-mini', 'opencode/big-pickle'],
+        modelAvailability: [],
+        canLoginFromUi: false,
+        capabilities: { teamLaunch: false, oneShot: false, extensions: undefined as never },
+        selectedBackendId: null,
+        resolvedBackendId: null,
+        availableBackends: [],
+        externalRuntimeDiagnostics: [],
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        connection: null,
+      } as never);
+
+      const verifyOpenCodeModelsSpy = vi
+        .spyOn(ClaudeMultimodelBridgeService.prototype, 'verifyOpenCodeModels')
+        .mockResolvedValue({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          modelVerificationState: 'verified',
+          statusMessage: null,
+          detailMessage: null,
+          models: ['openai/gpt-5.4-mini', 'opencode/big-pickle'],
+          modelAvailability: [
+            {
+              modelId: 'openai/gpt-5.4-mini',
+              status: 'unavailable',
+              reason: 'Token refresh failed: 401',
+            },
+            {
+              modelId: 'opencode/big-pickle',
+              status: 'available',
+              reason: null,
+            },
+          ],
+          canLoginFromUi: false,
+          capabilities: { teamLaunch: false, oneShot: false, extensions: undefined as never },
+          selectedBackendId: null,
+          resolvedBackendId: null,
+          availableBackends: [],
+          externalRuntimeDiagnostics: [],
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          connection: null,
+        } as never);
+
+      vi.mocked(execCli).mockImplementation(async (_binaryPath, args) => {
+        const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
+        if (normalizedArgs === '--version') {
+          return { stdout: '2.3.4', stderr: '' };
+        }
+        throw new Error(`Unexpected execCli call: ${normalizedArgs}`);
+      });
+
+      const status = await service.getStatus();
+      expect(status.providers.find((provider) => provider.providerId === 'opencode')?.modelAvailability).toEqual([]);
+
+      const verifiedProvider = await service.verifyProviderModels('opencode');
+
+      expect(verifyOpenCodeModelsSpy).toHaveBeenCalledTimes(1);
+      expect(verifiedProvider?.modelVerificationState).toBe('verified');
+      expect(verifiedProvider?.modelAvailability).toEqual([
+        expect.objectContaining({
+          modelId: 'openai/gpt-5.4-mini',
+          status: 'unavailable',
+        }),
+        expect.objectContaining({
+          modelId: 'opencode/big-pickle',
+          status: 'available',
+        }),
+      ]);
+    });
   });
 
   describe('install mutex', () => {

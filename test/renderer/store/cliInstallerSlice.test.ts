@@ -54,10 +54,11 @@ import { useStore } from '@renderer/store';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 import type { CliInstallationStatus } from '@shared/types';
+import type { CliProviderId } from '@shared/types/cliInstaller';
 
 function createMultimodelProvider(
   overrides: Partial<CliInstallationStatus['providers'][number]> & {
-    providerId: 'anthropic' | 'codex' | 'gemini';
+    providerId: CliProviderId;
     displayName: string;
   }
 ): CliInstallationStatus['providers'][number] {
@@ -281,6 +282,14 @@ describe('cliInstallerSlice', () => {
             displayName: 'Gemini',
             statusMessage: 'Ready',
           }),
+          createMultimodelProvider({
+            providerId: 'opencode',
+            displayName: 'OpenCode',
+            authenticated: true,
+            authMethod: 'opencode_managed',
+            statusMessage: 'OpenCode ready',
+            canLoginFromUi: false,
+          }),
         ],
       };
       vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(mockStatus);
@@ -295,6 +304,7 @@ describe('cliInstallerSlice', () => {
         anthropic: false,
         codex: false,
         gemini: false,
+        opencode: false,
       });
       expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
     });
@@ -346,6 +356,14 @@ describe('cliInstallerSlice', () => {
             displayName: 'Gemini',
             statusMessage: 'Ready',
           }),
+          createMultimodelProvider({
+            providerId: 'opencode',
+            displayName: 'OpenCode',
+            authenticated: true,
+            authMethod: 'opencode_managed',
+            statusMessage: 'OpenCode ready',
+            canLoginFromUi: false,
+          }),
         ],
       };
       vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(mockStatus);
@@ -366,6 +384,7 @@ describe('cliInstallerSlice', () => {
         anthropic: false,
         codex: true,
         gemini: false,
+        opencode: false,
       });
       expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
       expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledWith('codex');
@@ -385,6 +404,7 @@ describe('cliInstallerSlice', () => {
         anthropic: false,
         codex: false,
         gemini: false,
+        opencode: false,
       });
       expect(useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'codex'))
         .toMatchObject({

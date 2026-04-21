@@ -91,6 +91,8 @@ function formatProviderName(providerId: string): string {
       return 'Codex';
     case 'gemini':
       return 'Gemini';
+    case 'opencode':
+      return 'OpenCode';
     default:
       return providerId;
   }

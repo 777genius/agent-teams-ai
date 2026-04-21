@@ -47,7 +47,10 @@ import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
-import { TeamMcpConfigBuilder } from '@main/services/team/TeamMcpConfigBuilder';
+import {
+  resolveAgentTeamsMcpLaunchSpec,
+  TeamMcpConfigBuilder,
+} from '@main/services/team/TeamMcpConfigBuilder';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import {
@@ -112,6 +115,18 @@ import {
   type TeamReconcileTrigger,
 } from './services/team/TeamReconcileDrainScheduler';
 import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
+import { OpenCodeBridgeCommandClient } from './services/team/opencode/bridge/OpenCodeBridgeCommandClient';
+import {
+  createOpenCodeBridgeCommandLeaseStore,
+  createOpenCodeBridgeCommandLedgerStore,
+} from './services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
+import {
+  createOpenCodeBridgeClientIdentity,
+  OpenCodeBridgeCommandHandshakePort,
+} from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { OpenCodeProductionE2EEvidenceStore } from './services/team/opencode/e2e/OpenCodeProductionE2EEvidenceStore';
+import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { getAppIconPath } from './utils/appIcon';
 import { getProjectsBasePath, getTeamsBasePath, getTodosBasePath } from './utils/pathDecoder';
 import {
@@ -130,11 +145,14 @@ import {
   BoardTaskExactLogsService,
   BoardTaskLogStreamService,
   BranchStatusService,
+  ClaudeBinaryResolver,
   CliInstallerService,
   configManager,
   LocalFileSystemProvider,
   MemberStatsComputer,
   NotificationManager,
+  OpenCodeReadinessBridge,
+  OpenCodeTeamRuntimeAdapter,
   PtyTerminalService,
   ServiceContext,
   ServiceContextRegistry,
@@ -142,6 +160,7 @@ import {
   TaskBoundaryParser,
   TeamDataService,
   TeamLogSourceTracker,
+  TeamRuntimeAdapterRegistry,
   TeamTaskStallJournal,
   TeamTaskStallMonitor,
   TeamTaskStallNotifier,
@@ -155,6 +174,7 @@ import {
 
 import type { FileChangeEvent } from '@main/types';
 import type { TeamChangeEvent } from '@shared/types';
+import type { OpenCodeTeamLaunchMode } from './services/team';
 
 const logger = createLogger('App');
 startEventLoopLagMonitor();
@@ -178,6 +198,83 @@ const inboxNotifyTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) — suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
+
+function resolveOpenCodeTeamLaunchModeFromEnv(): OpenCodeTeamLaunchMode {
+  const raw = process.env.CLAUDE_TEAM_OPENCODE_LAUNCH_MODE?.trim().toLowerCase();
+  if (raw === 'dogfood' || raw === 'production' || raw === 'disabled') {
+    return raw;
+  }
+  if (process.env.CLAUDE_TEAM_OPENCODE_DOGFOOD === '1') {
+    return 'dogfood';
+  }
+  return 'disabled';
+}
+
+async function createOpenCodeRuntimeAdapterRegistry(): Promise<TeamRuntimeAdapterRegistry> {
+  const binaryPath = await ClaudeBinaryResolver.resolve();
+  if (!binaryPath) {
+    logger.warn('[OpenCode] Runtime adapter bridge disabled: orchestrator CLI binary not resolved');
+    return new TeamRuntimeAdapterRegistry();
+  }
+
+  const bridgeEnv = { ...process.env };
+  try {
+    const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec();
+    const mcpEntry = mcpLaunchSpec.args[0];
+    if (mcpEntry) {
+      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND = mcpLaunchSpec.command;
+      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY = mcpEntry;
+    }
+  } catch (error) {
+    logger.warn(
+      `[OpenCode] Runtime adapter bridge MCP entrypoint unresolved: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
+
+  const bridgeClient = new OpenCodeBridgeCommandClient({
+    binaryPath,
+    tempDirectory: join(app.getPath('temp'), 'claude-team-opencode-bridge'),
+    env: bridgeEnv,
+  });
+  const bridgeControlDir = join(app.getPath('userData'), 'opencode-bridge');
+  const clientIdentity = createOpenCodeBridgeClientIdentity({
+    appVersion: typeof app.getVersion === 'function' ? app.getVersion() : '1.3.0',
+    gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null,
+    buildId: process.env.VITE_BUILD_ID ?? process.env.BUILD_ID ?? null,
+  });
+  const stateChangingCommands = new OpenCodeStateChangingBridgeCommandService({
+    expectedClientIdentity: clientIdentity,
+    handshakePort: new OpenCodeBridgeCommandHandshakePort({
+      bridge: bridgeClient,
+      clientIdentity,
+    }),
+    leaseStore: createOpenCodeBridgeCommandLeaseStore({
+      filePath: join(bridgeControlDir, 'command-leases.json'),
+    }),
+    ledger: createOpenCodeBridgeCommandLedgerStore({
+      filePath: join(bridgeControlDir, 'command-ledger.json'),
+    }),
+    bridge: bridgeClient,
+    manifestReader: new OpenCodeRuntimeManifestEvidenceReader({
+      teamsBasePath: getTeamsBasePath(),
+    }),
+  });
+  return new TeamRuntimeAdapterRegistry([
+    new OpenCodeTeamRuntimeAdapter(
+      new OpenCodeReadinessBridge(bridgeClient, {
+        stateChangingCommands,
+        productionE2eEvidence: new OpenCodeProductionE2EEvidenceStore({
+          filePath: join(bridgeControlDir, 'production-e2e-evidence.json'),
+        }),
+      }),
+      {
+        launchMode: resolveOpenCodeTeamLaunchModeFromEnv(),
+      }
+    ),
+  ]);
+}
 
 // --- Team display name cache (avoid listTeams() on every notification) ---
 const TEAM_DISPLAY_NAME_TTL_MS = 30_000;
@@ -838,6 +935,7 @@ async function initializeServices(): Promise<void> {
   teamDataService = new TeamDataService();
   teamDataService.setMemberRuntimeAdvisoryService(teamMemberRuntimeAdvisoryService);
   teamProvisioningService = new TeamProvisioningService();
+  teamProvisioningService.setRuntimeAdapterRegistry(await createOpenCodeRuntimeAdapterRegistry());
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   void teamDataService

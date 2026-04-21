@@ -89,6 +89,10 @@ declare module 'agent-teams-controller' {
     launchTeam(flags: Record<string, unknown>): Promise<unknown>;
     stopTeam(flags?: Record<string, unknown>): Promise<unknown>;
     getRuntimeState(flags?: Record<string, unknown>): Promise<unknown>;
+    runtimeBootstrapCheckin(flags: Record<string, unknown>): Promise<unknown>;
+    runtimeDeliverMessage(flags: Record<string, unknown>): Promise<unknown>;
+    runtimeTaskEvent(flags: Record<string, unknown>): Promise<unknown>;
+    runtimeHeartbeat(flags: Record<string, unknown>): Promise<unknown>;
   }
 
   export interface AgentBlocksApi {

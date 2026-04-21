@@ -283,6 +283,8 @@ function getRuntimeAdvisoryProviderLabel(providerId: TeamProviderId | undefined)
       return 'Codex';
     case 'gemini':
       return 'Gemini';
+    case 'opencode':
+      return 'OpenCode';
     default:
       return null;
   }

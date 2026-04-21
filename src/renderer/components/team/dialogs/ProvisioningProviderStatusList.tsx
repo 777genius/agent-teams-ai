@@ -48,11 +48,16 @@ export function getProvisioningProviderBackendSummary(
   const optionById = new Map(options.map((option) => [option.id, option.label]));
   const effectiveBackendId = provider.resolvedBackendId ?? provider.selectedBackendId;
   const effectiveOption = options.find((option) => option.id === effectiveBackendId) ?? null;
-  const inferredProviderId =
-    provider.providerId ??
-    (effectiveBackendId === 'codex-native' || options.some((option) => option.id === 'codex-native')
-      ? 'codex'
-      : undefined);
+  const inferredProviderId: TeamProviderId | undefined =
+    provider.providerId === 'anthropic' ||
+    provider.providerId === 'codex' ||
+    provider.providerId === 'gemini' ||
+    provider.providerId === 'opencode'
+      ? provider.providerId
+      : effectiveBackendId === 'codex-native' ||
+          options.some((option) => option.id === 'codex-native')
+        ? 'codex'
+        : undefined;
   const normalizedLabel =
     formatProviderBackendLabel(inferredProviderId, effectiveBackendId ?? undefined) ?? null;
 

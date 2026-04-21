@@ -215,6 +215,69 @@ describe('agent-teams-mcp tools', () => {
     }
   });
 
+  it('forwards OpenCode runtime MCP tools through the runtime control bridge', async () => {
+    const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
+    const server = await startControlServer(async ({ method, url, body }) => {
+      calls.push({ method, url, body });
+      return { body: { ok: true, state: 'accepted' } };
+    });
+
+    try {
+      await getTool('runtime_bootstrap_checkin').execute({
+        teamName: 'alpha',
+        controlUrl: server.baseUrl,
+        runId: 'run-oc',
+        memberName: 'alice',
+        runtimeSessionId: 'ses-1',
+      });
+      await getTool('runtime_deliver_message').execute({
+        teamName: 'alpha',
+        controlUrl: server.baseUrl,
+        idempotencyKey: 'idem-1',
+        runId: 'run-oc',
+        fromMemberName: 'alice',
+        runtimeSessionId: 'ses-1',
+        to: 'user',
+        text: 'hello',
+      });
+      await getTool('runtime_task_event').execute({
+        teamName: 'alpha',
+        controlUrl: server.baseUrl,
+        idempotencyKey: 'idem-task-1',
+        runId: 'run-oc',
+        memberName: 'alice',
+        runtimeSessionId: 'ses-1',
+        taskId: 'task-1',
+        event: 'started',
+      });
+      await getTool('runtime_heartbeat').execute({
+        teamName: 'alpha',
+        controlUrl: server.baseUrl,
+        runId: 'run-oc',
+        memberName: 'alice',
+        runtimeSessionId: 'ses-1',
+      });
+
+      expect(calls.map((call) => call.url)).toEqual([
+        '/api/teams/alpha/opencode/runtime/bootstrap-checkin',
+        '/api/teams/alpha/opencode/runtime/deliver-message',
+        '/api/teams/alpha/opencode/runtime/task-event',
+        '/api/teams/alpha/opencode/runtime/heartbeat',
+      ]);
+      expect(calls[1].body).toEqual({
+        teamName: 'alpha',
+        idempotencyKey: 'idem-1',
+        runId: 'run-oc',
+        fromMemberName: 'alice',
+        runtimeSessionId: 'ses-1',
+        to: 'user',
+        text: 'hello',
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('discovers the control endpoint from the published state file', async () => {
     const claudeDir = makeClaudeDir();
     const statePath = path.join(claudeDir, 'team-control-api.json');

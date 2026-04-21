@@ -342,6 +342,65 @@ function createGeminiProvider(): CliProviderStatus {
   };
 }
 
+function createOpenCodeProvider(): CliProviderStatus {
+  return {
+    providerId: 'opencode',
+    displayName: 'OpenCode',
+    supported: true,
+    authenticated: true,
+    authMethod: 'opencode_managed',
+    verificationState: 'verified',
+    statusMessage: 'Managed runtime verified',
+    detailMessage: 'version 1.4.0 - live resolved-fin - managed teammate agent',
+    models: ['openai/gpt-5.4-mini'],
+    canLoginFromUi: false,
+    capabilities: {
+      teamLaunch: false,
+      oneShot: false,
+      extensions: createDefaultCliExtensionCapabilities(),
+    },
+    selectedBackendId: null,
+    resolvedBackendId: null,
+    availableBackends: [],
+    externalRuntimeDiagnostics: [
+      {
+        id: 'opencode-live-host',
+        label: 'OpenCode live host',
+        detected: true,
+        statusMessage: 'Healthy',
+        detailMessage: 'resolved resolved-fin',
+      },
+      {
+        id: 'opencode-managed-runtime',
+        label: 'OpenCode managed runtime',
+        detected: true,
+        statusMessage: 'Managed runtime verified',
+        detailMessage: 'managed teammate agent',
+      },
+      {
+        id: 'opencode-behavior',
+        label: 'OpenCode behavior',
+        detected: true,
+        statusMessage: 'Behavior fingerprint stable',
+        detailMessage: 'behavior abc123',
+      },
+      {
+        id: 'opencode-extra',
+        label: 'Should be hidden',
+        detected: false,
+        statusMessage: 'Hidden',
+        detailMessage: 'Only first three diagnostics are shown',
+      },
+    ],
+    backend: {
+      kind: 'opencode-cli',
+      label: 'OpenCode CLI',
+      authMethodDetail: 'managed teammate agent',
+    },
+    connection: null,
+  };
+}
+
 function findButtonByText(container: HTMLElement, text: string): HTMLButtonElement {
   const button = Array.from(container.querySelectorAll('button')).find((candidate) =>
     candidate.textContent?.includes(text)
@@ -1353,5 +1412,36 @@ describe('ProviderRuntimeSettingsDialog', () => {
 
     expect(onSelectBackend).toHaveBeenCalledWith('gemini', 'api');
     expect(host.textContent).toContain('Runtime updated, but failed to refresh provider status.');
+  });
+
+  it('shows OpenCode live runtime detail and bounded diagnostics in the provider summary', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [createOpenCodeProvider()],
+          initialProviderId: 'opencode',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('OpenCode');
+    expect(host.textContent).toContain('version 1.4.0 - live resolved-fin - managed teammate agent');
+    expect(host.textContent).toContain('OpenCode live host: Healthy - resolved resolved-fin');
+    expect(host.textContent).toContain(
+      'OpenCode managed runtime: Managed runtime verified - managed teammate agent'
+    );
+    expect(host.textContent).toContain(
+      'OpenCode behavior: Behavior fingerprint stable - behavior abc123'
+    );
+    expect(host.textContent).not.toContain('Should be hidden');
   });
 });

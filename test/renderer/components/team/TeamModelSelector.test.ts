@@ -34,6 +34,15 @@ describe('formatTeamModelSummary', () => {
     expect(formatTeamModelSummary('codex', 'gpt-5.4', 'medium')).toBe('5.4 · Medium');
   });
 
+  it('formats OpenCode models with source-aware summaries while preserving opaque ids', () => {
+    expect(formatTeamModelSummary('opencode', 'openai/gpt-5.4', 'medium')).toBe(
+      'GPT-5.4 · via OpenAI · Medium'
+    );
+    expect(formatTeamModelSummary('opencode', 'openrouter/moonshotai/kimi-k2', 'low')).toBe(
+      'moonshotai/kimi-k2 · via OpenRouter · Low'
+    );
+  });
+
   it('marks the known disabled Codex models only for Codex team selection', () => {
     expect(getTeamModelUiDisabledReason('codex', 'gpt-5.1-codex-mini')).toBe(
       GPT_5_1_CODEX_MINI_UI_DISABLED_REASON

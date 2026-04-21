@@ -216,6 +216,84 @@ describe('TaskLogStreamSection', () => {
     });
   });
 
+  it('describes OpenCode runtime fallback when the stream source is projected from runtime logs', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    apiState.getTaskLogStream.mockResolvedValueOnce({
+      participants: [buildParticipant('member:alice', 'alice')],
+      defaultFilter: 'member:alice',
+      segments: [
+        buildSegment({
+          id: 'segment-alice-1',
+          participantKey: 'member:alice',
+          memberName: 'alice',
+          startTimestamp: '2026-04-21T10:00:00.000Z',
+          endTimestamp: '2026-04-21T10:01:00.000Z',
+        }),
+      ],
+      source: 'opencode_runtime_fallback',
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TaskLogStreamSection, { teamName: 'demo', taskId: 'task-a' }));
+      await flushMicrotasks();
+    });
+
+    expect(host.textContent).toContain('Task-scoped OpenCode runtime logs projected');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('describes OpenCode marker-based fallback when runtime projection matched task tools', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    apiState.getTaskLogStream.mockResolvedValueOnce({
+      participants: [buildParticipant('member:alice', 'alice')],
+      defaultFilter: 'member:alice',
+      segments: [
+        buildSegment({
+          id: 'segment-alice-marker',
+          participantKey: 'member:alice',
+          memberName: 'alice',
+          startTimestamp: '2026-04-21T10:00:00.000Z',
+          endTimestamp: '2026-04-21T10:01:00.000Z',
+        }),
+      ],
+      source: 'opencode_runtime_fallback',
+      runtimeProjection: {
+        provider: 'opencode',
+        mode: 'heuristic',
+        attributionRecordCount: 0,
+        projectedMessageCount: 2,
+        fallbackReason: 'task_tool_markers',
+        markerMatchCount: 1,
+        markerSpanCount: 2,
+      },
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TaskLogStreamSection, { teamName: 'demo', taskId: 'task-a' }));
+      await flushMicrotasks();
+    });
+
+    expect(host.textContent).toContain('matched task tool markers');
+    expect(host.textContent).toContain('across 2 spans');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
   it('honors a participant default filter from the stream response', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     apiState.onTeamChange.mockImplementation(() => () => undefined);
@@ -330,6 +408,29 @@ describe('TaskLogStreamSection', () => {
             endTimestamp: '2026-04-12T16:05:00.000Z',
           }),
         ],
+      })
+      .mockResolvedValueOnce({
+        participants: [
+          buildParticipant('member:tom', 'tom'),
+          buildParticipant('member:alice', 'alice'),
+        ],
+        defaultFilter: 'all',
+        segments: [
+          buildSegment({
+            id: 'tom-1',
+            participantKey: 'member:tom',
+            memberName: 'tom',
+            startTimestamp: '2026-04-12T16:00:00.000Z',
+            endTimestamp: '2026-04-12T16:01:00.000Z',
+          }),
+          buildSegment({
+            id: 'tom-2',
+            participantKey: 'member:tom',
+            memberName: 'tom',
+            startTimestamp: '2026-04-12T16:04:00.000Z',
+            endTimestamp: '2026-04-12T16:05:00.000Z',
+          }),
+        ],
       });
 
     const host = document.createElement('div');
@@ -383,6 +484,14 @@ describe('TaskLogStreamSection', () => {
     expect(
       [...host.querySelectorAll('[data-testid="member-execution-log"]')].map((node) => node.textContent)
     ).toEqual(['tom:1', 'tom:1']);
+
+    await act(async () => {
+      handler?.(null, { teamName: 'demo', type: 'log-source-change' });
+      vi.advanceTimersByTime(400);
+      await flushMicrotasks();
+    });
+
+    expect(apiState.getTaskLogStream).toHaveBeenCalledTimes(3);
 
     await act(async () => {
       root.unmount();

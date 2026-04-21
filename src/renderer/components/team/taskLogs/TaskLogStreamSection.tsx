@@ -51,11 +51,29 @@ function normalizeResponse(response: BoardTaskLogStreamResponse): BoardTaskLogSt
   return {
     participants: response.participants,
     defaultFilter: response.defaultFilter,
+    source: response.source,
+    runtimeProjection: response.runtimeProjection,
     segments: response.segments.map((segment) => ({
       ...segment,
       chunks: asEnhancedChunkArray(segment.chunks) ?? [],
     })),
   };
+}
+
+function describeStreamSource(stream: BoardTaskLogStreamResponse | null): string {
+  if (stream?.source === 'opencode_runtime_attribution') {
+    return 'Task-scoped OpenCode runtime logs projected from explicit task attribution into the same execution-log components used in Logs.';
+  }
+  if (stream?.source === 'opencode_runtime_fallback') {
+    if (stream.runtimeProjection?.fallbackReason === 'task_tool_markers') {
+      const spanCount = stream.runtimeProjection.markerSpanCount;
+      const spanDetails =
+        typeof spanCount === 'number' && spanCount > 1 ? ` across ${spanCount} spans` : '';
+      return `Task-scoped OpenCode runtime logs projected from matched task tool markers${spanDetails} into the same execution-log components used in Logs.`;
+    }
+    return 'Task-scoped OpenCode runtime logs projected into the same execution-log components used in Logs.';
+  }
+  return 'Task-scoped transcript logs rendered with the same execution-log components used in Logs.';
 }
 
 const SegmentMarker = ({ segment }: { segment: BoardTaskLogSegment }): React.JSX.Element => {
@@ -211,11 +229,13 @@ export const TaskLogStreamSection = ({
     };
 
     const unsubscribe = api.teams.onTeamChange?.((_event, event) => {
-      if (
-        event.teamName !== teamName ||
-        event.type !== 'task-log-change' ||
-        event.taskId !== taskId
-      ) {
+      if (event.teamName !== teamName) {
+        return;
+      }
+      const shouldReload =
+        event.type === 'log-source-change' ||
+        (event.type === 'task-log-change' && event.taskId === taskId);
+      if (!shouldReload) {
         return;
       }
       scheduleReload();
@@ -247,6 +267,7 @@ export const TaskLogStreamSection = ({
 
   const participants = stream?.participants ?? [];
   const showChips = participants.length > 1;
+  const streamDescription = useMemo(() => describeStreamSource(stream), [stream]);
   const visibleSegments = useMemo(() => {
     const source = stream?.segments ?? [];
     const filtered =
@@ -292,9 +313,7 @@ export const TaskLogStreamSection = ({
       <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
         Task Log Stream
       </h4>
-      <p className="text-xs text-[var(--color-text-muted)]">
-        Task-scoped transcript logs rendered with the same execution-log components used in Logs.
-      </p>
+      <p className="text-xs text-[var(--color-text-muted)]">{streamDescription}</p>
 
       {showChips ? (
         <div className="flex flex-wrap items-center gap-1.5">
@@ -331,8 +350,8 @@ export const TaskLogStreamSection = ({
           <FileText size={20} className="mx-auto mb-2 opacity-40" />
           No task log stream yet
           <p className="mt-1 text-[10px] opacity-60">
-            Task-linked transcript logs will appear here when explicit task-linked transcript
-            metadata is available.
+            Task-linked logs will appear here when transcript metadata or runtime projection is
+            available.
           </p>
         </div>
       ) : (

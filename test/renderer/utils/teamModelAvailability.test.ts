@@ -29,6 +29,26 @@ function createCodexProviderStatus(
   };
 }
 
+function createOpenCodeProviderStatus(
+  models: string[],
+  overrides: Partial<TeamModelRuntimeProviderStatus> = {}
+): TeamModelRuntimeProviderStatus {
+  return {
+    providerId: 'opencode',
+    models,
+    authMethod: 'opencode_managed',
+    backend: {
+      kind: 'opencode-cli',
+      label: 'OpenCode CLI',
+    },
+    authenticated: true,
+    supported: true,
+    modelVerificationState: 'idle',
+    modelAvailability: [],
+    ...overrides,
+  };
+}
+
 describe('teamModelAvailability', () => {
   it('uses runtime-reported Codex models as the source of truth', () => {
     const providerStatus = createCodexProviderStatus(['gpt-5.4', 'gpt-5.3-codex']);
@@ -101,6 +121,48 @@ describe('teamModelAvailability', () => {
         availabilityReason: null,
       },
     ]);
+  });
+
+  it('keeps OpenCode raw ids intact while exposing readable labels and source badges', () => {
+    const providerStatus = createOpenCodeProviderStatus([
+      'openai/gpt-5.4',
+      'openrouter/moonshotai/kimi-k2',
+      'opencode/big-pickle',
+    ]);
+
+    expect(getAvailableTeamProviderModels('opencode', providerStatus)).toEqual([
+      'openai/gpt-5.4',
+      'opencode/big-pickle',
+      'openrouter/moonshotai/kimi-k2',
+    ]);
+
+    expect(getAvailableTeamProviderModelOptions('opencode', providerStatus)).toEqual([
+      { value: '', label: 'Default', badgeLabel: 'Default' },
+      {
+        value: 'openai/gpt-5.4',
+        label: 'GPT-5.4',
+        badgeLabel: 'OpenAI',
+        availabilityStatus: 'available',
+        availabilityReason: null,
+      },
+      {
+        value: 'opencode/big-pickle',
+        label: 'big-pickle',
+        badgeLabel: 'OpenCode',
+        availabilityStatus: 'available',
+        availabilityReason: null,
+      },
+      {
+        value: 'openrouter/moonshotai/kimi-k2',
+        label: 'moonshotai/kimi-k2',
+        badgeLabel: 'OpenRouter',
+        availabilityStatus: 'available',
+        availabilityReason: null,
+      },
+    ]);
+    expect(
+      normalizeTeamModelForUi('opencode', 'openrouter/moonshotai/kimi-k2', providerStatus)
+    ).toBe('openrouter/moonshotai/kimi-k2');
   });
 
   it('clears stale Codex selections when runtime no longer reports that model', () => {

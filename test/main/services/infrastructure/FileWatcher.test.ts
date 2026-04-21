@@ -62,6 +62,7 @@ import * as fsp from 'fs/promises';
 import { errorDetector } from '../../../../src/main/services/error/ErrorDetector';
 import { DataCache } from '../../../../src/main/services/infrastructure/DataCache';
 import { FileWatcher } from '../../../../src/main/services/infrastructure/FileWatcher';
+import { OPENCODE_TASK_LOG_ATTRIBUTION_FILE } from '../../../../src/shared/constants/opencodeTaskLogAttribution';
 
 function createFakeWatcher(): FsType.FSWatcher {
   const emitter = new EventEmitter() as EventEmitter & { close: () => void };
@@ -166,6 +167,27 @@ describe('FileWatcher', () => {
 
     expect(watchMock).toHaveBeenCalledTimes(3);
     watcher.stop();
+  });
+
+  it('emits log-source-change when OpenCode task-log attribution manifest changes', () => {
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, '/tmp/projects', '/tmp/todos');
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+
+    (
+      watcher as unknown as {
+        processTeamsChange: (eventType: string, filename: string) => void;
+      }
+    ).processTeamsChange('change', `team-a/${OPENCODE_TASK_LOG_ATTRIBUTION_FILE}`);
+
+    expect(events).toEqual([
+      {
+        type: 'log-source-change',
+        teamName: 'team-a',
+        detail: OPENCODE_TASK_LOG_ATTRIBUTION_FILE,
+      },
+    ]);
   });
 
   it('keeps append offset pinned for partial trailing lines until completed', async () => {

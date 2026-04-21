@@ -408,6 +408,7 @@ export const DateGroupedSessions = (): React.JSX.Element => {
       anthropic: 0,
       codex: 0,
       gemini: 0,
+      opencode: 0,
     };
 
     for (const session of searchedSessions) {

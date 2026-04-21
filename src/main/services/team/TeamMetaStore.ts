@@ -21,7 +21,7 @@ export interface TeamMetaFile {
   color?: string;
   cwd: string;
   prompt?: string;
-  providerId?: 'anthropic' | 'codex' | 'gemini';
+  providerId?: TeamProviderId;
   providerBackendId?: string;
   model?: string;
   effort?: string;

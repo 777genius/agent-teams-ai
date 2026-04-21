@@ -5,8 +5,15 @@ import {
 } from '@shared/utils/teamMemberName';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { getStableTeamOwnerId } from '@shared/utils/teamStableOwnerId';
+import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
-import type { TeamConfig, TeamMember, TeamMemberSnapshot, TeamTaskWithKanban } from '@shared/types';
+import type {
+  TeamConfig,
+  TeamMember,
+  TeamMemberSnapshot,
+  TeamProviderId,
+  TeamTaskWithKanban,
+} from '@shared/types';
 
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const CROSS_TEAM_TOOL_RECIPIENT_NAMES = new Set([
@@ -121,7 +128,7 @@ export class TeamMemberResolver {
         agentType?: string;
         role?: string;
         workflow?: string;
-        providerId?: 'anthropic' | 'codex' | 'gemini';
+        providerId?: TeamProviderId;
         model?: string;
         effort?: TeamMember['effort'];
         color?: string;
@@ -131,17 +138,10 @@ export class TeamMemberResolver {
     if (Array.isArray(config.members)) {
       for (const m of config.members) {
         if (typeof m?.name === 'string' && m.name.trim() !== '') {
-          const configMember = m as TeamMember & { provider?: 'anthropic' | 'codex' | 'gemini' };
+          const configMember = m as TeamMember & { provider?: TeamProviderId };
           const providerId =
-            configMember.providerId === 'anthropic' ||
-            configMember.providerId === 'codex' ||
-            configMember.providerId === 'gemini'
-              ? configMember.providerId
-              : configMember.provider === 'anthropic' ||
-                  configMember.provider === 'codex' ||
-                  configMember.provider === 'gemini'
-                ? configMember.provider
-                : undefined;
+            normalizeOptionalTeamProviderId(configMember.providerId) ??
+            normalizeOptionalTeamProviderId(configMember.provider);
           configMemberMap.set(m.name.trim(), {
             agentId: configMember.agentId,
             agentType: configMember.agentType,
@@ -164,7 +164,7 @@ export class TeamMemberResolver {
         agentType?: string;
         role?: string;
         workflow?: string;
-        providerId?: 'anthropic' | 'codex' | 'gemini';
+        providerId?: TeamProviderId;
         model?: string;
         effort?: TeamMember['effort'];
         color?: string;

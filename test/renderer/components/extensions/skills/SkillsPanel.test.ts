@@ -559,7 +559,7 @@ describe('SkillsPanel', () => {
     });
 
     expect(host.textContent).toContain(
-      'Shared skills in `.claude`, `.cursor`, and `.agents` are available to Anthropic and Codex.'
+      'Shared skills in `.claude`, `.cursor`, and `.agents` are available to Anthropic, Codex, and OpenCode.'
     );
     expect(host.textContent).toContain('Codex only');
 

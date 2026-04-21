@@ -293,6 +293,40 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(fs.existsSync(missingCwd)).toBe(false);
   });
 
+  it('blocks OpenCode prepare without probing the legacy Claude stream-json runtime', async () => {
+    const svc = new TeamProvisioningService();
+    const probeSpy = vi.spyOn(svc as any, 'getCachedOrProbeResult');
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+    });
+
+    expect(result).toMatchObject({
+      ready: false,
+      message:
+        'OpenCode team launch is not enabled yet. Production launch requires the gated OpenCode runtime adapter.',
+    });
+    expect(probeSpy).not.toHaveBeenCalled();
+  });
+
+  it('blocks OpenCode createTeam before resolving the legacy Claude binary', async () => {
+    const svc = new TeamProvisioningService();
+
+    await expect(
+      svc.createTeam(
+        {
+          teamName: 'opencode-team',
+          cwd: tempRoot,
+          providerId: 'opencode',
+          members: [],
+        },
+        () => {}
+      )
+    ).rejects.toThrow('OpenCode team launch is not enabled in the legacy Claude stream-json');
+    expect(ClaudeBinaryResolver.resolve).not.toHaveBeenCalled();
+  });
+
   it('keys the prepare probe cache by cwd', async () => {
     const svc = new TeamProvisioningService();
     vi.spyOn(svc as any, 'buildProvisioningEnv').mockResolvedValue({

@@ -38,6 +38,7 @@ describe('providerRuntimeEnv', () => {
   it('preserves gemini as a valid team provider id', () => {
     expect(resolveTeamProviderId('gemini')).toBe('gemini');
     expect(resolveTeamProviderId('codex')).toBe('codex');
+    expect(resolveTeamProviderId('opencode')).toBe('opencode');
     expect(resolveTeamProviderId(undefined)).toBe('anthropic');
   });
 });

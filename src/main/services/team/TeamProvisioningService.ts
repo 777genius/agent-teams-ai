@@ -119,6 +119,7 @@ import {
 } from './TeamBootstrapStateReader';
 import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
+import { TeamInboxWriter } from './TeamInboxWriter';
 import {
   createPersistedLaunchSnapshot,
   snapshotFromRuntimeMemberStatuses,
@@ -129,6 +130,26 @@ import { TeamMcpConfigBuilder } from './TeamMcpConfigBuilder';
 import { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMetaStore } from './TeamMetaStore';
+import {
+  TeamRuntimeAdapterRegistry,
+  type TeamLaunchRuntimeAdapter,
+  type TeamRuntimeLaunchInput,
+  type TeamRuntimeLaunchResult,
+  type TeamRuntimeMemberLaunchEvidence,
+} from './runtime';
+import {
+  RuntimeDeliveryDestinationRegistry,
+  RuntimeDeliveryReconciler,
+  RuntimeDeliveryService,
+  type RuntimeDeliveryDestinationPort,
+} from './opencode/delivery/RuntimeDeliveryService';
+import { createRuntimeDeliveryJournalStore } from './opencode/delivery/RuntimeDeliveryJournal';
+import { getOpenCodeTeamRuntimeDirectory } from './opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import {
+  createRuntimeRunTombstoneStore,
+  type RuntimeEvidenceKind,
+} from './opencode/store/RuntimeRunTombstoneStore';
+import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { TeamTaskReader } from './TeamTaskReader';
 import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
@@ -173,6 +194,20 @@ interface RelayInboxMessageView {
   isCoarseNoise: boolean;
 }
 
+interface OpenCodeRuntimeControlAck {
+  ok: true;
+  providerId: 'opencode';
+  teamName: string;
+  runId: string;
+  state: 'accepted' | 'delivered' | 'duplicate' | 'recorded';
+  memberName?: string;
+  runtimeSessionId?: string;
+  idempotencyKey?: string;
+  location?: unknown;
+  diagnostics: string[];
+  observedAt: string;
+}
+
 import type {
   CliProviderModelCatalog,
   ActiveToolCall,
@@ -185,9 +220,11 @@ import type {
   MemberSpawnLivenessSource,
   MemberSpawnStatus,
   MemberSpawnStatusEntry,
+  PersistedTeamLaunchMemberState,
   PersistedTeamLaunchPhase,
   PersistedTeamLaunchSummary,
   ProviderModelLaunchIdentity,
+  PersistedTeamLaunchSnapshot,
   TeamAgentRuntimeBackendType,
   TeamAgentRuntimeEntry,
   TeamAgentRuntimeSnapshot,
@@ -224,6 +261,63 @@ const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const RUN_TIMEOUT_MS = 300_000;
 const VERIFY_TIMEOUT_MS = 15_000;
 const MCP_PREFLIGHT_INITIALIZE_TIMEOUT_MS = 45_000;
+
+function asRuntimeRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('OpenCode runtime payload must be an object');
+  }
+  return value as Record<string, unknown>;
+}
+
+function requireRuntimeString(value: unknown, fieldName: string): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(`OpenCode runtime payload missing ${fieldName}`);
+  }
+  return value.trim();
+}
+
+function optionalRuntimeString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function normalizeRuntimeIso(value: unknown, fallback: string = nowIso()): string {
+  const raw = optionalRuntimeString(value);
+  if (!raw) {
+    return fallback;
+  }
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : fallback;
+}
+
+function normalizeRuntimeStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    : [];
+}
+
+function runtimeTaskRefs(teamName: string, value: unknown): InboxMessage['taskRefs'] | undefined {
+  const refs = normalizeRuntimeStringArray(value);
+  return refs.length > 0
+    ? refs.map((ref) => ({
+        teamName,
+        taskId: ref,
+        displayId: ref,
+      }))
+    : undefined;
+}
+
+function mergeRuntimeDiagnostics(
+  previous: string[] | undefined,
+  incoming: unknown,
+  fallback?: string
+): string[] | undefined {
+  const merged = [
+    ...(previous ?? []),
+    ...normalizeRuntimeStringArray(incoming),
+    ...(fallback ? [fallback] : []),
+  ].filter((value) => value.trim().length > 0);
+  return merged.length > 0 ? [...new Set(merged)] : undefined;
+}
 const VERIFY_POLL_MS = 500;
 const MCP_PREFLIGHT_SHUTDOWN_GRACE_MS = 250;
 const MCP_PREFLIGHT_SHUTDOWN_TIMEOUT_MS = 2_000;
@@ -516,6 +610,8 @@ function resolveRequestedLaunchModel(params: {
 
 function getTeamProviderLabel(providerId: TeamProviderId): string {
   switch (providerId) {
+    case 'opencode':
+      return 'OpenCode';
     case 'codex':
       return 'Codex';
     case 'gemini':
@@ -555,6 +651,8 @@ function getCanonicalSendMessageToolRule(to: string): string {
 function getConfiguredRuntimeBackend(providerId: TeamProviderId): string | null {
   const runtimeConfig = ConfigManager.getInstance().getConfig().runtime.providerBackends;
   switch (providerId) {
+    case 'opencode':
+      return null;
     case 'gemini':
       return runtimeConfig.gemini;
     case 'codex':
@@ -563,6 +661,33 @@ function getConfiguredRuntimeBackend(providerId: TeamProviderId): string | null 
     default:
       return null;
   }
+}
+
+function isOpenCodeLegacyProvisioningRequest(request: {
+  providerId?: unknown;
+  members?: readonly { providerId?: unknown; provider?: unknown }[];
+}): boolean {
+  return (
+    normalizeOptionalTeamProviderId(request.providerId) === 'opencode' ||
+    (request.members ?? []).some(
+      (member) =>
+        normalizeOptionalTeamProviderId(member.providerId) === 'opencode' ||
+        normalizeOptionalTeamProviderId(member.provider) === 'opencode'
+    )
+  );
+}
+
+function assertOpenCodeNotLaunchedThroughLegacyProvisioning(request: {
+  providerId?: unknown;
+  members?: readonly { providerId?: unknown; provider?: unknown }[];
+}): void {
+  if (!isOpenCodeLegacyProvisioningRequest(request)) {
+    return;
+  }
+  throw new Error(
+    'OpenCode team launch is not enabled in the legacy Claude stream-json provisioning path. ' +
+      'Use the gated OpenCode runtime adapter once production launch is enabled.'
+  );
 }
 
 function mergeProvisioningWarnings(
@@ -1408,9 +1533,7 @@ function formatWorkflowBlock(workflow: string, indent: string): string {
 type TeamMemberInput = TeamCreateRequest['members'][number];
 
 function normalizeTeamMemberProviderId(providerId: unknown): TeamProviderId | undefined {
-  return providerId === 'codex' || providerId === 'gemini' || providerId === 'anthropic'
-    ? providerId
-    : undefined;
+  return normalizeOptionalTeamProviderId(providerId);
 }
 
 function buildEffectiveTeamMemberSpec(
@@ -2963,6 +3086,11 @@ export class TeamProvisioningService {
   private readonly runs = new Map<string, ProvisioningRun>();
   private readonly provisioningRunByTeam = new Map<string, string>();
   private readonly aliveRunByTeam = new Map<string, string>();
+  private readonly runtimeAdapterProgressByRunId = new Map<string, TeamProvisioningProgress>();
+  private readonly runtimeAdapterRunByTeam = new Map<
+    string,
+    { runId: string; providerId: TeamProviderId; cwd?: string }
+  >();
   private readonly retainedClaudeLogsByTeam = new Map<string, RetainedClaudeLogsSnapshot>();
   private readonly persistedTranscriptClaudeLogsCache = new Map<
     string,
@@ -2998,6 +3126,7 @@ export class TeamProvisioningService {
   private toolApprovalSettingsByTeam = new Map<string, ToolApprovalSettings>();
   private pendingTimeouts = new Map<string, NodeJS.Timeout>();
   private inFlightResponses = new Set<string>();
+  private runtimeAdapterRegistry: TeamRuntimeAdapterRegistry | null = null;
   private controlApiBaseUrlResolver: (() => Promise<string | null>) | null = null;
   private crossTeamSender:
     | ((request: {
@@ -3017,9 +3146,11 @@ export class TeamProvisioningService {
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
     private readonly inboxReader: TeamInboxReader = new TeamInboxReader(),
     private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore(),
-    _sentMessagesStore: TeamSentMessagesStore = new TeamSentMessagesStore(),
+    private readonly sentMessagesStore: TeamSentMessagesStore = new TeamSentMessagesStore(),
     private readonly mcpConfigBuilder: TeamMcpConfigBuilder = new TeamMcpConfigBuilder(),
-    private readonly teamMetaStore: TeamMetaStore = new TeamMetaStore()
+    private readonly teamMetaStore: TeamMetaStore = new TeamMetaStore(),
+    private readonly inboxWriter: TeamInboxWriter = new TeamInboxWriter(),
+    private readonly openCodeTaskLogAttributionStore: OpenCodeTaskLogAttributionStore = new OpenCodeTaskLogAttributionStore()
   ) {
     this.memberLogsFinder = new TeamMemberLogsFinder(
       this.configReader,
@@ -3027,6 +3158,10 @@ export class TeamProvisioningService {
       this.membersMetaStore
     );
     this.transcriptProjectResolver = new TeamTranscriptProjectResolver(this.configReader);
+  }
+
+  setRuntimeAdapterRegistry(registry: TeamRuntimeAdapterRegistry | null): void {
+    this.runtimeAdapterRegistry = registry;
   }
 
   setCrossTeamSender(
@@ -3403,6 +3538,31 @@ export class TeamProvisioningService {
 
   private getTrackedRunId(teamName: string): string | null {
     return this.getProvisioningRunId(teamName) ?? this.getAliveRunId(teamName);
+  }
+
+  private getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null {
+    if (!this.runtimeAdapterRegistry?.has('opencode')) {
+      return null;
+    }
+    return this.runtimeAdapterRegistry.get('opencode');
+  }
+
+  private shouldRouteOpenCodeToRuntimeAdapter(request: {
+    providerId?: TeamProviderId;
+    members?: readonly { providerId?: TeamProviderId; provider?: TeamProviderId }[];
+  }): boolean {
+    return (
+      isOpenCodeLegacyProvisioningRequest(request) && this.getOpenCodeRuntimeAdapter() !== null
+    );
+  }
+
+  private setRuntimeAdapterProgress(
+    progress: TeamProvisioningProgress,
+    onProgress?: (progress: TeamProvisioningProgress) => void
+  ): TeamProvisioningProgress {
+    this.runtimeAdapterProgressByRunId.set(progress.runId, progress);
+    onProgress?.(progress);
+    return progress;
   }
 
   private async getPersistedTranscriptClaudeLogs(
@@ -4350,6 +4510,446 @@ export class TeamProvisioningService {
 
   getCurrentRunId(teamName: string): string | null {
     return this.getAliveRunId(teamName);
+  }
+
+  async recordOpenCodeRuntimeBootstrapCheckin(raw: unknown): Promise<OpenCodeRuntimeControlAck> {
+    const payload = asRuntimeRecord(raw);
+    const teamName = requireRuntimeString(payload.teamName, 'teamName');
+    const runId = requireRuntimeString(payload.runId, 'runId');
+    const memberName = requireRuntimeString(payload.memberName, 'memberName');
+    const runtimeSessionId = requireRuntimeString(payload.runtimeSessionId, 'runtimeSessionId');
+    const observedAt = normalizeRuntimeIso(payload.observedAt);
+
+    await this.assertOpenCodeRuntimeEvidenceAccepted({
+      teamName,
+      runId,
+      evidenceKind: 'bootstrap_checkin',
+    });
+    await this.updateOpenCodeRuntimeMemberLiveness({
+      teamName,
+      runId,
+      memberName,
+      runtimeSessionId,
+      observedAt,
+      diagnostics: payload.diagnostics,
+      reason: 'OpenCode runtime bootstrap check-in accepted',
+    });
+
+    return {
+      ok: true,
+      providerId: 'opencode',
+      teamName,
+      runId,
+      state: 'accepted',
+      memberName,
+      runtimeSessionId,
+      diagnostics: [],
+      observedAt,
+    };
+  }
+
+  async deliverOpenCodeRuntimeMessage(raw: unknown): Promise<OpenCodeRuntimeControlAck> {
+    const payload = asRuntimeRecord(raw);
+    const teamName = requireRuntimeString(payload.teamName, 'teamName');
+    const runId = requireRuntimeString(payload.runId, 'runId');
+    await this.assertOpenCodeRuntimeEvidenceAccepted({
+      teamName,
+      runId,
+      evidenceKind: 'delivery_call',
+    });
+
+    const delivery = this.createOpenCodeRuntimeDeliveryService(teamName);
+    const ack = await delivery.deliver({
+      ...payload,
+      teamName,
+      runId,
+      providerId: 'opencode',
+      createdAt: normalizeRuntimeIso(payload.createdAt),
+    });
+
+    if (!ack.ok) {
+      throw new Error(`OpenCode runtime delivery rejected: ${ack.reason}`);
+    }
+
+    return {
+      ok: true,
+      providerId: 'opencode',
+      teamName,
+      runId,
+      state: ack.delivered ? 'delivered' : 'duplicate',
+      idempotencyKey: ack.idempotencyKey,
+      location: ack.location,
+      diagnostics: ack.reason ? [ack.reason] : [],
+      observedAt: normalizeRuntimeIso(payload.createdAt),
+    };
+  }
+
+  async recordOpenCodeRuntimeTaskEvent(raw: unknown): Promise<OpenCodeRuntimeControlAck> {
+    const payload = asRuntimeRecord(raw);
+    const teamName = requireRuntimeString(payload.teamName, 'teamName');
+    const runId = requireRuntimeString(payload.runId, 'runId');
+    const memberName = requireRuntimeString(payload.memberName, 'memberName');
+    const taskId = requireRuntimeString(payload.taskId, 'taskId');
+    const event = requireRuntimeString(payload.event, 'event');
+    const idempotencyKey = requireRuntimeString(payload.idempotencyKey, 'idempotencyKey');
+    const runtimeSessionId = optionalRuntimeString(payload.runtimeSessionId);
+    const observedAt = normalizeRuntimeIso(payload.createdAt);
+
+    await this.assertOpenCodeRuntimeEvidenceAccepted({
+      teamName,
+      runId,
+      evidenceKind: 'delivery_call',
+    });
+
+    const writeResult = await this.openCodeTaskLogAttributionStore.upsertTaskRecord(teamName, {
+      taskId,
+      memberName,
+      scope: 'member_session_window',
+      ...(runtimeSessionId ? { sessionId: runtimeSessionId } : {}),
+      since: observedAt,
+      source: 'launch_runtime',
+    });
+    this.teamChangeEmitter?.({
+      type: 'task-log-change',
+      teamName,
+      runId,
+      taskId,
+      detail: `opencode-runtime-task-event:${event}`,
+    });
+
+    return {
+      ok: true,
+      providerId: 'opencode',
+      teamName,
+      runId,
+      state: 'recorded',
+      memberName,
+      ...(runtimeSessionId ? { runtimeSessionId } : {}),
+      idempotencyKey,
+      diagnostics: [writeResult],
+      observedAt,
+    };
+  }
+
+  async recordOpenCodeRuntimeHeartbeat(raw: unknown): Promise<OpenCodeRuntimeControlAck> {
+    const payload = asRuntimeRecord(raw);
+    const teamName = requireRuntimeString(payload.teamName, 'teamName');
+    const runId = requireRuntimeString(payload.runId, 'runId');
+    const memberName = requireRuntimeString(payload.memberName, 'memberName');
+    const runtimeSessionId = requireRuntimeString(payload.runtimeSessionId, 'runtimeSessionId');
+    const observedAt = normalizeRuntimeIso(payload.observedAt);
+
+    await this.assertOpenCodeRuntimeEvidenceAccepted({
+      teamName,
+      runId,
+      evidenceKind: 'heartbeat',
+    });
+    await this.updateOpenCodeRuntimeMemberLiveness({
+      teamName,
+      runId,
+      memberName,
+      runtimeSessionId,
+      observedAt,
+      diagnostics: undefined,
+      reason: `OpenCode runtime heartbeat accepted${optionalRuntimeString(payload.status) ? ` (${optionalRuntimeString(payload.status)})` : ''}`,
+    });
+
+    return {
+      ok: true,
+      providerId: 'opencode',
+      teamName,
+      runId,
+      state: 'accepted',
+      memberName,
+      runtimeSessionId,
+      diagnostics: [],
+      observedAt,
+    };
+  }
+
+  private async assertOpenCodeRuntimeEvidenceAccepted(input: {
+    teamName: string;
+    runId: string;
+    evidenceKind: RuntimeEvidenceKind;
+  }): Promise<void> {
+    const store = createRuntimeRunTombstoneStore({
+      filePath: path.join(
+        getOpenCodeTeamRuntimeDirectory(getTeamsBasePath(), input.teamName),
+        'opencode-run-tombstones.json'
+      ),
+    });
+    await store.assertEvidenceAccepted({
+      teamName: input.teamName,
+      runId: input.runId,
+      currentRunId: this.getTrackedRunId(input.teamName),
+      evidenceKind: input.evidenceKind,
+    });
+  }
+
+  private async updateOpenCodeRuntimeMemberLiveness(input: {
+    teamName: string;
+    runId: string;
+    memberName: string;
+    runtimeSessionId: string;
+    observedAt: string;
+    diagnostics: unknown;
+    reason: string;
+  }): Promise<void> {
+    const previous = await this.launchStateStore.read(input.teamName);
+    const expectedMembers = previous?.expectedMembers.length
+      ? previous.expectedMembers
+      : this.readPersistedRuntimeMembers(input.teamName)
+          .map((member) => (typeof member.name === 'string' ? member.name.trim() : ''))
+          .filter((name) => name.length > 0 && name !== 'user' && !isLeadMember({ name }));
+    const previousMember = previous?.members[input.memberName];
+    const nextMember: PersistedTeamLaunchMemberState = {
+      name: input.memberName,
+      launchState: 'confirmed_alive',
+      agentToolAccepted: true,
+      runtimeAlive: true,
+      bootstrapConfirmed: true,
+      hardFailure: false,
+      firstSpawnAcceptedAt: previousMember?.firstSpawnAcceptedAt ?? input.observedAt,
+      lastHeartbeatAt: input.observedAt,
+      lastRuntimeAliveAt: input.observedAt,
+      lastEvaluatedAt: input.observedAt,
+      sources: {
+        ...(previousMember?.sources ?? {}),
+        nativeHeartbeat: true,
+        processAlive: true,
+      },
+      diagnostics: mergeRuntimeDiagnostics(
+        previousMember?.diagnostics,
+        input.diagnostics,
+        input.reason
+      ),
+    };
+    const snapshot = createPersistedLaunchSnapshot({
+      teamName: input.teamName,
+      expectedMembers: [...new Set([...expectedMembers, input.memberName])],
+      leadSessionId: previous?.leadSessionId,
+      launchPhase: previous?.launchPhase ?? 'active',
+      members: {
+        ...(previous?.members ?? {}),
+        [input.memberName]: nextMember,
+      },
+      updatedAt: input.observedAt,
+    });
+    await this.launchStateStore.write(input.teamName, snapshot);
+    this.teamChangeEmitter?.({
+      type: 'member-spawn',
+      teamName: input.teamName,
+      runId: input.runId,
+      detail: input.memberName,
+    });
+  }
+
+  private createOpenCodeRuntimeDeliveryService(teamName: string): RuntimeDeliveryService {
+    const runtimeDir = getOpenCodeTeamRuntimeDirectory(getTeamsBasePath(), teamName);
+    const journal = createRuntimeDeliveryJournalStore({
+      filePath: path.join(runtimeDir, 'opencode-delivery-journal.json'),
+    });
+    return new RuntimeDeliveryService(
+      {
+        getCurrentRunId: async (candidateTeamName) => this.getTrackedRunId(candidateTeamName),
+      },
+      journal,
+      new RuntimeDeliveryDestinationRegistry(this.createOpenCodeRuntimeDeliveryPorts()),
+      {
+        append: async (event) => {
+          logger.warn(`[${event.teamName}] ${event.message}`);
+        },
+      },
+      {
+        emit: (event) => {
+          this.teamChangeEmitter?.({
+            type: event.type as TeamChangeEvent['type'],
+            teamName: event.teamName,
+            detail: typeof event.data?.detail === 'string' ? event.data.detail : undefined,
+          });
+        },
+      }
+    );
+  }
+
+  private createOpenCodeRuntimeDeliveryPorts(): RuntimeDeliveryDestinationPort[] {
+    const userMessagesPort: RuntimeDeliveryDestinationPort = {
+      kind: 'user_sent_messages',
+      write: async ({ envelope, destinationMessageId }) => {
+        await this.sentMessagesStore.appendMessage(envelope.teamName, {
+          from: envelope.fromMemberName,
+          to: 'user',
+          text: envelope.text,
+          timestamp: envelope.createdAt,
+          read: true,
+          summary: envelope.summary ?? undefined,
+          messageId: destinationMessageId,
+          source: 'lead_process',
+          leadSessionId: envelope.runtimeSessionId,
+          taskRefs: runtimeTaskRefs(envelope.teamName, envelope.taskRefs),
+        });
+        return {
+          kind: 'user_sent_messages',
+          teamName: envelope.teamName,
+          messageId: destinationMessageId,
+        };
+      },
+      verify: async ({ destination, destinationMessageId }) => {
+        if (destination.kind !== 'user_sent_messages') {
+          return { found: false, location: null, diagnostics: ['destination kind mismatch'] };
+        }
+        const messages = await this.sentMessagesStore.readMessages(destination.teamName);
+        const found = messages.some((message) => message.messageId === destinationMessageId);
+        return {
+          found,
+          location: found
+            ? {
+                kind: 'user_sent_messages',
+                teamName: destination.teamName,
+                messageId: destinationMessageId,
+              }
+            : null,
+          diagnostics: [],
+        };
+      },
+      buildChangeEvent: ({ teamName }) => ({
+        type: 'lead-message',
+        teamName,
+        data: { detail: 'opencode-runtime-delivery' },
+      }),
+    };
+
+    const memberInboxPort: RuntimeDeliveryDestinationPort = {
+      kind: 'member_inbox',
+      write: async ({ envelope, destinationMessageId }) => {
+        if (typeof envelope.to !== 'object' || !('memberName' in envelope.to)) {
+          throw new Error('Runtime delivery member destination missing memberName');
+        }
+        const memberName = envelope.to.memberName;
+        await this.inboxWriter.sendMessage(envelope.teamName, {
+          member: memberName,
+          from: envelope.fromMemberName,
+          to: memberName,
+          text: envelope.text,
+          timestamp: envelope.createdAt,
+          messageId: destinationMessageId,
+          summary: envelope.summary ?? undefined,
+          source: 'inbox',
+          leadSessionId: envelope.runtimeSessionId,
+          taskRefs: runtimeTaskRefs(envelope.teamName, envelope.taskRefs),
+        });
+        return {
+          kind: 'member_inbox',
+          teamName: envelope.teamName,
+          memberName,
+          messageId: destinationMessageId,
+        };
+      },
+      verify: async ({ destination, destinationMessageId }) => {
+        if (destination.kind !== 'member_inbox') {
+          return { found: false, location: null, diagnostics: ['destination kind mismatch'] };
+        }
+        const messages = await this.inboxReader.getMessagesFor(
+          destination.teamName,
+          destination.memberName
+        );
+        const found = messages.some((message) => message.messageId === destinationMessageId);
+        return {
+          found,
+          location: found
+            ? {
+                kind: 'member_inbox',
+                teamName: destination.teamName,
+                memberName: destination.memberName,
+                messageId: destinationMessageId,
+              }
+            : null,
+          diagnostics: [],
+        };
+      },
+      buildChangeEvent: ({ teamName, location }) => ({
+        type: 'inbox',
+        teamName,
+        data: {
+          detail:
+            location.kind === 'member_inbox' ? `inboxes/${location.memberName}.json` : 'inboxes',
+        },
+      }),
+    };
+
+    const crossTeamPort: RuntimeDeliveryDestinationPort = {
+      kind: 'cross_team_outbox',
+      write: async ({ envelope, destinationMessageId }) => {
+        if (typeof envelope.to !== 'object' || !('teamName' in envelope.to)) {
+          throw new Error('Runtime delivery cross-team destination missing teamName');
+        }
+        if (!this.crossTeamSender) {
+          throw new Error('Cross-team sender is not configured');
+        }
+        await this.crossTeamSender({
+          fromTeam: envelope.teamName,
+          fromMember: envelope.fromMemberName,
+          toTeam: envelope.to.teamName,
+          text: envelope.text,
+          summary: envelope.summary ?? undefined,
+          messageId: destinationMessageId,
+          timestamp: envelope.createdAt,
+          conversationId: envelope.idempotencyKey,
+        });
+        return {
+          kind: 'cross_team_outbox',
+          fromTeamName: envelope.teamName,
+          toTeamName: envelope.to.teamName,
+          toMemberName: envelope.to.memberName,
+          messageId: destinationMessageId,
+        };
+      },
+      verify: async ({ destination, destinationMessageId }) => {
+        if (destination.kind !== 'cross_team_outbox') {
+          return { found: false, location: null, diagnostics: ['destination kind mismatch'] };
+        }
+        const messages = await this.sentMessagesStore.readMessages(destination.fromTeamName);
+        const found = messages.some((message) => message.messageId === destinationMessageId);
+        return {
+          found,
+          location: found
+            ? {
+                kind: 'cross_team_outbox',
+                fromTeamName: destination.fromTeamName,
+                toTeamName: destination.toTeamName,
+                toMemberName: destination.toMemberName,
+                messageId: destinationMessageId,
+              }
+            : null,
+          diagnostics: [],
+        };
+      },
+      buildChangeEvent: ({ teamName }) => ({
+        type: 'inbox',
+        teamName,
+        data: { detail: 'cross-team-outbox' },
+      }),
+    };
+
+    return [userMessagesPort, memberInboxPort, crossTeamPort];
+  }
+
+  async recoverOpenCodeRuntimeDeliveryJournal(teamName: string): Promise<{ recovered: true }> {
+    const runtimeDir = getOpenCodeTeamRuntimeDirectory(getTeamsBasePath(), teamName);
+    const journal = createRuntimeDeliveryJournalStore({
+      filePath: path.join(runtimeDir, 'opencode-delivery-journal.json'),
+    });
+    const reconciler = new RuntimeDeliveryReconciler(
+      journal,
+      new RuntimeDeliveryDestinationRegistry(this.createOpenCodeRuntimeDeliveryPorts()),
+      {
+        append: async (event) => {
+          logger.warn(`[${event.teamName}] ${event.message}`);
+        },
+      }
+    );
+    await reconciler.reconcileTeam(teamName);
+    return { recovered: true };
   }
 
   getLeadActivityState(teamName: string): {
@@ -5529,6 +6129,33 @@ export class TeamProvisioningService {
     );
 
     for (const providerId of providerIds) {
+      if (providerId === 'opencode') {
+        const adapter = this.getOpenCodeRuntimeAdapter();
+        if (!adapter) {
+          blockingMessages.push(
+            'OpenCode team launch is not enabled yet. Production launch requires the gated OpenCode runtime adapter.'
+          );
+          continue;
+        }
+
+        const prepare = await adapter.prepare({
+          runId: `prepare-${randomUUID()}`,
+          teamName: '__prepare_opencode__',
+          cwd: targetCwd,
+          providerId: 'opencode',
+          model: selectedModelIds[0],
+          skipPermissions: true,
+          expectedMembers: [],
+          previousLaunchState: null,
+        });
+        details.push(...prepare.diagnostics);
+        warnings.push(...prepare.warnings);
+        if (!prepare.ok) {
+          blockingMessages.push(`OpenCode: ${prepare.reason}`);
+        }
+        continue;
+      }
+
       const cached = this.getFreshCachedProbeResult(targetCwdForValidation, providerId);
       const probeResult = cached ?? (await this.getCachedOrProbeResult(targetCwd, providerId));
       if (!probeResult?.claudePath) {
@@ -6720,6 +7347,10 @@ export class TeamProvisioningService {
       return { runId: existingProvisioningRunId };
     }
     assertAppDeterministicBootstrapEnabled();
+    if (this.shouldRouteOpenCodeToRuntimeAdapter(request)) {
+      return this.createOpenCodeTeamThroughRuntimeAdapter(request, onProgress);
+    }
+    assertOpenCodeNotLaunchedThroughLegacyProvisioning(request);
 
     // Set immediately to prevent TOCTOU (defense in depth alongside withTeamLock)
     const pendingKey = `pending-${randomUUID()}`;
@@ -7105,6 +7736,316 @@ export class TeamProvisioningService {
     }
   }
 
+  private async createOpenCodeTeamThroughRuntimeAdapter(
+    request: TeamCreateRequest,
+    onProgress: (progress: TeamProvisioningProgress) => void
+  ): Promise<TeamCreateResponse> {
+    const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
+    for (const probe of teamsBasePathsToProbe) {
+      const configPath = path.join(probe.basePath, request.teamName, 'config.json');
+      if (await this.pathExists(configPath)) {
+        const suffix = probe.location === 'configured' ? '' : ` (found under ${probe.basePath})`;
+        throw new Error(`Team already exists${suffix}`);
+      }
+    }
+
+    await ensureCwdExists(request.cwd);
+    const effectiveMembers = buildEffectiveTeamMemberSpecs(request.members, {
+      providerId: request.providerId,
+      model: request.model,
+      effort: request.effort,
+    });
+    const teamDir = path.join(getTeamsBasePath(), request.teamName);
+    const tasksDir = path.join(getTasksBasePath(), request.teamName);
+    await fs.promises.mkdir(teamDir, { recursive: true });
+    await fs.promises.mkdir(tasksDir, { recursive: true });
+    await this.teamMetaStore.writeMeta(request.teamName, {
+      displayName: request.displayName,
+      description: request.description,
+      color: request.color,
+      cwd: request.cwd,
+      prompt: request.prompt,
+      providerId: request.providerId,
+      providerBackendId: request.providerBackendId,
+      model: request.model,
+      effort: request.effort,
+      skipPermissions: request.skipPermissions,
+      worktree: request.worktree,
+      extraCliArgs: request.extraCliArgs,
+      limitContext: request.limitContext,
+      createdAt: Date.now(),
+    });
+    const membersToWrite = applyDistinctProvisioningMemberColors(
+      effectiveMembers.map((member) => ({
+        name: member.name.trim(),
+        role: member.role?.trim() || undefined,
+        workflow: member.workflow?.trim() || undefined,
+        providerId: normalizeOptionalTeamProviderId(member.providerId),
+        model: member.model?.trim() || undefined,
+        effort:
+          member.effort === 'low' || member.effort === 'medium' || member.effort === 'high'
+            ? member.effort
+            : undefined,
+        agentType: 'general-purpose' as const,
+        joinedAt: Date.now(),
+      }))
+    );
+    await this.membersMetaStore.writeMembers(request.teamName, membersToWrite, {
+      providerBackendId: request.providerBackendId,
+    });
+    await this.writeOpenCodeTeamConfig(request, effectiveMembers);
+
+    return this.runOpenCodeTeamRuntimeAdapterLaunch({
+      request,
+      members: effectiveMembers,
+      prompt: request.prompt?.trim() ?? '',
+      sourceWarning: undefined,
+      onProgress,
+    });
+  }
+
+  private async launchOpenCodeTeamThroughRuntimeAdapter(
+    request: TeamLaunchRequest,
+    onProgress: (progress: TeamProvisioningProgress) => void
+  ): Promise<TeamLaunchResponse> {
+    const configPath = path.join(getTeamsBasePath(), request.teamName, 'config.json');
+    const configRaw = await tryReadRegularFileUtf8(configPath, {
+      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+      maxBytes: TEAM_CONFIG_MAX_BYTES,
+    });
+    if (!configRaw) {
+      throw new Error(`Team "${request.teamName}" not found — config.json does not exist`);
+    }
+    await ensureCwdExists(request.cwd);
+    const { members, warning } = await this.resolveLaunchExpectedMembers(
+      request.teamName,
+      configRaw
+    );
+    const effectiveMembers = buildEffectiveTeamMemberSpecs(members, {
+      providerId: request.providerId,
+      model: request.model,
+      effort: request.effort,
+    });
+    await this.updateConfigProjectPath(request.teamName, request.cwd);
+
+    let existingTasks: TeamTask[] = [];
+    try {
+      existingTasks = await new TeamTaskReader().getTasks(request.teamName);
+    } catch (error) {
+      logger.warn(
+        `[${request.teamName}] Failed to read tasks for OpenCode launch prompt: ${String(error)}`
+      );
+    }
+    const prompt = buildDeterministicLaunchHydrationPrompt(
+      request,
+      effectiveMembers,
+      existingTasks,
+      false
+    );
+
+    return this.runOpenCodeTeamRuntimeAdapterLaunch({
+      request,
+      members: effectiveMembers,
+      prompt,
+      sourceWarning: warning,
+      onProgress,
+    });
+  }
+
+  private async runOpenCodeTeamRuntimeAdapterLaunch(input: {
+    request: TeamCreateRequest | TeamLaunchRequest;
+    members: TeamCreateRequest['members'];
+    prompt: string;
+    sourceWarning?: string;
+    onProgress: (progress: TeamProvisioningProgress) => void;
+  }): Promise<TeamLaunchResponse> {
+    const adapter = this.getOpenCodeRuntimeAdapter();
+    if (!adapter) {
+      throw new Error('OpenCode runtime adapter is not registered');
+    }
+
+    const runId = randomUUID();
+    const startedAt = nowIso();
+    const initialProgress: TeamProvisioningProgress = {
+      runId,
+      teamName: input.request.teamName,
+      state: 'validating',
+      message: 'Validating OpenCode team launch gate',
+      startedAt,
+      updatedAt: startedAt,
+      warnings: input.sourceWarning ? [input.sourceWarning] : undefined,
+    };
+    this.provisioningRunByTeam.set(input.request.teamName, runId);
+    this.setRuntimeAdapterProgress(initialProgress, input.onProgress);
+    this.resetTeamScopedTransientStateForNewRun(input.request.teamName);
+    const previousLaunchState = await this.launchStateStore.read(input.request.teamName);
+    await this.clearPersistedLaunchState(input.request.teamName);
+    const launchInput: TeamRuntimeLaunchInput = {
+      runId,
+      teamName: input.request.teamName,
+      cwd: input.request.cwd,
+      prompt: input.prompt,
+      providerId: 'opencode',
+      model: input.request.model,
+      effort: input.request.effort,
+      skipPermissions: input.request.skipPermissions !== false,
+      expectedMembers: input.members.map((member) => ({
+        name: member.name,
+        role: member.role,
+        workflow: member.workflow,
+        providerId: 'opencode',
+        model: member.model ?? input.request.model,
+        effort: member.effort ?? input.request.effort,
+        cwd: input.request.cwd,
+      })),
+      previousLaunchState,
+    };
+
+    const launching = this.setRuntimeAdapterProgress(
+      {
+        ...initialProgress,
+        state: 'spawning',
+        message: 'Starting OpenCode sessions through runtime adapter',
+        updatedAt: nowIso(),
+      },
+      input.onProgress
+    );
+
+    try {
+      const result = await adapter.launch(launchInput);
+      await this.persistOpenCodeRuntimeAdapterLaunchResult(result, launchInput);
+      const success = result.teamLaunchState === 'clean_success';
+      const pending = result.teamLaunchState === 'partial_pending';
+      const finalProgress = this.setRuntimeAdapterProgress(
+        {
+          ...launching,
+          state: success || pending ? 'ready' : 'failed',
+          message: success
+            ? 'OpenCode team launch is ready'
+            : pending
+              ? 'OpenCode team launch is waiting for runtime evidence or permissions'
+              : 'OpenCode team launch failed readiness gate',
+          messageSeverity: pending
+            ? 'warning'
+            : result.teamLaunchState === 'partial_failure'
+              ? 'error'
+              : undefined,
+          updatedAt: nowIso(),
+          warnings: result.warnings.length > 0 ? result.warnings : launching.warnings,
+          error:
+            result.teamLaunchState === 'partial_failure'
+              ? result.diagnostics.join('\n') || 'OpenCode launch failed'
+              : undefined,
+          cliLogsTail: result.diagnostics.join('\n') || undefined,
+          configReady: true,
+        },
+        input.onProgress
+      );
+      this.runtimeAdapterRunByTeam.set(input.request.teamName, {
+        runId,
+        providerId: 'opencode',
+        cwd: input.request.cwd,
+      });
+      this.aliveRunByTeam.set(input.request.teamName, runId);
+      if (this.provisioningRunByTeam.get(input.request.teamName) === runId) {
+        this.provisioningRunByTeam.delete(input.request.teamName);
+      }
+      this.teamChangeEmitter?.({
+        type: 'process',
+        teamName: input.request.teamName,
+        runId,
+        detail: finalProgress.state,
+      });
+      return { runId };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.setRuntimeAdapterProgress(
+        {
+          ...launching,
+          state: 'failed',
+          message: 'OpenCode runtime adapter launch failed',
+          messageSeverity: 'error',
+          updatedAt: nowIso(),
+          error: message,
+          cliLogsTail: message,
+        },
+        input.onProgress
+      );
+      if (this.provisioningRunByTeam.get(input.request.teamName) === runId) {
+        this.provisioningRunByTeam.delete(input.request.teamName);
+      }
+      throw error;
+    }
+  }
+
+  private async writeOpenCodeTeamConfig(
+    request: TeamCreateRequest,
+    members: TeamCreateRequest['members']
+  ): Promise<void> {
+    const configPath = path.join(getTeamsBasePath(), request.teamName, 'config.json');
+    const config: TeamConfig = {
+      name: request.displayName?.trim() || request.teamName,
+      description: request.description,
+      color: request.color,
+      projectPath: request.cwd,
+      members: members.map((member) => ({
+        name: member.name,
+        role: member.role,
+        workflow: member.workflow,
+        providerId: normalizeOptionalTeamProviderId(member.providerId),
+        model: member.model,
+        effort: member.effort,
+      })),
+    };
+    await atomicWriteAsync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+  }
+
+  private async persistOpenCodeRuntimeAdapterLaunchResult(
+    result: TeamRuntimeLaunchResult,
+    input: TeamRuntimeLaunchInput
+  ): Promise<PersistedTeamLaunchSnapshot> {
+    const members: Record<string, PersistedTeamLaunchMemberState> = {};
+    for (const member of input.expectedMembers) {
+      const evidence = result.members[member.name];
+      members[member.name] = this.toOpenCodePersistedLaunchMember(member.name, evidence);
+    }
+    const snapshot = createPersistedLaunchSnapshot({
+      teamName: input.teamName,
+      expectedMembers: input.expectedMembers.map((member) => member.name),
+      leadSessionId: result.leadSessionId,
+      launchPhase: result.launchPhase,
+      members,
+    });
+    await this.launchStateStore.write(input.teamName, snapshot);
+    return snapshot;
+  }
+
+  private toOpenCodePersistedLaunchMember(
+    memberName: string,
+    evidence: TeamRuntimeMemberLaunchEvidence | undefined
+  ): PersistedTeamLaunchMemberState {
+    const now = nowIso();
+    const launchState = evidence?.launchState ?? 'failed_to_start';
+    return {
+      name: memberName,
+      launchState,
+      agentToolAccepted: evidence?.agentToolAccepted === true,
+      runtimeAlive: evidence?.runtimeAlive === true,
+      bootstrapConfirmed: evidence?.bootstrapConfirmed === true,
+      hardFailure: evidence?.hardFailure === true || launchState === 'failed_to_start',
+      hardFailureReason: evidence?.hardFailureReason,
+      firstSpawnAcceptedAt: evidence?.agentToolAccepted ? now : undefined,
+      lastHeartbeatAt: evidence?.bootstrapConfirmed ? now : undefined,
+      lastRuntimeAliveAt: evidence?.runtimeAlive ? now : undefined,
+      lastEvaluatedAt: now,
+      sources: {
+        processAlive: evidence?.runtimeAlive === true,
+        nativeHeartbeat: evidence?.bootstrapConfirmed === true,
+      },
+      diagnostics: evidence?.diagnostics,
+    };
+  }
+
   async launchTeam(
     request: TeamLaunchRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
@@ -7123,6 +8064,10 @@ export class TeamProvisioningService {
       return { runId: existingProvisioningRunId };
     }
     assertAppDeterministicBootstrapEnabled();
+    if (this.shouldRouteOpenCodeToRuntimeAdapter(request)) {
+      return this.launchOpenCodeTeamThroughRuntimeAdapter(request, onProgress);
+    }
+    assertOpenCodeNotLaunchedThroughLegacyProvisioning(request);
 
     // Set immediately to prevent TOCTOU (defense in depth alongside withTeamLock)
     const pendingKey = `pending-${randomUUID()}`;
@@ -7179,6 +8124,10 @@ export class TeamProvisioningService {
         source,
         warning,
       } = await this.resolveLaunchExpectedMembers(request.teamName, configRaw);
+      assertOpenCodeNotLaunchedThroughLegacyProvisioning({
+        providerId: request.providerId,
+        members: expectedMemberSpecs,
+      });
       const expectedMembers = expectedMemberSpecs.map((m) => m.name);
 
       // Extract leadSessionId for session resume on reconnect.
@@ -7747,10 +8696,14 @@ export class TeamProvisioningService {
 
   async getProvisioningStatus(runId: string): Promise<TeamProvisioningProgress> {
     const run = this.runs.get(runId);
-    if (!run) {
-      throw new Error('Unknown runId');
+    if (run) {
+      return run.progress;
     }
-    return run.progress;
+    const runtimeProgress = this.runtimeAdapterProgressByRunId.get(runId);
+    if (runtimeProgress) {
+      return runtimeProgress;
+    }
+    throw new Error('Unknown runId');
   }
 
   async cancelProvisioning(runId: string): Promise<void> {
@@ -8593,6 +9546,9 @@ export class TeamProvisioningService {
     const runId = this.getAliveRunId(teamName);
     if (!runId) return false;
     const run = this.runs.get(runId);
+    if (!run && this.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
+      return true;
+    }
     return run?.child != null && !run.processKilled && !run.cancelRequested;
   }
 
@@ -8618,7 +9574,8 @@ export class TeamProvisioningService {
       teamName,
       isAlive: this.isTeamAlive(teamName),
       runId: run?.runId ?? runId ?? null,
-      progress: run?.progress ?? null,
+      progress:
+        run?.progress ?? (runId ? (this.runtimeAdapterProgressByRunId.get(runId) ?? null) : null),
     };
   }
 
@@ -10277,6 +11234,11 @@ export class TeamProvisioningService {
     }
     const run = this.runs.get(runId);
     if (!run) {
+      const runtimeRun = this.runtimeAdapterRunByTeam.get(teamName);
+      if (runtimeRun?.runId === runId && runtimeRun.providerId === 'opencode') {
+        void this.stopOpenCodeRuntimeAdapterTeam(teamName, runId);
+        return;
+      }
       this.provisioningRunByTeam.delete(teamName);
       this.aliveRunByTeam.delete(teamName);
       return;
@@ -10293,12 +11255,101 @@ export class TeamProvisioningService {
     logger.info(`[${teamName}] Process stopped (SIGKILL)`);
   }
 
+  private async stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void> {
+    const adapter = this.getOpenCodeRuntimeAdapter();
+    const previousLaunchState = await this.launchStateStore.read(teamName);
+    if (!adapter) {
+      this.runtimeAdapterRunByTeam.delete(teamName);
+      this.aliveRunByTeam.delete(teamName);
+      this.provisioningRunByTeam.delete(teamName);
+      return;
+    }
+    const startedAt = nowIso();
+    const previousProgress = this.runtimeAdapterProgressByRunId.get(runId);
+    this.setRuntimeAdapterProgress({
+      runId,
+      teamName,
+      state: 'disconnected',
+      message: 'Stopping OpenCode team through runtime adapter',
+      startedAt: previousProgress?.startedAt ?? startedAt,
+      updatedAt: startedAt,
+    });
+    try {
+      const runtimeRun = this.runtimeAdapterRunByTeam.get(teamName);
+      const result = await adapter.stop({
+        runId,
+        teamName,
+        cwd: runtimeRun?.cwd ?? this.readPersistedTeamProjectPath(teamName) ?? undefined,
+        providerId: 'opencode',
+        reason: 'user_requested',
+        previousLaunchState,
+        force: true,
+      });
+      await this.launchStateStore.write(
+        teamName,
+        createPersistedLaunchSnapshot({
+          teamName,
+          expectedMembers: previousLaunchState?.expectedMembers ?? [],
+          leadSessionId: previousLaunchState?.leadSessionId,
+          launchPhase: 'reconciled',
+          members: previousLaunchState?.members ?? {},
+        })
+      );
+      this.setRuntimeAdapterProgress({
+        runId,
+        teamName,
+        state: result.stopped ? 'disconnected' : 'failed',
+        message: result.stopped ? 'OpenCode team stopped' : 'OpenCode team stop failed',
+        messageSeverity: result.stopped ? undefined : 'error',
+        startedAt: previousProgress?.startedAt ?? startedAt,
+        updatedAt: nowIso(),
+        cliLogsTail: result.diagnostics.join('\n') || undefined,
+        warnings: result.warnings.length > 0 ? result.warnings : undefined,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.setRuntimeAdapterProgress({
+        runId,
+        teamName,
+        state: 'failed',
+        message: 'OpenCode team stop failed',
+        messageSeverity: 'error',
+        startedAt: previousProgress?.startedAt ?? startedAt,
+        updatedAt: nowIso(),
+        error: message,
+        cliLogsTail: message,
+      });
+    } finally {
+      this.runtimeAdapterRunByTeam.delete(teamName);
+      this.aliveRunByTeam.delete(teamName);
+      this.provisioningRunByTeam.delete(teamName);
+      this.teamChangeEmitter?.({
+        type: 'process',
+        teamName,
+        runId,
+        detail: 'stopped',
+      });
+    }
+  }
+
   private stopPersistentTeamMembers(teamName: string): void {
     const members = this.readPersistedRuntimeMembers(teamName);
     if (members.length > 0) {
       this.killPersistedPaneMembers(teamName, members);
     }
     this.killOrphanedTeamAgentProcesses(teamName);
+  }
+
+  private readPersistedTeamProjectPath(teamName: string): string | null {
+    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+    try {
+      const raw = fs.readFileSync(configPath, 'utf8');
+      const parsed = JSON.parse(raw) as { projectPath?: unknown };
+      const projectPath = typeof parsed.projectPath === 'string' ? parsed.projectPath.trim() : '';
+      return projectPath || null;
+    } catch {
+      return null;
+    }
   }
 
   private readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[] {

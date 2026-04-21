@@ -78,6 +78,7 @@ import type {
   TeamMember,
   TeamMemberActivityMeta,
   TeamProcess,
+  TeamProviderId,
   TeamSummary,
   TeamTask,
   TeamTaskStatus,
@@ -1315,7 +1316,7 @@ export class TeamDataService {
         name: string;
         role?: string;
         workflow?: string;
-        providerId?: 'anthropic' | 'codex' | 'gemini';
+        providerId?: TeamProviderId;
         model?: string;
         effort?: TeamMember['effort'];
       }[];

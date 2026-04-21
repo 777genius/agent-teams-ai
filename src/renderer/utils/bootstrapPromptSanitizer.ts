@@ -5,7 +5,7 @@ import {
   getTeamProviderLabel,
 } from '@renderer/utils/teamModelCatalog';
 
-import type { InboxMessage } from '@shared/types';
+import type { InboxMessage, TeamProviderId } from '@shared/types';
 
 const BOOTSTRAP_REQUIRED_MARKER_SETS = [
   [
@@ -31,11 +31,14 @@ const BOOTSTRAP_SUPPORTING_MARKERS = [
   'resume your queue normally and prioritize already-assigned board work',
 ] as const;
 
-type TeamProviderId = 'anthropic' | 'codex' | 'gemini';
-
 function parseProviderId(value: string | undefined): TeamProviderId | null {
   const normalized = value?.trim().toLowerCase();
-  if (normalized === 'anthropic' || normalized === 'codex' || normalized === 'gemini') {
+  if (
+    normalized === 'anthropic' ||
+    normalized === 'codex' ||
+    normalized === 'gemini' ||
+    normalized === 'opencode'
+  ) {
     return normalized;
   }
   return null;

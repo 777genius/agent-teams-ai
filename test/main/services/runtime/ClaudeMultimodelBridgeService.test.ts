@@ -182,7 +182,7 @@ describe('ClaudeMultimodelBridgeService', () => {
 
     const providers = await service.getProviderStatuses('/mock/agent_teams_orchestrator');
 
-    expect(providers).toHaveLength(3);
+    expect(providers).toHaveLength(4);
     expect(providers[0]).toMatchObject({
       providerId: 'anthropic',
       authenticated: true,
@@ -216,6 +216,18 @@ describe('ClaudeMultimodelBridgeService', () => {
         label: 'Gemini CLI',
         endpointLabel: 'Code Assist (cloudcode-pa.googleapis.com/v1internal)',
         projectId: 'demo-project',
+      },
+    });
+    expect(providers[3]).toMatchObject({
+      providerId: 'opencode',
+      displayName: 'OpenCode',
+      supported: false,
+      authenticated: false,
+      models: [],
+      canLoginFromUi: false,
+      capabilities: {
+        teamLaunch: false,
+        oneShot: false,
       },
     });
   });
@@ -692,5 +704,314 @@ describe('ClaudeMultimodelBridgeService', () => {
       audience: 'general',
       statusMessage: 'Codex CLI not found',
     });
+  });
+
+  it('uses live OpenCode verification on explicit provider verify', async () => {
+    execCliMock.mockImplementation((_binaryPath, args) => {
+      const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
+
+      if (normalizedArgs === 'runtime status --json --provider opencode') {
+        return Promise.resolve({
+          stdout: JSON.stringify({
+            providers: {
+              opencode: {
+                supported: true,
+                authenticated: true,
+                authMethod: 'opencode_managed',
+                verificationState: 'verified',
+                canLoginFromUi: false,
+                statusMessage: null,
+                detailMessage: 'version 1.4.0 - connected openai',
+                capabilities: {
+                  teamLaunch: false,
+                  oneShot: false,
+                  extensions: {
+                    plugins: { status: 'read-only', ownership: 'provider-scoped', reason: null },
+                    mcp: { status: 'read-only', ownership: 'provider-scoped', reason: null },
+                    skills: { status: 'read-only', ownership: 'provider-scoped', reason: null },
+                    apiKeys: { status: 'read-only', ownership: 'provider-scoped', reason: null },
+                  },
+                },
+                models: ['openai/gpt-5.4-mini'],
+                backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+                externalRuntimeDiagnostics: [],
+              },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        });
+      }
+
+      if (normalizedArgs === 'runtime verify --json --provider opencode') {
+        return Promise.resolve({
+          stdout: JSON.stringify({
+            schemaVersion: 1,
+            providerId: 'opencode',
+            snapshot: {
+              detected: true,
+              hostHealthy: true,
+              probeError: null,
+              diagnostics: [],
+              host: {
+                version: '1.4.0',
+                resolvedConfigFingerprint: 'resolved-fingerprint-123456',
+              },
+              profile: {
+                profileRootKey: 'profile-root',
+                projectBehaviorFingerprint: 'behavior-fingerprint-123456',
+                managedConfigFingerprint: 'managed-fingerprint-123456',
+              },
+              config: {
+                default_agent: 'teammate',
+                share: 'disabled',
+                snapshot: false,
+                autoupdate: false,
+              },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        });
+      }
+
+      return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const provider = await service.verifyProviderStatus('/mock/agent_teams_orchestrator', 'opencode');
+
+    expect(provider).toMatchObject({
+      providerId: 'opencode',
+      verificationState: 'verified',
+      detailMessage: expect.stringContaining('live resolved-fin'),
+      backend: {
+        kind: 'opencode-cli',
+        authMethodDetail: 'managed teammate agent',
+      },
+    });
+    expect(provider.externalRuntimeDiagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'opencode-live-host',
+          detected: true,
+          statusMessage: 'Healthy',
+        }),
+        expect.objectContaining({
+          id: 'opencode-managed-runtime',
+          detected: true,
+          statusMessage: 'Managed runtime verified',
+        }),
+      ])
+    );
+  });
+
+  it('loads projected OpenCode transcript data through the runtime transcript command', async () => {
+    execCliMock.mockImplementation((_binaryPath, args) => {
+      const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
+
+      if (
+        normalizedArgs
+        === 'runtime transcript --json --provider opencode --team team-a --member alice --limit 20'
+      ) {
+        return Promise.resolve({
+          stdout: JSON.stringify({
+            schemaVersion: 1,
+            providerId: 'opencode',
+            transcript: {
+              sessionId: 'session-1',
+              durableState: 'idle',
+              messageCount: 2,
+              toolCallCount: 1,
+              errorCount: 0,
+              latestAssistantText: '/tmp/project',
+              latestAssistantPreview: '/tmp/project',
+              messages: [],
+              diagnostics: [],
+              logProjection: {
+                sessionId: 'session-1',
+                durableState: 'idle',
+                sourceMessageCount: 2,
+                projectedMessageCount: 3,
+                syntheticMessageCount: 1,
+                toolCallCount: 1,
+                errorCount: 0,
+                diagnostics: [],
+                messages: [
+                  {
+                    uuid: 'msg-assistant-1',
+                    type: 'assistant',
+                    toolCalls: [{ id: 'call_pwd', name: 'bash' }],
+                  },
+                  {
+                    uuid: 'msg-assistant-1::tool_results',
+                    type: 'user',
+                    isMeta: true,
+                    toolResults: [{ toolUseId: 'call_pwd', isError: false }],
+                  },
+                ],
+              },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        });
+      }
+
+      return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const transcript = await service.getOpenCodeTranscript('/mock/agent_teams_orchestrator', {
+      teamId: 'team-a',
+      memberName: 'alice',
+      limit: 20,
+    });
+
+    expect(transcript).toMatchObject({
+      sessionId: 'session-1',
+      durableState: 'idle',
+      toolCallCount: 1,
+      logProjection: {
+        projectedMessageCount: 3,
+        syntheticMessageCount: 1,
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            uuid: 'msg-assistant-1',
+            type: 'assistant',
+          }),
+          expect.objectContaining({
+            uuid: 'msg-assistant-1::tool_results',
+            type: 'user',
+            isMeta: true,
+          }),
+        ]),
+      },
+    });
+  });
+
+  it('verifies OpenCode models through execution-grade runtime probes', async () => {
+    execCliMock.mockImplementation((_binaryPath, args) => {
+      const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
+
+      if (
+        normalizedArgs
+        === 'runtime verify-model --json --provider opencode --model openai/gpt-5.4-mini'
+      ) {
+        return Promise.resolve({
+          stdout: JSON.stringify({
+            schemaVersion: 1,
+            providerId: 'opencode',
+            result: {
+              modelId: 'openai/gpt-5.4-mini',
+              outcome: 'unavailable',
+              reason: 'Token refresh failed: 401',
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        });
+      }
+
+      if (
+        normalizedArgs
+        === 'runtime verify-model --json --provider opencode --model opencode/big-pickle'
+      ) {
+        return Promise.resolve({
+          stdout: JSON.stringify({
+            schemaVersion: 1,
+            providerId: 'opencode',
+            result: {
+              modelId: 'opencode/big-pickle',
+              outcome: 'available',
+              reason: null,
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        });
+      }
+
+      if (
+        normalizedArgs
+        === 'runtime verify-model --json --provider opencode --model openrouter/moonshotai/kimi-k2'
+      ) {
+        return Promise.resolve({
+          stdout: JSON.stringify({
+            schemaVersion: 1,
+            providerId: 'opencode',
+            result: {
+              modelId: 'openrouter/moonshotai/kimi-k2',
+              outcome: 'available',
+              reason: null,
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        });
+      }
+
+      return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const provider = await service.verifyOpenCodeModels('/mock/agent_teams_orchestrator', {
+      providerId: 'opencode',
+      displayName: 'OpenCode',
+      supported: true,
+      authenticated: true,
+      authMethod: 'opencode_managed',
+      verificationState: 'verified',
+      modelVerificationState: 'idle',
+      statusMessage: null,
+      detailMessage: null,
+      models: ['openai/gpt-5.4-mini', 'openrouter/moonshotai/kimi-k2', 'opencode/big-pickle'],
+      modelAvailability: [],
+      canLoginFromUi: false,
+      capabilities: {
+        teamLaunch: false,
+        oneShot: false,
+        extensions: {
+          plugins: { status: 'read-only', ownership: 'provider-scoped', reason: null },
+          mcp: { status: 'read-only', ownership: 'provider-scoped', reason: null },
+          skills: { status: 'read-only', ownership: 'provider-scoped', reason: null },
+          apiKeys: { status: 'read-only', ownership: 'provider-scoped', reason: null },
+        },
+      },
+      selectedBackendId: null,
+      resolvedBackendId: null,
+      availableBackends: [],
+      externalRuntimeDiagnostics: [],
+      backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+      connection: null,
+    });
+
+    expect(provider.modelVerificationState).toBe('verified');
+      expect(provider.modelAvailability).toEqual([
+        expect.objectContaining({
+          modelId: 'openai/gpt-5.4-mini',
+          status: 'unavailable',
+          reason: 'Token refresh failed: 401',
+        }),
+        expect.objectContaining({
+          modelId: 'openrouter/moonshotai/kimi-k2',
+          status: 'available',
+          reason: null,
+        }),
+        expect.objectContaining({
+          modelId: 'opencode/big-pickle',
+          status: 'available',
+          reason: null,
+        }),
+    ]);
   });
 });

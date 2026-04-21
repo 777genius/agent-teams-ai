@@ -10,6 +10,7 @@ import { BoardTaskExactLogStrictParser } from '../exact/BoardTaskExactLogStrictP
 import { BoardTaskExactLogSummarySelector } from '../exact/BoardTaskExactLogSummarySelector';
 import { isBoardTaskExactLogsReadEnabled } from '../exact/featureGates';
 import { getBoardTaskExactLogFileVersions } from '../exact/fileVersions';
+import { OpenCodeTaskLogStreamSource } from './OpenCodeTaskLogStreamSource';
 
 import type { BoardTaskExactLogDetailCandidate } from '../exact/BoardTaskExactLogTypes';
 import type { ContentBlock, ParsedMessage, ToolUseResultData } from '@main/types';
@@ -1078,7 +1079,8 @@ export class BoardTaskLogStreamService {
     private readonly detailSelector: BoardTaskExactLogDetailSelector = new BoardTaskExactLogDetailSelector(),
     private readonly chunkBuilder: BoardTaskExactLogChunkBuilder = new BoardTaskExactLogChunkBuilder(),
     private readonly taskReader: TeamTaskReader = new TeamTaskReader(),
-    private readonly transcriptSourceLocator: TeamTranscriptSourceLocator = new TeamTranscriptSourceLocator()
+    private readonly transcriptSourceLocator: TeamTranscriptSourceLocator = new TeamTranscriptSourceLocator(),
+    private readonly runtimeFallbackSource: OpenCodeTaskLogStreamSource = new OpenCodeTaskLogStreamSource()
   ) {}
 
   private async buildInferredExecutionSlices(
@@ -1294,6 +1296,10 @@ export class BoardTaskLogStreamService {
     teamName: string,
     taskId: string
   ): Promise<BoardTaskLogStreamSummary> {
+    if (!isBoardTaskExactLogsReadEnabled()) {
+      return emptySummary();
+    }
+
     const layout = await this.buildStreamLayout(teamName, taskId);
     if (layout.visibleSlices.length === 0) {
       return emptySummary();
@@ -1305,9 +1311,15 @@ export class BoardTaskLogStreamService {
   }
 
   async getTaskLogStream(teamName: string, taskId: string): Promise<BoardTaskLogStreamResponse> {
+    if (!isBoardTaskExactLogsReadEnabled()) {
+      return emptyResponse();
+    }
+
     const layout = await this.buildStreamLayout(teamName, taskId);
     if (layout.visibleSlices.length === 0) {
-      return emptyResponse();
+      return (
+        (await this.runtimeFallbackSource.getTaskLogStream(teamName, taskId)) ?? emptyResponse()
+      );
     }
 
     const segments: BoardTaskLogSegment[] = [];
@@ -1360,6 +1372,7 @@ export class BoardTaskLogStreamService {
       participants: layout.participants,
       defaultFilter,
       segments,
+      source: 'transcript',
     };
   }
 }

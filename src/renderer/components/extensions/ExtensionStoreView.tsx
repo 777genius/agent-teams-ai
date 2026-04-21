@@ -61,7 +61,7 @@ const ProviderCapabilityCardSkeleton = ({
   providerId,
   displayName,
 }: {
-  providerId: 'anthropic' | 'codex' | 'gemini';
+  providerId: 'anthropic' | 'codex' | 'gemini' | 'opencode';
   displayName: string;
 }): React.JSX.Element => (
   <div className="rounded-md border border-border bg-surface-raised px-3 py-2">

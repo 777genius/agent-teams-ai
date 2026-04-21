@@ -1,6 +1,8 @@
 import { ConfigManager } from '../infrastructure/ConfigManager';
 
-import type { TeamProviderId } from '@shared/types';
+import type { CliProviderId, TeamProviderId } from '@shared/types';
+
+type RuntimeEnvProviderId = CliProviderId | TeamProviderId;
 
 const PROVIDER_ROUTING_ENV_KEYS = [
   'CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST',
@@ -32,10 +34,9 @@ export function applyConfiguredRuntimeBackendsEnv(
 
 export function applyProviderRuntimeEnv(
   env: NodeJS.ProcessEnv,
-  providerId: TeamProviderId | undefined
+  providerId: RuntimeEnvProviderId | undefined
 ): NodeJS.ProcessEnv {
-  const resolvedProvider: TeamProviderId =
-    providerId === 'codex' || providerId === 'gemini' ? providerId : 'anthropic';
+  const resolvedProvider = resolveRuntimeProviderId(providerId);
 
   for (const key of PROVIDER_ROUTING_ENV_KEYS) {
     env[key] = undefined;
@@ -52,6 +53,18 @@ export function applyProviderRuntimeEnv(
   return env;
 }
 
+export function resolveRuntimeProviderId(
+  providerId: RuntimeEnvProviderId | undefined
+): CliProviderId {
+  if (providerId === 'codex' || providerId === 'gemini' || providerId === 'opencode') {
+    return providerId;
+  }
+
+  return 'anthropic';
+}
+
 export function resolveTeamProviderId(providerId: TeamProviderId | undefined): TeamProviderId {
-  return providerId === 'codex' || providerId === 'gemini' ? providerId : 'anthropic';
+  return providerId === 'codex' || providerId === 'gemini' || providerId === 'opencode'
+    ? providerId
+    : 'anthropic';
 }

@@ -1522,7 +1522,7 @@ export interface GlobalTaskDetailState {
 
 /** Per-team launch parameters shown in the header badge. */
 export interface TeamLaunchParams {
-  providerId?: 'anthropic' | 'codex' | 'gemini';
+  providerId?: TeamProviderId;
   providerBackendId?: string;
   model?: string; // 'opus' | 'sonnet' | 'haiku'
   effort?: EffortLevel;

@@ -279,6 +279,8 @@ function getProviderLabel(providerId: CliProviderId): string {
       return 'Codex';
     case 'gemini':
       return 'Gemini';
+    case 'opencode':
+      return 'OpenCode';
   }
 }
 
@@ -1132,7 +1134,9 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
 
   const handleProviderRefresh = useCallback(
     (providerId: CliProviderId) => {
-      void fetchCliProviderStatus(providerId);
+      void fetchCliProviderStatus(providerId, {
+        verifyModels: providerId === 'opencode',
+      });
     },
     [fetchCliProviderStatus]
   );
@@ -1218,7 +1222,11 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           providerStatusLoading={cliProviderStatusLoading}
           disabled={isBusy || cliStatusLoading || !renderCliStatus.binaryPath}
           onSelectBackend={handleProviderBackendChange}
-          onRefreshProvider={(providerId) => fetchCliProviderStatus(providerId)}
+          onRefreshProvider={(providerId) =>
+            fetchCliProviderStatus(providerId, {
+              verifyModels: providerId === 'opencode',
+            })
+          }
           onRequestLogin={(providerId) => setProviderTerminal({ providerId, action: 'login' })}
         />
         {providerTerminal && renderCliStatus.binaryPath && (

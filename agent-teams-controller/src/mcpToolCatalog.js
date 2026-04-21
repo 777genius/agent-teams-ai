@@ -51,7 +51,14 @@ const AGENT_TEAMS_KANBAN_TOOL_NAMES = [
   'kanban_set_column',
 ];
 
-const AGENT_TEAMS_RUNTIME_TOOL_NAMES = ['team_launch', 'team_stop'];
+const AGENT_TEAMS_RUNTIME_TOOL_NAMES = [
+  'team_launch',
+  'team_stop',
+  'runtime_bootstrap_checkin',
+  'runtime_deliver_message',
+  'runtime_task_event',
+  'runtime_heartbeat',
+];
 
 const AGENT_TEAMS_MCP_TOOL_GROUPS = [
   {

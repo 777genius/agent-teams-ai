@@ -153,6 +153,7 @@ function cloneCliInstallationStatus(status: CliInstallationStatus): CliInstallat
       ...provider,
       modelVerificationState: provider.modelVerificationState ?? 'idle',
       modelCatalog: provider.modelCatalog ? structuredClone(provider.modelCatalog) : null,
+      detailMessage: provider.detailMessage ?? null,
       modelAvailability: provider.modelAvailability?.map((item) => ({ ...item })) ?? [],
       runtimeCapabilities: provider.runtimeCapabilities
         ? structuredClone(provider.runtimeCapabilities)
@@ -763,15 +764,18 @@ export class CliInstallerService {
       return null;
     }
 
-    const providerStatus = await this.multimodelBridgeService.getProviderStatus(
-      binaryPath,
-      providerId
-    );
-    const nextProviderStatus = this.applyProviderModelAvailabilityToProvider(
-      binaryPath,
-      versionProbe.version,
-      providerStatus
-    );
+    const providerStatus =
+      providerId === 'opencode'
+        ? await this.multimodelBridgeService.verifyProviderStatus(binaryPath, providerId)
+        : await this.multimodelBridgeService.getProviderStatus(binaryPath, providerId);
+    const nextProviderStatus =
+      providerId === 'opencode'
+        ? await this.multimodelBridgeService.verifyOpenCodeModels(binaryPath, providerStatus)
+        : this.applyProviderModelAvailabilityToProvider(
+            binaryPath,
+            versionProbe.version,
+            providerStatus
+          );
     this.updateLatestProviderStatus(nextProviderStatus);
     if (this.latestStatusSnapshot) {
       this.publishStatusSnapshot(this.latestStatusSnapshot);

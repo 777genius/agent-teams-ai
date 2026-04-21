@@ -336,10 +336,25 @@ export interface BoardTaskLogSegment {
   chunks: EnhancedChunk[];
 }
 
+export interface BoardTaskLogStreamRuntimeProjection {
+  provider: 'opencode';
+  mode: 'attribution' | 'heuristic';
+  attributionRecordCount: number;
+  projectedMessageCount: number;
+  fallbackReason?:
+    | 'no_attribution_records'
+    | 'attribution_no_projected_messages'
+    | 'task_tool_markers';
+  markerMatchCount?: number;
+  markerSpanCount?: number;
+}
+
 export interface BoardTaskLogStreamResponse {
   participants: BoardTaskLogParticipant[];
   defaultFilter: 'all' | string;
   segments: BoardTaskLogSegment[];
+  source?: 'transcript' | 'opencode_runtime_fallback' | 'opencode_runtime_attribution';
+  runtimeProjection?: BoardTaskLogStreamRuntimeProjection;
 }
 
 export interface BoardTaskLogStreamSummary {
@@ -450,11 +465,7 @@ export interface TeamTask {
 }
 
 /** Task enriched for UI/DTO use (overlay from kanban-state.json). */
-export type TaskChangePresenceState =
-  | 'has_changes'
-  | 'needs_attention'
-  | 'no_changes'
-  | 'unknown';
+export type TaskChangePresenceState = 'has_changes' | 'needs_attention' | 'no_changes' | 'unknown';
 
 export interface TeamTaskWithKanban extends TeamTask {
   /** Set when task is in team kanban (review or approved column). */
@@ -787,7 +798,7 @@ export interface TeamViewSnapshot {
 }
 
 export type EffortLevel = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
-export type TeamProviderId = 'anthropic' | 'codex' | 'gemini';
+export type TeamProviderId = 'anthropic' | 'codex' | 'gemini' | 'opencode';
 export type TeamProviderBackendId = 'auto' | 'adapter' | 'api' | 'cli-sdk' | 'codex-native';
 export type TeamFastMode = 'inherit' | 'on' | 'off';
 

@@ -1,5 +1,14 @@
 import { parseModelString } from '@shared/utils/modelParser';
-import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
+import {
+  getOpenCodeQualifiedModelSourceLabel,
+  parseOpenCodeQualifiedModelRef,
+} from '@shared/utils/opencodeModelRef';
+import {
+  filterVisibleProviderRuntimeModels,
+  GPT_5_1_CODEX_MINI_UI_DISABLED_MODEL,
+  GPT_5_2_CODEX_UI_DISABLED_MODEL,
+  GPT_5_3_CODEX_SPARK_UI_DISABLED_MODEL,
+} from '@shared/utils/providerModelVisibility';
 
 import type { CliProviderId, CliProviderStatus, TeamProviderId } from '@shared/types';
 
@@ -38,6 +47,7 @@ const TEAM_PROVIDER_LABELS: Record<SupportedProviderId, string> = {
   anthropic: 'Anthropic',
   codex: 'Codex',
   gemini: 'Gemini',
+  opencode: 'OpenCode',
 };
 
 const ANTHROPIC_ALIAS_LABELS = {
@@ -133,12 +143,16 @@ const TEAM_PROVIDER_MODEL_OPTIONS: Record<SupportedProviderId, readonly TeamProv
         badgeLabel: '2.5-flash-lite',
       },
     ],
+    opencode: [{ value: '', label: 'Default', badgeLabel: 'Default' }],
   };
 
 const TEAM_PROVIDER_MODEL_ORDER: Record<SupportedProviderId, Map<string, number>> = {
   anthropic: new Map(ANTHROPIC_MODEL_ORDER.map((model, index) => [model, index])),
   codex: new Map(TEAM_PROVIDER_MODEL_OPTIONS.codex.map((option, index) => [option.value, index])),
   gemini: new Map(TEAM_PROVIDER_MODEL_OPTIONS.gemini.map((option, index) => [option.value, index])),
+  opencode: new Map(
+    TEAM_PROVIDER_MODEL_OPTIONS.opencode.map((option, index) => [option.value, index])
+  ),
 };
 
 function getKnownTeamProviderModelOption(
@@ -247,12 +261,15 @@ export function getTeamModelLabel(model: string | undefined): string | undefined
     return undefined;
   }
 
-  const overrideLabel = TEAM_MODEL_LABEL_OVERRIDES[trimmed];
+  const parsedOpenCodeModel = parseOpenCodeQualifiedModelRef(trimmed);
+  const labelTarget = parsedOpenCodeModel?.modelId ?? trimmed;
+
+  const overrideLabel = TEAM_MODEL_LABEL_OVERRIDES[labelTarget];
   if (overrideLabel) {
     return overrideLabel;
   }
 
-  return formatParsedClaudeModelLabel(trimmed) ?? trimmed;
+  return formatParsedClaudeModelLabel(labelTarget) ?? labelTarget;
 }
 
 function getRuntimeCatalogModel(
@@ -299,7 +316,21 @@ export function getTeamModelBadgeLabel(
   if (providerId === 'gemini') {
     return trimmed.replace(/^gemini-/, '');
   }
+  if (providerId === 'opencode') {
+    return getTeamModelLabel(trimmed) ?? trimmed;
+  }
   return trimmed;
+}
+
+export function getTeamModelSourceBadgeLabel(
+  providerId: SupportedProviderId,
+  model: string | undefined
+): string | undefined {
+  if (providerId !== 'opencode') {
+    return undefined;
+  }
+
+  return getOpenCodeQualifiedModelSourceLabel(model) ?? undefined;
 }
 
 export function getProviderScopedTeamModelLabel(

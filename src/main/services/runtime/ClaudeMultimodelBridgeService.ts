@@ -1,6 +1,7 @@
 import { execCli } from '@main/utils/childProcess';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
+import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
 import {
   createDefaultCliExtensionCapabilities,
   createLegacyRuntimeFallbackCliExtensionCapabilities,
@@ -10,12 +11,18 @@ import { resolveGeminiRuntimeAuth } from './geminiRuntimeAuth';
 import { buildProviderAwareCliEnv } from './providerAwareCliEnv';
 import { providerConnectionService } from './ProviderConnectionService';
 
-import type { CliProviderId, CliProviderReasoningEffort, CliProviderStatus } from '@shared/types';
+import type {
+  CliProviderId,
+  CliProviderModelAvailability,
+  CliProviderReasoningEffort,
+  CliProviderStatus,
+} from '@shared/types';
 
 const logger = createLogger('ClaudeMultimodelBridgeService');
 
 const PROVIDER_STATUS_TIMEOUT_MS = 10_000;
 const PROVIDER_MODELS_TIMEOUT_MS = 10_000;
+const OPENCODE_MODEL_VERIFY_TIMEOUT_MS = 60_000;
 
 interface RuntimeExtensionCapabilityResponse {
   status?: 'supported' | 'read-only' | 'unsupported';
@@ -94,6 +101,7 @@ interface ProviderStatusCommandResponse {
       verificationState?: 'verified' | 'unknown' | 'offline' | 'error';
       canLoginFromUi?: boolean;
       statusMessage?: string | null;
+      detailMessage?: string | null;
       capabilities?: {
         teamLaunch?: boolean;
         oneShot?: boolean;
@@ -179,7 +187,141 @@ interface UnifiedRuntimeStatusResponse {
   >;
 }
 
-const ORDERED_PROVIDER_IDS: CliProviderId[] = ['anthropic', 'codex', 'gemini'];
+interface OpenCodeRuntimeVerifyResponse {
+  schemaVersion?: number;
+  providerId?: 'opencode';
+  snapshot?: {
+    detected?: boolean;
+    hostHealthy?: boolean;
+    probeError?: string | null;
+    diagnostics?: string[];
+    host?: {
+      version?: string | null;
+      resolvedConfigFingerprint?: string | null;
+    } | null;
+    profile?: {
+      profileRootKey?: string;
+      projectBehaviorFingerprint?: string;
+      managedConfigFingerprint?: string;
+    } | null;
+    config?: {
+      default_agent?: string;
+      share?: string | null;
+      snapshot?: boolean;
+      autoupdate?: boolean | string;
+    } | null;
+  } | null;
+}
+
+export interface OpenCodeRuntimeTranscriptResponse {
+  schemaVersion?: number;
+  providerId?: 'opencode';
+  transcript?: {
+    sessionId?: string;
+    durableState?: string;
+    staleReason?: string | null;
+    messageCount?: number;
+    toolCallCount?: number;
+    errorCount?: number;
+    latestAssistantText?: string | null;
+    latestAssistantPreview?: string | null;
+    messages?: unknown[];
+    diagnostics?: string[];
+    logProjection?: {
+      sessionId?: string;
+      durableState?: string;
+      sourceMessageCount?: number;
+      projectedMessageCount?: number;
+      syntheticMessageCount?: number;
+      toolCallCount?: number;
+      errorCount?: number;
+      diagnostics?: string[];
+      messages?: OpenCodeRuntimeTranscriptLogMessage[];
+    } | null;
+  } | null;
+}
+
+export type OpenCodeRuntimeTranscriptLogContentBlock =
+  | {
+      type: 'text';
+      text: string;
+    }
+  | {
+      type: 'thinking';
+      thinking: string;
+      signature: string;
+    }
+  | {
+      type: 'tool_use';
+      id: string;
+      name: string;
+      input: Record<string, unknown>;
+    }
+  | {
+      type: 'tool_result';
+      tool_use_id: string;
+      content: string | OpenCodeRuntimeTranscriptLogContentBlock[];
+      is_error?: boolean;
+    };
+
+export interface OpenCodeRuntimeTranscriptLogToolCall {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+  isTask: boolean;
+  taskDescription?: string;
+  taskSubagentType?: string;
+}
+
+export interface OpenCodeRuntimeTranscriptLogToolResult {
+  toolUseId: string;
+  content: string | OpenCodeRuntimeTranscriptLogContentBlock[];
+  isError: boolean;
+}
+
+export interface OpenCodeRuntimeTranscriptLogMessage {
+  uuid: string;
+  parentUuid: string | null;
+  type: 'assistant' | 'user' | 'system';
+  timestamp: string;
+  role?: string;
+  content: OpenCodeRuntimeTranscriptLogContentBlock[] | string;
+  model?: string;
+  agentName?: string;
+  isMeta: boolean;
+  sessionId: string;
+  toolCalls: OpenCodeRuntimeTranscriptLogToolCall[];
+  toolResults: OpenCodeRuntimeTranscriptLogToolResult[];
+  sourceToolUseID?: string;
+  sourceToolAssistantUUID?: string;
+  subtype?: string;
+  level?: string;
+}
+
+interface OpenCodeRuntimeVerifyModelResponse {
+  schemaVersion?: number;
+  providerId?: 'opencode';
+  result?: {
+    modelId?: string;
+    outcome?: 'available' | 'unavailable' | 'unknown';
+    reason?: string | null;
+  } | null;
+}
+
+const ORDERED_PROVIDER_IDS: CliProviderId[] = ['anthropic', 'codex', 'gemini', 'opencode'];
+
+function getProviderDisplayName(providerId: CliProviderId): string {
+  switch (providerId) {
+    case 'anthropic':
+      return 'Anthropic';
+    case 'codex':
+      return 'Codex';
+    case 'gemini':
+      return 'Gemini';
+    case 'opencode':
+      return 'OpenCode';
+  }
+}
 
 function extractJsonObject<T>(raw: string): T {
   const trimmed = raw.trim();
@@ -198,17 +340,17 @@ function extractJsonObject<T>(raw: string): T {
 function createDefaultProviderStatus(providerId: CliProviderId): CliProviderStatus {
   return {
     providerId,
-    displayName:
-      providerId === 'anthropic' ? 'Anthropic' : providerId === 'codex' ? 'Codex' : 'Gemini',
+    displayName: getProviderDisplayName(providerId),
     supported: false,
     authenticated: false,
     authMethod: null,
     verificationState: 'unknown',
     modelVerificationState: 'idle',
     statusMessage: null,
+    detailMessage: null,
     models: [],
     modelAvailability: [],
-    canLoginFromUi: true,
+    canLoginFromUi: providerId !== 'opencode',
     capabilities: {
       teamLaunch: false,
       oneShot: false,
@@ -428,6 +570,7 @@ export class ClaudeMultimodelBridgeService {
       authMethod: runtimeStatus.authMethod ?? null,
       verificationState: runtimeStatus.verificationState ?? 'unknown',
       statusMessage: runtimeStatus.statusMessage ?? null,
+      detailMessage: runtimeStatus.detailMessage ?? null,
       canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
       capabilities: {
         teamLaunch: runtimeStatus.capabilities?.teamLaunch === true,
@@ -514,6 +657,7 @@ export class ClaudeMultimodelBridgeService {
       authMethod: null,
       verificationState: 'error',
       statusMessage: issue,
+      detailMessage: null,
       backend: null,
     };
   }
@@ -523,6 +667,94 @@ export class ClaudeMultimodelBridgeService {
     connectionIssues: Partial<Record<CliProviderId, string>>
   ): CliProviderStatus[] {
     return providers.map((provider) => this.applyConnectionIssue(provider, connectionIssues));
+  }
+
+  private async getOpenCodeVerifySnapshot(
+    binaryPath: string
+  ): Promise<OpenCodeRuntimeVerifyResponse['snapshot'] | null> {
+    const { env } = await this.buildCliEnv(binaryPath);
+    const { stdout } = await execCli(
+      binaryPath,
+      ['runtime', 'verify', '--json', '--provider', 'opencode'],
+      {
+        timeout: PROVIDER_STATUS_TIMEOUT_MS,
+        env,
+      }
+    );
+    const parsed = extractJsonObject<OpenCodeRuntimeVerifyResponse>(stdout);
+    return parsed.providerId === 'opencode' ? (parsed.snapshot ?? null) : null;
+  }
+
+  private mergeOpenCodeVerification(
+    provider: CliProviderStatus,
+    snapshot: OpenCodeRuntimeVerifyResponse['snapshot']
+  ): CliProviderStatus {
+    if (!snapshot) {
+      return provider;
+    }
+
+    const diagnostics = snapshot.diagnostics ?? [];
+    const diagnosticsSummary = diagnostics.slice(0, 2).join(' - ');
+    const liveIssuesPresent =
+      snapshot.detected === false ||
+      snapshot.hostHealthy !== true ||
+      Boolean(snapshot.probeError) ||
+      diagnostics.length > 0;
+
+    const detailParts = [
+      provider.detailMessage ?? null,
+      snapshot.host?.resolvedConfigFingerprint
+        ? `live ${snapshot.host.resolvedConfigFingerprint.slice(0, 12)}`
+        : null,
+      snapshot.profile?.managedConfigFingerprint
+        ? `managed ${snapshot.profile.managedConfigFingerprint.slice(0, 12)}`
+        : null,
+      snapshot.profile?.projectBehaviorFingerprint
+        ? `behavior ${snapshot.profile.projectBehaviorFingerprint.slice(0, 12)}`
+        : null,
+      diagnosticsSummary || null,
+    ].filter((value): value is string => Boolean(value));
+
+    const nextDiagnostics = [
+      ...(provider.externalRuntimeDiagnostics ?? []),
+      {
+        id: 'opencode-live-host',
+        label: 'OpenCode live host',
+        detected: snapshot.hostHealthy === true,
+        statusMessage: snapshot.hostHealthy === true ? 'Healthy' : 'Unavailable',
+        detailMessage: snapshot.probeError ?? null,
+      },
+      {
+        id: 'opencode-managed-runtime',
+        label: 'OpenCode managed runtime',
+        detected: !liveIssuesPresent,
+        statusMessage: liveIssuesPresent
+          ? 'Live verification found runtime drift'
+          : 'Managed runtime verified',
+        detailMessage: diagnosticsSummary || null,
+      },
+    ];
+
+    return {
+      ...provider,
+      verificationState: liveIssuesPresent ? 'error' : 'verified',
+      statusMessage: liveIssuesPresent
+        ? (snapshot.probeError ??
+          diagnostics[0] ??
+          'OpenCode live verification found runtime drift')
+        : provider.statusMessage,
+      detailMessage: detailParts.length > 0 ? detailParts.join(' - ') : provider.detailMessage,
+      externalRuntimeDiagnostics: nextDiagnostics,
+      backend: provider.backend
+        ? {
+            ...provider.backend,
+            authMethodDetail:
+              snapshot.config?.default_agent === 'teammate'
+                ? 'managed teammate agent'
+                : (provider.backend.authMethodDetail ?? null),
+          }
+        : provider.backend,
+    };
   }
 
   async getProviderStatus(
@@ -563,6 +795,134 @@ export class ClaudeMultimodelBridgeService {
       providers.find((provider) => provider.providerId === providerId) ??
       createDefaultProviderStatus(providerId)
     );
+  }
+
+  async verifyProviderStatus(
+    binaryPath: string,
+    providerId: CliProviderId
+  ): Promise<CliProviderStatus> {
+    const provider = await this.getProviderStatus(binaryPath, providerId);
+    if (providerId !== 'opencode') {
+      return provider;
+    }
+
+    try {
+      const snapshot = await this.getOpenCodeVerifySnapshot(binaryPath);
+      return this.mergeOpenCodeVerification(provider, snapshot);
+    } catch (error) {
+      logger.warn(
+        `OpenCode live verification unavailable: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return {
+        ...provider,
+        verificationState: 'error',
+        statusMessage: 'OpenCode live verification failed',
+        detailMessage: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  async getOpenCodeTranscript(
+    binaryPath: string,
+    params: {
+      teamId: string;
+      memberName: string;
+      limit?: number;
+    }
+  ): Promise<OpenCodeRuntimeTranscriptResponse['transcript'] | null> {
+    const { env } = await this.buildCliEnv(binaryPath);
+    const args = [
+      'runtime',
+      'transcript',
+      '--json',
+      '--provider',
+      'opencode',
+      '--team',
+      params.teamId,
+      '--member',
+      params.memberName,
+    ];
+    if (typeof params.limit === 'number') {
+      args.push('--limit', String(params.limit));
+    }
+
+    const { stdout } = await execCli(binaryPath, args, {
+      timeout: PROVIDER_STATUS_TIMEOUT_MS,
+      env,
+    });
+    const parsed = extractJsonObject<OpenCodeRuntimeTranscriptResponse>(stdout);
+    return parsed.providerId === 'opencode' ? (parsed.transcript ?? null) : null;
+  }
+
+  private async verifyOpenCodeModel(
+    binaryPath: string,
+    modelId: string
+  ): Promise<CliProviderModelAvailability> {
+    const { env } = await this.buildCliEnv(binaryPath);
+    try {
+      const { stdout } = await execCli(
+        binaryPath,
+        ['runtime', 'verify-model', '--json', '--provider', 'opencode', '--model', modelId],
+        {
+          timeout: OPENCODE_MODEL_VERIFY_TIMEOUT_MS,
+          env,
+        }
+      );
+      const parsed = extractJsonObject<OpenCodeRuntimeVerifyModelResponse>(stdout);
+      const outcome = parsed.providerId === 'opencode' ? parsed.result?.outcome : undefined;
+      const reason = parsed.providerId === 'opencode' ? (parsed.result?.reason ?? null) : null;
+
+      return {
+        modelId,
+        status:
+          outcome === 'available'
+            ? 'available'
+            : outcome === 'unavailable'
+              ? 'unavailable'
+              : 'unknown',
+        reason,
+        checkedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        modelId,
+        status: 'unknown',
+        reason: error instanceof Error ? error.message : String(error),
+        checkedAt: new Date().toISOString(),
+      };
+    }
+  }
+
+  async verifyOpenCodeModels(
+    binaryPath: string,
+    provider: CliProviderStatus
+  ): Promise<CliProviderStatus> {
+    const visibleModels = filterVisibleProviderRuntimeModels(provider.providerId, provider.models);
+    if (
+      provider.providerId !== 'opencode' ||
+      provider.supported !== true ||
+      provider.authenticated !== true ||
+      visibleModels.length === 0
+    ) {
+      return {
+        ...provider,
+        modelVerificationState: 'idle',
+        modelAvailability: [],
+      };
+    }
+
+    const modelAvailability: CliProviderModelAvailability[] = [];
+    for (const modelId of visibleModels) {
+      modelAvailability.push(await this.verifyOpenCodeModel(binaryPath, modelId));
+    }
+
+    return {
+      ...provider,
+      modelVerificationState: 'verified',
+      modelAvailability,
+    };
   }
 
   private async buildGeminiStatus(binaryPath: string): Promise<CliProviderStatus> {
@@ -686,6 +1046,7 @@ export class ClaudeMultimodelBridgeService {
             authMethod: runtimeStatus.authMethod ?? null,
             verificationState: runtimeStatus.verificationState ?? 'unknown',
             statusMessage: runtimeStatus.statusMessage ?? null,
+            detailMessage: runtimeStatus.detailMessage ?? null,
             canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
             capabilities: {
               teamLaunch: runtimeStatus.capabilities?.teamLaunch === true,

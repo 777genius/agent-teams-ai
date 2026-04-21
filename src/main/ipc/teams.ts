@@ -97,6 +97,7 @@ import {
 } from '@shared/utils/effortLevels';
 import { isTeamProviderBackendId, migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { isRateLimitMessage } from '@shared/utils/rateLimitDetector';
+import { isTeamProviderId } from '@shared/utils/teamProvider';
 import {
   buildStandaloneSlashCommandMeta,
   parseStandaloneSlashCommand,
@@ -1124,16 +1125,14 @@ function isValidEffort(value: unknown, providerId?: TeamProviderId | null): valu
 
 function parseOptionalMemberProviderId(
   value: unknown
-):
-  | { valid: true; value: 'anthropic' | 'codex' | 'gemini' | undefined }
-  | { valid: false; error: string } {
+): { valid: true; value: TeamProviderId | undefined } | { valid: false; error: string } {
   if (value === undefined || value === null || value === '') {
     return { valid: true, value: undefined };
   }
-  if (value === 'anthropic' || value === 'codex' || value === 'gemini') {
+  if (isTeamProviderId(value)) {
     return { valid: true, value };
   }
-  return { valid: false, error: 'member providerId must be anthropic, codex, or gemini' };
+  return { valid: false, error: 'member providerId must be anthropic, codex, gemini, or opencode' };
 }
 
 function parseOptionalProviderBackendId(
@@ -1701,7 +1700,7 @@ async function handlePrepareProvisioning(
 ): Promise<IpcResult<TeamProvisioningPrepareResult>> {
   let validatedCwd: string | undefined;
   let validatedProviderId: TeamLaunchRequest['providerId'];
-  let validatedProviderIds: ('anthropic' | 'codex' | 'gemini')[] | undefined;
+  let validatedProviderIds: TeamProviderId[] | undefined;
   let validatedSelectedModels: string[] | undefined;
   let validatedLimitContext: boolean | undefined;
   if (cwd !== undefined) {
@@ -1714,8 +1713,8 @@ async function handlePrepareProvisioning(
     }
   }
   if (providerId !== undefined) {
-    if (providerId !== 'anthropic' && providerId !== 'codex' && providerId !== 'gemini') {
-      return { success: false, error: 'providerId must be anthropic, codex, or gemini' };
+    if (!isTeamProviderId(providerId)) {
+      return { success: false, error: 'providerId must be anthropic, codex, gemini, or opencode' };
     }
     validatedProviderId = providerId;
   }
@@ -1723,10 +1722,13 @@ async function handlePrepareProvisioning(
     if (!Array.isArray(providerIds)) {
       return { success: false, error: 'providerIds must be an array when provided' };
     }
-    const normalized: ('anthropic' | 'codex' | 'gemini')[] = [];
+    const normalized: TeamProviderId[] = [];
     for (const entry of providerIds) {
-      if (entry !== 'anthropic' && entry !== 'codex' && entry !== 'gemini') {
-        return { success: false, error: 'providerIds entries must be anthropic, codex, or gemini' };
+      if (!isTeamProviderId(entry)) {
+        return {
+          success: false,
+          error: 'providerIds entries must be anthropic, codex, gemini, or opencode',
+        };
       }
       if (!normalized.includes(entry)) {
         normalized.push(entry);
@@ -3283,7 +3285,7 @@ async function handleReplaceMembers(
     name: string;
     role?: string;
     workflow?: string;
-    providerId?: 'anthropic' | 'codex' | 'gemini';
+    providerId?: TeamProviderId;
     model?: string;
     effort?: EffortLevel;
   }[] = [];

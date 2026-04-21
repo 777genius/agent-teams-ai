@@ -1,6 +1,8 @@
 import { inferTeamProviderIdFromModel } from '@shared/utils/teamProvider';
 
-import type { TeamProviderId } from '@shared/types';
+import type { CliProviderId, TeamProviderId } from '@shared/types';
+
+type SupportedProviderId = CliProviderId | TeamProviderId;
 
 export function stripTrailingOneMillionSuffixes(model: string | undefined): string | undefined {
   const trimmed = model?.trim();
@@ -13,7 +15,7 @@ export function stripTrailingOneMillionSuffixes(model: string | undefined): stri
 
 export function extractProviderScopedBaseModel(
   model: string | undefined,
-  providerId?: TeamProviderId
+  providerId?: SupportedProviderId
 ): string | undefined {
   const trimmed = model?.trim();
   if (!trimmed) {

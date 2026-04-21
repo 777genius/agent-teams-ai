@@ -3,6 +3,7 @@ import {
   getRuntimeAwareProviderScopedTeamModelLabel,
   getRuntimeAwareTeamModelBadgeLabel,
   getRuntimeAwareTeamModelUiDisabledReason,
+  getTeamModelSourceBadgeLabel,
   getTeamProviderLabel,
   getTeamProviderModelOptions,
   getVisibleTeamProviderModels,
@@ -314,6 +315,10 @@ export function getAvailableTeamProviderModelOptions(
       return {
         value: model,
         label: getProviderScopedTeamModelLabel(providerId, model) ?? model,
+        badgeLabel:
+          providerId === 'opencode'
+            ? (getTeamModelSourceBadgeLabel(providerId, model) ?? undefined)
+            : undefined,
         availabilityStatus: getRuntimeModelAvailability(providerId, model, providerStatus),
         availabilityReason: getRuntimeModelAvailabilityReason(model, providerStatus),
       };

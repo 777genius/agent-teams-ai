@@ -1,7 +1,9 @@
 import type { TeamProviderId } from '@shared/types';
 
+import { parseOpenCodeQualifiedModelRef } from './opencodeModelRef';
+
 export function isTeamProviderId(value: unknown): value is TeamProviderId {
-  return value === 'anthropic' || value === 'codex' || value === 'gemini';
+  return value === 'anthropic' || value === 'codex' || value === 'gemini' || value === 'opencode';
 }
 
 export function normalizeOptionalTeamProviderId(value: unknown): TeamProviderId | undefined {
@@ -23,6 +25,13 @@ export function inferTeamProviderIdFromModel(
     return undefined;
   }
   const normalizedWithoutExtendedContextSuffix = normalized.replace(/(?:\[1m\])+$/, '');
+
+  if (
+    normalized.startsWith('opencode/') ||
+    normalizedWithoutExtendedContextSuffix.startsWith('opencode/')
+  ) {
+    return 'opencode';
+  }
 
   if (
     normalized.startsWith('gpt-') ||
@@ -51,6 +60,13 @@ export function inferTeamProviderIdFromModel(
     normalizedWithoutExtendedContextSuffix === 'haiku'
   ) {
     return 'anthropic';
+  }
+
+  if (
+    parseOpenCodeQualifiedModelRef(normalized) ||
+    parseOpenCodeQualifiedModelRef(normalizedWithoutExtendedContextSuffix)
+  ) {
+    return 'opencode';
   }
 
   return undefined;

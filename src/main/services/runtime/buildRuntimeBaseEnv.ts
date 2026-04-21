@@ -6,7 +6,7 @@ import { configManager } from '../infrastructure/ConfigManager';
 import {
   applyConfiguredRuntimeBackendsEnv,
   applyProviderRuntimeEnv,
-  resolveTeamProviderId,
+  resolveRuntimeProviderId,
 } from './providerRuntimeEnv';
 
 import type { CliProviderId, TeamProviderId } from '@shared/types';
@@ -68,19 +68,19 @@ export function buildRuntimeBaseEnv(options: BuildRuntimeBaseEnvOptions = {}): {
     };
   }
 
-  const resolvedProviderId = resolveTeamProviderId(options.providerId);
+  const runtimeProviderId = resolveRuntimeProviderId(options.providerId);
   applyProviderRuntimeEnv(env, options.providerId);
 
-  if (resolvedProviderId === 'codex' && options.providerBackendId?.trim()) {
+  if (runtimeProviderId === 'codex' && options.providerBackendId?.trim()) {
     env.CLAUDE_CODE_CODEX_BACKEND = options.providerBackendId.trim();
   }
 
-  if (resolvedProviderId === 'gemini' && options.providerBackendId?.trim()) {
+  if (runtimeProviderId === 'gemini' && options.providerBackendId?.trim()) {
     env.CLAUDE_CODE_GEMINI_BACKEND = options.providerBackendId.trim();
   }
 
   return {
     env,
-    resolvedProviderId,
+    resolvedProviderId: runtimeProviderId,
   };
 }

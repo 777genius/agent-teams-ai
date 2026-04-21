@@ -4,6 +4,7 @@ import {
   isTeamProviderBackendId,
   migrateProviderBackendId,
 } from '@shared/utils/providerBackend';
+import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type { CliProviderStatus, TeamProviderBackendId, TeamProviderId } from '@shared/types';
 
@@ -27,8 +28,9 @@ export function resolveUiOwnedProviderBackendId(
   providerId: TeamProviderId | CliProviderStatus['providerId'] | undefined,
   provider: Pick<CliProviderStatus, 'selectedBackendId' | 'resolvedBackendId'> | null | undefined
 ): TeamProviderBackendId | undefined {
+  const normalizedProviderId = normalizeOptionalTeamProviderId(providerId);
   return migrateProviderBackendId(
-    providerId,
+    normalizedProviderId,
     provider?.selectedBackendId ?? provider?.resolvedBackendId
   );
 }

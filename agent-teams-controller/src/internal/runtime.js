@@ -218,6 +218,29 @@ function shouldWaitForStop(flags = {}) {
   return true;
 }
 
+function compactRuntimeToolBody(context, flags = {}, fields) {
+  const body = { teamName: context.teamName };
+  for (const field of fields) {
+    if (flags[field] !== undefined) {
+      body[field] = flags[field];
+    }
+  }
+  return body;
+}
+
+async function postRuntimeTool(context, flags = {}, toolPath, body) {
+  const baseUrls = resolveControlBaseUrls(context, flags);
+  return requestJsonWithFallback(
+    baseUrls,
+    `/api/teams/${encodeURIComponent(context.teamName)}/opencode/runtime/${toolPath}`,
+    {
+      method: 'POST',
+      body,
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+    }
+  );
+}
+
 async function waitForProvisioningState(baseUrls, teamName, runId, timeoutMs) {
   const startedAt = Date.now();
   let lastProgress = null;
@@ -331,8 +354,82 @@ async function getRuntimeState(context, flags = {}) {
   return requestJsonWithFallback(baseUrls, `/api/teams/${encodeURIComponent(context.teamName)}/runtime`);
 }
 
+async function runtimeBootstrapCheckin(context, flags = {}) {
+  return postRuntimeTool(
+    context,
+    flags,
+    'bootstrap-checkin',
+    compactRuntimeToolBody(context, flags, [
+      'runId',
+      'memberName',
+      'runtimeSessionId',
+      'observedAt',
+      'diagnostics',
+      'metadata',
+    ])
+  );
+}
+
+async function runtimeDeliverMessage(context, flags = {}) {
+  return postRuntimeTool(
+    context,
+    flags,
+    'deliver-message',
+    compactRuntimeToolBody(context, flags, [
+      'idempotencyKey',
+      'runId',
+      'fromMemberName',
+      'runtimeSessionId',
+      'to',
+      'text',
+      'createdAt',
+      'summary',
+      'taskRefs',
+    ])
+  );
+}
+
+async function runtimeTaskEvent(context, flags = {}) {
+  return postRuntimeTool(
+    context,
+    flags,
+    'task-event',
+    compactRuntimeToolBody(context, flags, [
+      'idempotencyKey',
+      'runId',
+      'memberName',
+      'runtimeSessionId',
+      'taskId',
+      'event',
+      'createdAt',
+      'summary',
+      'metadata',
+    ])
+  );
+}
+
+async function runtimeHeartbeat(context, flags = {}) {
+  return postRuntimeTool(
+    context,
+    flags,
+    'heartbeat',
+    compactRuntimeToolBody(context, flags, [
+      'runId',
+      'memberName',
+      'runtimeSessionId',
+      'observedAt',
+      'status',
+      'metadata',
+    ])
+  );
+}
+
 module.exports = {
   launchTeam,
   stopTeam,
   getRuntimeState,
+  runtimeBootstrapCheckin,
+  runtimeDeliverMessage,
+  runtimeTaskEvent,
+  runtimeHeartbeat,
 };

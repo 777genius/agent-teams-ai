@@ -14,7 +14,12 @@ const logger = createLogger('Store:cliInstaller');
 
 /** Max log lines to keep in UI (reserved for future use) */
 const _MAX_LOG_LINES = 50;
-export const MULTIMODEL_PROVIDER_IDS: CliProviderId[] = ['anthropic', 'codex', 'gemini'];
+export const MULTIMODEL_PROVIDER_IDS: CliProviderId[] = [
+  'anthropic',
+  'codex',
+  'gemini',
+  'opencode',
+];
 
 export function createLoadingMultimodelCliStatus(): CliInstallationStatus {
   const providers: CliProviderStatus[] = (
@@ -22,6 +27,7 @@ export function createLoadingMultimodelCliStatus(): CliInstallationStatus {
       { providerId: 'anthropic', displayName: 'Anthropic' },
       { providerId: 'codex', displayName: 'Codex' },
       { providerId: 'gemini', displayName: 'Gemini' },
+      { providerId: 'opencode', displayName: 'OpenCode' },
     ] as const
   ).map((provider) => ({
     ...provider,
@@ -33,7 +39,7 @@ export function createLoadingMultimodelCliStatus(): CliInstallationStatus {
     statusMessage: 'Checking...',
     models: [],
     modelAvailability: [],
-    canLoginFromUi: true,
+    canLoginFromUi: provider.providerId !== 'opencode',
     capabilities: {
       teamLaunch: false,
       oneShot: false,

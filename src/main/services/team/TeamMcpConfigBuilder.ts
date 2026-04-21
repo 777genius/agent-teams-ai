@@ -7,7 +7,7 @@ import * as path from 'path';
 
 import { atomicWriteAsync } from './atomicWrite';
 
-interface McpLaunchSpec {
+export interface McpLaunchSpec {
   command: string;
   args: string[];
 }
@@ -202,7 +202,7 @@ async function resolvePackagedServerEntry(): Promise<string> {
   }
 }
 
-async function resolveMcpLaunchSpec(): Promise<McpLaunchSpec> {
+export async function resolveAgentTeamsMcpLaunchSpec(): Promise<McpLaunchSpec> {
   const checked: string[] = [];
 
   // 1. Packaged Electron app — prefer stable copy, fall back to resourcesPath
@@ -250,7 +250,7 @@ async function resolveMcpLaunchSpec(): Promise<McpLaunchSpec> {
 
 export class TeamMcpConfigBuilder {
   async writeConfigFile(_projectPath?: string): Promise<string> {
-    const launchSpec = await resolveMcpLaunchSpec();
+    const launchSpec = await resolveAgentTeamsMcpLaunchSpec();
     const configDir = getMcpConfigsBasePath();
     const configPath = path.join(
       configDir,

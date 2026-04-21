@@ -1,8 +1,10 @@
+import type { TeamProviderId } from '@shared/types';
+
 export interface MemberDiffInput {
   name: string;
   role?: string;
   workflow?: string;
-  providerId?: 'anthropic' | 'codex' | 'gemini';
+  providerId?: TeamProviderId;
   model?: string;
   removedAt?: number | string | null;
 }
@@ -12,7 +14,7 @@ export interface ReplaceMembersDiff {
     name: string;
     role?: string;
     workflow?: string;
-    providerId?: 'anthropic' | 'codex' | 'gemini';
+    providerId?: TeamProviderId;
     model?: string;
   }[];
   removed: string[];
@@ -65,7 +67,7 @@ export function buildReplaceMembersDiff(
     name: string;
     role?: string;
     workflow?: string;
-    providerId?: 'anthropic' | 'codex' | 'gemini';
+    providerId?: TeamProviderId;
     model?: string;
   }[]
 ): ReplaceMembersDiff {
