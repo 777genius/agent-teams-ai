@@ -1,7 +1,19 @@
-import { normalizeCodexReasoningEffort, CODEX_REASONING_EFFORTS } from './codexReasoningEffort';
+import { CODEX_REASONING_EFFORTS, normalizeCodexReasoningEffort } from './codexReasoningEffort';
 
-import type { CodexAppServerModel } from '@main/services/infrastructure/codexAppServer';
 import type { CliProviderModelCatalogItem, CliProviderReasoningEffort } from '@shared/types';
+
+export interface CodexAppServerModelLike {
+  id?: string;
+  model?: string;
+  displayName?: string;
+  hidden?: boolean;
+  supportedReasoningEfforts?: unknown[];
+  defaultReasoningEffort?: unknown;
+  inputModalities?: unknown;
+  supportsPersonality?: boolean;
+  isDefault?: boolean;
+  upgrade?: unknown;
+}
 
 export interface NormalizedCodexModelCatalogResult {
   models: CliProviderModelCatalogItem[];
@@ -9,7 +21,7 @@ export interface NormalizedCodexModelCatalogResult {
   diagnostics: string[];
 }
 
-function normalizeModelId(model: CodexAppServerModel): string | null {
+function normalizeModelId(model: CodexAppServerModelLike): string | null {
   const id = model.id?.trim() || model.model?.trim() || null;
   return id && id.length > 0 ? id : null;
 }
@@ -26,7 +38,7 @@ function normalizeEffortOption(option: unknown): CliProviderReasoningEffort | nu
   return null;
 }
 
-function normalizeEfforts(model: CodexAppServerModel): CliProviderReasoningEffort[] {
+function normalizeEfforts(model: CodexAppServerModelLike): CliProviderReasoningEffort[] {
   const efforts = model.supportedReasoningEfforts?.flatMap((option) => {
     const normalized = normalizeEffortOption(option);
     return normalized ? [normalized] : [];
@@ -82,7 +94,7 @@ function asBadgeLabel(modelId: string): string {
 }
 
 export function normalizeCodexAppServerModels(
-  models: readonly CodexAppServerModel[] | undefined,
+  models: readonly CodexAppServerModelLike[] | undefined,
   options: {
     includeHidden?: boolean;
   } = {}

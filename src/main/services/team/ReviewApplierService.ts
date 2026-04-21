@@ -27,6 +27,15 @@ type LedgerApplyOutcome =
   | { handled: true; status: 'applied' | 'skipped' }
   | { handled: true; status: 'conflict' | 'error'; error: string; code: ApplyErrorCode };
 
+type CurrentTextReadResult =
+  | { missing: true; content: '' }
+  | { missing: false; content: string }
+  | { missing: false; content: ''; error: string };
+
+function getCurrentTextReadError(result: CurrentTextReadResult): string | null {
+  return 'error' in result ? result.error : null;
+}
+
 /**
  * Service for applying reject decisions from code review.
  *
@@ -518,12 +527,13 @@ export class ReviewApplierService {
       if (current.missing) {
         return { handled: true, status: 'applied' };
       }
-      if (current.error) {
+      const currentError = getCurrentTextReadError(current);
+      if (currentError) {
         return {
           handled: true,
           status: 'error',
           code: 'io-error',
-          error: current.error,
+          error: currentError,
         };
       }
       if (!afterHash) {
@@ -570,12 +580,13 @@ export class ReviewApplierService {
       }
       const current = await this.readCurrentText(filePath);
       if (!current.missing) {
+        const currentError = getCurrentTextReadError(current);
         return {
           handled: true,
           status: 'conflict',
           code: 'conflict',
           error:
-            current.error || 'File exists on disk; refusing to overwrite while rejecting delete.',
+            currentError || 'File exists on disk; refusing to overwrite while rejecting delete.',
         };
       }
       try {
@@ -672,12 +683,13 @@ export class ReviewApplierService {
 
     const newCurrent = await this.readCurrentText(newFilePath);
     if (!newCurrent.missing) {
-      if (newCurrent.error) {
+      const newCurrentError = getCurrentTextReadError(newCurrent);
+      if (newCurrentError) {
         return {
           handled: true,
           status: 'error',
           code: 'io-error',
-          error: newCurrent.error,
+          error: newCurrentError,
         };
       }
       if (this.hashText(newCurrent.content) !== newHash) {
@@ -692,12 +704,13 @@ export class ReviewApplierService {
 
     const oldCurrent = await this.readCurrentText(oldFilePath);
     if (!oldCurrent.missing) {
-      if (oldCurrent.error) {
+      const oldCurrentError = getCurrentTextReadError(oldCurrent);
+      if (oldCurrentError) {
         return {
           handled: true,
           status: 'error',
           code: 'io-error',
-          error: oldCurrent.error,
+          error: oldCurrentError,
         };
       }
       if (!oldHash || this.hashText(oldCurrent.content) !== oldHash) {
@@ -781,14 +794,15 @@ export class ReviewApplierService {
         },
       };
     }
-    if (current.error) {
+    const currentError = getCurrentTextReadError(current);
+    if (currentError) {
       return {
         ok: false,
         outcome: {
           handled: true,
           status: 'error',
           code: 'io-error',
-          error: current.error,
+          error: currentError,
         },
       };
     }
@@ -806,13 +820,7 @@ export class ReviewApplierService {
     return { ok: true };
   }
 
-  private async readCurrentText(
-    filePath: string
-  ): Promise<
-    | { missing: true; content: ''; error?: undefined }
-    | { missing: false; content: string; error?: undefined }
-    | { missing: false; content: ''; error: string }
-  > {
+  private async readCurrentText(filePath: string): Promise<CurrentTextReadResult> {
     try {
       return { missing: false, content: await readFile(filePath, 'utf8') };
     } catch (err) {
