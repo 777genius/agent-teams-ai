@@ -1,8 +1,7 @@
+import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { createHash, randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
 
 import { VersionedJsonStore, VersionedJsonStoreError } from './VersionedJsonStore';
 
@@ -248,6 +247,14 @@ export const OPENCODE_RUNTIME_STORE_DESCRIPTORS: RuntimeStoreDescriptor[] = [
   },
 ];
 
+async function readStoreDataOrThrow<TData>(store: VersionedJsonStore<TData>): Promise<TData> {
+  const result = await store.read();
+  if (!result.ok) {
+    throw new VersionedJsonStoreError(result.message, result.reason, result.quarantinePath);
+  }
+  return result.data;
+}
+
 export class RuntimeStoreManifestStore {
   constructor(
     private readonly store: VersionedJsonStore<RuntimeStoreManifest>,
@@ -255,11 +262,7 @@ export class RuntimeStoreManifestStore {
   ) {}
 
   async read(): Promise<RuntimeStoreManifest> {
-    const result = await this.store.read();
-    if (!result.ok) {
-      throw new VersionedJsonStoreError(result.message, result.reason, result.quarantinePath);
-    }
-    return result.data;
+    return readStoreDataOrThrow(this.store);
   }
 
   async markBatchPreparing(batch: RuntimeStoreWriteBatch): Promise<void> {
@@ -348,11 +351,7 @@ export class RuntimeStoreReceiptStore {
   }
 
   async list(): Promise<RuntimeStoreWriteBatch[]> {
-    const result = await this.store.read();
-    if (!result.ok) {
-      throw new VersionedJsonStoreError(result.message, result.reason, result.quarantinePath);
-    }
-    return result.data;
+    return readStoreDataOrThrow(this.store);
   }
 
   async listUncommitted(teamName: string): Promise<RuntimeStoreWriteBatch[]> {

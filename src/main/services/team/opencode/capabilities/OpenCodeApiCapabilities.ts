@@ -517,11 +517,12 @@ function looksLikeHtml(text: string): boolean {
 function redactUrl(url: string): string {
   try {
     const parsed = new URL(url);
+    const redactedCredential = 'redacted';
     if (parsed.username) {
-      parsed.username = 'redacted';
+      parsed.username = redactedCredential;
     }
     if (parsed.password) {
-      parsed.password = 'redacted';
+      parsed.password = redactedCredential;
     }
     return parsed.toString();
   } catch {
