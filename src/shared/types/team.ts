@@ -450,7 +450,11 @@ export interface TeamTask {
 }
 
 /** Task enriched for UI/DTO use (overlay from kanban-state.json). */
-export type TaskChangePresenceState = 'has_changes' | 'no_changes' | 'unknown';
+export type TaskChangePresenceState =
+  | 'has_changes'
+  | 'needs_attention'
+  | 'no_changes'
+  | 'unknown';
 
 export interface TeamTaskWithKanban extends TeamTask {
   /** Set when task is in team kanban (review or approved column). */

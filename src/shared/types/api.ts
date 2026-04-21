@@ -700,7 +700,8 @@ export interface ReviewAPI {
   // Decision persistence
   loadDecisions: (
     teamName: string,
-    scopeKey: string
+    scopeKey: string,
+    scopeToken?: string
   ) => Promise<{
     hunkDecisions: Record<string, HunkDecision>;
     fileDecisions: Record<string, HunkDecision>;
@@ -713,11 +714,12 @@ export interface ReviewAPI {
   saveDecisions: (
     teamName: string,
     scopeKey: string,
+    scopeToken: string,
     hunkDecisions: Record<string, HunkDecision>,
     fileDecisions: Record<string, HunkDecision>,
     hunkContextHashesByFile?: Record<string, Record<number, string>>
   ) => Promise<void>;
-  clearDecisions: (teamName: string, scopeKey: string) => Promise<void>;
+  clearDecisions: (teamName: string, scopeKey: string, scopeToken?: string) => Promise<void>;
   onCmdN?: (callback: () => void) => (() => void) | undefined;
   // Phase 4
   getGitFileLog: (

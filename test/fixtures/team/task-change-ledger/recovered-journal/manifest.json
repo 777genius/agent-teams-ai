@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "name": "recovered-journal",
+  "taskId": "fixture-recovered-journal",
+  "description": "Recovered journal fixture generated after replaying malformed journal lines.",
+  "projectRootToken": "__PROJECT_ROOT__",
+  "expected": {
+    "totalFiles": 1,
+    "warnings": [
+      "Task change ledger recovered from malformed journal lines."
+    ],
+    "relativePaths": [
+      "src/ok.ts"
+    ],
+    "relationKinds": []
+  }
+}

@@ -732,6 +732,52 @@ describe('ChangeExtractorService', () => {
     );
   });
 
+  it('writes needs_attention presence entries for warning-only task diff results', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir);
+
+    const upsertEntry = vi.fn(async () => undefined);
+    const ensureTracking = vi.fn(async () => ({
+      projectFingerprint: 'project-fingerprint',
+      logSourceGeneration: 'log-generation',
+    }));
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(async () =>
+        makeTaskChangeResult(TASK_ID, {
+          content: '',
+          confidence: 'fallback',
+          warning: 'Ledger skipped attribution because multiple task scopes were active.',
+        })
+      ),
+    };
+    const { service } = createService({
+      logPaths: [],
+      taskChangePresenceRepository: { upsertEntry },
+      teamLogSourceTracker: { ensureTracking },
+      taskChangeWorkerClient: workerClient,
+    });
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+
+    expect(result.files).toHaveLength(0);
+    expect(result.warnings).toEqual([
+      'Ledger skipped attribution because multiple task scopes were active.',
+    ]);
+    expect(upsertEntry).toHaveBeenCalledWith(
+      TEAM_NAME,
+      expect.objectContaining({
+        projectFingerprint: 'project-fingerprint',
+        logSourceGeneration: 'log-generation',
+      }),
+      expect.objectContaining({
+        taskId: TASK_ID,
+        presence: 'needs_attention',
+      })
+    );
+  });
+
   it('does not write no_changes presence entries for uncertain empty task diff results', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
     setClaudeBasePathOverride(tmpDir);

@@ -1,4 +1,5 @@
 import {
+  LEGACY_TASK_CHANGE_PRESENCE_CACHE_SCHEMA_VERSION,
   type PersistedTaskChangePresence,
   type PersistedTaskChangePresenceEntry,
   type PersistedTaskChangePresenceIndex,
@@ -10,7 +11,9 @@ function isIsoString(value: unknown): value is string {
 }
 
 function normalizePresence(value: unknown): PersistedTaskChangePresence | null {
-  return value === 'has_changes' || value === 'no_changes' ? value : null;
+  return value === 'has_changes' || value === 'needs_attention' || value === 'no_changes'
+    ? value
+    : null;
 }
 
 function normalizeEntry(taskId: string, value: unknown): PersistedTaskChangePresenceEntry | null {
@@ -47,8 +50,11 @@ export function normalizePersistedTaskChangePresenceIndex(
   }
 
   const raw = value as Record<string, unknown>;
+  const rawVersion =
+    typeof raw.version === 'number' ? raw.version : Number.NaN;
   if (
-    raw.version !== TASK_CHANGE_PRESENCE_CACHE_SCHEMA_VERSION ||
+    (rawVersion !== TASK_CHANGE_PRESENCE_CACHE_SCHEMA_VERSION &&
+      rawVersion !== LEGACY_TASK_CHANGE_PRESENCE_CACHE_SCHEMA_VERSION) ||
     typeof raw.teamName !== 'string' ||
     typeof raw.projectFingerprint !== 'string' ||
     raw.projectFingerprint.length === 0 ||

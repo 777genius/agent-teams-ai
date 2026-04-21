@@ -6,6 +6,7 @@ import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { getFileHunkCount } from '@renderer/store/slices/changeReviewSlice';
 import { buildTree, sortTreeNodes } from '@renderer/utils/fileTreeBuilder';
+import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
 import {
   Check,
   ChevronRight,
@@ -47,7 +48,8 @@ function getFileStatus(
   fileChunkCounts: Record<string, number>
 ): FileStatus {
   // File-level decision takes priority (set by Accept All / Reject All)
-  const fileDec = fileDecisions[file.filePath];
+  const reviewKey = getFileReviewKey(file);
+  const fileDec = fileDecisions[reviewKey] ?? fileDecisions[file.filePath];
   if (fileDec === 'accepted') return 'accepted';
   if (fileDec === 'rejected') return 'rejected';
 
@@ -56,8 +58,8 @@ function getFileStatus(
 
   const decisions: HunkDecision[] = [];
   for (let i = 0; i < count; i++) {
-    const key = `${file.filePath}:${i}`;
-    decisions.push(hunkDecisions[key] ?? 'pending');
+    const key = buildHunkDecisionKey(reviewKey, i);
+    decisions.push(hunkDecisions[key] ?? hunkDecisions[`${file.filePath}:${i}`] ?? 'pending');
   }
 
   const allAccepted = decisions.every((d) => d === 'accepted');
@@ -300,10 +302,18 @@ export const ReviewFileTree = ({
     };
 
     const hasAnyRejected = (f: FileChangeSummary): boolean => {
-      if (fileDecisions[f.filePath] === 'rejected') return true;
+      const reviewKey = getFileReviewKey(f);
+      if (fileDecisions[reviewKey] === 'rejected' || fileDecisions[f.filePath] === 'rejected') {
+        return true;
+      }
       const count = getFileHunkCount(f.filePath, f.snippets.length, fileChunkCounts);
       for (let i = 0; i < count; i++) {
-        if (hunkDecisions[`${f.filePath}:${i}`] === 'rejected') return true;
+        if (
+          hunkDecisions[buildHunkDecisionKey(reviewKey, i)] === 'rejected' ||
+          hunkDecisions[`${f.filePath}:${i}`] === 'rejected'
+        ) {
+          return true;
+        }
       }
       return false;
     };

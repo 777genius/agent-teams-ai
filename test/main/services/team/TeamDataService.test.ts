@@ -2656,6 +2656,82 @@ describe('TeamDataService', () => {
     expect(getMessages).not.toHaveBeenCalled();
   });
 
+  it('propagates persisted needs_attention presence through lightweight presence reads', async () => {
+    const task: TeamTask = {
+      id: 'task-1',
+      subject: 'Review API',
+      status: 'completed',
+      owner: 'alice',
+      workIntervals: [{ startedAt: '2026-03-01T10:05:00.000Z' }],
+      historyEvents: [],
+    };
+    const descriptor = buildTaskChangePresenceDescriptor({
+      owner: task.owner,
+      status: task.status,
+      intervals: task.workIntervals,
+      historyEvents: task.historyEvents,
+      reviewState: 'none',
+    });
+
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [], projectPath: '/repo' })),
+      } as never,
+      {
+        getTasks: vi.fn(async () => [task]),
+      } as never,
+      {
+        listInboxNames: vi.fn(async () => []),
+        getMessages: vi.fn(async () => []),
+      } as never,
+      {} as never,
+      {} as never,
+      {
+        resolveMembers: vi.fn(() => []),
+      } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'my-team', reviewers: [], tasks: {} })),
+      } as never
+    );
+
+    service.setTaskChangePresenceServices(
+      {
+        load: vi.fn(async () => ({
+          version: 2,
+          teamName: 'my-team',
+          projectFingerprint: 'project-fingerprint',
+          logSourceGeneration: 'log-generation',
+          writtenAt: '2026-03-01T12:00:00.000Z',
+          entries: {
+            'task-1': {
+              taskId: 'task-1',
+              taskSignature: descriptor.taskSignature,
+              presence: 'needs_attention',
+              writtenAt: '2026-03-01T12:00:00.000Z',
+              logSourceGeneration: 'log-generation',
+            },
+          },
+        })),
+        upsertEntry: vi.fn(async () => undefined),
+      } as never,
+      {
+        getSnapshot: vi.fn(() => ({
+          projectFingerprint: 'project-fingerprint',
+          logSourceGeneration: 'log-generation',
+        })),
+        ensureTracking: vi.fn(async () => ({
+          projectFingerprint: 'project-fingerprint',
+          logSourceGeneration: 'log-generation',
+        })),
+      } as never
+    );
+
+    const data = await service.getTaskChangePresence('my-team');
+
+    expect(data).toEqual({ 'task-1': 'needs_attention' });
+  });
+
   it('persists standalone slash metadata when sending directly to the live lead', async () => {
     const appendSentMessage = vi.fn((payload) => payload);
     const service = new TeamDataService(

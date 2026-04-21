@@ -51,6 +51,7 @@ import {
   buildTaskChangeSignature,
   deriveTaskSince,
 } from '@renderer/utils/taskChangeRequest';
+import { resolveTaskChangePresenceFromResult } from '@renderer/utils/taskChangePresence';
 import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { getTaskKanbanColumn } from '@shared/utils/reviewState';
@@ -103,16 +104,6 @@ import type {
   TeamTaskWithKanban,
 } from '@shared/types';
 
-function resolveTaskChangePresenceFromResult(
-  data: Pick<TaskChangeSetV2, 'files' | 'confidence'>
-): 'has_changes' | 'no_changes' | null {
-  if (data.files.length > 0) {
-    return 'has_changes';
-  }
-
-  return data.confidence === 'high' || data.confidence === 'medium' ? 'no_changes' : null;
-}
-
 interface TaskDetailDialogProps {
   open: boolean;
   loading?: boolean;
@@ -154,7 +145,7 @@ export const TaskDetailDialog = ({
   const { isLight } = useTheme();
   const currentTask = task ? (taskMap.get(task.id) ?? task) : null;
   const updateTaskFields = useStore((s) => s.updateTaskFields);
-  const recordTaskHasChanges = useStore((s) => s.recordTaskHasChanges);
+  const recordTaskChangePresence = useStore((s) => s.recordTaskChangePresence);
   const setSelectedTeamTaskChangePresence = useStore((s) => s.setSelectedTeamTaskChangePresence);
 
   const [logsRefreshing, setLogsRefreshing] = useState(false);
@@ -391,22 +382,22 @@ export const TaskDetailDialog = ({
   const syncTaskChangeSummaryResult = useCallback(
     (data: TaskChangeSetV2 | null) => {
       setTaskChangesFiles(data?.files ?? null);
+      const nextPresence = data ? resolveTaskChangePresenceFromResult(data) : null;
       if (currentTask && taskChangeRequestOptions) {
-        recordTaskHasChanges(
+        recordTaskChangePresence(
           teamName,
           currentTask.id,
           taskChangeRequestOptions,
-          !!data?.files.length
+          nextPresence
         );
       }
-      const nextPresence = data ? resolveTaskChangePresenceFromResult(data) : null;
-      if (currentTask && nextPresence) {
-        setSelectedTeamTaskChangePresence(teamName, currentTask.id, nextPresence);
+      if (currentTask) {
+        setSelectedTeamTaskChangePresence(teamName, currentTask.id, nextPresence ?? 'unknown');
       }
     },
     [
       currentTask,
-      recordTaskHasChanges,
+      recordTaskChangePresence,
       setSelectedTeamTaskChangePresence,
       taskChangeRequestOptions,
       teamName,

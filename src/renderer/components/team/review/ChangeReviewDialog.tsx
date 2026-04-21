@@ -14,7 +14,12 @@ import { buildSelectionAction } from '@renderer/utils/buildSelectionAction';
 import { buildSelectionInfo, SELECTION_DEBOUNCE_MS } from '@renderer/utils/codemirrorSelectionInfo';
 import { sortItemsAsTree } from '@renderer/utils/fileTreeBuilder';
 import { displayMemberName } from '@renderer/utils/memberHelpers';
-import { type TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
+import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
+import { buildReviewDecisionScopeToken } from '@renderer/utils/reviewDecisionScope';
+import {
+  buildTaskChangeSignature,
+  type TaskChangeRequestOptions,
+} from '@renderer/utils/taskChangeRequest';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { ChevronDown, Clock, X } from 'lucide-react';
 
@@ -122,6 +127,25 @@ export const ChangeReviewDialog = ({
   const scopeKey = mode === 'task' ? `task:${taskId ?? ''}` : `agent:${memberName ?? ''}`;
   // Filesystem-safe: use `-` instead of `:` for decision persistence key
   const decisionScopeKey = mode === 'task' ? `task-${taskId ?? ''}` : `agent-${memberName ?? ''}`;
+  const decisionScopeToken = useMemo(() => {
+    if (!activeChangeSet) return null;
+    if (mode === 'task') {
+      if (!('taskId' in activeChangeSet) || activeChangeSet.taskId !== taskId) {
+        return null;
+      }
+    } else if (!('memberName' in activeChangeSet) || activeChangeSet.memberName !== memberName) {
+      return null;
+    }
+
+    return buildReviewDecisionScopeToken({
+      mode,
+      taskId,
+      memberName,
+      requestSignature:
+        mode === 'task' ? buildTaskChangeSignature(taskChangeRequestOptions ?? {}) : undefined,
+      changeSet: activeChangeSet,
+    });
+  }, [activeChangeSet, memberName, mode, taskChangeRequestOptions, taskId]);
 
   // Active file from scroll-spy (replaces selectedReviewFilePath for continuous scroll)
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
@@ -813,8 +837,7 @@ export const ChangeReviewDialog = ({
   useEffect(() => {
     if (!open) return;
 
-    // Load persisted decisions from disk
-    void loadDecisionsFromDisk(teamName, decisionScopeKey);
+    resetAllReviewState();
 
     // Fetch changeSet
     if (mode === 'agent' && memberName) {
@@ -836,8 +859,13 @@ export const ChangeReviewDialog = ({
     fetchAgentChanges,
     fetchTaskChanges,
     clearChangeReviewCache,
-    loadDecisionsFromDisk,
+    resetAllReviewState,
   ]);
+
+  useEffect(() => {
+    if (!open || !decisionScopeToken) return;
+    void loadDecisionsFromDisk(teamName, decisionScopeKey, decisionScopeToken);
+  }, [decisionScopeKey, decisionScopeToken, loadDecisionsFromDisk, open, teamName]);
 
   // Persist decisions to disk on change (debounced via store action).
   // When decisions go from non-empty to empty (e.g. undo to clean state),
@@ -846,21 +874,27 @@ export const ChangeReviewDialog = ({
     Object.keys(hunkDecisions).length > 0 || Object.keys(fileDecisions).length > 0;
   const hadDecisionsRef = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    hadDecisionsRef.current = false;
+  }, [decisionScopeToken]);
+  useEffect(() => {
+    if (!open || !decisionScopeToken) return;
     if (hasDecisions) {
       hadDecisionsRef.current = true;
-      persistDecisions(teamName, decisionScopeKey);
+      persistDecisions(teamName, decisionScopeKey, decisionScopeToken);
     } else if (hadDecisionsRef.current) {
       hadDecisionsRef.current = false;
-      void clearDecisionsFromDisk(teamName, decisionScopeKey);
+      void clearDecisionsFromDisk(teamName, decisionScopeKey, decisionScopeToken);
     }
   }, [
     open,
     hasDecisions,
     hunkDecisions,
     fileDecisions,
+    fileContents,
+    fileChunkCounts,
     teamName,
     decisionScopeKey,
+    decisionScopeToken,
     persistDecisions,
     clearDecisionsFromDisk,
   ]);
@@ -1125,7 +1159,8 @@ export const ChangeReviewDialog = ({
 
     for (const file of activeChangeSet.files) {
       // File-level decision takes priority (set by Accept All / Reject All)
-      const fileDec = fileDecisions[file.filePath];
+      const reviewKey = getFileReviewKey(file);
+      const fileDec = fileDecisions[reviewKey] ?? fileDecisions[file.filePath];
       const count = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
 
       if (fileDec === 'accepted') {
@@ -1138,8 +1173,9 @@ export const ChangeReviewDialog = ({
       }
 
       for (let i = 0; i < count; i++) {
-        const key = `${file.filePath}:${i}`;
-        const decision: HunkDecision = hunkDecisions[key] ?? 'pending';
+        const key = buildHunkDecisionKey(reviewKey, i);
+        const decision: HunkDecision =
+          hunkDecisions[key] ?? hunkDecisions[`${file.filePath}:${i}`] ?? 'pending';
         if (decision === 'pending') pending++;
         else if (decision === 'accepted') accepted++;
         else if (decision === 'rejected') rejected++;
@@ -1163,7 +1199,7 @@ export const ChangeReviewDialog = ({
     // Only cleanup if apply succeeded (no error in store)
     const state = useStore.getState();
     if (!state.applyError) {
-      void clearDecisionsFromDisk(teamName, decisionScopeKey);
+      void clearDecisionsFromDisk(teamName, decisionScopeKey, decisionScopeToken ?? undefined);
       resetAllReviewState();
     }
   }, [
@@ -1173,6 +1209,7 @@ export const ChangeReviewDialog = ({
     memberName,
     clearDecisionsFromDisk,
     decisionScopeKey,
+    decisionScopeToken,
     resetAllReviewState,
   ]);
 

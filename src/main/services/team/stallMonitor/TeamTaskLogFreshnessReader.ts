@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -14,8 +15,40 @@ interface ParsedFreshnessSignal {
   transcriptFileBasename?: string;
 }
 
+function isWindowsReservedArtifactSegment(segment: string): boolean {
+  const stem = segment.split('.')[0]?.toUpperCase() ?? '';
+  return (
+    !segment ||
+    stem === 'CON' ||
+    stem === 'PRN' ||
+    stem === 'AUX' ||
+    stem === 'NUL' ||
+    /^COM[1-9]$/.test(stem) ||
+    /^LPT[1-9]$/.test(stem)
+  );
+}
+
 function encodeTaskId(taskId: string): string {
-  return encodeURIComponent(taskId);
+  const encoded = encodeURIComponent(taskId);
+  return isWindowsReservedArtifactSegment(encoded)
+    ? `task-id-${createHash('sha256').update(taskId).digest('hex').slice(0, 32)}`
+    : encoded;
+}
+
+function taskIdArtifactSegments(taskId: string): string[] {
+  const safe = encodeTaskId(taskId);
+  const legacy = encodeURIComponent(taskId);
+  return safe === legacy ? [safe] : [safe, legacy];
+}
+
+function taskSignalPathCandidates(projectDir: string, taskId: string): string[] {
+  return taskIdArtifactSegments(taskId).map((segment) =>
+    path.join(
+      projectDir,
+      BOARD_TASK_LOG_FRESHNESS_DIRNAME,
+      `${segment}${BOARD_TASK_LOG_FRESHNESS_FILE_SUFFIX}`
+    )
+  );
 }
 
 function isValidTimestamp(value: unknown): value is string {
@@ -30,28 +63,25 @@ export class TeamTaskLogFreshnessReader {
     taskIds: string[]
   ): Promise<Map<string, TaskLogFreshnessSignal>> {
     const uniqueTaskIds = [...new Set(taskIds)].filter((taskId) => taskId.trim().length > 0).sort();
-    const signalFilePaths = uniqueTaskIds.map((taskId) =>
-      path.join(
-        projectDir,
-        BOARD_TASK_LOG_FRESHNESS_DIRNAME,
-        `${encodeTaskId(taskId)}${BOARD_TASK_LOG_FRESHNESS_FILE_SUFFIX}`
-      )
+    const signalFilePathCandidates = uniqueTaskIds.map((taskId) =>
+      taskSignalPathCandidates(projectDir, taskId)
     );
-    this.cache.retainOnly(new Set(signalFilePaths));
+    this.cache.retainOnly(new Set(signalFilePathCandidates.flat()));
 
     const rows = await Promise.all(
       uniqueTaskIds.map(async (taskId, index) => {
-        const filePath = signalFilePaths[index];
-        const parsed = await this.readSignal(filePath);
-        if (!parsed || parsed.taskId !== taskId) {
+        const candidates = signalFilePathCandidates[index] ?? [];
+        const result = await this.readFirstSignal(candidates);
+        if (!result || result.parsed.taskId !== taskId) {
           return null;
         }
+        const parsed = result.parsed;
         return [
           taskId,
           {
             taskId,
             updatedAt: parsed.updatedAt,
-            filePath,
+            filePath: result.filePath,
             ...(parsed.transcriptFileBasename
               ? { transcriptFileBasename: parsed.transcriptFileBasename }
               : {}),
@@ -61,6 +91,18 @@ export class TeamTaskLogFreshnessReader {
     );
 
     return new Map(rows.filter((row): row is NonNullable<typeof row> => row !== null));
+  }
+
+  private async readFirstSignal(
+    filePaths: string[]
+  ): Promise<{ filePath: string; parsed: ParsedFreshnessSignal } | null> {
+    for (const filePath of filePaths) {
+      const parsed = await this.readSignal(filePath);
+      if (parsed) {
+        return { filePath, parsed };
+      }
+    }
+    return null;
   }
 
   private async readSignal(filePath: string): Promise<ParsedFreshnessSignal | false> {

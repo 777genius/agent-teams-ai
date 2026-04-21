@@ -9,6 +9,7 @@ import {
 } from '@codemirror/merge';
 import { ChangeSet, type ChangeSpec, EditorState, type StateEffect } from '@codemirror/state';
 import { type EditorView } from '@codemirror/view';
+import { buildHunkDecisionKey } from '@renderer/utils/reviewKey';
 import { computeDiffContextHash } from '@shared/utils/diffContextHash';
 import { structuredPatch } from 'diff';
 
@@ -93,7 +94,7 @@ export const mirrorEditsAfterResolve = EditorState.transactionExtender.of((tr) =
  */
 export function replayHunkDecisions(
   view: EditorView,
-  filePath: string,
+  reviewKey: string,
   hunkDecisions: Record<string, string>
 ): void {
   const result = getChunks(view.state);
@@ -102,7 +103,7 @@ export function replayHunkDecisions(
   // Collect decisions that need replaying
   const toReplay: { index: number; decision: 'accepted' | 'rejected' }[] = [];
   for (let i = 0; i < result.chunks.length; i++) {
-    const key = `${filePath}:${i}`;
+    const key = buildHunkDecisionKey(reviewKey, i);
     const d = hunkDecisions[key];
     if (d === 'accepted' || d === 'rejected') {
       toReplay.push({ index: i, decision: d });
@@ -134,7 +135,7 @@ export function replayHunkDecisions(
  */
 export function replayHunkDecisionsSmart(
   view: EditorView,
-  filePath: string,
+  reviewKey: string,
   hunkDecisions: Record<string, string>,
   hunkContextHashes?: Record<number, string>
 ): void {
@@ -171,7 +172,7 @@ export function replayHunkDecisionsSmart(
   }
 
   // Collect all decided indices from the decision map (don't assume contiguous 0..N)
-  const prefix = `${filePath}:`;
+  const prefix = `${reviewKey}:`;
   const decided: { mappedIndex: number; decision: 'accepted' | 'rejected' }[] = [];
   const usedMapped = new Set<number>();
 

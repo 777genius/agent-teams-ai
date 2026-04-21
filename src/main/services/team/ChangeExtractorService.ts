@@ -31,6 +31,7 @@ import type { TaskChangeWorkerClient } from './TaskChangeWorkerClient';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 import type { AgentChangeSet, ChangeStats, TaskChangeSetV2 } from '@shared/types';
+import { resolveTaskChangePresenceFromResult } from '@shared/utils/taskChangePresence';
 
 const logger = createLogger('Service:ChangeExtractorService');
 
@@ -759,11 +760,8 @@ export class ChangeExtractorService {
       return;
     }
 
-    if (
-      result.files.length === 0 &&
-      result.confidence !== 'high' &&
-      result.confidence !== 'medium'
-    ) {
+    const resolvedPresence = resolveTaskChangePresenceFromResult(result);
+    if (!resolvedPresence) {
       return;
     }
 
@@ -789,7 +787,7 @@ export class ChangeExtractorService {
       {
         taskId,
         taskSignature: descriptor.taskSignature,
-        presence: result.files.length > 0 ? 'has_changes' : 'no_changes',
+        presence: resolvedPresence,
         writtenAt: now,
         logSourceGeneration: snapshot.logSourceGeneration,
       }

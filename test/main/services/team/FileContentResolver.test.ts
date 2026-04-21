@@ -126,6 +126,45 @@ describe('FileContentResolver', () => {
     expect(content.contentSource).toBe('ledger-snapshot');
   });
 
+  it('does not synthesize empty text for metadata-only ledger lifecycle states', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockRejectedValue(new Error('ENOENT'));
+
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({ findMemberLogPaths: vi.fn().mockResolvedValue([]) } as any);
+
+    const content = await resolver.getFileContent('team', 'member', '/tmp/binary-create.bin', [
+      {
+        toolUseId: 'ledger-1',
+        filePath: '/tmp/binary-create.bin',
+        toolName: 'Bash',
+        type: 'shell-snapshot',
+        oldString: '',
+        newString: '',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+        ledger: {
+          eventId: 'event-1',
+          source: 'ledger-snapshot',
+          confidence: 'high',
+          originalFullContent: null,
+          modifiedFullContent: null,
+          beforeHash: null,
+          afterHash: 'hash',
+          operation: 'create',
+          beforeState: { exists: false, unavailableReason: 'binary file' },
+          afterState: { exists: true, sha256: 'hash', unavailableReason: 'binary file' },
+        },
+      },
+    ]);
+
+    expect(content.originalFullContent).toBeNull();
+    expect(content.modifiedFullContent).toBeNull();
+    expect(content.contentSource).toBe('unavailable');
+  });
+
   it('reuses cached content only when disk bytes and snippets are unchanged', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;

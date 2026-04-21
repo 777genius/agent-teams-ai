@@ -1133,6 +1133,7 @@ export class HttpAPIClient implements ElectronAPI {
     saveDecisions: async (
       _teamName: string,
       _scopeKey: string,
+      _scopeToken: string,
       _hunkDecisions: Record<string, unknown>,
       _fileDecisions: Record<string, unknown>,
       _hunkContextHashesByFile?: Record<string, Record<number, string>>

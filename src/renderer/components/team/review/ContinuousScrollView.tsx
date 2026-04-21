@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLazyFileContent } from '@renderer/hooks/useLazyFileContent';
 import { useVisibleFileSection } from '@renderer/hooks/useVisibleFileSection';
 import { useStore } from '@renderer/store';
+import { getFileReviewKey } from '@renderer/utils/reviewKey';
 
 import {
   acceptAllChunks,
@@ -189,6 +190,8 @@ export const ContinuousScrollView = ({
   const handleEditorViewReady = useCallback(
     (filePath: string, view: EditorView | null) => {
       if (view) {
+        const file = files.find((candidate) => candidate.filePath === filePath);
+        const reviewKey = file ? getFileReviewKey(file) : filePath;
         // Skip if this exact view instance was already processed
         if (editorViewMapRef.current.get(filePath) === view && replayedViewsRef.current.has(view)) {
           return;
@@ -202,7 +205,8 @@ export const ContinuousScrollView = ({
           setFileChunkCount(filePath, chunks.chunks.length);
         }
 
-        const fileDecision = fileDecisionsRef.current[filePath];
+        const fileDecision =
+          fileDecisionsRef.current[reviewKey] ?? fileDecisionsRef.current[filePath];
         if (fileDecision === 'accepted' || fileDecision === 'rejected') {
           // Sync file-level "Accept All" / "Reject All" decisions
           requestAnimationFrame(() => {
@@ -217,9 +221,9 @@ export const ContinuousScrollView = ({
           requestAnimationFrame(() => {
             replayHunkDecisionsSmart(
               view,
-              filePath,
+              reviewKey,
               hunkDecisionsRef.current,
-              hunkHashesRef.current[filePath]
+              hunkHashesRef.current[reviewKey] ?? hunkHashesRef.current[filePath]
             );
           });
         }
@@ -229,7 +233,7 @@ export const ContinuousScrollView = ({
         // is not needed since view instances are unique and old ones get GC'd)
       }
     },
-    [editorViewMapRef, setFileChunkCount]
+    [editorViewMapRef, files, setFileChunkCount]
   );
 
   if (files.length === 0) {
@@ -253,11 +257,12 @@ export const ContinuousScrollView = ({
       ) : null}
       {files.map((file) => {
         const filePath = file.filePath;
+        const reviewKey = getFileReviewKey(file);
         const content = fileContents[filePath] ?? null;
         const hasContent = filePath in fileContents;
         const hasEdits = filePath in editedContents;
         const isViewed = viewedSet.has(filePath);
-        const decision = fileDecisions[filePath];
+        const decision = fileDecisions[reviewKey] ?? fileDecisions[filePath];
 
         const isCollapsed = collapsedFiles.has(filePath);
 

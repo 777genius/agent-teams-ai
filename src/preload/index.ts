@@ -1398,16 +1398,17 @@ const electronAPI: ElectronAPI = {
       };
     },
     // Decision persistence
-    loadDecisions: async (teamName: string, scopeKey: string) => {
+    loadDecisions: async (teamName: string, scopeKey: string, scopeToken?: string) => {
       return invokeIpcWithResult<{
         hunkDecisions: Record<string, HunkDecision>;
         fileDecisions: Record<string, HunkDecision>;
         hunkContextHashesByFile?: Record<string, Record<number, string>>;
-      } | null>(REVIEW_LOAD_DECISIONS, teamName, scopeKey);
+      } | null>(REVIEW_LOAD_DECISIONS, teamName, scopeKey, scopeToken ?? null);
     },
     saveDecisions: async (
       teamName: string,
       scopeKey: string,
+      scopeToken: string,
       hunkDecisions: Record<string, HunkDecision>,
       fileDecisions: Record<string, HunkDecision>,
       hunkContextHashesByFile?: Record<string, Record<number, string>>
@@ -1416,13 +1417,19 @@ const electronAPI: ElectronAPI = {
         REVIEW_SAVE_DECISIONS,
         teamName,
         scopeKey,
+        scopeToken,
         hunkDecisions,
         fileDecisions,
         hunkContextHashesByFile ?? null
       );
     },
-    clearDecisions: async (teamName: string, scopeKey: string) => {
-      return invokeIpcWithResult<void>(REVIEW_CLEAR_DECISIONS, teamName, scopeKey);
+    clearDecisions: async (teamName: string, scopeKey: string, scopeToken?: string) => {
+      return invokeIpcWithResult<void>(
+        REVIEW_CLEAR_DECISIONS,
+        teamName,
+        scopeKey,
+        scopeToken ?? null
+      );
     },
     onCmdN: (callback: () => void): (() => void) => {
       const handler = (): void => callback();

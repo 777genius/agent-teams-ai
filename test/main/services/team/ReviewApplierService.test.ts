@@ -581,6 +581,77 @@ describe('ReviewApplierService', () => {
     expect(writeFile).not.toHaveBeenCalled();
     expect(unlink).not.toHaveBeenCalled();
   });
+
+  it('ledger exact partial reject stays in the strict ledger lane and applies inverse hunk patch', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
+
+    const filePath = '/tmp/exact-ledger.ts';
+    const original = 'const value = 1;\nconst keep = true;\n';
+    const modified = 'const value = 2;\nconst keep = true;\n';
+    readFile.mockResolvedValue(modified);
+    writeFile.mockResolvedValue(undefined);
+
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const svc = new ReviewApplierService();
+
+    const res = await svc.applyReviewDecisions(
+      {
+        teamName: 'team',
+        decisions: [
+          {
+            filePath,
+            fileDecision: 'pending',
+            hunkDecisions: { 0: 'rejected' },
+          },
+        ],
+      },
+      new Map([
+        [
+          filePath,
+          {
+            filePath,
+            relativePath: 'exact-ledger.ts',
+            snippets: [
+              {
+                toolUseId: 'ledger-1',
+                filePath,
+                toolName: 'Edit',
+                type: 'edit',
+                oldString: 'const value = 1;\n',
+                newString: 'const value = 2;\n',
+                replaceAll: false,
+                timestamp: '2026-03-01T10:00:00.000Z',
+                isError: false,
+                ledger: {
+                  eventId: 'event-1',
+                  source: 'ledger-exact',
+                  confidence: 'exact',
+                  originalFullContent: original,
+                  modifiedFullContent: modified,
+                  beforeHash: sha(original),
+                  afterHash: sha(modified),
+                  operation: 'modify',
+                  beforeState: { exists: true, sha256: sha(original) },
+                  afterState: { exists: true, sha256: sha(modified) },
+                },
+              },
+            ],
+            linesAdded: 1,
+            linesRemoved: 1,
+            isNewFile: false,
+            originalFullContent: original,
+            modifiedFullContent: modified,
+            contentSource: 'ledger-exact',
+          },
+        ],
+      ])
+    );
+
+    expect(res).toMatchObject({ applied: 1, conflicts: 0 });
+    expect(writeFile).toHaveBeenCalledWith(filePath, original, 'utf8');
+  });
 });
 
 function sha(content: string): string {

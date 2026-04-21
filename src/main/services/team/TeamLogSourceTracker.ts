@@ -16,6 +16,7 @@ import type { FSWatcher } from 'chokidar';
 const logger = createLogger('Service:TeamLogSourceTracker');
 const BOARD_TASK_LOG_FRESHNESS_DIRNAME = '.board-task-log-freshness';
 const BOARD_TASK_CHANGE_FRESHNESS_DIRNAME = '.board-task-change-freshness';
+const BOARD_TASK_CHANGES_DIRNAME = '.board-task-changes';
 const BOARD_TASK_LOG_FRESHNESS_FILE_SUFFIX = '.json';
 
 interface TeamLogSourceSnapshot {
@@ -40,6 +41,28 @@ interface TrackingState {
   snapshot: TeamLogSourceSnapshot;
   consumerCounts: Map<TeamLogSourceTrackingConsumer, number>;
   lifecycleVersion: number;
+}
+
+type DecodedFreshnessTaskId =
+  | { kind: 'task-id'; taskId: string }
+  | { kind: 'opaque-safe-segment' }
+  | { kind: 'invalid' };
+
+function isOpaqueSafeTaskIdSegment(segment: string): boolean {
+  return /^task-id-[0-9a-f]{32}$/.test(segment);
+}
+
+export function shouldIgnoreLogSourceWatcherPath(
+  projectDir: string,
+  watchedPath: string
+): boolean {
+  const relativePath = path.relative(projectDir, watchedPath);
+  if (!relativePath || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    return false;
+  }
+
+  const parts = relativePath.split(path.sep).filter(Boolean);
+  return parts[0] === BOARD_TASK_CHANGES_DIRNAME;
 }
 
 export class TeamLogSourceTracker {
@@ -276,6 +299,7 @@ export class TeamLogSourceTracker {
       ignorePermissionErrors: true,
       followSymlinks: false,
       depth: 3,
+      ignored: (watchedPath) => shouldIgnoreLogSourceWatcherPath(projectDir, watchedPath),
       awaitWriteFinish: {
         stabilityThreshold: 250,
         pollInterval: 50,
@@ -343,35 +367,66 @@ export class TeamLogSourceTracker {
       return true;
     }
 
-    const taskId = this.decodeTaskLogFreshnessTaskId(relativePath);
-    if (!taskId) {
+    const decoded = this.decodeTaskLogFreshnessTaskId(relativePath);
+    if (decoded.kind === 'invalid') {
+      return true;
+    }
+    if (decoded.kind === 'opaque-safe-segment') {
+      void this.emitTaskFreshnessSignalFromFile(teamName, changedPath);
       return true;
     }
 
     this.emitter?.({
       type: 'task-log-change',
       teamName,
-      taskId,
+      taskId: decoded.taskId,
     });
     return true;
   }
 
-  private decodeTaskLogFreshnessTaskId(fileName: string): string | null {
+  private decodeTaskLogFreshnessTaskId(fileName: string): DecodedFreshnessTaskId {
     if (!fileName.endsWith(BOARD_TASK_LOG_FRESHNESS_FILE_SUFFIX)) {
-      return null;
+      return { kind: 'invalid' };
     }
 
     const encodedTaskId = fileName.slice(0, -BOARD_TASK_LOG_FRESHNESS_FILE_SUFFIX.length);
     if (!encodedTaskId) {
-      return null;
+      return { kind: 'invalid' };
+    }
+    if (isOpaqueSafeTaskIdSegment(encodedTaskId)) {
+      return { kind: 'opaque-safe-segment' };
     }
 
     try {
       const taskId = decodeURIComponent(encodedTaskId);
-      return taskId.trim().length > 0 ? taskId : null;
+      return taskId.trim().length > 0
+        ? { kind: 'task-id', taskId }
+        : { kind: 'invalid' };
     } catch {
-      return null;
+      return { kind: 'invalid' };
     }
+  }
+
+  private async emitTaskFreshnessSignalFromFile(teamName: string, filePath: string): Promise<void> {
+    try {
+      const raw = await fs.readFile(filePath, 'utf8');
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      const taskId =
+        typeof parsed.taskId === 'string' && parsed.taskId.trim().length > 0
+          ? parsed.taskId.trim()
+          : null;
+      if (taskId) {
+        this.emitter?.({
+          type: 'task-log-change',
+          teamName,
+          taskId,
+        });
+        return;
+      }
+    } catch {
+      // Deletions or partially unavailable files still need a team-level refresh.
+    }
+    this.emitLogSourceChange(teamName);
   }
 
   private async recompute(teamName: string): Promise<TeamLogSourceSnapshot> {

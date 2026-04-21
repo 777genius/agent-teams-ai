@@ -642,7 +642,8 @@ export class TeamGraphAdapter {
         reviewerName: isReviewCycle ? reviewerName : null,
         reviewMode: isReviewCycle ? (reviewerName ? 'assigned' : 'manual') : undefined,
         reviewerColor: reviewerName ? memberColorByName.get(reviewerName) : undefined,
-        changePresence: task.changePresence,
+        changePresence:
+          task.changePresence === 'needs_attention' ? 'has_changes' : task.changePresence,
         displayId: task.displayId ?? undefined,
         ownerId: ownerMemberId,
         needsClarification: task.needsClarification ?? null,

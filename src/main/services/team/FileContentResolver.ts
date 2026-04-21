@@ -269,16 +269,7 @@ export class FileContentResolver {
     modified: string | null;
     source: FileChangeWithContent['contentSource'];
   } | null {
-    const ledgerSnippets = snippets
-      .filter((snippet) => snippet.ledger && !snippet.isError)
-      .sort((a, b) => {
-        const aTime = Date.parse(a.timestamp);
-        const bTime = Date.parse(b.timestamp);
-        if (Number.isFinite(aTime) && Number.isFinite(bTime) && aTime !== bTime) {
-          return aTime - bTime;
-        }
-        return a.toolUseId.localeCompare(b.toolUseId);
-      });
+    const ledgerSnippets = snippets.filter((snippet) => snippet.ledger && !snippet.isError);
 
     if (ledgerSnippets.length === 0) {
       return null;
@@ -289,8 +280,19 @@ export class FileContentResolver {
     if (!first || !last) {
       return null;
     }
-    const original = first.originalFullContent ?? (first.operation === 'create' ? '' : null);
-    const modified = last.modifiedFullContent ?? (last.operation === 'delete' ? '' : null);
+    const canUseSyntheticOriginal =
+      first.originalFullContent === null &&
+      first.operation === 'create' &&
+      last.modifiedFullContent !== null &&
+      !first.beforeState?.unavailableReason;
+    const canUseSyntheticModified =
+      last.modifiedFullContent === null &&
+      last.operation === 'delete' &&
+      first.originalFullContent !== null &&
+      !last.afterState?.unavailableReason;
+
+    const original = first.originalFullContent ?? (canUseSyntheticOriginal ? '' : null);
+    const modified = last.modifiedFullContent ?? (canUseSyntheticModified ? '' : null);
     if (original === null && modified === null) {
       return null;
     }

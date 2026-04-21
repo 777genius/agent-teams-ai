@@ -177,6 +177,7 @@ import type {
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
+  TaskChangePresenceState,
   TaskComment,
   TaskRef,
   TeamAgentRuntimeSnapshot,
@@ -916,7 +917,7 @@ async function handleGetData(
 async function handleGetTaskChangePresence(
   _event: IpcMainInvokeEvent,
   teamName: unknown
-): Promise<IpcResult<Record<string, 'has_changes' | 'no_changes' | 'unknown'>>> {
+): Promise<IpcResult<Record<string, TaskChangePresenceState>>> {
   const validated = validateTeamName(teamName);
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };

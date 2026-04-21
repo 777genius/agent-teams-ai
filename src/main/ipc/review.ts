@@ -454,7 +454,8 @@ async function handleGetGitFileLog(
 async function handleLoadDecisions(
   _event: IpcMainInvokeEvent,
   teamName: string,
-  scopeKey: string
+  scopeKey: string,
+  scopeToken: string | null = null
 ): Promise<
   IpcResult<{
     hunkDecisions: Record<string, HunkDecision>;
@@ -462,19 +463,23 @@ async function handleLoadDecisions(
     hunkContextHashesByFile?: Record<string, Record<number, string>>;
   } | null>
 > {
-  return wrapReviewHandler('loadDecisions', () => reviewDecisionStore.load(teamName, scopeKey));
+  return wrapReviewHandler('loadDecisions', () =>
+    reviewDecisionStore.load(teamName, scopeKey, scopeToken ?? undefined)
+  );
 }
 
 async function handleSaveDecisions(
   _event: IpcMainInvokeEvent,
   teamName: string,
   scopeKey: string,
+  scopeToken: string,
   hunkDecisions: Record<string, HunkDecision>,
   fileDecisions: Record<string, HunkDecision>,
   hunkContextHashesByFile: Record<string, Record<number, string>> | null = null
 ): Promise<IpcResult<void>> {
   return wrapReviewHandler('saveDecisions', () =>
     reviewDecisionStore.save(teamName, scopeKey, {
+      scopeToken,
       hunkDecisions,
       fileDecisions,
       hunkContextHashesByFile: hunkContextHashesByFile ?? undefined,
@@ -485,7 +490,10 @@ async function handleSaveDecisions(
 async function handleClearDecisions(
   _event: IpcMainInvokeEvent,
   teamName: string,
-  scopeKey: string
+  scopeKey: string,
+  scopeToken: string | null = null
 ): Promise<IpcResult<void>> {
-  return wrapReviewHandler('clearDecisions', () => reviewDecisionStore.clear(teamName, scopeKey));
+  return wrapReviewHandler('clearDecisions', () =>
+    reviewDecisionStore.clear(teamName, scopeKey, scopeToken ?? undefined)
+  );
 }

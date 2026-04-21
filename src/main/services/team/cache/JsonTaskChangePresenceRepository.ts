@@ -10,7 +10,10 @@ import {
 } from './taskChangePresenceCacheSchema';
 import { TASK_CHANGE_PRESENCE_CACHE_SCHEMA_VERSION } from './taskChangePresenceCacheTypes';
 
-import type { PersistedTaskChangePresenceIndex } from './taskChangePresenceCacheTypes';
+import type {
+  PersistedTaskChangePresence,
+  PersistedTaskChangePresenceIndex,
+} from './taskChangePresenceCacheTypes';
 import type { TaskChangePresenceRepository } from './TaskChangePresenceRepository';
 
 const logger = createLogger('Service:JsonTaskChangePresenceRepository');
@@ -87,7 +90,7 @@ export class JsonTaskChangePresenceRepository implements TaskChangePresenceRepos
     entry: {
       taskId: string;
       taskSignature: string;
-      presence: 'has_changes' | 'no_changes';
+      presence: PersistedTaskChangePresence;
       writtenAt: string;
       logSourceGeneration: string;
     }

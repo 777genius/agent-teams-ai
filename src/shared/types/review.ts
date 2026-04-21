@@ -3,6 +3,9 @@ export interface LedgerContentState {
   exists?: boolean;
   sha256?: string;
   sizeBytes?: number;
+  contentKind?: 'text' | 'binary' | 'unknown';
+  blobRef?: string;
+  unavailableCode?: 'binary' | 'too-large' | 'read-error' | 'not-captured' | 'blob-missing';
   unavailableReason?: string;
 }
 
@@ -45,7 +48,29 @@ export interface SnippetDiff {
     afterState?: LedgerContentState;
     relation?: LedgerChangeRelation;
     executionSeq?: number;
+    linesAdded?: number;
+    linesRemoved?: number;
+    textAvailability?: 'patch-text' | 'full-text' | 'unavailable';
   };
+}
+
+export interface TaskChangeJournalFileStamp {
+  bytes: number;
+  mtimeMs: number;
+  tailSha256: string | null;
+}
+
+export interface TaskChangeJournalStamp {
+  events?: TaskChangeJournalFileStamp;
+  notices?: TaskChangeJournalFileStamp;
+}
+
+export interface TaskChangeProvenance {
+  sourceKind: 'ledger' | 'legacy';
+  sourceFingerprint: string;
+  journalStamp?: TaskChangeJournalStamp;
+  bundleSchemaVersion?: number;
+  integrity?: 'ok' | 'recovered' | 'partial';
 }
 
 /** Агрегированные изменения по файлу */
@@ -56,6 +81,22 @@ export interface FileChangeSummary {
   linesAdded: number;
   linesRemoved: number;
   isNewFile: boolean;
+  changeKey?: string;
+  diffStatKnown?: boolean;
+  ledgerSummary?: {
+    latestOperation?: 'create' | 'modify' | 'delete';
+    createdInTask?: boolean;
+    deletedInTask?: boolean;
+    contentAvailability?: 'full-text' | 'hash-only' | 'metadata-only';
+    reviewability?: 'full-text' | 'partial-text' | 'metadata-only';
+    relation?: LedgerChangeRelation;
+    beforeState?: LedgerContentState;
+    afterState?: LedgerContentState;
+    primaryActorKey?: string;
+    agentIds?: string[];
+    memberNames?: string[];
+    executionSeqRange?: { start: number; end: number };
+  };
   /** Edit timeline for this file (Phase 4) */
   timeline?: FileEditTimeline;
 }
@@ -192,6 +233,34 @@ export interface TaskChangeScope {
   toolUseIds: string[];
   filePaths: string[];
   confidence: TaskScopeConfidence;
+  primaryActorKey?: string;
+  primaryAgentId?: string;
+  primaryMemberName?: string;
+  agentIds?: string[];
+  memberNames?: string[];
+  toolUseCount?: number;
+  toolUseIdsTruncated?: boolean;
+  phaseSet?: Array<'work' | 'review'>;
+  executionSeqRange?: { start: number; end: number };
+  confidenceBreakdown?: {
+    capture: 'exact' | 'high' | 'medium' | 'low';
+    attribution: 'high' | 'medium' | 'low' | 'ambiguous';
+    reviewability: 'full-text' | 'mixed' | 'metadata-only';
+  };
+  contributors?: Array<{
+    actorKey: string;
+    agentId?: string;
+    memberName?: string;
+    eventCount: number;
+    noticeCount: number;
+    touchedFileCount: number;
+    visibleFileCount: number;
+    toolUseCount: number;
+    cumulativeLinesAdded: number;
+    cumulativeLinesRemoved: number;
+    firstTimestamp: string;
+    lastTimestamp: string;
+  }>;
 }
 
 /** Результат парсинга всех границ задач из JSONL файла */
@@ -206,6 +275,8 @@ export interface TaskBoundariesResult {
 export interface TaskChangeSetV2 extends TaskChangeSet {
   scope: TaskChangeScope;
   warnings: string[];
+  diffStatCompleteness?: 'complete' | 'partial';
+  provenance?: TaskChangeProvenance;
 }
 
 // ── Phase 4: Enhanced Features types ──

@@ -11,6 +11,9 @@ const hoisted = vi.hoisted(() => ({
   getFileContent: vi.fn(),
   applyDecisions: vi.fn(),
   saveEditedFile: vi.fn(),
+  loadDecisions: vi.fn(),
+  saveDecisions: vi.fn(),
+  clearDecisions: vi.fn(),
   checkConflict: vi.fn(),
   rejectHunks: vi.fn(),
   rejectFile: vi.fn(),
@@ -26,6 +29,9 @@ vi.mock('@renderer/api', () => ({
       getFileContent: hoisted.getFileContent,
       applyDecisions: hoisted.applyDecisions,
       saveEditedFile: hoisted.saveEditedFile,
+      loadDecisions: hoisted.loadDecisions,
+      saveDecisions: hoisted.saveDecisions,
+      clearDecisions: hoisted.clearDecisions,
       checkConflict: hoisted.checkConflict,
       rejectHunks: hoisted.rejectHunks,
       rejectFile: hoisted.rejectFile,
@@ -181,7 +187,7 @@ describe('changeReviewSlice task changes', () => {
       totalLinesRemoved: 0,
       teamName: 'team-a',
       taskId: '1',
-      confidence: 'fallback',
+      confidence: 'high',
       computedAt: '2026-03-01T12:00:00.000Z',
       scope: {
         taskId: '1',
@@ -192,7 +198,7 @@ describe('changeReviewSlice task changes', () => {
         endTimestamp: '',
         toolUseIds: [],
         filePaths: [],
-        confidence: { tier: 4, label: 'fallback', reason: 'No log files found for task' },
+        confidence: { tier: 1, label: 'high', reason: 'Confirmed empty summary' },
       },
       warnings: [],
     });
@@ -202,6 +208,9 @@ describe('changeReviewSlice task changes', () => {
     await store.getState().checkTaskHasChanges('team-a', '1', OPTIONS_B);
 
     expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(2);
+    expect(
+      store.getState().taskChangePresenceByKey[buildTaskChangePresenceKey('team-a', '1', OPTIONS_A)]
+    ).toBe('no_changes');
   });
 
   it('updates selected team task changePresence after a positive summary check', async () => {
@@ -283,6 +292,53 @@ describe('changeReviewSlice task changes', () => {
       'presence-unknown',
       'no_changes'
     );
+  });
+
+  it('treats warning-only summaries as needs_attention and rechecks after invalidation', async () => {
+    const store = createSliceStore();
+    const teamName = 'team-a';
+    const taskId = 'presence-warning';
+    const cacheKey = buildTaskChangePresenceKey(teamName, taskId, OPTIONS_A);
+    hoisted.getTaskChanges.mockResolvedValue({
+      files: [],
+      totalFiles: 0,
+      totalLinesAdded: 0,
+      totalLinesRemoved: 0,
+      teamName,
+      taskId,
+      confidence: 'fallback',
+      computedAt: '2026-03-01T12:00:00.000Z',
+      scope: {
+        taskId,
+        memberName: '',
+        startLine: 0,
+        endLine: 0,
+        startTimestamp: '',
+        endTimestamp: '',
+        toolUseIds: [],
+        filePaths: [],
+        confidence: { tier: 4, label: 'fallback', reason: 'Ambiguous scope skipped' },
+      },
+      warnings: ['Ledger skipped attribution because multiple task scopes were active.'],
+      provenance: {
+        sourceKind: 'ledger',
+        sourceFingerprint: 'ledger-warning-only',
+      },
+    });
+
+    await store.getState().checkTaskHasChanges(teamName, taskId, OPTIONS_A);
+
+    expect(store.getState().setSelectedTeamTaskChangePresence).toHaveBeenCalledWith(
+      teamName,
+      taskId,
+      'needs_attention'
+    );
+    expect(store.getState().taskChangePresenceByKey[cacheKey]).toBe('needs_attention');
+
+    store.getState().invalidateTaskChangePresence([cacheKey]);
+    await store.getState().checkTaskHasChanges(teamName, taskId, OPTIONS_A);
+
+    expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(2);
   });
 
   it('downgrades stale known presence to unknown for fallback empty summaries', async () => {
@@ -554,8 +610,10 @@ describe('changeReviewSlice task changes', () => {
 
     expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(3);
     expect(
-      store.getState().taskHasChanges[buildTaskChangePresenceKey(teamName, taskId, OPTIONS_A)]
-    ).toBe(true);
+      store.getState().taskChangePresenceByKey[
+        buildTaskChangePresenceKey(teamName, taskId, OPTIONS_A)
+      ]
+    ).toBe('has_changes');
   });
 
   it('warms task summaries with bounded concurrency', async () => {
@@ -708,7 +766,16 @@ describe('changeReviewSlice task changes', () => {
       summaryOnly: true,
       forceFresh: true,
     });
-    expect(store.getState().taskHasChanges[buildTaskChangePresenceKey(teamName, taskId, OPTIONS_A)]).toBe(false);
+    expect(
+      store.getState().taskChangePresenceByKey[
+        buildTaskChangePresenceKey(teamName, taskId, OPTIONS_A)
+      ]
+    ).toBeUndefined();
+    expect(store.getState().setSelectedTeamTaskChangePresence).toHaveBeenCalledWith(
+      teamName,
+      taskId,
+      'unknown'
+    );
   });
 
   it('clears resolved file content state when fetchAgentChanges installs a new change set', async () => {
@@ -741,7 +808,7 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContentsLoading).toEqual({});
     expect(store.getState().fileChunkCounts).toEqual({});
     expect(store.getState().hunkContextHashesByFile).toEqual({});
-    expect(store.getState().hunkDecisions).toEqual({ '/repo/file.ts:0': 'rejected' });
+    expect(store.getState().hunkDecisions).toEqual({});
     expect(store.getState().changeSetEpoch).toBe(5);
     expect(store.getState().fileContentVersionByPath).toEqual({});
   });
@@ -777,7 +844,7 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContentsLoading).toEqual({});
     expect(store.getState().fileChunkCounts).toEqual({});
     expect(store.getState().hunkContextHashesByFile).toEqual({});
-    expect(store.getState().hunkDecisions).toEqual({ '/repo/file.ts:0': 'accepted' });
+    expect(store.getState().hunkDecisions).toEqual({});
     expect(store.getState().changeSetEpoch).toBe(2);
     expect(store.getState().fileContentVersionByPath).toEqual({});
   });
@@ -884,6 +951,93 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContentVersionByPath['/repo/file.ts']).toBe(1);
   });
 
+  it('normalizes persisted legacy file-path review decisions onto changeKey entries', async () => {
+    const store = createSliceStore();
+    const changeKey = 'rename:/repo/old.ts->/repo/new.ts';
+    const ledgerFile = {
+      ...makeFile('/repo/new.ts'),
+      changeKey,
+    };
+
+    store.setState({
+      activeChangeSet: {
+        ...makeTaskChangeSet('task-ledger', '/repo/new.ts'),
+        files: [ledgerFile],
+        totalFiles: 1,
+        totalLinesAdded: ledgerFile.linesAdded,
+        totalLinesRemoved: ledgerFile.linesRemoved,
+      },
+    });
+
+    hoisted.loadDecisions.mockResolvedValueOnce({
+      hunkDecisions: { '/repo/new.ts:0': 'rejected' },
+      fileDecisions: { '/repo/new.ts': 'rejected' },
+      hunkContextHashesByFile: { '/repo/new.ts': { 0: 'ctx-rename' } },
+    });
+
+    await store.getState().loadDecisionsFromDisk('team-a', 'task-task-ledger', 'scope-token');
+
+    expect(store.getState().hunkDecisions).toEqual({ [`${changeKey}:0`]: 'rejected' });
+    expect(store.getState().fileDecisions).toEqual({ [changeKey]: 'rejected' });
+    expect(store.getState().hunkContextHashesByFile).toEqual({
+      [changeKey]: { 0: 'ctx-rename' },
+    });
+  });
+
+  it('stores fresh decisions under changeKey for grouped ledger files', () => {
+    const store = createSliceStore();
+    const changeKey = 'rename:/repo/old.ts->/repo/new.ts';
+    const ledgerFile = {
+      ...makeFile('/repo/new.ts'),
+      changeKey,
+    };
+
+    store.setState({
+      activeChangeSet: {
+        ...makeAgentChangeSet('/repo/new.ts'),
+        files: [ledgerFile],
+        totalFiles: 1,
+        totalLinesAdded: ledgerFile.linesAdded,
+        totalLinesRemoved: ledgerFile.linesRemoved,
+      },
+      fileChunkCounts: { '/repo/new.ts': 1 },
+    });
+
+    const originalIndex = store.getState().setHunkDecision('/repo/new.ts', 0, 'rejected');
+    store.getState().setFileDecision('/repo/new.ts', 'rejected');
+
+    expect(originalIndex).toBe(0);
+    expect(store.getState().hunkDecisions).toEqual({ [`${changeKey}:0`]: 'rejected' });
+    expect(store.getState().fileDecisions).toEqual({ [changeKey]: 'rejected' });
+  });
+
+  it('stores grouped copy decisions under the copy changeKey', () => {
+    const store = createSliceStore();
+    const changeKey = 'copy:/repo/base.ts->/repo/copy.ts';
+    const ledgerFile = {
+      ...makeFile('/repo/copy.ts'),
+      changeKey,
+    };
+
+    store.setState({
+      activeChangeSet: {
+        ...makeAgentChangeSet('/repo/copy.ts'),
+        files: [ledgerFile],
+        totalFiles: 1,
+        totalLinesAdded: ledgerFile.linesAdded,
+        totalLinesRemoved: ledgerFile.linesRemoved,
+      },
+      fileChunkCounts: { '/repo/copy.ts': 1 },
+    });
+
+    const originalIndex = store.getState().setHunkDecision('/repo/copy.ts', 0, 'accepted');
+    store.getState().setFileDecision('/repo/copy.ts', 'accepted');
+
+    expect(originalIndex).toBe(0);
+    expect(store.getState().hunkDecisions).toEqual({ [`${changeKey}:0`]: 'accepted' });
+    expect(store.getState().fileDecisions).toEqual({ [changeKey]: 'accepted' });
+  });
+
   it('invalidates resolved file content without clearing draft or review decisions', async () => {
     const store = createSliceStore();
 
@@ -920,6 +1074,49 @@ describe('changeReviewSlice task changes', () => {
       '/repo/file.ts': { type: 'change' },
     });
     expect(store.getState().fileContentVersionByPath['/repo/file.ts']).toBe(1);
+  });
+
+  it('invalidates review-key hunk hashes for grouped ledger files without clearing decisions', () => {
+    const store = createSliceStore();
+    const changeKey = 'rename:/repo/old.ts->/repo/new.ts';
+    const ledgerFile = {
+      ...makeFile('/repo/new.ts'),
+      changeKey,
+    };
+
+    store.setState({
+      activeChangeSet: {
+        ...makeAgentChangeSet('/repo/new.ts'),
+        files: [ledgerFile],
+        totalFiles: 1,
+        totalLinesAdded: ledgerFile.linesAdded,
+        totalLinesRemoved: ledgerFile.linesRemoved,
+      },
+      hunkDecisions: { [`${changeKey}:0`]: 'rejected' },
+      fileDecisions: { [changeKey]: 'rejected' },
+      fileChunkCounts: { '/repo/new.ts': 2 },
+      hunkContextHashesByFile: { [changeKey]: { 0: 'ctx-rename' } },
+      fileContents: {
+        '/repo/new.ts': {
+          ...ledgerFile,
+          originalFullContent: 'before',
+          modifiedFullContent: 'after',
+          contentSource: 'ledger-exact',
+        },
+      },
+      fileContentsLoading: { '/repo/new.ts': true },
+      editedContents: { '/repo/new.ts': 'draft' },
+      reviewExternalChangesByFile: { '/repo/new.ts': { type: 'change' } },
+      fileContentVersionByPath: {},
+    });
+
+    store.getState().invalidateResolvedFileContent('/repo/new.ts');
+
+    expect(store.getState().hunkContextHashesByFile).toEqual({});
+    expect(store.getState().hunkDecisions).toEqual({ [`${changeKey}:0`]: 'rejected' });
+    expect(store.getState().fileDecisions).toEqual({ [changeKey]: 'rejected' });
+    expect(store.getState().editedContents).toEqual({ '/repo/new.ts': 'draft' });
+    expect(store.getState().fileContentVersionByPath['/repo/new.ts']).toBe(1);
   });
 
   it('reloadReviewFileFromDisk clears the draft but preserves review decisions', async () => {
@@ -1072,6 +1269,45 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileChunkCounts).toEqual({});
     expect(store.getState().hunkContextHashesByFile).toEqual({});
     expect(store.getState().fileContentVersionByPath['/repo/file.ts']).toBe(1);
+  });
+
+  it('clears review-key hunk hashes after saveEditedFile for grouped ledger files', async () => {
+    const store = createSliceStore();
+    const changeKey = 'rename:/repo/old.ts->/repo/new.ts';
+    const ledgerFile = {
+      ...makeFile('/repo/new.ts'),
+      changeKey,
+    };
+    hoisted.saveEditedFile.mockResolvedValueOnce(undefined);
+
+    store.setState({
+      activeChangeSet: {
+        ...makeAgentChangeSet('/repo/new.ts'),
+        files: [ledgerFile],
+        totalFiles: 1,
+        totalLinesAdded: ledgerFile.linesAdded,
+        totalLinesRemoved: ledgerFile.linesRemoved,
+      },
+      fileContents: {
+        '/repo/new.ts': {
+          ...ledgerFile,
+          originalFullContent: 'before',
+          modifiedFullContent: 'draft-before-save',
+          contentSource: 'ledger-exact',
+        },
+      },
+      fileChunkCounts: { '/repo/new.ts': 2 },
+      hunkContextHashesByFile: { [changeKey]: { 0: 'ctx-rename' } },
+      editedContents: { '/repo/new.ts': 'saved-content' },
+      fileContentVersionByPath: {},
+    });
+
+    await store.getState().saveEditedFile('/repo/new.ts');
+
+    expect(hoisted.saveEditedFile).toHaveBeenCalledWith('/repo/new.ts', 'saved-content', undefined);
+    expect(store.getState().hunkContextHashesByFile).toEqual({});
+    expect(store.getState().fileChunkCounts).toEqual({});
+    expect(store.getState().fileContents['/repo/new.ts']?.modifiedFullContent).toBe('saved-content');
   });
 
   it('forces re-review when snippets change even if file paths stay the same', async () => {

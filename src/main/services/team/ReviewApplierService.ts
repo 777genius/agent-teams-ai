@@ -454,9 +454,6 @@ export class ReviewApplierService {
     }
 
     const fullReject = fileRejected || allHunksRejected;
-    const hasSnapshot = ledgerSnippets.some(
-      (snippet) => snippet.type === 'shell-snapshot' || snippet.type === 'hook-snapshot'
-    );
     const hasUnavailableState = ledgerSnippets.some(
       (snippet) =>
         snippet.ledger?.beforeState?.unavailableReason ||
@@ -465,26 +462,26 @@ export class ReviewApplierService {
     const relation = this.resolveLedgerRelation(ledgerSnippets);
 
     if (!fullReject) {
-      if (relation?.kind === 'rename') {
+      if (relation?.kind === 'rename' || relation?.kind === 'copy') {
         return {
           handled: true,
           status: 'error',
           code: 'manual-review-required',
-          error: 'Ledger rename partial reject requires manual review.',
+          error: `Ledger ${relation.kind} partial reject requires manual review.`,
         };
-      }
-      if (!hasSnapshot) {
-        return { handled: false };
       }
       if (original === null || modified === null) {
         return {
           handled: true,
           status: 'error',
           code: 'manual-review-required',
-          error: 'Ledger snapshot content is unavailable; partial reject requires manual review.',
+          error: 'Ledger full text is unavailable; partial reject requires manual review.',
         };
       }
-      const guard = await this.checkLedgerCurrentHash(filePath, lastLedger.afterState?.sha256);
+      const guard = await this.checkLedgerCurrentHash(
+        filePath,
+        lastLedger.afterState?.sha256 ?? lastLedger.afterHash ?? undefined
+      );
       if (!guard.ok) {
         return guard.outcome;
       }
@@ -494,7 +491,7 @@ export class ReviewApplierService {
           handled: true,
           status: 'error',
           code: 'manual-review-required',
-          error: 'Ledger snapshot partial reject could not be applied safely.',
+          error: 'Ledger partial reject could not be applied safely.',
         };
       }
       try {
@@ -598,7 +595,7 @@ export class ReviewApplierService {
       return {
         handled: true,
         status: 'error',
-        code: hasUnavailableState ? 'manual-review-required' : 'unavailable',
+        code: 'manual-review-required',
         error:
           'Ledger before content is unavailable; rejecting this change requires manual review.',
       };

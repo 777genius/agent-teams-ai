@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -7,6 +8,10 @@ import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { TaskChangeLedgerReader } from '@main/services/team/TaskChangeLedgerReader';
 
 const TASK_ID = 'task-1';
+
+function safeTaskIdSegment(taskId: string): string {
+  return `task-id-${createHash('sha256').update(taskId).digest('hex').slice(0, 32)}`;
+}
 
 describe('TaskChangeLedgerReader', () => {
   let tmpDir: string | null = null;
@@ -54,6 +59,41 @@ describe('TaskChangeLedgerReader', () => {
       'Task change ledger skipped attribution because multiple task scopes were active.'
     );
     expect(result?.scope.toolUseIds).toEqual(['tool-1']);
+  });
+
+  it('reads ledger artifacts stored under Windows-safe task id segments', async () => {
+    tmpDir = await fsTempDir();
+    const taskId = 'CON';
+    const bundleDir = path.join(tmpDir, '.board-task-changes', 'bundles');
+    await mkdir(bundleDir, { recursive: true });
+    await writeFile(
+      path.join(bundleDir, `${safeTaskIdSegment(taskId)}.json`),
+      JSON.stringify({
+        schemaVersion: 1,
+        source: 'task-change-ledger',
+        taskId,
+        generatedAt: '2026-03-01T10:00:00.000Z',
+        eventCount: 0,
+        files: [],
+        totalLinesAdded: 0,
+        totalLinesRemoved: 0,
+        totalFiles: 0,
+        confidence: 'high',
+        warnings: ['reserved segment safe path'],
+        events: [],
+      }),
+      'utf8'
+    );
+
+    const reader = new TaskChangeLedgerReader();
+    const result = await reader.readTaskChanges({
+      teamName: 'team',
+      taskId,
+      projectDir: tmpDir,
+      includeDetails: true,
+    });
+
+    expect(result?.warnings).toContain('reserved segment safe path');
   });
 
   it('maps ledger state and rename relation into snippets', async () => {
@@ -177,6 +217,132 @@ describe('TaskChangeLedgerReader', () => {
     expect(result?.files[0]?.isNewFile).toBe(false);
     expect(result?.files[0]?.linesAdded).toBe(3);
     expect(result?.files[0]?.linesRemoved).toBe(2);
+  });
+
+  it('falls back to journal summary when bundle and freshness describe different generations', async () => {
+    tmpDir = await fsTempDir();
+    const bundleDir = path.join(tmpDir, '.board-task-changes', 'bundles');
+    const eventsDir = path.join(tmpDir, '.board-task-changes', 'events');
+    const freshnessDir = path.join(tmpDir, '.board-task-change-freshness');
+    await mkdir(bundleDir, { recursive: true });
+    await mkdir(eventsDir, { recursive: true });
+    await mkdir(freshnessDir, { recursive: true });
+
+    await writeFile(
+      path.join(bundleDir, `${encodeURIComponent(TASK_ID)}.json`),
+      JSON.stringify({
+        schemaVersion: 2,
+        source: 'task-change-ledger',
+        bundleKind: 'summary',
+        taskId: TASK_ID,
+        generatedAt: '2026-03-01T10:00:00.000Z',
+        journalStamp: { events: { bytes: 10, mtimeMs: 1, tailSha256: 'bundle' } },
+        integrity: 'ok',
+        eventCount: 1,
+        noticeCount: 0,
+        scope: {
+          confidence: { tier: 1, label: 'high', reason: 'bundle' },
+          memberName: 'bundle-agent',
+          agentIds: ['bundle-agent'],
+          startTimestamp: '2026-03-01T10:00:00.000Z',
+          endTimestamp: '2026-03-01T10:00:00.000Z',
+          toolUseIds: ['bundle-tool'],
+          toolUseCount: 1,
+          phaseSet: ['work'],
+          visibleFileCount: 1,
+          contributors: [],
+        },
+        files: [
+          {
+            changeKey: 'path:/repo/stale.ts',
+            filePath: '/repo/stale.ts',
+            relativePath: 'stale.ts',
+            linesAdded: 1,
+            linesRemoved: 0,
+            diffStatKnown: true,
+            eventCount: 1,
+            firstTimestamp: '2026-03-01T10:00:00.000Z',
+            lastTimestamp: '2026-03-01T10:00:00.000Z',
+            latestOperation: 'modify',
+            createdInTask: false,
+            deletedInTask: false,
+            latestBeforeHash: null,
+            latestAfterHash: null,
+            contentAvailability: 'metadata-only',
+            reviewability: 'metadata-only',
+            agentIds: ['bundle-agent'],
+          },
+        ],
+        totalLinesAdded: 1,
+        totalLinesRemoved: 0,
+        diffStatCompleteness: 'complete',
+        totalFiles: 1,
+        confidence: 'high',
+        warningCount: 0,
+        warnings: [],
+      }),
+      'utf8'
+    );
+
+    await writeFile(
+      path.join(freshnessDir, `${encodeURIComponent(TASK_ID)}.json`),
+      JSON.stringify({
+        schemaVersion: 2,
+        source: 'task-change-ledger',
+        taskId: TASK_ID,
+        updatedAt: '2026-03-01T10:00:01.000Z',
+        journalStamp: { events: { bytes: 20, mtimeMs: 2, tailSha256: 'freshness' } },
+        eventCount: 1,
+        noticeCount: 0,
+        integrity: 'ok',
+        bundleSchemaVersion: 2,
+        bundleKind: 'summary',
+      }),
+      'utf8'
+    );
+
+    await writeFile(
+      path.join(eventsDir, `${encodeURIComponent(TASK_ID)}.jsonl`),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        eventId: 'event-1',
+        taskId: TASK_ID,
+        taskRef: TASK_ID,
+        taskRefKind: 'canonical',
+        phase: 'work',
+        executionSeq: 1,
+        sessionId: 'session-1',
+        toolUseId: 'journal-tool',
+        source: 'file_edit',
+        operation: 'modify',
+        confidence: 'exact',
+        workspaceRoot: '/repo',
+        filePath: '/repo/journal.ts',
+        relativePath: 'journal.ts',
+        timestamp: '2026-03-01T10:00:02.000Z',
+        toolStatus: 'succeeded',
+        before: null,
+        after: null,
+        oldString: 'const a = 1;\n',
+        newString: 'const a = 2;\n',
+        linesAdded: 1,
+        linesRemoved: 1,
+      })}\n`,
+      'utf8'
+    );
+
+    const reader = new TaskChangeLedgerReader();
+    const result = await reader.readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: false,
+    });
+
+    expect(result?.files).toHaveLength(1);
+    expect(result?.files[0]?.filePath).toBe('/repo/journal.ts');
+    expect(result?.warnings).toContain('Task change summary fell back to journal reconstruction.');
   });
 });
 

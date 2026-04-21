@@ -159,4 +159,41 @@ describe('KanbanTaskCard change badge', () => {
       await Promise.resolve();
     });
   });
+
+  it('still renders the Changes action when changePresence needs attention', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(KanbanTaskCard, {
+          task: { ...baseTask, changePresence: 'needs_attention' },
+          teamName: 'my-team',
+          columnId: 'in_progress',
+          hasReviewers: true,
+          compact: false,
+          taskMap: new Map(),
+          memberColorMap: new Map([['alice', 'blue']]),
+          onRequestReview: noop,
+          onApprove: noop,
+          onRequestChanges: noop,
+          onMoveBackToDone: noop,
+          onStartTask: noop,
+          onCompleteTask: noop,
+          onCancelTask: noop,
+          onViewChanges: noop,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Changes');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
 });
