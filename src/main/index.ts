@@ -35,6 +35,7 @@ import {
   registerRecentProjectsIpc,
   removeRecentProjectsIpc,
 } from '@features/recent-projects/main';
+import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
@@ -113,6 +114,7 @@ import {
   OpenCodeBridgeCommandHandshakePort,
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { resolveOpenCodeTeamLaunchModeFromEnv } from './services/team/opencode/config/OpenCodeLaunchModeEnv';
 import { resolveOpenCodeProductionE2EEvidencePath } from './services/team/opencode/e2e/OpenCodeProductionE2EEvidencePath';
 import { OpenCodeProductionE2EEvidenceStore } from './services/team/opencode/e2e/OpenCodeProductionE2EEvidenceStore';
 import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
@@ -173,7 +175,6 @@ import {
   UpdaterService,
 } from './services';
 
-import type { OpenCodeTeamLaunchMode } from './services/team';
 import type { FileChangeEvent } from '@main/types';
 import type { TeamChangeEvent } from '@shared/types';
 
@@ -200,17 +201,6 @@ const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) — suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
 
-function resolveOpenCodeTeamLaunchModeFromEnv(): OpenCodeTeamLaunchMode {
-  const raw = process.env.CLAUDE_TEAM_OPENCODE_LAUNCH_MODE?.trim().toLowerCase();
-  if (raw === 'dogfood' || raw === 'production' || raw === 'disabled') {
-    return raw;
-  }
-  if (process.env.CLAUDE_TEAM_OPENCODE_DOGFOOD === '1') {
-    return 'dogfood';
-  }
-  return 'disabled';
-}
-
 async function createOpenCodeRuntimeAdapterRegistry(): Promise<TeamRuntimeAdapterRegistry> {
   const binaryPath = await ClaudeBinaryResolver.resolve();
   if (!binaryPath) {
@@ -218,7 +208,7 @@ async function createOpenCodeRuntimeAdapterRegistry(): Promise<TeamRuntimeAdapte
     return new TeamRuntimeAdapterRegistry();
   }
 
-  const bridgeEnv = { ...process.env };
+  const bridgeEnv = applyOpenCodeAutoUpdatePolicy({ ...process.env });
   try {
     const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec();
     const mcpEntry = mcpLaunchSpec.args[0];

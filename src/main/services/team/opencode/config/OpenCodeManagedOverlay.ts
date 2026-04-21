@@ -1,3 +1,4 @@
+import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { createHash } from 'crypto';
 import { promises as fs } from 'fs';
 import * as os from 'os';
@@ -33,7 +34,7 @@ export interface OpenCodeManagedOverlay {
   projectPath: string;
   env: {
     OPENCODE_CONFIG_CONTENT: string;
-    OPENCODE_DISABLE_AUTOUPDATE: '1';
+    OPENCODE_DISABLE_AUTOUPDATE?: '1';
   };
   appMcpServerName: string;
   appMcpConfig: OpenCodeMcpServerConfig;
@@ -48,6 +49,7 @@ export interface OpenCodeManagedOverlayBuilderInput {
   appMcpArgs: string[];
   appMcpEnv: Record<string, string>;
   mcpTimeoutMs?: number;
+  env?: NodeJS.ProcessEnv;
 }
 
 export interface OpenCodeBehaviorSourceScannerOptions {
@@ -97,10 +99,12 @@ export class OpenCodeManagedOverlayBuilder {
     return {
       launchMode: 'project_root_with_inline_overlay',
       projectPath: input.projectPath,
-      env: {
-        OPENCODE_CONFIG_CONTENT: JSON.stringify(overlayConfig),
-        OPENCODE_DISABLE_AUTOUPDATE: '1',
-      },
+      env: applyOpenCodeAutoUpdatePolicy(
+        {
+          OPENCODE_CONFIG_CONTENT: JSON.stringify(overlayConfig),
+        },
+        input.env ?? process.env
+      ),
       appMcpServerName,
       appMcpConfig: overlayConfig.mcp[appMcpServerName],
       preservedSources,
@@ -125,7 +129,7 @@ export class OpenCodeBehaviorSourceScanner {
   }
 
   async scan(projectPath: string): Promise<OpenCodeBehaviorSource[]> {
-    const sourceSpecs: Array<{ kind: OpenCodeBehaviorSourceKind; targetPath: string }> = [
+    const sourceSpecs: { kind: OpenCodeBehaviorSourceKind; targetPath: string }[] = [
       {
         kind: 'global_config',
         targetPath: path.join(this.homePath, '.config/opencode/opencode.json'),
@@ -224,19 +228,19 @@ export class OpenCodeBehaviorSourceScanner {
   }
 
   private async listDirectoryFiles(rootPath: string): Promise<
-    Array<{
+    {
       relativePath: string;
       size: number;
       mtimeMs: number;
       contentHash: string;
-    }>
+    }[]
   > {
-    const results: Array<{
+    const results: {
       relativePath: string;
       size: number;
       mtimeMs: number;
       contentHash: string;
-    }> = [];
+    }[] = [];
 
     const visit = async (directoryPath: string): Promise<void> => {
       if (results.length >= this.maxDirectoryFiles) {

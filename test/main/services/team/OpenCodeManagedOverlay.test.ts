@@ -61,9 +61,33 @@ describe('OpenCodeManagedOverlay', () => {
     });
     expect(overlay.env).not.toHaveProperty('OPENCODE_PURE');
     expect(overlay.env).not.toHaveProperty('OPENCODE_DISABLE_PROJECT_CONFIG');
+    expect(overlay.env.OPENCODE_DISABLE_AUTOUPDATE).toBe('1');
     expect(config).not.toHaveProperty('plugin');
     expect(config).not.toHaveProperty('model');
-    expect(overlay.diagnostics).toContain('OpenCode managed overlay checked at 2026-04-21T12:00:00.000Z');
+    expect(overlay.diagnostics).toContain(
+      'OpenCode managed overlay checked at 2026-04-21T12:00:00.000Z'
+    );
+  });
+
+  it('allows app-managed OpenCode auto-update only behind an explicit override', async () => {
+    const builder = new OpenCodeManagedOverlayBuilder(
+      new OpenCodeBehaviorSourceScanner({ homePath })
+    );
+
+    const overlay = await builder.build({
+      projectPath,
+      preferredMcpName: 'agent-teams',
+      appMcpCommand: 'node',
+      appMcpArgs: ['server.js'],
+      appMcpEnv: {},
+      env: {
+        CLAUDE_TEAM_OPENCODE_ALLOW_AUTOUPDATE: '1',
+        OPENCODE_DISABLE_AUTOUPDATE: '1',
+      },
+    });
+
+    expect(overlay.env.OPENCODE_CONFIG_CONTENT).toBeTruthy();
+    expect(overlay.env.OPENCODE_DISABLE_AUTOUPDATE).toBeUndefined();
   });
 
   it('renames the app-owned MCP server when user config already declares the preferred name', async () => {
@@ -73,7 +97,9 @@ describe('OpenCodeManagedOverlay', () => {
         'agent-teams-runtime-1': { type: 'local', command: 'custom-2', enabled: true },
       },
     });
-    const builder = new OpenCodeManagedOverlayBuilder(new OpenCodeBehaviorSourceScanner({ homePath }));
+    const builder = new OpenCodeManagedOverlayBuilder(
+      new OpenCodeBehaviorSourceScanner({ homePath })
+    );
 
     const overlay = await builder.build({
       projectPath,
@@ -99,10 +125,16 @@ describe('OpenCodeManagedOverlay', () => {
       }`,
       'utf8'
     );
-    await fs.writeFile(path.join(projectPath, '.opencode/plugins/example.ts'), 'export default {}', 'utf8');
+    await fs.writeFile(
+      path.join(projectPath, '.opencode/plugins/example.ts'),
+      'export default {}',
+      'utf8'
+    );
     const scanner = new OpenCodeBehaviorSourceScanner({ homePath });
 
-    await expect(scanner.readDeclaredMcpNames(projectPath)).resolves.toEqual(new Set(['agent-teams']));
+    await expect(scanner.readDeclaredMcpNames(projectPath)).resolves.toEqual(
+      new Set(['agent-teams'])
+    );
     const sources = await scanner.scan(projectPath);
 
     expect(sources).toContainEqual(

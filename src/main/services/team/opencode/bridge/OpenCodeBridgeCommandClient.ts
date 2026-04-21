@@ -1,20 +1,20 @@
+import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
+import { execCli } from '@main/utils/childProcess';
 import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
-import { execCli } from '@main/utils/childProcess';
-
 import {
   extractRunId,
   OPEN_CODE_BRIDGE_SCHEMA_VERSION,
-  parseSingleBridgeJsonResult,
-  validateBridgeResultEnvelope,
   type OpenCodeBridgeCommandEnvelope,
   type OpenCodeBridgeCommandName,
   type OpenCodeBridgeDiagnosticEvent,
   type OpenCodeBridgeFailure,
   type OpenCodeBridgeFailureKind,
   type OpenCodeBridgeResult,
+  parseSingleBridgeJsonResult,
+  validateBridgeResultEnvelope,
 } from './OpenCodeBridgeCommandContract';
 
 export interface OpenCodeBridgeProcessRunInput {
@@ -113,7 +113,7 @@ export class OpenCodeBridgeCommandClient {
     this.diagnosticIdFactory =
       options.diagnosticIdFactory ?? (() => `opencode-bridge-diagnostic-${randomUUID()}`);
     this.clock = options.clock ?? (() => new Date());
-    this.env = options.env ?? process.env;
+    this.env = applyOpenCodeAutoUpdatePolicy(options.env ?? process.env);
     this.keepInputFile = options.keepInputFile ?? false;
   }
 
