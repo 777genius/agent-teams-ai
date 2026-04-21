@@ -943,8 +943,9 @@ export class TaskChangeLedgerReader {
 
   private mapV2SummaryFile(file: LedgerSummaryFileV2, projectPath?: string): FileChangeSummary {
     const displayPath = file.displayPath ?? file.filePath;
+    const filePath = this.normalizeLedgerFilePath(file.filePath);
     return {
-      filePath: file.filePath,
+      filePath,
       relativePath: this.relativePath(displayPath, projectPath, file.relativePath),
       snippets: [],
       linesAdded: file.linesAdded,
@@ -1001,7 +1002,7 @@ export class TaskChangeLedgerReader {
       startTimestamp: scope.startTimestamp,
       endTimestamp: scope.endTimestamp,
       toolUseIds: scope.toolUseIds,
-      filePaths: files.map((file) => file.filePath),
+      filePaths: files.map((file) => this.normalizeLedgerFilePath(file.filePath)),
       confidence: scope.confidence,
       ...(scope.primaryActorKey ? { primaryActorKey: scope.primaryActorKey } : {}),
       ...(scope.primaryAgentId ? { primaryAgentId: scope.primaryAgentId } : {}),
@@ -1049,9 +1050,10 @@ export class TaskChangeLedgerReader {
     beforeContent: string | null,
     afterContent: string | null
   ): SnippetDiff {
+    const filePath = this.normalizeLedgerFilePath(event.filePath);
     return {
       toolUseId: event.toolUseId,
-      filePath: event.filePath,
+      filePath,
       toolName: this.mapToolName(event.source),
       type: this.mapSnippetType(event),
       oldString: event.oldString ?? beforeContent ?? '',
@@ -1371,7 +1373,18 @@ export class TaskChangeLedgerReader {
       return null;
     }
 
-    return `${normalizedAnchor.slice(0, normalizedAnchor.length - normalizedAnchorRelation.length)}${targetRelationPath.replace(/\\/g, '/')}`;
+    return this.normalizeLedgerFilePath(
+      `${normalizedAnchor.slice(0, normalizedAnchor.length - normalizedAnchorRelation.length)}${targetRelationPath.replace(/\\/g, '/')}`
+    );
+  }
+
+  private normalizeLedgerFilePath(filePath: string): string {
+    const slashPath = filePath.replace(/\\/g, '/');
+    const isWindowsAbsolute = /^[A-Za-z]:\//.test(slashPath) || slashPath.startsWith('//');
+    if (path.isAbsolute(filePath) || isWindowsAbsolute) {
+      return path.normalize(filePath);
+    }
+    return slashPath;
   }
 
   private relativePath(

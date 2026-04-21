@@ -61,6 +61,41 @@ async function rewriteProjectRootTokens(rootDir: string, token: string, projectD
   }
 }
 
+function shouldNormalizeLfFixtureFile(filePath: string): boolean {
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  return (
+    /\.(json|jsonl|md|txt|ts|tsx|js|jsx)$/.test(normalizedPath) ||
+    normalizedPath.includes('/.board-task-changes/blobs/sha256/')
+  );
+}
+
+function looksBinary(buffer: Buffer): boolean {
+  for (const byte of buffer) {
+    if (byte === 0) return true;
+    if (byte < 9 || (byte > 13 && byte < 32)) return true;
+  }
+  return false;
+}
+
+async function normalizeFixtureTextLineEndings(rootDir: string): Promise<void> {
+  const entries = await fs.readdir(rootDir, { withFileTypes: true });
+  for (const entry of entries) {
+    const entryPath = path.join(rootDir, entry.name);
+    if (entry.isDirectory()) {
+      await normalizeFixtureTextLineEndings(entryPath);
+      continue;
+    }
+    if (!shouldNormalizeLfFixtureFile(entryPath)) {
+      continue;
+    }
+    const raw = await fs.readFile(entryPath);
+    if (!raw.includes(13) || looksBinary(raw)) {
+      continue;
+    }
+    await fs.writeFile(entryPath, raw.toString('utf8').replace(/\r\n?/g, '\n'), 'utf8');
+  }
+}
+
 export async function materializeTaskChangeLedgerFixture(
   fixtureName: string
 ): Promise<MaterializedTaskChangeLedgerFixture> {
@@ -76,6 +111,7 @@ export async function materializeTaskChangeLedgerFixture(
   const token = manifest.projectRootToken ?? DEFAULT_PROJECT_ROOT_TOKEN;
 
   await rewriteProjectRootTokens(rootDir, token, projectDir);
+  await normalizeFixtureTextLineEndings(rootDir);
 
   return {
     rootDir,
