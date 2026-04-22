@@ -29,6 +29,7 @@ import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
 import { CliInstallWarningBanner } from '../common/CliInstallWarningBanner';
+import { GlobalProviderStatusHeader } from '../common/GlobalProviderStatusHeader';
 import { UpdateBanner } from '../common/UpdateBanner';
 import { UpdateDialog } from '../common/UpdateDialog';
 import { WorkspaceIndicator } from '../common/WorkspaceIndicator';
@@ -163,6 +164,7 @@ export const TabbedLayout = (): React.JSX.Element => {
       >
         <TabBarRow />
         <CliInstallWarningBanner />
+        <GlobalProviderStatusHeader />
         <div className="flex flex-1 overflow-hidden">
           {/* Command Palette (Cmd+K) */}
           <CommandPalette />

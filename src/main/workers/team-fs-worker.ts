@@ -2,7 +2,14 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { parentPort } from 'node:worker_threads';
 
+import { readBootstrapLaunchSnapshot } from '@main/services/team/TeamBootstrapStateReader';
 import { normalizePersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
+import {
+  choosePreferredLaunchStateSummary,
+  normalizePersistedLaunchSummaryProjection,
+  shouldSuppressLegacyLaunchArtifactHeuristic,
+  TEAM_LAUNCH_SUMMARY_FILE,
+} from '@main/services/team/TeamLaunchSummaryProjection';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 
@@ -112,6 +119,8 @@ interface RawMember {
   agentType?: unknown;
   role?: unknown;
   color?: unknown;
+  providerId?: unknown;
+  provider?: unknown;
   removedAt?: unknown;
 }
 
@@ -324,50 +333,42 @@ function dropCliProvisionerMembers(
 async function readLaunchState(
   teamsDir: string,
   teamName: string
-): Promise<{
-  partialLaunchFailure?: true;
-  expectedMemberCount?: number;
-  confirmedMemberCount?: number;
-  missingMembers?: string[];
-  teamLaunchState?: string;
-  launchUpdatedAt?: string;
-  confirmedCount?: number;
-  pendingCount?: number;
-  failedCount?: number;
-  runtimeAlivePendingCount?: number;
-} | null> {
+): Promise<ReturnType<typeof choosePreferredLaunchStateSummary>> {
+  const bootstrapSnapshot = await readBootstrapLaunchSnapshot(teamName);
   const launchStatePath = path.join(teamsDir, teamName, TEAM_LAUNCH_STATE_FILE);
-  try {
-    const stat = await fs.promises.stat(launchStatePath);
-    if (!stat.isFile() || stat.size > MAX_LAUNCH_STATE_BYTES) return null;
-    const raw = await fs.promises.readFile(launchStatePath, 'utf8');
-    const snapshot = normalizePersistedLaunchSnapshot(teamName, JSON.parse(raw));
-    if (!snapshot) return null;
-    const missingMembers = snapshot.expectedMembers.filter((name) => {
-      const member = snapshot.members[name];
-      return member?.launchState === 'failed_to_start';
-    });
-    return {
-      ...(snapshot.teamLaunchState === 'partial_failure'
-        ? { partialLaunchFailure: true as const }
-        : {}),
-      ...(snapshot.expectedMembers.length > 0
-        ? { expectedMemberCount: snapshot.expectedMembers.length }
-        : {}),
-      ...(snapshot.summary.confirmedCount > 0
-        ? { confirmedMemberCount: snapshot.summary.confirmedCount }
-        : {}),
-      ...(missingMembers.length > 0 ? { missingMembers } : {}),
-      teamLaunchState: snapshot.teamLaunchState,
-      launchUpdatedAt: snapshot.updatedAt,
-      confirmedCount: snapshot.summary.confirmedCount,
-      pendingCount: snapshot.summary.pendingCount,
-      failedCount: snapshot.summary.failedCount,
-      runtimeAlivePendingCount: snapshot.summary.runtimeAlivePendingCount,
-    };
-  } catch {
-    return null;
-  }
+  const launchSummaryPath = path.join(teamsDir, teamName, TEAM_LAUNCH_SUMMARY_FILE);
+  const [launchSnapshot, launchSummaryProjection] = await Promise.all([
+    (async () => {
+      try {
+        const stat = await fs.promises.stat(launchStatePath);
+        if (!stat.isFile() || stat.size > MAX_LAUNCH_STATE_BYTES) {
+          return null;
+        }
+        const raw = await fs.promises.readFile(launchStatePath, 'utf8');
+        return normalizePersistedLaunchSnapshot(teamName, JSON.parse(raw));
+      } catch {
+        return null;
+      }
+    })(),
+    (async () => {
+      try {
+        const stat = await fs.promises.stat(launchSummaryPath);
+        if (!stat.isFile() || stat.size > MAX_LAUNCH_STATE_BYTES) {
+          return null;
+        }
+        const raw = await fs.promises.readFile(launchSummaryPath, 'utf8');
+        return normalizePersistedLaunchSummaryProjection(teamName, JSON.parse(raw));
+      } catch {
+        return null;
+      }
+    })(),
+  ]);
+
+  return choosePreferredLaunchStateSummary({
+    bootstrapSnapshot,
+    launchSnapshot,
+    launchSummaryProjection,
+  });
 }
 
 /**
@@ -398,7 +399,12 @@ async function readDraftTeamMeta(
       const membersRaw = await fs.promises.readFile(membersPath, 'utf8');
       const membersData = JSON.parse(membersRaw) as { members?: unknown[] };
       if (Array.isArray(membersData?.members)) {
-        memberCount = membersData.members.length;
+        memberCount = membersData.members.filter((member) => {
+          if (!isRawMember(member)) return false;
+          const name = typeof member.name === 'string' ? member.name.trim() : '';
+          if (!name || name === 'user' || isLeadMember(member)) return false;
+          return !member.removedAt;
+        }).length;
       }
     } catch {
       // best-effort
@@ -538,6 +544,30 @@ async function listTeams(
     const removedKeys = new Set<string>();
     const expectedTeammateNames = new Set<string>();
     const confirmedArtifactNames = new Set<string>();
+    const metaRuntimeMembers: Array<{
+      name: string;
+      providerId?: 'anthropic' | 'codex' | 'gemini' | 'opencode';
+      removedAt?: unknown;
+    }> = [];
+    let leadProviderId: 'anthropic' | 'codex' | 'gemini' | 'opencode' | undefined;
+
+    try {
+      const teamMetaPath = path.join(payload.teamsDir, teamName, 'team.meta.json');
+      const teamMetaStat = await fs.promises.stat(teamMetaPath);
+      if (teamMetaStat.isFile() && teamMetaStat.size <= 256 * 1024) {
+        const raw = await readFileUtf8WithTimeout(teamMetaPath, payload.maxConfigReadMs);
+        const parsed = JSON.parse(raw) as { providerId?: unknown };
+        leadProviderId =
+          parsed?.providerId === 'anthropic' ||
+          parsed?.providerId === 'codex' ||
+          parsed?.providerId === 'gemini' ||
+          parsed?.providerId === 'opencode'
+            ? parsed.providerId
+            : undefined;
+      }
+    } catch {
+      leadProviderId = undefined;
+    }
 
     try {
       const metaPath = path.join(payload.teamsDir, teamName, 'members.meta.json');
@@ -548,15 +578,32 @@ async function listTeams(
         const members: unknown[] = Array.isArray(parsed?.members) ? parsed.members : [];
         for (const member of members) {
           if (!isRawMember(member)) continue;
+          const rawProviderId = member.providerId ?? member.provider;
+          const providerId =
+            rawProviderId === 'anthropic' ||
+            rawProviderId === 'codex' ||
+            rawProviderId === 'gemini' ||
+            rawProviderId === 'opencode'
+              ? rawProviderId
+              : undefined;
           const name = typeof member.name === 'string' ? member.name.trim() : '';
           if (!name) continue;
           if (isLeadMember(member)) continue;
           const key = name.toLowerCase();
           if (member.removedAt) {
             removedKeys.add(key);
+            metaRuntimeMembers.push({
+              name,
+              providerId,
+              removedAt: member.removedAt,
+            });
             continue;
           }
           expectedTeammateNames.add(name);
+          metaRuntimeMembers.push({
+            name,
+            providerId,
+          });
           mergeMember(member, memberMap, removedKeys);
         }
       }
@@ -599,9 +646,16 @@ async function listTeams(
       ...member,
       color: memberColors.get(member.name) ?? member.color,
     }));
+    const suppressLegacyLaunchArtifactHeuristic = shouldSuppressLegacyLaunchArtifactHeuristic({
+      leadProviderId,
+      members: metaRuntimeMembers,
+    });
     const launchStateSummary =
       (await readLaunchState(payload.teamsDir, teamName)) ??
       (() => {
+        if (suppressLegacyLaunchArtifactHeuristic) {
+          return null;
+        }
         if (
           !leadSessionId ||
           expectedTeammateNames.size === 0 ||

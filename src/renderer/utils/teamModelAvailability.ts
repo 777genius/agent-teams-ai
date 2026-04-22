@@ -90,14 +90,32 @@ export function isTeamProviderModelVerificationPending(
     return true;
   }
 
-  if (providerStatus.verificationState !== 'unknown') {
-    return false;
-  }
-
   const hasRuntimeModelTruth =
     providerStatus.models.length > 0 ||
     (providerStatus.modelCatalog?.models.length ?? 0) > 0 ||
     (providerStatus.modelAvailability?.length ?? 0) > 0;
+  if (!hasRuntimeModelTruth) {
+    if (
+      providerId === 'codex' &&
+      providerStatus.backend?.kind === 'codex-native' &&
+      providerStatus.supported
+    ) {
+      return true;
+    }
+
+    if (
+      providerId === 'opencode' &&
+      providerStatus.backend?.kind === 'opencode-cli' &&
+      providerStatus.supported
+    ) {
+      return true;
+    }
+  }
+
+  if (providerStatus.verificationState !== 'unknown') {
+    return false;
+  }
+
   if (hasRuntimeModelTruth) {
     return false;
   }
@@ -454,7 +472,7 @@ export function getTeamModelSelectionError(
   }
 
   if (!providerStatus) {
-    return `Model "${trimmed}" is waiting for ${getTeamProviderLabel(providerId) ?? providerId} runtime verification. Wait for the model list to load or use Default.`;
+    return null;
   }
 
   if (isTeamProviderModelVerificationPending(providerId, providerStatus)) {

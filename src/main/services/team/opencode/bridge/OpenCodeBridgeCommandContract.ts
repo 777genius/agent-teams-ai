@@ -49,6 +49,7 @@ export interface OpenCodeTeamLaunchMemberCommandSpec {
 export interface OpenCodeLaunchTeamCommandBody {
   mode: OpenCodeTeamLaunchMode;
   runId: string;
+  laneId: string;
   teamId: string;
   teamName: string;
   projectPath: string;
@@ -80,6 +81,7 @@ export interface OpenCodeLaunchTeamCommandData {
 
 export interface OpenCodeReconcileTeamCommandBody {
   runId: string;
+  laneId: string;
   teamId: string;
   teamName: string;
   projectPath?: string;
@@ -92,6 +94,7 @@ export interface OpenCodeReconcileTeamCommandBody {
 
 export interface OpenCodeStopTeamCommandBody {
   runId: string;
+  laneId: string;
   teamId: string;
   teamName: string;
   projectPath?: string;
@@ -223,6 +226,7 @@ export interface OpenCodeBridgeHandshake {
 
 export interface OpenCodeBridgeCommandPreconditions {
   handshakeIdentityHash: string;
+  laneId: string | null;
   expectedRunId: string | null;
   expectedCapabilitySnapshotId: string | null;
   expectedBehaviorFingerprint: string | null;
@@ -486,6 +490,7 @@ export function assertBridgeEvidenceCanCommitToRuntimeStores(input: {
 export function createOpenCodeBridgeIdempotencyKey(input: {
   command: OpenCodeBridgeCommandName;
   teamName: string;
+  laneId?: string | null;
   runId: string | null;
   body: unknown;
 }): string {
@@ -493,6 +498,7 @@ export function createOpenCodeBridgeIdempotencyKey(input: {
     'opencode',
     sanitizeKeyPart(input.command),
     sanitizeKeyPart(input.teamName),
+    sanitizeKeyPart(input.laneId ?? 'no-lane'),
     sanitizeKeyPart(input.runId ?? 'no-run'),
   ].join(':');
   return `${scope}:${stableHash(input).slice(0, 32)}`;

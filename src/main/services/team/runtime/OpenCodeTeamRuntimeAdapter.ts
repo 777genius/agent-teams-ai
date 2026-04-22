@@ -59,6 +59,7 @@ const REQUIRED_READY_CHECKPOINTS = new Set([
 export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   readonly providerId = 'opencode' as const;
   private readonly lastProjectPathByTeamName = new Map<string, string>();
+  private readonly lastReadinessByProjectPath = new Map<string, OpenCodeTeamLaunchReadiness>();
 
   constructor(
     private readonly bridge: OpenCodeTeamRuntimeBridgePort,
@@ -87,6 +88,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       requireExecutionProbe: !runtimeOnly,
       launchMode: runtimeOnly ? undefined : configuredLaunchMode,
     });
+    this.lastReadinessByProjectPath.set(input.cwd, readiness);
 
     if (!readiness.launchAllowed) {
       return {
@@ -132,6 +134,10 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     };
   }
 
+  getLastOpenCodeTeamLaunchReadiness(projectPath: string): OpenCodeTeamLaunchReadiness | null {
+    return this.lastReadinessByProjectPath.get(projectPath) ?? null;
+  }
+
   async launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult> {
     const configuredLaunchMode = resolveOpenCodeTeamLaunchMode(this.options);
     const prepared = await this.prepare(input);
@@ -157,6 +163,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     const data = await this.bridge.launchOpenCodeTeam({
       mode: configuredLaunchMode,
       runId: input.runId,
+      laneId: input.laneId?.trim() || 'primary',
       teamId: input.teamName,
       teamName: input.teamName,
       projectPath: input.cwd,
@@ -183,6 +190,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         : null;
       const data = await this.bridge.reconcileOpenCodeTeam({
         runId: input.runId,
+        laneId: input.laneId?.trim() || 'primary',
         teamId: input.teamName,
         teamName: input.teamName,
         projectPath,
@@ -263,6 +271,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         : null;
       const data = await this.bridge.stopOpenCodeTeam({
         runId: input.runId,
+        laneId: input.laneId?.trim() || 'primary',
         teamId: input.teamName,
         teamName: input.teamName,
         projectPath,

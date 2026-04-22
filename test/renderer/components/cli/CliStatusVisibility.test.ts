@@ -322,6 +322,7 @@ describe('CLI status visibility during completed install state', () => {
     };
     storeState.updateConfig = vi.fn().mockResolvedValue(undefined);
     storeState.openExtensionsTab = vi.fn();
+    window.localStorage.clear();
   });
 
   it('keeps the Multimodel toggle visible and enabled on the dashboard while login is still required', async () => {
@@ -627,6 +628,189 @@ describe('CLI status visibility during completed install state', () => {
 
     await act(async () => {
       root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('collapses dashboard provider cards down to the header summary', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'agent_teams_orchestrator',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      providers: [
+        {
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          supported: true,
+          authenticated: true,
+          authMethod: 'oauth',
+          verificationState: 'verified',
+          statusMessage: 'Connected via Anthropic subscription',
+          models: ['claude-sonnet-4-5'],
+          canLoginFromUi: true,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: true,
+          },
+          connection: {
+            supportsOAuth: true,
+            supportsApiKey: true,
+            configurableAuthModes: ['auto', 'oauth', 'api_key'],
+            configuredAuthMode: 'oauth',
+            apiKeyConfigured: false,
+            apiKeySource: null,
+            apiKeySourceLabel: null,
+          },
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Providers: 1/1 connected');
+    expect(host.textContent).toContain('Anthropic');
+
+    const collapseButton = host.querySelector(
+      'button[aria-label="Collapse provider details"]'
+    ) as HTMLButtonElement | null;
+    expect(collapseButton).not.toBeNull();
+
+    await act(async () => {
+      collapseButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Providers: 1/1 connected');
+    expect(host.textContent).not.toContain('Anthropic');
+    expect(host.textContent).not.toContain('Manage');
+    expect(
+      host.querySelector('button[aria-label="Expand provider details"]')
+    ).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('restores the collapsed dashboard provider banner after remount', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'agent_teams_orchestrator',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      providers: [
+        {
+          providerId: 'codex',
+          displayName: 'Codex',
+          supported: true,
+          authenticated: true,
+          authMethod: 'chatgpt',
+          verificationState: 'verified',
+          statusMessage: 'ChatGPT account ready',
+          models: ['gpt-5.4'],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: true,
+          },
+          connection: {
+            supportsOAuth: false,
+            supportsApiKey: true,
+            configurableAuthModes: ['auto', 'chatgpt', 'api_key'],
+            configuredAuthMode: 'chatgpt',
+            apiKeyConfigured: true,
+            apiKeySource: 'environment',
+            apiKeySourceLabel: 'Detected from OPENAI_API_KEY',
+            codex: {
+              preferredAuthMode: 'chatgpt',
+              effectiveAuthMode: 'chatgpt',
+              appServerState: 'healthy',
+              appServerStatusMessage: null,
+              managedAccount: {
+                type: 'chatgpt',
+                email: 'user@example.com',
+                planType: 'pro',
+              },
+              requiresOpenaiAuth: false,
+              login: {
+                status: 'idle',
+                error: null,
+                startedAt: null,
+              },
+              rateLimits: null,
+              launchAllowed: true,
+              launchIssueMessage: null,
+              launchReadinessState: 'ready_chatgpt',
+            },
+          },
+          backend: {
+            kind: 'codex-native',
+            label: 'Codex native',
+            endpointLabel: 'codex exec --json',
+            authMethodDetail: 'chatgpt',
+          },
+        },
+      ],
+    });
+
+    const firstHost = document.createElement('div');
+    document.body.appendChild(firstHost);
+    const firstRoot = createRoot(firstHost);
+
+    await act(async () => {
+      firstRoot.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    const collapseButton = firstHost.querySelector(
+      'button[aria-label="Collapse provider details"]'
+    ) as HTMLButtonElement | null;
+    expect(collapseButton).not.toBeNull();
+
+    await act(async () => {
+      collapseButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      firstRoot.unmount();
+      await Promise.resolve();
+    });
+
+    const secondHost = document.createElement('div');
+    document.body.appendChild(secondHost);
+    const secondRoot = createRoot(secondHost);
+
+    await act(async () => {
+      secondRoot.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(secondHost.textContent).toContain('Providers: 1/1 connected');
+    expect(secondHost.textContent).not.toContain('ChatGPT account ready');
+    expect(
+      secondHost.querySelector('button[aria-label="Expand provider details"]')
+    ).not.toBeNull();
+
+    await act(async () => {
+      secondRoot.unmount();
       await Promise.resolve();
     });
   });
@@ -1533,6 +1717,17 @@ describe('CLI status visibility during completed install state', () => {
     expect(host.textContent).toContain(
       'Usage limits appear only after Codex refreshes the currently selected ChatGPT session. Right now the local session needs reconnect. API key fallback is available if you switch auth mode.'
     );
+    const reconnectButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Reconnect ChatGPT'
+    );
+    expect(reconnectButton).toBeTruthy();
+
+    await act(async () => {
+      reconnectButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(codexAccountHookState.startChatgptLogin).toHaveBeenCalledTimes(1);
     expect(host.textContent).not.toContain('5h left');
 
     await act(async () => {

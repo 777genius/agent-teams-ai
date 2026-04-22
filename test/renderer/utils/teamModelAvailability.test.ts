@@ -184,10 +184,8 @@ describe('teamModelAvailability', () => {
     expect(getTeamModelSelectionError('codex', 'gpt-5.4', providerStatus)).toBeNull();
   });
 
-  it('waits for the runtime model list before validating explicit Codex selections', () => {
-    expect(getTeamModelSelectionError('codex', 'gpt-5.4')).toContain(
-      'waiting for Codex runtime verification'
-    );
+  it('does not raise a hard validation error while explicit Codex models are still loading', () => {
+    expect(getTeamModelSelectionError('codex', 'gpt-5.4')).toBeNull();
     expect(getTeamModelSelectionError('codex', '')).toBeNull();
   });
 
@@ -230,6 +228,25 @@ describe('teamModelAvailability', () => {
       },
       { value: 'gpt-5.1-codex-max', label: '5.1 Codex Max', badgeLabel: '5.1-codex-max' },
     ]);
+  });
+
+  it('keeps known Codex selections stable while Codex native account truth is loaded before the runtime model catalog', () => {
+    const providerStatus = createCodexProviderStatus([], {
+      authMethod: 'chatgpt',
+      backend: {
+        kind: 'codex-native',
+        label: 'Codex native',
+        endpointLabel: 'codex exec --json',
+      },
+      authenticated: true,
+      supported: true,
+      verificationState: 'verified',
+      modelVerificationState: 'idle',
+      statusMessage: 'ChatGPT account ready',
+    });
+
+    expect(normalizeTeamModelForUi('codex', 'gpt-5.4', providerStatus)).toBe('gpt-5.4');
+    expect(getTeamModelSelectionError('codex', 'gpt-5.4', providerStatus)).toBeNull();
   });
 
   it('keeps runtime models selectable without per-model verification state', () => {

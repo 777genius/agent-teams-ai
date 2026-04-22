@@ -8,6 +8,7 @@ import type { TeamProviderId } from '@shared/types';
 import type { CliProviderStatus } from '@shared/types';
 
 export type ProvisioningProviderCheckStatus = 'pending' | 'checking' | 'ready' | 'notes' | 'failed';
+export type ProvisioningPrepareState = 'idle' | 'loading' | 'ready' | 'failed';
 
 export interface ProvisioningProviderCheck {
   providerId: TeamProviderId;
@@ -139,6 +140,7 @@ type ProvisioningDetailSummary =
   | 'Authentication required'
   | 'Runtime provider is not configured'
   | 'CLI preflight failed'
+  | 'Selected model compatibility pending'
   | 'Selected model verified'
   | 'Selected model unavailable'
   | 'Selected model verification timed out'
@@ -197,6 +199,9 @@ function summarizeDetail(
   if (lower.includes('claude cli preflight check failed')) {
     return 'CLI preflight failed';
   }
+  if (lower.includes('compatible, deep verification pending')) {
+    return 'Selected model compatibility pending';
+  }
   if (lower.includes('selected model') && lower.includes('verified for launch')) {
     return 'Selected model verified';
   }
@@ -236,6 +241,7 @@ function summarizeDetail(
 }
 
 function getModelDetailSummary(details: string[]): string | null {
+  let compatibilityPendingCount = 0;
   let verifiedCount = 0;
   let unavailableCount = 0;
   let timedOutCount = 0;
@@ -244,6 +250,10 @@ function getModelDetailSummary(details: string[]): string | null {
 
   for (const detail of details) {
     const lower = detail.toLowerCase();
+    if (lower.includes('compatible, deep verification pending')) {
+      compatibilityPendingCount += 1;
+      continue;
+    }
     if (lower.includes(' - verified')) {
       verifiedCount += 1;
       continue;
@@ -275,6 +285,9 @@ function getModelDetailSummary(details: string[]): string | null {
   if (timedOutCount > 0) {
     parts.push(`${timedOutCount} model${timedOutCount === 1 ? '' : 's'} timed out`);
   }
+  if (compatibilityPendingCount > 0) {
+    parts.push(`${compatibilityPendingCount} compatible, deep verification pending`);
+  }
   if (checkingCount > 0) {
     parts.push(`${checkingCount} checking`);
   }
@@ -283,6 +296,14 @@ function getModelDetailSummary(details: string[]): string | null {
   }
 
   return parts.length > 0 ? `Selected model checks - ${parts.join(', ')}` : null;
+}
+
+function hasCompatibilityPendingDetails(checks: ProvisioningProviderCheck[]): boolean {
+  return checks.some((check) =>
+    check.details.some((detail) =>
+      detail.toLowerCase().includes('compatible, deep verification pending')
+    )
+  );
 }
 
 function getDisplayStatusText(check: ProvisioningProviderCheck): string {
@@ -400,6 +421,64 @@ export function getPrimaryProvisioningFailureDetail(
   }
 
   return null;
+}
+
+export function deriveEffectiveProvisioningPrepareState(params: {
+  state: ProvisioningPrepareState;
+  message: string | null;
+  warnings: string[];
+  checks: ProvisioningProviderCheck[];
+}): { state: ProvisioningPrepareState; message: string | null } {
+  if (params.state !== 'loading') {
+    return {
+      state: params.state,
+      message: params.message,
+    };
+  }
+
+  if (params.checks.length === 0) {
+    return {
+      state: params.state,
+      message: params.message,
+    };
+  }
+
+  const hasPendingChecks = params.checks.some(
+    (check) => check.status === 'pending' || check.status === 'checking'
+  );
+  if (hasPendingChecks) {
+    if (hasCompatibilityPendingDetails(params.checks)) {
+      return {
+        state: params.state,
+        message:
+          'Deep verification is still running. OpenCode free models may take around 20 seconds.',
+      };
+    }
+    return {
+      state: params.state,
+      message: params.message,
+    };
+  }
+
+  if (params.checks.some((check) => check.status === 'failed')) {
+    return {
+      state: 'failed',
+      message:
+        getPrimaryProvisioningFailureDetail(params.checks) ??
+        params.message ??
+        'Some selected providers need attention.',
+    };
+  }
+
+  const hasNotes =
+    params.warnings.length > 0 || params.checks.some((check) => check.status === 'notes');
+
+  return {
+    state: 'ready',
+    message: hasNotes
+      ? 'Selected providers are ready with notes.'
+      : 'Selected providers are ready.',
+  };
 }
 
 export function shouldHideProvisioningProviderStatusList(

@@ -104,8 +104,18 @@ import {
   type ProviderPrepareDiagnosticsModelResult,
   runProviderPrepareDiagnostics,
 } from './providerPrepareDiagnostics';
+import {
+  getShortLivedProviderPrepareModelResults,
+  storeShortLivedProviderPrepareModelResults,
+} from './providerPrepareShortLivedCache';
+import {
+  buildProviderPrepareModelChecksSignature,
+  buildProviderPrepareRequestSignature,
+  buildProviderPrepareRuntimeStatusSignature,
+} from './providerPrepareRequestSignature';
 import { getProvisioningModelIssue } from './provisioningModelIssues';
 import {
+  deriveEffectiveProvisioningPrepareState,
   failIncompleteProviderChecks,
   getPrimaryProvisioningFailureDetail,
   getProvisioningFailureHint,
@@ -447,7 +457,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             new Set([
               selectedProviderId,
               ...effectiveMemberDrafts.flatMap((member) =>
-                isTeamProviderId(member.providerId) ? [member.providerId] : []
+                !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
               ),
             ])
           ),
@@ -471,6 +481,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const prepareModelResultsCacheRef = useRef(
     new Map<string, Record<string, ProviderPrepareDiagnosticsModelResult>>()
   );
+  const lastPrepareRequestSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
     runtimeBackendSummaryByProviderRef.current = runtimeBackendSummaryByProvider;
@@ -480,7 +491,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [prepareChecks]);
   useEffect(() => {
     if (!open) {
-      prepareModelResultsCacheRef.current.clear();
+      lastPrepareRequestSignatureRef.current = null;
     }
   }, [open]);
   const runtimeProviderStatusById = useMemo(
@@ -1211,6 +1222,39 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // ---------------------------------------------------------------------------
 
   const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
+  const prepareRuntimeStatusSignature = useMemo(
+    () =>
+      buildProviderPrepareRuntimeStatusSignature(
+        selectedMemberProviders,
+        runtimeProviderStatusById
+      ),
+    [runtimeProviderStatusById, selectedMemberProviders]
+  );
+  const selectedModelChecksByProviderSignature = useMemo(
+    () => buildProviderPrepareModelChecksSignature(selectedModelChecksByProvider),
+    [selectedModelChecksByProvider]
+  );
+  const prepareRequestSignature = useMemo(
+    () =>
+      buildProviderPrepareRequestSignature({
+        cwd: effectiveCwd,
+        selectedProviderId,
+        selectedModel,
+        selectedMemberProviders,
+        limitContext,
+        runtimeStatusSignature: prepareRuntimeStatusSignature,
+        modelChecksSignature: selectedModelChecksByProviderSignature,
+      }),
+    [
+      effectiveCwd,
+      limitContext,
+      prepareRuntimeStatusSignature,
+      selectedMemberProviders,
+      selectedModel,
+      selectedModelChecksByProviderSignature,
+      selectedProviderId,
+    ]
+  );
 
   // Clear stale provisioning error when dialog opens
   useEffect(() => {
@@ -1221,9 +1265,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   // Warm up CLI for the currently selected working directory (launch mode only).
   useEffect(() => {
-    if (!open || !isLaunchMode) return;
+    if (!open || !isLaunchMode) {
+      prepareRequestSeqRef.current += 1;
+      lastPrepareRequestSignatureRef.current = null;
+      return;
+    }
 
     if (typeof api.teams.prepareProvisioning !== 'function') {
+      prepareRequestSeqRef.current += 1;
+      lastPrepareRequestSignatureRef.current = null;
       setPrepareState('failed');
       setPrepareWarnings([]);
       setPrepareChecks([]);
@@ -1234,6 +1284,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     }
 
     if (!effectiveCwd) {
+      prepareRequestSeqRef.current += 1;
+      lastPrepareRequestSignatureRef.current = null;
       setPrepareState('idle');
       setPrepareWarnings([]);
       setPrepareChecks([]);
@@ -1241,7 +1293,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
 
-    let cancelled = false;
+    if (lastPrepareRequestSignatureRef.current === prepareRequestSignature) {
+      return;
+    }
+    lastPrepareRequestSignatureRef.current = prepareRequestSignature;
+
     const requestSeq = ++prepareRequestSeqRef.current;
     const initialChecks = alignProvisioningChecks(
       prepareChecksRef.current,
@@ -1262,8 +1318,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           providerId,
           backendSummary,
           limitContext,
+          runtimeStatusSignature: prepareRuntimeStatusSignature,
         });
-        const cachedModelResultsById = prepareModelResultsCacheRef.current.get(cacheKey) ?? {};
+        const cachedModelResultsById = {
+          ...getShortLivedProviderPrepareModelResults({
+            providerId,
+            cacheKey,
+          }),
+          ...(prepareModelResultsCacheRef.current.get(cacheKey) ?? {}),
+        };
         const cachedSnapshot = getProviderPrepareCachedSnapshot({
           providerId,
           selectedModelIds: selectedModelChecks,
@@ -1287,7 +1350,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             details: plan.cachedSnapshot.details,
           });
         }
-        if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
+        if (prepareRequestSeqRef.current === requestSeq) {
           setPrepareChecks(checks);
         }
         const providerResults = await Promise.all(
@@ -1299,13 +1362,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               prepareProvisioning: api.teams.prepareProvisioning,
               limitContext,
               cachedModelResultsById: plan.cachedModelResultsById,
-              onModelProgress: ({ details }) => {
+              onModelProgress: ({ status, details }) => {
                 checks = updateProviderCheck(checks, plan.providerId, {
-                  status: 'checking',
+                  status,
                   backendSummary: plan.backendSummary,
                   details,
                 });
-                if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
+                if (prepareRequestSeqRef.current === requestSeq) {
                   setPrepareChecks(checks);
                 }
               },
@@ -1330,20 +1393,27 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           } else if (plan.prepResult.status === 'notes') {
             anyNotes = true;
           }
-          prepareModelResultsCacheRef.current.set(
-            plan.cacheKey,
-            buildReusableProviderPrepareModelResults(plan.prepResult.modelResultsById)
-          );
+          if (prepareRequestSeqRef.current === requestSeq) {
+            const reusableModelResults = buildReusableProviderPrepareModelResults(
+              plan.prepResult.modelResultsById
+            );
+            prepareModelResultsCacheRef.current.set(plan.cacheKey, reusableModelResults);
+            storeShortLivedProviderPrepareModelResults({
+              providerId: plan.providerId,
+              cacheKey: plan.cacheKey,
+              modelResultsById: plan.prepResult.modelResultsById,
+            });
+          }
           checks = updateProviderCheck(checks, plan.providerId, {
             status: plan.prepResult.status,
             backendSummary: plan.backendSummary,
             details: plan.prepResult.details,
           });
         }
-        if (!cancelled && prepareRequestSeqRef.current === requestSeq) {
+        if (prepareRequestSeqRef.current === requestSeq) {
           setPrepareChecks(checks);
         }
-        if (cancelled || prepareRequestSeqRef.current !== requestSeq) return;
+        if (prepareRequestSeqRef.current !== requestSeq) return;
         const failureMessage =
           getPrimaryProvisioningFailureDetail(checks) ?? 'Some selected providers need attention.';
         setPrepareState(anyFailure ? 'failed' : 'ready');
@@ -1356,7 +1426,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         );
         setPrepareWarnings(collectedWarnings);
       } catch (error) {
-        if (cancelled || prepareRequestSeqRef.current !== requestSeq) return;
+        if (prepareRequestSeqRef.current !== requestSeq) return;
         const failureMessage =
           error instanceof Error ? error.message : 'Failed to warm up Claude CLI environment';
         setPrepareState('failed');
@@ -1365,14 +1435,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         setPrepareMessage(failureMessage);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [
     open,
     isLaunchMode,
     effectiveCwd,
+    prepareRequestSignature,
     selectedProviderId,
     selectedMemberProviders,
     selectedModelChecksByProvider,
@@ -1687,6 +1754,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const provisioningError = isLaunchMode ? props.provisioningError : null;
   const activeError = localError ?? modelValidationError ?? provisioningError;
+  const effectivePrepare = useMemo(
+    () =>
+      deriveEffectiveProvisioningPrepareState({
+        state: prepareState,
+        message: prepareMessage,
+        warnings: prepareWarnings,
+        checks: prepareChecks,
+      }),
+    [prepareChecks, prepareMessage, prepareState, prepareWarnings]
+  );
   const launchInFlight = useStore((s) =>
     isLaunchMode && effectiveTeamName ? isTeamProvisioningActive(s, effectiveTeamName) : false
   );
@@ -2480,14 +2557,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           {/* Launch-only: CLI warm-up status */}
           {isLaunchMode ? (
             <div className="min-w-0">
-              {prepareState === 'idle' || prepareState === 'loading' ? (
+              {effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading' ? (
                 <>
                   <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                     <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                     <div>
                       <span>
-                        {prepareMessage ??
-                          (prepareState === 'idle'
+                        {effectivePrepare.message ??
+                          (effectivePrepare.state === 'idle'
                             ? 'Warming up CLI environment...'
                             : 'Preparing environment...')}
                       </span>
@@ -2503,7 +2580,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 </>
               ) : null}
 
-              {prepareState === 'ready' ? (
+              {effectivePrepare.state === 'ready' ? (
                 <div>
                   <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
                     <CheckCircle2 className="size-3.5 shrink-0" />
@@ -2514,9 +2591,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                         : 'CLI environment ready'}
                     </span>
                   </div>
-                  {prepareMessage ? (
+                  {effectivePrepare.message ? (
                     <p className="mt-0.5 pl-5 text-[11px] text-[var(--color-text-muted)]">
-                      {prepareMessage}
+                      {effectivePrepare.message}
                     </p>
                   ) : null}
                   <ProvisioningProviderStatusList checks={prepareChecks} className="mt-1" />
@@ -2532,7 +2609,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 </div>
               ) : null}
 
-              {prepareState === 'failed' ? (
+              {effectivePrepare.state === 'failed' ? (
                 <div className="text-xs">
                   <div className="flex items-start gap-2 text-red-300">
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
@@ -2542,18 +2619,21 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                         blocked
                       </p>
                       <p className="mt-0.5 text-red-300/80">
-                        {prepareMessage ?? 'Failed to prepare environment'}
+                        {effectivePrepare.message ?? 'Failed to prepare environment'}
                       </p>
                       <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
                         Pre-flight check to catch errors before {isRelaunch ? 'relaunch' : 'launch'}
                       </p>
                     </div>
                   </div>
-                  {!shouldHideProvisioningProviderStatusList(prepareChecks, prepareMessage) ? (
+                  {!shouldHideProvisioningProviderStatusList(
+                    prepareChecks,
+                    effectivePrepare.message
+                  ) ? (
                     <ProvisioningProviderStatusList
                       checks={prepareChecks}
                       className="mt-2"
-                      suppressDetailsMatching={prepareMessage}
+                      suppressDetailsMatching={effectivePrepare.message}
                     />
                   ) : null}
                   {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
@@ -2571,9 +2651,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   ) : null}
                   <div className="mt-1 flex items-center gap-2 pl-6">
                     <p className="text-[11px] text-[var(--color-text-muted)]">
-                      {getProvisioningFailureHint(prepareMessage, prepareChecks)}
+                      {getProvisioningFailureHint(effectivePrepare.message, prepareChecks)}
                     </p>
-                    {(prepareMessage ?? '').toLowerCase().includes('spawn ') ||
+                    {(effectivePrepare.message ?? '').toLowerCase().includes('spawn ') ||
                     prepareChecks.some((check) =>
                       check.details.some((detail) => detail.toLowerCase().includes('spawn '))
                     ) ? (

@@ -287,6 +287,16 @@ vi.mock('@renderer/components/team/dialogs/provisioningModelIssues', () => ({
 
 vi.mock('@renderer/components/team/dialogs/ProvisioningProviderStatusList', () => ({
   ProvisioningProviderStatusList: () => React.createElement('div', null, 'provider-status-list'),
+  deriveEffectiveProvisioningPrepareState: ({
+    state,
+    message,
+  }: {
+    state: 'idle' | 'loading' | 'ready' | 'failed';
+    message: string | null;
+  }) => ({
+    state,
+    message,
+  }),
   failIncompleteProviderChecks: (checks: unknown) => checks,
   getPrimaryProvisioningFailureDetail: () => null,
   getProvisioningFailureHint: () => 'hint',
@@ -908,6 +918,232 @@ describe('LaunchTeamDialog', () => {
         resolvedFastMode: true,
       },
     });
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('does not restart provider preflight when cli status refresh keeps the same semantic inputs', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'codex',
+          supported: true,
+          authenticated: true,
+          authMethod: 'chatgpt',
+          verificationState: 'verified',
+          modelVerificationState: 'verified',
+          statusMessage: null,
+          detailMessage: null,
+          selectedBackendId: 'codex-native',
+          resolvedBackendId: 'codex-native',
+          models: ['gpt-5.4'],
+          modelCatalog: {
+            source: 'app-server',
+            status: 'ready',
+            models: [{ id: 'gpt-5.4' }],
+          },
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+        },
+      ],
+    } as any;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    const renderDialog = async (): Promise<void> => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+      await flush();
+    };
+
+    await act(async () => {
+      await renderDialog();
+    });
+
+    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(1);
+
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'codex',
+          supported: true,
+          authenticated: true,
+          authMethod: 'chatgpt',
+          verificationState: 'verified',
+          modelVerificationState: 'verified',
+          statusMessage: null,
+          detailMessage: null,
+          selectedBackendId: 'codex-native',
+          resolvedBackendId: 'codex-native',
+          models: ['gpt-5.4'],
+          modelCatalog: {
+            source: 'app-server',
+            status: 'ready',
+            models: [{ id: 'gpt-5.4' }],
+          },
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+        },
+      ],
+    } as any;
+
+    await act(async () => {
+      await renderDialog();
+    });
+
+    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('keeps the in-flight preflight result after a same-signature rerender', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          modelVerificationState: 'verified',
+          statusMessage: 'warming up',
+          detailMessage: 'first render',
+          models: ['opencode/minimax-m2.5-free'],
+          modelCatalog: {
+            source: 'app-server',
+            status: 'ready',
+            models: [{ id: 'opencode/minimax-m2.5-free' }],
+          },
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+        },
+      ],
+    } as any;
+
+    let resolvePrepare!: (value: {
+      status: 'ready';
+      warnings: [];
+      details: [];
+      modelResultsById: {};
+    }) => void;
+    const preparePromise = new Promise<{
+      status: 'ready';
+      warnings: [];
+      details: [];
+      modelResultsById: {};
+    }>((resolve) => {
+      resolvePrepare = resolve;
+    });
+    vi.mocked(runProviderPrepareDiagnostics).mockReturnValueOnce(preparePromise as any);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    const renderDialog = async (): Promise<void> => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [
+            {
+              name: 'alice',
+              role: 'Reviewer',
+              providerId: 'opencode',
+              model: 'opencode/minimax-m2.5-free',
+            },
+          ] as any,
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    };
+
+    await act(async () => {
+      await renderDialog();
+    });
+
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          modelVerificationState: 'verified',
+          statusMessage: 'still warming',
+          detailMessage: 'same semantic status',
+          models: ['opencode/minimax-m2.5-free'],
+          modelCatalog: {
+            source: 'app-server',
+            status: 'ready',
+            models: [{ id: 'opencode/minimax-m2.5-free' }],
+          },
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+        },
+      ],
+    } as any;
+
+    await act(async () => {
+      await renderDialog();
+    });
+
+    await act(async () => {
+      resolvePrepare({
+        status: 'ready',
+        warnings: [],
+        details: [],
+        modelResultsById: {},
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain('Selected providers are ready.');
 
     await act(async () => {
       root.unmount();

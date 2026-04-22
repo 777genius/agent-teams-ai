@@ -819,6 +819,9 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(host.textContent).toContain(
       'Codex has a locally selected ChatGPT account, but the current session needs reconnect before usage limits can load here. The detected API key is only used after you switch Codex to API key mode.'
     );
+    expect(host.textContent).toContain('Reconnect ChatGPT');
+    expect(host.textContent).not.toContain('Disconnect account');
+    expect(host.textContent).toContain('Reconnect required');
   });
 
   it('disables Codex account actions while a Codex account request is already in flight', async () => {

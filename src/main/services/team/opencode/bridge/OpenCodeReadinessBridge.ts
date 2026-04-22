@@ -52,7 +52,13 @@ export interface OpenCodeReadinessBridgeOptions {
 }
 
 export interface OpenCodeProductionE2EEvidenceReadPort {
-  read(input?: { selectedModel?: string | null; projectPathFingerprint?: string | null }): Promise<{
+  read(input?: {
+    selectedModel?: string | null;
+    projectPathFingerprint?: string | null;
+    opencodeVersion?: string | null;
+    binaryFingerprint?: string | null;
+    capabilitySnapshotId?: string | null;
+  }): Promise<{
     ok: boolean;
     evidence: OpenCodeProductionE2EEvidence | null;
     artifactPath: string;
@@ -134,6 +140,9 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       ? await this.options.productionE2eEvidence.read({
           selectedModel: expectedModel,
           projectPathFingerprint,
+          opencodeVersion: input.runtime.version,
+          binaryFingerprint: input.runtime.binaryFingerprint,
+          capabilitySnapshotId: input.runtime.capabilitySnapshotId,
         })
       : {
           ok: false,
@@ -204,6 +213,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       OpenCodeLaunchTeamCommandData
     >('opencode.launchTeam', input, {
       teamName: input.teamName,
+      laneId: input.laneId,
       runId: input.runId,
       capabilitySnapshotId: input.expectedCapabilitySnapshotId,
       cwd: input.projectPath,
@@ -221,6 +231,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       OpenCodeLaunchTeamCommandData
     >('opencode.reconcileTeam', input, {
       teamName: input.teamName,
+      laneId: input.laneId,
       runId: input.runId,
       capabilitySnapshotId: input.expectedCapabilitySnapshotId ?? null,
       cwd,
@@ -236,6 +247,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       OpenCodeStopTeamCommandData
     >('opencode.stopTeam', input, {
       teamName: input.teamName,
+      laneId: input.laneId,
       runId: input.runId,
       capabilitySnapshotId: input.expectedCapabilitySnapshotId ?? null,
       cwd,
@@ -269,6 +281,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     body: TBody,
     input: {
       teamName: string;
+      laneId: string;
       runId: string;
       capabilitySnapshotId: string | null;
       cwd: string;
@@ -280,6 +293,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
         return await this.options.stateChangingCommands.execute<TBody, TData>({
           command,
           teamName: input.teamName,
+          laneId: input.laneId,
           runId: input.runId,
           capabilitySnapshotId: input.capabilitySnapshotId,
           behaviorFingerprint: null,
@@ -341,6 +355,7 @@ function blockedReadiness(input: {
     state: input.state,
     launchAllowed: false,
     modelId: input.modelId,
+    availableModels: [],
     opencodeVersion: null,
     installMethod: null,
     binaryPath: null,

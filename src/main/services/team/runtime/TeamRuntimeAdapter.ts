@@ -25,6 +25,7 @@ export interface TeamRuntimeMemberSpec {
 export interface TeamRuntimeLaunchInput {
   runId: string;
   teamName: string;
+  laneId?: string;
   cwd: string;
   prompt?: string;
   providerId: TeamRuntimeProviderId;
@@ -95,6 +96,7 @@ export type TeamRuntimeReconcileReason =
 export interface TeamRuntimeReconcileInput {
   runId: string;
   teamName: string;
+  laneId?: string;
   providerId: TeamRuntimeProviderId;
   expectedMembers: TeamRuntimeMemberSpec[];
   previousLaunchState: PersistedTeamLaunchSnapshot | null;
@@ -117,6 +119,7 @@ export type TeamRuntimeStopReason = 'user_requested' | 'relaunch' | 'cleanup' | 
 export interface TeamRuntimeStopInput {
   runId: string;
   teamName: string;
+  laneId?: string;
   cwd?: string;
   providerId: TeamRuntimeProviderId;
   reason: TeamRuntimeStopReason;

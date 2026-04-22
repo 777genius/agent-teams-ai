@@ -8,6 +8,7 @@ describe('buildProviderPrepareModelCacheKey', () => {
       cwd: '/tmp/project',
       providerId: 'anthropic' as const,
       backendSummary: 'Claude Code',
+      runtimeStatusSignature: 'status:v1',
     };
 
     expect(
@@ -29,8 +30,30 @@ describe('buildProviderPrepareModelCacheKey', () => {
       providerId: 'codex' as const,
       backendSummary: 'Codex native',
       limitContext: false,
+      runtimeStatusSignature: 'status:v1',
     };
 
     expect(buildProviderPrepareModelCacheKey(input)).toBe(buildProviderPrepareModelCacheKey(input));
+  });
+
+  it('separates runtime-status variants for the same provider runtime', () => {
+    const sharedInput = {
+      cwd: '/tmp/project',
+      providerId: 'codex' as const,
+      backendSummary: 'Codex native',
+      limitContext: false,
+    };
+
+    expect(
+      buildProviderPrepareModelCacheKey({
+        ...sharedInput,
+        runtimeStatusSignature: 'status:v1',
+      })
+    ).not.toBe(
+      buildProviderPrepareModelCacheKey({
+        ...sharedInput,
+        runtimeStatusSignature: 'status:v2',
+      })
+    );
   });
 });

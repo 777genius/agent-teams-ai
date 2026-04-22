@@ -9,16 +9,26 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 
-import {
-  choosePreferredLaunchSnapshot,
-  readBootstrapLaunchSnapshot,
-} from './TeamBootstrapStateReader';
+import { readBootstrapLaunchSnapshot } from './TeamBootstrapStateReader';
 import { getTeamFsWorkerClient } from './TeamFsWorkerClient';
 import { normalizePersistedLaunchSnapshot } from './TeamLaunchStateEvaluator';
+import {
+  type LaunchStateSummary,
+  choosePreferredLaunchStateSummary,
+  normalizePersistedLaunchSummaryProjection,
+  shouldSuppressLegacyLaunchArtifactHeuristic,
+  TEAM_LAUNCH_SUMMARY_FILE,
+} from './TeamLaunchSummaryProjection';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMetaStore } from './TeamMetaStore';
 
-import type { TeamConfig, TeamMember, TeamSummary, TeamSummaryMember } from '@shared/types';
+import type {
+  TeamConfig,
+  TeamMember,
+  TeamProviderId,
+  TeamSummary,
+  TeamSummaryMember,
+} from '@shared/types';
 
 const logger = createLogger('Service:TeamConfigReader');
 
@@ -77,67 +87,43 @@ function resolveProjectPathFromConfig(
   return undefined;
 }
 
-interface LaunchStateSummary {
-  partialLaunchFailure?: true;
-  expectedMemberCount?: number;
-  confirmedMemberCount?: number;
-  missingMembers?: string[];
-  teamLaunchState?: TeamSummary['teamLaunchState'];
-  launchUpdatedAt?: string;
-  confirmedCount?: number;
-  pendingCount?: number;
-  failedCount?: number;
-  runtimeAlivePendingCount?: number;
-}
-
 async function readLaunchStateSummary(teamDir: string): Promise<LaunchStateSummary | null> {
   const bootstrapSnapshot = await readBootstrapLaunchSnapshot(path.basename(teamDir));
   const launchStatePath = path.join(teamDir, TEAM_LAUNCH_STATE_FILE);
-  const launchSnapshot = await (async () => {
-    try {
-      const stat = await fs.promises.stat(launchStatePath);
-      if (!stat.isFile() || stat.size > MAX_LAUNCH_STATE_BYTES) {
+  const launchSummaryPath = path.join(teamDir, TEAM_LAUNCH_SUMMARY_FILE);
+  const [launchSnapshot, launchSummaryProjection] = await Promise.all([
+    (async () => {
+      try {
+        const stat = await fs.promises.stat(launchStatePath);
+        if (!stat.isFile() || stat.size > MAX_LAUNCH_STATE_BYTES) {
+          return null;
+        }
+
+        const raw = await readFileUtf8WithTimeout(launchStatePath, PER_TEAM_READ_TIMEOUT_MS);
+        return normalizePersistedLaunchSnapshot(path.basename(teamDir), JSON.parse(raw));
+      } catch {
         return null;
       }
+    })(),
+    (async () => {
+      try {
+        const stat = await fs.promises.stat(launchSummaryPath);
+        if (!stat.isFile() || stat.size > MAX_LAUNCH_STATE_BYTES) {
+          return null;
+        }
+        const raw = await readFileUtf8WithTimeout(launchSummaryPath, PER_TEAM_READ_TIMEOUT_MS);
+        return normalizePersistedLaunchSummaryProjection(path.basename(teamDir), JSON.parse(raw));
+      } catch {
+        return null;
+      }
+    })(),
+  ]);
 
-      const raw = await readFileUtf8WithTimeout(launchStatePath, PER_TEAM_READ_TIMEOUT_MS);
-      return normalizePersistedLaunchSnapshot(path.basename(teamDir), JSON.parse(raw));
-    } catch {
-      return null;
-    }
-  })();
-
-  const snapshot = choosePreferredLaunchSnapshot(bootstrapSnapshot, launchSnapshot);
-  if (!snapshot) {
-    return null;
-  }
-
-  try {
-    const missingMembers = snapshot.expectedMembers.filter((name) => {
-      const member = snapshot.members[name];
-      return member?.launchState === 'failed_to_start';
-    });
-    return {
-      ...(snapshot.teamLaunchState === 'partial_failure'
-        ? { partialLaunchFailure: true as const }
-        : {}),
-      ...(snapshot.expectedMembers.length > 0
-        ? { expectedMemberCount: snapshot.expectedMembers.length }
-        : {}),
-      ...(snapshot.summary.confirmedCount > 0
-        ? { confirmedMemberCount: snapshot.summary.confirmedCount }
-        : {}),
-      ...(missingMembers.length > 0 ? { missingMembers } : {}),
-      teamLaunchState: snapshot.teamLaunchState,
-      launchUpdatedAt: snapshot.updatedAt,
-      confirmedCount: snapshot.summary.confirmedCount,
-      pendingCount: snapshot.summary.pendingCount,
-      failedCount: snapshot.summary.failedCount,
-      runtimeAlivePendingCount: snapshot.summary.runtimeAlivePendingCount,
-    };
-  } catch {
-    return null;
-  }
+  return choosePreferredLaunchStateSummary({
+    bootstrapSnapshot,
+    launchSnapshot,
+    launchSummaryProjection,
+  });
 }
 
 async function mapLimit<T, R>(
@@ -171,7 +157,8 @@ function withReadTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 export class TeamConfigReader {
   constructor(
-    private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore()
+    private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore(),
+    private readonly teamMetaStore: TeamMetaStore = new TeamMetaStore()
   ) {}
 
   async listTeams(): Promise<TeamSummary[]> {
@@ -251,6 +238,7 @@ export class TeamConfigReader {
 
     try {
       let config: TeamConfig | null = null;
+      let leadProviderId: TeamProviderId | undefined;
       let displayName: string | null = null;
       let description = '';
       let color: string | undefined;
@@ -319,6 +307,7 @@ export class TeamConfigReader {
       const removedKeys = new Set<string>();
       const expectedTeammateNames = new Set<string>();
       const confirmedArtifactNames = new Set<string>();
+      let metaMembers: TeamMember[] = [];
 
       const mergeMember = (m: TeamMember): void => {
         const name = m.name?.trim();
@@ -339,7 +328,7 @@ export class TeamConfigReader {
       // Also read members.meta.json — UI-created teams store members there,
       // and CLI-created teams may have additional members added via the UI.
       try {
-        const metaMembers = await this.membersMetaStore.getMembers(teamName);
+        metaMembers = await this.membersMetaStore.getMembers(teamName);
         for (const member of metaMembers) {
           const name = member.name?.trim();
           if (!name) continue;
@@ -355,6 +344,12 @@ export class TeamConfigReader {
         }
       } catch {
         // best-effort — don't fail listing if meta file is broken
+      }
+
+      try {
+        leadProviderId = (await this.teamMetaStore.getMeta(teamName))?.providerId;
+      } catch {
+        leadProviderId = undefined;
       }
 
       // Merge config members AFTER meta so removedAt can suppress stale config entries.
@@ -383,11 +378,15 @@ export class TeamConfigReader {
         // best-effort
       }
 
-      // Defense: drop CLI auto-suffixed duplicates (alice-2) when base name exists.
-      const allNames = Array.from(memberMap.values()).map((m) => m.name);
-      const keepName = createCliAutoSuffixNameGuard(allNames);
+      // Defense: drop CLI auto-suffixed duplicates (alice-2) only when the
+      // base name is still active. Removed base members must not hide active
+      // suffixed teammates in summary/list paths.
+      const activeNamesForAutoSuffix = Array.from(memberMap.values())
+        .map((member) => member.name)
+        .filter((name) => !removedKeys.has(name.trim().toLowerCase()));
+      const keepName = createCliAutoSuffixNameGuard(activeNamesForAutoSuffix);
       // Defense: drop CLI provisioner artifacts (alice-provisioner) when base name exists.
-      const keepProvisioner = createCliProvisionerNameGuard(allNames);
+      const keepProvisioner = createCliProvisionerNameGuard(activeNamesForAutoSuffix);
       for (const [key, member] of Array.from(memberMap.entries())) {
         if (!keepName(member.name) || !keepProvisioner(member.name)) {
           memberMap.delete(key);
@@ -395,9 +394,16 @@ export class TeamConfigReader {
       }
 
       const members = Array.from(memberMap.values());
+      const suppressLegacyLaunchArtifactHeuristic = shouldSuppressLegacyLaunchArtifactHeuristic({
+        leadProviderId,
+        members: metaMembers,
+      });
       const launchStateSummary =
         (await readLaunchStateSummary(teamDir)) ??
         (() => {
+          if (suppressLegacyLaunchArtifactHeuristic) {
+            return null;
+          }
           if (
             !leadSessionId ||
             expectedTeammateNames.size === 0 ||
@@ -470,7 +476,13 @@ export class TeamConfigReader {
       try {
         const metaStore = new TeamMembersMetaStore();
         const members = await metaStore.getMembers(teamName);
-        memberCount = members.length;
+        memberCount = members.filter((member) => {
+          const name = member.name?.trim() ?? '';
+          if (!name || name === 'user' || isLeadMember(member)) {
+            return false;
+          }
+          return !member.removedAt;
+        }).length;
       } catch {
         // best-effort
       }

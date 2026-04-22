@@ -172,6 +172,74 @@ export function mergeCliStatusPreservingHydratedProviders(
   };
 }
 
+function isMultimodelCliStatus(
+  status: CliInstallationStatus | null | undefined
+): status is CliInstallationStatus & { flavor: 'agent_teams_orchestrator' } {
+  return status?.flavor === 'agent_teams_orchestrator';
+}
+
+function hasActiveProviderStatusLoading(
+  providerLoading: Partial<Record<CliProviderId, boolean>>
+): boolean {
+  return Object.values(providerLoading).some((loading) => loading === true);
+}
+
+function getAuthenticatedProvider(providers: CliProviderStatus[]): CliProviderStatus | null {
+  return providers.find((provider) => provider.authenticated) ?? null;
+}
+
+function buildMultimodelCliAuthState(params: {
+  status: CliInstallationStatus;
+  providers?: CliProviderStatus[];
+  providerLoading?: Partial<Record<CliProviderId, boolean>>;
+}): Pick<CliInstallationStatus, 'authLoggedIn' | 'authMethod' | 'authStatusChecking'> {
+  const providers = params.providers ?? params.status.providers;
+  const providerLoading = params.providerLoading ?? {};
+  const authenticatedProvider = getAuthenticatedProvider(providers);
+
+  return {
+    authLoggedIn: providers.some((provider) => provider.authenticated),
+    authMethod: authenticatedProvider?.authMethod ?? null,
+    authStatusChecking: params.status.installed && hasActiveProviderStatusLoading(providerLoading),
+  };
+}
+
+function getProviderDisplayName(providerId: CliProviderId): string {
+  switch (providerId) {
+    case 'anthropic':
+      return 'Anthropic';
+    case 'codex':
+      return 'Codex';
+    case 'gemini':
+      return 'Gemini';
+    case 'opencode':
+      return 'OpenCode';
+  }
+}
+
+function createProviderStatusErrorSnapshot(params: {
+  providerId: CliProviderId;
+  message: string;
+  currentProvider?: CliProviderStatus;
+}): CliProviderStatus {
+  const currentProvider =
+    params.currentProvider ??
+    createLoadingMultimodelCliStatus().providers.find(
+      (provider) => provider.providerId === params.providerId
+    )!;
+
+  return {
+    ...currentProvider,
+    providerId: params.providerId,
+    displayName: currentProvider.displayName ?? getProviderDisplayName(params.providerId),
+    authenticated: false,
+    authMethod: null,
+    verificationState: 'error',
+    statusMessage: params.message,
+    detailMessage: null,
+  };
+}
+
 // =============================================================================
 // Slice Interface
 // =============================================================================
@@ -297,12 +365,22 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           return {};
         }
 
+        const nextCliStatus = mergeCliStatusPreservingHydratedProviders(state.cliStatus, metadata);
+        const nextAuthState = isMultimodelCliStatus(nextCliStatus)
+          ? buildMultimodelCliAuthState({
+              status: nextCliStatus,
+              providerLoading: nextProviderLoading,
+            })
+          : null;
+
         return {
-          cliStatus: {
-            ...mergeCliStatusPreservingHydratedProviders(state.cliStatus, metadata),
-            launchError: metadata.launchError ?? null,
-            authStatusChecking: metadata.installed && pendingProviderIds.length > 0,
-          },
+          cliStatus: nextAuthState
+            ? {
+                ...nextCliStatus,
+                launchError: metadata.launchError ?? null,
+                ...nextAuthState,
+              }
+            : nextCliStatus,
           cliStatusLoading: false,
           cliProviderStatusLoading: nextProviderLoading,
         };
@@ -362,10 +440,21 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         if (epoch !== cliStatusEpoch) {
           return;
         }
-        set((state) => ({
-          cliStatus: mergeCliStatusPreservingHydratedProviders(state.cliStatus, status),
-          cliProviderStatusLoading: {},
-        }));
+        set((state) => {
+          const nextCliStatus = mergeCliStatusPreservingHydratedProviders(state.cliStatus, status);
+          return {
+            cliStatus: isMultimodelCliStatus(nextCliStatus)
+              ? {
+                  ...nextCliStatus,
+                  ...buildMultimodelCliAuthState({
+                    status: nextCliStatus,
+                    providerLoading: {},
+                  }),
+                }
+              : nextCliStatus,
+            cliProviderStatusLoading: {},
+          };
+        });
         if (status.installed) {
           for (const provider of status.providers) {
             void get().fetchCliProviderStatus(provider.providerId, {
@@ -404,13 +493,27 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
     const request = (async () => {
       if (!silent) {
-        set((state) => ({
-          cliStatusError: null,
-          cliProviderStatusLoading: {
+        set((state) => {
+          const nextLoading = {
             ...state.cliProviderStatusLoading,
             [providerId]: true,
-          },
-        }));
+          };
+
+          return {
+            cliStatusError: null,
+            cliProviderStatusLoading: nextLoading,
+            cliStatus:
+              state.cliStatus && isMultimodelCliStatus(state.cliStatus)
+                ? {
+                    ...state.cliStatus,
+                    ...buildMultimodelCliAuthState({
+                      status: state.cliStatus,
+                      providerLoading: nextLoading,
+                    }),
+                  }
+                : state.cliStatus,
+          };
+        });
       }
 
       try {
@@ -418,6 +521,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           ? await api.cliInstaller.verifyProviderModels(providerId)
           : await api.cliInstaller.getProviderStatus(providerId);
         set((state) => {
+          const currentCliStatus = state.cliStatus;
           const nextLoading = silent
             ? state.cliProviderStatusLoading
             : {
@@ -432,28 +536,38 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
             return { cliProviderStatusLoading: nextLoading };
           }
 
-          if (!providerStatus || !state.cliStatus) {
+          if (!providerStatus || !currentCliStatus) {
             return { cliProviderStatusLoading: nextLoading };
           }
 
-          const hasProvider = state.cliStatus.providers.some(
+          const settledCliStatus: CliInstallationStatus = currentCliStatus;
+          const hasProvider = settledCliStatus.providers.some(
             (provider) => provider.providerId === providerId
           );
           const nextProviders = hasProvider
-            ? state.cliStatus.providers.map((provider) =>
+            ? settledCliStatus.providers.map((provider) =>
                 provider.providerId === providerId ? providerStatus : provider
               )
-            : [...state.cliStatus.providers, providerStatus];
-          const authenticatedProvider =
-            nextProviders.find((provider) => provider.authenticated) ?? null;
+            : [...settledCliStatus.providers, providerStatus];
+          const nextCliStatus = isMultimodelCliStatus(settledCliStatus)
+            ? {
+                ...settledCliStatus,
+                providers: nextProviders,
+                ...buildMultimodelCliAuthState({
+                  status: settledCliStatus,
+                  providers: nextProviders,
+                  providerLoading: nextLoading,
+                }),
+              }
+            : {
+                ...settledCliStatus,
+                providers: nextProviders,
+                authLoggedIn: nextProviders.some((provider) => provider.authenticated),
+                authMethod: getAuthenticatedProvider(nextProviders)?.authMethod ?? null,
+              };
 
           return {
-            cliStatus: {
-              ...state.cliStatus,
-              providers: nextProviders,
-              authLoggedIn: nextProviders.some((provider) => provider.authenticated),
-              authMethod: authenticatedProvider?.authMethod ?? null,
-            },
+            cliStatus: nextCliStatus,
             cliProviderStatusLoading: nextLoading,
           };
         });
@@ -462,6 +576,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           error instanceof Error ? error.message : `Failed to refresh ${providerId} status`;
         logger.error(`Failed to fetch ${providerId} CLI status:`, error);
         set((state) => {
+          const currentCliStatus = state.cliStatus;
           const nextLoading = silent
             ? state.cliProviderStatusLoading
             : {
@@ -476,9 +591,57 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
             return { cliProviderStatusLoading: nextLoading };
           }
 
+          if (!currentCliStatus) {
+            return {
+              cliStatusError: message,
+              cliProviderStatusLoading: nextLoading,
+            };
+          }
+
+          const settledCliStatus: CliInstallationStatus = currentCliStatus;
+          const currentProvider =
+            settledCliStatus.providers.find((provider) => provider.providerId === providerId) ??
+            undefined;
+          const nextProviders = settledCliStatus.providers.some(
+            (provider) => provider.providerId === providerId
+          )
+            ? settledCliStatus.providers.map((provider) =>
+                provider.providerId === providerId
+                  ? createProviderStatusErrorSnapshot({
+                      providerId,
+                      message,
+                      currentProvider,
+                    })
+                  : provider
+              )
+            : [
+                ...currentCliStatus.providers,
+                createProviderStatusErrorSnapshot({
+                  providerId,
+                  message,
+                  currentProvider,
+                }),
+              ];
+
           return {
             cliStatusError: message,
             cliProviderStatusLoading: nextLoading,
+            cliStatus: isMultimodelCliStatus(settledCliStatus)
+              ? {
+                  ...settledCliStatus,
+                  providers: nextProviders,
+                  ...buildMultimodelCliAuthState({
+                    status: settledCliStatus,
+                    providers: nextProviders,
+                    providerLoading: nextLoading,
+                  }),
+                }
+              : {
+                  ...settledCliStatus,
+                  providers: nextProviders,
+                  authLoggedIn: nextProviders.some((provider) => provider.authenticated),
+                  authMethod: getAuthenticatedProvider(nextProviders)?.authMethod ?? null,
+                },
           };
         });
       } finally {

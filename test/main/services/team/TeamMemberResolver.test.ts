@@ -202,6 +202,30 @@ describe('TeamMemberResolver', () => {
     expect(names).not.toContain('ops.bot');
   });
 
+  it('does not let a removed base member hide an active suffixed teammate', () => {
+    const resolver = new TeamMemberResolver();
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [
+        { name: 'team-lead', agentType: 'team-lead', role: 'lead' },
+        { name: 'alice-2', agentType: 'general-purpose' },
+      ],
+    };
+    const metaMembers: TeamConfig['members'] = [
+      {
+        name: 'alice',
+        agentType: 'general-purpose',
+        removedAt: 1715000000000,
+      },
+    ];
+
+    const members = resolver.resolveMembers(config, metaMembers, [], []);
+    const names = members.map((member) => member.name);
+
+    expect(names).toContain('alice-2');
+    expect(names).toContain('alice');
+  });
+
   it('sets currentTaskId for in_progress task', () => {
     const resolver = new TeamMemberResolver();
     const config: TeamConfig = {

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  deriveEffectiveProvisioningPrepareState,
   getPrimaryProvisioningFailureDetail,
   getProvisioningProviderBackendSummary,
   ProvisioningProviderStatusList,
@@ -130,6 +131,45 @@ describe('ProvisioningProviderStatusList', () => {
     });
   });
 
+  it('summarizes compatibility-pending OpenCode model checks separately from verified ones', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProviderStatusList, {
+          checks: [
+            {
+              providerId: 'opencode',
+              status: 'checking',
+              backendSummary: 'OpenCode CLI',
+              details: [
+                'minimax-m2.5-free - compatible, deep verification pending...',
+                'nemotron-3-super-free - verified',
+              ],
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain(
+      'OpenCode (OpenCode CLI): Selected model checks - 1 compatible, deep verification pending, 1 verified'
+    );
+    expect(host.textContent).toContain(
+      'minimax-m2.5-free - compatible, deep verification pending...'
+    );
+    expect(host.textContent).toContain('nemotron-3-super-free - verified');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('normalizes generic preflight timeout notes without depending on a hardcoded CLI name', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
@@ -213,5 +253,77 @@ describe('ProvisioningProviderStatusList', () => {
         ],
       })
     ).toBe('Codex native');
+  });
+
+  it('promotes loading to ready once every provider check is already terminal', () => {
+    expect(
+      deriveEffectiveProvisioningPrepareState({
+        state: 'loading',
+        message: 'Checking selected providers in parallel...',
+        warnings: [],
+        checks: [
+          {
+            providerId: 'codex',
+            status: 'ready',
+            details: ['5.4 - verified', 'Default - verified'],
+          },
+          {
+            providerId: 'opencode',
+            status: 'ready',
+            details: ['minimax-m2.5-free - verified', 'nemotron-3-super-free - verified'],
+          },
+        ],
+      })
+    ).toEqual({
+      state: 'ready',
+      message: 'Selected providers are ready.',
+    });
+  });
+
+  it('promotes loading to failed once a terminal provider failure is already known', () => {
+    expect(
+      deriveEffectiveProvisioningPrepareState({
+        state: 'loading',
+        message: 'Checking selected providers in parallel...',
+        warnings: [],
+        checks: [
+          {
+            providerId: 'opencode',
+            status: 'failed',
+            details: [
+              'nemotron-3-super-free - unavailable - OpenCode production E2E evidence artifact has no entry for selected model opencode/nemotron-3-super-free',
+            ],
+          },
+        ],
+      })
+    ).toEqual({
+      state: 'failed',
+      message:
+        'nemotron-3-super-free - unavailable - OpenCode production E2E evidence artifact has no entry for selected model opencode/nemotron-3-super-free',
+    });
+  });
+
+  it('shows a more honest loading message while OpenCode deep verification is still pending', () => {
+    expect(
+      deriveEffectiveProvisioningPrepareState({
+        state: 'loading',
+        message: 'Checking selected providers in parallel...',
+        warnings: [],
+        checks: [
+          {
+            providerId: 'opencode',
+            status: 'checking',
+            details: [
+              'minimax-m2.5-free - compatible, deep verification pending...',
+              'nemotron-3-super-free - compatible, deep verification pending...',
+            ],
+          },
+        ],
+      })
+    ).toEqual({
+      state: 'loading',
+      message:
+        'Deep verification is still running. OpenCode free models may take around 20 seconds.',
+    });
   });
 });

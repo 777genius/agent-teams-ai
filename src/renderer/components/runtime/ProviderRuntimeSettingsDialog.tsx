@@ -276,7 +276,10 @@ function getCodexAccountPanelHint(
     return null;
   }
 
-  if (codex.managedAccount?.type === 'chatgpt') {
+  const hasActiveChatgptSession =
+    codex.effectiveAuthMode === 'chatgpt' && codex.launchAllowed === true;
+
+  if (hasActiveChatgptSession) {
     if (!codex.rateLimits) {
       return 'Usage limits appear here after Codex reports them for the connected ChatGPT account.';
     }
@@ -689,6 +692,10 @@ export const ProviderRuntimeSettingsDialog = ({
     : null;
   const codexConnection =
     selectedProvider?.providerId === 'codex' ? (selectedProvider.connection?.codex ?? null) : null;
+  const codexHasActiveChatgptSession =
+    codexConnection?.effectiveAuthMode === 'chatgpt' && codexConnection.launchAllowed === true;
+  const codexNeedsReconnect =
+    Boolean(codexConnection?.localActiveChatgptAccountPresent) && !codexHasActiveChatgptSession;
   const codexLoginPending =
     codexConnection?.login.status === 'starting' || codexConnection?.login.status === 'pending';
   const configurableAuthModes = selectedProvider?.connection?.configurableAuthModes ?? [];
@@ -1358,7 +1365,7 @@ export const ProviderRuntimeSettingsDialog = ({
                         >
                           Cancel login
                         </Button>
-                      ) : codexConnection?.managedAccount?.type === 'chatgpt' ? (
+                      ) : codexHasActiveChatgptSession ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -1375,7 +1382,7 @@ export const ProviderRuntimeSettingsDialog = ({
                           onClick={() => void handleCodexStartLogin()}
                         >
                           <Link2 className="mr-1 size-3.5" />
-                          Connect ChatGPT
+                          {codexNeedsReconnect ? 'Reconnect ChatGPT' : 'Connect ChatGPT'}
                         </Button>
                       )}
                     </div>
@@ -1385,21 +1392,25 @@ export const ProviderRuntimeSettingsDialog = ({
                     <span
                       className="rounded-full px-2 py-0.5"
                       style={{
-                        color:
-                          codexConnection?.managedAccount?.type === 'chatgpt'
-                            ? '#86efac'
+                        color: codexHasActiveChatgptSession
+                          ? '#86efac'
+                          : codexNeedsReconnect
+                            ? '#fbbf24'
                             : 'var(--color-text-muted)',
-                        backgroundColor:
-                          codexConnection?.managedAccount?.type === 'chatgpt'
-                            ? 'rgba(74, 222, 128, 0.14)'
+                        backgroundColor: codexHasActiveChatgptSession
+                          ? 'rgba(74, 222, 128, 0.14)'
+                          : codexNeedsReconnect
+                            ? 'rgba(245, 158, 11, 0.14)'
                             : 'rgba(255, 255, 255, 0.05)',
                       }}
                     >
-                      {codexConnection?.managedAccount?.type === 'chatgpt'
+                      {codexHasActiveChatgptSession
                         ? 'Connected'
-                        : codexLoginPending
-                          ? 'Login in progress'
-                          : 'Not connected'}
+                        : codexNeedsReconnect
+                          ? 'Reconnect required'
+                          : codexLoginPending
+                            ? 'Login in progress'
+                            : 'Not connected'}
                     </span>
                     {codexConnection ? (
                       <span

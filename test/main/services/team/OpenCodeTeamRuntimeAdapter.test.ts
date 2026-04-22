@@ -223,6 +223,7 @@ function readiness(
     state: 'adapter_disabled',
     launchAllowed: false,
     modelId: 'openai/gpt-5.4-mini',
+    availableModels: ['openai/gpt-5.4-mini'],
     opencodeVersion: '1.14.19',
     installMethod: 'brew',
     binaryPath: '/opt/homebrew/bin/opencode',

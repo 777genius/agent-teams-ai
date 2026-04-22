@@ -45,6 +45,7 @@ export interface OpenCodeTeamLaunchReadiness {
   state: OpenCodeTeamLaunchReadinessState;
   launchAllowed: boolean;
   modelId: string | null;
+  availableModels: string[];
   opencodeVersion: string | null;
   installMethod: OpenCodeInstallMethod | null;
   binaryPath: string | null;
@@ -326,6 +327,7 @@ function readiness(input: {
     state: input.state,
     launchAllowed: input.launchAllowed === true,
     modelId: input.modelId,
+    availableModels: input.inventory?.models ?? [],
     opencodeVersion: input.inventory?.version ?? null,
     installMethod: input.inventory?.installMethod ?? null,
     binaryPath: input.inventory?.binaryPath ?? null,

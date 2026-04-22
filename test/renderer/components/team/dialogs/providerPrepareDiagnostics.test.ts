@@ -59,7 +59,9 @@ describe('runProviderPrepareDiagnostics', () => {
         cwd?: string,
         providerId?: TeamProviderId,
         providerIds?: TeamProviderId[],
-        selectedModels?: string[]
+        selectedModels?: string[],
+        limitContext?: boolean,
+        modelVerificationMode?: 'compatibility' | 'deep'
       ) => Promise<TeamProvisioningPrepareResult>
     >().mockResolvedValue({
       ready: false,
@@ -80,8 +82,12 @@ describe('runProviderPrepareDiagnostics', () => {
 
   it('batches uncached model probes per provider and keeps failures scoped to the affected model', async () => {
     const deferredBatch = createDeferred<TeamProvisioningPrepareResult>();
-    const progressUpdates: Array<{ details: string[]; completedCount: number; totalCount: number }> =
-      [];
+    const progressUpdates: Array<{
+      status: 'checking' | 'ready' | 'notes' | 'failed';
+      details: string[];
+      completedCount: number;
+      totalCount: number;
+    }> = [];
 
     const prepareProvisioning = vi.fn<
       (
@@ -91,12 +97,6 @@ describe('runProviderPrepareDiagnostics', () => {
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {
-      if (!selectedModels || selectedModels.length === 0) {
-        return Promise.resolve({
-          ready: true,
-          message: 'CLI is warmed up and ready to launch',
-        });
-      }
       expect(selectedModels).toEqual(['gpt-5.4', 'gpt-5.2-codex']);
       return deferredBatch.promise;
     });
@@ -111,6 +111,7 @@ describe('runProviderPrepareDiagnostics', () => {
 
     await Promise.resolve();
     expect(progressUpdates[0]).toEqual({
+      status: 'checking',
       completedCount: 0,
       totalCount: 2,
       details: ['5.4 - checking...', '5.2 Codex - checking...'],
@@ -132,6 +133,7 @@ describe('runProviderPrepareDiagnostics', () => {
       '5.2 Codex - unavailable - Not available on this Codex native runtime',
     ]);
     expect(progressUpdates.at(-1)).toEqual({
+      status: 'failed',
       completedCount: 2,
       totalCount: 2,
       details: [
@@ -139,7 +141,117 @@ describe('runProviderPrepareDiagnostics', () => {
         '5.2 Codex - unavailable - Not available on this Codex native runtime',
       ],
     });
-    expect(prepareProvisioning).toHaveBeenCalledTimes(2);
+    expect(prepareProvisioning).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs OpenCode uncached selected models through compatibility first and deep verification second', async () => {
+    const deferredCompatibility = createDeferred<TeamProvisioningPrepareResult>();
+    const deferredDeep = createDeferred<TeamProvisioningPrepareResult>();
+    const progressUpdates: Array<{
+      status: 'checking' | 'ready' | 'notes' | 'failed';
+      details: string[];
+      completedCount: number;
+      totalCount: number;
+    }> = [];
+
+    const prepareProvisioning = vi.fn(
+      (
+        _cwd?: string,
+        _providerId?: TeamProviderId,
+        _providerIds?: TeamProviderId[],
+        selectedModels?: string[],
+        _limitContext?: boolean,
+        modelVerificationMode?: 'compatibility' | 'deep'
+      ) => {
+        if (modelVerificationMode === 'compatibility') {
+          expect(selectedModels).toEqual([
+            'opencode/minimax-m2.5-free',
+            'opencode/nemotron-3-super-free',
+          ]);
+          return deferredCompatibility.promise;
+        }
+        expect(modelVerificationMode).toBe('deep');
+        expect(selectedModels).toEqual([
+          'opencode/minimax-m2.5-free',
+          'opencode/nemotron-3-super-free',
+        ]);
+        return deferredDeep.promise;
+      }
+    );
+
+    const resultPromise = runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'opencode',
+      selectedModelIds: ['opencode/minimax-m2.5-free', 'opencode/nemotron-3-super-free'],
+      prepareProvisioning,
+      onModelProgress: (progress) => progressUpdates.push(progress),
+    });
+
+    await Promise.resolve();
+    expect(progressUpdates[0]).toEqual({
+      status: 'checking',
+      completedCount: 0,
+      totalCount: 2,
+      details: ['minimax-m2.5-free - checking...', 'nemotron-3-super-free - checking...'],
+    });
+
+    deferredCompatibility.resolve({
+      ready: true,
+      message: 'CLI is ready to launch',
+      details: [
+        'Selected model opencode/minimax-m2.5-free is compatible. Deep verification pending.',
+        'Selected model opencode/nemotron-3-super-free is compatible. Deep verification pending.',
+      ],
+      warnings: [],
+    });
+
+    await vi.waitFor(() =>
+      expect(progressUpdates.at(-1)).toEqual({
+        status: 'checking',
+        completedCount: 0,
+        totalCount: 2,
+        details: [
+          'minimax-m2.5-free - compatible, deep verification pending...',
+          'nemotron-3-super-free - compatible, deep verification pending...',
+        ],
+      })
+    );
+
+    deferredDeep.resolve({
+      ready: true,
+      message: 'CLI is ready to launch',
+      details: [
+        'Selected model opencode/minimax-m2.5-free verified for launch.',
+        'Selected model opencode/nemotron-3-super-free verified for launch.',
+      ],
+      warnings: [],
+    });
+
+    const result = await resultPromise;
+
+    expect(result.status).toBe('ready');
+    expect(result.details).toEqual([
+      'minimax-m2.5-free - verified',
+      'nemotron-3-super-free - verified',
+    ]);
+    expect(prepareProvisioning).toHaveBeenNthCalledWith(
+      1,
+      '/tmp/project',
+      'opencode',
+      ['opencode'],
+      ['opencode/minimax-m2.5-free', 'opencode/nemotron-3-super-free'],
+      undefined,
+      'compatibility'
+    );
+    expect(prepareProvisioning).toHaveBeenNthCalledWith(
+      2,
+      '/tmp/project',
+      'opencode',
+      ['opencode'],
+      ['opencode/minimax-m2.5-free', 'opencode/nemotron-3-super-free'],
+      undefined,
+      'deep'
+    );
   });
 
   it('normalizes raw Codex API error envelopes into a clean model reason', async () => {
@@ -151,12 +263,6 @@ describe('runProviderPrepareDiagnostics', () => {
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {
-      if (!selectedModels || selectedModels.length === 0) {
-        return Promise.resolve({
-          ready: true,
-          message: 'CLI is warmed up and ready to launch',
-        });
-      }
       return Promise.resolve({
         ready: false,
         message:
@@ -186,12 +292,6 @@ describe('runProviderPrepareDiagnostics', () => {
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {
-      if (!selectedModels || selectedModels.length === 0) {
-        return Promise.resolve({
-          ready: true,
-          message: 'CLI is warmed up and ready to launch',
-        });
-      }
       return Promise.resolve({
         ready: true,
         message: 'CLI is warmed up and ready to launch',
@@ -213,8 +313,12 @@ describe('runProviderPrepareDiagnostics', () => {
   });
 
   it('renders the provider default model as a dedicated Default check line', async () => {
-    const progressUpdates: Array<{ details: string[]; completedCount: number; totalCount: number }> =
-      [];
+    const progressUpdates: Array<{
+      status: 'checking' | 'ready' | 'notes' | 'failed';
+      details: string[];
+      completedCount: number;
+      totalCount: number;
+    }> = [];
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
@@ -223,12 +327,6 @@ describe('runProviderPrepareDiagnostics', () => {
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {
-      if (!selectedModels || selectedModels.length === 0) {
-        return Promise.resolve({
-          ready: true,
-          message: 'CLI is warmed up and ready to launch',
-        });
-      }
       return Promise.resolve({
         ready: true,
         message: 'CLI is warmed up and ready to launch',
@@ -245,6 +343,7 @@ describe('runProviderPrepareDiagnostics', () => {
     });
 
     expect(progressUpdates[0]).toEqual({
+      status: 'checking',
       completedCount: 0,
       totalCount: 1,
       details: ['Default - checking...'],
@@ -263,12 +362,6 @@ describe('runProviderPrepareDiagnostics', () => {
         limitContext?: boolean
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {
-      if (!selectedModels || selectedModels.length === 0) {
-        return Promise.resolve({
-          ready: true,
-          message: 'CLI is warmed up and ready to launch',
-        });
-      }
       return Promise.resolve({
         ready: true,
         message: 'CLI is warmed up and ready to launch',
@@ -285,27 +378,18 @@ describe('runProviderPrepareDiagnostics', () => {
     });
 
     expect(result.details).toEqual(['Default - verified']);
-    expect(prepareProvisioning).toHaveBeenNthCalledWith(
-      1,
-      '/tmp/project',
-      'anthropic',
-      ['anthropic'],
-      undefined,
-      true
-    );
-    expect(prepareProvisioning).toHaveBeenNthCalledWith(
-      2,
-      '/tmp/project',
-      'anthropic',
-      ['anthropic'],
-      [DEFAULT_PROVIDER_MODEL_SELECTION],
-      true
-    );
+    expect(prepareProvisioning).toHaveBeenNthCalledWith(1, '/tmp/project', 'anthropic', ['anthropic'], [
+      DEFAULT_PROVIDER_MODEL_SELECTION,
+    ], true);
   });
 
   it('reuses cached model results and probes only newly selected models', async () => {
-    const progressUpdates: Array<{ details: string[]; completedCount: number; totalCount: number }> =
-      [];
+    const progressUpdates: Array<{
+      status: 'checking' | 'ready' | 'notes' | 'failed';
+      details: string[];
+      completedCount: number;
+      totalCount: number;
+    }> = [];
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
@@ -314,13 +398,6 @@ describe('runProviderPrepareDiagnostics', () => {
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {
-      if (!selectedModels || selectedModels.length === 0) {
-        return Promise.resolve({
-          ready: true,
-          message: 'CLI is warmed up and ready to launch',
-        });
-      }
-
       expect(selectedModels).toEqual(['gpt-5.2-codex']);
       return Promise.resolve({
         ready: false,
@@ -350,6 +427,7 @@ describe('runProviderPrepareDiagnostics', () => {
     });
 
     expect(progressUpdates[0]).toEqual({
+      status: 'checking',
       completedCount: 2,
       totalCount: 3,
       details: ['5.2 - verified', '5.4 Mini - verified', '5.2 Codex - checking...'],
@@ -359,16 +437,8 @@ describe('runProviderPrepareDiagnostics', () => {
       '5.4 Mini - verified',
       '5.2 Codex - unavailable - Not available on this Codex native runtime',
     ]);
-    expect(prepareProvisioning).toHaveBeenCalledTimes(2);
-    expect(prepareProvisioning).toHaveBeenNthCalledWith(
-      1,
-      '/tmp/project',
-      'codex',
-      ['codex'],
-      undefined,
-      undefined
-    );
-    expect(prepareProvisioning).toHaveBeenNthCalledWith(2, '/tmp/project', 'codex', ['codex'], [
+    expect(prepareProvisioning).toHaveBeenCalledTimes(1);
+    expect(prepareProvisioning).toHaveBeenNthCalledWith(1, '/tmp/project', 'codex', ['codex'], [
       'gpt-5.2-codex',
     ], undefined);
   });
@@ -382,22 +452,15 @@ describe('runProviderPrepareDiagnostics', () => {
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {
-      if (!selectedModels || selectedModels.length === 0) {
-        return Promise.resolve({
-          ready: true,
-          message: 'CLI is ready to launch (see notes)',
-          warnings: [
-            'Preflight check for `orchestrator-cli -p` did not complete. Proceeding anyway. Details: Timeout running: orchestrator-cli -p Output only the single word PONG. --output-format text --model gpt-5.4-mini --max-turns 1 --no-session-persistence',
-          ],
-        });
-      }
-
       return Promise.resolve({
         ready: true,
-        message: 'CLI is warmed up and ready to launch',
+        message: 'CLI is ready to launch (see notes)',
         details: [
           'Selected model gpt-5.4-mini verified for launch.',
           'Selected model gpt-5.4 verified for launch.',
+        ],
+        warnings: [
+          'Preflight check for `orchestrator-cli -p` did not complete. Proceeding anyway. Details: Timeout running: orchestrator-cli -p Output only the single word PONG. --output-format text --model gpt-5.4-mini --max-turns 1 --no-session-persistence',
         ],
       });
     });
@@ -423,14 +486,6 @@ describe('runProviderPrepareDiagnostics', () => {
         selectedModels?: string[]
       ) => Promise<TeamProvisioningPrepareResult>
     >((_, __, ___, selectedModels) => {
-      if (!selectedModels || selectedModels.length === 0) {
-        return Promise.resolve({
-          ready: true,
-          message: 'CLI is ready to launch (see notes)',
-          warnings: ['orchestrator-cli preflight check failed (exit code 1).'],
-        });
-      }
-
       return Promise.resolve({
         ready: true,
         message: 'CLI is ready to launch (see notes)',
@@ -457,7 +512,13 @@ describe('runProviderPrepareDiagnostics', () => {
     });
   });
 
-  it('prefers detailed OpenCode auth diagnostics over a generic not_authenticated batch message', async () => {
+  it('suppresses a generic runtime preflight note during progress when cached selected models are already verified', async () => {
+    const progressUpdates: Array<{
+      status: 'checking' | 'ready' | 'notes' | 'failed';
+      details: string[];
+      completedCount: number;
+      totalCount: number;
+    }> = [];
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
@@ -469,10 +530,61 @@ describe('runProviderPrepareDiagnostics', () => {
       if (!selectedModels || selectedModels.length === 0) {
         return Promise.resolve({
           ready: true,
-          message: 'CLI is warmed up and ready to launch',
+          message: 'CLI is ready to launch (see notes)',
+          warnings: ['orchestrator-cli preflight check failed (exit code 1).'],
         });
       }
 
+      return Promise.resolve({
+        ready: true,
+        message: 'CLI is ready to launch (see notes)',
+        warnings: ['orchestrator-cli preflight check failed (exit code 1).'],
+      });
+    });
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'codex',
+      selectedModelIds: [DEFAULT_PROVIDER_MODEL_SELECTION, 'gpt-5.4'],
+      prepareProvisioning,
+      onModelProgress: (progress) => progressUpdates.push(progress),
+      cachedModelResultsById: {
+        [DEFAULT_PROVIDER_MODEL_SELECTION]: {
+          status: 'ready',
+          line: 'Default - verified',
+          warningLine: null,
+        },
+        'gpt-5.4': {
+          status: 'ready',
+          line: '5.4 - verified',
+          warningLine: null,
+        },
+      },
+    });
+
+    expect(prepareProvisioning).toHaveBeenCalledTimes(1);
+    expect(progressUpdates).toEqual([
+      {
+        status: 'ready',
+        completedCount: 2,
+        totalCount: 2,
+        details: ['Default - verified', '5.4 - verified'],
+      },
+    ]);
+    expect(result.status).toBe('ready');
+    expect(result.warnings).toEqual([]);
+    expect(result.details).toEqual(['Default - verified', '5.4 - verified']);
+  });
+
+  it('prefers detailed OpenCode auth diagnostics over a generic not_authenticated batch message', async () => {
+    const prepareProvisioning = vi.fn<
+      (
+        cwd?: string,
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
+        selectedModels?: string[]
+      ) => Promise<TeamProvisioningPrepareResult>
+    >((_, __, ___, selectedModels) => {
       return Promise.resolve({
         ready: false,
         message: 'OpenCode: not_authenticated',

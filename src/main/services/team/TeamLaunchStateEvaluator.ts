@@ -1,9 +1,12 @@
 import { isLeadMember } from '@shared/utils/leadDetection';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type {
   MemberLaunchState,
   MemberSpawnLivenessSource,
   MemberSpawnStatusEntry,
+  ProviderModelLaunchIdentity,
   PersistedTeamLaunchMemberSources,
   PersistedTeamLaunchMemberState,
   PersistedTeamLaunchPhase,
@@ -106,6 +109,27 @@ export function summarizePersistedLaunchMembers(
   return { confirmedCount, pendingCount, failedCount, runtimeAlivePendingCount };
 }
 
+export function hasMixedPersistedLaunchMetadata(
+  snapshot: PersistedTeamLaunchSnapshot | null | undefined
+): boolean {
+  if (!snapshot) {
+    return false;
+  }
+  if (
+    Array.isArray(snapshot.bootstrapExpectedMembers) &&
+    snapshot.bootstrapExpectedMembers.join('\u0000') !== snapshot.expectedMembers.join('\u0000')
+  ) {
+    return true;
+  }
+  return Object.values(snapshot.members).some(
+    (member) =>
+      Boolean(member?.laneId) ||
+      Boolean(member?.laneKind) ||
+      Boolean(member?.laneOwnerProviderId) ||
+      Boolean(member?.launchIdentity)
+  );
+}
+
 function deriveMemberLaunchState(
   member: Pick<
     PersistedTeamLaunchMemberState,
@@ -126,6 +150,83 @@ function deriveMemberLaunchState(
 
 function toBoolean(value: unknown): boolean {
   return value === true;
+}
+
+function normalizeFastMode(value: unknown): PersistedTeamLaunchMemberState['selectedFastMode'] {
+  return value === 'inherit' || value === 'on' || value === 'off' ? value : undefined;
+}
+
+function normalizeLaunchIdentity(
+  value: unknown,
+  fallbackProviderId?: PersistedTeamLaunchMemberState['providerId']
+): ProviderModelLaunchIdentity | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  const raw = value as Record<string, unknown>;
+  const providerId =
+    normalizeOptionalTeamProviderId(raw.providerId) ??
+    normalizeOptionalTeamProviderId(fallbackProviderId);
+  if (!providerId) {
+    return undefined;
+  }
+  const selectedModelKind =
+    raw.selectedModelKind === 'explicit' || raw.selectedModelKind === 'default'
+      ? raw.selectedModelKind
+      : 'default';
+  const catalogSource =
+    raw.catalogSource === 'anthropic-models-api' ||
+    raw.catalogSource === 'app-server' ||
+    raw.catalogSource === 'static-fallback' ||
+    raw.catalogSource === 'runtime' ||
+    raw.catalogSource === 'unavailable'
+      ? raw.catalogSource
+      : 'unavailable';
+  return {
+    providerId,
+    providerBackendId:
+      migrateProviderBackendId(
+        providerId,
+        typeof raw.providerBackendId === 'string' ? raw.providerBackendId : undefined
+      ) ?? null,
+    selectedModel: typeof raw.selectedModel === 'string' ? raw.selectedModel.trim() || null : null,
+    selectedModelKind,
+    resolvedLaunchModel:
+      typeof raw.resolvedLaunchModel === 'string' ? raw.resolvedLaunchModel.trim() || null : null,
+    catalogId: typeof raw.catalogId === 'string' ? raw.catalogId.trim() || null : null,
+    catalogSource,
+    catalogFetchedAt:
+      typeof raw.catalogFetchedAt === 'string' ? raw.catalogFetchedAt.trim() || null : null,
+    selectedEffort:
+      raw.selectedEffort === 'none' ||
+      raw.selectedEffort === 'minimal' ||
+      raw.selectedEffort === 'low' ||
+      raw.selectedEffort === 'medium' ||
+      raw.selectedEffort === 'high' ||
+      raw.selectedEffort === 'xhigh' ||
+      raw.selectedEffort === 'max'
+        ? raw.selectedEffort
+        : null,
+    resolvedEffort:
+      raw.resolvedEffort === 'none' ||
+      raw.resolvedEffort === 'minimal' ||
+      raw.resolvedEffort === 'low' ||
+      raw.resolvedEffort === 'medium' ||
+      raw.resolvedEffort === 'high' ||
+      raw.resolvedEffort === 'xhigh' ||
+      raw.resolvedEffort === 'max'
+        ? raw.resolvedEffort
+        : null,
+    selectedFastMode:
+      raw.selectedFastMode === 'inherit' ||
+      raw.selectedFastMode === 'on' ||
+      raw.selectedFastMode === 'off'
+        ? raw.selectedFastMode
+        : null,
+    resolvedFastMode: typeof raw.resolvedFastMode === 'boolean' ? raw.resolvedFastMode : null,
+    fastResolutionReason:
+      typeof raw.fastResolutionReason === 'string' ? raw.fastResolutionReason.trim() || null : null,
+  };
 }
 
 function normalizeSources(value: unknown): PersistedTeamLaunchMemberSources | undefined {
@@ -158,8 +259,35 @@ function normalizePersistedMemberState(
   if (!normalizedName || normalizedName === 'user' || isLeadMember({ name: normalizedName })) {
     return null;
   }
+  const providerId = normalizeOptionalTeamProviderId(parsed.providerId);
   const next: PersistedTeamLaunchMemberState = {
     name: normalizedName,
+    providerId,
+    providerBackendId: migrateProviderBackendId(
+      providerId,
+      typeof parsed.providerBackendId === 'string' ? parsed.providerBackendId : undefined
+    ),
+    model: typeof parsed.model === 'string' ? parsed.model.trim() || undefined : undefined,
+    effort:
+      parsed.effort === 'none' ||
+      parsed.effort === 'minimal' ||
+      parsed.effort === 'low' ||
+      parsed.effort === 'medium' ||
+      parsed.effort === 'high' ||
+      parsed.effort === 'xhigh' ||
+      parsed.effort === 'max'
+        ? parsed.effort
+        : undefined,
+    selectedFastMode: normalizeFastMode(parsed.selectedFastMode),
+    resolvedFastMode:
+      typeof parsed.resolvedFastMode === 'boolean' ? parsed.resolvedFastMode : undefined,
+    laneId: typeof parsed.laneId === 'string' ? parsed.laneId.trim() || undefined : undefined,
+    laneKind:
+      parsed.laneKind === 'primary' || parsed.laneKind === 'secondary'
+        ? parsed.laneKind
+        : undefined,
+    laneOwnerProviderId: normalizeOptionalTeamProviderId(parsed.laneOwnerProviderId),
+    launchIdentity: normalizeLaunchIdentity(parsed.launchIdentity, providerId),
     launchState: 'starting',
     agentToolAccepted: toBoolean(parsed.agentToolAccepted),
     runtimeAlive: toBoolean(parsed.runtimeAlive),
@@ -199,6 +327,7 @@ function normalizePersistedMemberState(
 export function createPersistedLaunchSnapshot(params: {
   teamName: string;
   expectedMembers: readonly string[];
+  bootstrapExpectedMembers?: readonly string[];
   leadSessionId?: string;
   launchPhase?: PersistedTeamLaunchPhase;
   members?: Record<string, PersistedTeamLaunchMemberState>;
@@ -208,6 +337,13 @@ export function createPersistedLaunchSnapshot(params: {
   const expectedMembers = Array.from(
     new Set(
       params.expectedMembers
+        .map(normalizeMemberName)
+        .filter((name) => name.length > 0 && name !== 'user' && !isLeadMember({ name }))
+    )
+  );
+  const bootstrapExpectedMembers = Array.from(
+    new Set(
+      (params.bootstrapExpectedMembers ?? expectedMembers)
         .map(normalizeMemberName)
         .filter((name) => name.length > 0 && name !== 'user' && !isLeadMember({ name }))
     )
@@ -246,6 +382,10 @@ export function createPersistedLaunchSnapshot(params: {
     ...(params.leadSessionId ? { leadSessionId: params.leadSessionId } : {}),
     launchPhase,
     expectedMembers,
+    ...(bootstrapExpectedMembers.length > 0 &&
+    bootstrapExpectedMembers.join('\u0000') !== expectedMembers.join('\u0000')
+      ? { bootstrapExpectedMembers }
+      : {}),
     members,
     summary,
     teamLaunchState: deriveTeamLaunchAggregateState(summary),
@@ -416,6 +556,11 @@ export function normalizePersistedLaunchSnapshot(
         (name): name is string => typeof name === 'string' && normalizeMemberName(name).length > 0
       )
     : [];
+  const bootstrapExpectedMembers = Array.isArray(record.bootstrapExpectedMembers)
+    ? record.bootstrapExpectedMembers.filter(
+        (name): name is string => typeof name === 'string' && normalizeMemberName(name).length > 0
+      )
+    : undefined;
   const updatedAt =
     typeof record.updatedAt === 'string' && record.updatedAt.trim().length > 0
       ? record.updatedAt
@@ -446,6 +591,7 @@ export function normalizePersistedLaunchSnapshot(
       record.launchPhase === 'reconciled'
         ? record.launchPhase
         : 'finished',
+    bootstrapExpectedMembers,
     members: normalizedMembers,
     updatedAt,
   });

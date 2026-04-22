@@ -144,7 +144,7 @@ describe('OpenCodeReadinessBridge', () => {
     });
   });
 
-  it('keeps production readiness open when evidence matches runtime identity and raw model', async () => {
+  it('keeps production readiness open when evidence matches runtime identity and project context', async () => {
     const executor = fakeExecutor(
       bridgeSuccess(readiness({ state: 'ready', launchAllowed: true }))
     );
@@ -169,6 +169,35 @@ describe('OpenCodeReadinessBridge', () => {
     expect(evidence.read).toHaveBeenCalledWith({
       selectedModel: 'openai/gpt-5.4-mini',
       projectPathFingerprint: buildOpenCodeProjectPathFingerprint('/repo'),
+      opencodeVersion: '1.14.19',
+      binaryFingerprint: 'bin-1',
+      capabilitySnapshotId: 'cap-1',
+    });
+  });
+
+  it('accepts production evidence recorded with a different OpenCode model when runtime identity matches', async () => {
+    const executor = fakeExecutor(
+      bridgeSuccess(readiness({ state: 'ready', launchAllowed: true }))
+    );
+    const evidence = fakeEvidenceStore(
+      productionEvidence({ selectedModel: 'opencode/minimax-m2.5-free' })
+    );
+    const bridge = new OpenCodeReadinessBridge(executor, {
+      productionE2eEvidence: evidence,
+    });
+
+    await expect(
+      bridge.checkOpenCodeTeamLaunchReadiness({
+        projectPath: '/repo',
+        selectedModel: 'opencode/nemotron-3-super-free',
+        requireExecutionProbe: true,
+        launchMode: 'production',
+      })
+    ).resolves.toMatchObject({
+      state: 'ready',
+      launchAllowed: true,
+      supportLevel: 'production_supported',
+      diagnostics: [],
     });
   });
 
@@ -204,6 +233,7 @@ describe('OpenCodeReadinessBridge', () => {
       bridge.launchOpenCodeTeam({
         mode: 'dogfood',
         runId: 'run-1',
+        laneId: 'primary',
         teamId: 'team-a',
         teamName: 'team-a',
         projectPath: '/repo',
@@ -223,6 +253,7 @@ describe('OpenCodeReadinessBridge', () => {
       expect.objectContaining({
         command: 'opencode.launchTeam',
         teamName: 'team-a',
+        laneId: 'primary',
         runId: 'run-1',
         capabilitySnapshotId: 'cap-1',
         cwd: '/repo',
@@ -327,6 +358,7 @@ function readiness(
     state: 'adapter_disabled',
     launchAllowed: false,
     modelId: 'openai/gpt-5.4-mini',
+    availableModels: ['openai/gpt-5.4-mini'],
     opencodeVersion: '1.14.19',
     installMethod: 'brew',
     binaryPath: '/opt/homebrew/bin/opencode',

@@ -127,6 +127,9 @@ describe('cliInstallerSlice', () => {
     // Reset store state
     useStore.setState({
       cliStatus: null,
+      cliStatusLoading: false,
+      cliProviderStatusLoading: {},
+      cliStatusError: null,
       cliInstallerState: 'idle',
       cliDownloadProgress: 0,
       cliDownloadTransferred: 0,
@@ -702,6 +705,100 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliDownloadProgress).toBe(0);
       expect(useStore.getState().cliDownloadTransferred).toBe(0);
       expect(useStore.getState().cliDownloadTotal).toBe(0);
+    });
+  });
+
+  describe('fetchCliProviderStatus', () => {
+    it('materializes provider fetch failures into provider-scoped error state', async () => {
+      useStore.setState({
+        cliStatus: createMultimodelStatus([
+          createMultimodelProvider({
+            providerId: 'anthropic',
+            displayName: 'Anthropic',
+            verificationState: 'unknown',
+            statusMessage: 'Checking...',
+          }),
+          createMultimodelProvider({
+            providerId: 'codex',
+            displayName: 'Codex',
+            authenticated: true,
+            authMethod: 'chatgpt',
+            statusMessage: 'ChatGPT account ready',
+          }),
+        ]),
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockRejectedValue(
+        new Error('Failed to refresh anthropic status')
+      );
+
+      await useStore.getState().fetchCliProviderStatus('anthropic');
+
+      expect(useStore.getState().cliProviderStatusLoading).toEqual({
+        anthropic: false,
+      });
+      expect(useStore.getState().cliStatusError).toBe('Failed to refresh anthropic status');
+      expect(
+        useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'anthropic')
+      ).toMatchObject({
+        displayName: 'Anthropic',
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'error',
+        statusMessage: 'Failed to refresh anthropic status',
+      });
+      expect(useStore.getState().cliStatus?.authStatusChecking).toBe(false);
+    });
+
+    it('marks authStatusChecking true while a multimodel provider refresh is in flight and clears it on success', async () => {
+      let resolveProviderStatus!: (value: CliInstallationStatus['providers'][number]) => void;
+      const pendingProviderStatus = new Promise<CliInstallationStatus['providers'][number]>((resolve) => {
+        resolveProviderStatus = resolve;
+      });
+
+      useStore.setState({
+        cliStatus: createMultimodelStatus([
+          createMultimodelProvider({
+            providerId: 'anthropic',
+            displayName: 'Anthropic',
+            authenticated: true,
+            authMethod: 'oauth_token',
+            statusMessage: 'Connected',
+          }),
+        ]),
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockImplementation(async (providerId) => {
+        if (providerId === 'anthropic') {
+          return pendingProviderStatus;
+        }
+
+        throw new Error(`Unexpected provider status request for ${providerId}`);
+      });
+
+      const refreshPromise = useStore.getState().fetchCliProviderStatus('anthropic');
+
+      await vi.waitFor(() => {
+        expect(useStore.getState().cliStatus?.authStatusChecking).toBe(true);
+      });
+
+      expect(useStore.getState().cliProviderStatusLoading).toEqual({
+        anthropic: true,
+      });
+
+      resolveProviderStatus(
+        createMultimodelProvider({
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          authenticated: true,
+          authMethod: 'oauth_token',
+          statusMessage: 'Connected',
+        })
+      );
+      await refreshPromise;
+
+      expect(useStore.getState().cliProviderStatusLoading).toEqual({
+        anthropic: false,
+      });
+      expect(useStore.getState().cliStatus?.authStatusChecking).toBe(false);
     });
   });
 

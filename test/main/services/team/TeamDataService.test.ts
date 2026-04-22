@@ -9,6 +9,7 @@ import { encodePath, setClaudeBasePathOverride } from '../../../../src/main/util
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
+import type { TeamMetaFile } from '../../../../src/main/services/team/TeamMetaStore';
 
 import type {
   InboxMessage,
@@ -333,6 +334,7 @@ function createGetTeamDataHarness(options: {
   listInboxNames?: () => Promise<string[]>;
   getMessages?: () => Promise<InboxMessage[]>;
   getMembers?: () => Promise<TeamConfig['members']>;
+  getTeamMeta?: () => Promise<TeamMetaFile | null>;
   getState?: () => Promise<KanbanState>;
   readMessages?: () => Promise<InboxMessage[]>;
   resolveMembers?: (
@@ -367,6 +369,11 @@ function createGetTeamDataHarness(options: {
     (async () => {
       return [] as TeamConfig['members'];
     });
+  const getTeamMeta =
+    options.getTeamMeta ??
+    (async () => {
+      return null;
+    });
   const getState =
     options.getState ??
     (async () => {
@@ -394,6 +401,9 @@ function createGetTeamDataHarness(options: {
   };
   const membersMetaStore = {
     getMembers: vi.fn(getMembers),
+  };
+  const teamMetaStore = {
+    getMeta: vi.fn(getTeamMeta),
   };
   const sentMessagesStore = {
     readMessages: vi.fn(readMessages),
@@ -431,7 +441,7 @@ function createGetTeamDataHarness(options: {
         },
       }) as never) as never,
     {} as never,
-    {} as never,
+    teamMetaStore as never,
     advisoryService as never
   );
 
@@ -441,6 +451,7 @@ function createGetTeamDataHarness(options: {
     taskReader,
     inboxReader,
     membersMetaStore,
+    teamMetaStore,
     sentMessagesStore,
     resolveMembersSpy,
     kanbanManager,
@@ -628,6 +639,262 @@ describe('TeamDataService', () => {
       isolation: 'worktree',
     });
     expect(writtenMembers.find((member) => member.name === 'bob')?.isolation).toBeUndefined();
+  });
+
+  it('persists member-level provider backend and fast mode during replaceMembers', async () => {
+    const writeMembers = vi.fn(async () => {});
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => []),
+      writeMembers,
+    } as never;
+
+    const service = new TeamDataService(
+      { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+      { getTasks: vi.fn(async () => []) } as never,
+      { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+      { resolveMembers: vi.fn(() => []) } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'runtime-team', reviewers: [], tasks: {} })),
+      } as never,
+      {} as never,
+      membersMetaStore,
+      { readMessages: vi.fn(async () => []) } as never,
+      (() => ({ processes: { listProcesses: vi.fn(async () => []) } }) as never) as never,
+      {} as never,
+      { getMeta: vi.fn(async () => ({ providerId: 'codex' })) } as never
+    );
+
+    await service.replaceMembers('runtime-team', {
+      members: [
+        {
+          name: 'alice',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'high',
+          fastMode: 'on',
+        },
+      ],
+    });
+
+    expect(writeMembers).toHaveBeenCalledWith(
+      'runtime-team',
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'alice',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'high',
+          fastMode: 'on',
+        }),
+      ])
+    );
+  });
+
+  it('allows multiple OpenCode teammates in replaceMembers drafts before they are persisted', async () => {
+    const writeMembers = vi.fn(async () => {});
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => []),
+      writeMembers,
+    } as never;
+
+    const service = new TeamDataService(
+      { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+      { getTasks: vi.fn(async () => []) } as never,
+      { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+      { resolveMembers: vi.fn(() => []) } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'runtime-team', reviewers: [], tasks: {} })),
+      } as never,
+      {} as never,
+      membersMetaStore,
+      { readMessages: vi.fn(async () => []) } as never,
+      (() => ({ processes: { listProcesses: vi.fn(async () => []) } }) as never) as never,
+      {} as never,
+      { getMeta: vi.fn(async () => ({ providerId: 'codex' })) } as never
+    );
+
+    await expect(
+      service.replaceMembers('runtime-team', {
+        members: [
+          { name: 'alice', providerId: 'opencode', model: 'minimax-m2.5-free' },
+          { name: 'bob', providerId: 'opencode', model: 'nemotron-3-super-free' },
+        ],
+      })
+    ).resolves.toBeUndefined();
+
+    expect(writeMembers).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks live addMember on a running mixed team', async () => {
+    const writeMembers = vi.fn(async () => {});
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'opencode',
+          model: 'minimax-m2.5-free',
+          agentType: 'general-purpose',
+        },
+      ]),
+      writeMembers,
+    } as never;
+
+    const service = new TeamDataService(
+      { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+      { getTasks: vi.fn(async () => []) } as never,
+      { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+      { resolveMembers: vi.fn(() => []) } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'mixed-team', reviewers: [], tasks: {} })),
+      } as never,
+      {} as never,
+      membersMetaStore,
+      { readMessages: vi.fn(async () => []) } as never,
+      (() =>
+        ({
+          processes: {
+            listProcesses: vi.fn(async () => [
+              {
+                id: 'run-1',
+                label: 'mixed-team',
+                pid: 123,
+                registeredAt: new Date().toISOString(),
+              },
+            ]),
+          },
+        }) as never) as never,
+      {} as never,
+      { getMeta: vi.fn(async () => ({ providerId: 'codex' })) } as never
+    );
+
+    await expect(
+      service.addMember('mixed-team', {
+        name: 'bob',
+        role: 'Developer',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+        effort: 'medium',
+      })
+    ).rejects.toThrow(
+      'Live roster mutation on a running mixed team is not supported in V1. Stop the team, edit the roster, then relaunch.'
+    );
+
+    expect(writeMembers).not.toHaveBeenCalled();
+  });
+
+  it('blocks live replaceMembers on a running mixed team', async () => {
+    const writeMembers = vi.fn(async () => {});
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'opencode',
+          model: 'minimax-m2.5-free',
+          agentType: 'general-purpose',
+        },
+      ]),
+      writeMembers,
+    } as never;
+
+    const service = new TeamDataService(
+      { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+      { getTasks: vi.fn(async () => []) } as never,
+      { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+      { resolveMembers: vi.fn(() => []) } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'mixed-team', reviewers: [], tasks: {} })),
+      } as never,
+      {} as never,
+      membersMetaStore,
+      { readMessages: vi.fn(async () => []) } as never,
+      (() =>
+        ({
+          processes: {
+            listProcesses: vi.fn(async () => [
+              {
+                id: 'run-1',
+                label: 'mixed-team',
+                pid: 123,
+                registeredAt: new Date().toISOString(),
+              },
+            ]),
+          },
+        }) as never) as never,
+      {} as never,
+      { getMeta: vi.fn(async () => ({ providerId: 'codex' })) } as never
+    );
+
+    await expect(
+      service.replaceMembers('mixed-team', {
+        members: [{ name: 'alice', providerId: 'codex', model: 'gpt-5.4', effort: 'high' }],
+      })
+    ).rejects.toThrow(
+      'Live roster mutation on a running mixed team is not supported in V1. Stop the team, edit the roster, then relaunch.'
+    );
+
+    expect(writeMembers).not.toHaveBeenCalled();
+  });
+
+  it('allows live removeMember for an OpenCode-owned member on a running mixed team', async () => {
+    const writeMembers = vi.fn(async () => {});
+    const membersMetaStore = {
+      getMembers: vi.fn(async () => [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'opencode',
+          model: 'minimax-m2.5-free',
+          agentType: 'general-purpose',
+        },
+      ]),
+      writeMembers,
+    } as never;
+
+    const service = new TeamDataService(
+      { getConfig: vi.fn(), listTeams: vi.fn() } as never,
+      { getTasks: vi.fn(async () => []) } as never,
+      { listInboxNames: vi.fn(async () => []), getMessages: vi.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+      { resolveMembers: vi.fn(() => []) } as never,
+      {
+        getState: vi.fn(async () => ({ teamName: 'mixed-team', reviewers: [], tasks: {} })),
+      } as never,
+      {} as never,
+      membersMetaStore,
+      { readMessages: vi.fn(async () => []) } as never,
+      (() =>
+        ({
+          processes: {
+            listProcesses: vi.fn(async () => [
+              {
+                id: 'run-1',
+                label: 'mixed-team',
+                pid: 123,
+                registeredAt: new Date().toISOString(),
+              },
+            ]),
+          },
+        }) as never) as never,
+      {} as never,
+      { getMeta: vi.fn(async () => ({ providerId: 'codex' })) } as never
+    );
+
+    await expect(service.removeMember('mixed-team', 'alice')).resolves.toBeUndefined();
+
+    expect(writeMembers).toHaveBeenCalledTimes(1);
   });
 
   it('does not carry over agentId from a previously removed member with the same name', async () => {
@@ -3968,6 +4235,104 @@ describe('TeamDataService', () => {
     ]);
   });
 
+  it('synthesizes a team lead from team meta when config and members meta have no lead entry', async () => {
+    const harness = createGetTeamDataHarness({
+      config: {
+        name: 'My team',
+        projectPath: '/repo',
+        members: [
+          {
+            name: 'alice',
+            role: 'Reviewer',
+            providerId: 'codex',
+            model: 'gpt-5.4',
+          },
+        ],
+      },
+      getTeamMeta: async () => ({
+        version: 1,
+        cwd: '/repo',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+        effort: 'medium',
+        createdAt: Date.now(),
+      }),
+      resolveMembers: () => [buildResolvedMember('alice')],
+    });
+
+    const data = await harness.service.getTeamData('my-team');
+
+    expect(data.members[0]).toMatchObject({
+      name: 'team-lead',
+      agentType: 'team-lead',
+      role: 'Team Lead',
+      providerId: 'codex',
+      model: 'gpt-5.4',
+      effort: 'medium',
+      cwd: '/repo',
+    });
+    expect(data.members[1]).toMatchObject({
+      name: 'alice',
+    });
+    expect(harness.teamMetaStore.getMeta).toHaveBeenCalledWith('my-team');
+  });
+
+  it('surfaces lane-aware member runtime truth alongside the synthesized lead snapshot', async () => {
+    const harness = createGetTeamDataHarness({
+      config: {
+        name: 'My team',
+        projectPath: '/repo',
+        members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+      },
+      getTeamMeta: async () => ({
+        version: 1,
+        cwd: '/repo',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.4',
+        effort: 'medium',
+        fastMode: 'off',
+        createdAt: Date.now(),
+      }),
+      resolveMembers: () => [
+        {
+          ...buildResolvedMember('alice'),
+          providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
+          model: 'minimax-m2.5-free',
+          laneId: 'secondary:opencode:alice',
+          laneKind: 'secondary',
+          laneOwnerProviderId: 'opencode',
+          selectedFastMode: 'inherit',
+          resolvedFastMode: false,
+        },
+      ],
+    });
+
+    const data = await harness.service.getTeamData('my-team');
+
+    expect(data.members[0]).toMatchObject({
+      name: 'team-lead',
+      agentType: 'team-lead',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.4',
+      effort: 'medium',
+      cwd: '/repo',
+    });
+    expect(data.members[1]).toMatchObject({
+      name: 'alice',
+      providerId: 'opencode',
+      providerBackendId: 'opencode-cli',
+      model: 'minimax-m2.5-free',
+      laneId: 'secondary:opencode:alice',
+      laneKind: 'secondary',
+      laneOwnerProviderId: 'opencode',
+      selectedFastMode: 'inherit',
+      resolvedFastMode: false,
+    });
+  });
+
   it('degrades advisory lookup failure to warning and still completes the snapshot', async () => {
     const harness = createGetTeamDataHarness({
       resolveMembers: () => [buildResolvedMember('alice')],
@@ -4145,12 +4510,19 @@ describe('TeamDataService', () => {
       buildDefaultTeamConfig(),
       metaMembers,
       inboxNames,
-      [
+      expect.arrayContaining([
         expect.objectContaining({
           id: 'task-1',
           subject: 'Investigate rollout',
         }),
-      ]
+      ]),
+      expect.objectContaining({
+        launchSnapshot: null,
+        leadProviderId: undefined,
+        leadProviderBackendId: undefined,
+        leadFastMode: undefined,
+        leadResolvedFastMode: undefined,
+      })
     );
   });
 

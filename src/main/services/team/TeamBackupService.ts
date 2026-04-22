@@ -59,6 +59,8 @@ const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 const TEAM_ROOT_FILES = [
   'config.json',
   'team.meta.json',
+  'launch-state.json',
+  'launch-summary.json',
   'kanban-state.json',
   'sentMessages.json',
   'sent-cross-team.json',
@@ -68,6 +70,7 @@ const TEAM_ROOT_FILES = [
 
 // Subdirs under ~/.claude/teams/{teamName}/
 const TEAM_SUBDIRS = ['inboxes', 'review-decisions'];
+const TEAM_RECURSIVE_SUBDIRS = ['.opencode-runtime'];
 // Subdirs under getAppDataPath() (our own storage, not in ~/.claude/)
 const APP_DATA_SUBDIRS = ['attachments'];
 const APP_DATA_DEEP_SUBDIRS = ['task-attachments'];
@@ -100,6 +103,57 @@ function isValidConfig(content: string): boolean {
   } catch {
     return false;
   }
+}
+
+async function collectRecursiveFiles(
+  rootDir: string,
+  relPrefix: string
+): Promise<BackupFileDescriptor[]> {
+  const files: BackupFileDescriptor[] = [];
+  const walk = async (dirPath: string, relDir: string): Promise<void> => {
+    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const sourcePath = path.join(dirPath, entry.name);
+      const relPath = relDir ? `${relDir}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        await walk(sourcePath, relPath);
+        continue;
+      }
+      if (entry.isFile()) {
+        files.push({
+          sourcePath,
+          relPath: relPrefix ? `${relPrefix}/${relPath}` : relPath,
+        });
+      }
+    }
+  };
+
+  await walk(rootDir, '');
+  return files;
+}
+
+function collectRecursiveFilesSync(rootDir: string, relPrefix: string): BackupFileDescriptor[] {
+  const files: BackupFileDescriptor[] = [];
+  const walk = (dirPath: string, relDir: string): void => {
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const sourcePath = path.join(dirPath, entry.name);
+      const relPath = relDir ? `${relDir}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        walk(sourcePath, relPath);
+        continue;
+      }
+      if (entry.isFile()) {
+        files.push({
+          sourcePath,
+          relPath: relPrefix ? `${relPrefix}/${relPath}` : relPath,
+        });
+      }
+    }
+  };
+
+  walk(rootDir, '');
+  return files;
 }
 
 // ---------------------------------------------------------------------------
@@ -734,6 +788,15 @@ export class TeamBackupService {
       }
     }
 
+    for (const subdir of TEAM_RECURSIVE_SUBDIRS) {
+      const dirPath = path.join(teamDir, subdir);
+      try {
+        files.push(...(await collectRecursiveFiles(dirPath, subdir)));
+      } catch (err: unknown) {
+        if (!isEnoent(err)) hasErrors = true;
+      }
+    }
+
     // Flat subdirs under app data dir (attachments/)
     const appDataDir = getAppDataPath();
     for (const subdir of APP_DATA_SUBDIRS) {
@@ -825,6 +888,14 @@ export class TeamBackupService {
             });
           }
         }
+      } catch {
+        // skip
+      }
+    }
+
+    for (const subdir of TEAM_RECURSIVE_SUBDIRS) {
+      try {
+        files.push(...collectRecursiveFilesSync(path.join(teamDir, subdir), subdir));
       } catch {
         // skip
       }

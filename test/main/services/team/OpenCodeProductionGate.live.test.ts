@@ -126,6 +126,7 @@ liveDescribe('OpenCode production gate live e2e', () => {
       launch = await readinessBridge.launchOpenCodeTeam({
         mode: 'dogfood',
         runId,
+        laneId: 'primary',
         teamId: teamName,
         teamName,
         projectPath: PROJECT_PATH,
@@ -147,6 +148,7 @@ liveDescribe('OpenCode production gate live e2e', () => {
 
       reconcile = await readinessBridge.reconcileOpenCodeTeam({
         runId,
+        laneId: 'primary',
         teamId: teamName,
         teamName,
         projectPath: PROJECT_PATH,
@@ -158,11 +160,11 @@ liveDescribe('OpenCode production gate live e2e', () => {
       expect(reconcile.teamLaunchState).toBe('ready');
 
       const transcript = await bridgeClient.execute<
-        { teamId: string; teamName: string; memberName: string },
+        { teamId: string; teamName: string; laneId: string; memberName: string },
         { logProjection?: { messages?: unknown[] }; messages?: unknown[] }
       >(
         'opencode.getRuntimeTranscript',
-        { teamId: teamName, teamName, memberName },
+        { teamId: teamName, teamName, laneId: 'primary', memberName },
         { cwd: PROJECT_PATH, timeoutMs: 60_000 }
       );
       expect(transcript.ok).toBe(true);
@@ -181,6 +183,7 @@ liveDescribe('OpenCode production gate live e2e', () => {
 
       stop = await readinessBridge.stopOpenCodeTeam({
         runId,
+        laneId: 'primary',
         teamId: teamName,
         teamName,
         projectPath: PROJECT_PATH,
@@ -247,6 +250,7 @@ liveDescribe('OpenCode production gate live e2e', () => {
         await readinessBridge
           .stopOpenCodeTeam({
             runId,
+            laneId: 'primary',
             teamId: teamName,
             teamName,
             projectPath: PROJECT_PATH,
@@ -326,11 +330,13 @@ async function rejectsStaleCapability(input: {
     await input.stateChangingCommands.execute({
       command: 'opencode.reconcileTeam',
       teamName: input.teamName,
+      laneId: 'primary',
       runId: input.runId,
       capabilitySnapshotId: 'opencode:stale-capability',
       behaviorFingerprint: null,
       body: {
         runId: input.runId,
+        laneId: 'primary',
         teamId: input.teamName,
         teamName: input.teamName,
         projectPath: PROJECT_PATH,

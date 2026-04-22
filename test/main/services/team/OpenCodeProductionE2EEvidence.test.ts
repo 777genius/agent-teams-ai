@@ -30,7 +30,7 @@ describe('OpenCodeProductionE2EEvidence', () => {
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
-  it('accepts strict evidence only when runtime identity, model and required MCP tools match', () => {
+  it('accepts production evidence when runtime identity, project context and required MCP tools match', () => {
     const evidence = passingEvidence();
 
     expect(validateOpenCodeProductionE2EEvidence(evidence)).toEqual(evidence);
@@ -85,7 +85,6 @@ describe('OpenCodeProductionE2EEvidence', () => {
         'OpenCode production E2E evidence is expired',
         'OpenCode production E2E evidence is missing signals: stale_run_rejected',
         'OpenCode production E2E evidence is missing observed MCP tools: agent-teams_runtime_deliver_message',
-        'OpenCode production E2E evidence model openrouter/anthropic/claude-sonnet-4.5 does not match selected model openai/gpt-5.4-mini. Production launch is intentionally scoped to the exact raw model id; regenerate evidence with OPENCODE_E2E_MODEL=openai/gpt-5.4-mini.',
       ]),
     });
   });
@@ -139,7 +138,7 @@ describe('OpenCodeProductionE2EEvidence', () => {
     });
   });
 
-  it('stores production evidence for multiple raw model ids and reads exact model matches', async () => {
+  it('stores production evidence for multiple raw model ids and reads exact model matches when no project context is provided', async () => {
     const filePath = path.join(tempDir, 'production-e2e-evidence.json');
     const store = new OpenCodeProductionE2EEvidenceStore({
       filePath,
@@ -171,6 +170,87 @@ describe('OpenCodeProductionE2EEvidence', () => {
       diagnostics: [
         'OpenCode production E2E evidence artifact has no entry for selected model openai/gpt-5.4-mini',
       ],
+    });
+  });
+
+  it('reuses the current project production proof even when the requested OpenCode model differs', async () => {
+    const filePath = path.join(tempDir, 'production-e2e-evidence.json');
+    const store = new OpenCodeProductionE2EEvidenceStore({
+      filePath,
+      clock: () => now,
+    });
+
+    await store.write(
+      passingEvidence({
+        evidenceId: 'e2e-project-a',
+        selectedModel: 'opencode/minimax-m2.5-free',
+        projectPathFingerprint: buildOpenCodeProjectPathFingerprint('/repo-a'),
+      })
+    );
+    await store.write(
+      passingEvidence({
+        evidenceId: 'e2e-project-b',
+        selectedModel: 'opencode/minimax-m2.5-free',
+        projectPathFingerprint: buildOpenCodeProjectPathFingerprint('/repo-b'),
+      })
+    );
+
+    await expect(
+      store.read({
+        selectedModel: 'opencode/nemotron-3-super-free',
+        projectPathFingerprint: buildOpenCodeProjectPathFingerprint('/repo-b'),
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      evidence: {
+        evidenceId: 'e2e-project-b',
+        selectedModel: 'opencode/minimax-m2.5-free',
+      },
+      diagnostics: [],
+    });
+  });
+
+  it('prefers a runtime-compatible project proof over a newer stale one from the same cwd', async () => {
+    const filePath = path.join(tempDir, 'production-e2e-evidence.json');
+    const store = new OpenCodeProductionE2EEvidenceStore({
+      filePath,
+      clock: () => now,
+    });
+
+    await store.write(
+      passingEvidence({
+        evidenceId: 'stale-newer',
+        createdAt: '2026-04-21T12:05:00.000Z',
+        selectedModel: 'opencode/big-pickle',
+        projectPathFingerprint: buildOpenCodeProjectPathFingerprint('/repo-a'),
+        capabilitySnapshotId: 'cap-stale',
+      })
+    );
+    await store.write(
+      passingEvidence({
+        evidenceId: 'matching-older',
+        createdAt: '2026-04-21T12:00:00.000Z',
+        selectedModel: 'opencode/minimax-m2.5-free',
+        projectPathFingerprint: buildOpenCodeProjectPathFingerprint('/repo-a'),
+        capabilitySnapshotId: 'cap-current',
+      })
+    );
+
+    await expect(
+      store.read({
+        selectedModel: 'opencode/nemotron-3-super-free',
+        projectPathFingerprint: buildOpenCodeProjectPathFingerprint('/repo-a'),
+        opencodeVersion: '1.14.19',
+        binaryFingerprint: 'version:1.14.19',
+        capabilitySnapshotId: 'cap-current',
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      evidence: {
+        evidenceId: 'matching-older',
+        selectedModel: 'opencode/minimax-m2.5-free',
+      },
+      diagnostics: [],
     });
   });
 
@@ -218,9 +298,7 @@ describe('OpenCodeProductionE2EEvidence', () => {
     ).resolves.toMatchObject({
       ok: true,
       evidence: null,
-      diagnostics: [
-        'OpenCode production E2E evidence artifact has no entry for selected model opencode/minimax-m2.5-free and the current working directory',
-      ],
+      diagnostics: ['OpenCode production E2E evidence artifact has no entry for the current working directory'],
     });
   });
 });

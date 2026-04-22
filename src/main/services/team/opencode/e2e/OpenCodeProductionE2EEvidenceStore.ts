@@ -25,8 +25,16 @@ export interface OpenCodeProductionE2EEvidenceStoreOptions {
 }
 
 export interface OpenCodeProductionE2EEvidenceStoreReadOptions {
+  /**
+   * Preferred exact raw model id when a matching project-scoped proof exists.
+   * Production proof is primarily scoped to the runtime/project integration, not
+   * to a mandatory per-model whitelist.
+   */
   selectedModel?: string | null;
   projectPathFingerprint?: string | null;
+  opencodeVersion?: string | null;
+  binaryFingerprint?: string | null;
+  capabilitySnapshotId?: string | null;
 }
 
 export class OpenCodeProductionE2EEvidenceStore {
@@ -106,11 +114,48 @@ function selectEvidence(
 
   const modelId = options.selectedModel?.trim() ?? '';
   const projectPathFingerprint = options.projectPathFingerprint?.trim() ?? '';
-  if (modelId) {
-    const entries = Object.values(data.entriesByModel).filter(
-      (entry) => entry.selectedModel === modelId
+  const entries = Object.values(data.entriesByModel);
+  const pickBestForRuntime = (
+    candidates: OpenCodeProductionE2EEvidence[]
+  ): OpenCodeProductionE2EEvidence | null => {
+    const runtimeMatched = candidates.filter((entry) => runtimeIdentityMatches(entry, options));
+    return pickNewestEvidence(runtimeMatched.length > 0 ? runtimeMatched : candidates);
+  };
+
+  if (projectPathFingerprint) {
+    const pathEntries = entries.filter(
+      (entry) => entry.projectPathFingerprint === projectPathFingerprint
     );
-    if (entries.length === 0) {
+    if (pathEntries.length === 0) {
+      return {
+        evidence: null,
+        diagnostics: [
+          'OpenCode production E2E evidence artifact has no entry for the current working directory',
+        ],
+      };
+    }
+
+    if (modelId) {
+      const exactModelMatch = pickBestForRuntime(
+        pathEntries.filter((entry) => entry.selectedModel === modelId)
+      );
+      if (exactModelMatch) {
+        return {
+          evidence: exactModelMatch,
+          diagnostics: [],
+        };
+      }
+    }
+
+    return {
+      evidence: pickBestForRuntime(pathEntries),
+      diagnostics: [],
+    };
+  }
+
+  if (modelId) {
+    const exactModelEntries = entries.filter((entry) => entry.selectedModel === modelId);
+    if (exactModelEntries.length === 0) {
       return {
         evidence: null,
         diagnostics: [
@@ -119,32 +164,12 @@ function selectEvidence(
       };
     }
 
-    if (projectPathFingerprint) {
-      const exactMatch = pickNewestEvidence(
-        entries.filter((entry) => entry.projectPathFingerprint === projectPathFingerprint)
-      );
-      if (exactMatch) {
-        return {
-          evidence: exactMatch,
-          diagnostics: [],
-        };
-      }
-
-      return {
-        evidence: null,
-        diagnostics: [
-          `OpenCode production E2E evidence artifact has no entry for selected model ${modelId} and the current working directory`,
-        ],
-      };
-    }
-
     return {
-      evidence: pickNewestEvidence(entries),
+      evidence: pickNewestEvidence(exactModelEntries),
       diagnostics: [],
     };
   }
 
-  const entries = Object.values(data.entriesByModel);
   if (entries.length === 1) {
     return { evidence: entries[0] ?? null, diagnostics: [] };
   }
@@ -180,6 +205,31 @@ function upsertEvidence(
 
 function buildEvidenceKey(evidence: OpenCodeProductionE2EEvidence): string {
   return [evidence.selectedModel, evidence.projectPathFingerprint ?? 'global'].join('::');
+}
+
+function runtimeIdentityMatches(
+  evidence: OpenCodeProductionE2EEvidence,
+  options: OpenCodeProductionE2EEvidenceStoreReadOptions
+): boolean {
+  const expectedVersion = options.opencodeVersion?.trim() ?? '';
+  if (expectedVersion && evidence.version !== expectedVersion) {
+    return false;
+  }
+
+  const expectedBinaryFingerprint = options.binaryFingerprint?.trim() ?? '';
+  if (expectedBinaryFingerprint && evidence.binaryFingerprint !== expectedBinaryFingerprint) {
+    return false;
+  }
+
+  const expectedCapabilitySnapshotId = options.capabilitySnapshotId?.trim() ?? '';
+  if (
+    expectedCapabilitySnapshotId &&
+    evidence.capabilitySnapshotId !== expectedCapabilitySnapshotId
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 function pickNewestEvidence(

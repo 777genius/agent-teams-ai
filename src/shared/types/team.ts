@@ -10,8 +10,10 @@ export interface TeamMember {
   /** Opt-in runtime isolation for persistent teammates. Omitted means shared workspace. */
   isolation?: 'worktree';
   providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  fastMode?: TeamFastMode;
   color?: string;
   joinedAt?: number;
   cwd?: string;
@@ -767,8 +769,14 @@ export interface TeamMemberSnapshot {
   workflow?: string;
   isolation?: 'worktree';
   providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  selectedFastMode?: TeamFastMode;
+  resolvedFastMode?: boolean;
+  laneId?: string;
+  laneKind?: 'primary' | 'secondary';
+  laneOwnerProviderId?: TeamProviderId;
   cwd?: string;
   /** Set only when member's git branch differs from the lead's branch. */
   gitBranch?: string;
@@ -909,6 +917,16 @@ export interface PersistedTeamLaunchMemberSources {
 
 export interface PersistedTeamLaunchMemberState {
   name: string;
+  providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
+  model?: string;
+  effort?: EffortLevel;
+  selectedFastMode?: TeamFastMode;
+  resolvedFastMode?: boolean;
+  laneId?: string;
+  laneKind?: 'primary' | 'secondary';
+  laneOwnerProviderId?: TeamProviderId;
+  launchIdentity?: ProviderModelLaunchIdentity;
   launchState: MemberLaunchState;
   agentToolAccepted: boolean;
   runtimeAlive: boolean;
@@ -937,6 +955,7 @@ export interface PersistedTeamLaunchSnapshot {
   leadSessionId?: string;
   launchPhase: PersistedTeamLaunchPhase;
   expectedMembers: string[];
+  bootstrapExpectedMembers?: string[];
   members: Record<string, PersistedTeamLaunchMemberState>;
   summary: PersistedTeamLaunchSummary;
   teamLaunchState: TeamLaunchAggregateState;
@@ -962,6 +981,10 @@ export interface TeamAgentRuntimeEntry {
   alive: boolean;
   restartable: boolean;
   backendType?: TeamAgentRuntimeBackendType;
+  providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
+  laneId?: string;
+  laneKind?: 'primary' | 'secondary';
   pid?: number;
   runtimeModel?: string;
   rssBytes?: number;
@@ -1072,8 +1095,10 @@ export interface TeamProvisioningMemberInput {
   /** Opt-in: run this teammate in its own git worktree. */
   isolation?: 'worktree';
   providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  fastMode?: TeamFastMode;
 }
 
 export interface TeamCreateRequest {
@@ -1113,6 +1138,8 @@ export interface TeamCreateConfigRequest {
 export interface TeamCreateResponse {
   runId: string;
 }
+
+export type TeamProvisioningModelVerificationMode = 'compatibility' | 'deep';
 
 export interface TeamProvisioningPrepareResult {
   ready: boolean;

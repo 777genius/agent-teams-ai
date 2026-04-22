@@ -94,6 +94,10 @@ export interface OpenCodeProductionE2EGateExpectation {
   opencodeVersion: string | null;
   binaryFingerprint: string | null;
   capabilitySnapshotId: string | null;
+  /**
+   * The currently selected raw model id. Kept for observability and evidence
+   * lookup preference, but not as a hard production-proof gate.
+   */
   selectedModel: string | null;
   projectPathFingerprint?: string | null;
   requiredMcpTools?: string[];
@@ -373,14 +377,6 @@ function collectExpectedRuntimeDiagnostics(
   } else if (evidence.capabilitySnapshotId !== expected.capabilitySnapshotId) {
     diagnostics.push(
       'OpenCode production E2E evidence capability snapshot does not match current runtime'
-    );
-  }
-
-  if (!expected.selectedModel) {
-    diagnostics.push('OpenCode production gate cannot verify selected raw model id');
-  } else if (evidence.selectedModel !== expected.selectedModel) {
-    diagnostics.push(
-      `OpenCode production E2E evidence model ${evidence.selectedModel} does not match selected model ${expected.selectedModel}. Production launch is intentionally scoped to the exact raw model id; regenerate evidence with OPENCODE_E2E_MODEL=${expected.selectedModel}.`
     );
   }
 

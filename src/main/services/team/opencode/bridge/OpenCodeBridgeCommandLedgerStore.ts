@@ -20,6 +20,7 @@ export interface OpenCodeBridgeCommandLedgerEntry {
   requestId: string;
   command: OpenCodeBridgeCommandName;
   teamName: string;
+  laneId: string | null;
   runId: string | null;
   requestHash: string;
   responseHash: string | null;
@@ -33,6 +34,7 @@ export interface OpenCodeBridgeCommandLedgerEntry {
 export interface OpenCodeBridgeCommandLease {
   leaseId: string;
   teamName: string;
+  laneId: string | null;
   runId: string | null;
   command: OpenCodeBridgeCommandName;
   holderPeer: 'claude_team';
@@ -68,6 +70,7 @@ export class OpenCodeBridgeCommandLedger {
     requestId: string;
     command: OpenCodeBridgeCommandName;
     teamName: string;
+    laneId?: string | null;
     runId: string | null;
     requestHash: string;
   }): Promise<OpenCodeBridgeLedgerBeginResult> {
@@ -110,6 +113,7 @@ export class OpenCodeBridgeCommandLedger {
           requestId: input.requestId,
           command: input.command,
           teamName: input.teamName,
+          laneId: input.laneId ?? null,
           runId: input.runId,
           requestHash: input.requestHash,
           responseHash: null,
@@ -216,6 +220,7 @@ export class OpenCodeBridgeCommandLeaseStore {
 
   async acquire(input: {
     teamName: string;
+    laneId?: string | null;
     runId: string | null;
     command: OpenCodeBridgeCommandName;
     ttlMs: number;
@@ -233,6 +238,7 @@ export class OpenCodeBridgeCommandLeaseStore {
       const active = normalized.find(
         (lease) =>
           lease.teamName === input.teamName &&
+          lease.laneId === (input.laneId ?? null) &&
           lease.state === 'active' &&
           Date.parse(lease.expiresAt) > nowMs
       );
@@ -246,6 +252,7 @@ export class OpenCodeBridgeCommandLeaseStore {
       created = {
         leaseId: this.idFactory(),
         teamName: input.teamName,
+        laneId: input.laneId ?? null,
         runId: input.runId,
         command: input.command,
         holderPeer: 'claude_team',

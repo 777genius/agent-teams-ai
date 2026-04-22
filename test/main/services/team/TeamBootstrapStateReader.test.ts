@@ -477,4 +477,49 @@ describe('TeamBootstrapStateReader', () => {
       kind: 'launch',
     });
   });
+
+  it('ignores stale terminal bootstrap-only pending snapshots when canonical launch state is missing', () => {
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-04-22T15:00:00.000Z'));
+
+    const preferred = choosePreferredLaunchSnapshot(
+      {
+        version: 2,
+        teamName: 'atlas-hq-2',
+        updatedAt: '2026-04-09T20:35:57.962Z',
+        launchPhase: 'finished',
+        expectedMembers: ['alice', 'jack'],
+        members: {
+          alice: {
+            name: 'alice',
+            launchState: 'runtime_pending_bootstrap',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-04-09T20:35:57.962Z',
+          },
+          jack: {
+            name: 'jack',
+            launchState: 'runtime_pending_bootstrap',
+            agentToolAccepted: true,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            lastEvaluatedAt: '2026-04-09T20:35:57.962Z',
+          },
+        },
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 2,
+          failedCount: 0,
+          runtimeAlivePendingCount: 0,
+        },
+        teamLaunchState: 'partial_pending',
+      },
+      null
+    );
+
+    expect(preferred).toBeNull();
+    nowSpy.mockRestore();
+  });
 });

@@ -1,6 +1,7 @@
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import * as fs from 'fs';
@@ -26,26 +27,44 @@ function normalizeOptionalBackendId(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function normalizeFastMode(value: unknown): TeamMember['fastMode'] {
+  return value === 'inherit' || value === 'on' || value === 'off' ? value : undefined;
+}
+
 function normalizeMember(member: TeamMember): TeamMember | null {
   const trimmedName = member.name?.trim();
   if (!trimmedName) {
     return null;
   }
+  const providerId = normalizeOptionalTeamProviderId(member.providerId);
   return {
     name: trimmedName,
     role: typeof member.role === 'string' ? member.role.trim() || undefined : undefined,
     workflow: typeof member.workflow === 'string' ? member.workflow.trim() || undefined : undefined,
     isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
-    providerId: normalizeOptionalTeamProviderId(member.providerId),
+    providerId,
+    providerBackendId: migrateProviderBackendId(
+      providerId,
+      normalizeOptionalBackendId(member.providerBackendId)
+    ),
     model: typeof member.model === 'string' ? member.model.trim() || undefined : undefined,
     effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
+    fastMode: normalizeFastMode(member.fastMode),
     agentType:
       typeof member.agentType === 'string' ? member.agentType.trim() || undefined : undefined,
     color: typeof member.color === 'string' ? member.color.trim() || undefined : undefined,
     joinedAt: typeof member.joinedAt === 'number' ? member.joinedAt : undefined,
     agentId: typeof member.agentId === 'string' ? member.agentId : undefined,
+    cwd: typeof member.cwd === 'string' ? member.cwd.trim() || undefined : undefined,
     removedAt: typeof member.removedAt === 'number' ? member.removedAt : undefined,
   };
+}
+
+function buildActiveNameGuard(membersByName: Map<string, TeamMember>): (name: string) => boolean {
+  const activeNames = Array.from(membersByName.values())
+    .filter((member) => !member.removedAt)
+    .map((member) => member.name);
+  return createCliAutoSuffixNameGuard(activeNames);
 }
 
 export class TeamMembersMetaStore {
@@ -106,9 +125,11 @@ export class TeamMembersMetaStore {
       deduped.set(normalized.name, normalized);
     }
 
-    // Defense: drop CLI auto-suffixed duplicates (alice-2) when base name exists.
+    // Defense: drop CLI auto-suffixed duplicates (alice-2) only when the base
+    // name is still active. Removed base members must not hide active suffixed
+    // teammates after live mutation / rollback flows.
     const allNames = Array.from(deduped.keys());
-    const keepName = createCliAutoSuffixNameGuard(allNames);
+    const keepName = buildActiveNameGuard(deduped);
     for (const name of allNames) {
       if (!keepName(name)) {
         deduped.delete(name);
@@ -140,9 +161,11 @@ export class TeamMembersMetaStore {
       deduped.set(normalized.name, normalized);
     }
 
-    // Defense: drop CLI auto-suffixed duplicates (alice-2) when base name exists.
+    // Defense: drop CLI auto-suffixed duplicates (alice-2) only when the base
+    // name is still active. Removed base members must not hide active suffixed
+    // teammates after live mutation / rollback flows.
     const allNames = Array.from(deduped.keys());
-    const keepName = createCliAutoSuffixNameGuard(allNames);
+    const keepName = buildActiveNameGuard(deduped);
     for (const name of allNames) {
       if (!keepName(name)) {
         deduped.delete(name);

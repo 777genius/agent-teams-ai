@@ -381,6 +381,308 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     );
   });
 
+  it('checks every selected OpenCode model instead of only the first one', async () => {
+    const prepare = vi.fn(async (input: { model?: string }) => {
+      if (input.model === 'opencode/nemotron-3-super-free') {
+        return {
+          ok: false as const,
+          providerId: 'opencode' as const,
+          reason: 'e2e_missing',
+          retryable: false,
+          diagnostics: [
+            'OpenCode production E2E evidence artifact has no entry for selected model opencode/nemotron-3-super-free',
+          ],
+          warnings: [],
+        };
+      }
+
+      return {
+        ok: true as const,
+        providerId: 'opencode' as const,
+        modelId: input.model ?? null,
+        diagnostics: [],
+        warnings: [],
+      };
+    });
+    const registry = new TeamRuntimeAdapterRegistry([
+      {
+        providerId: 'opencode',
+        prepare,
+        launch: vi.fn(),
+        reconcile: vi.fn(),
+        stop: vi.fn(),
+      } as any,
+    ]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+      modelIds: ['opencode/minimax-m2.5-free', 'opencode/nemotron-3-super-free'],
+    });
+
+    expect(prepare).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        providerId: 'opencode',
+        model: 'opencode/minimax-m2.5-free',
+        runtimeOnly: false,
+      })
+    );
+    expect(prepare).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        providerId: 'opencode',
+        model: 'opencode/nemotron-3-super-free',
+        runtimeOnly: false,
+      })
+    );
+    expect(result.ready).toBe(false);
+    expect(result.details).toContain(
+      'Selected model opencode/minimax-m2.5-free verified for launch.'
+    );
+    expect(result.message).toBe(
+      'Selected model opencode/nemotron-3-super-free is unavailable. OpenCode production E2E evidence artifact has no entry for selected model opencode/nemotron-3-super-free'
+    );
+  });
+
+  it('runs OpenCode model verification with bounded concurrency and preserves model order', async () => {
+    const started: string[] = [];
+    let activeCount = 0;
+    let maxActiveCount = 0;
+    const releases = new Map<string, () => void>();
+    const prepare = vi.fn((input: { model?: string }) => {
+      const modelId = input.model ?? 'unknown-model';
+      started.push(modelId);
+      activeCount += 1;
+      maxActiveCount = Math.max(maxActiveCount, activeCount);
+
+      return new Promise<any>((resolve) => {
+        releases.set(modelId, () => {
+          activeCount -= 1;
+          if (modelId === 'opencode/big-pickle') {
+            resolve({
+              ok: false as const,
+              providerId: 'opencode' as const,
+              reason: 'provider_busy',
+              retryable: true,
+              diagnostics: ['provider busy'],
+              warnings: [],
+            });
+            return;
+          }
+
+          resolve({
+            ok: true as const,
+            providerId: 'opencode' as const,
+            modelId,
+            diagnostics: [],
+            warnings: [],
+          });
+        });
+      });
+    });
+    const registry = new TeamRuntimeAdapterRegistry([
+      {
+        providerId: 'opencode',
+        prepare,
+        launch: vi.fn(),
+        reconcile: vi.fn(),
+        stop: vi.fn(),
+      } as any,
+    ]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const resultPromise = svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+      modelIds: [
+        'opencode/minimax-m2.5-free',
+        'opencode/nemotron-3-super-free',
+        'opencode/big-pickle',
+      ],
+    });
+
+    await vi.waitFor(() =>
+      expect(started).toEqual([
+        'opencode/minimax-m2.5-free',
+        'opencode/nemotron-3-super-free',
+      ])
+    );
+    expect(maxActiveCount).toBe(2);
+    expect(releases.has('opencode/big-pickle')).toBe(false);
+
+    releases.get('opencode/nemotron-3-super-free')?.();
+    await vi.waitFor(() =>
+      expect(started).toEqual([
+        'opencode/minimax-m2.5-free',
+        'opencode/nemotron-3-super-free',
+        'opencode/big-pickle',
+      ])
+    );
+    expect(maxActiveCount).toBe(2);
+
+    releases.get('opencode/big-pickle')?.();
+    releases.get('opencode/minimax-m2.5-free')?.();
+
+    const result = await resultPromise;
+
+    expect(result.ready).toBe(true);
+    expect(result.details).toEqual([
+      'Selected model opencode/minimax-m2.5-free verified for launch.',
+      'Selected model opencode/nemotron-3-super-free verified for launch.',
+    ]);
+    expect(result.warnings).toEqual([
+      'Selected model opencode/big-pickle could not be verified. provider busy',
+    ]);
+  });
+
+  it('runs OpenCode compatibility-only selected model checks without the deep execution probe', async () => {
+    const prepare = vi.fn(async (input: { model?: string; runtimeOnly?: boolean }) => ({
+      ok: true as const,
+      providerId: 'opencode' as const,
+      modelId: input.model ?? null,
+      diagnostics: [],
+      warnings: [],
+    }));
+    const registry = new TeamRuntimeAdapterRegistry([
+      {
+        providerId: 'opencode',
+        prepare,
+        getLastOpenCodeTeamLaunchReadiness: vi.fn(() => ({
+          state: 'ready',
+          launchAllowed: true,
+          modelId: 'openrouter/minimax-m2.5-free',
+          availableModels: [
+            'opencode/minimax-m2.5-free',
+            'opencode/nemotron-3-super-free',
+          ],
+          opencodeVersion: '1.0.0',
+          installMethod: 'unknown',
+          binaryPath: 'opencode',
+          hostHealthy: true,
+          appMcpConnected: true,
+          requiredToolsPresent: true,
+          permissionBridgeReady: true,
+          runtimeStoresReady: true,
+          supportLevel: 'production_supported',
+          missing: [],
+          diagnostics: [],
+          evidence: {
+            capabilitiesReady: true,
+            mcpToolProofRoute: 'mcp:tools/list',
+            observedMcpTools: [],
+            runtimeStoreReadinessReason: 'runtime_store_manifest_valid',
+          },
+        })),
+        launch: vi.fn(),
+        reconcile: vi.fn(),
+        stop: vi.fn(),
+      } as any,
+    ]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+      modelIds: ['opencode/minimax-m2.5-free', 'opencode/nemotron-3-super-free'],
+      modelVerificationMode: 'compatibility',
+    });
+
+    expect(result.ready).toBe(true);
+    expect(result.details).toEqual([
+      'Selected model opencode/minimax-m2.5-free is compatible. Deep verification pending.',
+      'Selected model opencode/nemotron-3-super-free is compatible. Deep verification pending.',
+    ]);
+    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(prepare).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: 'opencode',
+        model: undefined,
+        runtimeOnly: true,
+      })
+    );
+  });
+
+  it('treats retryable OpenCode compatibility failures as blocking selected-model diagnostics', async () => {
+    const prepare = vi.fn(async () => ({
+      ok: false as const,
+      providerId: 'opencode' as const,
+      reason: 'not_authenticated',
+      retryable: true,
+      diagnostics: ['OpenCode provider authentication failed'],
+      warnings: [],
+    }));
+    const registry = new TeamRuntimeAdapterRegistry([
+      {
+        providerId: 'opencode',
+        prepare,
+        launch: vi.fn(),
+        reconcile: vi.fn(),
+        stop: vi.fn(),
+      } as any,
+    ]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+      modelIds: ['opencode/minimax-m2.5-free'],
+      modelVerificationMode: 'compatibility',
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe(
+      'Selected model opencode/minimax-m2.5-free could not be verified. OpenCode provider authentication failed'
+    );
+    expect(result.warnings).toEqual([
+      'Selected model opencode/minimax-m2.5-free could not be verified. OpenCode provider authentication failed',
+    ]);
+  });
+
+  it('normalizes unexpected OpenCode model prepare exceptions into a blocking diagnostic', async () => {
+    const prepare = vi.fn(async (input: { model?: string }) => {
+      if (input.model === 'opencode/nemotron-3-super-free') {
+        throw new Error('bridge exploded');
+      }
+
+      return {
+        ok: true as const,
+        providerId: 'opencode' as const,
+        modelId: input.model ?? null,
+        diagnostics: [],
+        warnings: [],
+      };
+    });
+    const registry = new TeamRuntimeAdapterRegistry([
+      {
+        providerId: 'opencode',
+        prepare,
+        launch: vi.fn(),
+        reconcile: vi.fn(),
+        stop: vi.fn(),
+      } as any,
+    ]);
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(registry);
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      forceFresh: true,
+      modelIds: ['opencode/minimax-m2.5-free', 'opencode/nemotron-3-super-free'],
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.details).toEqual(['Selected model opencode/minimax-m2.5-free verified for launch.']);
+    expect(result.message).toBe(
+      'Selected model opencode/nemotron-3-super-free is unavailable. bridge exploded'
+    );
+  });
+
   it('keys the prepare probe cache by cwd', async () => {
     const svc = new TeamProvisioningService();
     vi.spyOn(svc as any, 'buildProvisioningEnv').mockResolvedValue({
