@@ -269,7 +269,7 @@ describe('buildTeamProvisioningPresentation', () => {
     expect(presentation?.panelMessage).toBe('1 teammate still joining');
   });
 
-  it('counts permission-blocked teammates as still joining while launch is finishing', () => {
+  it('surfaces permission-blocked teammates as awaiting approval while launch is finishing', () => {
     const presentation = buildTeamProvisioningPresentation({
       progress: {
         runId: 'run-4c',
@@ -329,8 +329,72 @@ describe('buildTeamProvisioningPresentation', () => {
     });
 
     expect(presentation?.compactTitle).toBe('Finishing launch');
-    expect(presentation?.compactDetail).toBe('1 teammate still joining');
-    expect(presentation?.panelMessage).toBe('1 teammate still joining');
+    expect(presentation?.compactDetail).toBe('1 teammate awaiting permission approval');
+    expect(presentation?.panelMessage).toBe('1 teammate awaiting permission approval');
+  });
+
+  it('surfaces permission-blocked teammates as awaiting approval while launch is still active', () => {
+    const presentation = buildTeamProvisioningPresentation({
+      progress: {
+        runId: 'run-4d',
+        teamName: 'opencode-team',
+        state: 'finalizing',
+        startedAt: '2026-04-13T10:00:00.000Z',
+        updatedAt: '2026-04-13T10:00:08.000Z',
+        message: 'Waiting for runtime confirmation',
+        messageSeverity: undefined,
+        pid: 4321,
+        cliLogsTail: '',
+        assistantOutput: '',
+      },
+      members: [
+        {
+          name: 'team-lead',
+          agentType: 'team-lead',
+          status: 'active',
+          currentTaskId: null,
+          taskCount: 0,
+          lastActiveAt: null,
+          messageCount: 0,
+        },
+        {
+          name: 'bob',
+          agentType: 'engineer',
+          status: 'unknown',
+          currentTaskId: null,
+          taskCount: 0,
+          lastActiveAt: null,
+          messageCount: 0,
+        },
+      ],
+      memberSpawnStatuses: {
+        bob: {
+          status: 'online',
+          launchState: 'runtime_pending_permission',
+          updatedAt: '2026-04-13T10:00:07.000Z',
+          runtimeAlive: true,
+          livenessSource: 'process',
+          bootstrapConfirmed: false,
+          hardFailure: false,
+          agentToolAccepted: true,
+          pendingPermissionRequestIds: ['perm_1'],
+          firstSpawnAcceptedAt: '2026-04-13T10:00:01.000Z',
+        },
+      },
+      memberSpawnSnapshot: {
+        expectedMembers: ['bob'],
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 1,
+        },
+      },
+    });
+
+    expect(presentation?.compactTitle).toBe('Launching team');
+    expect(presentation?.compactDetail).toBe('1 teammate awaiting permission approval');
+    expect(presentation?.panelMessage).toBe('1 teammate awaiting permission approval');
   });
 
   it('keeps a generic failed teammate message while launch is still active if only persisted failure counts remain', () => {
