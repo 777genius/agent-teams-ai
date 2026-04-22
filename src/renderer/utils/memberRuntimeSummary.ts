@@ -45,14 +45,25 @@ export function resolveMemberRuntimeSummary(
   spawnEntry: MemberSpawnStatusEntry | undefined,
   runtimeEntry?: TeamAgentRuntimeEntry
 ): string | undefined {
+  const memberProviderBackendId = (member as ResolvedTeamMember & { providerBackendId?: string })
+    .providerBackendId;
   const configuredProvider: TeamProviderId =
     member.providerId ?? launchParams?.providerId ?? 'anthropic';
-  const configuredModel = member.model?.trim() || launchParams?.model?.trim() || '';
-  const configuredEffort = member.effort ?? launchParams?.effort;
+  const inheritsLeadRuntimeDefaults =
+    member.providerId == null ||
+    launchParams?.providerId == null ||
+    member.providerId === launchParams.providerId;
+  const configuredModel =
+    member.model?.trim() || (inheritsLeadRuntimeDefaults ? launchParams?.model?.trim() || '' : '');
+  const configuredEffort =
+    member.effort ?? (inheritsLeadRuntimeDefaults ? launchParams?.effort : undefined);
   const runtimeModel = spawnEntry?.runtimeModel?.trim() || runtimeEntry?.runtimeModel?.trim();
+  const configuredProviderBackendId =
+    memberProviderBackendId ??
+    (inheritsLeadRuntimeDefaults ? launchParams?.providerBackendId : undefined);
   const backendLabel = normalizeMemberBackendLabel(
     configuredProvider,
-    formatTeamProviderBackendLabel(configuredProvider, launchParams?.providerBackendId)
+    formatTeamProviderBackendLabel(configuredProvider, configuredProviderBackendId)
   );
   const memorySuffix =
     typeof runtimeEntry?.rssBytes === 'number' && runtimeEntry.rssBytes > 0

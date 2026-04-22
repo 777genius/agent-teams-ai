@@ -4,7 +4,9 @@ import { resolveMemberRuntimeSummary } from '@renderer/utils/memberRuntimeSummar
 
 import type { MemberSpawnStatusEntry, ResolvedTeamMember } from '@shared/types';
 
-function createMember(overrides: Partial<ResolvedTeamMember> = {}): ResolvedTeamMember {
+type TestResolvedTeamMember = ResolvedTeamMember & { providerBackendId?: string };
+
+function createMember(overrides: Partial<TestResolvedTeamMember> = {}): TestResolvedTeamMember {
   return {
     name: 'alice',
     agentId: 'alice@test-team',
@@ -117,5 +119,28 @@ describe('resolveMemberRuntimeSummary', () => {
         undefined
       )
     ).toBe('5.4 Mini · Medium · Codex');
+  });
+
+  it('does not leak the lead backend label into OpenCode side-lane members', () => {
+    const member = createMember({
+      providerId: 'opencode',
+      providerBackendId: undefined,
+      model: 'opencode/nemotron-3-super-free',
+      effort: undefined,
+    });
+
+    expect(
+      resolveMemberRuntimeSummary(
+        member,
+        {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'medium',
+          limitContext: false,
+        },
+        undefined
+      )
+    ).toBe('nemotron-3-super-free · via OpenCode');
   });
 });
