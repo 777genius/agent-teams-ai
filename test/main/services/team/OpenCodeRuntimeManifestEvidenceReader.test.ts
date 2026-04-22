@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   OpenCodeRuntimeManifestEvidenceReader,
@@ -286,6 +286,67 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
             `OpenCode lane ${laneId} is marked active in lanes.json, but no lane state exists on disk.`,
           ],
         },
+      },
+    });
+  });
+
+  it('quarantines malformed lanes.json and falls back to an empty index', async () => {
+    const teamName = 'team-zeta';
+    const runtimeDir = getOpenCodeTeamRuntimeDirectory(tempDir, teamName);
+    const filePath = getOpenCodeRuntimeLaneIndexPath(tempDir, teamName);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    try {
+      await fs.mkdir(runtimeDir, { recursive: true });
+      await fs.writeFile(
+        filePath,
+        ['{', '  "version": 1,', '  "updatedAt": "2026-04-22T10:00:00.000Z",', '  "lanes": {}', '}', '}'].join('\n'),
+        'utf8'
+      );
+
+      await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toEqual({
+        version: 1,
+        updatedAt: expect.any(String),
+        lanes: {},
+      });
+      await expect(fs.readFile(filePath, 'utf8')).rejects.toThrow();
+
+      const runtimeEntries = await fs.readdir(runtimeDir);
+      expect(runtimeEntries.some((entry) => /^lanes\.invalid\.\d+\.json$/.test(entry))).toBe(true);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('serializes concurrent lane index upserts without losing sibling lanes', async () => {
+    const teamName = 'team-eta';
+
+    await Promise.all([
+      upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId: 'secondary:opencode:bob',
+        state: 'active',
+      }),
+      upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId: 'secondary:opencode:jack',
+        state: 'active',
+      }),
+      upsertOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: tempDir,
+        teamName,
+        laneId: 'secondary:opencode:tom',
+        state: 'active',
+      }),
+    ]);
+
+    await expect(readOpenCodeRuntimeLaneIndex(tempDir, teamName)).resolves.toMatchObject({
+      lanes: {
+        'secondary:opencode:bob': { state: 'active' },
+        'secondary:opencode:jack': { state: 'active' },
+        'secondary:opencode:tom': { state: 'active' },
       },
     });
   });

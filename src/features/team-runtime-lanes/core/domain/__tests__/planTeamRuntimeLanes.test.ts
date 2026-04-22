@@ -64,6 +64,54 @@ describe('planTeamRuntimeLanes', () => {
     });
   });
 
+  it('allows a non-OpenCode lead with only OpenCode teammates and leaves the primary lane teammate roster empty', () => {
+    const result = planTeamRuntimeLanes({
+      leadProviderId: 'codex',
+      members: [
+        { name: 'alice', providerId: 'opencode', model: 'big-pickle' },
+        { name: 'bob', providerId: 'opencode', model: 'minimax-m2.5-free' },
+        { name: 'tom', providerId: 'opencode', model: 'ling-2.6-flash-free' },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      plan: {
+        mode: 'mixed_opencode_side_lanes',
+        primaryMembers: [],
+        sideLanes: [
+          {
+            laneId: 'secondary:opencode:alice',
+            providerId: 'opencode',
+            member: expect.objectContaining({
+              name: 'alice',
+              providerId: 'opencode',
+              model: 'big-pickle',
+            }),
+          },
+          {
+            laneId: 'secondary:opencode:bob',
+            providerId: 'opencode',
+            member: expect.objectContaining({
+              name: 'bob',
+              providerId: 'opencode',
+              model: 'minimax-m2.5-free',
+            }),
+          },
+          {
+            laneId: 'secondary:opencode:tom',
+            providerId: 'opencode',
+            member: expect.objectContaining({
+              name: 'tom',
+              providerId: 'opencode',
+              model: 'ling-2.6-flash-free',
+            }),
+          },
+        ],
+      },
+    });
+  });
+
   it('creates a secondary OpenCode lane for an Anthropic-led mixed team', () => {
     const result = planTeamRuntimeLanes({
       leadProviderId: 'anthropic',

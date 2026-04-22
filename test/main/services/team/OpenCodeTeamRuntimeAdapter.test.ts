@@ -80,6 +80,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         alice: {
           sessionId: 'oc-session-1',
           launchState: 'confirmed_alive',
+          runtimePid: 123,
           model: 'openai/gpt-5.4-mini',
           evidence: [
             { kind: 'required_tools_proven', observedAt: '2026-04-21T00:00:00.000Z' },
@@ -116,6 +117,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
           providerId: 'opencode',
           launchState: 'confirmed_alive',
           sessionId: 'oc-session-1',
+          runtimePid: 123,
           hardFailure: false,
         },
       },

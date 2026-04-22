@@ -1,5 +1,6 @@
 import type { TeamProviderId } from '@shared/types';
 import type { CliProviderId } from '@shared/types/cliInstaller';
+import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 export const GEMINI_UI_FROZEN = true;
 export const GEMINI_UI_DISABLED_REASON = 'Gemini in development';
@@ -33,14 +34,11 @@ export function normalizeCreateLaunchProviderForUi(
     return 'anthropic';
   }
 
-  // return providerId === 'codex' || providerId === 'gemini' ? providerId : 'anthropic';
-  if (providerId === 'codex') {
-    return 'codex';
-  }
-  if (providerId === 'gemini' && GEMINI_UI_FROZEN) {
+  const normalizedProviderId = normalizeOptionalTeamProviderId(providerId);
+  if (normalizedProviderId === 'gemini' && GEMINI_UI_FROZEN) {
     return 'anthropic';
   }
-  return providerId === 'anthropic' ? 'anthropic' : 'anthropic';
+  return normalizedProviderId ?? 'anthropic';
 }
 
 export function isCreateLaunchProviderDisabled(

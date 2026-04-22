@@ -64,6 +64,7 @@ export interface OpenCodeTeamMemberLaunchCommandData {
   sessionId: string;
   launchState: OpenCodeTeamMemberLaunchBridgeState;
   model: string;
+  runtimePid?: number;
   evidence: Array<{ kind: string; observedAt: string }>;
 }
 

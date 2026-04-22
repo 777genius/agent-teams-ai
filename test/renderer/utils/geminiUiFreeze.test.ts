@@ -26,4 +26,8 @@ describe('geminiUiFreeze', () => {
   it('keeps codex available when multimodel is enabled', () => {
     expect(normalizeCreateLaunchProviderForUi('codex', true)).toBe('codex');
   });
+
+  it('keeps opencode available when multimodel is enabled', () => {
+    expect(normalizeCreateLaunchProviderForUi('opencode', true)).toBe('opencode');
+  });
 });

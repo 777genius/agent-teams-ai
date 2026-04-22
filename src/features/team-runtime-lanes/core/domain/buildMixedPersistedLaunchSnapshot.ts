@@ -163,9 +163,7 @@ function createSecondaryLaneMemberState(
   const providerId =
     normalizeOptionalTeamProviderId(params.member.providerId) ?? params.leadDefaults.providerId;
   const evidence = params.evidence;
-  const hardFailureReason =
-    evidence?.hardFailureReason ??
-    (!evidence && params.pendingReason ? params.pendingReason : undefined);
+  const hardFailureReason = evidence?.hardFailureReason;
   const launchState =
     evidence?.launchState ??
     deriveMemberLaunchState({
@@ -213,7 +211,11 @@ function createSecondaryLaneMemberState(
           inboxHeartbeat: evidence.bootstrapConfirmed === true || undefined,
         }
       : undefined,
-    diagnostics: evidence?.diagnostics?.length ? [...evidence.diagnostics] : undefined,
+    diagnostics: evidence?.diagnostics?.length
+      ? [...evidence.diagnostics]
+      : !evidence && params.pendingReason
+        ? [params.pendingReason]
+        : undefined,
   };
   base.diagnostics = base.diagnostics?.length ? base.diagnostics : buildDiagnostics(base);
   return base;

@@ -1191,6 +1191,35 @@ interface MixedSecondaryRuntimeLaneState {
   diagnostics: string[];
 }
 
+function createUnexpectedMixedSecondaryLaneFailureResult(input: {
+  runId: string;
+  teamName: string;
+  memberName: string;
+  message: string;
+}): TeamRuntimeLaunchResult {
+  return {
+    runId: input.runId,
+    teamName: input.teamName,
+    launchPhase: 'finished',
+    teamLaunchState: 'partial_failure',
+    members: {
+      [input.memberName]: {
+        memberName: input.memberName,
+        providerId: 'opencode',
+        launchState: 'failed_to_start',
+        agentToolAccepted: false,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: true,
+        hardFailureReason: input.message,
+        diagnostics: [input.message],
+      },
+    },
+    warnings: [],
+    diagnostics: [input.message],
+  };
+}
+
 type LeadActivityState = 'active' | 'idle' | 'offline';
 
 type ProvisioningAuthSource =
@@ -1270,6 +1299,7 @@ interface LiveTeamAgentRuntimeMetadata {
   backendType?: TeamAgentRuntimeBackendType;
   agentId?: string;
   pid?: number;
+  metricsPid?: number;
   model?: string;
   tmuxPaneId?: string;
 }
@@ -3142,11 +3172,12 @@ function emitLogsProgress(run: ProvisioningRun): void {
 
 function buildCliExitError(code: number | null, stdoutText: string, stderrText: string): string {
   const trimmed = buildCombinedLogs(stdoutText, stderrText).trim();
+  const cliCommandLabel = getConfiguredCliCommandLabel();
   if (trimmed.length > 0) {
     if (trimmed.toLowerCase().includes('please run /login')) {
       return (
-        'Claude CLI reports it is not authenticated ("Please run /login"). ' +
-        'Run `claude auth login` (or start `claude` and run `/login`) to authenticate, then retry. ' +
+        `${cliCommandLabel} reports it is not authenticated ("Please run /login"). ` +
+        'Run the CLI in a normal terminal and complete login, then retry. ' +
         'For automation/headless use, set `ANTHROPIC_API_KEY` for `-p` mode.'
       );
     }
@@ -3154,10 +3185,10 @@ function buildCliExitError(code: number | null, stdoutText: string, stderrText: 
   }
 
   if (code === 1) {
-    return 'Claude CLI exited with code 1. Typical causes: missing auth/onboarding for CLI, or command requiring interactive TTY. Run `claude` in a normal terminal, complete setup, and retry.';
+    return `${cliCommandLabel} exited with code 1 without stdout/stderr. Typical causes: missing auth/onboarding, interactive TTY requirements, or an early bootstrap/runtime crash. Check \`~/.claude/debug/latest\` for the real stack and retry.`;
   }
 
-  return `Claude CLI exited with code ${code ?? 'unknown'}`;
+  return `${cliCommandLabel} exited with code ${code ?? 'unknown'}`;
 }
 
 interface CachedProbeResult {
@@ -6167,7 +6198,7 @@ export class TeamProvisioningService {
       runtimePids.add(leadPid);
     }
     for (const metadata of liveRuntimeByMember.values()) {
-      const memberPid = metadata.pid;
+      const memberPid = metadata.pid ?? metadata.metricsPid;
       if (typeof memberPid === 'number' && Number.isFinite(memberPid) && memberPid > 0) {
         runtimePids.add(memberPid);
       }
@@ -6260,12 +6291,38 @@ export class TeamProvisioningService {
         persistedRuntimeMember?.backendType,
         false
       );
-      const restartable = backendType !== 'in-process';
+      const rssPid = liveRuntimeMember?.pid ?? liveRuntimeMember?.metricsPid;
+      const isOpenCodeMember =
+        (launchMember?.providerId ?? normalizeOptionalTeamProviderId(member.providerId)) ===
+        'opencode';
+      const isSharedOpenCodeHost =
+        isOpenCodeMember &&
+        !liveRuntimeMember?.pid &&
+        typeof liveRuntimeMember?.metricsPid === 'number' &&
+        liveRuntimeMember.metricsPid > 0;
+      const displayPid = liveRuntimeMember?.pid ?? (isSharedOpenCodeHost ? rssPid : undefined);
+      const restartable = isOpenCodeMember
+        ? Boolean(liveRuntimeMember?.pid)
+        : isSharedOpenCodeHost
+          ? false
+          : backendType !== 'in-process';
       const runtimeModel =
         liveRuntimeMember?.model ??
         launchMember?.model?.trim() ??
         member.model?.trim() ??
         undefined;
+      let rssBytes = rssPid ? rssBytesByPid.get(rssPid) : undefined;
+      if (rssBytes == null && isSharedOpenCodeHost && typeof rssPid === 'number' && rssPid > 0) {
+        try {
+          const refreshedStat = await pidusage(rssPid, { maxage: 0 });
+          if (Number.isFinite(refreshedStat.memory) && refreshedStat.memory >= 0) {
+            rssBytesByPid.set(rssPid, refreshedStat.memory);
+            rssBytes = refreshedStat.memory;
+          }
+        } catch {
+          // Shared OpenCode host can exit between discovery and the targeted RSS refresh.
+        }
+      }
 
       snapshotMembers[memberName] = {
         memberName,
@@ -6278,11 +6335,9 @@ export class TeamProvisioningService {
           : {}),
         ...(launchMember?.laneId ? { laneId: launchMember.laneId } : {}),
         ...(launchMember?.laneKind ? { laneKind: launchMember.laneKind } : {}),
-        ...(liveRuntimeMember?.pid ? { pid: liveRuntimeMember.pid } : {}),
+        ...(displayPid ? { pid: displayPid } : {}),
         ...(runtimeModel ? { runtimeModel } : {}),
-        ...(liveRuntimeMember?.pid && rssBytesByPid.has(liveRuntimeMember.pid)
-          ? { rssBytes: rssBytesByPid.get(liveRuntimeMember.pid) }
-          : {}),
+        ...(typeof rssBytes === 'number' && rssBytes >= 0 ? { rssBytes } : {}),
         updatedAt,
       };
     }
@@ -11474,12 +11529,32 @@ export class TeamProvisioningService {
       ) {
         continue;
       }
+      const configuredRuntimeMember = member as unknown as Record<string, unknown>;
+      const configuredAgentId =
+        typeof configuredRuntimeMember.agentId === 'string'
+          ? configuredRuntimeMember.agentId.trim()
+          : '';
+      const configuredTmuxPaneId =
+        typeof configuredRuntimeMember.tmuxPaneId === 'string'
+          ? configuredRuntimeMember.tmuxPaneId.trim()
+          : '';
+      const configuredBackendType =
+        typeof configuredRuntimeMember.backendType === 'string'
+          ? configuredRuntimeMember.backendType
+          : undefined;
       const runtimeModel =
         member.model?.trim() ||
         this.findEffectiveRunMemberModel(run, memberName) ||
         this.findMetaMemberModel(metaMembers, memberName);
       upsertMetadata(memberName, {
         ...(runtimeModel ? { model: runtimeModel } : {}),
+        ...(configuredAgentId ? { agentId: configuredAgentId } : {}),
+        ...(configuredTmuxPaneId ? { tmuxPaneId: configuredTmuxPaneId } : {}),
+        ...(normalizeTeamAgentRuntimeBackendType(configuredBackendType, false)
+          ? {
+              backendType: normalizeTeamAgentRuntimeBackendType(configuredBackendType, false),
+            }
+          : {}),
       });
     }
 
@@ -11511,6 +11586,23 @@ export class TeamProvisioningService {
       }
       upsertMetadata(memberName, {
         ...(member.model?.trim() ? { model: member.model.trim() } : {}),
+      });
+    }
+
+    for (const lane of run?.mixedSecondaryLanes ?? []) {
+      const memberName = lane.member.name?.trim() ?? '';
+      if (!memberName || this.isMemberRemovedInMeta(metaMembers, memberName)) {
+        continue;
+      }
+      const evidence = lane.result?.members[memberName];
+      const runtimeModel = lane.member.model?.trim() || undefined;
+      upsertMetadata(memberName, {
+        backendType: 'process',
+        alive: evidence?.runtimeAlive === true || evidence?.agentToolAccepted === true,
+        ...(runtimeModel ? { model: runtimeModel } : {}),
+        ...(typeof evidence?.runtimePid === 'number' && evidence.runtimePid > 0
+          ? { metricsPid: evidence.runtimePid }
+          : {}),
       });
     }
 
@@ -11551,13 +11643,19 @@ export class TeamProvisioningService {
             : undefined;
       const status = this.findTrackedMemberSpawnStatus(run, memberName);
       const mayInferAliveFromStatusOnly = status?.launchState !== 'failed_to_start';
+      const sharedRuntimeAlive =
+        backendType === 'process' &&
+        typeof metadata.metricsPid === 'number' &&
+        metadata.metricsPid > 0;
       const alive =
         typeof resolvedPid === 'number' && resolvedPid > 0
           ? true
           : backendType === 'tmux'
             ? false
-            : mayInferAliveFromStatusOnly &&
-              Boolean(status?.runtimeAlive || status?.bootstrapConfirmed);
+            : sharedRuntimeAlive
+              ? true
+              : mayInferAliveFromStatusOnly &&
+                Boolean(status?.runtimeAlive || status?.bootstrapConfirmed);
       metadataByMember.set(memberName, {
         ...metadata,
         alive,
@@ -11866,7 +11964,7 @@ export class TeamProvisioningService {
     launchPhase: PersistedTeamLaunchPhase
   ): PersistedTeamLaunchSnapshot | null {
     const mixedSecondaryLanes = run.mixedSecondaryLanes ?? [];
-    if (!run.isLaunch || mixedSecondaryLanes.length === 0) {
+    if (mixedSecondaryLanes.length === 0) {
       return null;
     }
 
@@ -12130,6 +12228,47 @@ export class TeamProvisioningService {
     }
   }
 
+  private launchQueuedMixedSecondaryLaneInBackground(
+    run: ProvisioningRun,
+    lane: MixedSecondaryRuntimeLaneState
+  ): void {
+    if (lane.state !== 'queued') {
+      return;
+    }
+
+    lane.state = 'launching';
+    lane.runId = lane.runId ?? randomUUID();
+
+    void (async () => {
+      try {
+        await this.launchSingleMixedSecondaryLane(run, lane);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.warn(
+          `[${run.teamName}] OpenCode secondary lane ${lane.laneId} crashed during launch orchestration: ${message}`
+        );
+        lane.state = 'finished';
+        lane.result = createUnexpectedMixedSecondaryLaneFailureResult({
+          runId: lane.runId ?? randomUUID(),
+          teamName: run.teamName,
+          memberName: lane.member.name,
+          message,
+        });
+        lane.warnings = [];
+        lane.diagnostics = [...lane.diagnostics, message];
+        await upsertOpenCodeRuntimeLaneIndexEntry({
+          teamsBasePath: getTeamsBasePath(),
+          teamName: run.teamName,
+          laneId: lane.laneId,
+          state: 'degraded',
+          diagnostics: [message],
+        }).catch(() => undefined);
+        this.deleteSecondaryRuntimeRun(run.teamName, lane.laneId);
+        await this.publishMixedSecondaryLaneStatusChange(run, lane).catch(() => undefined);
+      }
+    })();
+  }
+
   private async launchMixedSecondaryLaneIfNeeded(
     run: ProvisioningRun
   ): Promise<PersistedTeamLaunchSnapshot | null> {
@@ -12170,7 +12309,7 @@ export class TeamProvisioningService {
     }
 
     for (const lane of mixedSecondaryLanes) {
-      await this.launchSingleMixedSecondaryLane(run, lane);
+      this.launchQueuedMixedSecondaryLaneInBackground(run, lane);
     }
 
     return this.persistLaunchStateSnapshot(run, this.getMixedSecondaryLaunchPhase(run));

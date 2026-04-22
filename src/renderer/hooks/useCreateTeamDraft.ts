@@ -17,6 +17,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { createMemberDraft } from '@renderer/components/team/members/membersEditorUtils';
 import {
+  setStoredCreateTeamMemberRuntimePreferences,
+  getStoredCreateTeamSyncModelsWithLead,
+  setStoredCreateTeamSyncModelsWithLead,
+} from '@renderer/services/createTeamPreferences';
+import {
   type CreateTeamDraftSnapshot,
   createTeamDraftStorage,
   type SerializedMemberDraft,
@@ -34,7 +39,7 @@ export interface UseCreateTeamDraftResult {
   members: MemberDraft[];
   setMembers: (v: MemberDraft[]) => void;
   syncModelsWithLead: boolean;
-  setSyncModelsWithLead: (v: boolean) => void;
+  setSyncModelsWithLead: (v: boolean, options?: { persistStoredPreference?: boolean }) => void;
   teammateWorktreeDefault: boolean;
   setTeammateWorktreeDefault: (v: boolean) => void;
   cwdMode: 'project' | 'custom';
@@ -103,10 +108,12 @@ function deserializeMembers(serialized: SerializedMemberDraft[]): MemberDraft[] 
 // ---------------------------------------------------------------------------
 
 export function useCreateTeamDraft(): UseCreateTeamDraftResult {
+  const storedSyncModelsWithLead = getStoredCreateTeamSyncModelsWithLead();
+
   // ── State ──────────────────────────────────────────────────────────────
   const [teamName, setTeamNameState] = useState('');
   const [members, setMembersState] = useState<MemberDraft[]>([]);
-  const [syncModelsWithLead, setSyncModelsWithLeadState] = useState(true);
+  const [syncModelsWithLead, setSyncModelsWithLeadState] = useState(storedSyncModelsWithLead);
   const [teammateWorktreeDefault, setTeammateWorktreeDefaultState] = useState(false);
   const [cwdMode, setCwdModeState] = useState<'project' | 'custom'>('project');
   const [selectedProjectPath, setSelectedProjectPathState] = useState('');
@@ -119,7 +126,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   // ── Refs (latest values for debounced callbacks) ───────────────────────
   const teamNameRef = useRef('');
   const membersRef = useRef<MemberDraft[]>([]);
-  const syncModelsWithLeadRef = useRef(true);
+  const syncModelsWithLeadRef = useRef(storedSyncModelsWithLead);
   const teammateWorktreeDefaultRef = useRef(false);
   const cwdModeRef = useRef<'project' | 'custom'>('project');
   const selectedProjectPathRef = useRef('');
@@ -204,10 +211,17 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
 
   const applySnapshot = useCallback((snap: CreateTeamDraftSnapshot) => {
     const deserialized = deserializeMembers(snap.members);
+    const nextSyncModelsWithLead =
+      snap.syncModelsWithLead ?? getStoredCreateTeamSyncModelsWithLead();
+
+    setStoredCreateTeamSyncModelsWithLead(nextSyncModelsWithLead);
+    if (!nextSyncModelsWithLead) {
+      setStoredCreateTeamMemberRuntimePreferences(deserialized);
+    }
 
     teamNameRef.current = snap.teamName;
     membersRef.current = deserialized;
-    syncModelsWithLeadRef.current = snap.syncModelsWithLead ?? true;
+    syncModelsWithLeadRef.current = nextSyncModelsWithLead;
     teammateWorktreeDefaultRef.current = snap.teammateWorktreeDefault === true;
     cwdModeRef.current = snap.cwdMode;
     selectedProjectPathRef.current = snap.selectedProjectPath;
@@ -218,7 +232,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
 
     setTeamNameState(snap.teamName);
     setMembersState(deserialized);
-    setSyncModelsWithLeadState(snap.syncModelsWithLead ?? true);
+    setSyncModelsWithLeadState(nextSyncModelsWithLead);
     setTeammateWorktreeDefaultState(snap.teammateWorktreeDefault === true);
     setCwdModeState(snap.cwdMode);
     setSelectedProjectPathState(snap.selectedProjectPath);
@@ -285,10 +299,13 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   );
 
   const setSyncModelsWithLead = useCallback(
-    (v: boolean) => {
+    (v: boolean, options?: { persistStoredPreference?: boolean }) => {
       userTouchedRef.current = true;
       syncModelsWithLeadRef.current = v;
       setSyncModelsWithLeadState(v);
+      if (options?.persistStoredPreference !== false) {
+        setStoredCreateTeamSyncModelsWithLead(v);
+      }
       scheduleSave();
     },
     [scheduleSave]
@@ -367,6 +384,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   // ── Clear all ──────────────────────────────────────────────────────────
 
   const clearDraft = useCallback(() => {
+    const nextStoredSyncModelsWithLead = getStoredCreateTeamSyncModelsWithLead();
     if (timerRef.current != null) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -378,7 +396,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
 
     teamNameRef.current = '';
     membersRef.current = [];
-    syncModelsWithLeadRef.current = true;
+    syncModelsWithLeadRef.current = nextStoredSyncModelsWithLead;
     teammateWorktreeDefaultRef.current = false;
     cwdModeRef.current = 'project';
     selectedProjectPathRef.current = '';
@@ -389,7 +407,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
 
     setTeamNameState('');
     setMembersState([]);
-    setSyncModelsWithLeadState(true);
+    setSyncModelsWithLeadState(nextStoredSyncModelsWithLead);
     setTeammateWorktreeDefaultState(false);
     setCwdModeState('project');
     setSelectedProjectPathState('');

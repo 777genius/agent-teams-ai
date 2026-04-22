@@ -133,6 +133,33 @@ describe('MemberCard starting-state visuals', () => {
     });
   });
 
+  it('shows a full loading badge for connecting teammates during provisioning', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberCard, {
+          member,
+          memberColor: 'blue',
+          isTeamAlive: false,
+          isTeamProvisioning: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('connecting');
+    expect(host.querySelector('[aria-label="connecting"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('keeps runtime retry visible even while the teammate already has an active task', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

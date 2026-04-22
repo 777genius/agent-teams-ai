@@ -26,6 +26,7 @@ import {
   normalizeProviderForMode,
   validateMemberNameInline,
 } from '@renderer/components/team/members/MembersEditorSection';
+import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
 import { TeamRosterEditorSection } from '@renderer/components/team/members/TeamRosterEditorSection';
 import { AutoResizeTextarea } from '@renderer/components/ui/auto-resize-textarea';
 import { Button } from '@renderer/components/ui/button';
@@ -50,12 +51,27 @@ import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
+import {
+  applyStoredCreateTeamMemberRuntimePreferences,
+  getStoredCreateTeamMemberRuntimePreferences,
+  getStoredCreateTeamEffort,
+  getStoredCreateTeamFastMode as getStoredTeamFastMode,
+  getStoredCreateTeamLimitContext,
+  getStoredCreateTeamModel as getStoredTeamModel,
+  getStoredCreateTeamProvider as getStoredTeamProvider,
+  getStoredCreateTeamSkipPermissions,
+  migrateLegacyCreateTeamPreferences,
+  setStoredCreateTeamMemberRuntimePreferences,
+  setStoredCreateTeamEffort,
+  setStoredCreateTeamFastMode,
+  setStoredCreateTeamLimitContext,
+  setStoredCreateTeamModel,
+  setStoredCreateTeamProvider,
+  setStoredCreateTeamSkipPermissions,
+} from '@renderer/services/createTeamPreferences';
 import { useStore } from '@renderer/store';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
-import {
-  isGeminiUiFrozen,
-  normalizeCreateLaunchProviderForUi,
-} from '@renderer/utils/geminiUiFreeze';
+import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
@@ -129,28 +145,6 @@ import type {
   TeamProviderId,
   TeamProvisioningMemberInput,
 } from '@shared/types';
-
-function getStoredTeamProvider(): TeamProviderId {
-  const stored = localStorage.getItem('team:lastSelectedProvider');
-  // return stored === 'codex' || stored === 'gemini' ? stored : 'anthropic';
-  return normalizeCreateLaunchProviderForUi(
-    stored === 'codex' || stored === 'gemini' ? stored : 'anthropic',
-    true
-  );
-}
-
-function getStoredTeamModel(providerId: TeamProviderId): string {
-  const stored = localStorage.getItem(`team:lastSelectedModel:${providerId}`);
-  if (stored === null) {
-    return providerId === 'anthropic' ? 'opus' : '';
-  }
-  return normalizeExplicitTeamModelForUi(providerId, stored === '__default__' ? '' : stored);
-}
-
-function getStoredTeamFastMode(): TeamFastMode {
-  const stored = localStorage.getItem('team:lastSelectedFastMode');
-  return stored === 'on' || stored === 'off' || stored === 'inherit' ? stored : 'inherit';
-}
 
 function isEphemeralRenderedProjectPath(projectPath: string | null | undefined): boolean {
   const normalized = normalizePath(projectPath ?? '').toLowerCase();
@@ -422,16 +416,9 @@ export const CreateTeamDialog = ({
   const [selectedModel, setSelectedModelRaw] = useState(() =>
     getStoredTeamModel(getStoredTeamProvider())
   );
-  const [limitContext, setLimitContextRaw] = useState(
-    () => localStorage.getItem('team:lastLimitContext') === 'true'
-  );
-  const [skipPermissions, setSkipPermissionsRaw] = useState(
-    () => localStorage.getItem('team:lastSkipPermissions') !== 'false'
-  );
-  const [selectedEffort, setSelectedEffortRaw] = useState(() => {
-    const stored = localStorage.getItem('team:lastSelectedEffort');
-    return stored === null ? 'medium' : stored;
-  });
+  const [limitContext, setLimitContextRaw] = useState(getStoredCreateTeamLimitContext);
+  const [skipPermissions, setSkipPermissionsRaw] = useState(getStoredCreateTeamSkipPermissions);
+  const [selectedEffort, setSelectedEffortRaw] = useState(getStoredCreateTeamEffort);
   const [selectedFastMode, setSelectedFastModeRaw] = useState<TeamFastMode>(getStoredTeamFastMode);
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
 
@@ -442,14 +429,7 @@ export const CreateTeamDialog = ({
   const [customArgs, setCustomArgsRaw] = useState('');
 
   useEffect(() => {
-    const legacyTeamModel = localStorage.getItem('team:lastSelectedModel');
-    if (
-      legacyTeamModel != null &&
-      localStorage.getItem('team:lastSelectedModel:anthropic') == null
-    ) {
-      localStorage.setItem('team:lastSelectedModel:anthropic', legacyTeamModel);
-    }
-    localStorage.removeItem('team:lastSelectedModel');
+    migrateLegacyCreateTeamPreferences();
   }, []);
 
   // Re-read localStorage when advancedKey changes
@@ -465,38 +445,38 @@ export const CreateTeamDialog = ({
   const setSelectedModel = (value: string): void => {
     const normalizedValue = normalizeExplicitTeamModelForUi(selectedProviderId, value);
     setSelectedModelRaw(normalizedValue);
-    localStorage.setItem(`team:lastSelectedModel:${selectedProviderId}`, normalizedValue);
+    setStoredCreateTeamModel(selectedProviderId, normalizedValue);
   };
 
   const setSelectedProviderId = (value: TeamProviderId): void => {
     const normalizedValue = normalizeProviderForMode(value, multimodelEnabled);
     setSelectedProviderIdRaw(normalizedValue);
-    localStorage.setItem('team:lastSelectedProvider', normalizedValue);
+    setStoredCreateTeamProvider(normalizedValue);
     if (normalizedValue !== 'anthropic') {
       setLimitContextRaw(false);
-      localStorage.setItem('team:lastLimitContext', 'false');
+      setStoredCreateTeamLimitContext(false);
     }
     setSelectedModelRaw(getStoredTeamModel(normalizedValue));
   };
 
   const setLimitContext = (value: boolean): void => {
     setLimitContextRaw(value);
-    localStorage.setItem('team:lastLimitContext', String(value));
+    setStoredCreateTeamLimitContext(value);
   };
 
   const setSkipPermissions = (value: boolean): void => {
     setSkipPermissionsRaw(value);
-    localStorage.setItem('team:lastSkipPermissions', String(value));
+    setStoredCreateTeamSkipPermissions(value);
   };
 
   const setSelectedEffort = (value: string): void => {
     setSelectedEffortRaw(value);
-    localStorage.setItem('team:lastSelectedEffort', value);
+    setStoredCreateTeamEffort(value);
   };
 
   const setSelectedFastMode = (value: TeamFastMode): void => {
     setSelectedFastModeRaw(value);
-    localStorage.setItem('team:lastSelectedFastMode', value);
+    setStoredCreateTeamFastMode(value);
   };
 
   const setWorktreeEnabled = (value: boolean): void => {
@@ -535,6 +515,13 @@ export const CreateTeamDialog = ({
     promptChipDraft.clearChipDraft();
     resetUIState();
   };
+
+  const persistCurrentMemberRuntimePreferences = useCallback(
+    (nextMembers: readonly MemberDraft[] = members): void => {
+      setStoredCreateTeamMemberRuntimePreferences(nextMembers);
+    },
+    [members]
+  );
 
   const effectiveCwd = cwdMode === 'project' ? selectedProjectPath.trim() : customCwd.trim();
   const dialogTeamNameKey = sanitizeTeamName(teamName.trim());
@@ -975,6 +962,9 @@ export const CreateTeamDialog = ({
     }
 
     if (initialData) {
+      const nextSyncModelsWithLead = !initialData.members.some(
+        (member) => member.providerId || member.model || member.effort
+      );
       setTeamName(initialData.teamName);
       descriptionDraft.setValue(initialData.description ?? '');
       setTeamColor(initialData.color ?? '');
@@ -1002,9 +992,7 @@ export const CreateTeamDialog = ({
         initialData.members.length > 0 &&
           initialData.members.every((member) => member.isolation === 'worktree')
       );
-      setSyncModelsWithLead(
-        !initialData.members.some((member) => member.providerId || member.model || member.effort)
-      );
+      setSyncModelsWithLead(nextSyncModelsWithLead, { persistStoredPreference: false });
       return;
     }
 
@@ -1012,17 +1000,34 @@ export const CreateTeamDialog = ({
       return;
     }
 
+    const nextDefaultMembers = DEFAULT_MEMBERS.map((member) =>
+      createMemberDraft({
+        name: member.name,
+        roleSelection: member.roleSelection,
+        workflow: member.workflow,
+      })
+    );
     setMembers(
-      DEFAULT_MEMBERS.map((member) =>
-        createMemberDraft({
-          name: member.name,
-          roleSelection: member.roleSelection,
-          workflow: member.workflow,
-        })
-      )
+      syncModelsWithLead
+        ? nextDefaultMembers
+        : applyStoredCreateTeamMemberRuntimePreferences(nextDefaultMembers)
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initialData is checked once on open/draftLoaded
   }, [open, draftLoaded]);
+
+  useEffect(() => {
+    if (!open || !draftLoaded || initialData || syncModelsWithLead || members.length === 0) {
+      return;
+    }
+    persistCurrentMemberRuntimePreferences(members);
+  }, [
+    draftLoaded,
+    initialData,
+    members,
+    open,
+    persistCurrentMemberRuntimePreferences,
+    syncModelsWithLead,
+  ]);
 
   useEffect(() => {
     if (!open || initialData || !draftLoaded) {
@@ -1221,14 +1226,14 @@ export const CreateTeamDialog = ({
     const notices: string[] = [];
     if (reconciliation.nextEffort !== selectedEffort) {
       setSelectedEffortRaw(reconciliation.nextEffort);
-      localStorage.setItem('team:lastSelectedEffort', reconciliation.nextEffort);
+      setStoredCreateTeamEffort(reconciliation.nextEffort);
       if (reconciliation.effortResetReason) {
         notices.push(reconciliation.effortResetReason);
       }
     }
     if (reconciliation.nextFastMode !== selectedFastMode) {
       setSelectedFastModeRaw(reconciliation.nextFastMode);
-      localStorage.setItem('team:lastSelectedFastMode', reconciliation.nextFastMode);
+      setStoredCreateTeamFastMode(reconciliation.nextFastMode);
       if (reconciliation.fastModeResetReason) {
         notices.push(reconciliation.fastModeResetReason);
       }
@@ -1437,10 +1442,29 @@ export const CreateTeamDialog = ({
     (checked: boolean): void => {
       setSyncModelsWithLead(checked);
       if (checked) {
+        persistCurrentMemberRuntimePreferences(members);
         setMembers(members.map(clearMemberModelOverrides));
+        return;
+      }
+
+      if (getStoredCreateTeamMemberRuntimePreferences().length === 0) {
+        return;
+      }
+
+      const nextMembers = applyStoredCreateTeamMemberRuntimePreferences(members);
+      const hasRuntimeChanges = nextMembers.some((member, index) => {
+        const previousMember = members[index];
+        return (
+          member.providerId !== previousMember?.providerId ||
+          member.model !== previousMember?.model ||
+          member.effort !== previousMember?.effort
+        );
+      });
+      if (hasRuntimeChanges) {
+        setMembers(nextMembers);
       }
     },
-    [members, setMembers, setSyncModelsWithLead]
+    [members, persistCurrentMemberRuntimePreferences, setMembers, setSyncModelsWithLead]
   );
 
   const activeError =
@@ -1496,6 +1520,9 @@ export const CreateTeamDialog = ({
     if (!launchTeam) {
       void (async () => {
         try {
+          if (!syncModelsWithLead) {
+            persistCurrentMemberRuntimePreferences(members);
+          }
           await api.teams.createConfig({
             teamName: request.teamName,
             displayName: request.displayName,
@@ -1520,6 +1547,9 @@ export const CreateTeamDialog = ({
 
     void (async () => {
       try {
+        if (!syncModelsWithLead) {
+          persistCurrentMemberRuntimePreferences(members);
+        }
         await onCreate(request);
         onOpenTeam(request.teamName, effectiveCwd || undefined);
         resetFormState();

@@ -124,6 +124,7 @@ export const MemberCard = ({
   const runtimeAdvisoryTitle = launchPresentation.runtimeAdvisoryTitle;
   const presenceLabel = launchPresentation.presenceLabel;
   const spawnCardClass = launchPresentation.cardClass;
+  const launchStatusLabel = launchPresentation.launchStatusLabel;
   const colors = getTeamColorSet(memberColor);
   const { isLight } = useTheme();
   const pending = taskCounts?.pending ?? 0;
@@ -146,11 +147,14 @@ export const MemberCard = ({
     spawnLaunchState !== 'failed_to_start' &&
     !activityTask &&
     !runtimeSummary;
-  const showStartingBadge = !isRemoved && presenceLabel === 'starting' && !activityTask;
+  const showLaunchBadge =
+    !isRemoved && !activityTask && (presenceLabel === 'starting' || presenceLabel === 'connecting');
+  const launchBadgeLabel =
+    presenceLabel === 'starting' ? presenceLabel : (launchStatusLabel ?? presenceLabel);
   const showRuntimeAdvisoryBadge =
     !isRemoved &&
     Boolean(runtimeAdvisoryLabel) &&
-    !showStartingBadge &&
+    !showLaunchBadge &&
     spawnStatus !== 'error' &&
     (Boolean(activityTask) || !isAwaitingReply);
 
@@ -263,26 +267,19 @@ export const MemberCard = ({
               </div>
             ) : null}
           </div>
-          {showStartingBadge ? (
+          {showLaunchBadge ? (
             <span className="flex shrink-0 items-center gap-1">
               <Loader2
                 className="size-3.5 shrink-0 animate-spin text-[var(--color-text-muted)]"
-                aria-label="starting"
+                aria-label={presenceLabel}
               />
               <Badge
                 variant="secondary"
                 className="shrink-0 px-1.5 py-0.5 text-[10px] font-normal leading-none text-[var(--color-text-muted)]"
               >
-                starting
+                {launchBadgeLabel}
               </Badge>
             </span>
-          ) : presenceLabel === 'connecting' ? (
-            !isRemoved ? (
-              <Loader2
-                className="size-3.5 shrink-0 animate-spin text-[var(--color-text-muted)]"
-                aria-label="connecting"
-              />
-            ) : null
           ) : spawnStatus === 'error' ? (
             <Tooltip>
               <TooltipTrigger asChild>

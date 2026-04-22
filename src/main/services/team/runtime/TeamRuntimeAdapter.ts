@@ -71,6 +71,7 @@ export interface TeamRuntimeMemberLaunchEvidence {
   hardFailureReason?: string;
   sessionId?: string;
   backendType?: TeamAgentRuntimeBackendType;
+  runtimePid?: number;
   diagnostics: string[];
 }
 

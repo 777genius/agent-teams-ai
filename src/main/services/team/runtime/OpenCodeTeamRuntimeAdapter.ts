@@ -377,6 +377,7 @@ function mapOpenCodeLaunchDataToRuntimeResult(
           member.name,
           bridgeMember?.launchState ?? 'failed',
           bridgeMember?.sessionId,
+          bridgeMember?.runtimePid,
           [
             ...(bridgeMember?.evidence ?? []).map(
               (evidence) => `${evidence.kind} at ${evidence.observedAt}`
@@ -411,6 +412,7 @@ function mapBridgeMemberToRuntimeEvidence(
   memberName: string,
   launchState: OpenCodeTeamMemberLaunchBridgeState,
   sessionId: string | undefined,
+  runtimePid: number | undefined,
   diagnostics: string[]
 ): TeamRuntimeMemberLaunchEvidence {
   const confirmed = launchState === 'confirmed_alive';
@@ -430,6 +432,9 @@ function mapBridgeMemberToRuntimeEvidence(
     hardFailure: failed,
     hardFailureReason: failed ? 'OpenCode bridge reported member launch failure' : undefined,
     sessionId,
+    ...(typeof runtimePid === 'number' && Number.isFinite(runtimePid) && runtimePid > 0
+      ? { runtimePid }
+      : {}),
     diagnostics,
   };
 }

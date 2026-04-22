@@ -65,7 +65,12 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
       laneKind: 'secondary',
       laneOwnerProviderId: 'opencode',
       launchState: 'starting',
+      hardFailure: false,
+      hardFailureReason: undefined,
     });
+    expect(snapshot.members.bob.diagnostics).toContain(
+      'Queued for OpenCode secondary lane launch.'
+    );
     expect(snapshot.summary).toEqual({
       confirmedCount: 1,
       pendingCount: 1,

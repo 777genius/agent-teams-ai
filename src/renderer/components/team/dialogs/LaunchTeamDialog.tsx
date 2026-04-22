@@ -229,11 +229,7 @@ function getLocalTimezone(): string {
 
 function getStoredTeamProvider(): TeamProviderId {
   const stored = localStorage.getItem('team:lastSelectedProvider');
-  // return stored === 'codex' || stored === 'gemini' ? stored : 'anthropic';
-  return normalizeCreateLaunchProviderForUi(
-    stored === 'codex' || stored === 'gemini' ? stored : 'anthropic',
-    true
-  );
+  return normalizeCreateLaunchProviderForUi(normalizeOptionalTeamProviderId(stored), true);
 }
 
 function getStoredTeamModel(providerId: TeamProviderId): string {
@@ -753,12 +749,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             : [];
       const editableMembersSource = filterEditableMemberInputs(nextMembersSource);
       const storedEffort = localStorage.getItem('team:lastSelectedEffort');
-      const savedProviderId =
-        savedRequest?.providerId === 'codex' || savedRequest?.providerId === 'gemini'
-          ? savedRequest.providerId
-          : savedRequest?.providerId === 'anthropic'
-            ? 'anthropic'
-            : null;
+      const savedProviderId = normalizeOptionalTeamProviderId(savedRequest?.providerId) ?? null;
       const savedProviderBackendId =
         typeof savedRequest?.providerBackendId === 'string' &&
         savedRequest.providerBackendId.trim().length > 0
@@ -810,15 +801,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     if (!isLaunchMode) {
       return null;
     }
-    const fromLaunchParams = previousLaunchParams?.providerId;
-    if (
-      fromLaunchParams === 'anthropic' ||
-      fromLaunchParams === 'codex' ||
-      fromLaunchParams === 'gemini'
-    ) {
-      return fromLaunchParams;
-    }
-    return savedLaunchProviderId;
+    return (
+      normalizeOptionalTeamProviderId(previousLaunchParams?.providerId) ?? savedLaunchProviderId
+    );
   }, [isLaunchMode, previousLaunchParams?.providerId, savedLaunchProviderId]);
 
   const providerChangeForcesFreshLeadContext = useMemo(() => {

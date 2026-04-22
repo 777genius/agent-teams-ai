@@ -215,7 +215,9 @@ export const MemberDraftRow = ({
   const canOpenLockedModelPanel = lockProviderModel && !isRemoved && Boolean(lockedModelAction);
   const modelTooltipText = forceInheritedModelSettings
     ? 'Provider, model, and effort are inherited from the lead while sync is enabled.'
-    : (lockedModelAction?.description ?? modelLockReason);
+    : lockProviderModel
+      ? (lockedModelAction?.description ?? modelLockReason)
+      : undefined;
   const hasModelIssue = Boolean(modelIssueText);
   const runtimeSummary = formatTeamModelSummary(
     effectiveProviderId,
