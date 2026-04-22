@@ -11857,6 +11857,19 @@ export class TeamProvisioningService {
       runtimeAlivePendingCount: number;
     }
   ): string {
+    const permissionPendingCount = this.countRunPermissionPendingMembers(run);
+    if (
+      launchSummary.pendingCount > 0 &&
+      permissionPendingCount > 0 &&
+      permissionPendingCount === launchSummary.pendingCount
+    ) {
+      return `${prefix} — ${
+        permissionPendingCount === 1
+          ? '1 teammate awaiting permission approval'
+          : `${permissionPendingCount} teammates awaiting permission approval`
+      }`;
+    }
+
     const stillStartingCount = Math.max(
       0,
       launchSummary.pendingCount - launchSummary.runtimeAlivePendingCount
@@ -11891,6 +11904,30 @@ export class TeamProvisioningService {
       return this.buildPendingBootstrapStatusMessage(prefix, run, launchSummary);
     }
 
+    const allPendingMembers = snapshot.expectedMembers.filter((memberName) => {
+      const member = snapshot.members[memberName];
+      if (!member) {
+        return false;
+      }
+      return member.launchState !== 'confirmed_alive' && member.launchState !== 'failed_to_start';
+    });
+    if (
+      allPendingMembers.length > 0 &&
+      allPendingMembers.every((memberName) => {
+        const member = snapshot.members[memberName];
+        return (
+          member?.launchState === 'runtime_pending_permission' ||
+          (member?.pendingPermissionRequestIds?.length ?? 0) > 0
+        );
+      })
+    ) {
+      return `${prefix} — ${
+        allPendingMembers.length === 1
+          ? '1 teammate awaiting permission approval'
+          : `${allPendingMembers.length} teammates awaiting permission approval`
+      }`;
+    }
+
     const primaryExpectedMembers = new Set(
       snapshot.bootstrapExpectedMembers ?? run.expectedMembers
     );
@@ -11920,6 +11957,28 @@ export class TeamProvisioningService {
         run.memberSpawnStatuses.get(expected) ?? createInitialMemberSpawnStatusEntry();
     }
     return statuses;
+  }
+
+  private countRunPermissionPendingMembers(run: ProvisioningRun): number {
+    let count = 0;
+    for (const expected of run.expectedMembers ?? []) {
+      const entry = run.memberSpawnStatuses.get(expected) ?? createInitialMemberSpawnStatusEntry();
+      if (entry.launchState === 'runtime_pending_permission') {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  private hasPendingLaunchMembers(
+    run: ProvisioningRun,
+    launchSummary: {
+      pendingCount: number;
+    },
+    snapshot?: PersistedTeamLaunchSnapshot | null
+  ): boolean {
+    const expectedCount = snapshot?.expectedMembers.length ?? run.expectedMembers?.length ?? 0;
+    return launchSummary.pendingCount > 0 && expectedCount > 0;
   }
 
   private buildLiveLaunchSnapshotForRun(
@@ -15443,14 +15502,9 @@ export class TeamProvisioningService {
         : this.getFailedSpawnMembers(run);
       const launchSummary = persistedLaunchSnapshot?.summary ?? this.getMemberLaunchSummary(run);
       const hasSpawnFailures = failedSpawnMembers.length > 0;
-      const stillStartingCount = Math.max(
-        0,
-        launchSummary.pendingCount - launchSummary.runtimeAlivePendingCount
-      );
       const hasPendingBootstrap =
         !hasSpawnFailures &&
-        stillStartingCount > 0 &&
-        (persistedLaunchSnapshot?.expectedMembers.length ?? run.expectedMembers?.length ?? 0) > 0;
+        this.hasPendingLaunchMembers(run, launchSummary, persistedLaunchSnapshot);
       const readyMessage = hasSpawnFailures
         ? `Launch completed with teammate errors — ${failedSpawnMembers
             .map((member) => member.name)
@@ -15622,14 +15676,9 @@ export class TeamProvisioningService {
       : this.getFailedSpawnMembers(run);
     const launchSummary = persistedLaunchSnapshot?.summary ?? this.getMemberLaunchSummary(run);
     const hasSpawnFailures = failedSpawnMembers.length > 0;
-    const stillStartingCount = Math.max(
-      0,
-      launchSummary.pendingCount - launchSummary.runtimeAlivePendingCount
-    );
     const hasPendingBootstrap =
       !hasSpawnFailures &&
-      stillStartingCount > 0 &&
-      (persistedLaunchSnapshot?.expectedMembers.length ?? run.expectedMembers.length) > 0;
+      this.hasPendingLaunchMembers(run, launchSummary, persistedLaunchSnapshot);
     const progress = updateProgress(
       run,
       'ready',

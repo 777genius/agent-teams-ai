@@ -2001,6 +2001,126 @@ describe('TeamProvisioningService', () => {
       expect(message).toBe('Finishing launch - waiting for secondary runtime lane: bob');
     });
 
+    it('uses permission-pending copy when the remaining mixed-team member is awaiting approval', async () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'mixed-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map([
+          [
+            'alice',
+            createMemberSpawnStatusEntry({
+              status: 'online',
+              launchState: 'confirmed_alive',
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+            }),
+          ],
+        ]),
+      });
+      run.isLaunch = true;
+      run.mixedSecondaryLanes = [
+        {
+          laneId: 'secondary:opencode:bob',
+          providerId: 'opencode',
+          member: {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            effort: 'medium',
+          },
+          runId: 'opencode-run-1',
+          state: 'launching',
+          result: null,
+          warnings: [],
+          diagnostics: [],
+        },
+      ];
+
+      const message = (svc as any).buildAggregatePendingLaunchMessage(
+        'Finishing launch',
+        run,
+        {
+          confirmedCount: 1,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 1,
+        },
+        {
+          version: 2,
+          teamName: 'mixed-team',
+          updatedAt: '2026-04-22T12:00:00.000Z',
+          launchPhase: 'active',
+          expectedMembers: ['alice', 'bob'],
+          bootstrapExpectedMembers: ['alice'],
+          members: {
+            alice: {
+              name: 'alice',
+              providerId: 'codex',
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'codex',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+            bob: {
+              name: 'bob',
+              providerId: 'opencode',
+              laneId: 'secondary:opencode:bob',
+              laneKind: 'secondary',
+              laneOwnerProviderId: 'opencode',
+              launchState: 'runtime_pending_permission',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              pendingPermissionRequestIds: ['perm-1'],
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+          },
+          summary: {
+            confirmedCount: 1,
+            pendingCount: 1,
+            failedCount: 0,
+            runtimeAlivePendingCount: 1,
+          },
+          teamLaunchState: 'partial_pending',
+        }
+      );
+
+      expect(message).toBe('Finishing launch — 1 teammate awaiting permission approval');
+    });
+
+    it('keeps launch pending when the only remaining teammate is permission-blocked but already online', () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map([
+          [
+            'alice',
+            createMemberSpawnStatusEntry({
+              status: 'online',
+              launchState: 'runtime_pending_permission',
+              runtimeAlive: true,
+              agentToolAccepted: true,
+              bootstrapConfirmed: false,
+              pendingPermissionRequestIds: ['perm-1'],
+            }),
+          ],
+        ]),
+      });
+      const launchSummary = (svc as any).getMemberLaunchSummary(run);
+
+      expect((svc as any).hasPendingLaunchMembers(run, launchSummary, null)).toBe(true);
+      expect((svc as any).buildPendingBootstrapStatusMessage('Finishing launch', run, launchSummary)).toBe(
+        'Finishing launch — 1 teammate awaiting permission approval'
+      );
+    });
+
     it('launches the OpenCode secondary lane with side-lane provider and member runtime identity', async () => {
       const svc = new TeamProvisioningService();
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => ({
