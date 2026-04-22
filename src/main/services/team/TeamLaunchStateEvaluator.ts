@@ -484,7 +484,13 @@ export function snapshotToMemberSpawnStatuses(
 ): Record<string, MemberSpawnStatusEntry> {
   if (!snapshot) return {};
   const statuses: Record<string, MemberSpawnStatusEntry> = {};
-  for (const memberName of snapshot.expectedMembers) {
+  const memberNames = Array.from(
+    new Set([
+      ...snapshot.expectedMembers.map(normalizeMemberName).filter(Boolean),
+      ...Object.keys(snapshot.members).map(normalizeMemberName).filter(Boolean),
+    ])
+  );
+  for (const memberName of memberNames) {
     const entry = snapshot.members[memberName];
     if (!entry) continue;
     let status: MemberSpawnStatusEntry['status'] = 'offline';
