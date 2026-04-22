@@ -41,7 +41,11 @@ function countPermissionBlockedMembers(memberSpawnStatuses: MemberSpawnStatusCol
       ? [...memberSpawnStatuses.values()]
       : Object.values(memberSpawnStatuses);
 
-  return entries.filter((entry) => entry.launchState === 'runtime_pending_permission').length;
+  return entries.filter(
+    (entry) =>
+      entry.launchState === 'runtime_pending_permission' ||
+      (entry.pendingPermissionRequestIds?.length ?? 0) > 0
+  ).length;
 }
 
 function buildAwaitingPermissionPhrase(count: number): string {
