@@ -371,14 +371,26 @@ function mapOpenCodeLaunchDataToRuntimeResult(
   const members = Object.fromEntries(
     input.expectedMembers.map((member) => {
       const bridgeMember = data.members[member.name];
+      const fallbackLaunchState = bridgeMember
+        ? bridgeMember.launchState
+        : data.teamLaunchState === 'failed'
+          ? 'failed'
+          : data.teamLaunchState === 'permission_blocked'
+            ? 'permission_blocked'
+            : 'created';
       return [
         member.name,
         mapBridgeMemberToRuntimeEvidence(
           member.name,
-          bridgeMember?.launchState ?? 'failed',
+          fallbackLaunchState,
           bridgeMember?.sessionId,
           bridgeMember?.runtimePid,
           [
+            ...(bridgeMember
+              ? []
+              : [
+                  `OpenCode bridge response did not include ${member.name}; keeping the member pending until lane state materializes.`,
+                ]),
             ...(bridgeMember?.evidence ?? []).map(
               (evidence) => `${evidence.kind} at ${evidence.observedAt}`
             ),

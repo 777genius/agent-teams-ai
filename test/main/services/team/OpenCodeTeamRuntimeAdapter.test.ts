@@ -162,6 +162,62 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     });
   });
 
+  it('keeps missing bridge members pending while reconcile is still launching', async () => {
+    const reconcileOpenCodeTeam = vi.fn(async () => ({
+      runId: 'run-1',
+      teamLaunchState: 'launching',
+      members: {
+        alice: {
+          sessionId: 'oc-session-1',
+          launchState: 'confirmed_alive',
+          model: 'openai/gpt-5.4-mini',
+          evidence: [{ kind: 'member_ready', observedAt: '2026-04-21T00:00:00.000Z' }],
+        },
+      },
+      warnings: [],
+      diagnostics: [],
+      durableCheckpoints: [],
+      manifestHighWatermark: null,
+      runtimeStoreManifestHighWatermark: null,
+    }) satisfies OpenCodeLaunchTeamCommandData);
+    const adapter = new OpenCodeTeamRuntimeAdapter(
+      bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+        reconcileOpenCodeTeam,
+      }),
+      { launchMode: 'dogfood' }
+    );
+
+    const result = await adapter.reconcile({
+      runId: 'run-1',
+      teamName: 'team-a',
+      providerId: 'opencode',
+      expectedMembers: [
+        ...launchInput().expectedMembers,
+        {
+          name: 'bob',
+          providerId: 'opencode',
+          model: 'openai/gpt-5.4-mini',
+          cwd: '/repo',
+        },
+      ],
+      previousLaunchState: launchSnapshot(),
+      reason: 'startup_recovery',
+    });
+
+    expect(result.teamLaunchState).toBe('partial_pending');
+    expect(result.members.alice?.launchState).toBe('confirmed_alive');
+    expect(result.members.bob).toMatchObject({
+      providerId: 'opencode',
+      launchState: 'runtime_pending_bootstrap',
+      runtimeAlive: true,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+    });
+    expect(result.members.bob?.diagnostics).toContain(
+      'OpenCode bridge response did not include bob; keeping the member pending until lane state materializes.'
+    );
+  });
+
   it('acknowledges stop without mutating live OpenCode ownership in the adapter shell', async () => {
     const adapter = new OpenCodeTeamRuntimeAdapter(
       bridgePort(readiness({ state: 'adapter_disabled', launchAllowed: false }))

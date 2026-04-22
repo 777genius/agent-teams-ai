@@ -106,9 +106,12 @@ export function getLaunchJoinMilestonesFromMembers({
   memberSpawnSnapshot?: Pick<MemberSpawnStatusesSnapshot, 'expectedMembers' | 'summary'>;
 }): LaunchJoinMilestones {
   const teammates = members.filter((member) => !member.removedAt && !isLeadMember(member));
+  const activeTeammateNames = new Set(teammates.map((member) => member.name));
   const teammateNames =
     memberSpawnSnapshot?.expectedMembers?.length && memberSpawnSnapshot.expectedMembers.length > 0
-      ? memberSpawnSnapshot.expectedMembers
+      ? memberSpawnSnapshot.expectedMembers.filter((memberName) =>
+          activeTeammateNames.has(memberName)
+        )
       : teammates.map((member) => member.name);
   const expectedTeammateCount = teammateNames.length;
   const snapshotSummary = memberSpawnSnapshot?.summary;
