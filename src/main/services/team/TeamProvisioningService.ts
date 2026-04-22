@@ -9333,6 +9333,9 @@ export class TeamProvisioningService {
       bootstrapConfirmed: evidence?.bootstrapConfirmed === true,
       hardFailure: evidence?.hardFailure === true || launchState === 'failed_to_start',
       hardFailureReason: evidence?.hardFailureReason,
+      pendingPermissionRequestIds: evidence?.pendingPermissionRequestIds?.length
+        ? [...new Set(evidence.pendingPermissionRequestIds)]
+        : undefined,
       firstSpawnAcceptedAt: evidence?.agentToolAccepted ? now : undefined,
       lastHeartbeatAt: evidence?.bootstrapConfirmed ? now : undefined,
       lastRuntimeAliveAt: evidence?.runtimeAlive ? now : undefined,

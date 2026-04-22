@@ -3014,6 +3014,41 @@ describe('TeamProvisioningService', () => {
       ).rejects.toThrow();
     });
 
+    it('preserves pending permission request ids for pure OpenCode launch-state members', () => {
+      const svc = new TeamProvisioningService();
+
+      const member = (svc as any).toOpenCodePersistedLaunchMember(
+        {
+          name: 'alice',
+          providerId: 'opencode',
+          model: 'minimax-m2.5-free',
+          effort: 'medium',
+        },
+        {
+          launchState: 'runtime_pending_permission',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: false,
+          hardFailure: false,
+          hardFailureReason: undefined,
+          pendingPermissionRequestIds: [
+            'opencode:run-1:perm-1',
+            'opencode:run-1:perm-1',
+            'opencode:run-1:perm-2',
+          ],
+          diagnostics: ['waiting for permission approval'],
+        }
+      );
+
+      expect(member).toMatchObject({
+        name: 'alice',
+        providerId: 'opencode',
+        launchState: 'runtime_pending_permission',
+        pendingPermissionRequestIds: ['opencode:run-1:perm-1', 'opencode:run-1:perm-2'],
+        diagnostics: ['waiting for permission approval'],
+      });
+    });
+
     it('fails early when the previous tmux pane does not exit before restart', async () => {
       vi.useFakeTimers();
 
