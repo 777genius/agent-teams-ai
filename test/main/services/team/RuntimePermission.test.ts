@@ -203,6 +203,32 @@ describe('RuntimePermissionRequestStore and services', () => {
       answerOrigin: 'provider_side_effect_projection',
     });
     expect(launchState.members.get('alice')).toMatchObject({
+      launchState: 'runtime_pending_bootstrap',
+      pendingPermissionRequestIds: [],
+    });
+  });
+
+  it('keeps confirmed_alive after answering the last pending permission', async () => {
+    await store.upsertPending(permissionRecord());
+    launchState.members.set('alice', {
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      pendingPermissionRequestIds: ['opencode:run-1:perm_1'],
+    });
+
+    await expect(
+      answerService().answer({
+        appRequestId: 'opencode:run-1:perm_1',
+        runId: 'run-1',
+        decision: 'once',
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      diagnostics: [],
+    });
+
+    expect(launchState.members.get('alice')).toMatchObject({
+      launchState: 'confirmed_alive',
       pendingPermissionRequestIds: [],
     });
   });

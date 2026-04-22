@@ -536,6 +536,14 @@ export class RuntimePermissionAnswerService {
         .map((pendingRecord) => pendingRecord.appRequestId);
       await this.launchStateStore.updateMember(record.teamName, record.memberName, (member) => ({
         ...member,
+        launchState:
+          remainingMemberPendingIds.length > 0
+            ? 'runtime_pending_permission'
+            : member.launchState === 'confirmed_alive'
+              ? member.launchState
+              : member.bootstrapConfirmed
+                ? 'confirmed_alive'
+                : 'runtime_pending_bootstrap',
         pendingPermissionRequestIds: remainingMemberPendingIds,
         lastRuntimeEventAt: answeredAt,
       }));
