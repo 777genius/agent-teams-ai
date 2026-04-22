@@ -11855,9 +11855,12 @@ export class TeamProvisioningService {
       confirmedCount: number;
       pendingCount: number;
       runtimeAlivePendingCount: number;
-    }
+    },
+    snapshot?: PersistedTeamLaunchSnapshot | null
   ): string {
-    const permissionPendingCount = this.countRunPermissionPendingMembers(run);
+    const permissionPendingCount = snapshot
+      ? this.countSnapshotPermissionPendingMembers(snapshot)
+      : this.countRunPermissionPendingMembers(run);
     if (
       launchSummary.pendingCount > 0 &&
       permissionPendingCount > 0 &&
@@ -11901,7 +11904,7 @@ export class TeamProvisioningService {
   ): string {
     const mixedSecondaryLanes = run.mixedSecondaryLanes ?? [];
     if (!snapshot || mixedSecondaryLanes.length === 0) {
-      return this.buildPendingBootstrapStatusMessage(prefix, run, launchSummary);
+      return this.buildPendingBootstrapStatusMessage(prefix, run, launchSummary, snapshot);
     }
 
     const allPendingMembers = snapshot.expectedMembers.filter((memberName) => {
@@ -11964,6 +11967,23 @@ export class TeamProvisioningService {
     for (const expected of run.expectedMembers ?? []) {
       const entry = run.memberSpawnStatuses.get(expected) ?? createInitialMemberSpawnStatusEntry();
       if (entry.launchState === 'runtime_pending_permission') {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  private countSnapshotPermissionPendingMembers(snapshot: PersistedTeamLaunchSnapshot): number {
+    let count = 0;
+    for (const memberName of snapshot.expectedMembers) {
+      const member = snapshot.members[memberName];
+      if (!member) {
+        continue;
+      }
+      if (
+        member.launchState === 'runtime_pending_permission' ||
+        (member.pendingPermissionRequestIds?.length ?? 0) > 0
+      ) {
         count += 1;
       }
     }

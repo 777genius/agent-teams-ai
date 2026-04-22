@@ -2121,6 +2121,59 @@ describe('TeamProvisioningService', () => {
       );
     });
 
+    it('trusts persisted snapshot permission state for pure teams when live run statuses are absent', () => {
+      const svc = new TeamProvisioningService();
+      const run = createMemberSpawnRun({
+        teamName: 'pure-team',
+        expectedMembers: ['alice'],
+        memberSpawnStatuses: new Map(),
+      });
+
+      const message = (svc as any).buildAggregatePendingLaunchMessage(
+        'Finishing launch',
+        run,
+        {
+          confirmedCount: 0,
+          pendingCount: 1,
+          failedCount: 0,
+          runtimeAlivePendingCount: 1,
+        },
+        {
+          version: 2,
+          teamName: 'pure-team',
+          updatedAt: '2026-04-22T12:00:00.000Z',
+          launchPhase: 'active',
+          expectedMembers: ['alice'],
+          bootstrapExpectedMembers: ['alice'],
+          members: {
+            alice: {
+              name: 'alice',
+              providerId: 'opencode',
+              laneId: 'primary',
+              laneKind: 'primary',
+              laneOwnerProviderId: 'opencode',
+              launchState: 'runtime_pending_bootstrap',
+              agentToolAccepted: true,
+              runtimeAlive: true,
+              bootstrapConfirmed: false,
+              hardFailure: false,
+              pendingPermissionRequestIds: ['perm-1'],
+              lastEvaluatedAt: '2026-04-22T12:00:00.000Z',
+            },
+          },
+          summary: {
+            confirmedCount: 0,
+            pendingCount: 1,
+            failedCount: 0,
+            runtimeAlivePendingCount: 1,
+          },
+          teamLaunchState: 'partial_pending',
+        }
+      );
+
+      expect(message).toBe('Finishing launch — 1 teammate awaiting permission approval');
+    });
+
     it('launches the OpenCode secondary lane with side-lane provider and member runtime identity', async () => {
       const svc = new TeamProvisioningService();
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => ({
