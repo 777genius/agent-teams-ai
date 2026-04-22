@@ -733,6 +733,7 @@ function areMemberSpawnStatusEntriesEqual(
     left.status === right.status &&
     left.launchState === right.launchState &&
     left.error === right.error &&
+    left.hardFailureReason === right.hardFailureReason &&
     left.livenessSource === right.livenessSource &&
     left.runtimeAlive === right.runtimeAlive &&
     left.runtimeModel === right.runtimeModel &&

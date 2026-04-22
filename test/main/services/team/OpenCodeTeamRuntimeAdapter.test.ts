@@ -251,6 +251,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         alice: {
           sessionId: 'oc-session-1',
           launchState: 'permission_blocked',
+          pendingPermissionRequestIds: ['perm-1', 'perm-1', 'perm-2'],
           runtimePid: 123,
           model: 'openai/gpt-5.4-mini',
           evidence: [
@@ -283,6 +284,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         alice: {
           providerId: 'opencode',
           launchState: 'runtime_pending_permission',
+          pendingPermissionRequestIds: ['perm-1', 'perm-2'],
           runtimeAlive: true,
           agentToolAccepted: true,
           bootstrapConfirmed: false,

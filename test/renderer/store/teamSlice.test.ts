@@ -3463,6 +3463,71 @@ describe('teamSlice actions', () => {
       expect(store.getState().memberSpawnSnapshotsByTeam['my-team']).toEqual(nextSnapshot);
     });
 
+    it('rewrites renderer state when only hard failure reason changes', async () => {
+      const store = createSliceStore();
+      const previousSnapshot = createMemberSpawnSnapshot({
+        teamLaunchState: 'partial_failure',
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 0,
+          failedCount: 1,
+          runtimeAlivePendingCount: 0,
+        },
+        statuses: {
+          alice: createMemberSpawnStatus({
+            status: 'error',
+            launchState: 'failed_to_start',
+            runtimeAlive: false,
+            livenessSource: undefined,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            hardFailureReason: 'initial failure',
+          }),
+        },
+      });
+      const previousStatuses = previousSnapshot.statuses;
+
+      store.setState({
+        currentRuntimeRunIdByTeam: {
+          'my-team': 'runtime-run',
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': previousStatuses,
+        },
+        memberSpawnSnapshotsByTeam: {
+          'my-team': previousSnapshot,
+        },
+      });
+
+      const nextSnapshot = createMemberSpawnSnapshot({
+        teamLaunchState: 'partial_failure',
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 0,
+          failedCount: 1,
+          runtimeAlivePendingCount: 0,
+        },
+        statuses: {
+          alice: createMemberSpawnStatus({
+            status: 'error',
+            launchState: 'failed_to_start',
+            runtimeAlive: false,
+            livenessSource: undefined,
+            bootstrapConfirmed: false,
+            hardFailure: true,
+            hardFailureReason: 'resolved runtime reported missing auth',
+          }),
+        },
+      });
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(nextSnapshot);
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).not.toBe(previousStatuses);
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toEqual(nextSnapshot.statuses);
+      expect(store.getState().memberSpawnSnapshotsByTeam['my-team']).toEqual(nextSnapshot);
+    });
+
     it('rewrites renderer state when top-level launch summary changes', async () => {
       const store = createSliceStore();
       const previousSnapshot = createMemberSpawnSnapshot({

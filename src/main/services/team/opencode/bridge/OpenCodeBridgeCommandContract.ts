@@ -63,6 +63,7 @@ export interface OpenCodeLaunchTeamCommandBody {
 export interface OpenCodeTeamMemberLaunchCommandData {
   sessionId: string;
   launchState: OpenCodeTeamMemberLaunchBridgeState;
+  pendingPermissionRequestIds?: string[];
   model: string;
   runtimePid?: number;
   evidence: Array<{ kind: string; observedAt: string }>;
