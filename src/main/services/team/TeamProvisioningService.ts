@@ -7733,13 +7733,14 @@ export class TeamProvisioningService {
       typeof adapter.getLastOpenCodeTeamLaunchReadiness === 'function'
         ? adapter.getLastOpenCodeTeamLaunchReadiness(cwd)
         : null;
-    const availableModels = Array.from(
+    const availableModels: string[] = Array.from(
       new Set(
-        (latestReadiness?.availableModels ?? [])
+        (Array.isArray(latestReadiness?.availableModels) ? latestReadiness.availableModels : [])
+          .filter((modelId: unknown): modelId is string => typeof modelId === 'string')
           .map((modelId: string) => modelId.trim())
-          .filter(Boolean)
+          .filter((modelId: string) => modelId.length > 0)
       )
-    ) as string[];
+    );
     appendPreflightDebugLog('opencode_compatibility_batch_catalog', {
       cwd,
       modelIds,
