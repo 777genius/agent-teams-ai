@@ -257,7 +257,7 @@ vi.mock('@renderer/hooks/useTheme', () => ({
 
 vi.mock('@renderer/utils/geminiUiFreeze', () => ({
   isGeminiUiFrozen: () => false,
-  normalizeCreateLaunchProviderForUi: (providerId: unknown) => providerId,
+  normalizeCreateLaunchProviderForUi: (providerId: unknown) => providerId ?? 'anthropic',
 }));
 
 vi.mock('@renderer/utils/teamModelAvailability', () => ({

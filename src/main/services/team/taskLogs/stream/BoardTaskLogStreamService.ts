@@ -1,7 +1,9 @@
 import { extractToolCalls, extractToolResults } from '@main/utils/toolExtraction';
 import { isLeadMember as isLeadMemberCheck } from '@shared/utils/leadDetection';
+import { getTaskDisplayId } from '@shared/utils/taskIdentity';
 
 import { TeamTaskReader } from '../../TeamTaskReader';
+import type { BoardTaskActivityRecord } from '../activity/BoardTaskActivityRecord';
 import { BoardTaskActivityRecordSource } from '../activity/BoardTaskActivityRecordSource';
 import { TeamTranscriptSourceLocator } from '../discovery/TeamTranscriptSourceLocator';
 import { BoardTaskExactLogChunkBuilder } from '../exact/BoardTaskExactLogChunkBuilder';
@@ -59,6 +61,27 @@ const INFERRED_WINDOW_GRACE_BEFORE_MS = 30_000;
 const INFERRED_WINDOW_GRACE_AFTER_MS = 15_000;
 const INFERRED_RECORD_RANGE_BEFORE_MS = 5 * 60_000;
 const INFERRED_RECORD_RANGE_AFTER_MS = 60_000;
+const HISTORICAL_BOARD_LIFECYCLE_TOOL_NAMES = new Set([
+  'task_complete',
+  'task_set_status',
+  'task_start',
+  'review_approve',
+  'review_request_changes',
+  'review_start',
+]);
+const HISTORICAL_BOARD_ACTION_TOOL_NAMES = new Set([
+  'review_request',
+  'task_add_comment',
+  'task_attach_comment_file',
+  'task_attach_file',
+  'task_get',
+  'task_get_comment',
+  'task_link',
+  'task_set_clarification',
+  'task_set_owner',
+  'task_unlink',
+]);
+const TASK_REFERENCE_KEYS = new Set(['task', 'taskid', 'id', 'displayid', 'targetid']);
 
 function emptyResponse(): BoardTaskLogStreamResponse {
   return {
@@ -82,6 +105,321 @@ function isBoardMcpToolName(toolName: string | undefined): boolean {
   if (!toolName) return false;
   const normalized = toolName.trim().toLowerCase();
   return BOARD_MCP_TOOL_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+}
+
+function canonicalizeBoardToolName(toolName: string | undefined): string | null {
+  if (!toolName) return null;
+  const normalized = toolName.trim().toLowerCase();
+  for (const prefix of BOARD_MCP_TOOL_PREFIXES) {
+    if (normalized.startsWith(prefix)) {
+      return normalized.slice(prefix.length);
+    }
+  }
+  return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeTaskReference(value: unknown): string | null {
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    return null;
+  }
+
+  const normalized = String(value).trim().replace(/^#/, '').toLowerCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function buildTaskReferenceSet(task: TeamTask): Set<string> {
+  return new Set(
+    [task.id, getTaskDisplayId(task)]
+      .map(normalizeTaskReference)
+      .filter((value): value is string => value !== null)
+  );
+}
+
+function readHistoricalActorName(input: Record<string, unknown>): string | undefined {
+  for (const key of ['actor', 'from']) {
+    const value = input[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}
+
+function valueReferencesTask(value: unknown, taskRefs: Set<string>, depth = 0): boolean {
+  if (depth > 4 || value === null || value === undefined || taskRefs.size === 0) {
+    return false;
+  }
+
+  const normalized = normalizeTaskReference(value);
+  if (normalized && taskRefs.has(normalized)) {
+    return true;
+  }
+
+  if (Array.isArray(value)) {
+    return value.some((item) => valueReferencesTask(item, taskRefs, depth + 1));
+  }
+
+  if (typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>).some(([key, nestedValue]) => {
+      const normalizedKey = key.toLowerCase();
+      if (TASK_REFERENCE_KEYS.has(normalizedKey)) {
+        return valueReferencesTask(nestedValue, taskRefs, depth + 1);
+      }
+      return depth < 2 && valueReferencesTask(nestedValue, taskRefs, depth + 1);
+    });
+  }
+
+  return false;
+}
+
+function normalizeStatusDetail(
+  value: unknown
+): 'pending' | 'in_progress' | 'completed' | 'deleted' | undefined {
+  if (value !== 'pending' && value !== 'in_progress' && value !== 'completed' && value !== 'deleted') {
+    return undefined;
+  }
+  return value;
+}
+
+function normalizeOwnerDetail(value: unknown): string | null | undefined {
+  if (value === null) {
+    return null;
+  }
+
+  const normalized = normalizeTaskReference(value);
+  if (!normalized) {
+    return undefined;
+  }
+
+  return normalized === 'clear' || normalized === 'none' ? null : String(value).trim();
+}
+
+function normalizeClarificationDetail(value: unknown): 'lead' | 'user' | null | undefined {
+  if (value === null) {
+    return null;
+  }
+
+  if (value !== 'lead' && value !== 'user' && value !== 'clear') {
+    return undefined;
+  }
+
+  return value === 'clear' ? null : value;
+}
+
+function normalizeRelationshipDetail(
+  value: unknown
+): 'blocked-by' | 'blocks' | 'related' | undefined {
+  if (value !== 'blocked-by' && value !== 'blocks' && value !== 'related') {
+    return undefined;
+  }
+  return value;
+}
+
+function inferHistoricalLinkKind(
+  canonicalToolName: string
+): 'lifecycle' | 'board_action' | null {
+  if (HISTORICAL_BOARD_LIFECYCLE_TOOL_NAMES.has(canonicalToolName)) {
+    return 'lifecycle';
+  }
+  if (HISTORICAL_BOARD_ACTION_TOOL_NAMES.has(canonicalToolName)) {
+    return 'board_action';
+  }
+  return null;
+}
+
+function inferHistoricalActionCategory(
+  canonicalToolName: string
+): BoardTaskActivityCategory {
+  switch (canonicalToolName) {
+    case 'task_start':
+    case 'task_complete':
+    case 'task_set_status':
+      return 'status';
+    case 'review_start':
+    case 'review_request':
+    case 'review_approve':
+    case 'review_request_changes':
+      return 'review';
+    case 'task_add_comment':
+    case 'task_get_comment':
+      return 'comment';
+    case 'task_set_owner':
+      return 'assignment';
+    case 'task_get':
+      return 'read';
+    case 'task_attach_file':
+    case 'task_attach_comment_file':
+      return 'attachment';
+    case 'task_link':
+    case 'task_unlink':
+      return 'relationship';
+    case 'task_set_clarification':
+      return 'clarification';
+    default:
+      return 'other';
+  }
+}
+
+function asObjectRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function resolveToolResultPayload(
+  message: ParsedMessage,
+  toolResult: ParsedMessage['toolResults'][number]
+): unknown {
+  const toolUseResult = message.toolUseResult as
+    | ({ toolUseId?: string } & Record<string, unknown>)
+    | string
+    | unknown[]
+    | undefined;
+
+  if (toolUseResult && typeof toolUseResult === 'object' && !Array.isArray(toolUseResult)) {
+    const toolUseId =
+      typeof toolUseResult.toolUseId === 'string' ? toolUseResult.toolUseId.trim() : undefined;
+    if (toolUseId === toolResult.toolUseId || message.toolResults.length === 1) {
+      return toolUseResult;
+    }
+  }
+
+  if (toolUseResult && message.toolResults.length === 1) {
+    return toolUseResult;
+  }
+
+  return toolResult.content;
+}
+
+function parseToolResultRecord(value: unknown): Record<string, unknown> | null {
+  const directRecord = asObjectRecord(value);
+  if (directRecord) {
+    return directRecord;
+  }
+
+  if (typeof value === 'string') {
+    return asObjectRecord(parseJsonLikeString(value));
+  }
+
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  return asObjectRecord(parseJsonLikeString(collectTextBlockText(value)));
+}
+
+function buildHistoricalActionDetails(args: {
+  canonicalToolName: string;
+  input: Record<string, unknown>;
+  resultPayload: unknown;
+}): NonNullable<BoardTaskActivityRecord['action']>['details'] | undefined {
+  const { canonicalToolName, input, resultPayload } = args;
+  const resultRecord = parseToolResultRecord(resultPayload);
+  const details: NonNullable<NonNullable<BoardTaskActivityRecord['action']>['details']> = {};
+
+  if (canonicalToolName === 'task_set_status') {
+    const status = normalizeStatusDetail(input.status);
+    if (status) {
+      details.status = status;
+    }
+  }
+
+  if (canonicalToolName === 'task_set_owner' && Object.prototype.hasOwnProperty.call(input, 'owner')) {
+    const owner = normalizeOwnerDetail(input.owner);
+    if (owner !== undefined) {
+      details.owner = owner;
+    }
+  }
+
+  if (canonicalToolName === 'task_set_clarification') {
+    const clarification = normalizeClarificationDetail(input.clarification ?? input.value);
+    if (clarification !== undefined) {
+      details.clarification = clarification;
+    }
+  }
+
+  if (canonicalToolName === 'review_request' && typeof input.reviewer === 'string') {
+    details.reviewer = input.reviewer.trim();
+  }
+
+  if (canonicalToolName === 'task_link' || canonicalToolName === 'task_unlink') {
+    const relationship = normalizeRelationshipDetail(input.relationship ?? input.linkType);
+    if (relationship) {
+      details.relationship = relationship;
+    }
+  }
+
+  if (canonicalToolName === 'task_get_comment' && typeof input.commentId === 'string') {
+    details.commentId = input.commentId.trim();
+  }
+
+  if (canonicalToolName === 'task_add_comment') {
+    const resultCommentId =
+      typeof resultRecord?.commentId === 'string'
+        ? resultRecord.commentId.trim()
+        : typeof resultRecord?.comment === 'object' &&
+            resultRecord.comment !== null &&
+            'id' in resultRecord.comment &&
+            typeof (resultRecord.comment as Record<string, unknown>).id === 'string'
+          ? String((resultRecord.comment as Record<string, unknown>).id).trim()
+          : undefined;
+    if (resultCommentId) {
+      details.commentId = resultCommentId;
+    }
+  }
+
+  if (canonicalToolName === 'task_attach_file' || canonicalToolName === 'task_attach_comment_file') {
+    const attachmentId =
+      typeof resultRecord?.id === 'string' && resultRecord.id.trim().length > 0
+        ? resultRecord.id.trim()
+        : undefined;
+    const filename =
+      typeof resultRecord?.filename === 'string' && resultRecord.filename.trim().length > 0
+        ? resultRecord.filename.trim()
+        : undefined;
+    if (attachmentId) {
+      details.attachmentId = attachmentId;
+    }
+    if (filename) {
+      details.filename = filename;
+    }
+  }
+
+  return Object.keys(details).length > 0 ? details : undefined;
+}
+
+function mergeActivityRecords(
+  explicitRecords: BoardTaskActivityRecord[],
+  inferredRecords: BoardTaskActivityRecord[]
+): BoardTaskActivityRecord[] {
+  const merged = new Map<string, BoardTaskActivityRecord>();
+  for (const record of [...explicitRecords, ...inferredRecords]) {
+    merged.set(record.id, record);
+  }
+
+  return [...merged.values()].sort(compareCandidates);
+}
+
+function retainSyntheticToolUseAssistants(messages: ParsedMessage[]): ParsedMessage[] {
+  return messages.map((message) => {
+    if (
+      message.type !== 'assistant' ||
+      message.model !== '<synthetic>' ||
+      !Array.isArray(message.content)
+    ) {
+      return message;
+    }
+
+    const hasToolUse = message.content.some((block) => block.type === 'tool_use');
+    if (!hasToolUse) {
+      return message;
+    }
+
+    return {
+      ...message,
+      model: undefined,
+    };
+  });
 }
 
 function toStreamActor(detail: BoardTaskExactLogDetailCandidate['actor']): BoardTaskLogActor {
@@ -1185,6 +1523,200 @@ export class BoardTaskLogStreamService {
     return inferredSlices.sort(compareSlices);
   }
 
+  private async recoverHistoricalBoardMcpRecords(
+    teamName: string,
+    taskId: string
+  ): Promise<{
+    task: TeamTask | null;
+    parsedMessagesByFile: Map<string, ParsedMessage[]>;
+    records: BoardTaskActivityRecord[];
+  }> {
+    const [activeTasks, deletedTasks, transcriptContext] = await Promise.all([
+      this.taskReader.getTasks(teamName),
+      this.taskReader.getDeletedTasks(teamName),
+      this.transcriptSourceLocator.getContext(teamName),
+    ]);
+
+    const task = [...activeTasks, ...deletedTasks].find((candidate) => candidate.id === taskId) ?? null;
+    const transcriptFiles = transcriptContext?.transcriptFiles ?? [];
+    if (!task || transcriptFiles.length === 0) {
+      return {
+        task,
+        parsedMessagesByFile: new Map(),
+        records: [],
+      };
+    }
+
+    const parsedMessagesByFile = await this.strictParser.parseFiles(transcriptFiles);
+    const taskRefs = buildTaskReferenceSet(task);
+    const leadName =
+      transcriptContext?.config.members
+        ?.find((member) => isLeadMemberCheck(member))
+        ?.name?.trim() || 'team-lead';
+
+    const toolCallsByUseIdByFile = new Map<
+      string,
+      Map<
+        string,
+        {
+          toolName: string;
+          canonicalToolName: string;
+          input: Record<string, unknown>;
+        }
+      >
+    >();
+
+    for (const [filePath, messages] of parsedMessagesByFile.entries()) {
+      const toolCallsByUseId = new Map<
+        string,
+        {
+          toolName: string;
+          canonicalToolName: string;
+          input: Record<string, unknown>;
+        }
+      >();
+      for (const message of messages) {
+        for (const toolCall of message.toolCalls) {
+          if (!isBoardMcpToolName(toolCall.name)) {
+            continue;
+          }
+          const canonicalToolName = canonicalizeBoardToolName(toolCall.name);
+          if (!canonicalToolName) {
+            continue;
+          }
+          toolCallsByUseId.set(toolCall.id, {
+            toolName: toolCall.name,
+            canonicalToolName,
+            input: toolCall.input ?? {},
+          });
+        }
+      }
+      toolCallsByUseIdByFile.set(filePath, toolCallsByUseId);
+    }
+
+    const recoveredRecords: BoardTaskActivityRecord[] = [];
+    for (const [filePath, messages] of parsedMessagesByFile.entries()) {
+      const toolCallsByUseId = toolCallsByUseIdByFile.get(filePath);
+      if (!toolCallsByUseId) {
+        continue;
+      }
+      const taskDisplayId = getTaskDisplayId(task);
+
+      for (let index = 0; index < messages.length; index += 1) {
+        const message = messages[index];
+        if (message.type !== 'user' || message.toolResults.length === 0) {
+          continue;
+        }
+
+        const baseActor = buildInferredActor(message, leadName);
+        if (!baseActor) {
+          continue;
+        }
+
+        for (const toolResult of message.toolResults) {
+          if (toolResult.isError) {
+            continue;
+          }
+
+          const toolCall = toolCallsByUseId.get(toolResult.toolUseId);
+          if (!toolCall) {
+            continue;
+          }
+
+          const overriddenActorName =
+            !baseActor.memberName ? readHistoricalActorName(toolCall.input) : undefined;
+          const actor: BoardTaskLogActor = overriddenActorName
+            ? {
+                ...baseActor,
+                memberName: overriddenActorName,
+                role:
+                  normalizeMemberName(overriddenActorName) === normalizeMemberName(leadName)
+                    ? 'lead'
+                    : 'member',
+              }
+            : baseActor;
+
+          const linkKind = inferHistoricalLinkKind(toolCall.canonicalToolName);
+          if (!linkKind) {
+            continue;
+          }
+
+          const resultPayload = resolveToolResultPayload(message, toolResult);
+          if (
+            !valueReferencesTask(toolCall.input, taskRefs) &&
+            !valueReferencesTask(resultPayload, taskRefs)
+          ) {
+            continue;
+          }
+
+          const details = buildHistoricalActionDetails({
+            canonicalToolName: toolCall.canonicalToolName,
+            input: toolCall.input,
+            resultPayload,
+          });
+
+          recoveredRecords.push({
+            id: [
+              'historical-board-mcp',
+              filePath,
+              message.uuid,
+              toolResult.toolUseId,
+              task.id,
+            ].join(':'),
+            timestamp: message.timestamp.toISOString(),
+            task: {
+              locator: {
+                ref: taskDisplayId,
+                refKind: 'display',
+                canonicalId: task.id,
+              },
+              resolution: task.status === 'deleted' ? 'deleted' : 'resolved',
+              taskRef: {
+                taskId: task.id,
+                displayId: taskDisplayId,
+                teamName,
+              },
+            },
+            linkKind,
+            targetRole: 'subject',
+            actor: {
+              ...(actor.memberName ? { memberName: actor.memberName } : {}),
+              role: actor.role,
+              sessionId: actor.sessionId,
+              ...(actor.agentId ? { agentId: actor.agentId } : {}),
+              isSidechain: actor.isSidechain,
+            },
+            actorContext: {
+              relation:
+                toolCall.canonicalToolName === 'task_start' ||
+                toolCall.canonicalToolName === 'review_start'
+                  ? 'idle'
+                  : 'same_task',
+            },
+            action: {
+              canonicalToolName: toolCall.canonicalToolName,
+              toolUseId: toolResult.toolUseId,
+              category: inferHistoricalActionCategory(toolCall.canonicalToolName),
+              ...(details ? { details } : {}),
+            },
+            source: {
+              messageUuid: message.uuid,
+              filePath,
+              toolUseId: toolResult.toolUseId,
+              sourceOrder: index + 1,
+            },
+          });
+        }
+      }
+    }
+
+    return {
+      task,
+      parsedMessagesByFile,
+      records: recoveredRecords.sort(compareCandidates),
+    };
+  }
+
   private async buildStreamLayout(teamName: string, taskId: string): Promise<StreamLayout> {
     if (!isBoardTaskExactLogsReadEnabled()) {
       return {
@@ -1193,7 +1725,17 @@ export class BoardTaskLogStreamService {
       };
     }
 
-    const records = await this.recordSource.getTaskRecords(teamName, taskId);
+    let records = await this.recordSource.getTaskRecords(teamName, taskId);
+    let parsedMessagesByFile: Map<string, ParsedMessage[]> | null = null;
+
+    if (records.length === 0) {
+      const recovered = await this.recoverHistoricalBoardMcpRecords(teamName, taskId);
+      if (recovered.records.length > 0) {
+        records = mergeActivityRecords(records, recovered.records);
+        parsedMessagesByFile = recovered.parsedMessagesByFile;
+      }
+    }
+
     if (records.length === 0) {
       return {
         participants: [],
@@ -1220,16 +1762,19 @@ export class BoardTaskLogStreamService {
       };
     }
 
-    const parsedMessagesByFile = await this.strictParser.parseFiles(
-      candidates.map((candidate) => candidate.source.filePath)
-    );
+    const candidateFilePaths = candidates.map((candidate) => candidate.source.filePath);
+    const parsedMessagesByFileForCandidates =
+      parsedMessagesByFile &&
+      candidateFilePaths.every((filePath) => parsedMessagesByFile?.has(filePath))
+        ? parsedMessagesByFile
+        : await this.strictParser.parseFiles(candidateFilePaths);
 
     const slices: StreamSlice[] = [];
     for (const candidate of candidates) {
       const detail = this.detailSelector.selectDetail({
         candidate,
         records,
-        parsedMessagesByFile,
+        parsedMessagesByFile: parsedMessagesByFileForCandidates,
       });
       if (!detail || detail.filteredMessages.length === 0) {
         continue;
@@ -1275,7 +1820,7 @@ export class BoardTaskLogStreamService {
       teamName,
       taskId,
       records,
-      parsedMessagesByFile
+      parsedMessagesByFileForCandidates
     );
     const combinedSlices = [...slices, ...inferredExecutionSlices].sort(compareSlices);
     const deNoisedSlices = filterReadOnlySlices(combinedSlices);
@@ -1340,7 +1885,9 @@ export class BoardTaskLogStreamService {
         currentSegmentSlices = [];
         return;
       }
-      const chunks = this.chunkBuilder.buildBundleChunks(cleanedMessages);
+      const chunks = this.chunkBuilder.buildBundleChunks(
+        retainSyntheticToolUseAssistants(cleanedMessages)
+      );
       if (chunks.length > 0) {
         segments.push({
           id: buildSegmentId(participantKey, currentSegmentSlices),

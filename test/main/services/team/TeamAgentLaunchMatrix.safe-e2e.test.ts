@@ -1855,6 +1855,117 @@ describe('Team agent launch matrix safe e2e', () => {
     });
   });
 
+  it('recovers stale active mixed OpenCode lanes into ready and permission-pending states before degrading them', async () => {
+    const teamName = 'mixed-runtime-recover-split-permission-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath });
+    await writeTeamMeta(teamName, projectPath);
+    await writeMembersMeta(teamName);
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: getTeamsBasePath(),
+      teamName,
+      laneId: 'secondary:opencode:bob',
+      state: 'active',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: getTeamsBasePath(),
+      teamName,
+      laneId: 'secondary:opencode:tom',
+      state: 'active',
+    });
+    const adapter = new FakeOpenCodeRuntimeAdapter('clean_success', {
+      bob: 'confirmed',
+      tom: 'permission',
+    });
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+
+    const statuses = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(adapter.reconcileInputs.map((input) => input.laneId).sort()).toEqual([
+      'secondary:opencode:bob',
+      'secondary:opencode:tom',
+    ]);
+    expect(statuses.teamLaunchState).toBe('partial_pending');
+    expect(statuses.statuses.bob).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      hardFailure: false,
+    });
+    expect(statuses.statuses.tom).toMatchObject({
+      status: 'online',
+      launchState: 'runtime_pending_permission',
+      hardFailure: false,
+      pendingPermissionRequestIds: ['perm-tom'],
+    });
+    expect(statuses.statuses.bob?.launchState).not.toBe('failed_to_start');
+    expect(statuses.statuses.tom?.launchState).not.toBe('failed_to_start');
+    await expect(readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)).resolves.toMatchObject({
+      lanes: {
+        'secondary:opencode:bob': { state: 'active' },
+        'secondary:opencode:tom': { state: 'active' },
+      },
+    });
+  });
+
+  it('recovers stale active mixed OpenCode lanes into ready and bootstrap-pending states before degrading them', async () => {
+    const teamName = 'mixed-runtime-recover-split-bootstrap-safe-e2e';
+    await writeMixedTeamConfig({ teamName, projectPath });
+    await writeTeamMeta(teamName, projectPath);
+    await writeMembersMeta(teamName);
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: getTeamsBasePath(),
+      teamName,
+      laneId: 'secondary:opencode:bob',
+      state: 'active',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: getTeamsBasePath(),
+      teamName,
+      laneId: 'secondary:opencode:tom',
+      state: 'active',
+    });
+    const adapter = new FakeOpenCodeRuntimeAdapter('clean_success', {
+      bob: 'confirmed',
+      tom: 'launching',
+    });
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+
+    const statuses = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(adapter.reconcileInputs.map((input) => input.laneId).sort()).toEqual([
+      'secondary:opencode:bob',
+      'secondary:opencode:tom',
+    ]);
+    expect(statuses.teamLaunchState).toBe('partial_pending');
+    expect(statuses.summary).toMatchObject({
+      confirmedCount: 1,
+      pendingCount: 2,
+      failedCount: 0,
+      runtimeAlivePendingCount: 1,
+    });
+    expect(statuses.statuses.bob).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      hardFailure: false,
+    });
+    expect(statuses.statuses.tom).toMatchObject({
+      status: 'online',
+      launchState: 'runtime_pending_bootstrap',
+      runtimeAlive: true,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+    });
+    expect(statuses.statuses.bob?.launchState).not.toBe('failed_to_start');
+    expect(statuses.statuses.tom?.launchState).not.toBe('failed_to_start');
+    await expect(readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)).resolves.toMatchObject({
+      lanes: {
+        'secondary:opencode:bob': { state: 'active' },
+        'secondary:opencode:tom': { state: 'active' },
+      },
+    });
+  });
+
   it('recovers pure OpenCode launch statuses from disk after service restart', async () => {
     const adapter = new FakeOpenCodeRuntimeAdapter();
     const firstService = new TeamProvisioningService();
@@ -1999,7 +2110,7 @@ describe('Team agent launch matrix safe e2e', () => {
   });
 });
 
-type FakeMemberOutcome = 'confirmed' | 'permission' | 'failed';
+type FakeMemberOutcome = 'confirmed' | 'permission' | 'launching' | 'failed';
 
 class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   readonly providerId = 'opencode' as const;
@@ -2101,6 +2212,7 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     const outcome = this.memberOutcomes[member.name] ?? this.defaultOutcome();
     const failed = outcome === 'failed';
     const permissionPending = outcome === 'permission';
+    const bootstrapPending = outcome === 'launching';
     return {
       memberName: member.name,
       providerId: 'opencode',
@@ -2108,10 +2220,12 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         ? 'failed_to_start'
         : permissionPending
           ? 'runtime_pending_permission'
-          : 'confirmed_alive',
+          : bootstrapPending
+            ? 'runtime_pending_bootstrap'
+            : 'confirmed_alive',
       agentToolAccepted: !failed,
       runtimeAlive: !failed,
-      bootstrapConfirmed: !failed && !permissionPending,
+      bootstrapConfirmed: !failed && !permissionPending && !bootstrapPending,
       hardFailure: failed,
       hardFailureReason: failed ? 'fake_open_code_launch_failure' : undefined,
       pendingPermissionRequestIds: permissionPending ? [`perm-${member.name}`] : undefined,
@@ -2120,7 +2234,9 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         ? ['fake OpenCode launch failure']
         : permissionPending
           ? ['fake OpenCode launch awaiting permission']
-          : ['fake OpenCode launch ready'],
+          : bootstrapPending
+            ? ['fake OpenCode launch awaiting bootstrap']
+            : ['fake OpenCode launch ready'],
     };
   }
 
@@ -2131,7 +2247,7 @@ class FakeOpenCodeRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     if (outcomes.some((outcome) => outcome === 'failed')) {
       return 'partial_failure';
     }
-    if (outcomes.some((outcome) => outcome === 'permission')) {
+    if (outcomes.some((outcome) => outcome === 'permission' || outcome === 'launching')) {
       return 'partial_pending';
     }
     return 'clean_success';

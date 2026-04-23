@@ -160,7 +160,7 @@ describe('KanbanTaskCard change badge', () => {
     });
   });
 
-  it('still renders the Changes action when changePresence needs attention', async () => {
+  it('does not render the Changes action when changePresence needs attention', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -189,7 +189,7 @@ describe('KanbanTaskCard change badge', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Changes');
+    expect(host.querySelector('[aria-label="Changes"]')).toBeNull();
 
     await act(async () => {
       root.unmount();

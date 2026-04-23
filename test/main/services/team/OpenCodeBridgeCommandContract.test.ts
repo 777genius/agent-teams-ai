@@ -208,7 +208,9 @@ describe('OpenCodeBridgeCommandContract', () => {
     });
 
     expect(first).toBe(second);
-    expect(first).toMatch(/^opencode:opencode.launchTeam:Team_A:run-1:[a-f0-9]{32}$/);
+    expect(first).toMatch(
+      /^opencode:opencode\.launchTeam:Team_A:no-lane:run-1:[a-f0-9]{32}$/
+    );
     expect(stableHash({ b: 2, a: 1 })).toBe(stableHash({ a: 1, b: 2 }));
   });
 });

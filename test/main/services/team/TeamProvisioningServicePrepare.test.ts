@@ -996,6 +996,101 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     );
   });
 
+  it('includes CLI output in generic preflight failures', async () => {
+    const svc = new TeamProvisioningService();
+    vi.spyOn(svc as any, 'spawnProbe')
+      .mockResolvedValueOnce({
+        stdout: 'orchestrator-cli 1.2.3',
+        stderr: '',
+        exitCode: 0,
+      })
+      .mockResolvedValueOnce({
+        stdout: 'upstream unavailable',
+        stderr: 'request id: req_123',
+        exitCode: 1,
+      });
+
+    const result = await (svc as any).probeClaudeRuntime(
+      '/fake/claude',
+      tempRoot,
+      {
+        PATH: '/usr/bin',
+        SHELL: '/bin/zsh',
+      },
+      'codex'
+    );
+
+    expect(result.warning).toContain('preflight check failed (exit code 1). Details:');
+    expect(result.warning).toContain('upstream unavailable');
+    expect(result.warning).toContain('request id: req_123');
+  });
+
+  it('continues selected model verification after transient preflight warnings', async () => {
+    const svc = new TeamProvisioningService();
+    vi.spyOn(svc as any, 'getCachedOrProbeResult').mockResolvedValue({
+      claudePath: '/fake/claude',
+      authSource: 'oauth_token',
+      warning:
+        'Preflight check for `claude -p` did not complete. Proceeding anyway. Details: Timeout running: claude -p Output only the single word PONG. --output-format text --model haiku --max-turns 1 --no-session-persistence',
+    });
+    const verifySelectedProviderModels = vi
+      .spyOn(svc as any, 'verifySelectedProviderModels')
+      .mockResolvedValue({
+        details: ['Selected model opus verified for launch.'],
+        warnings: [],
+        blockingMessages: [],
+      });
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      forceFresh: true,
+      providerId: 'anthropic',
+      modelIds: ['opus'],
+    });
+
+    expect(verifySelectedProviderModels).toHaveBeenCalledTimes(1);
+    expect(result.ready).toBe(true);
+    expect(result.details).toEqual(['Selected model opus verified for launch.']);
+    expect(result.warnings).toContain(
+      'Preflight check for `claude -p` did not complete. Proceeding anyway. Details: Timeout running: claude -p Output only the single word PONG. --output-format text --model haiku --max-turns 1 --no-session-persistence'
+    );
+  });
+
+  it('continues selected model verification after generic preflight failures', async () => {
+    const svc = new TeamProvisioningService();
+    vi.spyOn(svc as any, 'getCachedOrProbeResult').mockResolvedValue({
+      claudePath: '/fake/claude',
+      authSource: 'codex_runtime',
+      warning:
+        'orchestrator-cli preflight check failed (exit code 1). Details: upstream unavailable',
+    });
+    const verifySelectedProviderModels = vi
+      .spyOn(svc as any, 'verifySelectedProviderModels')
+      .mockResolvedValue({
+        details: [
+          'Selected model gpt-5.4 verified for launch.',
+          'Selected model gpt-5.4-mini verified for launch.',
+        ],
+        warnings: [],
+        blockingMessages: [],
+      });
+
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      forceFresh: true,
+      providerId: 'codex',
+      modelIds: ['gpt-5.4', 'gpt-5.4-mini'],
+    });
+
+    expect(verifySelectedProviderModels).toHaveBeenCalledTimes(1);
+    expect(result.ready).toBe(true);
+    expect(result.details).toEqual([
+      'Selected model gpt-5.4 verified for launch.',
+      'Selected model gpt-5.4-mini verified for launch.',
+    ]);
+    expect(result.warnings).toContain(
+      'orchestrator-cli preflight check failed (exit code 1). Details: upstream unavailable'
+    );
+  });
+
   it('maps ANTHROPIC_AUTH_TOKEN into ANTHROPIC_API_KEY for headless preflight', async () => {
     const svc = new TeamProvisioningService();
     vi.mocked(resolveInteractiveShellEnv).mockResolvedValue({

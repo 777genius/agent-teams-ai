@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { isRelativeUrl, parsePathWithLine } from '@renderer/components/chat/viewers/FileLink';
+import {
+  isRelativeUrl,
+  parsePathWithLine,
+  resolveFileLinkPath,
+} from '@renderer/components/chat/viewers/FileLink';
 
 describe('parsePathWithLine', () => {
   it('returns filePath and null line for simple path', () => {
@@ -89,5 +93,32 @@ describe('isRelativeUrl', () => {
 
   it('returns false for empty string', () => {
     expect(isRelativeUrl('')).toBe(false);
+  });
+
+  it('returns true for absolute filesystem paths', () => {
+    expect(isRelativeUrl('/Users/test/project/docs/roadmap.md')).toBe(true);
+    expect(isRelativeUrl('C:\\Users\\test\\project\\README.md')).toBe(true);
+  });
+});
+
+describe('resolveFileLinkPath', () => {
+  const PROJECT_PATH = '/Users/test/project';
+
+  it('resolves relative paths against the project root', () => {
+    expect(resolveFileLinkPath('docs/roadmap.md', PROJECT_PATH)).toBe(
+      '/Users/test/project/docs/roadmap.md'
+    );
+  });
+
+  it('normalizes dot segments in relative paths', () => {
+    expect(resolveFileLinkPath('./docs/../README.md', PROJECT_PATH)).toBe(
+      '/Users/test/project/README.md'
+    );
+  });
+
+  it('preserves absolute filesystem paths as-is', () => {
+    expect(
+      resolveFileLinkPath('/Users/belief/dev/projects/your_posts/docs/roadmap.md', PROJECT_PATH)
+    ).toBe('/Users/belief/dev/projects/your_posts/docs/roadmap.md');
   });
 });

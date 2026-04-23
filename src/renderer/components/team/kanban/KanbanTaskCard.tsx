@@ -257,8 +257,7 @@ export const KanbanTaskCard = memo(
     const isReviewManual = columnId === 'review' && !hasReviewers && effectiveReviewer.length === 0;
     const metaActions = (
       <>
-        {canDisplay &&
-        (task.changePresence === 'has_changes' || task.changePresence === 'needs_attention') ? (
+        {canDisplay && task.changePresence === 'has_changes' ? (
           <TaskActionIconButton
             label="Changes"
             icon={<FileCode className="size-2.5" />}

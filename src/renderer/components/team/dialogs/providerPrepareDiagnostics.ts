@@ -420,6 +420,20 @@ function resolveModelResultFromBatch(
     };
   }
 
+  if (result.ready && (result.warnings?.length ?? 0) > 0 && !hasModelScopedEntries) {
+    const line = buildModelFailureLine(
+      providerId,
+      modelId,
+      'check failed',
+      'Verification did not complete after runtime preflight warning'
+    );
+    return {
+      status: 'notes',
+      line,
+      warningLine: line,
+    };
+  }
+
   if (result.ready) {
     return {
       status: 'ready',

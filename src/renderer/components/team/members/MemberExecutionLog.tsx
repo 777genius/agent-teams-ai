@@ -177,7 +177,7 @@ const AIExecutionGroup = ({
   }, [group, memberName]);
   const hasToggleContent = enhanced.displayItems.length > 0;
   const visibleLastOutput =
-    enhanced.lastOutput?.type === 'tool_result' ? null : enhanced.lastOutput;
+    enhanced.lastOutput?.type === 'tool_result' && hasToggleContent ? null : enhanced.lastOutput;
 
   return (
     <div className="space-y-3 border-l-2 pl-3" style={{ borderColor: 'var(--chat-ai-border)' }}>

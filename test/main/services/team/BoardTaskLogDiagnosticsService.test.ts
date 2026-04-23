@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 
@@ -14,6 +14,10 @@ import type { TeamTask } from '../../../../src/shared/types';
 
 const TEAM_NAME = 'beacon-desk-2';
 const TASK_ID = 'c414cd52-470a-4b51-ae1e-e5250fff95d7';
+const ANNOTATED_REAL_FIXTURE_PATH = path.resolve(
+  process.cwd(),
+  'test/fixtures/team/task-log-stream-annotated-real.jsonl',
+);
 
 function createTask(overrides: Partial<TeamTask> = {}): TeamTask {
   return {
@@ -307,5 +311,47 @@ describe('BoardTaskLogDiagnosticsService', () => {
       'mcp__agent-teams__task_add_comment',
     ]);
     expect(report.diagnosis.join(' ')).toContain('Only board MCP actions are explicit');
+  });
+
+  it('does not report missing explicit worker links for a real-format annotated transcript fixture', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'task-log-diagnostics-annotated-real-'));
+    tempDirs.push(dir);
+    const transcriptPath = path.join(dir, 'session.jsonl');
+    const fixtureText = await readFile(ANNOTATED_REAL_FIXTURE_PATH, 'utf8');
+    await writeFile(transcriptPath, fixtureText, 'utf8');
+
+    const task = createTask({
+      workIntervals: undefined,
+    });
+
+    const taskReader = {
+      getTasks: async () => [task],
+      getDeletedTasks: async () => [] as TeamTask[],
+    };
+    const transcriptSourceLocator = {
+      listTranscriptFiles: async () => [transcriptPath],
+    };
+    const recordSource = new BoardTaskActivityRecordSource(
+      transcriptSourceLocator as never,
+      taskReader as never,
+      new BoardTaskActivityTranscriptReader(),
+      new BoardTaskActivityRecordBuilder(),
+    );
+    const streamService = new BoardTaskLogStreamService(recordSource);
+    const diagnosticsService = new BoardTaskLogDiagnosticsService(
+      taskReader as never,
+      transcriptSourceLocator as never,
+      recordSource,
+      undefined,
+      streamService,
+    );
+
+    const report = await diagnosticsService.diagnose(TEAM_NAME, '#c414cd52');
+
+    expect(report.explicitRecords.execution).toBeGreaterThan(0);
+    expect(report.intervalToolResults.worker.missingExplicit).toBe(0);
+    expect(report.stream.visibleToolNames).toContain('Bash');
+    expect(report.stream.visibleToolNames).toContain('mcp__agent-teams__task_complete');
+    expect(report.diagnosis.join(' ')).not.toContain('Only board MCP actions are explicit');
   });
 });

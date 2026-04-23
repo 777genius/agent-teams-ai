@@ -1,3 +1,4 @@
+import { existsSync } from 'fs';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
@@ -14,8 +15,16 @@ interface WorkerResponse {
   error?: string;
 }
 
-function getWorkerPath(): string {
-  return path.join(process.cwd(), 'dist-electron', 'main', 'team-fs-worker.cjs');
+function getWorkerInfo(): { path: string; execArgv?: string[] } {
+  const builtWorkerPath = path.join(process.cwd(), 'dist-electron', 'main', 'team-fs-worker.cjs');
+  if (existsSync(builtWorkerPath)) {
+    return { path: builtWorkerPath };
+  }
+
+  return {
+    path: path.join(process.cwd(), 'src', 'main', 'workers', 'team-fs-worker.ts'),
+    execArgv: ['--import', 'tsx'],
+  };
 }
 
 function callListTeams(worker: Worker, teamsDir: string): Promise<unknown[]> {
@@ -80,7 +89,7 @@ describe('team-fs-worker integration', () => {
   });
 
   it('uses launch-summary.json when launch-state.json is too large for mixed-team summaries', async () => {
-    const workerPath = getWorkerPath();
+    const workerInfo = getWorkerInfo();
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
     const teamName = 'mixed-worker-team';
     const teamDir = path.join(tempDir, teamName);
@@ -148,7 +157,10 @@ describe('team-fs-worker integration', () => {
       'utf8'
     );
 
-    const worker = new Worker(workerPath);
+    const worker = new Worker(
+      workerInfo.path,
+      workerInfo.execArgv ? { execArgv: workerInfo.execArgv } : undefined
+    );
     try {
       const teams = (await callListTeams(worker, tempDir)) as Array<Record<string, unknown>>;
       expect(teams).toHaveLength(1);
@@ -170,7 +182,7 @@ describe('team-fs-worker integration', () => {
   });
 
   it('ignores removed and lead members when draft-team worker summary counts members', async () => {
-    const workerPath = getWorkerPath();
+    const workerInfo = getWorkerInfo();
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
     const teamName = 'draft-worker-team';
     const teamDir = path.join(tempDir, teamName);
@@ -199,7 +211,10 @@ describe('team-fs-worker integration', () => {
       'utf8'
     );
 
-    const worker = new Worker(workerPath);
+    const worker = new Worker(
+      workerInfo.path,
+      workerInfo.execArgv ? { execArgv: workerInfo.execArgv } : undefined
+    );
     try {
       const teams = (await callListTeams(worker, tempDir)) as Array<Record<string, unknown>>;
       expect(teams).toHaveLength(1);

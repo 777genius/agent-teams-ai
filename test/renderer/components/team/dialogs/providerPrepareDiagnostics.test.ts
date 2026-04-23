@@ -477,7 +477,7 @@ describe('runProviderPrepareDiagnostics', () => {
     expect(result.details).toEqual(['5.4 Mini - verified', '5.4 - verified']);
   });
 
-  it('suppresses a generic runtime preflight note when all selected models verify', async () => {
+  it('does not synthesize verified from a generic runtime preflight note alone', async () => {
     const prepareProvisioning = vi.fn<
       (
         cwd?: string,
@@ -490,6 +490,47 @@ describe('runProviderPrepareDiagnostics', () => {
         ready: true,
         message: 'CLI is ready to launch (see notes)',
         warnings: ['orchestrator-cli preflight check failed (exit code 1).'],
+      });
+    });
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'codex',
+      selectedModelIds: ['gpt-5.4'],
+      prepareProvisioning,
+    });
+
+    expect(result.status).toBe('notes');
+    expect(result.warnings).toEqual([
+      '5.4 - check failed - Verification did not complete after runtime preflight warning',
+    ]);
+    expect(result.details).toEqual([
+      '5.4 - check failed - Verification did not complete after runtime preflight warning',
+    ]);
+    expect(result.modelResultsById).toEqual({
+      'gpt-5.4': {
+        status: 'notes',
+        line: '5.4 - check failed - Verification did not complete after runtime preflight warning',
+        warningLine:
+          '5.4 - check failed - Verification did not complete after runtime preflight warning',
+      },
+    });
+  });
+
+  it('suppresses a generic runtime preflight failure when selected models later verify', async () => {
+    const prepareProvisioning = vi.fn<
+      (
+        cwd?: string,
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
+        selectedModels?: string[]
+      ) => Promise<TeamProvisioningPrepareResult>
+    >((_, __, ___, selectedModels) => {
+      return Promise.resolve({
+        ready: true,
+        message: 'CLI is ready to launch (see notes)',
+        details: ['Selected model gpt-5.4 verified for launch.'],
+        warnings: ['orchestrator-cli preflight check failed (exit code 1). Details: upstream unavailable'],
       });
     });
 

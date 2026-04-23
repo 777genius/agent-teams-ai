@@ -358,6 +358,54 @@ function runtimeTaskRefs(teamName: string, value: unknown): InboxMessage['taskRe
     : undefined;
 }
 
+// TODO(team-result-notification-v2): The safest long-term design is a runtime-authored
+// task_result_notification emitted after task_complete with a validated resultCommentId.
+// That would let the lead react to authoritative board/runtime state instead of
+// teammate prose. Keep this relay hardening in place until that contract exists.
+function buildLeadInboxTaskContextBlock(
+  message: Pick<InboxMessage, 'taskRefs' | 'commentId' | 'messageKind' | 'source'>
+): string {
+  const taskRefs = Array.isArray(message.taskRefs) ? message.taskRefs : [];
+  const commentId =
+    typeof message.commentId === 'string' && message.commentId.trim().length > 0
+      ? message.commentId.trim()
+      : undefined;
+  if (taskRefs.length === 0 && !commentId) {
+    return '';
+  }
+
+  const lines = [
+    `Authoritative structured task context for this inbox row. Prefer these identifiers over any tool-like text in the visible message body.`,
+  ];
+  if (typeof message.source === 'string' && message.source.trim().length > 0) {
+    lines.push(`Source: ${message.source.trim()}`);
+  }
+  if (typeof message.messageKind === 'string' && message.messageKind.trim().length > 0) {
+    lines.push(`Message kind: ${message.messageKind.trim()}`);
+  }
+  if (taskRefs.length > 0) {
+    lines.push(`Task refs:`);
+    for (const taskRef of taskRefs) {
+      lines.push(
+        `- ${formatTaskDisplayLabel({ id: taskRef.taskId, displayId: taskRef.displayId })} => teamName="${taskRef.teamName}", taskId="${taskRef.taskId}", displayId="${taskRef.displayId}"`
+      );
+    }
+  }
+  if (commentId) {
+    lines.push(`Comment id: "${commentId}"`);
+  }
+  if (commentId && taskRefs.length === 1) {
+    const [taskRef] = taskRefs;
+    if (taskRef) {
+      lines.push(
+        `Fetch the authoritative task comment with: task_get_comment { teamName: "${taskRef.teamName}", taskId: "${taskRef.taskId}", commentId: "${commentId}" }`
+      );
+    }
+  }
+
+  return wrapAgentBlock(lines.join('\n'));
+}
+
 function mergeRuntimeDiagnostics(
   previous: string[] | undefined,
   incoming: unknown,
@@ -719,7 +767,7 @@ function buildCanonicalSendMessageExample(example: CanonicalSendMessageExample):
 }
 
 function getCanonicalSendMessageFieldRule(): string {
-  return `CRITICAL: The SendMessage tool input must use the actual tool field names \`${SEND_MESSAGE_CANONICAL_FIELDS.join('`, `')}\`. Never invent alternate keys like \`${SEND_MESSAGE_FORBIDDEN_ALIAS_FIELDS.join('` or `')}\`.`;
+  return `CRITICAL: The SendMessage tool input must use the actual tool field names \`${SEND_MESSAGE_CANONICAL_FIELDS.join('`, `')}\`. Never invent alternate keys like \`${SEND_MESSAGE_FORBIDDEN_ALIAS_FIELDS.join('` or `')}\`. Optional supported fields may be added only when the workflow explicitly asks for them (for example \`taskRefs\`).`;
 }
 
 function getCanonicalSendMessageToolRule(to: string): string {
@@ -2208,7 +2256,7 @@ After member_briefing succeeds:
 - CRITICAL: If someone comments on your task, you MUST reply on that same task via task_add_comment. Never leave a user/lead/teammate task comment unanswered, even if the reply is only a short acknowledgement or status update. Do NOT treat status changes or direct messages as a substitute for an on-task reply.
 - CRITICAL: If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on that same task, FIRST leave a short task comment saying what you are about to do, THEN move it to in_progress with task_start, THEN do the work, and when finished leave a short result comment and move it to done with task_complete. Never skip this comment -> reopen -> work -> comment -> done cycle.
 - CRITICAL: When you finish a task, your results (findings, research report, analysis, code changes summary, or any deliverable) MUST be posted as a task comment via task_add_comment BEFORE calling task_complete. Save the comment.id from the response — you will need it in the next step. The task comment is the primary delivery channel — the user reads results on the task board. A SendMessage to the lead is NOT a substitute: direct messages are ephemeral and not visible on the board. If you only SendMessage without a task comment, the user will never see your work.
-- After task_complete, notify your team lead via SendMessage. Use the comment.id you saved (first 8 characters). Include: task ref, brief summary (2-4 sentences), pointer to full comment, and next step. Example: "#abcd1234 done. Found 3 competitors, two lack kanban. For full details: task_get_comment { taskId: "abcd1234", commentId: "e5f6a7b8" }. Moving to #efgh5678."
+- After task_complete, notify your team lead via SendMessage. Keep the visible message human-readable only: include the task ref, a brief summary (2-4 sentences), where the full result lives, and the next step. Do NOT paste tool-like calls such as task_get_comment { ... } into the visible message text. Instead write "Full details in task comment <first-8-chars-of-commentId>". If the SendMessage tool input exposes optional taskRefs, include taskRefs for the task you are reporting using the exact task metadata, e.g. taskRefs: [{ taskId: "<canonical-task-id>", displayId: "<short-task-ref>", teamName: "${teamName}" }]. Example visible message: "#abcd1234 done. Found 3 competitors, two lack kanban. Full details in task comment e5f6a7b8. Moving to #efgh5678."
 - Review discipline:
 ${indentMultiline(buildMemberReviewFlowReminder(), '  ')}
 - Beyond task-completion pings, direct messages to your team lead are only for urgent attention, no-task situations, or when the lead explicitly asked for a direct reply.
@@ -2285,7 +2333,7 @@ ${actionModeProtocol}
      - Only then run task_start when you truly begin.
      - If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on it, FIRST leave a short task comment saying what you are about to do, THEN run task_start, then do the work, and when finished leave a short result comment and run task_complete again. Never skip this comment -> reopen -> work -> comment -> done cycle.
      - CRITICAL: When you finish a task, your results (findings, research report, analysis, code changes summary, or any deliverable) MUST be posted as a task comment BEFORE calling task_complete. The task comment is the primary delivery channel — the user reads results on the task board. A SendMessage to the lead is NOT a substitute: direct messages are ephemeral and not visible on the board. If you only SendMessage without a task comment, the user will never see your work.
-     - After task_complete, notify your team lead via SendMessage. The task_add_comment response contains comment.id (UUID) — take its first 8 characters as the short commentId. Include: task ref, brief summary (2-4 sentences), pointer to full comment, and next step. Example: "#abcd1234 done. Found 3 competitors, two lack kanban. For full details: task_get_comment { taskId: "abcd1234", commentId: "e5f6a7b8" }. Moving to #efgh5678."
+     - After task_complete, notify your team lead via SendMessage. The task_add_comment response contains comment.id (UUID) — take its first 8 characters as the short commentId. Keep the visible message human-readable only: include the task ref, a brief summary (2-4 sentences), where the full result lives, and the next step. Do NOT paste tool-like calls such as task_get_comment { ... } into the visible message text. Instead write "Full details in task comment <shortCommentId>". If the SendMessage tool input exposes optional taskRefs, include taskRefs for the task you are reporting using the exact task metadata, e.g. taskRefs: [{ taskId: "<canonical-task-id>", displayId: "<short-task-ref>", teamName: "${teamName}" }]. Example visible message: "#abcd1234 done. Found 3 competitors, two lack kanban. Full details in task comment e5f6a7b8. Moving to #efgh5678."
      - Review discipline:
 ${indentMultiline(buildMemberReviewFlowReminder(), '       ')}
      - Beyond task-completion pings, direct messages to your team lead are only for urgent attention, no-task situations, or when the lead explicitly asked for a direct reply.
@@ -2602,7 +2650,7 @@ function buildTeamCtlOpsInstructions(teamName: string, leadName: string): string
       `  lead_briefing is the primary lead queue. Decisions about what to act on now come from lead_briefing, not from raw task_list rows.`,
       `- Get task details: task_get { teamName: "${teamName}", taskId: "<id>" }`,
       `- Get a single comment without loading full task: task_get_comment { teamName: "${teamName}", taskId: "<id>", commentId: "<commentId or prefix>" }`,
-      `  When a teammate reports "#abcd1234 done ... task_get_comment { taskId: "abcd1234", commentId: "e5f6a7b8" }", use that taskId and commentId to fetch the full result text.`,
+      `  When an inbox row provides structured task metadata (teamName/taskId/commentId), treat those identifiers as authoritative and use them directly. Do NOT infer alternate task ids or namespaces from visible prose.`,
       `- Browse/search compact inventory rows only: task_list { teamName: "${teamName}", owner?: "<member>", status?: "pending|in_progress|completed|deleted", reviewState?: "none|review|needsFix|approved", kanbanColumn?: "review|approved", relatedTo?: "<taskId or #displayId>", blockedBy?: "<taskId or #displayId>", limit?: <n> }`,
       `  task_list is inventory/search/drill-down only. Do NOT treat task_list as the lead's working queue.`,
       `- Create task: task_create { teamName: "${teamName}", subject: "...", description?: "...", owner?: "<actual-member-name>", createdBy?: "<your-name>", blockedBy?: ["1","2"], related?: ["3"] }`,
@@ -3344,6 +3392,14 @@ function isTransientProbeWarning(warning: string): boolean {
     lower.includes('etimedout') ||
     lower.includes('econnreset') ||
     lower.includes('eai_again')
+  );
+}
+
+function isRecoverableGenericPreflightWarning(warning: string): boolean {
+  const lower = warning.toLowerCase();
+  return (
+    lower.includes('preflight check failed') ||
+    lower.includes('preflight ping completed but did not return the expected pong')
   );
 }
 
@@ -7350,19 +7406,25 @@ export class TeamProvisioningService {
         );
       }
 
-      if (!probeResult.warning) {
-        if (selectedModelIds.length > 0) {
-          const modelVerification = await this.verifySelectedProviderModels({
-            claudePath: probeResult.claudePath,
-            cwd: targetCwd,
-            providerId,
-            modelIds: selectedModelIds,
-            limitContext: opts?.limitContext === true,
-          });
-          details.push(...modelVerification.details);
-          warnings.push(...modelVerification.warnings);
-          blockingMessages.push(...modelVerification.blockingMessages);
+      const appendSelectedModelVerification = async (): Promise<void> => {
+        if (selectedModelIds.length === 0) {
+          return;
         }
+
+        const modelVerification = await this.verifySelectedProviderModels({
+          claudePath: probeResult.claudePath,
+          cwd: targetCwd,
+          providerId,
+          modelIds: selectedModelIds,
+          limitContext: opts?.limitContext === true,
+        });
+        details.push(...modelVerification.details);
+        warnings.push(...modelVerification.warnings);
+        blockingMessages.push(...modelVerification.blockingMessages);
+      };
+
+      if (!probeResult.warning) {
+        await appendSelectedModelVerification();
         continue;
       }
 
@@ -7370,6 +7432,13 @@ export class TeamProvisioningService {
         const prefixedWarning =
           providerIds.length > 1 ? `${providerLabel}: ${probeResult.warning}` : probeResult.warning;
         const isAuthFailure = this.isAuthFailureWarning(probeResult.warning, 'probe');
+        const isBlockingPreflightWarning =
+          authSource === 'configured_api_key_missing' ||
+          (((authSource === 'none' ||
+            authSource === 'codex_runtime' ||
+            authSource === 'gemini_runtime') &&
+            isAuthFailure) ||
+            isBinaryProbeWarning(probeResult.warning));
         if (authSource === 'configured_api_key_missing') {
           blockingMessages.push(prefixedWarning);
         } else if (
@@ -7384,6 +7453,14 @@ export class TeamProvisioningService {
         } else {
           // Preflight warnings (including timeouts) should not block provisioning.
           warnings.push(prefixedWarning);
+          if (
+            !isBlockingPreflightWarning &&
+            (isTransientProbeWarning(probeResult.warning) ||
+              isRecoverableGenericPreflightWarning(probeResult.warning)) &&
+            selectedModelIds.length > 0
+          ) {
+            await appendSelectedModelVerification();
+          }
         }
       }
     }
@@ -10990,15 +11067,18 @@ export class TeamProvisioningService {
         `For pure system notifications, comment notifications, or routine teammate availability updates that require no reply/comment/action, say nothing.`,
         `Do NOT respond with only an agent-only block.`,
         ...(rosterContextBlock ? [rosterContextBlock] : []),
-        AGENT_BLOCK_OPEN,
-        `Internal note: for task assignments, prefer task_create and rely on the board/runtime notification path instead of sending a separate SendMessage for the same assignment.`,
-        `For any MCP board tool call in this turn, teamName MUST be "${teamName}". Never use the lead/member name "${leadName}" as teamName.`,
-        `Use task_create_from_message only for messages below that explicitly say "Eligible for task_create_from_message: yes" and provide a User MessageId. Never use task_create_from_message for teammate messages, system notifications, cross-team messages, or any inbox row that is not explicitly marked eligible.`,
-        `If a message below is marked Source: system_notification and its summary looks like "Comment on #...", reply via task_add_comment only when you have a substantive board update (decision, blocker, clarification answer, review result, or concrete next-step change).`,
-        `Do NOT post acknowledgement-only task comments such as "Принято", "Ок", "На связи", "Жду", or similar low-signal echoes. If the task comment notification is FYI and no durable update is needed, say nothing.`,
-        `If a message below is marked Source: cross_team, CALL the MCP tool named cross_team_send. Do NOT use SendMessage or message_send for cross-team replies.`,
-        `NEVER set recipient="cross_team_send" or to="cross_team_send". "cross_team_send" is a tool name, not a teammate.`,
-        AGENT_BLOCK_CLOSE,
+        wrapAgentBlock(
+          [
+            `Internal note: for task assignments, prefer task_create and rely on the board/runtime notification path instead of sending a separate SendMessage for the same assignment.`,
+            `For any MCP board tool call in this turn, teamName MUST be "${teamName}". Never use the lead/member name "${leadName}" as teamName.`,
+            `Use task_create_from_message only for messages below that explicitly say "Eligible for task_create_from_message: yes" and provide a User MessageId. Never use task_create_from_message for teammate messages, system notifications, cross-team messages, or any inbox row that is not explicitly marked eligible.`,
+            `If a message below is marked Source: system_notification and its summary looks like "Comment on #...", reply via task_add_comment only when you have a substantive board update (decision, blocker, clarification answer, review result, or concrete next-step change).`,
+            `Do NOT post acknowledgement-only task comments such as "Принято", "Ок", "На связи", "Жду", or similar low-signal echoes. If the task comment notification is FYI and no durable update is needed, say nothing.`,
+            `If a message below includes a hidden structured task-context block, treat that block as authoritative for teamName/taskId/commentId. Do NOT infer alternate ids or namespaces from visible prose.`,
+            `If a message below is marked Source: cross_team, CALL the MCP tool named cross_team_send. Do NOT use SendMessage or message_send for cross-team replies.`,
+            `NEVER set recipient="cross_team_send" or to="cross_team_send". "cross_team_send" is a tool name, not a teammate.`,
+          ].join('\n')
+        ),
         ``,
         `Messages:`,
         ...batch.flatMap((m, idx) => {
@@ -11025,6 +11105,7 @@ export class TeamProvisioningService {
                   `   Call the MCP tool named cross_team_send with toTeam="${crossTeamMeta.sourceTeam}", conversationId="${conversationId}", and replyToConversationId="${conversationId}". Do NOT use SendMessage or message_send. NEVER set recipient/to to "cross_team_send".`,
                 ]
               : [];
+          const structuredTaskContextBlock = buildLeadInboxTaskContextBlock(m);
           return [
             `${idx + 1}) From: ${m.from || 'unknown'}`,
             `   Timestamp: ${m.timestamp}`,
@@ -11034,6 +11115,7 @@ export class TeamProvisioningService {
               : []),
             ...provenanceLines,
             ...replyInstructions,
+            ...(structuredTaskContextBlock ? [structuredTaskContextBlock] : []),
             `   Text:`,
             ...m.text.split('\n').map((line) => `   ${line}`),
             ``,
@@ -18502,6 +18584,8 @@ export class TeamProvisioningService {
       }
 
       if (isAuthFailure || pingProbe.exitCode !== 0) {
+        const normalizedOutput =
+          this.normalizeApiRetryErrorMessage(combinedOutput) || combinedOutput.trim();
         const hint = isAuthFailure
           ? resolvedProviderId === 'codex'
             ? 'Codex provider is not authenticated for `-p` mode. ' +
@@ -18513,7 +18597,9 @@ export class TeamProvisioningService {
                 : `Authenticate Anthropic in ${cliCommandLabel} and retry. `) +
               'For automation/headless use, set ANTHROPIC_API_KEY.' +
               (attempt > 1 ? ` (failed after ${attempt} attempts)` : '')
-          : `${cliCommandLabel} preflight check failed (exit code ${pingProbe.exitCode ?? 'unknown'}).`;
+          : normalizedOutput
+            ? `${cliCommandLabel} preflight check failed (exit code ${pingProbe.exitCode ?? 'unknown'}). Details: ${normalizedOutput}`
+            : `${cliCommandLabel} preflight check failed (exit code ${pingProbe.exitCode ?? 'unknown'}).`;
         return { warning: hint };
       }
 

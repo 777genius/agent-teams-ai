@@ -90,6 +90,18 @@ function makeTaskChangeResult(
     confidence: 'high' | 'medium' | 'low' | 'fallback';
     content: string;
     warning: string;
+    scope: Partial<{
+      memberName: string;
+      startTimestamp: string;
+      endTimestamp: string;
+      toolUseIds: string[];
+      filePaths: string[];
+      confidence: {
+        tier: 1 | 2 | 3 | 4;
+        label: 'high' | 'medium' | 'low' | 'fallback';
+        reason: string;
+      };
+    }>;
   }> = {}
 ) {
   const teamName = overrides.teamName ?? TEAM_NAME;
@@ -128,18 +140,19 @@ function makeTaskChangeResult(
     computedAt: '2026-03-01T12:00:00.000Z',
     scope: {
       taskId: targetTaskId,
-      memberName: 'alice',
+      memberName: overrides.scope?.memberName ?? 'alice',
       startLine: 0,
       endLine: 0,
-      startTimestamp: '',
-      endTimestamp: '',
-      toolUseIds: [],
-      filePaths: files.map((file) => file.filePath),
-      confidence: {
-        tier: confidenceTierByLabel[confidence],
-        label: confidence,
-        reason: 'test fixture',
-      },
+      startTimestamp: overrides.scope?.startTimestamp ?? '',
+      endTimestamp: overrides.scope?.endTimestamp ?? '',
+      toolUseIds: overrides.scope?.toolUseIds ?? [],
+      filePaths: overrides.scope?.filePaths ?? files.map((file) => file.filePath),
+      confidence:
+        overrides.scope?.confidence ?? {
+          tier: confidenceTierByLabel[confidence],
+          label: confidence,
+          reason: 'test fixture',
+        },
     },
     warnings: overrides.warning ? [overrides.warning] : [],
   };
@@ -776,6 +789,52 @@ describe('ChangeExtractorService', () => {
         presence: 'needs_attention',
       })
     );
+  });
+
+  it('does not write warning-only presence for active interval summaries with no observed file edits yet', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'change-extractor-service-'));
+    setClaudeBasePathOverride(tmpDir);
+    await writeTaskFile(tmpDir);
+
+    const upsertEntry = vi.fn(async () => undefined);
+    const ensureTracking = vi.fn(async () => ({
+      projectFingerprint: 'project-fingerprint',
+      logSourceGeneration: 'log-generation',
+    }));
+    const workerClient = {
+      isAvailable: vi.fn(() => true),
+      computeTaskChanges: vi.fn(async () =>
+        makeTaskChangeResult(TASK_ID, {
+          content: '',
+          confidence: 'medium',
+          warning: 'No file edits found within persisted workIntervals.',
+          scope: {
+            memberName: 'echo',
+            startTimestamp: '2026-03-01T12:00:00.000Z',
+            endTimestamp: '',
+            toolUseIds: [],
+            filePaths: [],
+            confidence: {
+              tier: 2,
+              label: 'medium',
+              reason: 'Scoped by persisted task workIntervals (timestamp-based)',
+            },
+          },
+        })
+      ),
+    };
+    const { service } = createService({
+      logPaths: [],
+      taskChangePresenceRepository: { upsertEntry },
+      teamLogSourceTracker: { ensureTracking },
+      taskChangeWorkerClient: workerClient,
+    });
+
+    const result = await service.getTaskChanges(TEAM_NAME, TASK_ID, SUMMARY_OPTIONS);
+
+    expect(result.files).toHaveLength(0);
+    expect(result.warnings).toEqual(['No file edits found within persisted workIntervals.']);
+    expect(upsertEntry).not.toHaveBeenCalled();
   });
 
   it('does not write no_changes presence entries for uncertain empty task diff results', async () => {

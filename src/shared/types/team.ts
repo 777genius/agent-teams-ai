@@ -587,6 +587,8 @@ export interface InboxMessage {
   timestamp: string;
   read: boolean;
   taskRefs?: TaskRef[];
+  /** Authoritative task comment id attached by runtime-authored task notifications. */
+  commentId?: string;
   summary?: string;
   color?: string;
   messageId?: string;
@@ -638,6 +640,7 @@ export interface SendMessageRequest {
   member: string;
   text: string;
   taskRefs?: TaskRef[];
+  commentId?: string;
   actionMode?: AgentActionMode;
   summary?: string;
   from?: string;

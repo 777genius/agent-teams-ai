@@ -2709,18 +2709,20 @@ describe('TeamProvisioningService', () => {
       ];
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
-      await vi.waitFor(() => {
+      await vi.waitFor(async () => {
         expect(adapterLaunch).toHaveBeenCalledTimes(1);
-      });
-      await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
-        lanes: {
-          'secondary:opencode:bob': {
-            state: 'degraded',
-            diagnostics: expect.arrayContaining([
-              'OpenCode readiness bridge failed: timeout: OpenCode bridge command timed out',
-            ]),
-          },
-        },
+        await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject(
+          {
+            lanes: {
+              'secondary:opencode:bob': {
+                state: 'degraded',
+                diagnostics: expect.arrayContaining([
+                  'OpenCode readiness bridge failed: timeout: OpenCode bridge command timed out',
+                ]),
+              },
+            },
+          }
+        );
       });
     });
 
