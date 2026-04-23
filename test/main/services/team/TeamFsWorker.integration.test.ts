@@ -27,6 +27,16 @@ function getWorkerInfo(): { path: string; execArgv?: string[] } {
   };
 }
 
+function createWorker(workerInfo: { path: string; execArgv?: string[] }): Worker {
+  return new Worker(workerInfo.path, {
+    ...(workerInfo.execArgv ? { execArgv: workerInfo.execArgv } : {}),
+    env: {
+      ...process.env,
+      TSX_TSCONFIG_PATH: path.join(process.cwd(), 'tsconfig.json'),
+    },
+  });
+}
+
 function callListTeams(worker: Worker, teamsDir: string): Promise<unknown[]> {
   const requestId = `req-${Date.now()}`;
   return new Promise((resolve, reject) => {
@@ -157,10 +167,7 @@ describe('team-fs-worker integration', () => {
       'utf8'
     );
 
-    const worker = new Worker(
-      workerInfo.path,
-      workerInfo.execArgv ? { execArgv: workerInfo.execArgv } : undefined
-    );
+    const worker = createWorker(workerInfo);
     try {
       const teams = (await callListTeams(worker, tempDir)) as Array<Record<string, unknown>>;
       expect(teams).toHaveLength(1);
@@ -211,10 +218,7 @@ describe('team-fs-worker integration', () => {
       'utf8'
     );
 
-    const worker = new Worker(
-      workerInfo.path,
-      workerInfo.execArgv ? { execArgv: workerInfo.execArgv } : undefined
-    );
+    const worker = createWorker(workerInfo);
     try {
       const teams = (await callListTeams(worker, tempDir)) as Array<Record<string, unknown>>;
       expect(teams).toHaveLength(1);
