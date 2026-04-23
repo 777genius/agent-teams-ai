@@ -805,6 +805,40 @@ describe('TeamProvisioningService', () => {
       expect(snapshot.members.alice).toBeUndefined();
     });
 
+    it('keeps pure OpenCode launch members alive from confirmed launch snapshot while runtime adapter is tracked', async () => {
+      const teamName = 'pure-opencode-runtime-team';
+      const projectPath = '/Users/test/project';
+      writeLaunchConfig(teamName, projectPath, 'lead-session', ['alice']);
+      writeLaunchState(teamName, 'lead-session', {
+        alice: {
+          providerId: 'opencode',
+          model: 'opencode/big-pickle',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          hardFailureReason: undefined,
+        },
+      });
+
+      const svc = new TeamProvisioningService();
+      (svc as any).runtimeAdapterRunByTeam.set(teamName, {
+        runId: 'opencode-runtime-run',
+        providerId: 'opencode',
+        cwd: projectPath,
+      });
+      (svc as any).aliveRunByTeam.set(teamName, 'opencode-runtime-run');
+
+      const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+
+      expect(snapshot.members.alice).toMatchObject({
+        alive: true,
+        providerId: 'opencode',
+        runtimeModel: 'opencode/big-pickle',
+      });
+    });
+
     it('excludes removed meta members from live runtime metadata resolution', async () => {
       const svc = new TeamProvisioningService();
       (svc as any).configReader = {
@@ -4842,6 +4876,97 @@ describe('TeamProvisioningService', () => {
     expect(result.teamLaunchState).toBe('partial_failure');
   });
 
+  it('marks persisted bootstrap as confirmed when member transcript shows successful member_briefing', async () => {
+    allowConsoleLogs();
+    const teamName = 'zz-unit-bootstrap-transcript-success';
+    const leadSessionId = 'lead-session';
+    const memberSessionId = 'alice-session';
+    const projectPath = '/Users/test/proj';
+    const projectId = '-Users-test-proj';
+    const acceptedAt = new Date(Date.now() - 5_000).toISOString();
+    const successAt = new Date(Date.now() - 4_000).toISOString();
+
+    writeLaunchConfig(teamName, projectPath, leadSessionId, ['alice', 'bob']);
+    writeLaunchState(teamName, leadSessionId, {
+      alice: {
+        launchState: 'runtime_pending_bootstrap',
+        agentToolAccepted: true,
+        runtimeAlive: true,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        hardFailureReason: undefined,
+        firstSpawnAcceptedAt: acceptedAt,
+      },
+      bob: {
+        launchState: 'starting',
+        agentToolAccepted: false,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        hardFailureReason: undefined,
+      },
+    });
+
+    const projectRoot = path.join(tempProjectsBase, projectId);
+    fs.mkdirSync(projectRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(projectRoot, `${leadSessionId}.jsonl`),
+      `${JSON.stringify({
+        timestamp: new Date(Date.now() - 10_000).toISOString(),
+        teamName,
+        type: 'user',
+        message: { role: 'user', content: 'Lead bootstrap context' },
+      })}\n`,
+      'utf8'
+    );
+    fs.writeFileSync(
+      path.join(projectRoot, `${memberSessionId}.jsonl`),
+      [
+        JSON.stringify({
+          timestamp: acceptedAt,
+          teamName,
+          agentName: 'alice',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: `You are bootstrapping into team "${teamName}" as member "alice".`,
+          },
+        }),
+        JSON.stringify({
+          timestamp: successAt,
+          teamName,
+          agentName: 'alice',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: [
+              {
+                type: 'tool_result',
+                tool_use_id: 'item_1',
+                content: `Member briefing for alice on team "${teamName}" (${teamName}).\nTask briefing for alice:\nNo actionable tasks.`,
+                is_error: false,
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    (svc as any).getLiveTeamAgentNames = vi.fn(() => new Set(['alice']));
+
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(result.statuses.alice).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      runtimeAlive: true,
+    });
+    expect(result.statuses.alice?.error).toBeUndefined();
+  });
+
   it('marks an online teammate bootstrap as failed when transcript shows model unavailability', async () => {
     allowConsoleLogs();
     const teamName = 'zz-live-bootstrap-model-unavailable';
@@ -4935,6 +5060,184 @@ describe('TeamProvisioningService', () => {
       'requested model is not available'
     );
     expect(run.provisioningOutputParts.join('\n')).toContain('requested model is not available');
+  });
+
+  it('marks a live teammate bootstrap as confirmed when transcript shows successful member_briefing', async () => {
+    allowConsoleLogs();
+    const teamName = 'zz-live-bootstrap-transcript-success';
+    const leadSessionId = 'lead-session';
+    const memberSessionId = 'alice-session';
+    const projectPath = '/Users/test/proj';
+    const projectId = '-Users-test-proj';
+    const acceptedAt = new Date(Date.now() - 5_000).toISOString();
+    const successAt = new Date(Date.now() - 4_000).toISOString();
+
+    writeLaunchConfig(teamName, projectPath, leadSessionId, ['alice']);
+
+    const projectRoot = path.join(tempProjectsBase, projectId);
+    fs.mkdirSync(projectRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(projectRoot, `${memberSessionId}.jsonl`),
+      [
+        JSON.stringify({
+          timestamp: acceptedAt,
+          teamName,
+          agentName: 'alice',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: `You are bootstrapping into team "${teamName}" as member "alice".`,
+          },
+        }),
+        JSON.stringify({
+          timestamp: successAt,
+          teamName,
+          agentName: 'alice',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'text',
+                text: `Bootstrap выполнен для \`alice\` в команде \`${teamName}\`.`,
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    const run = {
+      runId: 'run-live-success-1',
+      teamName,
+      startedAt: new Date(Date.now() - 60_000).toISOString(),
+      request: {
+        members: [],
+      },
+      expectedMembers: ['alice'],
+      memberSpawnStatuses: new Map([
+        [
+          'alice',
+          {
+            status: 'waiting',
+            launchState: 'runtime_pending_bootstrap',
+            error: undefined,
+            updatedAt: acceptedAt,
+            runtimeAlive: true,
+            livenessSource: 'process',
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            agentToolAccepted: true,
+            firstSpawnAcceptedAt: acceptedAt,
+            lastHeartbeatAt: undefined,
+          },
+        ],
+      ]),
+      provisioningOutputParts: [],
+      activeToolCalls: new Map(),
+      isLaunch: false,
+    } as any;
+
+    await (svc as any).reconcileBootstrapTranscriptSuccesses(run);
+
+    expect(run.memberSpawnStatuses.get('alice')).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: true,
+      bootstrapConfirmed: true,
+    });
+    expect(run.provisioningOutputParts.join('\n')).toContain('bootstrap confirmed via transcript');
+  });
+
+  it('marks a live teammate bootstrap as confirmed from transcript even when runtime discovery is stale', async () => {
+    allowConsoleLogs();
+    const teamName = 'zz-live-bootstrap-transcript-success-without-runtime';
+    const leadSessionId = 'lead-session';
+    const memberSessionId = 'atlas-session';
+    const projectPath = '/Users/test/proj';
+    const projectId = '-Users-test-proj';
+    const acceptedAt = new Date(Date.now() - 5_000).toISOString();
+    const successAt = new Date(Date.now() - 4_000).toISOString();
+
+    writeLaunchConfig(teamName, projectPath, leadSessionId, ['atlas']);
+
+    const projectRoot = path.join(tempProjectsBase, projectId);
+    fs.mkdirSync(projectRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(projectRoot, `${memberSessionId}.jsonl`),
+      [
+        JSON.stringify({
+          timestamp: acceptedAt,
+          teamName,
+          agentName: 'atlas',
+          type: 'user',
+          message: {
+            role: 'user',
+            content: `You are bootstrapping into team "${teamName}" as member "atlas".`,
+          },
+        }),
+        JSON.stringify({
+          timestamp: successAt,
+          teamName,
+          agentName: 'atlas',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'text',
+                text: `Bootstrap выполнен для \`atlas\` в команде \`${teamName}\`.`,
+              },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+      'utf8'
+    );
+
+    const svc = new TeamProvisioningService();
+    const run = {
+      runId: 'run-live-success-2',
+      teamName,
+      startedAt: new Date(Date.now() - 60_000).toISOString(),
+      request: {
+        members: [],
+      },
+      expectedMembers: ['atlas'],
+      memberSpawnStatuses: new Map([
+        [
+          'atlas',
+          {
+            status: 'waiting',
+            launchState: 'runtime_pending_bootstrap',
+            error: undefined,
+            updatedAt: acceptedAt,
+            runtimeAlive: false,
+            livenessSource: undefined,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            agentToolAccepted: true,
+            firstSpawnAcceptedAt: acceptedAt,
+            lastHeartbeatAt: undefined,
+          },
+        ],
+      ]),
+      provisioningOutputParts: [],
+      activeToolCalls: new Map(),
+      isLaunch: false,
+    } as any;
+
+    await (svc as any).reconcileBootstrapTranscriptSuccesses(run);
+
+    expect(run.memberSpawnStatuses.get('atlas')).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: false,
+      bootstrapConfirmed: true,
+    });
+    expect(run.provisioningOutputParts.join('\n')).toContain('bootstrap confirmed via transcript');
   });
 
   it('marks a persisted online teammate bootstrap as failed when transcript shows model unavailability', async () => {
@@ -6136,6 +6439,144 @@ describe('TeamProvisioningService', () => {
     );
   });
 
+  it('recovers stale mixed secondary lanes from live OpenCode runtime reconcile before degrading them', async () => {
+    const teamName = 'relay-works-7';
+    writeTeamMeta(teamName, {
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.4',
+    });
+    writeMembersMeta(teamName, [
+      {
+        name: 'atlas',
+        providerId: 'opencode',
+        model: 'opencode/nemotron-3-super-free',
+      },
+      {
+        name: 'bob',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+      },
+      {
+        name: 'nova',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+      },
+      {
+        name: 'tom',
+        providerId: 'opencode',
+        model: 'opencode/minimax-m2.5-free',
+      },
+    ]);
+    writeLaunchConfig(teamName, '/Users/test/proj', 'lead-session', ['bob', 'nova']);
+    writeBootstrapState(teamName, [
+      { name: 'bob', status: 'registered' },
+      { name: 'nova', status: 'registered' },
+    ]);
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempTeamsBase,
+      teamName,
+      laneId: 'secondary:opencode:atlas',
+      state: 'active',
+    });
+    await upsertOpenCodeRuntimeLaneIndexEntry({
+      teamsBasePath: tempTeamsBase,
+      teamName,
+      laneId: 'secondary:opencode:tom',
+      state: 'active',
+    });
+
+    const adapterReconcile = vi.fn(async (input: Record<string, unknown>) => {
+      const member = (input.expectedMembers as Array<{ name: string }>)[0]?.name;
+      return {
+        runId: String(input.runId),
+        teamName,
+        launchPhase: 'reconciled',
+        teamLaunchState: 'clean_success',
+        members: member
+          ? {
+              [member]: {
+                memberName: member,
+                providerId: 'opencode',
+                launchState: 'confirmed_alive',
+                agentToolAccepted: true,
+                runtimeAlive: true,
+                bootstrapConfirmed: true,
+                hardFailure: false,
+                diagnostics: ['bootstrap confirmed'],
+              },
+            }
+          : {},
+        snapshot: null,
+        warnings: [],
+        diagnostics: [],
+      };
+    });
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(
+      new TeamRuntimeAdapterRegistry([
+        {
+          providerId: 'opencode',
+          prepare: vi.fn(),
+          launch: vi.fn(),
+          reconcile: adapterReconcile,
+          stop: vi.fn(),
+        } as any,
+      ])
+    );
+
+    const result = await svc.getMemberSpawnStatuses(teamName);
+
+    expect(adapterReconcile).toHaveBeenCalledTimes(2);
+    expect(adapterReconcile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName,
+        laneId: 'secondary:opencode:atlas',
+        reason: 'startup_recovery',
+        expectedMembers: [
+          expect.objectContaining({
+            name: 'atlas',
+            providerId: 'opencode',
+            cwd: '/Users/test/proj',
+          }),
+        ],
+      })
+    );
+    expect(adapterReconcile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName,
+        laneId: 'secondary:opencode:tom',
+        reason: 'startup_recovery',
+        expectedMembers: [
+          expect.objectContaining({
+            name: 'tom',
+            providerId: 'opencode',
+            cwd: '/Users/test/proj',
+          }),
+        ],
+      })
+    );
+    expect(result.expectedMembers).toEqual(expect.arrayContaining(['atlas', 'bob', 'nova', 'tom']));
+    expect(result.statuses.atlas).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+    });
+    expect(result.statuses.tom).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+    });
+    await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
+      lanes: {
+        'secondary:opencode:atlas': {
+          state: 'active',
+        },
+        'secondary:opencode:tom': {
+          state: 'active',
+        },
+      },
+    });
+  });
+
   it('includes queued OpenCode secondary lanes in live spawn statuses before the final mixed snapshot settles', async () => {
     const svc = new TeamProvisioningService();
     vi.spyOn(svc as any, 'refreshMemberSpawnStatusesFromLeadInbox').mockResolvedValue(undefined);
@@ -6206,6 +6647,81 @@ describe('TeamProvisioningService', () => {
     expect(result.statuses.atlas).toMatchObject({
       status: 'spawning',
       launchState: 'starting',
+    });
+  });
+
+  it('keeps finished OpenCode secondary lanes pending when runtime evidence has not materialized yet', async () => {
+    const svc = new TeamProvisioningService();
+    vi.spyOn(svc as any, 'refreshMemberSpawnStatusesFromLeadInbox').mockResolvedValue(undefined);
+    vi.spyOn(svc as any, 'maybeAuditMemberSpawnStatuses').mockResolvedValue(undefined);
+
+    const run = createMemberSpawnRun({
+      teamName: 'mixed-live-finished-no-evidence',
+      runId: 'run-mixed-live-2',
+      expectedMembers: ['bob'],
+      memberSpawnStatuses: new Map([
+        [
+          'bob',
+          createMemberSpawnStatusEntry({
+            status: 'online',
+            launchState: 'confirmed_alive',
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            livenessSource: 'heartbeat',
+          }),
+        ],
+      ]),
+    });
+    run.isLaunch = true;
+    run.request = {
+      teamName: 'mixed-live-finished-no-evidence',
+      cwd: '/tmp/mixed-live-finished-no-evidence',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.4',
+      members: [],
+    };
+    run.effectiveMembers = [
+      {
+        name: 'bob',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+      },
+    ];
+    run.mixedSecondaryLanes = [
+      {
+        laneId: 'secondary:opencode:atlas',
+        providerId: 'opencode',
+        member: {
+          name: 'atlas',
+          providerId: 'opencode',
+          model: 'opencode/nemotron-3-super-free',
+        },
+        runId: 'lane-run-atlas',
+        state: 'finished',
+        result: null,
+        warnings: [],
+        diagnostics: [],
+      },
+    ];
+    run.detectedSessionId = 'lead-session';
+
+    (svc as any).runs.set(run.runId, run);
+    (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
+
+    const result = await svc.getMemberSpawnStatuses(run.teamName);
+
+    expect(result.teamLaunchState).toBe('partial_pending');
+    expect(result.expectedMembers).toEqual(expect.arrayContaining(['bob', 'atlas']));
+    expect(result.statuses.bob).toMatchObject({
+      status: 'online',
+      launchState: 'confirmed_alive',
+    });
+    expect(result.statuses.atlas).toMatchObject({
+      status: 'waiting',
+      launchState: 'runtime_pending_bootstrap',
+      hardFailure: false,
+      hardFailureReason: undefined,
     });
   });
 

@@ -1924,6 +1924,39 @@ function extractBootstrapFailureReason(text: string): string | null {
   return trimmed.slice(0, 280);
 }
 
+function isBootstrapTranscriptSuccessText(
+  text: string,
+  teamName: string,
+  memberName: string
+): boolean {
+  const normalizedText = text.replace(/\s+/g, ' ').trim().toLowerCase();
+  if (!normalizedText) {
+    return false;
+  }
+
+  const normalizedTeamName = teamName.trim().toLowerCase();
+  const normalizedMemberName = memberName.trim().toLowerCase();
+  if (!normalizedTeamName || !normalizedMemberName) {
+    return false;
+  }
+
+  if (
+    normalizedText.startsWith(
+      `member briefing for ${normalizedMemberName} on team "${normalizedTeamName}" (${normalizedTeamName}).`
+    ) ||
+    normalizedText.startsWith(
+      `member briefing for ${normalizedMemberName} on team '${normalizedTeamName}' (${normalizedTeamName}).`
+    )
+  ) {
+    return true;
+  }
+
+  return (
+    normalizedText.includes(`bootstrap выполнен для \`${normalizedMemberName}\``) &&
+    normalizedText.includes(`команде \`${normalizedTeamName}\``)
+  );
+}
+
 function extractTranscriptTextContent(value: unknown): string[] {
   if (typeof value === 'string') {
     const trimmed = value.trim();
@@ -6134,6 +6167,58 @@ export class TeamProvisioningService {
     }
   }
 
+  private confirmMemberSpawnStatusFromTranscript(
+    run: ProvisioningRun,
+    memberName: string,
+    observedAt: string
+  ): void {
+    const prev = run.memberSpawnStatuses.get(memberName) ?? createInitialMemberSpawnStatusEntry();
+    const updatedAt = nowIso();
+    const next: MemberSpawnStatusEntry = {
+      ...prev,
+      status: 'online',
+      updatedAt,
+      agentToolAccepted: true,
+      runtimeAlive: prev.runtimeAlive === true,
+      bootstrapConfirmed: true,
+      hardFailure: false,
+      error: undefined,
+      hardFailureReason: undefined,
+      livenessSource: prev.livenessSource ?? 'process',
+      firstSpawnAcceptedAt: prev.firstSpawnAcceptedAt ?? observedAt,
+      lastHeartbeatAt: isMemberSpawnHeartbeatTimestampNewer(prev.lastHeartbeatAt, observedAt)
+        ? observedAt
+        : prev.lastHeartbeatAt,
+    };
+    next.launchState = deriveMemberLaunchState(next);
+
+    if (
+      prev.status === next.status &&
+      prev.launchState === next.launchState &&
+      prev.error === next.error &&
+      prev.hardFailureReason === next.hardFailureReason &&
+      prev.livenessSource === next.livenessSource &&
+      prev.agentToolAccepted === next.agentToolAccepted &&
+      prev.runtimeAlive === next.runtimeAlive &&
+      prev.bootstrapConfirmed === next.bootstrapConfirmed &&
+      prev.hardFailure === next.hardFailure &&
+      prev.firstSpawnAcceptedAt === next.firstSpawnAcceptedAt &&
+      prev.lastHeartbeatAt === next.lastHeartbeatAt
+    ) {
+      return;
+    }
+
+    run.memberSpawnStatuses.set(memberName, next);
+    run.pendingMemberRestarts?.delete(memberName);
+    this.syncMemberLaunchGraceCheck(run, memberName, next);
+    this.appendMemberBootstrapDiagnostic(run, memberName, 'bootstrap confirmed via transcript');
+    if (!this.isCurrentTrackedRun(run)) return;
+    this.emitMemberSpawnChange(run, memberName);
+    if (run.isLaunch) {
+      void this.persistLaunchStateSnapshot(run, run.provisioningComplete ? 'finished' : 'active');
+    }
+  }
+
   /**
    * Get current member spawn statuses for a team.
    * Returns a map of memberName → MemberSpawnStatusEntry.
@@ -6349,6 +6434,11 @@ export class TeamProvisioningService {
         launchMember?.model?.trim() ??
         member.model?.trim() ??
         undefined;
+      const launchSnapshotAlive =
+        this.isTeamAlive(teamName) &&
+        (launchMember?.runtimeAlive === true ||
+          launchMember?.bootstrapConfirmed === true ||
+          launchMember?.launchState === 'confirmed_alive');
       let rssBytes = rssPid ? rssBytesByPid.get(rssPid) : undefined;
       if (rssBytes == null && isSharedOpenCodeHost && typeof rssPid === 'number' && rssPid > 0) {
         try {
@@ -6364,7 +6454,7 @@ export class TeamProvisioningService {
 
       snapshotMembers[memberName] = {
         memberName,
-        alive: liveRuntimeMember?.alive ?? launchMember?.runtimeAlive ?? false,
+        alive: liveRuntimeMember?.alive === true || launchSnapshotAlive,
         restartable,
         ...(backendType ? { backendType } : {}),
         ...(launchMember?.providerId ? { providerId: launchMember.providerId } : {}),
@@ -6892,6 +6982,7 @@ export class TeamProvisioningService {
     }
     run.lastMemberSpawnAuditAt = now;
     await this.auditMemberSpawnStatuses(run);
+    await this.reconcileBootstrapTranscriptSuccesses(run);
   }
 
   private async reconcileBootstrapTranscriptFailures(run: ProvisioningRun): Promise<void> {
@@ -6917,6 +7008,32 @@ export class TeamProvisioningService {
         continue;
       }
       this.setMemberSpawnStatus(run, memberName, 'error', transcriptFailureReason);
+    }
+  }
+
+  private async reconcileBootstrapTranscriptSuccesses(run: ProvisioningRun): Promise<void> {
+    for (const memberName of run.expectedMembers ?? []) {
+      const current = run.memberSpawnStatuses.get(memberName);
+      if (
+        !current ||
+        current.launchState === 'failed_to_start' ||
+        current.launchState === 'confirmed_alive' ||
+        current.bootstrapConfirmed === true ||
+        current.agentToolAccepted !== true
+      ) {
+        continue;
+      }
+      const acceptedAtMs =
+        current.firstSpawnAcceptedAt != null ? Date.parse(current.firstSpawnAcceptedAt) : NaN;
+      const transcriptOutcome = await this.findBootstrapTranscriptOutcome(
+        run.teamName,
+        memberName,
+        Number.isFinite(acceptedAtMs) ? acceptedAtMs : null
+      );
+      if (transcriptOutcome?.kind !== 'success') {
+        continue;
+      }
+      this.confirmMemberSpawnStatusFromTranscript(run, memberName, transcriptOutcome.observedAt);
     }
   }
 
@@ -12147,6 +12264,8 @@ export class TeamProvisioningService {
       primaryStatuses: this.buildRuntimeSpawnStatusRecord(run),
       secondaryMembers: mixedSecondaryLanes.map((secondaryLane) => {
         const evidenceEntry = secondaryLane.result?.members[secondaryLane.member.name];
+        const finishedWithoutRuntimeEvidence =
+          secondaryLane.state === 'finished' && !secondaryLane.result;
         return {
           laneId: secondaryLane.laneId,
           member: secondaryLane.member,
@@ -12173,7 +12292,21 @@ export class TeamProvisioningService {
                 pendingPermissionRequestIds: evidenceEntry.pendingPermissionRequestIds,
                 diagnostics: evidenceEntry.diagnostics,
               }
-            : null,
+            : finishedWithoutRuntimeEvidence
+              ? {
+                  launchState: 'runtime_pending_bootstrap',
+                  agentToolAccepted: false,
+                  runtimeAlive: false,
+                  bootstrapConfirmed: false,
+                  hardFailure: false,
+                  diagnostics:
+                    secondaryLane.diagnostics.length > 0
+                      ? [...secondaryLane.diagnostics]
+                      : [
+                          'OpenCode secondary lane finished without runtime evidence. Waiting for runtime reconciliation.',
+                        ],
+                }
+              : null,
           pendingReason:
             secondaryLane.result || secondaryLane.state === 'finished'
               ? undefined
@@ -12498,6 +12631,7 @@ export class TeamProvisioningService {
     if (activeMembers.length === 0) {
       return null;
     }
+    const projectPath = this.readPersistedTeamProjectPath(teamName);
 
     const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName).catch(
       () => ({
@@ -12541,6 +12675,7 @@ export class TeamProvisioningService {
         bootstrapConfirmed?: boolean;
         hardFailure?: boolean;
         hardFailureReason?: string;
+        pendingPermissionRequestIds?: string[];
         diagnostics?: string[];
       };
       pendingReason?: string;
@@ -12566,6 +12701,32 @@ export class TeamProvisioningService {
 
       let laneEntry = laneIndex.lanes[laneIdentity.laneId];
       if (laneEntry?.state === 'active') {
+        const runtimeEvidence = await this.tryRecoverActiveOpenCodeSecondaryLaneFromRuntime({
+          teamName,
+          laneId: laneIdentity.laneId,
+          member,
+          projectPath,
+          previousLaunchState: persistedSnapshot ?? bootstrapSnapshot,
+        });
+        if (runtimeEvidence) {
+          recoveredAny = true;
+          secondaryMembers.push({
+            laneId: laneIdentity.laneId,
+            member,
+            leadDefaults,
+            evidence: {
+              launchState: runtimeEvidence.launchState,
+              agentToolAccepted: runtimeEvidence.agentToolAccepted,
+              runtimeAlive: runtimeEvidence.runtimeAlive,
+              bootstrapConfirmed: runtimeEvidence.bootstrapConfirmed,
+              hardFailure: runtimeEvidence.hardFailure,
+              hardFailureReason: runtimeEvidence.hardFailureReason,
+              pendingPermissionRequestIds: runtimeEvidence.pendingPermissionRequestIds,
+              diagnostics: runtimeEvidence.diagnostics,
+            },
+          });
+          continue;
+        }
         const recovery = await recoverStaleOpenCodeRuntimeLaneIndexEntry({
           teamsBasePath: getTeamsBasePath(),
           teamName,
@@ -12638,6 +12799,50 @@ export class TeamProvisioningService {
     });
     await this.launchStateStore.write(teamName, recoveredSnapshot);
     return recoveredSnapshot;
+  }
+
+  private async tryRecoverActiveOpenCodeSecondaryLaneFromRuntime(params: {
+    teamName: string;
+    laneId: string;
+    member: TeamMember;
+    projectPath: string | null;
+    previousLaunchState: PersistedTeamLaunchSnapshot | null;
+  }): Promise<TeamRuntimeMemberLaunchEvidence | null> {
+    const adapter = this.getOpenCodeRuntimeAdapter();
+    if (!adapter || !params.projectPath) {
+      return null;
+    }
+
+    try {
+      const reconcileResult = await adapter.reconcile({
+        runId: randomUUID(),
+        laneId: params.laneId,
+        teamName: params.teamName,
+        providerId: 'opencode',
+        expectedMembers: [
+          {
+            name: params.member.name,
+            role: params.member.role,
+            workflow: params.member.workflow,
+            isolation: params.member.isolation === 'worktree' ? ('worktree' as const) : undefined,
+            providerId: 'opencode',
+            model: params.member.model,
+            effort: params.member.effort,
+            cwd: params.projectPath,
+          },
+        ],
+        previousLaunchState: params.previousLaunchState,
+        reason: 'startup_recovery',
+      });
+      return reconcileResult.members[params.member.name] ?? null;
+    } catch (error) {
+      logger.warn(
+        `[${params.teamName}] Failed to recover stale OpenCode lane ${params.laneId} from runtime bridge: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return null;
+    }
   }
 
   private async reconcilePersistedLaunchState(teamName: string): Promise<{
@@ -12802,14 +13007,19 @@ export class TeamProvisioningService {
         current.hardFailureReason = undefined;
       }
       if (!current.bootstrapConfirmed && !current.hardFailure) {
-        const transcriptFailureReason = await this.findBootstrapTranscriptFailureReason(
+        const transcriptOutcome = await this.findBootstrapTranscriptOutcome(
           teamName,
           expected,
           Number.isFinite(acceptedAtMs) ? acceptedAtMs : null
         );
-        if (transcriptFailureReason) {
+        if (transcriptOutcome?.kind === 'success') {
+          current.bootstrapConfirmed = true;
+          current.lastHeartbeatAt = current.lastHeartbeatAt ?? transcriptOutcome.observedAt;
+          current.hardFailure = false;
+          current.hardFailureReason = undefined;
+        } else if (transcriptOutcome?.kind === 'failure') {
           current.hardFailure = true;
-          current.hardFailureReason = transcriptFailureReason;
+          current.hardFailureReason = transcriptOutcome.reason;
           current.sources.hardFailureSignal = true;
         }
       }
@@ -12864,6 +13074,26 @@ export class TeamProvisioningService {
     memberName: string,
     sinceMs: number | null
   ): Promise<string | null> {
+    const outcome = await this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs);
+    return outcome?.kind === 'failure' ? outcome.reason : null;
+  }
+
+  private async findBootstrapTranscriptOutcome(
+    teamName: string,
+    memberName: string,
+    sinceMs: number | null
+  ): Promise<
+    | {
+        kind: 'success';
+        observedAt: string;
+      }
+    | {
+        kind: 'failure';
+        observedAt: string;
+        reason: string;
+      }
+    | null
+  > {
     let summaries: Awaited<ReturnType<TeamMemberLogsFinder['findMemberLogs']>>;
     try {
       summaries = await this.memberLogsFinder.findMemberLogs(teamName, memberName, sinceMs);
@@ -12873,26 +13103,39 @@ export class TeamProvisioningService {
 
     for (const summary of summaries) {
       if (!summary.filePath) continue;
-      const reason = await this.readRecentBootstrapFailureReason(
+      const outcome = await this.readRecentBootstrapTranscriptOutcome(
         summary.filePath,
         sinceMs,
-        memberName
+        memberName,
+        teamName
       );
-      if (reason) {
-        return reason;
+      if (outcome) {
+        return outcome;
       }
     }
 
-    return this.findBootstrapFailureReasonInProjectRoot(teamName, memberName, sinceMs);
+    return this.findBootstrapTranscriptOutcomeInProjectRoot(teamName, memberName, sinceMs);
   }
 
-  private async readRecentBootstrapFailureReason(
+  private async readRecentBootstrapTranscriptOutcome(
     filePath: string,
     sinceMs: number | null,
-    memberName?: string
-  ): Promise<string | null> {
+    memberName: string,
+    teamName: string
+  ): Promise<
+    | {
+        kind: 'success';
+        observedAt: string;
+      }
+    | {
+        kind: 'failure';
+        observedAt: string;
+        reason: string;
+      }
+    | null
+  > {
     let handle: fs.promises.FileHandle | null = null;
-    const normalizedMemberName = memberName?.trim().toLowerCase() || null;
+    const normalizedMemberName = memberName.trim().toLowerCase();
     try {
       handle = await fs.promises.open(filePath, 'r');
       const stat = await handle.stat();
@@ -12923,20 +13166,25 @@ export class TeamProvisioningService {
         if (sinceMs != null && Number.isFinite(timestampMs) && timestampMs < sinceMs) {
           continue;
         }
-        if (normalizedMemberName) {
-          const parsedAgentName =
-            typeof (parsed as { agentName?: unknown }).agentName === 'string'
-              ? (parsed as { agentName?: string }).agentName?.trim().toLowerCase() || null
-              : null;
-          if (parsedAgentName && parsedAgentName !== normalizedMemberName) {
-            continue;
-          }
+        const parsedAgentName =
+          typeof (parsed as { agentName?: unknown }).agentName === 'string'
+            ? (parsed as { agentName?: string }).agentName?.trim().toLowerCase() || null
+            : null;
+        if (parsedAgentName && parsedAgentName !== normalizedMemberName) {
+          continue;
         }
         const text = extractTranscriptMessageText(parsed);
         if (!text) continue;
+        const observedAt =
+          typeof parsed.timestamp === 'string' && parsed.timestamp.trim().length > 0
+            ? parsed.timestamp.trim()
+            : new Date().toISOString();
         const reason = extractBootstrapFailureReason(text);
         if (reason) {
-          return reason;
+          return { kind: 'failure', observedAt, reason };
+        }
+        if (isBootstrapTranscriptSuccessText(text, teamName, memberName)) {
+          return { kind: 'success', observedAt };
         }
       }
     } catch {
@@ -12948,11 +13196,22 @@ export class TeamProvisioningService {
     return null;
   }
 
-  private async findBootstrapFailureReasonInProjectRoot(
+  private async findBootstrapTranscriptOutcomeInProjectRoot(
     teamName: string,
     memberName: string,
     sinceMs: number | null
-  ): Promise<string | null> {
+  ): Promise<
+    | {
+        kind: 'success';
+        observedAt: string;
+      }
+    | {
+        kind: 'failure';
+        observedAt: string;
+        reason: string;
+      }
+    | null
+  > {
     let config: Awaited<ReturnType<TeamConfigReader['getConfig']>>;
     try {
       config = await this.configReader.getConfig(teamName);
@@ -12979,13 +13238,14 @@ export class TeamProvisioningService {
       if (config?.leadSessionId && entry.name === `${config.leadSessionId}.jsonl`) {
         continue;
       }
-      const reason = await this.readRecentBootstrapFailureReason(
+      const outcome = await this.readRecentBootstrapTranscriptOutcome(
         path.join(projectDir, entry.name),
         sinceMs,
-        memberName
+        memberName,
+        teamName
       );
-      if (reason) {
-        return reason;
+      if (outcome) {
+        return outcome;
       }
     }
 
